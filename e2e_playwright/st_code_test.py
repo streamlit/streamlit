@@ -68,10 +68,10 @@ def test_syntax_highlighting(themed_app: Page, assert_snapshot: ImageCompareFunc
     assert_snapshot(first_code_element, name="st_code-hover_copy")
 
 
-def test_code_blocks_render_correctly(
+def test_code_blocks_render_correctly_themed(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
-    """Test that the code blocks render as expected via screenshot matching."""
+    """Test that code blocks with syntax highlighting render correctly (theme-dependent)."""
     code_blocks = themed_app.get_by_test_id("stCode")
     expect(code_blocks).to_have_count(33)
     # The code blocks might require a bit more time for rendering, so wait until
@@ -84,6 +84,7 @@ def test_code_blocks_render_correctly(
     # Check that there are 15 code blocks with the class "language-python"
     expect(themed_app.locator("code.language-python")).to_have_count(31)
 
+    # Syntax highlighting (colors differ by theme)
     assert_snapshot(code_blocks.nth(0), name="st_code-auto_lang")
     assert_snapshot(code_blocks.nth(1), name="st_code-empty")
     assert_snapshot(code_blocks.nth(2), name="st_code-python_lang")
@@ -92,7 +93,20 @@ def test_code_blocks_render_correctly(
     assert_snapshot(code_blocks.nth(5), name="st_markdown-code_block")
     assert_snapshot(code_blocks.nth(6), name="st_code-diff_lang")
 
-    # Test long lines draw as expected.
+
+def test_code_blocks_render_correctly_layout(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that code blocks layout properties render correctly (theme-independent)."""
+    code_blocks = app.get_by_test_id("stCode")
+    expect(code_blocks).to_have_count(33)
+    # Wait for code blocks to render
+    foo_func_count = 5
+    app.wait_for_function(
+        f"()=>document.body.textContent.split('def foo()').length === {foo_func_count}"
+    )
+
+    # Test long lines draw as expected (wrapping is layout behavior)
     # The screenshot for long-no_wrap seems to be a bit flaky, scrolling
     # it into view seems to help fix this (but not sure why).
     code_blocks.nth(15).scroll_into_view_if_needed()
@@ -101,19 +115,19 @@ def test_code_blocks_render_correctly(
     assert_snapshot(code_blocks.nth(17), name="st_code-long-wrap")
     assert_snapshot(code_blocks.nth(18), name="st_code-long-numbers-wrap")
 
-    # Test height prop
+    # Test height prop (sizing is layout property)
     assert_snapshot(code_blocks.nth(19), name="st_code-height-long-code")
     assert_snapshot(code_blocks.nth(20), name="st_code-height-short-code")
 
-    # Test long single word string
+    # Test long single word string (wrapping behavior)
     long_string = "askldfjlweklrjweifjlsdfliwjlierjilsildfjlslfij" * 3
     code_blocks.nth(24).scroll_into_view_if_needed()
-    expect(themed_app.get_by_text(long_string)).to_have_count(2)
-    expect(themed_app.get_by_text(long_string).nth(0)).to_be_attached()
+    expect(app.get_by_text(long_string)).to_have_count(2)
+    expect(app.get_by_text(long_string).nth(0)).to_be_attached()
     assert_snapshot(code_blocks.nth(24), name="st_code-long-single-word-string-no-wrap")
 
     code_blocks.nth(25).scroll_into_view_if_needed()
-    expect(themed_app.get_by_text(long_string).nth(1)).to_be_attached()
+    expect(app.get_by_text(long_string).nth(1)).to_be_attached()
     assert_snapshot(code_blocks.nth(25), name="st_code-long-single-word-string-wrap")
 
 
