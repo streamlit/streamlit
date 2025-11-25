@@ -96,24 +96,28 @@ const loadRemarkEmoji = (): Promise<typeof import("remark-emoji")> =>
  * Heuristic to determine if the markdown source contains emoji shortcodes that require remark-emoji.
  * Checks for patterns like :emoji_name: but excludes Streamlit's custom :material/ and
  * :streamlit: syntax which are handled separately.
+ * Supports shortcodes with special characters like :+1:, :-1:, etc.
  *
  * @param source - The markdown source string to check
  * @returns true if emoji shortcodes are detected, false otherwise
  */
-function containsEmojiShortcodes(source: string): boolean {
-  return /:(?!material\/|streamlit:)\w[\w_-]*:/.test(source)
+export function containsEmojiShortcodes(source: string): boolean {
+  return /:(?!material\/|streamlit:)[\w+-][\w_+-]*:/.test(source)
 }
 
 /**
  * Detects if the markdown source contains math syntax that requires KaTeX.
  * Checks for inline math ($...$) and display math ($$...$$) patterns.
+ * For inline math, ensures no whitespace immediately after opening $ or before closing $
+ * to avoid false positives like "$5 and $10".
  *
  * @param source - The markdown source string to check
  * @returns true if math syntax is detected, false otherwise
  */
-function containsMathSyntax(source: string): boolean {
-  // Detect inline math: $...$ or display math: $$...$$
-  return /\$\$[\s\S]+?\$\$|\$[^$\n]+?\$/.test(source)
+export function containsMathSyntax(source: string): boolean {
+  // Detect display math: $$...$$ or inline math: $...$
+  // Inline math requires non-whitespace after opening $ and before closing $
+  return /\$\$[\s\S]+?\$\$|\$(?!\s)[^$\n]+?(?<!\s)\$/.test(source)
 }
 
 export enum Tags {
