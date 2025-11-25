@@ -80,21 +80,7 @@ class QueryParams(MutableMapping[str, str]):
         self._send_query_param_msg()
 
     def __set_item_internal(self, key: str, value: str | Iterable[str]) -> None:
-        if isinstance(value, dict):
-            raise StreamlitAPIException(
-                f"You cannot set a query params key `{key}` to a dictionary."
-            )
-
-        if key in EMBED_QUERY_PARAMS_KEYS:
-            raise StreamlitAPIException(
-                "Query param embed and embed_options (case-insensitive) cannot be set programmatically."
-            )
-        # Type checking users should handle the string serialization themselves
-        # We will accept any type for the list and serialize to str just in case
-        if isinstance(value, Iterable) and not isinstance(value, str):
-            self._query_params[key] = [str(item) for item in value]
-        else:
-            self._query_params[key] = str(value)
+        _set_item_in_dict(self._query_params, key, value)
 
     def __delitem__(self, key: str) -> None:
         self._ensure_single_query_api_used()
