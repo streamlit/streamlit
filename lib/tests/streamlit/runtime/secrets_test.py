@@ -602,3 +602,32 @@ class SecretsFallbackTest(DeltaGeneratorTestCase):
                     markdown_text = element.markdown.body
                     assert "Error" not in markdown_text
                     assert "error" not in markdown_text
+
+
+
+def test_secrets_file_not_found_error_message():
+    """Test that the secrets file not found error message properly formats paths."""
+    with patch("streamlit.runtime.secrets.file_util.os.path.isfile") as isfile_mock:
+        isfile_mock.return_value = False
+        
+        # Test Windows path formatting
+        with patch("streamlit.runtime.secrets.file_util.secrets_file_locations") as locations_mock:
+            locations_mock.return_value = ["C:\\Users\\user\\.streamlit\\secrets.toml"]
+            
+            with pytest.raises(FileNotFoundError) as exc_info:
+                secrets = Secrets("fake_path/.streamlit/secrets.toml")
+            
+            error_message = str(exc_info.value)
+            # Verify backticks are present around the path
+            assert "`C:\\Users\\user\\.streamlit\\secrets.toml`" in error_message
+        
+        # Test POSIX path formatting
+        with patch("streamlit.runtime.secrets.file_util.secrets_file_locations") as locations_mock:
+            locations_mock.return_value = ["/home/user/.streamlit/secrets.toml"]
+            
+            with pytest.raises(FileNotFoundError) as exc_info:
+                secrets = Secrets("fake_path/.streamlit/secrets.toml")
+            
+            error_message = str(exc_info.value)
+            # Verify backticks are present around the path
+            assert "`/home/user/.streamlit/secrets.toml`" in error_message
