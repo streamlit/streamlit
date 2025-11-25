@@ -125,6 +125,14 @@ message Config {
   }
   ToolbarMode toolbar_mode = 8;
 
+  // See config option "ui.headerTransparency".
+  enum HeaderTransparency {
+    HEADER_TRANSPARENCY_AUTO = 0;
+    HEADER_TRANSPARENCY_ALWAYS = 1;
+    HEADER_TRANSPARENCY_NEVER = 2;
+  }
+  HeaderTransparency header_transparency = 9;
+
   reserved 1;
 }
 

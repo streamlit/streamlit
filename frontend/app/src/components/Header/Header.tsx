@@ -22,6 +22,7 @@ import {
   DynamicIcon,
   ThemeContext,
 } from "@streamlit/lib"
+import { Config } from "@streamlit/protobuf"
 
 import {
   StyledHeader,
@@ -32,6 +33,7 @@ import {
   StyledLogoContainer,
   StyledOpenSidebarButton,
 } from "./styled-components"
+import { useHeaderTransparency } from "./useHeaderTransparency"
 
 export interface HeaderProps {
   hasSidebar: boolean
@@ -41,6 +43,8 @@ export interface HeaderProps {
   rightContent?: ReactNode
   logoComponent?: ReactNode
   showToolbar: boolean
+  isWideMode: boolean
+  headerTransparency: Config.HeaderTransparency
 }
 
 const Header = ({
@@ -51,6 +55,8 @@ const Header = ({
   rightContent,
   logoComponent,
   showToolbar,
+  isWideMode,
+  headerTransparency,
 }: HeaderProps): ReactElement => {
   const { activeTheme } = useContext(ThemeContext)
 
@@ -69,11 +75,19 @@ const Header = ({
     navigation ||
     shouldShowRightContent
 
+  // Determine if the header should be transparent based on content, layout, and config
+  const { isTransparent, leftRef, rightRef } = useHeaderTransparency(
+    !!navigation,
+    !!hasAnyContent,
+    isWideMode,
+    headerTransparency
+  )
+
   return (
     <StyledHeader
       className="stAppHeader"
       data-testid="stHeader"
-      isTransparentBackground={!hasAnyContent}
+      isTransparentBackground={isTransparent}
     >
       {hasAnyContent ? (
         <StyledHeaderToolbar
@@ -82,7 +96,7 @@ const Header = ({
           theme={activeTheme.emotion}
         >
           <StyledHeaderContent>
-            <StyledHeaderLeftSection>
+            <StyledHeaderLeftSection ref={leftRef}>
               {shouldShowLogo ? (
                 <StyledLogoContainer>{logoComponent}</StyledLogoContainer>
               ) : null}
@@ -104,7 +118,7 @@ const Header = ({
             </StyledHeaderLeftSection>
             {navigation}
             {shouldShowRightContent ? (
-              <StyledHeaderRightSection>
+              <StyledHeaderRightSection ref={rightRef}>
                 {rightContent}
               </StyledHeaderRightSection>
             ) : null}

@@ -177,6 +177,7 @@ interface State {
   allowRunOnSave: boolean
   scriptFinishedHandlers: (() => void)[]
   toolbarMode: Config.ToolbarMode
+  headerTransparency: Config.HeaderTransparency
   themeHash: string
   gitInfo: IGitInfo | null
   formsData: FormsData
@@ -326,6 +327,7 @@ export class App extends PureComponent<Props, State> {
       hideSidebarNav: true,
       expandSidebarNav: false,
       toolbarMode: Config.ToolbarMode.MINIMAL,
+      headerTransparency: Config.HeaderTransparency.HEADER_TRANSPARENCY_AUTO,
       latestRunTime: performance.now(),
       fragmentIdsThisRun: [],
       // Information sent from the host
@@ -1229,6 +1231,7 @@ export class App extends PureComponent<Props, State> {
         allowRunOnSave: config.allowRunOnSave,
         hideTopBar: config.hideTopBar,
         toolbarMode: config.toolbarMode,
+        headerTransparency: config.headerTransparency,
         latestRunTime: performance.now(),
         mainScriptHash,
         // If we're here, the fragmentIdsThisRun variable is always the
@@ -2204,6 +2207,7 @@ export class App extends PureComponent<Props, State> {
       scriptRunState,
       userSettings,
       hideTopBar,
+      headerTransparency,
       hideSidebarNav,
       expandSidebarNav,
       currentPageScriptHash,
@@ -2309,6 +2313,7 @@ export class App extends PureComponent<Props, State> {
                 inputsDisabled || connectionState !== ConnectionState.CONNECTED
               }
               showToolbar={showToolbar}
+              headerTransparency={headerTransparency}
               disableFullscreenMode={libConfig.disableFullscreenMode}
               componentRegistry={this.componentRegistry}
               topRightContent={

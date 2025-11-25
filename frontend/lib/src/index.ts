@@ -85,6 +85,7 @@ export { useEmotionTheme } from "./hooks/useEmotionTheme"
 export { useExecuteWhenChanged } from "./hooks/useExecuteWhenChanged"
 export { ensureHotkeysFilterConfigured } from "./hooks/useRegisterShortcut"
 export { useRequiredContext } from "./hooks/useRequiredContext"
+export { useResizeObserver } from "./hooks/useResizeObserver"
 export {
   measureScrollbarGutterSize,
   useScrollbarGutterSize,

@@ -36,6 +36,7 @@ import {
 import { render, renderWithContexts } from "@streamlit/lib/testing"
 import {
   Block as BlockProto,
+  Config,
   Element,
   ForwardMsgMetadata,
   Logo as LogoProto,
@@ -101,6 +102,7 @@ function getProps(props: Partial<AppViewProps> = {}): AppViewProps {
     embedded: false,
     widgetsDisabled: false,
     showToolbar: true,
+    headerTransparency: Config.HeaderTransparency.HEADER_TRANSPARENCY_AUTO,
     showPadding: false,
     disableScrolling: false,
     navigationPosition: Navigation.Position.SIDEBAR,

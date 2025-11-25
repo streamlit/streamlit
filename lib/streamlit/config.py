@@ -1098,6 +1098,21 @@ _create_option(
     visibility="hidden",
 )
 
+_create_option(
+    "ui.headerTransparency",
+    description="""
+        Controls the header transparency behavior.
+
+        Supported values:
+        - "auto": Header is transparent when empty, solid when it has content (default)
+        - "always": Header is always transparent with content fading in on hover/scroll
+        - "never": Header always has a solid background
+    """,
+    default_val="auto",
+    type_=str,
+    visibility="hidden",
+)
+
 
 # Config Section: Mapbox #
 

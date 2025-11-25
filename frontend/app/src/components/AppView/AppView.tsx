@@ -51,7 +51,7 @@ import {
   useWindowDimensionsContext,
   WidgetStateManager,
 } from "@streamlit/lib"
-import { Navigation } from "@streamlit/protobuf"
+import { Config, Navigation } from "@streamlit/protobuf"
 
 import ScrollToBottomContainer from "./ScrollToBottomContainer"
 import {
@@ -99,6 +99,8 @@ export interface AppViewProps {
 
   showToolbar: boolean
 
+  headerTransparency: Config.HeaderTransparency
+
   disableFullscreenMode?: boolean
 
   componentRegistry: ComponentRegistry
@@ -124,6 +126,7 @@ function AppView(props: AppViewProps): ReactElement {
     removeScriptFinishedHandler,
     widgetsDisabled,
     showToolbar,
+    headerTransparency,
     disableFullscreenMode,
     componentRegistry,
   } = props
@@ -326,6 +329,8 @@ function AppView(props: AppViewProps): ReactElement {
             rightContent={topRightContent}
             logoComponent={logoElement}
             showToolbar={showToolbar}
+            isWideMode={wideMode}
+            headerTransparency={headerTransparency}
           />
           <Component
             tabIndex={0}

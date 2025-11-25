@@ -42,6 +42,8 @@ export const StyledHeader = styled.header<StyledHeaderProps>(
     zIndex: theme.zIndices.header,
     pointerEvents: isTransparentBackground ? "none" : "auto",
     fontSize: theme.fontSizes.sm,
+    // Smooth transition for background color changes (used by dynamic header transparency)
+    transition: "background 150ms ease-in-out",
     "@media print": {
       position: "absolute",
       background: "transparent",
