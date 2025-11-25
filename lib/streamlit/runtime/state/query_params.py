@@ -243,7 +243,6 @@ def process_query_params(
             value = query_params[key]
             _set_item_in_dict(processed_params, key, value)
     else:
-        query_params = cast("Iterable[tuple[str, str | Iterable[str]]]", query_params)
         for key, value in query_params:
             if key in processed_params:
                 # If the key already exists, we need to accumulate the values.
