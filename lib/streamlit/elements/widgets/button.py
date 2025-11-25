@@ -930,8 +930,10 @@ class ButtonMixin:
               of the parent container.
 
         query_params : dict, list of tuples, or None
-            The query parameters to set when switching pages. This can be a
-            dictionary or an iterable of key-value pairs.
+            Query parameters to apply when navigating to the target page. This
+            can be a dictionary or an iterable of key-value tuples. Values can
+            be strings or iterables of strings (for repeated keys). When
+            omitted, all non-embed query parameters are cleared during navigation.
 
         Example
         -------
@@ -946,7 +948,7 @@ class ButtonMixin:
         >>> import streamlit as st
         >>>
         >>> st.page_link("your_app.py", label="Home", icon="🏠")
-        >>> st.page_link("pages/page_1.py", label="Page 1", icon="1️⃣")
+        >>> st.page_link("pages/page_1.py", label="Page 1", icon="1️⃣", query_params={"team": "streamlit"})
         >>> st.page_link("pages/page_2.py", label="Page 2", icon="2️⃣", disabled=True)
         >>> st.page_link("http://www.google.com", label="Google", icon="🌎")
 

@@ -1743,10 +1743,12 @@ export class App extends PureComponent<Props, State> {
         const preservedQueryParams = preserveEmbedQueryParams()
 
         if (queryStringOverride !== undefined) {
-          if (preservedQueryParams && queryStringOverride) {
-            queryString = `${preservedQueryParams}&${queryStringOverride}`
+          if (preservedQueryParams) {
+            queryString = queryStringOverride
+              ? `${preservedQueryParams}&${queryStringOverride}`
+              : preservedQueryParams
           } else {
-            queryString = queryStringOverride || preservedQueryParams
+            queryString = queryStringOverride
           }
         } else {
           queryString = preservedQueryParams
