@@ -62,7 +62,15 @@ function PageLink(props: Readonly<Props>): ReactElement {
 
   let href = element.page
   if (element.external && element.queryString) {
-    href += (href.includes("?") ? "&" : "?") + element.queryString
+    try {
+      const url = new URL(element.page)
+      const params = new URLSearchParams(element.queryString)
+      params.forEach((value, key) => url.searchParams.append(key, value))
+      href = url.toString()
+    } catch {
+      // Fallback to original logic if URL parsing fails
+      href += (href.includes("?") ? "&" : "?") + element.queryString
+    }
   }
 
   return (

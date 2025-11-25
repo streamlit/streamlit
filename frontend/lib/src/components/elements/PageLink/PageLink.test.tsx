@@ -222,7 +222,7 @@ describe("PageLink", () => {
     render(<PageLink {...props} />)
 
     const pageLink = screen.getByTestId("stPageLink-NavLink")
-    expect(pageLink).toHaveAttribute("href", "http://example.com?foo=bar")
+    expect(pageLink).toHaveAttribute("href", "http://example.com/?foo=bar")
   })
 
   it("constructs href with queryString for external links when URL already has query params", () => {
@@ -236,7 +236,23 @@ describe("PageLink", () => {
     const pageLink = screen.getByTestId("stPageLink-NavLink")
     expect(pageLink).toHaveAttribute(
       "href",
-      "http://example.com?baz=qux&foo=bar"
+      "http://example.com/?baz=qux&foo=bar"
+    )
+  })
+
+  it("constructs href with queryString for external links with fragment", () => {
+    const props = getProps({
+      page: "http://example.com#section",
+      external: true,
+      queryString: "foo=bar",
+    })
+    render(<PageLink {...props} />)
+
+    const pageLink = screen.getByTestId("stPageLink-NavLink")
+    // Query params should be placed before the fragment
+    expect(pageLink).toHaveAttribute(
+      "href",
+      "http://example.com/?foo=bar#section"
     )
   })
 
