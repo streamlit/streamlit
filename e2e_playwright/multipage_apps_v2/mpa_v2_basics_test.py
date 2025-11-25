@@ -439,6 +439,32 @@ def test_removes_non_embed_query_params_when_swapping_pages(app: Page, app_port:
     )
 
 
+def test_preserves_query_params_on_browser_back_navigation(app: Page, app_port: int):
+    """Test that query params are preserved on first script run after browser back button.
+
+    Regression test for https://github.com/streamlit/streamlit/issues/9279
+    """
+    # Navigate to main page with query params
+    goto_app(app, f"http://localhost:{app_port}/?mykey=myvalue")
+    expect(app).to_have_url(f"http://localhost:{app_port}/?mykey=myvalue")
+
+    # Verify query params are displayed
+    expect_prefixed_markdown(app, "Query Params:", "{'mykey': 'myvalue'}")
+
+    # Navigate to another page via sidebar (this clears query params)
+    get_page_link(app, "page 4").click()
+    wait_for_app_loaded(app)
+    expect(app).to_have_url(f"http://localhost:{app_port}/page_4")
+
+    # Use browser back button to return to main page with query params
+    app.go_back()
+    wait_for_app_loaded(app)
+
+    # Verify query params are preserved on the first script run after back navigation
+    expect(app).to_have_url(f"http://localhost:{app_port}/?mykey=myvalue")
+    expect_prefixed_markdown(app, "Query Params:", "{'mykey': 'myvalue'}")
+
+
 def test_renders_logos(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that logos display properly in sidebar and main sections."""
 
