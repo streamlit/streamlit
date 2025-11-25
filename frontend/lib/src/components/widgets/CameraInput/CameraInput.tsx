@@ -232,10 +232,10 @@ const CameraInput = ({
    * Toggle between front and back camera.
    */
   const handleSetFacingMode = useCallback((): void => {
-    setFacingMode(
-      facingMode === FacingMode.USER ? FacingMode.ENVIRONMENT : FacingMode.USER
+    setFacingMode(prevMode =>
+      prevMode === FacingMode.USER ? FacingMode.ENVIRONMENT : FacingMode.USER
     )
-  }, [facingMode, setFacingMode])
+  }, [setFacingMode])
 
   /**
    * Get a file by its local ID.
