@@ -96,7 +96,7 @@ describe("PageLink", () => {
 
     const pageNavLink = screen.getByTestId("stPageLink-NavLink")
     await user.click(pageNavLink)
-    expect(mockOnPageChange).toHaveBeenCalledWith("main_page_hash")
+    expect(mockOnPageChange).toHaveBeenCalledWith("main_page_hash", "")
   })
 
   it("triggers onPageChange with pageScriptHash and queryString when clicked", async () => {
