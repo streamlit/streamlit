@@ -76,10 +76,10 @@ class QueryParams(MutableMapping[str, str]):
 
     def __setitem__(self, key: str, value: str | Iterable[str]) -> None:
         self._ensure_single_query_api_used()
-        self.__set_item_internal(key, value)
+        self._set_item_internal(key, value)
         self._send_query_param_msg()
 
-    def __set_item_internal(self, key: str, value: str | Iterable[str]) -> None:
+    def _set_item_internal(self, key: str, value: str | Iterable[str]) -> None:
         _set_item_in_dict(self._query_params, key, value)
 
     def __delitem__(self, key: str) -> None:
@@ -105,12 +105,12 @@ class QueryParams(MutableMapping[str, str]):
         if hasattr(other, "keys") and hasattr(other, "__getitem__"):
             other = cast("SupportsKeysAndGetItem[str, str | Iterable[str]]", other)
             for key in other.keys():  # noqa: SIM118
-                self.__set_item_internal(key, other[key])
+                self._set_item_internal(key, other[key])
         else:
             for key, value in other:
-                self.__set_item_internal(key, value)
+                self._set_item_internal(key, value)
         for key, value in kwds.items():
-            self.__set_item_internal(key, value)
+            self._set_item_internal(key, value)
         self._send_query_param_msg()
 
     def get_all(self, key: str) -> list[str]:
