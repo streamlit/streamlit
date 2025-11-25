@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-import React, { memo, ReactElement } from "react"
+import React, { memo, ReactElement, useMemo } from "react"
 
 import { range } from "lodash-es"
 
-import { Arrow as ArrowProto } from "@streamlit/protobuf"
+import { Arrow as ArrowProto, IArrow } from "@streamlit/protobuf"
 
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import { format as formatArrowCell } from "~lib/dataframes/arrowFormatUtils"
@@ -26,6 +26,7 @@ import {
   DataFrameCellType,
   isNumericType,
 } from "~lib/dataframes/arrowTypeUtils"
+import { mergeQuiverData } from "~lib/dataframes/dataframeUtils"
 import {
   getStyledCell,
   getStyledHeaders,
@@ -44,11 +45,21 @@ import {
 
 export interface TableProps {
   element: ArrowProto
-  data: Quiver
+  addedRowsList?: IArrow[]
 }
 
 export function ArrowTable(props: Readonly<TableProps>): ReactElement {
-  const table = props.data
+  // Instantiate Quiver from proto data (apache-arrow loads here, not in entry bundle)
+  const table = useMemo(() => {
+    let quiver = new Quiver(props.element)
+    // Merge all added rows sequentially
+    if (props.addedRowsList) {
+      for (const addedRows of props.addedRowsList) {
+        quiver = mergeQuiverData(quiver, addedRows)
+      }
+    }
+    return quiver
+  }, [props.element, props.addedRowsList])
   const { cssId, cssStyles, caption } = table.styler ?? {}
   const { numHeaderRows, numDataRows, numColumns } = table.dimensions
   const dataRowIndices = range(numDataRows)

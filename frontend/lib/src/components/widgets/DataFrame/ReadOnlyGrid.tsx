@@ -16,14 +16,19 @@
 
 import React from "react"
 
-import { Arrow, Arrow as ArrowProto, streamlit } from "@streamlit/protobuf"
+import {
+  Arrow,
+  Arrow as ArrowProto,
+  IArrow,
+  streamlit,
+} from "@streamlit/protobuf"
 
-import { Quiver } from "~lib/dataframes/Quiver"
+import type { Quiver } from "~lib/dataframes/Quiver"
 
 import DataFrame from "./DataFrame"
 
 interface ReadOnlyGridProps {
-  data: Quiver
+  data: IArrow | Quiver
   height?: number
   width?: streamlit.IWidthConfig
   customToolbarActions?: React.ReactNode[]
@@ -58,8 +63,9 @@ export const ReadOnlyGrid = ({
           // Enforces read-only mode:
           editingMode: Arrow.EditingMode.READ_ONLY,
           disabled: true,
-          // Data is provided via the data property below:
-          data: undefined,
+          // Data from the provided IArrow (or extract from Quiver):
+          data:
+            "data" in data ? data.data || new Uint8Array() : new Uint8Array(),
           styler: null,
           width: undefined,
           height: height ?? null,
@@ -70,7 +76,6 @@ export const ReadOnlyGrid = ({
           selectionMode: [],
         })
       }
-      data={data}
       widgetMgr={undefined}
       disabled={true}
       fragmentId={undefined}

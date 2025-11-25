@@ -47,7 +47,7 @@ import {
 import { Resizable } from "re-resizable"
 import { createPortal } from "react-dom"
 
-import { Arrow as ArrowProto, streamlit } from "@streamlit/protobuf"
+import { Arrow as ArrowProto, IArrow, streamlit } from "@streamlit/protobuf"
 
 import { FlexContext } from "~lib/components/core/Layout/FlexContext"
 import { LibConfigContext } from "~lib/components/core/LibConfigContext"
@@ -55,6 +55,7 @@ import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscre
 import { withFullScreenWrapper } from "~lib/components/shared/FullScreenWrapper"
 import Toolbar, { ToolbarAction } from "~lib/components/shared/Toolbar"
 import { useFormClearHelper } from "~lib/components/widgets/Form"
+import { mergeQuiverData } from "~lib/dataframes/dataframeUtils"
 import { Quiver } from "~lib/dataframes/Quiver"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useDebouncedCallback } from "~lib/hooks/useDebouncedCallback"
@@ -124,7 +125,7 @@ export interface DataframeState {
 
 export interface DataFrameProps {
   element: ArrowProto
-  data: Quiver
+  addedRowsList?: IArrow[]
   disabled: boolean
   widgetMgr: WidgetStateManager | undefined
   disableFullscreenMode?: boolean
@@ -139,13 +140,13 @@ export interface DataFrameProps {
  * The main component used by dataframe & data_editor to render an editable table.
  *
  * @param element - The element's proto message
- * @param data - The Arrow data to render (extracted from the proto message)
+ * @param addedRowsList - Optional list of added rows data to merge with the main data
  * @param disabled - Whether the widget is disabled
  * @param widgetMgr - The widget manager
  */
 function DataFrame({
   element,
-  data,
+  addedRowsList,
   disabled,
   widgetMgr,
   disableFullscreenMode,
@@ -154,6 +155,17 @@ function DataFrame({
   widthConfig,
   heightConfig,
 }: Readonly<DataFrameProps>): ReactElement {
+  // Instantiate Quiver from proto data (apache-arrow loads here, not in entry bundle)
+  const data = useMemo(() => {
+    let quiver = new Quiver(element)
+    // Merge all added rows sequentially
+    if (addedRowsList) {
+      for (const addedRows of addedRowsList) {
+        quiver = mergeQuiverData(quiver, addedRows)
+      }
+    }
+    return quiver
+  }, [element, addedRowsList])
   const {
     expanded: isFullScreen,
     expand,

@@ -21,7 +21,6 @@ import { screen } from "@testing-library/react"
 
 import { Arrow as ArrowProto } from "@streamlit/protobuf"
 
-import { Quiver } from "~lib/dataframes/Quiver"
 import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
 import { TEN_BY_TEN } from "~lib/mocks/arrow"
 import { render } from "~lib/test_util"
@@ -39,18 +38,17 @@ vi.mock("native-file-system-adapter", () => ({}))
 import DataFrame, { DataFrameProps } from "./DataFrame"
 
 const getProps = (
-  data: Quiver,
+  data: Uint8Array = TEN_BY_TEN,
   useContainerWidth = false,
   editingMode: ArrowProto.EditingMode = ArrowProto.EditingMode.READ_ONLY
 ): DataFrameProps => ({
   element: ArrowProto.create({
-    data: new Uint8Array(),
+    data,
     useContainerWidth,
     width: 400,
     height: 400,
     editingMode,
   }),
-  data,
   disabled: false,
   widgetMgr: {
     getStringValue: vi.fn(),
@@ -61,7 +59,7 @@ const getProps = (
 const { ResizeObserver } = window
 
 describe("DataFrame widget", () => {
-  const props = getProps(new Quiver({ data: TEN_BY_TEN }))
+  const props = getProps(TEN_BY_TEN)
 
   beforeEach(() => {
     vi.spyOn(UseResizeObserver, "useResizeObserver").mockReturnValue({
@@ -82,7 +80,7 @@ describe("DataFrame widget", () => {
 
   it("renders when widgetMgr is undefined", () => {
     const propsWithoutWidgetMgr = {
-      ...getProps(new Quiver({ data: TEN_BY_TEN })),
+      ...getProps(TEN_BY_TEN),
       widgetMgr: undefined,
     }
 
@@ -119,11 +117,7 @@ describe("DataFrame widget", () => {
 
     render(
       <DataFrame
-        {...getProps(
-          new Quiver({ data: TEN_BY_TEN }),
-          true,
-          ArrowProto.EditingMode.FIXED
-        )}
+        {...getProps(TEN_BY_TEN, true, ArrowProto.EditingMode.FIXED)}
       />
     )
     // You have to set a second arg with {} to test work and get the received props

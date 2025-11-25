@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-import { produce } from "immer"
-
 import {
   ArrowNamedDataSet,
   Arrow as ArrowProto,
@@ -23,14 +21,7 @@ import {
   Element,
   ForwardMsgMetadata,
   IArrow,
-  IArrowNamedDataSet,
 } from "@streamlit/protobuf"
-
-import {
-  VegaLiteChartElement,
-  WrappedNamedDataset,
-} from "~lib/components/elements/ArrowVegaLiteChart"
-import { Quiver } from "~lib/dataframes/Quiver"
 
 import { AppNode } from "./AppNode.interface"
 import { AppNodeVisitor } from "./visitors/AppNodeVisitor.interface"
@@ -48,9 +39,17 @@ export class ElementNode implements AppNode {
 
   public readonly fragmentId?: string
 
-  private lazyQuiverElement?: Quiver
+  // Store raw arrow data instead of Quiver to avoid loading apache-arrow in entry bundle
+  private cachedArrowData?: ArrowProto
 
-  private lazyVegaLiteChartElement?: VegaLiteChartElement
+  // Store array of added rows to accumulate multiple add_rows calls
+  private cachedAddedRowsList?: IArrow[]
+
+  // For VegaLite charts, store the proto and addRows data separately
+  private lazyVegaLiteChartElement?: ArrowVegaLiteChartProto
+
+  // Store array of added rows for VegaLite to accumulate multiple add_rows calls
+  private vegaLiteAddedRowsList?: ArrowNamedDataSet[]
 
   // The hash of the script that created this element.
   public readonly activeScriptHash: string
@@ -70,9 +69,17 @@ export class ElementNode implements AppNode {
     this.fragmentId = fragmentId
   }
 
-  public get quiverElement(): Quiver {
-    if (this.lazyQuiverElement !== undefined) {
-      return this.lazyQuiverElement
+  /**
+   * Get the raw Arrow data for this element.
+   * Returns ArrowProto that can be used to instantiate Quiver in the component.
+   * This avoids importing apache-arrow in the entry bundle.
+   */
+  public get arrowData(): { data: ArrowProto; addedRowsList?: IArrow[] } {
+    if (this.cachedArrowData !== undefined) {
+      return {
+        data: this.cachedArrowData,
+        addedRowsList: this.cachedAddedRowsList,
+      }
     }
 
     if (
@@ -80,19 +87,28 @@ export class ElementNode implements AppNode {
       this.element.type !== "arrowDataFrame"
     ) {
       throw new Error(
-        `elementType '${this.element.type}' is not a valid Quiver element!`
+        `elementType '${this.element.type}' is not a valid Arrow element!`
       )
     }
 
-    const toReturn = new Quiver(this.element[this.element.type] as ArrowProto)
-    // TODO (lukasmasuch): Delete element from proto object?
-    this.lazyQuiverElement = toReturn
-    return toReturn
+    const arrowProto = this.element[this.element.type] as ArrowProto
+    this.cachedArrowData = arrowProto
+    return { data: arrowProto, addedRowsList: this.cachedAddedRowsList }
   }
 
-  public get vegaLiteChartElement(): VegaLiteChartElement {
+  /**
+   * Get the VegaLiteChartElement. Returns raw proto and any pending addRows data
+   * separately, avoiding loading apache-arrow in the entry bundle.
+   */
+  public get vegaLiteChartElement(): {
+    proto: ArrowVegaLiteChartProto
+    addedRowsList?: ArrowNamedDataSet[]
+  } {
     if (this.lazyVegaLiteChartElement !== undefined) {
-      return this.lazyVegaLiteChartElement
+      return {
+        proto: this.lazyVegaLiteChartElement,
+        addedRowsList: this.vegaLiteAddedRowsList,
+      }
     }
 
     if (this.element.type !== "arrowVegaLiteChart") {
@@ -102,25 +118,19 @@ export class ElementNode implements AppNode {
     }
 
     const proto = this.element.arrowVegaLiteChart as ArrowVegaLiteChartProto
-    const modifiedData = proto.data ? new Quiver(proto.data) : null
-    const modifiedDatasets =
-      proto.datasets.length > 0 ? wrapDatasets(proto.datasets) : []
 
-    const toReturn = {
-      data: modifiedData,
-      spec: proto.spec,
-      datasets: modifiedDatasets,
-      useContainerWidth: proto.useContainerWidth,
-      vegaLiteTheme: proto.theme,
-      id: proto.id,
-      selectionMode: proto.selectionMode,
-      formId: proto.formId,
+    // Cache proto - ArrowVegaLiteChart component will instantiate Quiver
+    this.lazyVegaLiteChartElement = proto
+    return {
+      proto,
+      addedRowsList: this.vegaLiteAddedRowsList,
     }
-
-    this.lazyVegaLiteChartElement = toReturn
-    return toReturn
   }
 
+  /**
+   * Store added rows data without instantiating Quiver.
+   * The component will handle merging when it instantiates Quiver.
+   */
   public arrowAddRows(
     namedDataSet: ArrowNamedDataSet,
     scriptRunId: string
@@ -134,21 +144,38 @@ export class ElementNode implements AppNode {
       this.fragmentId
     )
 
+    // Copy cached data from current node
+    newNode.cachedArrowData = this.cachedArrowData
+    newNode.cachedAddedRowsList = this.cachedAddedRowsList
+      ? [...this.cachedAddedRowsList]
+      : undefined
+
     switch (elementType) {
       case "arrowTable":
       case "arrowDataFrame": {
-        newNode.lazyQuiverElement = ElementNode.quiverAddRowsHelper(
-          this.quiverElement,
-          namedDataSet
-        )
+        if (namedDataSet.hasName) {
+          throw new Error(
+            "Add rows cannot be used with a named dataset for this element."
+          )
+        }
+        // Append the new data to the list of added rows
+        if (!newNode.cachedAddedRowsList) {
+          newNode.cachedAddedRowsList = []
+        }
+        newNode.cachedAddedRowsList.push(namedDataSet.data as IArrow)
         break
       }
       case "arrowVegaLiteChart": {
+        // For VegaLite, store the proto and addRows data separately
+        // Use cached proto if available, otherwise read from element
         newNode.lazyVegaLiteChartElement =
-          ElementNode.vegaLiteChartAddRowsHelper(
-            this.vegaLiteChartElement,
-            namedDataSet
-          )
+          this.lazyVegaLiteChartElement ??
+          (this.element.arrowVegaLiteChart as ArrowVegaLiteChartProto)
+        // Copy the list of added rows and append the new one
+        newNode.vegaLiteAddedRowsList = this.vegaLiteAddedRowsList
+          ? [...this.vegaLiteAddedRowsList]
+          : []
+        newNode.vegaLiteAddedRowsList.push(namedDataSet)
         break
       }
       default: {
@@ -160,39 +187,6 @@ export class ElementNode implements AppNode {
     }
 
     return newNode
-  }
-
-  private static quiverAddRowsHelper(
-    element: Quiver,
-    namedDataSet: ArrowNamedDataSet
-  ): Quiver {
-    if (namedDataSet.hasName) {
-      throw new Error(
-        "Add rows cannot be used with a named dataset for this element."
-      )
-    }
-
-    const newQuiver = new Quiver(namedDataSet.data as IArrow)
-    return element.addRows(newQuiver)
-  }
-
-  private static vegaLiteChartAddRowsHelper(
-    element: VegaLiteChartElement,
-    namedDataSet: ArrowNamedDataSet
-  ): VegaLiteChartElement {
-    const newDataSetName = namedDataSet.hasName ? namedDataSet.name : null
-    const newDataSetQuiver = new Quiver(namedDataSet.data as IArrow)
-
-    return produce(element, (draft: VegaLiteChartElement) => {
-      const existingDataSet = getNamedDataSet(draft.datasets, newDataSetName)
-      if (existingDataSet) {
-        existingDataSet.data = existingDataSet.data.addRows(newDataSetQuiver)
-      } else {
-        draft.data = draft.data
-          ? draft.data.addRows(newDataSetQuiver)
-          : newDataSetQuiver
-      }
-    })
   }
 
   /**
@@ -217,33 +211,4 @@ export class ElementNode implements AppNode {
   public debug(): string {
     return this.accept(new DebugVisitor())
   }
-}
-
-/**
- * If there is only one NamedDataSet, return it.
- * If there is a NamedDataset that matches the given name, return it.
- * Otherwise, return `undefined`.
- */
-function getNamedDataSet(
-  namedDataSets: WrappedNamedDataset[],
-  name: string | null
-): WrappedNamedDataset | undefined {
-  if (namedDataSets.length === 1) {
-    return namedDataSets[0]
-  }
-
-  return namedDataSets.find(
-    (dataset: WrappedNamedDataset) => dataset.hasName && dataset.name === name
-  )
-}
-
-/** Iterates over datasets and converts data to Quiver. */
-function wrapDatasets(datasets: IArrowNamedDataSet[]): WrappedNamedDataset[] {
-  return datasets.map((dataset: IArrowNamedDataSet) => {
-    return {
-      hasName: dataset.hasName as boolean,
-      name: dataset.name as string,
-      data: new Quiver(dataset.data as IArrow),
-    }
-  })
 }

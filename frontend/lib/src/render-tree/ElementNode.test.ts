@@ -27,37 +27,37 @@ import {
 } from "./test-utils"
 
 describe("ElementNode", () => {
-  describe("ElementNode.quiverElement", () => {
-    it("returns a quiverElement (arrowTable)", () => {
+  describe("ElementNode.arrowData", () => {
+    it("returns arrowData (arrowTable)", () => {
       const node = arrowTable()
-      const q = node.quiverElement
-      expect(q.columnNames).toEqual([["", "c1", "c2"]])
-      expect(q.getCell(0, 0).content).toEqual("i1")
+      const arrowData = node.arrowData
+      expect(arrowData.data).toBeDefined()
+      expect(arrowData.data.data).toBeDefined()
     })
 
-    it("returns a quiverElement (arrowDataFrame)", () => {
+    it("returns arrowData (arrowDataFrame)", () => {
       const node = arrowDataFrame()
-      const q = node.quiverElement
-      expect(q.columnNames).toEqual([["", "c1", "c2"]])
-      expect(q.getCell(0, 0).content).toEqual("i1")
+      const arrowData = node.arrowData
+      expect(arrowData.data).toBeDefined()
+      expect(arrowData.data.data).toBeDefined()
     })
 
     it("does not recompute its value (arrowTable)", () => {
-      // accessing `quiverElement` twice should return the same instance.
+      // accessing `arrowData` twice should return the same instance.
       const node = arrowTable()
-      expect(node.quiverElement).toStrictEqual(node.quiverElement)
+      expect(node.arrowData).toStrictEqual(node.arrowData)
     })
 
     it("does not recompute its value (arrowDataFrame)", () => {
-      // accessing `quiverElement` twice should return the same instance.
+      // accessing `arrowData` twice should return the same instance.
       const node = arrowDataFrame()
-      expect(node.quiverElement).toStrictEqual(node.quiverElement)
+      expect(node.arrowData).toStrictEqual(node.arrowData)
     })
 
     it("throws an error for other element types", () => {
       const node = text("foo")
-      expect(() => node.quiverElement).toThrow(
-        "elementType 'text' is not a valid Quiver element!"
+      expect(() => node.arrowData).toThrow(
+        "elementType 'text' is not a valid Arrow element!"
       )
     })
   })
@@ -82,22 +82,22 @@ describe("ElementNode", () => {
       const element = node.vegaLiteChartElement
 
       // spec
-      expect(element.spec).toEqual(MOCK_VEGA_LITE_CHART.spec)
+      expect(element.proto.spec).toEqual(MOCK_VEGA_LITE_CHART.spec)
 
-      // data
-      expect(element.data?.columnNames).toEqual([["", "c1", "c2"]])
-      expect(element.data?.getCell(0, 0).content).toEqual("i1")
+      // data - returns raw proto
+      expect(element.proto.data).toBeDefined()
+      expect(element.proto.data?.data).toBeDefined()
 
       // datasets
-      expect(element.datasets.length).toEqual(0)
+      expect(element.proto.datasets?.length).toEqual(0)
 
       // use container width
-      expect(element.useContainerWidth).toEqual(
+      expect(element.proto.useContainerWidth).toEqual(
         MOCK_VEGA_LITE_CHART.useContainerWidth
       )
     })
 
-    it("returns a vegaLiteChartElement (datasets)", () => {
+    it("returns a vegaLiteChartElement proto (datasets)", () => {
       const MOCK_VEGA_LITE_CHART = {
         spec: JSON.stringify({
           mark: "circle",
@@ -116,23 +116,19 @@ describe("ElementNode", () => {
       const element = node.vegaLiteChartElement
 
       // spec
-      expect(element.spec).toEqual(MOCK_VEGA_LITE_CHART.spec)
+      expect(element.proto.spec).toEqual(MOCK_VEGA_LITE_CHART.spec)
 
-      // data
-      expect(element.data).toEqual(null)
+      // data - returns raw proto
+      expect(element.proto.data).toEqual(null)
 
-      // datasets
-      expect(element.datasets[0].hasName).toEqual(
-        MOCK_VEGA_LITE_CHART.datasets[0].hasName
-      )
-      expect(element.datasets[0].name).toEqual(
-        MOCK_VEGA_LITE_CHART.datasets[0].name
-      )
-      expect(element.datasets[0].data.columnNames).toEqual([["", "c1", "c2"]])
-      expect(element.datasets[0].data.getCell(0, 0).content).toEqual("i1")
+      // datasets - returns raw proto
+      expect(element.proto.datasets?.[0]?.hasName).toEqual(true)
+      expect(element.proto.datasets?.[0]?.name).toEqual("foo")
+      expect(element.proto.datasets?.[0]?.data).toBeDefined()
+      expect(element.proto.datasets?.[0]?.data?.data).toBeDefined()
 
       // use container width
-      expect(element.useContainerWidth).toEqual(
+      expect(element.proto.useContainerWidth).toEqual(
         MOCK_VEGA_LITE_CHART.useContainerWidth
       )
     })
@@ -185,20 +181,18 @@ describe("ElementNode", () => {
     } as ArrowNamedDataSet
 
     describe("arrowTable", () => {
-      test("addRows can be called with an unnamed dataset", () => {
+      test("addRows stores the added rows data", () => {
         const node = arrowTable()
         const newNode = node.arrowAddRows(
           MOCK_UNNAMED_DATASET,
           NO_SCRIPT_RUN_ID
         )
-        const q = newNode.quiverElement
+        const arrowData = newNode.arrowData
 
-        expect(q.columnNames).toEqual([["", "c1", "c2"]])
-        expect(q.dimensions.numDataRows).toEqual(4)
-        expect(q.getCell(0, 0).content).toEqual("i1")
-        expect(q.getCell(2, 0).content).toEqual("i1")
-        expect(q.getCell(0, 1).content).toEqual("foo")
-        expect(q.getCell(2, 1).content).toEqual("foo")
+        // Check that we have both original data and addedRows
+        expect(arrowData.data).toBeDefined()
+        expect(arrowData.addedRows).toBeDefined()
+        expect(arrowData.addedRows).toBe(MOCK_UNNAMED_DATASET.data)
       })
 
       test("addRows throws an error when called with a named dataset", () => {
@@ -212,20 +206,18 @@ describe("ElementNode", () => {
     })
 
     describe("arrowDataFrame", () => {
-      test("addRows can be called with an unnamed dataset", () => {
+      test("addRows stores the added rows data", () => {
         const node = arrowDataFrame()
         const newNode = node.arrowAddRows(
           MOCK_UNNAMED_DATASET,
           NO_SCRIPT_RUN_ID
         )
-        const q = newNode.quiverElement
+        const arrowData = newNode.arrowData
 
-        expect(q.columnNames).toEqual([["", "c1", "c2"]])
-        expect(q.dimensions.numDataRows).toEqual(4)
-        expect(q.getCell(0, 0).content).toEqual("i1")
-        expect(q.getCell(2, 0).content).toEqual("i1")
-        expect(q.getCell(0, 1).content).toEqual("foo")
-        expect(q.getCell(2, 1).content).toEqual("foo")
+        // Check that we have both original data and addedRows
+        expect(arrowData.data).toBeDefined()
+        expect(arrowData.addedRows).toBeDefined()
+        expect(arrowData.addedRows).toBe(MOCK_UNNAMED_DATASET.data)
       })
 
       test("addRows throws an error when called with a named dataset", () => {
@@ -258,7 +250,7 @@ describe("ElementNode", () => {
       })
 
       describe("addRows is called with a named dataset", () => {
-        test("element has one dataset -> append new rows to that dataset", () => {
+        test("element has one dataset -> stores add rows data for component to handle", () => {
           const node = arrowVegaLiteChart(
             getVegaLiteChart([MOCK_ANOTHER_NAMED_DATASET])
           )
@@ -268,17 +260,14 @@ describe("ElementNode", () => {
           )
           const element = newNode.vegaLiteChartElement
 
-          const quiverData = element.datasets[0].data
-          expect(quiverData?.columnNames).toEqual([["", "c1", "c2"]])
-          expect(quiverData?.dimensions.numDataRows).toEqual(4)
-
-          expect(quiverData?.getCell(0, 0).content).toEqual("i1")
-          expect(quiverData?.getCell(0, 1).content).toEqual("foo")
-          expect(quiverData?.getCell(2, 0).content).toEqual("i1")
-          expect(quiverData?.getCell(2, 1).content).toEqual("foo")
+          // Element now returns proto and addRowsData separately
+          expect(element.addRowsData).toBeDefined()
+          expect(element.addRowsData?.hasName).toBe(true)
+          expect(element.addRowsData?.name).toEqual("foo")
+          expect(element.addRowsData?.data).toBe(MOCK_NAMED_DATASET.data)
         })
 
-        test("element has a dataset with the given name -> append new rows to that dataset", () => {
+        test("element has a dataset with the given name -> stores add rows data", () => {
           const node = arrowVegaLiteChart(
             getVegaLiteChart([MOCK_NAMED_DATASET, MOCK_ANOTHER_NAMED_DATASET])
           )
@@ -288,17 +277,13 @@ describe("ElementNode", () => {
           )
           const element = newNode.vegaLiteChartElement
 
-          const quiverData = element.datasets[0].data
-          expect(quiverData?.columnNames).toEqual([["", "c1", "c2"]])
-          expect(quiverData?.dimensions.numDataRows).toEqual(4)
-
-          expect(quiverData?.getCell(0, 0).content).toEqual("i1")
-          expect(quiverData?.getCell(0, 1).content).toEqual("foo")
-          expect(quiverData?.getCell(2, 0).content).toEqual("i1")
-          expect(quiverData?.getCell(2, 1).content).toEqual("foo")
+          // Element returns proto and addRowsData separately
+          expect(element.addRowsData).toBeDefined()
+          expect(element.addRowsData?.hasName).toBe(true)
+          expect(element.addRowsData?.name).toEqual("foo")
         })
 
-        test("element doesn't have a matched dataset, but has data -> append new rows to data", () => {
+        test("element doesn't have a matched dataset, but has data -> stores add rows data", () => {
           const node = arrowVegaLiteChart(getVegaLiteChart(undefined, UNICODE))
           const newNode = node.arrowAddRows(
             MOCK_NAMED_DATASET,
@@ -306,17 +291,12 @@ describe("ElementNode", () => {
           )
           const element = newNode.vegaLiteChartElement
 
-          const quiverData = element.data
-          expect(quiverData?.columnNames).toEqual([["", "c1", "c2"]])
-          expect(quiverData?.dimensions.numDataRows).toEqual(4)
-
-          expect(quiverData?.getCell(0, 0).content).toEqual("i1")
-          expect(quiverData?.getCell(0, 1).content).toEqual("foo")
-          expect(quiverData?.getCell(2, 0).content).toEqual("i1")
-          expect(quiverData?.getCell(2, 1).content).toEqual("foo")
+          // Element returns proto and addRowsData separately
+          expect(element.addRowsData).toBeDefined()
+          expect(element.addRowsData?.hasName).toBe(true)
         })
 
-        test("element doesn't have a matched dataset or data -> use new rows as data", () => {
+        test("element doesn't have a matched dataset or data -> stores add rows data", () => {
           const node = arrowVegaLiteChart(
             getVegaLiteChart([
               MOCK_ANOTHER_NAMED_DATASET,
@@ -329,15 +309,12 @@ describe("ElementNode", () => {
           )
           const element = newNode.vegaLiteChartElement
 
-          const quiverData = element.data
-          expect(quiverData?.columnNames).toEqual([["", "c1", "c2"]])
-          expect(quiverData?.dimensions.numDataRows).toEqual(2)
-
-          expect(quiverData?.getCell(0, 0).content).toEqual("i1")
-          expect(quiverData?.getCell(0, 1).content).toEqual("foo")
+          // Element returns proto and addRowsData separately
+          expect(element.addRowsData).toBeDefined()
+          expect(element.addRowsData?.hasName).toBe(true)
         })
 
-        test("element doesn't have any datasets or data -> use new rows as data", () => {
+        test("element doesn't have any datasets or data -> stores add rows data", () => {
           const node = arrowVegaLiteChart(getVegaLiteChart())
           const newNode = node.arrowAddRows(
             MOCK_NAMED_DATASET,
@@ -345,17 +322,14 @@ describe("ElementNode", () => {
           )
           const element = newNode.vegaLiteChartElement
 
-          const quiverData = element.data
-          expect(quiverData?.columnNames).toEqual([["", "c1", "c2"]])
-          expect(quiverData?.dimensions.numDataRows).toEqual(2)
-
-          expect(quiverData?.getCell(0, 0).content).toEqual("i1")
-          expect(quiverData?.getCell(0, 1).content).toEqual("foo")
+          // Element returns proto and addRowsData separately
+          expect(element.addRowsData).toBeDefined()
+          expect(element.addRowsData?.hasName).toBe(true)
         })
       })
 
       describe("addRows is called with an unnamed dataset", () => {
-        test("element has one dataset -> append new rows to that dataset", () => {
+        test("element has one dataset -> stores add rows data", () => {
           const node = arrowVegaLiteChart(
             getVegaLiteChart([MOCK_NAMED_DATASET])
           )
@@ -365,17 +339,12 @@ describe("ElementNode", () => {
           )
           const element = newNode.vegaLiteChartElement
 
-          const quiverData = element.datasets[0].data
-          expect(quiverData.columnNames).toEqual([["", "c1", "c2"]])
-          expect(quiverData?.dimensions.numDataRows).toEqual(4)
-
-          expect(quiverData.getCell(0, 0).content).toEqual("i1")
-          expect(quiverData.getCell(2, 0).content).toEqual("i1")
-          expect(quiverData.getCell(0, 1).content).toEqual("foo")
-          expect(quiverData.getCell(2, 1).content).toEqual("foo")
+          // Element returns proto and addRowsData separately
+          expect(element.addRowsData).toBeDefined()
+          expect(element.addRowsData?.hasName).toBe(false)
         })
 
-        test("element has data -> append new rows to data", () => {
+        test("element has data -> stores add rows data", () => {
           const node = arrowVegaLiteChart(getVegaLiteChart(undefined, UNICODE))
           const newNode = node.arrowAddRows(
             MOCK_UNNAMED_DATASET,
@@ -383,17 +352,12 @@ describe("ElementNode", () => {
           )
           const element = newNode.vegaLiteChartElement
 
-          const quiverData = element.data
-          expect(quiverData?.columnNames).toEqual([["", "c1", "c2"]])
-          expect(quiverData?.dimensions.numDataRows).toEqual(4)
-
-          expect(quiverData?.getCell(0, 0).content).toEqual("i1")
-          expect(quiverData?.getCell(2, 0).content).toEqual("i1")
-          expect(quiverData?.getCell(0, 1).content).toEqual("foo")
-          expect(quiverData?.getCell(2, 1).content).toEqual("foo")
+          // Element returns proto and addRowsData separately
+          expect(element.addRowsData).toBeDefined()
+          expect(element.addRowsData?.hasName).toBe(false)
         })
 
-        test("element doesn't have any datasets or data -> use new rows as data", () => {
+        test("element doesn't have any datasets or data -> stores add rows data", () => {
           const node = arrowVegaLiteChart(getVegaLiteChart())
           const newNode = node.arrowAddRows(
             MOCK_UNNAMED_DATASET,
@@ -401,12 +365,9 @@ describe("ElementNode", () => {
           )
           const element = newNode.vegaLiteChartElement
 
-          const quiverData = element.data
-          expect(quiverData?.columnNames).toEqual([["", "c1", "c2"]])
-          expect(quiverData?.dimensions.numDataRows).toEqual(2)
-
-          expect(quiverData?.getCell(0, 0).content).toEqual("i1")
-          expect(quiverData?.getCell(0, 1).content).toEqual("foo")
+          // Element returns proto and addRowsData separately
+          expect(element.addRowsData).toBeDefined()
+          expect(element.addRowsData?.hasName).toBe(false)
         })
       })
     })

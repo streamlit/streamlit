@@ -14,6 +14,12 @@
  * limitations under the License.
  */
 
+import {
+  ArrowNamedDataSet,
+  Arrow as ArrowProto,
+  ArrowVegaLiteChart as ArrowVegaLiteChartProto,
+} from "@streamlit/protobuf"
+
 import { Quiver } from "~lib/dataframes/Quiver"
 import {
   CATEGORICAL,
@@ -27,7 +33,155 @@ import {
   UNICODE,
 } from "~lib/mocks/arrow"
 
-import { getDataArray } from "./arrowUtils"
+import { buildVegaLiteChartElement, getDataArray } from "./arrowUtils"
+
+const BASE_SPEC = JSON.stringify({
+  mark: "bar",
+  encoding: {
+    x: { field: "c1" },
+    y: { field: "c2" },
+  },
+})
+
+function createChartProto(
+  overrides: Partial<ArrowVegaLiteChartProto> = {}
+): ArrowVegaLiteChartProto {
+  return ArrowVegaLiteChartProto.create({
+    spec: BASE_SPEC,
+    data: null,
+    datasets: [],
+    useContainerWidth: false,
+    theme: "streamlitTheme",
+    id: "chart-id",
+    selectionMode: [],
+    formId: "",
+    ...overrides,
+  })
+}
+
+function createNamedDataset(
+  name: string | null,
+  hasName: boolean,
+  data: Uint8Array
+): ArrowNamedDataSet {
+  return ArrowNamedDataSet.create({
+    name: name ?? undefined,
+    hasName,
+    data: ArrowProto.create({ data }),
+  })
+}
+
+describe("buildVegaLiteChartElement", () => {
+  it("builds element with inline data and no addRows", () => {
+    const proto = createChartProto({
+      data: ArrowProto.create({ data: UNICODE }),
+    })
+
+    const element = buildVegaLiteChartElement({ proto })
+
+    expect(element.spec).toEqual(proto.spec)
+    expect(element.data).not.toBeNull()
+    expect(element.datasets).toHaveLength(0)
+    expect(element.rawData).toEqual(proto.data)
+  })
+
+  it("builds element with single dataset and no addRows", () => {
+    const dataset = createNamedDataset("foo", true, UNICODE)
+    const proto = createChartProto({
+      data: null,
+      datasets: [dataset],
+    })
+
+    const element = buildVegaLiteChartElement({ proto })
+
+    expect(element.data).toBeNull()
+    expect(element.datasets).toHaveLength(1)
+    expect(element.datasets[0].hasName).toBe(true)
+    expect(element.datasets[0].name).toBe("foo")
+    expect(element.datasets[0].rawData).toEqual(dataset.data)
+  })
+
+  it("merges addRows into single dataset regardless of name", () => {
+    const baseDataset = createNamedDataset("base", true, UNICODE)
+    const proto = createChartProto({
+      data: null,
+      datasets: [baseDataset],
+    })
+
+    const addRows = createNamedDataset("other-name", true, UNICODE)
+
+    const element = buildVegaLiteChartElement({
+      proto,
+      addRowsData: addRows,
+    })
+
+    expect(element.data).toBeNull()
+    expect(element.datasets).toHaveLength(1)
+
+    const quiver = element.datasets[0].data
+    // We don't assert exact contents, but the merged quiver should have more rows
+    // than the original single table.
+    expect(quiver.dimensions.numDataRows).toBeGreaterThan(0)
+  })
+
+  it("merges addRows into matching named dataset when multiple datasets exist", () => {
+    const base = createNamedDataset("base", true, UNICODE)
+    const target = createNamedDataset("target", true, UNICODE)
+    const proto = createChartProto({
+      data: null,
+      datasets: [base, target],
+    })
+
+    const addRows = createNamedDataset("target", true, UNICODE)
+
+    const element = buildVegaLiteChartElement({
+      proto,
+      addRowsData: addRows,
+    })
+
+    expect(element.datasets).toHaveLength(2)
+
+    const targetDataset = element.datasets.find(d => d.name === "target")
+    expect(targetDataset).toBeDefined()
+    expect(targetDataset?.data.dimensions.numDataRows).toBeGreaterThan(0)
+  })
+
+  it("merges addRows into inline data when no dataset matches", () => {
+    const proto = createChartProto({
+      data: ArrowProto.create({ data: UNICODE }),
+      datasets: [],
+    })
+
+    const addRows = createNamedDataset("unmatched", true, UNICODE)
+
+    const element = buildVegaLiteChartElement({
+      proto,
+      addRowsData: addRows,
+    })
+
+    expect(element.data).not.toBeNull()
+    expect(element.datasets).toHaveLength(0)
+    expect(element.rawData).toEqual(proto.data)
+  })
+
+  it("uses addRows as sole data when there is no data or datasets", () => {
+    const proto = createChartProto({
+      data: null,
+      datasets: [],
+    })
+
+    const addRows = createNamedDataset(null, false, UNICODE)
+
+    const element = buildVegaLiteChartElement({
+      proto,
+      addRowsData: addRows,
+    })
+
+    expect(element.data).not.toBeNull()
+    expect(element.datasets).toHaveLength(0)
+    expect(element.rawData).toEqual(addRows.data)
+  })
+})
 
 describe("Types of dataframe indexes as x axis", () => {
   describe("Supported", () => {

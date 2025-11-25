@@ -14,12 +14,23 @@
  * limitations under the License.
  */
 
-import React, { FC, memo, useEffect, useLayoutEffect, useState } from "react"
+import React, {
+  FC,
+  memo,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useState,
+} from "react"
 
 import { Global } from "@emotion/react"
 import { InsertChart, TableChart } from "@emotion-icons/material-outlined"
 
-import { streamlit } from "@streamlit/protobuf"
+import {
+  ArrowNamedDataSet,
+  ArrowVegaLiteChart as ArrowVegaLiteChartProto,
+  streamlit,
+} from "@streamlit/protobuf"
 
 import {
   shouldHeightStretch,
@@ -36,7 +47,7 @@ import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import { VegaLiteChartElement } from "./arrowUtils"
+import { buildVegaLiteChartElement, VegaLiteChartElement } from "./arrowUtils"
 import {
   StyledVegaLiteChartContainer,
   StyledVegaLiteChartTooltips,
@@ -62,7 +73,8 @@ function isFacetChart(spec: string | object): boolean {
   }
 }
 export interface Props {
-  element: VegaLiteChartElement
+  element: ArrowVegaLiteChartProto
+  addedRowsList?: ArrowNamedDataSet[]
   widgetMgr: WidgetStateManager
   fragmentId?: string
   disableFullscreenMode?: boolean
@@ -72,12 +84,21 @@ export interface Props {
 
 const ArrowVegaLiteChart: FC<Props> = ({
   disableFullscreenMode,
-  element: inputElement,
+  element,
+  addedRowsList,
   fragmentId,
   widgetMgr,
   widthConfig,
   heightConfig,
 }) => {
+  // Convert raw proto to VegaLiteChartElement by instantiating Quiver
+  // This loads apache-arrow only when this component is rendered (not in entry bundle)
+  const inputElement: VegaLiteChartElement = useMemo(() => {
+    return buildVegaLiteChartElement({
+      proto: element,
+      addedRowsList,
+    })
+  }, [element, addedRowsList])
   const [showData, setShowData] = useState(false)
   const [enableShowData, setEnableShowData] = useState(false)
 
@@ -122,7 +143,7 @@ const ArrowVegaLiteChart: FC<Props> = ({
   // 2. Stabilize some aspects of the input element to detect changes in the
   //    configuration of the chart since each element will always provide new references
   //    Note: We do not stabilize data/datasets as that is managed by the embed.
-  const element = useVegaElementPreprocessor(
+  const vegaElement = useVegaElementPreprocessor(
     inputElement,
     // Facet charts enter a loop when using the width/height from the StyledVegaLiteChartContainer.
     isFacet ? (fullScreenWidth ?? 0) : chartContainerWidth,
@@ -134,12 +155,12 @@ const ArrowVegaLiteChart: FC<Props> = ({
   // This hook provides lifecycle functions for creating and removing the view.
   // It also will update the view if the data changes (and not the spec)
   const { createView, updateView, finalizeView } = useVegaEmbed(
-    element,
+    vegaElement,
     widgetMgr,
     fragmentId
   )
 
-  const { data, datasets, spec } = element
+  const { data, datasets, spec } = vegaElement
 
   // Create the view once the container is ready and re-create
   // if the spec changes or the dimensions change.
@@ -192,9 +213,13 @@ const ArrowVegaLiteChart: FC<Props> = ({
   }, [data, datasets])
 
   if (showData) {
+    // Get raw Arrow data for ReadOnlyGrid (it needs IArrow, not Quiver)
+    const rawDataForGrid = inputElement.rawData ??
+      datasets[0]?.rawData ?? { data: new Uint8Array() }
+
     return (
       <ReadOnlyGrid
-        data={data ?? datasets[0]?.data}
+        data={rawDataForGrid}
         height={fullScreenHeight ?? chartContainerHeight ?? undefined}
         width={widthConfig ?? undefined}
         customToolbarActions={[

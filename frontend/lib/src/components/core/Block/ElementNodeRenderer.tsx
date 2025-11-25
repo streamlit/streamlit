@@ -20,7 +20,6 @@ import classNames from "classnames"
 
 import {
   Alert as AlertProto,
-  Arrow as ArrowProto,
   AudioInput as AudioInputProto,
   Audio as AudioProto,
   BidiComponent as BidiComponentProto,
@@ -210,11 +209,11 @@ const RawElementNodeRenderer = (
     }
 
     case "arrowTable": {
-      const arrowProto = node.element.arrowTable as ArrowProto
+      const arrowData = node.arrowData
       return (
         <ArrowTable
-          element={arrowProto}
-          data={node.quiverElement}
+          element={arrowData.data}
+          addedRowsList={arrowData.addedRowsList}
           {...elementProps}
         />
       )
@@ -413,32 +412,33 @@ const RawElementNodeRenderer = (
 
     // Widgets:
     case "arrowDataFrame": {
-      const arrowProto = node.element.arrowDataFrame as ArrowProto
-      widgetProps.disabled = widgetProps.disabled || arrowProto.disabled
+      const arrowData = node.arrowData
+      widgetProps.disabled = widgetProps.disabled || arrowData.data.disabled
       return (
         <ArrowDataFrame
           // Arrow dataframe can be used as a widget (data_editor) or
           // an element (dataframe). We only want to set the key in case of
           // it being used as a widget. For the non-widget usage, the id will
           // be undefined.
-          key={arrowProto.id || undefined}
-          element={arrowProto}
-          data={node.quiverElement}
+          key={arrowData.data.id || undefined}
+          element={arrowData.data}
+          addedRowsList={arrowData.addedRowsList}
           {...widgetProps}
         />
       )
     }
 
     case "arrowVegaLiteChart": {
-      const vegaLiteElement = node.vegaLiteChartElement
+      const vegaLiteData = node.vegaLiteChartElement
       return (
         <ArrowVegaLiteChart
-          element={vegaLiteElement}
+          element={vegaLiteData.proto}
+          addedRowsList={vegaLiteData.addedRowsList}
           // Vega-lite chart can be used as a widget (when selections are activated) or
           // an element. We only want to set the key in case of it being used as a widget
           // since otherwise it might break some apps that show the same charts multiple times.
           // So we only compute an element ID if it's a widget, otherwise its an empty string.
-          key={vegaLiteElement.id || undefined}
+          key={vegaLiteData.proto.id || undefined}
           {...widgetProps}
         />
       )

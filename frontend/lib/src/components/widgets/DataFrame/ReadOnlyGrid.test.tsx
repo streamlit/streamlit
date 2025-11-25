@@ -19,9 +19,7 @@ import React from "react"
 import { render, screen } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { Arrow } from "@streamlit/protobuf"
-
-import type { Quiver } from "~lib/dataframes/Quiver"
+import { Arrow, IArrow } from "@streamlit/protobuf"
 
 import type { DataFrameProps } from "./DataFrame"
 import { ReadOnlyGrid } from "./ReadOnlyGrid"
@@ -44,9 +42,9 @@ describe("ReadOnlyGrid", () => {
   })
 
   it("renders DataFrame with read-only defaults and stretch width", () => {
-    const fakeQuiver = {} as unknown as Quiver // DataFrame is mocked; the value isn't used
+    const fakeArrowData = { data: new Uint8Array() } as IArrow // DataFrame is mocked; the value isn't used
 
-    render(<ReadOnlyGrid data={fakeQuiver} />)
+    render(<ReadOnlyGrid data={fakeArrowData} />)
 
     // Mocked DataFrame should be rendered
     expect(screen.getByTestId("MockDataFrame")).toBeVisible()
@@ -54,7 +52,7 @@ describe("ReadOnlyGrid", () => {
     // Props should be passed through with expected defaults
     expect(receivedProps?.disabled).toBe(true)
     expect(receivedProps?.disableFullscreenMode).toBe(true)
-    expect(receivedProps?.data).toBe(fakeQuiver)
+    expect(receivedProps?.element?.data).toEqual(fakeArrowData.data)
     expect(receivedProps?.customToolbarActions).toBeUndefined()
     expect(receivedProps?.heightConfig).toBeUndefined()
     expect(receivedProps?.widthConfig?.useStretch).toBe(true)
@@ -67,9 +65,9 @@ describe("ReadOnlyGrid", () => {
   })
 
   it("applies pixel height when provided", () => {
-    const fakeQuiver = {} as unknown as Quiver
+    const fakeArrowData = { data: new Uint8Array() } as IArrow
 
-    render(<ReadOnlyGrid data={fakeQuiver} height={320} />)
+    render(<ReadOnlyGrid data={fakeArrowData} height={320} />)
 
     expect(receivedProps?.heightConfig).toEqual(
       expect.objectContaining({ pixelHeight: 320 })
@@ -77,14 +75,16 @@ describe("ReadOnlyGrid", () => {
   })
 
   it("forwards custom toolbar actions", () => {
-    const fakeQuiver = {} as unknown as Quiver
+    const fakeArrowData = { data: new Uint8Array() } as IArrow
     const actions = [
       <button key="a" type="button">
         A
       </button>,
     ]
 
-    render(<ReadOnlyGrid data={fakeQuiver} customToolbarActions={actions} />)
+    render(
+      <ReadOnlyGrid data={fakeArrowData} customToolbarActions={actions} />
+    )
 
     expect(receivedProps?.customToolbarActions).toBe(actions)
   })
