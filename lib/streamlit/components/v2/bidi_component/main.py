@@ -351,12 +351,12 @@ class BidiComponentMixin:
                         bidi_component_proto.arrow_data.CopyFrom(arrow_data_proto)
                     else:
                         # Fallback to JSON.
-                        bidi_component_proto.json = json.dumps(data)
+                        bidi_component_proto.json = json.dumps(data, sort_keys=True)
             except Exception:
                 # As a last resort attempt JSON serialization so that we don't
                 # silently drop developer data.
                 try:
-                    bidi_component_proto.json = json.dumps(data)
+                    bidi_component_proto.json = json.dumps(data, sort_keys=True)
                 except Exception:
                     raise BidiComponentUnserializableDataError()
         bidi_component_proto.form_id = current_form_id(self.dg)

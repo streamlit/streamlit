@@ -1055,6 +1055,28 @@ class BidiComponentIdentityTest(DeltaGeneratorTestCase):
         delta = self.get_delta_from_queue()
         return delta.new_element.bidi_component.id
 
+    def test_unkeyed_id_stable_when_data_is_none(self):
+        """Without data, unkeyed components should have stable IDs based on other params."""
+        st._bidi_component("ident")
+        id1 = self._render_and_get_id()
+
+        self._clear_widget_registrations_for_current_run()
+
+        st._bidi_component("ident")
+        id2 = self._render_and_get_id()
+
+        assert id1 == id2
+
+    def test_unkeyed_id_differs_between_none_and_empty_data(self):
+        """data=None must produce a different ID than data={} (empty dict is still data)."""
+        st._bidi_component("ident", data=None)
+        id_none = self._render_and_get_id()
+
+        st._bidi_component("ident", data={})
+        id_empty = self._render_and_get_id()
+
+        assert id_none != id_empty
+
     def test_unkeyed_id_changes_when_json_data_changes(self):
         """Without a user key, changing JSON data must change the backend id."""
         st._bidi_component("ident", data={"x": 1})
@@ -1211,6 +1233,41 @@ class BidiComponentIdentityTest(DeltaGeneratorTestCase):
 
         assert identity["mixed_json"] == "{}"
         assert identity["mixed_arrow_blobs"] == "a,b"
+
+    def test_unkeyed_id_stable_when_json_key_order_changes(self):
+        """Without a user key, changing the insertion order of keys in a JSON dict should NOT change the backend id."""
+        data1 = {"a": 1, "b": 2}
+        data2 = {"b": 2, "a": 1}
+
+        st._bidi_component("ident", data=data1)
+        id1 = self._render_and_get_id()
+
+        self._clear_widget_registrations_for_current_run()
+
+        st._bidi_component("ident", data=data2)
+        id2 = self._render_and_get_id()
+
+        assert id1 == id2
+
+    def test_unkeyed_id_stable_when_mixed_data_json_key_order_changes(self):
+        """Without a user key, changing the insertion order of keys in the JSON
+        part of MixedData should NOT change the backend id."""
+        # We use different dataframes (same content) to trigger mixed processing but keep blobs same
+        df1 = pd.DataFrame({"c": [3]})
+        df2 = pd.DataFrame({"c": [3]})
+
+        data1 = {"df": df1, "meta": {"a": 1, "b": 2}}
+        data2 = {"df": df2, "meta": {"b": 2, "a": 1}}
+
+        st._bidi_component("ident", data=data1)
+        id1 = self._render_and_get_id()
+
+        self._clear_widget_registrations_for_current_run()
+
+        st._bidi_component("ident", data=data2)
+        id2 = self._render_and_get_id()
+
+        assert id1 == id2
 
 
 class BidiComponentStateCallbackTest(DeltaGeneratorTestCase):
