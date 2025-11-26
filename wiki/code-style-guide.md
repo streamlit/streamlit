@@ -26,7 +26,7 @@ We use [PEP8 style](https://pep8.org) for Python code, with a few adjustments:
 
 ### Logging and printing
 
-The main principle here is "anything the user may want to able to easily pipe
+The main principle here is "anything the user may want to be able to easily pipe
 into a file / another process should go into `stdout`, everything else
 `stderr`".
 
