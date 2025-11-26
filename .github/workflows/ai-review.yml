@@ -75,7 +75,7 @@ jobs:
           2. Read and analyze the changed files to understand the full context.
           3. Read the best practices files (.cursor/rules/e2e_playwright.mdc, .cursor/rules/python_tests.mdc, .cursor/rules/typescript.mdc) to understand the testing standards.
           4. Perform a thorough code review based on the checklist above.
-          5. Write your review to a file named 'review.md' in the current directory.
+          5. Write a review that will later be posted as a comment on the PR into a file named 'review.md' in the current directory.
           6. The review comment should be well-structured with clear sections and actionable feedback.
           7. If there are issues, clearly describe them with specific file references and line numbers.
           8. Write either 'APPROVED' or 'CHANGES_REQUESTED' (exactly one of these) to a file named 'verdict.txt'.
@@ -95,7 +95,7 @@ jobs:
           " --force --model "$MODEL" --output-format=text
 
       - name: Upload review artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: review-output
           path: |
@@ -121,7 +121,7 @@ jobs:
 
       - name: Download review artifacts
         id: download
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         continue-on-error: true
         with:
           name: review-output
