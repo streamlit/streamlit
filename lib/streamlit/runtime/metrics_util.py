@@ -92,6 +92,7 @@ _ATTRIBUTIONS_TO_CHECK: Final = [
     "tables",
     "zarr",
     "datasets",
+    "daft",
     # ML & LLM Tools:
     "mistralai",
     "openai",
@@ -131,6 +132,25 @@ _ATTRIBUTIONS_TO_CHECK: Final = [
     "lightgbm",
     "catboost",
     "sklearn",
+    "pydantic_ai",
+    "datachain",
+    "docling",
+    "litserve",
+    "crawl4ai",
+    "baml_client",
+    "browser_use",
+    "crewai",
+    "unsloth",
+    "langgraph",
+    "dspy",
+    "ultralytics",
+    "instructor",
+    "ragas",
+    "swarm",
+    "faster_whisper",
+    "memori",
+    "autogen_agentchat",
+    "xai_sdk",
     # Workflow Tools:
     "prefect",
     "luigi",
@@ -156,6 +176,9 @@ _ATTRIBUTIONS_TO_CHECK: Final = [
     "fastapi",
     "starlette",
     "uvloop",
+    "orjson",
+    "rich",
+    "playwright",
 ]
 
 _ETC_MACHINE_ID_PATH = "/etc/machine-id"
