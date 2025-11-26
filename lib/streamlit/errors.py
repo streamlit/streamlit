@@ -426,7 +426,7 @@ class StreamlitQueryParamDictValueError(LocalizableStreamlitException):
 
     def __init__(self, key: str) -> None:
         super().__init__(
-            "Query param value for `{key}` cannot be a dictionary. "
+            "Query param value for `{key}` cannot be set to a dictionary. "
             "Provide a string or iterable of strings instead.",
             key=key,
         )
