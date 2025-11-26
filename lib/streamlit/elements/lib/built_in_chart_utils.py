@@ -19,9 +19,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Final, Literal, TypedDict, cast
-
-from typing_extensions import TypeAlias
+from typing import TYPE_CHECKING, Any, Final, Literal, TypeAlias, TypedDict, cast
 
 from streamlit import dataframe_util, type_util
 from streamlit.elements.lib.color_util import (
@@ -340,7 +338,7 @@ def prep_chart_data_for_add_rows(
     """
     import pandas as pd
 
-    df = cast("pd.DataFrame", dataframe_util.convert_anything_to_pandas_df(data))
+    df = dataframe_util.convert_anything_to_pandas_df(data)
 
     # Make range indices start at last_index.
     if isinstance(df.index, pd.RangeIndex):
@@ -433,7 +431,7 @@ def _infer_vegalite_type(
 
 
 def _get_pandas_index_attr(
-    data: pd.DataFrame | pd.Series,
+    data: pd.DataFrame | pd.Series[Any],
     attr: str,
 ) -> Any | None:
     return getattr(data.index, attr, None)
@@ -636,7 +634,7 @@ def _drop_unused_columns(df: pd.DataFrame, *column_names: str | None) -> pd.Data
         seen.add(x)
         keep.append(x)
 
-    return df[keep]
+    return df[keep]  # ty: ignore[invalid-return-type]
 
 
 def _maybe_convert_color_column_in_place(
@@ -653,7 +651,7 @@ def _maybe_convert_color_column_in_place(
         pass
     elif is_color_tuple_like(first_color_datum):
         # Tuples need to be converted to CSS-valid.
-        df.loc[:, color_column] = df[color_column].map(to_css_color)
+        df.loc[:, color_column] = df[color_column].apply(to_css_color)
     else:
         # Other kinds of colors columns (i.e. pure numbers or nominal strings) shouldn't
         # be converted since they are treated by Vega-Lite as sequential or categorical

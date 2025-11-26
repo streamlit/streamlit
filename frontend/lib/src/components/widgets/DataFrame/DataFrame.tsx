@@ -50,12 +50,13 @@ import { createPortal } from "react-dom"
 import { Arrow as ArrowProto, streamlit } from "@streamlit/protobuf"
 
 import { FlexContext } from "~lib/components/core/Layout/FlexContext"
-import { LibContext } from "~lib/components/core/LibContext"
+import { LibConfigContext } from "~lib/components/core/LibConfigContext"
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
 import { withFullScreenWrapper } from "~lib/components/shared/FullScreenWrapper"
 import Toolbar, { ToolbarAction } from "~lib/components/shared/Toolbar"
 import { useFormClearHelper } from "~lib/components/widgets/Form"
 import { Quiver } from "~lib/dataframes/Quiver"
+import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useDebouncedCallback } from "~lib/hooks/useDebouncedCallback"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import { useScrollbarGutterSize } from "~lib/hooks/useScrollbarGutterSize"
@@ -161,21 +162,24 @@ function DataFrame({
     height: fullScreenHeight,
   } = useRequiredContext(ElementFullscreenContext)
 
-  const { isInHorizontalLayout } = useRequiredContext(FlexContext)
+  const { isInHorizontalLayout, isInRoot } = useRequiredContext(FlexContext)
 
   const resizableRef = useRef<Resizable>(null)
   const dataEditorRef = useRef<DataEditorRef>(null)
-  const resizableContainerRef = useRef<HTMLDivElement>(null)
   const scrollbarGutterSize = useScrollbarGutterSize()
+
+  const {
+    height: measuredContainerHeight,
+    elementRef: resizableContainerRef,
+  } = useCalculatedDimensions()
 
   const gridTheme = useCustomTheme()
 
   const { getRowThemeOverride, onItemHovered: handleRowHover } =
     useRowHover(gridTheme)
 
-  const {
-    libConfig: { enforceDownloadInNewTab = false }, // Default to false, if no libConfig, e.g. for tests
-  } = useContext(LibContext)
+  // Default to false, if no libConfig, e.g. for tests
+  const { enforceDownloadInNewTab = false } = useContext(LibConfigContext)
 
   const [isFocused, setIsFocused] = useState<boolean>(true)
   const [showSearch, setShowSearch] = useState(false)
@@ -257,8 +261,6 @@ function DataFrame({
   // e.g. if the user has applied changes to the column order in the code.
   useEffect(() => {
     setColumnOrder(element.columnOrder)
-
-    // eslint-disable-next-line react-hooks/react-compiler
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [element.columnOrder.join(",")])
 
@@ -300,9 +302,7 @@ function DataFrame({
     },
     // We only want to run this effect once during the initial component load
     // so we disable the eslint rule.
-    // TODO: Update to match React best practices
-    // eslint-disable-next-line react-hooks/react-compiler
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
     []
   )
 
@@ -455,9 +455,7 @@ function DataFrame({
     // to play around and get to the bottom of it.
     clearSelection(true, true)
     // Only run this on changes to the fullscreen mode:
-    // TODO: Update to match React best practices
-    // eslint-disable-next-line react-hooks/react-compiler
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
   }, [isFullScreen])
 
   // This callback is used to refresh the rendering of specified cells
@@ -559,9 +557,7 @@ function DataFrame({
     },
     // We only want to run this effect once during the initial component load
     // so we disable the eslint rule.
-    // TODO: Update to match React best practices
-    // eslint-disable-next-line react-hooks/react-compiler
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
     []
   )
 
@@ -664,7 +660,10 @@ function DataFrame({
     onItemHovered: handleTooltips,
   } = useTooltips(columns, getCellContent, ignoredRowIndices)
 
-  const { drawCell, customRenderers } = useCustomRenderer(columns)
+  const { drawCell, customRenderers } = useCustomRenderer(
+    columns,
+    element.placeholder ?? undefined
+  )
   const { provideEditor } = useCustomEditors()
   // Callback that can be used to configure the column menu for the columns
   const configureColumnMenu = useCallback(
@@ -705,7 +704,9 @@ function DataFrame({
     fullScreenHeight,
     isFullScreen,
     widthConfig,
-    heightConfig
+    heightConfig,
+    measuredContainerHeight,
+    isInRoot
   )
   // This is used as fallback in case the table is empty to
   // insert cells indicating this state:
@@ -799,7 +800,7 @@ function DataFrame({
         clearTimeout(timeoutId)
       }
     }
-  }, [resizableSize, numRows, glideColumns])
+  }, [resizableSize, numRows, glideColumns, resizableContainerRef])
 
   // Hide the column visibility menu if all columns are visible:
   useEffect(() => {
@@ -808,12 +809,23 @@ function DataFrame({
     }
   }, [allColumns.length, columns.length])
 
+  // Disable resize if the dataframe is in a horizontal layout or if it is a content-width dataframe
+  // and not in the root container. This is because the feature requires measurements from the parent container
+  // which cannot be determined when the parent container has a fit-content width or when there are multiple siblings
+  // in a nested container.
+  const disableResize =
+    isInHorizontalLayout || (widthConfig?.useContent && !isInRoot)
+      ? true
+      : false
+
   return (
     <StyledResizableContainer
       className="stDataFrame"
       data-testid="stDataFrame"
       ref={resizableContainerRef}
       isInHorizontalLayout={isInHorizontalLayout}
+      minHeight={minHeight}
+      disableResize={disableResize}
       onPointerDown={e => {
         if (resizableContainerRef.current) {
           // Prevent clicks on the scrollbar handle to propagate to the grid:
@@ -978,7 +990,7 @@ function DataFrame({
         // dataframes in horizontal layouts, so it is disabled. The
         // resize handles are also disabled so that the dataframe cannot be
         // stretched beyond the container width.
-        maxWidth={isInHorizontalLayout ? undefined : maxWidth}
+        maxWidth={disableResize ? undefined : maxWidth}
         size={resizableSize}
         enable={{
           top: false,
@@ -986,7 +998,7 @@ function DataFrame({
           bottom: false,
           left: false,
           topRight: false,
-          bottomRight: isInHorizontalLayout ? false : true,
+          bottomRight: disableResize ? false : true,
           bottomLeft: false,
           topLeft: false,
         }}

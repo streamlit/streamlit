@@ -31,12 +31,11 @@ import tempfile
 import threading
 import uuid
 import weakref
+from collections.abc import Callable
 from enum import Enum
 from re import Pattern
 from types import MappingProxyType
-from typing import TYPE_CHECKING, Any, Callable, Final, Union, cast
-
-from typing_extensions import TypeAlias
+from typing import TYPE_CHECKING, Any, Final, TypeAlias, cast
 
 from streamlit import logger, type_util, util
 from streamlit.errors import StreamlitAPIException
@@ -59,7 +58,7 @@ _PANDAS_SAMPLE_SIZE: Final = 10_000
 _NP_SIZE_LARGE: Final = 500_000
 _NP_SAMPLE_SIZE: Final = 100_000
 
-HashFuncsDict: TypeAlias = dict[Union[str, type[Any]], Callable[[Any], Any]]
+HashFuncsDict: TypeAlias = dict[str | type[Any], Callable[[Any], Any]]
 
 # Arbitrary item to denote where we found a cycle in a hashed object.
 # This allows us to hash self-referencing lists, dictionaries, etc.
@@ -419,7 +418,7 @@ class _CacheFuncHasher:
         if type_util.is_type(obj, "pandas.core.series.Series"):
             from pandas.util import hash_pandas_object
 
-            series_obj: pd.Series = cast("pd.Series", obj)
+            series_obj = cast("pd.Series[Any]", obj)
             self.update(h, series_obj.size)
             self.update(h, series_obj.dtype.name)
 

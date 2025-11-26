@@ -19,9 +19,7 @@ import fractions
 import numbers
 import re
 import textwrap
-from typing import TYPE_CHECKING, Any, Final, Union
-
-from typing_extensions import TypeAlias
+from typing import TYPE_CHECKING, Any, Final, TypeAlias, Union
 
 from streamlit.errors import StreamlitAPIException
 
@@ -66,7 +64,14 @@ def is_material_icon(maybe_icon: str) -> bool:
 
 def validate_icon_or_emoji(icon: str | None) -> str:
     """Validate an icon or emoji and return it in normalized format if valid."""
-    if icon is not None and icon.startswith(":material"):
+    if icon is None:
+        return ""
+
+    # Support the special case of the spinner icon:
+    if icon == "spinner":
+        return "spinner"
+
+    if icon.startswith(":material"):
         return validate_material_icon(icon)
     return validate_emoji(icon)
 

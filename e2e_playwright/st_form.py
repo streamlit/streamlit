@@ -33,6 +33,11 @@ with st.form("form_1"):
     time_input = st.time_input("Time Input", time(8, 45))
     toggle_input = st.toggle("Toggle Input", value=False)
     st.form_submit_button("Submit", key="submit_button_form_1")
+    shortcut_submit_clicked = st.form_submit_button(
+        "Submit with shortcut",
+        key="shortcut_submit_button",
+        shortcut="Ctrl+Alt+S",
+    )
 
 st.write("Checkbox:", checkbox)
 st.write("Date Input:", date_input)
@@ -47,6 +52,9 @@ st.write("Text Input:", text_input)
 st.write("Time Input:", time_input)
 st.write("Toggle Input:", toggle_input)
 st.write("Submit button session state:", st.session_state.get("submit_button_form_1"))
+
+if shortcut_submit_clicked:
+    st.write("Shortcut form submitted!")
 
 with st.form("form_2"):
     st.write("Inside form 2")

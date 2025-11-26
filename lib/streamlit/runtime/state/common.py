@@ -16,25 +16,28 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import (
+    TYPE_CHECKING,
     Any,
-    Callable,
     Final,
     Generic,
     Literal,
+    TypeAlias,
+    TypeGuard,
     TypeVar,
-    Union,
     cast,
     get_args,
 )
-
-from typing_extensions import TypeAlias, TypeGuard
 
 from streamlit import util
 from streamlit.errors import (
     StreamlitAPIException,
 )
+
+if TYPE_CHECKING:
+    from streamlit.runtime.state.session_state import SessionState
 
 GENERATED_ELEMENT_ID_PREFIX: Final = "$$ID"
 TESTING_KEY = "$$STREAMLIT_INTERNAL_KEY_TESTING"
@@ -44,7 +47,7 @@ T = TypeVar("T")
 T_co = TypeVar("T_co", covariant=True)
 
 
-WidgetArgs: TypeAlias = Union[tuple[Any, ...], list[Any]]
+WidgetArgs: TypeAlias = tuple[Any, ...] | list[Any]
 WidgetKwargs: TypeAlias = dict[str, Any]
 WidgetCallback: TypeAlias = Callable[..., None]
 
@@ -93,6 +96,7 @@ ValueFieldName: TypeAlias = Literal[
     "file_uploader_state_value",
     "int_value",
     "json_value",
+    "json_trigger_value",
     "string_value",
     "trigger_value",
     "string_trigger_value",
@@ -102,6 +106,13 @@ ValueFieldName: TypeAlias = Literal[
 
 def is_array_value_field_name(obj: object) -> TypeGuard[ArrayValueFieldName]:
     return obj in _ARRAY_VALUE_FIELD_NAMES
+
+
+# Optional hook that allows a widget to customize how its value should be
+# presented in `st.session_state` without altering the underlying stored value
+# or callback semantics. The presenter receives the widget's base value and the
+# SessionState instance in case it needs to access additional widget state.
+WidgetValuePresenter: TypeAlias = Callable[[Any, "SessionState"], Any]
 
 
 @dataclass(frozen=True)
@@ -117,10 +128,24 @@ class WidgetMetadata(Generic[T]):
     # Widget callbacks are called at the start of a script run, before the
     # body of the script is executed.
     callback: WidgetCallback | None = None
+
+    # An optional dictionary of event names to user-code callbacks. These are
+    # invoked when the corresponding widget event occurs. Callbacks are called
+    # at the start of a script run, before the body of the script is executed.
+    # Right now, multiple callbacks are only supported for widgets with a
+    # `value_type` of `json_value` or `json_trigger_value`. The keys in this
+    # dictionary should correspond to keys in the widget's JSON state.
+    callbacks: dict[str, WidgetCallback] | None = None
     callback_args: WidgetArgs | None = None
     callback_kwargs: WidgetKwargs | None = None
 
     fragment_id: str | None = None
+
+    # Optional presenter hook used for customizing the user-visible value in
+    # st.session_state. This is intended for advanced widgets (e.g. Custom
+    # Components v2) that need to synthesize a presentation-only value from
+    # multiple internal widget states.
+    presenter: WidgetValuePresenter | None = None
 
     def __repr__(self) -> str:
         return util.repr_(self)

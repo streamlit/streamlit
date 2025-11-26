@@ -15,10 +15,8 @@
 from __future__ import annotations
 
 import re
-from typing import Final, Literal
+from typing import Final, Literal, TypeAlias
 from urllib.parse import urlparse
-
-from typing_extensions import TypeAlias
 
 UrlSchema: TypeAlias = Literal["http", "https", "mailto", "data"]
 

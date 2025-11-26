@@ -49,7 +49,9 @@ st.write("value 4:", v4)
 v5 = st.radio("radio 5 (horizontal)", options, horizontal=True)
 st.write("value 5:", v5)
 
-v6 = st.radio("radio 6 (options from dataframe)", pd.DataFrame({"foo": list(options)}))
+v6: str = st.radio(
+    "radio 6 (options from dataframe)", pd.DataFrame({"foo": list(options)})
+)
 st.write("value 6:", v6)
 
 v7 = st.radio(

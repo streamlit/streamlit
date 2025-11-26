@@ -39,10 +39,11 @@ export const StyledTooltipIconWrapper =
 export const StyledLabelHelpWrapper = styled.div<StyledLabelHelpWrapperProps>(
   ({ isLatex }) => ({
     display: "flex",
-    visibility: "visible",
-    verticalAlign: "middle",
     flexDirection: "row",
     alignItems: "center",
+    visibility: "visible",
+    width: "100%",
+    // For LaTeX, center the content
     ...(isLatex ? { justifyContent: "center" } : {}),
   })
 )

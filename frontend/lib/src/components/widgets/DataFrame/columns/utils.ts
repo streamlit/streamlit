@@ -24,8 +24,7 @@ import {
   TextCell,
 } from "@glideapps/glide-data-grid"
 import { Vector } from "apache-arrow"
-import merge from "lodash/merge"
-import toString from "lodash/toString"
+import { merge, toString } from "lodash-es"
 import moment, { Moment } from "moment"
 import "moment-duration-format"
 import "moment-timezone"

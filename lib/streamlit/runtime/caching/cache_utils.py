@@ -24,7 +24,7 @@ import threading
 import time
 from abc import abstractmethod
 from collections import defaultdict
-from typing import TYPE_CHECKING, Any, Callable, Final, Generic, TypeVar, cast, overload
+from typing import TYPE_CHECKING, Any, Final, Generic, TypeVar, cast, overload
 
 from typing_extensions import ParamSpec
 
@@ -54,6 +54,7 @@ from streamlit.runtime.scriptrunner_utils.script_run_context import (
 
 if TYPE_CHECKING:
     import types
+    from collections.abc import Callable
 
     from streamlit.runtime.caching.cache_type import CacheType
 
@@ -218,7 +219,7 @@ class CachedFunc(Generic[P, R]):  # ty: ignore[invalid-argument-type]
         if isinstance(self._info.show_spinner, str):
             spinner_message = self._info.show_spinner
         elif self._info.show_spinner is True:
-            name = self._info.func.__qualname__
+            name = cast("types.FunctionType", self._info.func).__qualname__
             if len(args) == 0 and len(kwargs) == 0:
                 spinner_message = f"Running `{name}()`."
             else:

@@ -38,9 +38,12 @@ Following actions/components are tested:
 
 from __future__ import annotations
 
-from typing import Callable
+from typing import TYPE_CHECKING
 
 import streamlit as st
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 def use_components_html():
@@ -194,7 +197,7 @@ def use_url_fragment():
 
 
 def use_bokeh():
-    from bokeh.plotting import figure
+    from bokeh.plotting import figure  # type: ignore
     from streamlit_bokeh import streamlit_bokeh  # type: ignore
 
     # Data

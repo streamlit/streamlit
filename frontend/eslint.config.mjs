@@ -22,7 +22,7 @@ import { createJiti } from "jiti"
 import eslint from "@eslint/js"
 import tseslint from "typescript-eslint"
 import react from "eslint-plugin-react"
-import * as reactHooks from "eslint-plugin-react-hooks"
+import reactHooks from "eslint-plugin-react-hooks"
 import eslintReact from "@eslint-react/eslint-plugin"
 import importPlugin from "eslint-plugin-import"
 import eslintPluginPrettierRecommended from "eslint-plugin-prettier/recommended"
@@ -31,7 +31,7 @@ import vitest from "@vitest/eslint-plugin"
 import testingLibrary from "eslint-plugin-testing-library"
 import noRelativeImportPaths from "eslint-plugin-no-relative-import-paths"
 import globals from "globals"
-import { globalIgnores } from "eslint/config"
+import { defineConfig, globalIgnores } from "eslint/config"
 import jsxA11y from "eslint-plugin-jsx-a11y"
 
 // Import other configs
@@ -48,11 +48,57 @@ const streamlitCustom = await jiti.import(
   { default: true }
 )
 
-export default tseslint.config([
+/**
+ * Helper to create the no-restricted-imports rule config.
+ *
+ * @param {Object[]} additionalPatterns - Extra "patterns" to restrict (merged with the base rules).
+ * @param {boolean} isTestFile - Whether to apply the relaxed rules for test files.
+ */
+export const getNoRestrictedImports = (
+  additionalPatterns = [],
+  isTestFile = false
+) => {
+  const restrictedImportPaths = [
+    {
+      name: "timezone-mock",
+      message: "Please use the withTimezones test harness instead",
+    },
+    {
+      name: "@emotion/react",
+      message:
+        "Please use the useEmotionTheme hook instead of useTheme for type-safety",
+      importNames: ["useTheme"],
+    },
+    {
+      name: "axios",
+      importNames: ["CancelToken"],
+      message: "Please use the `AbortController` API instead of `CancelToken`",
+    },
+  ]
+
+  const basePaths = isTestFile
+    ? restrictedImportPaths
+    : [
+        ...restrictedImportPaths,
+        {
+          name: "@streamlit/lib/testing",
+          message: "Test utilities must stay in test files.",
+        },
+      ]
+  return [
+    "error",
+    {
+      paths: [...basePaths],
+      patterns: [...additionalPatterns],
+    },
+  ]
+}
+
+export default defineConfig([
   // Base recommended configs
   eslint.configs.recommended,
   tseslint.configs.recommendedTypeChecked,
-  reactHooks.configs.recommended,
+  reactHooks.configs.flat.recommended,
   eslintReact.configs["recommended-type-checked"],
   importPlugin.flatConfigs.recommended,
   eslintPluginPrettierRecommended,
@@ -104,9 +150,6 @@ export default tseslint.config([
       "react/prop-types": "off",
       // We don't escape entities
       "react/no-unescaped-entities": "off",
-      // Opting into the latest react-compiler rules
-      // @see https://react.dev/blog/2025/04/21/react-compiler-rc
-      "react-hooks/react-compiler": "error",
       // We do want to discourage the usage of flushSync
       "@eslint-react/dom/no-flush-sync": "error",
       // This was giving false positives
@@ -298,34 +341,12 @@ export default tseslint.config([
       // We only turn this rule on for certain directories
       "streamlit-custom/enforce-memo": "off",
       "streamlit-custom/no-force-reflow-access": "error",
-      "no-restricted-imports": [
-        "error",
-        {
-          paths: [
-            {
-              name: "timezone-mock",
-              message: "Please use the withTimezones test harness instead",
-            },
-            {
-              name: "@emotion/react",
-              message:
-                "Please use the useEmotionTheme hook instead of useTheme for type-safety",
-              importNames: ["useTheme"],
-            },
-            {
-              name: "axios",
-              importNames: ["CancelToken"],
-              message:
-                "Please use the `AbortController` API instead of `CancelToken`",
-            },
-          ],
-        },
-      ],
+      "no-restricted-imports": getNoRestrictedImports(),
       // React configuration
       "react/jsx-uses-react": "off",
       "react/react-in-jsx-scope": "off",
       // React hooks rules
-      ...reactHooks.configs.recommended.rules,
+      ...reactHooks.configs.flat.recommended.rules,
       // jsx-a11y rules
       ...jsxA11y.flatConfigs.recommended.rules,
       // prohibit autoFocus prop
@@ -363,6 +384,7 @@ export default tseslint.config([
 
       // Testing library rules
       "testing-library/prefer-user-event": "error",
+      "no-restricted-imports": getNoRestrictedImports([], true),
     },
   },
   // Theme files specific configuration

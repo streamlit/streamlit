@@ -19,7 +19,7 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit.elements.lib.policies import _LOGGER
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitValueError
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
 from streamlit.proto.Metric_pb2 import Metric as MetricProto
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -100,7 +100,7 @@ class MetricTest(DeltaGeneratorTestCase):
             "—",
         ]
 
-        for arg_value, proto_value in zip(arg_values, proto_values):
+        for arg_value, proto_value in zip(arg_values, proto_values, strict=False):
             st.metric("label_test", arg_value)
 
             c = self.get_delta_from_queue().new_element.metric
@@ -112,7 +112,7 @@ class MetricTest(DeltaGeneratorTestCase):
         arg_values = [" -253", "+25", "26", 123, -123, 1.234, -1.5, None, ""]
         delta_values = ["-253", "+25", "26", "123", "-123", "1.234", "-1.5", "", ""]
 
-        for arg_value, delta_value in zip(arg_values, delta_values):
+        for arg_value, delta_value in zip(arg_values, delta_values, strict=False):
             st.metric("label_test", "4312", arg_value)
 
             c = self.get_delta_from_queue().new_element.metric
@@ -159,7 +159,11 @@ class MetricTest(DeltaGeneratorTestCase):
             color_value,
             direction_value,
         ) in zip(
-            arg_delta_values, arg_delta_color_values, color_values, direction_values
+            arg_delta_values,
+            arg_delta_color_values,
+            color_values,
+            direction_values,
+            strict=False,
         ):
             st.metric(
                 "label_test", "4312", arg_delta_value, delta_color=arg_delta_color_value
@@ -169,6 +173,50 @@ class MetricTest(DeltaGeneratorTestCase):
             assert c.label == "label_test"
             assert c.color == color_value
             assert c.direction == direction_value
+
+    def test_delta_arrow_default(self):
+        """Test that metric delta arrow defaults to auto."""
+        st.metric("label_test", "123", 123)
+
+        c = self.get_delta_from_queue().new_element.metric
+        assert c.direction == MetricProto.MetricDirection.UP
+
+    @parameterized.expand(
+        [
+            ("auto", 5, MetricProto.MetricDirection.UP, MetricProto.MetricColor.GREEN),
+            ("up", -5, MetricProto.MetricDirection.UP, MetricProto.MetricColor.RED),
+            (
+                "down",
+                5,
+                MetricProto.MetricDirection.DOWN,
+                MetricProto.MetricColor.GREEN,
+            ),
+            ("off", 5, MetricProto.MetricDirection.NONE, MetricProto.MetricColor.GREEN),
+        ]
+    )
+    def test_delta_arrow_values(
+        self,
+        delta_arrow_value,
+        delta,
+        expected_direction,
+        expected_color,
+    ):
+        """Test that metric overrides direction according to delta arrow setting."""
+        st.metric(
+            "label_test",
+            "123",
+            delta,
+            delta_arrow=delta_arrow_value,
+        )
+
+        c = self.get_delta_from_queue().new_element.metric
+        assert c.direction == expected_direction
+        assert c.color == expected_color
+
+    def test_delta_arrow_invalid(self):
+        """Test that invalid delta arrow raises an error."""
+        with pytest.raises(StreamlitValueError):
+            st.metric("label_test", "123", 5, delta_arrow="invalid")  # type: ignore[arg-type]
 
     def test_metric_in_column(self):
         col1, col2, col3, col4, col5 = st.columns(5)

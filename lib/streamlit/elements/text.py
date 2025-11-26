@@ -23,7 +23,7 @@ from streamlit.string_util import clean_text
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
-    from streamlit.elements.lib.layout_utils import Width
+    from streamlit.elements.lib.layout_utils import TextAlignment, Width
     from streamlit.type_util import SupportsStr
 
 
@@ -35,6 +35,7 @@ class TextMixin:
         *,  # keyword-only arguments:
         help: str | None = None,
         width: Width = "content",
+        text_alignment: TextAlignment = "left",
     ) -> DeltaGenerator:
         r"""Write text without Markdown or HTML parsing.
 
@@ -69,6 +70,16 @@ class TextMixin:
               the parent container, the width of the element matches the width
               of the parent container.
 
+        text_alignment : "left", "center", "right", or "justify"
+            The horizontal alignment of the text within the element. This can
+            be one of the following:
+
+            - ``"left"`` (default): Text is aligned to the left edge.
+            - ``"center"``: Text is centered.
+            - ``"right"``: Text is aligned to the right edge.
+            - ``"justify"``: Text is justified (stretched to align on both
+              left and right edges, with the last line left-aligned).
+
         Example
         -------
         >>> import streamlit as st
@@ -86,7 +97,7 @@ class TextMixin:
             text_proto.help = help
 
         validate_width(width, allow_content=True)
-        layout_config = LayoutConfig(width=width)
+        layout_config = LayoutConfig(width=width, text_alignment=text_alignment)
 
         return self.dg._enqueue("text", text_proto, layout_config=layout_config)
 

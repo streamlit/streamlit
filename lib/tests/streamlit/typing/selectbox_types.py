@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING
 
 from typing_extensions import assert_type
 
@@ -36,27 +36,27 @@ if TYPE_CHECKING:
     assert_type(selectbox("foo", [], accept_new_options=True), str)
 
     assert_type(selectbox("foo", [1, 2, 3]), int)
-    assert_type(selectbox("foo", [1, 2, 3], index=None), Union[int, None])
+    assert_type(selectbox("foo", [1, 2, 3], index=None), int | None)
     assert_type(selectbox("foo", [1.0, 2.0, 3.0]), float)
-    assert_type(selectbox("foo", [1.0, 2.0, 3.0], index=None), Union[float, None])
+    assert_type(selectbox("foo", [1.0, 2.0, 3.0], index=None), float | None)
     assert_type(selectbox("foo", [1.0, 2, 3.0]), float)
-    assert_type(selectbox("foo", [1.0, 2, 3.0], index=None), Union[float, None])
+    assert_type(selectbox("foo", [1.0, 2, 3.0], index=None), float | None)
     assert_type(selectbox("foo", ["foo", "bar"]), str)
-    assert_type(selectbox("foo", ["foo", "bar"], index=None), Union[str, None])
+    assert_type(selectbox("foo", ["foo", "bar"], index=None), str | None)
     assert_type(selectbox("foo", Alfred), Alfred)
     assert_type(selectbox("foo", [Alfred.HITCHCOCK, Alfred.GREENE]), Alfred)
-    assert_type(selectbox("foo", Alfred, index=None), Union[Alfred, None])
+    assert_type(selectbox("foo", Alfred, index=None), Alfred | None)
     assert_type(selectbox("foo", [1, Alfred.HITCHCOCK, "five"], index=None), object)
     assert_type(
-        selectbox("foo", [1, 2, 3], index=0, accept_new_options=True), Union[int, str]
+        selectbox("foo", [1, 2, 3], index=0, accept_new_options=True), int | str
     )
     assert_type(
         selectbox("foo", [1, 2, 3], index=None, accept_new_options=True),
-        Union[int, str, None],
+        int | str | None,
     )
     assert_type(
         selectbox("foo", ["foo", "bar"], index=None, accept_new_options=True),
-        Union[str, None],
+        str | None,
     )
     accept_new_options = True
     assert_type(
@@ -66,5 +66,5 @@ if TYPE_CHECKING:
             index=None,
             accept_new_options=accept_new_options,
         ),
-        Union[Alfred, str, None],
+        Alfred | str | None,
     )

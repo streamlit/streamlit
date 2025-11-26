@@ -15,11 +15,14 @@
 from __future__ import annotations
 
 import re
-from typing import Callable
+from typing import TYPE_CHECKING
 
 from playwright.sync_api import Locator, Page, expect
 
 from e2e_playwright.shared.app_utils import get_element_by_key, select_radio_option
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 # List of markdown features that are not allowed in (widget) labels:
 

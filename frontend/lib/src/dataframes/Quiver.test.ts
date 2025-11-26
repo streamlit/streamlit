@@ -15,7 +15,7 @@
  */
 
 import { Field } from "apache-arrow"
-import cloneDeep from "lodash/cloneDeep"
+import { cloneDeep } from "lodash-es"
 
 import { Quiver } from "~lib/dataframes/Quiver"
 import {

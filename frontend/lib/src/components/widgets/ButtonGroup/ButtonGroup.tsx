@@ -34,6 +34,7 @@ import {
 import { shouldWidthStretch } from "~lib/components/core/Layout/utils"
 import BaseButton, {
   BaseButtonKind,
+  BaseButtonProps,
   BaseButtonSize,
   DynamicButtonLabel,
   BaseButtonTooltip,
@@ -77,7 +78,7 @@ function handleSelection(
   index: number,
   currentSelection?: number[]
 ): number[] {
-  if (mode == ButtonGroupProto.ClickMode.MULTI_SELECT) {
+  if (mode === ButtonGroupProto.ClickMode.MULTI_SELECT) {
     return handleMultiSelection(index, currentSelection ?? [])
   }
 
@@ -189,25 +190,19 @@ function getButtonGroupOverridesStyle(
   style: ButtonGroupProto.Style,
   spacing: EmotionTheme["spacing"],
   containerWidth: boolean
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-): Record<string, any> {
-  const baseStyle = {
+): React.CSSProperties {
+  const baseStyle: React.CSSProperties = {
     flexWrap: "wrap",
-    maxWidth: "100%",
-    // This ensures that the button
-    // group does not overflow the container due
-    // to the negative margins that BaseWeb adds.
-    // When maxWidth is set to 100%, without this,
-    // the buttons will wrap to the next line.
+    // maxWidth must be conditional:
+    // - "100%" for stretch width: allows buttons to fill container
+    // - "fit-content" for content width: prevents flexbox calculation errors
+    //   that cause the last button to wrap incorrectly (gh-12067)
+    maxWidth: containerWidth ? "100%" : "fit-content",
+    // This ensures that the button group does not overflow the container
+    // due to the negative margins that BaseWeb adds.
     margin: "0 0",
   }
   const width = containerWidth ? "100%" : "auto"
-  const segmentedControlNoStretch = containerWidth
-    ? {}
-    : {
-        content: "''",
-        flex: 10000,
-      }
 
   switch (style) {
     case ButtonGroupProto.Style.BORDERLESS:
@@ -228,10 +223,6 @@ function getButtonGroupOverridesStyle(
         ...baseStyle,
         columnGap: spacing.none,
         rowGap: spacing.twoXS,
-        // Adding an empty pseudo-element after the last button in the group.
-        // This will make buttons only as big as needed without stretching to the whole container width (aka let them 'hug' to the side)
-        // This is only needed if the button group has content width.
-        "::after": segmentedControlNoStretch,
         width,
       }
     default:
@@ -265,8 +256,8 @@ function createOptionChild(
   // we have to use forwardRef here because BasewebButtonGroup passes the ref down to its children
   // and we see a console.error otherwise
   return forwardRef(function BaseButtonGroup(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    props: any,
+    // Accept only the props compatible with BaseButton to improve type safety
+    props: Partial<BaseButtonProps>,
     _: Ref<BasewebButtonGroup>
   ): ReactElement {
     const { element, kind, size } = getContentElement(
@@ -312,11 +303,11 @@ function getInitialValue(
 function getDefaultStateFromProto(
   element: ButtonGroupProto
 ): ButtonGroupValue {
-  return element.default ?? null
+  return element.default ?? []
 }
 
 function getCurrStateFromProto(element: ButtonGroupProto): ButtonGroupValue {
-  return element.value ?? null
+  return element.value ?? []
 }
 
 function ButtonGroup(props: Readonly<Props>): ReactElement {

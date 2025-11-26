@@ -151,14 +151,6 @@ class ColorPickerTest(DeltaGeneratorTestCase):
                 "Invalid width value: 'invalid'. Width must be either an integer (pixels), 'stretch', or 'content'.",
             ),
             (
-                -100,
-                "Invalid width value: -100. Width must be either an integer (pixels), 'stretch', or 'content'.",
-            ),
-            (
-                0,
-                "Invalid width value: 0. Width must be either an integer (pixels), 'stretch', or 'content'.",
-            ),
-            (
                 100.5,
                 "Invalid width value: 100.5. Width must be either an integer (pixels), 'stretch', or 'content'.",
             ),
@@ -182,6 +174,25 @@ class ColorPickerTest(DeltaGeneratorTestCase):
             == WidthConfigFields.USE_CONTENT.value
         )
         assert el.width_config.use_content is True
+
+    def test_color_picker_enforces_minimum_width(self):
+        """Test that st.color_picker enforces minimum width of 40px."""
+        test_cases = [
+            (10, 40),  # Below minimum -> enforced to 40
+            (40, 40),  # Exactly minimum -> stays 40
+            (100, 100),  # Above minimum -> stays as specified
+        ]
+
+        for specified_width, expected_width in test_cases:
+            with self.subTest(specified_width=specified_width):
+                st.color_picker(f"test label {specified_width}", width=specified_width)
+
+                el = self.get_delta_from_queue().new_element
+                assert (
+                    el.width_config.WhichOneof("width_spec")
+                    == WidthConfigFields.PIXEL_WIDTH.value
+                )
+                assert el.width_config.pixel_width == expected_width
 
     def test_stable_id_with_key(self):
         """Test that the widget ID is stable when a stable key is provided."""

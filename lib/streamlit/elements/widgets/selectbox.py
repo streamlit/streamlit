@@ -17,7 +17,6 @@ from textwrap import dedent
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
     Generic,
     Literal,
     TypeVar,
@@ -67,7 +66,7 @@ from streamlit.type_util import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Callable, Sequence
 
     from streamlit.delta_generator import DeltaGenerator
 
@@ -403,6 +402,8 @@ class SelectboxMixin:
         -------
         any
             The selected option or ``None`` if no option is selected.
+
+            This is a copy of the selected option, not the original.
 
         Examples
         --------

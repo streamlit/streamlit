@@ -17,8 +17,10 @@
 import React from "react"
 
 import { screen } from "@testing-library/react"
+import { vi } from "vitest"
 
 import { render } from "~lib/test_util"
+import * as utils from "~lib/util/utils"
 
 import {
   DynamicButtonLabel,
@@ -70,9 +72,21 @@ describe("DynamicButtonLabel", () => {
     expect(icon).toHaveTextContent("thumb_up")
   })
 
-  it("renders icon with no margin, if there is no label", () => {
-    render(<DynamicButtonLabel {...getProps({ label: "" })} />)
+  it("renders shortcut text when provided", () => {
+    const shortcut = "ctrl+k"
 
-    expect(screen.getByTestId("stIconEmoji")).toHaveStyle("margin: 0")
+    render(<DynamicButtonLabel {...getProps({ shortcut })} />)
+
+    expect(screen.getByText("Ctrl + K")).toBeInTheDocument()
+  })
+
+  it("maps Cmd shortcut to Ctrl on non-mac platforms", () => {
+    const spy = vi.spyOn(utils, "isFromMac").mockReturnValue(false)
+    const shortcut = "cmd+n"
+
+    render(<DynamicButtonLabel {...getProps({ shortcut })} />)
+
+    expect(screen.getByText("Ctrl + N")).toBeInTheDocument()
+    spy.mockRestore()
   })
 })

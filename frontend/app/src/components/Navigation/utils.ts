@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import groupBy from "lodash/groupBy"
+import { groupBy } from "lodash-es"
 
 import { IAppPage } from "@streamlit/protobuf"
 

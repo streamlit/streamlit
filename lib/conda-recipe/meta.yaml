@@ -37,6 +37,7 @@ build:
 requirements:
   host:
     - pip
+    - setuptools
     - python {{ package_data.get('python_requires') }}
   run:
     {% for req in package_data.get('install_requires', []) %}

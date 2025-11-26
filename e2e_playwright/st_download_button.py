@@ -96,10 +96,20 @@ st.download_button(
     key="help_download_button",
 )
 
+shortcut_download_clicked = st.download_button(
+    "Shortcut download button",
+    data="Shortcut payload",
+    file_name="shortcut.txt",
+    shortcut="Ctrl+Alt+D",
+    key="shortcut_download_button",
+)
+if shortcut_download_clicked:
+    st.write("Shortcut download triggered!")
+
 random_str = str(random())
 clicked = st.download_button(label="Download random text", data=random_str)
 
-st.write(f"value: {clicked}")
+st.write(f"Random download value: {clicked}")
 
 download_button_ignore_rerun = st.download_button(
     "Download Button ignore rerun",
@@ -129,16 +139,19 @@ if runtime.exists():
         args=(1,),
         kwargs={"y": 2},
     )
-    st.write("value:", i1)
-    st.write("value from state:", st.session_state["download_button"])
+    st.write("Download button with on_click value:", i1)
+    st.write(
+        "Download button with on_click value from state:",
+        st.session_state["download_button"],
+    )
 
     button_was_clicked = "click_count" in st.session_state
     st.write("Download Button was clicked:", button_was_clicked)
 
     if button_was_clicked:
         st.write("times clicked:", st.session_state.click_count)
-        st.write("arg value:", st.session_state.x)
-        st.write("kwarg value:", st.session_state.y)
+        st.write("callback arg value:", st.session_state.x)
+        st.write("callback kwarg value:", st.session_state.y)
 
 i2 = st.checkbox("reset button return value")
 

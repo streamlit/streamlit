@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import re
+
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import (
@@ -23,13 +25,14 @@ from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_checkbox,
     click_toggle,
+    expect_markdown,
     expect_prefixed_markdown,
     get_element_by_key,
     get_expander,
     goto_app,
 )
 
-DOWNLOAD_BUTTON_ELEMENTS = 17
+DOWNLOAD_BUTTON_ELEMENTS = 18
 
 
 def check_download_button_source_error_count(messages: list[str], expected_count: int):
@@ -86,6 +89,10 @@ def test_download_button_widget_rendering(
         get_element_by_key(themed_app, "help_download_button"),
         name="st_download_button-help",
     )
+    assert_snapshot(
+        get_element_by_key(themed_app, "shortcut_download_button"),
+        name="st_download_button-shortcut",
+    )
 
 
 def test_show_tooltip_on_hover(app: Page):
@@ -95,16 +102,19 @@ def test_show_tooltip_on_hover(app: Page):
 
 
 def test_value_correct_on_click(app: Page):
-    download_button = app.get_by_test_id("stDownloadButton").nth(10).locator("button")
+    download_button = app.get_by_role("button", name="Download random text")
     download_button.click()
-    expect(app.get_by_test_id("stMarkdown").first).to_have_text("value: True")
+    wait_for_app_run(app)
+    expect_prefixed_markdown(app, "Random download value:", "True", exact_match=True)
 
 
 def test_value_not_reset_on_reclick(app: Page):
-    download_button = app.get_by_test_id("stDownloadButton").nth(10).locator("button")
+    download_button = app.get_by_role("button", name="Download random text")
     download_button.click()
+    wait_for_app_run(app)
     download_button.click()
-    expect(app.get_by_test_id("stMarkdown").first).to_have_text("value: True")
+    wait_for_app_run(app)
+    expect_prefixed_markdown(app, "Random download value:", "True", exact_match=True)
 
 
 def test_value_correct_on_ignore_click(app: Page):
@@ -115,8 +125,18 @@ def test_value_correct_on_ignore_click(app: Page):
         download_button.click()
 
     # Check that rerun does not happen
-    expect(app.get_by_test_id("stMarkdown").nth(1)).to_have_text(
-        "Ignore rerun download button value: False"
+
+    # While a rerun isn't expected, we still wait for a rerun here to ensure that the text actually
+    # fails if the rerun happens.
+    # The reason is that the default download button return is false, so if we do the
+    # markdown check immidately it might suceedd even if the rerun happens slightly later.
+    wait_for_app_run(app)
+
+    expect_prefixed_markdown(
+        app,
+        "Ignore rerun download button value:",
+        "False",
+        exact_match=True,
     )
     # Check that the actual download happened
     download = download_info.value
@@ -129,30 +149,39 @@ def test_value_correct_on_ignore_click(app: Page):
 
 def test_click_calls_callback(app: Page):
     download_button = get_element_by_key(app, "download_button").locator("button")
-    expect(app.get_by_test_id("stMarkdown").nth(4)).to_contain_text(
-        "Download Button was clicked: False"
+    expect_prefixed_markdown(
+        app,
+        "Download Button was clicked:",
+        "False",
+        exact_match=True,
     )
     download_button.click()
-    expect(app.get_by_test_id("stMarkdown").nth(4)).to_have_text(
-        "Download Button was clicked: True"
+    wait_for_app_run(app)
+    expect_prefixed_markdown(
+        app,
+        "Download Button was clicked:",
+        "True",
+        exact_match=True,
     )
-    expect(app.get_by_test_id("stMarkdown").nth(5)).to_have_text("times clicked: 1")
-    expect(app.get_by_test_id("stMarkdown").nth(6)).to_have_text("arg value: 1")
-    expect(app.get_by_test_id("stMarkdown").nth(7)).to_have_text("kwarg value: 2")
+    expect_prefixed_markdown(app, "times clicked:", "1")
+    expect_prefixed_markdown(app, "callback arg value:", "1")
+    expect_prefixed_markdown(app, "callback kwarg value:", "2")
 
 
 def test_reset_on_other_widget_change(app: Page):
-    download_button = app.get_by_test_id("stDownloadButton").nth(12).locator("button")
+    download_button = get_element_by_key(app, "download_button").locator("button")
     download_button.click()
-    expect(app.get_by_test_id("stMarkdown").nth(2)).to_have_text("value: True")
-    expect(app.get_by_test_id("stMarkdown").nth(3)).to_have_text(
-        "value from state: True"
+    wait_for_app_run(app)
+    expect_prefixed_markdown(app, "Download button with on_click value:", "True")
+    expect_prefixed_markdown(
+        app, "Download button with on_click value from state:", "True"
     )
 
     click_checkbox(app, "reset button return value")
-    expect(app.get_by_test_id("stMarkdown").nth(2)).to_have_text("value: False")
-    expect(app.get_by_test_id("stMarkdown").nth(3)).to_have_text(
-        "value from state: False"
+    wait_for_app_run(app)
+    expect_prefixed_markdown(app, "Download button with on_click value:", "False")
+    expect_prefixed_markdown(
+        app, "Download button with on_click value from state:", "False"
     )
 
 
@@ -286,3 +315,20 @@ def test_dynamic_download_button(app: Page, assert_snapshot: ImageCompareFunctio
 
     wait_for_app_run(app)
     expect_prefixed_markdown(app, "Clicked updated button:", "True")
+
+
+def test_download_button_shortcut_triggers(app: Page):
+    """Ensure pressing the shortcut activates the download button."""
+    shortcut_button = get_element_by_key(app, "shortcut_download_button")
+    expect(shortcut_button).to_be_visible()
+    expect(shortcut_button.locator("kbd")).to_have_text(
+        re.compile(r"(Ctrl|⌘) \+ (Alt|Option|⌥) \+ D")
+    )
+
+    # Press hotkey to trigger the button:
+    with app.expect_download() as download_info:
+        app.keyboard.press("ControlOrMeta+Alt+D")
+    download = download_info.value
+    assert download.suggested_filename == "shortcut.txt"
+    wait_for_app_run(app)
+    expect_markdown(app, "Shortcut download triggered!")

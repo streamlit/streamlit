@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import json
 import unittest
-from typing import Any, Callable, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar
 from unittest import mock
 from unittest.mock import MagicMock, Mock, patch
 
@@ -48,6 +48,9 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.caching import cached_message_replay
 from streamlit.type_util import is_altair_version_less_than
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 df1 = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
 df2 = pd.DataFrame([["E", "F", "G", "H"], [11, 12, 13, 14]], index=["a", "b"]).T
@@ -2704,6 +2707,16 @@ class VegaUtilitiesTest(unittest.TestCase):
                 '{"data": {"items": ["plot_3"], "descriptions": ["This plot_4 shows..."]}}',
                 '{"data": {"items": ["plot_1"], "descriptions": ["This plot_4 shows..."]}}',
             ),  # Only replace actual IDs, not text content
+            (
+                "param_",
+                '{"config": {"settings": ["param_e4f9", "param_a1b2c3"]}}',
+                '{"config": {"settings": ["param_1", "param_2"]}}',
+            ),  # Hash-based suffixes should be replaced as well
+            (
+                "view_",
+                '{"views": {"list": ["view_d1f2", "view_d1f2", "view_0abc"]}}',
+                '{"views": {"list": ["view_1", "view_1", "view_2"]}}',
+            ),  # Hash-based suffixes with duplicates
         ]
     )
     def test_reset_counter_pattern(self, prefix: str, vega_spec: str, expected: str):

@@ -19,10 +19,13 @@ from __future__ import annotations
 import datetime
 import re
 import textwrap
-from typing import Any, Callable
+from typing import TYPE_CHECKING, Any
 
 from streamlit.string_util import to_snake_case
 from streamlit.util import repr_
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 class ConfigOption:

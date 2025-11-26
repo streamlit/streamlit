@@ -18,7 +18,7 @@ import tempfile
 import textwrap
 import traceback
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock
 from urllib import parse
 
@@ -48,6 +48,7 @@ from streamlit.testing.v1.element_tree import (
     Column,
     Dataframe,
     DateInput,
+    DateTimeInput,
     Divider,
     ElementList,
     ElementTree,
@@ -88,7 +89,7 @@ from streamlit.testing.v1.util import patch_config_options
 from streamlit.util import calc_md5
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator, Sequence
+    from collections.abc import Callable, Iterator, Sequence
 
     from streamlit.proto.WidgetStates_pb2 import WidgetStates
 
@@ -607,6 +608,20 @@ class AppTest:
             ``at.date_input(key="my_key")`` for a widget with a given key.
         """
         return self._tree.date_input
+
+    @property
+    def datetime_input(self) -> WidgetList[DateTimeInput]:
+        """Sequence of all ``st.datetime_input`` widgets.
+
+        Returns
+        -------
+        WidgetList of DateTimeInput
+            Sequence of all ``st.datetime_input`` widgets. Individual widgets can
+            be accessed from a WidgetList by index (order on the page) or key.
+            For example, ``at.datetime_input[0]`` for the first widget or
+            ``at.datetime_input(key="my_key")`` for a widget with a given key.
+        """
+        return self._tree.datetime_input
 
     @property
     def divider(self) -> ElementList[Divider]:

@@ -57,6 +57,7 @@ export default function useStateRef<T>(
 ): [T, Dispatch<SetStateAction<T>>, MutableRefObject<T>] {
   const [state, setState] = useState<T>(initialState)
   const ref = useRef<T>(initialState)
+  // eslint-disable-next-line react-hooks/refs -- TODO: Do not access ref during render
   ref.current = state
 
   return [state, setState, ref]

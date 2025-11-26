@@ -26,7 +26,7 @@ from e2e_playwright.shared.dataframe_utils import (
     get_open_cell_overlay,
 )
 
-_NUM_DATAFRAME_ELEMENTS = 23
+_NUM_DATAFRAME_ELEMENTS = 24
 
 
 def test_data_editor_supports_various_configurations(
@@ -64,6 +64,7 @@ def test_data_editor_supports_various_configurations(
     assert_snapshot(elements.nth(20), name="st_data_editor-line_chart_column")
     assert_snapshot(elements.nth(21), name="st_data_editor-image_column")
     assert_snapshot(elements.nth(22), name="st_data_editor-multiselect_column")
+    assert_snapshot(elements.nth(23), name="st_data_editor-missing_placeholder")
 
 
 def test_multiselect_cell_editing(

@@ -73,4 +73,15 @@ describe("CustomCodeTag Element", () => {
       baseElement.querySelector("pre code .token.string")?.innerHTML
     ).toBe('"Hello"')
   })
+
+  it.each([
+    [null, ""],
+    [undefined, ""],
+    ["null", "null"],
+    ["undefined", "undefined"],
+  ])("renders children '%s' as '%s'", (children, expected) => {
+    const props = getStreamlitSyntaxHighlighterProps({ children })
+    const { baseElement } = render(<StreamlitSyntaxHighlighter {...props} />)
+    expect(baseElement.querySelector("pre code")).toHaveTextContent(expected)
+  })
 })
