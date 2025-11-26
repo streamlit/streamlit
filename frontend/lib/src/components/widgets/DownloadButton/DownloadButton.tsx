@@ -34,6 +34,7 @@ import BaseButton, {
   BaseButtonTooltip,
   DynamicButtonLabel,
 } from "~lib/components/shared/BaseButton"
+import { useRegisterShortcut } from "~lib/hooks/useRegisterShortcut"
 import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
 import { StyledErrorMessage } from "~lib/styled-components"
 import createDownloadLinkElement from "~lib/util/createDownloadLinkElement"
@@ -50,6 +51,7 @@ export interface Props {
 function DownloadButton(props: Props): ReactElement {
   const { disabled, element, widgetMgr, endpoints, fragmentId } = props
   const { help, label, icon, ignoreRerun, type, url, deferredFileId } = element
+  const shortcut = element.shortcut ? element.shortcut : undefined
 
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -122,6 +124,10 @@ function DownloadButton(props: Props): ReactElement {
   }, [requestDeferredFile, deferredFileId, endpoints, enforceDownloadInNewTab])
 
   const handleDownloadClick = useCallback((): void => {
+    if (disabled) {
+      return
+    }
+
     if (!ignoreRerun) {
       // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
       widgetMgr.setTriggerValue(element, { fromUi: true }, fragmentId)
@@ -142,6 +148,7 @@ function DownloadButton(props: Props): ReactElement {
       link.click()
     }
   }, [
+    disabled,
     ignoreRerun,
     widgetMgr,
     element,
@@ -151,6 +158,12 @@ function DownloadButton(props: Props): ReactElement {
     downloadUrl,
     enforceDownloadInNewTab,
   ])
+
+  useRegisterShortcut({
+    shortcut,
+    disabled,
+    onActivate: handleDownloadClick,
+  })
 
   // Clear error after 5 seconds
   useEffect(() => {
@@ -174,6 +187,7 @@ function DownloadButton(props: Props): ReactElement {
           <DynamicButtonLabel
             icon={isLoading ? "spinner" : icon}
             label={label}
+            shortcut={shortcut}
           />
         </BaseButton>
       </BaseButtonTooltip>

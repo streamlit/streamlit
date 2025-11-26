@@ -24,7 +24,7 @@ import { PageLink as PageLinkProto } from "@streamlit/protobuf"
 import { render, renderWithContexts } from "~lib/test_util"
 import { lightTheme } from "~lib/theme"
 
-import PageLink, { Props } from "./PageLink"
+import PageLink, { buildHref, Props } from "./PageLink"
 
 const getProps = (
   elementProps: Partial<PageLinkProto> = {},
@@ -96,7 +96,22 @@ describe("PageLink", () => {
 
     const pageNavLink = screen.getByTestId("stPageLink-NavLink")
     await user.click(pageNavLink)
-    expect(mockOnPageChange).toHaveBeenCalledWith("main_page_hash")
+    expect(mockOnPageChange).toHaveBeenCalledWith("main_page_hash", "")
+  })
+
+  it("triggers onPageChange with pageScriptHash and queryString when clicked", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ queryString: "foo=bar" })
+
+    renderWithContexts(<PageLink {...props} />, {
+      navigationContext: {
+        onPageChange: mockOnPageChange,
+      },
+    })
+
+    const pageNavLink = screen.getByTestId("stPageLink-NavLink")
+    await user.click(pageNavLink)
+    expect(mockOnPageChange).toHaveBeenCalledWith("main_page_hash", "foo=bar")
   })
 
   it("does not trigger onPageChange when disabled", async () => {
@@ -198,6 +213,60 @@ describe("PageLink", () => {
     expect(pageLinkText).not.toHaveStyle(`font-weight: 600`)
   })
 
+  it("constructs href with queryString for external links", () => {
+    const props = getProps({
+      page: "http://example.com",
+      external: true,
+      queryString: "foo=bar",
+    })
+    render(<PageLink {...props} />)
+
+    const pageLink = screen.getByTestId("stPageLink-NavLink")
+    expect(pageLink).toHaveAttribute("href", "http://example.com/?foo=bar")
+  })
+
+  it("constructs href with queryString for external links when URL already has query params", () => {
+    const props = getProps({
+      page: "http://example.com?baz=qux",
+      external: true,
+      queryString: "foo=bar",
+    })
+    render(<PageLink {...props} />)
+
+    const pageLink = screen.getByTestId("stPageLink-NavLink")
+    expect(pageLink).toHaveAttribute(
+      "href",
+      "http://example.com/?baz=qux&foo=bar"
+    )
+  })
+
+  it("constructs href with queryString for external links with fragment", () => {
+    const props = getProps({
+      page: "http://example.com#section",
+      external: true,
+      queryString: "foo=bar",
+    })
+    render(<PageLink {...props} />)
+
+    const pageLink = screen.getByTestId("stPageLink-NavLink")
+    // Query params should be placed before the fragment
+    expect(pageLink).toHaveAttribute(
+      "href",
+      "http://example.com/?foo=bar#section"
+    )
+  })
+
+  it("constructs href with queryString for internal links", () => {
+    const props = getProps({
+      page: "page_1",
+      queryString: "foo=bar&baz=qux",
+    })
+    render(<PageLink {...props} />)
+
+    const pageLink = screen.getByTestId("stPageLink-NavLink")
+    expect(pageLink).toHaveAttribute("href", "page_1?foo=bar&baz=qux")
+  })
+
   it("renders with help properly", async () => {
     const user = userEvent.setup()
     render(<PageLink {...getProps({ help: "mockHelpText" })} />)
@@ -217,5 +286,91 @@ describe("PageLink", () => {
 
     const tooltipContent = await screen.findByTestId("stTooltipContent")
     expect(tooltipContent).toHaveTextContent("mockHelpText")
+  })
+})
+
+describe("buildHref", () => {
+  it("returns the page path when no queryString is provided", () => {
+    const element = PageLinkProto.create({
+      page: "my_page",
+      queryString: "",
+    })
+    expect(buildHref(element)).toBe("my_page")
+  })
+
+  it("appends queryString to internal links", () => {
+    const element = PageLinkProto.create({
+      page: "my_page",
+      queryString: "foo=bar",
+      external: false,
+    })
+    expect(buildHref(element)).toBe("my_page?foo=bar")
+  })
+
+  it("appends queryString with & for internal links that already have query params", () => {
+    const element = PageLinkProto.create({
+      page: "my_page?existing=param",
+      queryString: "foo=bar",
+      external: false,
+    })
+    expect(buildHref(element)).toBe("my_page?existing=param&foo=bar")
+  })
+
+  it("appends queryString to external links using URL API", () => {
+    const element = PageLinkProto.create({
+      page: "https://example.com",
+      queryString: "foo=bar",
+      external: true,
+    })
+    expect(buildHref(element)).toBe("https://example.com/?foo=bar")
+  })
+
+  it("appends queryString to external links with existing query params", () => {
+    const element = PageLinkProto.create({
+      page: "https://example.com?existing=param",
+      queryString: "foo=bar",
+      external: true,
+    })
+    expect(buildHref(element)).toBe(
+      "https://example.com/?existing=param&foo=bar"
+    )
+  })
+
+  it("places queryString before fragment for external links", () => {
+    const element = PageLinkProto.create({
+      page: "https://example.com#section",
+      queryString: "foo=bar",
+      external: true,
+    })
+    expect(buildHref(element)).toBe("https://example.com/?foo=bar#section")
+  })
+
+  it("handles multiple query params for external links", () => {
+    const element = PageLinkProto.create({
+      page: "https://example.com",
+      queryString: "foo=bar&baz=qux",
+      external: true,
+    })
+    expect(buildHref(element)).toBe("https://example.com/?foo=bar&baz=qux")
+  })
+
+  it("falls back to string concatenation for invalid external URLs", () => {
+    const element = PageLinkProto.create({
+      page: "not-a-valid-url",
+      queryString: "foo=bar",
+      external: true,
+    })
+    // Falls back to simple concatenation when URL parsing fails
+    expect(buildHref(element)).toBe("not-a-valid-url?foo=bar")
+  })
+
+  it("places queryString before fragment in fallback for invalid external URLs", () => {
+    const element = PageLinkProto.create({
+      page: "not-a-valid-url#section",
+      queryString: "foo=bar",
+      external: true,
+    })
+    // Falls back to string manipulation that correctly places query before fragment
+    expect(buildHref(element)).toBe("not-a-valid-url?foo=bar#section")
   })
 })

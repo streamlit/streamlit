@@ -18,12 +18,22 @@ import React from "react"
 
 import { screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
+import { vi } from "vitest"
 
 import { LinkButton as LinkButtonProto } from "@streamlit/protobuf"
 
+import { useRegisterShortcut } from "~lib/hooks/useRegisterShortcut"
 import { render } from "~lib/test_util"
 
 import LinkButton, { Props } from "./LinkButton"
+
+vi.mock("~lib/hooks/useRegisterShortcut", () => ({
+  useRegisterShortcut: vi.fn(),
+  formatShortcutForDisplay: vi.fn(
+    (shortcut: string | null | undefined) =>
+      shortcut?.replace(/\+/g, " + ") || undefined
+  ),
+}))
 
 const getProps = (
   elementProps: Partial<LinkButtonProto> = {},
@@ -38,6 +48,10 @@ const getProps = (
 })
 
 describe("LinkButton widget", () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
   it("renders without crashing", () => {
     const props = getProps()
     render(<LinkButton {...props} />)
@@ -83,6 +97,39 @@ describe("LinkButton widget", () => {
 
     const tooltipContent = await screen.findByTestId("stTooltipContent")
     expect(tooltipContent).toHaveTextContent("mockHelpText")
+  })
+
+  it("renders with shortcut label", () => {
+    const props = getProps({ shortcut: "Ctrl+Enter" })
+    render(<LinkButton {...props} />)
+
+    // Check that the shortcut is displayed in the button
+    // Note: The actual text might vary based on platform (e.g. Ctrl vs Cmd),
+    // but DynamicButtonLabel handles that. For test environment, we assume defaults.
+    const shortcutText = screen.getByText("Ctrl + Enter")
+    expect(shortcutText).toBeVisible()
+  })
+
+  it("triggers the link click when shortcut is pressed", () => {
+    const props = getProps({ shortcut: "Ctrl+Enter" })
+    const useRegisterShortcutMock = vi.mocked(useRegisterShortcut)
+
+    // Spy on the anchor click method to ensure it is called
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, "click")
+
+    render(<LinkButton {...props} />)
+
+    expect(useRegisterShortcutMock).toHaveBeenCalled()
+
+    // Get the onActivate callback passed to the hook
+    const { onActivate } = useRegisterShortcutMock.mock.calls[0][0]
+
+    // Simulate the shortcut activation
+    onActivate()
+
+    expect(clickSpy).toHaveBeenCalled()
+
+    clickSpy.mockRestore()
   })
 
   describe("wrapped BaseLinkButton", () => {

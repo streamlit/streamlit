@@ -22,9 +22,9 @@ import {
   createSidebarTheme,
   emotionLightTheme,
   mockEndpoints,
-  renderWithContexts,
   ThemeConfig,
 } from "@streamlit/lib"
+import { renderWithContexts } from "@streamlit/lib/testing"
 import { CustomThemeConfig } from "@streamlit/protobuf"
 
 import { SidebarProps } from "./Sidebar"

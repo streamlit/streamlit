@@ -487,4 +487,5 @@ class BootstrapUvloopTest(TestCase):
     def test_handles_missing_uvloop(self):
         """Missing uvloop does not raise."""
         with patch.object(bootstrap.env_util, "IS_WINDOWS", False):
-            bootstrap._maybe_install_uvloop(running_in_event_loop=False)
+            with patch.dict("sys.modules", {"uvloop": None}):
+                bootstrap._maybe_install_uvloop(running_in_event_loop=False)

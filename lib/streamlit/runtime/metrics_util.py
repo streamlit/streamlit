@@ -155,6 +155,7 @@ _ATTRIBUTIONS_TO_CHECK: Final = [
     "authlib",
     "fastapi",
     "starlette",
+    "uvloop",
 ]
 
 _ETC_MACHINE_ID_PATH = "/etc/machine-id"
@@ -333,8 +334,10 @@ def _get_command_telemetry(
     ):
         name = f"component:{self_arg.name}"
 
-    if name == "_bidi_component" and len(args) > 0 and isinstance(args[0], str):
-        component_name = args[0]
+    if name == "_bidi_component" and len(args) > 1 and isinstance(args[1], str):
+        # Bound DeltaGenerator methods always receive `self` as args[0], so args[1]
+        # is the user-supplied component name.
+        component_name = args[1]
         name = f"component_v2:{component_name}"
 
     return Command(name=name, args=arguments)

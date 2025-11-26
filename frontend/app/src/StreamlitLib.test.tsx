@@ -34,11 +34,11 @@ import {
   FormsData,
   AppConfig as LibAppConfig,
   LibConfigContextProps,
-  render,
   ScriptRunState,
   SessionInfo,
   WidgetStateManager,
 } from "@streamlit/lib"
+import { render } from "@streamlit/lib/testing"
 import {
   Delta as DeltaProto,
   Element as ElementProto,

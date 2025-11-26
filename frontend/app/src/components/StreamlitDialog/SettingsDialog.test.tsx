@@ -30,11 +30,11 @@ import {
   darkTheme,
   lightTheme,
   mockSessionInfo,
-  renderWithContexts,
   SessionInfo,
   ThemeConfig,
   ThemeContextProps,
 } from "@streamlit/lib"
+import { renderWithContexts } from "@streamlit/lib/testing"
 
 import { Props, SettingsDialog } from "./SettingsDialog"
 

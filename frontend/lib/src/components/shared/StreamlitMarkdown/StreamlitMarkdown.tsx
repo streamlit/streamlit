@@ -18,40 +18,42 @@ import React, {
   CSSProperties,
   type FC,
   type HTMLProps,
+  lazy,
   memo,
   type ReactElement,
   type ReactNode,
+  Suspense,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react"
 
 import slugify from "@sindresorhus/slugify"
 import { type Element, type Root } from "hast"
-import omit from "lodash/omit"
-import once from "lodash/once"
+import { omit, once } from "lodash-es"
 import { findAndReplace } from "mdast-util-find-and-replace"
 import { Link2 as LinkIcon } from "react-feather"
 import ReactMarkdown, {
   Components,
   Options as ReactMarkdownProps,
 } from "react-markdown"
-import rehypeKatex from "rehype-katex"
-import rehypeRaw from "rehype-raw"
 import remarkDirective from "remark-directive"
-import remarkEmoji from "remark-emoji"
 import remarkGfm from "remark-gfm"
 import remarkMathPlugin from "remark-math"
 import { PluggableList } from "unified"
 import { visit } from "unist-util-visit"
 import xxhash from "xxhashjs"
 
+import { Skeleton as SkeletonProto } from "@streamlit/protobuf"
+
 import streamlitLogo from "~lib/assets/img/streamlit-logo/streamlit-mark-color.svg"
 import IsDialogContext from "~lib/components/core/IsDialogContext"
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
-import StreamlitSyntaxHighlighter from "~lib/components/elements/CodeBlock/StreamlitSyntaxHighlighter"
 import { StyledInlineCode } from "~lib/components/elements/CodeBlock/styled-components"
+import { Skeleton } from "~lib/components/elements/Skeleton"
 import ErrorBoundary from "~lib/components/shared/ErrorBoundary"
 import { InlineTooltipIcon } from "~lib/components/shared/TooltipIcon"
 import { useCrossOriginAttribute } from "~lib/hooks/useCrossOriginAttribute"
@@ -66,12 +68,58 @@ import {
 import {
   StyledHeadingActionElements,
   StyledHeadingWithActionElements,
+  StyledHelpIconWrapper,
   StyledLinkIcon,
   StyledPreWrapper,
   StyledStreamlitMarkdown,
 } from "./styled-components"
 
-import "katex/dist/katex.min.css"
+const StreamlitSyntaxHighlighter = lazy(
+  () => import("~lib/components/elements/CodeBlock/StreamlitSyntaxHighlighter")
+)
+
+// Lazy load katex dependencies
+const loadKatexPlugin = (): Promise<typeof import("rehype-katex")> =>
+  import("rehype-katex")
+const loadKatexStyles = once((): void => {
+  void import("katex/dist/katex.min.css")
+})
+
+// Lazy load rehype-raw (pulls in parse5)
+const loadRehypeRaw = (): Promise<typeof import("rehype-raw")> =>
+  import("rehype-raw")
+
+// Lazy load remark-emoji (pulls in node-emoji and @sindresorhus/is)
+const loadRemarkEmoji = (): Promise<typeof import("remark-emoji")> =>
+  import("remark-emoji")
+
+/**
+ * Heuristic to determine if the markdown source contains emoji shortcodes that require remark-emoji.
+ * Checks for patterns like :emoji_name: but excludes Streamlit's custom :material/ and
+ * :streamlit: syntax which are handled separately.
+ * Supports shortcodes with special characters like :+1:, :-1:, etc.
+ *
+ * @param source - The markdown source string to check
+ * @returns true if emoji shortcodes are detected, false otherwise
+ */
+export function containsEmojiShortcodes(source: string): boolean {
+  return /:(?!material\/|streamlit:)[\w+-][\w_+-]*:/.test(source)
+}
+
+/**
+ * Detects if the markdown source contains math syntax that requires KaTeX.
+ * Checks for inline math ($...$) and display math ($$...$$) patterns.
+ * For inline math, ensures no whitespace immediately after opening $ or before closing $
+ * to avoid false positives like "$5 and $10".
+ *
+ * @param source - The markdown source string to check
+ * @returns true if math syntax is detected, false otherwise
+ */
+export function containsMathSyntax(source: string): boolean {
+  // Detect display math: $$...$$ or inline math: $...$
+  // Inline math requires non-whitespace after opening $ and before closing $
+  return /\$\$[\s\S]+?\$\$|\$(?!\s)[^$\n]+?(?<!\s)\$/.test(source)
+}
 
 export enum Tags {
   H1 = "h1",
@@ -357,9 +405,24 @@ export const CustomCodeTag: FC<CustomCodeTagProps> = ({
 
   const language = match?.[1] || ""
   return !inline ? (
-    <StreamlitSyntaxHighlighter language={language} showLineNumbers={false}>
-      {codeText}
-    </StreamlitSyntaxHighlighter>
+    <ErrorBoundary>
+      <Suspense
+        fallback={
+          <Skeleton
+            element={SkeletonProto.create({
+              style: SkeletonProto.SkeletonStyle.ELEMENT,
+            })}
+          />
+        }
+      >
+        <StreamlitSyntaxHighlighter
+          language={language}
+          showLineNumbers={false}
+        >
+          {codeText}
+        </StreamlitSyntaxHighlighter>
+      </Suspense>
+    </ErrorBoundary>
   ) : (
     <StyledInlineCode className={className} {...omit(props, "node")}>
       {children}
@@ -390,6 +453,26 @@ export const CustomMediaTag: FC<
   return <Tag {...attributes} />
 }
 
+interface CustomHelpIconProps {
+  children?: string
+}
+
+/**
+ * Custom component to render inline help icons in markdown.
+ * Wraps InlineTooltipIcon in an inline-block span for proper inline flow.
+ */
+export const CustomHelpIcon: FC<CustomHelpIconProps> = ({ children }) => {
+  // Ensure we only pass strings to the tooltip. Text directives should always
+  // pass plain strings, but we check defensively at runtime.
+  const tooltipContent = typeof children === "string" ? children : ""
+
+  return (
+    <StyledHelpIconWrapper>
+      <InlineTooltipIcon content={tooltipContent} />
+    </StyledHelpIconWrapper>
+  )
+}
+
 // These are common renderers that don't depend on props or context
 const BASE_RENDERERS = {
   pre: CustomPreTag,
@@ -403,6 +486,7 @@ const BASE_RENDERERS = {
   img: CustomMediaTag,
   video: CustomMediaTag,
   audio: CustomMediaTag,
+  "streamlit-help-icon": CustomHelpIcon,
 }
 
 /**
@@ -452,6 +536,29 @@ function createColorMapping(theme: EmotionTheme): Map<string, string> {
         ${redbg}, ${orangebg}, ${yellowbg}, ${greenbg}, ${bluebg}, ${violetbg}, ${purplebg});`,
     })
   )
+}
+
+/**
+ * Factory function to create the help icon directive plugin
+ */
+function createRemarkHelpIcon() {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
+  return () => (tree: any) => {
+    visit(tree, "textDirective", (node, _index, _parent) => {
+      const nodeName = String(node.name)
+
+      // Handle help icon directive (:help[tooltip content])
+      if (nodeName === "help") {
+        const data = node.data || (node.data = {})
+        data.hName = "streamlit-help-icon"
+        data.hProperties = data.hProperties || {}
+        // Pass the children through so CustomHelpIcon can extract the content
+        return
+      }
+    })
+
+    return tree
+  }
 }
 
 /**
@@ -528,9 +635,12 @@ function createRemarkColoringAndSmall(
       // We convert unsupported text directives to plain text to avoid them being
       // ignored / not rendered. See https://github.com/streamlit/streamlit/issues/8726,
       // https://github.com/streamlit/streamlit/issues/5968
-      node.type = "text"
-      node.value = `:${nodeName}`
-      node.data = {}
+      // Don't convert if the directive was already handled by another plugin
+      if (!node.data?.hName) {
+        node.type = "text"
+        node.value = `:${nodeName}`
+        node.data = {}
+      }
     })
     return tree
   }
@@ -658,11 +768,12 @@ function createRemarkTypographicalSymbols() {
 }
 
 // Standard remark plugins that don't depend on theme or props
+// Note: remarkEmoji is lazy-loaded and added conditionally when emoji shortcodes are detected
 const BASE_REMARK_PLUGINS = [
   remarkMathPlugin,
-  remarkEmoji,
   remarkGfm,
   remarkDirective,
+  createRemarkHelpIcon(),
   createRemarkStreamlitLogo(),
   createRemarkTypographicalSymbols(),
 ]
@@ -736,23 +847,123 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
   disableLinks,
 }: Readonly<RenderedMarkdownProps>): ReactElement {
   const theme = useEmotionTheme()
+  type KatexPlugin = Awaited<ReturnType<typeof loadKatexPlugin>>["default"]
+  type RawPlugin = Awaited<ReturnType<typeof loadRehypeRaw>>["default"]
+  type EmojiPlugin = Awaited<ReturnType<typeof loadRemarkEmoji>>["default"]
+  const [katexPlugin, setKatexPlugin] = useState<KatexPlugin | null>(null)
+  const isLoadingKatexRef = useRef(false)
+  const [rawPlugin, setRawPlugin] = useState<RawPlugin | null>(null)
+  const isLoadingRawRef = useRef(false)
+  const [emojiPlugin, setEmojiPlugin] = useState<EmojiPlugin | null>(null)
+  const isLoadingEmojiRef = useRef(false)
+
+  const needsKatex = useMemo(() => containsMathSyntax(source), [source])
+  const needsEmoji = useMemo(() => containsEmojiShortcodes(source), [source])
+
+  // Load katex plugin when needed
+  useEffect(() => {
+    let isMounted = true
+
+    if (needsKatex && !katexPlugin && !isLoadingKatexRef.current) {
+      isLoadingKatexRef.current = true
+      loadKatexStyles()
+      void loadKatexPlugin()
+        .then(module => {
+          if (isMounted) {
+            setKatexPlugin(() => module.default)
+          }
+        })
+        .catch(() => {
+          // Silently fail - math will render as plain text
+        })
+        .finally(() => {
+          isLoadingKatexRef.current = false
+        })
+    }
+
+    return () => {
+      isMounted = false
+    }
+  }, [needsKatex, katexPlugin])
+
+  // Load rehype-raw plugin when HTML is allowed
+  useEffect(() => {
+    let isMounted = true
+
+    if (allowHTML && !rawPlugin && !isLoadingRawRef.current) {
+      isLoadingRawRef.current = true
+      void loadRehypeRaw()
+        .then(module => {
+          if (isMounted) {
+            setRawPlugin(() => module.default)
+          }
+        })
+        .catch(() => {
+          // Silently fail - HTML will be escaped
+        })
+        .finally(() => {
+          isLoadingRawRef.current = false
+        })
+    }
+
+    return () => {
+      isMounted = false
+    }
+  }, [allowHTML, rawPlugin])
+
+  // Load remark-emoji plugin when emoji shortcodes are detected
+  useEffect(() => {
+    let isMounted = true
+
+    if (needsEmoji && !emojiPlugin && !isLoadingEmojiRef.current) {
+      isLoadingEmojiRef.current = true
+      void loadRemarkEmoji()
+        .then(module => {
+          if (isMounted) {
+            setEmojiPlugin(() => module.default)
+          }
+        })
+        .catch(() => {
+          // Silently fail - emoji shortcodes will render as plain text
+        })
+        .finally(() => {
+          isLoadingEmojiRef.current = false
+        })
+    }
+
+    return () => {
+      isMounted = false
+    }
+  }, [needsEmoji, emojiPlugin])
 
   const colorMapping = useMemo(() => createColorMapping(theme), [theme])
 
-  const remarkPlugins = useMemo(
-    () => [
+  const remarkPlugins = useMemo<PluggableList>(() => {
+    const plugins: PluggableList = [
       ...BASE_REMARK_PLUGINS,
       createRemarkColoringAndSmall(theme, colorMapping),
       createRemarkMaterialIcons(theme),
-    ],
-    [theme, colorMapping]
-  )
+    ]
+
+    // Only add emoji plugin if it's loaded (lazy-loaded when emoji shortcodes detected)
+    if (emojiPlugin) {
+      plugins.push(emojiPlugin)
+    }
+
+    return plugins
+  }, [theme, colorMapping, emojiPlugin])
 
   const rehypePlugins = useMemo<PluggableList>(() => {
-    const plugins: PluggableList = [rehypeKatex]
+    const plugins: PluggableList = []
 
-    if (allowHTML) {
-      plugins.push(rehypeRaw)
+    // Only add katex plugin if it's loaded
+    if (katexPlugin) {
+      plugins.push(katexPlugin)
+    }
+
+    // Only add raw plugin if it's loaded and HTML is allowed
+    if (allowHTML && rawPlugin) {
+      plugins.push(rawPlugin)
     }
 
     // This plugin must run last to ensure the inline property is set correctly
@@ -760,7 +971,7 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
     plugins.push(rehypeSetCodeInlineProperty)
 
     return plugins
-  }, [allowHTML])
+  }, [allowHTML, katexPlugin, rawPlugin])
 
   const renderers = useMemo(
     () =>
@@ -781,6 +992,23 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
     if (!isLabel) return []
     return disableLinks ? LINKS_DISALLOWED_ELEMENTS : LABEL_DISALLOWED_ELEMENTS
   }, [isLabel, disableLinks])
+
+  // Show skeleton while dependencies are loading
+  if (
+    (needsKatex && !katexPlugin) ||
+    (allowHTML && !rawPlugin) ||
+    (needsEmoji && !emojiPlugin)
+  ) {
+    return (
+      <ErrorBoundary>
+        <Skeleton
+          element={SkeletonProto.create({
+            style: SkeletonProto.SkeletonStyle.ELEMENT,
+          })}
+        />
+      </ErrorBoundary>
+    )
+  }
 
   return (
     <ErrorBoundary>
