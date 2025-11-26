@@ -181,6 +181,7 @@ _ATTRIBUTIONS_TO_CHECK: Final = [
     "sentence_transformers",
     "spacy",
     "nltk",
+    "onnxruntime",
     # Workflow Tools:
     "prefect",
     "luigi",
@@ -204,6 +205,8 @@ _ATTRIBUTIONS_TO_CHECK: Final = [
     "starlette",
     "playwright",
     "folium",
+    "geopandas",
+    "httpx",
     # Optional streamlit dependencies:
     "seaborn",
     "graphviz",
@@ -223,6 +226,7 @@ _ATTRIBUTIONS_TO_CHECK: Final = [
     "pdfplumber",
     "docx",
     "openpyxl",
+    "xlsxwriter",
     # Image/Vision:
     "cv2",
     "mediapipe",
