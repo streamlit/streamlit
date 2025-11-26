@@ -20,7 +20,7 @@ We use [PEP8 style](https://pep8.org) for Python code, with a few adjustments:
 ### Docstrings
 
 - Use [Numpydoc style](https://numpydoc.readthedocs.io/en/latest/format.html).
-- Docstrings are meant for users of a function, not developers who may be edit the internals of that function in the future. If you want to talk to future developers, use comments.
+- Docstrings are meant for users of a function, not developers who may edit the internals of that function in the future. If you want to talk to future developers, use comments.
 - All modules that we expect users to interact with must have top-level docstrings. If a user is not meant to interact with a module, docstrings are optional.
 - A docstring should not be a simple re-statement of the function name / class name / filename. For example, this is a bad docstring for DeltaGenerator.py: "Declares the DeltaGenerator class".
 
