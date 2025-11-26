@@ -264,6 +264,14 @@ export class App extends PureComponent<Props, State> {
 
   private isInitializingConnectionManager: boolean = true
 
+  // Queue for pending file URL requests when disconnected.
+  // This handles the case where users select files on mobile browsers while
+  // the WebSocket connection has timed out (e.g., file picker was open too long).
+  private pendingFileURLRequests: Array<{
+    requestId: string
+    files: File[]
+  }> = []
+
   // Whether we have received a NewSession message after the latest rerun request.
   // This is used to ensure that we only increment the message cache run count after
   // we have received a NewSession message after the latest rerun request.
@@ -787,6 +795,11 @@ export class App extends PureComponent<Props, State> {
       this.hostCommunicationMgr.sendMessageToHost({
         type: "WEBSOCKET_CONNECTED",
       })
+
+      // Process any queued file URL requests that were made while disconnected.
+      // This handles the case where users select files on mobile browsers while
+      // the WebSocket connection had timed out.
+      this.processPendingFileURLRequests()
     } else {
       // If we're starting from the CONNECTED state and going to any other
       // state, we must be disconnecting.
@@ -2076,9 +2089,36 @@ export class App extends PureComponent<Props, State> {
       backMsg.type = "fileUrlsRequest"
       this.sendBackMsg(backMsg)
     } else {
-      LOG.warn(
-        `Cannot request file URLs (isServerConnected: ${isConnected}, isSessionInfoSet: ${isSessionInfoSet})`
+      // Queue the request to be sent when the connection is re-established.
+      // This handles the case where users select files on mobile browsers while
+      // the WebSocket connection has timed out (e.g., file picker was open too long).
+      LOG.info(
+        `Queueing file URL request (isServerConnected: ${isConnected}, isSessionInfoSet: ${isSessionInfoSet})`
       )
+      this.pendingFileURLRequests.push({ requestId, files })
+    }
+  }
+
+  /**
+   * Process any queued file URL requests that were made while disconnected.
+   * Called when the WebSocket connection is re-established.
+   */
+  processPendingFileURLRequests = (): void => {
+    if (this.pendingFileURLRequests.length === 0) {
+      return
+    }
+
+    LOG.info(
+      `Processing ${this.pendingFileURLRequests.length} pending file URL request(s)`
+    )
+
+    // Process all pending requests
+    const pendingRequests = [...this.pendingFileURLRequests]
+    this.pendingFileURLRequests = []
+
+    for (const { requestId, files } of pendingRequests) {
+      // Re-invoke requestFileURLs now that we're connected
+      this.requestFileURLs(requestId, files)
     }
   }
 

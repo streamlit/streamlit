@@ -2945,7 +2945,7 @@ describe("App", () => {
       })
     })
 
-    it("does nothing if server is disconnected", () => {
+    it("queues requests when server is disconnected", () => {
       renderApp(getProps())
 
       const fileUploadClient =
@@ -2960,7 +2960,49 @@ describe("App", () => {
 
       const connectionManager = getMockConnectionManager()
 
+      // No message sent when disconnected
       expect(connectionManager.sendMessage).not.toBeCalled()
+    })
+
+    it("processes queued requests when connection is re-established", () => {
+      renderApp(getProps())
+
+      const fileUploadClient =
+        getStoredValue<FileUploadClient>(FileUploadClient)
+
+      // Queue a request while disconnected
+      // @ts-expect-error - requestFileURLs is private
+      fileUploadClient.requestFileURLs("myRequestId", [
+        new File([""], "file1.txt"),
+        new File([""], "file2.txt"),
+      ])
+
+      // No message sent yet
+      const connectionManager = getMockConnectionManager()
+      expect(connectionManager.sendMessage).not.toBeCalled()
+
+      // Set up session info
+      const sessionInfo = getStoredValue<SessionInfo>(SessionInfo)
+      sessionInfo.setCurrent(mockSessionInfoProps())
+
+      // Mock connection as connected and simulate connection state change
+      getMockConnectionManager(true)
+
+      act(() => {
+        getMockConnectionManagerProp("connectionStateChanged")(
+          ConnectionState.CONNECTED
+        )
+      })
+
+      // The queued request should now be sent
+      expect(connectionManager.sendMessage).toHaveBeenCalledWith(
+        expect.objectContaining({
+          fileUrlsRequest: expect.objectContaining({
+            requestId: "myRequestId",
+            fileNames: ["file1.txt", "file2.txt"],
+          }),
+        })
+      )
     })
   })
 
