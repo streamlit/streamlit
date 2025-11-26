@@ -50,7 +50,7 @@ This means you should always have logs, warnings, errors, and notices end up in
   - Where possible, avoid the need to [target other components](https://emotion.sh/docs/styled#targeting-another-emotion-component). Sometimes, targeting outside components is necessary, but we want to try to avoid the interconnectedness between these components where possible.
   - Use the theme everywhere. Each styled component has a function input with a `theme` parameter (in addition to any props). The theme argument will be equivalent in structure to the main theme. Use the proper values that match the color/spacing/sizing/font style you are looking for.
   - Sometimes, the theme won't provide a valid value. That is fine, hard-code the value if needed in either the Theme (if it can be generalized) or in the styled component (if it is a special case)
-- When using [BaseWeb](https://baseweb.design), our design system library, be sure to import our theme via [`useTheme`](https://emotion.sh/docs/theming#usetheme-hook) and use those values in overrides.
+- When using [BaseWeb](https://baseweb.design), our design system library, be sure to import our theme via `useEmotionTheme` and use those values in overrides.
 
 ## Assets
 
