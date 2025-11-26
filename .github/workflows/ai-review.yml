@@ -6,13 +6,15 @@ on:
     types: [labeled]
 
 jobs:
-  ai-review:
+  # Job 1: AI performs the review with READ-ONLY access
+  review:
     if: github.event.label.name == 'ai-review'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       contents: read
-      pull-requests: write
-      issues: write
+      pull-requests: read
+      issues: read
 
     # Avoid duplicate workflows on same branch
     concurrency:
@@ -43,9 +45,10 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           MODEL: opus-4.5-thinking
         run: |
-          cursor-agent -p "You are operating in a GitHub Actions runner to perform a code review.
+          cursor-agent -p ""You are operating in a GitHub Actions runner to perform a code review on a pull request.
 
-          The GitHub CLI is available as \`gh\` and authenticated via \`GH_TOKEN\`. Git is available for read operations.
+          The GitHub CLI (\`gh\`) is available for READ operations only. Use it to fetch PR details, diff, and file contents.
+          Git is also available for read operations.
 
           # Context:
           - Repo: ${{ github.repository }}
@@ -55,13 +58,14 @@ jobs:
           - Head Ref: ${{ github.head_ref }}
 
           # Goal:
-          Please review this branch (PR: ${{ github.event.pull_request.html_url }}) and make sure that the changes make sense, are bug free, backwards compatible and ready for merge. Please don't run any linting, tests, or other tasks that are already handled by CI.
+          Review this branch (PR: ${{ github.event.pull_request.html_url }}) and ensure the changes are bug-free, backwards compatible, and ready for merge.
 
           # Review Checklist:
           - Unit and e2e tests are covering the changes well.
           - The e2e tests follow the best practices documented in .cursor/rules/e2e_playwright.mdc
           - The python unit tests follow the best practices documented in .cursor/rules/python_tests.mdc
           - The frontend unit tests follow the best practices documented in .cursor/rules/typescript.mdc
+          - If proto files have been changed, please check with .cursor/rules/protobuf.mdc if the changes look good.
           - No risky aspects that could cause security issues or regressions.
           - The code follows other best practices from the Streamlit code base.
 
@@ -70,13 +74,13 @@ jobs:
           2. Read and analyze the changed files to understand the full context.
           3. Read the best practices files (.cursor/rules/e2e_playwright.mdc, .cursor/rules/python_tests.mdc, .cursor/rules/typescript.mdc) to understand the testing standards.
           4. Perform a thorough code review based on the checklist above.
-          5. Post a single, comprehensive review comment to the PR using \`gh pr comment ${{ github.event.pull_request.number }} --body \"<your review>\"\`.
+          5. Write your review to a file named \`review.md\` in the current directory.
           6. The review comment should be well-structured with clear sections and actionable feedback.
-          7. If everything looks good, indicate that the PR is ready for merge.
-          8. If there are issues, clearly describe them with specific file references and line numbers.
+          7. If there are issues, clearly describe them with specific file references and line numbers.
+          8. Write either \`APPROVED\` or \`CHANGES_REQUESTED\` (exactly one of these) to a file named \`verdict.txt\`.
 
-          # Output Format for PR Comment:
-          Structure your review comment with the following sections:
+          # Output Format for review.md:
+          Structure your review with the following sections:
           - **Summary**: Brief overview of what the PR does
           - **Code Quality**: Assessment of code structure, patterns, and maintainability
           - **Test Coverage**: Evaluation of unit and e2e test coverage
@@ -85,11 +89,76 @@ jobs:
           - **Recommendations**: Specific suggestions for improvement (if any)
           - **Verdict**: Overall assessment (Ready for merge / Needs changes)
 
-          Do NOT run linting, tests, or build commands. Focus only on code review.
+          Do NOT run linting, tests, or build commands, this will be done by the CI system. Focus only on code review.
+          Do NOT attempt to post comments, edit PRs, or perform any write operations - they will fail.
           " --force --model "$MODEL" --output-format=text
 
-      - name: Remove 'ai-review' label after review
+      - name: Upload review artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: review-output
+          path: |
+            review.md
+            verdict.txt
+          retention-days: 1
+
+  # Job 2: Post the review with WRITE access (no agent)
+  post-review:
+    needs: review
+    if: always()
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Remove 'ai-review' label
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh pr edit ${{ github.event.pull_request.number }} --remove-label "ai-review"
+          gh pr edit ${{ github.event.pull_request.number }} --remove-label "ai-review" --repo ${{ github.repository }}
+
+      - name: Download review artifacts
+        id: download
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: review-output
+
+      - name: Post review comment
+        if: steps.download.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ ! -f review.md ]; then
+            echo "Error: review.md not found"
+            exit 1
+          fi
+          gh pr comment ${{ github.event.pull_request.number }} --body-file review.md --repo ${{ github.repository }}
+
+      - name: Post failure notice
+        if: steps.download.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr comment ${{ github.event.pull_request.number }} --body "⚠️ **AI Review Failed**
+
+          The AI review job failed to complete. Please check the [workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) for details.
+
+          You can retry by adding the \`ai-review\` label again." --repo ${{ github.repository }}
+
+      - name: Apply label based on verdict
+        if: steps.download.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ ! -f verdict.txt ]; then
+            echo "Warning: verdict.txt not found, skipping label"
+            exit 0
+          fi
+
+          VERDICT=$(cat verdict.txt | tr -d '[:space:]')
+          if [ "$VERDICT" = "CHANGES_REQUESTED" ]; then
+            echo "Adding 'do-not-merge' label"
+            gh pr edit ${{ github.event.pull_request.number }} --add-label "do-not-merge" --repo ${{ github.repository }}
+          fi
