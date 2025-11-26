@@ -99,7 +99,7 @@ If there isn't an obvious fix for the flakiness and the flakiness does not indic
 ## Other Tips & Tricks
 
 - If a test isn't compatible with a specific browser, you can use the `@pytest.mark.skip_browser("firefox")` decorator to skip it.
-- `assert_snapshot` is a none-waiting assertion. This can potentially lead to some flakiness if an element hasn't fully loaded yet. Make sure that you have some waiting checks before calling `assert_snapshot` if necessary (this depends on a case by case basis).
+- `assert_snapshot` is a non-waiting assertion. This can potentially lead to some flakiness if an element hasn't fully loaded yet. Make sure that you have some waiting checks before calling `assert_snapshot` if necessary (this depends on a case by case basis).
 - From [playwright docs](https://playwright.dev/python/docs/api/class-page#page-wait-for-timeout): "**Never use `wait_for_timeout` in production**. Tests that wait for time are inherently flaky. Use Locator actions and web assertions that wait automatically."
 - Every dedicated test file requires to start a new Streamlit app server during our CI run. Therefore, it is more time efficient to **group tests into more high-level test scripts** (e.g. based on a command) instead of splitting it into many smaller test scripts.
 - **Minimize the number of pixels to test** for better time efficiency and less flakiness. E.g instead of doing fullscreen tests, only screenshot the relevant part. And try to not add redundant screenshot tests for that are just testing the same scenarios.
