@@ -363,7 +363,7 @@ export class App extends PureComponent<Props, State> {
         this.setState({ inputsDisabled })
       },
       themeChanged: this.handleThemeMessage,
-      pageChanged: this.onPageChange,
+      pageChanged: pageScriptHash => this.onPageChange(pageScriptHash),
       isOwnerChanged: isOwner => this.setState({ isOwner }),
       fileUploadClientConfigChanged: config => {
         if (this.endpoints.setFileUploadClientConfig !== undefined) {
@@ -1749,7 +1749,7 @@ export class App extends PureComponent<Props, State> {
     if (pageScriptHash) {
       // The user specified exactly which page to run. We can simply use this
       // value in the BackMsg we send to the server.
-      if (pageScriptHash != currentPageScriptHash && !preserveQueryParams) {
+      if (pageScriptHash !== currentPageScriptHash && !preserveQueryParams) {
         // Clear non-embed query parameters within a page change while we wait
         // for the server to send updated query params (if any).
         // Skip clearing if preserveQueryParams is true (e.g., browser back/forward
