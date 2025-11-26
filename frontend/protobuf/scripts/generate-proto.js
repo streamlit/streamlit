@@ -47,7 +47,7 @@ const pbjsCommand = [
 const pbtsCommand = ["yarn", "run", "--silent", "pbts", "proto.js"]
 const TEMPLATE = "/* eslint-disable */\n\n"
 
-const runCommand = (commandAndArgs, outputFile, postProcess = null) => {
+const runCommand = (commandAndArgs, outputFile) => {
   const [cmd, ...args] = commandAndArgs
   const result = spawnSync(cmd, args, {
     maxBuffer: 4096 * 1024,
@@ -68,22 +68,13 @@ const runCommand = (commandAndArgs, outputFile, postProcess = null) => {
     console.warn(`Warnings:\n${result.stderr}`)
   }
 
-  let output = result.stdout
-
-  // Apply post-processing if provided
-  if (postProcess) {
-    output = postProcess(output)
-  }
-
-  fs.writeFileSync(outputFile, `${TEMPLATE}${output}`, "utf8")
+  fs.writeFileSync(outputFile, `${TEMPLATE}${result.stdout}`, "utf8")
   console.log(`Generated: ${outputFile}`)
 }
 
 // Run the commands sequentially
 try {
   console.log("Generating proto.js with optimizations...")
-
-  // No post-processing needed - keeping protobufjs/minimal import
   runCommand(pbjsCommand, outputJsFile)
 
   console.log("Generating proto.d.ts...")

@@ -3669,7 +3669,6 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@streamlit/protobuf@workspace:protobuf"
   dependencies:
-    protobufjs: "npm:^7.5.4"
     protobufjs-cli: "npm:^1.2.0"
     typesync: "npm:^0.14.3"
   languageName: unknown
