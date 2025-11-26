@@ -165,6 +165,7 @@ audio_input = _main.audio_input
 badge = _main.badge
 balloons = _main.balloons
 bar_chart = _main.bar_chart
+_bidi_component = _main._bidi_component
 bokeh_chart = _main.bokeh_chart
 button = _main.button
 caption = _main.caption
@@ -179,6 +180,7 @@ container = _main.container
 dataframe = _main.dataframe
 data_editor = _main.data_editor
 date_input = _main.date_input
+datetime_input = _main.datetime_input
 divider = _main.divider
 download_button = _main.download_button
 expander = _main.expander
@@ -219,6 +221,7 @@ select_slider = _main.select_slider
 segmented_control = _main.segmented_control
 slider = _main.slider
 snow = _main.snow
+space = _main.space
 subheader = _main.subheader
 success = _main.success
 table = _main.table
@@ -304,4 +307,5 @@ experimental_set_query_params = _deprecate_func_name(
 # make it possible to call streamlit.components.v1.html etc. by importing it here
 # import in the very end to avoid partially-initialized module import errors, because
 # streamlit.components.v1 also uses some streamlit imports
-import streamlit.components.v1  # noqa: F401
+import streamlit.components.v1
+import streamlit.components.v2  # noqa: F401

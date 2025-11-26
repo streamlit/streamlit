@@ -15,7 +15,7 @@
  */
 
 import axios from "axios"
-import zip from "lodash/zip"
+import { zip } from "lodash-es"
 import { default as WS } from "vitest-websocket-mock"
 
 import { BackMsg } from "@streamlit/protobuf"
@@ -27,6 +27,7 @@ import {
 } from "./constants"
 import { doInitPings } from "./DoInitPings"
 import { mockEndpoints } from "./testUtils"
+import { ErrorDetails } from "./types"
 import { Args, WebsocketConnection } from "./WebsocketConnection"
 
 const MOCK_ALLOWED_ORIGINS_CONFIG = {
@@ -285,7 +286,7 @@ describe("doInitPings", () => {
 
     expect(MOCK_PING_DATA.retryCallback).toHaveBeenCalledWith(
       1,
-      TEST_ERROR_MESSAGE,
+      { message: TEST_ERROR_MESSAGE },
       expect.anything()
     )
   })
@@ -321,7 +322,7 @@ describe("doInitPings", () => {
 
     expect(MOCK_PING_DATA.retryCallback).toHaveBeenCalledWith(
       1,
-      "Connection timed out.",
+      { message: "Connection timed out." },
       expect.anything()
     )
   })
@@ -361,7 +362,10 @@ describe("doInitPings", () => {
 
     expect(MOCK_PING_DATA.retryCallback).toHaveBeenCalledWith(
       1,
-      "Streamlit server is not responding. Are you connected to the internet?",
+      {
+        message:
+          "Streamlit server is not responding. Are you connected to the internet?",
+      },
       expect.anything()
     )
   })
@@ -399,7 +403,10 @@ describe("doInitPings", () => {
 
     expect(MOCK_PING_DATA.retryCallback).toHaveBeenCalledWith(
       1,
-      "Streamlit server is not responding. Are you connected to the internet?",
+      {
+        message:
+          "Streamlit server is not responding. Are you connected to the internet?",
+      },
       expect.anything()
     )
   })
@@ -501,7 +508,7 @@ If you are trying to access a Streamlit app running on another server, this coul
 
     expect(MOCK_PING_DATA.retryCallback).toHaveBeenCalledWith(
       1,
-      forbiddenMarkdown,
+      { message: forbiddenMarkdown },
       expect.anything()
     )
   })
@@ -542,8 +549,56 @@ If you are trying to access a Streamlit app running on another server, this coul
 
     expect(MOCK_PING_DATA.retryCallback).toHaveBeenCalledWith(
       1,
-      `Connection failed with status ${TEST_ERROR.response.status}, ` +
-        `and response "${TEST_ERROR.response.data}".`,
+      {
+        message: `Connection failed with status ${TEST_ERROR.response.status}, and response:`,
+        codeBlock: TEST_ERROR.response.data,
+      },
+      expect.anything()
+    )
+  })
+
+  it("calls retry with 'Connection failed with status ...' for any status code other than 0, 403, and 2xx with an object response", async () => {
+    const TEST_ERROR = {
+      response: {
+        status: 500,
+        data: {
+          message: "TEST_DATA",
+        },
+      },
+    }
+
+    axios.get = vi
+      .fn()
+      // First Connection attempt
+      .mockRejectedValueOnce(TEST_ERROR)
+      .mockResolvedValueOnce(MOCK_HOST_CONFIG_RESPONSE)
+      // Second Connection attempt
+      .mockResolvedValueOnce("")
+      .mockResolvedValueOnce(MOCK_HOST_CONFIG_RESPONSE)
+
+    const retryCallback = createTimerAdvancingRetryCallback(
+      MOCK_PING_DATA.retryCallback
+    )
+
+    const { promise } = doInitPings(
+      MOCK_PING_DATA.uri,
+      MOCK_PING_DATA.timeoutMs,
+      MOCK_PING_DATA.maxTimeoutMs,
+      retryCallback,
+      MOCK_PING_DATA.sendClientError,
+      MOCK_PING_DATA.setAllowedOrigins
+    )
+
+    // Run any remaining timers to complete the ping process
+    await vi.runAllTimersAsync()
+    await promise
+
+    expect(MOCK_PING_DATA.retryCallback).toHaveBeenCalledWith(
+      1,
+      {
+        message: `Connection failed with status ${TEST_ERROR.response.status}, and response:`,
+        codeBlock: JSON.stringify(TEST_ERROR.response.data, null, 2),
+      },
       expect.anything()
     )
   })
@@ -619,7 +674,7 @@ If you are trying to access a Streamlit app running on another server, this coul
     const timeouts: number[] = []
     const retryCallback = (
       _times: number,
-      _errorNode: React.ReactNode,
+      _errorDetails: ErrorDetails,
       timeout: number
     ): void => {
       timeouts.push(timeout)
@@ -685,7 +740,7 @@ If you are trying to access a Streamlit app running on another server, this coul
     const timeouts: number[] = []
     const retryCallback = (
       _times: number,
-      _errorNode: React.ReactNode,
+      _errorDetails: ErrorDetails,
       timeout: number
     ): void => {
       timeouts.push(timeout)
@@ -740,7 +795,7 @@ If you are trying to access a Streamlit app running on another server, this coul
     const timeouts: number[] = []
     const retryCallback = (
       _times: number,
-      _errorNode: React.ReactNode,
+      _errorDetails: ErrorDetails,
       timeout: number
     ): void => {
       timeouts.push(timeout)
@@ -770,7 +825,7 @@ If you are trying to access a Streamlit app running on another server, this coul
     const timeouts2: number[] = []
     const retryCallback2 = (
       _times: number,
-      _errorNode: React.ReactNode,
+      _errorDetails: ErrorDetails,
       timeout: number
     ): void => {
       timeouts2.push(timeout)

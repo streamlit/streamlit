@@ -19,21 +19,20 @@ from __future__ import annotations
 
 import textwrap
 from abc import ABC, abstractmethod
-from collections.abc import Iterator, Sequence
+from collections.abc import Callable, Iterator, Sequence
 from dataclasses import dataclass, field, fields, is_dataclass
 from datetime import date, datetime, time, timedelta
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
     Generic,
+    TypeAlias,
     TypeVar,
-    Union,
     cast,
     overload,
 )
 
-from typing_extensions import Self, TypeAlias
+from typing_extensions import Self
 
 from streamlit import dataframe_util, util
 from streamlit.elements.heading import HeadingProtoTag
@@ -41,6 +40,7 @@ from streamlit.elements.widgets.select_slider import SelectSliderSerde
 from streamlit.elements.widgets.slider import SliderSerde, SliderStep
 from streamlit.elements.widgets.time_widgets import (
     DateInputSerde,
+    DateTimeInputSerde,
     DateWidgetReturn,
     TimeInputSerde,
     _parse_date_value,
@@ -63,6 +63,7 @@ if TYPE_CHECKING:
     from streamlit.proto.Code_pb2 import Code as CodeProto
     from streamlit.proto.ColorPicker_pb2 import ColorPicker as ColorPickerProto
     from streamlit.proto.DateInput_pb2 import DateInput as DateInputProto
+    from streamlit.proto.DateTimeInput_pb2 import DateTimeInput as DateTimeInputProto
     from streamlit.proto.Element_pb2 import Element as ElementProto
     from streamlit.proto.Exception_pb2 import Exception as ExceptionProto
     from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
@@ -73,6 +74,7 @@ if TYPE_CHECKING:
     from streamlit.proto.NumberInput_pb2 import NumberInput as NumberInputProto
     from streamlit.proto.Radio_pb2 import Radio as RadioProto
     from streamlit.proto.Selectbox_pb2 import Selectbox as SelectboxProto
+    from streamlit.proto.Space_pb2 import Space as SpaceProto
     from streamlit.proto.Text_pb2 import Text as TextProto
     from streamlit.proto.TextArea_pb2 import TextArea as TextAreaProto
     from streamlit.proto.TextInput_pb2 import TextInput as TextInputProto
@@ -505,8 +507,8 @@ class Dataframe(Element):
         return dataframe_util.convert_arrow_bytes_to_pandas_df(self.proto.data)
 
 
-SingleDateValue: TypeAlias = Union[date, datetime]
-DateValue: TypeAlias = Union[SingleDateValue, Sequence[SingleDateValue], None]
+SingleDateValue: TypeAlias = date | datetime
+DateValue: TypeAlias = SingleDateValue | Sequence[SingleDateValue] | None
 
 
 @dataclass(repr=False)
@@ -668,6 +670,20 @@ class Latex(Markdown):
     def __init__(self, proto: MarkdownProto, root: ElementTree) -> None:
         super().__init__(proto, root)
         self.type = "latex"
+
+
+@dataclass(repr=False)
+class Space(Element):
+    """A representation of st.space for testing."""
+
+    proto: SpaceProto = field(repr=False)
+
+    key: None = None
+
+    def __init__(self, proto: SpaceProto, root: ElementTree) -> None:
+        self.proto = proto
+        self.root = root
+        self.type = "space"
 
 
 @dataclass(repr=False)
@@ -861,7 +877,7 @@ class Multiselect(Widget, Generic[T]):
         return self
 
 
-Number = Union[int, float]
+Number: TypeAlias = int | float
 
 
 @dataclass(repr=False)
@@ -1308,7 +1324,8 @@ class TextInput(Widget):
         return self.set_value(v)
 
 
-TimeValue: TypeAlias = Union[time, datetime]
+TimeValue: TypeAlias = time | datetime
+DateTimeWidgetValue: TypeAlias = datetime
 
 
 @dataclass(repr=False)
@@ -1366,6 +1383,59 @@ class TimeInput(Widget):
             return self
         dt = datetime.combine(date.today(), self.value) - timedelta(seconds=self.step)
         return self.set_value(dt.time())
+
+
+@dataclass(repr=False)
+class DateTimeInput(Widget):
+    """A representation of ``st.datetime_input``."""
+
+    _value: DateTimeWidgetValue | None | InitialValue
+    proto: DateTimeInputProto = field(repr=False)
+    label: str
+    format: str
+    min: str
+    max: str
+    step: int
+    help: str
+    form_id: str
+
+    def __init__(self, proto: DateTimeInputProto, root: ElementTree) -> None:
+        super().__init__(proto, root)
+        self._value = InitialValue()
+        self.type = "date_time_input"
+
+    def set_value(self, v: DateTimeWidgetValue | None) -> DateTimeInput:
+        """Set the value of the widget."""
+        self._value = v
+        return self
+
+    @property
+    def _widget_state(self) -> WidgetState:
+        from datetime import datetime
+
+        datetime_ui_format = "%Y/%m/%d, %H:%M"
+
+        ws = WidgetState()
+        ws.id = self.id
+
+        # Parse min and max values for validation
+        min_dt = datetime.strptime(self.min, datetime_ui_format)
+        max_dt = datetime.strptime(self.max, datetime_ui_format)
+
+        serde = DateTimeInputSerde(value=None, min=min_dt, max=max_dt)
+        serialized_value = serde.serialize(self.value)
+        if serialized_value is not None:
+            ws.string_array_value.data[:] = serialized_value
+        return ws
+
+    @property
+    def value(self) -> datetime | None:
+        """The current value of the widget. (datetime)"""  # noqa: D400
+        if not isinstance(self._value, InitialValue):
+            return self._value
+        state = self.root.session_state
+        assert state
+        return state[self.id]  # type: ignore
 
 
 @dataclass(repr=False)
@@ -1517,6 +1587,10 @@ class Block:
     @property
     def date_input(self) -> WidgetList[DateInput]:
         return WidgetList(self.get("date_input"))  # type: ignore
+
+    @property
+    def datetime_input(self) -> WidgetList[DateTimeInput]:
+        return WidgetList(self.get("date_time_input"))  # type: ignore
 
     @property
     def divider(self) -> ElementList[Divider]:
@@ -1828,7 +1902,7 @@ class Tab(Block):
         self.label = proto.label
 
 
-Node: TypeAlias = Union[Element, Block]
+Node: TypeAlias = Element | Block
 
 
 def get_widget_state(node: Node) -> WidgetState | None:
@@ -1972,6 +2046,8 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                 new_node = ColorPicker(elt.color_picker, root=root)
             elif ty == "date_input":
                 new_node = DateInput(elt.date_input, root=root)
+            elif ty == "date_time_input":
+                new_node = DateTimeInput(elt.date_time_input, root=root)
             elif ty == "exception":
                 new_node = Exception(elt.exception, root=root)
             elif ty == "heading":

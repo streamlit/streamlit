@@ -15,7 +15,8 @@
 from __future__ import annotations
 
 import os
-from typing import TYPE_CHECKING, Any, Callable, cast
+import re
+from typing import TYPE_CHECKING, Any, Final, cast
 
 import tornado.web
 
@@ -27,7 +28,14 @@ from streamlit.web.server.server_util import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Awaitable, Sequence
+    from collections.abc import Awaitable, Callable, Sequence
+
+
+# Files that match this pattern do not get cached.
+NO_CACHE_PATTERN = re.compile(r"(?:\.html$|^manifest\.json$)")
+
+# The max-age value to send with cached assets. Set to one year.
+STATIC_ASSET_CACHE_MAX_AGE_SECONDS: Final = 365 * 24 * 60 * 60
 
 
 def allow_all_cross_origin_requests() -> bool:
@@ -62,16 +70,21 @@ class StaticFileHandler(tornado.web.StaticFileHandler):
         super().initialize(path, default_filename)
 
     def set_extra_headers(self, path: str) -> None:
-        """Disable cache for HTML files.
+        """Disable cache for HTML files and manifest.json.
 
         Other assets like JS and CSS are suffixed with their hash, so they can
         be cached indefinitely.
         """
+
         is_index_url = len(path) == 0
-        if is_index_url or path.endswith(".html"):
+        if is_index_url or NO_CACHE_PATTERN.search(path):
             self.set_header("Cache-Control", "no-cache")
         else:
-            self.set_header("Cache-Control", "public")
+            # For all other static files suffixed with their hash, we set a long cache time.
+            self.set_header(
+                "Cache-Control",
+                f"public, immutable, max-age={STATIC_ASSET_CACHE_MAX_AGE_SECONDS}",
+            )
 
     def validate_absolute_path(self, root: str, absolute_path: str) -> str | None:
         try:

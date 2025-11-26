@@ -20,6 +20,7 @@ import types
 from collections import ChainMap, UserDict, UserList
 from collections.abc import (
     AsyncGenerator,
+    Callable,
     Generator,
     ItemsView,
     Iterable,
@@ -30,14 +31,12 @@ from io import StringIO
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
     Final,
     cast,
 )
 
 from streamlit import dataframe_util, type_util
 from streamlit.errors import StreamlitAPIException
-from streamlit.logger import get_logger
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.string_util import (
     is_mem_address_str,
@@ -56,10 +55,6 @@ HELP_TYPES: Final[tuple[type[Any], ...]] = (
     types.ModuleType,
 )
 
-_LOGGER: Final = get_logger(__name__)
-
-_TEXT_CURSOR: Final = " ▏"
-
 
 class StreamingOutput(list[Any]):
     pass
@@ -73,8 +68,10 @@ class WriteMixin:
         | Generator[Any, Any, Any]
         | Iterable[Any]
         | AsyncGenerator[Any, Any],
+        *,
+        cursor: str | None = None,
     ) -> list[Any] | str:
-        """Stream a generator, iterable, or stream-like sequence to the app.
+        r"""Stream a generator, iterable, or stream-like sequence to the app.
 
         ``st.write_stream`` iterates through the given sequences and writes all
         chunks to the app. String chunks will be written using a typewriter effect.
@@ -93,6 +90,27 @@ class WriteMixin:
                 To use additional LLM libraries, you can create a wrapper to
                 manually define a generator function and include custom output
                 parsing.
+
+        cursor : str or None
+            A string to append to text as it's being written. If this is
+            ``None`` (default), no cursor is shown. Otherwise, the string is
+            rendered as Markdown and appears as a cursor at the end of the
+            streamed text. For example, you can use an emoji, emoji shortcode,
+            or Material icon.
+
+            The first line of the cursor string can contain GitHub-flavored
+            Markdown of the following types: Bold, Italics, Strikethroughs,
+            Inline Code, Links, and Images. Images display like icons, with a
+            max height equal to the font height. If you pass a multiline
+            string, additional lines display after the text with the full
+            Markdown rendering capabilities of ``st.markdown``.
+
+            See the ``body`` parameter of |st.markdown|_ for additional,
+            supported Markdown directives.
+
+            .. |st.markdown| replace:: ``st.markdown``
+            .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
+
 
         Returns
         -------
@@ -153,6 +171,7 @@ class WriteMixin:
                 "this data type."
             )
 
+        cursor_str = cursor or ""
         stream_container: DeltaGenerator | None = None
         streamed_response: str = ""
         written_content: list[Any] = StreamingOutput()
@@ -231,7 +250,7 @@ class WriteMixin:
                 streamed_response += chunk
                 # Only add the streaming symbol on the second text chunk
                 stream_container.markdown(
-                    streamed_response + ("" if first_text else _TEXT_CURSOR),
+                    streamed_response + ("" if first_text else cursor_str),
                 )
             elif callable(chunk):
                 flush_stream_response()
@@ -254,7 +273,7 @@ class WriteMixin:
         return written_content
 
     @gather_metrics("write")
-    def write(self, *args: Any, unsafe_allow_html: bool = False, **kwargs: Any) -> None:
+    def write(self, *args: Any, unsafe_allow_html: bool = False) -> None:
         """Displays arguments in the app.
 
         This is the Swiss Army knife of Streamlit commands: it does different
@@ -323,13 +342,6 @@ class WriteMixin:
                 If you only want to insert HTML or CSS without Markdown text,
                 we recommend using ``st.html`` instead.
 
-        **kwargs : any
-            Keyword arguments. Not used.
-
-        .. deprecated::
-            ``**kwargs`` is deprecated and will be removed in a later version.
-            Use other, more specific Streamlit commands to pass additional
-            keyword arguments.
 
         Returns
         -------
@@ -400,13 +412,6 @@ class WriteMixin:
             height: 300px
 
         """
-        if kwargs:
-            _LOGGER.warning(
-                'Invalid arguments were passed to "st.write" function. Support for '
-                "passing such unknown keywords arguments will be dropped in future. "
-                "Invalid arguments were: %s",
-                kwargs,
-            )
 
         if len(args) == 1 and isinstance(args[0], str):
             # Optimization: If there is only one arg, and it's a string,

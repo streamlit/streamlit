@@ -16,6 +16,7 @@
 import { GridCellKind } from "@glideapps/glide-data-grid"
 import { MultiSelectCellType } from "@glideapps/glide-data-grid-cells"
 import { Field, List, Utf8 } from "apache-arrow"
+import { transparentize } from "color2k"
 
 import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
 import { mockTheme } from "~lib/mocks/mockTheme"
@@ -226,5 +227,60 @@ describe("prepareOptions", () => {
     )
     const expected = blend(customColor, mockTheme.emotion.colors.bgColor)
     expect(opts[0].color).toEqual(expected)
+  })
+
+  it("assigns categorical chart colors for 'auto' and wraps around", () => {
+    const categoricalColors = mockTheme.emotion.colors.chartCategoricalColors
+    // Create more options than categorical colors to verify wrap-around
+    const count = categoricalColors.length + 3
+    const input = Array.from({ length: count }, (_, i) => ({
+      value: `v${i}`,
+      color: "auto" as const,
+    }))
+
+    const opts = prepareOptions(input, mockTheme.emotion)
+    const expectedColors = input.map((_, i) =>
+      blend(
+        transparentize(categoricalColors[i % categoricalColors.length], 0.7),
+        mockTheme.emotion.colors.bgColor
+      )
+    )
+
+    expect(opts.map(o => o.color)).toEqual(expectedColors)
+  })
+
+  it("leaves string options colorless and assigns 'auto' for object options", () => {
+    const categoricalColors = mockTheme.emotion.colors.chartCategoricalColors
+    const input = [
+      "A",
+      { value: "B", color: "auto" as const },
+      "C",
+      { value: "D", color: "auto" as const },
+    ]
+
+    const opts = prepareOptions(input, mockTheme.emotion)
+
+    const expected = [
+      { value: "A", label: undefined, color: undefined },
+      {
+        value: "B",
+        label: undefined,
+        color: blend(
+          transparentize(categoricalColors[0], 0.7),
+          mockTheme.emotion.colors.bgColor
+        ),
+      },
+      { value: "C", label: undefined, color: undefined },
+      {
+        value: "D",
+        label: undefined,
+        color: blend(
+          transparentize(categoricalColors[1], 0.7),
+          mockTheme.emotion.colors.bgColor
+        ),
+      },
+    ]
+
+    expect(opts).toEqual(expected)
   })
 })

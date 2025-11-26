@@ -15,9 +15,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import TYPE_CHECKING, Literal, Union, cast
-
-from typing_extensions import TypeAlias
+from typing import TYPE_CHECKING, Literal, TypeAlias, cast
 
 from streamlit.elements.lib.layout_utils import LayoutConfig, validate_width
 from streamlit.errors import StreamlitAPIException
@@ -27,7 +25,7 @@ from streamlit.string_util import clean_text
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
-    from streamlit.elements.lib.layout_utils import Width
+    from streamlit.elements.lib.layout_utils import TextAlignment, Width
     from streamlit.type_util import SupportsStr
 
 
@@ -37,8 +35,8 @@ class HeadingProtoTag(Enum):
     SUBHEADER_TAG = "h3"
 
 
-Anchor: TypeAlias = Union[str, Literal[False], None]
-Divider: TypeAlias = Union[bool, str, None]
+Anchor: TypeAlias = str | Literal[False] | None
+Divider: TypeAlias = bool | str | None
 
 
 class HeadingMixin:
@@ -51,6 +49,7 @@ class HeadingMixin:
         help: str | None = None,
         divider: Divider = False,
         width: Width = "stretch",
+        text_alignment: TextAlignment = "left",
     ) -> DeltaGenerator:
         """Display text in header formatting.
 
@@ -79,13 +78,13 @@ class HeadingMixin:
             including the Markdown directives described in the ``body``
             parameter of ``st.markdown``.
 
-        divider : bool or “blue“, “green“, “orange“, “red“, “violet“, “yellow“, “gray“/“grey“, or “rainbow“
-            Shows a colored divider below the header. If True, successive
-            headers will cycle through divider colors. That is, the first
-            header will have a blue line, the second header will have a
-            green line, and so on. If a string, the color can be set to one of
-            the following: blue, green, orange, red, violet, yellow, gray/grey, or
-            rainbow.
+        divider : bool, "blue", "green", "orange", "red", "violet", "yellow", "gray"/"grey", or "rainbow"
+            Shows a colored divider below the header. If this is ``True``,
+            successive headers will cycle through divider colors, except gray
+            and rainbow. That is, the first header will have a blue line, the
+            second header will have a green line, and so on. If this is a
+            string, the color can be set to one of the following: blue, green,
+            orange, red, violet, yellow, gray/grey, or rainbow.
 
         width : "stretch", "content", or int
             The width of the header element. This can be one of the following:
@@ -98,6 +97,16 @@ class HeadingMixin:
               fixed width. If the specified width is greater than the width of
               the parent container, the width of the element matches the width
               of the parent container.
+
+        text_alignment : "left", "center", "right", or "justify"
+            The horizontal alignment of the text within the element. This can
+            be one of the following:
+
+            - ``"left"`` (default): Text is aligned to the left edge.
+            - ``"center"``: Text is centered.
+            - ``"right"``: Text is aligned to the right edge.
+            - ``"justify"``: Text is justified (stretched to align on both
+              left and right edges, with the last line left-aligned).
 
         Examples
         --------
@@ -117,7 +126,7 @@ class HeadingMixin:
 
         """
         validate_width(width, allow_content=True)
-        layout_config = LayoutConfig(width=width)
+        layout_config = LayoutConfig(width=width, text_alignment=text_alignment)
 
         return self.dg._enqueue(
             "heading",
@@ -140,6 +149,7 @@ class HeadingMixin:
         help: str | None = None,
         divider: Divider = False,
         width: Width = "stretch",
+        text_alignment: TextAlignment = "left",
     ) -> DeltaGenerator:
         """Display text in subheader formatting.
 
@@ -168,13 +178,13 @@ class HeadingMixin:
             including the Markdown directives described in the ``body``
             parameter of ``st.markdown``.
 
-        divider : bool or “blue“, “green“, “orange“, “red“, “violet“, “yellow“, “gray“/“grey“, or “rainbow“
-            Shows a colored divider below the header. If True, successive
-            headers will cycle through divider colors. That is, the first
-            header will have a blue line, the second header will have a
-            green line, and so on. If a string, the color can be set to one of
-            the following: blue, green, orange, red, violet, yellow, gray/grey, or
-            rainbow.
+        divider : bool, "blue", "green", "orange", "red", "violet", "yellow", "gray"/"grey", or "rainbow"
+            Shows a colored divider below the header. If this is ``True``,
+            successive headers will cycle through divider colors, except gray
+            and rainbow. That is, the first header will have a blue line, the
+            second header will have a green line, and so on. If this is a
+            string, the color can be set to one of the following: blue, green,
+            orange, red, violet, yellow, gray/grey, or rainbow.
 
         width : "stretch", "content", or int
             The width of the subheader element. This can be one of the following:
@@ -187,6 +197,16 @@ class HeadingMixin:
               fixed width. If the specified width is greater than the width of
               the parent container, the width of the element matches the width
               of the parent container.
+
+        text_alignment : "left", "center", "right", or "justify"
+            The horizontal alignment of the text within the element. This can
+            be one of the following:
+
+            - ``"left"`` (default): Text is aligned to the left edge.
+            - ``"center"``: Text is centered.
+            - ``"right"``: Text is aligned to the right edge.
+            - ``"justify"``: Text is justified (stretched to align on both
+              left and right edges, with the last line left-aligned).
 
         Examples
         --------
@@ -206,7 +226,7 @@ class HeadingMixin:
 
         """
         validate_width(width, allow_content=True)
-        layout_config = LayoutConfig(width=width)
+        layout_config = LayoutConfig(width=width, text_alignment=text_alignment)
 
         return self.dg._enqueue(
             "heading",
@@ -228,6 +248,7 @@ class HeadingMixin:
         *,  # keyword-only arguments:
         help: str | None = None,
         width: Width = "stretch",
+        text_alignment: TextAlignment = "left",
     ) -> DeltaGenerator:
         """Display text in title formatting.
 
@@ -271,6 +292,16 @@ class HeadingMixin:
               the parent container, the width of the element matches the width
               of the parent container.
 
+        text_alignment : "left", "center", "right", or "justify"
+            The horizontal alignment of the text within the element. This can
+            be one of the following:
+
+            - ``"left"`` (default): Text is aligned to the left edge.
+            - ``"center"``: Text is centered.
+            - ``"right"``: Text is aligned to the right edge.
+            - ``"justify"``: Text is justified (stretched to align on both
+              left and right edges, with the last line left-aligned).
+
         Examples
         --------
         >>> import streamlit as st
@@ -284,12 +315,15 @@ class HeadingMixin:
 
         """
         validate_width(width, allow_content=True)
-        layout_config = LayoutConfig(width=width)
+        layout_config = LayoutConfig(width=width, text_alignment=text_alignment)
 
         return self.dg._enqueue(
             "heading",
             HeadingMixin._create_heading_proto(
-                tag=HeadingProtoTag.TITLE_TAG, body=body, anchor=anchor, help=help
+                tag=HeadingProtoTag.TITLE_TAG,
+                body=body,
+                anchor=anchor,
+                help=help,
             ),
             layout_config=layout_config,
         )
@@ -351,4 +385,5 @@ class HeadingMixin:
 
         if help:
             proto.help = help
+
         return proto

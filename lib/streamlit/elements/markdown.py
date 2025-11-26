@@ -80,7 +80,7 @@ class MarkdownMixin:
             - Colored text and background colors for text, using the syntax
               ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
               respectively. ``color`` must be replaced with any of the following
-              supported colors: red, orange, yellow, blue, green, violet, gray/grey,
+              supported colors: red, orange, yellow, green, blue, violet, gray/grey,
               rainbow, or primary. For example, you can use
               ``:orange[your text here]`` or ``:blue-background[your text here]``.
               If you use "primary" for color, Streamlit will use the default
@@ -89,7 +89,7 @@ class MarkdownMixin:
 
             - Colored badges, using the syntax ``:color-badge[text in the badge]``.
               ``color`` must be replaced with any of the following supported
-              colors: red, orange, yellow, blue, green, violet, gray/grey, or primary.
+              colors: red, orange, yellow, green, blue, violet, gray/grey, or primary.
               For example, you can use ``:orange-badge[your text here]`` or
               ``:blue-badge[your text here]``.
 
@@ -370,6 +370,7 @@ class MarkdownMixin:
             "primary",
         ] = "blue",
         width: Width = "content",
+        help: str | None = None,
     ) -> DeltaGenerator:
         """Display a colored badge with an icon and label.
 
@@ -437,6 +438,14 @@ class MarkdownMixin:
               the parent container, the width of the element matches the width
               of the parent container.
 
+        help : str or None
+            A tooltip that gets displayed when the badge is hovered over. If
+            this is ``None`` (default), no tooltip is displayed.
+
+            The tooltip can optionally contain GitHub-flavored Markdown, including
+            the Markdown directives described in the ``body`` parameter of
+            ``st.markdown``.
+
         Examples
         --------
         Create standalone badges with ``st.badge`` (with or without icons). If
@@ -465,6 +474,9 @@ class MarkdownMixin:
         badge_proto = MarkdownProto()
         badge_proto.body = f":{color}-badge[{icon_str}{escaped_label}]"
         badge_proto.element_type = MarkdownProto.Type.NATIVE
+
+        if help is not None:
+            badge_proto.help = help
 
         validate_width(width, allow_content=True)
         layout_config = LayoutConfig(width=width)

@@ -18,6 +18,13 @@ SHELL=/bin/bash
 
 INSTALL_DEV_REQS ?= true
 INSTALL_TEST_REQS ?= true
+INSTALL_PLAYWRIGHT ?= true
+# Flags:
+#  - INSTALL_DEV_REQS: install dev requirements (default: true)
+#  - INSTALL_TEST_REQS: install test requirements (default: true)
+#  - INSTALL_PLAYWRIGHT: install Playwright browsers during python-init (default: true)
+#    CI uses a dedicated action to install browsers and typically sets this to false.
+#    Local dev can opt out when not needed: `INSTALL_PLAYWRIGHT=false make init`
 PYTHON_VERSION := $(shell python --version | cut -d " " -f 2 | cut -d "." -f 1-2)
 MIN_PROTOC_VERSION = 3.20
 
@@ -34,7 +41,7 @@ help:
 	@# Magic line used to create self-documenting makefiles.
 	@# Note that this means the documenting comment just before the command (but after the .PHONY) must be all one line, and should begin with a capital letter and end with a period.
 	@# See https://stackoverflow.com/a/35730928
-	@awk '/^#/{c=substr($$0,3);next}c&&/^[[:alpha:]][[:alnum:]_-]+:/{print substr($$1,1,index($$1,":")),c}1{c=0}' Makefile | column -s: -t
+	@awk '/^#/{c=substr($$0,3);next}c&&/^[[:alpha:]][[:alnum:]_-]+:/{print substr($$1,1,index($$1,":")-1) ";" c}1{c=0}' Makefile | column -s';' -t
 
 .PHONY: all
 # Install all dependencies, build frontend, and install editable Streamlit.
@@ -82,6 +89,7 @@ clean:
 	rm -rf frontend/public/reports
 	rm -rf frontend/lib/dist
 	rm -rf frontend/connection/dist
+	rm -rf frontend/component-v2-lib/dist
 	rm -rf ~/.cache/pre-commit
 	rm -rf e2e_playwright/test-results
 	rm -rf e2e_playwright/performance-results
@@ -132,7 +140,7 @@ python-init:
 		echo "Running command: pip install $${pip_args[@]}"; \
 		pip install $${pip_args[@]}; \
 	fi;\
-	if [ "${INSTALL_TEST_REQS}" = "true" ] ; then\
+	if [ "${INSTALL_TEST_REQS}" = "true" ] && [ "${INSTALL_PLAYWRIGHT}" = "true" ] ; then\
 		python -m playwright install --with-deps; \
 	fi;
 
@@ -244,7 +252,6 @@ frontend-lint:
 .PHONY: frontend-types
 # Run the frontend type checker.
 frontend-types:
-	cd frontend/ ; yarn workspaces foreach --all --exclude @streamlit/lib --exclude @streamlit/app run typecheck
 	cd frontend/ ; yarn workspaces foreach --all run typecheck
 
 .PHONY: frontend-format
@@ -288,6 +295,11 @@ update-snapshots-changed:
 update-material-icons:
 	python ./scripts/update_material_icon_font_and_names.py
 
+.PHONY: update-emojis
+# Update emojis based on latest emoji version.
+update-emojis:
+	python ./scripts/update_emojis.py
+
 .PHONY: update-notices
 # Update the notices file (licenses of frontend assets and dependencies).
 update-notices:
@@ -299,7 +311,6 @@ update-notices:
 	./scripts/append_license.sh frontend/app/src/assets/fonts/Source_Serif/Source-Serif.LICENSE
 	./scripts/append_license.sh frontend/app/src/assets/img/Material-Icons.LICENSE
 	./scripts/append_license.sh frontend/app/src/assets/img/Open-Iconic.LICENSE
-	./scripts/append_license.sh frontend/lib/src/vendor/bokeh/bokeh-LICENSE.txt
 	./scripts/append_license.sh frontend/lib/src/vendor/react-bootstrap-LICENSE.txt
 	./scripts/append_license.sh frontend/lib/src/vendor/fzy.js/fzyjs-LICENSE.txt
 
@@ -344,6 +355,36 @@ run-e2e-test:
 		echo "You can find test-results in ./e2e_playwright/test-results"; \
 		exit 1 \
 	)
+
+.PHONY: trace-e2e-test
+# Run e2e test with tracing and view it. Use via `make trace-e2e-test <test_file.py>::<test_func>`.
+trace-e2e-test:
+	@if [[ -z "$(filter-out $@,$(MAKECMDGOALS))" ]]; then \
+		echo "Error: Please specify a single test to run"; \
+		echo "Usage: make trace-e2e-test <test_file.py>::<test_function>"; \
+		echo "Example: make trace-e2e-test st_audio_input_test.py::test_audio_input_renders"; \
+		exit 1; \
+	fi
+	@TEST_ARG=$$(echo $(filter-out $@,$(MAKECMDGOALS)) | sed 's|^e2e_playwright/||'); \
+	if [[ ! "$$TEST_ARG" == *"::"* ]]; then \
+		echo "Error: You must specify a single test function, not an entire test file"; \
+		echo "Usage: make trace-e2e-test <test_file.py>::<test_function>"; \
+		echo "Example: make trace-e2e-test st_audio_input_test.py::test_audio_input_renders"; \
+		exit 1; \
+	fi; \
+	echo "Clearing previous traces..."; \
+	rm -rf e2e_playwright/test-results/traces; \
+	mkdir -p e2e_playwright/test-results/traces; \
+	echo "Running test with tracing: $$TEST_ARG"; \
+	(cd e2e_playwright && pytest $$TEST_ARG --tracing=on --output=test-results/traces || true); \
+	echo ""; \
+	echo "Launching trace viewer..."; \
+	TRACE_FILE=$$(find e2e_playwright/test-results/traces -name "trace.zip" -type f 2>/dev/null | head -n 1); \
+	if [[ -n "$$TRACE_FILE" ]]; then \
+		python -m playwright show-trace "$$TRACE_FILE"; \
+	else \
+		echo "No trace file found. Check e2e_playwright/test-results/traces/ directory."; \
+	fi
 
 .PHONY: lighthouse-tests
 # Run Lighthouse performance tests.

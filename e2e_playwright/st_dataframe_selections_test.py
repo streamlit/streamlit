@@ -547,11 +547,11 @@ def test_that_index_cannot_be_selected(app: Page):
     select_column(canvas, 0)
     wait_for_app_run(app)
 
-    # Nothing should be selected:
+    # The selection is kept the same:
     expect_prefixed_markdown(
         app,
         "No selection on index column:",
-        "{'selection': {'rows': [], 'columns': [], 'cells': []}}",
+        "{'selection': {'rows': [], 'columns': ['col_3'], 'cells': []}}",
         exact_match=True,
     )
 
@@ -563,7 +563,7 @@ def test_that_index_cannot_be_selected(app: Page):
     expect_prefixed_markdown(
         app,
         "No selection on index column:",
-        "{'selection': {'rows': [], 'columns': ['col_1'], 'cells': []}}",
+        "{'selection': {'rows': [], 'columns': ['col_1', 'col_3'], 'cells': []}}",
         exact_match=True,
     )
 

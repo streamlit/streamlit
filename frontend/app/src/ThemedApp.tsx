@@ -17,6 +17,7 @@
 import React from "react"
 
 import FontFaceDeclaration from "@streamlit/app/src/components/FontFaceDeclaration"
+import FontSources from "@streamlit/app/src/components/FontSources"
 import {
   PortalProvider,
   RootStyleProvider,
@@ -33,7 +34,7 @@ export interface ThemedAppProps {
 const ThemedApp = ({
   streamlitExecutionStartedAt,
 }: ThemedAppProps): JSX.Element => {
-  const [themeManager, fontFaces] = useThemeManager()
+  const [themeManager, fontFaces, fontSources] = useThemeManager()
   const { activeTheme } = themeManager
 
   return (
@@ -44,6 +45,7 @@ const ThemedApp = ({
           {fontFaces.length > 0 && (
             <FontFaceDeclaration fontFaces={fontFaces} />
           )}
+          {fontSources && <FontSources fontSources={fontSources} />}
           <AppWithScreencast
             theme={themeManager}
             streamlitExecutionStartedAt={streamlitExecutionStartedAt}

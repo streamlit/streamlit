@@ -21,7 +21,6 @@ import sys
 from typing import Any, Final
 
 from streamlit import cli_util, config, env_util, file_util, net_util, secrets
-from streamlit.git_util import MIN_GIT_VERSION, GitRepo
 from streamlit.logger import get_logger
 from streamlit.watcher import report_watchdog_availability, watch_file
 from streamlit.web.server import Server, server_address_is_unix_socket, server_util
@@ -57,6 +56,29 @@ def _fix_sys_path(main_script_path: str) -> None:
     ourselves we need to do it instead.
     """
     sys.path.insert(0, os.path.dirname(main_script_path))
+
+
+def _maybe_install_uvloop(running_in_event_loop: bool) -> None:
+    """Install uvloop as the default event loop policy if available."""
+
+    if running_in_event_loop:
+        return
+
+    if env_util.IS_WINDOWS:
+        return
+
+    try:
+        import uvloop
+    except ModuleNotFoundError:
+        return
+
+    try:
+        uvloop.install()
+        _LOGGER.debug("uvloop installed as default event loop policy.")
+    except Exception:
+        _LOGGER.warning(
+            "Failed to install uvloop. Falling back to default loop.", exc_info=True
+        )
 
 
 def _fix_tornado_crash() -> None:
@@ -101,7 +123,6 @@ def _fix_sys_argv(main_script_path: str, args: list[str]) -> None:
 
 
 def _on_server_start(server: Server) -> None:
-    _maybe_print_old_git_warning(server.main_script_path)
     _maybe_print_static_folder_warning(server.main_script_path)
     _print_url(server.is_running_hello)
     report_watchdog_availability()
@@ -228,35 +249,6 @@ def _print_url(is_running_hello: bool) -> None:
         cli_util.print_to_cli("")
 
 
-def _maybe_print_old_git_warning(main_script_path: str) -> None:
-    """If our script is running in a Git repo, and we're running a very old
-    Git version, print a warning that Git integration will be unavailable.
-    """
-    repo = GitRepo(main_script_path)
-    if (
-        not repo.is_valid()
-        and repo.git_version is not None
-        and repo.git_version < MIN_GIT_VERSION
-    ):
-        git_version_string = ".".join(str(val) for val in repo.git_version)
-        min_version_string = ".".join(str(val) for val in MIN_GIT_VERSION)
-        cli_util.print_to_cli("")
-        cli_util.print_to_cli("  Git integration is disabled.", fg="yellow", bold=True)
-        cli_util.print_to_cli("")
-        cli_util.print_to_cli(
-            f"  Streamlit requires Git {min_version_string} or later, "
-            f"but you have {git_version_string}.",
-            fg="yellow",
-        )
-        cli_util.print_to_cli(
-            "  Git is used by Streamlit Cloud (https://streamlit.io/cloud).",
-            fg="yellow",
-        )
-        cli_util.print_to_cli(
-            "  To enable this feature, please update Git.", fg="yellow"
-        )
-
-
 def load_config_options(flag_options: dict[str, Any]) -> None:
     """Load config options from config.toml files, then overlay the ones set by
     flag_options.
@@ -357,6 +349,7 @@ def run(
         # This prevents the task from being garbage collected
         server._bootstrap_task = task
     else:
+        _maybe_install_uvloop(running_in_event_loop)
         # No running event loop, so we can use asyncio.run
         # This is the normal case when running streamlit from the command line
         _LOGGER.debug("Starting new event loop for server")

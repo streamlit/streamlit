@@ -117,3 +117,15 @@ with st.container(horizontal=True, border=True, key="layout-horizontal-button-gr
     st.segmented_control("Segmented Control", ["Option 1", "Option 2", "Option 3"])
     st.feedback("thumbs", width="stretch")
     st.pills("Priority", ["Low", "Medium", "High"], width="stretch")
+
+with st.container(horizontal=True, border=True, key="layout-horizontal-line-charts"):
+    # Create sample data for line charts
+    chart_data1 = pd.DataFrame({"x": range(10), "y": [i**2 for i in range(10)]})
+
+    chart_data2 = pd.DataFrame({"x": range(8), "y": [i * 2 + 1 for i in range(8)]})
+
+    chart_data3 = pd.DataFrame({"x": range(12), "y": [abs(i - 6) for i in range(12)]})
+
+    st.line_chart(chart_data1, x="x", y="y", width="content")
+    st.line_chart(chart_data2, x="x", y="y", width="stretch")
+    st.line_chart(chart_data3, x="x", y="y", width="stretch")

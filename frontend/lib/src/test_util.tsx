@@ -23,25 +23,93 @@ import {
 } from "@testing-library/react"
 import { Vector } from "apache-arrow"
 
+import { PageConfig } from "@streamlit/protobuf"
+
+import {
+  DownloadContext,
+  DownloadContextProps,
+} from "./components/core/DownloadContext"
 import {
   FormsContext,
   FormsContextProps,
 } from "./components/core/FormsContext"
 import { FlexContext } from "./components/core/Layout/FlexContext"
 import { Direction } from "./components/core/Layout/utils"
-import { LibContext, LibContextProps } from "./components/core/LibContext"
+import {
+  LibConfigContext,
+  LibConfigContextProps,
+} from "./components/core/LibConfigContext"
+import {
+  NavigationContext,
+  NavigationContextProps,
+} from "./components/core/NavigationContext"
+import {
+  ScriptRunContext,
+  ScriptRunContextProps,
+} from "./components/core/ScriptRunContext"
+import {
+  SidebarConfigContext,
+  SidebarConfigContextProps,
+} from "./components/core/SidebarConfigContext"
+import {
+  ThemeContext,
+  ThemeContextProps,
+} from "./components/core/ThemeContext"
 import ThemeProvider from "./components/core/ThemeProvider"
+import {
+  ViewStateContext,
+  ViewStateContextProps,
+} from "./components/core/ViewStateContext"
 import { WindowDimensionsProvider } from "./components/shared/WindowDimensions/Provider"
-import { ComponentRegistry } from "./components/widgets/CustomComponent/ComponentRegistry"
-import { mockEndpoints } from "./mocks/mocks"
 import { mockTheme } from "./mocks/mockTheme"
 import { ScriptRunState } from "./ScriptRunState"
-import { baseTheme } from "./theme"
 import { createFormsData } from "./WidgetStateManager"
 
 const flexContextValue = {
   direction: Direction.VERTICAL,
   isInHorizontalLayout: false,
+  isInRoot: false,
+  isInContentWidthContainer: false,
+}
+
+const defaultLibConfigContextValue = {
+  locale: "en-US",
+  mapboxToken: undefined,
+  enforceDownloadInNewTab: undefined,
+  resourceCrossOriginMode: undefined,
+}
+
+const defaultSidebarConfigContextValue = {
+  initialSidebarState: PageConfig.SidebarState.AUTO,
+  appLogo: null,
+  sidebarChevronDownshift: 0,
+  expandSidebarNav: false,
+  hideSidebarNav: false,
+}
+
+const defaultThemeContextValue = {
+  activeTheme: mockTheme,
+  setTheme: () => {},
+  availableThemes: [],
+}
+
+const defaultNavigationContextValue = {
+  pageLinkBaseUrl: "",
+  currentPageScriptHash: "",
+  onPageChange: () => {},
+  navSections: [],
+  appPages: [],
+}
+
+const defaultViewStateContextValue = {
+  isFullScreen: false,
+  setFullScreen: () => {},
+}
+
+const defaultScriptRunContextValue = {
+  scriptRunState: ScriptRunState.NOT_RUNNING,
+  scriptRunId: "script run 123",
+  fragmentIdsThisRun: [],
 }
 
 export const TestAppWrapper: FC<PropsWithChildren> = ({ children }) => {
@@ -49,7 +117,27 @@ export const TestAppWrapper: FC<PropsWithChildren> = ({ children }) => {
     <ThemeProvider theme={mockTheme.emotion}>
       <WindowDimensionsProvider>
         <FlexContext.Provider value={flexContextValue}>
-          {children}
+          <LibConfigContext.Provider value={defaultLibConfigContextValue}>
+            <SidebarConfigContext.Provider
+              value={defaultSidebarConfigContextValue}
+            >
+              <ThemeContext.Provider value={defaultThemeContextValue}>
+                <ViewStateContext.Provider
+                  value={defaultViewStateContextValue}
+                >
+                  <NavigationContext.Provider
+                    value={defaultNavigationContextValue}
+                  >
+                    <ScriptRunContext.Provider
+                      value={defaultScriptRunContextValue}
+                    >
+                      {children}
+                    </ScriptRunContext.Provider>
+                  </NavigationContext.Provider>
+                </ViewStateContext.Provider>
+              </ThemeContext.Provider>
+            </SidebarConfigContext.Provider>
+          </LibConfigContext.Provider>
         </FlexContext.Provider>
       </WindowDimensionsProvider>
     </ThemeProvider>
@@ -84,59 +172,223 @@ export function mockWindowLocation(hostname: string): void {
 }
 
 /**
+ * Options for overriding context values in renderWithContexts.
+ * All properties are optional - only provide the contexts you need to override.
+ */
+export interface RenderWithContextsOptions {
+  viewStateContext?: Partial<ViewStateContextProps>
+  libConfigContext?: Partial<LibConfigContextProps>
+  sidebarConfigContext?: Partial<SidebarConfigContextProps>
+  themeContext?: Partial<ThemeContextProps>
+  navigationContext?: Partial<NavigationContextProps>
+  formsContext?: Partial<FormsContextProps>
+  scriptRunContext?: Partial<ScriptRunContextProps>
+  downloadContext?: Partial<DownloadContextProps>
+}
+
+/**
+ * Extended RenderResult that includes a rerender function supporting context updates
+ */
+export interface RenderWithContextsResult extends RenderResult {
+  /**
+   * Re-render the component with updated context values.
+   * Merges new context props with existing ones (shallow merge).
+   *
+   * @param component The component to render (usually the same component with updated props)
+   * @param options Context overrides to merge with existing values
+   */
+  rerenderWithContexts: (
+    component: ReactElement,
+    options?: RenderWithContextsOptions
+  ) => void
+}
+
+/**
  * Use react-testing-library to render a ReactElement. The element will be
- * wrapped in our LibContext.Provider and FormsContext.Provider.
+ * wrapped in Providers for ViewStateContext, LibConfigContext, SidebarConfigContext,
+ * ThemeContext, NavigationContext, FormsContext, and ScriptRunContext.
+ *
+ * Returns an extended RenderResult with a `rerenderWithContexts` method that
+ * allows updating context values during re-renders.
+ *
+ * @param component The React component to render
+ * @param options Context overrides (all optional)
+ * @returns Extended render result with rerenderWithContexts method
+ *
+ * @example
+ * renderWithContexts(<MyComponent />, {
+ *   navigationContext: { appPages: [...] },
+ *   themeContext: { activeTheme: customTheme },
+ *   viewStateContext: { isFullScreen: true }
+ * })
  */
 export const renderWithContexts = (
   component: ReactElement,
-  overrideLibContextProps: Partial<LibContextProps>,
-  overrideFormsContextProps?: Partial<FormsContextProps>
-): RenderResult => {
-  const defaultLibContextProps = {
-    isFullScreen: false,
-    setFullScreen: vi.fn(),
-    addScriptFinishedHandler: vi.fn(),
-    removeScriptFinishedHandler: vi.fn(),
-    activeTheme: baseTheme,
+  options: RenderWithContextsOptions = {}
+): RenderWithContextsResult => {
+  // Track current context values across rerenders.
+  // The Wrapper component below reads these on each render,
+  // so updating them in rerenderWithContexts will affect subsequent renders.
+
+  // Use let to allow reassignment in rerenderWithContexts
+  let currentLibConfigContextProps: LibConfigContextProps = {
+    locale: "en-US",
+    // Flattened libConfig properties:
+    mapboxToken: undefined,
+    enforceDownloadInNewTab: undefined,
+    resourceCrossOriginMode: undefined,
+    ...options.libConfigContext,
+  }
+
+  let currentSidebarConfigContextProps: SidebarConfigContextProps = {
+    initialSidebarState: PageConfig.SidebarState.AUTO,
+    appLogo: null,
+    sidebarChevronDownshift: 0,
+    expandSidebarNav: false,
+    hideSidebarNav: false,
+    ...options.sidebarConfigContext,
+  }
+
+  let currentThemeContextProps: ThemeContextProps = {
+    activeTheme: mockTheme,
     setTheme: vi.fn(),
     availableThemes: [],
-    addThemes: vi.fn(),
-    onPageChange: vi.fn(),
+    ...options.themeContext,
+  }
+
+  let currentNavigationContextProps: NavigationContextProps = {
+    pageLinkBaseUrl: "",
     currentPageScriptHash: "",
-    libConfig: {},
-    fragmentIdsThisRun: [],
-    locale: "en-US",
+    onPageChange: vi.fn(),
+    navSections: [],
+    appPages: [],
+    ...options.navigationContext,
+  }
+
+  let currentViewStateContextProps: ViewStateContextProps = {
+    isFullScreen: false,
+    setFullScreen: vi.fn(),
+    ...options.viewStateContext,
+  }
+
+  let currentScriptRunContextProps: ScriptRunContextProps = {
     scriptRunState: ScriptRunState.NOT_RUNNING,
     scriptRunId: "script run 123",
-    componentRegistry: new ComponentRegistry(mockEndpoints()),
+    fragmentIdsThisRun: [],
+    ...options.scriptRunContext,
   }
 
-  const defaultFormsContextProps = {
+  let currentFormsContextProps: FormsContextProps = {
     formsData: createFormsData(),
+    ...options.formsContext,
   }
 
-  return reactTestingLibraryRender(component, {
-    wrapper: ({ children }) => (
-      <ThemeProvider theme={baseTheme.emotion}>
-        <WindowDimensionsProvider>
-          <FlexContext.Provider value={flexContextValue}>
-            <LibContext.Provider
-              value={{ ...defaultLibContextProps, ...overrideLibContextProps }}
+  let currentDownloadContextProps: DownloadContextProps = {
+    requestDeferredFile: undefined,
+    ...options.downloadContext,
+  }
+
+  const Wrapper: FC<PropsWithChildren> = ({ children }) => (
+    <ThemeProvider theme={mockTheme.emotion}>
+      <WindowDimensionsProvider>
+        <FlexContext.Provider value={flexContextValue}>
+          <LibConfigContext.Provider value={currentLibConfigContextProps}>
+            <SidebarConfigContext.Provider
+              value={currentSidebarConfigContextProps}
             >
-              <FormsContext.Provider
-                value={{
-                  ...defaultFormsContextProps,
-                  ...overrideFormsContextProps,
-                }}
-              >
-                {children}
-              </FormsContext.Provider>
-            </LibContext.Provider>
-          </FlexContext.Provider>
-        </WindowDimensionsProvider>
-      </ThemeProvider>
-    ),
+              <ThemeContext.Provider value={currentThemeContextProps}>
+                <NavigationContext.Provider
+                  value={currentNavigationContextProps}
+                >
+                  <ViewStateContext.Provider
+                    value={currentViewStateContextProps}
+                  >
+                    <ScriptRunContext.Provider
+                      value={currentScriptRunContextProps}
+                    >
+                      <DownloadContext.Provider
+                        value={currentDownloadContextProps}
+                      >
+                        <FormsContext.Provider
+                          value={currentFormsContextProps}
+                        >
+                          {children}
+                        </FormsContext.Provider>
+                      </DownloadContext.Provider>
+                    </ScriptRunContext.Provider>
+                  </ViewStateContext.Provider>
+                </NavigationContext.Provider>
+              </ThemeContext.Provider>
+            </SidebarConfigContext.Provider>
+          </LibConfigContext.Provider>
+        </FlexContext.Provider>
+      </WindowDimensionsProvider>
+    </ThemeProvider>
+  )
+
+  const result = reactTestingLibraryRender(component, {
+    wrapper: Wrapper,
   })
+
+  return {
+    ...result,
+    rerenderWithContexts: (
+      newComponent: ReactElement,
+      newOptions?: RenderWithContextsOptions
+    ): void => {
+      // Update context values if provided
+      if (newOptions?.viewStateContext) {
+        currentViewStateContextProps = {
+          ...currentViewStateContextProps,
+          ...newOptions.viewStateContext,
+        }
+      }
+      if (newOptions?.libConfigContext) {
+        currentLibConfigContextProps = {
+          ...currentLibConfigContextProps,
+          ...newOptions.libConfigContext,
+        }
+      }
+      if (newOptions?.sidebarConfigContext) {
+        currentSidebarConfigContextProps = {
+          ...currentSidebarConfigContextProps,
+          ...newOptions.sidebarConfigContext,
+        }
+      }
+      if (newOptions?.themeContext) {
+        currentThemeContextProps = {
+          ...currentThemeContextProps,
+          ...newOptions.themeContext,
+        }
+      }
+      if (newOptions?.navigationContext) {
+        currentNavigationContextProps = {
+          ...currentNavigationContextProps,
+          ...newOptions.navigationContext,
+        }
+      }
+      if (newOptions?.formsContext) {
+        currentFormsContextProps = {
+          ...currentFormsContextProps,
+          ...newOptions.formsContext,
+        }
+      }
+      if (newOptions?.downloadContext) {
+        currentDownloadContextProps = {
+          ...currentDownloadContextProps,
+          ...newOptions.downloadContext,
+        }
+      }
+      if (newOptions?.scriptRunContext) {
+        currentScriptRunContextProps = {
+          ...currentScriptRunContextProps,
+          ...newOptions.scriptRunContext,
+        }
+      }
+      // Use the original rerender with the wrapper
+      result.rerender(newComponent)
+    },
+  }
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.

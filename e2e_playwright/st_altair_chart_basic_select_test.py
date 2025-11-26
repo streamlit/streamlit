@@ -46,8 +46,9 @@ def _create_selection_rectangle(
     canvas_start_pos: _MousePosition,
     canvas_end_pos: _MousePosition,
 ) -> None:
-    chart.scroll_into_view_if_needed()
     expect(chart).to_be_visible()
+    chart.scroll_into_view_if_needed()
+
     bounding_box = chart.bounding_box()
     assert bounding_box is not None
     canvas_start_x_px = bounding_box.get("x", 0)
@@ -64,8 +65,8 @@ def _create_selection_rectangle(
 
 
 def _click(app: Page, chart: Locator, click_position: _MousePosition) -> None:
-    chart.scroll_into_view_if_needed()
     expect(chart).to_be_visible()
+    chart.scroll_into_view_if_needed()
     chart.click(position={"x": click_position.x, "y": click_position.y})
     wait_for_app_run(app)
 
@@ -343,11 +344,11 @@ def _test_shift_click_point_selection_scatter_chart_displays_selection(
     chart.scroll_into_view_if_needed()
     chart.click(position={"x": 264, "y": 162})
     wait_for_app_run(app)
-    chart.click(position={"x": 310, "y": 175}, modifiers=["Shift"])
+    chart.click(position={"x": 310, "y": 175}, modifiers=["Shift"])  # ty: ignore[invalid-argument-type]
     wait_for_app_run(app)
-    chart.click(position={"x": 402, "y": 194}, modifiers=["Shift"])
+    chart.click(position={"x": 402, "y": 194}, modifiers=["Shift"])  # ty: ignore[invalid-argument-type]
     wait_for_app_run(app)
-    chart.click(position={"x": 181, "y": 94}, modifiers=["Shift"])
+    chart.click(position={"x": 181, "y": 94}, modifiers=["Shift"])  # ty: ignore[invalid-argument-type]
     wait_for_app_run(app)
 
     # move the mouse away so that we do not have any hover-menu effects on the chart when taking the screenshot.

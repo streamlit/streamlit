@@ -15,12 +15,6 @@
  */
 
 import styled from "@emotion/styled"
-import { ChevronLeft } from "react-feather"
-
-export const StyledBackButton = styled(ChevronLeft)(({ theme }) => ({
-  cursor: "pointer",
-  marginRight: theme.spacing.lg,
-}))
 
 export const StyledDialogBody = styled.div(({ theme }) => ({
   display: "grid",
@@ -117,3 +111,15 @@ export const StyledDeployErrorContent = styled.div(({ theme }) => ({
     paddingLeft: theme.spacing.twoXL,
   },
 }))
+
+interface StyledErrorTextProps {
+  hasCodeBelow: boolean
+}
+
+export const StyledErrorText = styled.div<StyledErrorTextProps>(
+  ({ theme, hasCodeBelow }) => ({
+    ...(hasCodeBelow && {
+      marginBottom: theme.spacing.lg,
+    }),
+  })
+)

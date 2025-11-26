@@ -24,7 +24,7 @@ extend-exclude = [
   "frontend/**",
 ]
 
-target-version = 'py39'
+target-version = 'py310'
 line-length = 88
 
 [format]
@@ -55,7 +55,6 @@ ignore = [
   "PYI041",  # Checks for parameter annotations that contain redundant unions between builtin numeric types (e.g., int | float).
   "PYI051",  # Checks for redundant unions between a Literal and a builtin supertype of that Literal.
   "PD009",   # Checks for usage of pd.DataFrame.iat.
-  "PD901",   # Checks for usage of `df` variable name.
   "PIE790",  # Checks for unnecessary pass statements.
   "TD003",   # Checks for missing issue link in TODO comment.
   "TD002",   # Checks for missing author in TODO comment.

@@ -85,6 +85,28 @@ class PageLinkTest(DeltaGeneratorTestCase):
         assert c.external
         assert c.help == "Some help text"
 
+    def test_query_params(self):
+        """Test that it can be called with query_params param."""
+        st.page_link(
+            page="https://streamlit.io",
+            label="the label",
+            query_params={"foo": "bar", "baz": [1, 2]},
+        )
+
+        c = self.get_delta_from_queue().new_element.page_link
+        assert c.query_string == "foo=bar&baz=1&baz=2"
+
+    def test_query_params_list_of_tuples(self):
+        """Test that it can be called with query_params as list of tuples."""
+        st.page_link(
+            page="https://streamlit.io",
+            label="the label",
+            query_params=[("foo", "bar"), ("baz", "1"), ("baz", "2")],
+        )
+
+        c = self.get_delta_from_queue().new_element.page_link
+        assert c.query_string == "foo=bar&baz=1&baz=2"
+
     @patch("pathlib.Path.is_file", MagicMock(return_value=True))
     def test_st_page_with_label(self):
         """Test that st.page_link accepts an st.Page, but does not uses its title"""

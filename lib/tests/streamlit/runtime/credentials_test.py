@@ -407,5 +407,6 @@ class CredentialsModulesTest(unittest.TestCase):
         assert "👋" in email_prompt()
 
     @patch("streamlit.runtime.credentials.env_util.IS_WINDOWS", new=True)
+    @patch.dict(os.environ, {"WT_SESSION": ""}, clear=False)
     def test_show_emojis_windows(self):
         assert "👋" not in email_prompt()

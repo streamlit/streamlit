@@ -136,11 +136,13 @@ describe("Metric element", () => {
       direction: MetricProto.MetricDirection.NONE,
     })
     render(<Metric {...props} />)
+    // This is the gray metric text color
     expect(screen.getByTestId("stMetricDelta")).toHaveStyle(
       "color: rgba(49, 51, 63, 0.6);"
     )
+    // This is the gray metric background color
     expect(screen.getByTestId("stMetricDelta")).toHaveStyle(
-      "background-color: rgba(128, 132, 149, 0.1);"
+      "background-color: rgba(49, 51, 63, 0.1);"
     )
   })
 
@@ -150,9 +152,11 @@ describe("Metric element", () => {
       direction: MetricProto.MetricDirection.DOWN,
     })
     render(<Metric {...props} />)
+    // This is the green metric text color
     expect(screen.getByTestId("stMetricDelta")).toHaveStyle(
       "color: rgb(21, 130, 55);"
     )
+    // This is the green metric background color
     expect(screen.getByTestId("stMetricDelta")).toHaveStyle(
       "background-color: rgba(33, 195, 84, 0.1);"
     )
@@ -161,9 +165,11 @@ describe("Metric element", () => {
   it("renders correct red based on props", () => {
     const props = getProps()
     render(<Metric {...props} />)
+    // This is the red metric text color
     expect(screen.getByTestId("stMetricDelta")).toHaveStyle(
-      "color: rgb(255, 43, 43);"
+      "color: rgb(189, 64, 67);"
     )
+    // This is the red metric background color
     expect(screen.getByTestId("stMetricDelta")).toHaveStyle(
       "background-color: rgba(255, 43, 43, 0.1);"
     )
@@ -412,7 +418,7 @@ describe("Metric element", () => {
           expect.objectContaining({
             mark: expect.objectContaining({
               type: "area",
-              opacity: 0.2,
+              opacity: 1,
               line: expect.objectContaining({
                 strokeWidth: 2,
                 strokeCap: "round",
@@ -472,7 +478,27 @@ describe("Metric element", () => {
           encodings: ["x"],
           nearest: true,
           on: "mousemove",
-          clear: "mouseout",
+          clear: "mouseleave",
+        }),
+      })
+    })
+
+    it("throttles hover selection for large datasets", () => {
+      const largeChartData = Array.from({ length: 1500 }, (_, index) =>
+        Number(index)
+      )
+      const spec = getMetricChartSpec(
+        largeChartData,
+        MetricProto.ChartType.LINE,
+        200,
+        mockTheme.emotion,
+        MetricProto.MetricColor.RED
+      ) as TopLevelSpec & { layer: unknown[] }
+
+      const pointsLayer = spec.layer?.[1] as { params?: unknown[] }
+      expect(pointsLayer?.params?.[0]).toMatchObject({
+        select: expect.objectContaining({
+          on: "mousemove{16}",
         }),
       })
     })

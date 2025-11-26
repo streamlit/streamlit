@@ -362,3 +362,51 @@ def test_submit_button_with_key(app: Page):
     """Test that the submit button can have a custom css class via the key argument."""
     submit_button = get_element_by_key(app, "submit_button_form_1")
     expect(submit_button).to_be_visible()
+
+
+# Firefox has some issues with sub-pixel flakiness
+# but functional everything is working fine with firefox.
+@pytest.mark.skip_browser("firefox")
+def test_form_submit_button_displays_shortcut(app: Page):
+    """Ensure shortcut labels are rendered for form submit buttons."""
+    shortcut_button = get_element_by_key(app, "shortcut_submit_button")
+    expect(shortcut_button.locator("kbd")).to_have_text("Ctrl + Alt + S")
+
+
+# Firefox has some issues with sub-pixel flakiness
+# but functional everything is working fine with firefox.
+@pytest.mark.skip_browser("firefox")
+def test_form_submit_button_shortcut_triggers(app: Page):
+    """Ensure pressing the shortcut activates the form submit button."""
+    shortcut_button = get_element_by_key(app, "shortcut_submit_button")
+    expect(shortcut_button).to_be_visible()
+    expect(shortcut_button.locator("kbd")).to_have_text("Ctrl + Alt + S")
+
+    # Press hotkey to trigger the button:
+    app.keyboard.press("Control+Alt+KeyS")
+    wait_for_app_run(app)
+    expect(app.get_by_text("Shortcut form submitted!")).to_be_visible()
+
+
+# Firefox has some issues with sub-pixel flakiness
+# but functional everything is working fine with firefox.
+@pytest.mark.skip_browser("firefox")
+def test_dynamic_submit_button(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that the submit button can be updated dynamically."""
+    submit_button = get_element_by_key(app, "dynamic_button_with_key")
+    expect(submit_button).to_be_visible()
+
+    expect(submit_button).to_contain_text("Initial dynamic button")
+    assert_snapshot(submit_button, name="st_form_submit_button-dynamic_initial")
+    # Click the toggle to update the button props
+    click_toggle(app, "Update button props")
+
+    expect(submit_button).to_contain_text("Updated dynamic button")
+    submit_button.scroll_into_view_if_needed()
+    assert_snapshot(submit_button, name="st_form_submit_button-dynamic_updated")
+
+    # Click the submit button:
+    submit_button.click()
+    wait_for_app_run(app)
+
+    expect_prefixed_markdown(app, "Clicked updated button:", "True")

@@ -215,12 +215,7 @@ function FormattingMenu({
               }}
               role="menuitem"
             >
-              <DynamicIcon
-                size={"base"}
-                margin="0"
-                color="inherit"
-                iconValue={format.icon}
-              />
+              <DynamicIcon size="base" iconValue={format.icon} />
               {format.label}
             </StyledMenuListItem>
           ))}

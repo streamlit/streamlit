@@ -79,6 +79,11 @@ st.write("value 12:", v12)
 v13 = st.text_area("text area 13 (height=60)", "default text", height=60)
 st.write("value 13:", v13)
 
+# gh-12867: Test very small height that would produce negative calculation
+# height=10: 10 - 30 (labelAndPadding) = -20, should clamp to 0 then use minHeight
+v13_5 = st.text_area("text area 13.5 (height=10)", "default text", height=10)
+st.write("value 13.5:", v13_5)
+
 if "text_area_14" not in st.session_state:
     st.session_state["text_area_14"] = "xyz"
 
@@ -141,3 +146,42 @@ with col2:
         """Height matches partner column""",
         height="stretch",
     )
+
+st.markdown("Dynamic text area:")
+
+if st.toggle("Update text area props"):
+    ta_value = st.text_area(
+        "Updated dynamic text area",
+        value="updated",
+        width=200,
+        height=150,
+        help="updated help",
+        key="dynamic_text_area_with_key",
+        on_change=lambda a, param: print(
+            f"Updated text area - callback triggered: {a} {param}"
+        ),
+        args=("Updated text area arg",),
+        kwargs={"param": "updated kwarg param"},
+        placeholder="updated placeholder",
+        # max_chars is not yet supported for dynamic changes
+        # keeping it at the same value for now:
+        max_chars=100,
+    )
+    st.write("Updated text area value:", ta_value)
+else:
+    ta_value = st.text_area(
+        "Initial dynamic text area",
+        value="initial",
+        width="stretch",
+        height="content",
+        help="initial help",
+        key="dynamic_text_area_with_key",
+        on_change=lambda a, param: print(
+            f"Initial text area - callback triggered: {a} {param}"
+        ),
+        args=("Initial text area arg",),
+        kwargs={"param": "initial kwarg param"},
+        placeholder="initial placeholder",
+        max_chars=100,
+    )
+    st.write("Initial text area value:", ta_value)

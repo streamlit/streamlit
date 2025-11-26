@@ -19,11 +19,13 @@ from __future__ import annotations
 import dataclasses
 import functools
 import hashlib
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any
 
 from streamlit.proto.RootContainer_pb2 import RootContainer
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from streamlit.delta_generator import DeltaGenerator
 
 

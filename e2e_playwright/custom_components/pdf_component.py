@@ -23,9 +23,12 @@ from __future__ import annotations
 
 import base64
 import io
-from typing import Callable
+from typing import TYPE_CHECKING
 
 import streamlit as st
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 # Compact dummy PDF for testing
 _DUMMY_PDF_CONTENT = (

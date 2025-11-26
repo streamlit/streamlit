@@ -24,7 +24,7 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react"
-import cloneDeep from "lodash/cloneDeep"
+import { cloneDeep } from "lodash-es"
 
 import {
   getMenuStructure,
@@ -34,9 +34,13 @@ import { MetricsManager } from "@streamlit/app/src/MetricsManager"
 import {
   ConnectionManager,
   ConnectionState,
+  ErrorDetails,
   mockEndpoints,
 } from "@streamlit/connection"
 import {
+  CUSTOM_THEME_AUTO_NAME,
+  CUSTOM_THEME_DARK_NAME,
+  CUSTOM_THEME_LIGHT_NAME,
   CUSTOM_THEME_NAME,
   FileUploadClient,
   getDefaultTheme,
@@ -48,7 +52,6 @@ import {
   lightTheme,
   LocalStore,
   mockSessionInfoProps,
-  mockWindowLocation,
   RootStyleProvider,
   ScriptRunState,
   SessionInfo,
@@ -56,6 +59,7 @@ import {
   WidgetStateManager,
   WindowDimensionsProvider,
 } from "@streamlit/lib"
+import { mockWindowLocation } from "@streamlit/lib/testing"
 import {
   Config,
   CustomThemeConfig,
@@ -230,6 +234,7 @@ const getProps = (extend?: Partial<Props>): Props => ({
     availableThemes: [],
     setTheme: vi.fn(),
     addThemes: vi.fn(),
+    setFonts: vi.fn(),
     setImportedTheme: vi.fn(),
   },
   streamlitExecutionStartedAt: 100,
@@ -770,9 +775,10 @@ describe("App", () => {
       expect(props.theme.addThemes).toHaveBeenCalled()
       expect(props.theme.setTheme).toHaveBeenCalled()
 
-      // @ts-expect-error
-      expect(props.theme.setTheme.mock.calls[0][0].name).toBe(
-        CUSTOM_THEME_NAME
+      expect(props.theme.setTheme).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: CUSTOM_THEME_NAME,
+        })
       )
     })
 
@@ -793,9 +799,10 @@ describe("App", () => {
       expect(props.theme.addThemes).toHaveBeenCalled()
       expect(props.theme.setTheme).toHaveBeenCalled()
 
-      // @ts-expect-error
-      expect(props.theme.setTheme.mock.calls[0][0].name).toBe(
-        CUSTOM_THEME_NAME
+      expect(props.theme.setTheme).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: CUSTOM_THEME_NAME,
+        })
       )
     })
 
@@ -832,6 +839,7 @@ describe("App", () => {
           availableThemes: [],
           setTheme: vi.fn(),
           addThemes: vi.fn(),
+          setFonts: vi.fn(),
           setImportedTheme: vi.fn(),
         },
       })
@@ -1572,6 +1580,52 @@ describe("App", () => {
           .pageScriptHash
       ).toBe("top_hash")
     })
+
+    it("preserves query params from URL on first script run after browser back button", async () => {
+      renderApp(getProps())
+
+      sendForwardMessage("newSession", {
+        ...CURRENT_NEW_SESSION_JSON,
+        pageScriptHash: "top_hash",
+      })
+      sendForwardMessage("navigation", {
+        ...THIS_NAVIGATION_JSON,
+        pageScriptHash: "top_hash",
+      })
+
+      const connectionManager = getMockConnectionManager()
+      // @ts-expect-error
+      connectionManager.sendMessage.mockClear()
+
+      // Navigate to page2
+      sendForwardMessage("newSession", {
+        ...CURRENT_NEW_SESSION_JSON,
+        pageScriptHash: "sub_hash",
+      })
+      sendForwardMessage("navigation", {
+        ...THIS_NAVIGATION_JSON,
+        pageScriptHash: "sub_hash",
+      })
+
+      // @ts-expect-error
+      connectionManager.sendMessage.mockClear()
+
+      // Simulate user clicking browser back button to main page with query params.
+      // In a real browser, the URL would be restored to include query params.
+      // In JSDOM, we need to manually set the URL before triggering popstate.
+      window.history.pushState({}, "", "/?mykey=myvalue")
+      window.dispatchEvent(new PopStateEvent("popstate"))
+
+      await waitFor(() => {
+        expect(connectionManager.sendMessage).toBeCalledTimes(1)
+      })
+
+      // Verify the query params from the URL are preserved in the rerun message
+      expect(
+        // @ts-expect-error
+        connectionManager.sendMessage.mock.calls[0][0].rerunScript.queryString
+      ).toBe("mykey=myvalue")
+    })
   })
 
   describe("App.handlePageConfigChanged", () => {
@@ -1916,7 +1970,75 @@ describe("App", () => {
   })
 
   describe("App.processThemeInput", () => {
-    it("calls setImportedTheme when fontFaces are provided", () => {
+    it("passing a custom theme adds the custom theme and removes preset themes", () => {
+      // Simplest custom theme (no light/dark versions)
+      const themeInput = new CustomThemeConfig({
+        primaryColor: "blue",
+      })
+
+      const props = getProps()
+      renderApp(props)
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        customTheme: themeInput,
+      })
+
+      // Custom theme should be added
+      expect(props.theme.addThemes).toHaveBeenCalledTimes(1)
+      // Should have exactly one theme with name CUSTOM_THEME_NAME, and keepPresetThemes should be false
+      expect(props.theme.addThemes).toHaveBeenCalledWith(
+        [expect.objectContaining({ name: CUSTOM_THEME_NAME })],
+        expect.objectContaining({ keepPresetThemes: false })
+      )
+      // Active theme should be set to the custom theme
+      expect(props.theme.setTheme).toHaveBeenCalledWith(
+        expect.objectContaining({ name: CUSTOM_THEME_NAME })
+      )
+    })
+
+    it("passing a custom theme with light/dark versions adds both and removes preset themes", () => {
+      const themeInput = new CustomThemeConfig({
+        primaryColor: "blue",
+        light: {
+          primaryColor: "red",
+        },
+        dark: {
+          primaryColor: "green",
+        },
+      })
+
+      const props = getProps()
+      renderApp(props)
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        customTheme: themeInput,
+      })
+
+      // Check that 3 themes were added (light, dark, auto)
+      expect(props.theme.addThemes).toHaveBeenCalledTimes(1)
+      expect(props.theme.addThemes).toHaveBeenCalledWith(
+        [
+          expect.objectContaining({ name: CUSTOM_THEME_LIGHT_NAME }),
+          expect.objectContaining({ name: CUSTOM_THEME_DARK_NAME }),
+          expect.objectContaining({ name: CUSTOM_THEME_AUTO_NAME }),
+        ],
+        expect.objectContaining({ keepPresetThemes: false })
+      )
+
+      // Active theme should be set to the auto theme
+      expect(props.theme.setTheme).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: CUSTOM_THEME_AUTO_NAME,
+          themeInput: expect.objectContaining({
+            primaryColor: "red",
+          }),
+        })
+      )
+    })
+
+    it("calls setFonts when fontFaces are provided", () => {
       const fontFaces = [{ url: "test-url" }]
       const themeInput = new CustomThemeConfig({
         primaryColor: "blue",
@@ -1931,11 +2053,11 @@ describe("App", () => {
         customTheme: themeInput,
       })
 
-      // Should have called setImportedTheme
-      expect(props.theme.setImportedTheme).toHaveBeenCalledWith(themeInput)
+      // Should have called setFonts
+      expect(props.theme.setFonts).toHaveBeenCalledWith(themeInput)
     })
 
-    it("doesn't call setImportedTheme when fontFaces is empty", () => {
+    it("doesn't call setFonts when fontFaces is empty", () => {
       const themeInput = new CustomThemeConfig({
         primaryColor: "blue",
         fontFaces: [],
@@ -1949,8 +2071,149 @@ describe("App", () => {
         customTheme: themeInput,
       })
 
-      // Should not have called setImportedTheme
-      expect(props.theme.setImportedTheme).not.toHaveBeenCalled()
+      // Should not have called setFonts
+      expect(props.theme.setFonts).not.toHaveBeenCalled()
+    })
+
+    it("calls setFonts when a fontSource is provided", () => {
+      const fontSources = [
+        {
+          configName: "font",
+          sourceUrl:
+            "https://fonts.googleapis.com/css2?family=Inter&display=swap",
+        },
+      ]
+      const themeInput = new CustomThemeConfig({
+        primaryColor: "blue",
+        fontSources,
+      })
+
+      const props = getProps()
+      renderApp(props)
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        customTheme: themeInput,
+      })
+
+      // Should have called setFonts
+      expect(props.theme.setFonts).toHaveBeenCalledWith(themeInput)
+    })
+
+    it("doesn't call setFonts when fontSources is empty", () => {
+      const themeInput = new CustomThemeConfig({
+        primaryColor: "blue",
+        fontSources: [],
+      })
+
+      const props = getProps()
+      renderApp(props)
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        customTheme: themeInput,
+      })
+
+      // Should not have called setFonts
+      expect(props.theme.setFonts).not.toHaveBeenCalled()
+    })
+
+    it("sets active theme to Custom Theme when theme input has no light/dark configs", () => {
+      // App receives a custom theme input with new session, no light/dark configs
+      const themeInput = new CustomThemeConfig({
+        primaryColor: "blue",
+      })
+
+      const props = getProps()
+      renderApp(props)
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        customTheme: themeInput,
+      })
+
+      expect(props.theme.addThemes).toHaveBeenCalledTimes(1)
+      expect(props.theme.setTheme).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: CUSTOM_THEME_NAME,
+        })
+      )
+    })
+
+    it("sets active theme based on system preference when theme input has light/dark configs - Custom Theme Light", () => {
+      // Mock the system preference return value (light)
+      Object.defineProperty(window, "matchMedia", {
+        writable: true,
+        value: vi.fn().mockImplementation(query => ({
+          matches: query === "(prefers-color-scheme: light)", // Returns true for light
+        })),
+      })
+      const themeInput = new CustomThemeConfig({
+        primaryColor: "blue",
+        light: {
+          primaryColor: "lightblue",
+        },
+        dark: {
+          primaryColor: "darkblue",
+        },
+      })
+
+      const props = getProps()
+      renderApp(props)
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        customTheme: themeInput,
+      })
+
+      expect(props.theme.addThemes).toHaveBeenCalledTimes(1)
+      // Check that the auto theme is set, and that it is the custom light theme
+      expect(props.theme.setTheme).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: CUSTOM_THEME_AUTO_NAME,
+          themeInput: expect.objectContaining({
+            primaryColor: "lightblue",
+          }),
+        })
+      )
+    })
+
+    it("sets active theme based on system preference when theme input has light/dark configs - Custom Theme Dark", () => {
+      // Mock the system preference return value (dark)
+      Object.defineProperty(window, "matchMedia", {
+        writable: true,
+        value: vi.fn().mockImplementation(query => ({
+          matches: query === "(prefers-color-scheme: dark)", // Returns true for dark
+        })),
+      })
+      const themeInput = new CustomThemeConfig({
+        primaryColor: "blue",
+        light: {
+          primaryColor: "lightblue",
+        },
+        dark: {
+          primaryColor: "darkblue",
+        },
+      })
+
+      const props = getProps()
+      renderApp(props)
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        customTheme: themeInput,
+      })
+
+      expect(props.theme.addThemes).toHaveBeenCalledTimes(1)
+      // Check that the auto theme is set, and that it is the custom dark theme
+      expect(props.theme.setTheme).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: CUSTOM_THEME_AUTO_NAME,
+          themeInput: expect.objectContaining({
+            primaryColor: "darkblue",
+          }),
+        })
+      )
     })
   })
 
@@ -2728,11 +2991,20 @@ describe("App", () => {
       })
     })
 
-    it("does nothing if server is disconnected", () => {
+    it("rejects with error when server is disconnected", () => {
+      // When disconnected, file upload requests should be rejected immediately
+      // with an error. We can't queue and retry because reconnection triggers
+      // a script rerun, which remounts the FileUploader component and
+      // invalidates the promise callback.
       renderApp(getProps())
 
       const fileUploadClient =
         getStoredValue<FileUploadClient>(FileUploadClient)
+
+      const onFileURLsResponseSpy = vi.spyOn(
+        fileUploadClient,
+        "onFileURLsResponse"
+      )
 
       // @ts-expect-error - requestFileURLs is private
       fileUploadClient.requestFileURLs("myRequestId", [
@@ -2743,7 +3015,15 @@ describe("App", () => {
 
       const connectionManager = getMockConnectionManager()
 
+      // No message sent when disconnected
       expect(connectionManager.sendMessage).not.toBeCalled()
+
+      // Error response should be sent to reject the pending promise
+      expect(onFileURLsResponseSpy).toHaveBeenCalledWith({
+        responseId: "myRequestId",
+        errorMsg:
+          "Connection lost. Please wait for the app to reconnect, then try again.",
+      })
     })
   })
 
@@ -3997,9 +4277,9 @@ describe("App", () => {
 
         // Trigger a connection error dialog
         act(() => {
-          getMockConnectionManagerProp("onConnectionError")(
-            "Connection error message."
-          )
+          getMockConnectionManagerProp("onConnectionError")({
+            message: "Connection error message.",
+          })
         })
 
         expect(hostCommunicationMgr.sendMessageToHost).toBeCalledWith({
@@ -4617,11 +4897,11 @@ describe("App.hasReceivedNewSession flag behavior", () => {
   describe("Connection Error Handling", () => {
     const triggerConnectionError = (
       connectionManager: ConnectionManager,
-      errorMessage: string
+      errorDetails: ErrorDetails
     ): void => {
       act(() => {
         // @ts-expect-error - connectionManager.props is private
-        connectionManager.props.onConnectionError(errorMessage)
+        connectionManager.props.onConnectionError(errorDetails)
       })
     }
 
@@ -4630,10 +4910,9 @@ describe("App.hasReceivedNewSession flag behavior", () => {
         renderApp(getProps())
         const connectionManager = getMockConnectionManager(false)
 
-        triggerConnectionError(
-          connectionManager,
-          "Network error: Unable to connect"
-        )
+        triggerConnectionError(connectionManager, {
+          message: "Network error: Unable to connect",
+        })
 
         // Verify error dialog and message are displayed
         expect(screen.getByText("Connection error")).toBeVisible()
@@ -4647,7 +4926,9 @@ describe("App.hasReceivedNewSession flag behavior", () => {
         const connectionManager = getMockConnectionManager(false)
 
         // First error
-        triggerConnectionError(connectionManager, "Connection lost")
+        triggerConnectionError(connectionManager, {
+          message: "Connection lost",
+        })
 
         expect(screen.getByText("Connection error")).toBeVisible()
 
@@ -4661,7 +4942,9 @@ describe("App.hasReceivedNewSession flag behavior", () => {
         expect(screen.queryByText("Connection error")).toBeNull()
 
         // Second error should not display
-        triggerConnectionError(connectionManager, "Another connection error")
+        triggerConnectionError(connectionManager, {
+          message: "Another connection error",
+        })
 
         expect(screen.queryByText("Connection error")).toBeNull()
       })
@@ -4684,7 +4967,9 @@ describe("App.hasReceivedNewSession flag behavior", () => {
         })
 
         // Trigger error
-        triggerConnectionError(connectionManager, "Connection lost")
+        triggerConnectionError(connectionManager, {
+          message: "Connection lost",
+        })
 
         // Dialog should not be displayed
         expect(screen.queryByText("Connection error")).toBeNull()
@@ -4699,16 +4984,15 @@ describe("App.hasReceivedNewSession flag behavior", () => {
         )
       })
 
-      it("displays error with StreamlitMarkdown formatting", () => {
+      it("displays error with DialogErrorMessage formatting", () => {
         renderApp(getProps())
         const connectionManager = getMockConnectionManager(false)
 
-        triggerConnectionError(
-          connectionManager,
-          "**Network Error**: Unable to connect to server"
-        )
+        triggerConnectionError(connectionManager, {
+          message: "Network Error: Unable to connect to server",
+        })
 
-        // Verify both error dialog and markdown content are displayed
+        // Verify both error dialog and error message are displayed
         expect(screen.getByText("Connection error")).toBeVisible()
         expect(screen.getByText(/Network Error/)).toBeVisible()
       })
@@ -4720,7 +5004,9 @@ describe("App.hasReceivedNewSession flag behavior", () => {
         const connectionManager = getMockConnectionManager(false)
 
         // Trigger connection error
-        triggerConnectionError(connectionManager, "Connection lost")
+        triggerConnectionError(connectionManager, {
+          message: "Connection lost",
+        })
 
         expect(screen.getByText("Connection error")).toBeVisible()
 
@@ -4741,7 +5027,9 @@ describe("App.hasReceivedNewSession flag behavior", () => {
         })
 
         // New error should be displayed after reconnection
-        triggerConnectionError(connectionManager, "New connection error")
+        triggerConnectionError(connectionManager, {
+          message: "New connection error",
+        })
 
         expect(screen.getByText("Connection error")).toBeVisible()
         expect(screen.getByText(/New connection error/)).toBeVisible()
@@ -4768,7 +5056,9 @@ describe("App.hasReceivedNewSession flag behavior", () => {
         })
 
         // Trigger connection error
-        triggerConnectionError(connectionManager, "Connection lost")
+        triggerConnectionError(connectionManager, {
+          message: "Connection lost",
+        })
 
         expect(screen.getByText("Connection error")).toBeVisible()
 
@@ -4788,7 +5078,9 @@ describe("App.hasReceivedNewSession flag behavior", () => {
         const connectionManager = getMockConnectionManager(false)
 
         // First, show a connection error dialog
-        triggerConnectionError(connectionManager, "Connection lost")
+        triggerConnectionError(connectionManager, {
+          message: "Connection lost",
+        })
 
         expect(screen.getByText("Connection error")).toBeVisible()
 
@@ -4857,11 +5149,11 @@ describe("App.hasReceivedNewSession flag behavior", () => {
         const connectionManager = getMockConnectionManager(false)
 
         // Trigger multiple errors
-        triggerConnectionError(connectionManager, "Error 1")
+        triggerConnectionError(connectionManager, { message: "Error 1" })
 
-        triggerConnectionError(connectionManager, "Error 2")
+        triggerConnectionError(connectionManager, { message: "Error 2" })
 
-        triggerConnectionError(connectionManager, "Error 3")
+        triggerConnectionError(connectionManager, { message: "Error 3" })
 
         // Should only show the latest error
         expect(screen.getByText("Connection error")).toBeVisible()
@@ -4875,7 +5167,7 @@ describe("App.hasReceivedNewSession flag behavior", () => {
         const connectionManager = getMockConnectionManager(false)
 
         // First error
-        triggerConnectionError(connectionManager, "First error")
+        triggerConnectionError(connectionManager, { message: "First error" })
 
         expect(screen.getByText("Connection error")).toBeVisible()
 
@@ -4902,7 +5194,7 @@ describe("App.hasReceivedNewSession flag behavior", () => {
         })
 
         // Error should still not display (dismissal persists)
-        triggerConnectionError(connectionManager, "Another error")
+        triggerConnectionError(connectionManager, { message: "Another error" })
 
         expect(screen.queryByText("Connection error")).toBeNull()
 
@@ -4913,7 +5205,9 @@ describe("App.hasReceivedNewSession flag behavior", () => {
           )
         })
 
-        triggerConnectionError(connectionManager, "Error after reconnect")
+        triggerConnectionError(connectionManager, {
+          message: "Error after reconnect",
+        })
 
         expect(screen.getByText("Connection error")).toBeVisible()
       })
@@ -4990,7 +5284,9 @@ describe("App.hasReceivedNewSession flag behavior", () => {
         })
 
         // Try to trigger connection error
-        triggerConnectionError(connectionManager, "Error while disconnected")
+        triggerConnectionError(connectionManager, {
+          message: "Error while disconnected",
+        })
 
         // Should still show error dialog even when disconnected
         expect(screen.getByText("Connection error")).toBeVisible()

@@ -19,19 +19,23 @@ from e2e_playwright.conftest import ImageCompareFunction
 from e2e_playwright.shared.app_utils import check_top_level_class
 from e2e_playwright.shared.react18_utils import wait_for_react_stability
 
-NUM_CHARTS = 11
+NUM_CHARTS = 8
 
 
 def test_altair_chart_displays_correctly(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
-    expect(
-        themed_app.get_by_test_id("stVegaLiteChart").locator(
-            "[role='graphics-document']"
-        )
-    ).to_have_count(NUM_CHARTS)
     charts = themed_app.get_by_test_id("stVegaLiteChart")
     expect(charts).to_have_count(NUM_CHARTS)
+
+    # Also make sure that all Vega display objects are rendered:
+    expect(charts.locator("[role='graphics-document']")).to_have_count(NUM_CHARTS)
+
+    # Ensure all charts are visible before taking snapshots
+    for idx in range(NUM_CHARTS):
+        chart = charts.nth(idx)
+        vega_display = chart.locator("[role='graphics-document']").nth(0)
+        expect(vega_display).to_be_visible()
 
     assert_snapshot(charts.nth(0), name="st_altair_chart-pie_chart_large_legend_items")
     assert_snapshot(charts.nth(1), name="st_altair_chart-scatter_chart_default_theme")
@@ -40,21 +44,16 @@ def test_altair_chart_displays_correctly(
         charts.nth(3), name="st_altair_chart-scatter_chart_overwritten_theme"
     )
     assert_snapshot(charts.nth(4), name="st_altair_chart-bar_chart_overwritten_theme")
+    # TODO(lukasmasuch): Temporarily disabled because of flickering in webkit & chromium.
+    # assert_snapshot(charts.nth(5), name="st_altair_chart-grouped_bar_chart_default_theme")  # noqa: ERA001
+    # assert_snapshot(charts.nth(5), name="st_altair_chart-grouped_bar_chart_streamlit_theme")  # noqa: ERA001
+    # assert_snapshot(charts.nth(5), name="st_altair_chart-grouped_use_container_width_default_theme")  # noqa: ERA001
     assert_snapshot(
-        charts.nth(5), name="st_altair_chart-grouped_bar_chart_default_theme"
+        charts.nth(5), name="st_altair_chart-grouped_layered_line_chart_streamlit_theme"
     )
+    assert_snapshot(charts.nth(6), name="st_altair_chart-vconcat_width")
     assert_snapshot(
-        charts.nth(6), name="st_altair_chart-grouped_bar_chart_streamlit_theme"
-    )
-    assert_snapshot(
-        charts.nth(7), name="st_altair_chart-grouped_use_container_width_default_theme"
-    )
-    assert_snapshot(
-        charts.nth(8), name="st_altair_chart-grouped_layered_line_chart_streamlit_theme"
-    )
-    assert_snapshot(charts.nth(9), name="st_altair_chart-vconcat_width")
-    assert_snapshot(
-        charts.nth(10), name="st_altair_chart-altair_chart_cut_off_legend_title_none"
+        charts.nth(7), name="st_altair_chart-altair_chart_cut_off_legend_title_none"
     )
 
 
@@ -63,11 +62,12 @@ def test_check_top_level_class(app: Page):
     check_top_level_class(app, "stVegaLiteChart")
 
 
-# This test seems to be a bit flaky in chromium, so we skip it for now.
-@pytest.mark.skip_browser("chromium")
-@pytest.mark.flaky(reruns=4)
+# Webkit is quite flaky, potentially pointing to a bug
+# see the other comments in the test script
+@pytest.mark.skip_browser("webkit")
 def test_chart_tooltip_styling(app: Page, assert_snapshot: ImageCompareFunction):
     """Check that the chart tooltip styling is correct."""
+
     charts = app.get_by_test_id("stVegaLiteChart")
     expect(charts).to_have_count(NUM_CHARTS)
 

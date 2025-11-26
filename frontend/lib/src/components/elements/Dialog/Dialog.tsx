@@ -76,6 +76,7 @@ const Dialog: React.FC<React.PropsWithChildren<Props>> = ({
   useEffect(() => {
     // Only apply the open state if it was actually set in the proto.
     if (notNullOrUndefined(initialIsOpen)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- TODO: Do not set state in effect
       setIsOpen(initialIsOpen)
     }
 

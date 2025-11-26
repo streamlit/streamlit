@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { FC, memo, useCallback, useContext, useMemo } from "react"
+import { FC, memo, useCallback, useContext, useMemo } from "react"
 
 import { ChevronDown } from "baseui/icon"
 import {
@@ -23,13 +23,13 @@ import {
   TYPE,
   Select as UISelect,
 } from "baseui/select"
-import without from "lodash/without"
+import { without } from "lodash-es"
 
 import { MultiSelect as MultiSelectProto } from "@streamlit/protobuf"
 
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
+import { getBorderColor } from "~lib/components/shared/Base/styled-components"
 import { VirtualDropdown } from "~lib/components/shared/Dropdown"
-import { fuzzyFilterSelectOptions } from "~lib/components/shared/Dropdown/Selectbox"
 import { Placement } from "~lib/components/shared/Tooltip"
 import TooltipIcon from "~lib/components/shared/TooltipIcon"
 import {
@@ -42,11 +42,8 @@ import {
   ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { isMobile } from "~lib/util/isMobile"
-import {
-  getSelectPlaceholder,
-  labelVisibilityProtoValueToEnum,
-} from "~lib/util/utils"
+import { useSelectCommon } from "~lib/hooks/useSelectCommon"
+import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 export interface Props {
@@ -57,11 +54,6 @@ export interface Props {
 }
 
 type MultiselectValue = string[]
-
-interface MultiselectOption {
-  label: string
-  value: string
-}
 
 const getStateFromWidgetMgr = (
   widgetMgr: WidgetStateManager,
@@ -127,12 +119,6 @@ const Multiselect: FC<Props> = props => {
     return "No results"
   }, [element.maxSelections, value.length])
 
-  const valueFromState = useMemo(() => {
-    return value.map(option => {
-      return { value: option, label: option }
-    })
-  }, [value])
-
   const generateNewState = useCallback(
     (data: OnChangeParams): MultiselectValue => {
       switch (data.type) {
@@ -184,50 +170,37 @@ const Multiselect: FC<Props> = props => {
     [element.maxSelections, generateNewState, setValueWithSource, value.length]
   )
 
+  const { options } = element
+
+  const {
+    placeholder,
+    disabled: shouldDisable,
+    selectOptions,
+    inputReadOnly,
+    valuesToUiMulti,
+    createFilterOptions,
+  } = useSelectCommon({
+    options,
+    isMulti: true,
+    acceptNewOptions: element.acceptNewOptions ?? false,
+    placeholderInput: element.placeholder,
+  })
+
   const filterOptions = useCallback(
     (options: readonly Option[], filterValue: string): readonly Option[] => {
       if (overMaxSelections) {
         return []
       }
-      // We need to manually filter for previously selected options here
-      const unselectedOptions = options.filter(
-        option => !value.includes(option.value)
-      )
-
-      return fuzzyFilterSelectOptions(
-        unselectedOptions as MultiselectOption[],
-        filterValue
-      )
+      return createFilterOptions(value)(options, filterValue)
     },
-    [overMaxSelections, value]
-  )
-
-  const { options } = element
-
-  // Get placeholder and disabled state using utility function
-  const { placeholder, shouldDisable } = getSelectPlaceholder(
-    element.placeholder,
-    options,
-    element.acceptNewOptions ?? false,
-    true // isMultiSelect = true for multi-select
+    [createFilterOptions, overMaxSelections, value]
   )
 
   const disabled = props.disabled || shouldDisable
-  const selectOptions: MultiselectOption[] = options.map(
-    (option: string, index: number) => {
-      return {
-        label: option,
-        value: option,
-        // We are using an id because if multiple options are equal,
-        // we have observed weird UI glitches
-        id: `${option}_${index}`,
-      }
-    }
+  const valueFromState = useMemo(
+    () => valuesToUiMulti(value),
+    [valuesToUiMulti, value]
   )
-
-  // Check if we have more than 10 options in the selectbox.
-  // If that's true, we show the keyboard on mobile. If not, we hide it.
-  const showKeyboardOnMobile = options.length > 10
 
   // Calculate the max height of the selectbox based on the baseFontSize
   // to better support advanced theming
@@ -313,14 +286,22 @@ const Multiselect: FC<Props> = props => {
               }),
             },
             ControlContainer: {
-              style: {
-                maxHeight: maxHeight,
-                minHeight: theme.sizes.minElementHeight,
-                // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
-                borderLeftWidth: theme.sizes.borderWidth,
-                borderRightWidth: theme.sizes.borderWidth,
-                borderTopWidth: theme.sizes.borderWidth,
-                borderBottomWidth: theme.sizes.borderWidth,
+              style: ({ $isFocused }: { $isFocused: boolean }) => {
+                const borderColor = getBorderColor(theme.colors, $isFocused)
+                return {
+                  maxHeight: maxHeight,
+                  minHeight: theme.sizes.minElementHeight,
+                  // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
+                  borderLeftWidth: theme.sizes.borderWidth,
+                  borderRightWidth: theme.sizes.borderWidth,
+                  borderTopWidth: theme.sizes.borderWidth,
+                  borderBottomWidth: theme.sizes.borderWidth,
+
+                  borderTopColor: borderColor,
+                  borderRightColor: borderColor,
+                  borderBottomColor: borderColor,
+                  borderLeftColor: borderColor,
+                }
               },
             },
             Placeholder: {
@@ -345,7 +326,7 @@ const Multiselect: FC<Props> = props => {
                 overrides: {
                   Svg: {
                     style: {
-                      color: theme.colors.darkGray,
+                      color: theme.colors.grayTextColor,
                       // setting this width and height makes the clear-icon align with dropdown arrows of other input fields
                       padding: theme.spacing.threeXS,
                       height: theme.sizes.clearIconSize,
@@ -361,7 +342,7 @@ const Multiselect: FC<Props> = props => {
             },
             SearchIcon: {
               style: {
-                color: theme.colors.darkGray,
+                color: theme.colors.grayTextColor,
               },
             },
             Tag: {
@@ -422,15 +403,7 @@ const Multiselect: FC<Props> = props => {
                 },
               },
             },
-            Input: {
-              props: {
-                // Change the 'readonly' prop to hide the mobile keyboard if options < 10
-                readOnly:
-                  isMobile() && showKeyboardOnMobile === false
-                    ? "readonly"
-                    : null,
-              },
-            },
+            Input: { props: { readOnly: inputReadOnly } },
             Dropdown: { component: VirtualDropdown },
           }}
         />

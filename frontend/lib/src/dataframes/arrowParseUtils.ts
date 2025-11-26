@@ -28,8 +28,7 @@ import {
   tableFromIPC,
   Vector,
 } from "apache-arrow"
-import range from "lodash/range"
-import unzip from "lodash/unzip"
+import { range, unzip } from "lodash-es"
 
 import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
 

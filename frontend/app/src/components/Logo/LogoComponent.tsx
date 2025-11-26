@@ -23,7 +23,7 @@ import {
   StyledLogoLink,
 } from "@streamlit/app/src/components/Sidebar/styled-components"
 import { StreamlitEndpoints } from "@streamlit/connection"
-import { getCrossOriginAttribute, LibContext } from "@streamlit/lib"
+import { getCrossOriginAttribute, LibConfigContext } from "@streamlit/lib"
 import { Logo } from "@streamlit/protobuf"
 
 const LOG = getLogger("LogoComponent")
@@ -46,7 +46,7 @@ const LogoComponent = ({
   componentName = "Logo",
   dataTestId = "stLogo",
 }: LogoComponentProps): ReactElement | null => {
-  const { libConfig } = useContext(LibContext)
+  const { resourceCrossOriginMode } = useContext(LibConfigContext)
 
   if (!appLogo) {
     return null
@@ -70,7 +70,7 @@ const LogoComponent = ({
   const source = endpoints.buildMediaURL(displayImage)
 
   const crossOrigin = getCrossOriginAttribute(
-    libConfig.resourceCrossOriginMode,
+    resourceCrossOriginMode,
     displayImage
   )
 
@@ -100,7 +100,11 @@ const LogoComponent = ({
     )
   }
 
-  return logo
+  // Wrapping the logo into a div makes it easier to correctly
+  // handle the width in all cases. It already gets wrapped via a
+  // link element (<a>) above when link is provided.
+  // https://github.com/streamlit/streamlit/issues/12326
+  return <div>{logo}</div>
 }
 
 export default LogoComponent

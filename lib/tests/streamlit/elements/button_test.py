@@ -21,7 +21,7 @@ import os
 import tempfile
 from pathlib import Path
 from textwrap import dedent
-from typing import Any, Callable
+from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -36,6 +36,9 @@ from streamlit.proto.DownloadButton_pb2 import (
 )
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 def get_button_command_matrix(
@@ -144,6 +147,157 @@ class ButtonTest(DeltaGeneratorTestCase):
 
         c = getattr(self.get_delta_from_queue().new_element, name)
         assert c.disabled
+
+    @parameterized.expand(
+        [
+            (name, command)
+            for name, command in get_button_command_matrix()
+            if name in {"button", "download_button", "link_button"}
+        ]
+    )
+    def test_shortcut_serialization(
+        self, name: str, command: Callable[..., Any]
+    ) -> None:
+        """Test that shortcuts are serialized for supported buttons."""
+        command(shortcut="Ctrl+K")
+
+        proto = getattr(self.get_delta_from_queue().new_element, name)
+        assert proto.shortcut == "ctrl+k"
+
+    def test_cmd_shortcut_alias(self) -> None:
+        """Test that Cmd shortcuts are normalized."""
+        st.button("the label", shortcut="Cmd+O")
+
+        proto = self.get_delta_from_queue().new_element.button
+        assert proto.shortcut == "cmd+o"
+
+    @parameterized.expand(
+        [
+            (name, command)
+            for name, command in get_button_command_matrix()
+            if name in {"button", "download_button", "link_button"}
+        ]
+    )
+    def test_shortcut_ignores_case_and_whitespace(
+        self, name: str, command: Callable[..., Any]
+    ) -> None:
+        """Test that shortcuts ignore casing and extraneous whitespace."""
+        command(shortcut="  CtRl  +  OptIon +   ShIfT   +   N   ")
+
+        proto = getattr(self.get_delta_from_queue().new_element, name)
+        assert proto.shortcut == "ctrl+alt+shift+n"
+
+    @parameterized.expand(
+        [
+            (name, command)
+            for name, command in get_button_command_matrix()
+            if name in {"button", "download_button", "link_button"}
+        ]
+    )
+    def test_modifier_only_shortcuts_raise(
+        self, name: str, command: Callable[..., Any]
+    ) -> None:
+        """Test that modifier-only shortcuts raise an exception."""
+        with pytest.raises(StreamlitAPIException):
+            command(shortcut="ctrl")
+
+        with pytest.raises(StreamlitAPIException):
+            command(shortcut="   shift   ")
+
+    @parameterized.expand(
+        [
+            ("upper_r", "R"),
+            ("lower_r", "r"),
+            ("shift_r", "Shift+R"),
+            ("ctrl_c", "Ctrl+C"),
+            ("cmd_c", "cmd+c"),
+        ]
+    )
+    def test_reserved_shortcuts_raise(self, _name: str, shortcut: str) -> None:
+        """Test that reserved shortcuts raise an exception."""
+        with pytest.raises(StreamlitAPIException):
+            st.button("reserved", shortcut=shortcut)
+
+    def test_invalid_shortcut_raises(self) -> None:
+        """Test that invalid shortcuts raise an exception."""
+        with pytest.raises(StreamlitAPIException):
+            st.button("invalid", shortcut="A+B")
+
+    def test_stable_id_button_with_key(self):
+        """Test that the button ID is stable when a stable key is provided."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            st.button(
+                label="Label 1",
+                key="button_key",
+                help="Help 1",
+                type="secondary",
+                disabled=False,
+                width="content",
+                on_click=lambda: st.write("Button clicked"),
+                args=("arg1", "arg2"),
+                kwargs={"kwarg1": "kwarg1"},
+            )
+            c1 = self.get_delta_from_queue().new_element.button
+            id1 = c1.id
+
+            st.button(
+                label="Label 2",
+                key="button_key",
+                help="Help 2",
+                type="primary",
+                disabled=True,
+                width="stretch",
+                on_click=lambda: st.write("Other button clicked"),
+                args=("arg_1", "arg_2"),
+                kwargs={"kwarg_1": "kwarg_1"},
+            )
+            c2 = self.get_delta_from_queue().new_element.button
+            id2 = c2.id
+            assert id1 == id2
+
+    def test_stable_id_download_button_with_key(self):
+        """Test that the download button ID is stable when a key is provided."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            st.download_button(
+                label="Label 1",
+                data="data1",
+                file_name="file1.txt",
+                mime="text/plain",
+                key="download_button_key",
+                help="Help 1",
+                type="secondary",
+                disabled=False,
+                width="content",
+                on_click=lambda: st.write("Button clicked"),
+                args=("arg1", "arg2"),
+                kwargs={"kwarg1": "kwarg1"},
+            )
+            c1 = self.get_delta_from_queue().new_element.download_button
+            id1 = c1.id
+
+            st.download_button(
+                label="Label 2",
+                data="data2",
+                file_name="file2.txt",
+                mime="text/csv",
+                key="download_button_key",
+                help="Help 2",
+                type="primary",
+                disabled=True,
+                width="stretch",
+                on_click=lambda: st.write("Other button clicked"),
+                args=("arg_1", "arg_2"),
+                kwargs={"kwarg_1": "kwarg_1"},
+            )
+            c2 = self.get_delta_from_queue().new_element.download_button
+            id2 = c2.id
+            assert id1 == id2
 
     def test_use_container_width_true(self):
         """Test use_container_width=True is mapped to width='stretch'."""

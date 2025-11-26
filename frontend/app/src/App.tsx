@@ -18,9 +18,7 @@ import React, { PureComponent, ReactNode } from "react"
 
 import classNames from "classnames"
 import { enableMapSet, enablePatches } from "immer"
-import without from "lodash/without"
 import { getLogger } from "loglevel"
-import moment from "moment"
 import { flushSync } from "react-dom"
 import Hotkeys from "react-hot-keys"
 
@@ -37,6 +35,7 @@ import {
   WarningProps,
 } from "@streamlit/app/src/components/StreamlitDialog"
 import { DialogType } from "@streamlit/app/src/components/StreamlitDialog/constants"
+import DialogErrorMessage from "@streamlit/app/src/components/StreamlitDialog/DialogErrorMessage"
 import { UserSettings } from "@streamlit/app/src/components/StreamlitDialog/UserSettings"
 import ToolbarActions from "@streamlit/app/src/components/ToolbarActions"
 import withScreencast, {
@@ -52,6 +51,7 @@ import {
   ConnectionManager,
   ConnectionState,
   DefaultStreamlitEndpoints,
+  ErrorDetails,
   IHostConfigResponse,
   LibConfig,
   parseUriIntoBaseParts,
@@ -61,12 +61,13 @@ import {
   AppRoot,
   CircularBuffer,
   ComponentRegistry,
+  createCustomThemes,
   createFormsData,
   createPresetThemes,
-  createTheme,
-  CUSTOM_THEME_NAME,
+  CUSTOM_THEME_AUTO_NAME,
   DeployedAppMetadata,
   ensureError,
+  ensureHotkeysFilterConfigured,
   extractPageNameFromPathName,
   FileUploadClient,
   FormsData,
@@ -77,6 +78,8 @@ import {
   getHostSpecifiedTheme,
   getIFrameEnclosingApp,
   getLocaleLanguage,
+  getQueryString,
+  getScreencastTimestamp,
   getTimezone,
   getTimezoneOffset,
   getUrl,
@@ -99,7 +102,6 @@ import {
   PresetThemeName,
   ScriptRunState,
   SessionInfo,
-  StreamlitMarkdown,
   ThemeConfig,
   toExportedTheme,
   toThemeInput,
@@ -111,6 +113,7 @@ import {
   BackMsg,
   Config,
   CustomThemeConfig,
+  DeferredFileResponse,
   Delta,
   FileURLsResponse,
   ForwardMsg,
@@ -252,6 +255,12 @@ export class App extends PureComponent<Props, State> {
 
   private readonly embeddingId: string = generateUID()
 
+  // Listener registry for deferred file responses: fileId -> set of listeners
+  private readonly deferredFileListeners = new Map<
+    string,
+    Set<(response: DeferredFileResponse) => void>
+  >()
+
   private readonly appNavigation: AppNavigation
 
   private isInitializingConnectionManager: boolean = true
@@ -264,6 +273,9 @@ export class App extends PureComponent<Props, State> {
 
   public constructor(props: Props) {
     super(props)
+
+    // Register hotkey filter:
+    ensureHotkeysFilterConfigured()
 
     // Initialize immerjs
     enablePatches()
@@ -352,7 +364,7 @@ export class App extends PureComponent<Props, State> {
         this.setState({ inputsDisabled })
       },
       themeChanged: this.handleThemeMessage,
-      pageChanged: this.onPageChange,
+      pageChanged: pageScriptHash => this.onPageChange(pageScriptHash),
       isOwnerChanged: isOwner => this.setState({ isOwner }),
       fileUploadClientConfigChanged: config => {
         if (this.endpoints.setFileUploadClientConfig !== undefined) {
@@ -505,7 +517,7 @@ export class App extends PureComponent<Props, State> {
         this.hostCommunicationMgr.setAllowedOrigins(appConfig)
         // Set the streamlit-app specific config settings in AppContext:
         this.setAppConfig(appConfig)
-        // Set the streamlit-lib specific config settings in LibContext:
+        // Set the streamlit-lib specific config settings in LibConfigContext:
         this.setLibConfig(libConfig)
       },
     })
@@ -643,19 +655,25 @@ export class App extends PureComponent<Props, State> {
 
   showError(
     title: string,
-    errorMarkdown: string,
+    errorDetails: ErrorDetails,
     dialogType:
       | DialogType.WARNING
       | DialogType.CONNECTION_ERROR = DialogType.WARNING
   ): void {
-    LOG.error(errorMarkdown)
+    LOG.error(errorDetails.message)
+
     const newDialog: WarningProps | ConnectionErrorProps = {
       type: dialogType,
       title,
-      msg: <StreamlitMarkdown source={errorMarkdown} allowHTML={false} />,
+      msg: (
+        <DialogErrorMessage
+          message={errorDetails.message}
+          codeBlock={errorDetails.codeBlock}
+        />
+      ),
       onClose: () => {},
     }
-    this.maybeShowErrorDialog(newDialog, errorMarkdown)
+    this.maybeShowErrorDialog(newDialog, errorDetails.message)
   }
 
   showDeployError = (
@@ -868,6 +886,8 @@ export class App extends PureComponent<Props, State> {
         autoRerun: (autoRerun: AutoRerun) => this.handleAutoRerun(autoRerun),
         fileUrlsResponse: (fileURLsResponse: FileURLsResponse) =>
           this.uploadClient.onFileURLsResponse(fileURLsResponse),
+        deferredFileResponse: (deferredFileResponse: DeferredFileResponse) =>
+          this.handleDeferredFileResponse(deferredFileResponse),
         parentMessage: (parentMessage: ParentMessage) =>
           this.handleCustomParentMessage(parentMessage),
         logo: (logo: Logo) =>
@@ -888,7 +908,7 @@ export class App extends PureComponent<Props, State> {
     } catch (e) {
       const err = ensureError(e)
       LOG.error(err)
-      this.showError("Bad message format", err.message)
+      this.showError("Bad message format", { message: err.message })
     }
   }
 
@@ -968,6 +988,8 @@ export class App extends PureComponent<Props, State> {
       document.location.pathname + (queryString ? `?${queryString}` : "")
     window.history.pushState({}, "", targetUrl)
 
+    this.setState({ queryParams: queryString })
+
     this.hostCommunicationMgr.sendMessageToHost({
       type: "SET_QUERY_PARAM",
       queryParams: queryString ? `?${queryString}` : "",
@@ -978,7 +1000,9 @@ export class App extends PureComponent<Props, State> {
     const errMsg = pageName
       ? `You have requested page /${pageName}, but no corresponding file was found in the app's pages/ directory`
       : "The page that you have requested does not seem to exist"
-    this.showError("Page not found", `${errMsg}. Running the app's main page.`)
+    this.showError("Page not found", {
+      message: `${errMsg}. Running the app's main page.`,
+    })
   }
 
   handlePageNotFound = (pageNotFound: PageNotFound): void => {
@@ -1137,7 +1161,8 @@ export class App extends PureComponent<Props, State> {
       // See https://github.com/streamlit/streamlit/pull/6271#issuecomment-1465090690 for the discussion.
       if (prevPageName !== newPageName) {
         const pagePath = isViewingMainPage ? "" : newPageName
-        const queryString = preserveEmbedQueryParams()
+        const queryString =
+          this.state.queryParams || preserveEmbedQueryParams()
         const qs = queryString ? `?${queryString}` : ""
 
         const basePathPrefix = pathname === "/" ? "" : pathname
@@ -1212,8 +1237,14 @@ export class App extends PureComponent<Props, State> {
       })
       this.maybeSetState(this.appNavigation.handleNewSession(newSessionProto))
 
-      // Set the favicon to its default values
-      this.onPageIconChanged(`${import.meta.env.BASE_URL}favicon.png`)
+      // Only set default favicon once per page load, and only if no custom icon has been set
+      if (
+        !this.appNavigation.hasSetDefaultFavicon &&
+        !this.appNavigation.isPageIconSet
+      ) {
+        this.appNavigation.hasSetDefaultFavicon = true
+        this.onPageIconChanged(`${import.meta.env.BASE_URL}favicon.png`)
+      }
     } else {
       this.setState({
         fragmentIdsThisRun,
@@ -1286,7 +1317,11 @@ export class App extends PureComponent<Props, State> {
     if (isNullOrUndefined(targetAppPage) || (hasAnchor && isSamePage)) {
       return
     }
-    this.onPageChange(targetAppPage.pageScriptHash as string)
+    // Pass preserveQueryParams=true to preserve query params from the URL when
+    // navigating via browser history (back/forward buttons). This ensures that
+    // query params present in the URL after history navigation are sent to the
+    // server on the first script run.
+    this.onPageChange(targetAppPage.pageScriptHash as string, undefined, true)
   }
 
   /**
@@ -1323,17 +1358,28 @@ export class App extends PureComponent<Props, State> {
 
     const usingCustomTheme = !isPresetTheme(this.props.theme.activeTheme)
     if (themeInput) {
-      const customTheme = createTheme(CUSTOM_THEME_NAME, themeInput)
-      // For now, users can only add one custom theme.
-      this.props.theme.addThemes([customTheme])
+      // createCustomThemes can return either 1 theme ("Custom Theme")
+      // or 3 themes ("Custom Theme Light", "Custom Theme Dark", and "Custom Theme Auto")
+      const customThemes = createCustomThemes(themeInput)
+
+      // Add the new custom themes to the theme manager and remove the preset themes
+      this.props.theme.addThemes(customThemes, { keepPresetThemes: false })
 
       const userPreference = getCachedTheme()
       if (userPreference === null || usingCustomTheme) {
-        // Update the theme to be customTheme either if the user hasn't set a
-        // preference (developer-provided custom themes should be the default
-        // for an app) or if a custom theme is currently active (to ensure that
-        // we pick up any new changes to it).
-        this.setAndSendTheme(customTheme)
+        // If the user hasn't set a preference, or if a custom theme is currently active,
+        // update the theme to be a custom theme.
+        if (customThemes.length > 1) {
+          // When Custom Theme Light & Custom Theme Dark present, we create an auto theme based
+          // on the system preference and set this as the active theme
+          const autoThemeIndex = customThemes.findIndex(
+            theme => theme.name === CUSTOM_THEME_AUTO_NAME
+          )
+          this.setAndSendTheme(customThemes[autoThemeIndex])
+        } else {
+          // Set to singular Custom Theme
+          this.setAndSendTheme(customThemes[0])
+        }
       }
     } else {
       // Remove the custom theme menu option.
@@ -1346,10 +1392,13 @@ export class App extends PureComponent<Props, State> {
       }
     }
 
-    if (themeInput?.fontFaces && themeInput.fontFaces.length > 0) {
-      // If font faces are provided, we need to set the imported theme with the theme
-      // manager to make the font faces available.
-      this.props.theme.setImportedTheme(themeInput)
+    if (
+      (themeInput?.fontFaces && themeInput.fontFaces.length > 0) ||
+      (themeInput?.fontSources && themeInput.fontSources.length > 0)
+    ) {
+      // If font faces or font sources are provided, we need to set the imported
+      // theme with the theme manager to make the fonts available.
+      this.props.theme.setFonts(themeInput)
     }
   }
 
@@ -1626,7 +1675,11 @@ export class App extends PureComponent<Props, State> {
     )
   }
 
-  onPageChange = (pageScriptHash: string): void => {
+  onPageChange = (
+    pageScriptHash: string,
+    queryString?: string,
+    preserveQueryParams?: boolean
+  ): void => {
     const { elements, mainScriptHash } = this.state
 
     // We are about to change the page, so clear all auto reruns
@@ -1650,7 +1703,10 @@ export class App extends PureComponent<Props, State> {
     this.sendRerunBackMsg(
       this.widgetMgr.getActiveWidgetStates(activeWidgetIds),
       undefined,
-      pageScriptHash
+      pageScriptHash,
+      undefined,
+      queryString,
+      preserveQueryParams
     )
   }
 
@@ -1667,7 +1723,9 @@ export class App extends PureComponent<Props, State> {
     widgetStates?: WidgetStates,
     fragmentId?: string,
     pageScriptHash?: string,
-    isAutoRerun?: boolean
+    isAutoRerun?: boolean,
+    queryStringOverride?: string,
+    preserveQueryParams?: boolean
   ): void => {
     const baseUriParts = this.getBaseUriParts()
     if (!baseUriParts) {
@@ -1680,7 +1738,7 @@ export class App extends PureComponent<Props, State> {
     }
 
     const { currentPageScriptHash } = this.state
-    let queryString = this.getQueryString()
+    let queryString = queryStringOverride ?? this.getQueryString()
     let pageName = ""
 
     const contextInfo = {
@@ -1695,9 +1753,16 @@ export class App extends PureComponent<Props, State> {
     if (pageScriptHash) {
       // The user specified exactly which page to run. We can simply use this
       // value in the BackMsg we send to the server.
-      if (pageScriptHash != currentPageScriptHash) {
-        // clear non-embed query parameters within a page change
-        queryString = preserveEmbedQueryParams()
+      if (pageScriptHash !== currentPageScriptHash && !preserveQueryParams) {
+        // Clear non-embed query parameters within a page change while we wait
+        // for the server to send updated query params (if any).
+        // Skip clearing if preserveQueryParams is true (e.g., browser back/forward
+        // navigation where query params from the URL should be preserved).
+        const preservedQueryParams = preserveEmbedQueryParams()
+
+        queryString = getQueryString(queryStringOverride, preservedQueryParams)
+
+        this.setState({ queryParams: queryString })
         this.hostCommunicationMgr.sendMessageToHost({
           type: "SET_QUERY_PARAM",
           queryParams: queryString,
@@ -1802,21 +1867,9 @@ export class App extends PureComponent<Props, State> {
       isDeployErrorModalOpen:
         this.state.dialog?.type === DialogType.DEPLOY_ERROR,
       metricsMgr: this.metricsMgr,
+      gitInfo: this.state.gitInfo,
     }
     this.openDialog(deployDialogProps)
-  }
-
-  openThemeCreatorDialog = (): void => {
-    this.metricsMgr.enqueue("menuClick", {
-      label: "editTheme",
-    })
-    const newDialog: DialogProps = {
-      type: DialogType.THEME_CREATOR,
-      backToSettings: this.settingsCallback,
-      onClose: this.closeDialog,
-      metricsMgr: this.metricsMgr,
-    }
-    this.openDialog(newDialog)
   }
 
   /**
@@ -1862,7 +1915,7 @@ export class App extends PureComponent<Props, State> {
   /**
    * Updates the app body when there's a connection error.
    */
-  handleConnectionError = (errMarkdown: string): void => {
+  handleConnectionError = (errDetails: ErrorDetails): void => {
     // Don't show the error dialog if it has been dismissed for this session
     if (this.state.connectionErrorDismissed) {
       return
@@ -1870,11 +1923,7 @@ export class App extends PureComponent<Props, State> {
 
     // This is just a regular error dialog, but with type CONNECTION_ERROR
     // instead of WARNING, so we can rescind the dialog later when reconnected.
-    this.showError(
-      "Connection error",
-      errMarkdown,
-      DialogType.CONNECTION_ERROR
-    )
+    this.showError("Connection error", errDetails, DialogType.CONNECTION_ERROR)
   }
 
   /**
@@ -1895,11 +1944,6 @@ export class App extends PureComponent<Props, State> {
       allowRunOnSave: this.state.allowRunOnSave,
       onSave: this.saveSettings,
       onClose: () => {},
-      developerMode: showDevelopmentOptions(
-        this.state.isOwner,
-        this.state.toolbarMode
-      ),
-      openThemeCreator: this.openThemeCreatorDialog,
       animateModal,
       metricsMgr: this.metricsMgr,
     }
@@ -1931,7 +1975,7 @@ export class App extends PureComponent<Props, State> {
     let windowToPrint
     try {
       const htmlIFrameElement = getIFrameEnclosingApp(this.embeddingId)
-      if (htmlIFrameElement && htmlIFrameElement.contentWindow) {
+      if (htmlIFrameElement?.contentWindow) {
         windowToPrint = htmlIFrameElement.contentWindow.window
       } else {
         windowToPrint = window
@@ -1948,7 +1992,7 @@ export class App extends PureComponent<Props, State> {
   screencastCallback = (): void => {
     const { scriptName } = this.state
     const { startRecording } = this.props.screenCast
-    const date = moment().format("YYYY-MM-DD-HH-MM-SS")
+    const date = getScreencastTimestamp()
 
     startRecording(`streamlit-${scriptName}-${date}`)
   }
@@ -1982,9 +2026,8 @@ export class App extends PureComponent<Props, State> {
   removeScriptFinishedHandler = (func: () => void): void => {
     this.setState((prevState, _) => {
       return {
-        scriptFinishedHandlers: without(
-          prevState.scriptFinishedHandlers,
-          func
+        scriptFinishedHandlers: prevState.scriptFinishedHandlers.filter(
+          h => h !== func
         ),
       }
     })
@@ -2051,10 +2094,73 @@ export class App extends PureComponent<Props, State> {
       backMsg.type = "fileUrlsRequest"
       this.sendBackMsg(backMsg)
     } else {
+      // Reject the request immediately with an error. This can happen on mobile
+      // browsers when the file picker is open for an extended period causing
+      // the WebSocket connection to time out.
+      //
+      // We can't queue and retry because reconnection triggers a script rerun,
+      // which remounts the FileUploader component and invalidates the promise
+      // callback. The user needs to re-select the file after reconnection.
       LOG.warn(
         `Cannot request file URLs (isServerConnected: ${isConnected}, isSessionInfoSet: ${isSessionInfoSet})`
       )
+      this.uploadClient.onFileURLsResponse({
+        responseId: requestId,
+        errorMsg:
+          "Connection lost. Please wait for the app to reconnect, then try again.",
+      })
     }
+  }
+
+  requestDeferredFile = (fileId: string): Promise<DeferredFileResponse> => {
+    const isConnected = this.isServerConnected()
+    const isSessionInfoSet = this.sessionInfo.isSet
+
+    if (!isConnected || !isSessionInfoSet) {
+      return Promise.reject(
+        new Error("Not connected to server or session not initialized")
+      )
+    }
+
+    const resolver = Promise.withResolvers<DeferredFileResponse>()
+
+    // Register a one-time listener for this fileId
+    const listeners =
+      this.deferredFileListeners.get(fileId) ??
+      new Set<(response: DeferredFileResponse) => void>()
+    const once = (response: DeferredFileResponse): void => {
+      listeners.delete(once)
+      resolver.resolve(response)
+    }
+    listeners.add(once)
+    this.deferredFileListeners.set(fileId, listeners)
+
+    const backMsg = new BackMsg({
+      deferredFileRequest: {
+        fileId,
+        sessionId: this.sessionInfo.current.sessionId,
+      },
+    })
+
+    backMsg.type = "deferredFileRequest"
+    this.sendBackMsg(backMsg)
+
+    return resolver.promise
+  }
+
+  handleDeferredFileResponse = (response: DeferredFileResponse): void => {
+    const listeners = this.deferredFileListeners.get(response.fileId)
+    if (!listeners || listeners.size === 0) return
+
+    // Notify and clear all listeners for this fileId
+    for (const listener of Array.from(listeners)) {
+      try {
+        listener(response)
+      } catch {
+        // Swallow listener errors to avoid breaking notification fanout
+      }
+    }
+    this.deferredFileListeners.delete(response.fileId)
   }
 
   handleKeyDown = (keyName: string): void => {
@@ -2191,26 +2297,21 @@ export class App extends PureComponent<Props, State> {
         sidebarChevronDownshift={sidebarChevronDownshift}
         expandSidebarNav={expandSidebarNav}
         hideSidebarNav={hideSidebarNav || hostHideSidebarNav}
-        widgetsDisabled={
-          inputsDisabled || connectionState !== ConnectionState.CONNECTED
-        }
-        gitInfo={this.state.gitInfo}
         isFullScreen={isFullScreen}
         setFullScreen={this.handleFullScreen}
-        addScriptFinishedHandler={this.addScriptFinishedHandler}
-        removeScriptFinishedHandler={this.removeScriptFinishedHandler}
         activeTheme={this.props.theme.activeTheme}
         setTheme={this.setAndSendTheme}
         availableThemes={this.props.theme.availableThemes}
-        addThemes={this.props.theme.addThemes}
-        libConfig={libConfig}
         fragmentIdsThisRun={this.state.fragmentIdsThisRun}
         locale={window.navigator.language}
         formsData={this.state.formsData}
         scriptRunState={scriptRunState}
         scriptRunId={scriptRunId}
-        componentRegistry={this.componentRegistry}
-        showToolbar={showToolbar}
+        // LibConfig properties
+        mapboxToken={libConfig.mapboxToken}
+        enforceDownloadInNewTab={libConfig.enforceDownloadInNewTab}
+        resourceCrossOriginMode={libConfig.resourceCrossOriginMode}
+        requestDeferredFile={this.requestDeferredFile}
       >
         <Hotkeys
           keyName="r,c,esc"
@@ -2231,23 +2332,19 @@ export class App extends PureComponent<Props, State> {
               elements={elements}
               widgetMgr={this.widgetMgr}
               uploadClient={this.uploadClient}
-              appLogo={elements.logo}
-              appPages={appPages}
-              navSections={navSections}
-              onPageChange={this.onPageChange}
-              hideSidebarNav={
-                hideSidebarNav ||
-                hostHideSidebarNav ||
-                effectiveNavigationPosition === Navigation.Position.TOP
-              }
-              expandSidebarNav={expandSidebarNav}
               navigationPosition={effectiveNavigationPosition}
-              pageLinkBaseUrl={this.state.pageLinkBaseUrl}
               wideMode={userSettings.wideMode}
               embedded={isEmbed()}
               showPadding={showPadding}
               disableScrolling={disableScrolling}
-              currentPageScriptHash={currentPageScriptHash}
+              addScriptFinishedHandler={this.addScriptFinishedHandler}
+              removeScriptFinishedHandler={this.removeScriptFinishedHandler}
+              widgetsDisabled={
+                inputsDisabled || connectionState !== ConnectionState.CONNECTED
+              }
+              showToolbar={showToolbar}
+              disableFullscreenMode={libConfig.disableFullscreenMode}
+              componentRegistry={this.componentRegistry}
               topRightContent={
                 <>
                   {!hideTopBar && (

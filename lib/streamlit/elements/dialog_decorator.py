@@ -14,8 +14,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from functools import wraps
-from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar, cast, overload
+from typing import TYPE_CHECKING, Any, Literal, TypeVar, cast, overload
 
 from streamlit.delta_generator_singletons import (
     get_dg_singleton_instance,
@@ -199,10 +200,12 @@ def dialog_decorator(
         .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
     width : "small", "medium", "large"
-        The width of the modal dialog. If ``width`` is ``"small"`` (default), the
-        modal dialog will be a maximum of 500 pixels wide. If ``width`` is ``"medium"``,
-        the modal dialog will be up to 750 pixels wide. If ``width`` is ``"large"``,
-        the modal dialog will be up to 1280 pixels wide.
+        The width of the modal dialog. This can be one of the following:
+
+        - ``"small"`` (default): The modal dialog will be a maximum of 500
+          pixels wide.
+        - ``"medium"``: The modal dialog will be up to 750 pixels wide.
+        - ``"large"``: The modal dialog will be up to 1280 pixels wide.
 
     dismissible : bool
         Whether the modal dialog can be dismissed by the user. If this is

@@ -14,23 +14,26 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, ReactNode, useContext } from "react"
+import React, { ReactElement, useContext } from "react"
 
 import classNames from "classnames"
 
 import { Block as BlockProto, streamlit } from "@streamlit/protobuf"
 
-import { AppNode, BlockNode, ElementNode } from "~lib/AppNode"
-import { FormsContext } from "~lib/components/core/FormsContext"
-import { FlexContextProvider } from "~lib/components/core/Layout/FlexContext"
+import { BlockNode } from "~lib/AppNode"
+import {
+  FlexContext,
+  FlexContextProvider,
+} from "~lib/components/core/Layout/FlexContext"
 import { useLayoutStyles } from "~lib/components/core/Layout/useLayoutStyles"
+import type { UseLayoutStylesArgs } from "~lib/components/core/Layout/useLayoutStyles"
 import {
   Direction,
   getDirectionOfBlock,
   MinFlexElementWidth,
-  shouldChildrenStretch,
+  shouldWidthStretch,
 } from "~lib/components/core/Layout/utils"
-import { LibContext } from "~lib/components/core/LibContext"
+import { ScriptRunContext } from "~lib/components/core/ScriptRunContext"
 import ChatMessage from "~lib/components/elements/ChatMessage"
 import Dialog from "~lib/components/elements/Dialog"
 import Expander from "~lib/components/elements/Expander"
@@ -38,12 +41,10 @@ import Popover from "~lib/components/elements/Popover"
 import Tabs, { TabProps } from "~lib/components/elements/Tabs"
 import Form from "~lib/components/widgets/Form"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import { useScrollToBottom } from "~lib/hooks/useScrollToBottom"
-import { ScriptRunState } from "~lib/ScriptRunState"
-import { getElementId, notNullOrUndefined } from "~lib/util/utils"
+import { notNullOrUndefined } from "~lib/util/utils"
 
-import ElementNodeRenderer from "./ElementNodeRenderer"
+import { RenderNodeVisitor } from "./RenderNodeVisitor"
 import {
   StyledColumn,
   StyledFlexContainerBlock,
@@ -65,78 +66,63 @@ import {
 } from "./utils"
 
 const ChildRenderer = (props: BlockPropsWithoutWidth): ReactElement => {
-  const { libConfig } = useContext(LibContext)
-
   // Handle cycling of colors for dividers:
   assignDividerColor(props.node, useEmotionTheme())
 
-  // Capture all the element ids to avoid rendering the same element twice
-  const elementKeySet = new Set<string>()
+  return <>{RenderNodeVisitor.collectReactElements(props)}</>
+}
 
-  return (
-    <>
-      {props.node.children &&
-        props.node.children.map((node: AppNode, index: number): ReactNode => {
-          const disableFullscreenMode =
-            libConfig.disableFullscreenMode || props.disableFullscreenMode
+/**
+ * Extract only layout-relevant fields from a block submessage to satisfy
+ * `useLayoutStyles`'s `subElement` shape while being robust to unrelated block
+ * types like TabContainer.
+ */
+const getLayoutSubElement = (
+  block: BlockProto
+): UseLayoutStylesArgs["subElement"] => {
+  const typeKey = block.type as keyof typeof block | undefined
+  const raw = typeKey
+    ? (block as unknown as Record<string, unknown>)[typeKey]
+    : undefined
+  if (!raw || typeof raw !== "object") return undefined
 
-          // Base case: render a leaf node.
-          if (node instanceof ElementNode) {
-            // Put node in childProps instead of passing as a node={node} prop in React to
-            // guarantee it doesn't get overwritten by {...childProps}.
-            const childProps = {
-              ...props,
-              disableFullscreenMode,
-              node,
-            }
+  const candidate = raw as Record<string, unknown>
+  const subElement = {
+    useContainerWidth: candidate.useContainerWidth as
+      | boolean
+      | null
+      | undefined,
+    height: candidate.height as number | undefined,
+    width: candidate.width as number | undefined,
+    widthConfig: candidate.widthConfig as
+      | streamlit.IWidthConfig
+      | null
+      | undefined,
+  }
 
-            const key = getElementId(node.element) || index.toString()
-            // Avoid rendering the same element twice. We assume the first one is the one we want
-            // because the page is rendered top to bottom, so a valid widget would be rendered
-            // correctly and we assume the second one is therefore stale (or throw an error).
-            // Also, our setIn logic pushes stale widgets down in the list of elements, so the
-            // most recent one should always come first.
-            if (elementKeySet.has(key)) {
-              return null
-            }
+  if (
+    subElement.useContainerWidth === undefined &&
+    subElement.height === undefined &&
+    subElement.width === undefined &&
+    subElement.widthConfig === undefined
+  ) {
+    return undefined
+  }
 
-            elementKeySet.add(key)
-
-            return <ElementNodeRenderer key={key} {...childProps} />
-          }
-
-          // Recursive case: render a block, which can contain other blocks
-          // and elements.
-          if (node instanceof BlockNode) {
-            // Put node in childProps instead of passing as a node={node} prop in React to
-            // guarantee it doesn't get overwritten by {...childProps}.
-            const childProps = {
-              ...props,
-              disableFullscreenMode,
-              node,
-            }
-
-            // TODO: Update to match React best practices
-            // eslint-disable-next-line @eslint-react/no-array-index-key, @typescript-eslint/no-use-before-define
-            return <BlockNodeRenderer key={index} {...childProps} />
-          }
-
-          // We don't have any other node types!
-          // eslint-disable-next-line @typescript-eslint/no-base-to-string, @typescript-eslint/restrict-template-expressions -- TODO: Fix this
-          throw new Error(`Unrecognized AppNode: ${node}`)
-        })}
-    </>
-  )
+  return subElement
 }
 
 interface ContainerContentsWrapperProps extends BaseBlockProps {
   node: BlockNode
   height: React.CSSProperties["height"]
+  isRoot?: boolean
 }
 
 export const ContainerContentsWrapper = (
   props: ContainerContentsWrapperProps
 ): ReactElement => {
+  const parentContext = useContext(FlexContext)
+
   const defaultStyles: StyledFlexContainerBlockProps = {
     direction: Direction.VERTICAL,
     flex: 1,
@@ -148,7 +134,11 @@ export const ContainerContentsWrapper = (
 
   const userKey = getKeyFromId(props.node.deltaBlock.id)
   return (
-    <FlexContextProvider direction={Direction.VERTICAL}>
+    <FlexContextProvider
+      direction={Direction.VERTICAL}
+      isRoot={props.isRoot}
+      parentContext={parentContext}
+    >
       <StyledFlexContainerBlock
         {...defaultStyles}
         className={classNames(
@@ -171,6 +161,7 @@ export const FlexBoxContainer = (
   props: FlexBoxContainerProps
 ): ReactElement => {
   const direction = getDirectionOfBlock(props.node.deltaBlock)
+  const parentContext = useContext(FlexContext)
 
   const activateScrollToBottom = getActivateScrollToBottomBackwardsCompatible(
     props.node
@@ -179,10 +170,7 @@ export const FlexBoxContainer = (
 
   const layout_styles = useLayoutStyles({
     element: props.node.deltaBlock,
-    subElement:
-      (props.node.deltaBlock.type &&
-        props.node.deltaBlock[props.node.deltaBlock.type]) ||
-      undefined,
+    subElement: getLayoutSubElement(props.node.deltaBlock),
   })
 
   const styles = {
@@ -207,8 +195,25 @@ export const FlexBoxContainer = (
 
   const userKey = getKeyFromId(props.node.deltaBlock.id)
 
+  // Extract pixel width if the container has a fixed width
+  const parentWidth =
+    props.node.deltaBlock.widthConfig?.pixelWidth ?? undefined
+
+  // Determine width configuration for FlexContext
+  const hasContentWidth =
+    props.node.deltaBlock.widthConfig?.useContent ?? false
+  const hasFixedWidth =
+    (props.node.deltaBlock.widthConfig?.pixelWidth ?? 0) > 0 ||
+    (props.node.deltaBlock.widthConfig?.remWidth ?? 0) > 0
+
   return (
-    <FlexContextProvider direction={direction}>
+    <FlexContextProvider
+      direction={direction}
+      parentWidth={parentWidth}
+      hasContentWidth={hasContentWidth}
+      hasFixedWidth={hasFixedWidth}
+      parentContext={parentContext}
+    >
       <StyledFlexContainerBlock
         {...styles}
         className={classNames(
@@ -234,11 +239,12 @@ export interface BlockPropsWithoutWidth extends BaseBlockProps {
 const LARGE_STRETCH_BEHAVIOR = ["tabContainer"]
 const MEDIUM_STRETCH_BEHAVIOR = ["chatInput"]
 
-const BlockNodeRenderer = (props: BlockPropsWithoutWidth): ReactElement => {
+export const BlockNodeRenderer = (
+  props: BlockPropsWithoutWidth
+): ReactElement => {
   const { node } = props
-  const { fragmentIdsThisRun, scriptRunState, scriptRunId } =
-    useContext(LibContext)
-  const { formsData } = useRequiredContext(FormsContext)
+  const { scriptRunState, scriptRunId, fragmentIdsThisRun } =
+    useContext(ScriptRunContext)
 
   let minStretchBehavior: MinFlexElementWidth
   if (LARGE_STRETCH_BEHAVIOR.includes(node.deltaBlock.type ?? "")) {
@@ -248,8 +254,6 @@ const BlockNodeRenderer = (props: BlockPropsWithoutWidth): ReactElement => {
   } else if (node.deltaBlock.type === "chatMessage") {
     if (node.isEmpty) {
       minStretchBehavior = "8rem"
-    } else {
-      minStretchBehavior = "fit-content"
     }
   } else if (
     node.deltaBlock.type === "flexContainer" ||
@@ -263,9 +267,7 @@ const BlockNodeRenderer = (props: BlockPropsWithoutWidth): ReactElement => {
 
   const styles = useLayoutStyles({
     element: node.deltaBlock,
-    subElement:
-      (node.deltaBlock.type && node.deltaBlock[node.deltaBlock.type]) ||
-      undefined,
+    subElement: getLayoutSubElement(node.deltaBlock),
     minStretchBehavior,
   })
 
@@ -284,6 +286,9 @@ const BlockNodeRenderer = (props: BlockPropsWithoutWidth): ReactElement => {
 
   const childProps = { ...props, ...{ node } }
 
+  // Disable fullscreen mode if already disabled by parent
+  // (e.g., via libConfig or ancestor dialog/popover),
+  // or if this block itself is a dialog or popover
   const disableFullscreenMode =
     props.disableFullscreenMode ||
     notNullOrUndefined(node.deltaBlock.dialog) ||
@@ -331,7 +336,7 @@ const BlockNodeRenderer = (props: BlockPropsWithoutWidth): ReactElement => {
       <Popover
         empty={node.isEmpty}
         element={node.deltaBlock.popover as BlockProto.Popover}
-        stretchWidth={shouldChildrenStretch(node.deltaBlock.widthConfig)}
+        stretchWidth={shouldWidthStretch(node.deltaBlock.widthConfig)}
       >
         {child}
       </Popover>
@@ -341,17 +346,11 @@ const BlockNodeRenderer = (props: BlockPropsWithoutWidth): ReactElement => {
   if (node.deltaBlock.type === "form") {
     const { formId, clearOnSubmit, enterToSubmit, border } = node.deltaBlock
       .form as BlockProto.Form
-    const submitButtons = formsData.submitButtons.get(formId)
-    const hasSubmitButton =
-      submitButtons !== undefined && submitButtons.length > 0
-    const scriptNotRunning = scriptRunState === ScriptRunState.NOT_RUNNING
     containerElement = (
       <Form
         formId={formId}
         clearOnSubmit={clearOnSubmit}
         enterToSubmit={enterToSubmit}
-        hasSubmitButton={hasSubmitButton}
-        scriptNotRunning={scriptNotRunning}
         widgetMgr={props.widgetMgr}
         border={border}
         overflow={styles.overflow}

@@ -14,9 +14,12 @@
 
 from __future__ import annotations
 
-from typing import Any, Callable
+from typing import TYPE_CHECKING, Any
 
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 class ForwardMsgQueue:
@@ -134,6 +137,7 @@ class ForwardMsgQueue:
                     "script_finished",
                     "session_status_changed",
                     "parent_message",
+                    "page_info_changed",
                 }
                 or (
                     # preserve all messages if this is a fragment rerun and...

@@ -46,7 +46,7 @@ class PageHelperFunctionTests(unittest.TestCase):
     def test_page_sort_key_error(self):
         with pytest.raises(
             ValueError,
-            match="/foo/bar/baz.rs is not a Python file. This should never happen.",
+            match=r"/foo/bar/baz.rs is not a Python file. This should never happen.",
         ):
             source_util.page_sort_key(Path("/foo/bar/baz.rs"))
 

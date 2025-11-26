@@ -46,17 +46,38 @@ export interface StyledElementContainerProps {
   elementType: string
   overflow: React.CSSProperties["overflow"]
   flex?: React.CSSProperties["flex"]
+  minWidth?: React.CSSProperties["minWidth"]
+  textAlign?: React.CSSProperties["textAlign"]
 }
+
+export const StyledSpace = styled.div({
+  // Styling is handled in StyledElementContainerLayoutWrapper.
+  // Space component should fill the container.
+  width: "100%",
+  height: "100%",
+})
 
 const GLOBAL_ELEMENTS = ["balloons", "snow"]
 export const StyledElementContainer = styled.div<StyledElementContainerProps>(
-  ({ theme, isStale, width, height, elementType, overflow, flex }) => ({
+  ({
+    theme,
+    isStale,
     width,
     height,
+    elementType,
+    overflow,
+    flex,
+    minWidth,
+    textAlign,
+  }) => ({
+    width,
+    height,
+    textAlign,
     maxWidth: "100%",
     // Important so that individual elements don't take up too much space
     // in horizontal layouts. Particularly when an element uses the full screen wrapper.
-    minWidth: "1rem",
+    // Some components support zero width (e.g. iframe).
+    minWidth: width === "0px" ? 0 : (minWidth ?? "1rem"),
     // Allows to have absolutely-positioned nodes inside app elements, like
     // floating buttons.
     position: "relative",
@@ -85,6 +106,15 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
       ? {
           // Use display: none for empty elements to avoid the flexbox gap.
           display: "none",
+        }
+      : {}),
+    ...(elementType === "space"
+      ? {
+          // Space elements should have minimal cross-axis dimensions.
+          // The FlexContext logic in StyledElementContainerLayoutWrapper handles
+          // the primary dimension (width for horizontal, height for vertical).
+          minWidth: 0,
+          minHeight: 0,
         }
       : {}),
     ...(GLOBAL_ELEMENTS.includes(elementType)

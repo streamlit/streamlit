@@ -16,6 +16,11 @@ import time
 
 import streamlit as st
 
+if st.checkbox("Set default value", value=False):
+    st.session_state.default_feedback = 2
+else:
+    st.session_state.default_feedback = None
+
 with st.container(key="thumbs_container"):
     st.feedback()
     st.session_state.thumbs_feedback_disabled = 1
@@ -32,15 +37,11 @@ with st.container(key="faces_container"):
         ),
     )
     st.session_state.faces_feedback_disabled = 3
-    st.feedback(
-        "faces",
-        key="faces_feedback_disabled",
-        disabled=True,
-    )
+    st.feedback("faces", key="faces_feedback_disabled", disabled=True)
     st.feedback("faces", key="faces_feedback_hover_test")
 
 with st.container(key="stars_container"):
-    sentiment = st.feedback("stars")
+    sentiment = st.feedback("stars", default=st.session_state.default_feedback)
     st.write(f"Star sentiment: {sentiment}")
     st.session_state.star_feedback_disabled = 3
     sentiment = st.feedback("stars", disabled=True, key="star_feedback_disabled")
@@ -49,7 +50,7 @@ with st.container(key="stars_container"):
 
 
 with st.form(key="my_form", clear_on_submit=True):
-    sentiment = st.feedback()
+    sentiment = st.feedback(key="feedback_in_form")
     st.form_submit_button("Submit")
 
 st.write("feedback-in-form:", str(sentiment))
@@ -79,7 +80,40 @@ st.feedback("thumbs", width="content", key="thumbs_content_width")
 st.feedback("thumbs", width="stretch", key="thumbs_stretch_width")
 st.feedback("thumbs", width=300, key="thumbs_300px_width")
 
+st.subheader("Minimum width enforcement (gh-12068)")
+st.feedback("thumbs", width=10, key="thumbs_min_width")
+st.feedback("stars", width=10, key="stars_min_width")
+
 if "runs" not in st.session_state:
     st.session_state.runs = 0
 st.session_state.runs += 1
 st.write("Runs:", st.session_state.runs)
+
+if st.toggle("Update feedback props"):
+    dyn_val = st.feedback(
+        key="dynamic_feedback_widget",
+        width=300,
+        default=3,
+        on_change=lambda a, param: print(
+            f"Updated feedback - callback triggered: {a} {param}"
+        ),
+        args=("Updated feedback arg",),
+        kwargs={"param": "updated kwarg param"},
+        # Whitelisted args:
+        options="stars",
+    )
+    st.write("Updated feedback value:", dyn_val)
+else:
+    dyn_val = st.feedback(
+        key="dynamic_feedback_widget",
+        width="content",
+        default=2,
+        on_change=lambda a, param: print(
+            f"Initial feedback - callback triggered: {a} {param}"
+        ),
+        args=("Initial feedback arg",),
+        kwargs={"param": "initial kwarg param"},
+        # Whitelisted args:
+        options="stars",
+    )
+    st.write("Initial feedback value:", dyn_val)

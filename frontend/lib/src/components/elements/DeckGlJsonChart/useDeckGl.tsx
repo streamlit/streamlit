@@ -23,7 +23,7 @@ import {
 } from "@deck.gl/core"
 import { parseToRgba } from "color2k"
 import JSON5 from "json5"
-import isEqual from "lodash/isEqual"
+import { isEqual } from "lodash-es"
 
 import { DeckGlJsonChart as DeckGlJsonChartProto } from "@streamlit/protobuf"
 
@@ -227,9 +227,7 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
   const parsedPydeckJson = useMemo(() => {
     return Object.freeze(JSON5.parse<ParsedDeckGlConfig>(element.json))
     // Only parse JSON when transitioning to/from fullscreen, the json changes, or theme changes
-    // TODO: Update to match React best practices
-    // eslint-disable-next-line react-hooks/react-compiler
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
   }, [isFullScreen, isLightTheme, element.json])
 
   const deck = useMemo<DeckObject>(() => {
@@ -391,7 +389,7 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
 
   const createTooltip = useCallback(
     (info: PickingInfo | null): TooltipContent => {
-      if (!info || !info.object || !tooltip) {
+      if (!info?.object || !tooltip) {
         return null
       }
 

@@ -34,14 +34,19 @@ declare global {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
 export type OnMessage = (ForwardMsg: any) => void
 
+export interface ErrorDetails {
+  message: string
+  codeBlock?: string
+}
+
 export type OnConnectionStateChange = (
   connectionState: ConnectionState,
-  errMsg?: string
+  errMsg?: ErrorDetails
 ) => void
 
 export type OnRetry = (
   totalTries: number,
-  errorMarkdown: string,
+  errorDetails: ErrorDetails,
   retryTimeout: number
 ) => void
 
@@ -103,6 +108,13 @@ export interface StreamlitEndpoints {
    * @param path The path of the component resource to fetch, e.g. "index.html".
    */
   buildComponentURL(componentName: string, path: string): string
+
+  /**
+   * Return a URL to fetch data for the given bidirectional component.
+   * @param componentName The registered name of the component.
+   * @param path The path of the component resource to fetch, e.g. "script.js".
+   */
+  buildBidiComponentURL(componentName: string, path: string): string
 
   /**
    * Construct a URL for a media file.

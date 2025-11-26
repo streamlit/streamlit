@@ -14,22 +14,21 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
     Final,
     Generic,
     Literal,
+    TypeAlias,
     TypeVar,
     cast,
     overload,
 )
 
-from typing_extensions import TypeAlias
-
+from streamlit import config
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
     LayoutConfig,
@@ -276,6 +275,7 @@ class ButtonGroupMixin:
         options: Literal["thumbs"] = ...,
         *,
         key: Key | None = None,
+        default: int | None = None,
         disabled: bool = False,
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
@@ -288,6 +288,7 @@ class ButtonGroupMixin:
         options: Literal["faces", "stars"] = ...,
         *,
         key: Key | None = None,
+        default: int | None = None,
         disabled: bool = False,
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
@@ -300,6 +301,7 @@ class ButtonGroupMixin:
         options: Literal["thumbs", "faces", "stars"] = "thumbs",
         *,
         key: Key | None = None,
+        default: int | None = None,
         disabled: bool = False,
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
@@ -330,6 +332,14 @@ class ButtonGroupMixin:
             An optional string or integer to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
             based on its content. No two widgets may have the same key.
+
+        default : int or None
+            Default feedback value. This must be consistent with the feedback
+            type in ``options``:
+
+            - 0 or 1 if ``options="thumbs"``.
+            - Between 0 and 4, inclusive, if ``options="faces"`` or
+              ``options="stars"``.
 
         disabled : bool
             An optional boolean that disables the feedback widget if set
@@ -407,7 +417,41 @@ class ButtonGroupMixin:
                 f"The argument passed was '{options}'."
             )
         transformed_options, options_indices = get_mapped_options(options)
-        serde = _SingleSelectSerde[int](options_indices)
+
+        if default is not None and (default < 0 or default >= len(transformed_options)):
+            raise StreamlitAPIException(
+                f"The default value in '{options}' must be a number between 0 and {len(transformed_options) - 1}."
+                f" The passed default value is {default}"
+            )
+
+        # Convert small pixel widths to "content" to prevent icon wrapping.
+        # Calculate threshold based on theme.baseFontSize to be responsive to
+        # custom themes. The calculation is based on icon buttons sized in rem:
+        # - Button size: ~1.5rem (icon 1.25rem + padding 0.125rem x 2)
+        # - Gap: 0.125rem between buttons
+        # - thumbs: 2 buttons + 1 gap = 3.125rem
+        # - faces/stars: 5 buttons + 4 gaps = 8rem
+        base_font_size = config.get_option("theme.baseFontSize") or 16
+        button_size_rem = 1.5
+        gap_size_rem = 0.125
+
+        if options == "thumbs":
+            # 2 buttons + 1 gap
+            min_width_rem = 2 * button_size_rem + gap_size_rem
+        else:
+            # 5 buttons + 4 gaps (faces or stars)
+            min_width_rem = 5 * button_size_rem + 4 * gap_size_rem
+
+        # Convert rem to pixels based on base font size, add 10% buffer
+        min_width_threshold = int(min_width_rem * base_font_size * 1.1)
+
+        if isinstance(width, int) and width < min_width_threshold:
+            width = "content"
+
+        _default: list[int] | None = (
+            [options_indices[default]] if default is not None else None
+        )
+        serde = _SingleSelectSerde[int](options_indices, default_value=_default)
 
         selection_visualization = ButtonGroupProto.SelectionVisualization.ONLY_SELECTED
         if options == "stars":
@@ -417,7 +461,7 @@ class ButtonGroupMixin:
 
         sentiment = self._button_group(
             transformed_options,
-            default=None,
+            default=_default,
             key=key,
             selection_mode="single",
             disabled=disabled,
@@ -596,6 +640,8 @@ class ButtonGroupMixin:
             If the ``selection_mode`` is ``multi``, this is a list of selected
             options or an empty list. If the ``selection_mode`` is
             ``"single"``, this is a selected option or ``None``.
+
+            This contains copies of the selected options, not the originals.
 
         Examples
         --------
@@ -824,6 +870,8 @@ class ButtonGroupMixin:
             options or an empty list. If the ``selection_mode`` is
             ``"single"``, this is a selected option or ``None``.
 
+            This contains copies of the selected options, not the originals.
+
         Examples
         --------
         **Example 1: Multi-select segmented control**
@@ -1047,6 +1095,10 @@ class ButtonGroupMixin:
             # "feedback" in errors
             "feedback" if style == "borderless" else style,
             user_key=key,
+            # Treat the provided key as the main identity for segmented_control, pills and feedback,
+            # and only include kwargs that can invalidate the current selection.
+            # We whitelist the formatted options and the click mode (single vs multi).
+            key_as_main_identity={"options", "click_mode"},
             dg=self.dg,
             options=formatted_options,
             default=default,

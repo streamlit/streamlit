@@ -16,7 +16,7 @@
 
 import { mockEndpoints } from "~lib/mocks/mocks"
 
-import { extractEmoji, handleFavicon } from "./Favicon"
+import { handleFavicon } from "./Favicon"
 
 function getFaviconHref(): string {
   const faviconElement: HTMLLinkElement | null = document.querySelector(
@@ -44,144 +44,229 @@ describe("Favicon element", () => {
   const buildMediaURL = vi.fn().mockReturnValue("https://mock.media.url")
   const endpoints = mockEndpoints({ buildMediaURL: buildMediaURL })
 
-  it("sets the favicon in the DOM", () => {
+  it("sets the favicon in the DOM", async () => {
     handleFavicon("https://some/random/favicon.png", vi.fn(), endpoints)
-    expect(buildMediaURL).toHaveBeenCalledWith(
-      "https://some/random/favicon.png"
-    )
-    expect(getFaviconHref()).toBe("https://mock.media.url/")
+    // Wait for async operation to complete
+    await vi.waitFor(() => {
+      expect(buildMediaURL).toHaveBeenCalledWith(
+        "https://some/random/favicon.png"
+      )
+      expect(getFaviconHref()).toBe("https://mock.media.url/")
+    })
   })
 
-  it("accepts emojis directly", () => {
+  it("accepts emojis directly", async () => {
     handleFavicon("emoji:🍕", vi.fn(), endpoints)
-    // Check that its an svg that contains the pizza emoji bytecode:
-    expect(getFaviconHref()).toContain("svg")
-    expect(getFaviconHref()).toContain("%F0%9F%8D%95")
+    // Wait for async operation to complete
+    await vi.waitFor(() => {
+      // Check that its an svg that contains the pizza emoji bytecode:
+      expect(getFaviconHref()).toContain("svg")
+      expect(getFaviconHref()).toContain("%F0%9F%8D%95")
+    })
   })
 
-  it("handles emoji variants correctly", () => {
+  it("handles emoji variants correctly", async () => {
     handleFavicon("emoji:🛰", vi.fn(), endpoints)
-    // Check that its an svg that contains the satellite emoji bytecode:
-    expect(getFaviconHref()).toContain("svg")
-    expect(getFaviconHref()).toContain("%F0%9F%9B%B0")
+    // Wait for async operation to complete
+    await vi.waitFor(() => {
+      // Check that its an svg that contains the satellite emoji bytecode:
+      expect(getFaviconHref()).toContain("svg")
+      expect(getFaviconHref()).toContain("%F0%9F%9B%B0")
+    })
   })
 
-  it("handles material icon correctly", () => {
+  it("handles material icon correctly", async () => {
     handleFavicon(":material/flag:", vi.fn(), endpoints)
-    expect(getFaviconHref()).toBe(FLAG_MATERIAL_ICON_URL)
+    await vi.waitFor(() => {
+      expect(getFaviconHref()).toBe(FLAG_MATERIAL_ICON_URL)
+    })
 
     handleFavicon(":material/smart_display:", vi.fn(), endpoints)
-    expect(getFaviconHref()).toBe(SMART_DISPLAY_MATERIAL_ICON_URL)
+    await vi.waitFor(() => {
+      expect(getFaviconHref()).toBe(SMART_DISPLAY_MATERIAL_ICON_URL)
+    })
 
     handleFavicon(":material/accessibility_new:", vi.fn(), endpoints)
-    expect(getFaviconHref()).toBe(ACCESSIBILITY_NEW_MATERIAL_ICON_URL)
+    await vi.waitFor(() => {
+      expect(getFaviconHref()).toBe(ACCESSIBILITY_NEW_MATERIAL_ICON_URL)
+    })
   })
 
-  it("handles emoji shortcodes containing a dash correctly", () => {
+  it("handles emoji shortcodes containing a dash correctly", async () => {
     handleFavicon(":crescent-moon:", vi.fn(), endpoints)
-    // Check that its an svg that contains the crescent moon emoji bytecode:
-    expect(getFaviconHref()).toContain("svg")
-    expect(getFaviconHref()).toContain("%F0%9F%8C%99")
+    // Wait for async operation to complete
+    await vi.waitFor(() => {
+      // Check that its an svg that contains the crescent moon emoji bytecode:
+      expect(getFaviconHref()).toContain("svg")
+      expect(getFaviconHref()).toContain("%F0%9F%8C%99")
+    })
   })
 
-  it("accepts emoji shortcodes", () => {
+  it("accepts emoji shortcodes", async () => {
     handleFavicon(":pizza:", vi.fn(), endpoints)
-    // Check that its an svg that contains the pizza emoji bytecode:
-    expect(getFaviconHref()).toContain("svg")
-    expect(getFaviconHref()).toContain("%F0%9F%8D%95")
+    // Wait for async operation to complete
+    await vi.waitFor(() => {
+      // Check that its an svg that contains the pizza emoji bytecode:
+      expect(getFaviconHref()).toContain("svg")
+      expect(getFaviconHref()).toContain("%F0%9F%8D%95")
+    })
   })
 
-  it("updates the favicon when it changes", () => {
+  it("updates the favicon when it changes", async () => {
     handleFavicon("/media/1234567890.png", vi.fn(), endpoints)
+    await vi.waitFor(() => {
+      expect(getFaviconHref()).toBe("https://mock.media.url/")
+    })
+
     handleFavicon(":pizza:", vi.fn(), endpoints)
-    // Check that its an svg that contains the pizza emoji bytecode:
-    expect(getFaviconHref()).toContain("svg")
-    expect(getFaviconHref()).toContain("%F0%9F%8D%95")
+    // Wait for async operation to complete
+    await vi.waitFor(() => {
+      // Check that its an svg that contains the pizza emoji bytecode:
+      expect(getFaviconHref()).toContain("svg")
+      expect(getFaviconHref()).toContain("%F0%9F%8D%95")
+    })
   })
 
-  it("sends SET_PAGE_FAVICON message to host", () => {
+  it("sends SET_PAGE_FAVICON message to host", async () => {
     const sendMessageToHost = vi.fn()
     handleFavicon(
       "https://streamlit.io/path/to/favicon.png",
       sendMessageToHost,
       endpoints
     )
-    expect(sendMessageToHost).toHaveBeenCalledWith({
-      favicon: "https://mock.media.url",
-      type: "SET_PAGE_FAVICON",
+    await vi.waitFor(() => {
+      expect(sendMessageToHost).toHaveBeenCalledWith({
+        favicon: "https://mock.media.url",
+        type: "SET_PAGE_FAVICON",
+      })
     })
   })
 
-  describe("extractEmoji", () => {
-    it("handles basic emojis", () => {
-      expect(extractEmoji("emoji:😀")).toBe("😀")
-      expect(extractEmoji("emoji:🚀")).toBe("🚀")
-      expect(extractEmoji("emoji:🍕")).toBe("🍕")
-      expect(extractEmoji("emoji:⭐")).toBe("⭐")
-      expect(extractEmoji("emoji:🎮")).toBe("🎮")
-      expect(extractEmoji("emoji:🛰️")).toBe("🛰️")
+  describe("emoji handling", () => {
+    it.each([
+      ["emoji:😀", "%F0%9F%98%80"],
+      ["emoji:🚀", "%F0%9F%9A%80"],
+      ["emoji:🍕", "%F0%9F%8D%95"],
+      ["emoji:⭐", "%E2%AD%90"],
+      ["emoji:🎮", "%F0%9F%8E%AE"],
+      ["emoji:🛰️", "%F0%9F%9B%B0"],
+    ])("handles basic emojis - %s", async (favicon, expectedEncodedEmoji) => {
+      handleFavicon(favicon, vi.fn(), endpoints)
+      await vi.waitFor(() => {
+        expect(getFaviconHref()).toContain("svg")
+        expect(getFaviconHref()).toContain(expectedEncodedEmoji)
+      })
     })
 
-    it("handles emoji shortcodes", () => {
-      expect(extractEmoji(":smile:")).toBe("😄")
-      expect(extractEmoji(":rocket:")).toBe("🚀")
-      expect(extractEmoji(":pizza:")).toBe("🍕")
-      expect(extractEmoji(":star:")).toBe("⭐")
-      expect(extractEmoji(":video_game:")).toBe("🎮")
+    it.each([
+      [":smile:", "%F0%9F%98%84"], // 😄
+      [":rocket:", "%F0%9F%9A%80"], // 🚀
+      [":pizza:", "%F0%9F%8D%95"], // 🍕
+      [":star:", "%E2%AD%90"], // ⭐
+      [":video_game:", "%F0%9F%8E%AE"], // 🎮
+    ])(
+      "handles emoji shortcodes - %s",
+      async (favicon, expectedEncodedEmoji) => {
+        handleFavicon(favicon, vi.fn(), endpoints)
+        await vi.waitFor(() => {
+          expect(getFaviconHref()).toContain("svg")
+          expect(getFaviconHref()).toContain(expectedEncodedEmoji)
+        })
+      }
+    )
+
+    it.each([
+      [":crescent-moon:", "%F0%9F%8C%99"], // 🌙
+      [":lying-face:", "%F0%9F%A4%A5"], // 🤥
+    ])(
+      "handles shortcodes with dashes - %s",
+      async (favicon, expectedEncodedEmoji) => {
+        handleFavicon(favicon, vi.fn(), endpoints)
+        await vi.waitFor(() => {
+          expect(getFaviconHref()).toContain("svg")
+          expect(getFaviconHref()).toContain(expectedEncodedEmoji)
+        })
+      }
+    )
+
+    it.each([
+      ["emoji:👍🏻", "%F0%9F%91%8D%F0%9F%8F%BB"], // light skin tone
+      ["emoji:👍🏽", "%F0%9F%91%8D%F0%9F%8F%BD"], // medium skin tone
+      ["emoji:👍🏿", "%F0%9F%91%8D%F0%9F%8F%BF"], // dark skin tone
+    ])(
+      "handles skin tone modifiers - %s",
+      async (favicon, expectedEncodedEmoji) => {
+        handleFavicon(favicon, vi.fn(), endpoints)
+        await vi.waitFor(() => {
+          expect(getFaviconHref()).toContain("svg")
+          expect(getFaviconHref()).toContain(expectedEncodedEmoji)
+        })
+      }
+    )
+
+    it.each([
+      ["emoji:🪣", "%F0%9F%AA%A3"], // bucket (added in 2020)
+      ["emoji:🥹", "%F0%9F%A5%B9"], // face holding back tears (added in 2022)
+      ["emoji:🫠", "%F0%9F%AB%A0"], // melting face (added in 2022)
+      ["emoji:🫥", "%F0%9F%AB%A5"], // dotted line face (added in 2022)
+      ["emoji:🐦‍🔥", "svg"], // Phoenix (added in 2023) - complex ZWJ sequence
+      ["emoji:🍋‍🟩", "svg"], // lime (added in 2023) - complex ZWJ sequence
+    ])("handles newer emojis - %s", async (favicon, expectedContent) => {
+      handleFavicon(favicon, vi.fn(), endpoints)
+      await vi.waitFor(() => {
+        expect(getFaviconHref()).toContain("svg")
+        expect(getFaviconHref()).toContain(expectedContent)
+      })
     })
 
-    it("handles shortcodes with dashes", () => {
-      expect(extractEmoji(":crescent-moon:")).toBe("🌙")
-      expect(extractEmoji(":lying-face:")).toBe("🤥")
+    it.each([
+      ["emoji:😀", "%F0%9F%98%80"], // grinning face (2015)
+      ["emoji:👨‍👩‍👦", "svg"], // family (2016) - ZWJ sequence
+      ["emoji:💩", "%F0%9F%92%A9"], // pile of poo (2010)
+      ["emoji:♥️", "svg"], // heart symbol (very early emoji)
+    ])("handles older emojis - %s", async (favicon, expectedContent) => {
+      handleFavicon(favicon, vi.fn(), endpoints)
+      await vi.waitFor(() => {
+        expect(getFaviconHref()).toContain("svg")
+        expect(getFaviconHref()).toContain(expectedContent)
+      })
     })
 
-    it("handles skin tone modifiers", () => {
-      expect(extractEmoji("emoji:👍🏻")).toBe("👍🏻") // light skin tone
-      expect(extractEmoji("emoji:👍🏽")).toBe("👍🏽") // medium skin tone
-      expect(extractEmoji("emoji:👍🏿")).toBe("👍🏿") // dark skin tone
+    it.each([
+      ["emoji:👨‍💻", "svg"], // man technologist - ZWJ sequence
+      ["emoji:👩‍🚒", "svg"], // woman firefighter - ZWJ sequence
+      ["emoji:👨‍👨‍👧‍👧", "svg"], // family with two men and two girls - complex ZWJ
+      [":woman_technologist:", "%F0%9F%91%A9"], // 👩‍💻
+    ])("handles compound emojis - %s", async (favicon, expectedContent) => {
+      handleFavicon(favicon, vi.fn(), endpoints)
+      await vi.waitFor(() => {
+        expect(getFaviconHref()).toContain("svg")
+        expect(getFaviconHref()).toContain(expectedContent)
+      })
     })
 
-    it("handles newer emojis", () => {
-      expect(extractEmoji("emoji:🪣")).toBe("🪣") // bucket (added in 2020)
-      expect(extractEmoji("emoji:🥹")).toBe("🥹") // face holding back tears (added in 2022)
-      expect(extractEmoji("emoji:🫠")).toBe("🫠") // melting face (added in 2022)
-      expect(extractEmoji("emoji:🫥")).toBe("🫥") // dotted line face (added in 2022)
-      expect(extractEmoji("emoji:🐦‍🔥")).toBe("🐦‍🔥") // Phoenix (added in 2023)
-      expect(extractEmoji("emoji:🍋‍🟩")).toBe("🍋‍🟩") // lime (added in 2023)
+    it.each([
+      ["emoji:🇺🇸", "%F0%9F%87%BA%F0%9F%87%B8"], // 🇺🇸
+      ["emoji:🇯🇵", "%F0%9F%87%AF%F0%9F%87%B5"], // 🇯🇵
+      ["emoji:🇪🇸", "%F0%9F%87%AA%F0%9F%87%B8"], // 🇪🇸
+      [":brazil:", "%F0%9F%87%A7%F0%9F%87%B7"], // 🇧🇷
+    ])("handles flags - %s", async (favicon, expectedEncodedEmoji) => {
+      handleFavicon(favicon, vi.fn(), endpoints)
+      await vi.waitFor(() => {
+        expect(getFaviconHref()).toContain("svg")
+        expect(getFaviconHref()).toContain(expectedEncodedEmoji)
+      })
     })
 
-    it("handles older emojis", () => {
-      expect(extractEmoji("emoji:😀")).toBe("😀") // grinning face (2015)
-      expect(extractEmoji("emoji:👨‍👩‍👦")).toBe("👨‍👩‍👦") // family (2016)
-      expect(extractEmoji("emoji:💩")).toBe("💩") // pile of poo (2010)
-      expect(extractEmoji("emoji:♥️")).toBe("♥️") // heart symbol (very early emoji)
-    })
-
-    it("handles compound emojis", () => {
-      expect(extractEmoji("emoji:👨‍💻")).toBe("👨‍💻") // man technologist
-      expect(extractEmoji("emoji:👩‍🚒")).toBe("👩‍🚒") // woman firefighter
-      expect(extractEmoji("emoji:👨‍👨‍👧‍👧")).toBe("👨‍👨‍👧‍👧") // family with two men and two girls
-      expect(extractEmoji(":woman_technologist:")).toBe("👩‍💻")
-    })
-
-    it("handles flags", () => {
-      expect(extractEmoji("emoji:🇺🇸")).toBe("🇺🇸")
-      expect(extractEmoji("emoji:🇯🇵")).toBe("🇯🇵")
-      expect(extractEmoji("emoji:🇪🇸")).toBe("🇪🇸")
-      expect(extractEmoji(":brazil:")).toBe("🇧🇷")
-    })
-
-    it("handles material icons correctly", () => {
-      expect(extractEmoji(":material/flag:")).toBe("")
-      expect(extractEmoji(":material/smart_display:")).toBe("")
-    })
-
-    it("handles edge cases", () => {
-      expect(extractEmoji(":invalid_emoji_code:")).toBe("")
-      expect(extractEmoji("hello")).toBe("")
-      expect(extractEmoji("12345")).toBe("")
-      expect(extractEmoji("::")).toBe("")
-      expect(extractEmoji(":")).toBe("")
-    })
+    it.each([[":invalid_emoji_code:"], ["hello"], ["12345"], ["::"], [":"]])(
+      "treats non-emoji strings as URLs - %s",
+      async favicon => {
+        handleFavicon(favicon, vi.fn(), endpoints)
+        await vi.waitFor(() => {
+          expect(buildMediaURL).toHaveBeenCalledWith(favicon)
+          expect(getFaviconHref()).toBe("https://mock.media.url/")
+        })
+      }
+    )
   })
 })

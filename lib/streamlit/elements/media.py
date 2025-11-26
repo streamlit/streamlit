@@ -18,9 +18,7 @@ import io
 import re
 from datetime import timedelta
 from pathlib import Path
-from typing import TYPE_CHECKING, Final, Union, cast
-
-from typing_extensions import TypeAlias
+from typing import TYPE_CHECKING, Final, TypeAlias, Union, cast
 
 from streamlit import runtime, type_util, url_util
 from streamlit.elements.lib.layout_utils import WidthWithoutContent, validate_width
@@ -53,11 +51,11 @@ MediaData: TypeAlias = Union[
     None,
 ]
 
-SubtitleData: TypeAlias = Union[
-    str, Path, bytes, io.BytesIO, dict[str, Union[str, Path, bytes, io.BytesIO]], None
-]
+SubtitleData: TypeAlias = (
+    str | Path | bytes | io.BytesIO | dict[str, str | Path | bytes | io.BytesIO] | None
+)
 
-MediaTime: TypeAlias = Union[int, float, timedelta, str]
+MediaTime: TypeAlias = int | float | timedelta | str
 
 TIMEDELTA_PARSE_ERROR_MESSAGE: Final = (
     "Failed to convert '{param_name}' to a timedelta. "
@@ -639,6 +637,7 @@ def marshall_video(
             "video",
             # video does not yet allow setting a user-defined key
             user_key=None,
+            key_as_main_identity=False,
             dg=dg,
             url=proto.url,
             mimetype=mimetype,
@@ -831,6 +830,7 @@ def marshall_audio(
         proto.id = compute_and_register_element_id(
             "audio",
             user_key=None,
+            key_as_main_identity=False,
             dg=dg,
             url=proto.url,
             mimetype=mimetype,
