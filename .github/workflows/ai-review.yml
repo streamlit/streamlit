@@ -45,9 +45,9 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           MODEL: opus-4.5-thinking
         run: |
-          cursor-agent -p ""You are operating in a GitHub Actions runner to perform a code review on a pull request.
+          cursor-agent -p "You are operating in a GitHub Actions runner to perform a code review on a pull request.
 
-          The GitHub CLI (\`gh\`) is available for READ operations only. Use it to fetch PR details, diff, and file contents.
+          The GitHub CLI (gh) is available for READ operations only. Use it to fetch PR details, diff, and file contents.
           Git is also available for read operations.
 
           # Context:
@@ -71,14 +71,14 @@ jobs:
           - The code follows other best practices from the Streamlit code base.
 
           # Instructions:
-          1. Use \`gh pr diff ${{ github.event.pull_request.number }}\` to get the changes in the PR.
+          1. Use 'gh pr diff ${{ github.event.pull_request.number }}' to get the changes in the PR.
           2. Read and analyze the changed files to understand the full context.
           3. Read the best practices files (.cursor/rules/e2e_playwright.mdc, .cursor/rules/python_tests.mdc, .cursor/rules/typescript.mdc) to understand the testing standards.
           4. Perform a thorough code review based on the checklist above.
-          5. Write your review to a file named \`review.md\` in the current directory.
+          5. Write your review to a file named 'review.md' in the current directory.
           6. The review comment should be well-structured with clear sections and actionable feedback.
           7. If there are issues, clearly describe them with specific file references and line numbers.
-          8. Write either \`APPROVED\` or \`CHANGES_REQUESTED\` (exactly one of these) to a file named \`verdict.txt\`.
+          8. Write either 'APPROVED' or 'CHANGES_REQUESTED' (exactly one of these) to a file named 'verdict.txt'.
 
           # Output Format for review.md:
           Structure your review with the following sections:
