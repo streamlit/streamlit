@@ -107,10 +107,8 @@ describe("ComponentInstance", () => {
             formsDataChanged: vi.fn(),
           })
         }
-      />,
-      {
-        componentRegistry,
-      }
+        componentRegistry={componentRegistry}
+      />
     )
     expect(registerListener).toHaveBeenCalledTimes(1)
   })
@@ -131,16 +129,15 @@ describe("ComponentInstance", () => {
             formsDataChanged: vi.fn(),
           })
         }
-      />,
-      {
-        componentRegistry,
-      }
+        componentRegistry={componentRegistry}
+      />
     )
     unmount()
     expect(deregisterListener).toHaveBeenCalledTimes(1)
   })
 
   it("renders its iframe correctly", () => {
+    const componentRegistry = getComponentRegistry()
     renderWithContexts(
       <ComponentInstance
         element={createElementProp()}
@@ -151,10 +148,8 @@ describe("ComponentInstance", () => {
             formsDataChanged: vi.fn(),
           })
         }
-      />,
-      {
-        componentRegistry: getComponentRegistry(),
-      }
+        componentRegistry={componentRegistry}
+      />
     )
     const iframe = screen.getByTitle(MOCK_COMPONENT_NAME)
     expect(iframe).toHaveAttribute(
@@ -183,10 +178,8 @@ describe("ComponentInstance", () => {
             formsDataChanged: vi.fn(),
           })
         }
-      />,
-      {
-        componentRegistry,
-      }
+        componentRegistry={componentRegistry}
+      />
     )
     const iframe = screen.getByTitle(MOCK_COMPONENT_NAME)
     expect(iframe).toHaveAttribute(
@@ -197,6 +190,7 @@ describe("ComponentInstance", () => {
 
   it("includes window.__streamlit?.CUSTOM_COMPONENT_CLIENT_ID in queryString if set", () => {
     window.__streamlit = { CUSTOM_COMPONENT_CLIENT_ID: "foobar" }
+    const componentRegistry = getComponentRegistry()
     renderWithContexts(
       <ComponentInstance
         element={createElementProp()}
@@ -207,10 +201,8 @@ describe("ComponentInstance", () => {
             formsDataChanged: vi.fn(),
           })
         }
-      />,
-      {
-        componentRegistry: getComponentRegistry(),
-      }
+        componentRegistry={componentRegistry}
+      />
     )
     const iframe = screen.getByTitle(MOCK_COMPONENT_NAME)
     expect(iframe).toHaveAttribute(
@@ -220,6 +212,7 @@ describe("ComponentInstance", () => {
   })
 
   it("displays a skeleton initially with a certain height", () => {
+    const componentRegistry = getComponentRegistry()
     renderWithContexts(
       <ComponentInstance
         element={createElementProp()}
@@ -230,10 +223,8 @@ describe("ComponentInstance", () => {
             formsDataChanged: vi.fn(),
           })
         }
-      />,
-      {
-        componentRegistry: getComponentRegistry(),
-      }
+        componentRegistry={componentRegistry}
+      />
     )
     const skeleton = screen.getByTestId("stSkeleton")
     expect(skeleton).toBeInTheDocument()
@@ -244,6 +235,7 @@ describe("ComponentInstance", () => {
   })
 
   it("will not displays a skeleton when height is explicitly set to 0", () => {
+    const componentRegistry = getComponentRegistry()
     renderWithContexts(
       <ComponentInstance
         element={createElementProp({ height: 0 })}
@@ -254,10 +246,8 @@ describe("ComponentInstance", () => {
             formsDataChanged: vi.fn(),
           })
         }
-      />,
-      {
-        componentRegistry: getComponentRegistry(),
-      }
+        componentRegistry={componentRegistry}
+      />
     )
     expect(screen.queryByTestId("stSkeleton")).not.toBeInTheDocument()
 
@@ -268,6 +258,7 @@ describe("ComponentInstance", () => {
   describe("COMPONENT_READY handler", () => {
     it("posts a RENDER message to the iframe", () => {
       const jsonArgs = { foo: "string", bar: 5 }
+      const componentRegistry = getComponentRegistry()
       renderWithContexts(
         <ComponentInstance
           element={createElementProp(jsonArgs)}
@@ -278,10 +269,8 @@ describe("ComponentInstance", () => {
               formsDataChanged: vi.fn(),
             })
           }
-        />,
-        {
-          componentRegistry: getComponentRegistry(),
-        }
+          componentRegistry={componentRegistry}
+        />
       )
       const iframe = screen.getByTitle(MOCK_COMPONENT_NAME)
       // @ts-expect-error
@@ -303,6 +292,7 @@ describe("ComponentInstance", () => {
     })
 
     it("hides the skeleton and maintains iframe height of 0", () => {
+      const componentRegistry = getComponentRegistry()
       renderWithContexts(
         <ComponentInstance
           element={createElementProp()}
@@ -313,10 +303,8 @@ describe("ComponentInstance", () => {
               formsDataChanged: vi.fn(),
             })
           }
-        />,
-        {
-          componentRegistry: getComponentRegistry(),
-        }
+          componentRegistry={componentRegistry}
+        />
       )
 
       const iframe = screen.getByTitle(MOCK_COMPONENT_NAME)
@@ -340,6 +328,7 @@ describe("ComponentInstance", () => {
 
     it("prevents RENDER message until component is ready", () => {
       const jsonArgs = { foo: "string", bar: 5 }
+      const componentRegistry = getComponentRegistry()
       renderWithContexts(
         <ComponentInstance
           element={createElementProp(jsonArgs)}
@@ -350,10 +339,8 @@ describe("ComponentInstance", () => {
               formsDataChanged: vi.fn(),
             })
           }
-        />,
-        {
-          componentRegistry: getComponentRegistry(),
-        }
+          componentRegistry={componentRegistry}
+        />
       )
       const iframe = screen.getByTitle(MOCK_COMPONENT_NAME)
       // @ts-expect-error
@@ -366,6 +353,7 @@ describe("ComponentInstance", () => {
       // (This can happen during development, when the component's devserver
       // reloads.)
       const jsonArgs = { foo: "string", bar: 5 }
+      const componentRegistry = getComponentRegistry()
       renderWithContexts(
         <ComponentInstance
           element={createElementProp(jsonArgs)}
@@ -376,10 +364,8 @@ describe("ComponentInstance", () => {
               formsDataChanged: vi.fn(),
             })
           }
-        />,
-        {
-          componentRegistry: getComponentRegistry(),
-        }
+          componentRegistry={componentRegistry}
+        />
       )
       const iframe = screen.getByTitle(MOCK_COMPONENT_NAME)
       // @ts-expect-error
@@ -415,6 +401,7 @@ describe("ComponentInstance", () => {
 
     it("send render message whenever the args change and the component is ready", () => {
       let jsonArgs = { foo: "string", bar: 5 }
+      const componentRegistry = getComponentRegistry()
       const { rerender } = renderWithContexts(
         <ComponentInstance
           element={createElementProp(jsonArgs)}
@@ -425,10 +412,8 @@ describe("ComponentInstance", () => {
               formsDataChanged: vi.fn(),
             })
           }
-        />,
-        {
-          componentRegistry: getComponentRegistry(),
-        }
+          componentRegistry={componentRegistry}
+        />
       )
       const iframe = screen.getByTitle(MOCK_COMPONENT_NAME)
       // @ts-expect-error
@@ -457,6 +442,7 @@ describe("ComponentInstance", () => {
               formsDataChanged: vi.fn(),
             })
           }
+          componentRegistry={componentRegistry}
         />
       )
 
@@ -471,6 +457,7 @@ describe("ComponentInstance", () => {
       })
 
       const jsonArgs = { foo: "string", bar: 5 }
+      const componentRegistry = getComponentRegistry()
       const { rerender } = renderWithContexts(
         <ComponentInstance
           element={createElementProp(jsonArgs)}
@@ -481,10 +468,8 @@ describe("ComponentInstance", () => {
               formsDataChanged: vi.fn(),
             })
           }
-        />,
-        {
-          componentRegistry: getComponentRegistry(),
-        }
+          componentRegistry={componentRegistry}
+        />
       )
       const iframe = screen.getByTitle(MOCK_COMPONENT_NAME)
       // @ts-expect-error
@@ -520,6 +505,7 @@ describe("ComponentInstance", () => {
               formsDataChanged: vi.fn(),
             })
           }
+          componentRegistry={componentRegistry}
         />
       )
 
@@ -529,6 +515,7 @@ describe("ComponentInstance", () => {
     it("errors on unrecognized API version", () => {
       const badAPIVersion = CUSTOM_COMPONENT_API_VERSION + 1
       const jsonArgs = { foo: "string", bar: 5 }
+      const componentRegistry = getComponentRegistry()
       renderWithContexts(
         <ComponentInstance
           element={createElementProp(jsonArgs)}
@@ -539,10 +526,8 @@ describe("ComponentInstance", () => {
               formsDataChanged: vi.fn(),
             })
           }
-        />,
-        {
-          componentRegistry: getComponentRegistry(),
-        }
+          componentRegistry={componentRegistry}
+        />
       )
       const iframe = screen.getByTitle(MOCK_COMPONENT_NAME)
       // SET COMPONENT_READY
@@ -566,6 +551,7 @@ describe("ComponentInstance", () => {
       const element = createElementProp(jsonArgs, [
         new SpecialArg({ key: "foo" }),
       ])
+      const componentRegistry = getComponentRegistry()
       renderWithContexts(
         <ComponentInstance
           element={element}
@@ -576,10 +562,8 @@ describe("ComponentInstance", () => {
               formsDataChanged: vi.fn(),
             })
           }
-        />,
-        {
-          componentRegistry: getComponentRegistry(),
-        }
+          componentRegistry={componentRegistry}
+        />
       )
       expect(
         screen.getByText("Unrecognized SpecialArg type: undefined")
@@ -587,6 +571,7 @@ describe("ComponentInstance", () => {
     })
 
     it("warns if COMPONENT_READY hasn't been received after a timeout", async () => {
+      const componentRegistry = getComponentRegistry()
       renderWithContexts(
         <ComponentInstance
           element={createElementProp()}
@@ -597,10 +582,8 @@ describe("ComponentInstance", () => {
               formsDataChanged: vi.fn(),
             })
           }
-        />,
-        {
-          componentRegistry: getComponentRegistry(),
-        }
+          componentRegistry={componentRegistry}
+        />
       )
       // Advance past our warning timeout, and force a re-render.
       await act(() => vi.advanceTimersByTime(COMPONENT_READY_WARNING_TIME_MS))
@@ -628,10 +611,8 @@ describe("ComponentInstance", () => {
               formsDataChanged: vi.fn(),
             })
           }
-        />,
-        {
-          componentRegistry,
-        }
+          componentRegistry={componentRegistry}
+        />
       )
 
       expect(checkSourceUrlResponseSpy).toHaveBeenCalledWith(
@@ -658,10 +639,8 @@ describe("ComponentInstance", () => {
               formsDataChanged: vi.fn(),
             })
           }
-        />,
-        {
-          componentRegistry,
-        }
+          componentRegistry={componentRegistry}
+        />
       )
       // Advance past our warning timeout, and force a re-render.
       await act(() => vi.advanceTimersByTime(COMPONENT_READY_WARNING_TIME_MS))
@@ -675,6 +654,7 @@ describe("ComponentInstance", () => {
 
   describe("SET_COMPONENT_VALUE handler", () => {
     it("handles JSON values", () => {
+      const componentRegistry = getComponentRegistry()
       const jsonValue = {
         foo: "string",
         bar: 123,
@@ -692,10 +672,8 @@ describe("ComponentInstance", () => {
               formsDataChanged: vi.fn(),
             })
           }
-        />,
-        {
-          componentRegistry: getComponentRegistry(),
-        }
+          componentRegistry={componentRegistry}
+        />
       )
 
       const iframe = screen.getByTitle(MOCK_COMPONENT_NAME)
@@ -743,6 +721,7 @@ describe("ComponentInstance", () => {
       const jsonValue = {}
 
       const element = createElementProp(jsonValue)
+      const componentRegistry = getComponentRegistry()
       renderWithContexts(
         <ComponentInstance
           element={element}
@@ -755,10 +734,8 @@ describe("ComponentInstance", () => {
           }
           // Also verify that we can pass a fragmentID down to setBytesValue.
           fragmentId="myFragmentId"
-        />,
-        {
-          componentRegistry: getComponentRegistry(),
-        }
+          componentRegistry={componentRegistry}
+        />
       )
 
       const iframe = screen.getByTitle(MOCK_COMPONENT_NAME)
@@ -812,6 +789,7 @@ describe("ComponentInstance", () => {
       }
 
       const element = createElementProp(jsonValue)
+      const componentRegistry = getComponentRegistry()
       renderWithContexts(
         <ComponentInstance
           element={element}
@@ -822,10 +800,8 @@ describe("ComponentInstance", () => {
               formsDataChanged: vi.fn(),
             })
           }
-        />,
-        {
-          componentRegistry: getComponentRegistry(),
-        }
+          componentRegistry={componentRegistry}
+        />
       )
       const iframe = screen.getByTitle(MOCK_COMPONENT_NAME)
       // SET COMPONENT_VALUE
@@ -856,6 +832,7 @@ describe("ComponentInstance", () => {
       it("updates the frameHeight without re-rendering", () => {
         const jsonValue = {}
         const element = createElementProp(jsonValue)
+        const componentRegistry = getComponentRegistry()
         renderWithContexts(
           <ComponentInstance
             element={element}
@@ -866,10 +843,8 @@ describe("ComponentInstance", () => {
                 formsDataChanged: vi.fn(),
               })
             }
-          />,
-          {
-            componentRegistry: getComponentRegistry(),
-          }
+            componentRegistry={componentRegistry}
+          />
         )
         const iframe = screen.getByTitle(MOCK_COMPONENT_NAME)
         // SET COMPONENT_READY
@@ -914,6 +889,7 @@ describe("ComponentInstance", () => {
         }
 
         const element = createElementProp(jsonValue)
+        const componentRegistry = getComponentRegistry()
         renderWithContexts(
           <ComponentInstance
             element={element}
@@ -924,10 +900,8 @@ describe("ComponentInstance", () => {
                 formsDataChanged: vi.fn(),
               })
             }
-          />,
-          {
-            componentRegistry: getComponentRegistry(),
-          }
+            componentRegistry={componentRegistry}
+          />
         )
         const iframe = screen.getByTitle(MOCK_COMPONENT_NAME)
         // SET IFRAME_HEIGHT

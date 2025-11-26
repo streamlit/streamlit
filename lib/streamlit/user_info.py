@@ -20,7 +20,6 @@ from typing import (
     Any,
     Final,
     NoReturn,
-    Union,
 )
 
 from streamlit import config, logger, runtime
@@ -100,7 +99,9 @@ def login(provider: str | None = None) -> None:
         - You must install ``Authlib>=1.3.2`` to use this command. You can
           install it as an extra with Streamlit:
 
-          >>> pip install streamlit[auth]
+          .. code-block:: shell
+
+             pip install streamlit[auth]
 
         - Your authentication configuration is dependent on your host location.
           When you deploy your app, remember to update your ``redirect_uri``
@@ -270,6 +271,7 @@ def login(provider: str | None = None) -> None:
     Your app code:
 
     >>> import streamlit as st
+    >>>
     >>> if st.button("Log in"):
     >>>     st.login("auth0")
     >>> if st.user.is_logged_in:
@@ -299,9 +301,8 @@ def logout() -> None:
     """Logout the current user.
 
     This command removes the user's information from ``st.user``,
-    deletes their identity cookie, and redirects them to perform a proper
-    logout from the OAuth provider (if available) before returning to your
-    app's home page. This creates a new session.
+    deletes their identity cookie, and redirects them back to your app's home
+    page. This creates a new session.
 
     If the user has multiple sessions open in the same browser,
     ``st.user`` will not be cleared in any other session.
@@ -310,9 +311,8 @@ def logout() -> None:
     ``st.logout()`` within that session to update ``st.user``.
 
     .. Note::
-        If the OAuth provider supports OIDC end_session_endpoint in their
-        server metadata, the user will be logged out from the identity provider
-        as well. If not available, only local logout is performed.
+        This does not log the user out of their underlying account from the
+        identity provider.
 
     Example
     -------
@@ -378,7 +378,7 @@ def _get_user_info() -> UserInfo:
     return context_user_info
 
 
-class UserInfoProxy(Mapping[str, Union[str, bool, None]]):
+class UserInfoProxy(Mapping[str, str | bool | None]):
     """
     A read-only, dict-like object for accessing information about the current\
     user.

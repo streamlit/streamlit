@@ -14,16 +14,13 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from functools import wraps
-from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar, cast, overload
+from typing import TYPE_CHECKING, Any, Literal, TypeVar, cast, overload
 
 from streamlit.delta_generator_singletons import (
     get_dg_singleton_instance,
     get_last_dg_added_to_context_stack,
-)
-from streamlit.deprecation_util import (
-    make_deprecated_name_warning,
-    show_deprecation_warning,
 )
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.fragment import _fragment
@@ -67,7 +64,6 @@ def _dialog_decorator(
     title: str,
     *,
     width: DialogWidth = "small",
-    should_show_deprecation_warning: bool = False,
     dismissible: bool = True,
     on_dismiss: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
 ) -> F:
@@ -89,15 +85,6 @@ def _dialog_decorator(
         dialog.open()
 
         def dialog_content() -> None:
-            if should_show_deprecation_warning:
-                show_deprecation_warning(
-                    make_deprecated_name_warning(
-                        "experimental_dialog",
-                        "dialog",
-                        "2025-01-01",
-                    )
-                )
-
             # if the dialog should be closed, st.rerun() has to be called
             # (same behavior as with st.fragment)
             _ = non_optional_func(*args, **kwargs)
@@ -163,14 +150,15 @@ def dialog_decorator(
     called. Any values from the dialog that need to be accessed from the wider
     app should generally be stored in Session State.
 
-    A user can dismiss a modal dialog by clicking outside of it, clicking the
-    "**X**" in its upper-right corner, or pressing ``ESC`` on their keyboard.
-    Dismissing a modal dialog does not trigger an app rerun. To close the modal
-    dialog programmatically, call ``st.rerun()`` explicitly inside of the
-    dialog function. To enforce that dialogs are always closed programmatically,
-    you can set the ``dismissible`` parameter to ``False``. This will hide the "**X**"
-    button in the upper-right corner of the dialog and prevent the user from dismissing
-    the dialog by clicking outside of it or pressing ``ESC``.
+    If a dialog is dismissible, a user can dismiss it by clicking outside of
+    it, clicking the "**X**" in its upper-right corner, or pressing ``ESC`` on
+    their keyboard. You can configure whether this triggers a rerun of the app
+    by setting the ``on_dismiss`` parameter.
+
+    If a dialog is not dismissible, it must be closed programmatically by
+    calling ``st.rerun()`` inside the dialog function. This is useful when you
+    want to ensure that the dialog is always closed programmatically, such as
+    when the dialog contains a form that must be submitted before closing.
 
     ``st.dialog`` inherits behavior from |st.fragment|_.
     When a user interacts with an input widget created inside a dialog function,
@@ -211,27 +199,33 @@ def dialog_decorator(
         .. |st.markdown| replace:: ``st.markdown``
         .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
-    width : "small", "large"
-        The width of the modal dialog. If ``width`` is ``"small`` (default), the
-        modal dialog will be 500 pixels wide. If ``width`` is ``"large"``, the
-        modal dialog will be about 750 pixels wide.
+    width : "small", "medium", "large"
+        The width of the modal dialog. This can be one of the following:
+
+        - ``"small"`` (default): The modal dialog will be a maximum of 500
+          pixels wide.
+        - ``"medium"``: The modal dialog will be up to 750 pixels wide.
+        - ``"large"``: The modal dialog will be up to 1280 pixels wide.
 
     dismissible : bool
-        Whether the modal dialog can be dismissed by the user by clicking outside of
-        it or by pressing ``ESC``. Setting it to False also hides the ``X``
-        button in the upper-right corner of the dialog.
+        Whether the modal dialog can be dismissed by the user. If this is
+        ``True`` (default), the user can dismiss the dialog by clicking
+        outside of it, clicking the "**X**" in its upper-right corner, or
+        pressing ``ESC`` on their keyboard. If this is ``False``, the "**X**"
+        in the upper-right corner is hidden and the dialog must be closed
+        programmatically by calling ``st.rerun()`` inside the dialog function.
 
         .. note::
-            Setting ``dismissible`` to False does not guarantee that all
-            interactions in the main app are blocked. Please don't rely on
-            dismissible for security-critical checks.
+            Setting ``dismissible`` to ``False`` does not guarantee that all
+            interactions in the main app are blocked. Don't rely on
+            ``dismissible`` for security-critical checks.
 
-    on_dismiss : "ignore", "rerun" or callable
+    on_dismiss : "ignore", "rerun", or callable
         How the dialog should respond to dismissal events.
-        ``on_dismiss`` can be one of the following:
+        This can be one of the following:
 
-        - ``"ignore"`` (default): Streamlit will not rerun on dismissal
-          of the dialog.
+        - ``"ignore"`` (default): Streamlit will not rerun the app when the
+          user dismisses the dialog.
 
         - ``"rerun"``: Streamlit will rerun the app when the user dismisses
           the dialog.
@@ -290,45 +284,4 @@ def dialog_decorator(
     func: F = func_or_title
     return _dialog_decorator(
         func, "", width=width, dismissible=dismissible, on_dismiss=on_dismiss
-    )
-
-
-@overload
-def experimental_dialog_decorator(
-    title: str, *, width: DialogWidth = "small"
-) -> Callable[[F], F]: ...
-
-
-# 'title' can be a function since `dialog_decorator` is a decorator. We just call it
-# 'title' here though to make the user-doc more friendly as we want the user to pass a
-#  title, not a function. The user is supposed to call it like @st.dialog("my_title"),
-#  which makes 'title' a positional arg, hence this 'trick'. The overload is required to
-#  have a good type hint for the decorated function args.
-@overload
-def experimental_dialog_decorator(title: F, *, width: DialogWidth = "small") -> F: ...
-
-
-@gather_metrics("experimental_dialog")
-def experimental_dialog_decorator(
-    title: F | str, *, width: DialogWidth = "small"
-) -> F | Callable[[F], F]:
-    """Deprecated alias for @st.dialog.
-    See the docstring for the decorator's new name.
-    """
-    func_or_title = title
-    if isinstance(func_or_title, str):
-        # Support passing the params via function decorator
-        def wrapper(f: F) -> F:
-            return _dialog_decorator(
-                non_optional_func=f,
-                title=func_or_title,
-                width=width,
-                should_show_deprecation_warning=True,
-            )
-
-        return wrapper
-
-    func: F = func_or_title
-    return _dialog_decorator(
-        func, "", width=width, should_show_deprecation_warning=True
     )

@@ -18,7 +18,16 @@ import pytest
 from playwright.sync_api import Locator, Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_loaded
-from e2e_playwright.shared.app_utils import check_top_level_class, expect_help_tooltip
+from e2e_playwright.shared.app_utils import (
+    check_top_level_class,
+    expect_help_tooltip,
+    get_heading,
+)
+
+# Does not include divider header/subheaders
+TITLE_COUNT = 11
+HEADER_COUNT = 10
+SUBHEADER_COUNT = 13
 
 
 def _get_title_elements(app: Page) -> Locator:
@@ -43,7 +52,7 @@ _subheader_divider_filter_text = re.compile(r"[a-zA-Z]+ Subheader Divider:")
 def test_correct_number_and_content_of_title_elements(app: Page):
     """Test that correct number of st.title (=> h1) exist with the right content."""
     titles = _get_title_elements(app)
-    expect(titles).to_have_count(9)
+    expect(titles).to_have_count(TITLE_COUNT)
 
     expect(titles.nth(0)).to_have_text("info This title is awesome!")
     expect(titles.nth(1)).to_have_text("This title is awesome too!")
@@ -56,7 +65,7 @@ def test_correct_number_and_content_of_title_elements(app: Page):
 def test_correct_number_and_content_of_header_elements(app: Page):
     """Test that correct number of st.header (=> h2) exist with the right content."""
     headers = _get_header_elements(app).filter(has_not_text=_header_divider_filter_text)
-    expect(headers).to_have_count(8)
+    expect(headers).to_have_count(HEADER_COUNT)
 
     expect(headers.nth(0)).to_have_text("info This header is awesome!")
     expect(headers.nth(1)).to_have_text("This header is awesome too!")
@@ -70,7 +79,7 @@ def test_correct_number_and_content_of_subheader_elements(app: Page):
     subheaders = _get_subheader_elements(app).filter(
         has_not_text=_subheader_divider_filter_text
     )
-    expect(subheaders).to_have_count(11)
+    expect(subheaders).to_have_count(SUBHEADER_COUNT)
 
     expect(subheaders.nth(0)).to_have_text("info This subheader is awesome!")
     expect(subheaders.nth(1)).to_have_text("This subheader is awesome too!")
@@ -92,52 +101,57 @@ def test_display_titles_with_anchors(app: Page):
 
 
 def test_display_headers_with_anchors_and_style_icons(app: Page):
-    headers = _get_header_elements(app)
-
-    first_header = headers.nth(0)
+    # Test header with icon and anchor
+    first_header = get_heading(app, "This header is awesome!").locator("h2")
     expect(first_header).to_have_id("info-this-header-is-awesome")
     expect(first_header.locator("svg")).to_be_attached()
     expect(first_header.locator("a")).to_have_attribute(
         "href", "#info-this-header-is-awesome"
     )
 
-    second_header = headers.nth(1)
+    # Test header with custom anchor
+    second_header = get_heading(app, "This header is awesome too!").locator("h2")
     expect(second_header).to_have_id("awesome-header")
     expect(second_header.locator("svg")).to_be_attached()
     expect(second_header.locator("a")).to_have_attribute("href", "#awesome-header")
 
-    third_header = headers.nth(2)
+    # Test header with hidden anchor
+    third_header = get_heading(
+        app, "This header with hidden anchor is awesome tooooo!"
+    ).locator("h2")
     expect(third_header).to_have_id("this-header-with-hidden-anchor-is-awesome-tooooo")
     expect(third_header.locator("svg")).not_to_be_attached()
 
 
 def test_display_subheaders_with_anchors_and_style_icons(app: Page):
-    headers = _get_subheader_elements(app)
-
-    first_header = headers.nth(0)
-    expect(first_header).to_have_id("info-this-subheader-is-awesome")
-    expect(first_header.locator("svg")).to_be_attached()
-    expect(first_header.locator("a")).to_have_attribute(
+    # Test subheader with icon and anchor
+    first_subheader = get_heading(app, "This subheader is awesome!").locator("h3")
+    expect(first_subheader).to_have_id("info-this-subheader-is-awesome")
+    expect(first_subheader.locator("svg")).to_be_attached()
+    expect(first_subheader.locator("a")).to_have_attribute(
         "href", "#info-this-subheader-is-awesome"
     )
 
-    second_header = headers.nth(1)
-    expect(second_header).to_have_id("awesome-subheader")
-    expect(second_header.locator("svg")).to_be_attached()
-    expect(second_header.locator("a")).to_have_attribute("href", "#awesome-subheader")
+    # Test subheader with custom anchor
+    second_subheader = get_heading(app, "This subheader is awesome too!").locator("h3")
+    expect(second_subheader).to_have_id("awesome-subheader")
+    expect(second_subheader.locator("svg")).to_be_attached()
+    expect(second_subheader.locator("a")).to_have_attribute(
+        "href", "#awesome-subheader"
+    )
 
-    third_header = headers.nth(4)
-    expect(third_header).to_have_id("subheader-with-hidden-anchor")
-    expect(third_header.locator("svg")).not_to_be_attached()
+    # Test subheader with hidden anchor
+    third_subheader = get_heading(app, "Subheader with hidden Anchor").locator("h3")
+    expect(third_subheader).to_have_id("subheader-with-hidden-anchor")
+    expect(third_subheader.locator("svg")).not_to_be_attached()
 
 
 def test_clicking_on_anchor_changes_url(app: Page):
     import re
 
-    headers = _get_header_elements(app)
-    first_header = headers.nth(0)
-    first_header.hover()
-    link = first_header.locator("a")
+    header = get_heading(app, "This header is awesome!").locator("h2")
+    header.hover()
+    link = header.locator("a")
     expect(link).to_have_attribute("href", "#info-this-header-is-awesome")
     link.click()
     expect(app).to_have_url(re.compile(".*#info-this-header-is-awesome"))
@@ -146,67 +160,89 @@ def test_clicking_on_anchor_changes_url(app: Page):
 def test_headers_snapshot_match(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
-    headers = _get_header_elements(themed_app)
+    # Test simple header
+    header_simple = get_heading(themed_app, "This header is awesome!")
+    assert_snapshot(header_simple, name="st_header-simple")
 
-    assert_snapshot(headers.nth(0), name="st_header-simple")
-    assert_snapshot(headers.nth(3), name="st_header-with_help")
+    # Test header with help (exact match to avoid matching "header with help and hidden anchor")
+    header_with_help = get_heading(themed_app, re.compile(r"^header with help$"))
+    assert_snapshot(header_with_help, name="st_header-with_help")
 
 
 def test_headers_hovered_snapshot_match(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
-    headers = _get_header_elements(themed_app)
-    header = headers.nth(0)
+    # Test simple header with visible anchor on hover
+    header = get_heading(themed_app, "This header is awesome!")
     link_container = header.get_by_test_id("stHeaderActionElements").locator("a")
     expect(link_container).to_have_css("visibility", "hidden")
     header.hover()
     expect(link_container).to_have_css("visibility", "visible")
     assert_snapshot(header, name="st_header-hover_with_visible_anchor")
 
-    header = headers.nth(3)
-    link_container = header.get_by_test_id("stHeaderActionElements").locator("a")
+    # Test header with help and anchor on hover (exact match)
+    header_with_help = get_heading(themed_app, re.compile(r"^header with help$"))
+    link_container = header_with_help.get_by_test_id("stHeaderActionElements").locator(
+        "a"
+    )
     expect(link_container).to_have_css("visibility", "hidden")
-    header.hover()
+    header_with_help.hover()
     expect(link_container).to_have_css("visibility", "visible")
-    assert_snapshot(header, name="st_header-hover_with_help_and_anchor")
+    assert_snapshot(header_with_help, name="st_header-hover_with_help_and_anchor")
 
-    header = headers.nth(4)
-    link_container = header.get_by_test_id("stHeaderActionElements").locator("a")
+    # Test header with help and hidden anchor (no link)
+    header_hidden = get_heading(
+        themed_app, re.compile(r"^header with help and hidden anchor$")
+    )
+    link_container = header_hidden.get_by_test_id("stHeaderActionElements").locator("a")
     expect(link_container).not_to_be_attached()
-    assert_snapshot(header, name="st_header-hover_with_help_and_hidden_anchor")
+    assert_snapshot(header_hidden, name="st_header-hover_with_help_and_hidden_anchor")
 
 
 def test_subheaders_snapshot_match(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
-    headers = _get_subheader_elements(themed_app)
+    # Test simple subheader
+    subheader_simple = get_heading(themed_app, "This subheader is awesome!")
+    assert_snapshot(subheader_simple, name="st_subheader-simple")
 
-    assert_snapshot(headers.nth(0), name="st_subheader-simple")
-    assert_snapshot(headers.nth(5), name="st_subheader-with_code_and_help")
+    # Test subheader with help (exact match to avoid matching "Subheader with help and hidden anchor")
+    subheader_with_help = get_heading(themed_app, re.compile(r"^Subheader with help$"))
+    assert_snapshot(subheader_with_help, name="st_subheader-with_code_and_help")
 
 
 def test_subheaders_hovered_snapshot_match(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
-    headers = _get_subheader_elements(themed_app)
-    header = headers.nth(0)
-    link_container = header.get_by_test_id("stHeaderActionElements").locator("a")
+    # Test simple subheader with visible anchor on hover
+    subheader = get_heading(themed_app, "This subheader is awesome!")
+    link_container = subheader.get_by_test_id("stHeaderActionElements").locator("a")
     expect(link_container).to_have_css("visibility", "hidden")
-    header.hover()
+    subheader.hover()
     expect(link_container).to_have_css("visibility", "visible")
-    assert_snapshot(header, name="st_subheader-hover_with_visible_anchor")
+    assert_snapshot(subheader, name="st_subheader-hover_with_visible_anchor")
 
-    header = headers.nth(5)
-    link_container = header.get_by_test_id("stHeaderActionElements").locator("a")
+    # Test subheader with help and anchor on hover (exact match)
+    subheader_with_help = get_heading(themed_app, re.compile(r"^Subheader with help$"))
+    link_container = subheader_with_help.get_by_test_id(
+        "stHeaderActionElements"
+    ).locator("a")
     expect(link_container).to_have_css("visibility", "hidden")
-    header.hover()
+    subheader_with_help.hover()
     expect(link_container).to_have_css("visibility", "visible")
-    assert_snapshot(header, name="st_subheader-hover_with_help_and_anchor")
+    assert_snapshot(subheader_with_help, name="st_subheader-hover_with_help_and_anchor")
 
-    header = headers.nth(6)
-    link_container = header.get_by_test_id("stHeaderActionElements").locator("a")
+    # Test subheader with help and hidden anchor (no link)
+    subheader_hidden = get_heading(
+        themed_app, re.compile(r"^Subheader with help and hidden anchor$")
+    )
+    link_container = subheader_hidden.get_by_test_id("stHeaderActionElements").locator(
+        "a"
+    )
     expect(link_container).not_to_be_attached()
-    assert_snapshot(header, name="st_subheader-hover_with_help_and_hidden_anchor")
+    assert_snapshot(
+        subheader_hidden, name="st_subheader-hover_with_help_and_hidden_anchor"
+    )
 
 
 def test_links_are_rendered_correctly_snapshot(
@@ -220,7 +256,8 @@ def test_links_are_rendered_correctly_snapshot(
     assert_snapshot(link, name="st_header-title_with_link")
 
 
-_number_of_colors = 8
+# 9 colors: red, orange, yellow, blue, green, violet, gray, grey, rainbow
+_number_of_colors = 9
 
 
 @pytest.mark.parametrize("color_index", range(_number_of_colors))
@@ -259,15 +296,17 @@ def test_subheader_divider_snapshot(
 
 def test_help_tooltip_works(app: Page):
     """Test that the help tooltip is displayed on hover."""
-    header_with_help = _get_header_elements(app).nth(3)
-
     tooltip_text = "Some help tooltip"
+
+    # Use exact match to avoid matching "header with help and hidden anchor"
+    header_with_help = get_heading(app, re.compile(r"^header with help$"))
     expect_help_tooltip(app, header_with_help, tooltip_text)
 
-    subheader_with_help = _get_subheader_elements(app).nth(5)
+    # Use exact match to avoid matching "Subheader with help and hidden anchor"
+    subheader_with_help = get_heading(app, re.compile(r"^Subheader with help$"))
     expect_help_tooltip(app, subheader_with_help, tooltip_text)
 
-    title_with_help = _get_title_elements(app).nth(1)
+    title_with_help = get_heading(app, "This title is awesome too!")
     expect_help_tooltip(app, title_with_help, tooltip_text)
 
 
@@ -295,48 +334,90 @@ def test_heading_widths_snapshot(
 ):
     """Test that headings with different width configurations render correctly."""
 
-    # Get the width example elements (they appear at the end of the page)
     # Title width examples
-    title_400px = _get_title_elements(themed_app).filter(
-        has_text="Title with 400px width"
-    )
-    title_stretch = _get_title_elements(themed_app).filter(
-        has_text="Title with stretch width"
-    )
-    title_content = _get_title_elements(themed_app).filter(
-        has_text="Title with content width"
-    )
-
+    title_400px = get_heading(themed_app, "Title with 400px width")
+    title_400px.scroll_into_view_if_needed()
     assert_snapshot(title_400px, name="st_title-width_400px")
+
+    title_stretch = get_heading(themed_app, "Title with stretch width")
+    title_stretch.scroll_into_view_if_needed()
     assert_snapshot(title_stretch, name="st_title-width_stretch")
+
+    title_content = get_heading(themed_app, "Title with content width")
+    title_content.scroll_into_view_if_needed()
     assert_snapshot(title_content, name="st_title-width_content")
 
     # Header width examples
-    header_400px = _get_header_elements(themed_app).filter(
-        has_text="Header with 400px width"
-    )
-    header_stretch = _get_header_elements(themed_app).filter(
-        has_text="Header with stretch width"
-    )
-    header_content = _get_header_elements(themed_app).filter(
-        has_text="Header with content width"
-    )
-
+    header_400px = get_heading(themed_app, "Header with 400px width")
+    header_400px.scroll_into_view_if_needed()
     assert_snapshot(header_400px, name="st_header-width_400px")
+
+    header_stretch = get_heading(themed_app, "Header with stretch width")
+    header_stretch.scroll_into_view_if_needed()
     assert_snapshot(header_stretch, name="st_header-width_stretch")
+
+    header_content = get_heading(themed_app, "Header with content width")
+    header_content.scroll_into_view_if_needed()
     assert_snapshot(header_content, name="st_header-width_content")
 
     # Subheader width examples
-    subheader_300px = _get_subheader_elements(themed_app).filter(
-        has_text="Subheader with 300px width"
-    )
-    subheader_stretch = _get_subheader_elements(themed_app).filter(
-        has_text="Subheader with stretch width"
-    )
-    subheader_content = _get_subheader_elements(themed_app).filter(
-        has_text="Subheader with content width"
+    subheader_300px = get_heading(themed_app, "Subheader with 300px width")
+    subheader_300px.scroll_into_view_if_needed()
+    assert_snapshot(subheader_300px, name="st_subheader-width_300px")
+
+    subheader_stretch = get_heading(themed_app, "Subheader with stretch width")
+    subheader_stretch.scroll_into_view_if_needed()
+    assert_snapshot(subheader_stretch, name="st_subheader-width_stretch")
+
+    subheader_content = get_heading(themed_app, "Subheader with content width")
+    subheader_content.scroll_into_view_if_needed()
+    assert_snapshot(subheader_content, name="st_subheader-width_content")
+
+
+def test_title_text_alignment(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test st.title with text alignment."""
+    # Test center alignment with help tooltip
+    title_center = get_heading(app, "Centered Title")
+    title_center.scroll_into_view_if_needed()
+    expect(title_center).to_have_css("text-align", "center")
+    assert_snapshot(title_center, name="st_title-text_alignment_center_with_help")
+
+    # Test right alignment with help tooltip
+    title_right = get_heading(app, "Right Aligned Title")
+    title_right.scroll_into_view_if_needed()
+    expect(title_right).to_have_css("text-align", "right")
+    assert_snapshot(title_right, name="st_title-text_alignment_right_with_help")
+
+
+def test_header_text_alignment(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test st.header with text alignment."""
+    # Test center alignment with divider
+    header_center = get_heading(app, "Centered Header with longer text")
+    header_center.scroll_into_view_if_needed()
+    expect(header_center).to_have_css("text-align", "center")
+    assert_snapshot(header_center, name="st_header-text_alignment_center")
+
+    # Test right alignment with help tooltip
+    header_right = get_heading(app, "Right Aligned Header with longer text")
+    header_right.scroll_into_view_if_needed()
+    expect(header_right).to_have_css("text-align", "right")
+    assert_snapshot(header_right, name="st_header-text_alignment_right_with_help")
+
+
+def test_subheader_text_alignment(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test st.subheader with text alignment."""
+    # Test center alignment with help tooltip and divider
+    subheader_center = get_heading(app, "Centered Subheader")
+    subheader_center.scroll_into_view_if_needed()
+    expect(subheader_center).to_have_css("text-align", "center")
+    assert_snapshot(
+        subheader_center, name="st_subheader-text_alignment_center_with_help"
     )
 
-    assert_snapshot(subheader_300px, name="st_subheader-width_300px")
-    assert_snapshot(subheader_stretch, name="st_subheader-width_stretch")
-    assert_snapshot(subheader_content, name="st_subheader-width_content")
+    # Test justify alignment with help tooltip
+    subheader_justify = get_heading(app, "Justified Subheader with longer text")
+    subheader_justify.scroll_into_view_if_needed()
+    expect(subheader_justify).to_have_css("text-align", "justify")
+    assert_snapshot(
+        subheader_justify, name="st_subheader-text_alignment_justify_with_help"
+    )

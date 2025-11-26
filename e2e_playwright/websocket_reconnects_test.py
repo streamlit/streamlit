@@ -22,6 +22,7 @@ from e2e_playwright.shared.app_utils import (
     click_button,
     expect_connection_status,
     expect_markdown,
+    expect_script_state,
     get_checkbox,
 )
 
@@ -64,8 +65,13 @@ def test_reruns_script_when_interrupted_by_websocket_disconnect(
     # Click on the checkbox, but don't wait for the app to finish running.
     get_checkbox(app, "do something slow").locator("label").click()
 
+    # Wait for the script rerun to start.
+    expect_script_state(app, "running")
+
+    # Disconnect the websocket and wait for status to jump to CONNECTING.
     expect_connection_status(app, "CONNECTING", DISCONNECT_WEBSOCKET_ACTION)
 
+    # Wait for the app to connect again and finish running.
     wait_for_app_run(app)
     expect_markdown(app, "slow operations attempted: 2")
 

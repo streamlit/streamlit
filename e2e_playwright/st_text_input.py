@@ -102,3 +102,42 @@ st.text_input(
 
 st.text_input("text input 17 (width=200px)", "width test", width=200)
 st.text_input("text input 18 (width='stretch')", "width test", width="stretch")
+
+st.markdown("Dynamic text input:")
+
+if st.toggle("Update text input props"):
+    txt_value = st.text_input(
+        "Updated dynamic text input",
+        value="updated",
+        width=200,
+        help="updated help",
+        key="dynamic_text_input_with_key",
+        on_change=lambda a, param: print(
+            f"Updated text input - callback triggered: {a} {param}"
+        ),
+        args=("Updated text arg",),
+        kwargs={"param": "updated kwarg param"},
+        placeholder="updated placeholder",
+        autocomplete="updated autocomplete",
+        # max_chars is not yet supported for dynamic changes
+        # keeping it at the same value for now:
+        max_chars=100,
+    )
+    st.write("Updated text input value:", txt_value)
+else:
+    txt_value = st.text_input(
+        "Initial dynamic text input",
+        value="initial",
+        width="stretch",
+        help="initial help",
+        key="dynamic_text_input_with_key",
+        on_change=lambda a, param: print(
+            f"Initial text input - callback triggered: {a} {param}"
+        ),
+        args=("Initial text arg",),
+        kwargs={"param": "initial kwarg param"},
+        placeholder="initial placeholder",
+        autocomplete="initial autocomplete",
+        max_chars=100,
+    )
+    st.write("Initial text input value:", txt_value)

@@ -48,9 +48,25 @@ export const PING_MAXIMUM_RETRY_PERIOD_MS = 2000
 export const MAX_RETRIES_BEFORE_CLIENT_ERROR = 6
 
 /**
- * Timeout when attempting to connect to a websocket, in millis.
+ * Detect if we're on an Android device. This is used to adjust timeouts
+ * for Android Chrome where file pickers can keep the app backgrounded
+ * for extended periods.
  */
-export const WEBSOCKET_TIMEOUT_MS = 15 * 1000
+const isAndroidDevice = (): boolean => {
+  if (typeof navigator === "undefined") {
+    return false
+  }
+  return /Android/i.test(navigator.userAgent)
+}
+
+/**
+ * Timeout when attempting to connect to a websocket, in millis.
+ * Android devices get a longer timeout (60s vs 15s) because file pickers
+ * background the browser tab for extended periods, causing premature
+ * connection timeouts.
+ * See: https://github.com/streamlit/streamlit/issues/11419
+ */
+export const WEBSOCKET_TIMEOUT_MS = isAndroidDevice() ? 60 * 1000 : 15 * 1000
 
 /**
  * Ping timeout in millis.

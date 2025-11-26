@@ -16,17 +16,30 @@
 
 import { useCallback, useEffect, useRef } from "react"
 
+export type UseTimeoutReturn = {
+  clear: () => void
+  restart: () => void
+}
+
 /**
- * Call setTimeout with the passed callback and timeout in milliseconds.
- * The timeout can be cleared by calling the returned clear-function.
+ * Call setTimeout with the passed callback and timeout in milliseconds. The
+ * timeout can be cleared by calling the returned clear function or restarted
+ * by calling the returned restart function.
  *
- * A new timeout will be set when the passed timeoutMs changes.
+ * A new timeout will be set when the passed timeoutMs changes. If timeoutMs is
+ * null, no timeout will be set. If timeoutMs changes from null to a number, the
+ * timeout will start. If timeoutMs changes from a number to null, the timeout
+ * will be cleared.
  *
  * @param callback to be called when the timeout delay is over
- * @param timeoutMs the delay in milliseconds after which the timeout callback is called
- * @returns a memoized clear (stable reference across re-runs) function to stop the timeout
+ * @param timeoutMs the delay in milliseconds after which the timeout callback
+ * is called, or null to disable timeout
+ * @returns an object with clear and restart functions to control the timeout
  */
-function useTimeout(callback: () => void, timeoutMs: number): () => void {
+function useTimeout(
+  callback: () => void,
+  timeoutMs: number | null
+): UseTimeoutReturn {
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const callbackRef = useRef<() => void>(callback)
 
@@ -34,28 +47,44 @@ function useTimeout(callback: () => void, timeoutMs: number): () => void {
     callbackRef.current = callback
   }, [callback])
 
-  useEffect(() => {
-    timeoutRef.current = setTimeout(() => {
-      callbackRef.current()
-    }, timeoutMs)
-
-    return () => {
-      if (!timeoutRef.current) {
-        return
-      }
+  const setupTimeout = useCallback(() => {
+    // Clear any existing timeout
+    if (timeoutRef.current) {
       clearTimeout(timeoutRef.current)
       timeoutRef.current = null
     }
+
+    // Only set timeout if timeoutMs is not null
+    if (timeoutMs !== null) {
+      timeoutRef.current = setTimeout(() => {
+        callbackRef.current()
+      }, timeoutMs)
+    }
   }, [timeoutMs])
 
-  const clear = useCallback(() => {
-    if (!timeoutRef.current) {
-      return
+  useEffect(() => {
+    setupTimeout()
+
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current)
+        timeoutRef.current = null
+      }
     }
-    clearTimeout(timeoutRef.current)
+  }, [setupTimeout])
+
+  const clear = useCallback(() => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current)
+      timeoutRef.current = null
+    }
   }, [])
 
-  return clear
+  const restart = useCallback(() => {
+    setupTimeout()
+  }, [setupTimeout])
+
+  return { clear, restart }
 }
 
 export default useTimeout

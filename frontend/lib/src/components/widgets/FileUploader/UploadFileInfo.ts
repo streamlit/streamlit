@@ -14,13 +14,11 @@
  * limitations under the License.
  */
 
-import { CancelTokenSource } from "axios"
-
 import { IFileURLs } from "@streamlit/protobuf"
 
 export interface UploadingStatus {
   type: "uploading"
-  cancelToken: CancelTokenSource
+  abortController: AbortController
   progress: number
 }
 

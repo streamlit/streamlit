@@ -16,12 +16,14 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react"
 
-import { PickingInfo, ViewStateChangeParameters } from "@deck.gl/core"
-// eslint-disable-next-line import/no-unresolved
-import { TooltipContent } from "@deck.gl/core/dist/lib/tooltip"
+import {
+  type DeckProps,
+  PickingInfo,
+  ViewStateChangeParameters,
+} from "@deck.gl/core"
 import { parseToRgba } from "color2k"
 import JSON5 from "json5"
-import isEqual from "lodash/isEqual"
+import { isEqual } from "lodash-es"
 
 import { DeckGlJsonChart as DeckGlJsonChartProto } from "@streamlit/protobuf"
 
@@ -47,6 +49,14 @@ import {
   LAYER_TYPE_TO_FILL_FUNCTION,
 } from "./utils/colors"
 import { jsonConverter } from "./utils/jsonConverter"
+
+/**
+ * Extracted type from the DeckGL library since it is not exported correctly.
+ */
+type TooltipContent =
+  NonNullable<DeckProps["getTooltip"]> extends (info: PickingInfo) => infer R
+    ? R
+    : never
 
 type UseDeckGlShape = {
   createTooltip: (info: PickingInfo | null) => TooltipContent
@@ -156,7 +166,7 @@ function updateWidgetMgrState(
 
 export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
   const {
-    height: propsHeight,
+    height: fullScreenHeight,
     width: propsWidth,
     expanded: propsIsFullScreen,
   } = useRequiredContext(ElementFullscreenContext)
@@ -189,7 +199,7 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
     element,
     isFullScreen,
     shouldUseContainerWidth,
-    container: { height: propsHeight, width: propsWidth },
+    container: { height: fullScreenHeight, width: propsWidth },
     heightFallback:
       (viewState?.initialViewState as { height: number } | undefined)
         ?.height || theme.sizes.defaultMapHeight,
@@ -217,9 +227,7 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
   const parsedPydeckJson = useMemo(() => {
     return Object.freeze(JSON5.parse<ParsedDeckGlConfig>(element.json))
     // Only parse JSON when transitioning to/from fullscreen, the json changes, or theme changes
-    // TODO: Update to match React best practices
-    // eslint-disable-next-line react-hooks/react-compiler
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
   }, [isFullScreen, isLightTheme, element.json])
 
   const deck = useMemo<DeckObject>(() => {
@@ -381,7 +389,7 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
 
   const createTooltip = useCallback(
     (info: PickingInfo | null): TooltipContent => {
-      if (!info || !info.object || !tooltip) {
+      if (!info?.object || !tooltip) {
         return null
       }
 

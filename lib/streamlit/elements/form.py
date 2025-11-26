@@ -29,6 +29,7 @@ from streamlit.elements.lib.policies import (
     check_cache_replay_rules,
     check_session_state_rules,
 )
+from streamlit.elements.lib.utils import Key, to_key
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto import Block_pb2
 from streamlit.runtime.metrics_util import gather_metrics
@@ -243,11 +244,13 @@ class FormMixin:
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
+        key: Key | None = None,
         type: Literal["primary", "secondary", "tertiary"] = "secondary",
         icon: str | None = None,
         disabled: bool = False,
         use_container_width: bool | None = None,
         width: Width = "content",
+        shortcut: str | None = None,
     ) -> bool:
         r"""Display a form submit button.
 
@@ -279,6 +282,7 @@ class FormMixin:
 
             .. |st.markdown| replace:: ``st.markdown``
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
+
         help : str or None
             A tooltip that gets displayed when the button is hovered over. If
             this is ``None`` (default), no tooltip is displayed.
@@ -286,12 +290,21 @@ class FormMixin:
             The tooltip can optionally contain GitHub-flavored Markdown,
             including the Markdown directives described in the ``body``
             parameter of ``st.markdown``.
+
         on_click : callable
             An optional callback invoked when this button is clicked.
+
         args : list or tuple
             An optional list or tuple of args to pass to the callback.
+
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
+
+        key : str or int
+            An optional string or integer to use as the unique key for the widget.
+            If this is omitted, a key will be generated for the widget
+            based on its content. No two widgets may have the same key.
+
         type : "primary", "secondary", or "tertiary"
             An optional string that specifies the button type. This can be one
             of the following:
@@ -301,7 +314,7 @@ class FormMixin:
             - ``"secondary"`` (default): The button's background coordinates
               with the app's background color for normal emphasis.
             - ``"tertiary"``: The button is plain text without a border or
-              background for subtly.
+              background for subtlety.
 
         icon : str or None
             An optional emoji or icon to display next to the button label. If ``icon``
@@ -319,6 +332,9 @@ class FormMixin:
               Thumb Up icon. Find additional icons in the `Material Symbols
               <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
               font library.
+
+            - ``"spinner"``: Displays a spinner as an icon.
+
         disabled : bool
             Whether to disable the button. If this is ``False`` (default), the
             user can interact with the button. If this is ``True``, the button
@@ -329,11 +345,6 @@ class FormMixin:
             ``enter_to_submit=False``.
 
         use_container_width : bool
-                This parameter will be removed in a future version. Use the
-                ``width`` parameter instead. For ``use_container_width=True``,
-                use ``width="stretch"``. For ``use_container_width=False``,
-                use ``width="content"``.
-
             Whether to expand the button's width to fill its parent container.
             If ``use_container_width`` is ``False`` (default), Streamlit sizes
             the button to fit its contents. If ``use_container_width`` is
@@ -342,16 +353,39 @@ class FormMixin:
             In both cases, if the contents of the button are wider than the
             parent container, the contents will line wrap.
 
-        width : int, "stretch", or "content"
-            An optional width for the submit button. This can be one of the
-            following:
+            .. deprecated::
+                ``use_container_width`` is deprecated and will be removed in a
+                future release. For ``use_container_width=True``, use
+                ``width="stretch"``. For ``use_container_width=False``, use
+                ``width="content"``.
 
-            - An integer which corresponds to the desired button width in
-              pixels.
-            - ``"stretch"``: The button's width expands to fill its parent
+        width : "content", "stretch", or int
+            The width of the button. This can be one of the following:
+
+            - ``"content"`` (default): The width of the button matches the
+              width of its content, but doesn't exceed the width of the parent
               container.
-            - ``"content"`` (default): The button's width is set to fit its
-              contents.
+            - ``"stretch"``: The width of the button matches the width of the
+              parent container.
+            - An integer specifying the width in pixels: The button has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the button matches the width
+              of the parent container.
+
+        shortcut : str or None
+            An optional keyboard shortcut that triggers the submit button.
+            Provide a single alphanumeric key (e.g. ``"K"``, ``"4"``), a
+            function key (e.g. ``"F11"``), or a supported special key (e.g.
+            ``"Enter"``, ``"Esc"``), optionally combined with modifiers.
+
+            Examples: ``"Ctrl+K"``, ``"Cmd+Shift+O"``, ``"Mod+Enter"``.
+
+            .. note::
+                The keys ``"C"`` and ``"R"`` are reserved and cannot be used,
+                even with modifiers. ``"Ctrl"``, ``"Cmd"``, and ``"Mod"`` are
+                platform-dependent: they map to ``"Command"`` (⌘) on macOS and
+                ``"Control"`` on Windows/Linux. Punctuation keys (e.g. ``"."``,
+                ``","``) are not currently supported.
 
         Returns
         -------
@@ -381,6 +415,8 @@ class FormMixin:
             disabled=disabled,
             ctx=ctx,
             width=width,
+            key=key,
+            shortcut=shortcut,
         )
 
     def _form_submit_button(
@@ -391,14 +427,16 @@ class FormMixin:
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
+        key: Key | None = None,
         type: Literal["primary", "secondary", "tertiary"] = "secondary",
         icon: str | None = None,
         disabled: bool = False,
         ctx: ScriptRunContext | None = None,
         width: Width = "content",
+        shortcut: str | None = None,
     ) -> bool:
         form_id = current_form_id(self.dg)
-        submit_button_key = f"FormSubmitter:{form_id}-{label}"
+        submit_button_key = to_key(key) or f"FormSubmitter:{form_id}-{label}"
         return self.dg._button(
             label=label,
             key=submit_button_key,
@@ -412,6 +450,7 @@ class FormMixin:
             disabled=disabled,
             ctx=ctx,
             width=width,
+            shortcut=shortcut,
         )
 
     @property

@@ -46,8 +46,9 @@ def _create_selection_rectangle(
     canvas_start_pos: _MousePosition,
     canvas_end_pos: _MousePosition,
 ) -> None:
-    chart.scroll_into_view_if_needed()
     expect(chart).to_be_visible()
+    chart.scroll_into_view_if_needed()
+
     bounding_box = chart.bounding_box()
     assert bounding_box is not None
     canvas_start_x_px = bounding_box.get("x", 0)
@@ -64,58 +65,106 @@ def _create_selection_rectangle(
 
 
 def _click(app: Page, chart: Locator, click_position: _MousePosition) -> None:
-    chart.scroll_into_view_if_needed()
     expect(chart).to_be_visible()
+    chart.scroll_into_view_if_needed()
     chart.click(position={"x": click_position.x, "y": click_position.y})
     wait_for_app_run(app)
 
 
 def _get_selection_point_scatter_chart(app: Page) -> Locator:
-    return app.get_by_test_id("stVegaLiteChart").locator("canvas").nth(0)
+    return (
+        app.get_by_test_id("stVegaLiteChart")
+        .locator("[role='graphics-document']")
+        .nth(0)
+    )
 
 
 def _get_selection_interval_scatter_chart(app: Page) -> Locator:
-    return app.get_by_test_id("stVegaLiteChart").locator("canvas").nth(1)
+    return (
+        app.get_by_test_id("stVegaLiteChart")
+        .locator("[role='graphics-document']")
+        .nth(1)
+    )
 
 
 def _get_selection_interval_scatter_chart_tooltip(app: Page) -> Locator:
-    return app.get_by_test_id("stVegaLiteChart").locator("canvas").nth(2)
+    return (
+        app.get_by_test_id("stVegaLiteChart")
+        .locator("[role='graphics-document']")
+        .nth(2)
+    )
 
 
 def _get_selection_point_bar_chart(app: Page) -> Locator:
-    return app.get_by_test_id("stVegaLiteChart").locator("canvas").nth(3)
+    return (
+        app.get_by_test_id("stVegaLiteChart")
+        .locator("[role='graphics-document']")
+        .nth(3)
+    )
 
 
 def _get_selection_interval_bar_chart(app: Page) -> Locator:
-    return app.get_by_test_id("stVegaLiteChart").locator("canvas").nth(4)
+    return (
+        app.get_by_test_id("stVegaLiteChart")
+        .locator("[role='graphics-document']")
+        .nth(4)
+    )
 
 
 def _get_selection_point_area_chart(app: Page) -> Locator:
-    return app.get_by_test_id("stVegaLiteChart").locator("canvas").nth(5)
+    return (
+        app.get_by_test_id("stVegaLiteChart")
+        .locator("[role='graphics-document']")
+        .nth(5)
+    )
 
 
 def _get_selection_interval_area_chart(app: Page) -> Locator:
-    return app.get_by_test_id("stVegaLiteChart").locator("canvas").nth(6)
+    return (
+        app.get_by_test_id("stVegaLiteChart")
+        .locator("[role='graphics-document']")
+        .nth(6)
+    )
 
 
 def _get_selection_point_histogram(app: Page) -> Locator:
-    return app.get_by_test_id("stVegaLiteChart").locator("canvas").nth(7)
+    return (
+        app.get_by_test_id("stVegaLiteChart")
+        .locator("[role='graphics-document']")
+        .nth(7)
+    )
 
 
 def _get_selection_interval_histogram(app: Page) -> Locator:
-    return app.get_by_test_id("stVegaLiteChart").locator("canvas").nth(8)
+    return (
+        app.get_by_test_id("stVegaLiteChart")
+        .locator("[role='graphics-document']")
+        .nth(8)
+    )
 
 
 def _get_in_form_chart(app: Page) -> Locator:
-    return app.get_by_test_id("stVegaLiteChart").locator("canvas").nth(9)
+    return (
+        app.get_by_test_id("stVegaLiteChart")
+        .locator("[role='graphics-document']")
+        .nth(9)
+    )
 
 
 def _get_callback_chart(app: Page) -> Locator:
-    return app.get_by_test_id("stVegaLiteChart").locator("canvas").nth(10)
+    return (
+        app.get_by_test_id("stVegaLiteChart")
+        .locator("[role='graphics-document']")
+        .nth(10)
+    )
 
 
 def _get_in_fragment_chart(app: Page) -> Locator:
-    return app.get_by_test_id("stVegaLiteChart").locator("canvas").nth(11)
+    return (
+        app.get_by_test_id("stVegaLiteChart")
+        .locator("[role='graphics-document']")
+        .nth(11)
+    )
 
 
 def test_point_bar_chart_displays_selection_text(app: Page):
@@ -295,11 +344,11 @@ def _test_shift_click_point_selection_scatter_chart_displays_selection(
     chart.scroll_into_view_if_needed()
     chart.click(position={"x": 264, "y": 162})
     wait_for_app_run(app)
-    chart.click(position={"x": 310, "y": 175}, modifiers=["Shift"])
+    chart.click(position={"x": 310, "y": 175}, modifiers=["Shift"])  # ty: ignore[invalid-argument-type]
     wait_for_app_run(app)
-    chart.click(position={"x": 402, "y": 194}, modifiers=["Shift"])
+    chart.click(position={"x": 402, "y": 194}, modifiers=["Shift"])  # ty: ignore[invalid-argument-type]
     wait_for_app_run(app)
-    chart.click(position={"x": 181, "y": 94}, modifiers=["Shift"])
+    chart.click(position={"x": 181, "y": 94}, modifiers=["Shift"])  # ty: ignore[invalid-argument-type]
     wait_for_app_run(app)
 
     # move the mouse away so that we do not have any hover-menu effects on the chart when taking the screenshot.

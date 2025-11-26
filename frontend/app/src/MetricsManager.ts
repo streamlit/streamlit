@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import pick from "lodash/pick"
+import { pick } from "lodash-es"
 import { getLogger } from "loglevel"
 import { v4 as uuidv4 } from "uuid"
 

@@ -14,13 +14,11 @@
  * limitations under the License.
  */
 
-import merge from "lodash/merge"
-import mergeWith from "lodash/mergeWith"
+import { merge, mergeWith } from "lodash-es"
 
 import {
   convertRemToPx,
   EmotionTheme,
-  getBlue80,
   getDivergingColorsArray,
   getGray30,
   getGray70,
@@ -121,7 +119,7 @@ export function applyStreamlitTheme(config: any, theme: EmotionTheme): any {
     },
     mark: {
       tooltip: { content: "encoding" },
-      color: getBlue80(theme),
+      color: theme.colors.chartCategoricalColors[0],
     },
     bar: {
       binSpacing: convertRemToPx(theme.spacing.twoXS),

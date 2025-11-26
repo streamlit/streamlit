@@ -50,10 +50,22 @@ export const StyledDetails = styled.details<StyledDetailsProps>(
   })
 )
 
-export const StyledSummaryHeading = styled.span({
+export const StyledSummaryHeading = styled.span(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   flexGrow: 1,
+  minWidth: 0,
+  width: "100%",
+  maxWidth: "100%",
+  overflow: "hidden",
+  gap: theme.spacing.sm,
+}))
+
+export const StyledSummaryLabelWrapper = styled.div({
+  display: "flex",
+  width: "100%",
+  flexGrow: 1,
+  overflow: "hidden",
 })
 
 interface StyledSummaryProps {
@@ -66,6 +78,10 @@ export const StyledSummary = styled.summary<StyledSummaryProps>(
     position: "relative",
     display: "flex",
     width: "100%",
+    // Prevent chevron/user icon from overlapping content by ensuring
+    // children can shrink and the summary can clip excess inline overflow.
+    minWidth: 0,
+    overflow: "hidden",
     "&:focus": {
       outline: "none",
     },

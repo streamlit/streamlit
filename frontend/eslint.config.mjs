@@ -16,12 +16,13 @@
 
 import path from "path"
 import { fileURLToPath } from "url"
+import { createJiti } from "jiti"
 
 // Core ESLint and plugins
 import eslint from "@eslint/js"
 import tseslint from "typescript-eslint"
 import react from "eslint-plugin-react"
-import * as reactHooks from "eslint-plugin-react-hooks"
+import reactHooks from "eslint-plugin-react-hooks"
 import eslintReact from "@eslint-react/eslint-plugin"
 import importPlugin from "eslint-plugin-import"
 import eslintPluginPrettierRecommended from "eslint-plugin-prettier/recommended"
@@ -29,9 +30,8 @@ import lodash from "eslint-plugin-lodash"
 import vitest from "@vitest/eslint-plugin"
 import testingLibrary from "eslint-plugin-testing-library"
 import noRelativeImportPaths from "eslint-plugin-no-relative-import-paths"
-import streamlitCustom from "eslint-plugin-streamlit-custom"
 import globals from "globals"
-import { globalIgnores } from "eslint/config"
+import { defineConfig, globalIgnores } from "eslint/config"
 import jsxA11y from "eslint-plugin-jsx-a11y"
 
 // Import other configs
@@ -40,11 +40,65 @@ import jsxA11y from "eslint-plugin-jsx-a11y"
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
-export default tseslint.config([
+// This is to support our custom rules, which are written in TypeScript,
+// but need to be imported as JS to work in ESLint.
+const jiti = createJiti(import.meta.url)
+const streamlitCustom = await jiti.import(
+  path.resolve(__dirname, "./eslint-plugin-streamlit-custom/src/index.ts"),
+  { default: true }
+)
+
+/**
+ * Helper to create the no-restricted-imports rule config.
+ *
+ * @param {Object[]} additionalPatterns - Extra "patterns" to restrict (merged with the base rules).
+ * @param {boolean} isTestFile - Whether to apply the relaxed rules for test files.
+ */
+export const getNoRestrictedImports = (
+  additionalPatterns = [],
+  isTestFile = false
+) => {
+  const restrictedImportPaths = [
+    {
+      name: "timezone-mock",
+      message: "Please use the withTimezones test harness instead",
+    },
+    {
+      name: "@emotion/react",
+      message:
+        "Please use the useEmotionTheme hook instead of useTheme for type-safety",
+      importNames: ["useTheme"],
+    },
+    {
+      name: "axios",
+      importNames: ["CancelToken"],
+      message: "Please use the `AbortController` API instead of `CancelToken`",
+    },
+  ]
+
+  const basePaths = isTestFile
+    ? restrictedImportPaths
+    : [
+        ...restrictedImportPaths,
+        {
+          name: "@streamlit/lib/testing",
+          message: "Test utilities must stay in test files.",
+        },
+      ]
+  return [
+    "error",
+    {
+      paths: [...basePaths],
+      patterns: [...additionalPatterns],
+    },
+  ]
+}
+
+export default defineConfig([
   // Base recommended configs
   eslint.configs.recommended,
   tseslint.configs.recommendedTypeChecked,
-  reactHooks.configs.recommended,
+  reactHooks.configs.flat.recommended,
   eslintReact.configs["recommended-type-checked"],
   importPlugin.flatConfigs.recommended,
   eslintPluginPrettierRecommended,
@@ -96,17 +150,12 @@ export default tseslint.config([
       "react/prop-types": "off",
       // We don't escape entities
       "react/no-unescaped-entities": "off",
-      // Opting into the latest react-compiler rules
-      // @see https://react.dev/blog/2025/04/21/react-compiler-rc
-      "react-hooks/react-compiler": "error",
       // We do want to discourage the usage of flushSync
       "@eslint-react/dom/no-flush-sync": "error",
       // This was giving false positives
       "@eslint-react/no-unused-class-component-members": "off",
       // This was giving false positives
       "@eslint-react/naming-convention/use-state": "off",
-      // Helps us catch functions written as if they are hooks, but are not.
-      "@eslint-react/hooks-extra/no-useless-custom-hooks": "error",
       // Turning off for now until we have clearer guidance on how to fix existing usages
       "@eslint-react/hooks-extra/no-direct-set-state-in-use-effect": "off",
       // We don't want to warn about empty fragments
@@ -162,6 +211,8 @@ export default tseslint.config([
       ],
       // We want this on
       "@typescript-eslint/no-non-null-assertion": "error",
+      // Prefer optional chaining over && chains
+      "@typescript-eslint/prefer-optional-chain": "error",
       // Permit for-of loops
       "no-restricted-syntax": [
         "error",
@@ -203,6 +254,11 @@ export default tseslint.config([
           object: "window",
           property: "innerHeight",
           message: "Please use the `useWindowDimensionsContext` hook instead.",
+        },
+        {
+          object: "navigator",
+          property: "clipboard",
+          message: "Please use the `useCopyToClipboard` hook instead.",
         },
       ],
       // Imports should be `import "./FooModule"`, not `import "./FooModule.js"`
@@ -285,28 +341,12 @@ export default tseslint.config([
       // We only turn this rule on for certain directories
       "streamlit-custom/enforce-memo": "off",
       "streamlit-custom/no-force-reflow-access": "error",
-      "no-restricted-imports": [
-        "error",
-        {
-          paths: [
-            {
-              name: "timezone-mock",
-              message: "Please use the withTimezones test harness instead",
-            },
-            {
-              name: "@emotion/react",
-              message:
-                "Please use the useEmotionTheme hook instead of useTheme for type-safety",
-              importNames: ["useTheme"],
-            },
-          ],
-        },
-      ],
+      "no-restricted-imports": getNoRestrictedImports(),
       // React configuration
       "react/jsx-uses-react": "off",
       "react/react-in-jsx-scope": "off",
       // React hooks rules
-      ...reactHooks.configs.recommended.rules,
+      ...reactHooks.configs.flat.recommended.rules,
       // jsx-a11y rules
       ...jsxA11y.flatConfigs.recommended.rules,
       // prohibit autoFocus prop
@@ -344,6 +384,7 @@ export default tseslint.config([
 
       // Testing library rules
       "testing-library/prefer-user-event": "error",
+      "no-restricted-imports": getNoRestrictedImports([], true),
     },
   },
   // Theme files specific configuration

@@ -14,11 +14,13 @@
 
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING
 
+import pytest
 from playwright.sync_api import expect
 
-from e2e_playwright.conftest import IframedPage, wait_for_app_run
+from e2e_playwright.conftest import IframedPage, rerun_app, wait_for_app_run
 from e2e_playwright.shared.app_utils import expect_no_skeletons, goto_app
 
 if TYPE_CHECKING:
@@ -37,7 +39,7 @@ def is_expected_error(
 
     # There is an expected error with pydeck and firefox related to WebGL rendering
     # This seems to be an issue with firefox used with playwright:
-    if "o is null undefined" in msg.text and browser_name == "firefox":
+    if re.search(r"deck:.*is null undefined", msg.text) and browser_name == "firefox":
         return True
 
     # TODO(lukasmasuch): Investigate why firefox is running into this eval issue:
@@ -139,3 +141,12 @@ def test_mega_tester_app_in_iframe(iframed_app: IframedPage, browser_name: str):
 
     # There should be no unexpected console errors:
     assert not console_errors, "Console errors were logged " + str(console_errors)
+
+
+@pytest.mark.performance
+@pytest.mark.repeat(5)  # only repeat 5 times since otherwise it would take too long
+def test_mega_tester_app_rendering_performance(app: Page):
+    """Test the performance of the mega tester app rendering."""
+    # Rerun the app 5 times:
+    for _ in range(5):
+        rerun_app(app)

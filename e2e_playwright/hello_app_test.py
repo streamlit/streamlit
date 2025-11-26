@@ -18,6 +18,7 @@ from e2e_playwright.conftest import (
     ImageCompareFunction,
     wait_for_app_run,
 )
+from e2e_playwright.shared.vega_utils import assert_vega_chart_height
 
 
 def navigate_to_page(app: Page, index: int):
@@ -75,9 +76,7 @@ def test_plotting_demo_page(app: Page, assert_snapshot: ImageCompareFunction) ->
     # and additional timeout
     expect(app.get_by_test_id("stText")).to_contain_text("100% complete", timeout=15000)
     expect(app.get_by_test_id("stProgress")).not_to_be_visible()
-    expect(app.get_by_test_id("stVegaLiteChart").locator("canvas")).to_have_attribute(
-        "height", "350"
-    )
+    assert_vega_chart_height(app.get_by_test_id("stVegaLiteChart"), 350)
 
     assert_snapshot(app, name="hello_app-plotting_demo_page")
 
@@ -90,9 +89,11 @@ def test_mapping_demo_page(app: Page) -> None:
     check_page_icon(app, "public", 3)
     # We add an additional timeout here since sometimes the loading of
     # the map takes a bit longer (probably because of the map token request).
-    expect(app.get_by_test_id("stDeckGlJsonChart")).to_have_attribute(
-        "height", "31.25rem", timeout=10000
-    )
+    expect(
+        app.get_by_test_id("stElementContainer").filter(
+            has=app.get_by_test_id("stDeckGlJsonChart")
+        )
+    ).to_have_css("height", "500px", timeout=10000)
 
     # The snapshot test here is flaky, the map doesn't seem to always result
     # in the same image.
@@ -106,9 +107,7 @@ def _load_dataframe_demo_page(app: Page):
     check_page_icon(app, "table", 1)
     expect(app.get_by_test_id("stMultiSelect")).to_be_visible()
     expect(app.get_by_test_id("stDataFrame")).to_be_visible()
-    expect(app.get_by_test_id("stVegaLiteChart").locator("canvas")).to_have_attribute(
-        "height", "350"
-    )
+    assert_vega_chart_height(app.get_by_test_id("stVegaLiteChart"), 350)
 
 
 def test_dataframe_demo_page(app: Page, assert_snapshot: ImageCompareFunction) -> None:

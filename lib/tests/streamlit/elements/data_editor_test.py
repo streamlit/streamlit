@@ -53,6 +53,10 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.data_test_cases import SHARED_TEST_CASES, CaseMetadata
+from tests.streamlit.elements.layout_test_utils import (
+    HeightConfigFields,
+    WidthConfigFields,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -134,6 +138,26 @@ class DataEditorUtilTest(unittest.TestCase):
                 ColumnDataKind.TIMEDELTA,
                 pd.Timedelta(100000),
             ),
+            (
+                [1, 2, 3],
+                ColumnDataKind.LIST,
+                [1, 2, 3],
+            ),
+            (
+                ("1", "2", "3"),
+                ColumnDataKind.LIST,
+                ["1", "2", "3"],
+            ),
+            (
+                "foo",
+                ColumnDataKind.LIST,
+                ["foo"],
+            ),
+            (
+                ["foo"],
+                ColumnDataKind.EMPTY,
+                ["foo"],
+            ),
         ]
     )
     def test_parse_value(
@@ -200,12 +224,25 @@ class DataEditorUtilTest(unittest.TestCase):
                     datetime.datetime.now(),
                     datetime.datetime.now(),
                 ],
+                "col5": [["x"], ["y"], ["z"]],
             }
         )
 
         added_rows: list[dict[str, Any]] = [
-            {"col1": 10, "col2": "foo", "col3": False, "col4": "2020-03-20T14:28:23"},
-            {"col1": 11, "col2": "bar", "col3": True, "col4": "2023-03-20T14:28:23"},
+            {
+                "col1": 10,
+                "col2": "foo",
+                "col3": False,
+                "col4": "2020-03-20T14:28:23",
+                "col5": ["x", "y"],
+            },
+            {
+                "col1": 11,
+                "col2": "bar",
+                "col3": True,
+                "col4": "2023-03-20T14:28:23",
+                "col5": ["z"],
+            },
         ]
 
         _apply_row_additions(
@@ -213,6 +250,9 @@ class DataEditorUtilTest(unittest.TestCase):
         )
 
         assert len(df) == 5
+        assert df.loc[3, "col5"] == ["x", "y"]
+        assert df.loc[4, "col5"] == ["z"]
+        assert pd.api.types.is_bool_dtype(df["col3"])
 
     def test_apply_row_deletions(self):
         """Test applying row deletions to a DataFrame."""
@@ -501,11 +541,19 @@ class DataEditorTest(DeltaGeneratorTestCase):
         df = pd.DataFrame({"a": [1, 2, 3]})
         st.data_editor(df)
 
-        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        # Get the element from the queue
+        el = self.get_delta_from_queue().new_element
+        proto = el.arrow_data_frame
         pd.testing.assert_frame_equal(convert_arrow_bytes_to_pandas_df(proto.data), df)
 
-        assert proto.use_container_width
-        assert proto.width == 0
+        # Test default width configuration (should be 'stretch')
+        assert (
+            el.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.USE_STRETCH.value
+        )
+        assert el.width_config.use_stretch is True
+
+        # Test other default values
         assert proto.height == 0
         assert proto.editing_mode == ArrowProto.EditingMode.FIXED
         assert proto.selection_mode == []
@@ -518,6 +566,7 @@ class DataEditorTest(DeltaGeneratorTestCase):
         assert proto.id != ""
         # Row height should not be set if not specified
         assert not proto.HasField("row_height")
+        assert not proto.HasField("placeholder")
 
     def test_just_disabled_true(self):
         """Test that it can be called with disabled=True param."""
@@ -537,11 +586,18 @@ class DataEditorTest(DeltaGeneratorTestCase):
         """Test that it can be called with width and height."""
         st.data_editor(pd.DataFrame(), width=300, height=400)
 
-        proto = self.get_delta_from_queue().new_element.arrow_data_frame
-        assert proto.width == 300
-        assert proto.height == 400
-        # Uses false as default for use_container_width in this case
-        assert not proto.use_container_width
+        # Get the element from the queue
+        el = self.get_delta_from_queue().new_element
+
+        # Test width configuration (should be pixel width)
+        assert (
+            el.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.PIXEL_WIDTH.value
+        )
+        assert el.width_config.pixel_width == 300
+
+        assert el.height_config.WhichOneof("height_spec") == "pixel_height"
+        assert el.height_config.pixel_height == 400
 
     def test_num_rows_fixed(self):
         """Test that it can be called with num_rows fixed."""
@@ -571,12 +627,62 @@ class DataEditorTest(DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.arrow_data_frame
         assert proto.row_height == 100
 
-    def test_just_use_container_width(self):
-        """Test that it can be called with use_container_width."""
-        st.data_editor(pd.DataFrame(), use_container_width=False)
+    def test_placeholder_parameter(self):
+        """Test that it can be called with placeholder."""
+        st.data_editor(pd.DataFrame(), placeholder="N/A")
 
         proto = self.get_delta_from_queue().new_element.arrow_data_frame
-        assert not proto.use_container_width
+        assert proto.placeholder == "N/A"
+
+    def test_just_use_container_width(self):
+        """Test that use_container_width parameter works and shows deprecation warning."""
+        with patch(
+            "streamlit.elements.widgets.data_editor.show_deprecation_warning"
+        ) as mock_warning:
+            st.data_editor(pd.DataFrame(), use_container_width=True)
+
+            # Check deprecation warning is shown
+            mock_warning.assert_called_once()
+            assert "use_container_width" in mock_warning.call_args[0][0]
+
+        el = self.get_delta_from_queue().new_element
+        # When use_container_width=True, it should set width='stretch'
+        assert (
+            el.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.USE_STRETCH.value
+        )
+        assert el.width_config.use_stretch is True
+
+    def test_use_container_width_false(self):
+        """Test use_container_width=False sets width='content'."""
+        with patch(
+            "streamlit.elements.widgets.data_editor.show_deprecation_warning"
+        ) as mock_warning:
+            st.data_editor(pd.DataFrame({"a": [1, 2, 3]}), use_container_width=False)
+
+            # Check deprecation warning is shown
+            mock_warning.assert_called_once()
+
+        el = self.get_delta_from_queue().new_element
+        # When use_container_width=False, it should set width='content'
+        assert (
+            el.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.USE_CONTENT.value
+        )
+        assert el.width_config.use_content is True
+
+    def test_use_container_width_false_with_integer_width(self):
+        """Test use_container_width=False with integer width preserves the integer."""
+        with patch("streamlit.elements.widgets.data_editor.show_deprecation_warning"):
+            st.data_editor(pd.DataFrame(), width=400, use_container_width=False)
+
+        el = self.get_delta_from_queue().new_element
+        # When use_container_width=False with integer width, keep the integer width
+        assert (
+            el.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.PIXEL_WIDTH.value
+        )
+        assert el.width_config.pixel_width == 400
 
     def test_disable_individual_columns(self):
         """Test that disable can be used to disable individual columns."""
@@ -631,6 +737,20 @@ class DataEditorTest(DeltaGeneratorTestCase):
 
         proto = self.get_delta_from_queue().new_element.arrow_data_frame
         assert proto.columns == json.dumps({INDEX_IDENTIFIER: {"hidden": False}})
+
+    @patch("streamlit.elements.widgets.data_editor._LOGGER")
+    def test_hide_index_true_dynamic_non_range_index_logs_warning(
+        self, mock_logger: MagicMock
+    ):
+        """Test that hide_index=True with dynamic rows and non-range index logs a warning."""
+        df = pd.DataFrame({"a": [1, 2]}, index=["row_0", "row_1"])
+
+        st.data_editor(df, hide_index=True, num_rows="dynamic")
+
+        mock_logger.warning.assert_called_once()
+        warning_message = mock_logger.warning.call_args[0][0]
+        assert "hide_index=True" in warning_message
+        assert "num_rows='dynamic'" in warning_message
 
     @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
     def test_inside_form(self):
@@ -938,3 +1058,63 @@ class DataEditorTest(DeltaGeneratorTestCase):
         el = self.get_delta_from_queue(-2).new_element.exception
         assert el.type == "CachedWidgetWarning"
         assert el.is_warning
+
+    def test_width_content(self):
+        """Test that width='content' sets widthConfig correctly."""
+        st.data_editor(pd.DataFrame({"a": [1, 2, 3]}), width="content")
+
+        el = self.get_delta_from_queue().new_element
+        assert (
+            el.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.USE_CONTENT.value
+        )
+        assert el.width_config.use_content is True
+
+    def test_width_stretch_explicit(self):
+        """Test that width='stretch' sets widthConfig correctly."""
+        st.data_editor(pd.DataFrame({"a": [1, 2, 3]}), width="stretch")
+
+        el = self.get_delta_from_queue().new_element
+        assert (
+            el.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.USE_STRETCH.value
+        )
+        assert el.width_config.use_stretch is True
+
+    def test_height_auto_default(self):
+        """Test that default height='auto' doesn't set heightConfig."""
+        st.data_editor(pd.DataFrame({"a": [1, 2, 3]}))
+
+        el = self.get_delta_from_queue().new_element
+        # height="auto" is the default and shouldn't set heightConfig
+        assert el.height_config.WhichOneof("height_spec") is None
+
+    def test_height_integer(self):
+        """Test that integer height sets heightConfig correctly."""
+        st.data_editor(pd.DataFrame({"a": [1, 2, 3]}), height=500)
+
+        el = self.get_delta_from_queue().new_element
+        assert el.height_config.WhichOneof("height_spec") == "pixel_height"
+        assert el.height_config.pixel_height == 500
+
+    def test_height_stretch(self):
+        """Test that height='stretch' sets heightConfig correctly."""
+        st.data_editor(pd.DataFrame({"a": [1, 2, 3]}), height="stretch")
+
+        el = self.get_delta_from_queue().new_element
+        assert (
+            el.height_config.WhichOneof("height_spec")
+            == HeightConfigFields.USE_STRETCH.value
+        )
+        assert el.height_config.use_stretch is True
+
+    def test_height_content(self):
+        """Test that height='content' sets heightConfig correctly."""
+        st.data_editor(pd.DataFrame({"a": [1, 2, 3]}), height="content")
+
+        el = self.get_delta_from_queue().new_element
+        assert (
+            el.height_config.WhichOneof("height_spec")
+            == HeightConfigFields.USE_CONTENT.value
+        )
+        assert el.height_config.use_content is True

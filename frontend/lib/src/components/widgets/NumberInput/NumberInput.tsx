@@ -19,18 +19,17 @@ import React, {
   ReactElement,
   useCallback,
   useEffect,
-  useMemo,
   useRef,
   useState,
 } from "react"
 
 import { Minus, Plus } from "@emotion-icons/open-iconic"
 import { Input as UIInput } from "baseui/input"
-import uniqueId from "lodash/uniqueId"
+import { uniqueId } from "lodash-es"
 
 import { NumberInput as NumberInputProto } from "@streamlit/protobuf"
 
-import Icon, { DynamicIcon } from "~lib/components/shared/Icon"
+import Icon, { DynamicIcon, isMaterialIcon } from "~lib/components/shared/Icon"
 import InputInstructions from "~lib/components/shared/InputInstructions/InputInstructions"
 import { Placement } from "~lib/components/shared/Tooltip"
 import TooltipIcon from "~lib/components/shared/TooltipIcon"
@@ -39,7 +38,7 @@ import {
   WidgetLabel,
 } from "~lib/components/widgets/BaseWidget"
 import { useFormClearHelper } from "~lib/components/widgets/Form"
-import { useCalculatedWidth } from "~lib/hooks/useCalculatedWidth"
+import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { convertRemToPx } from "~lib/theme"
 import {
@@ -90,7 +89,7 @@ const NumberInput: React.FC<Props> = ({
     max,
   } = element
 
-  const [width, elementRef] = useCalculatedWidth()
+  const { width, elementRef } = useCalculatedDimensions()
 
   const [step, setStep] = useState<number>(() => getStep(element))
   const initialValue = getInitialValue({ element, widgetMgr })
@@ -100,14 +99,14 @@ const NumberInput: React.FC<Props> = ({
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null)
   const id = useRef(uniqueId("number_input_"))
 
-  const formattedValue = useMemo(() => {
-    return formatValue({
-      value,
+  const [formattedValue, setFormattedValue] = useState<string | null>(() =>
+    formatValue({
+      value: initialValue,
       dataType: elementDataType,
       format: elementFormat,
       step,
     })
-  }, [value, elementDataType, elementFormat, step])
+  )
 
   const canDec = canDecrement(value, step, min)
   const canInc = canIncrement(value, step, max)
@@ -125,6 +124,24 @@ const NumberInput: React.FC<Props> = ({
   useEffect(() => {
     setStep(getStep({ step: element.step, dataType: element.dataType }))
   }, [element.dataType, element.step])
+
+  // Update the formatted value if format related props changes
+  useEffect(() => {
+    // Only update if the user isn't currently actively editing:
+    if (!dirty) {
+      setFormattedValue(
+        formatValue({
+          value,
+          dataType: elementDataType,
+          format: elementFormat,
+          step,
+        })
+      )
+    }
+    // We only want to reformat the value if any of the formatting
+    // related parameters change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
+  }, [elementDataType, elementFormat, step])
 
   const commitValue = useCallback(
     ({
@@ -162,6 +179,14 @@ const NumberInput: React.FC<Props> = ({
 
         setDirty(false)
         setValue(newValue)
+        setFormattedValue(
+          formatValue({
+            value: newValue,
+            dataType: elementDataType,
+            format: elementFormat,
+            step,
+          })
+        )
       }
     },
     [
@@ -170,10 +195,12 @@ const NumberInput: React.FC<Props> = ({
       inputRef,
       widgetMgr,
       fragmentId,
+      step,
       elementDataType,
       elementId,
       elementFormId,
       elementDefault,
+      elementFormat,
     ]
   )
 
@@ -192,8 +219,16 @@ const NumberInput: React.FC<Props> = ({
     const { value: elementValue } = element
     element.setValue = false
     setValue(elementValue ?? null)
+    setFormattedValue(
+      formatValue({
+        value: elementValue ?? null,
+        dataType: elementDataType,
+        format: elementFormat,
+        step,
+      })
+    )
     commitValue({ value: elementValue ?? null, source: { fromUi: false } })
-  }, [element, commitValue])
+  }, [element, step, commitValue, elementDataType, elementFormat])
 
   // on component mount, we want to update the value from protobuf if setValue is true, otherwise commit current value
   useEffect(() => {
@@ -221,9 +256,7 @@ const NumberInput: React.FC<Props> = ({
     // I don't want to run this effect on every render, only on mount.
     // Additionally, it's okay if commitValue changes, because we only call
     // it once in the beginning anyways.
-    // TODO: Update to match React best practices
-    // eslint-disable-next-line react-hooks/react-compiler
-    /* eslint-disable react-hooks/exhaustive-deps */
+    /* eslint-disable react-hooks/exhaustive-deps -- TODO: Update to match React best practices */
   }, [])
 
   // update from protobuf whenever component updates if element.setValue is truthy
@@ -253,6 +286,7 @@ const NumberInput: React.FC<Props> = ({
     if (targetValue === "") {
       setDirty(true)
       setValue(null)
+      setFormattedValue(null)
     } else {
       let numValue: number
 
@@ -264,6 +298,7 @@ const NumberInput: React.FC<Props> = ({
 
       setDirty(true)
       setValue(numValue)
+      setFormattedValue(targetValue)
     }
   }
 
@@ -313,11 +348,6 @@ const NumberInput: React.FC<Props> = ({
     },
     [dirty, value, commitValue, widgetMgr, elementFormId, fragmentId]
   )
-
-  // Material icons need to be larger to render similar size of emojis,
-  // and we change their text color
-  const isMaterialIcon = icon?.startsWith(":material")
-  const dynamicIconSize = isMaterialIcon ? "lg" : "base"
 
   // Adjust breakpoint for icon so the total width of the input element
   // is same when input controls hidden
@@ -375,7 +405,7 @@ const NumberInput: React.FC<Props> = ({
               <DynamicIcon
                 data-testid="stNumberInputIcon"
                 iconValue={element.icon}
-                size={dynamicIconSize}
+                size="lg"
               />
             )
           }
@@ -391,7 +421,7 @@ const NumberInput: React.FC<Props> = ({
                 overrides: {
                   Svg: {
                     style: {
-                      color: theme.colors.darkGray,
+                      color: theme.colors.grayTextColor,
                       // setting this width and height makes the clear-icon align with dropdown arrows of other input fields
                       padding: theme.spacing.threeXS,
                       height: theme.sizes.clearIconSize,
@@ -457,7 +487,9 @@ const NumberInput: React.FC<Props> = ({
                 // Keeps emoji icons from being cut off on the right
                 minWidth: theme.iconSizes.lg,
                 // Material icons color changed as inactionable
-                color: isMaterialIcon ? theme.colors.fadedText60 : "inherit",
+                color: isMaterialIcon(icon)
+                  ? theme.colors.fadedText60
+                  : "inherit",
               },
             },
           }}
@@ -474,7 +506,7 @@ const NumberInput: React.FC<Props> = ({
               <Icon
                 content={Minus}
                 size="xs"
-                color={canDec ? "inherit" : theme.colors.disabled}
+                color={canDec ? "inherit" : theme.colors.fadedText40}
               />
             </StyledInputControl>
             <StyledInputControl
@@ -486,7 +518,7 @@ const NumberInput: React.FC<Props> = ({
               <Icon
                 content={Plus}
                 size="xs"
-                color={canInc ? "inherit" : theme.colors.disabled}
+                color={canInc ? "inherit" : theme.colors.fadedText40}
               />
             </StyledInputControl>
           </StyledInputControls>

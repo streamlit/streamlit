@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import { waitFor } from "@testing-library/dom"
+
 import { PlotlyChart as PlotlyChartProto } from "@streamlit/protobuf"
 
 import { mockTheme } from "~lib/mocks/mockTheme"
@@ -169,6 +171,7 @@ describe("PlotlyChart utils", () => {
             pointIndex: 1,
             data: { legendgroup: "group1" },
             pointIndices: [1],
+            customdata: [10, null, { extraInfo: 7 }],
           },
         ],
         // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
@@ -180,7 +183,7 @@ describe("PlotlyChart utils", () => {
       handleSelection(event, widgetMgr, proto, mockFragmentId)
       expect(widgetMgr.setStringValue).toHaveBeenCalledWith(
         { id: "plotly_chart", selectionMode: [0, 1, 2] },
-        '{"selection":{"points":[{"point_index":1,"point_indices":[1],"legendgroup":"group1"}],"point_indices":[1],"box":[],"lasso":[]}}',
+        '{"selection":{"points":[{"point_index":1,"point_indices":[1],"customdata":[10,null,{"extra_info":7}],"legendgroup":"group1"}],"point_indices":[1],"box":[],"lasso":[]}}',
         { fromUi: true },
         "testFragment"
       )
@@ -390,7 +393,7 @@ describe("PlotlyChart utils", () => {
   })
 
   describe("sendEmptySelection", () => {
-    it("sets empty selection state", () => {
+    it("sets empty selection state", async () => {
       const sendRerunBackMsg = vi.fn()
       const widgetMgr = new WidgetStateManager({
         sendRerunBackMsg,
@@ -406,24 +409,26 @@ describe("PlotlyChart utils", () => {
         '{"selection":{"points":[],"point_indices":[],"box":[],"lasso":[]}}'
       )
 
-      // Verify rerun message is sent with correct widget states
-      expect(sendRerunBackMsg).toHaveBeenCalledWith(
-        {
-          widgets: [
-            {
-              id: "plotly_chart",
-              stringValue:
-                '{"selection":{"points":[],"point_indices":[],"box":[],"lasso":[]}}',
-            },
-          ],
-        },
-        undefined,
-        undefined,
-        undefined
-      )
+      await waitFor(() => {
+        // Verify rerun message is sent with correct widget states
+        expect(sendRerunBackMsg).toHaveBeenCalledWith(
+          {
+            widgets: [
+              {
+                id: "plotly_chart",
+                stringValue:
+                  '{"selection":{"points":[],"point_indices":[],"box":[],"lasso":[]}}',
+              },
+            ],
+          },
+          undefined,
+          undefined,
+          undefined
+        )
+      })
     })
 
-    it("sets empty selection state and sends rerun with fragmentId", () => {
+    it("sets empty selection state and sends rerun with fragmentId", async () => {
       const sendRerunBackMsg = vi.fn()
       const widgetMgr = new WidgetStateManager({
         sendRerunBackMsg,
@@ -441,20 +446,22 @@ describe("PlotlyChart utils", () => {
       )
 
       // Verify rerun message is sent with correct widget states and fragmentId
-      expect(sendRerunBackMsg).toHaveBeenCalledWith(
-        {
-          widgets: [
-            {
-              id: "plotly_chart",
-              stringValue:
-                '{"selection":{"points":[],"point_indices":[],"box":[],"lasso":[]}}',
-            },
-          ],
-        },
-        fragmentId,
-        undefined,
-        undefined
-      )
+      await waitFor(() => {
+        expect(sendRerunBackMsg).toHaveBeenCalledWith(
+          {
+            widgets: [
+              {
+                id: "plotly_chart",
+                stringValue:
+                  '{"selection":{"points":[],"point_indices":[],"box":[],"lasso":[]}}',
+              },
+            ],
+          },
+          fragmentId,
+          undefined,
+          undefined
+        )
+      })
     })
   })
 })

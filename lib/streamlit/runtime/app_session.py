@@ -20,7 +20,7 @@ import os
 import sys
 import uuid
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Callable, Final
+from typing import TYPE_CHECKING, Any, Final
 
 from google.protobuf.json_format import ParseDict
 
@@ -45,12 +45,15 @@ from streamlit.runtime.metrics_util import Installation
 from streamlit.runtime.pages_manager import PagesManager
 from streamlit.runtime.scriptrunner import RerunData, ScriptRunner, ScriptRunnerEvent
 from streamlit.runtime.secrets import secrets_singleton
+from streamlit.runtime.theme_util import parse_fonts_with_source
 from streamlit.string_util import to_snake_case
 from streamlit.version import STREAMLIT_VERSION_STRING
 from streamlit.watcher import LocalSourcesWatcher
 
 if TYPE_CHECKING:
-    from streamlit.proto.BackMsg_pb2 import BackMsg
+    from collections.abc import Callable
+
+    from streamlit.proto.BackMsg_pb2 import BackMsg, DeferredFileRequest
     from streamlit.runtime.script_data import ScriptData
     from streamlit.runtime.scriptrunner.script_cache import ScriptCache
     from streamlit.runtime.state import SessionState
@@ -301,6 +304,15 @@ class AppSession:
                 self._handle_stop_script_request()
             elif msg_type == "file_urls_request":
                 self._handle_file_urls_request(msg.file_urls_request)
+            elif msg_type == "deferred_file_request":
+                # Execute deferred callable in a separate thread to avoid blocking
+                # the main event loop. Use create_task to run the async handler.
+                # Store task reference to prevent garbage collection.
+                task = asyncio.create_task(
+                    self._handle_deferred_file_request(msg.deferred_file_request)
+                )
+                # Add task name for better debugging
+                task.set_name(f"deferred_file_{msg.deferred_file_request.file_id}")
             else:
                 _LOGGER.warning('No handler for "%s"', msg_type)
 
@@ -735,10 +747,34 @@ class AppSession:
             msg.new_session, pages or self._pages_manager.get_pages()
         )
         _populate_config_msg(msg.new_session.config)
+
+        # Handles theme sections
+        # [theme] configs
         _populate_theme_msg(msg.new_session.custom_theme)
+        # [theme.light] configs
+        _populate_theme_msg(
+            msg.new_session.custom_theme.light,
+            f"theme.{config.CustomThemeCategories.LIGHT.value}",
+        )
+        # [theme.dark] configs
+        _populate_theme_msg(
+            msg.new_session.custom_theme.dark,
+            f"theme.{config.CustomThemeCategories.DARK.value}",
+        )
+        # [theme.sidebar] configs
         _populate_theme_msg(
             msg.new_session.custom_theme.sidebar,
             f"theme.{config.CustomThemeCategories.SIDEBAR.value}",
+        )
+        # [theme.light.sidebar] configs
+        _populate_theme_msg(
+            msg.new_session.custom_theme.light.sidebar,
+            f"theme.{config.CustomThemeCategories.LIGHT_SIDEBAR.value}",
+        )
+        # [theme.dark.sidebar] configs
+        _populate_theme_msg(
+            msg.new_session.custom_theme.dark.sidebar,
+            f"theme.{config.CustomThemeCategories.DARK_SIDEBAR.value}",
         )
 
         # Immutable session data. We send this every time a new session is
@@ -810,6 +846,12 @@ class AppSession:
             else:
                 msg.git_info_changed.state = GitInfo.GitStates.DEFAULT
 
+            _LOGGER.debug(
+                "Git information found. Name: %s, Branch: %s, Module: %s",
+                repository_name,
+                branch,
+                module,
+            )
             self._enqueue_forward_msg(msg)
         except Exception as ex:
             # Users may never even install Git in the first place, so this
@@ -889,6 +931,34 @@ class AppSession:
 
         self._enqueue_forward_msg(msg)
 
+    async def _handle_deferred_file_request(self, request: DeferredFileRequest) -> None:
+        """Handle a deferred_file_request BackMsg sent by the client.
+
+        Execute the deferred callable in a separate thread and send the URL back
+        to the frontend. This prevents blocking the main event loop if the callable
+        is slow.
+        """
+        response = ForwardMsg()
+        response.deferred_file_response.file_id = request.file_id
+
+        try:
+            # Execute the deferred callable in a separate thread to avoid blocking
+            # the main event loop. This is critical for shared apps where a slow
+            # callable could freeze all sessions.
+            url = await asyncio.to_thread(
+                runtime.get_instance().media_file_mgr.execute_deferred,
+                request.file_id,
+            )
+            response.deferred_file_response.url = url
+        except Exception as e:
+            # Send error response if callable execution fails
+            _LOGGER.exception(
+                "Error executing deferred callable for file_id %s", request.file_id
+            )
+            response.deferred_file_response.error_msg = str(e)
+
+        self._enqueue_forward_msg(response)
+
     def _populate_app_pages(
         self, msg: NewSession, pages: dict[PageHash, PageInfo]
     ) -> None:
@@ -946,6 +1016,8 @@ def _populate_theme_msg(msg: CustomThemeConfig, section: str = "theme") -> None:
                 "base",
                 "font",
                 "fontFaces",
+                "codeFont",
+                "headingFont",
                 "headingFontSizes",
                 "headingFontWeights",
                 "chartCategoricalColors",
@@ -975,11 +1047,15 @@ def _populate_theme_msg(msg: CustomThemeConfig, section: str = "theme") -> None:
         else:
             msg.base = base_map[base]
 
-    # Since the font field uses the deprecated enum, we need to put the font
-    # config into the body_font field instead:
-    body_font = theme_opts.get("font", None)
-    if body_font:
-        msg.body_font = body_font
+    # Handle font, codeFont, and headingFont config options and if they are
+    # specified with a source URL
+    msg = parse_fonts_with_source(
+        msg,
+        theme_opts.get("font", None),
+        theme_opts.get("codeFont", None),
+        theme_opts.get("headingFont", None),
+        section,
+    )
 
     font_faces = theme_opts.get("fontFaces", None)
     # If fontFaces was configured via config.toml, it's already a parsed list of

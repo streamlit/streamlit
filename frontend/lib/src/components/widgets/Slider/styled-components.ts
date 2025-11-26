@@ -15,16 +15,25 @@
  */
 
 import styled from "@emotion/styled"
+import { type StyleProps } from "baseui/slider"
 import { transparentize } from "color2k"
 
-export interface StyledSliderProps {
+export const StyledSlider = styled.div({
+  position: "relative",
+  ":focus-within:has(:focus-visible)": {
+    "--slider-focused": 1,
+  },
+})
+
+export interface StyledThumbProps {
   disabled: boolean
+  isDragged: boolean
 }
 
-export const StyledThumb = styled.div<StyledSliderProps>(
-  ({ disabled, theme }) => ({
+export const StyledThumb = styled.div<StyledThumbProps>(
+  ({ disabled, theme, isDragged }) => ({
     alignItems: "center",
-    backgroundColor: disabled ? theme.colors.gray : theme.colors.primary,
+    backgroundColor: disabled ? theme.colors.gray60 : theme.colors.primary,
     borderTopLeftRadius: "100%",
     borderTopRightRadius: "100%",
     borderBottomLeftRadius: "100%",
@@ -33,11 +42,13 @@ export const StyledThumb = styled.div<StyledSliderProps>(
     borderBottomStyle: "none",
     borderRightStyle: "none",
     borderLeftStyle: "none",
-    boxShadow: "none",
     display: "flex",
     justifyContent: "center",
     height: theme.sizes.sliderThumb,
     width: theme.sizes.sliderThumb,
+    boxShadow: isDragged
+      ? `0 0 0 0.2rem ${transparentize(theme.colors.primary, 0.5)}`
+      : "none",
     ":focus": {
       outline: "none",
     },
@@ -47,11 +58,15 @@ export const StyledThumb = styled.div<StyledSliderProps>(
   })
 )
 
-export const StyledThumbValue = styled.div<StyledSliderProps>(
+export interface StyledThumbValueProps {
+  disabled: boolean
+}
+
+export const StyledThumbValue = styled.div<StyledThumbValueProps>(
   ({ disabled, theme }) => ({
     fontFamily: theme.genericFonts.bodyFont,
     fontSize: theme.fontSizes.sm,
-    color: disabled ? theme.colors.gray : theme.colors.primary,
+    color: disabled ? theme.colors.gray60 : theme.colors.primary,
     top: "-1.6em",
     position: "absolute",
     whiteSpace: "nowrap",
@@ -61,5 +76,42 @@ export const StyledThumbValue = styled.div<StyledSliderProps>(
     // If values are clickable, it's hard to move the right thumb when they're
     // very close. So make them unclickable:
     pointerEvents: "none",
+  })
+)
+
+export const StyledInnerTrackWrapper = styled.div({
+  flex: 1,
+})
+
+export const StyledThumbWrapper = styled.div<StyleProps>(({ theme }) => {
+  return {
+    position: "absolute",
+    height: theme.spacing.twoXS,
+    left: `calc(${theme.sizes.sliderThumb} / 2)`,
+    right: `calc(${theme.sizes.sliderThumb} / 2)`,
+  }
+})
+
+export interface StyledSliderTickBarProps {
+  isHovered: boolean
+  isDisabled: boolean
+}
+
+export const StyledSliderTickBar = styled.div<StyledSliderTickBarProps>(
+  ({ theme, isHovered, isDisabled }) => ({
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: "100%",
+    display: "flex",
+    justifyContent: "space-between",
+    pointerEvents: "none",
+    marginTop: `-${theme.spacing.md}`,
+    fontSize: theme.fontSizes.sm,
+    lineHeight: theme.lineHeights.base,
+    fontWeight: theme.fontWeights.normal,
+    color: isDisabled ? theme.colors.fadedText40 : theme.colors.fadedText60,
+    opacity: isHovered ? 1 : "var(--slider-focused, 0)",
+    transition: isHovered ? "none" : "opacity 300ms 200ms",
   })
 )

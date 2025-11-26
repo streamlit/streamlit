@@ -30,6 +30,7 @@ export const usePrevious = (value: any): any => {
     ref.current = value
   }, [value])
 
+  // eslint-disable-next-line react-hooks/refs -- TODO: Do not access ref during render
   return ref.current
 }
 
@@ -41,6 +42,7 @@ export const useIsOverflowing = (
   const [isOverflowing, setIsOverflowing] = useState(false)
   const checkOverflowing = useCallback(() => {
     if (current) {
+      // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
       const { scrollHeight, clientHeight } = current
 
       setIsOverflowing(scrollHeight > clientHeight)
@@ -53,7 +55,6 @@ export const useIsOverflowing = (
   useEffect(() => {
     checkOverflowing()
     // TODO: Update to match React best practices
-    // eslint-disable-next-line react-hooks/react-compiler
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [expanded, current?.clientHeight]) // eslint-disable-line streamlit-custom/no-force-reflow-access -- Existing usage
 

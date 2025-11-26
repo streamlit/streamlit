@@ -14,28 +14,40 @@
  * limitations under the License.
  */
 
-import { BubbleCell, GridCell, GridCellKind } from "@glideapps/glide-data-grid"
+import { GridCell, GridCellKind } from "@glideapps/glide-data-grid"
+import { MultiSelectCellType } from "@glideapps/glide-data-grid-cells"
 
 import { isNullOrUndefined } from "~lib/util/utils"
 
 import {
+  arrayToCopyValue,
   BaseColumn,
   BaseColumnProps,
-  isMissingValueCell,
+  isEditableArrayValue,
   toSafeArray,
-  toSafeString,
 } from "./utils"
 
 /**
- * A column type that supports optimized rendering values of array/list types.
+ * A column type that supports optimized rendering and editing of
+ *  values of array/list types.
  */
 function ListColumn(props: BaseColumnProps): BaseColumn {
-  const cellTemplate: BubbleCell = {
-    kind: GridCellKind.Bubble,
-    data: [],
+  const cellTemplate: MultiSelectCellType = {
+    kind: GridCellKind.Custom,
+    readonly: !props.isEditable,
     allowOverlay: true,
     contentAlign: props.contentAlignment,
     style: "normal",
+    copyData: "",
+    data: {
+      // We are reusing the multi-select cell type for list columns:
+      kind: "multi-select-cell",
+      values: [],
+      // List column don't have options, and allow creation & duplication.
+      options: undefined,
+      allowCreation: true,
+      allowDuplicates: true,
+    },
   }
 
   return {
@@ -43,39 +55,50 @@ function ListColumn(props: BaseColumnProps): BaseColumn {
     kind: "list",
     sortMode: "default",
     typeIcon: ":material/list:",
-    isEditable: false, // List column is always readonly
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    getCell(data?: any): GridCell {
-      const cellData = isNullOrUndefined(data) ? [] : toSafeArray(data)
+    getCell(data?: unknown): GridCell {
+      if (isNullOrUndefined(data)) {
+        return {
+          ...cellTemplate,
+          data: {
+            ...cellTemplate.data,
+            values: null,
+          },
+          // @ts-expect-error - isMissingValue is not a valid property of MultiSelectCellType
+          // but needed to activate the missing cell handling.
+          isMissingValue: true,
+          copyData: "",
+        } satisfies MultiSelectCellType
+      }
+
+      const cellData = toSafeArray(data)
 
       return {
         ...cellTemplate,
-        data: cellData,
-        isMissingValue: isNullOrUndefined(data),
-        copyData: isNullOrUndefined(data)
-          ? ""
-          : toSafeString(
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-              cellData.map((x: any) =>
-                // Replace commas with spaces since commas are used to
-                // separate the list items.
-                typeof x === "string" && x.includes(",")
-                  ? x.replace(/,/g, " ")
-                  : x
-              )
-            ),
-      } as BubbleCell
+        data: {
+          ...cellTemplate.data,
+          values: cellData,
+        },
+        copyData: arrayToCopyValue(cellData),
+        ...(props.isEditable &&
+          !isEditableArrayValue(data) && {
+            readonly: true,
+            isError: true,
+            errorDetails:
+              "Editing of arrays with non-string values is not supported. " +
+              "Please disable editing or convert all values to strings.",
+          }),
+      } satisfies MultiSelectCellType
     },
-    getCellValue(cell: BubbleCell): string[] | null {
-      if (isNullOrUndefined(cell.data) || isMissingValueCell(cell)) {
+    getCellValue(cell: MultiSelectCellType): string[] | null {
+      if (isNullOrUndefined(cell.data?.values)) {
         return null
       }
 
-      return cell.data
+      return cell.data.values
     },
   }
 }
 
-ListColumn.isEditableType = false
+ListColumn.isEditableType = true
 
 export default ListColumn

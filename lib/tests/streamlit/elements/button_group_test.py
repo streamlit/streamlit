@@ -16,7 +16,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Callable, Literal
+from typing import TYPE_CHECKING, Any, Literal
 from unittest.mock import MagicMock, patch
 
 import numpy as np
@@ -25,7 +25,6 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.elements.lib.utils import compute_and_register_element_id
 from streamlit.elements.widgets.button_group import (
     _FACES_ICONS,
     _SELECTED_STAR_ICON,
@@ -38,12 +37,16 @@ from streamlit.elements.widgets.button_group import (
     _SingleSelectSerde,
     get_mapped_options,
 )
-from streamlit.errors import StreamlitAPIException, StreamlitDuplicateElementId
+from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
 from streamlit.runtime.state.session_state import get_script_run_ctx
+from streamlit.testing.v1.util import patch_config_options
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 class TestGetMappedOptions:
@@ -245,6 +248,75 @@ class TestFeedbackCommand(DeltaGeneratorTestCase):
         val = st.feedback("thumbs", key="feedback_command_key")
         assert val == session_state_index
 
+    def test_feedback_converts_small_width_to_content(self):
+        """Test that st.feedback converts small pixel widths to content width.
+
+        The threshold is calculated dynamically based on theme.baseFontSize,
+        so this tests with default 16px base font size.
+        """
+        # With default 16px base font: thumbs threshold ~55px (3.125rem x 16 x 1.1)
+        st.feedback("thumbs", width=30, key="thumbs_small")
+        el = self.get_delta_from_queue().new_element
+        assert (
+            el.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.USE_CONTENT.value
+        )
+        assert el.width_config.use_content is True
+
+        # With default 16px base font: faces threshold ~141px (8rem x 16 x 1.1)
+        st.feedback("faces", width=100, key="faces_small")
+        el = self.get_delta_from_queue().new_element
+        assert (
+            el.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.USE_CONTENT.value
+        )
+        assert el.width_config.use_content is True
+
+    def test_feedback_preserves_adequate_pixel_widths(self):
+        """Test that st.feedback preserves pixel widths above the threshold."""
+        # Large widths well above any threshold should be preserved
+        st.feedback("thumbs", width=100, key="thumbs_adequate")
+        el = self.get_delta_from_queue().new_element
+        assert (
+            el.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.PIXEL_WIDTH.value
+        )
+        assert el.width_config.pixel_width == 100
+
+        st.feedback("stars", width=200, key="stars_adequate")
+        el = self.get_delta_from_queue().new_element
+        assert (
+            el.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.PIXEL_WIDTH.value
+        )
+        assert el.width_config.pixel_width == 200
+
+    def test_feedback_threshold_adapts_to_base_font_size(self):
+        """Test that the conversion threshold adapts to theme.baseFontSize."""
+
+        # Test with 20px base font size (larger than default 16px)
+        # Threshold calculation: 3.125rem x 20 x 1.1 = 68.75px (thumbs)
+        # So width=65 should convert to "content" at 20px, but preserves at 16px
+        with patch_config_options({"theme.baseFontSize": 20}):
+            st.feedback("thumbs", width=65, key="thumbs_20px_font")
+            el = self.get_delta_from_queue().new_element
+            # At 20px base font, 65px is below threshold, converts to content
+            assert (
+                el.width_config.WhichOneof("width_spec")
+                == WidthConfigFields.USE_CONTENT.value
+            )
+            assert el.width_config.use_content is True
+
+        # At 16px base font, same 65px width is above threshold, preserved
+        with patch_config_options({"theme.baseFontSize": 16}):
+            st.feedback("thumbs", width=65, key="thumbs_16px_font")
+            el = self.get_delta_from_queue().new_element
+            assert (
+                el.width_config.WhichOneof("width_spec")
+                == WidthConfigFields.PIXEL_WIDTH.value
+            )
+            assert el.width_config.pixel_width == 65
+
 
 def get_command_matrix(
     test_args: list[Any], with_st_feedback: bool = False
@@ -375,6 +447,14 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
     @parameterized.expand(
         [
             (st.feedback, ("thumbs",)),
+            (
+                st.feedback,
+                ("thumbs",),
+                {"default": 1},
+                1,
+            ),
+            (st.feedback, ("stars",), {"default": 2}, 2),
+            (st.feedback, ("faces",), {"default": 3}, 3),
             (st.pills, ("label", ["a", "b", "c"])),
             (st.pills, ("label", ["a", "b", "c"]), {"default": "b"}, "b"),
             (
@@ -898,89 +978,254 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
             "The argument passed was 'foo'."
         )
 
-
-class TestButtonGroupDuplicateElementIdErrorMessages(DeltaGeneratorTestCase):
-    """Test that button group widgets show correct command names in duplicate element ID error messages."""
-
     @parameterized.expand(
         [
-            (
-                "segmented_control",
-                dict(
-                    style="segmented_control",
-                    options=("a", "b", "c"),
-                ),
-                ["segmented_control"],
-                ["button_group"],
-            ),
-            (
-                "pills",
-                dict(
-                    style="pills",
-                    options=("option1", "option2"),
-                ),
-                ["pills"],
-                ["button_group"],
-            ),
-            (
-                "feedback (borderless)",
-                dict(
-                    style="borderless",
-                    options="thumbs",
-                ),
-                ["feedback"],
-                ["button_group", "borderless"],
-            ),
-            (
-                "button_group (no style)",
-                dict(
-                    options=("a", "b"),
-                ),
-                ["button_group"],
-                [],
-            ),
+            (st.feedback, ("thumbs",), "feedback"),
+            (st.pills, ("label", ["a", "b", "c"]), "pills"),
+            (st.segmented_control, ("label", ["a", "b", "c"]), "segmented_control"),
         ]
     )
     def test_duplicate_element_id_error_message(
-        self,
-        name: str,
-        kwargs: dict,
-        must_include: list[str],
-        must_not_include: list[str],
-    ) -> None:
-        """Test widget name display in duplicate element ID error messages.
+        self, command: Callable, command_args: tuple[Any, ...], element_name: str
+    ):
+        with pytest.raises(StreamlitAPIException) as exception:
+            # Call two times to trigger the error:
+            command(*command_args)
+            command(*command_args)
 
-        Parameters
-        ----------
-        name : str
-            Description of the test case
-        kwargs : dict
-            Parameters to pass to compute_and_register_element_id
-        must_include : list[str]
-            Strings that must be present in the error message
-        must_not_include : list[str]
-            Strings that must not be present in the error message
+        # Make sure the correct name is used in the error message
+        assert element_name in str(exception.value)
+
+    def test_stable_id_with_key_segmented_control(self):
+        """Test that the widget ID is stable for segmented_control when a stable key is provided."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            # First render with certain params (keep whitelisted kwargs stable)
+            st.segmented_control(
+                label="Label 1",
+                key="segmented_control_key",
+                help="Help 1",
+                disabled=False,
+                width="content",
+                on_change=lambda: None,
+                args=("arg1", "arg2"),
+                kwargs={"kwarg1": "kwarg1"},
+                label_visibility="visible",
+                default="a",
+                # Whitelisted args:
+                options=["a", "b", "c"],
+                selection_mode="single",
+                format_func=lambda x: x.capitalize(),
+            )
+            proto1 = self.get_delta_from_queue().new_element.button_group
+            id1 = proto1.id
+
+            # Second render with different non-whitelisted params but same key
+            st.segmented_control(
+                label="Label 2",
+                key="segmented_control_key",
+                help="Help 2",
+                disabled=True,
+                width="stretch",
+                on_change=lambda: None,
+                args=("arg_1", "arg_2"),
+                kwargs={"kwarg_1": "kwarg_1"},
+                label_visibility="hidden",
+                default="b",
+                # Whitelisted args:
+                options=["a", "b", "c"],
+                selection_mode="single",
+                format_func=lambda x: x.capitalize(),
+            )
+            proto2 = self.get_delta_from_queue().new_element.button_group
+            id2 = proto2.id
+            assert id1 == id2
+
+    @parameterized.expand(
+        [
+            ("options", ["a", "b"], ["x", "y"]),
+            ("selection_mode", "single", "multi"),
+            ("format_func", lambda x: x.capitalize(), lambda x: x.lower()),
+        ]
+    )
+    def test_whitelisted_stable_key_kwargs_segmented_control(
+        self, kwarg_name: str, value1: object, value2: object
+    ):
+        """Test that the widget ID changes for segmented_control when a whitelisted kwarg changes even when the key
+        is provided.
         """
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            base_kwargs: dict[str, object] = {
+                "label": "Label",
+                "key": "segmented_control_key_1",
+                "options": ["a", "b", "c"],
+                "selection_mode": "single",
+            }
 
-        # Create element ID (no key to force element ID duplication)
-        _ = compute_and_register_element_id(
-            "button_group",
-            user_key=None,
-            form_id=None,
-            **kwargs,
-        )
-        # Try to create another element with the same parameters - should raise error
-        with pytest.raises(StreamlitDuplicateElementId) as exc_info:
-            compute_and_register_element_id(
-                "button_group",
-                user_key=None,
-                form_id=None,
-                **kwargs,
+            # Apply first value for the whitelisted kwarg
+            base_kwargs[kwarg_name] = value1
+            st.segmented_control(**base_kwargs)  # type: ignore[arg-type]
+            proto1 = self.get_delta_from_queue().new_element.button_group
+            id1 = proto1.id
+
+            # Apply second value for the whitelisted kwarg
+            base_kwargs[kwarg_name] = value2
+            st.segmented_control(**base_kwargs)  # type: ignore[arg-type]
+            proto2 = self.get_delta_from_queue().new_element.button_group
+            id2 = proto2.id
+            assert id1 != id2
+
+    def test_stable_id_with_key_feedback(self):
+        """Test that the widget ID is stable for feedback when a stable key is provided."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            # First render with certain params (keep whitelisted kwargs stable)
+            st.feedback(
+                key="feedback_key",
+                disabled=False,
+                width="content",
+                on_change=lambda: None,
+                args=("arg1", "arg2"),
+                kwargs={"kwarg1": "kwarg1"},
+                default=0,
+                # Whitelisted args:
+                options="thumbs",
             )
-        msg = str(exc_info.value)
-        for must in must_include:
-            assert must in msg, f"Expected '{must}' in error message for {name}"
-        for must_not in must_not_include:
-            assert must_not not in msg, (
-                f"Did not expect '{must_not}' in error message for {name}"
+            proto1 = self.get_delta_from_queue().new_element.button_group
+            id1 = proto1.id
+
+            # Second render with different non-whitelisted params but same key
+            st.feedback(
+                key="feedback_key",
+                disabled=True,
+                width="stretch",
+                on_change=lambda: None,
+                args=("arg_1", "arg_2"),
+                kwargs={"kwarg_1": "kwarg_1"},
+                default=1,
+                # Whitelisted args:
+                options="thumbs",
             )
+            proto2 = self.get_delta_from_queue().new_element.button_group
+            id2 = proto2.id
+            assert id1 == id2
+
+    @parameterized.expand(
+        [
+            ("options", "thumbs", "faces"),
+        ]
+    )
+    def test_whitelisted_stable_key_kwargs_feedback(
+        self, _kwarg_name: str, value1: object, value2: object
+    ):
+        """Test that the widget ID changes for feedback when a whitelisted kwarg
+        changes even when the key is provided."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            base_kwargs: dict[str, object] = {
+                "key": "feedback_key_1",
+            }
+
+            # Apply first value for the whitelisted kwarg
+            st.feedback(value1, **base_kwargs)  # type: ignore[arg-type]
+            proto1 = self.get_delta_from_queue().new_element.button_group
+            id1 = proto1.id
+
+            # Apply second value for the whitelisted kwarg
+            st.feedback(value2, **base_kwargs)  # type: ignore[arg-type]
+            proto2 = self.get_delta_from_queue().new_element.button_group
+            id2 = proto2.id
+            assert id1 != id2
+
+    def test_stable_id_with_key_pills(self):
+        """Test that the widget ID is stable for pills when a stable key is provided."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            # First render with certain params (keep whitelisted kwargs stable)
+            st.pills(
+                label="Label 1",
+                key="pills_key",
+                help="Help 1",
+                disabled=False,
+                width="content",
+                on_change=lambda: None,
+                args=("arg1", "arg2"),
+                kwargs={"kwarg1": "kwarg1"},
+                label_visibility="visible",
+                default="a",
+                # Whitelisted args:
+                options=["a", "b", "c"],
+                selection_mode="single",
+                format_func=lambda x: x.capitalize(),
+            )
+            proto1 = self.get_delta_from_queue().new_element.button_group
+            id1 = proto1.id
+
+            # Second render with different non-whitelisted params but same key
+            st.pills(
+                label="Label 2",
+                key="pills_key",
+                help="Help 2",
+                disabled=True,
+                width="stretch",
+                on_change=lambda: None,
+                args=("arg_1", "arg_2"),
+                kwargs={"kwarg_1": "kwarg_1"},
+                label_visibility="hidden",
+                default="b",
+                # Whitelisted args:
+                options=["a", "b", "c"],
+                selection_mode="single",
+                format_func=lambda x: x.capitalize(),
+            )
+            proto2 = self.get_delta_from_queue().new_element.button_group
+            id2 = proto2.id
+            assert id1 == id2
+
+    @parameterized.expand(
+        [
+            ("options", ["a", "b"], ["x", "y"]),
+            ("selection_mode", "single", "multi"),
+            ("format_func", lambda x: x.capitalize(), lambda x: x.lower()),
+        ]
+    )
+    def test_whitelisted_stable_key_kwargs_pills(
+        self, kwarg_name: str, value1: object, value2: object
+    ):
+        """Test that the widget ID changes for pills when a whitelisted kwarg changes even when the key
+        is provided.
+        """
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            base_kwargs: dict[str, object] = {
+                "label": "Label",
+                "key": "pills_key_1",
+                "options": ["a", "b", "c"],
+                "selection_mode": "single",
+            }
+
+            # Apply first value for the whitelisted kwarg
+            base_kwargs[kwarg_name] = value1
+            st.pills(**base_kwargs)  # type: ignore[arg-type]
+            proto1 = self.get_delta_from_queue().new_element.button_group
+            id1 = proto1.id
+
+            # Apply second value for the whitelisted kwarg
+            base_kwargs[kwarg_name] = value2
+            st.pills(**base_kwargs)  # type: ignore[arg-type]
+            proto2 = self.get_delta_from_queue().new_element.button_group
+            id2 = proto2.id
+            assert id1 != id2

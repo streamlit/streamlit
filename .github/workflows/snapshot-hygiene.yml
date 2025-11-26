@@ -9,6 +9,7 @@ on:
     paths:
       - "e2e_playwright/**"
       - "scripts/snapshot_cleanup.py"
+
   # Allows workflow to be called from other workflows
   workflow_call:
     inputs:
@@ -38,7 +39,7 @@ jobs:
 
     steps:
       - name: Checkout Streamlit code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ inputs.ref }}
           persist-credentials: false
@@ -47,7 +48,7 @@ jobs:
       - name: Set Python version vars
         uses: ./.github/actions/build_info
       - name: Set up Python ${{ env.PYTHON_MAX_VERSION }}
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "${{ env.PYTHON_MAX_VERSION }}"
       - name: Setup virtual env
@@ -58,7 +59,7 @@ jobs:
           python scripts/snapshot_cleanup.py --ci
       - name: Delete comment on success
         if: success() && github.event_name == 'pull_request'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             // Find and delete existing orphaned snapshots comments
@@ -89,23 +90,50 @@ jobs:
             }
       - name: Comment on PR if snapshots found
         if: failure() && github.event_name == 'pull_request'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
-            github.rest.issues.createComment({
+            const body = `❌ **Orphaned Snapshots Detected**
+
+            This PR contains orphaned e2e snapshots that are no longer used by tests.
+
+            **To fix this:**
+            1. Run \`python scripts/snapshot_cleanup.py\` locally to clean them up
+            2. Or review the snapshots manually to ensure they're actually orphaned
+            3. Commit and push the changes
+
+            This helps keep our snapshot directory clean and our tests maintainable.
+
+            If you believe the script incorrectly flagged valid snapshots, add them to the \`DISALLOWED_SNAPSHOTS\` set in the cleanup script.`;
+
+            // Find existing orphaned snapshots comment
+            const comments = await github.rest.issues.listComments({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `❌ **Orphaned Snapshots Detected**
+            });
 
-              This PR contains orphaned e2e snapshots that are no longer used by tests.
+            const existingComment = comments.data.find(comment =>
+              comment.user.type === 'Bot' &&
+              comment.body.includes('❌ **Orphaned Snapshots Detected**')
+            );
 
-              **To fix this:**
-              1. Run \`python scripts/snapshot_cleanup.py\` locally to clean them up
-              2. Or review the snapshots manually to ensure they're actually orphaned
-              3. Commit and push the changes
-
-              This helps keep our snapshot directory clean and our tests maintainable.
-
-              If you believe the script incorrectly flagged valid snapshots, add them to the \`DISALLOWED_SNAPSHOTS\` set in the cleanup script.`
-            })
+            if (existingComment) {
+              // Update existing comment
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existingComment.id,
+                body: body
+              });
+              console.log(`Updated existing comment ${existingComment.id}`);
+            } else {
+              // Create new comment if none exists
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: body
+              });
+              console.log('Created new orphaned snapshots comment');
+            }

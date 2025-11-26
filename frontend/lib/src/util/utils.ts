@@ -15,7 +15,7 @@
  */
 
 import decamelize from "decamelize"
-import get from "lodash/get"
+import { get } from "lodash-es"
 import xxhash from "xxhashjs"
 
 import {
@@ -30,7 +30,7 @@ import { isNullOrUndefined, notNullOrUndefined } from "@streamlit/utils"
 import { assertNever } from "./assertNever"
 
 // This prefix should be in sync with the value on the python side:
-const GENERATED_ELEMENT_ID_PREFIX = "$$ID"
+export const GENERATED_ELEMENT_ID_PREFIX = "$$ID"
 
 /**
  * Wraps a function to allow it to be called, at most, once per interval
@@ -62,7 +62,6 @@ export function debounce(delay: number, fn: any): any {
  */
 export const EMBED_QUERY_PARAM_KEY = "embed"
 export const EMBED_OPTIONS_QUERY_PARAM_KEY = "embed_options"
-export const EMBED_SHOW_COLORED_LINE = "show_colored_line"
 export const EMBED_SHOW_TOOLBAR = "show_toolbar"
 export const EMBED_SHOW_PADDING = "show_padding"
 export const EMBED_DISABLE_SCROLLING = "disable_scrolling"
@@ -73,7 +72,6 @@ export const EMBED_HIDE_LOADING_SCREEN = "hide_loading_screen"
 export const EMBED_SHOW_LOADING_SCREEN_V1 = "show_loading_screen_v1"
 export const EMBED_SHOW_LOADING_SCREEN_V2 = "show_loading_screen_v2"
 export const EMBED_QUERY_PARAM_VALUES = [
-  EMBED_SHOW_COLORED_LINE,
   EMBED_SHOW_TOOLBAR,
   EMBED_SHOW_PADDING,
   EMBED_DISABLE_SCROLLING,
@@ -137,22 +135,29 @@ export function preserveEmbedQueryParams(): string {
 }
 
 /**
+ * Builds a query string by combining an optional override with preserved embed params.
+ * Used during page navigation to merge user query params with embed options.
+ */
+export function getQueryString(
+  queryStringOverride: string | undefined,
+  preservedQueryParams: string
+): string {
+  if (queryStringOverride !== undefined) {
+    if (preservedQueryParams) {
+      return queryStringOverride
+        ? `${preservedQueryParams}&${queryStringOverride}`
+        : preservedQueryParams
+    }
+    return queryStringOverride
+  }
+  return preservedQueryParams
+}
+
+/**
  * Returns true if the URL parameters contain ?embed=true (case insensitive).
  */
 export function isEmbed(): boolean {
   return getEmbedUrlParams(EMBED_QUERY_PARAM_KEY).has(EMBED_TRUE)
-}
-
-/**
- * Returns true if the URL parameters contain ?embed=true&embed_options=show_colored_line (case insensitive).
- */
-export function isColoredLineDisplayed(): boolean {
-  return (
-    isEmbed() &&
-    getEmbedUrlParams(EMBED_OPTIONS_QUERY_PARAM_KEY).has(
-      EMBED_SHOW_COLORED_LINE
-    )
-  )
 }
 
 /**
@@ -239,6 +244,21 @@ export function getUrl(): string {
   urlObj.search = ""
   urlObj.hash = ""
   return urlObj.toString()
+}
+
+/**
+ * Returns date in "YYYY-MM-DD-HH-MM-SS" format to be used for screencast recording file name.
+ */
+export function getScreencastTimestamp(): string {
+  const date = new Date()
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, "0")
+  const day = String(date.getDate()).padStart(2, "0")
+  const hours = String(date.getHours()).padStart(2, "0")
+  const minutes = String(date.getMinutes()).padStart(2, "0")
+  const seconds = String(date.getSeconds()).padStart(2, "0")
+
+  return `${year}-${month}-${day}-${hours}-${minutes}-${seconds}`
 }
 
 /**
@@ -473,6 +493,7 @@ export enum AcceptFileValue {
   None,
   Single,
   Multiple,
+  Directory,
 }
 
 export function chatInputAcceptFileProtoValueToEnum(
@@ -485,6 +506,8 @@ export function chatInputAcceptFileProtoValueToEnum(
       return AcceptFileValue.Single
     case ChatInputProto.AcceptFile.MULTIPLE:
       return AcceptFileValue.Multiple
+    case ChatInputProto.AcceptFile.DIRECTORY:
+      return AcceptFileValue.Directory
     default:
       assertNever(value)
       return AcceptFileValue.None
@@ -652,7 +675,9 @@ export function keysToSnakeCase(
 
       if (Array.isArray(value)) {
         value = value.map(item =>
-          typeof item === "object" ? keysToSnakeCase(item) : item
+          item !== null && typeof item === "object"
+            ? keysToSnakeCase(item)
+            : item
         )
       }
 

@@ -37,6 +37,7 @@ import {
 } from "./DoInitPings"
 import { ForwardMsgCache } from "./ForwardMessageCache"
 import {
+  ErrorDetails,
   Event,
   IHostConfigResponse,
   OnConnectionStateChange,
@@ -190,7 +191,7 @@ export class WebsocketConnection {
    * timeout fires. This field stores the timer ID from setTimeout, so we can
    * cancel it if needed.
    */
-  private wsConnectionTimeoutId?: number
+  private wsConnectionTimeout?: NodeJS.Timeout | number
 
   constructor(props: Args) {
     this.args = props
@@ -214,7 +215,10 @@ export class WebsocketConnection {
   }
 
   // This should only be called inside stepFsm().
-  private setFsmState(state: ConnectionState, errMsg?: string): void {
+  private setFsmState(
+    state: ConnectionState,
+    errDetails?: ErrorDetails
+  ): void {
     LOG.info(`New state: ${state}`)
     this.state = state
 
@@ -229,7 +233,7 @@ export class WebsocketConnection {
         break
     }
 
-    this.args.onConnectionStateChange(state, errMsg)
+    this.args.onConnectionStateChange(state, errDetails)
 
     // Perform post-callback actions when entering certain states.
     switch (this.state) {
@@ -273,7 +277,9 @@ export class WebsocketConnection {
       )
       // If we get a fatal error, we transition to DISCONNECTED_FOREVER
       // regardless of our current state.
-      this.setFsmState(ConnectionState.DISCONNECTED_FOREVER, errMsg)
+      this.setFsmState(ConnectionState.DISCONNECTED_FOREVER, {
+        message: errMsg || "Unknown error",
+      })
       return
     }
 
@@ -468,7 +474,7 @@ export class WebsocketConnection {
   }
 
   private setConnectionTimeout(uri: string): void {
-    if (notNullOrUndefined(this.wsConnectionTimeoutId)) {
+    if (notNullOrUndefined(this.wsConnectionTimeout)) {
       // This should never happen. We set the timeout ID to null in both FSM
       // nodes that lead to this one.
       throw new Error("WS timeout is already set")
@@ -476,12 +482,12 @@ export class WebsocketConnection {
 
     const localWebsocket = this.websocket
 
-    this.wsConnectionTimeoutId = window.setTimeout(() => {
+    this.wsConnectionTimeout = globalThis.setTimeout(() => {
       if (localWebsocket !== this.websocket) {
         return
       }
 
-      if (isNullOrUndefined(this.wsConnectionTimeoutId)) {
+      if (isNullOrUndefined(this.wsConnectionTimeout)) {
         // Sometimes the clearTimeout doesn't work. No idea why :-/
         LOG.warn("Timeout fired after cancellation")
         return
@@ -507,7 +513,7 @@ export class WebsocketConnection {
         this.stepFsm("CONNECTION_TIMED_OUT")
       }
     }, WEBSOCKET_TIMEOUT_MS)
-    LOG.info(`Set WS timeout ${this.wsConnectionTimeoutId}`)
+    LOG.info(`Set WS timeout ${Number(this.wsConnectionTimeout)}`)
   }
 
   private closeConnection(): void {
@@ -522,10 +528,10 @@ export class WebsocketConnection {
       this.websocket = undefined
     }
 
-    if (notNullOrUndefined(this.wsConnectionTimeoutId)) {
-      LOG.info(`Clearing WS timeout ${this.wsConnectionTimeoutId}`)
-      window.clearTimeout(this.wsConnectionTimeoutId)
-      this.wsConnectionTimeoutId = undefined
+    if (notNullOrUndefined(this.wsConnectionTimeout)) {
+      LOG.info(`Clearing WS timeout ${Number(this.wsConnectionTimeout)}`)
+      globalThis.clearTimeout(this.wsConnectionTimeout)
+      this.wsConnectionTimeout = undefined
     }
 
     if (this.pingRequest) {

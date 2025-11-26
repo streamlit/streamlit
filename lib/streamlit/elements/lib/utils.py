@@ -20,18 +20,18 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Literal,
+    TypeAlias,
     Union,
     overload,
 )
 
 from google.protobuf.message import Message
-from typing_extensions import TypeAlias
 
 from streamlit import config
+from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.errors import StreamlitDuplicateElementId, StreamlitDuplicateElementKey
 from streamlit.proto.ChatInput_pb2 import ChatInput
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
-from streamlit.proto.RootContainer_pb2 import RootContainer
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
     ScriptRunContext,
     get_script_run_ctx,
@@ -49,12 +49,12 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
 
-Key: TypeAlias = Union[str, int]
+Key: TypeAlias = str | int
 
 LabelVisibility: TypeAlias = Literal["visible", "hidden", "collapsed"]
 
-PROTO_SCALAR_VALUE = Union[float, int, bool, str, bytes]
-SAFE_VALUES = Union[
+PROTO_SCALAR_VALUE: TypeAlias = float | int | bool | str | bytes
+SAFE_VALUES: TypeAlias = Union[
     date,
     time,
     datetime,
@@ -82,7 +82,7 @@ def get_label_visibility_proto_value(
 
 
 def get_chat_input_accept_file_proto_value(
-    accept_file_value: bool | Literal["multiple"],
+    accept_file_value: Literal["multiple", "directory"] | bool,
 ) -> ChatInput.AcceptFile.ValueType:
     """Returns one of ChatInput.AcceptFile enum value based on string value."""
 
@@ -92,6 +92,8 @@ def get_chat_input_accept_file_proto_value(
         return ChatInput.AcceptFile.SINGLE
     if accept_file_value == "multiple":
         return ChatInput.AcceptFile.MULTIPLE
+    if accept_file_value == "directory":
+        return ChatInput.AcceptFile.DIRECTORY
 
     raise ValueError(f"Unknown accept file value: {accept_file_value}")
 
@@ -184,9 +186,8 @@ def compute_and_register_element_id(
     element_type: str,
     *,
     user_key: str | None,
-    form_id: str | None,
-    dg: DeltaGenerator | None = None,
-    style: str | None = None,
+    dg: DeltaGenerator | None,
+    key_as_main_identity: bool | set[str],
     **kwargs: SAFE_VALUES | Iterable[SAFE_VALUES],
 ) -> str:
     """Compute and register the ID for the given element.
@@ -213,17 +214,8 @@ def compute_and_register_element_id(
         The user-specified key for the element. `None` if no key is provided
         or if the element doesn't support a specifying a key.
 
-    form_id : str | None
-        The ID of the form that the element belongs to. `None` or empty string
-        if the element doesn't belong to a form or doesn't support forms.
-
     dg : DeltaGenerator | None
         The DeltaGenerator of each element. `None` if the element is not a widget.
-
-    style: str | None
-        The style of the element, to provide more context to the user in the
-        error message. This should be `None` if the element does not support
-        the style parameter.
 
     kwargs : SAFE_VALUES | Iterable[SAFE_VALUES]
         The arguments to use to compute the element ID.
@@ -231,47 +223,46 @@ def compute_and_register_element_id(
         Some common parameters like key, disabled,
         format_func, label_visibility, args, kwargs, on_change, and
         the active_script_hash are not supposed to be added here
+
+    key_as_main_identity : bool | set[str]
+        If True and a key is provided by the user, we don't include
+        command kwargs in the element ID computation.
+        If a set of kwarg names is provided and a key is provided,
+        only the kwargs with names in this set will be included
+        in the element ID computation.
     """
     ctx = get_script_run_ctx()
 
-    kwargs_to_use = {**kwargs}
-    if form_id:
-        kwargs_to_use["form_id"] = form_id
-    if style:
-        kwargs_to_use["style"] = style
+    # When a user_key is present and key_as_main_identity is True OR a set (even empty),
+    # we should ignore general command kwargs and form/sidebar context. For the set case,
+    # only explicitly whitelisted kwargs will be included below.
+    ignore_command_kwargs = user_key is not None and (
+        (key_as_main_identity is True) or isinstance(key_as_main_identity, set)
+    )
 
-    # If style is provided, use it for the error message, to provide more
-    # context to the user.
-    if style == "borderless":
-        # The borderless style is used by st.feedback, but users expect to see
-        # "feedback" in errors
-        element_type_for_error = "feedback"
-    elif style:
-        element_type_for_error = style
+    if isinstance(key_as_main_identity, set) and user_key:
+        # Only include the explicitly whitelisted kwargs in the computation
+        kwargs_to_use = {k: v for k, v in kwargs.items() if k in key_as_main_identity}
     else:
-        element_type_for_error = element_type
+        kwargs_to_use = {} if ignore_command_kwargs else {**kwargs}
 
     if ctx:
         # Add the active script hash to give elements on different
-        # pages unique IDs.
+        # pages unique IDs. This is added even if
+        # key_as_main_identity is specified.
         kwargs_to_use["active_script_hash"] = ctx.active_script_hash
 
-    if dg:
+    if dg and not ignore_command_kwargs:
+        kwargs_to_use["form_id"] = current_form_id(dg)
         # If no key is provided and the widget element is inside the sidebar area
         # add it to the kwargs
         # allowing the same widget to be both in main area and sidebar.
-        active_dg_root_container = dg._active_dg._root_container
-        if active_dg_root_container == RootContainer.SIDEBAR and user_key is None:
-            kwargs_to_use["active_dg_root_container"] = str(active_dg_root_container)
+        kwargs_to_use["active_dg_root_container"] = dg._active_dg._root_container
 
-    element_id = _compute_element_id(
-        element_type,
-        user_key,
-        **kwargs_to_use,
-    )
+    element_id = _compute_element_id(element_type, user_key, **kwargs_to_use)
 
     if ctx:
-        _register_element_id(ctx, element_type_for_error, element_id)
+        _register_element_id(ctx, element_type, element_id)
     return element_id
 
 

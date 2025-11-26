@@ -130,7 +130,7 @@ def highlight_first(value: float) -> str:
 
 
 df = pd.DataFrame(np.arange(0, 100, 1).reshape(10, 10))
-st.table(df.style.map(highlight_first))
+st.table(df.style.map(highlight_first))  # type: ignore[arg-type]
 
 st.subheader("Pandas Styler: Background and font styling")
 
@@ -146,7 +146,7 @@ def highlight_max(s: Any, props: str = "") -> npt.NDArray[Any]:
 
 
 # Passing style values w/ all color formats to test css-style-string parsing robustness.
-styled_df = df.style.map(style_negative, props="color:#FF0000;").map(
+styled_df = df.style.map(style_negative, props="color:#FF0000;").map(  # type: ignore[call-overload]
     lambda v: "opacity: 20%;" if (v < 0.3) and (v > -0.3) else None
 )
 
@@ -169,7 +169,7 @@ weather_df = pd.DataFrame(
 )
 
 
-def rain_condition(v: float) -> str:
+def rain_condition(v: Any) -> str:
     if v < 1.75:
         return "Dry"
     if v < 2.75:
@@ -213,7 +213,7 @@ headers = {
     "selector": "th",
     "props": "background-color: #000066; color: white;",
 }
-styled_df.set_table_styles([cell_hover, headers])
+styled_df.set_table_styles([cell_hover, headers])  # type: ignore
 styled_df.set_table_styles(
     {
         ("Regression", "Tumour"): [
@@ -244,7 +244,6 @@ styled_df.set_tooltips(
 )
 
 st.table(styled_df)
-
 
 st.header("Markdown Support")
 index = pd.Index(
@@ -281,3 +280,18 @@ data = pd.DataFrame(
 )
 
 st.table(data)
+
+st.header("Border Parameter")
+
+st.subheader("No borders (border=False)")
+data_dict = {
+    "A": [1, 2, 3],
+    "B": ["X", "Y", "Z"],
+    "C": [10.5, 20.3, 30.1],
+    "D": ["Alpha", "Beta", "Gamma"],
+    "E": [True, False, True],
+}
+st.table(data_dict, border=False)
+
+st.subheader("Horizontal borders only (border='horizontal')")
+st.table(data_dict, border="horizontal")

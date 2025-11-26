@@ -216,14 +216,17 @@ with st.container(key="badge_elements"):
         "Streamlit interface.",
     )
     st.markdown(
-        ":blue-badge[Blue markdown badge] :green-badge[🌱 Green markdown badge]"
+        ":blue-badge[Blue markdown badge] :green-badge[🌱 Green markdown badge] :yellow-badge[Yellow markdown badge]"
     )
 
 "---"
 
-st.markdown(
-    "Images in markdown should stay inside the container width:\n\n![image](./app/static/streamlit-logo.png)"
-)
+col1, _ = st.columns(2)
+with col1:
+    st.markdown(
+        "Images in markdown should stay inside the container width and not be distorted:\n\n"
+        "![image](./app/static/streamlit-logo.png)"
+    )
 
 "---"
 
@@ -248,13 +251,13 @@ $$
 | --------- | ----------- |
 | Some      | :material/description: :streamlit: Data        |
 
-- :small[small], :small[:red[small red]], :blue[blue], :green[green], :red[red], :violet[violet], :orange[orange],
-  :gray[gray], :grey[grey], :rainbow[rainbow], :primary[primary]
-- :blue-background[blue], :green-background[green], :red-background[red], :violet-background[violet],
-  :orange-background[orange], :gray-background[gray], :grey-background[grey], :primary-background[primary],
-  :rainbow-background[rainbow]
-- [x] :blue-badge[blue], :green-badge[green], :red-badge[red], :orange-badge[orange],
-  :violet-badge[violet], :gray-badge[gray], :grey-badge[grey], :primary-badge[primary]
+- :small[small], :small[:red[small red]], :blue[blue], :green[green], :yellow[yellow], :red[red], :violet[violet],
+  :orange[orange], :gray[gray], :grey[grey], :rainbow[rainbow], :primary[primary]
+- :blue-background[blue], :green-background[green], :yellow-background[yellow], :red-background[red],
+  :violet-background[violet], :orange-background[orange], :gray-background[gray],
+  :grey-background[grey], :primary-background[primary], :rainbow-background[rainbow]
+- [x] :blue-badge[blue], :green-badge[green], :yellow-badge[yellow], :red-badge[red], :violet-badge[violet],
+  :orange-badge[orange], :gray-badge[gray], :grey-badge[grey], :primary-badge[primary]
 - [ ] Material icons :red[:material/local_fire_department:] :green-background[:material/celebration: Yay]
   and Streamlit logo :streamlit: :red-background[:streamlit:]
 - <- -> <-> -- >= <= ~= https://example.com-> `code <- -> <-> -- >= <= ~=` $a <- -> <-> -- >= <= ~= b$
@@ -283,49 +286,47 @@ if st.button("Run element"):
 
 
 # Width Examples
-with st.expander("Markdown Width Examples", expanded=True):
-    with st.container(border=True):
-        st.markdown(
-            "**Content width:** This is regular markdown text with "
-            "content-based sizing that adapts to its content width.",
-            width="content",
-        )
+st.markdown(
+    "**Content width:** This is regular markdown text with "
+    "content-based sizing that adapts to its content width.",
+    width="content",
+)
 
-        st.markdown(
-            "**Fixed width (200px):** This is markdown text with a fixed width of "
-            "200 pixels. The text will wrap to fit within this constrained width.",
-            width=200,
-        )
+st.markdown(
+    "**Fixed width (200px):** This is markdown text with a fixed width of "
+    "200 pixels. The text will wrap to fit within this constrained width.",
+    width=200,
+)
 
-        st.markdown(
-            "**Stretch width:** This is markdown text that stretches to fill the "
-            "full width of the container, regardless of content length.",
-            width="stretch",
-        )
+st.markdown(
+    "**Stretch width:** This is markdown text that stretches to fill the "
+    "full width of the container, regardless of content length.",
+    width="stretch",
+)
 
-with st.expander("Caption Width Examples", expanded=True):
-    with st.container(border=True):
-        st.caption(
-            "This is a caption with content-based width sizing that adapts "
-            "to the caption text length.",
-            width="content",
-        )
+st.caption(
+    "This is a caption with content-based width sizing that adapts "
+    "to the caption text length.",
+    width="content",
+)
 
-        st.caption(
-            "This is a caption with a fixed width of 300 pixels. Caption text will "
-            "wrap within this constraint.",
-            width=300,
-        )
+st.caption(
+    "This is a caption with a fixed width of 300 pixels. Caption text will "
+    "wrap within this constraint.",
+    width=300,
+)
 
-        st.caption(
-            "This is a caption that stretches to fill the full container width.",
-            width="stretch",
-        )
+st.caption(
+    "This is a caption that stretches to fill the full container width.",
+    width="stretch",
+)
 
-with st.expander("Badge Width Examples", expanded=True):
-    with st.container(border=True):
-        st.badge("Default badge", width="content")
+st.badge("Default badge", width="content")
 
-        st.badge("Fixed 100px badge", width=100)
+st.badge("Fixed 100px badge", width=100)
 
-        st.badge("Stretch badge", width="stretch")
+st.badge("Stretch badge", width="stretch")
+
+
+with st.container(border=True, width=150, key="long_word"):
+    st.markdown("A_LONG_WORD_THAT_SHOULD_BREAK_WORDS_IN_THE_CONTAINER")

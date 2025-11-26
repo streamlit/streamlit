@@ -335,6 +335,15 @@ class FormSubmitButtonTest(DeltaGeneratorTestCase):
         last_delta = self.get_delta_from_queue()
         assert last_delta.new_element.button.type == "secondary"
 
+    def test_submit_button_with_key(self):
+        """Test that a submit button can have a custom key."""
+
+        form = st.form("foo")
+        form.form_submit_button(key="submit_button")
+
+        last_delta = self.get_delta_from_queue()
+        assert "submit_button" in last_delta.new_element.button.id
+
     @parameterized.expand(["primary", "secondary", "tertiary"])
     def test_submit_button_types(self, type):
         """Test that a submit button can be called with different types."""

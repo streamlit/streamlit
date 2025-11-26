@@ -36,7 +36,7 @@ export const StyledNavLink = styled.a<StyledNavLinkProps>(
     alignItems: "center",
     justifyContent: "flex-start",
     gap: theme.spacing.sm,
-    borderRadius: theme.radii.button,
+    borderRadius: theme.radii.default,
     paddingLeft: theme.spacing.sm,
     paddingRight: theme.spacing.sm,
     marginTop: theme.spacing.threeXS,

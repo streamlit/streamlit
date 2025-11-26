@@ -462,6 +462,10 @@ class ContainerTest(DeltaGeneratorTestCase):
         container_block = self.get_delta_from_queue()
         assert container_block.add_block.width_config.use_stretch
 
+        st.container(width="content")
+        container_block = self.get_delta_from_queue()
+        assert container_block.add_block.width_config.use_content
+
     @parameterized.expand(
         [
             (None,),
@@ -911,17 +915,88 @@ class TabsTest(DeltaGeneratorTestCase):
 
         for tab in tabs:
             with tab:
-                # Noop
                 pass
 
         all_deltas = self.get_all_deltas_from_queue()
 
         tabs_block = all_deltas[1:]
-        # 6 elements will be created: 1 horizontal block, 5 tabs
         assert len(all_deltas) == 6
         assert len(tabs_block) == 5
         for index, tab_block in enumerate(tabs_block):
             assert tab_block.add_block.tab.label == f"tab {index}"
+
+    def test_default_tab_index_first_tab(self):
+        """Test that the default tab index is 0 when default is not specified."""
+        tabs = ["Tab 1", "Tab 2", "Tab 3"]
+        st.tabs(tabs)
+
+        all_deltas = self.get_all_deltas_from_queue()
+        tab_container_block = all_deltas[0]
+
+        assert tab_container_block.add_block.tab_container.default_tab_index == 0
+
+    def test_invalid_default_tab(self):
+        """Test that an exception is raised if the default tab is not in the list."""
+        tabs = ["Tab 1", "Tab 2", "Tab 3"]
+        default_tab = "Tab 4"
+
+        with pytest.raises(StreamlitAPIException) as context:
+            st.tabs(tabs, default=default_tab)
+
+        assert "The default tab 'Tab 4' is not in the list of tabs." in str(
+            context.value
+        )
+
+    def test_valid_default_tab(self):
+        """Test that a valid default tab sets the correct index."""
+        tabs = ["Home", "Profile", "Settings"]
+        default = "Profile"
+        st.tabs(tabs, default=default)
+
+        all_deltas = self.get_all_deltas_from_queue()
+        tab_container_block = all_deltas[0]
+
+        assert tab_container_block.add_block.tab_container.default_tab_index == 1
+
+    def test_tab_labels_with_whitespace(self):
+        """Test that labels with leading/trailing spaces are accepted and preserved."""
+        tabs = ["  Tab 1", "Tab 2  ", "  Tab 3  "]
+        st.tabs(tabs)
+
+        all_deltas = self.get_all_deltas_from_queue()
+        labels = [delta.add_block.tab.label for delta in all_deltas[1:]]
+
+        assert labels == tabs
+
+    def test_duplicate_tab_labels(self):
+        """Test that duplicate tab labels are allowed."""
+        tabs = ["Tab", "Tab", "Tab"]
+        st.tabs(tabs)
+
+        all_deltas = self.get_all_deltas_from_queue()
+        labels = [delta.add_block.tab.label for delta in all_deltas[1:]]
+
+        assert labels == tabs
+
+    def test_default_tab_with_duplicate_labels_picks_first_occurrence_zero(self):
+        """If default label appears multiple times, pick the first occurrence (index 0)."""
+        tabs = ["Dupe", "Unique", "Dupe"]
+        st.tabs(tabs, default="Dupe")
+
+        all_deltas = self.get_all_deltas_from_queue()
+        tab_container_block = all_deltas[0]
+
+        assert tab_container_block.add_block.tab_container.default_tab_index == 0
+
+    def test_default_tab_with_duplicate_labels_picks_first_occurrence_non_zero(self):
+        """If the first occurrence is not at index 0, pick that non-zero index."""
+        tabs = ["X", "Dupe", "Unique", "Dupe"]
+        st.tabs(tabs, default="Dupe")
+
+        all_deltas = self.get_all_deltas_from_queue()
+        tab_container_block = all_deltas[0]
+
+        assert tab_container_block.add_block.tab_container.default_tab_index == 1
 
 
 class DialogTest(DeltaGeneratorTestCase):
@@ -944,6 +1019,24 @@ class DialogTest(DeltaGeneratorTestCase):
         assert not dialog_block.add_block.dialog.is_open
         assert dialog_block.add_block.dialog.dismissible
         assert not dialog_block.add_block.dialog.id
+
+    @parameterized.expand(
+        [
+            ("medium", BlockProto.Dialog.DialogWidth.MEDIUM),
+            ("large", BlockProto.Dialog.DialogWidth.LARGE),
+            ("small", BlockProto.Dialog.DialogWidth.SMALL),
+        ]
+    )
+    def test_dialog_width(
+        self, width: str, expected_width: BlockProto.Dialog.DialogWidth.ValueType
+    ):
+        """Test that the dialog width parameter works correctly for all supported values"""
+        dialog = st._main._dialog(DialogTest.title, width=width)
+        with dialog:
+            # No content so that 'get_delta_from_queue' returns the dialog.
+            pass
+        dialog_block = self.get_delta_from_queue()
+        assert dialog_block.add_block.dialog.width == expected_width
 
     def test_dialog_deltagenerator_opens_and_closes(self):
         """Test that dialog opens and closes"""
@@ -982,15 +1075,6 @@ class DialogTest(DeltaGeneratorTestCase):
         """Test that the dialog decorator having a title does not throw an error"""
 
         @st.dialog("example title")
-        def dialog():
-            return None
-
-        dialog()
-
-    def test_experimental_dialog_decorator_also_works(self):
-        """Test that the dialog decorator having a title does not throw an error"""
-
-        @st.experimental_dialog("example title")
         def dialog():
             return None
 

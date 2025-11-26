@@ -400,6 +400,15 @@ def test_removes_query_params_with_st_switch_page(app: Page, app_port: int):
     expect(app).to_have_url(f"http://localhost:{app_port}/page_5")
 
 
+def test_switch_page_with_query_params(app: Page, app_port: int):
+    """Test that st.switch_page applies provided query params."""
+
+    click_button(app, "Navigate with query params")
+
+    expect(app).to_have_url(f"http://localhost:{app_port}/page_5?team=streamlit")
+    expect_prefixed_markdown(app, "Query Params:", "{'team': 'streamlit'}")
+
+
 def test_removes_query_params_when_clicking_link(app: Page, app_port: int):
     """Test that query params are removed when swapping pages by clicking on a link."""
 
@@ -428,6 +437,32 @@ def test_removes_non_embed_query_params_when_swapping_pages(app: Page, app_port:
     expect(app).to_have_url(
         f"http://localhost:{app_port}/page_4?embed=true&embed_options=show_toolbar&embed_options=show_colored_line"
     )
+
+
+def test_preserves_query_params_on_browser_back_navigation(app: Page, app_port: int):
+    """Test that query params are preserved on first script run after browser back button.
+
+    Regression test for https://github.com/streamlit/streamlit/issues/9279
+    """
+    # Navigate to main page with query params
+    goto_app(app, f"http://localhost:{app_port}/?mykey=myvalue")
+    expect(app).to_have_url(f"http://localhost:{app_port}/?mykey=myvalue")
+
+    # Verify query params are displayed
+    expect_prefixed_markdown(app, "Query Params:", "{'mykey': 'myvalue'}")
+
+    # Navigate to another page via sidebar (this clears query params)
+    get_page_link(app, "page 4").click()
+    wait_for_app_loaded(app)
+    expect(app).to_have_url(f"http://localhost:{app_port}/page_4")
+
+    # Use browser back button to return to main page with query params
+    app.go_back()
+    wait_for_app_loaded(app)
+
+    # Verify query params are preserved on the first script run after back navigation
+    expect(app).to_have_url(f"http://localhost:{app_port}/?mykey=myvalue")
+    expect_prefixed_markdown(app, "Query Params:", "{'mykey': 'myvalue'}")
 
 
 def test_renders_logos(app: Page, assert_snapshot: ImageCompareFunction):
@@ -460,6 +495,23 @@ def test_page_link_with_st_file(app: Page):
     wait_for_app_loaded(app)
 
     expect(page_heading(app)).to_contain_text("Page 9")
+
+
+def test_page_link_with_query_params(app: Page, app_port: int):
+    """Test st.page_link with query params works."""
+
+    page_link = app.get_by_test_id("stPageLink-NavLink").filter(
+        has_text="page 9 with query params"
+    )
+    expect(page_link).to_be_visible()
+    expect(page_link).to_have_attribute("href", "page_9?foo=bar&baz=1&baz=2")
+
+    page_link.click()
+    wait_for_app_loaded(app)
+
+    expect(page_heading(app)).to_contain_text("Page 9")
+    expect(app).to_have_url(f"http://localhost:{app_port}/page_9?foo=bar&baz=1&baz=2")
+    expect_prefixed_markdown(app, "Query Params:", "{'foo': 'bar', 'baz': ['1', '2']}")
 
 
 def test_hidden_navigation(app: Page):
@@ -495,6 +547,132 @@ def test_page_url_path_appears_in_url(app: Page, app_port: int):
     link.click()
     wait_for_app_loaded(app)
     expect(app).to_have_url(f"http://localhost:{app_port}/my_url_path")
+
+
+def test_sidebar_mixed_empty_and_named_sections(app: Page):
+    """Test sidebar navigation with mixed empty and named sections.
+
+    When an empty section name is mixed with named sections, the pages
+    in the empty section should appear as standalone items at the root level.
+    """
+    # Enable mixed sections test mode
+    click_checkbox(app, "Test Mixed Empty/Named Sections")
+    wait_for_app_run(app)
+
+    sidebar_nav = app.get_by_test_id("stSidebarNav")
+
+    # Check that pages from empty section appear at root level
+    page_2_link = sidebar_nav.locator("a").filter(has_text="page 2")
+    page_3_link = sidebar_nav.locator("a").filter(has_text="Different Title")
+    expect(page_2_link).to_be_visible()
+    expect(page_3_link).to_be_visible()
+
+    # Check that "Admin" section header is visible
+    admin_section = sidebar_nav.get_by_text("Admin", exact=True)
+    expect(admin_section).to_be_visible()
+
+    # Check that pages under Admin are visible
+    page_4_link = sidebar_nav.locator("a").filter(has_text="page 4")
+    page_5_link = sidebar_nav.locator("a").filter(has_text="page 5")
+    expect(page_4_link).to_be_visible()
+    expect(page_5_link).to_be_visible()
+
+    # Check that "Reports" section header is visible
+    reports_section = sidebar_nav.get_by_text("Reports", exact=True)
+    expect(reports_section).to_be_visible()
+
+    # Check that page under Reports is visible
+    page_6_link = sidebar_nav.locator("a").filter(has_text="slow page")
+    expect(page_6_link).to_be_visible()
+
+    # Test navigation to standalone page
+    page_2_link.click()
+    wait_for_app_run(app)
+    expect(page_heading(app)).to_contain_text("Page 2")
+
+    # Test navigation to page in named section
+    page_4_link.click()
+    wait_for_app_run(app)
+    expect(page_heading(app)).to_contain_text("Page 4")
+
+
+def test_sidebar_empty_section_in_middle(app: Page):
+    """Test sidebar navigation with empty section in the middle of named sections.
+
+    This tests the specific scenario where an empty section appears between
+    named sections, ensuring proper rendering and navigation structure.
+    """
+    # Enable empty middle test mode
+    click_checkbox(app, "Test Empty Section in Middle")
+    wait_for_app_run(app)
+
+    sidebar_nav = app.get_by_test_id("stSidebarNav")
+
+    # Check Section A is visible
+    section_a = sidebar_nav.get_by_text("Section A", exact=True)
+    expect(section_a).to_be_visible()
+
+    # Check pages under Section A
+    page_2_link = sidebar_nav.locator("a").filter(has_text="page 2")
+    page_3_link = sidebar_nav.locator("a").filter(has_text="Different Title")
+    expect(page_2_link).to_be_visible()
+    expect(page_3_link).to_be_visible()
+
+    # Check standalone pages from empty section
+    page_4_link = sidebar_nav.locator("a").filter(has_text="page 4")
+    page_5_link = sidebar_nav.locator("a").filter(has_text="page 5")
+    expect(page_4_link).to_be_visible()
+    expect(page_5_link).to_be_visible()
+
+    # Check Section B is visible
+    section_b = sidebar_nav.get_by_text("Section B", exact=True)
+    expect(section_b).to_be_visible()
+
+    # Check pages under Section B
+    page_6_link = sidebar_nav.locator("a").filter(has_text="slow page")
+    page_7_link = sidebar_nav.locator("a").filter(has_text="page 7")
+    expect(page_6_link).to_be_visible()
+    expect(page_7_link).to_be_visible()
+
+    # Check Section C is visible
+    section_c = sidebar_nav.get_by_text("Section C", exact=True)
+    expect(section_c).to_be_visible()
+
+    # Check pages under Section C
+    page_8_link = sidebar_nav.locator("a").filter(has_text="page 8")
+    page_9_link = sidebar_nav.locator("a").filter(has_text="page 9")
+    expect(page_8_link).to_be_visible()
+    expect(page_9_link).to_be_visible()
+
+    # Test navigation to standalone page from empty section
+    page_4_link.click()
+    wait_for_app_run(app)
+    expect(page_heading(app)).to_contain_text("Page 4")
+
+    # Test navigation to page in Section B
+    page_6_link.click()
+    wait_for_app_run(app)
+    expect(page_heading(app)).to_contain_text("Page 6")
+
+
+def test_sidebar_mixed_sections_visual_regression(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Visual regression test for sidebar with mixed empty and named sections."""
+    # Test mixed empty/named sections
+    click_checkbox(themed_app, "Test Mixed Empty/Named Sections")
+    wait_for_app_run(themed_app)
+
+    sidebar_nav = themed_app.get_by_test_id("stSidebarNav")
+    assert_snapshot(sidebar_nav, name="mpa-sidebar_nav_mixed_sections")
+
+    # Test empty section in middle
+    click_checkbox(themed_app, "Test Mixed Empty/Named Sections")  # Uncheck first
+    wait_for_app_run(themed_app)
+    click_checkbox(themed_app, "Test Empty Section in Middle")
+    wait_for_app_run(themed_app)
+
+    assert_snapshot(sidebar_nav, name="mpa-sidebar_nav_empty_middle")
 
 
 def test_widgets_maintain_state_in_fragment(app: Page):

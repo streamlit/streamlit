@@ -29,9 +29,10 @@ import {
   EMBED_QUERY_PARAM_VALUES,
   getEmbedUrlParams,
   getLoadingScreenType,
+  getQueryString,
+  getScreencastTimestamp,
   getSelectPlaceholder,
   getUrl,
-  isColoredLineDisplayed,
   isDarkThemeInQueryParams,
   isEmbed,
   isInChildFrame,
@@ -80,7 +81,6 @@ describe("setCookie", () => {
 
 describe("embedParamValues", () => {
   const embedParamValuesShouldHave = [
-    "show_colored_line",
     "show_toolbar",
     "show_padding",
     "disable_scrolling",
@@ -212,7 +212,6 @@ describe("isEmbed", () => {
       },
     }))
 
-    expect(isColoredLineDisplayed()).toBe(false)
     expect(isToolbarDisplayed()).toBe(false)
     expect(isPaddingDisplayed()).toBe(false)
     expect(isScrollingHidden()).toBe(false)
@@ -228,7 +227,6 @@ describe("isEmbed", () => {
       },
     }))
 
-    expect(isColoredLineDisplayed()).toBe(false)
     expect(isToolbarDisplayed()).toBe(false)
     expect(isPaddingDisplayed()).toBe(false)
     expect(isScrollingHidden()).toBe(false)
@@ -242,7 +240,6 @@ describe("isEmbed", () => {
       },
     }))
 
-    expect(isColoredLineDisplayed()).toBe(false)
     expect(isToolbarDisplayed()).toBe(false)
     expect(isPaddingDisplayed()).toBe(false)
     expect(isScrollingHidden()).toBe(false)
@@ -275,7 +272,6 @@ describe("isEmbed", () => {
       },
     }))
 
-    expect(isColoredLineDisplayed()).toBe(false)
     expect(isToolbarDisplayed()).toBe(false)
     expect(isPaddingDisplayed()).toBe(false)
     expect(isScrollingHidden()).toBe(true)
@@ -290,7 +286,6 @@ describe("isEmbed", () => {
       },
     }))
 
-    expect(isColoredLineDisplayed()).toBe(false)
     expect(isToolbarDisplayed()).toBe(false)
     expect(isPaddingDisplayed()).toBe(true)
     expect(isScrollingHidden()).toBe(false)
@@ -305,23 +300,7 @@ describe("isEmbed", () => {
       },
     }))
 
-    expect(isColoredLineDisplayed()).toBe(false)
     expect(isToolbarDisplayed()).toBe(true)
-    expect(isPaddingDisplayed()).toBe(false)
-    expect(isScrollingHidden()).toBe(false)
-    expect(isLightThemeInQueryParams()).toBe(false)
-    expect(isDarkThemeInQueryParams()).toBe(false)
-  })
-
-  it("should show the colored line if in embed options", () => {
-    windowSpy.mockImplementation(() => ({
-      location: {
-        search: "?embed=true&embed_options=show_colored_line",
-      },
-    }))
-
-    expect(isColoredLineDisplayed()).toBe(true)
-    expect(isToolbarDisplayed()).toBe(false)
     expect(isPaddingDisplayed()).toBe(false)
     expect(isScrollingHidden()).toBe(false)
     expect(isLightThemeInQueryParams()).toBe(false)
@@ -489,6 +468,30 @@ describe("keysToSnakeCase", () => {
 
   it("should return an empty dictionary when passed an empty dictionary", () => {
     expect(keysToSnakeCase({})).toEqual({})
+  })
+
+  it("should preserve null values inside arrays without throwing", () => {
+    const input = {
+      customdata: [1, null, { innerKey: 5, anotherNull: null }],
+    }
+
+    expect(keysToSnakeCase(input)).toEqual({
+      customdata: [1, null, { inner_key: 5, another_null: null }],
+    })
+  })
+
+  it("should not attempt to recurse into null values", () => {
+    const input = {
+      value: null,
+      array: [null],
+      nested: { child: null },
+    }
+
+    expect(keysToSnakeCase(input)).toEqual({
+      value: null,
+      array: [null],
+      nested: { child: null },
+    })
   })
 })
 
@@ -728,4 +731,112 @@ describe("getSelectPlaceholder", () => {
       expect(result.shouldDisable).toBe(false)
     })
   })
+})
+
+describe("getScreencastTimestamp", () => {
+  beforeEach(() => {
+    // Set timezone to UTC for consistent test results across all environments
+    process.env.TZ = "UTC"
+    vi.useFakeTimers()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+    delete process.env.TZ
+  })
+
+  it("should return a timestamp in the correct format", () => {
+    vi.setSystemTime(new Date("2025-11-18T12:00:00.000Z"))
+    expect(getScreencastTimestamp()).toBe("2025-11-18-12-00-00")
+  })
+
+  it("should handle single-digit months with proper padding", () => {
+    vi.setSystemTime(new Date("2025-01-05T08:03:07.000Z"))
+    expect(getScreencastTimestamp()).toBe("2025-01-05-08-03-07")
+  })
+
+  it("should handle single-digit days with proper padding", () => {
+    vi.setSystemTime(new Date("2025-12-09T14:30:45.000Z"))
+    expect(getScreencastTimestamp()).toBe("2025-12-09-14-30-45")
+  })
+
+  it("should handle single-digit hours with proper padding", () => {
+    vi.setSystemTime(new Date("2025-06-15T03:25:50.000Z"))
+    expect(getScreencastTimestamp()).toBe("2025-06-15-03-25-50")
+  })
+
+  it("should handle single-digit minutes with proper padding", () => {
+    vi.setSystemTime(new Date("2025-07-20T18:05:30.000Z"))
+    expect(getScreencastTimestamp()).toBe("2025-07-20-18-05-30")
+  })
+
+  it("should handle single-digit seconds with proper padding", () => {
+    vi.setSystemTime(new Date("2025-08-25T23:45:09.000Z"))
+    expect(getScreencastTimestamp()).toBe("2025-08-25-23-45-09")
+  })
+
+  it("should handle midnight correctly", () => {
+    vi.setSystemTime(new Date("2025-03-10T00:00:00.000Z"))
+    expect(getScreencastTimestamp()).toBe("2025-03-10-00-00-00")
+  })
+
+  it("should handle end of year correctly", () => {
+    vi.setSystemTime(new Date("2024-12-31T23:59:59.000Z"))
+    expect(getScreencastTimestamp()).toBe("2024-12-31-23-59-59")
+  })
+
+  it("should ignore milliseconds", () => {
+    vi.setSystemTime(new Date("2025-05-15T10:20:30.999Z"))
+    expect(getScreencastTimestamp()).toBe("2025-05-15-10-20-30")
+  })
+})
+
+describe("getQueryString", () => {
+  it.each([
+    {
+      queryStringOverride: undefined,
+      preservedQueryParams: "embed=true",
+      expected: "embed=true",
+      description:
+        "returns preservedQueryParams when queryStringOverride is undefined",
+    },
+    {
+      queryStringOverride: undefined,
+      preservedQueryParams: "",
+      expected: "",
+      description: "returns empty string when both are empty/undefined",
+    },
+    {
+      queryStringOverride: "foo=bar",
+      preservedQueryParams: "",
+      expected: "foo=bar",
+      description: "returns queryStringOverride when no preservedQueryParams",
+    },
+    {
+      queryStringOverride: "foo=bar",
+      preservedQueryParams: "embed=true",
+      expected: "embed=true&foo=bar",
+      description: "combines preservedQueryParams and queryStringOverride",
+    },
+    {
+      queryStringOverride: "",
+      preservedQueryParams: "embed=true",
+      expected: "embed=true",
+      description:
+        "returns only preservedQueryParams when queryStringOverride is empty string",
+    },
+    {
+      queryStringOverride: "page=1&sort=asc",
+      preservedQueryParams: "embed=true&embed_options=dark",
+      expected: "embed=true&embed_options=dark&page=1&sort=asc",
+      description: "handles complex query strings",
+    },
+  ])(
+    "$description",
+    ({ queryStringOverride, preservedQueryParams, expected }) => {
+      expect(getQueryString(queryStringOverride, preservedQueryParams)).toBe(
+        expected
+      )
+    }
+  )
 })

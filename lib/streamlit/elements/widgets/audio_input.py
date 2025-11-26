@@ -16,9 +16,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import TYPE_CHECKING, Union, cast
-
-from typing_extensions import TypeAlias
+from typing import TYPE_CHECKING, TypeAlias, cast
 
 from streamlit.elements.lib.file_uploader_utils import enforce_filename_restriction
 from streamlit.elements.lib.form_utils import current_form_id
@@ -35,6 +33,7 @@ from streamlit.elements.lib.utils import (
     to_key,
 )
 from streamlit.elements.widgets.file_uploader import _get_upload_files
+from streamlit.errors import StreamlitAPIException
 from streamlit.proto.AudioInput_pb2 import AudioInput as AudioInputProto
 from streamlit.proto.Common_pb2 import FileUploaderState as FileUploaderStateProto
 from streamlit.proto.Common_pb2 import UploadedFileInfo as UploadedFileInfoProto
@@ -52,7 +51,10 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.elements.lib.layout_utils import WidthWithoutContent
 
-SomeUploadedAudioFile: TypeAlias = Union[UploadedFile, DeletedFile, None]
+SomeUploadedAudioFile: TypeAlias = UploadedFile | DeletedFile | None
+
+# Allowed sample rates for audio recording
+ALLOWED_SAMPLE_RATES = {8000, 11025, 16000, 22050, 24000, 32000, 44100, 48000}
 
 
 @dataclass
@@ -90,6 +92,7 @@ class AudioInputMixin:
         self,
         label: str,
         *,
+        sample_rate: int | None = 16000,
         key: Key | None = None,
         help: str | None = None,
         on_change: WidgetCallback | None = None,
@@ -124,6 +127,15 @@ class AudioInputMixin:
 
             .. |st.markdown| replace:: ``st.markdown``
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
+
+        sample_rate : int or None
+            The target sample rate for the audio recording in Hz.
+            This defaults to 16000 Hz, which is optimal for speech recognition.
+
+            The following sample rates are supported: 8000, 11025, 16000,
+            22050, 24000, 32000, 44100, or 48000. If this is ``None``, the
+            widget uses the browser's default sample rate (typically 44100 or
+            48000 Hz).
 
         key : str or int
             An optional string or integer to use as the unique key for the widget.
@@ -185,6 +197,10 @@ class AudioInputMixin:
 
         Examples
         --------
+        *Example 1:* Record a voice message and play it back.*
+
+        The default sample rate of 16000 Hz is optimal for speech recognition.
+
         >>> import streamlit as st
         >>>
         >>> audio_value = st.audio_input("Record a voice message")
@@ -196,10 +212,34 @@ class AudioInputMixin:
            https://doc-audio-input.streamlit.app/
            height: 260px
 
+        *Example 2:* Record high-fidelity audio and play it back.*
+
+        Higher sample rates can create higher-quality, larger audio files. This
+        might require a nicer microphone to fully appreciate the difference.
+
+        >>> import streamlit as st
+        >>>
+        >>> audio_value = st.audio_input("Record high quality audio", sample_rate=48000)
+        >>>
+        >>> if audio_value:
+        ...     st.audio(audio_value)
+
+        .. output::
+           https://doc-audio-input-high-rate.streamlit.app/
+           height: 260px
+
         """
+        # Validate sample_rate parameter
+        if sample_rate is not None and sample_rate not in ALLOWED_SAMPLE_RATES:
+            raise StreamlitAPIException(
+                f"Invalid sample_rate: {sample_rate}. "
+                f"Must be one of {sorted(ALLOWED_SAMPLE_RATES)} Hz, or None for browser default."
+            )
+
         ctx = get_script_run_ctx()
         return self._audio_input(
             label=label,
+            sample_rate=sample_rate,
             key=key,
             help=help,
             on_change=on_change,
@@ -214,6 +254,7 @@ class AudioInputMixin:
     def _audio_input(
         self,
         label: str,
+        sample_rate: int | None = 16000,
         key: Key | None = None,
         help: str | None = None,
         on_change: WidgetCallback | None = None,
@@ -239,11 +280,13 @@ class AudioInputMixin:
         element_id = compute_and_register_element_id(
             "audio_input",
             user_key=key,
-            form_id=current_form_id(self.dg),
+            # Treat the provided key as the main identity.
+            key_as_main_identity=True,
             dg=self.dg,
             label=label,
             help=help,
             width=width,
+            sample_rate=sample_rate,
         )
 
         audio_input_proto = AudioInputProto()
@@ -254,6 +297,10 @@ class AudioInputMixin:
         audio_input_proto.label_visibility.value = get_label_visibility_proto_value(
             label_visibility
         )
+
+        # Set sample_rate in protobuf if specified
+        if sample_rate is not None:
+            audio_input_proto.sample_rate = sample_rate
 
         if label and help is not None:
             audio_input_proto.help = dedent(help)

@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 import { defineConfig } from "vite"
+import { analyzer } from "vite-bundle-analyzer"
 import { version } from "./package.json"
 
 import react from "@vitejs/plugin-react-swc"
-import path from "path"
 import viteTsconfigPaths from "vite-tsconfig-paths"
 
 const BASE = "./"
@@ -26,6 +26,7 @@ const HASH = process.env.OMIT_HASH_FROM_MAIN_FILES ? "" : ".[hash]"
 // This is a convenience for developers for debugging purposes
 const DEV_BUILD = Boolean(process.env.DEV_BUILD)
 const IS_PROFILER_BUILD = Boolean(process.env.IS_PROFILER_BUILD)
+const ANALYZE_BUNDLE = Boolean(process.env.ANALYZE_BUNDLE)
 // The URL of the backend server to proxy to:
 // Can be changed to run against a remote server or different port:
 const DEV_SERVER_BACKEND_URL =
@@ -64,6 +65,22 @@ export default defineConfig({
       plugins: [["@swc/plugin-emotion", {}]],
     }),
     viteTsconfigPaths(),
+    ...(ANALYZE_BUNDLE
+      ? [
+          analyzer({
+            analyzerMode: "json",
+            // NOTE: fileName is relative to the build output directory (outDir: "build").
+            // "../bundle-analysis.json" will be created in the project root (frontend/app/bundle-analysis.json).
+            fileName: "../bundle-analysis.json",
+          }),
+          analyzer({
+            analyzerMode: "static",
+            // NOTE: fileName is relative to the build output directory (outDir: "build").
+            // "../bundle-analysis.html" will be created in the project root (frontend/app/bundle-analysis.html).
+            fileName: "../bundle-analysis.html",
+          }),
+        ]
+      : []),
   ],
   resolve: {
     alias: [
@@ -73,6 +90,11 @@ export default defineConfig({
       {
         find: "react-syntax-highlighter",
         replacement: "react-syntax-highlighter/dist/cjs/index.js",
+      },
+      // Redirect old lodash to lodash-es to avoid duplication
+      {
+        find: "lodash",
+        replacement: "lodash-es",
       },
       ...profilerAliases,
     ],
@@ -101,12 +123,20 @@ export default defineConfig({
         target: DEV_SERVER_BACKEND_URL,
         changeOrigin: true,
       },
+      "^.*/auth/.*": {
+        target: DEV_SERVER_BACKEND_URL,
+        changeOrigin: true,
+      },
+      "^.*/oauth2callback": {
+        target: DEV_SERVER_BACKEND_URL,
+        changeOrigin: true,
+      },
     },
   },
   build: {
     outDir: "build",
     assetsDir: "static",
-    sourcemap: DEV_BUILD,
+    sourcemap: DEV_BUILD || ANALYZE_BUNDLE,
     manifest: true,
     rollupOptions: {
       output: {
@@ -115,9 +145,22 @@ export default defineConfig({
         entryFileNames: `static/js/[name]${HASH}.js`,
         // Ensure assetFileNames is also configured if you're handling asset files
         assetFileNames: assetInfo => {
+          // For CSS files, place them in the /static/css/ directory
           if (assetInfo.name?.endsWith(".css")) {
-            // For CSS files, place them in the /static/css/ directory
-            return `static/css/[name]${HASH}[extname]`
+            // If OMIT_HASH_FROM_MAIN_FILES is set, we don't want to include the
+            // hash in the filename of the entry file at the minimum. There could
+            // be other files with the same name that cause a conflict, which would
+            // increment the entry file to index2.css, etc. This ensures the entry
+            // file is named index.css in this case.
+            if (
+              assetInfo.names.includes("index.css") &&
+              assetInfo.originalFileNames.includes("index.html")
+            ) {
+              return `static/css/[name]${HASH}[extname]`
+            }
+
+            // For chunk css files, include the hash in the filename.
+            return `static/css/[name].[hash][extname]`
           }
 
           // For other assets, use the /static/media/ directory

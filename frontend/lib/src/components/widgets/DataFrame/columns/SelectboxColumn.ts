@@ -30,12 +30,48 @@ import {
   toSafeString,
 } from "./utils"
 
+type SelectOption = { value: string | number | boolean; label?: string }
+
+/**
+ * Unifies the options into the format required by the selectbox cell.
+ *
+ * @param options The options to prepare.
+ * @returns The prepared options in the format required by the selectbox cell.
+ */
+export const prepareOptions = (
+  options: readonly (string | number | boolean | SelectOption)[]
+): { value: string; label: string }[] => {
+  if (isNullOrUndefined(options)) {
+    return []
+  }
+
+  return options
+    .filter(opt => notNullOrUndefined(opt) && opt !== "") // ignore empty option if it exists
+    .map(option => {
+      if (typeof option === "object" && "value" in option) {
+        // Handle SelectOption type
+        const optionValue = toSafeString(option.value).trim()
+        return {
+          value: optionValue,
+          label: option.label ?? optionValue,
+        }
+      }
+
+      // Handle primitive types (string, number, boolean)
+      const optionValue = toSafeString(option).trim() // convert everything to string
+      return {
+        value: optionValue,
+        label: optionValue,
+      }
+    })
+}
+
 export interface SelectboxColumnParams {
   /**
    * A list of options available in the selectbox.
    * Every value in the column needs to match one of the options.
    */
-  readonly options: (string | number | boolean)[]
+  readonly options: (string | number | boolean | SelectOption)[]
 }
 
 /**
@@ -59,7 +95,21 @@ function SelectboxColumn(props: BaseColumnProps): BaseColumn {
     props.columnTypeOptions
   ) as SelectboxColumnParams
 
-  const uniqueTypes = new Set(parameters.options.map(x => typeof x))
+  const isSelectOption = (obj: unknown): obj is SelectOption =>
+    typeof obj === "object" &&
+    obj !== null &&
+    "value" in (obj as Record<string, unknown>)
+
+  const getOptionValueType = (
+    x: string | number | boolean | SelectOption
+  ): string => {
+    if (isSelectOption(x)) {
+      return typeof x.value
+    }
+    return typeof x
+  }
+
+  const uniqueTypes = new Set(parameters.options.map(getOptionValueType))
   if (uniqueTypes.size === 1) {
     if (uniqueTypes.has("number") || uniqueTypes.has("bigint")) {
       dataType = "number"
@@ -67,6 +117,8 @@ function SelectboxColumn(props: BaseColumnProps): BaseColumn {
       dataType = "boolean"
     }
   }
+
+  const preparedOptions = prepareOptions(parameters.options)
 
   const cellTemplate: DropdownCellType = {
     kind: GridCellKind.Custom,
@@ -81,9 +133,7 @@ function SelectboxColumn(props: BaseColumnProps): BaseColumn {
       allowedValues: [
         // Add empty option if the column is not configured as required:
         ...(props.isRequired !== true ? [null] : []),
-        ...parameters.options
-          .filter(opt => opt !== null && opt !== "") // ignore empty option if it exists
-          .map(opt => toSafeString(opt)), // convert everything to string
+        ...preparedOptions,
       ],
       value: "",
     },
@@ -102,11 +152,26 @@ function SelectboxColumn(props: BaseColumnProps): BaseColumn {
         cellData = toSafeString(data)
       }
 
-      if (validate && !cellTemplate.data.allowedValues.includes(cellData)) {
-        return getErrorCell(
-          toSafeString(cellData),
-          `The value is not part of the allowed options.`
-        )
+      if (validate) {
+        const isValidValue = cellTemplate.data.allowedValues.some(option => {
+          if (option === null) {
+            return cellData === null
+          }
+          if (typeof option === "string") {
+            return option === cellData
+          }
+          if (typeof option === "object" && "value" in option) {
+            return option.value === cellData
+          }
+          return false
+        })
+
+        if (!isValidValue) {
+          return getErrorCell(
+            toSafeString(cellData),
+            `The value is not part of the allowed options.`
+          )
+        }
       }
 
       return {

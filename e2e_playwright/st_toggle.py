@@ -42,10 +42,12 @@ st.write("toggle 5 - value:", i5)
 i6 = st.toggle("toggle 6 (True, disabled)", value=True, disabled=True)
 st.write("toggle 6 - value:", i6)
 
-i7 = st.toggle("toggle 7 (label hidden)", label_visibility="hidden")
+i7 = st.toggle("toggle 7 (label hidden)", label_visibility="hidden", key="toggle_7")
 st.write("toggle 7 - value:", i7)
 
-i8 = st.toggle("toggle 8 (label collapsed)", label_visibility="collapsed")
+i8 = st.toggle(
+    "toggle 8 (label collapsed)", label_visibility="collapsed", key="toggle_8"
+)
 st.write("toggle 8 - value:", i8)
 
 with st.expander("Grouped toggles", expanded=True):
@@ -55,9 +57,41 @@ with st.expander("Grouped toggles", expanded=True):
     st.text("A non-toggle element")
 
 st.toggle(
-    "toggle 9 -> :material/check: :rainbow[Fancy] _**markdown** `label` _support_"
+    "toggle 9 -> :material/check: :rainbow[Fancy] _**markdown** `label` _support_",
+    key="toggle_9",
 )
 
 st.toggle("toggle with content width", width="content")
 st.toggle("toggle with stretch width", width="stretch")
 st.toggle("toggle with 150px width", width=150)
+
+st.markdown("Dynamic toggle props:")
+
+if st.toggle("Update toggle props"):
+    state = st.toggle(
+        "Updated dynamic toggle",
+        value=False,
+        width="stretch",
+        help="updated help",
+        key="dynamic_toggle_with_key",
+        on_change=lambda a, param: print(
+            f"Updated toggle - callback triggered: {a} {param}"
+        ),
+        args=("Updated toggle arg",),
+        kwargs={"param": "updated kwarg param"},
+    )
+    st.write("Updated toggle state:", state)
+else:
+    state = st.toggle(
+        "Initial dynamic toggle",
+        value=True,
+        width="content",
+        help="initial help",
+        key="dynamic_toggle_with_key",
+        on_change=lambda a, param: print(
+            f"Initial toggle - callback triggered: {a} {param}"
+        ),
+        args=("Initial toggle arg",),
+        kwargs={"param": "initial kwarg param"},
+    )
+    st.write("Initial toggle state:", state)

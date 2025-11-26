@@ -17,10 +17,11 @@
 import React, { FC, memo, useCallback, useRef, useState } from "react"
 
 import { Textarea as UITextArea } from "baseui/textarea"
-import uniqueId from "lodash/uniqueId"
+import { uniqueId } from "lodash-es"
 
 import { Element, TextArea as TextAreaProto } from "@streamlit/protobuf"
 
+import { getBorderColor } from "~lib/components/shared/Base/styled-components"
 import InputInstructions from "~lib/components/shared/InputInstructions/InputInstructions"
 import { Placement } from "~lib/components/shared/Tooltip"
 import TooltipIcon from "~lib/components/shared/TooltipIcon"
@@ -32,7 +33,7 @@ import {
   useBasicWidgetState,
   ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
-import { useCalculatedWidth } from "~lib/hooks/useCalculatedWidth"
+import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import useOnInputChange from "~lib/hooks/useOnInputChange"
 import useSubmitFormViaEnterKey from "~lib/hooks/useSubmitFormViaEnterKey"
@@ -91,9 +92,10 @@ const TextArea: FC<Props> = ({
   fragmentId,
   outerElement,
 }) => {
+  // eslint-disable-next-line react-hooks/refs -- TODO: Do not access ref during render
   const id = useRef(uniqueId("text_area_")).current
 
-  const [width, elementRef] = useCalculatedWidth()
+  const { width, elementRef } = useCalculatedDimensions()
 
   /**
    * True if the user-specified state.value has not yet been synced to the WidgetStateManager.
@@ -266,13 +268,22 @@ const TextArea: FC<Props> = ({
             props: {
               "data-testid": "stTextAreaRootElement",
             },
-            style: {
-              // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
-              borderLeftWidth: theme.sizes.borderWidth,
-              borderRightWidth: theme.sizes.borderWidth,
-              borderTopWidth: theme.sizes.borderWidth,
-              borderBottomWidth: theme.sizes.borderWidth,
-              flexGrow: 1,
+            style: ({ $isFocused }: { $isFocused: boolean }) => {
+              const borderColor = getBorderColor(theme.colors, $isFocused)
+              return {
+                // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
+                borderLeftWidth: theme.sizes.borderWidth,
+                borderRightWidth: theme.sizes.borderWidth,
+                borderTopWidth: theme.sizes.borderWidth,
+                borderBottomWidth: theme.sizes.borderWidth,
+
+                borderTopColor: borderColor,
+                borderRightColor: borderColor,
+                borderBottomColor: borderColor,
+                borderLeftColor: borderColor,
+
+                flexGrow: 1,
+              }
             },
           },
         }}

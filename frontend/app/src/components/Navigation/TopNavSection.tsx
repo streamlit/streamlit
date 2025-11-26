@@ -16,7 +16,6 @@
 
 import React, { useState } from "react"
 
-import { useTheme } from "@emotion/react"
 import {
   KeyboardArrowDown,
   KeyboardArrowUp,
@@ -24,7 +23,7 @@ import {
 import { PLACEMENT, TRIGGER_TYPE, Popover as UIPopover } from "baseui/popover"
 
 import { StreamlitEndpoints } from "@streamlit/connection"
-import { hasLightBackgroundColor, Icon } from "@streamlit/lib"
+import { hasLightBackgroundColor, Icon, useEmotionTheme } from "@streamlit/lib"
 import { IAppPage } from "@streamlit/protobuf"
 import { isNullOrUndefined } from "@streamlit/utils"
 
@@ -47,6 +46,7 @@ interface TopNavSectionProps {
   pageLinkBaseUrl: string
   currentPageScriptHash: string
   hideChevron?: boolean
+  widgetsDisabled: boolean
 }
 
 const TopNavSection = ({
@@ -57,9 +57,10 @@ const TopNavSection = ({
   pageLinkBaseUrl,
   currentPageScriptHash,
   hideChevron = false,
+  widgetsDisabled,
 }: TopNavSectionProps): React.ReactElement | null => {
   const [open, setOpen] = useState(false)
-  const theme = useTheme()
+  const theme = useEmotionTheme()
   const lightBackground = hasLightBackgroundColor(theme)
   const showSections = sections.length > 1
 
@@ -76,7 +77,7 @@ const TopNavSection = ({
       triggerType={TRIGGER_TYPE.click}
       placement={PLACEMENT.bottomLeft}
       content={() => (
-        <StyledPopoverContent data-testid="stTopNavSection">
+        <StyledPopoverContent data-testid="stTopNavPopover">
           {sections.map((section, _sectionIndex) => {
             const sectionName = section[0].sectionHeader
 
@@ -103,12 +104,14 @@ const TopNavSection = ({
                       {...item}
                       icon={item.icon || null}
                       isTopNav={true}
+                      isInDropdown={true}
                       isActive={currentPageScriptHash === item.pageScriptHash}
                       onClick={handleClick}
                       pageUrl={endpoints.buildAppPageURL(
                         pageLinkBaseUrl,
                         item
                       )}
+                      widgetsDisabled={widgetsDisabled}
                     >
                       {pageName}
                     </SidebarNavLink>
@@ -173,6 +176,7 @@ const TopNavSection = ({
           tabIndex={0}
           onClick={() => setOpen(!open)}
           isOpen={open}
+          data-testid="stTopNavSection"
         >
           <StyledNavSectionText>{title}</StyledNavSectionText>
           {!hideChevron && (

@@ -19,7 +19,6 @@ from textwrap import dedent
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
     Generic,
     Literal,
     TypeVar,
@@ -64,7 +63,7 @@ from streamlit.type_util import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Callable, Sequence
 
     from streamlit.dataframe_util import OptionSequence
     from streamlit.delta_generator import DeltaGenerator
@@ -370,7 +369,9 @@ class MultiSelectMixin:
         Returns
         -------
         list
-            A list with the selected options
+            A list of the selected options.
+
+            The list contains copies of the selected options, not the originals.
 
         Examples
         --------
@@ -492,7 +493,16 @@ class MultiSelectMixin:
         element_id = compute_and_register_element_id(
             widget_name,
             user_key=key,
-            form_id=form_id,
+            # Treat the provided key as the main identity. Only include
+            # changes to the options, accept_new_options, and max_selections
+            # in the identity computation as those can invalidate the
+            # current selection.
+            key_as_main_identity={
+                "options",
+                "max_selections",
+                "accept_new_options",
+                "format_func",
+            },
             dg=self.dg,
             label=label,
             options=formatted_options,

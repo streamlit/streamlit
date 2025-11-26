@@ -6,6 +6,11 @@ on:
       - "develop"
   pull_request:
     types: [opened, synchronize, reopened]
+    paths-ignore:
+      # Don't run CI if changes are only in the specs folder:
+      - "specs/**"
+      # Don't run CI if changes are only in the agent-knowledge folder:
+      - "agent-knowledge/**"
 
 # Avoid duplicate workflows on same branch
 concurrency:
@@ -22,7 +27,7 @@ jobs:
 
     steps:
       - name: Checkout Streamlit code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           persist-credentials: false
           submodules: "recursive"
@@ -30,7 +35,7 @@ jobs:
       - name: Set build config env vars
         uses: ./.github/actions/build_info
       - name: Set up Python 3.12
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.12"
       - name: Setup virtual env

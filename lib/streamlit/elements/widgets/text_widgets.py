@@ -243,6 +243,8 @@ class TextWidgetsMixin:
               <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
               font library.
 
+            - ``"spinner"``: Displays a spinner as an icon.
+
         width : "stretch" or int
             The width of the text input widget. This can be one of the
             following:
@@ -328,7 +330,9 @@ class TextWidgetsMixin:
         element_id = compute_and_register_element_id(
             "text_input",
             user_key=key,
-            form_id=current_form_id(self.dg),
+            # Explicitly whitelist max_chars to make sure the ID changes when it changes
+            # since the widget value might become invalid based on a different max_chars
+            key_as_main_identity={"max_chars"},
             dg=self.dg,
             label=label,
             value=value,
@@ -643,7 +647,9 @@ class TextWidgetsMixin:
         element_id = compute_and_register_element_id(
             "text_area",
             user_key=key,
-            form_id=current_form_id(self.dg),
+            # Explicitly whitelist max_chars to make sure the ID changes when it changes
+            # since the widget value might become invalid based on a different max_chars
+            key_as_main_identity={"max_chars"},
             dg=self.dg,
             label=label,
             value=value,

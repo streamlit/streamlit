@@ -23,6 +23,7 @@ import { TimePicker as UITimePicker } from "baseui/timepicker"
 import { TimeInput as TimeInputProto } from "@streamlit/protobuf"
 
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
+import { getBorderColor } from "~lib/components/shared/Base/styled-components"
 import { Placement } from "~lib/components/shared/Tooltip"
 import TooltipIcon from "~lib/components/shared/TooltipIcon"
 import {
@@ -40,7 +41,10 @@ import {
 } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import { StyledClearIconContainer } from "./styled-components"
+import {
+  StyledClearIconContainer,
+  StyledTimeDropdownListItem,
+} from "./styled-components"
 
 export interface Props {
   disabled: boolean
@@ -79,13 +83,21 @@ function TimeInput({
 
         overrides: {
           ControlContainer: {
-            style: {
-              height: theme.sizes.minElementHeight,
-              // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
-              borderLeftWidth: theme.sizes.borderWidth,
-              borderRightWidth: theme.sizes.borderWidth,
-              borderTopWidth: theme.sizes.borderWidth,
-              borderBottomWidth: theme.sizes.borderWidth,
+            style: ({ $isFocused }: { $isFocused: boolean }) => {
+              const borderColor = getBorderColor(theme.colors, $isFocused)
+              return {
+                height: theme.sizes.minElementHeight,
+                // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
+                borderLeftWidth: theme.sizes.borderWidth,
+                borderRightWidth: theme.sizes.borderWidth,
+                borderTopWidth: theme.sizes.borderWidth,
+                borderBottomWidth: theme.sizes.borderWidth,
+
+                borderTopColor: borderColor,
+                borderRightColor: borderColor,
+                borderBottomColor: borderColor,
+                borderLeftColor: borderColor,
+              }
             },
           },
 
@@ -127,12 +139,7 @@ function TimeInput({
           },
 
           DropdownListItem: {
-            style: () => ({
-              paddingRight: theme.spacing.lg,
-              paddingLeft: theme.spacing.lg,
-              paddingTop: theme.spacing.sm,
-              paddingBottom: theme.spacing.sm,
-            }),
+            component: StyledTimeDropdownListItem,
           },
 
           // Nudge the dropdown menu by 1px so the focus state doesn't get cut off
@@ -227,7 +234,7 @@ function TimeInput({
             overrides={{
               Svg: {
                 style: {
-                  color: theme.colors.darkGray,
+                  color: theme.colors.grayTextColor,
                   // setting this width and height makes the clear-icon align with dropdown arrows of other input fields
                   padding: theme.spacing.threeXS,
                   height: theme.sizes.clearIconSize,

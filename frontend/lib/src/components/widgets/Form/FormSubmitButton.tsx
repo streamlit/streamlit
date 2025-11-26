@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useEffect } from "react"
+import React, { ReactElement, useCallback, useEffect } from "react"
 
 import { Button as ButtonProto } from "@streamlit/protobuf"
 
@@ -26,6 +26,7 @@ import BaseButton, {
   BaseButtonTooltip,
   DynamicButtonLabel,
 } from "~lib/components/shared/BaseButton"
+import { useRegisterShortcut } from "~lib/hooks/useRegisterShortcut"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -39,6 +40,7 @@ export interface Props {
 export function FormSubmitButton(props: Props): ReactElement {
   const { disabled, element, widgetMgr, fragmentId } = props
   const { formId } = element
+  const shortcut = element.shortcut ? element.shortcut : undefined
 
   const { formsData } = useRequiredContext(FormsContext)
   const hasInProgressUpload = formsData.formsWithUploads.has(formId)
@@ -50,10 +52,26 @@ export function FormSubmitButton(props: Props): ReactElement {
     kind = BaseButtonKind.TERTIARY_FORM_SUBMIT
   }
 
+  const isDisabled = disabled || hasInProgressUpload
+
   useEffect(() => {
     widgetMgr.addSubmitButton(formId, element)
     return () => widgetMgr.removeSubmitButton(formId, element)
   }, [widgetMgr, formId, element])
+
+  const handleSubmit = useCallback((): void => {
+    if (isDisabled) {
+      return
+    }
+
+    widgetMgr.submitForm(element.formId, fragmentId, element)
+  }, [isDisabled, widgetMgr, element, fragmentId])
+
+  useRegisterShortcut({
+    shortcut,
+    disabled: isDisabled,
+    onActivate: handleSubmit,
+  })
 
   return (
     <Box className="stFormSubmitButton" data-testid="stFormSubmitButton">
@@ -62,12 +80,14 @@ export function FormSubmitButton(props: Props): ReactElement {
           kind={kind}
           size={BaseButtonSize.SMALL}
           containerWidth={true}
-          disabled={disabled || hasInProgressUpload}
-          onClick={() => {
-            widgetMgr.submitForm(element.formId, fragmentId, element)
-          }}
+          disabled={isDisabled}
+          onClick={handleSubmit}
         >
-          <DynamicButtonLabel icon={element.icon} label={element.label} />
+          <DynamicButtonLabel
+            icon={element.icon}
+            label={element.label}
+            shortcut={shortcut}
+          />
         </BaseButton>
       </BaseButtonTooltip>
     </Box>

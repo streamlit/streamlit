@@ -18,6 +18,7 @@ updates:
     labels:
       - "change:chore"
       - "impact:internal"
+      - "autofix"
 
     ignore:
       - dependency-name: "baseui"
@@ -49,6 +50,9 @@ updates:
       - dependency-name: "sass"
         # Breaks our build process, needs more investigation
         versions: [">=1.80.0"]
+      - dependency-name: "react-window"
+        # This requires us to update baseui, since that has a dependency on react-window v1.
+        versions: [">=2.0.0"]
 
     groups:
       deck-gl:
@@ -105,11 +109,9 @@ updates:
     labels:
       - "change:chore"
       - "impact:internal"
+      - "autofix"
 
     ignore:
-      - dependency-name: "bokeh"
-        # We only support bokeh 2.4.3
-        versions: [">=2.4.3"]
       - dependency-name: "langchain"
         # Newer langchain version conflict with our test setup
         # see: https://github.com/streamlit/streamlit/pull/10227
@@ -126,3 +128,4 @@ updates:
     labels:
       - "change:chore"
       - "impact:internal"
+      - "autofix"

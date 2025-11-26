@@ -73,7 +73,9 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
         must be installed in your environment to use this connection. You can
         install it as an extra with Streamlit:
 
-        >>> pip install streamlit[snowflake]
+        .. code-block:: shell
+
+           pip install streamlit[snowflake]
 
     .. Important::
         Account identifiers must be of the form ``<orgname>-<account_name>``
@@ -355,7 +357,7 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
         def _query(sql: str) -> DataFrame:
             cur = self._instance.cursor()
             cur.execute(sql, params=params, **kwargs)
-            return cur.fetch_pandas_all()
+            return cur.fetch_pandas_all()  # type: ignore
 
         # We modify our helper function's `__qualname__` here to work around default
         # `@st.cache_data` behavior. Otherwise, `.query()` being called with different

@@ -23,7 +23,7 @@ import {
 } from "@emotion-icons/material-outlined"
 
 import BaseButton, { BaseButtonKind } from "~lib/components/shared/BaseButton"
-import Icon, { StyledSpinnerIcon } from "~lib/components/shared/Icon"
+import Icon, { DynamicIcon } from "~lib/components/shared/Icon"
 import { UploadFileInfo } from "~lib/components/widgets/FileUploader/UploadFileInfo"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { assertNever } from "~lib/util/assertNever"
@@ -56,17 +56,20 @@ export const ChatUploadedFileIcon: FC<ChatUploadedFileIconProps> = ({
   switch (type) {
     case "uploading":
       return (
-        <StyledSpinnerIcon
-          data-testid="stChatInputFileIconSpinner"
+        <DynamicIcon
+          iconValue="spinner"
+          testid="stChatInputFileIconSpinner"
           size="lg"
-          margin="0"
-          padding="0"
         />
       )
     case "error":
       return (
         <ChatUploadedFileIconTooltip content={fileInfo.status.errorMessage}>
-          <Icon color={theme.colors.red} content={ErrorOutline} size="lg" />
+          <Icon
+            color={theme.colors.redTextColor}
+            content={ErrorOutline}
+            size="lg"
+          />
         </ChatUploadedFileIconTooltip>
       )
     case "uploaded":

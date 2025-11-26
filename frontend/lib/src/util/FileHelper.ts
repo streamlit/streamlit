@@ -133,7 +133,11 @@ export const getRejectedFileInfo = (
   maxUploadSizeInBytes: number
 ): UploadFileInfo => {
   const { file, errors } = rejected
-  return new UploadFileInfo(file.name, file.size, fileId, {
+
+  // For directory uploads, use the relative path to preserve directory structure
+  const fileName = file.webkitRelativePath || file.name
+
+  return new UploadFileInfo(fileName, file.size, fileId, {
     type: "error",
     errorMessage: errors
       .map(error => getErrorMessage(error.code, file, maxUploadSizeInBytes))

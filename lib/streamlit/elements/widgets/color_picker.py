@@ -213,13 +213,20 @@ class ColorPickerMixin:
         )
         maybe_raise_label_warnings(label, label_visibility)
 
+        # Enforce minimum width of 40px to match the color block's intrinsic size.
+        # The color block is always 40x40px, so the widget should never be smaller.
+        min_width_px = 40
+        if isinstance(width, int) and width < min_width_px:
+            width = min_width_px
+
         validate_width(width, allow_content=True)
+
         layout_config = LayoutConfig(width=width)
 
         element_id = compute_and_register_element_id(
             "color_picker",
             user_key=key,
-            form_id=current_form_id(self.dg),
+            key_as_main_identity=True,
             dg=self.dg,
             label=label,
             value=str(value),

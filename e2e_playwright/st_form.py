@@ -32,7 +32,12 @@ with st.form("form_1"):
     text_input = st.text_input("Text Input", value="foo")
     time_input = st.time_input("Time Input", time(8, 45))
     toggle_input = st.toggle("Toggle Input", value=False)
-    st.form_submit_button("Submit")
+    st.form_submit_button("Submit", key="submit_button_form_1")
+    shortcut_submit_clicked = st.form_submit_button(
+        "Submit with shortcut",
+        key="shortcut_submit_button",
+        shortcut="Ctrl+Alt+S",
+    )
 
 st.write("Checkbox:", checkbox)
 st.write("Date Input:", date_input)
@@ -46,6 +51,10 @@ st.write("Text Area:", text_area)
 st.write("Text Input:", text_input)
 st.write("Time Input:", time_input)
 st.write("Toggle Input:", toggle_input)
+st.write("Submit button session state:", st.session_state.get("submit_button_form_1"))
+
+if shortcut_submit_clicked:
+    st.write("Shortcut form submitted!")
 
 with st.form("form_2"):
     st.write("Inside form 2")
@@ -264,3 +273,30 @@ with st.container(key="width_tests"):
         st.form_submit_button("Content Width (Default)", width="content")
         st.form_submit_button("Stretch Width", width="stretch")
         st.form_submit_button("250px Width", width=250)
+
+
+update_button_props = st.toggle("Update button props")
+
+with st.form("form_with_dynamic_button"):
+    st.write("Form with dynamic button")
+
+    if update_button_props:
+        clicked = st.form_submit_button(
+            "Updated dynamic button",
+            type="secondary",
+            icon=":material/looks_two:",
+            width="stretch",
+            help="updated help",
+            key="dynamic_button_with_key",
+        )
+        st.write("Clicked updated button:", clicked)
+    else:
+        clicked = st.form_submit_button(
+            "Initial dynamic button",
+            type="primary",
+            icon=":material/looks_one:",
+            width="content",
+            help="initial help",
+            key="dynamic_button_with_key",
+        )
+        st.write("Clicked initial button:", clicked)
