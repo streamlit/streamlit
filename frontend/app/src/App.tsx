@@ -2107,10 +2107,18 @@ export class App extends PureComponent<Props, State> {
 
   /**
    * Process any queued file URL requests that were made while disconnected.
-   * Called when the WebSocket connection is re-established.
+   * Called when the WebSocket connection is re-established and session info
+   * is available.
    */
   processPendingFileURLRequests = (): void => {
     if (this.pendingFileURLRequests.length === 0) {
+      return
+    }
+
+    // Don't process if connection or session info isn't ready yet.
+    // This method will be called again from handleInitialization once
+    // session info is available.
+    if (!this.isServerConnected() || !this.sessionInfo.isSet) {
       return
     }
 

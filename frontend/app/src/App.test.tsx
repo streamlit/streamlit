@@ -3005,7 +3005,10 @@ describe("App", () => {
       )
     })
 
-    it("processes queued requests after session info is restored via handleNewSession", () => {
+    it("does not process queued requests when connected but session info is not set yet", () => {
+      // This tests the race condition where WebSocket connects before
+      // handleNewSession is received. The queue should NOT be processed
+      // until session info is available.
       renderApp(getProps())
 
       const fileUploadClient =
@@ -3022,8 +3025,6 @@ describe("App", () => {
       expect(connectionManager.sendMessage).not.toBeCalled()
 
       // Connection is re-established but session info is NOT set yet
-      // This simulates the race condition where connection comes up
-      // before handleNewSession is received
       getMockConnectionManager(true)
 
       act(() => {
@@ -3032,8 +3033,41 @@ describe("App", () => {
         )
       })
 
-      // File URL request should NOT be sent yet because session info is not set
-      // (though other messages like rerunScript may be sent)
+      // File URL request should NOT be sent because session info is missing.
+      // processPendingFileURLRequests should return early without processing.
+      expect(connectionManager.sendMessage).not.toHaveBeenCalledWith(
+        expect.objectContaining({
+          fileUrlsRequest: expect.anything(),
+        })
+      )
+    })
+
+    it("processes queued requests after session info is restored via handleNewSession", () => {
+      // This tests that requests queued while disconnected are eventually
+      // processed once both connection AND session info are available.
+      renderApp(getProps())
+
+      const fileUploadClient =
+        getStoredValue<FileUploadClient>(FileUploadClient)
+
+      // Queue a request while disconnected (no session info set)
+      // @ts-expect-error - requestFileURLs is private
+      fileUploadClient.requestFileURLs("myRequestId", [
+        new File([""], "file1.txt"),
+      ])
+
+      const connectionManager = getMockConnectionManager()
+
+      // Connection is re-established but session info is NOT set yet
+      getMockConnectionManager(true)
+
+      act(() => {
+        getMockConnectionManagerProp("connectionStateChanged")(
+          ConnectionState.CONNECTED
+        )
+      })
+
+      // Request not sent yet (session info missing)
       expect(connectionManager.sendMessage).not.toHaveBeenCalledWith(
         expect.objectContaining({
           fileUrlsRequest: expect.anything(),
@@ -3041,7 +3075,7 @@ describe("App", () => {
       )
 
       // Now simulate receiving handleNewSession which sets session info
-      // This should trigger processPendingFileURLRequests again
+      // This triggers processPendingFileURLRequests from handleInitialization
       sendForwardMessage("newSession", NEW_SESSION_JSON)
 
       // Now the queued request should be sent
