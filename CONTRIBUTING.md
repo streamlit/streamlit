@@ -348,7 +348,7 @@ You might have double environments which mismatch for example by accident you co
 If the `protoc` command fails and there is a version mismatch reported, try to install the correct version.
 
 - Go to [Protobuf releases](https://github.com/protocolbuffers/protobuf/releases)
-- Choose the [Protobuf tag](https://github.com/protocolbuffers/protobuf/tags) which matches Python's environment Protobuf version, for example [3.20.0](<https://github.com/protocolbuffers/protobuf/releases/tag/>> v3.20.0). Call `pip show protobuf` or equivalent to find this out.
+- Choose the [Protobuf tag](https://github.com/protocolbuffers/protobuf/tags) which matches Python's environment Protobuf version, for example [3.20.0](https://github.com/protocolbuffers/protobuf/releases/tag/v3.20.0). Call `pip show protobuf` or equivalent to find this out.
 - Download zip containing protoc for your system, example: [protoc-3.20.0-osx-x86_64.zip](https://github.com/protocolbuffers/protobuf/releases/download/v3.20.0/protoc-3.20.0-osx-x86_64.zip)
 
 <details>
