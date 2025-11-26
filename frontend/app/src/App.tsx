@@ -1302,6 +1302,12 @@ export class App extends PureComponent<Props, State> {
       SessionInfo.propsFromNewSessionMessage(newSessionProto)
     )
 
+    // Process any queued file URL requests now that session info is available.
+    // This handles the case where the connection was re-established but
+    // session info wasn't yet set when processPendingFileURLRequests was
+    // first called from handleConnectionStateChanged.
+    this.processPendingFileURLRequests()
+
     // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
     this.metricsMgr.initialize({
       gatherUsageStats: config.gatherUsageStats,

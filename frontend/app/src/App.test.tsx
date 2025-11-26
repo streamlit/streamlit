@@ -3004,6 +3004,56 @@ describe("App", () => {
         })
       )
     })
+
+    it("processes queued requests after session info is restored via handleNewSession", () => {
+      renderApp(getProps())
+
+      const fileUploadClient =
+        getStoredValue<FileUploadClient>(FileUploadClient)
+
+      // Queue a request while disconnected (no session info set)
+      // @ts-expect-error - requestFileURLs is private
+      fileUploadClient.requestFileURLs("myRequestId", [
+        new File([""], "file1.txt"),
+      ])
+
+      // No message sent yet
+      const connectionManager = getMockConnectionManager()
+      expect(connectionManager.sendMessage).not.toBeCalled()
+
+      // Connection is re-established but session info is NOT set yet
+      // This simulates the race condition where connection comes up
+      // before handleNewSession is received
+      getMockConnectionManager(true)
+
+      act(() => {
+        getMockConnectionManagerProp("connectionStateChanged")(
+          ConnectionState.CONNECTED
+        )
+      })
+
+      // File URL request should NOT be sent yet because session info is not set
+      // (though other messages like rerunScript may be sent)
+      expect(connectionManager.sendMessage).not.toHaveBeenCalledWith(
+        expect.objectContaining({
+          fileUrlsRequest: expect.anything(),
+        })
+      )
+
+      // Now simulate receiving handleNewSession which sets session info
+      // This should trigger processPendingFileURLRequests again
+      sendForwardMessage("newSession", NEW_SESSION_JSON)
+
+      // Now the queued request should be sent
+      expect(connectionManager.sendMessage).toHaveBeenCalledWith(
+        expect.objectContaining({
+          fileUrlsRequest: expect.objectContaining({
+            requestId: "myRequestId",
+            fileNames: ["file1.txt"],
+          }),
+        })
+      )
+    })
   })
 
   describe("Test Main Menu shortcut functionality", () => {
