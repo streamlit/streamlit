@@ -1,0 +1,95 @@
+# AI Review workflow uses Cursor CLI to review PRs
+name: AI Review
+
+on:
+  pull_request:
+    types: [labeled]
+
+jobs:
+  ai-review:
+    if: github.event.label.name == 'ai-review'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+
+    # Avoid duplicate workflows on same branch
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-ai-review
+      cancel-in-progress: true
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout Streamlit code
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.head_ref }}
+          persist-credentials: false
+          submodules: "recursive"
+          fetch-depth: 0
+
+      - name: Install Cursor CLI
+        run: |
+          curl https://cursor.com/install -fsS | bash
+          echo "$HOME/.cursor/bin" >> $GITHUB_PATH
+
+      - name: Run AI Review
+        env:
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MODEL: claude-4.5-opus
+        run: |
+          cursor-agent -p "You are operating in a GitHub Actions runner to perform a code review.
+
+          The GitHub CLI is available as \`gh\` and authenticated via \`GH_TOKEN\`. Git is available for read operations.
+
+          # Context:
+          - Repo: ${{ github.repository }}
+          - PR Number: ${{ github.event.pull_request.number }}
+          - PR URL: ${{ github.event.pull_request.html_url }}
+          - Base Ref: ${{ github.base_ref }}
+          - Head Ref: ${{ github.head_ref }}
+
+          # Goal:
+          Please review this branch (PR: ${{ github.event.pull_request.html_url }}) and make sure that the changes make sense, are bug free, backwards compatible and ready for merge. Please don't run any linting, tests, or other tasks that are already handled by CI.
+
+          # Review Checklist:
+          - Unit and e2e tests are covering the changes well.
+          - The e2e tests follow the best practices documented in .cursor/rules/e2e_playwright.mdc
+          - The python unit tests follow the best practices documented in .cursor/rules/python_tests.mdc
+          - The frontend unit tests follow the best practices documented in .cursor/rules/typescript.mdc
+          - No risky aspects that could cause security issues or regressions.
+          - The code follows other best practices from the Streamlit code base.
+
+          # Instructions:
+          1. Use \`gh pr diff ${{ github.event.pull_request.number }}\` to get the changes in the PR.
+          2. Read and analyze the changed files to understand the full context.
+          3. Read the best practices files (.cursor/rules/e2e_playwright.mdc, .cursor/rules/python_tests.mdc, .cursor/rules/typescript.mdc) to understand the testing standards.
+          4. Perform a thorough code review based on the checklist above.
+          5. Post a single, comprehensive review comment to the PR using \`gh pr comment ${{ github.event.pull_request.number }} --body \"<your review>\"\`.
+          6. The review comment should be well-structured with clear sections and actionable feedback.
+          7. If everything looks good, indicate that the PR is ready for merge.
+          8. If there are issues, clearly describe them with specific file references and line numbers.
+
+          # Output Format for PR Comment:
+          Structure your review comment with the following sections:
+          - **Summary**: Brief overview of what the PR does
+          - **Code Quality**: Assessment of code structure, patterns, and maintainability
+          - **Test Coverage**: Evaluation of unit and e2e test coverage
+          - **Backwards Compatibility**: Analysis of any breaking changes
+          - **Security & Risk**: Any security concerns or regression risks
+          - **Recommendations**: Specific suggestions for improvement (if any)
+          - **Verdict**: Overall assessment (Ready for merge / Needs changes)
+
+          Do NOT run linting, tests, or build commands. Focus only on code review.
+          " --force --model "$MODEL" --output-format=text
+
+      - name: Remove 'ai-review' label after review
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr edit ${{ github.event.pull_request.number }} --remove-label "ai-review"
