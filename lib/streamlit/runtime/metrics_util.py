@@ -154,6 +154,7 @@ _ATTRIBUTIONS_TO_CHECK: Final = [
     "agno",
     "mistralai",
     "smolagents",
+    "ollama",
     # Workflow Tools:
     "prefect",
     "luigi",
