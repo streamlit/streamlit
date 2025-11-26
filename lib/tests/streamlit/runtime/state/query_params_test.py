@@ -446,7 +446,7 @@ class TestSetItemInDict:
 
     @parameterized.expand(
         [
-            ("dict_value", "foo", {"bar": "baz"}, "cannot set.*to a dictionary"),
+            ("dict_value", "foo", {"bar": "baz"}, "cannot be set to a dictionary"),
             ("embed_key", "embed", "true", "embed.*cannot be set"),
             (
                 "embed_options_key",
