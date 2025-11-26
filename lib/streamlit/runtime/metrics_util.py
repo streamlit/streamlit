@@ -186,6 +186,7 @@ _ATTRIBUTIONS_TO_CHECK: Final = [
     "luigi",
     "airflow",
     "dagster",
+    "celery",
     # Vector Stores:
     "pgvector",
     "faiss",
