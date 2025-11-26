@@ -17,7 +17,7 @@ Streamlit lets you transform Python scripts into interactive web apps in minutes
 - **Live editing:** See your app update instantly as you edit your script.
 - **Open-source and free:** Join a vibrant community and contribute to Streamlit's future.
 
-## Installation
+## Installationtest
 
 Open a terminal and run:
 
