@@ -633,8 +633,6 @@ class BidiComponentTest(DeltaGeneratorTestCase):
     def test_component_with_dict_containing_dataframe(self):
         """Test component with dict containing dataframe - should use mixed data serialization."""
 
-        import pandas as pd
-
         # Register a component
         self.mock_component_manager.register(
             BidiComponentDefinition(
@@ -673,8 +671,6 @@ class BidiComponentTest(DeltaGeneratorTestCase):
 
     def test_component_with_multiple_dataframes_in_dict(self):
         """Test component with dict containing multiple dataframes."""
-
-        import pandas as pd
 
         # Register a component
         self.mock_component_manager.register(
@@ -778,7 +774,6 @@ class BidiComponentTest(DeltaGeneratorTestCase):
         assert bidi_component_proto.WhichOneof("data") == "json"
 
         # The data should be JSON-serialized as a string (due to DataFrame fallback)
-        import json
 
         parsed_json = json.loads(bidi_component_proto.json)
         assert isinstance(parsed_json, str)  # It's a string representation
@@ -810,7 +805,6 @@ class BidiComponentTest(DeltaGeneratorTestCase):
         assert bidi_component_proto.WhichOneof("data") == "json"
 
         # The data should be JSON-serialized as a string (due to DataFrame fallback)
-        import json
 
         parsed_json = json.loads(bidi_component_proto.json)
 
