@@ -182,7 +182,7 @@ make init
 
 ### 6. Running tests
 
-You should always write unit tests and end-to-end tests! This true for new features, but also for bugs; this way when you fix a bug you can be sure it will not show up again. So bug-fixing is actually a great way to increase our test coverage where it actually matters.
+You should always write unit tests and end-to-end tests! This is true for new features, but also for bugs; this way when you fix a bug you can be sure it will not show up again. So bug-fixing is actually a great way to increase our test coverage where it actually matters.
 
 #### Python unit tests
 
