@@ -363,4 +363,14 @@ describe("buildHref", () => {
     // Falls back to simple concatenation when URL parsing fails
     expect(buildHref(element)).toBe("not-a-valid-url?foo=bar")
   })
+
+  it("places queryString before fragment in fallback for invalid external URLs", () => {
+    const element = PageLinkProto.create({
+      page: "not-a-valid-url#section",
+      queryString: "foo=bar",
+      external: true,
+    })
+    // Falls back to string manipulation that correctly places query before fragment
+    expect(buildHref(element)).toBe("not-a-valid-url?foo=bar#section")
+  })
 })

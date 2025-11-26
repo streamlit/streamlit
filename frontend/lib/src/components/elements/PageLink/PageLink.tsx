@@ -46,7 +46,12 @@ export function buildHref(element: PageLinkProto): string {
         href = url.toString()
       } catch {
         // Fallback if URL parsing fails
-        href += (href.includes("?") ? "&" : "?") + element.queryString
+        const [urlBase, fragment] = href.split("#")
+        href =
+          urlBase +
+          (urlBase.includes("?") ? "&" : "?") +
+          element.queryString +
+          (fragment ? "#" + fragment : "")
       }
     } else {
       // Internal links: append query string to relative path
