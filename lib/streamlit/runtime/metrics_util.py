@@ -151,6 +151,9 @@ _ATTRIBUTIONS_TO_CHECK: Final = [
     "memori",
     "autogen_agentchat",
     "xai_sdk",
+    "agno",
+    "mistralai",
+    "smolagents",
     # Workflow Tools:
     "prefect",
     "luigi",
