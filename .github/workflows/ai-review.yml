@@ -64,7 +64,7 @@ jobs:
           - Unit and e2e tests are covering the changes well.
           - The e2e tests follow the best practices documented in .cursor/rules/e2e_playwright.mdc
           - The python unit tests follow the best practices documented in .cursor/rules/python_tests.mdc
-          - The frontend unit tests follow the best practices documented in .cursor/rules/typescript.mdc
+          - The frontend changed and unit tests follow the best practices documented in .cursor/rules/typescript.mdc
           - The python library changes follow the best practices documented in .cursor/rules/python_lib.mdc and .cursor/rules/python.mdc
           - If proto files have been changed, please check with .cursor/rules/protobuf.mdc if the changes look good.
           - No risky aspects that could cause security issues or regressions.
