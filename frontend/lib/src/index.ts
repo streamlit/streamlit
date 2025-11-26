@@ -158,6 +158,7 @@ export {
   getEmbeddingIdClassName,
   getIFrameEnclosingApp,
   getLocaleLanguage,
+  getQueryString,
   getScreencastTimestamp,
   getTimezone,
   getTimezoneOffset,

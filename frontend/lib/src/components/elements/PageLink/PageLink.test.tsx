@@ -24,7 +24,7 @@ import { PageLink as PageLinkProto } from "@streamlit/protobuf"
 import { render, renderWithContexts } from "~lib/test_util"
 import { lightTheme } from "~lib/theme"
 
-import PageLink, { Props } from "./PageLink"
+import PageLink, { buildHref, Props } from "./PageLink"
 
 const getProps = (
   elementProps: Partial<PageLinkProto> = {},
@@ -286,5 +286,81 @@ describe("PageLink", () => {
 
     const tooltipContent = await screen.findByTestId("stTooltipContent")
     expect(tooltipContent).toHaveTextContent("mockHelpText")
+  })
+})
+
+describe("buildHref", () => {
+  it("returns the page path when no queryString is provided", () => {
+    const element = PageLinkProto.create({
+      page: "my_page",
+      queryString: "",
+    })
+    expect(buildHref(element)).toBe("my_page")
+  })
+
+  it("appends queryString to internal links", () => {
+    const element = PageLinkProto.create({
+      page: "my_page",
+      queryString: "foo=bar",
+      external: false,
+    })
+    expect(buildHref(element)).toBe("my_page?foo=bar")
+  })
+
+  it("appends queryString with & for internal links that already have query params", () => {
+    const element = PageLinkProto.create({
+      page: "my_page?existing=param",
+      queryString: "foo=bar",
+      external: false,
+    })
+    expect(buildHref(element)).toBe("my_page?existing=param&foo=bar")
+  })
+
+  it("appends queryString to external links using URL API", () => {
+    const element = PageLinkProto.create({
+      page: "https://example.com",
+      queryString: "foo=bar",
+      external: true,
+    })
+    expect(buildHref(element)).toBe("https://example.com/?foo=bar")
+  })
+
+  it("appends queryString to external links with existing query params", () => {
+    const element = PageLinkProto.create({
+      page: "https://example.com?existing=param",
+      queryString: "foo=bar",
+      external: true,
+    })
+    expect(buildHref(element)).toBe(
+      "https://example.com/?existing=param&foo=bar"
+    )
+  })
+
+  it("places queryString before fragment for external links", () => {
+    const element = PageLinkProto.create({
+      page: "https://example.com#section",
+      queryString: "foo=bar",
+      external: true,
+    })
+    expect(buildHref(element)).toBe("https://example.com/?foo=bar#section")
+  })
+
+  it("handles multiple query params for external links", () => {
+    const element = PageLinkProto.create({
+      page: "https://example.com",
+      queryString: "foo=bar&baz=qux",
+      external: true,
+    })
+    expect(buildHref(element)).toBe("https://example.com/?foo=bar&baz=qux")
+  })
+
+  it("falls back to string concatenation for invalid external URLs", () => {
+    const element = PageLinkProto.create({
+      page: "not-a-valid-url",
+      queryString: "foo=bar",
+      external: true,
+    })
+    // Falls back to simple concatenation when URL parsing fails
+    expect(buildHref(element)).toBe("not-a-valid-url?foo=bar")
   })
 })

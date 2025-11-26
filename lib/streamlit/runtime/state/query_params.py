@@ -19,7 +19,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Final, cast
 from urllib import parse
 
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitQueryParamDictValueError
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 
@@ -198,9 +198,7 @@ def _set_item_in_dict(
 ) -> None:
     """Set an item in a dictionary."""
     if isinstance(value, dict):
-        raise StreamlitAPIException(
-            f"You cannot set a query params key `{key}` to a dictionary."
-        )
+        raise StreamlitQueryParamDictValueError(key)
 
     if key in EMBED_QUERY_PARAMS_KEYS:
         raise StreamlitAPIException(
@@ -233,9 +231,7 @@ def process_query_params(
             if key in processed_params:
                 # If the key already exists, we need to accumulate the values.
                 if isinstance(value, dict):
-                    raise StreamlitAPIException(
-                        f"You cannot set a query params key `{key}` to a dictionary."
-                    )
+                    raise StreamlitQueryParamDictValueError(key)
 
                 current_val = processed_params[key]
                 if not isinstance(current_val, list):

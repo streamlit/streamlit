@@ -79,6 +79,7 @@ import {
   getHostSpecifiedTheme,
   getIFrameEnclosingApp,
   getLocaleLanguage,
+  getQueryString,
   getScreencastTimestamp,
   getTimezone,
   getTimezoneOffset,
@@ -1742,17 +1743,7 @@ export class App extends PureComponent<Props, State> {
         // for the server to send updated query params (if any).
         const preservedQueryParams = preserveEmbedQueryParams()
 
-        if (queryStringOverride !== undefined) {
-          if (preservedQueryParams) {
-            queryString = queryStringOverride
-              ? `${preservedQueryParams}&${queryStringOverride}`
-              : preservedQueryParams
-          } else {
-            queryString = queryStringOverride
-          }
-        } else {
-          queryString = preservedQueryParams
-        }
+        queryString = getQueryString(queryStringOverride, preservedQueryParams)
 
         this.setState({ queryParams: queryString })
         this.hostCommunicationMgr.sendMessageToHost({

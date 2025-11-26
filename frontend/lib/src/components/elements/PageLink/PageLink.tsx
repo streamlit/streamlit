@@ -31,6 +31,31 @@ import {
   StyledNavLinkText,
 } from "./styled-components"
 
+/**
+ * Builds the href URL for a page link, appending query string parameters if present.
+ */
+export function buildHref(element: PageLinkProto): string {
+  let href = element.page
+  if (element.queryString) {
+    if (element.external) {
+      // External links: use URL API to properly handle fragments
+      try {
+        const url = new URL(element.page)
+        const params = new URLSearchParams(element.queryString)
+        params.forEach((value, key) => url.searchParams.append(key, value))
+        href = url.toString()
+      } catch {
+        // Fallback if URL parsing fails
+        href += (href.includes("?") ? "&" : "?") + element.queryString
+      }
+    } else {
+      // Internal links: append query string to relative path
+      href += (href.includes("?") ? "&" : "?") + element.queryString
+    }
+  }
+  return href
+}
+
 export interface Props {
   disabled: boolean
   element: PageLinkProto
@@ -60,24 +85,7 @@ function PageLink(props: Readonly<Props>): ReactElement {
     }
   }
 
-  let href = element.page
-  if (element.queryString) {
-    if (element.external) {
-      // External links: use URL API to properly handle fragments
-      try {
-        const url = new URL(element.page)
-        const params = new URLSearchParams(element.queryString)
-        params.forEach((value, key) => url.searchParams.append(key, value))
-        href = url.toString()
-      } catch {
-        // Fallback if URL parsing fails
-        href += (href.includes("?") ? "&" : "?") + element.queryString
-      }
-    } else {
-      // Internal links: append query string to relative path
-      href += (href.includes("?") ? "&" : "?") + element.queryString
-    }
-  }
+  const href = buildHref(element)
 
   return (
     <div className="stPageLink" data-testid="stPageLink">
