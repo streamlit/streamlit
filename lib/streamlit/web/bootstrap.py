@@ -249,29 +249,6 @@ def _print_url(is_running_hello: bool) -> None:
         cli_util.print_to_cli("")
 
 
-def _maybe_install_uvloop(running_in_event_loop: bool) -> None:
-    """Install uvloop as the default event loop policy if available."""
-
-    if running_in_event_loop:
-        return
-
-    if env_util.IS_WINDOWS:
-        return
-
-    try:
-        import uvloop
-    except ModuleNotFoundError:
-        return
-
-    try:
-        uvloop.install()
-        _LOGGER.debug("uvloop installed as default event loop policy.")
-    except Exception:
-        _LOGGER.warning(
-            "Failed to install uvloop. Falling back to default loop.", exc_info=True
-        )
-
-
 def load_config_options(flag_options: dict[str, Any]) -> None:
     """Load config options from config.toml files, then overlay the ones set by
     flag_options.
