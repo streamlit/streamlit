@@ -89,7 +89,7 @@ The following pytest **fixtures** are available within `conftest.py`:
 
 ## Common ways to reduce flakiness
 
-Adding additional `except(element).to_X` checks often reduces flakiness. Espcially before running any interaction on the element. Sometimes, increasing and adding timeouts can also help to reduce flakiness but its more of an anti-pattern that hides flakiness instead of actually fully solving it.
+Adding additional `except(element).to_X` checks often reduces flakiness. Especially before running any interaction on the element. Sometimes, increasing and adding timeouts can also help to reduce flakiness but its more of an anti-pattern that hides flakiness instead of actually fully solving it.
 
 If there isn't an obvious fix for the flakiness and the flakiness does not indicate a reproducible bug, you can use:
 
