@@ -83,7 +83,7 @@ The following pytest **fixtures** are available within `conftest.py`:
 
 ## Three Rules of Playwright
 
-1. Leverage the [**`expect`** method](https://playwright.dev/python/docs/test-assertions) for assertions wherever possible. **`assert`** is **evil** 😈 (causes flakiness), please don't use it!
+1. Leverage the [**`expect`** method](https://playwright.dev/python/docs/test-assertions) for assertions wherever possible. **`assert`** can cause flakiness in Playwright tests (due to lack of auto-waiting), please use `expect` instead!
 2. Use [**`get_by_test_id`**](https://playwright.dev/python/docs/api/class-page#page-get-by-test-id) to locate elements wherever possible. Use `.locator` only for aspects that are not accessible via a test-id!
 3. Don't use `assert`! But `expect` doesn't work with my case? Use the `wait_until` utility method instead.
 
