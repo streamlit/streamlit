@@ -31,7 +31,7 @@ All screenshots are stored in a test-specific folder under `e2e_playwright/__sna
 
 ## Accessing GitHub test results
 
-Upon completion of every [Playwright E2E Tests workflow](https://github.com/streamlit/streamlit/actions/workflows/playwright.yml), test results will be uploaded and can be accessed from the Artifacts section of the workflow run summary.
+Upon completion of every [Playwright E2E Tests workflow](../.github/workflows/playwright.yml), test results will be uploaded and can be accessed from the Artifacts section of the workflow run summary.
 
 <img width="700" alt="image" src="https://github.com/streamlit/streamlit/assets/2852129/3c7f7739-7ced-4d93-b131-9628c83bc49e">
 

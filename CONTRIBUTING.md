@@ -20,7 +20,7 @@ This helps make sure:
 
 ## Style Guide
 
-Check out [Streamlit's style guide](https://github.com/streamlit/streamlit/wiki/Style-Guide). We use [Prettier](https://prettier.io), [Ruff](https://github.com/astral-sh/ruff) and [ESLint](https://eslint.org/) to format and lint code, but some things go beyond what auto-formatters and linters can do. So please take a look!
+Check out [Streamlit's style guide](./wiki/code-styled-guide.md). We use [Prettier](https://prettier.io), [Ruff](https://github.com/astral-sh/ruff) and [ESLint](https://eslint.org/) to format and lint code, but some things go beyond what auto-formatters and linters can do. So please take a look!
 
 ## How to build Streamlit
 
@@ -81,7 +81,7 @@ $ source .venv/bin/activate
 
 #### Windows
 
-Streamlit's development setup is pretty Mac- and Linux-centric. If you're doing Streamlit development on Windows, we suggest using our [devcontainer](https://github.com/streamlit/streamlit/tree/develop/.devcontainer) via Github Codespaces or locally via VS Code. Alternatively, you can also spin up a Linux VM (e.g. via [VirtualBox](https://www.virtualbox.org/), which is free); or your own Linux Docker image; or using Microsoft's WSL ("Windows Subsystem for Linux").
+Streamlit's development setup is pretty Mac- and Linux-centric. If you're doing Streamlit development on Windows, we suggest using our [devcontainer](./.devcontainer) via Github Codespaces or locally via VS Code. Alternatively, you can also spin up a Linux VM (e.g. via [VirtualBox](https://www.virtualbox.org/), which is free); or your own Linux Docker image; or using Microsoft's WSL ("Windows Subsystem for Linux").
 
 ### 2. Grab the code
 
@@ -204,7 +204,7 @@ You should always write unit tests and end-to-end tests! This true for new featu
   PYTHONPATH=lib pytest lib/tests/streamlit/the_test_name.py -k test_that_something_works
   ```
 
-- Some tests require you to set up credentials to connect to Snowflake and install [the `snowflake-snowpark-python` package](https://pypi.org/project/snowflake-snowpark-python/). Information on how the Snowflake environment is set up is in our [test utils](https://github.com/streamlit/streamlit/blob/8cb5af07743196950aae88a54db7ad327c56a1b0/lib/tests/testutil.py#L106) including environment variables to be set. They are skipped by default when running tests. To enable them and disable all others, pass the `--require-integration` flag to `pytest`.
+- Some tests require you to set up credentials to connect to Snowflake and install [the `snowflake-snowpark-python` package](https://pypi.org/project/snowflake-snowpark-python/). Information on how the Snowflake environment is set up is in our [test utils](./lib/tests/testutil.py) including environment variables to be set. They are skipped by default when running tests. To enable them and disable all others, pass the `--require-integration` flag to `pytest`.
 
   ```bash
   PYTHONPATH=lib pytest --require-integration
@@ -229,7 +229,7 @@ NOTE: Making changes to a react component may cause unit snapshot tests (which a
 
 #### End-to-end tests
 
-You can find information about our e2e testing setup [here](https://github.com/streamlit/streamlit/wiki/Running-e2e-tests-and-updating-snapshots).
+You can find information about our e2e testing setup [here](./wiki/running-e2e-tests.md).
 
 ### 7. Formatting, linting, and type-checking
 
@@ -300,7 +300,7 @@ make frontend-types
 
 ### VS-Code / Cursor Setup
 
-For development in VS Code, we recommend installing the extensions listed in [`.vscode/extensions.json`](https://github.com/streamlit/streamlit/blob/develop/.vscode/extensions.json) and for an optimized configuration you can use the VS-Code settings from [`.devcontainer/devcontainer.json`](https://github.com/streamlit/streamlit/blob/develop/.devcontainer/devcontainer.json).
+For development in VS Code, we recommend installing the extensions listed in [`.vscode/extensions.json`](./.vscode/extensions.json) and for an optimized configuration you can use the VS-Code settings from [`.devcontainer/devcontainer.json`](./.devcontainer/devcontainer.json).
 
 ### Pre-commit hooks
 
