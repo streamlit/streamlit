@@ -208,6 +208,7 @@ _ATTRIBUTIONS_TO_CHECK: Final = [
     "folium",
     "geopandas",
     "httpx",
+    "pyecharts",
     # Optional streamlit dependencies:
     "seaborn",
     "graphviz",
