@@ -630,9 +630,23 @@ function createRemarkColoringAndSmall(
         }
         return
       }
+    })
+    return tree
+  }
+}
 
-      // Handle unsupported directives
-      // We convert unsupported text directives to plain text to avoid them being
+/**
+ * Factory function to create the unsupported directives cleanup plugin.
+ * This plugin should run last to convert any unsupported text directives
+ * to plain text, ensuring they are rendered rather than ignored.
+ */
+function createRemarkUnsupportedDirectivesCleanup() {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
+  return () => (tree: any) => {
+    visit(tree, "textDirective", (node, _index, _parent) => {
+      const nodeName = String(node.name)
+
+      // Convert unsupported text directives to plain text to avoid them being
       // ignored / not rendered. See https://github.com/streamlit/streamlit/issues/8726,
       // https://github.com/streamlit/streamlit/issues/5968
       // Don't convert if the directive was already handled by another plugin
@@ -949,6 +963,9 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
     if (emojiPlugin) {
       plugins.push(emojiPlugin)
     }
+
+    // This plugin must run last to clean up any unsupported directives
+    plugins.push(createRemarkUnsupportedDirectivesCleanup())
 
     return plugins
   }, [theme, colorMapping, emojiPlugin])
