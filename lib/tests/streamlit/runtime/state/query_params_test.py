@@ -416,6 +416,11 @@ class ProcessQueryParamsTest(DeltaGeneratorTestCase):
             ("embed_key", {"embed": "true"}),
             ("embed_options_key", {"embed_options": "show_toolbar"}),
             ("dict_value", {"foo": {"bar": "baz"}}),
+            # Case-insensitive embed key checks
+            ("embed_key_uppercase", {"EMBED": "true"}),
+            ("embed_key_mixed_case", {"Embed": "true"}),
+            ("embed_options_key_uppercase", {"EMBED_OPTIONS": "show_toolbar"}),
+            ("embed_options_key_mixed_case", {"Embed_Options": "show_toolbar"}),
         ]
     )
     def test_process_query_params_raises_on_invalid_input(
@@ -451,6 +456,21 @@ class TestSetItemInDict:
             (
                 "embed_options_key",
                 "embed_options",
+                "show_toolbar",
+                "embed.*cannot be set",
+            ),
+            # Case-insensitive embed key checks
+            ("embed_key_uppercase", "EMBED", "true", "embed.*cannot be set"),
+            ("embed_key_mixed_case", "Embed", "true", "embed.*cannot be set"),
+            (
+                "embed_options_key_uppercase",
+                "EMBED_OPTIONS",
+                "show_toolbar",
+                "embed.*cannot be set",
+            ),
+            (
+                "embed_options_key_mixed_case",
+                "Embed_Options",
                 "show_toolbar",
                 "embed.*cannot be set",
             ),

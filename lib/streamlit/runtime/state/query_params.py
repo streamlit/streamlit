@@ -50,7 +50,9 @@ class QueryParams(MutableMapping[str, str]):
         self._ensure_single_query_api_used()
 
         return iter(
-            key for key in self._query_params if key not in EMBED_QUERY_PARAMS_KEYS
+            key
+            for key in self._query_params
+            if key.lower() not in EMBED_QUERY_PARAMS_KEYS
         )
 
     def __getitem__(self, key: str) -> str:
@@ -59,7 +61,7 @@ class QueryParams(MutableMapping[str, str]):
         If the key is not present, raise KeyError.
         """
         self._ensure_single_query_api_used()
-        if key in EMBED_QUERY_PARAMS_KEYS:
+        if key.lower() in EMBED_QUERY_PARAMS_KEYS:
             raise KeyError(missing_key_error_message(key))
 
         try:
@@ -84,7 +86,7 @@ class QueryParams(MutableMapping[str, str]):
 
     def __delitem__(self, key: str) -> None:
         self._ensure_single_query_api_used()
-        if key in EMBED_QUERY_PARAMS_KEYS:
+        if key.lower() in EMBED_QUERY_PARAMS_KEYS:
             raise KeyError(missing_key_error_message(key))
         try:
             del self._query_params[key]
@@ -115,7 +117,7 @@ class QueryParams(MutableMapping[str, str]):
 
     def get_all(self, key: str) -> list[str]:
         self._ensure_single_query_api_used()
-        if key not in self._query_params or key in EMBED_QUERY_PARAMS_KEYS:
+        if key not in self._query_params or key.lower() in EMBED_QUERY_PARAMS_KEYS:
             return []
         value = self._query_params[key]
         return value if isinstance(value, list) else [value]
@@ -123,7 +125,11 @@ class QueryParams(MutableMapping[str, str]):
     def __len__(self) -> int:
         self._ensure_single_query_api_used()
         return len(
-            {key for key in self._query_params if key not in EMBED_QUERY_PARAMS_KEYS}
+            {
+                key
+                for key in self._query_params
+                if key.lower() not in EMBED_QUERY_PARAMS_KEYS
+            }
         )
 
     def __str__(self) -> str:
@@ -154,7 +160,7 @@ class QueryParams(MutableMapping[str, str]):
         return {
             key: self[key]
             for key in self._query_params
-            if key not in EMBED_QUERY_PARAMS_KEYS
+            if key.lower() not in EMBED_QUERY_PARAMS_KEYS
         }
 
     def from_dict(
@@ -179,7 +185,7 @@ class QueryParams(MutableMapping[str, str]):
         self._query_params = {
             key: value
             for key, value in self._query_params.items()
-            if key in EMBED_QUERY_PARAMS_KEYS and preserve_embed
+            if key.lower() in EMBED_QUERY_PARAMS_KEYS and preserve_embed
         }
 
     def _ensure_single_query_api_used(self) -> None:
@@ -200,7 +206,7 @@ def _set_item_in_dict(
     if isinstance(value, dict):
         raise StreamlitQueryParamDictValueError(key)
 
-    if key in EMBED_QUERY_PARAMS_KEYS:
+    if key.lower() in EMBED_QUERY_PARAMS_KEYS:
         raise StreamlitAPIException(
             "Query param embed and embed_options (case-insensitive) cannot be set programmatically."
         )
