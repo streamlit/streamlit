@@ -54,6 +54,6 @@ This means you should always have logs, warnings, errors, and notices end up in
 
 ## Assets
 
-If you need to add image assets, fonts, etc, first check with Streamlit developers so we can look at the license. If all is good, you'll still need to add a line to the `notices` rule in our `Makefile`, and rerun `make update-notices`.
+If you need to add image assets, fonts, etc, first check with Streamlit developers so we can look at the license. If all is good, you'll still need to add a line to the `update-notices` rule in our `Makefile`, and rerun `make update-notices`.
 
 ![Views](https://api.views-badge.org/badge/st-wiki-styleguide)
