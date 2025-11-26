@@ -264,14 +264,6 @@ export class App extends PureComponent<Props, State> {
 
   private isInitializingConnectionManager: boolean = true
 
-  // Queue for pending file URL requests when disconnected.
-  // This handles the case where users select files on mobile browsers while
-  // the WebSocket connection has timed out (e.g., file picker was open too long).
-  private pendingFileURLRequests: Array<{
-    requestId: string
-    files: File[]
-  }> = []
-
   // Whether we have received a NewSession message after the latest rerun request.
   // This is used to ensure that we only increment the message cache run count after
   // we have received a NewSession message after the latest rerun request.
@@ -795,11 +787,6 @@ export class App extends PureComponent<Props, State> {
       this.hostCommunicationMgr.sendMessageToHost({
         type: "WEBSOCKET_CONNECTED",
       })
-
-      // Process any queued file URL requests that were made while disconnected.
-      // This handles the case where users select files on mobile browsers while
-      // the WebSocket connection had timed out.
-      this.processPendingFileURLRequests()
     } else {
       // If we're starting from the CONNECTED state and going to any other
       // state, we must be disconnecting.
@@ -1301,12 +1288,6 @@ export class App extends PureComponent<Props, State> {
     this.sessionInfo.setCurrent(
       SessionInfo.propsFromNewSessionMessage(newSessionProto)
     )
-
-    // Process any queued file URL requests now that session info is available.
-    // This handles the case where the connection was re-established but
-    // session info wasn't yet set when processPendingFileURLRequests was
-    // first called from handleConnectionStateChanged.
-    this.processPendingFileURLRequests()
 
     // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
     this.metricsMgr.initialize({
@@ -2095,44 +2076,21 @@ export class App extends PureComponent<Props, State> {
       backMsg.type = "fileUrlsRequest"
       this.sendBackMsg(backMsg)
     } else {
-      // Queue the request to be sent when the connection is re-established.
-      // This handles the case where users select files on mobile browsers while
-      // the WebSocket connection has timed out (e.g., file picker was open too long).
-      LOG.info(
-        `Queueing file URL request (isServerConnected: ${isConnected}, isSessionInfoSet: ${isSessionInfoSet})`
+      // Reject the request immediately with an error. This can happen on mobile
+      // browsers when the file picker is open for an extended period causing
+      // the WebSocket connection to time out.
+      //
+      // We can't queue and retry because reconnection triggers a script rerun,
+      // which remounts the FileUploader component and invalidates the promise
+      // callback. The user needs to re-select the file after reconnection.
+      LOG.warn(
+        `Cannot request file URLs (isServerConnected: ${isConnected}, isSessionInfoSet: ${isSessionInfoSet})`
       )
-      this.pendingFileURLRequests.push({ requestId, files })
-    }
-  }
-
-  /**
-   * Process any queued file URL requests that were made while disconnected.
-   * Called when the WebSocket connection is re-established and session info
-   * is available.
-   */
-  processPendingFileURLRequests = (): void => {
-    if (this.pendingFileURLRequests.length === 0) {
-      return
-    }
-
-    // Don't process if connection or session info isn't ready yet.
-    // This method will be called again from handleInitialization once
-    // session info is available.
-    if (!this.isServerConnected() || !this.sessionInfo.isSet) {
-      return
-    }
-
-    LOG.info(
-      `Processing ${this.pendingFileURLRequests.length} pending file URL request(s)`
-    )
-
-    // Process all pending requests
-    const pendingRequests = [...this.pendingFileURLRequests]
-    this.pendingFileURLRequests = []
-
-    for (const { requestId, files } of pendingRequests) {
-      // Re-invoke requestFileURLs now that we're connected
-      this.requestFileURLs(requestId, files)
+      this.uploadClient.onFileURLsResponse({
+        responseId: requestId,
+        errorMsg:
+          "Connection lost. Please wait for the app to reconnect, then try again.",
+      })
     }
   }
 

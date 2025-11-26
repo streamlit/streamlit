@@ -2945,11 +2945,20 @@ describe("App", () => {
       })
     })
 
-    it("queues requests when server is disconnected", () => {
+    it("rejects with error when server is disconnected", () => {
+      // When disconnected, file upload requests should be rejected immediately
+      // with an error. We can't queue and retry because reconnection triggers
+      // a script rerun, which remounts the FileUploader component and
+      // invalidates the promise callback.
       renderApp(getProps())
 
       const fileUploadClient =
         getStoredValue<FileUploadClient>(FileUploadClient)
+
+      const onFileURLsResponseSpy = vi.spyOn(
+        fileUploadClient,
+        "onFileURLsResponse"
+      )
 
       // @ts-expect-error - requestFileURLs is private
       fileUploadClient.requestFileURLs("myRequestId", [
@@ -2962,131 +2971,13 @@ describe("App", () => {
 
       // No message sent when disconnected
       expect(connectionManager.sendMessage).not.toBeCalled()
-    })
 
-    it("processes queued requests when connection is re-established", () => {
-      renderApp(getProps())
-
-      const fileUploadClient =
-        getStoredValue<FileUploadClient>(FileUploadClient)
-
-      // Queue a request while disconnected
-      // @ts-expect-error - requestFileURLs is private
-      fileUploadClient.requestFileURLs("myRequestId", [
-        new File([""], "file1.txt"),
-        new File([""], "file2.txt"),
-      ])
-
-      // No message sent yet
-      const connectionManager = getMockConnectionManager()
-      expect(connectionManager.sendMessage).not.toBeCalled()
-
-      // Set up session info
-      const sessionInfo = getStoredValue<SessionInfo>(SessionInfo)
-      sessionInfo.setCurrent(mockSessionInfoProps())
-
-      // Mock connection as connected and simulate connection state change
-      getMockConnectionManager(true)
-
-      act(() => {
-        getMockConnectionManagerProp("connectionStateChanged")(
-          ConnectionState.CONNECTED
-        )
+      // Error response should be sent to reject the pending promise
+      expect(onFileURLsResponseSpy).toHaveBeenCalledWith({
+        responseId: "myRequestId",
+        errorMsg:
+          "Connection lost. Please wait for the app to reconnect, then try again.",
       })
-
-      // The queued request should now be sent
-      expect(connectionManager.sendMessage).toHaveBeenCalledWith(
-        expect.objectContaining({
-          fileUrlsRequest: expect.objectContaining({
-            requestId: "myRequestId",
-            fileNames: ["file1.txt", "file2.txt"],
-          }),
-        })
-      )
-    })
-
-    it("does not process queued requests when connected but session info is not set yet", () => {
-      // This tests the race condition where WebSocket connects before
-      // handleNewSession is received. The queue should NOT be processed
-      // until session info is available.
-      renderApp(getProps())
-
-      const fileUploadClient =
-        getStoredValue<FileUploadClient>(FileUploadClient)
-
-      // Queue a request while disconnected (no session info set)
-      // @ts-expect-error - requestFileURLs is private
-      fileUploadClient.requestFileURLs("myRequestId", [
-        new File([""], "file1.txt"),
-      ])
-
-      // No message sent yet
-      const connectionManager = getMockConnectionManager()
-      expect(connectionManager.sendMessage).not.toBeCalled()
-
-      // Connection is re-established but session info is NOT set yet
-      getMockConnectionManager(true)
-
-      act(() => {
-        getMockConnectionManagerProp("connectionStateChanged")(
-          ConnectionState.CONNECTED
-        )
-      })
-
-      // File URL request should NOT be sent because session info is missing.
-      // processPendingFileURLRequests should return early without processing.
-      expect(connectionManager.sendMessage).not.toHaveBeenCalledWith(
-        expect.objectContaining({
-          fileUrlsRequest: expect.anything(),
-        })
-      )
-    })
-
-    it("processes queued requests after session info is restored via handleNewSession", () => {
-      // This tests that requests queued while disconnected are eventually
-      // processed once both connection AND session info are available.
-      renderApp(getProps())
-
-      const fileUploadClient =
-        getStoredValue<FileUploadClient>(FileUploadClient)
-
-      // Queue a request while disconnected (no session info set)
-      // @ts-expect-error - requestFileURLs is private
-      fileUploadClient.requestFileURLs("myRequestId", [
-        new File([""], "file1.txt"),
-      ])
-
-      const connectionManager = getMockConnectionManager()
-
-      // Connection is re-established but session info is NOT set yet
-      getMockConnectionManager(true)
-
-      act(() => {
-        getMockConnectionManagerProp("connectionStateChanged")(
-          ConnectionState.CONNECTED
-        )
-      })
-
-      // Request not sent yet (session info missing)
-      expect(connectionManager.sendMessage).not.toHaveBeenCalledWith(
-        expect.objectContaining({
-          fileUrlsRequest: expect.anything(),
-        })
-      )
-
-      // Now simulate receiving handleNewSession which sets session info
-      // This triggers processPendingFileURLRequests from handleInitialization
-      sendForwardMessage("newSession", NEW_SESSION_JSON)
-
-      // Now the queued request should be sent
-      expect(connectionManager.sendMessage).toHaveBeenCalledWith(
-        expect.objectContaining({
-          fileUrlsRequest: expect.objectContaining({
-            requestId: "myRequestId",
-            fileNames: ["file1.txt"],
-          }),
-        })
-      )
     })
   })
 
