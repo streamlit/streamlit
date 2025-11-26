@@ -41,7 +41,7 @@ jobs:
         env:
           CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          MODEL: claude-4.5-opus
+          MODEL: opus-4.5-thinking
         run: |
           cursor-agent -p "You are operating in a GitHub Actions runner to perform a code review.
 
