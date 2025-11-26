@@ -182,6 +182,7 @@ _ATTRIBUTIONS_TO_CHECK: Final = [
     "spacy",
     "nltk",
     "onnxruntime",
+    "llama_api_client",
     # Workflow Tools:
     "prefect",
     "luigi",
