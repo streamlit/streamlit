@@ -209,6 +209,9 @@ _ATTRIBUTIONS_TO_CHECK: Final = [
     "geopandas",
     "httpx",
     "pyecharts",
+    "fastplotlib",
+    "pygfx",
+    "highcharts_core",
     # Optional streamlit dependencies:
     "seaborn",
     "graphviz",
