@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import sortBy from "lodash/sortBy"
+import { sortBy } from "lodash-es"
 
 import { hasMatch, score } from "~lib/vendor/fzy.js/fuzzySearch"
 

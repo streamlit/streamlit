@@ -15,7 +15,7 @@
  */
 
 import decamelize from "decamelize"
-import get from "lodash/get"
+import { get } from "lodash-es"
 import xxhash from "xxhashjs"
 
 import {

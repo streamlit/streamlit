@@ -91,6 +91,11 @@ export default defineConfig({
         find: "react-syntax-highlighter",
         replacement: "react-syntax-highlighter/dist/cjs/index.js",
       },
+      // Redirect old lodash to lodash-es to avoid duplication
+      {
+        find: "lodash",
+        replacement: "lodash-es",
+      },
       ...profilerAliases,
     ],
   },

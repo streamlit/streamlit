@@ -30,7 +30,7 @@ import {
   Slider as UISlider,
   StyledInnerTrack as UIStyledInnerTrack,
 } from "baseui/slider"
-import pick from "lodash/pick"
+import { pick } from "lodash-es"
 import moment from "moment"
 import { sprintf } from "sprintf-js"
 

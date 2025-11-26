@@ -28,6 +28,8 @@ import { getMarkdownBgColors } from "~lib/theme/getColors"
 import { colors } from "~lib/theme/primitives/colors"
 
 import StreamlitMarkdown, {
+  containsEmojiShortcodes,
+  containsMathSyntax,
   createAnchorFromText,
   CustomCodeTag,
   CustomCodeTagProps,
@@ -81,6 +83,202 @@ describe("createAnchorFromText", () => {
   ])("converts '%s' to '%s'", (input, expected) => {
     expect(createAnchorFromText(input)).toEqual(expected)
   })
+})
+
+describe("containsMathSyntax", () => {
+  it.each([
+    // Valid math syntax - should return true
+    { input: "$x + y$", expected: true, description: "simple inline math" },
+    {
+      input: "$\\frac{1}{2}$",
+      expected: true,
+      description: "inline math with fraction",
+    },
+    { input: "$$x + y$$", expected: true, description: "display math" },
+    {
+      input: "$$\nax^2 + bx + c = 0\n$$",
+      expected: true,
+      description: "multiline display math",
+    },
+    {
+      input: "text $x$ and $y$ more text",
+      expected: true,
+      description: "multiple inline math",
+    },
+    {
+      input: "$x^2$",
+      expected: true,
+      description: "inline math with superscript",
+    },
+    {
+      input: "$\\alpha + \\beta$",
+      expected: true,
+      description: "inline math with Greek letters",
+    },
+
+    // Invalid math syntax - should return false (avoid false positives)
+    {
+      input: "the price is between $5 and $10",
+      expected: false,
+      description: "dollar amounts with spaces",
+    },
+    {
+      input: "$ 5 + 10 $",
+      expected: false,
+      description: "spaces after opening and before closing $",
+    },
+    {
+      input: "$ x + y$",
+      expected: false,
+      description: "space after opening $",
+    },
+    {
+      input: "$x + y $",
+      expected: false,
+      description: "space before closing $",
+    },
+    {
+      input: "no math here",
+      expected: false,
+      description: "no dollar signs",
+    },
+    { input: "$", expected: false, description: "single dollar sign" },
+    {
+      input: "just text with $",
+      expected: false,
+      description: "unclosed dollar sign",
+    },
+  ])(
+    "detects $description correctly",
+    ({ input, expected }: { input: string; expected: boolean }) => {
+      expect(containsMathSyntax(input)).toBe(expected)
+    }
+  )
+})
+
+describe("containsEmojiShortcodes", () => {
+  it.each([
+    // Valid emoji shortcodes - should return true
+    { input: ":smile:", expected: true, description: "basic emoji shortcode" },
+    { input: ":+1:", expected: true, description: "thumbs up emoji" },
+    { input: ":-1:", expected: true, description: "thumbs down emoji" },
+    {
+      input: ":joy:",
+      expected: true,
+      description: "emoji with word characters",
+    },
+    {
+      input: ":face_with_tears_of_joy:",
+      expected: true,
+      description: "emoji with underscores",
+    },
+    {
+      input: ":custom-emoji:",
+      expected: true,
+      description: "emoji with hyphens",
+    },
+    {
+      input: ":emoji_name-123:",
+      expected: true,
+      description: "emoji with underscores, hyphens, and numbers",
+    },
+    {
+      input: "text :smile: more text",
+      expected: true,
+      description: "emoji within text",
+    },
+    {
+      input: ":smile: :joy:",
+      expected: true,
+      description: "multiple emojis",
+    },
+    // Numbers
+    { input: ":100:", expected: true, description: "numbers only" },
+    { input: ":1234:", expected: true, description: "multi-digit numbers" },
+    {
+      input: ":2nd_place_medal:",
+      expected: true,
+      description: "starts with number (2nd)",
+    },
+    // Hyphens in various positions
+    { input: ":e-mail:", expected: true, description: "hyphen in middle" },
+    { input: ":t-rex:", expected: true, description: "hyphen after letter" },
+    {
+      input: ":non-potable_water:",
+      expected: true,
+      description: "hyphen and underscore",
+    },
+    {
+      input: ":8ball:",
+      expected: true,
+      description: "starts with digit followed by letters",
+    },
+    // Clock emojis
+    { input: ":clock1:", expected: true, description: "clock emoji" },
+    {
+      input: ":clock12:",
+      expected: true,
+      description: "clock emoji double digit",
+    },
+    {
+      input: ":clock1030:",
+      expected: true,
+      description: "clock emoji with minutes",
+    },
+    // Country codes and special formats
+    { input: ":cn:", expected: true, description: "short country code" },
+    { input: ":uk:", expected: true, description: "country code uk" },
+    { input: ":us:", expected: true, description: "country code us" },
+    // More complex patterns from the actual emoji list
+    {
+      input: ":slightly_smiling_face:",
+      expected: true,
+      description: "long underscore name",
+    },
+    {
+      input: ":woman_health_worker:",
+      expected: true,
+      description: "multiple underscores",
+    },
+    {
+      input: ":+1: and :-1:",
+      expected: true,
+      description: "both special chars",
+    },
+
+    // Invalid shortcodes - should return false
+    {
+      input: ":material/search:",
+      expected: false,
+      description: "material icon (excluded)",
+    },
+    {
+      input: ":streamlit:",
+      expected: false,
+      description: "streamlit logo (excluded)",
+    },
+    {
+      input: "no emoji here",
+      expected: false,
+      description: "no colons",
+    },
+    { input: ":", expected: false, description: "single colon" },
+    {
+      input: ":unclosed",
+      expected: false,
+      description: "unclosed shortcode",
+    },
+    {
+      input: "text with : colons",
+      expected: false,
+      description: "colons without emoji pattern",
+    },
+  ])(
+    "detects $description correctly",
+    ({ input, expected }: { input: string; expected: boolean }) => {
+      expect(containsEmojiShortcodes(input)).toBe(expected)
+    }
+  )
 })
 
 describe("linkReference", () => {
@@ -180,15 +378,13 @@ describe("StreamlitMarkdown", () => {
     ).toBeInTheDocument()
   })
 
-  it("passes props properly", () => {
+  it("passes props properly", async () => {
     const source =
       "<a class='nav_item' href='//0.0.0.0:8501/?p=some_page' target='_self'>Some Page</a>"
     render(<StreamlitMarkdown source={source} allowHTML={true} />)
-    expect(screen.getByText("Some Page")).toHaveAttribute(
-      "href",
-      "//0.0.0.0:8501/?p=some_page"
-    )
-    expect(screen.getByText("Some Page")).toHaveAttribute("target", "_self")
+    const link = await screen.findByText("Some Page")
+    expect(link).toHaveAttribute("href", "//0.0.0.0:8501/?p=some_page")
+    expect(link).toHaveAttribute("target", "_self")
   })
 
   it("doesn't render header anchors when isInSidebar is true", () => {
@@ -215,10 +411,10 @@ describe("StreamlitMarkdown", () => {
     ).not.toBeInTheDocument()
   })
 
-  it("propagates header attributes to custom header", () => {
+  it("propagates header attributes to custom header", async () => {
     const source = '<h1 data-test="lol">alsdkjhflaf</h1>'
     render(<StreamlitMarkdown source={source} allowHTML />)
-    const h1 = screen.getByRole("heading")
+    const h1 = await screen.findByRole("heading")
     expect(h1).toHaveAttribute("data-test", "lol")
   })
 
@@ -247,9 +443,13 @@ describe("StreamlitMarkdown", () => {
 
   test.each(validCases)(
     "renders valid markdown when isLabel is true - $tag",
-    ({ input, tag, expected }) => {
+    async ({ input, tag, expected }) => {
       render(<StreamlitMarkdown source={input} allowHTML={false} isLabel />)
-      const markdownText = screen.getByText(expected)
+      // Use findByText for emoji shortcodes since remark-emoji is lazy-loaded
+      const markdownText =
+        input === ":joy:"
+          ? await screen.findByText(expected)
+          : screen.getByText(expected)
       expect(markdownText).toBeInTheDocument()
 
       const expectedTag = markdownText.nodeName.toLowerCase()
@@ -268,18 +468,18 @@ describe("StreamlitMarkdown", () => {
     expect(image).toHaveAttribute("alt", "Streamlit logo")
   })
 
-  it("renders streamlit logo with allowHTML=true", () => {
+  it("renders streamlit logo with allowHTML=true", async () => {
     render(<StreamlitMarkdown source={":streamlit:"} allowHTML={true} />)
-    const image = screen.getByRole("img")
+    const image = await screen.findByRole("img")
     expect(image).toHaveAttribute("alt", "Streamlit logo")
     expect(image).toHaveStyle("display: inline-block")
     expect(image).toHaveStyle("user-select: none")
   })
 
-  it("renders material icons with allowHTML=true", () => {
+  it("renders material icons with allowHTML=true", async () => {
     const source = `:material/search: Icon`
     render(<StreamlitMarkdown source={source} allowHTML={true} />)
-    const markdown = screen.getByText("search")
+    const markdown = await screen.findByText("search")
     const tagName = markdown.nodeName.toLowerCase()
     expect(tagName).toBe("span")
     expect(markdown).toHaveStyle("font-family: Material Symbols Rounded")
