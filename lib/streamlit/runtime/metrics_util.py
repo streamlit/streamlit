@@ -152,7 +152,7 @@ _ATTRIBUTIONS_TO_CHECK: Final = [
     "autogen_agentchat",
     "xai_sdk",
     "agno",
-    "mistralai",
+    "langfuse",
     "smolagents",
     "ollama",
     # Workflow Tools:
