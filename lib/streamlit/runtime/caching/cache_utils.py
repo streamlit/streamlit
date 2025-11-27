@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import contextlib
 import functools
 import hashlib
@@ -24,7 +25,15 @@ import threading
 import time
 from abc import abstractmethod
 from collections import defaultdict
-from typing import TYPE_CHECKING, Any, Final, Generic, TypeVar, cast, overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Final,
+    Generic,
+    TypeVar,
+    cast,
+    overload,
+)
 
 from typing_extensions import ParamSpec
 
@@ -54,7 +63,7 @@ from streamlit.runtime.scriptrunner_utils.script_run_context import (
 
 if TYPE_CHECKING:
     import types
-    from collections.abc import Callable
+    from collections.abc import Callable, Coroutine
 
     from streamlit.runtime.caching.cache_type import CacheType
 
@@ -143,6 +152,7 @@ class CachedFuncInfo(Generic[P, R]):  # ty: ignore[invalid-argument-type]
         self.hash_funcs = hash_funcs
         self.show_spinner = show_spinner
         self.show_time = show_time
+        self.is_async = asyncio.iscoroutinefunction(func)
 
     @property
     def cache_type(self) -> CacheType:
@@ -181,7 +191,8 @@ class BoundCachedFunc(Generic[P, R]):  # ty: ignore[invalid-argument-type]
         self._instance = instance
 
     def __call__(self, *args: P.args, **kwargs: P.kwargs) -> R:
-        return self._cached_func(self._instance, *args, **kwargs)
+        # BoundCachedFunc delegates to CachedFunc which handles async detection
+        return self._cached_func(self._instance, *args, **kwargs)  # type: ignore[return-value]
 
     def __repr__(self) -> str:
         return f"<BoundCachedFunc: {self._cached_func._info.func} of {self._instance}>"
@@ -212,18 +223,41 @@ class CachedFunc(Generic[P, R]):  # ty: ignore[invalid-argument-type]
 
         return functools.update_wrapper(BoundCachedFunc(self, instance), self)
 
-    def __call__(self, *args: P.args, **kwargs: P.kwargs) -> R:
-        """The wrapper. We'll only call our underlying function on a cache miss."""
-
-        spinner_message: str | None = None
+    def _get_spinner_message(
+        self, args: tuple[Any, ...], kwargs: dict[str, Any]
+    ) -> str | None:
+        """Generate the spinner message for this function call."""
         if isinstance(self._info.show_spinner, str):
-            spinner_message = self._info.show_spinner
-        elif self._info.show_spinner is True:
+            return self._info.show_spinner
+        if self._info.show_spinner is True:
             name = cast("types.FunctionType", self._info.func).__qualname__
             if len(args) == 0 and len(kwargs) == 0:
-                spinner_message = f"Running `{name}()`."
-            else:
-                spinner_message = f"Running `{name}(...)`."
+                return f"Running `{name}()`."
+            return f"Running `{name}(...)`."
+        return None
+
+    def __call__(self, *args: P.args, **kwargs: P.kwargs) -> R | Coroutine[Any, Any, R]:
+        """The wrapper. We'll only call our underlying function on a cache miss.
+
+        For async functions:
+        - If called from a sync context (no running event loop), the async function
+          is executed automatically and the result is returned directly.
+        - If called from an async context (running event loop), returns a coroutine
+          that must be awaited.
+        """
+        spinner_message = self._get_spinner_message(args, kwargs)
+
+        if self._info.is_async:
+            coro = self._async_get_or_create_cached_value(args, kwargs, spinner_message)
+
+            # Check if we're already in an async context
+            try:
+                asyncio.get_running_loop()
+                # There's a running event loop - return coroutine to be awaited
+                return coro
+            except RuntimeError:
+                # No running event loop - execute and return result directly
+                return asyncio.run(coro)
 
         return self._get_or_create_cached_value(args, kwargs, spinner_message)
 
@@ -343,6 +377,97 @@ class CachedFunc(Generic[P, R]):  # ty: ignore[invalid-argument-type]
                     # If the returned value is an unevaluated dataframe, raise an error.
                     # Unevaluated dataframes are not yet in the local memory, which also
                     # means they cannot be properly cached (serialized).
+                    raise UnevaluatedDataFrameError(
+                        f"The function {get_cached_func_name_md(self._info.func)} is "
+                        "decorated with `st.cache_data` but it returns an unevaluated "
+                        f"data object of type `{type_util.get_fqn_type(computed_value)}`. "
+                        "Please convert the object to a serializable format "
+                        "(e.g. Pandas DataFrame) before returning it, so "
+                        "`st.cache_data` can serialize and cache it."
+                    ) from ex
+                raise UnserializableReturnValueError(
+                    return_value=computed_value, func=self._info.func
+                )
+
+    async def _async_get_or_create_cached_value(
+        self,
+        func_args: tuple[Any, ...],
+        func_kwargs: dict[str, Any],
+        spinner_message: str | None = None,
+    ) -> R:
+        """Async version of _get_or_create_cached_value for async functions."""
+        # Retrieve the function's cache object. We must do this "just-in-time"
+        # (as opposed to in the constructor), because caches can be invalidated
+        # at any time.
+        cache = self._info.get_function_cache(self._function_key)
+
+        # Generate the key for the cached value. This is based on the
+        # arguments passed to the function.
+        value_key = _make_value_key(
+            cache_type=self._info.cache_type,
+            func=self._info.func,
+            func_args=func_args,
+            func_kwargs=func_kwargs,
+            hash_funcs=self._info.hash_funcs,
+        )
+
+        with contextlib.suppress(CacheKeyNotFoundError):
+            cached_result = cache.read_result(value_key)
+            return self._handle_cache_hit(cached_result)
+
+        # only show spinner if there is a message to show and always only for the
+        # outermost cache function if cache functions are nested.
+        is_nested_cache_function = in_cached_function.get()
+        spinner_or_no_context = (
+            spinner(spinner_message, _cache=True, show_time=self._info.show_time)
+            if spinner_message is not None and not is_nested_cache_function
+            else contextlib.nullcontext()
+        )
+        with spinner_or_no_context:
+            return await self._async_handle_cache_miss(
+                cache, value_key, func_args, func_kwargs
+            )
+
+    async def _async_handle_cache_miss(
+        self,
+        cache: Cache[R],
+        value_key: str,
+        func_args: tuple[Any, ...],
+        func_kwargs: dict[str, Any],
+    ) -> R:
+        """Async version of _handle_cache_miss for async functions.
+
+        This method awaits the coroutine returned by the cached function before
+        storing the result in the cache.
+        """
+        with cache.compute_value_lock(value_key):
+            # We've acquired the lock - but another thread may have acquired it first
+            # and already computed the value. So we need to test for a cache hit again,
+            # before computing.
+            try:
+                cached_result = cache.read_result(value_key)
+                # Another thread computed the value before us. Early exit!
+                return self._handle_cache_hit(cached_result)
+            except CacheKeyNotFoundError:
+                # No cache hit -> we will call the cached function below.
+                pass
+
+            # We acquired the lock before any other thread. Compute the value!
+            # For async functions, we need to await the coroutine.
+            with self._info.cached_message_replay_ctx.calling_cached_function(
+                self._info.func
+            ):
+                computed_value = await self._info.func(*func_args, **func_kwargs)
+
+            # We've computed our value, and now we need to write it back to the cache
+            # along with any "replay messages" that were generated during value computation.
+            messages = self._info.cached_message_replay_ctx._most_recent_messages
+            try:
+                cache.write_result(value_key, computed_value, messages)
+                return computed_value
+            except (CacheError, RuntimeError) as ex:
+                # An exception was thrown while we tried to write to the cache.
+                if is_unevaluated_data_object(computed_value):
                     raise UnevaluatedDataFrameError(
                         f"The function {get_cached_func_name_md(self._info.func)} is "
                         "decorated with `st.cache_data` but it returns an unevaluated "

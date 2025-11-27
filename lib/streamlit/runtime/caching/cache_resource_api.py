@@ -297,17 +297,17 @@ class CacheResourceAPI:
         `Caching overview
         <https://docs.streamlit.io/develop/concepts/architecture/caching>`_.
 
-        .. warning::
-            Async objects are not officially supported in Streamlit. Caching
-            async objects or objects that reference async objects may have
-            unintended consequences. For example, Streamlit may close event
-            loops in its normal operation and make the cached object raise an
-            ``Event loop closed`` error.
+        .. note::
+            Caching async functions is supported. In a sync context (typical
+            Streamlit scripts), you can call the decorated async function
+            directly without ``asyncio.run()`` - Streamlit handles it
+            automatically. The actual return value (not the coroutine) is cached.
 
-            To upvote official ``asyncio`` support, see GitHub issue `#8488
-            <https://github.com/streamlit/streamlit/issues/8488>`_. To upvote
-            support for caching async functions, see GitHub issue `#8308
-            <https://github.com/streamlit/streamlit/issues/8308>`_.
+        .. warning::
+            Async objects that reference event loops may have unintended
+            consequences. For example, Streamlit may close event loops in its
+            normal operation and make the cached object raise an
+            ``Event loop closed`` error.
 
         Parameters
         ----------

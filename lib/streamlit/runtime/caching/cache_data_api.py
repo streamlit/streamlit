@@ -420,9 +420,10 @@ class CacheDataAPI:
         <https://docs.streamlit.io/develop/concepts/architecture/caching>`_.
 
         .. note::
-            Caching async functions is not supported. To upvote this feature,
-            see GitHub issue `#8308
-            <https://github.com/streamlit/streamlit/issues/8308>`_.
+            Caching async functions is supported. In a sync context (typical
+            Streamlit scripts), you can call the decorated async function
+            directly without ``asyncio.run()`` - Streamlit handles it
+            automatically. The actual return value (not the coroutine) is cached.
 
         Parameters
         ----------

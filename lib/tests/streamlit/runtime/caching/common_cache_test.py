@@ -950,3 +950,213 @@ def test_arrow_replay():
     at = AppTest.from_file("test_data/arrow_replay.py").run()
 
     assert not at.exception
+
+
+class CommonCacheAsyncTest(unittest.TestCase):
+    """Tests for async function caching support (GitHub issue #8308)."""
+
+    def setUp(self) -> None:
+        # Caching functions rely on an active script run ctx
+        add_script_run_ctx(threading.current_thread(), create_mock_script_run_ctx())
+        mock_runtime = MagicMock(spec=Runtime)
+        mock_runtime.cache_storage_manager = MemoryCacheStorageManager()
+        Runtime._instance = mock_runtime
+
+    def tearDown(self) -> None:
+        cache_data.clear()
+        cache_resource.clear()
+
+    @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
+    def test_async_simple(self, _: str, cache_decorator: Any) -> None:
+        """Test that async functions can be cached and called like sync functions."""
+
+        @cache_decorator
+        async def async_foo() -> int:
+            return 42
+
+        # In sync context, can call directly without asyncio.run()
+        result = async_foo()
+        assert result == 42
+
+        # Call again to ensure cached value is returned
+        result2 = async_foo()
+        assert result2 == 42
+
+    @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
+    def test_async_with_arguments(self, _: str, cache_decorator: Any) -> None:
+        """Test that async functions with arguments are cached correctly."""
+        call_count = [0]
+
+        @cache_decorator
+        async def async_add(a: int, b: int) -> int:
+            call_count[0] += 1
+            return a + b
+
+        # First call should execute the function (no asyncio.run needed)
+        result1 = async_add(1, 2)
+        assert result1 == 3
+        assert call_count[0] == 1
+
+        # Same arguments should return cached value
+        result2 = async_add(1, 2)
+        assert result2 == 3
+        assert call_count[0] == 1  # Function not called again
+
+        # Different arguments should execute the function
+        result3 = async_add(2, 3)
+        assert result3 == 5
+        assert call_count[0] == 2
+
+    @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
+    def test_async_clear_cache(self, _: str, cache_decorator: Any) -> None:
+        """Test that async function caches can be cleared."""
+        call_count = [0]
+
+        @cache_decorator
+        async def async_counter() -> int:
+            call_count[0] += 1
+            return call_count[0]
+
+        # First call (no asyncio.run needed)
+        result1 = async_counter()
+        assert result1 == 1
+
+        # Cached call
+        result2 = async_counter()
+        assert result2 == 1
+
+        # Clear cache and call again
+        async_counter.clear()
+        result3 = async_counter()
+        assert result3 == 2
+
+    @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
+    def test_async_with_await_inside(self, _: str, cache_decorator: Any) -> None:
+        """Test that async functions that await other coroutines work correctly."""
+        import asyncio
+
+        async def helper() -> str:
+            await asyncio.sleep(0)  # Simulate async operation
+            return "hello"
+
+        @cache_decorator
+        async def async_with_await() -> str:
+            result = await helper()
+            return result + " world"
+
+        # Can call directly without asyncio.run
+        result = async_with_await()
+        assert result == "hello world"
+
+        # Cached call
+        result2 = async_with_await()
+        assert result2 == "hello world"
+
+    @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
+    def test_async_decorator_with_params(self, _: str, cache_decorator: Any) -> None:
+        """Test that async functions work with decorator parameters."""
+
+        @cache_decorator(show_spinner=False)
+        async def async_with_params() -> int:
+            return 100
+
+        # Can call directly without asyncio.run
+        result = async_with_params()
+        assert result == 100
+
+    @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
+    def test_async_reuse_coroutine_error_fixed(
+        self, _: str, cache_decorator: Any
+    ) -> None:
+        """Test that the 'cannot reuse already awaited coroutine' error is fixed.
+
+        This was the original bug reported in GitHub issue #8308 for cache_resource.
+        """
+
+        @cache_decorator
+        async def get_resource() -> int:
+            return 42
+
+        # First call (no asyncio.run needed)
+        result1 = get_resource()
+        assert result1 == 42
+
+        # Second call should NOT raise "cannot reuse already awaited coroutine"
+        result2 = get_resource()
+        assert result2 == 42
+
+        # Third call for good measure
+        result3 = get_resource()
+        assert result3 == 42
+
+    @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
+    def test_async_class_method(self, _: str, cache_decorator: Any) -> None:
+        """Test that async methods on classes work correctly with caching."""
+        import asyncio
+
+        call_count = [0]
+
+        class MyClass:
+            @cache_decorator
+            async def async_method(_self, value: int) -> int:
+                call_count[0] += 1
+                await asyncio.sleep(0)
+                return value * 2
+
+        obj = MyClass()
+
+        # First call (no asyncio.run needed)
+        result1 = obj.async_method(5)
+        assert result1 == 10
+        assert call_count[0] == 1
+
+        # Cached call (same args)
+        result2 = obj.async_method(5)
+        assert result2 == 10
+        assert call_count[0] == 1  # Not called again
+
+        # Different args
+        result3 = obj.async_method(10)
+        assert result3 == 20
+        assert call_count[0] == 2
+
+    @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
+    def test_async_in_async_context(self, _: str, cache_decorator: Any) -> None:
+        """Test that async cached functions work when awaited from async context."""
+        import asyncio
+
+        call_count = [0]
+
+        @cache_decorator
+        async def async_func() -> int:
+            call_count[0] += 1
+            await asyncio.sleep(0)
+            return 42
+
+        async def caller() -> tuple[int, int]:
+            # When called from async context, should return coroutine to await
+            result1 = await async_func()
+            result2 = await async_func()  # Should be cached
+            return result1, result2
+
+        # Run the async caller
+        r1, r2 = asyncio.run(caller())
+        assert r1 == 42
+        assert r2 == 42
+        assert call_count[0] == 1  # Only called once due to caching

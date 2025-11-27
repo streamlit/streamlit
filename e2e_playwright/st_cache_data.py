@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
 from typing import TYPE_CHECKING, cast
 
 import numpy as np
@@ -99,3 +100,28 @@ def image():
 
 if st.checkbox("Show image", True):
     image()
+
+
+# ===== Async caching tests (GitHub issue #8308) =====
+if "async_cache_data_counter" not in st.session_state:
+    st.session_state.async_cache_data_counter = 0
+
+
+@st.cache_data
+async def async_cached_data() -> int:
+    """Async function cached with cache_data.
+
+    Can be called directly without asyncio.run() - Streamlit handles it!
+    """
+    st.session_state.async_cache_data_counter += 1
+    await asyncio.sleep(0)  # Simulate async operation
+    return cast("int", st.session_state.async_cache_data_counter)
+
+
+if st.button("Run async cached data function"):
+    # No asyncio.run() needed! Just call the function directly.
+    result = async_cached_data()
+    st.markdown(
+        f"Async cache_data executions: {st.session_state.async_cache_data_counter}"
+    )
+    st.write("Async cache_data return", result)

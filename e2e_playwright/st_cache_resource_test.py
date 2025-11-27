@@ -49,3 +49,32 @@ def test_that_replay_element_works_as_expected(app: Page):
     expect(app.get_by_test_id("stException")).to_have_count(0)
     expect(app.get_by_text("Cache executions: 1")).to_be_visible()
     expect(app.get_by_text("Cache return 1")).to_be_visible()
+
+
+def test_async_cache_resource_function(app: Page):
+    """Test that async functions work with cache_resource (GitHub issue #8308).
+
+    This verifies that the 'cannot reuse already awaited coroutine' error is fixed.
+    """
+    from e2e_playwright.conftest import wait_for_app_run
+
+    click_button(app, "Run async cached resource function")
+    wait_for_app_run(app)
+
+    # Verify no exceptions occurred
+    expect(app.get_by_test_id("stException")).to_have_count(0)
+
+    # Verify first execution
+    expect(app.get_by_text("Async cache_resource executions: 1")).to_be_visible()
+    expect(app.get_by_text("Async cache_resource return 1")).to_be_visible()
+
+    # Execute again - should return cached value without "cannot reuse coroutine" error
+    click_button(app, "Run async cached resource function")
+    wait_for_app_run(app)
+
+    # Verify no exceptions occurred (this is the main fix for the bug)
+    expect(app.get_by_test_id("stException")).to_have_count(0)
+
+    # Values should be the same (cached)
+    expect(app.get_by_text("Async cache_resource executions: 1")).to_be_visible()
+    expect(app.get_by_text("Async cache_resource return 1")).to_be_visible()
