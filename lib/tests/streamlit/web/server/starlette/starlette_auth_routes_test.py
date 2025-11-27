@@ -17,7 +17,6 @@ from __future__ import annotations
 from http.cookies import SimpleCookie
 from typing import TYPE_CHECKING, Any
 
-import pytest
 from starlette.applications import Starlette
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.responses import PlainTextResponse, RedirectResponse
@@ -32,10 +31,6 @@ if TYPE_CHECKING:
     import pytest
 
 
-class _NoAuthlibRuntimeError(RuntimeError):
-    pass
-
-
 def _build_app() -> Starlette:
     app = Starlette(routes=get_auth_routes(""))
 
@@ -48,6 +43,7 @@ def _build_app() -> Starlette:
 
 
 def test_redirect_without_provider(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test that login redirects to root when no provider is specified."""
     monkeypatch.setenv("STREAMLIT_OAUTH_PROVIDER", "")
     with TestClient(_build_app()) as client:
         response = client.get("/auth/login")
@@ -56,6 +52,7 @@ def test_redirect_without_provider(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_logout_clears_cookie() -> None:
+    """Test that logout clears the auth cookie and redirects to root."""
     with TestClient(_build_app()) as client:
         client.cookies.set("_streamlit_user", "value")
         response = client.get("/auth/logout", follow_redirects=False)
@@ -66,6 +63,7 @@ def test_logout_clears_cookie() -> None:
 
 
 def test_callback_handles_error_query(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test that OAuth callback handles error query parameters gracefully."""
     monkeypatch.setattr(
         starlette_auth_routes,
         "_get_origin_from_secrets",
@@ -88,6 +86,7 @@ def test_callback_handles_error_query(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_callback_missing_provider_redirects(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test that OAuth callback redirects when provider cannot be determined."""
     monkeypatch.setattr(
         starlette_auth_routes,
         "_get_origin_from_secrets",
@@ -108,6 +107,8 @@ def test_callback_missing_provider_redirects(monkeypatch: pytest.MonkeyPatch) ->
 
 @patch_config_options({"server.cookieSecret": "test-secret"})
 def test_auth_callback_sets_signed_cookie(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test that successful OAuth callback sets a signed auth cookie."""
+
     async def _dummy_authorize_access_token(self, request: Any) -> dict[str, Any]:
         return {"userinfo": {"email": "user@example.com"}}
 
@@ -148,6 +149,7 @@ def test_auth_callback_sets_signed_cookie(monkeypatch: pytest.MonkeyPatch) -> No
 
 
 def test_login_initializes_session(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test that login endpoint initializes a session for OAuth flow."""
     captured_session: dict[str, Any] | None = None
 
     class _DummyClient:

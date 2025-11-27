@@ -159,6 +159,7 @@ def starlette_client(tmp_path: Path) -> Iterator[tuple[TestClient, _DummyRuntime
 
 
 def test_health_endpoint(starlette_client: tuple[TestClient, _DummyRuntime]) -> None:
+    """Test that the health endpoint returns 200 with 'ok' message."""
     client, _ = starlette_client
     response = client.get("/_stcore/health")
     assert response.status_code == 200
@@ -166,6 +167,7 @@ def test_health_endpoint(starlette_client: tuple[TestClient, _DummyRuntime]) -> 
 
 
 def test_metrics_endpoint(starlette_client: tuple[TestClient, _DummyRuntime]) -> None:
+    """Test that the metrics endpoint returns stats in text format."""
     client, _ = starlette_client
     response = client.get("/_stcore/metrics")
     assert response.status_code == 200
@@ -175,6 +177,7 @@ def test_metrics_endpoint(starlette_client: tuple[TestClient, _DummyRuntime]) ->
 def test_metrics_endpoint_protobuf(
     starlette_client: tuple[TestClient, _DummyRuntime],
 ) -> None:
+    """Test that the metrics endpoint returns stats in protobuf format when requested."""
     client, runtime = starlette_client
     expected = runtime.stats_mgr.get_stats()
     response = client.get(
@@ -190,6 +193,7 @@ def test_metrics_endpoint_protobuf(
 def test_media_endpoint_serves_file(
     starlette_client: tuple[TestClient, _DummyRuntime],
 ) -> None:
+    """Test that the media endpoint serves files correctly."""
     client, runtime = starlette_client
     storage = runtime.media_file_mgr._storage
     file_id = storage.load_and_get_id(
@@ -208,6 +212,7 @@ def test_media_endpoint_serves_file(
 def test_media_endpoint_download_headers(
     starlette_client: tuple[TestClient, _DummyRuntime],
 ) -> None:
+    """Test that downloadable files have Content-Disposition attachment header."""
     client, runtime = starlette_client
     storage = runtime.media_file_mgr._storage
     file_id = storage.load_and_get_id(
@@ -274,6 +279,7 @@ def test_media_endpoint_rejects_invalid_ranges(
 def test_upload_put_adds_file(
     starlette_client: tuple[TestClient, _DummyRuntime],
 ) -> None:
+    """Test that file uploads are stored correctly."""
     client, runtime = starlette_client
     response = client.put(
         "_stcore/upload_file/session123/fileid",
@@ -303,6 +309,7 @@ def test_upload_put_enforces_max_size(
 
 
 def test_component_endpoint(starlette_client: tuple[TestClient, _DummyRuntime]) -> None:
+    """Test that custom component files are served correctly."""
     client, _ = starlette_client
     response = client.get("/component/comp/index.html")
     assert response.status_code == 200
@@ -369,6 +376,7 @@ def test_websocket_rejects_text_frames(
 def test_upload_delete_removes_file(
     starlette_client: tuple[TestClient, _DummyRuntime],
 ) -> None:
+    """Test that file deletions remove files from storage."""
     client, runtime = starlette_client
     runtime.uploaded_file_mgr.file_storage.setdefault("session123", {})["fileid"] = (
         UploadedFileRec(
@@ -386,6 +394,7 @@ def test_upload_delete_removes_file(
 
 @patch_config_options({"global.developmentMode": False})
 def test_host_config_excludes_localhost_when_not_dev(tmp_path: Path) -> None:
+    """Test that localhost is excluded from allowed origins in production mode."""
     component_dir = tmp_path / "component"
     component_dir.mkdir()
     (component_dir / "index.html").write_text("component")
@@ -409,6 +418,7 @@ def test_host_config_excludes_localhost_when_not_dev(tmp_path: Path) -> None:
 
 @patch_config_options({"global.developmentMode": True})
 def test_host_config_includes_localhost_in_dev(tmp_path: Path) -> None:
+    """Test that localhost is included in allowed origins in development mode."""
     component_dir = tmp_path / "component"
     component_dir.mkdir()
     (component_dir / "index.html").write_text("component")
@@ -432,6 +442,7 @@ def test_host_config_includes_localhost_in_dev(tmp_path: Path) -> None:
 
 @patch_config_options({"global.developmentMode": True})
 def test_static_files_skipped_in_dev_mode(tmp_path: Path) -> None:
+    """Test that static file serving is skipped in development mode."""
     component_dir = tmp_path / "component"
     component_dir.mkdir()
     (component_dir / "index.html").write_text("component")
@@ -509,6 +520,7 @@ def test_websocket_auth_cookie_yields_user_info(tmp_path: Path) -> None:
 
 @patch_config_options({"server.enableXsrfProtection": False})
 def test_websocket_accepts_existing_session(tmp_path: Path) -> None:
+    """Test that WebSocket reconnection with existing session ID works."""
     component_dir = tmp_path / "component"
     component_dir.mkdir()
     (component_dir / "index.html").write_text("component")
