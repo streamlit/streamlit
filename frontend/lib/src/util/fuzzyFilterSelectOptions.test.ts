@@ -47,7 +47,7 @@ describe("fuzzyFilterSelectOptions", () => {
       "e2e/scripts/components_iframe.py",
     ])
 
-    const results2 = fuzzyFilterSelectOptions(options, "eseg")
+    const results2 = fuzzyFilterSelectOptions(options, "esqu")
     expect(results2.map(it => it.label)).toEqual([
       "e2e/scripts/st_query_params.py",
     ])
