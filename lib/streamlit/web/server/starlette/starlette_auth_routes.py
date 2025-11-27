@@ -23,7 +23,6 @@ from urllib.parse import urlparse
 
 from starlette.responses import RedirectResponse, Response
 from starlette.routing import Route
-from tornado.web import create_signed_value
 
 from streamlit.auth_util import (
     AuthCache,
@@ -36,6 +35,7 @@ from streamlit.logger import get_logger
 from streamlit.url_util import make_url_path
 from streamlit.web.server.oauth_authlib_routes import auth_cache
 from streamlit.web.server.server_util import AUTH_COOKIE_NAME, get_cookie_secret
+from streamlit.web.server.starlette.starlette_app_utils import create_signed_value
 
 # Auth route path constants (without base URL prefix)
 ROUTE_AUTH_LOGIN: Final = "auth/login"
@@ -142,8 +142,6 @@ async def _set_auth_cookie(response: Response, user_info: dict[str, Any]) -> Non
         )
 
     cookie_secret = get_cookie_secret()
-
-    # TODO(lukasmasuch): Replace with implementation that doesn't require Tornado.
     signed_value = create_signed_value(
         cookie_secret, AUTH_COOKIE_NAME, serialized_cookie_value
     )

@@ -19,9 +19,6 @@ from __future__ import annotations
 import binascii
 import os
 import time
-from typing import Any
-
-from tornado.web import decode_signed_value as _tornado_decode_signed_value
 
 
 def parse_range_header(range_header: str, total_size: int) -> tuple[int, int]:
@@ -105,27 +102,72 @@ def websocket_mask(mask: bytes, data: bytes) -> bytes:
     return bytes(result)
 
 
+def create_signed_value(
+    secret: str,
+    name: str,
+    value: str | bytes,
+) -> bytes:
+    """Create a signed cookie value using itsdangerous.
+
+    Parameters
+    ----------
+    secret
+        The secret key used for signing.
+    name
+        The cookie name (used as salt for additional security).
+    value
+        The value to sign.
+
+    Returns
+    -------
+    bytes
+        The signed value as bytes.
+    """
+    from itsdangerous import URLSafeTimedSerializer
+
+    serializer = URLSafeTimedSerializer(secret, salt=name)
+    if isinstance(value, bytes):
+        value = value.decode("utf-8")
+    return serializer.dumps(value).encode("utf-8")
+
+
 def decode_signed_value(
     secret: str,
     name: str,
     value: str | bytes,
     max_age_days: float = 31,
-    clock: Any = None,
-    min_version: int | None = None,
 ) -> bytes | None:
-    """Decode a signed cookie value.
+    """Decode a signed cookie value using itsdangerous.
 
-    Currently wraps Tornado's implementation for compatibility.
+    Parameters
+    ----------
+    secret
+        The secret key used for signing.
+    name
+        The cookie name (used as salt for additional security).
+    value
+        The signed value to decode.
+    max_age_days
+        Maximum age of the cookie in days (default: 31).
+
+    Returns
+    -------
+    bytes | None
+        The decoded value as bytes, or None if invalid/expired.
     """
-    # TODO(lukasmasuch): Replace with implementation that doesn't require Tornado.
-    return _tornado_decode_signed_value(
-        secret,
-        name,
-        value,
-        max_age_days=max_age_days,
-        clock=clock,
-        min_version=min_version,
-    )
+    from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
+
+    serializer = URLSafeTimedSerializer(secret, salt=name)
+    if isinstance(value, bytes):
+        value = value.decode("utf-8")
+
+    try:
+        decoded = serializer.loads(value, max_age=int(max_age_days * 86400))
+        if isinstance(decoded, str):
+            return decoded.encode("utf-8")
+        return decoded
+    except (BadSignature, SignatureExpired):
+        return None
 
 
 def generate_xsrf_token_string(

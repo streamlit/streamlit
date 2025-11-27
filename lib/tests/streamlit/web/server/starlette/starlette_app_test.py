@@ -488,9 +488,7 @@ def test_websocket_auth_cookie_yields_user_info(tmp_path: Path) -> None:
             "email": "user@example.com",
         }
     )
-    from tornado.web import create_signed_value
-
-    cookie_value = create_signed_value(
+    cookie_value = starlette_app_utils.create_signed_value(
         "test-signing-secret",
         "_streamlit_user",
         cookie_payload,

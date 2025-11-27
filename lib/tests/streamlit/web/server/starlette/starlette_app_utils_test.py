@@ -19,11 +19,9 @@ from __future__ import annotations
 import binascii
 import time
 import unittest
-from unittest.mock import patch
 
 import pytest
 from tornado.util import _websocket_mask
-from tornado.web import create_signed_value
 
 from streamlit.web.server.starlette import starlette_app_utils
 
@@ -115,36 +113,52 @@ class StarletteServerUtilsTest(unittest.TestCase):
             actual = starlette_app_utils.websocket_mask(mask, data)
             assert actual == expected, f"Mismatch for length {length}"
 
-    def test_decode_signed_value_compatibility(self):
-        """Test that decode_signed_value is compatible with Tornado's create_signed_value."""
+    def test_signed_value_roundtrip(self):
+        """Test that create_signed_value and decode_signed_value work together."""
         secret = "test_secret_key"
         name = "test_cookie"
         value = "test_value"
 
-        # Create a signed value using Tornado
-        signed_value = create_signed_value(secret, name, value)
+        # Create a signed value
+        signed_value = starlette_app_utils.create_signed_value(secret, name, value)
 
         # Decode using our utility
         decoded = starlette_app_utils.decode_signed_value(secret, name, signed_value)
+        assert decoded is not None
         assert decoded.decode("utf-8") == value
 
-    @patch(
-        "streamlit.web.server.starlette.starlette_app_utils._tornado_decode_signed_value"
-    )
-    def test_decode_signed_value_fallback(self, mock_tornado_decode):
-        """Test that it falls back gracefully (currently returns None) if Tornado is missing or mocking fails."""
-        # Simulate tornado missing by mocking the internal import reference to None
-        # (This is slightly tricky since we can't easily unload the module, but we can force the fallback path
-        # if we were to modify the module. Since we can't easily modify the module state for just one test without
-        # reloading, we will test the logic by mocking the implementation if it were None).
+    def test_signed_value_with_bytes(self):
+        """Test that signed value works with bytes input."""
+        secret = "test_secret_key"
+        name = "test_cookie"
+        value = b"test_value_bytes"
 
-        # Ideally, we would test the fallback logic if we implemented a pure python version.
-        # Since currently it wraps Tornado, we just verify it calls it.
-        mock_tornado_decode.return_value = b"decoded"
+        signed_value = starlette_app_utils.create_signed_value(secret, name, value)
+        decoded = starlette_app_utils.decode_signed_value(secret, name, signed_value)
+        assert decoded == value
 
-        result = starlette_app_utils.decode_signed_value("secret", "name", "value")
-        assert result == b"decoded"
-        mock_tornado_decode.assert_called_once()
+    def test_decode_signed_value_invalid_signature(self):
+        """Test that invalid signature returns None."""
+        secret = "test_secret_key"
+        name = "test_cookie"
+
+        # Tampered value
+        result = starlette_app_utils.decode_signed_value(
+            secret, name, "invalid_signed_value"
+        )
+        assert result is None
+
+    def test_decode_signed_value_wrong_secret(self):
+        """Test that wrong secret returns None."""
+        secret = "test_secret_key"
+        name = "test_cookie"
+        value = "test_value"
+
+        signed_value = starlette_app_utils.create_signed_value(secret, name, value)
+        result = starlette_app_utils.decode_signed_value(
+            "wrong_secret", name, signed_value
+        )
+        assert result is None
 
     def test_xsrf_token_roundtrip(self):
         """Test generating and then decoding an XSRF token."""

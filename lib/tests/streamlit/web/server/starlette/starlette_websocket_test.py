@@ -295,7 +295,9 @@ class TestParseUserCookieSigned:
         """Test that valid cookie is parsed correctly."""
         import json
 
-        from tornado.web import create_signed_value
+        from streamlit.web.server.starlette.starlette_app_utils import (
+            create_signed_value,
+        )
 
         cookie_payload = json.dumps(
             {
@@ -319,7 +321,9 @@ class TestParseUserCookieSigned:
         """Test that bytes cookie is handled correctly."""
         import json
 
-        from tornado.web import create_signed_value
+        from streamlit.web.server.starlette.starlette_app_utils import (
+            create_signed_value,
+        )
 
         cookie_payload = json.dumps(
             {"origin": "http://localhost", "is_logged_in": True}
@@ -338,7 +342,9 @@ class TestParseUserCookieSigned:
         """Test that string cookie is handled correctly."""
         import json
 
-        from tornado.web import create_signed_value
+        from streamlit.web.server.starlette.starlette_app_utils import (
+            create_signed_value,
+        )
 
         cookie_payload = json.dumps(
             {"origin": "http://localhost", "is_logged_in": True}
