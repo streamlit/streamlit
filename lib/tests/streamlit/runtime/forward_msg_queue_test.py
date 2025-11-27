@@ -17,6 +17,8 @@
 from __future__ import annotations
 
 import copy
+import threading
+import time
 import unittest
 
 from parameterized import parameterized
@@ -363,3 +365,172 @@ class ForwardMsgQueueTest(unittest.TestCase):
         fmq.enqueue(TEXT_DELTA_MSG2)
 
         assert count == 0
+
+
+class ForwardMsgQueueThreadSafetyTest(unittest.TestCase):
+    """Tests for thread safety of ForwardMsgQueue.
+
+    These tests verify that the queue can be safely accessed from multiple threads
+    concurrently, which is required for parallel fragment execution.
+    """
+
+    def test_concurrent_enqueue(self):
+        """Verify that concurrent enqueue calls don't cause data corruption."""
+        fmq = ForwardMsgQueue()
+        num_threads = 10
+        msgs_per_thread = 100
+        errors: list[Exception] = []
+
+        def enqueue_messages(thread_idx: int) -> None:
+            try:
+                for i in range(msgs_per_thread):
+                    msg = ForwardMsg()
+                    msg.delta.new_element.text.body = f"thread_{thread_idx}_msg_{i}"
+                    # Use unique delta paths for each message to avoid composition
+                    msg.metadata.delta_path[:] = make_delta_path(
+                        RootContainer.MAIN, (), thread_idx * msgs_per_thread + i
+                    )
+                    fmq.enqueue(msg)
+            except Exception as e:
+                errors.append(e)
+
+        threads = [
+            threading.Thread(target=enqueue_messages, args=(i,))
+            for i in range(num_threads)
+        ]
+
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+        # No errors should have occurred
+        assert len(errors) == 0
+
+        # All messages should be in the queue
+        queue = fmq.flush()
+        assert len(queue) == num_threads * msgs_per_thread
+
+    def test_concurrent_enqueue_and_flush(self):
+        """Verify that concurrent enqueue and flush calls are safe."""
+        fmq = ForwardMsgQueue()
+        num_enqueue_threads = 5
+        num_flush_threads = 3
+        msgs_per_thread = 50
+        errors: list[Exception] = []
+        total_flushed: list[int] = []
+        lock = threading.Lock()
+
+        def enqueue_messages(thread_idx: int) -> None:
+            try:
+                for i in range(msgs_per_thread):
+                    msg = ForwardMsg()
+                    msg.delta.new_element.text.body = f"thread_{thread_idx}_msg_{i}"
+                    msg.metadata.delta_path[:] = make_delta_path(
+                        RootContainer.MAIN, (), thread_idx * msgs_per_thread + i
+                    )
+                    fmq.enqueue(msg)
+                    time.sleep(0.001)  # Small delay to increase interleaving
+            except Exception as e:
+                errors.append(e)
+
+        def flush_messages() -> None:
+            try:
+                for _ in range(10):
+                    queue = fmq.flush()
+                    with lock:
+                        total_flushed.append(len(queue))
+                    time.sleep(0.01)
+            except Exception as e:
+                errors.append(e)
+
+        enqueue_threads = [
+            threading.Thread(target=enqueue_messages, args=(i,))
+            for i in range(num_enqueue_threads)
+        ]
+        flush_threads = [
+            threading.Thread(target=flush_messages) for _ in range(num_flush_threads)
+        ]
+
+        all_threads = enqueue_threads + flush_threads
+        for t in all_threads:
+            t.start()
+        for t in all_threads:
+            t.join()
+
+        # No errors should have occurred
+        assert len(errors) == 0
+
+        # Flush any remaining messages
+        remaining = fmq.flush()
+        total_flushed.append(len(remaining))
+
+        # Total flushed should equal total enqueued
+        assert sum(total_flushed) == num_enqueue_threads * msgs_per_thread
+
+    def test_concurrent_clear(self):
+        """Verify that concurrent clear calls are safe."""
+        fmq = ForwardMsgQueue()
+        num_threads = 5
+        errors: list[Exception] = []
+
+        # Pre-populate the queue
+        for i in range(100):
+            msg = ForwardMsg()
+            msg.delta.new_element.text.body = f"msg_{i}"
+            msg.metadata.delta_path[:] = make_delta_path(RootContainer.MAIN, (), i)
+            fmq.enqueue(msg)
+
+        def clear_queue() -> None:
+            try:
+                for _ in range(10):
+                    fmq.clear()
+                    time.sleep(0.001)
+            except Exception as e:
+                errors.append(e)
+
+        threads = [threading.Thread(target=clear_queue) for _ in range(num_threads)]
+
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+        # No errors should have occurred
+        assert len(errors) == 0
+
+        # Queue should be empty after all clears
+        assert fmq.is_empty()
+
+    def test_concurrent_len(self):
+        """Verify that concurrent __len__ calls are safe during enqueue."""
+        fmq = ForwardMsgQueue()
+        num_threads = 5
+        errors: list[Exception] = []
+
+        def enqueue_and_check_len(thread_idx: int) -> None:
+            try:
+                for i in range(50):
+                    msg = ForwardMsg()
+                    msg.delta.new_element.text.body = f"thread_{thread_idx}_msg_{i}"
+                    msg.metadata.delta_path[:] = make_delta_path(
+                        RootContainer.MAIN, (), thread_idx * 50 + i
+                    )
+                    fmq.enqueue(msg)
+                    # Call len() concurrently with enqueue
+                    _ = len(fmq)
+            except Exception as e:
+                errors.append(e)
+
+        threads = [
+            threading.Thread(target=enqueue_and_check_len, args=(i,))
+            for i in range(num_threads)
+        ]
+
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+        # No errors should have occurred
+        assert len(errors) == 0

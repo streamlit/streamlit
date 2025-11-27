@@ -14,6 +14,8 @@
 
 from __future__ import annotations
 
+import threading
+import time
 import unittest
 from collections.abc import Callable
 from unittest.mock import MagicMock, patch
@@ -416,6 +418,179 @@ class FragmentTest(unittest.TestCase):
         # countercheck
         fragment_id2 = _fragment(my_function, additional_hash_info="")()
         assert fragment_id1 == fragment_id2
+
+
+class ParallelFragmentTest(unittest.TestCase):
+    """Tests for parallel fragment execution via the parallel=True parameter."""
+
+    def setUp(self):
+        self.original_dg_stack = context_dg_stack.get()
+        root_container = MagicMock()
+        context_dg_stack.set(
+            (
+                DeltaGenerator(
+                    root_container=root_container,
+                    cursor=MagicMock(root_container=root_container),
+                ),
+            )
+        )
+
+    def tearDown(self):
+        context_dg_stack.set(self.original_dg_stack)
+
+    @patch("streamlit.runtime.fragment.get_script_run_ctx")
+    def test_parallel_fragment_spawns_thread(self, patched_get_script_run_ctx):
+        """Verify that parallel=True spawns a new thread to run the fragment."""
+        ctx = MagicMock()
+        ctx.fragment_storage = MemoryFragmentStorage()
+        patched_get_script_run_ctx.return_value = ctx
+
+        thread_names: list[str] = []
+        thread_event = threading.Event()
+
+        @fragment(parallel=True)
+        def my_parallel_fragment():
+            thread_names.append(threading.current_thread().name)
+            thread_event.set()
+
+        my_parallel_fragment()
+
+        # Wait for the thread to execute (with timeout)
+        thread_event.wait(timeout=2.0)
+
+        # Verify a thread was spawned with the expected naming pattern
+        assert len(thread_names) == 1
+        assert thread_names[0].startswith("parallel_fragment_")
+
+    @patch("streamlit.runtime.fragment.get_script_run_ctx")
+    def test_parallel_fragment_returns_none(self, patched_get_script_run_ctx):
+        """Verify that parallel fragments always return None."""
+        ctx = MagicMock()
+        ctx.fragment_storage = MemoryFragmentStorage()
+        patched_get_script_run_ctx.return_value = ctx
+
+        @fragment(parallel=True)
+        def my_parallel_fragment():
+            return 42
+
+        result = my_parallel_fragment()
+        assert result is None
+
+    @patch("streamlit.runtime.fragment.get_script_run_ctx")
+    def test_parallel_fragment_executes_function(self, patched_get_script_run_ctx):
+        """Verify that parallel fragments actually execute the wrapped function."""
+        ctx = MagicMock()
+        ctx.fragment_storage = MemoryFragmentStorage()
+        patched_get_script_run_ctx.return_value = ctx
+
+        execution_count = [0]  # Use list to allow mutation in closure
+        thread_event = threading.Event()
+
+        @fragment(parallel=True)
+        def my_parallel_fragment():
+            execution_count[0] += 1
+            thread_event.set()
+
+        my_parallel_fragment()
+
+        # Wait for thread to complete
+        thread_event.wait(timeout=2.0)
+
+        assert execution_count[0] == 1
+
+    @patch("streamlit.runtime.fragment.get_script_run_ctx")
+    def test_parallel_fragment_handles_exceptions_gracefully(
+        self, patched_get_script_run_ctx
+    ):
+        """Verify that exceptions in parallel fragments are handled and logged."""
+        ctx = MagicMock()
+        ctx.fragment_storage = MemoryFragmentStorage()
+        patched_get_script_run_ctx.return_value = ctx
+
+        exception_raised = threading.Event()
+
+        @fragment(parallel=True)
+        def my_exploding_fragment():
+            exception_raised.set()
+            raise ValueError("Test exception")
+
+        # Should not raise - exception is handled in thread
+        my_exploding_fragment()
+
+        # Wait for thread to execute
+        exception_raised.wait(timeout=2.0)
+
+        # Give time for the exception handling to complete
+        time.sleep(0.1)
+
+        # The test passes if we get here without the main thread raising
+        assert exception_raised.is_set()
+
+    @patch("streamlit.runtime.fragment.get_script_run_ctx")
+    def test_non_parallel_fragment_runs_synchronously(self, patched_get_script_run_ctx):
+        """Verify that non-parallel fragments run in the calling thread."""
+        ctx = MagicMock()
+        ctx.fragment_storage = MemoryFragmentStorage()
+        patched_get_script_run_ctx.return_value = ctx
+
+        calling_thread = threading.current_thread().name
+        fragment_thread = [None]
+
+        @fragment(parallel=False)
+        def my_sync_fragment():
+            fragment_thread[0] = threading.current_thread().name
+
+        my_sync_fragment()
+
+        # Fragment should run in the same thread
+        assert fragment_thread[0] == calling_thread
+
+    @patch("streamlit.runtime.fragment.get_script_run_ctx")
+    def test_multiple_parallel_fragments_run_concurrently(
+        self, patched_get_script_run_ctx
+    ):
+        """Verify that multiple parallel fragments can run concurrently."""
+        ctx = MagicMock()
+        ctx.fragment_storage = MemoryFragmentStorage()
+        patched_get_script_run_ctx.return_value = ctx
+
+        started_events = [threading.Event() for _ in range(3)]
+        finish_event = threading.Event()
+        execution_order: list[int] = []
+        lock = threading.Lock()
+
+        def make_fragment(idx: int):
+            @fragment(parallel=True)
+            def my_fragment():
+                started_events[idx].set()
+                # Wait for signal to finish
+                finish_event.wait(timeout=2.0)
+                with lock:
+                    execution_order.append(idx)
+
+            return my_fragment
+
+        # Start all fragments
+        fragments = [make_fragment(i) for i in range(3)]
+        for f in fragments:
+            f()
+
+        # Wait for all fragments to start (they should start concurrently)
+        for event in started_events:
+            event.wait(timeout=2.0)
+
+        # All threads should have started
+        for event in started_events:
+            assert event.is_set()
+
+        # Signal threads to finish
+        finish_event.set()
+
+        # Give threads time to complete
+        time.sleep(0.2)
+
+        # All fragments should have executed
+        assert len(execution_order) == 3
 
 
 # TESTS FOR WRITING TO CONTAINERS OUTSIDE AND INSIDE OF FRAGMENT

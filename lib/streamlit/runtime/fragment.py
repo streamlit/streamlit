@@ -16,27 +16,34 @@ from __future__ import annotations
 
 import contextlib
 import inspect
+import threading
 from abc import abstractmethod
 from collections.abc import Callable
 from copy import deepcopy
 from functools import wraps
-from typing import TYPE_CHECKING, Any, Protocol, TypeVar, overload
+from typing import TYPE_CHECKING, Any, Final, Protocol, TypeVar, overload
 
 from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.errors import FragmentHandledException, FragmentStorageKeyError
+from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.exceptions import (
     RerunException,
     StopException,
 )
-from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
+from streamlit.runtime.scriptrunner_utils.script_run_context import (
+    add_script_run_ctx,
+    get_script_run_ctx,
+)
 from streamlit.time_util import time_to_seconds
 from streamlit.type_util import get_object_name
 from streamlit.util import calc_md5
 
 if TYPE_CHECKING:
     from datetime import timedelta
+
+_LOGGER: Final = get_logger(__name__)
 
 
 F = TypeVar("F", bound=Callable[..., Any])
@@ -134,6 +141,7 @@ def _fragment(
     func: F | None = None,
     *,
     run_every: int | float | timedelta | str | None = None,
+    parallel: bool = False,
     additional_hash_info: str = "",
 ) -> Callable[[F], F] | F:
     """Contains the actual fragment logic.
@@ -149,6 +157,7 @@ def _fragment(
             return fragment(
                 func=f,
                 run_every=run_every,
+                parallel=parallel,
             )
 
         return wrapper
@@ -261,6 +270,20 @@ def _fragment(
             msg.auto_rerun.fragment_id = fragment_id
             ctx.enqueue(msg)
 
+        # Execute the wrapped fragment - either in parallel or synchronously.
+        if parallel:
+            # Run fragment in a separate thread for parallel execution.
+            # The return value is ignored for parallel fragments.
+            thread = threading.Thread(
+                target=_run_parallel_fragment,
+                args=(wrapped_fragment, fragment_id),
+                name=f"parallel_fragment_{fragment_id[:8]}",
+                daemon=True,
+            )
+            add_script_run_ctx(thread, ctx)
+            thread.start()
+            return None
+
         # Immediate execute the wrapped fragment since we are in a full app run
         return wrapped_fragment()
 
@@ -273,11 +296,37 @@ def _fragment(
     return wrap
 
 
+def _run_parallel_fragment(
+    wrapped_fragment: Fragment,
+    fragment_id: str,
+) -> None:
+    """Execute a fragment in a parallel thread.
+
+    This function is the target for threads spawned by parallel fragments.
+    It handles exceptions gracefully and logs any errors.
+    """
+    try:
+        wrapped_fragment()
+    except (RerunException, StopException):
+        # These exceptions are expected flow control and should not be logged.
+        _LOGGER.debug(
+            "Parallel fragment %s received rerun/stop exception", fragment_id[:8]
+        )
+    except FragmentHandledException:
+        # Exception was already handled and displayed to the user.
+        pass
+    except Exception:
+        _LOGGER.exception(
+            "Unhandled exception in parallel fragment %s", fragment_id[:8]
+        )
+
+
 @overload
 def fragment(
     func: F,
     *,
     run_every: int | float | timedelta | str | None = None,
+    parallel: bool = False,
 ) -> F: ...
 
 
@@ -288,6 +337,7 @@ def fragment(
     func: None = None,
     *,
     run_every: int | float | timedelta | str | None = None,
+    parallel: bool = False,
 ) -> Callable[[F], F]: ...
 
 
@@ -296,6 +346,7 @@ def fragment(
     func: F | None = None,
     *,
     run_every: int | float | timedelta | str | None = None,
+    parallel: bool = False,
 ) -> Callable[[F], F] | F:
     """Decorator to turn a function into a fragment which can rerun independently\
     of the full app.
@@ -332,6 +383,9 @@ def fragment(
 
         - Fragments can only contain widgets in their main body. Fragments
           can't render widgets to externally created containers.
+        - When ``parallel=True``, the fragment runs in a separate thread. The
+          return value of the fragment function is ignored, and widgets inside
+          parallel fragments may have limited functionality.
 
     Parameters
     ----------
@@ -353,6 +407,22 @@ def fragment(
 
         If ``run_every`` is ``None``, the fragment will only rerun from
         user-triggered events.
+
+    parallel: bool
+        If ``True``, the fragment will run in a separate thread, allowing
+        multiple fragments to execute concurrently. This is useful for
+        dashboards where independent sections can load data and render
+        in parallel, reducing overall page load time.
+
+        When ``parallel=True``:
+
+            - The fragment executes in a background thread.
+            - The return value of the fragment function is ignored.
+            - Multiple parallel fragments can run simultaneously.
+            - Any values that need to be accessed from the wider app should
+              be stored in Session State.
+
+        Default is ``False``.
 
     Examples
     --------
@@ -434,5 +504,26 @@ def fragment(
         https://doc-fragment-rerun.streamlit.app/
         height: 400px
 
+    The following example demonstrates parallel fragments for loading
+    independent dashboard sections concurrently:
+
+    >>> import streamlit as st
+    >>> import time
+    >>> import numpy as np
+    >>>
+    >>> @st.fragment(parallel=True)
+    >>> def chart1():
+    >>>     time.sleep(2)  # Simulate slow data load
+    >>>     st.line_chart(np.random.randn(100, 2))
+    >>>
+    >>> @st.fragment(parallel=True)
+    >>> def chart2():
+    >>>     time.sleep(2)  # Simulate slow data load
+    >>>     st.bar_chart(np.random.randn(50, 3))
+    >>>
+    >>> # Both fragments run in parallel, so total load time is ~2s instead of ~4s
+    >>> chart1()
+    >>> chart2()
+
     """
-    return _fragment(func, run_every=run_every)
+    return _fragment(func, run_every=run_every, parallel=parallel)
