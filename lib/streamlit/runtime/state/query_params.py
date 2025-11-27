@@ -47,8 +47,6 @@ class QueryParams(MutableMapping[str, str]):
     _query_params: dict[str, list[str] | str] = field(default_factory=dict)
 
     def __iter__(self) -> Iterator[str]:
-        self._ensure_single_query_api_used()
-
         return iter(
             key
             for key in self._query_params
@@ -60,7 +58,6 @@ class QueryParams(MutableMapping[str, str]):
         Returns the last item in a list or an empty string if empty.
         If the key is not present, raise KeyError.
         """
-        self._ensure_single_query_api_used()
         if key.lower() in EMBED_QUERY_PARAMS_KEYS:
             raise KeyError(missing_key_error_message(key))
 
@@ -77,7 +74,6 @@ class QueryParams(MutableMapping[str, str]):
             raise KeyError(missing_key_error_message(key))
 
     def __setitem__(self, key: str, value: str | Iterable[str]) -> None:
-        self._ensure_single_query_api_used()
         self._set_item_internal(key, value)
         self._send_query_param_msg()
 
@@ -85,7 +81,6 @@ class QueryParams(MutableMapping[str, str]):
         _set_item_in_dict(self._query_params, key, value)
 
     def __delitem__(self, key: str) -> None:
-        self._ensure_single_query_api_used()
         if key.lower() in EMBED_QUERY_PARAMS_KEYS:
             raise KeyError(missing_key_error_message(key))
         try:
@@ -103,7 +98,6 @@ class QueryParams(MutableMapping[str, str]):
     ) -> None:
         # This overrides the `update` provided by MutableMapping
         # to ensure only one one ForwardMsg is sent.
-        self._ensure_single_query_api_used()
         if hasattr(other, "keys") and hasattr(other, "__getitem__"):
             other = cast("SupportsKeysAndGetItem[str, str | Iterable[str]]", other)
             for key in other.keys():  # noqa: SIM118
@@ -116,14 +110,12 @@ class QueryParams(MutableMapping[str, str]):
         self._send_query_param_msg()
 
     def get_all(self, key: str) -> list[str]:
-        self._ensure_single_query_api_used()
         if key not in self._query_params or key.lower() in EMBED_QUERY_PARAMS_KEYS:
             return []
         value = self._query_params[key]
         return value if isinstance(value, list) else [value]
 
     def __len__(self) -> int:
-        self._ensure_single_query_api_used()
         return len(
             {
                 key
@@ -133,14 +125,12 @@ class QueryParams(MutableMapping[str, str]):
         )
 
     def __str__(self) -> str:
-        self._ensure_single_query_api_used()
         return str(self._query_params)
 
     def _send_query_param_msg(self) -> None:
         ctx = get_script_run_ctx()
         if ctx is None:
             return
-        self._ensure_single_query_api_used()
 
         msg = ForwardMsg()
         msg.page_info_changed.query_string = parse.urlencode(
@@ -150,12 +140,10 @@ class QueryParams(MutableMapping[str, str]):
         ctx.enqueue(msg)
 
     def clear(self) -> None:
-        self._ensure_single_query_api_used()
         self.clear_with_no_forward_msg(preserve_embed=True)
         self._send_query_param_msg()
 
     def to_dict(self) -> dict[str, str]:
-        self._ensure_single_query_api_used()
         # return the last query param if multiple values are set
         return {
             key: self[key]
@@ -168,7 +156,6 @@ class QueryParams(MutableMapping[str, str]):
         _dict: Iterable[tuple[str, str | Iterable[str]]]
         | SupportsKeysAndGetItem[str, str | Iterable[str]],
     ) -> None:
-        self._ensure_single_query_api_used()
         old_value = self._query_params.copy()
         self.clear_with_no_forward_msg(preserve_embed=True)
         try:
@@ -187,12 +174,6 @@ class QueryParams(MutableMapping[str, str]):
             for key, value in self._query_params.items()
             if key.lower() in EMBED_QUERY_PARAMS_KEYS and preserve_embed
         }
-
-    def _ensure_single_query_api_used(self) -> None:
-        ctx = get_script_run_ctx()
-        if ctx is None:
-            return
-        ctx.mark_production_query_params_used()
 
 
 def missing_key_error_message(key: str) -> str:

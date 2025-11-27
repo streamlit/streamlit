@@ -57,7 +57,7 @@ def test_get_query_params():
     def script():
         import streamlit as st
 
-        st.write(st.experimental_get_query_params())
+        st.write(st.query_params)
 
     at = AppTest.from_function(script).run()
     assert at.json[0].value == "{}"
@@ -71,7 +71,7 @@ def test_set_query_params():
     def script():
         import streamlit as st
 
-        st.experimental_set_query_params(foo="bar")
+        st.query_params["foo"] = "bar"
 
     at = AppTest.from_function(script).run()
     # parse.parse_qs puts everything in lists
