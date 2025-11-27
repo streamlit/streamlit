@@ -1002,6 +1002,24 @@ class VegaLiteChartTest(DeltaGeneratorTestCase):
             },
         )
 
+    @patch("streamlit.elements.vega_charts.show_deprecation_warning")
+    def test_kwargs_deprecation_warning(self, mock_warning: Mock):
+        """Test that passing kwargs shows a deprecation warning."""
+        st.vega_lite_chart(df1, x="foo", boink_boop=100)
+
+        mock_warning.assert_called_once()
+        warning_message = mock_warning.call_args[0][0]
+        assert "Variable keyword arguments" in warning_message
+        assert "deprecated" in warning_message
+        assert "spec" in warning_message
+
+    @patch("streamlit.elements.vega_charts.show_deprecation_warning")
+    def test_no_kwargs_no_deprecation_warning(self, mock_warning: Mock):
+        """Test that not passing kwargs does not show a deprecation warning."""
+        st.vega_lite_chart(df1, {"mark": "rect"})
+
+        mock_warning.assert_not_called()
+
     def test_pyarrow_table_data(self):
         """Test that you can pass pyarrow.Table as data."""
         table = pa.Table.from_pandas(df1)
