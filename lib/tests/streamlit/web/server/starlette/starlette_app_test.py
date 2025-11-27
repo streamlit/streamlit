@@ -653,6 +653,11 @@ def test_websocket_ignores_debug_disconnect_in_production(tmp_path: Path) -> Non
     component_dir.mkdir()
     (component_dir / "index.html").write_text("component")
 
+    static_dir = tmp_path / "static"
+    static_dir.mkdir()
+    monkeypatch = pytest.MonkeyPatch()
+    monkeypatch.setattr(file_util, "get_static_dir", lambda: str(static_dir))
+
     runtime = _DummyRuntime(component_dir)
     app = create_starlette_app(runtime)
     client = TestClient(app)
@@ -676,6 +681,8 @@ def test_websocket_ignores_debug_disconnect_in_production(tmp_path: Path) -> Non
     _session_id, msg = runtime.last_backmsg
     assert msg.WhichOneof("type") == "rerun_script"
 
+    monkeypatch.undo()
+
 
 @patch_config_options(
     {
@@ -691,6 +698,11 @@ def test_websocket_ignores_debug_shutdown_in_production(tmp_path: Path) -> None:
     component_dir = tmp_path / "component"
     component_dir.mkdir()
     (component_dir / "index.html").write_text("component")
+
+    static_dir = tmp_path / "static"
+    static_dir.mkdir()
+    monkeypatch = pytest.MonkeyPatch()
+    monkeypatch.setattr(file_util, "get_static_dir", lambda: str(static_dir))
 
     runtime = _DummyRuntime(component_dir)
     app = create_starlette_app(runtime)
@@ -712,6 +724,8 @@ def test_websocket_ignores_debug_shutdown_in_production(tmp_path: Path) -> None:
 
     # Runtime should NOT be stopped
     assert runtime.stopped is False
+
+    monkeypatch.undo()
 
 
 @patch_config_options(
