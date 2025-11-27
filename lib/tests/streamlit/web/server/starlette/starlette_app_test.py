@@ -453,6 +453,9 @@ def test_static_files_skipped_in_dev_mode(tmp_path: Path) -> None:
     }
 )
 def test_websocket_auth_cookie_yields_user_info(tmp_path: Path) -> None:
+    """Test that auth cookies are properly parsed when valid XSRF token is provided."""
+    from streamlit.web.server.starlette import starlette_app_utils
+
     component_dir = tmp_path / "component"
     component_dir.mkdir()
     (component_dir / "index.html").write_text("component")
@@ -466,6 +469,7 @@ def test_websocket_auth_cookie_yields_user_info(tmp_path: Path) -> None:
     app = create_starlette_app(runtime)
     client = TestClient(app)
 
+    # Create auth cookie payload
     cookie_payload = json.dumps(
         {
             "origin": "http://testserver",
@@ -481,11 +485,18 @@ def test_websocket_auth_cookie_yields_user_info(tmp_path: Path) -> None:
         cookie_payload,
     )
 
-    client.cookies.set("_streamlit_user", cookie_value.decode("utf-8"))
+    # Generate a valid XSRF token (same token for cookie and subprotocol)
+    xsrf_token = starlette_app_utils.generate_xsrf_token_string()
 
+    # Set both cookies
+    client.cookies.set("_streamlit_user", cookie_value.decode("utf-8"))
+    client.cookies.set("_streamlit_xsrf", xsrf_token)
+
+    # Connect with XSRF token in subprotocol (second position)
     with client.websocket_connect(
         "/_stcore/stream",
         headers={"Origin": "http://testserver"},
+        subprotocols=["streamlit", xsrf_token],
     ) as websocket:
         websocket.close(code=1000)
 
@@ -568,3 +579,165 @@ def test_static_files_apply_cache_headers(tmp_path: Path) -> None:
         )
 
     monkeypatch.undo()
+
+
+@patch_config_options(
+    {
+        "server.enableXsrfProtection": True,
+        "global.developmentMode": False,
+        "server.cookieSecret": "test-signing-secret",
+    }
+)
+def test_websocket_rejects_auth_cookie_without_valid_xsrf(tmp_path: Path) -> None:
+    """Test that auth cookies are not parsed without valid XSRF token."""
+    component_dir = tmp_path / "component"
+    component_dir.mkdir()
+    (component_dir / "index.html").write_text("component")
+
+    static_dir = tmp_path / "static"
+    static_dir.mkdir()
+    monkeypatch = pytest.MonkeyPatch()
+    monkeypatch.setattr(file_util, "get_static_dir", lambda: str(static_dir))
+
+    runtime = _DummyRuntime(component_dir)
+    app = create_starlette_app(runtime)
+    client = TestClient(app)
+
+    # Create a valid auth cookie
+    cookie_payload = json.dumps(
+        {
+            "origin": "http://testserver",
+            "is_logged_in": True,
+            "email": "user@example.com",
+        }
+    )
+    from tornado.web import create_signed_value
+
+    cookie_value = create_signed_value(
+        "test-signing-secret",
+        "_streamlit_user",
+        cookie_payload,
+    )
+
+    # Set auth cookie but no XSRF cookie
+    client.cookies.set("_streamlit_user", cookie_value.decode("utf-8"))
+
+    # Connect without providing XSRF token in subprotocol
+    with client.websocket_connect(
+        "/_stcore/stream",
+        headers={"Origin": "http://testserver"},
+        subprotocols=["streamlit"],  # No XSRF token in second position
+    ) as websocket:
+        websocket.close(code=1000)
+
+    # User info should NOT include auth data because XSRF validation failed
+    assert runtime.last_user_info is not None
+    assert runtime.last_user_info.get("is_logged_in") is not True
+    assert runtime.last_user_info.get("email") is None
+
+    monkeypatch.undo()
+
+
+@patch_config_options(
+    {
+        "global.developmentMode": False,
+        "global.e2eTest": False,
+        "server.enableXsrfProtection": False,
+    }
+)
+def test_websocket_ignores_debug_disconnect_in_production(tmp_path: Path) -> None:
+    """Test that debug_disconnect_websocket is ignored in production mode."""
+    from streamlit.proto.BackMsg_pb2 import BackMsg
+
+    component_dir = tmp_path / "component"
+    component_dir.mkdir()
+    (component_dir / "index.html").write_text("component")
+
+    runtime = _DummyRuntime(component_dir)
+    app = create_starlette_app(runtime)
+    client = TestClient(app)
+
+    with client.websocket_connect("/_stcore/stream") as websocket:
+        # Send a debug_disconnect_websocket message
+        back_msg = BackMsg()
+        back_msg.debug_disconnect_websocket = True
+        websocket.send_bytes(back_msg.SerializeToString())
+
+        # Send a valid rerun message to verify connection is still alive
+        back_msg2 = BackMsg()
+        back_msg2.rerun_script.query_string = ""
+        websocket.send_bytes(back_msg2.SerializeToString())
+
+        # Close gracefully
+        websocket.close(code=1000)
+
+    # The runtime should have received the rerun message (connection wasn't closed)
+    assert runtime.last_backmsg is not None
+    _session_id, msg = runtime.last_backmsg
+    assert msg.WhichOneof("type") == "rerun_script"
+
+
+@patch_config_options(
+    {
+        "global.developmentMode": False,
+        "global.e2eTest": False,
+        "server.enableXsrfProtection": False,
+    }
+)
+def test_websocket_ignores_debug_shutdown_in_production(tmp_path: Path) -> None:
+    """Test that debug_shutdown_runtime is ignored in production mode."""
+    from streamlit.proto.BackMsg_pb2 import BackMsg
+
+    component_dir = tmp_path / "component"
+    component_dir.mkdir()
+    (component_dir / "index.html").write_text("component")
+
+    runtime = _DummyRuntime(component_dir)
+    app = create_starlette_app(runtime)
+    client = TestClient(app)
+
+    with client.websocket_connect("/_stcore/stream") as websocket:
+        # Send a debug_shutdown_runtime message
+        back_msg = BackMsg()
+        back_msg.debug_shutdown_runtime = True
+        websocket.send_bytes(back_msg.SerializeToString())
+
+        # Send a valid rerun message to verify connection is still alive
+        back_msg2 = BackMsg()
+        back_msg2.rerun_script.query_string = ""
+        websocket.send_bytes(back_msg2.SerializeToString())
+
+        # Close gracefully
+        websocket.close(code=1000)
+
+    # Runtime should NOT be stopped
+    assert runtime.stopped is False
+
+
+@patch_config_options(
+    {
+        "global.developmentMode": True,
+        "global.e2eTest": False,
+        "server.enableXsrfProtection": False,
+    }
+)
+def test_websocket_allows_debug_shutdown_in_dev_mode(tmp_path: Path) -> None:
+    """Test that debug_shutdown_runtime works in development mode."""
+    from streamlit.proto.BackMsg_pb2 import BackMsg
+
+    component_dir = tmp_path / "component"
+    component_dir.mkdir()
+    (component_dir / "index.html").write_text("component")
+
+    runtime = _DummyRuntime(component_dir)
+    app = create_starlette_app(runtime)
+    client = TestClient(app)
+
+    with client.websocket_connect("/_stcore/stream") as websocket:
+        # Send a debug_shutdown_runtime message
+        back_msg = BackMsg()
+        back_msg.debug_shutdown_runtime = True
+        websocket.send_bytes(back_msg.SerializeToString())
+
+    # Runtime should be stopped
+    assert runtime.stopped is True

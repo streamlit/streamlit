@@ -97,15 +97,27 @@ async def _set_cors_headers(request: Request, response: Response) -> None:
         response.headers["Access-Control-Allow-Origin"] = origin
 
 
-def _parse_subprotocols(headers: Headers) -> tuple[str | None, str | None]:
+def _parse_subprotocols(
+    headers: Headers,
+) -> tuple[str | None, str | None, str | None]:
+    """Parse the Sec-WebSocket-Protocol header.
+
+    Returns a tuple of (selected_subprotocol, xsrf_token, existing_session_id).
+
+    The subprotocol header is repurposed to pass tokens from client to server:
+    - First entry: subprotocol to select (e.g., "streamlit")
+    - Second entry: XSRF token for authentication validation
+    - Third entry: existing session ID for reconnection
+    """
     raw = headers.get("sec-websocket-protocol")
     if not raw:
-        return None, None
+        return None, None, None
 
     entries = [value.strip() for value in raw.split(",") if value.strip()]
     selected = entries[0] if entries else None
+    xsrf_token = entries[1] if len(entries) >= 2 else None
     existing_session = entries[2] if len(entries) >= 3 else None
-    return selected, existing_session
+    return selected, xsrf_token, existing_session
 
 
 def _gather_user_info(headers: Headers) -> dict[str, str | bool | None]:
@@ -118,6 +130,30 @@ def _gather_user_info(headers: Headers) -> dict[str, str | bool | None]:
         values = headers.getlist(header_name)
         user_info[user_key] = values[0] if values else None
     return user_info
+
+
+def _validate_xsrf_token(supplied_token: str | None, xsrf_cookie: str | None) -> bool:
+    """Validate the XSRF token from the WebSocket subprotocol against the cookie.
+
+    This mirrors Tornado's XSRF validation logic to ensure the frontend can share
+    XSRF logic between WebSocket handshake and HTTP uploads regardless of backend.
+    """
+    import hmac
+
+    if not supplied_token or not xsrf_cookie:
+        return False
+
+    # Decode the supplied token from the subprotocol
+    supplied_token_bytes, _ = starlette_app_utils.decode_xsrf_token_string(
+        supplied_token
+    )
+    # Decode the expected token from the cookie
+    expected_token_bytes, _ = starlette_app_utils.decode_xsrf_token_string(xsrf_cookie)
+
+    if not supplied_token_bytes or not expected_token_bytes:
+        return False
+
+    return hmac.compare_digest(supplied_token_bytes, expected_token_bytes)
 
 
 def _ensure_xsrf_cookie(request: Request, response: Response) -> None:
@@ -440,18 +476,29 @@ def create_starlette_app(runtime: Runtime) -> Starlette:
         return response
 
     async def _websocket_endpoint(websocket: WebSocket) -> None:
-        subprotocol, existing_session_id = _parse_subprotocols(websocket.headers)
+        subprotocol, xsrf_token, existing_session_id = _parse_subprotocols(
+            websocket.headers
+        )
         await websocket.accept(subprotocol=subprotocol)
 
         client = _StarletteSessionClient(websocket)
         session_id: str | None = None
         user_info = _gather_user_info(websocket.headers)
         if is_xsrf_enabled():
-            cookie = websocket.cookies.get("_streamlit_user")
+            auth_cookie = websocket.cookies.get("_streamlit_user")
+            xsrf_cookie = websocket.cookies.get("_streamlit_xsrf")
             origin_header = websocket.headers.get("Origin")
-            if cookie and origin_header:
+
+            # Validate XSRF token before parsing auth cookie (matches Tornado behavior)
+            if (
+                auth_cookie
+                and origin_header
+                and _validate_xsrf_token(xsrf_token, xsrf_cookie)
+            ):
                 try:
-                    user_info.update(_parse_user_cookie_signed(cookie, origin_header))
+                    user_info.update(
+                        _parse_user_cookie_signed(auth_cookie, origin_header)
+                    )
                 except Exception:  # pragma: no cover - defensive
                     _LOGGER.exception("Error parsing auth cookie for websocket")
 
@@ -488,12 +535,32 @@ def create_starlette_app(runtime: Runtime) -> Starlette:
                     continue
 
                 msg_type = back_msg.WhichOneof("type")
+
+                # "debug_disconnect_websocket" and "debug_shutdown_runtime" are special
+                # developmentMode-only messages used in e2e tests to test reconnect
+                # handling and disabling widgets.
                 if msg_type == "debug_disconnect_websocket":
-                    await websocket.close()
-                    break
+                    if config.get_option("global.developmentMode") or config.get_option(
+                        "global.e2eTest"
+                    ):
+                        await websocket.close()
+                        break
+                    _LOGGER.warning(
+                        "Client tried to disconnect websocket when not in "
+                        "development mode or e2e testing."
+                    )
+                    continue
                 if msg_type == "debug_shutdown_runtime":
-                    runtime.stop()
-                    break
+                    if config.get_option("global.developmentMode") or config.get_option(
+                        "global.e2eTest"
+                    ):
+                        runtime.stop()
+                        break
+                    _LOGGER.warning(
+                        "Client tried to shut down runtime when not in "
+                        "development mode or e2e testing."
+                    )
+                    continue
 
                 runtime.handle_backmsg(session_id, back_msg)
 
