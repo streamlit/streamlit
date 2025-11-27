@@ -21,9 +21,8 @@ from starlette.applications import Starlette
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.responses import PlainTextResponse, RedirectResponse
 from starlette.testclient import TestClient
-from tornado.web import decode_signed_value
 
-from streamlit.web.server.starlette import starlette_auth_routes
+from streamlit.web.server.starlette import starlette_app_utils, starlette_auth_routes
 from streamlit.web.server.starlette.starlette_auth_routes import get_auth_routes
 from tests.testutil import patch_config_options
 
@@ -141,7 +140,9 @@ def test_auth_callback_sets_signed_cookie(monkeypatch: pytest.MonkeyPatch) -> No
         cookies = SimpleCookie()
         cookies.load(response.headers["set-cookie"])
         signed_value = cookies["_streamlit_user"].value
-        decoded = decode_signed_value("test-secret", "_streamlit_user", signed_value)
+        decoded = starlette_app_utils.decode_signed_value(
+            "test-secret", "_streamlit_user", signed_value
+        )
         assert decoded is not None
         payload = decoded.decode("utf-8")
         assert "user@example.com" in payload
