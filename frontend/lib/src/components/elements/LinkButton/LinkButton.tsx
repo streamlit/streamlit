@@ -68,7 +68,11 @@ function LinkButton(props: Readonly<Props>): ReactElement {
           rel="noreferrer"
           aria-disabled={element.disabled}
         >
-          <DynamicButtonLabel icon={element.icon} label={element.label} />
+          <DynamicButtonLabel
+            icon={element.icon}
+            iconPosition={element.iconPosition}
+            label={element.label}
+          />
         </BaseLinkButton>
       </BaseButtonTooltip>
     </Box>

@@ -67,7 +67,11 @@ export function FormSubmitButton(props: Props): ReactElement {
             widgetMgr.submitForm(element.formId, fragmentId, element)
           }}
         >
-          <DynamicButtonLabel icon={element.icon} label={element.label} />
+          <DynamicButtonLabel
+            icon={element.icon}
+            iconPosition={element.iconPosition as "left" | "right"}
+            label={element.label}
+          />
         </BaseButton>
       </BaseButtonTooltip>
     </Box>

@@ -145,6 +145,24 @@ describe("PageLink", () => {
     expect(pageLinkIcon).toHaveTextContent("🏠")
   })
 
+  it("positions the icon before the label by default", () => {
+    const props = getProps({ icon: "🏠" })
+    render(<PageLink {...props} />)
+
+    const pageNavLink = screen.getByTestId("stPageLink-NavLink")
+    const iconWrapper = screen.getByTestId("stIconEmoji").parentElement
+    expect(pageNavLink.firstElementChild).toBe(iconWrapper)
+  })
+
+  it("renders the icon after the label when iconPosition is right", () => {
+    const props = getProps({ icon: "🏠", iconPosition: "right" })
+    render(<PageLink {...props} />)
+
+    const pageNavLink = screen.getByTestId("stPageLink-NavLink")
+    const iconWrapper = screen.getByTestId("stIconEmoji").parentElement
+    expect(pageNavLink.lastElementChild).toBe(iconWrapper)
+  })
+
   it("does not render an icon when empty string is provided", () => {
     const props = getProps({ icon: "" })
     render(<PageLink {...props} />)

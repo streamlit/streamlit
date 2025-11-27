@@ -70,6 +70,13 @@ class LinkButtonTest(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.link_button
         assert c.icon == ":material/bolt:"
 
+    def test_icon_position(self):
+        """Test that icon_position is serialized for link buttons."""
+        st.link_button("the label", url="https://streamlit.io", icon_position="right")
+
+        c = self.get_delta_from_queue().new_element.link_button
+        assert c.icon_position == "right"
+
     def test_invalid_icon(self):
         """Test that an error is raised if an invalid icon is provided."""
         with pytest.raises(StreamlitAPIException) as e:

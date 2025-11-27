@@ -61,7 +61,11 @@ function Button(props: Props): ReactElement {
             widgetMgr.setTriggerValue(element, { fromUi: true }, fragmentId)
           }
         >
-          <DynamicButtonLabel icon={element.icon} label={element.label} />
+          <DynamicButtonLabel
+            icon={element.icon}
+            iconPosition={element.iconPosition as "left" | "right"}
+            label={element.label}
+          />
         </BaseButton>
       </BaseButtonTooltip>
     </Box>

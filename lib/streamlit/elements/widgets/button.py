@@ -83,6 +83,26 @@ DownloadButtonDataType: TypeAlias = (
     | Callable[[], str | bytes | TextIO | BinaryIO | io.RawIOBase]
 )
 
+IconPosition: TypeAlias = Literal["left", "right"]
+
+_DEFAULT_ICON_POSITION: Final[IconPosition] = "left"
+_VALID_ICON_POSITIONS: Final = ("left", "right")
+
+
+def _normalize_icon_position(
+    icon_position: IconPosition | str | None, command: str
+) -> IconPosition:
+    if icon_position is None:
+        return _DEFAULT_ICON_POSITION
+
+    if icon_position not in _VALID_ICON_POSITIONS:
+        raise StreamlitAPIException(
+            f'The icon_position argument to {command} must be "left" or "right". \n'
+            f'The argument passed was "{icon_position}".'
+        )
+
+    return cast("IconPosition", icon_position)
+
 
 @dataclass
 class ButtonSerde:
@@ -106,6 +126,7 @@ class ButtonMixin:
         *,  # keyword-only arguments:
         type: Literal["primary", "secondary", "tertiary"] = "secondary",
         icon: str | None = None,
+        icon_position: IconPosition = "left",
         disabled: bool = False,
         use_container_width: bool | None = None,
         width: Width = "content",
@@ -183,6 +204,10 @@ class ButtonMixin:
               font library.
 
             - ``"spinner"``: Displays a spinner as an icon.
+
+        icon_position : "left" or "right"
+            The position of the icon relative to the button label. Defaults to
+            ``"left"``.
 
         disabled : bool
             An optional boolean that disables the button if set to ``True``.
@@ -274,6 +299,8 @@ class ButtonMixin:
                 f'\nThe argument passed was "{type}".'
             )
 
+        normalized_icon_position = _normalize_icon_position(icon_position, "st.button")
+
         return self.dg._button(
             label,
             key,
@@ -285,6 +312,7 @@ class ButtonMixin:
             disabled=disabled,
             type=type,
             icon=icon,
+            icon_position=normalized_icon_position,
             ctx=ctx,
             width=width,
         )
@@ -304,6 +332,7 @@ class ButtonMixin:
         *,  # keyword-only arguments:
         type: Literal["primary", "secondary", "tertiary"] = "secondary",
         icon: str | None = None,
+        icon_position: IconPosition = "left",
         disabled: bool = False,
         use_container_width: bool | None = None,
         width: Width = "content",
@@ -436,6 +465,10 @@ class ButtonMixin:
               font library.
 
             - ``"spinner"``: Displays a spinner as an icon.
+
+        icon_position : "left" or "right"
+            The position of the icon relative to the button label. Defaults to
+            ``"left"``.
 
         disabled : bool
             An optional boolean that disables the download button if set to
@@ -612,6 +645,10 @@ class ButtonMixin:
                 f'The argument passed was "{type}".'
             )
 
+        normalized_icon_position = _normalize_icon_position(
+            icon_position, "st.download_button"
+        )
+
         return self._download_button(
             label=label,
             data=data,
@@ -624,6 +661,7 @@ class ButtonMixin:
             kwargs=kwargs,
             type=type,
             icon=icon,
+            icon_position=normalized_icon_position,
             disabled=disabled,
             ctx=ctx,
             width=width,
@@ -638,6 +676,7 @@ class ButtonMixin:
         help: str | None = None,
         type: Literal["primary", "secondary", "tertiary"] = "secondary",
         icon: str | None = None,
+        icon_position: IconPosition = "left",
         disabled: bool = False,
         use_container_width: bool | None = None,
         width: Width = "content",
@@ -758,6 +797,10 @@ class ButtonMixin:
                 f'\nThe argument passed was "{type}".'
             )
 
+        normalized_icon_position = _normalize_icon_position(
+            icon_position, "st.link_button"
+        )
+
         if use_container_width is not None:
             width = "stretch" if use_container_width else "content"
 
@@ -768,6 +811,7 @@ class ButtonMixin:
             disabled=disabled,
             type=type,
             icon=icon,
+            icon_position=normalized_icon_position,
             width=width,
         )
 
@@ -778,6 +822,7 @@ class ButtonMixin:
         *,
         label: str | None = None,
         icon: str | None = None,
+        icon_position: IconPosition = "left",
         help: str | None = None,
         disabled: bool = False,
         use_container_width: bool | None = None,
@@ -911,10 +956,15 @@ class ButtonMixin:
             # Sidebar page links should always be stretch width.
             width = "stretch"
 
+        normalized_icon_position = _normalize_icon_position(
+            icon_position, "st.page_link"
+        )
+
         return self._page_link(
             page=page,
             label=label,
             icon=icon,
+            icon_position=normalized_icon_position,
             help=help,
             disabled=disabled,
             width=width,
@@ -934,6 +984,7 @@ class ButtonMixin:
         *,  # keyword-only arguments:
         type: Literal["primary", "secondary", "tertiary"] = "secondary",
         icon: str | None = None,
+        icon_position: IconPosition = "left",
         disabled: bool = False,
         ctx: ScriptRunContext | None = None,
         width: Width = "content",
@@ -966,6 +1017,7 @@ class ButtonMixin:
             help=help,
             type=type,
             width=width,
+            icon_position=icon_position,
         )
 
         if is_in_form(self.dg):
@@ -988,6 +1040,7 @@ class ButtonMixin:
 
         if icon is not None:
             download_button_proto.icon = validate_icon_or_emoji(icon)
+        download_button_proto.icon_position = icon_position
 
         if on_click == "ignore":
             download_button_proto.ignore_rerun = True
@@ -1022,6 +1075,7 @@ class ButtonMixin:
         *,  # keyword-only arguments:
         type: Literal["primary", "secondary", "tertiary"] = "secondary",
         icon: str | None = None,
+        icon_position: IconPosition = "left",
         disabled: bool = False,
         width: Width = "content",
     ) -> DeltaGenerator:
@@ -1036,6 +1090,7 @@ class ButtonMixin:
 
         if icon is not None:
             link_button_proto.icon = validate_icon_or_emoji(icon)
+        link_button_proto.icon_position = icon_position
 
         validate_width(width, allow_content=True)
         layout_config = LayoutConfig(width=width)
@@ -1049,12 +1104,16 @@ class ButtonMixin:
         *,  # keyword-only arguments:
         label: str | None = None,
         icon: str | None = None,
+        icon_position: IconPosition = "left",
         help: str | None = None,
         disabled: bool = False,
         width: Width = "content",
     ) -> DeltaGenerator:
         page_link_proto = PageLinkProto()
         validate_width(width, allow_content=True)
+
+        # Set icon_position early so it's set even in early return paths
+        page_link_proto.icon_position = icon_position
 
         ctx = get_script_run_ctx()
         if not ctx:
@@ -1070,6 +1129,7 @@ class ButtonMixin:
 
         if icon is not None:
             page_link_proto.icon = validate_icon_or_emoji(icon)
+        page_link_proto.icon_position = icon_position
 
         if help is not None:
             page_link_proto.help = dedent(help)
@@ -1145,6 +1205,7 @@ class ButtonMixin:
         *,  # keyword-only arguments:
         type: Literal["primary", "secondary", "tertiary"] = "secondary",
         icon: str | None = None,
+        icon_position: IconPosition = "left",
         disabled: bool = False,
         ctx: ScriptRunContext | None = None,
         width: Width = "content",
@@ -1173,6 +1234,7 @@ class ButtonMixin:
             is_form_submitter=is_form_submitter,
             type=type,
             width=width,
+            icon_position=icon_position,
         )
 
         # It doesn't make sense to create a button inside a form (except
@@ -1204,6 +1266,7 @@ class ButtonMixin:
 
         if icon is not None:
             button_proto.icon = validate_icon_or_emoji(icon)
+        button_proto.icon_position = icon_position
 
         serde = ButtonSerde()
 

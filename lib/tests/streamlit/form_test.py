@@ -372,6 +372,23 @@ class FormSubmitButtonTest(DeltaGeneratorTestCase):
         last_delta = self.get_delta_from_queue()
         assert last_delta.new_element.button.icon == ":material/thumb_up:"
 
+    @parameterized.expand(["left", "right"])
+    def test_submit_button_icon_position(self, icon_position):
+        """Test that submit button icon positions are serialized."""
+
+        form = st.form("foo")
+        form.form_submit_button(icon_position=icon_position)
+
+        last_delta = self.get_delta_from_queue()
+        assert last_delta.new_element.button.icon_position == icon_position
+
+    def test_submit_button_invalid_icon_position(self):
+        """Test that invalid submit button icon positions raise an error."""
+
+        form = st.form("foo")
+        with pytest.raises(StreamlitAPIException):
+            form.form_submit_button(icon_position="center")  # type: ignore[arg-type]
+
     def test_submit_button_does_not_use_container_width_by_default(self):
         """Test that a submit button does not use_use_container width by default."""
 

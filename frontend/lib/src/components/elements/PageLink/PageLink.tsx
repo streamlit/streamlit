@@ -60,6 +60,8 @@ function PageLink(props: Readonly<Props>): ReactElement {
     }
   }
 
+  const iconPosition = element.iconPosition === "right" ? "right" : "left"
+
   return (
     <div className="stPageLink" data-testid="stPageLink">
       <BaseButtonTooltip
@@ -77,7 +79,7 @@ function PageLink(props: Readonly<Props>): ReactElement {
             rel="noreferrer"
             onClick={handleClick}
           >
-            {element.icon && (
+            {element.icon && iconPosition === "left" && (
               <DynamicIcon
                 size="lg"
                 color={disabled ? colors.fadedText40 : colors.bodyText}
@@ -94,6 +96,13 @@ function PageLink(props: Readonly<Props>): ReactElement {
                 disableLinks
               />
             </StyledNavLinkText>
+            {element.icon && iconPosition === "right" && (
+              <DynamicIcon
+                size="lg"
+                color={disabled ? colors.fadedText40 : colors.bodyText}
+                iconValue={element.icon}
+              />
+            )}
           </StyledNavLink>
         </StyledNavLinkContainer>
       </BaseButtonTooltip>

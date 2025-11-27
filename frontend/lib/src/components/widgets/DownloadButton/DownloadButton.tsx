@@ -173,6 +173,7 @@ function DownloadButton(props: Props): ReactElement {
         >
           <DynamicButtonLabel
             icon={isLoading ? "spinner" : icon}
+            iconPosition={element.iconPosition}
             label={label}
           />
         </BaseButton>

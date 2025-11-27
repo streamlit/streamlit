@@ -140,6 +140,27 @@ class ButtonTest(DeltaGeneratorTestCase):
         c = getattr(self.get_delta_from_queue().new_element, name)
         assert c.icon == icon
 
+    def test_invalid_icon_position_raises(self):
+        """Test that invalid icon_position values raise an error."""
+        with pytest.raises(StreamlitAPIException):
+            st.button("label", icon_position="center")  # type: ignore[arg-type]
+
+    @parameterized.expand(
+        [
+            (name, command, position)
+            for name, command in get_button_command_matrix()
+            for position in ["left", "right"]
+        ]
+    )
+    def test_icon_position(
+        self, name: str, command: Callable[..., Any], icon_position: str
+    ):
+        """Test that icon_position is serialized for button-like commands."""
+        command(icon_position=icon_position)
+
+        c = getattr(self.get_delta_from_queue().new_element, name)
+        assert c.icon_position == icon_position
+
     @parameterized.expand(get_button_command_matrix())
     def test_just_disabled(self, name: str, command: Callable[..., Any]):
         """Test that it can be called with disabled param."""

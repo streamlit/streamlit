@@ -27,6 +27,7 @@ export interface DynamicButtonLabelProps {
   label?: string
   iconSize?: IconSize
   useSmallerFont?: boolean
+  iconPosition?: "left" | "right"
 }
 
 export const DynamicButtonLabel = ({
@@ -34,10 +35,15 @@ export const DynamicButtonLabel = ({
   label,
   iconSize,
   useSmallerFont = false,
+  iconPosition = "left",
 }: DynamicButtonLabelProps): React.ReactElement | null => {
+  const normalizedIconPosition = iconPosition === "right" ? "right" : "left"
+
   return (
     <StyledButtonLabel>
-      {icon && <DynamicIcon size={iconSize ?? "lg"} iconValue={icon} />}
+      {icon && normalizedIconPosition === "left" && (
+        <DynamicIcon size={iconSize ?? "lg"} iconValue={icon} />
+      )}
       {label && (
         <StreamlitMarkdown
           source={label}
@@ -46,6 +52,9 @@ export const DynamicButtonLabel = ({
           largerLabel={!useSmallerFont}
           disableLinks
         />
+      )}
+      {icon && normalizedIconPosition === "right" && (
+        <DynamicIcon size={iconSize ?? "lg"} iconValue={icon} />
       )}
     </StyledButtonLabel>
   )

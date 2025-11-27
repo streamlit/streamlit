@@ -62,6 +62,19 @@ class PageLinkTest(DeltaGeneratorTestCase):
         assert c.page == "https://streamlit.io"
         assert c.external
         assert c.icon == "🐶"
+        assert c.icon_position == "left"
+
+    def test_icon_position(self):
+        """Test that custom icon positions are serialized."""
+        st.page_link(
+            page="https://streamlit.io",
+            label="the label",
+            icon="🐶",
+            icon_position="right",
+        )
+
+        c = self.get_delta_from_queue().new_element.page_link
+        assert c.icon_position == "right"
 
     def test_disabled(self):
         """Test that it can be called with disabled param."""
