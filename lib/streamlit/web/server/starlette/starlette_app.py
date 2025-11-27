@@ -1003,6 +1003,13 @@ def create_starlette_app(runtime: Runtime) -> Starlette:
         session_cookie="_streamlit_session",
     )
 
+    # TODO(lukasmasuch): Validate the performance gain of GZip compression by comparing
+    # response sizes and latency between Tornado (compress_response=True) and Starlette.
+    # Consider making this configurable or adjusting minimum_size threshold if needed.
+    from starlette.middleware.gzip import GZipMiddleware
+
+    app.add_middleware(GZipMiddleware, minimum_size=500, compresslevel=6)
+
     @app.route(_with_base("_stcore/metrics", base_url), methods=["OPTIONS"])
     async def _metrics_options(request: Request) -> Response:
         response = Response(status_code=204)
