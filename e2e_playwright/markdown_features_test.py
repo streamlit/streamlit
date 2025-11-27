@@ -59,7 +59,7 @@ DISALLOWED_MARKDOWN_FEATURES: dict[str, list[str]] = {
     "st_selectbox": DISALLOWED_FEATURES_IN_LABEL,
     "st_multiselect": DISALLOWED_FEATURES_IN_LABEL,
     "st_slider": DISALLOWED_FEATURES_IN_LABEL,
-    "st_select_slider": DISALLOWED_FEATURES_IN_LABEL,
+    "st_select_slider": [],
     "st_text_input": DISALLOWED_FEATURES_IN_LABEL,
     "st_number_input": DISALLOWED_FEATURES_IN_LABEL,
     "st_text_area": DISALLOWED_FEATURES_IN_LABEL,
@@ -145,6 +145,32 @@ def test_markdown_restrictions_for_all_elements(app: Page):
             if element_name in ["st_caption", "st_image"]:
                 markdown_container_test_id = "stCaptionContainer"
 
+            if element_name == "st_select_slider":
+                # Special case for select-slider options
+                slider_label = container.locator(
+                    "[data-testid='stMarkdownContainer']"
+                ).nth(0)
+                slider_current_option = container.locator(
+                    "[data-testid='stMarkdownContainer']"
+                ).nth(1)
+                slider_min_label = container.locator(
+                    "[data-testid='stMarkdownContainer']"
+                ).nth(2)
+
+                if feature in disallowed_features:
+                    # Feature should not be present
+                    expect(slider_label).not_to_be_attached()
+                    expect(slider_current_option).not_to_be_attached()
+                    expect(slider_min_label).not_to_be_attached()
+                else:
+                    # Feature should be present
+                    expect(slider_label).to_be_visible()
+                    expect(slider_current_option).to_be_visible()
+                    expect(slider_min_label).to_be_visible()
+
+                continue
+
+            # General case for other elements
             element_locator = locator_fn(
                 container.get_by_test_id(markdown_container_test_id)
             )
