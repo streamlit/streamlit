@@ -357,7 +357,13 @@ def create_media_routes(
         except MediaFileStorageError as exc:
             raise HTTPException(status_code=404, detail="File not found") from exc
 
-        headers: dict[str, str] = {"X-Content-Type-Options": "nosniff"}
+        headers: dict[str, str] = {
+            "X-Content-Type-Options": "nosniff",
+            # Prevent GZip middleware from compressing media files.
+            # Audio/video elements in browsers (especially Firefox) fail when
+            # binary media content is gzip-compressed.
+            "Content-Encoding": "identity",
+        }
 
         if media_file.kind == MediaFileKind.DOWNLOADABLE:
             filename = media_file.filename
