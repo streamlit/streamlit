@@ -37,6 +37,11 @@ from streamlit.url_util import make_url_path
 from streamlit.web.server.oauth_authlib_routes import auth_cache
 from streamlit.web.server.server_util import AUTH_COOKIE_NAME, get_cookie_secret
 
+# Auth route path constants (without base URL prefix)
+ROUTE_AUTH_LOGIN: Final = "auth/login"
+ROUTE_AUTH_LOGOUT: Final = "auth/logout"
+ROUTE_OAUTH_CALLBACK: Final = "oauth2callback"
+
 
 class _AsyncAuthCache:
     """Adapter that exposes AuthCache with awaitable methods for Authlib.
@@ -304,7 +309,7 @@ def get_auth_routes(base_url: str) -> list[Route]:
         return await _auth_callback(request, base_url)
 
     return [
-        Route(make_url_path(base_url, "auth/login"), login, methods=["GET"]),
-        Route(make_url_path(base_url, "auth/logout"), logout, methods=["GET"]),
-        Route(make_url_path(base_url, "oauth2callback"), callback, methods=["GET"]),
+        Route(make_url_path(base_url, ROUTE_AUTH_LOGIN), login, methods=["GET"]),
+        Route(make_url_path(base_url, ROUTE_AUTH_LOGOUT), logout, methods=["GET"]),
+        Route(make_url_path(base_url, ROUTE_OAUTH_CALLBACK), callback, methods=["GET"]),
     ]

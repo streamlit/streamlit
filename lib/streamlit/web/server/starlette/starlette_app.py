@@ -18,11 +18,13 @@ from __future__ import annotations
 
 import binascii
 import os
+from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING, Any
 
 from streamlit import config, file_util
 from streamlit.web.server.server_util import get_cookie_secret
 from streamlit.web.server.starlette.starlette_routes import (
+    ROUTE_WEBSOCKET_STREAM,
     _with_base,
     create_app_static_routes,
     create_bidi_component_routes,
@@ -41,6 +43,8 @@ from streamlit.web.server.starlette.starlette_static import (
 from streamlit.web.server.starlette.starlette_websocket import create_websocket_handler
 
 if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
     from starlette.applications import Starlette
 
     from streamlit.runtime import Runtime
@@ -67,12 +71,21 @@ def create_starlette_app(runtime: Runtime) -> Starlette:
     try:
         from starlette.applications import Starlette
         from starlette.middleware.sessions import SessionMiddleware
-        from starlette.routing import Mount, WebSocketRoute
+        from starlette.routing import Mount, Route, WebSocketRoute
     except ModuleNotFoundError as exc:  # pragma: no cover - import guard
         raise RuntimeError(
             "Starlette is not installed. Run `pip install streamlit[starlette]` "
             "or disable `server.useStarlette`."
         ) from exc
+
+    # Define lifespan context manager for startup/shutdown events
+    @asynccontextmanager
+    async def _lifespan(_app: Starlette) -> AsyncIterator[None]:
+        # Startup
+        await runtime.start()
+        yield
+        # Shutdown
+        runtime.stop()
 
     # Extract runtime components
     media_manager: MediaFileManager = runtime.media_file_mgr
@@ -111,12 +124,16 @@ def create_starlette_app(runtime: Runtime) -> Starlette:
     # Add WebSocket route
     websocket_handler = create_websocket_handler(runtime)
     routes.append(
-        WebSocketRoute(_with_base("_stcore/stream", base_url), websocket_handler)
+        WebSocketRoute(_with_base(ROUTE_WEBSOCKET_STREAM, base_url), websocket_handler)
     )
 
     # Add script health check routes if enabled
     if config.get_option("server.scriptHealthCheckEnabled"):
         routes.extend(create_script_health_routes(runtime, base_url))
+
+    # Add metrics OPTIONS route (for CORS preflight)
+    metrics_options_handler, metrics_path = create_metrics_options_handler(base_url)
+    routes.append(Route(metrics_path, metrics_options_handler, methods=["OPTIONS"]))
 
     # Add static files mount (only in production mode)
     if not dev_mode:
@@ -126,8 +143,8 @@ def create_starlette_app(runtime: Runtime) -> Starlette:
         )
         routes.append(Mount(_with_base("", base_url), app=static_files, name="static"))
 
-    # Create the Starlette application
-    app = Starlette(routes=routes)
+    # Create the Starlette application with lifespan handler
+    app = Starlette(routes=routes, lifespan=_lifespan)
 
     # Add session middleware
     def _session_secret() -> str:
@@ -155,22 +172,6 @@ def create_starlette_app(runtime: Runtime) -> Starlette:
         minimum_size=500,
         compresslevel=6,
     )
-
-    # Add metrics OPTIONS handler (for CORS preflight)
-    metrics_options_handler, metrics_path = create_metrics_options_handler(base_url)
-
-    @app.route(metrics_path, methods=["OPTIONS"])
-    async def _metrics_options(request: Any) -> Any:
-        return await metrics_options_handler(request)
-
-    # Add lifecycle event handlers
-    @app.on_event("startup")
-    async def _on_startup() -> None:
-        await runtime.start()
-
-    @app.on_event("shutdown")
-    async def _on_shutdown() -> None:
-        runtime.stop()
 
     return app
 

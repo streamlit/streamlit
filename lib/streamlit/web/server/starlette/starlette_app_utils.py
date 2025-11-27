@@ -21,7 +21,6 @@ import os
 import time
 from typing import Any
 
-from tornado.util import _websocket_mask as _tornado_websocket_mask
 from tornado.web import decode_signed_value as _tornado_decode_signed_value
 
 
@@ -79,12 +78,31 @@ def parse_range_header(range_header: str, total_size: int) -> tuple[int, int]:
 
 
 def websocket_mask(mask: bytes, data: bytes) -> bytes:
-    """Mask or unmask data for WebSocket transmission.
+    """Mask or unmask data for WebSocket transmission per RFC 6455.
 
-    This is a bidirectional operation (XOR).
+    Each byte of data is XORed with mask[i % 4]. This operation is
+    bidirectional - applying it twice with the same mask returns the
+    original data.
+
+    Parameters
+    ----------
+    mask : bytes
+        A 4-byte masking key.
+    data : bytes
+        The data to mask or unmask.
+
+    Returns
+    -------
+    bytes
+        The masked/unmasked data.
     """
-    # TODO(lukasmasuch): Replace with implementation that doesn't require Tornado.
-    return _tornado_websocket_mask(mask, data)
+    if len(mask) != 4:
+        raise ValueError("mask must be 4 bytes")
+
+    result = bytearray(len(data))
+    for i, byte in enumerate(data):
+        result[i] = byte ^ mask[i % 4]
+    return bytes(result)
 
 
 def decode_signed_value(

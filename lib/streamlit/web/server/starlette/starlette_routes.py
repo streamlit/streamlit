@@ -19,7 +19,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 from shlex import quote
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Final
 
 from streamlit import config, file_util
 from streamlit.logger import get_logger
@@ -53,7 +53,37 @@ if TYPE_CHECKING:
     from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
     from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
 
-_LOGGER = get_logger(__name__)
+_LOGGER: Final = get_logger(__name__)
+
+# Route path constants (without base URL prefix)
+# These define the canonical paths for all Starlette server endpoints.
+
+# Health check routes
+ROUTE_HEALTH: Final = "_stcore/health"
+ROUTE_HEALTH_DEPRECATED: Final = "healthz"
+ROUTE_SCRIPT_HEALTH: Final = "_stcore/script-health-check"
+ROUTE_SCRIPT_HEALTH_DEPRECATED: Final = "script-health-check"
+
+# Metrics routes
+ROUTE_METRICS: Final = "_stcore/metrics"
+ROUTE_METRICS_DEPRECATED: Final = "st-metrics"
+
+# Host configuration
+ROUTE_HOST_CONFIG: Final = "_stcore/host-config"
+
+# Media and file routes
+ROUTE_MEDIA: Final = "media/{file_id:path}"
+ROUTE_UPLOAD_FILE: Final = "_stcore/upload_file/{session_id}/{file_id}"
+
+# Component routes
+ROUTE_COMPONENT: Final = "component/{path:path}"
+ROUTE_BIDI_COMPONENT: Final = "_stcore/bidi-components/{path:path}"
+
+# App static files
+ROUTE_APP_STATIC: Final = "app/static/{path:path}"
+
+# WebSocket stream
+ROUTE_WEBSOCKET_STREAM: Final = "_stcore/stream"
 
 
 def _with_base(path: str, base_url: str | None = None) -> str:
@@ -153,7 +183,7 @@ def create_health_routes(runtime: Runtime, base_url: str | None) -> list[Any]:
         if "_stcore/" not in request.url.path:
             response.headers["Deprecation"] = "true"
             response.headers["Link"] = (
-                f'<{_with_base("_stcore/health", base_url)}>; rel="alternate"'
+                f'<{_with_base(ROUTE_HEALTH, base_url)}>; rel="alternate"'
             )
         return response
 
@@ -165,22 +195,22 @@ def create_health_routes(runtime: Runtime, base_url: str | None) -> list[Any]:
 
     return [
         Route(
-            _with_base("_stcore/health", base_url),
+            _with_base(ROUTE_HEALTH, base_url),
             _health_endpoint,
             methods=["GET", "HEAD"],
         ),
         Route(
-            _with_base("_stcore/health", base_url),
+            _with_base(ROUTE_HEALTH, base_url),
             _health_options,
             methods=["OPTIONS"],
         ),
         Route(
-            _with_base("healthz", base_url),
+            _with_base(ROUTE_HEALTH_DEPRECATED, base_url),
             _health_endpoint,
             methods=["GET", "HEAD"],
         ),
         Route(
-            _with_base("healthz", base_url),
+            _with_base(ROUTE_HEALTH_DEPRECATED, base_url),
             _health_options,
             methods=["OPTIONS"],
         ),
@@ -202,8 +232,7 @@ def create_script_health_routes(runtime: Runtime, base_url: str | None) -> list[
         if "_stcore/" not in request.url.path:
             response.headers["Deprecation"] = "true"
             response.headers["Link"] = (
-                f"<{_with_base('_stcore/script-health-check', base_url)}>; "
-                'rel="alternate"'
+                f'<{_with_base(ROUTE_SCRIPT_HEALTH, base_url)}>; rel="alternate"'
             )
         return response
 
@@ -215,22 +244,22 @@ def create_script_health_routes(runtime: Runtime, base_url: str | None) -> list[
 
     return [
         Route(
-            _with_base("_stcore/script-health-check", base_url),
+            _with_base(ROUTE_SCRIPT_HEALTH, base_url),
             _script_health_endpoint,
             methods=["GET", "HEAD"],
         ),
         Route(
-            _with_base("_stcore/script-health-check", base_url),
+            _with_base(ROUTE_SCRIPT_HEALTH, base_url),
             _health_options,
             methods=["OPTIONS"],
         ),
         Route(
-            _with_base("script-health-check", base_url),
+            _with_base(ROUTE_SCRIPT_HEALTH_DEPRECATED, base_url),
             _script_health_endpoint,
             methods=["GET", "HEAD"],
         ),
         Route(
-            _with_base("script-health-check", base_url),
+            _with_base(ROUTE_SCRIPT_HEALTH_DEPRECATED, base_url),
             _health_options,
             methods=["OPTIONS"],
         ),
@@ -257,18 +286,18 @@ def create_metrics_routes(runtime: Runtime, base_url: str | None) -> list[Any]:
         if "_stcore/" not in request.url.path:
             response.headers["Deprecation"] = "true"
             response.headers["Link"] = (
-                f'<{_with_base("_stcore/metrics", base_url)}>; rel="alternate"'
+                f'<{_with_base(ROUTE_METRICS, base_url)}>; rel="alternate"'
             )
         return response
 
     return [
         Route(
-            _with_base("_stcore/metrics", base_url),
+            _with_base(ROUTE_METRICS, base_url),
             _metrics_endpoint,
             methods=["GET"],
         ),
         Route(
-            _with_base("st-metrics", base_url),
+            _with_base(ROUTE_METRICS_DEPRECATED, base_url),
             _metrics_endpoint,
             methods=["GET"],
         ),
@@ -305,7 +334,7 @@ def create_host_config_routes(base_url: str | None) -> list[Any]:
 
     return [
         Route(
-            _with_base("_stcore/host-config", base_url),
+            _with_base(ROUTE_HOST_CONFIG, base_url),
             _host_config_endpoint,
             methods=["GET"],
         ),
@@ -386,12 +415,12 @@ def create_media_routes(
 
     return [
         Route(
-            _with_base("media/{file_id:path}", base_url),
+            _with_base(ROUTE_MEDIA, base_url),
             _media_endpoint,
             methods=["GET"],
         ),
         Route(
-            _with_base("media/{file_id:path}", base_url),
+            _with_base(ROUTE_MEDIA, base_url),
             _media_options,
             methods=["OPTIONS"],
         ),
@@ -489,17 +518,17 @@ def create_upload_routes(
 
     return [
         Route(
-            _with_base("_stcore/upload_file/{session_id}/{file_id}", base_url),
+            _with_base(ROUTE_UPLOAD_FILE, base_url),
             _upload_put,
             methods=["PUT"],
         ),
         Route(
-            _with_base("_stcore/upload_file/{session_id}/{file_id}", base_url),
+            _with_base(ROUTE_UPLOAD_FILE, base_url),
             _upload_delete,
             methods=["DELETE"],
         ),
         Route(
-            _with_base("_stcore/upload_file/{session_id}/{file_id}", base_url),
+            _with_base(ROUTE_UPLOAD_FILE, base_url),
             _upload_options,
             methods=["OPTIONS"],
         ),
@@ -560,12 +589,12 @@ def create_component_routes(
 
     return [
         Route(
-            _with_base("component/{path:path}", base_url),
+            _with_base(ROUTE_COMPONENT, base_url),
             _component_endpoint,
             methods=["GET"],
         ),
         Route(
-            _with_base("component/{path:path}", base_url),
+            _with_base(ROUTE_COMPONENT, base_url),
             _component_options,
             methods=["OPTIONS"],
         ),
@@ -639,12 +668,12 @@ def create_bidi_component_routes(
 
     return [
         Route(
-            _with_base("_stcore/bidi-components/{path:path}", base_url),
+            _with_base(ROUTE_BIDI_COMPONENT, base_url),
             _bidi_component_endpoint,
             methods=["GET"],
         ),
         Route(
-            _with_base("_stcore/bidi-components/{path:path}", base_url),
+            _with_base(ROUTE_BIDI_COMPONENT, base_url),
             _bidi_component_options,
             methods=["OPTIONS"],
         ),
@@ -702,12 +731,12 @@ def create_app_static_routes(
 
     return [
         Route(
-            _with_base("app/static/{path:path}", base_url),
+            _with_base(ROUTE_APP_STATIC, base_url),
             _app_static_endpoint,
             methods=["GET"],
         ),
         Route(
-            _with_base("app/static/{path:path}", base_url),
+            _with_base(ROUTE_APP_STATIC, base_url),
             _app_static_options,
             methods=["OPTIONS"],
         ),
@@ -725,4 +754,4 @@ def create_metrics_options_handler(base_url: str | None) -> Any:
         await _set_cors_headers(request, response)
         return response
 
-    return _metrics_options, _with_base("_stcore/metrics", base_url)
+    return _metrics_options, _with_base(ROUTE_METRICS, base_url)

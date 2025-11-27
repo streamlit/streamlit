@@ -85,6 +85,36 @@ class StarletteServerUtilsTest(unittest.TestCase):
         unmasked = starlette_app_utils.websocket_mask(mask, masked)
         assert unmasked == data
 
+    def test_websocket_mask_empty_data(self):
+        """Test that masking empty data returns empty bytes."""
+        mask = b"1234"
+        data = b""
+
+        result = starlette_app_utils.websocket_mask(mask, data)
+        assert result == b""
+
+    def test_websocket_mask_invalid_mask_length(self):
+        """Test that invalid mask length raises ValueError."""
+        with pytest.raises(ValueError, match="mask must be 4 bytes"):
+            starlette_app_utils.websocket_mask(b"12", b"data")
+
+        with pytest.raises(ValueError, match="mask must be 4 bytes"):
+            starlette_app_utils.websocket_mask(b"12345", b"data")
+
+        with pytest.raises(ValueError, match="mask must be 4 bytes"):
+            starlette_app_utils.websocket_mask(b"", b"data")
+
+    def test_websocket_mask_various_lengths(self):
+        """Test masking data of various lengths matches Tornado."""
+        mask = b"\x01\x02\x03\x04"
+
+        # Test lengths 1-10 to cover different modulo cases
+        for length in range(1, 11):
+            data = bytes(range(length))
+            expected = _websocket_mask(mask, data)
+            actual = starlette_app_utils.websocket_mask(mask, data)
+            assert actual == expected, f"Mismatch for length {length}"
+
     def test_decode_signed_value_compatibility(self):
         """Test that decode_signed_value is compatible with Tornado's create_signed_value."""
         secret = "test_secret_key"
