@@ -23,6 +23,7 @@ from typing import TYPE_CHECKING, Any
 from streamlit import config, file_util
 from streamlit.web.server.server_util import get_cookie_secret
 from streamlit.web.server.starlette.starlette_routes import (
+    _with_base,
     create_app_static_routes,
     create_bidi_component_routes,
     create_component_routes,
@@ -172,17 +173,6 @@ def create_starlette_app(runtime: Runtime) -> Starlette:
         runtime.stop()
 
     return app
-
-
-def _with_base(path: str, base_url: str | None = None) -> str:
-    """Prepend the base URL path to a route path."""
-    base = (
-        base_url if base_url is not None else config.get_option("server.baseUrlPath")
-    ) or ""
-    base = base.strip("/")
-    if base:
-        return f"/{base}/{path.lstrip('/')}"
-    return f"/{path.lstrip('/')}"
 
 
 __all__ = ["create_starlette_app"]

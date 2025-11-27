@@ -88,9 +88,7 @@ class TestSetCorsHeaders:
         response = MagicMock()
         response.headers = {}
 
-        asyncio.get_event_loop().run_until_complete(
-            _set_cors_headers(request, response)
-        )
+        asyncio.run(_set_cors_headers(request, response))
 
         assert response.headers["Access-Control-Allow-Origin"] == "*"
 
@@ -103,9 +101,7 @@ class TestSetCorsHeaders:
         response = MagicMock()
         response.headers = {}
 
-        asyncio.get_event_loop().run_until_complete(
-            _set_cors_headers(request, response)
-        )
+        asyncio.run(_set_cors_headers(request, response))
 
         assert response.headers["Access-Control-Allow-Origin"] == "*"
 
@@ -126,9 +122,7 @@ class TestSetCorsHeaders:
         response = MagicMock()
         response.headers = {}
 
-        asyncio.get_event_loop().run_until_complete(
-            _set_cors_headers(request, response)
-        )
+        asyncio.run(_set_cors_headers(request, response))
 
         assert "Access-Control-Allow-Origin" not in response.headers
 
@@ -148,8 +142,6 @@ class TestSetCorsHeaders:
         response = MagicMock()
         response.headers = {}
 
-        asyncio.get_event_loop().run_until_complete(
-            _set_cors_headers(request, response)
-        )
+        asyncio.run(_set_cors_headers(request, response))
 
         assert "Access-Control-Allow-Origin" not in response.headers
