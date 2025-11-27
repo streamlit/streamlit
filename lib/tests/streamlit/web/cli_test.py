@@ -721,15 +721,13 @@ class HTTPServerIntegrationTest(unittest.TestCase):
             )
             try:
                 response = https_session.get(
-                    "https://localhost:8510/_stcore/healthz", verify=str(pem_file)
+                    "https://localhost:8510/healthz", verify=str(pem_file)
                 )
                 response.raise_for_status()
                 assert response.text == "ok"
                 # HTTP traffic is restricted
                 with pytest.raises(requests.exceptions.ConnectionError):
-                    response = https_session.get(
-                        "http://localhost:8510/_stcore/healthz"
-                    )
+                    response = https_session.get("http://localhost:8510/healthz")
                     response.raise_for_status()
             finally:
                 proc.kill()
