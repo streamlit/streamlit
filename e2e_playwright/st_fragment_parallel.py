@@ -15,113 +15,66 @@
 """E2E test app demonstrating parallel fragment execution.
 
 This app creates multiple parallel fragments that each sleep for a short time.
-When running in parallel, the total load time should be approximately equal to
-the longest sleep time, not the sum of all sleep times.
+When running in parallel, the total main thread time should be short since
+parallel fragments run in background threads.
 """
 
 import time
 
 import streamlit as st
 
+# Sleep duration for each fragment (in seconds)
+FRAGMENT_SLEEP_TIME = 0.3
+
 # Record when the script starts
 script_start_time = time.time()
-st.write(f"Script started at: {script_start_time:.3f}")
-
-# Sleep duration for each fragment (in seconds)
-FRAGMENT_SLEEP_TIME = 10
 
 
 @st.fragment(parallel=True)
-def parallel_fragment_1():
-    """First parallel fragment - sleeps then displays content."""
-    with st.spinner("Parallel fragment 1 is running..."):
-        fragment_start = time.time()
-        time.sleep(FRAGMENT_SLEEP_TIME)
-        fragment_end = time.time()
-
-    st.markdown("**Fragment 1** (parallel=True)")
-    st.write(f"Duration: {fragment_end - fragment_start:.3f}s")
-    st.metric("Fragment 1", "✓ Complete")
-
-
-@st.fragment(parallel=True)
-def parallel_fragment_2():
-    """Second parallel fragment - sleeps then displays content."""
-    with st.spinner("Parallel fragment 2 is running..."):
-        fragment_start = time.time()
-        time.sleep(FRAGMENT_SLEEP_TIME)
-        fragment_end = time.time()
-
-    st.markdown("**Fragment 2** (parallel=True)")
-    st.write(f"Duration: {fragment_end - fragment_start:.3f}s")
-    st.metric("Fragment 2", "✓ Complete")
-
-
-@st.fragment(parallel=True)
-def parallel_fragment_3():
-    """Third parallel fragment - sleeps then displays content."""
-    with st.spinner("Parallel fragment 3 is running..."):
-        fragment_start = time.time()
-        time.sleep(FRAGMENT_SLEEP_TIME)
-        fragment_end = time.time()
-
-    st.markdown("**Fragment 3** (parallel=True)")
-    st.write(f"Duration: {fragment_end - fragment_start:.3f}s")
-    st.metric("Fragment 3", "✓ Complete")
-
-
-# Non-parallel fragment for comparison
-@st.fragment
-def sequential_fragment():
-    """Regular (non-parallel) fragment for comparison."""
-    fragment_start = time.time()
+def parallel_chart_1():
+    """First parallel fragment - simulates slow data load."""
     time.sleep(FRAGMENT_SLEEP_TIME)
-    fragment_end = time.time()
+    st.write("parallel_chart_1_complete")
 
-    st.markdown("**Sequential Fragment** (parallel=False)")
-    st.write(f"Duration: {fragment_end - fragment_start:.3f}s")
-    st.metric("Sequential", "✓ Complete")
+
+@st.fragment(parallel=True)
+def parallel_chart_2():
+    """Second parallel fragment - simulates slow data load."""
+    time.sleep(FRAGMENT_SLEEP_TIME)
+    st.write("parallel_chart_2_complete")
+
+
+@st.fragment(parallel=True)
+def parallel_chart_3():
+    """Third parallel fragment - simulates slow data load."""
+    time.sleep(FRAGMENT_SLEEP_TIME)
+    st.write("parallel_chart_3_complete")
 
 
 st.header("Parallel Fragments Demo")
 
-# Create columns to show parallel fragments side by side
+# Call all parallel fragments - they should start executing in background
 col1, col2, col3 = st.columns(3)
 
 with col1:
-    parallel_fragment_1()
+    parallel_chart_1()
 
 with col2:
-    parallel_fragment_2()
+    parallel_chart_2()
 
 with col3:
-    parallel_fragment_3()
-
-st.divider()
-
-st.header("Sequential Fragment (for comparison)")
-sequential_fragment()
-sequential_fragment()
+    parallel_chart_3()
 
 # Record when the main script finishes (before waiting for threads)
 script_end_time = time.time()
 main_thread_duration = script_end_time - script_start_time
 
 st.divider()
-st.header("Timing Summary")
-st.write(f"Main thread execution time: {main_thread_duration:.3f}s")
-st.write(
-    f"Expected sequential time (3 parallel + 1 sequential): {FRAGMENT_SLEEP_TIME * 4:.3f}s"
-)
-st.write(
-    f"Expected parallel time (max of 3 parallel + 1 sequential): {FRAGMENT_SLEEP_TIME * 2:.3f}s"
-)
+
+st.write(f"main_thread_time: {main_thread_duration:.3f}")
 
 # The main thread should complete quickly since parallel fragments run in background
-# Only the sequential fragment blocks the main thread
-if main_thread_duration < FRAGMENT_SLEEP_TIME * 3:
-    st.success(
-        "✓ Main thread completed quickly - parallel fragments are running in background!"
-    )
-else:
-    st.error("✗ Main thread took too long - parallel execution may not be working")
+# Each fragment sleeps for FRAGMENT_SLEEP_TIME, but since they're parallel,
+# the main thread should NOT be blocked by those sleeps
+if main_thread_duration < FRAGMENT_SLEEP_TIME * 2:
+    st.write("parallel_execution_verified")

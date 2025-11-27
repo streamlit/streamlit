@@ -108,6 +108,10 @@ class ScriptRunContext:
     # we allow only one dialog to be open at the same time
     has_dialog_opened: bool = False
 
+    # Track parallel fragment threads so we can wait for them before script finishes
+    _parallel_fragment_threads: list[threading.Thread] = field(default_factory=list)
+    _parallel_fragment_lock: threading.Lock = field(default_factory=threading.Lock)
+
     # TODO(willhuang1997): Remove this variable when experimental query params are removed
     _experimental_query_params_used = False
     _production_query_params_used = False
@@ -164,6 +168,9 @@ class ScriptRunContext:
         self.new_fragment_ids = set()
         self.has_dialog_opened = False
         self.cached_message_hashes = cached_message_hashes or set()
+        # Clear any leftover parallel fragment threads from previous runs
+        with self._parallel_fragment_lock:
+            self._parallel_fragment_threads.clear()
 
         in_cached_function.set(False)
 
@@ -216,6 +223,39 @@ class ScriptRunContext:
     def mark_production_query_params_used(self) -> None:
         self._production_query_params_used = True
         self.ensure_single_query_api_used()
+
+    def register_parallel_fragment_thread(self, thread: threading.Thread) -> None:
+        """Register a parallel fragment thread so we can wait for it before script finishes.
+
+        Parameters
+        ----------
+        thread : threading.Thread
+            The thread running the parallel fragment.
+        """
+        with self._parallel_fragment_lock:
+            self._parallel_fragment_threads.append(thread)
+
+    def wait_for_parallel_fragments(self, timeout: float | None = None) -> None:
+        """Wait for all parallel fragment threads to complete.
+
+        This should be called before the script run is considered finished,
+        to ensure all parallel fragment output is sent to the frontend.
+
+        Parameters
+        ----------
+        timeout : float or None
+            Maximum time to wait for each thread in seconds. If None, wait indefinitely.
+        """
+        with self._parallel_fragment_lock:
+            threads = self._parallel_fragment_threads.copy()
+
+        for thread in threads:
+            if thread.is_alive():
+                thread.join(timeout=timeout)
+
+        # Clear the list after waiting
+        with self._parallel_fragment_lock:
+            self._parallel_fragment_threads.clear()
 
 
 SCRIPT_RUN_CONTEXT_ATTR_NAME: Final = "streamlit_script_run_ctx"

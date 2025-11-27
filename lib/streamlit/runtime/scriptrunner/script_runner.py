@@ -685,6 +685,12 @@ class ScriptRunner:
                 premature_stop,
                 uncaught_exception,
             ) = exec_func_with_error_handling(code_to_exec, ctx)
+
+            # Wait for any parallel fragment threads to complete before we
+            # send the script_finished message. This ensures all fragment
+            # output is sent to the frontend.
+            ctx.wait_for_parallel_fragments()
+
             # setting the session state here triggers a yield-callback call
             # which reads self._requests and checks for rerun data
             self._session_state[SCRIPT_RUN_WITHOUT_ERRORS_KEY] = run_without_errors

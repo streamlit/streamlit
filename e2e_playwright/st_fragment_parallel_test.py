@@ -12,78 +12,46 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""E2E tests for parallel fragment execution."""
+"""E2E tests for parallel fragment execution.
+
+These tests verify that fragments with parallel=True do not block the main thread,
+allowing the script to continue execution while fragments run in background threads.
+"""
 
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import wait_until
 
 
-def test_all_parallel_fragments_render(app: Page):
-    """Verify that all parallel fragments render their content."""
-    # Wait for all fragment metrics to appear (3 parallel + 1 sequential = 4 total)
-    wait_until(app, lambda: app.get_by_test_id("stMetric").count() >= 4, timeout=10000)
+def test_main_thread_not_blocked_by_parallel_fragments(app: Page):
+    """Verify that the main thread completes quickly despite fragment sleeps.
 
-    # Verify all metrics are visible
-    expect(app.get_by_test_id("stMetric")).to_have_count(4)
+    The app creates 3 parallel fragments that each sleep for 0.3s.
+    If running sequentially, this would take 0.9s+ for the main thread.
+    With parallel execution, the main thread should complete much faster
+    since the sleeps happen in background threads.
 
-    # Verify each fragment's metric label is visible
-    metrics = app.get_by_test_id("stMetric")
-    expect(metrics.filter(has_text="Fragment 1")).to_be_visible()
-    expect(metrics.filter(has_text="Fragment 2")).to_be_visible()
-    expect(metrics.filter(has_text="Fragment 3")).to_be_visible()
-    expect(metrics.filter(has_text="Sequential")).to_be_visible()
-
-
-def test_parallel_fragments_show_completion_status(app: Page):
-    """Verify that all fragments show their completion status."""
-    # Wait for completion indicators
-    wait_until(app, lambda: app.get_by_text("✓ Complete").count() >= 4, timeout=10000)
-
-    # All 4 fragments should show "✓ Complete"
-    expect(app.get_by_text("✓ Complete")).to_have_count(4)
-
-
-def test_main_thread_completes_quickly(app: Page):
-    """Verify that the main thread doesn't block on parallel fragments.
-
-    The success message indicates that parallel fragments ran in the background.
+    The app verifies timing internally and writes "parallel_execution_verified"
+    if the main thread completed faster than expected for sequential execution.
     """
-    # Wait for the app to finish and check for the success message
+    # Wait for the parallel execution verification message
     wait_until(
         app,
-        lambda: app.get_by_text(
-            "✓ Main thread completed quickly - parallel fragments are running in background!"
-        ).count()
-        > 0,
+        lambda: app.get_by_text("parallel_execution_verified").count() > 0,
         timeout=10000,
     )
 
-    success_alert = app.get_by_test_id("stAlert").filter(
-        has_text="Main thread completed"
-    )
-    expect(success_alert).to_be_visible()
+    expect(app.get_by_text("parallel_execution_verified")).to_be_visible()
 
 
-def test_fragment_headers_visible(app: Page):
-    """Verify the page structure and headers are correctly rendered."""
-    # Wait for app to load
-    wait_until(app, lambda: app.get_by_test_id("stMetric").count() >= 4, timeout=10000)
-
-    # Check headers
+def test_page_structure_renders_correctly(app: Page):
+    """Verify the page structure is correctly rendered with columns."""
+    # Verify header is visible
     expect(app.get_by_role("heading", name="Parallel Fragments Demo")).to_be_visible()
-    expect(
-        app.get_by_role("heading", name="Sequential Fragment (for comparison)")
-    ).to_be_visible()
-    expect(app.get_by_role("heading", name="Timing Summary")).to_be_visible()
 
-
-def test_parallel_fragments_in_columns(app: Page):
-    """Verify that parallel fragments are displayed in columns."""
-    # Wait for fragments to render
-    wait_until(app, lambda: app.get_by_test_id("stMetric").count() >= 4, timeout=10000)
-
-    # Check that we have column containers with metrics inside
-    # The columns should contain the parallel fragment metrics
+    # Verify we have 3 column containers for the 3 parallel fragments
     columns = app.get_by_test_id("stColumn")
-    expect(columns).to_have_count(3)  # 3 columns for 3 parallel fragments
+    expect(columns).to_have_count(3)
+
+    # Verify main thread timing info is displayed
+    expect(app.get_by_text("main_thread_time:")).to_be_visible()

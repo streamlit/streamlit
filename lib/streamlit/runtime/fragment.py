@@ -278,9 +278,11 @@ def _fragment(
                 target=_run_parallel_fragment,
                 args=(wrapped_fragment, fragment_id),
                 name=f"parallel_fragment_{fragment_id[:8]}",
-                daemon=True,
+                daemon=False,  # Non-daemon so script waits for completion
             )
             add_script_run_ctx(thread, ctx)
+            # Register the thread so the script runner waits for it before finishing
+            ctx.register_parallel_fragment_thread(thread)
             thread.start()
             return None
 
