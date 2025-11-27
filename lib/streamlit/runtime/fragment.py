@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import contextlib
+import contextvars
 import inspect
 import threading
 from abc import abstractmethod
@@ -274,9 +275,12 @@ def _fragment(
         if parallel:
             # Run fragment in a separate thread for parallel execution.
             # The return value is ignored for parallel fragments.
+            # Copy the current context to preserve ContextVar values (like dg_stack)
+            # which are needed for proper column/container rendering.
+            parent_context = contextvars.copy_context()
             thread = threading.Thread(
                 target=_run_parallel_fragment,
-                args=(wrapped_fragment, fragment_id),
+                args=(wrapped_fragment, fragment_id, parent_context),
                 name=f"parallel_fragment_{fragment_id[:8]}",
                 daemon=False,  # Non-daemon so script waits for completion
             )
@@ -301,26 +305,44 @@ def _fragment(
 def _run_parallel_fragment(
     wrapped_fragment: Fragment,
     fragment_id: str,
+    parent_context: contextvars.Context,
 ) -> None:
     """Execute a fragment in a parallel thread.
 
     This function is the target for threads spawned by parallel fragments.
     It handles exceptions gracefully and logs any errors.
+
+    Parameters
+    ----------
+    wrapped_fragment : Fragment
+        The fragment callable to execute.
+    fragment_id : str
+        The unique identifier for this fragment.
+    parent_context : contextvars.Context
+        The context from the parent thread, containing ContextVar values
+        like dg_stack needed for proper rendering in columns/containers.
     """
-    try:
-        wrapped_fragment()
-    except (RerunException, StopException):
-        # These exceptions are expected flow control and should not be logged.
-        _LOGGER.debug(
-            "Parallel fragment %s received rerun/stop exception", fragment_id[:8]
-        )
-    except FragmentHandledException:
-        # Exception was already handled and displayed to the user.
-        pass
-    except Exception:
-        _LOGGER.exception(
-            "Unhandled exception in parallel fragment %s", fragment_id[:8]
-        )
+
+    def run_fragment() -> None:
+        """Inner function to run in the parent context."""
+        try:
+            wrapped_fragment()
+        except (RerunException, StopException):
+            # These exceptions are expected flow control and should not be logged.
+            _LOGGER.debug(
+                "Parallel fragment %s received rerun/stop exception", fragment_id[:8]
+            )
+        except FragmentHandledException:
+            # Exception was already handled and displayed to the user.
+            pass
+        except Exception:
+            _LOGGER.exception(
+                "Unhandled exception in parallel fragment %s", fragment_id[:8]
+            )
+
+    # Run the fragment with the parent thread's context variables
+    # This ensures dg_stack and other ContextVars are properly set
+    parent_context.run(run_fragment)
 
 
 @overload
