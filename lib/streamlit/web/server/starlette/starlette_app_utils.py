@@ -165,7 +165,10 @@ def decode_signed_value(
         decoded = serializer.loads(value, max_age=int(max_age_days * 86400))
         if isinstance(decoded, str):
             return decoded.encode("utf-8")
-        return decoded
+        if isinstance(decoded, bytes):
+            return decoded
+        # Fallback: convert to string then bytes if unexpected type
+        return str(decoded).encode("utf-8")
     except (BadSignature, SignatureExpired):
         return None
 
