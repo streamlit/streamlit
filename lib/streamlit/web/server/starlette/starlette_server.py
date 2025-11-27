@@ -58,8 +58,6 @@ def _get_websocket_settings() -> tuple[int, int]:
     """Get the WebSocket ping interval and timeout settings.
 
     Returns a tuple of (ping_interval, ping_timeout) in seconds.
-    Uvicorn/websockets doesn't have the same constraints as Tornado 6.5+,
-    so we use simpler defaults.
     """
     configured_interval = config.get_option("server.websocketPingInterval")
 
