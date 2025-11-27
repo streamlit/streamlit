@@ -60,13 +60,10 @@ _LOGGER: Final = get_logger(__name__)
 
 # Health check routes
 ROUTE_HEALTH: Final = "_stcore/health"
-ROUTE_HEALTH_DEPRECATED: Final = "healthz"
 ROUTE_SCRIPT_HEALTH: Final = "_stcore/script-health-check"
-ROUTE_SCRIPT_HEALTH_DEPRECATED: Final = "script-health-check"
 
 # Metrics routes
 ROUTE_METRICS: Final = "_stcore/metrics"
-ROUTE_METRICS_DEPRECATED: Final = "st-metrics"
 
 # Host configuration
 ROUTE_HOST_CONFIG: Final = "_stcore/host-config"
@@ -204,16 +201,6 @@ def create_health_routes(runtime: Runtime, base_url: str | None) -> list[Any]:
             _health_options,
             methods=["OPTIONS"],
         ),
-        Route(
-            _with_base(ROUTE_HEALTH_DEPRECATED, base_url),
-            _health_endpoint,
-            methods=["GET", "HEAD"],
-        ),
-        Route(
-            _with_base(ROUTE_HEALTH_DEPRECATED, base_url),
-            _health_options,
-            methods=["OPTIONS"],
-        ),
     ]
 
 
@@ -253,16 +240,6 @@ def create_script_health_routes(runtime: Runtime, base_url: str | None) -> list[
             _health_options,
             methods=["OPTIONS"],
         ),
-        Route(
-            _with_base(ROUTE_SCRIPT_HEALTH_DEPRECATED, base_url),
-            _script_health_endpoint,
-            methods=["GET", "HEAD"],
-        ),
-        Route(
-            _with_base(ROUTE_SCRIPT_HEALTH_DEPRECATED, base_url),
-            _health_options,
-            methods=["OPTIONS"],
-        ),
     ]
 
 
@@ -295,12 +272,7 @@ def create_metrics_routes(runtime: Runtime, base_url: str | None) -> list[Any]:
             _with_base(ROUTE_METRICS, base_url),
             _metrics_endpoint,
             methods=["GET"],
-        ),
-        Route(
-            _with_base(ROUTE_METRICS_DEPRECATED, base_url),
-            _metrics_endpoint,
-            methods=["GET"],
-        ),
+        )
     ]
 
 
