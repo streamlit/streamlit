@@ -331,10 +331,11 @@ def create_media_routes(
 
         headers: dict[str, str] = {
             "X-Content-Type-Options": "nosniff",
+            # TODO(lukasmasuch): Remove this?:
             # Prevent GZip middleware from compressing media files.
             # Audio/video elements in browsers (especially Firefox) fail when
             # binary media content is gzip-compressed.
-            "Content-Encoding": "identity",
+            # "Content-Encoding": "identity",
         }
 
         if media_file.kind == MediaFileKind.DOWNLOADABLE:
