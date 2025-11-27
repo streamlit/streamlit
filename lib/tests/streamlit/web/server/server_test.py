@@ -21,19 +21,16 @@ import contextlib
 import errno
 import os
 import re
-import socket
 import subprocess
 import sys
 import tempfile
 import unittest
 from pathlib import Path
 from unittest import mock
-from unittest.mock import AsyncMock, patch
+from unittest.mock import patch
 
 import pytest
-import tornado.httpserver
 import tornado.testing
-import tornado.web
 import tornado.websocket
 from parameterized import parameterized
 
@@ -621,75 +618,6 @@ class UnixSocketTest(unittest.TestCase):
                 "/home/superfakehomedir/fancy-test/testasd"
             )
             mock_server.add_socket.assert_called_with(some_socket)
-
-
-class StarlettePortRetryTest(unittest.TestCase):
-    """Tests Starlette port binding and retry logic."""
-
-    def setUp(self) -> None:
-        Runtime._instance = None
-        self.original_port = config.get_option("server.port")
-        config.set_option("server.port", 8600)
-        self.loop = asyncio.new_event_loop()
-
-    def tearDown(self) -> None:
-        Runtime._instance = None
-        config.set_option("server.port", self.original_port)
-        self.loop.close()
-
-    def _create_server(self) -> Server:
-        server = Server("mock/script/path", is_hello=False)
-        server._runtime._eventloop = self.loop
-        return server
-
-    def _run_async(self, coro: asyncio.Future) -> None:
-        self.loop.run_until_complete(coro)
-
-    def test_retries_on_port_in_use(self) -> None:
-        """Ensure Starlette server retries the next port when the first is busy."""
-
-        server = self._create_server()
-        mock_socket = mock.MagicMock(spec=socket.socket)
-
-        with (
-            patch(
-                "streamlit.web.server.server._bind_socket",
-                side_effect=[OSError(errno.EADDRINUSE, "busy"), mock_socket],
-            ) as bind_socket,
-            patch(
-                "streamlit.web.server.server.server_port_is_manually_set",
-                return_value=False,
-            ),
-            patch("uvicorn.Server") as uvicorn_server_cls,
-        ):
-            uvicorn_instance = mock.MagicMock()
-            uvicorn_instance.serve = AsyncMock()
-            uvicorn_server_cls.return_value = uvicorn_instance
-
-            self._run_async(server._start_starlette())
-
-        assert bind_socket.call_count == 2
-        uvicorn_instance.serve.assert_awaited_once()
-        mock_socket.close.assert_called_once()
-        assert config.get_option("server.port") == 8601
-
-    def test_honors_manual_port_setting(self) -> None:
-        """Ensure we exit when the user explicitly set the port and it is busy."""
-
-        server = self._create_server()
-
-        with (
-            patch(
-                "streamlit.web.server.server._bind_socket",
-                side_effect=OSError(errno.EADDRINUSE, "busy"),
-            ),
-            patch(
-                "streamlit.web.server.server.server_port_is_manually_set",
-                return_value=True,
-            ),
-        ):
-            with pytest.raises(SystemExit):
-                self._run_async(server._start_starlette())
 
 
 class ScriptCheckEndpointExistsTest(tornado.testing.AsyncHTTPTestCase):

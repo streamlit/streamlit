@@ -1,0 +1,319 @@
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""Unit tests for starlette_server module."""
+
+from __future__ import annotations
+
+import asyncio
+import errno
+import socket
+from unittest import mock
+from unittest.mock import AsyncMock, patch
+
+import pytest
+
+from streamlit import config
+from streamlit.runtime import Runtime
+from streamlit.web.server.server import Server
+from streamlit.web.server.starlette.starlette_server import (
+    RetriesExceededError,
+    _bind_socket,
+    _get_websocket_settings,
+    _server_address_is_unix_socket,
+    _server_port_is_manually_set,
+)
+from tests.testutil import patch_config_options
+
+
+class TestBindSocket:
+    """Tests for _bind_socket function."""
+
+    def test_creates_ipv4_socket(self) -> None:
+        """Test that IPv4 address creates AF_INET socket."""
+        mock_sock = mock.MagicMock()
+        with patch("socket.socket", return_value=mock_sock) as mock_socket_cls:
+            result = _bind_socket("127.0.0.1", 8501, 100)
+
+            mock_socket_cls.assert_called_once_with(family=socket.AF_INET)
+            mock_sock.setsockopt.assert_called_with(
+                socket.SOL_SOCKET, socket.SO_REUSEADDR, 1
+            )
+            mock_sock.bind.assert_called_once_with(("127.0.0.1", 8501))
+            mock_sock.listen.assert_called_once_with(100)
+            mock_sock.setblocking.assert_called_once_with(False)
+            mock_sock.set_inheritable.assert_called_once_with(True)
+            assert result == mock_sock
+
+    def test_creates_ipv6_socket(self) -> None:
+        """Test that IPv6 address creates AF_INET6 socket."""
+        mock_sock = mock.MagicMock()
+        with patch("socket.socket", return_value=mock_sock) as mock_socket_cls:
+            result = _bind_socket("::", 8501, 100)
+
+            mock_socket_cls.assert_called_once_with(family=socket.AF_INET6)
+            # Should set IPV6_V6ONLY to 0
+            mock_sock.setsockopt.assert_any_call(
+                socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 0
+            )
+            assert result == mock_sock
+
+    def test_detects_ipv6_by_colon(self) -> None:
+        """Test that addresses with colons are treated as IPv6."""
+        mock_sock = mock.MagicMock()
+        with patch("socket.socket", return_value=mock_sock) as mock_socket_cls:
+            _bind_socket("::1", 8501, 100)
+
+            mock_socket_cls.assert_called_once_with(family=socket.AF_INET6)
+
+
+class TestGetWebsocketSettings:
+    """Tests for _get_websocket_settings function."""
+
+    @patch_config_options({"server.websocketPingInterval": None})
+    def test_default_settings(self) -> None:
+        """Test that default settings are returned when not configured."""
+        interval, timeout = _get_websocket_settings()
+
+        assert interval == 30
+        assert timeout == 30
+
+    @patch_config_options({"server.websocketPingInterval": 45})
+    def test_custom_interval(self) -> None:
+        """Test that custom interval is respected."""
+        interval, timeout = _get_websocket_settings()
+
+        assert interval == 45
+        assert timeout == 45
+
+    @patch_config_options({"server.websocketPingInterval": 10})
+    def test_low_interval_accepted(self) -> None:
+        """Test that low interval values are accepted (no Tornado constraints)."""
+        interval, timeout = _get_websocket_settings()
+
+        assert interval == 10
+        assert timeout == 10
+
+
+class TestServerPortIsManuallySet:
+    """Tests for _server_port_is_manually_set function."""
+
+    def test_returns_true_when_manually_set(self) -> None:
+        """Test that True is returned when port is manually configured."""
+        with patch("streamlit.config.is_manually_set", return_value=True):
+            result = _server_port_is_manually_set()
+
+        assert result is True
+
+    def test_returns_false_when_default(self) -> None:
+        """Test that False is returned when port is not manually configured."""
+        with patch("streamlit.config.is_manually_set", return_value=False):
+            result = _server_port_is_manually_set()
+
+        assert result is False
+
+
+class TestServerAddressIsUnixSocket:
+    """Tests for _server_address_is_unix_socket function."""
+
+    @patch_config_options({"server.address": "unix:///tmp/streamlit.sock"})
+    def test_returns_true_for_unix_socket(self) -> None:
+        """Test that True is returned for Unix socket address."""
+        result = _server_address_is_unix_socket()
+
+        assert result is True
+
+    @patch_config_options({"server.address": "127.0.0.1"})
+    def test_returns_false_for_ip_address(self) -> None:
+        """Test that False is returned for IP address."""
+        result = _server_address_is_unix_socket()
+
+        assert result is False
+
+    @patch_config_options({"server.address": None})
+    def test_returns_false_for_none(self) -> None:
+        """Test that False is returned when address is None."""
+        result = _server_address_is_unix_socket()
+
+        assert result is False
+
+    @patch_config_options({"server.address": ""})
+    def test_returns_false_for_empty_string(self) -> None:
+        """Test that False is returned for empty string."""
+        result = _server_address_is_unix_socket()
+
+        assert result is False
+
+
+class TestStartStarletteServer:
+    """Integration tests for start_starlette_server function."""
+
+    def setUp(self) -> None:
+        """Set up test fixtures."""
+        Runtime._instance = None
+        self.original_port = config.get_option("server.port")
+        config.set_option("server.port", 8600)
+        self.loop = asyncio.new_event_loop()
+
+    def tearDown(self) -> None:
+        """Tear down test fixtures."""
+        Runtime._instance = None
+        config.set_option("server.port", self.original_port)
+        self.loop.close()
+
+    @pytest.fixture(autouse=True)
+    def setup_and_teardown(self) -> None:
+        """Pytest fixture for setup and teardown."""
+        self.setUp()
+        yield
+        self.tearDown()
+
+    def _create_server(self) -> Server:
+        """Create a Server instance for testing."""
+        server = Server("mock/script/path", is_hello=False)
+        server._runtime._eventloop = self.loop
+        return server
+
+    def _run_async(self, coro: asyncio.Future) -> None:
+        """Run an async coroutine in the test event loop."""
+        self.loop.run_until_complete(coro)
+
+    def test_retries_on_port_in_use(self) -> None:
+        """Test that server retries the next port when the first is busy."""
+        server = self._create_server()
+        mock_socket = mock.MagicMock(spec=socket.socket)
+
+        with (
+            patch(
+                "streamlit.web.server.starlette.starlette_server._bind_socket",
+                side_effect=[OSError(errno.EADDRINUSE, "busy"), mock_socket],
+            ) as bind_socket,
+            patch(
+                "streamlit.web.server.starlette.starlette_server._server_port_is_manually_set",
+                return_value=False,
+            ),
+            patch("uvicorn.Server") as uvicorn_server_cls,
+        ):
+            uvicorn_instance = mock.MagicMock()
+            uvicorn_instance.serve = AsyncMock()
+            uvicorn_server_cls.return_value = uvicorn_instance
+
+            self._run_async(server._start_starlette())
+
+        assert bind_socket.call_count == 2
+        uvicorn_instance.serve.assert_awaited_once()
+        mock_socket.close.assert_called_once()
+        assert config.get_option("server.port") == 8601
+
+    def test_honors_manual_port_setting(self) -> None:
+        """Test that server exits when manual port is busy."""
+        server = self._create_server()
+
+        with (
+            patch(
+                "streamlit.web.server.starlette.starlette_server._bind_socket",
+                side_effect=OSError(errno.EADDRINUSE, "busy"),
+            ),
+            patch(
+                "streamlit.web.server.starlette.starlette_server._server_port_is_manually_set",
+                return_value=True,
+            ),
+        ):
+            with pytest.raises(SystemExit):
+                self._run_async(server._start_starlette())
+
+    def test_raises_on_max_retries_exceeded(self) -> None:
+        """Test that RetriesExceededError is raised after max retries."""
+        server = self._create_server()
+
+        with (
+            patch(
+                "streamlit.web.server.starlette.starlette_server._bind_socket",
+                side_effect=OSError(errno.EADDRINUSE, "busy"),
+            ),
+            patch(
+                "streamlit.web.server.starlette.starlette_server._server_port_is_manually_set",
+                return_value=False,
+            ),
+        ):
+            with pytest.raises(RetriesExceededError):
+                self._run_async(server._start_starlette())
+
+    def test_raises_on_unix_socket(self) -> None:
+        """Test that RuntimeError is raised for Unix socket addresses."""
+        server = self._create_server()
+
+        with patch_config_options({"server.address": "unix:///tmp/streamlit.sock"}):
+            with pytest.raises(RuntimeError, match="Unix sockets are not supported"):
+                self._run_async(server._start_starlette())
+
+    def test_propagates_non_address_in_use_errors(self) -> None:
+        """Test that non-EADDRINUSE errors are propagated immediately."""
+        server = self._create_server()
+
+        with patch(
+            "streamlit.web.server.starlette.starlette_server._bind_socket",
+            side_effect=OSError(errno.EACCES, "permission denied"),
+        ):
+            with pytest.raises(OSError, match="permission denied") as exc_info:
+                self._run_async(server._start_starlette())
+
+            assert exc_info.value.errno == errno.EACCES
+
+    def test_uses_default_address_when_not_configured(self) -> None:
+        """Test that 127.0.0.1 is used when address is not configured."""
+        server = self._create_server()
+        mock_socket = mock.MagicMock(spec=socket.socket)
+
+        with (
+            patch_config_options({"server.address": None}),
+            patch(
+                "streamlit.web.server.starlette.starlette_server._bind_socket",
+                return_value=mock_socket,
+            ) as bind_socket,
+            patch("uvicorn.Server") as uvicorn_server_cls,
+        ):
+            uvicorn_instance = mock.MagicMock()
+            uvicorn_instance.serve = AsyncMock()
+            uvicorn_server_cls.return_value = uvicorn_instance
+
+            self._run_async(server._start_starlette())
+
+        # Check that bind_socket was called with 127.0.0.1
+        bind_socket.assert_called_once()
+        call_args = bind_socket.call_args[0]
+        assert call_args[0] == "127.0.0.1"
+
+    def test_uses_configured_address(self) -> None:
+        """Test that configured address is used."""
+        server = self._create_server()
+        mock_socket = mock.MagicMock(spec=socket.socket)
+
+        with (
+            patch_config_options({"server.address": "0.0.0.0"}),
+            patch(
+                "streamlit.web.server.starlette.starlette_server._bind_socket",
+                return_value=mock_socket,
+            ) as bind_socket,
+            patch("uvicorn.Server") as uvicorn_server_cls,
+        ):
+            uvicorn_instance = mock.MagicMock()
+            uvicorn_instance.serve = AsyncMock()
+            uvicorn_server_cls.return_value = uvicorn_instance
+
+            self._run_async(server._start_starlette())
+
+        bind_socket.assert_called_once()
+        call_args = bind_socket.call_args[0]
+        assert call_args[0] == "0.0.0.0"

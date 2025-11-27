@@ -18,7 +18,6 @@ import errno
 import logging
 import mimetypes
 import os
-import socket
 import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final
@@ -283,28 +282,6 @@ def start_listening_tcp_socket(http_server: HTTPServer) -> None:
         )
 
 
-def _bind_socket(address: str, port: int, backlog: int) -> socket.socket:
-    """Bind a non-blocking TCP socket to the given address and port."""
-
-    if ":" in address:
-        family = socket.AF_INET6
-    else:
-        family = socket.AF_INET
-
-    sock = socket.socket(family=family)
-    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-
-    if family == socket.AF_INET6:
-        # Allow both IPv4 and IPv6 clients when binding to "::".
-        sock.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 0)
-
-    sock.bind((address, port))
-    sock.listen(backlog)
-    sock.setblocking(False)
-    sock.set_inheritable(True)
-    return sock
-
-
 class Server:
     def __init__(self, main_script_path: str, is_hello: bool) -> None:
         """Create the server. It won't be started yet."""
@@ -547,91 +524,9 @@ class Server:
         self._runtime.stop()
 
     async def _start_starlette(self) -> None:
-        from streamlit.web.server.starlette import create_starlette_app
+        from streamlit.web.server.starlette import start_starlette_server
 
-        try:
-            import uvicorn
-        except ModuleNotFoundError as exc:  # pragma: no cover
-            raise RuntimeError(
-                "uvicorn is required for server.useStarlette but is not installed."
-            ) from exc
-
-        app = create_starlette_app(self._runtime)
-
-        configured_address = config.get_option("server.address")
-        configured_port = int(config.get_option("server.port"))
-
-        cert_file = config.get_option("server.sslCertFile")
-        key_file = config.get_option("server.sslKeyFile")
-        ws_ping_interval, ws_ping_timeout = _get_websocket_ping_interval_and_timeout()
-        ws_max_size = get_max_message_size_bytes()
-        ws_per_message_deflate = config.get_option("server.enableWebsocketCompression")
-
-        if server_address_is_unix_socket():
-            # TODO(lukasmasuch): Do we need to support unix sockets with Starlette?
-            raise RuntimeError(
-                "Unix sockets are not supported with Starlette currently."
-            )
-
-        last_exception: BaseException | None = None
-
-        for attempt in range(MAX_PORT_SEARCH_RETRIES + 1):
-            port = configured_port + attempt
-            address = configured_address if configured_address else "127.0.0.1"
-
-            uvicorn_config = uvicorn.Config(
-                app,
-                host=address,
-                port=port,
-                ssl_certfile=cert_file,
-                ssl_keyfile=key_file,
-                ws="auto",
-                ws_ping_interval=ws_ping_interval,
-                ws_ping_timeout=ws_ping_timeout,
-                ws_max_size=ws_max_size,
-                ws_per_message_deflate=ws_per_message_deflate,
-                use_colors=False,
-                log_config=None,
-            )
-
-            try:
-                sock = _bind_socket(address, port, uvicorn_config.backlog)
-            except OSError as exc:
-                last_exception = exc
-                if exc.errno == errno.EADDRINUSE:
-                    if server_port_is_manually_set():
-                        _LOGGER.error("Port %s is already in use", port)  # noqa: TRY400
-                        sys.exit(1)
-                    _LOGGER.debug(
-                        "Port %s already in use, trying to use the next one.", port
-                    )
-                    if attempt == MAX_PORT_SEARCH_RETRIES:
-                        raise RetriesExceededError(
-                            f"Cannot start Streamlit server. Port {port} is already in use, "
-                            f"and Streamlit was unable to find a free port after "
-                            f"{MAX_PORT_SEARCH_RETRIES} attempts."
-                        ) from exc
-                    continue
-                raise
-
-            server = uvicorn.Server(uvicorn_config)
-            _LOGGER.info("Starting Starlette server on %s:%s", address, port)
-
-            try:
-                config.set_option(
-                    "server.port", port, ConfigOption.STREAMLIT_DEFINITION
-                )
-                await server.serve(sockets=[sock])
-                return
-            except Exception as e:  # pragma: no cover
-                last_exception = e
-                _LOGGER.exception("Error starting Starlette server")
-                raise
-            finally:
-                sock.close()
-
-        if last_exception is not None:
-            raise last_exception
+        await start_starlette_server(self._runtime)
 
 
 def _set_tornado_log_levels() -> None:
