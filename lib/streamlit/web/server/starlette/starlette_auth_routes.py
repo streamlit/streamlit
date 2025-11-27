@@ -142,6 +142,8 @@ async def _set_auth_cookie(response: Response, user_info: dict[str, Any]) -> Non
         )
 
     cookie_secret = get_cookie_secret()
+
+    # TODO(lukasmasuch): Replace with implementation that doesn't require Tornado.
     signed_value = create_signed_value(
         cookie_secret, AUTH_COOKIE_NAME, serialized_cookie_value
     )
