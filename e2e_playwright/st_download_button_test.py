@@ -29,7 +29,7 @@ from e2e_playwright.shared.app_utils import (
     goto_app,
 )
 
-DOWNLOAD_BUTTON_ELEMENTS = 17
+DOWNLOAD_BUTTON_ELEMENTS = 21
 
 
 def check_download_button_source_error_count(messages: list[str], expected_count: int):
@@ -286,3 +286,28 @@ def test_dynamic_download_button(app: Page, assert_snapshot: ImageCompareFunctio
 
     wait_for_app_run(app)
     expect_prefixed_markdown(app, "Clicked updated button:", "True")
+
+
+def test_download_button_icon_position(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that icon_position correctly positions icons on download buttons."""
+    # Test Material icon positioning
+    assert_snapshot(
+        get_element_by_key(themed_app, "download_icon_left"),
+        name="st_download_button-icon_position_left_material",
+    )
+    assert_snapshot(
+        get_element_by_key(themed_app, "download_icon_right"),
+        name="st_download_button-icon_position_right_material",
+    )
+
+    # Test emoji icon positioning
+    assert_snapshot(
+        get_element_by_key(themed_app, "download_emoji_left"),
+        name="st_download_button-icon_position_left_emoji",
+    )
+    assert_snapshot(
+        get_element_by_key(themed_app, "download_emoji_right"),
+        name="st_download_button-icon_position_right_emoji",
+    )

@@ -18,7 +18,7 @@ from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_loaded
 from e2e_playwright.shared.app_utils import get_element_by_key, get_expander
 from e2e_playwright.shared.theme_utils import apply_theme_via_window
 
-PAGE_LINK_COUNT = 17
+PAGE_LINK_COUNT = 21
 
 
 def test_page_links(app: Page, assert_snapshot: ImageCompareFunction):
@@ -104,3 +104,25 @@ def test_page_link_with_custom_theme(app: Page, assert_snapshot: ImageCompareFun
     # Hover over the page link to show background color & radius application
     page_link.hover()
     assert_snapshot(container, name="st_page_link-custom-theme")
+
+
+def test_page_link_icon_position(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that icon_position correctly positions icons on page links."""
+    page_link_elements = app.get_by_test_id("stPageLink")
+    expect(page_link_elements).to_have_count(PAGE_LINK_COUNT)
+
+    # Test emoji icon positioning (indices 17 and 18)
+    assert_snapshot(
+        page_link_elements.nth(17), name="st_page_link-icon_position_left_emoji"
+    )
+    assert_snapshot(
+        page_link_elements.nth(18), name="st_page_link-icon_position_right_emoji"
+    )
+
+    # Test Material icon positioning (indices 19 and 20)
+    assert_snapshot(
+        page_link_elements.nth(19), name="st_page_link-icon_position_left_material"
+    )
+    assert_snapshot(
+        page_link_elements.nth(20), name="st_page_link-icon_position_right_material"
+    )

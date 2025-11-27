@@ -67,3 +67,31 @@ with st.sidebar:
 with st.container(key="custom_theme"):
     st.page_link("http://www.example.com", label="Custom Theme Example")
     st.button("Button Example", type="primary")
+
+st.markdown("### Page Link Icon Position Examples")
+
+st.page_link(
+    "http://www.example.com",
+    label="Icon Left (Default)",
+    icon="🌎",
+    icon_position="left",
+)
+st.page_link(
+    "http://www.example.com",
+    label="Icon Right",
+    icon="🌎",
+    icon_position="right",
+)
+
+st.page_link(
+    "http://www.example.com",
+    label="Material Icon Left",
+    icon=":material/home:",
+    icon_position="left",
+)
+st.page_link(
+    "http://www.example.com",
+    label="Material Icon Right",
+    icon=":material/home:",
+    icon_position="right",
+)

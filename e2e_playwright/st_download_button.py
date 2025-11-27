@@ -173,3 +173,35 @@ else:
         key="dynamic_download_button_with_key",
     )
     st.write("Clicked initial button:", clicked)
+
+st.markdown("### Download Button Icon Position Examples")
+
+st.download_button(
+    "Icon Left (Default)",
+    data="Hello world!",
+    icon=":material/download:",
+    icon_position="left",
+    key="download_icon_left",
+)
+st.download_button(
+    "Icon Right",
+    data="Hello world!",
+    icon=":material/download:",
+    icon_position="right",
+    key="download_icon_right",
+)
+
+st.download_button(
+    "Emoji Left",
+    data="Hello world!",
+    icon="⬇️",
+    icon_position="left",
+    key="download_emoji_left",
+)
+st.download_button(
+    "Emoji Right",
+    data="Hello world!",
+    icon="⬇️",
+    icon_position="right",
+    key="download_emoji_right",
+)
