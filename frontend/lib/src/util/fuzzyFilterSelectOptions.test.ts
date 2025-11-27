@@ -42,8 +42,8 @@ describe("fuzzyFilterSelectOptions", () => {
     const results1 = fuzzyFilterSelectOptions(options, "esstm")
     expect(results1.map(it => it.label)).toEqual([
       "e2e/scripts/st_markdown.py",
-      "e2e/scripts/st_dataframe_sort_column.py",
       "e2e/scripts/st_query_params.py",
+      "e2e/scripts/st_dataframe_sort_column.py",
       "e2e/scripts/components_iframe.py",
     ])
 
