@@ -294,10 +294,14 @@ describe("#getContextualFillColor", () => {
 })
 
 describe("#LAYER_TYPE_TO_FILL_FUNCTION", () => {
-  it("should have fill functions defined for common layer types", () => {
-    // Check that the mapping exists and has expected structure
-    expect(LAYER_TYPE_TO_FILL_FUNCTION).toBeDefined()
-    expect(typeof LAYER_TYPE_TO_FILL_FUNCTION).toBe("object")
+  it("should have all values as arrays of strings", () => {
+    // Verify the structure of the mapping: all values should be arrays of strings
+    Object.entries(LAYER_TYPE_TO_FILL_FUNCTION).forEach(([_key, value]) => {
+      expect(Array.isArray(value)).toBe(true)
+      value.forEach(fnName => {
+        expect(typeof fnName).toBe("string")
+      })
+    })
   })
 
   it("should map ScatterplotLayer to multiple fill functions", () => {

@@ -88,10 +88,6 @@ const getProps = (
 }
 
 describe("DeckGlJsonChart", () => {
-  beforeEach(() => {
-    mockHasLightBackgroundColor.mockReturnValue(false)
-  })
-
   it("should render with correct test id and className", () => {
     const props = getProps()
     render(<DeckGlJsonChart {...props} />)
@@ -183,7 +179,10 @@ describe("DeckGlJsonChart", () => {
       const chart = screen.getByTestId("stDeckGlJsonChart")
       await userEvent.hover(chart)
 
-      // Give time for any toolbar to potentially appear
+      // We use a hardcoded timeout here because we're testing a negative assertion
+      // (that something does NOT appear). Unlike positive assertions where we can
+      // wait for an element to appear, there's no reliable way to "wait for something
+      // to not appear" - we need to give sufficient time for it to potentially render.
       await new Promise(resolve => setTimeout(resolve, 100))
       expect(screen.queryByLabelText("Fullscreen")).not.toBeInTheDocument()
     })

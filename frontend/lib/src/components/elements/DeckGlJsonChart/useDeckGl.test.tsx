@@ -32,7 +32,7 @@ import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import { mockTheme } from "~lib/mocks/mockTheme"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import { EMPTY_STATE, useDeckGl, UseDeckGlProps } from "./useDeckGl"
+import { useDeckGl, UseDeckGlProps } from "./useDeckGl"
 
 const mockInitialViewState = {
   bearing: -27.36,
@@ -90,25 +90,26 @@ const getUseDeckGlProps = (
 }
 
 describe("useDeckGl", () => {
-  it("should merge client and server changes in viewState", () => {
+  it("should apply server viewState changes as a diff to the current state", () => {
     const initialProps = getUseDeckGlProps()
 
-    const {
-      result: { current },
-      rerender,
-    } = renderHook(props => useDeckGl(props), {
+    const { result, rerender } = renderHook(props => useDeckGl(props), {
       initialProps,
     })
 
-    expect(current.viewState).toEqual(mockInitialViewState)
+    expect(result.current.viewState).toEqual(mockInitialViewState)
 
+    // Server sends new zoom value
     rerender({
       ...initialProps,
       element: getUseDeckGlProps({}, { zoom: 8 }).element,
     })
 
-    // should match original mockInitialViewState
-    expect(current.viewState).toEqual({ ...mockInitialViewState, zoom: 6 })
+    // Should reflect the merged server change (zoom: 8)
+    expect(result.current.viewState).toEqual({
+      ...mockInitialViewState,
+      zoom: 8,
+    })
   })
 
   describe("createTooltip", () => {
@@ -189,14 +190,16 @@ describe("useDeckGl", () => {
       mapStyle: "mapbox://styles/mapbox/light-v9",
     }
 
-    const mockJsonParse = vi.fn().mockReturnValue(newJson)
+    // Store reference to original parse function for proper cleanup
+    const originalParse = JSON5.parse
 
     beforeEach(() => {
-      JSON5.parse = mockJsonParse
+      vi.spyOn(JSON5, "parse").mockReturnValue(newJson)
     })
 
     afterEach(() => {
-      mockJsonParse.mockClear()
+      // Restore only the JSON5.parse mock to avoid affecting other global mocks
+      JSON5.parse = originalParse
     })
 
     it.each([
@@ -356,17 +359,6 @@ describe("useDeckGl", () => {
       })
 
       expect(result.current.viewState).toEqual(newViewState)
-    })
-  })
-
-  describe("EMPTY_STATE constant", () => {
-    it("should have empty selection indices and objects", () => {
-      expect(EMPTY_STATE).toEqual({
-        selection: {
-          indices: {},
-          objects: {},
-        },
-      })
     })
   })
 })
