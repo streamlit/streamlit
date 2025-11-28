@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import TYPE_CHECKING, Any, Literal, TypeAlias, cast
+from typing import TYPE_CHECKING, Any, Final, Literal, TypeAlias, cast
 
 from streamlit.dataframe_util import OptionSequence, convert_anything_to_list
 from streamlit.elements.lib.layout_utils import (
@@ -59,7 +59,7 @@ DeltaColor: TypeAlias = Literal[
 DeltaArrow: TypeAlias = Literal["auto", "up", "down", "off"]
 
 # Mapping from delta_color string values to proto enum values
-_DELTA_COLOR_TO_PROTO: dict[str, MetricProto.MetricColor.ValueType] = {
+_DELTA_COLOR_TO_PROTO: Final[dict[str, MetricProto.MetricColor.ValueType]] = {
     "red": MetricProto.MetricColor.RED,
     "orange": MetricProto.MetricColor.ORANGE,
     "yellow": MetricProto.MetricColor.YELLOW,
@@ -69,6 +69,22 @@ _DELTA_COLOR_TO_PROTO: dict[str, MetricProto.MetricColor.ValueType] = {
     "gray": MetricProto.MetricColor.GRAY,
     "grey": MetricProto.MetricColor.GRAY,
     "primary": MetricProto.MetricColor.PRIMARY,
+}
+
+# Valid delta_color values for validation
+_VALID_DELTA_COLORS: Final[set[str]] = {
+    "normal",
+    "inverse",
+    "off",
+    "red",
+    "orange",
+    "yellow",
+    "green",
+    "blue",
+    "violet",
+    "gray",
+    "grey",
+    "primary",
 }
 
 
@@ -410,21 +426,7 @@ def _determine_delta_color_and_direction(
     delta_color: DeltaColor,
     delta: Delta,
 ) -> MetricColorAndDirection:
-    valid_colors = {
-        "normal",
-        "inverse",
-        "off",
-        "red",
-        "orange",
-        "yellow",
-        "green",
-        "blue",
-        "violet",
-        "gray",
-        "grey",
-        "primary",
-    }
-    if delta_color not in valid_colors:
+    if delta_color not in _VALID_DELTA_COLORS:
         raise StreamlitAPIException(
             f"'{delta_color}' is not an accepted value. delta_color only accepts: "
             "'normal', 'inverse', 'off', or a color name ('red', 'orange', 'yellow', "
@@ -452,7 +454,7 @@ def _determine_delta_color_and_direction(
         )
 
     # Handle "normal", "inverse", "off" modes
-    is_negative = _is_negative_delta(delta)
+    is_negative = cd_direction == MetricProto.MetricDirection.DOWN
     if delta_color == "normal":
         cd_color = (
             MetricProto.MetricColor.RED
