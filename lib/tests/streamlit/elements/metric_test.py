@@ -289,10 +289,39 @@ class MetricTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitAPIException) as exc:
             st.metric("Hello World.", 123, 0, delta_color="Invalid")
 
-        assert (
-            str(exc.value)
-            == "'Invalid' is not an accepted value. delta_color only accepts: 'normal', 'inverse', or 'off'"
-        )
+        assert "'Invalid' is not an accepted value" in str(exc.value)
+
+    @parameterized.expand(
+        [
+            ("red", MetricProto.MetricColor.RED),
+            ("orange", MetricProto.MetricColor.ORANGE),
+            ("yellow", MetricProto.MetricColor.YELLOW),
+            ("green", MetricProto.MetricColor.GREEN),
+            ("blue", MetricProto.MetricColor.BLUE),
+            ("violet", MetricProto.MetricColor.VIOLET),
+            ("gray", MetricProto.MetricColor.GRAY),
+            ("grey", MetricProto.MetricColor.GRAY),
+            ("primary", MetricProto.MetricColor.PRIMARY),
+        ]
+    )
+    def test_delta_color_named_colors(self, delta_color_value, expected_proto_color):
+        """Test that metric delta_color accepts named color values."""
+        st.metric("label_test", "123", 5, delta_color=delta_color_value)
+
+        c = self.get_delta_from_queue().new_element.metric
+        assert c.label == "label_test"
+        assert c.color == expected_proto_color
+        # Arrow direction should still be based on delta sign (positive = UP)
+        assert c.direction == MetricProto.MetricDirection.UP
+
+    def test_delta_color_named_color_with_negative_delta(self):
+        """Test that named colors work with negative delta (arrow points down)."""
+        st.metric("label_test", "123", -5, delta_color="blue")
+
+        c = self.get_delta_from_queue().new_element.metric
+        assert c.color == MetricProto.MetricColor.BLUE
+        # Arrow direction should still be based on delta sign (negative = DOWN)
+        assert c.direction == MetricProto.MetricDirection.DOWN
 
     def test_help(self):
         st.metric("label_test", value="500", help="   help text")

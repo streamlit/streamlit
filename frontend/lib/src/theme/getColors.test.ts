@@ -245,130 +245,141 @@ describe("getMarkdownTextColors", () => {
 })
 
 describe("getMetricColor", () => {
-  it("returns correct metric color for light theme", () => {
-    const colors = lightTheme.emotion.colors
+  const metricColorTestCases = [
+    { protoColor: MetricProto.MetricColor.RED, colorKey: "redColor" },
+    { protoColor: MetricProto.MetricColor.GREEN, colorKey: "greenColor" },
+    { protoColor: MetricProto.MetricColor.GRAY, colorKey: "grayColor" },
+    { protoColor: MetricProto.MetricColor.ORANGE, colorKey: "orangeColor" },
+    { protoColor: MetricProto.MetricColor.YELLOW, colorKey: "yellowColor" },
+    { protoColor: MetricProto.MetricColor.BLUE, colorKey: "blueColor" },
+    { protoColor: MetricProto.MetricColor.VIOLET, colorKey: "violetColor" },
+    { protoColor: MetricProto.MetricColor.PRIMARY, colorKey: "primary" },
+  ] as const
 
-    const result1 = getMetricColor(
-      lightTheme.emotion,
-      MetricProto.MetricColor.RED
-    )
-    const result2 = getMetricColor(
-      lightTheme.emotion,
-      MetricProto.MetricColor.GREEN
-    )
-    const result3 = getMetricColor(
-      lightTheme.emotion,
-      MetricProto.MetricColor.GRAY
-    )
+  it.each(metricColorTestCases)(
+    "returns $colorKey for light theme",
+    ({ protoColor, colorKey }) => {
+      expect(getMetricColor(lightTheme.emotion, protoColor)).toBe(
+        lightTheme.emotion.colors[colorKey]
+      )
+    }
+  )
 
-    expect(result1).toBe(colors.redColor)
-    expect(result2).toBe(colors.greenColor)
-    expect(result3).toBe(colors.grayColor)
-  })
-
-  it("returns correct metric color for dark theme", () => {
-    const colors = darkTheme.emotion.colors
-    const result1 = getMetricColor(
-      darkTheme.emotion,
-      MetricProto.MetricColor.RED
-    )
-    const result2 = getMetricColor(
-      darkTheme.emotion,
-      MetricProto.MetricColor.GREEN
-    )
-    const result3 = getMetricColor(
-      darkTheme.emotion,
-      MetricProto.MetricColor.GRAY
-    )
-
-    expect(result1).toBe(colors.redColor)
-    expect(result2).toBe(colors.greenColor)
-    expect(result3).toBe(colors.grayColor)
-  })
+  it.each(metricColorTestCases)(
+    "returns $colorKey for dark theme",
+    ({ protoColor, colorKey }) => {
+      expect(getMetricColor(darkTheme.emotion, protoColor)).toBe(
+        darkTheme.emotion.colors[colorKey]
+      )
+    }
+  )
 })
 
 describe("getMetricBackgroundColor", () => {
-  it("returns correct metric background colors for light theme", () => {
-    const colors = lightTheme.emotion.colors
-    const result1 = getMetricBackgroundColor(
-      lightTheme.emotion,
-      MetricProto.MetricColor.RED
-    )
-    const result2 = getMetricBackgroundColor(
-      lightTheme.emotion,
-      MetricProto.MetricColor.GREEN
-    )
-    const result3 = getMetricBackgroundColor(
-      lightTheme.emotion,
-      MetricProto.MetricColor.GRAY
-    )
+  const bgColorTestCases = [
+    {
+      protoColor: MetricProto.MetricColor.RED,
+      colorKey: "redBackgroundColor",
+    },
+    {
+      protoColor: MetricProto.MetricColor.GREEN,
+      colorKey: "greenBackgroundColor",
+    },
+    {
+      protoColor: MetricProto.MetricColor.GRAY,
+      colorKey: "grayBackgroundColor",
+    },
+    {
+      protoColor: MetricProto.MetricColor.ORANGE,
+      colorKey: "orangeBackgroundColor",
+    },
+    {
+      protoColor: MetricProto.MetricColor.YELLOW,
+      colorKey: "yellowBackgroundColor",
+    },
+    {
+      protoColor: MetricProto.MetricColor.BLUE,
+      colorKey: "blueBackgroundColor",
+    },
+    {
+      protoColor: MetricProto.MetricColor.VIOLET,
+      colorKey: "violetBackgroundColor",
+    },
+  ] as const
 
-    expect(result1).toBe(colors.redBackgroundColor)
-    expect(result2).toBe(colors.greenBackgroundColor)
-    expect(result3).toBe(colors.grayBackgroundColor)
+  it.each(bgColorTestCases)(
+    "returns $colorKey for light theme",
+    ({ protoColor, colorKey }) => {
+      expect(getMetricBackgroundColor(lightTheme.emotion, protoColor)).toBe(
+        lightTheme.emotion.colors[colorKey]
+      )
+    }
+  )
+
+  it.each(bgColorTestCases)(
+    "returns $colorKey for dark theme",
+    ({ protoColor, colorKey }) => {
+      expect(getMetricBackgroundColor(darkTheme.emotion, protoColor)).toBe(
+        darkTheme.emotion.colors[colorKey]
+      )
+    }
+  )
+
+  it("returns computed primary background color for light theme", () => {
+    expect(
+      getMetricBackgroundColor(
+        lightTheme.emotion,
+        MetricProto.MetricColor.PRIMARY
+      )
+    ).toBe(transparentize(lightTheme.emotion.colors.primary, 0.9))
   })
 
-  it("returns correct metric background colors for dark theme", () => {
-    const colors = darkTheme.emotion.colors
-    const result1 = getMetricBackgroundColor(
-      darkTheme.emotion,
-      MetricProto.MetricColor.RED
-    )
-    const result2 = getMetricBackgroundColor(
-      darkTheme.emotion,
-      MetricProto.MetricColor.GREEN
-    )
-    const result3 = getMetricBackgroundColor(
-      darkTheme.emotion,
-      MetricProto.MetricColor.GRAY
-    )
-
-    expect(result1).toBe(colors.redBackgroundColor)
-    expect(result2).toBe(colors.greenBackgroundColor)
-    expect(result3).toBe(colors.grayBackgroundColor)
+  it("returns computed primary background color for dark theme", () => {
+    expect(
+      getMetricBackgroundColor(
+        darkTheme.emotion,
+        MetricProto.MetricColor.PRIMARY
+      )
+    ).toBe(transparentize(darkTheme.emotion.colors.primary, 0.7))
   })
 })
 
 describe("getMetricTextColor", () => {
-  it("returns correct metric text color for light theme", () => {
-    const colors = lightTheme.emotion.colors
+  const textColorTestCases = [
+    { protoColor: MetricProto.MetricColor.RED, colorKey: "redTextColor" },
+    { protoColor: MetricProto.MetricColor.GREEN, colorKey: "greenTextColor" },
+    { protoColor: MetricProto.MetricColor.GRAY, colorKey: "grayTextColor" },
+    {
+      protoColor: MetricProto.MetricColor.ORANGE,
+      colorKey: "orangeTextColor",
+    },
+    {
+      protoColor: MetricProto.MetricColor.YELLOW,
+      colorKey: "yellowTextColor",
+    },
+    { protoColor: MetricProto.MetricColor.BLUE, colorKey: "blueTextColor" },
+    {
+      protoColor: MetricProto.MetricColor.VIOLET,
+      colorKey: "violetTextColor",
+    },
+    { protoColor: MetricProto.MetricColor.PRIMARY, colorKey: "primary" },
+  ] as const
 
-    const result1 = getMetricTextColor(
-      lightTheme.emotion,
-      MetricProto.MetricColor.RED
-    )
-    const result2 = getMetricTextColor(
-      lightTheme.emotion,
-      MetricProto.MetricColor.GREEN
-    )
-    const result3 = getMetricTextColor(
-      lightTheme.emotion,
-      MetricProto.MetricColor.GRAY
-    )
+  it.each(textColorTestCases)(
+    "returns $colorKey for light theme",
+    ({ protoColor, colorKey }) => {
+      expect(getMetricTextColor(lightTheme.emotion, protoColor)).toBe(
+        lightTheme.emotion.colors[colorKey]
+      )
+    }
+  )
 
-    expect(result1).toBe(colors.redTextColor)
-    expect(result2).toBe(colors.greenTextColor)
-    expect(result3).toBe(colors.grayTextColor)
-  })
-
-  it("returns correct metric text color for dark theme", () => {
-    const colors = darkTheme.emotion.colors
-
-    const result1 = getMetricTextColor(
-      darkTheme.emotion,
-      MetricProto.MetricColor.RED
-    )
-    const result2 = getMetricTextColor(
-      darkTheme.emotion,
-      MetricProto.MetricColor.GREEN
-    )
-    const result3 = getMetricTextColor(
-      darkTheme.emotion,
-      MetricProto.MetricColor.GRAY
-    )
-
-    expect(result1).toBe(colors.redTextColor)
-    expect(result2).toBe(colors.greenTextColor)
-    expect(result3).toBe(colors.grayTextColor)
-  })
+  it.each(textColorTestCases)(
+    "returns $colorKey for dark theme",
+    ({ protoColor, colorKey }) => {
+      expect(getMetricTextColor(darkTheme.emotion, protoColor)).toBe(
+        darkTheme.emotion.colors[colorKey]
+      )
+    }
+  )
 })

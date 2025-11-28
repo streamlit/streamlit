@@ -146,6 +146,16 @@ export function getMetricColor(
       return theme.colors.redColor
     case MetricProto.MetricColor.GREEN:
       return theme.colors.greenColor
+    case MetricProto.MetricColor.ORANGE:
+      return theme.colors.orangeColor
+    case MetricProto.MetricColor.YELLOW:
+      return theme.colors.yellowColor
+    case MetricProto.MetricColor.BLUE:
+      return theme.colors.blueColor
+    case MetricProto.MetricColor.VIOLET:
+      return theme.colors.violetColor
+    case MetricProto.MetricColor.PRIMARY:
+      return theme.colors.primary
     // this must be grey
     default:
       return theme.colors.grayColor
@@ -189,11 +199,23 @@ export function getMetricBackgroundColor(
   theme: EmotionTheme,
   color: MetricProto.MetricColor
 ): string {
+  const lightTheme = hasLightBackgroundColor(theme)
+
   switch (color) {
     case MetricProto.MetricColor.RED:
       return theme.colors.redBackgroundColor
     case MetricProto.MetricColor.GREEN:
       return theme.colors.greenBackgroundColor
+    case MetricProto.MetricColor.ORANGE:
+      return theme.colors.orangeBackgroundColor
+    case MetricProto.MetricColor.YELLOW:
+      return theme.colors.yellowBackgroundColor
+    case MetricProto.MetricColor.BLUE:
+      return theme.colors.blueBackgroundColor
+    case MetricProto.MetricColor.VIOLET:
+      return theme.colors.violetBackgroundColor
+    case MetricProto.MetricColor.PRIMARY:
+      return transparentize(theme.colors.primary, lightTheme ? 0.9 : 0.7)
     // this must be grey
     default:
       return theme.colors.grayBackgroundColor
@@ -251,6 +273,16 @@ export function getMetricTextColor(
       return theme.colors.redTextColor
     case MetricProto.MetricColor.GREEN:
       return theme.colors.greenTextColor
+    case MetricProto.MetricColor.ORANGE:
+      return theme.colors.orangeTextColor
+    case MetricProto.MetricColor.YELLOW:
+      return theme.colors.yellowTextColor
+    case MetricProto.MetricColor.BLUE:
+      return theme.colors.blueTextColor
+    case MetricProto.MetricColor.VIOLET:
+      return theme.colors.violetTextColor
+    case MetricProto.MetricColor.PRIMARY:
+      return theme.colors.primary
     // this must be grey
     default:
       return theme.colors.grayTextColor

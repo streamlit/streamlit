@@ -136,3 +136,7 @@ st.metric("Pixel height (200px)", 123, 123, border=True, height=200)
 with st.container(height=400, key="height_test"):
     st.metric("Stretch height", 123, 123, height="stretch")
     st.metric("Content height", 123, 123, height="content")
+
+# Test named delta colors
+st.metric("Yellow delta", 100, "+5%", delta_color="yellow", border=True)
+st.metric("Primary delta", 75, "-2", delta_color="primary", border=True)
