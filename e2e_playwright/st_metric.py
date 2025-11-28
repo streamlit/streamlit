@@ -138,5 +138,21 @@ with st.container(height=400, key="height_test"):
     st.metric("Content height", 123, 123, height="content")
 
 # Test named delta colors
-st.metric("Yellow delta", 100, "+5%", delta_color="yellow", border=True)
-st.metric("Primary delta", 75, "-2", delta_color="primary", border=True)
+st.metric(
+    "Yellow delta",
+    100,
+    "+5%",
+    delta_color="yellow",
+    border=True,
+    chart_data=generate_sparkline_data(),
+    chart_type="bar",
+)
+st.metric(
+    "Primary delta",
+    75,
+    "-2",
+    delta_color="primary",
+    border=True,
+    chart_data=generate_sparkline_data(),
+    chart_type="line",
+)
