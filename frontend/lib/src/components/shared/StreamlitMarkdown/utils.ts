@@ -68,7 +68,12 @@ type RemarkPluginFactory<Options = unknown> = (
   options?: Options
 ) => RemarkTransformer
 
-/** Configuration for the useLazyPlugin hook */
+/**
+ * Configuration for the useLazyPlugin hook.
+ *
+ * Note: `load` and `onBeforeLoad` should be stable references (e.g., module-level
+ * functions or wrapped in useCallback) to avoid unnecessary effect re-runs.
+ */
 export interface PluginLoaderConfig {
   key: PluginKey
   needed: boolean
