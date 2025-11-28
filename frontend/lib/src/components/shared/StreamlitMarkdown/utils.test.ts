@@ -108,20 +108,33 @@ describe("extractPlugin", () => {
     consoleWarnSpy.mockRestore()
   })
 
-  it("handles circular default references", () => {
-    const pluginFn = vi.fn()
-    const module: Record<string, unknown> = { default: pluginFn }
-    // Create a scenario where default points to itself (shouldn't happen in practice)
-    // but the code handles it by checking next === current
+  it("handles circular default references without infinite loop", () => {
+    // Create a true circular reference where default points to itself
+    const module: Record<string, unknown> = {}
+    module.default = module
+
+    const consoleWarnSpy = vi
+      .spyOn(console, "warn")
+      .mockImplementation(() => {})
 
     const result = extractPlugin(module, "test-plugin")
 
-    expect(result).toBe(pluginFn)
+    // The circular reference is detected (next === current), loop breaks,
+    // but no function is found, so LOAD_FAILED is returned
+    expect(result).toBe(LOAD_FAILED)
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      "[StreamlitMarkdown] Failed to load test-plugin plugin"
+    )
+    consoleWarnSpy.mockRestore()
   })
 
-  it("limits depth to prevent infinite loops", () => {
-    // Create deeply nested defaults (more than 5 levels)
-    const pluginFn = vi.fn()
+  it("limits depth to 5 levels to prevent deep nesting issues", () => {
+    const consoleWarnSpy = vi
+      .spyOn(console, "warn")
+      .mockImplementation(() => {})
+
+    // Create deeply nested defaults (7 levels deep, beyond the 5-level limit)
+    // The function is at depth 7, unreachable within the 5-level limit
     const module = {
       default: {
         default: {
@@ -129,7 +142,7 @@ describe("extractPlugin", () => {
             default: {
               default: {
                 default: {
-                  default: pluginFn,
+                  default: vi.fn(), // depth 7 - unreachable
                 },
               },
             },
@@ -138,14 +151,36 @@ describe("extractPlugin", () => {
       },
     }
 
-    // Should still find the function even with deep nesting (up to 5 levels)
     const result = extractPlugin(module, "test-plugin")
 
-    // The function is at depth 7, but we only go 5 deep, so we should find
-    // an object at depth 5, not the function. However, the module itself
-    // is also added as a candidate, so it depends on the order.
-    // In practice, this tests that we don't infinite loop.
-    expect(typeof result).toBeDefined()
+    // We only traverse 5 levels deep, so the function at depth 7 is not found.
+    // The module itself is added as a fallback candidate but it's an object, not a function.
+    // Therefore, LOAD_FAILED should be returned.
+    expect(result).toBe(LOAD_FAILED)
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      "[StreamlitMarkdown] Failed to load test-plugin plugin"
+    )
+    consoleWarnSpy.mockRestore()
+  })
+
+  it("finds function within the 5-level depth limit", () => {
+    const pluginFn = vi.fn()
+    // Function at depth 5 - should be found
+    const module = {
+      default: {
+        default: {
+          default: {
+            default: {
+              default: pluginFn, // depth 5 - reachable
+            },
+          },
+        },
+      },
+    }
+
+    const result = extractPlugin(module, "test-plugin")
+
+    expect(result).toBe(pluginFn)
   })
 })
 
@@ -446,6 +481,64 @@ describe("useLazyPlugin", () => {
       expect.stringContaining("unmounted component")
     )
     consoleErrorSpy.mockRestore()
+  })
+
+  it("shares loading promise across concurrent hook instances", async () => {
+    const mockPlugin = vi.fn()
+    let resolveLoad: (value: { default: typeof mockPlugin }) => void
+    const loadFn = vi.fn().mockReturnValue(
+      new Promise(resolve => {
+        resolveLoad = resolve
+      })
+    )
+
+    // Render multiple hooks simultaneously with the same plugin key
+    const { result: result1 } = renderHook(() =>
+      useLazyPlugin({
+        key: "katex",
+        needed: true,
+        load: loadFn,
+        pluginName: "test-plugin",
+      })
+    )
+
+    const { result: result2 } = renderHook(() =>
+      useLazyPlugin({
+        key: "katex",
+        needed: true,
+        load: loadFn,
+        pluginName: "test-plugin",
+      })
+    )
+
+    const { result: result3 } = renderHook(() =>
+      useLazyPlugin({
+        key: "katex",
+        needed: true,
+        load: loadFn,
+        pluginName: "test-plugin",
+      })
+    )
+
+    // All should be null initially (loading)
+    expect(result1.current).toBeNull()
+    expect(result2.current).toBeNull()
+    expect(result3.current).toBeNull()
+
+    // Load function should only be called once despite 3 concurrent requests
+    expect(loadFn).toHaveBeenCalledTimes(1)
+
+    // Resolve the shared promise
+    act(() => {
+      resolveLoad({ default: mockPlugin })
+    })
+
+    // All instances should receive the same loaded plugin
+    await waitFor(() => {
+      expect(result1.current).toBe(mockPlugin)
+      expect(result2.current).toBe(mockPlugin)
+      expect(result3.current).toBe(mockPlugin)
+    })
   })
 })
 

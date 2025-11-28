@@ -872,6 +872,32 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
 
   const colorMapping = useMemo(() => createColorMapping(theme), [theme])
 
+  // Wrap plugins once when they load, not on every render or when other deps change
+  const wrappedKatexPlugin = useMemo(
+    () =>
+      isLoadedPlugin(katexPlugin)
+        ? wrapRehypePlugin(katexPlugin, "rehype-katex")
+        : null,
+    [katexPlugin]
+  )
+
+  const wrappedRawPlugin = useMemo(
+    () =>
+      isLoadedPlugin(rawPlugin)
+        ? wrapRehypePlugin(rawPlugin, "rehype-raw")
+        : null,
+    [rawPlugin]
+  )
+
+  const wrappedEmojiPlugin = useMemo(
+    () =>
+      isLoadedPlugin(emojiPlugin)
+        ? // eslint-disable-next-line @typescript-eslint/no-explicit-any -- unified's Plugin type is more complex than our wrapper expects
+          wrapRemarkPlugin(emojiPlugin as any, "remark-emoji")
+        : null,
+    [emojiPlugin]
+  )
+
   const remarkPlugins = useMemo<PluggableList>(() => {
     const plugins: PluggableList = [
       ...BASE_REMARK_PLUGINS,
@@ -879,23 +905,22 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
       createRemarkMaterialIcons(theme),
     ]
 
-    if (needsEmoji && isLoadedPlugin(emojiPlugin)) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- unified's Plugin type is more complex than our wrapper expects
-      plugins.push(wrapRemarkPlugin(emojiPlugin as any, "remark-emoji"))
+    if (needsEmoji && wrappedEmojiPlugin) {
+      plugins.push(wrappedEmojiPlugin)
     }
 
     return plugins
-  }, [theme, colorMapping, needsEmoji, emojiPlugin])
+  }, [theme, colorMapping, needsEmoji, wrappedEmojiPlugin])
 
   const rehypePlugins = useMemo<PluggableList>(() => {
     const plugins: PluggableList = []
 
-    if (needsKatex && isLoadedPlugin(katexPlugin)) {
-      plugins.push(wrapRehypePlugin(katexPlugin, "rehype-katex"))
+    if (needsKatex && wrappedKatexPlugin) {
+      plugins.push(wrappedKatexPlugin)
     }
 
-    if (allowHTML && isLoadedPlugin(rawPlugin)) {
-      plugins.push(wrapRehypePlugin(rawPlugin, "rehype-raw"))
+    if (allowHTML && wrappedRawPlugin) {
+      plugins.push(wrappedRawPlugin)
     }
 
     // This plugin must run last to ensure the inline property is set correctly
@@ -903,7 +928,7 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
     plugins.push(rehypeSetCodeInlineProperty)
 
     return plugins
-  }, [allowHTML, needsKatex, katexPlugin, rawPlugin])
+  }, [allowHTML, needsKatex, wrappedKatexPlugin, wrappedRawPlugin])
 
   const renderers = useMemo(
     () =>

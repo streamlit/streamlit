@@ -129,8 +129,7 @@ export function isLoadedPlugin<T>(plugin: PluginState<T>): plugin is T {
  * Handles various module shapes from different bundlers (nested default exports, etc.)
  */
 export function extractPlugin<T>(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Module shape varies by bundler
-  module: Record<string, any>,
+  module: Record<string, unknown>,
   pluginName: string
 ): PluginState<T> {
   const candidates: unknown[] = []
@@ -249,14 +248,18 @@ export function useLazyPlugin<T>(config: PluginLoaderConfig): PluginState<T> {
   )
 
   useEffect(() => {
+    // Skip if not needed, or if we already have a result (including LOAD_FAILED).
+    // LOAD_FAILED is a truthy Symbol, so failed plugins are intentionally cached
+    // and not retried - this prevents infinite retry loops on persistent failures.
     if (!needed || plugin) {
       return
     }
 
+    // Sync from module-level cache if another instance already loaded this plugin
     const cached = pluginCache[key]
     if (cached) {
       // Wrap in arrow function to prevent React from calling the plugin
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional: syncing from module-level cache, not causing cascading renders
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional: syncing from module-level cache on mount, not causing cascading renders
       setPlugin(() => cached as PluginState<T>)
       return
     }
