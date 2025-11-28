@@ -24,7 +24,7 @@ import {
   getMetricBackgroundColor,
   getMetricColor,
   getMetricTextColor,
-} from "./colors"
+} from "./metricColors"
 
 describe("getMetricColor", () => {
   const metricColorTestCases = [

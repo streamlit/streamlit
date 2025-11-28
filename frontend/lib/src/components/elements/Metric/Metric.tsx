@@ -38,7 +38,7 @@ import { StyledWidgetLabelHelpInline } from "~lib/components/widgets/BaseWidget"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 
-import { getMetricBackgroundColor, getMetricColor } from "./colors"
+import { getMetricBackgroundColor, getMetricColor } from "./metricColors"
 import {
   StyledMetricChart,
   StyledMetricContainer,
