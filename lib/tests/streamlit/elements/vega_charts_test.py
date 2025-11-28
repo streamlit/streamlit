@@ -1882,6 +1882,33 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
         assert selection_param["select"]["on"] == "mousemove{16}"
         assert selection_param["select"]["clear"] == "mouseleave"
 
+    @unittest.skipIf(
+        is_altair_version_less_than("5.0.0") is True,
+        "This test only runs if altair is >= 5.0.0",
+    )
+    @parameterized.expand(
+        [
+            (1000, "mousemove"),  # At threshold - no throttling
+            (1001, "mousemove{16}"),  # Just above threshold - throttled
+        ]
+    )
+    def test_line_chart_hover_throttling_threshold_boundary(
+        self, num_points: int, expected_event: str
+    ):
+        """Test hover throttling at the exact threshold boundary (1000 points)."""
+        import numpy as np
+
+        df = pd.DataFrame({"a": np.arange(num_points), "b": np.arange(num_points)})
+        st.line_chart(df, x="a", y="b")
+
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        chart_spec = json.loads(proto.spec)
+
+        hover_params = [
+            p for p in chart_spec["params"] if p.get("select", {}).get("nearest")
+        ]
+        assert hover_params[0]["select"]["on"] == expected_event
+
     @parameterized.expand(ST_CHART_ARGS)
     def test_unused_columns_are_dropped(
         self, chart_command: Callable, altair_type: str
