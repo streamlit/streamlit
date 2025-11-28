@@ -1882,15 +1882,15 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
         assert selection_param["select"]["on"] == "mousemove{16}"
         assert selection_param["select"]["clear"] == "mouseleave"
 
-    @unittest.skipIf(
-        is_altair_version_less_than("5.0.0") is True,
-        "This test only runs if altair is >= 5.0.0",
-    )
     @parameterized.expand(
         [
             (1000, "mousemove"),  # At threshold - no throttling
             (1001, "mousemove{16}"),  # Just above threshold - throttled
         ]
+    )
+    @unittest.skipIf(
+        is_altair_version_less_than("5.0.0") is True,
+        "This test only runs if altair is >= 5.0.0",
     )
     def test_line_chart_hover_throttling_threshold_boundary(
         self, num_points: int, expected_event: str
