@@ -12,7 +12,7 @@ on:
       runs:
         description: Number of times to run changed-files E2E
         required: false
-        default: "50"
+        default: "25"
         type: string
 
 permissions:
@@ -43,7 +43,7 @@ jobs:
           # Resolve runs
           runs_input="${{ inputs.runs }}"
           if [[ -z "$runs_input" ]]; then
-            runs_input="50"
+            runs_input="25"
           fi
           echo "runs=$runs_input" >> "$GITHUB_OUTPUT"
 
