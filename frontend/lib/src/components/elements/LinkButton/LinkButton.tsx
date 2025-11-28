@@ -14,7 +14,13 @@
  * limitations under the License.
  */
 
-import React, { memo, MouseEvent, ReactElement } from "react"
+import React, {
+  memo,
+  MouseEvent,
+  ReactElement,
+  useCallback,
+  useRef,
+} from "react"
 
 import { LinkButton as LinkButtonProto } from "@streamlit/protobuf"
 
@@ -25,6 +31,7 @@ import {
   BaseButtonTooltip,
   DynamicButtonLabel,
 } from "~lib/components/shared/BaseButton"
+import { useRegisterShortcut } from "~lib/hooks/useRegisterShortcut"
 
 import BaseLinkButton from "./BaseLinkButton"
 
@@ -34,6 +41,7 @@ export interface Props {
 
 function LinkButton(props: Readonly<Props>): ReactElement {
   const { element } = props
+  const shortcut = element.shortcut ? element.shortcut : undefined
 
   let kind = BaseButtonKind.SECONDARY
   if (element.type === "primary") {
@@ -42,12 +50,31 @@ function LinkButton(props: Readonly<Props>): ReactElement {
     kind = BaseButtonKind.TERTIARY
   }
 
-  const handleClick = (e: MouseEvent<HTMLAnchorElement>): void => {
-    // Prevent the link from being followed if the button is disabled.
+  const anchorRef = useRef<HTMLAnchorElement | null>(null)
+
+  const handleShortcut = useCallback((): void => {
     if (element.disabled) {
-      e.preventDefault()
+      return
     }
-  }
+
+    anchorRef.current?.click()
+  }, [element.disabled])
+
+  const handleClick = useCallback(
+    (event: MouseEvent<HTMLAnchorElement>): void => {
+      if (element.disabled) {
+        // Prevent the link from being followed if the button is disabled.
+        event.preventDefault()
+      }
+    },
+    [element.disabled]
+  )
+
+  useRegisterShortcut({
+    shortcut,
+    disabled: element.disabled,
+    onActivate: handleShortcut,
+  })
 
   return (
     <Box className="stLinkButton" data-testid="stLinkButton">
@@ -59,6 +86,7 @@ function LinkButton(props: Readonly<Props>): ReactElement {
         {/* We use separate BaseLinkButton instead of BaseButton here, because
         link behavior requires tag <a> instead of <button>.*/}
         <BaseLinkButton
+          ref={anchorRef}
           kind={kind}
           size={BaseButtonSize.SMALL}
           disabled={element.disabled}
@@ -68,7 +96,11 @@ function LinkButton(props: Readonly<Props>): ReactElement {
           rel="noreferrer"
           aria-disabled={element.disabled}
         >
-          <DynamicButtonLabel icon={element.icon} label={element.label} />
+          <DynamicButtonLabel
+            icon={element.icon}
+            label={element.label}
+            shortcut={shortcut}
+          />
         </BaseLinkButton>
       </BaseButtonTooltip>
     </Box>

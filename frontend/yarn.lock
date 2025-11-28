@@ -3413,7 +3413,7 @@ __metadata:
     "@types/hoist-non-react-statics": "npm:^3.3.7"
     "@types/iframe-resizer": "npm:~4.0.0"
     "@types/jsdom": "npm:~21.1.7"
-    "@types/lodash": "npm:^4.17.20"
+    "@types/lodash-es": "npm:~4.17.12"
     "@types/node": "npm:^24.3.1"
     "@types/prop-types": "npm:~15.7.15"
     "@types/react": "npm:^18.2.0"
@@ -3452,7 +3452,7 @@ __metadata:
     immer: "npm:^10.1.3"
     jsdom: "npm:24.1.3"
     lighthouse: "npm:^12.8.2"
-    lodash: "npm:^4.17.21"
+    lodash-es: "npm:^4.17.21"
     loglevel: "npm:^1.9.2"
     moment: "npm:^2.29.4"
     polyfill-pseudoclass-has: "npm:^1.1.0"
@@ -3479,6 +3479,7 @@ __metadata:
     util: "npm:^0.12.5"
     uuid: "npm:^13.0.0"
     vite: "npm:^7.1.11"
+    vite-bundle-analyzer: "npm:^1.2.3"
     vite-plugin-svgr: "npm:^4.5.0"
     vite-tsconfig-paths: "npm:^5.1.4"
     vitest: "npm:^3.2.4"
@@ -3509,11 +3510,11 @@ __metadata:
     "@streamlit/protobuf": "workspace:^"
     "@streamlit/utils": "workspace:^"
     "@types/eslint": "npm:^9.6.1"
-    "@types/lodash": "npm:~4.17.20"
+    "@types/lodash-es": "npm:^4.17.12"
     axios: "npm:^1.12.1"
     axios-mock-adapter: "npm:^2.1.0"
     eslint: "npm:^9.39.0"
-    lodash: "npm:^4.17.21"
+    lodash-es: "npm:^4.17.21"
     loglevel: "npm:^1.9.2"
     prettier: "npm:^3.6.2"
     typesync: "npm:^0.14.3"
@@ -3566,7 +3567,7 @@ __metadata:
     "@types/eslint": "npm:^9.6.1"
     "@types/hoist-non-react-statics": "npm:~3.3.7"
     "@types/katex": "npm:~0.16.7"
-    "@types/lodash": "npm:~4.17.20"
+    "@types/lodash-es": "npm:~4.17.12"
     "@types/mapbox-gl": "npm:~1.13.10"
     "@types/moment-duration-format": "npm:~2.2.6"
     "@types/plotly.js": "npm:^3.0.5"
@@ -3600,7 +3601,7 @@ __metadata:
     immer: "npm:^10.1.3"
     json5: "npm:^2.2.3"
     katex: "npm:^0.16.22"
-    lodash: "npm:^4.17.21"
+    lodash-es: "npm:^4.17.21"
     loglevel: "npm:^1.9.2"
     mapbox-gl: "npm:^1.13.2"
     mdast-util-find-and-replace: "npm:^3.0.2"
@@ -3618,7 +3619,6 @@ __metadata:
     query-string: "npm:^9.3.1"
     re-resizable: "npm:^6.11.2"
     react-color: "npm:^2.18.1"
-    react-debounce-render: "npm:^8.0.2"
     react-dropzone: "npm:^14.3.8"
     react-feather: "npm:^2.0.10"
     react-json-view: "npm:^1.19.1"
@@ -3648,7 +3648,7 @@ __metadata:
     uuid: "npm:^13.0.0"
     vega: "npm:^6.2.0"
     vega-embed: "npm:^7.0.2"
-    vega-interpreter: "npm:^2.1.0"
+    vega-interpreter: "npm:^2.2.1"
     vega-lite: "npm:6.3.1"
     vite: "npm:^7.1.11"
     vite-plugin-dts: "npm:^4.5.4"
@@ -4852,10 +4852,19 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/lodash@npm:^4.17.20, @types/lodash@npm:~4.17.20":
-  version: 4.17.20
-  resolution: "@types/lodash@npm:4.17.20"
-  checksum: 10c0/98cdd0faae22cbb8079a01a3bb65aa8f8c41143367486c1cbf5adc83f16c9272a2a5d2c1f541f61d0d73da543c16ee1d21cf2ef86cb93cd0cc0ac3bced6dd88f
+"@types/lodash-es@npm:^4.17.12, @types/lodash-es@npm:~4.17.12":
+  version: 4.17.12
+  resolution: "@types/lodash-es@npm:4.17.12"
+  dependencies:
+    "@types/lodash": "npm:*"
+  checksum: 10c0/5d12d2cede07f07ab067541371ed1b838a33edb3c35cb81b73284e93c6fd0c4bbeaefee984e69294bffb53f62d7272c5d679fdba8e595ff71e11d00f2601dde0
+  languageName: node
+  linkType: hard
+
+"@types/lodash@npm:*":
+  version: 4.17.21
+  resolution: "@types/lodash@npm:4.17.21"
+  checksum: 10c0/73cb006e047d8871e9d63f3a165543bf16c44a5b6fe3f9f6299e37cb8d67a7b1d55ac730959a81f9def510fd07232ff7e30e05413e5d5a12793baad84ebe36c3
   languageName: node
   linkType: hard
 
@@ -4946,12 +4955,21 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/node@npm:*, @types/node@npm:>=13.7.0":
+"@types/node@npm:*":
   version: 20.17.8
   resolution: "@types/node@npm:20.17.8"
   dependencies:
     undici-types: "npm:~6.19.2"
   checksum: 10c0/d68bbd9f8946a56d3f405e2dbfcc98d1d7a3cdbaa45d0a8fea2865e63ecdf3a2c9a0e992d9ea1658651909273026d341047e593596e133e842374371e04031c3
+  languageName: node
+  linkType: hard
+
+"@types/node@npm:>=13.7.0":
+  version: 24.10.1
+  resolution: "@types/node@npm:24.10.1"
+  dependencies:
+    undici-types: "npm:~7.16.0"
+  checksum: 10c0/d6bca7a78f550fbb376f236f92b405d676003a8a09a1b411f55920ef34286ee3ee51f566203920e835478784df52662b5b2af89159d9d319352e9ea21801c002
   languageName: node
   linkType: hard
 
@@ -7043,9 +7061,9 @@ __metadata:
   linkType: hard
 
 "caniuse-lite@npm:^1.0.30001669":
-  version: 1.0.30001753
-  resolution: "caniuse-lite@npm:1.0.30001753"
-  checksum: 10c0/730344b6c54769f544f1d4bd7f99a122cd5f6e964e482adbcb18b63cda56e9c40aca1e3ab47c7154098803c9ba3772cca0aba936d1c924e67e8db8345712e5a8
+  version: 1.0.30001757
+  resolution: "caniuse-lite@npm:1.0.30001757"
+  checksum: 10c0/3ccb71fa2bf1f8c96ff1bf9b918b08806fed33307e20a3ce3259155fda131eaf96cfcd88d3d309c8fd7f8285cc71d89a3b93648a1c04814da31c301f98508d42
   languageName: node
   linkType: hard
 
@@ -13028,13 +13046,13 @@ __metadata:
   linkType: hard
 
 "js-yaml@npm:^4.1.0":
-  version: 4.1.0
-  resolution: "js-yaml@npm:4.1.0"
+  version: 4.1.1
+  resolution: "js-yaml@npm:4.1.1"
   dependencies:
     argparse: "npm:^2.0.1"
   bin:
     js-yaml: bin/js-yaml.js
-  checksum: 10c0/184a24b4eaacfce40ad9074c64fd42ac83cf74d8c8cd137718d456ced75051229e5061b8633c3366b8aada17945a7a356b337828c19da92b51ae62126575018f
+  checksum: 10c0/561c7d7088c40a9bb53cc75becbfb1df6ae49b34b5e6e5a81744b14ae8667ec564ad2527709d1a6e7d5e5fa6d483aa0f373a50ad98d42fde368ec4a190d4fae7
   languageName: node
   linkType: hard
 
@@ -13513,13 +13531,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"lodash.debounce@npm:^4.0.8":
-  version: 4.0.8
-  resolution: "lodash.debounce@npm:4.0.8"
-  checksum: 10c0/762998a63e095412b6099b8290903e0a8ddcb353ac6e2e0f2d7e7d03abd4275fe3c689d88960eb90b0dde4f177554d51a690f22a343932ecbc50a5d111849987
-  languageName: node
-  linkType: hard
-
 "lodash.flow@npm:^3.3.0":
   version: 3.5.0
   resolution: "lodash.flow@npm:3.5.0"
@@ -13555,7 +13566,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"long@npm:^5.0.0, long@npm:^5.2.1":
+"long@npm:^5.0.0":
+  version: 5.3.2
+  resolution: "long@npm:5.3.2"
+  checksum: 10c0/7130fe1cbce2dca06734b35b70d380ca3f70271c7f8852c922a7c62c86c4e35f0c39290565eca7133c625908d40e126ac57c02b1b1a4636b9457d77e1e60b981
+  languageName: node
+  linkType: hard
+
+"long@npm:^5.2.1":
   version: 5.2.3
   resolution: "long@npm:5.2.3"
   checksum: 10c0/6a0da658f5ef683b90330b1af76f06790c623e148222da9d75b60e266bbf88f803232dd21464575681638894a84091616e7f89557aa087fd14116c0f4e0e43d9
@@ -16384,18 +16402,6 @@ __metadata:
   peerDependencies:
     react: "*"
   checksum: 10c0/6f9fce9ff3014926d960abccd5d79ecb391a41f835a4b85663fd48ff933554391222f40ed8cfc5417305d47b1e480023981ec22e13c3b16b0d8d718270fa815e
-  languageName: node
-  linkType: hard
-
-"react-debounce-render@npm:^8.0.2":
-  version: 8.0.2
-  resolution: "react-debounce-render@npm:8.0.2"
-  dependencies:
-    hoist-non-react-statics: "npm:^3.3.2"
-    lodash.debounce: "npm:^4.0.8"
-  peerDependencies:
-    react: ^17.0.2
-  checksum: 10c0/54a8a636b749581d1aa0715ff52184ec59dc31b74169a47ca2b606b9c542107b8d1d166d0773d0c53493dd716d76cca3fb6c788b22c4b82efec5b2a42e7a5878
   languageName: node
   linkType: hard
 
@@ -19379,6 +19385,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"undici-types@npm:~7.16.0":
+  version: 7.16.0
+  resolution: "undici-types@npm:7.16.0"
+  checksum: 10c0/3033e2f2b5c9f1504bdc5934646cb54e37ecaca0f9249c983f7b1fc2e87c6d18399ebb05dc7fd5419e02b2e915f734d872a65da2e3eeed1813951c427d33cc9a
+  languageName: node
+  linkType: hard
+
 "undici-types@npm:~7.8.0":
   version: 7.8.0
   resolution: "undici-types@npm:7.8.0"
@@ -19907,21 +19920,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"vega-interpreter@npm:^2.0.0":
-  version: 2.0.0
-  resolution: "vega-interpreter@npm:2.0.0"
-  dependencies:
-    vega-util: "npm:^2.0.0"
-  checksum: 10c0/5dfeeabb1af2ffbe08c6c99e9571398929f0f60841584ac95b3da9c6a4c779ebf7c86e5e7dba054fe285af9b7c2433bb3d78e25e8f7a3ee07c743bb8e7ff73b7
-  languageName: node
-  linkType: hard
-
-"vega-interpreter@npm:^2.1.0":
-  version: 2.1.0
-  resolution: "vega-interpreter@npm:2.1.0"
+"vega-interpreter@npm:^2.0.0, vega-interpreter@npm:^2.2.1":
+  version: 2.2.1
+  resolution: "vega-interpreter@npm:2.2.1"
   dependencies:
     vega-util: "npm:^2.1.0"
-  checksum: 10c0/9af405426e9278edd73ff84438d5fe4167412ef89d07460b62c418b1ea8c0a159438e49893404f0277076f49766431020ac32c64759c63359a46281854efe37a
+  checksum: 10c0/91da8c4df70fbf54caea5bf30b45726a14d04016bf4eac76460b7c665435e33f86a5ecca9d40478afefa2e630571b0eee13bb184793da5cbcb43f82186749b9d
   languageName: node
   linkType: hard
 
@@ -20265,6 +20269,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"vite-bundle-analyzer@npm:^1.2.3":
+  version: 1.2.3
+  resolution: "vite-bundle-analyzer@npm:1.2.3"
+  bin:
+    analyze: dist/bin.js
+  checksum: 10c0/e99c49cde7ec57ca6f70f02faa4bd96f0ed43da7a98b86b9e129b99e65c29eba7fec9fefa2bb3d8fd24db5bd0988258ae213cd70978cf3894905118b9eedb495
+  languageName: node
+  linkType: hard
+
 "vite-node@npm:3.2.4":
   version: 3.2.4
   resolution: "vite-node@npm:3.2.4"
@@ -20332,9 +20345,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"vite@npm:^5.0.0 || ^6.0.0 || ^7.0.0-0":
-  version: 7.1.5
-  resolution: "vite@npm:7.1.5"
+"vite@npm:^5.0.0 || ^6.0.0 || ^7.0.0-0, vite@npm:^7.1.11":
+  version: 7.2.2
+  resolution: "vite@npm:7.2.2"
   dependencies:
     esbuild: "npm:^0.25.0"
     fdir: "npm:^6.5.0"
@@ -20383,62 +20396,7 @@ __metadata:
       optional: true
   bin:
     vite: bin/vite.js
-  checksum: 10c0/782d2f20c25541b26d1fb39bef5f194149caff39dc25b7836e25f049ca919f2e2ce186bddb21f3f20f6195354b3579ec637a8ca08d65b117f8b6f81e3e730a9c
-  languageName: node
-  linkType: hard
-
-"vite@npm:^7.1.11":
-  version: 7.1.11
-  resolution: "vite@npm:7.1.11"
-  dependencies:
-    esbuild: "npm:^0.25.0"
-    fdir: "npm:^6.5.0"
-    fsevents: "npm:~2.3.3"
-    picomatch: "npm:^4.0.3"
-    postcss: "npm:^8.5.6"
-    rollup: "npm:^4.43.0"
-    tinyglobby: "npm:^0.2.15"
-  peerDependencies:
-    "@types/node": ^20.19.0 || >=22.12.0
-    jiti: ">=1.21.0"
-    less: ^4.0.0
-    lightningcss: ^1.21.0
-    sass: ^1.70.0
-    sass-embedded: ^1.70.0
-    stylus: ">=0.54.8"
-    sugarss: ^5.0.0
-    terser: ^5.16.0
-    tsx: ^4.8.1
-    yaml: ^2.4.2
-  dependenciesMeta:
-    fsevents:
-      optional: true
-  peerDependenciesMeta:
-    "@types/node":
-      optional: true
-    jiti:
-      optional: true
-    less:
-      optional: true
-    lightningcss:
-      optional: true
-    sass:
-      optional: true
-    sass-embedded:
-      optional: true
-    stylus:
-      optional: true
-    sugarss:
-      optional: true
-    terser:
-      optional: true
-    tsx:
-      optional: true
-    yaml:
-      optional: true
-  bin:
-    vite: bin/vite.js
-  checksum: 10c0/c4aa7f47b1fb07f734ed6f4f605d73e5acf7ff9754d75b4adbfbdddf0e520413019834620c1f7b4a207bce7e1d20a2636c584db2b1b17f5a3ba2cd23d47e50ab
+  checksum: 10c0/9c76ee441f8dbec645ddaecc28d1f9cf35670ffa91cff69af7b1d5081545331603f0b1289d437b2fa8dc43cdc77b4d96b5bd9c9aed66310f490cb1a06f9c814c
   languageName: node
   linkType: hard
 

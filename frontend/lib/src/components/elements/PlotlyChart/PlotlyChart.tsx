@@ -70,11 +70,6 @@ export interface PlotlyChartProps {
   width: number
 }
 
-/**
- * Note: we do not have any React-testing-library tests because Plotly doesn't support it
- * https://github.com/plotly/react-plotly.js/issues/176
- */
-
 export function PlotlyChart({
   element,
   widgetMgr,

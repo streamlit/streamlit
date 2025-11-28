@@ -16,48 +16,33 @@
 
 from __future__ import annotations
 
-import json
-from typing import TYPE_CHECKING, Final, cast
+from typing import TYPE_CHECKING, cast
 
 from streamlit.deprecation_util import (
     show_deprecation_warning,
 )
-from streamlit.errors import StreamlitAPIException
-from streamlit.proto.BokehChart_pb2 import BokehChart as BokehChartProto
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.util import calc_md5
 
 if TYPE_CHECKING:
-    from bokeh.plotting.figure import Figure
-
     from streamlit.delta_generator import DeltaGenerator
-
-ST_BOKEH_VERSION: Final = "2.4.3"
 
 
 class BokehMixin:
     @gather_metrics("bokeh_chart")
     def bokeh_chart(
         self,
-        figure: Figure,
-        use_container_width: bool = True,
+        figure: object,  # noqa: ARG002
+        use_container_width: bool = True,  # noqa: ARG002
     ) -> DeltaGenerator:
         """Display an interactive Bokeh chart.
 
-        Bokeh is a charting library for Python. The arguments to this function
-        closely follow the ones for Bokeh's ``show`` function. You can find
+        Bokeh is a charting library for Python. You can find
         more about Bokeh at https://bokeh.pydata.org.
 
-        To show Bokeh charts in Streamlit, call ``st.bokeh_chart``
-        wherever you would call Bokeh's ``show``.
-
         .. Important::
-            You must install ``bokeh==2.4.3`` and ``numpy<2`` to use this
-            command, which is deprecated and will be removed in a future
-            version.
-
-            For more current updates, use the |streamlit-bokeh|_ custom
-            component instead.
+            This command has been deprecated and removed. Please use our custom
+            component, |streamlit-bokeh|_, instead. Calling st.bokeh_chart will
+            do nothing.
 
         .. |streamlit-bokeh| replace:: ``streamlit-bokeh``
         .. _streamlit-bokeh: https://github.com/streamlit/streamlit-bokeh
@@ -74,70 +59,17 @@ class BokehMixin:
             container. If ``use_container_width`` is ``False``, Streamlit sets the
             width of the chart to fit its contents according to the plotting library,
             up to the width of the parent container.
-
-        Example
-        -------
-        >>> import streamlit as st
-        >>> from bokeh.plotting import figure
-        >>>
-        >>> x = [1, 2, 3, 4, 5]
-        >>> y = [6, 7, 2, 4, 5]
-        >>>
-        >>> p = figure(title="simple line example", x_axis_label="x", y_axis_label="y")
-        >>> p.line(x, y, legend_label="Trend", line_width=2)
-        >>>
-        >>> st.bokeh_chart(p)
-
-        .. output::
-           https://doc-bokeh-chart.streamlit.app/
-           height: 700px
-
         """
-        import bokeh
-
-        if bokeh.__version__ != ST_BOKEH_VERSION:
-            raise StreamlitAPIException(
-                f"Streamlit only supports Bokeh version {ST_BOKEH_VERSION}, "
-                f"but you have version {bokeh.__version__} installed. Please "
-                f"run `pip install --force-reinstall --no-deps bokeh=="
-                f"{ST_BOKEH_VERSION}` to install the correct version.\n\n\n"
-                f"To use the latest version of Bokeh, install our custom component, "
-                f"[streamlit-bokeh](https://github.com/streamlit/streamlit-bokeh)."
-            )
 
         show_deprecation_warning(
-            "st.bokeh_chart is deprecated and will be removed in a future version. "
+            "st.bokeh_chart has been deprecated and removed. "
             "Please use our custom component, "
             "[streamlit-bokeh](https://github.com/streamlit/streamlit-bokeh), "
-            "instead."
+            "instead. Calling st.bokeh_chart will do nothing."
         )
-        # Generate element ID from delta path
-        delta_path = self.dg._get_delta_path_str()
-
-        element_id = calc_md5(delta_path.encode())
-        bokeh_chart_proto = BokehChartProto()
-        marshall(bokeh_chart_proto, figure, use_container_width, element_id)
-        return self.dg._enqueue("bokeh_chart", bokeh_chart_proto)
+        return self.dg
 
     @property
     def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)
-
-
-def marshall(
-    proto: BokehChartProto,
-    figure: Figure,
-    use_container_width: bool,
-    element_id: str,
-) -> None:
-    """Construct a Bokeh chart object.
-
-    See DeltaGenerator.bokeh_chart for docs.
-    """
-    from bokeh.embed import json_item
-
-    data = json_item(figure)
-    proto.figure = json.dumps(data)
-    proto.use_container_width = use_container_width
-    proto.element_id = element_id

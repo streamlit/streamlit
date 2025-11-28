@@ -181,6 +181,7 @@ export const StyledStreamlitMarkdown =
         color: "inherit",
         // Always respect the width of the parent container:
         maxWidth: "100%",
+        width: isLabel ? "" : "100%",
         // Break long words to prevent them from overflowing the container:
         overflowWrap: "break-word",
         ...sharedMarkdownStyle(theme),
@@ -265,10 +266,10 @@ export const StyledStreamlitMarkdown =
         },
 
         table: {
-          // Add some space below the markdown tables
-          marginBottom: theme.spacing.lg,
+          display: "table",
           // Prevent double borders
           borderCollapse: "collapse",
+          marginBottom: theme.spacing.lg,
         },
 
         tr: {
@@ -313,6 +314,17 @@ export const StyledStreamlitMarkdown =
 
         "p, ol, ul, dl, li": {
           fontSize: "inherit",
+        },
+
+        "& > ul, & > ol": {
+          display: "block",
+          width: "fit-content",
+          textAlign: "left",
+        },
+
+        // Ensure nested lists stay as block elements
+        "li > ul, li > ol": {
+          display: "block",
         },
 
         // Allow long Latex formulas that are not inline (i.e. either from `st.latex`
@@ -409,3 +421,9 @@ export const StyledPreWrapper = styled.div(({ theme }) => ({
   // Set spacing between pre-elements inside of markdown similar to our gap spacing between elements
   marginBottom: theme.spacing.lg,
 }))
+
+export const StyledHelpIconWrapper = styled.span({
+  display: "inline-block",
+  verticalAlign: "middle",
+  transform: "translateY(-0.1em)",
+})

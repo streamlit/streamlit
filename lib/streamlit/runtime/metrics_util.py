@@ -78,6 +78,7 @@ _ATTRIBUTIONS_TO_CHECK: Final = [
     "duckdb",
     "opensearchpy",
     "supabase",
+    "databricks",
     # Dataframe Libraries:
     "polars",
     "dask",
@@ -92,6 +93,7 @@ _ATTRIBUTIONS_TO_CHECK: Final = [
     "tables",
     "zarr",
     "datasets",
+    "daft",
     # ML & LLM Tools:
     "mistralai",
     "openai",
@@ -131,11 +133,62 @@ _ATTRIBUTIONS_TO_CHECK: Final = [
     "lightgbm",
     "catboost",
     "sklearn",
+    "pydantic_ai",
+    "datachain",
+    "docling",
+    "litserve",
+    "crawl4ai",
+    "baml_client",
+    "browser_use",
+    "crewai",
+    "unsloth",
+    "langgraph",
+    "dspy",
+    "ultralytics",
+    "instructor",
+    "ragas",
+    "swarm",
+    "faster_whisper",
+    "memori",
+    "autogen_agentchat",
+    "xai_sdk",
+    "agno",
+    "langfuse",
+    "smolagents",
+    "ollama",
+    "groq",
+    "together",
+    "ai21",
+    "marvin",
+    "outlines",
+    "guardrails",
+    "promptflow",
+    "semantic_router",
+    "mem0",
+    "aisuite",
+    "mlflow",
+    "optuna",
+    "keras",
+    "jax",
+    "shap",
+    "evidently",
+    "great_expectations",
+    "bentoml",
+    "modal",
+    "sagemaker",
+    "vertexai",
+    "tiktoken",
+    "sentence_transformers",
+    "spacy",
+    "nltk",
+    "onnxruntime",
+    "llama_api_client",
     # Workflow Tools:
     "prefect",
     "luigi",
     "airflow",
     "dagster",
+    "celery",
     # Vector Stores:
     "pgvector",
     "faiss",
@@ -148,11 +201,40 @@ _ATTRIBUTIONS_TO_CHECK: Final = [
     "lancedb",
     # Others:
     "snowflake",
+    "pydantic",
+    "fastapi",
+    "starlette",
+    "playwright",
+    "folium",
+    "geopandas",
+    "httpx",
+    "pyecharts",
+    "fastplotlib",
+    "pygfx",
+    "highcharts_core",
+    # Optional streamlit dependencies:
+    "seaborn",
+    "graphviz",
+    "matplotlib",
+    "uvloop",
+    "orjson",
+    "rich",
     "streamlit_extras",
     "streamlit_pydantic",
-    "pydantic",
+    "pygwalker",
+    "plotly",
+    "bokeh",
     "plost",
     "authlib",
+    # Document Processing:
+    "pypdf",
+    "pdfplumber",
+    "docx",
+    "openpyxl",
+    "xlsxwriter",
+    # Image/Vision:
+    "cv2",
+    "mediapipe",
 ]
 
 _ETC_MACHINE_ID_PATH = "/etc/machine-id"
@@ -331,8 +413,10 @@ def _get_command_telemetry(
     ):
         name = f"component:{self_arg.name}"
 
-    if name == "_bidi_component" and len(args) > 0 and isinstance(args[0], str):
-        component_name = args[0]
+    if name == "_bidi_component" and len(args) > 1 and isinstance(args[1], str):
+        # Bound DeltaGenerator methods always receive `self` as args[0], so args[1]
+        # is the user-supplied component name.
+        component_name = args[1]
         name = f"component_v2:{component_name}"
 
     return Command(name=name, args=arguments)

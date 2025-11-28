@@ -26,6 +26,8 @@ export {
 export type { BlockPropsWithoutWidth } from "./components/core/Block"
 export { default as ElementNodeRenderer } from "./components/core/Block/ElementNodeRenderer"
 export type { ElementNodeRendererProps } from "./components/core/Block/ElementNodeRenderer"
+export { DownloadContext } from "./components/core/DownloadContext"
+export type { DownloadContextProps } from "./components/core/DownloadContext"
 export { FormsContext } from "./components/core/FormsContext"
 export type { FormsContextProps } from "./components/core/FormsContext"
 export { default as IsDialogContext } from "./components/core/IsDialogContext"
@@ -45,7 +47,7 @@ export { default as ThemeProvider } from "./components/core/ThemeProvider"
 export { ViewStateContext } from "./components/core/ViewStateContext"
 export type { ViewStateContextProps } from "./components/core/ViewStateContext"
 export { default as AlertElement } from "./components/elements/AlertElement"
-export { default as StreamlitSyntaxHighlighter } from "./components/elements/CodeBlock/StreamlitSyntaxHighlighter"
+export { default as StreamlitErrorCodeBlock } from "./components/elements/CodeBlock/StreamlitErrorCodeBlock"
 export { handleFavicon } from "./components/elements/Favicon"
 export { default as TextElement } from "./components/elements/TextElement"
 export {
@@ -81,6 +83,7 @@ export { useCopyToClipboard } from "./hooks/useCopyToClipboard"
 export { useCrossOriginAttribute } from "./hooks/useCrossOriginAttribute"
 export { useEmotionTheme } from "./hooks/useEmotionTheme"
 export { useExecuteWhenChanged } from "./hooks/useExecuteWhenChanged"
+export { ensureHotkeysFilterConfigured } from "./hooks/useRegisterShortcut"
 export { useRequiredContext } from "./hooks/useRequiredContext"
 export {
   measureScrollbarGutterSize,
@@ -105,7 +108,6 @@ export { mockTheme } from "./mocks/mockTheme"
 export { RootStyleProvider } from "./RootStyleProvider"
 export { ScriptRunState } from "./ScriptRunState"
 export { SessionInfo } from "./SessionInfo"
-export { mockWindowLocation, render, renderWithContexts } from "./test_util"
 export {
   AUTO_THEME_NAME,
   baseTheme,
@@ -156,6 +158,8 @@ export {
   getEmbeddingIdClassName,
   getIFrameEnclosingApp,
   getLocaleLanguage,
+  getQueryString,
+  getScreencastTimestamp,
   getTimezone,
   getTimezoneOffset,
   getUrl,

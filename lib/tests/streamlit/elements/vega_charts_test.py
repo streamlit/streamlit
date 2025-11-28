@@ -1002,6 +1002,24 @@ class VegaLiteChartTest(DeltaGeneratorTestCase):
             },
         )
 
+    @patch("streamlit.elements.vega_charts.show_deprecation_warning")
+    def test_kwargs_deprecation_warning(self, mock_warning: Mock):
+        """Test that passing kwargs shows a deprecation warning."""
+        st.vega_lite_chart(df1, x="foo", boink_boop=100)
+
+        mock_warning.assert_called_once()
+        warning_message = mock_warning.call_args[0][0]
+        assert "Variable keyword arguments" in warning_message
+        assert "deprecated" in warning_message
+        assert "spec" in warning_message
+
+    @patch("streamlit.elements.vega_charts.show_deprecation_warning")
+    def test_no_kwargs_no_deprecation_warning(self, mock_warning: Mock):
+        """Test that not passing kwargs does not show a deprecation warning."""
+        st.vega_lite_chart(df1, {"mark": "rect"})
+
+        mock_warning.assert_not_called()
+
     def test_pyarrow_table_data(self):
         """Test that you can pass pyarrow.Table as data."""
         table = pa.Table.from_pandas(df1)
@@ -2707,6 +2725,16 @@ class VegaUtilitiesTest(unittest.TestCase):
                 '{"data": {"items": ["plot_3"], "descriptions": ["This plot_4 shows..."]}}',
                 '{"data": {"items": ["plot_1"], "descriptions": ["This plot_4 shows..."]}}',
             ),  # Only replace actual IDs, not text content
+            (
+                "param_",
+                '{"config": {"settings": ["param_e4f9", "param_a1b2c3"]}}',
+                '{"config": {"settings": ["param_1", "param_2"]}}',
+            ),  # Hash-based suffixes should be replaced as well
+            (
+                "view_",
+                '{"views": {"list": ["view_d1f2", "view_d1f2", "view_0abc"]}}',
+                '{"views": {"list": ["view_1", "view_1", "view_2"]}}',
+            ),  # Hash-based suffixes with duplicates
         ]
     )
     def test_reset_counter_pattern(self, prefix: str, vega_spec: str, expected: str):

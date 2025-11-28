@@ -28,7 +28,7 @@ st.set_page_config(layout="wide")
 # Generate a random dataframe
 df = pd.DataFrame(
     np.random.randn(5, 5),
-    columns=(f"col_{i}" for i in range(5)),
+    columns=[f"col_{i}" for i in range(5)],
 )
 
 st.header("Disabled parameter:")
@@ -503,3 +503,16 @@ result = st.data_editor(
 )
 
 st.write("Multiselect column return:", str(result))
+
+st.header("Missing placeholder:")
+st.data_editor(
+    pd.DataFrame(
+        {
+            "with_none": [1, None, 3],
+            "all_missing": [None, None, None],
+            "nan": [None, np.nan, 3],
+        }
+    ),
+    placeholder="-",
+    width="content",
+)

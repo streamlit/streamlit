@@ -27,6 +27,11 @@ export const StyledColorPicker = styled.div<StyledColorPickerProps>(
     flexDirection: "column",
     alignItems: "flex-start",
     cursor: disabled ? "not-allowed" : "default",
+    // Enforce minimum width to prevent shrinking below the color block's
+    // intrinsic size. The color block uses theme.sizes.minElementHeight (40px)
+    // for both its width and height, so we use the same value here to keep
+    // them in sync.
+    minWidth: theme.sizes.minElementHeight,
   })
 )
 

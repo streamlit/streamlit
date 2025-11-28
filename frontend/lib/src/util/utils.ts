@@ -15,7 +15,7 @@
  */
 
 import decamelize from "decamelize"
-import get from "lodash/get"
+import { get } from "lodash-es"
 import xxhash from "xxhashjs"
 
 import {
@@ -135,6 +135,25 @@ export function preserveEmbedQueryParams(): string {
 }
 
 /**
+ * Builds a query string by combining an optional override with preserved embed params.
+ * Used during page navigation to merge user query params with embed options.
+ */
+export function getQueryString(
+  queryStringOverride: string | undefined,
+  preservedQueryParams: string
+): string {
+  if (queryStringOverride !== undefined) {
+    if (preservedQueryParams) {
+      return queryStringOverride
+        ? `${preservedQueryParams}&${queryStringOverride}`
+        : preservedQueryParams
+    }
+    return queryStringOverride
+  }
+  return preservedQueryParams
+}
+
+/**
  * Returns true if the URL parameters contain ?embed=true (case insensitive).
  */
 export function isEmbed(): boolean {
@@ -225,6 +244,21 @@ export function getUrl(): string {
   urlObj.search = ""
   urlObj.hash = ""
   return urlObj.toString()
+}
+
+/**
+ * Returns date in "YYYY-MM-DD-HH-MM-SS" format to be used for screencast recording file name.
+ */
+export function getScreencastTimestamp(): string {
+  const date = new Date()
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, "0")
+  const day = String(date.getDate()).padStart(2, "0")
+  const hours = String(date.getHours()).padStart(2, "0")
+  const minutes = String(date.getMinutes()).padStart(2, "0")
+  const seconds = String(date.getSeconds()).padStart(2, "0")
+
+  return `${year}-${month}-${day}-${hours}-${minutes}-${seconds}`
 }
 
 /**

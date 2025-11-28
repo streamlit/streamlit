@@ -113,7 +113,7 @@ def test_use_column_width_parameter(app: Page, assert_snapshot: ImageCompareFunc
 
     expect(app.get_by_test_id("stMainBlockContainer")).to_contain_text(
         "The use_column_width parameter has been deprecated and will be removed in a "
-        "future release. Please utilize the use_container_width parameter instead."
+        "future release. Please utilize the width parameter instead."
     )
 
 

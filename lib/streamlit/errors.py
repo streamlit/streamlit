@@ -285,6 +285,17 @@ class StreamlitInvalidHorizontalAlignmentError(LocalizableStreamlitException):
         )
 
 
+class StreamlitInvalidTextAlignmentError(LocalizableStreamlitException):
+    """Exception raised when an invalid text_alignment value is provided."""
+
+    def __init__(self, text_alignment: Any) -> None:
+        super().__init__(
+            'Invalid text_alignment value: "{text_alignment}". '
+            'Valid values are: `"left"`, `"center"`, `"right"`, or `"justify"`.',
+            text_alignment=text_alignment,
+        )
+
+
 # st.multiselect
 class StreamlitSelectionCountExceedsMaxError(LocalizableStreamlitException):
     """Exception raised when there are more default selections specified than the max allowable selections."""
@@ -407,6 +418,17 @@ class StreamlitMissingPageLabelError(LocalizableStreamlitException):
     def __init__(self) -> None:
         super().__init__(
             "The `label` param is required for external links used with `st.page_link` - please provide a `label`."
+        )
+
+
+class StreamlitQueryParamDictValueError(LocalizableStreamlitException):
+    """Exception raised when a query param value is a dictionary."""
+
+    def __init__(self, key: str) -> None:
+        super().__init__(
+            "Query param value for `{key}` cannot be set to a dictionary. "
+            "Provide a string or iterable of strings instead.",
+            key=key,
         )
 
 

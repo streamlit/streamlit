@@ -18,12 +18,31 @@ from __future__ import annotations
 
 import collections
 import threading
-from typing import Final
+import uuid
+from typing import TYPE_CHECKING, BinaryIO, Final, TextIO, TypedDict, cast
 
 from streamlit.logger import get_logger
-from streamlit.runtime.media_file_storage import MediaFileKind, MediaFileStorage
+from streamlit.runtime.download_data_util import convert_data_to_bytes_and_infer_mime
+from streamlit.runtime.media_file_storage import (
+    MediaFileKind,
+    MediaFileStorage,
+    MediaFileStorageError,
+)
+
+if TYPE_CHECKING:
+    import io
+    from collections.abc import Callable
 
 _LOGGER: Final = get_logger(__name__)
+
+
+class DeferredCallableEntry(TypedDict):
+    """Typed metadata for deferred download callables."""
+
+    callable: Callable[[], bytes | str | BinaryIO | TextIO | io.RawIOBase]
+    mimetype: str | None
+    filename: str | None
+    coordinates: str
 
 
 def _get_session_id() -> str:
@@ -90,6 +109,10 @@ class MediaFileManager:
             collections.defaultdict(dict)
         )
 
+        # Dict of [file_id -> deferred callable metadata]
+        # Used for deferred download button execution
+        self._deferred_callables: dict[str, DeferredCallableEntry] = {}
+
         # MediaFileManager is used from multiple threads, so all operations
         # need to be protected with a Lock. (This is not an RLock, which
         # means taking it multiple times from the same thread will deadlock.)
@@ -129,6 +152,31 @@ class MediaFileManager:
                     else:
                         file.mark_for_delete()
 
+            # Clean up orphaned deferred callables
+            self._remove_orphaned_deferred_callables()
+
+    def _remove_orphaned_deferred_callables(self) -> None:
+        """Remove deferred callables that are not referenced by any active session.
+
+        Thread safety: callers must hold `self._lock`.
+        """
+        _LOGGER.debug("Removing orphaned deferred callables...")
+
+        # Get all file_ids currently referenced by any session
+        active_file_ids = set[str]()
+        for session_file_ids_by_coord in self._files_by_session_and_coord.values():
+            active_file_ids.update(session_file_ids_by_coord.values())
+
+        # Remove deferred callables that are no longer referenced
+        deferred_ids_to_remove = [
+            file_id
+            for file_id in self._deferred_callables
+            if file_id not in active_file_ids
+        ]
+        for file_id in deferred_ids_to_remove:
+            _LOGGER.debug("Removing deferred callable: %s", file_id)
+            del self._deferred_callables[file_id]
+
     def _delete_file(self, file_id: str) -> None:
         """Delete the given file from storage, and remove its metadata from
         self._files_by_id.
@@ -157,6 +205,10 @@ class MediaFileManager:
         with self._lock:
             if session_id in self._files_by_session_and_coord:
                 del self._files_by_session_and_coord[session_id]
+
+            # Don't immediately delete deferred callables here to avoid race conditions.
+            # They will be cleaned up by remove_orphaned_deferred_callables() which
+            # only removes callables that are not referenced by ANY session.
 
         _LOGGER.debug(
             "Sessions still active: %r", self._files_by_session_and_coord.keys()
@@ -231,3 +283,127 @@ class MediaFileManager:
             self._files_by_session_and_coord[session_id][coordinates] = file_id
 
             return self._storage.get_url(file_id)
+
+    def add_deferred(
+        self,
+        data_callable: Callable[[], bytes | str | BinaryIO | TextIO | io.RawIOBase],
+        mimetype: str | None,
+        coordinates: str,
+        file_name: str | None = None,
+    ) -> str:
+        """Register a callable for deferred execution. Returns placeholder file_id.
+
+        The callable will be executed later when execute_deferred() is called,
+        typically when the user clicks a download button.
+
+        Safe to call from any thread.
+
+        Parameters
+        ----------
+        data_callable : Callable[[], bytes | str | BinaryIO | TextIO | io.RawIOBase]
+            A callable that returns the file data when invoked.
+        mimetype : str or None
+            The mime type for the file. E.g. "text/csv".
+            If None, the mimetype will be inferred from the data type when
+            execute_deferred() is called.
+        coordinates : str
+            Unique string identifying an element's location.
+        file_name : str or None
+            Optional file_name. Used to set the filename in the response header.
+
+        Returns
+        -------
+        str
+            A placeholder file_id that can be used to execute the callable later.
+        """
+        session_id = _get_session_id()
+
+        with self._lock:
+            # Generate a unique placeholder ID for this deferred callable
+            # Expected: a new placeholder ID is created on every script rerun.
+            file_id = uuid.uuid4().hex
+
+            # Store the callable with its metadata
+            self._deferred_callables[file_id] = cast(
+                "DeferredCallableEntry",
+                {
+                    "callable": data_callable,
+                    "mimetype": mimetype,
+                    "filename": file_name,
+                    "coordinates": coordinates,
+                },
+            )
+
+            # Track this deferred file by session and coordinate
+            self._files_by_session_and_coord[session_id][coordinates] = file_id
+
+            return file_id
+
+    def execute_deferred(self, file_id: str) -> str:
+        """Execute a deferred callable and return the URL to the generated file.
+
+        This method retrieves the callable registered with add_deferred(),
+        executes it, stores the result, and returns a URL to access it.
+
+        Safe to call from any thread.
+
+        Parameters
+        ----------
+        file_id : str
+            The placeholder file_id returned by add_deferred().
+
+        Returns
+        -------
+        str
+            The URL that can be used to download the generated file.
+
+        Raises
+        ------
+        MediaFileStorageError
+            If the file_id is not found or if the callable execution fails.
+        """
+        # Retrieve deferred callable metadata while holding lock
+        with self._lock:
+            if file_id not in self._deferred_callables:
+                raise MediaFileStorageError(f"Deferred file {file_id} not found")
+
+            deferred = self._deferred_callables[file_id]
+
+        # Execute callable outside lock to avoid blocking other operations
+        try:
+            data = deferred["callable"]()
+        except Exception as e:
+            raise MediaFileStorageError(f"Callable execution failed: {e}") from e
+
+        # Convert data to bytes and infer mimetype if needed
+        data_as_bytes, inferred_mime_type = convert_data_to_bytes_and_infer_mime(
+            data,
+            unsupported_error=MediaFileStorageError(
+                f"Callable returned unsupported type: {type(data)}"
+            ),
+        )
+
+        # Use provided mimetype if available, otherwise use inferred mimetype
+        mime_type: str = deferred["mimetype"] or inferred_mime_type
+
+        # Store the generated data and get the actual file_id
+        with self._lock:
+            actual_file_id = self._storage.load_and_get_id(
+                data_as_bytes,
+                mime_type,
+                MediaFileKind.DOWNLOADABLE,
+                deferred["filename"],
+            )
+
+            # Create metadata for the actual file
+            metadata = MediaFileMetadata(kind=MediaFileKind.DOWNLOADABLE)
+            self._file_metadata[actual_file_id] = metadata
+
+            # Keep the deferred callable so users can download multiple times
+            # It will be cleaned up when clear_session_refs() is called on rerun
+
+            # We leave actual_file_id unmapped so repeat clicks rerun the callable.
+            # Cleanup prunes the stored file once no session references it.
+
+            # Return the URL to access the file
+            return self._storage.get_url(actual_file_id)
