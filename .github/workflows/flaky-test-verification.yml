@@ -17,7 +17,7 @@ on:
 
 permissions:
   contents: read
-  pull-requests: read
+  pull-requests: write
 
 jobs:
   verify:
@@ -34,6 +34,14 @@ jobs:
       base_ref: ${{ steps.compute.outputs.base_ref }}
       matrix: ${{ steps.compute.outputs.matrix }}
     steps:
+      - name: Remove flaky-verify label
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/labels/flaky-verify \
+            --method DELETE || true
+
       - name: Compute inputs and matrix
         id: compute
         shell: bash
