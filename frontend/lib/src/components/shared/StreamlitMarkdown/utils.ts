@@ -242,39 +242,31 @@ export function wrapRemarkPlugin<Options = unknown>(
 export function useLazyPlugin<T>(config: PluginLoaderConfig): PluginState<T> {
   const { key, needed, load, pluginName, onBeforeLoad } = config
 
-  // Use lazy initialization to prevent React from calling the cached plugin
-  const [plugin, setPlugin] = useState<PluginState<T>>(
-    () => pluginCache[key] as PluginState<T>
-  )
+  // Read from module-level cache during render - this is the source of truth.
+  // This avoids the anti-pattern of syncing external state into local state via useEffect.
+  const cachedPlugin = needed ? (pluginCache[key] as PluginState<T>) : null
+
+  // Local state only tracks loading progress, not the final cached value
+  const [loadingResult, setLoadingResult] = useState<PluginState<T>>(null)
 
   useEffect(() => {
-    // Skip if not needed, or if we already have a result (including LOAD_FAILED).
+    // Skip if not needed, already cached, or already have a loading result.
     // LOAD_FAILED is a truthy Symbol, so failed plugins are intentionally cached
     // and not retried - this prevents infinite retry loops on persistent failures.
-    if (!needed || plugin) {
+    if (!needed || cachedPlugin || loadingResult) {
       return
     }
 
-    // Sync from module-level cache if another instance already loaded this plugin
-    const cached = pluginCache[key]
-    if (cached) {
-      // Wrap in arrow function to prevent React from calling the plugin
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional: syncing from module-level cache on mount, not causing cascading renders
-      setPlugin(() => cached as PluginState<T>)
-      return
-    }
-
-    let isCancelled = false
-    const resolve = (loadedPlugin: PluginState<T>): void => {
-      if (!isCancelled) {
-        // Wrap in arrow function to prevent React from calling the plugin
-        setPlugin(() => loadedPlugin)
-      }
-    }
-
+    // Check if another instance is already loading this plugin
     const existingPromise = loadingPromises[key]
     if (existingPromise) {
-      void existingPromise.then(p => resolve(p as PluginState<T>))
+      let isCancelled = false
+      void existingPromise.then(p => {
+        if (!isCancelled) {
+          // Wrap in arrow function to prevent React from calling the plugin
+          setLoadingResult(() => p as PluginState<T>)
+        }
+      })
       return () => {
         isCancelled = true
       }
@@ -282,29 +274,46 @@ export function useLazyPlugin<T>(config: PluginLoaderConfig): PluginState<T> {
 
     onBeforeLoad?.()
 
+    let isCancelled = false
     const loadPromise = load()
       .then(module => extractPlugin<T>(module, pluginName))
       .then(extracted => {
         pluginCache[key] = extracted as PluginState<AnyPlugin>
+        if (!isCancelled) {
+          // Wrap in arrow function to prevent React from calling the plugin
+          setLoadingResult(() => extracted)
+        }
         return extracted
       })
       .catch(() => {
-        pluginCache[key] = LOAD_FAILED
-        return LOAD_FAILED
+        const failed = LOAD_FAILED as PluginState<T>
+        pluginCache[key] = failed as PluginState<AnyPlugin>
+        if (!isCancelled) {
+          setLoadingResult(() => failed)
+        }
+        return failed
       })
       .finally(() => {
         loadingPromises[key] = null
       }) as Promise<PluginState<T>>
 
     loadingPromises[key] = loadPromise as Promise<PluginState<AnyPlugin>>
-    void loadPromise.then(resolve)
 
     return () => {
       isCancelled = true
     }
-  }, [needed, plugin, key, load, pluginName, onBeforeLoad])
+  }, [
+    needed,
+    cachedPlugin,
+    loadingResult,
+    key,
+    load,
+    pluginName,
+    onBeforeLoad,
+  ])
 
-  return plugin
+  // Return cached plugin if available (source of truth), otherwise loading result
+  return cachedPlugin ?? loadingResult
 }
 
 /**
