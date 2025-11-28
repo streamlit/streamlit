@@ -16,8 +16,9 @@
 
 import { useEffect, useState } from "react"
 
-import type { Root } from "hast"
+import type { Root as HastRoot } from "hast"
 import { once } from "lodash-es"
+import type { Root as MdastRoot } from "mdast"
 import type { VFile } from "vfile"
 
 /**
@@ -45,13 +46,27 @@ export type PluginKey = "katex" | "raw" | "emoji"
 /** Union type for all supported plugin types */
 type AnyPlugin = KatexPlugin | RawPlugin | EmojiPlugin
 
-/** A rehype transformer function that processes an AST tree */
-type RehypeTransformer = (tree: Root, file: VFile) => Root | undefined | void
+/** A rehype transformer function that processes an HTML AST tree */
+type RehypeTransformer = (
+  tree: HastRoot,
+  file: VFile
+) => HastRoot | undefined | void
 
 /** A rehype plugin factory that returns a transformer when called with options */
 type RehypePluginFactory<Options = unknown> = (
   options?: Options
 ) => RehypeTransformer
+
+/** A remark transformer function that processes a Markdown AST tree */
+type RemarkTransformer = (
+  tree: MdastRoot,
+  file: VFile
+) => MdastRoot | undefined | void
+
+/** A remark plugin factory that returns a transformer when called with options */
+type RemarkPluginFactory<Options = unknown> = (
+  options?: Options
+) => RemarkTransformer
 
 /** Configuration for the useLazyPlugin hook */
 export interface PluginLoaderConfig {
@@ -154,7 +169,8 @@ export function extractPlugin<T>(
 
 /**
  * Wraps a rehype plugin to add error handling and guard against undefined trees.
- * Returns a factory function that unified will call to get the transformer.
+ * If the plugin crashes during transformation, the original tree is returned,
+ * allowing the content to render as plain text instead of breaking the component.
  */
 export function wrapRehypePlugin<Options = unknown>(
   plugin: RehypePluginFactory<Options>,
@@ -163,7 +179,38 @@ export function wrapRehypePlugin<Options = unknown>(
   return (options?: Options): RehypeTransformer => {
     const transformer = plugin(options)
 
-    return (tree: Root, file: VFile): Root | undefined | void => {
+    return (tree: HastRoot, file: VFile): HastRoot | undefined | void => {
+      if (!tree) {
+        return tree
+      }
+
+      try {
+        return transformer(tree, file)
+      } catch (error) {
+        // eslint-disable-next-line no-console -- Intentional error logging for debugging plugin crashes
+        console.error(
+          `[StreamlitMarkdown] ${pluginName} crashed while transforming`,
+          error
+        )
+        return tree
+      }
+    }
+  }
+}
+
+/**
+ * Wraps a remark plugin to add error handling and guard against undefined trees.
+ * If the plugin crashes during transformation, the original tree is returned,
+ * allowing the content to render as plain text instead of breaking the component.
+ */
+export function wrapRemarkPlugin<Options = unknown>(
+  plugin: RemarkPluginFactory<Options>,
+  pluginName: string
+): RemarkPluginFactory<Options> {
+  return (options?: Options): RemarkTransformer => {
+    const transformer = plugin(options)
+
+    return (tree: MdastRoot, file: VFile): MdastRoot | undefined | void => {
       if (!tree) {
         return tree
       }

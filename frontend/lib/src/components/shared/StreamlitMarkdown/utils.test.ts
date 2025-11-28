@@ -15,7 +15,8 @@
  */
 
 import { act, renderHook, waitFor } from "@testing-library/react"
-import type { Root } from "hast"
+import type { Root as HastRoot } from "hast"
+import type { Root as MdastRoot } from "mdast"
 import type { VFile } from "vfile"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
@@ -27,6 +28,7 @@ import {
   type PluginState,
   useLazyPlugin,
   wrapRehypePlugin,
+  wrapRemarkPlugin,
 } from "./utils"
 
 // Reset the module-level cache between tests to ensure isolation
@@ -148,15 +150,15 @@ describe("extractPlugin", () => {
 })
 
 describe("wrapRehypePlugin", () => {
-  // Create properly typed mock objects matching Root and VFile types
-  const createMockTree = (): Root => ({
+  // Create properly typed mock objects matching HastRoot and VFile types
+  const createMockHastTree = (): HastRoot => ({
     type: "root",
     children: [],
   })
   const createMockFile = (): VFile => ({ path: "test.md", value: "" }) as VFile
 
   it("wraps a plugin and calls the original transformer", () => {
-    const mockTree = createMockTree()
+    const mockTree = createMockHastTree()
     const mockFile = createMockFile()
     const transformer = vi.fn().mockReturnValue(mockTree)
     const plugin = vi.fn().mockReturnValue(transformer)
@@ -178,9 +180,9 @@ describe("wrapRehypePlugin", () => {
 
     const wrapped = wrapRehypePlugin(plugin, "test-plugin")
     const wrappedTransformer = wrapped()
-    // Test undefined handling - cast needed since Root doesn't include undefined
+    // Test undefined handling - cast needed since HastRoot doesn't include undefined
     const result = wrappedTransformer(
-      undefined as unknown as Root,
+      undefined as unknown as HastRoot,
       createMockFile()
     )
 
@@ -189,7 +191,7 @@ describe("wrapRehypePlugin", () => {
   })
 
   it("catches errors and returns original tree", () => {
-    const mockTree = createMockTree()
+    const mockTree = createMockHastTree()
     const mockFile = createMockFile()
     const error = new Error("Plugin crashed!")
     const transformer = vi.fn().mockImplementation(() => {
@@ -213,12 +215,90 @@ describe("wrapRehypePlugin", () => {
   })
 
   it("passes plugin options through", () => {
-    const mockTree = createMockTree()
+    const mockTree = createMockHastTree()
     const transformer = vi.fn().mockReturnValue(mockTree)
     const plugin = vi.fn().mockReturnValue(transformer)
     const options = { strict: true, output: "html" }
 
     const wrapped = wrapRehypePlugin(plugin, "test-plugin")
+    wrapped(options)
+
+    expect(plugin).toHaveBeenCalledWith(options)
+  })
+})
+
+describe("wrapRemarkPlugin", () => {
+  // Create properly typed mock objects matching MdastRoot and VFile types
+  const createMockMdastTree = (): MdastRoot => ({
+    type: "root",
+    children: [],
+  })
+  const createMockFile = (): VFile => ({ path: "test.md", value: "" }) as VFile
+
+  it("wraps a plugin and calls the original transformer", () => {
+    const mockTree = createMockMdastTree()
+    const mockFile = createMockFile()
+    const transformer = vi.fn().mockReturnValue(mockTree)
+    const plugin = vi.fn().mockReturnValue(transformer)
+
+    const wrapped = wrapRemarkPlugin(plugin, "test-plugin")
+    const wrappedTransformer = wrapped()
+
+    expect(plugin).toHaveBeenCalled()
+
+    const result = wrappedTransformer(mockTree, mockFile)
+
+    expect(transformer).toHaveBeenCalledWith(mockTree, mockFile)
+    expect(result).toBe(mockTree)
+  })
+
+  it("returns undefined tree without calling transformer", () => {
+    const transformer = vi.fn()
+    const plugin = vi.fn().mockReturnValue(transformer)
+
+    const wrapped = wrapRemarkPlugin(plugin, "test-plugin")
+    const wrappedTransformer = wrapped()
+    // Test undefined handling - cast needed since MdastRoot doesn't include undefined
+    const result = wrappedTransformer(
+      undefined as unknown as MdastRoot,
+      createMockFile()
+    )
+
+    expect(transformer).not.toHaveBeenCalled()
+    expect(result).toBeUndefined()
+  })
+
+  it("catches errors and returns original tree", () => {
+    const mockTree = createMockMdastTree()
+    const mockFile = createMockFile()
+    const error = new Error("Plugin crashed!")
+    const transformer = vi.fn().mockImplementation(() => {
+      throw error
+    })
+    const plugin = vi.fn().mockReturnValue(transformer)
+    const consoleErrorSpy = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {})
+
+    const wrapped = wrapRemarkPlugin(plugin, "test-plugin")
+    const wrappedTransformer = wrapped()
+    const result = wrappedTransformer(mockTree, mockFile)
+
+    expect(result).toBe(mockTree)
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      "[StreamlitMarkdown] test-plugin crashed while transforming",
+      error
+    )
+    consoleErrorSpy.mockRestore()
+  })
+
+  it("passes plugin options through", () => {
+    const mockTree = createMockMdastTree()
+    const transformer = vi.fn().mockReturnValue(mockTree)
+    const plugin = vi.fn().mockReturnValue(transformer)
+    const options = { emoticon: true, padSpaceAfter: false }
+
+    const wrapped = wrapRemarkPlugin(plugin, "test-plugin")
     wrapped(options)
 
     expect(plugin).toHaveBeenCalledWith(options)

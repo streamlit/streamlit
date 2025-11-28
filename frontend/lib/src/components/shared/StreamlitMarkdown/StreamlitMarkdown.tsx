@@ -82,6 +82,7 @@ import {
   type RawPlugin,
   useLazyPlugin,
   wrapRehypePlugin,
+  wrapRemarkPlugin,
 } from "./utils"
 
 const StreamlitSyntaxHighlighter = lazy(
@@ -879,7 +880,8 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
     ]
 
     if (needsEmoji && isLoadedPlugin(emojiPlugin)) {
-      plugins.push(emojiPlugin)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- unified's Plugin type is more complex than our wrapper expects
+      plugins.push(wrapRemarkPlugin(emojiPlugin as any, "remark-emoji"))
     }
 
     return plugins
