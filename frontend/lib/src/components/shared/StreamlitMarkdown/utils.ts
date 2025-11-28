@@ -317,7 +317,11 @@ export function useLazyPlugin<T>(config: PluginLoaderConfig): PluginState<T> {
     onBeforeLoad,
   ])
 
-  // Return cached plugin if available (source of truth), otherwise loading result
+  if (!needed) {
+    return null
+  }
+
+  // Return cached plugin (source of truth) if available, otherwise loading result
   return cachedPlugin ?? loadingResult
 }
 

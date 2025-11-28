@@ -444,6 +444,32 @@ describe("useLazyPlugin", () => {
     expect(loadFn).toHaveBeenCalledTimes(1)
   })
 
+  it("returns null when needed becomes false after plugin is loaded", async () => {
+    const mockPlugin = vi.fn()
+    const loadFn = vi.fn().mockResolvedValue({ default: mockPlugin })
+
+    const { result, rerender } = renderHook(
+      ({ needed }) =>
+        useLazyPlugin({
+          key: "raw",
+          needed,
+          load: loadFn,
+          pluginName: "test-plugin",
+        }),
+      { initialProps: { needed: true } }
+    )
+
+    // Wait for plugin to load
+    await waitFor(() => {
+      expect(result.current).toBe(mockPlugin)
+    })
+
+    // Now set needed to false - should return null, not the stale plugin
+    rerender({ needed: false })
+
+    expect(result.current).toBeNull()
+  })
+
   it("handles cleanup on unmount without errors", () => {
     const mockPlugin = vi.fn()
     let resolveLoad: (value: { default: typeof mockPlugin }) => void
