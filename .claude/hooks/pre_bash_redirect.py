@@ -51,7 +51,7 @@ def main():
     try:
         payload = json.load(sys.stdin)
     except Exception as e:
-        # Fail secure: block (exit 2) if we can't parse input to verify safety
+        # Fail secure: block (exit 2) if we can't parse input to verify safety.
         print(  # noqa: T201
             f"Policy: Failed to parse hook input ({type(e).__name__}: {e}). "
             f"Blocking tool call for safety.",
