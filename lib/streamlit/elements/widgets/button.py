@@ -1129,7 +1129,7 @@ class ButtonMixin:
 
         if icon is not None:
             page_link_proto.icon = validate_icon_or_emoji(icon)
-        page_link_proto.icon_position = icon_position
+
 
         if help is not None:
             page_link_proto.help = dedent(help)

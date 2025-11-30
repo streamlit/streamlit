@@ -70,7 +70,7 @@ function LinkButton(props: Readonly<Props>): ReactElement {
         >
           <DynamicButtonLabel
             icon={element.icon}
-            iconPosition={element.iconPosition}
+            iconPosition={element.iconPosition as "left" | "right"}
             label={element.label}
           />
         </BaseLinkButton>
