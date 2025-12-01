@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import json
+from typing import NoReturn
 
 import pandas as pd
 
@@ -238,3 +239,24 @@ def test_serialization_fallback_to_string():
     assert not proto.HasField("mixed")
     assert proto.HasField("json")
     assert json.loads(proto.json) == str(data)
+
+
+def test_extract_dataframes_from_dict_fallback_on_arrow_failure(monkeypatch):
+    """If Arrow serialization fails for a dataframe-like value, the original value should be preserved."""
+    from streamlit.components.v2.bidi_component import serialization as ser
+
+    class Sentinel:
+        pass
+
+    obj = Sentinel()
+
+    # Force detection as dataframe-like but make conversion raise.
+    monkeypatch.setattr(ser, "is_dataframe_like", lambda v: v is obj)
+
+    def _boom(_: object) -> NoReturn:
+        raise Exception("boom")
+
+    monkeypatch.setattr(ser, "convert_anything_to_arrow_bytes", _boom)
+
+    result = ser._extract_dataframes_from_dict({"df": obj})
+    assert result["df"] is obj

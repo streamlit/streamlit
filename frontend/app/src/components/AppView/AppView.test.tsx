@@ -30,11 +30,10 @@ import {
   mockSessionInfo,
   mockTheme,
   NavigationContextProps,
-  render,
-  renderWithContexts,
   SidebarConfigContextProps,
   WidgetStateManager,
 } from "@streamlit/lib"
+import { render, renderWithContexts } from "@streamlit/lib/testing"
 import {
   Block as BlockProto,
   Element,

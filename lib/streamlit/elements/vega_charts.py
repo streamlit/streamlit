@@ -2133,6 +2133,14 @@ class VegaChartsMixin:
         translated to the syntax shown above.
 
         """
+        if kwargs:
+            show_deprecation_warning(
+                "Variable keyword arguments for `st.vega_lite_chart` have been "
+                "deprecated and will be removed in a future release. Use the "
+                "`spec` argument instead to specify Vega-Lite configuration "
+                "options."
+            )
+
         return self._vega_lite_chart(
             data=data,
             spec=spec,

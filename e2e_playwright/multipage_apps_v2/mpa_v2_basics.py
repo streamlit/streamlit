@@ -144,6 +144,12 @@ st.page_link("page_5.py", label="page 5 page link")
 
 st.page_link(page9, label="page 9 page link")
 
+st.page_link(
+    page9,
+    label="page 9 with query params",
+    query_params={"foo": "bar", "baz": ["1", "2"]},
+)
+
 st.write("Context URL:", st.context.url)
 
 st.write("End of Script")

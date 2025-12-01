@@ -29,7 +29,7 @@ from e2e_playwright.shared.app_utils import (
     get_expander,
 )
 
-TOTAL_BUTTONS = 28
+TOTAL_BUTTONS = 29
 
 
 def test_button_widget_rendering(
@@ -85,6 +85,10 @@ def test_button_widget_rendering(
     assert_snapshot(
         get_element_by_key(themed_app, "material_icon_digit_in_label_button"),
         name="st_button-material_icon_1k_markdown",
+    )
+    assert_snapshot(
+        get_button(themed_app, "Shortcut Button"),
+        name="st_button-shortcut_button",
     )
 
     # The rest is tested in one screenshot in the following test
@@ -164,48 +168,49 @@ def test_colored_text_hover(app: Page):
     """Test that the colored text is correctly rendered and changes color on hover."""
     # Check hover behavior for colored text in primary button
     primary_button_container = get_element_by_key(app, "colored_text_primary")
-    expect(primary_button_container.locator("span")).to_have_class(
-        "stMarkdownColoredText"
-    )
-    expect(primary_button_container.locator("span")).to_have_css(
+    primary_text = primary_button_container.locator("span.stMarkdownColoredText").first
+    expect(primary_text).to_have_class("stMarkdownColoredText")
+    expect(primary_text).to_have_css(
         "color",
         "rgb(0, 84, 163)",  # blueTextColor
     )
     primary_button_container.locator("button").hover()
     # For primary buttons, the colored text should stay blue on hover (no color inheritance)
-    expect(primary_button_container.locator("span")).to_have_css(
+    expect(primary_text).to_have_css(
         "color",
         "rgb(0, 84, 163)",  # blueTextColor
     )
 
     # Check hover behavior for colored text in secondary button
     secondary_button_container = get_element_by_key(app, "colored_text_secondary")
-    expect(secondary_button_container.locator("span")).to_have_class(
-        "stMarkdownColoredText"
-    )
-    expect(secondary_button_container.locator("span")).to_have_css(
+    secondary_text = secondary_button_container.locator(
+        "span.stMarkdownColoredText"
+    ).first
+    expect(secondary_text).to_have_class("stMarkdownColoredText")
+    expect(secondary_text).to_have_css(
         "color",
         "rgb(0, 84, 163)",  # blueTextColor
     )
     secondary_button_container.locator("button").hover()
     # For secondary buttons, the colored text should stay blue on hover (no color inheritance)
-    expect(secondary_button_container.locator("span")).to_have_css(
+    expect(secondary_text).to_have_css(
         "color",
         "rgb(0, 84, 163)",  # blueTextColor
     )
 
     # Check hover behavior for colored text in tertiary button
     tertiary_button_container = get_element_by_key(app, "colored_text_tertiary")
-    expect(tertiary_button_container.locator("span")).to_have_class(
-        "stMarkdownColoredText"
-    )
-    expect(tertiary_button_container.locator("span")).to_have_css(
+    tertiary_text = tertiary_button_container.locator(
+        "span.stMarkdownColoredText"
+    ).first
+    expect(tertiary_text).to_have_class("stMarkdownColoredText")
+    expect(tertiary_text).to_have_css(
         "color",
         "rgb(0, 84, 163)",  # blueTextColor
     )
     tertiary_button_container.locator("button").hover()
     # For tertiary buttons, the colored text should be red on hover to match the rest of the text
-    expect(tertiary_button_container.locator("span")).to_have_css(
+    expect(tertiary_text).to_have_css(
         "color",
         "rgb(255, 75, 75)",
     )
@@ -256,6 +261,20 @@ def test_dynamic_button(app: Page, assert_snapshot: ImageCompareFunction):
     wait_for_app_run(app)
 
     expect_prefixed_markdown(app, "Clicked updated button:", "True")
+
+
+def test_button_shortcut_triggers(app: Page):
+    """Ensure pressing the shortcut activates the button."""
+    shortcut_button = get_element_by_key(app, "shortcut_button")
+    expect(shortcut_button).to_be_visible()
+
+    # Ensure shortcut labels are rendered for buttons.
+    expect(shortcut_button.locator("kbd")).to_have_text("Ctrl + J")
+
+    # Press hotkey to trigger the button:
+    app.keyboard.press("Control+J")
+    wait_for_app_run(app)
+    expect_markdown(app, "Shortcut button pressed!")
 
 
 def test_button_with_spinner_icon(app: Page):

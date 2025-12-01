@@ -15,6 +15,7 @@
 from unittest.mock import patch
 
 import pytest
+from parameterized import parameterized
 
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
@@ -315,3 +316,94 @@ class StBadgeAPITest(DeltaGeneratorTestCase):
 
         assert el.markdown.body == ":blue-badge[Badge without help]"
         assert not getattr(el.markdown, "help", None)
+
+
+class StMarkdownTextAlignmentTest(DeltaGeneratorTestCase):
+    """Test st.markdown text_alignment parameter."""
+
+    @parameterized.expand(
+        [
+            ("left", 1),
+            ("center", 2),
+            ("right", 3),
+            ("justify", 4),
+            (None, 1),  # Default case
+        ]
+    )
+    def test_st_markdown_text_alignment(
+        self, text_alignment: str | None, expected_alignment: int
+    ):
+        """Test st.markdown with various text_alignment values.
+
+        Parameters
+        ----------
+        text_alignment : str | None
+            The text alignment value to test, or None for default behavior.
+        expected_alignment : int
+            The expected protobuf alignment enum value (1=LEFT, 2=CENTER, 3=RIGHT, 4=JUSTIFY).
+        """
+        if text_alignment is None:
+            st.markdown("Test")
+        else:
+            st.markdown("Test", text_alignment=text_alignment)
+
+        el = self.get_delta_from_queue().new_element
+        assert el.markdown.body == "Test"
+        assert el.text_alignment_config.alignment == expected_alignment
+
+    def test_st_markdown_text_alignment_invalid(self):
+        """Test st.markdown with invalid text_alignment raises error."""
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.markdown("Test", text_alignment="invalid")
+
+        assert 'Invalid text_alignment value: "invalid"' in str(exc.value)
+        assert "left" in str(exc.value)
+        assert "center" in str(exc.value)
+        assert "right" in str(exc.value)
+        assert "justify" in str(exc.value)
+
+
+class StCaptionTextAlignmentTest(DeltaGeneratorTestCase):
+    """Test st.caption text_alignment parameter."""
+
+    @parameterized.expand(
+        [
+            ("left", 1),
+            ("center", 2),
+            ("right", 3),
+            ("justify", 4),
+            (None, 1),  # Default case
+        ]
+    )
+    def test_st_caption_text_alignment(
+        self, text_alignment: str | None, expected_alignment: int
+    ):
+        """Test st.caption with various text_alignment values.
+
+        Parameters
+        ----------
+        text_alignment : str | None
+            The text alignment value to test, or None for default behavior.
+        expected_alignment : int
+            The expected protobuf alignment enum value.
+        """
+        if text_alignment is None:
+            st.caption("Caption text")
+        else:
+            st.caption("Caption text", text_alignment=text_alignment)
+
+        el = self.get_delta_from_queue().new_element
+        assert el.markdown.body == "Caption text"
+        assert el.markdown.is_caption is True
+        assert el.text_alignment_config.alignment == expected_alignment
+
+    def test_st_caption_text_alignment_invalid(self):
+        """Test st.caption with invalid text_alignment raises error."""
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.caption("Caption text", text_alignment="top")
+
+        assert 'Invalid text_alignment value: "top"' in str(exc.value)
+        assert "left" in str(exc.value)
+        assert "center" in str(exc.value)
+        assert "right" in str(exc.value)
+        assert "justify" in str(exc.value)

@@ -34,14 +34,19 @@ declare global {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
 export type OnMessage = (ForwardMsg: any) => void
 
+export interface ErrorDetails {
+  message: string
+  codeBlock?: string
+}
+
 export type OnConnectionStateChange = (
   connectionState: ConnectionState,
-  errMsg?: string
+  errMsg?: ErrorDetails
 ) => void
 
 export type OnRetry = (
   totalTries: number,
-  errorMarkdown: string,
+  errorDetails: ErrorDetails,
   retryTimeout: number
 ) => void
 

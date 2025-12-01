@@ -58,6 +58,29 @@ def _fix_sys_path(main_script_path: str) -> None:
     sys.path.insert(0, os.path.dirname(main_script_path))
 
 
+def _maybe_install_uvloop(running_in_event_loop: bool) -> None:
+    """Install uvloop as the default event loop policy if available."""
+
+    if running_in_event_loop:
+        return
+
+    if env_util.IS_WINDOWS:
+        return
+
+    try:
+        import uvloop
+    except ModuleNotFoundError:
+        return
+
+    try:
+        uvloop.install()
+        _LOGGER.debug("uvloop installed as default event loop policy.")
+    except Exception:
+        _LOGGER.warning(
+            "Failed to install uvloop. Falling back to default loop.", exc_info=True
+        )
+
+
 def _fix_tornado_crash() -> None:
     """Set default asyncio policy to be compatible with Tornado 6.
 
@@ -326,6 +349,7 @@ def run(
         # This prevents the task from being garbage collected
         server._bootstrap_task = task
     else:
+        _maybe_install_uvloop(running_in_event_loop)
         # No running event loop, so we can use asyncio.run
         # This is the normal case when running streamlit from the command line
         _LOGGER.debug("Starting new event loop for server")

@@ -24,7 +24,7 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react"
-import cloneDeep from "lodash/cloneDeep"
+import { cloneDeep } from "lodash-es"
 
 import {
   getMenuStructure,
@@ -34,6 +34,7 @@ import { MetricsManager } from "@streamlit/app/src/MetricsManager"
 import {
   ConnectionManager,
   ConnectionState,
+  ErrorDetails,
   mockEndpoints,
 } from "@streamlit/connection"
 import {
@@ -51,7 +52,6 @@ import {
   lightTheme,
   LocalStore,
   mockSessionInfoProps,
-  mockWindowLocation,
   RootStyleProvider,
   ScriptRunState,
   SessionInfo,
@@ -59,6 +59,7 @@ import {
   WidgetStateManager,
   WindowDimensionsProvider,
 } from "@streamlit/lib"
+import { mockWindowLocation } from "@streamlit/lib/testing"
 import {
   Config,
   CustomThemeConfig,
@@ -85,12 +86,6 @@ import {
 
 import { App, LOG, Props } from "./App"
 import { showDevelopmentOptions } from "./showDevelopmentOptions"
-
-vi.mock("~lib/baseconsts", async () => {
-  return {
-    ...(await vi.importActual("~lib/baseconsts")),
-  }
-})
 
 vi.mock("@streamlit/lib", async () => {
   const actualLib = await vi.importActual("@streamlit/lib")
@@ -1579,6 +1574,52 @@ describe("App", () => {
           .pageScriptHash
       ).toBe("top_hash")
     })
+
+    it("preserves query params from URL on first script run after browser back button", async () => {
+      renderApp(getProps())
+
+      sendForwardMessage("newSession", {
+        ...CURRENT_NEW_SESSION_JSON,
+        pageScriptHash: "top_hash",
+      })
+      sendForwardMessage("navigation", {
+        ...THIS_NAVIGATION_JSON,
+        pageScriptHash: "top_hash",
+      })
+
+      const connectionManager = getMockConnectionManager()
+      // @ts-expect-error
+      connectionManager.sendMessage.mockClear()
+
+      // Navigate to page2
+      sendForwardMessage("newSession", {
+        ...CURRENT_NEW_SESSION_JSON,
+        pageScriptHash: "sub_hash",
+      })
+      sendForwardMessage("navigation", {
+        ...THIS_NAVIGATION_JSON,
+        pageScriptHash: "sub_hash",
+      })
+
+      // @ts-expect-error
+      connectionManager.sendMessage.mockClear()
+
+      // Simulate user clicking browser back button to main page with query params.
+      // In a real browser, the URL would be restored to include query params.
+      // In JSDOM, we need to manually set the URL before triggering popstate.
+      window.history.pushState({}, "", "/?mykey=myvalue")
+      window.dispatchEvent(new PopStateEvent("popstate"))
+
+      await waitFor(() => {
+        expect(connectionManager.sendMessage).toBeCalledTimes(1)
+      })
+
+      // Verify the query params from the URL are preserved in the rerun message
+      expect(
+        // @ts-expect-error
+        connectionManager.sendMessage.mock.calls[0][0].rerunScript.queryString
+      ).toBe("mykey=myvalue")
+    })
   })
 
   describe("App.handlePageConfigChanged", () => {
@@ -2944,11 +2985,20 @@ describe("App", () => {
       })
     })
 
-    it("does nothing if server is disconnected", () => {
+    it("rejects with error when server is disconnected", () => {
+      // When disconnected, file upload requests should be rejected immediately
+      // with an error. We can't queue and retry because reconnection triggers
+      // a script rerun, which remounts the FileUploader component and
+      // invalidates the promise callback.
       renderApp(getProps())
 
       const fileUploadClient =
         getStoredValue<FileUploadClient>(FileUploadClient)
+
+      const onFileURLsResponseSpy = vi.spyOn(
+        fileUploadClient,
+        "onFileURLsResponse"
+      )
 
       // @ts-expect-error - requestFileURLs is private
       fileUploadClient.requestFileURLs("myRequestId", [
@@ -2959,7 +3009,15 @@ describe("App", () => {
 
       const connectionManager = getMockConnectionManager()
 
+      // No message sent when disconnected
       expect(connectionManager.sendMessage).not.toBeCalled()
+
+      // Error response should be sent to reject the pending promise
+      expect(onFileURLsResponseSpy).toHaveBeenCalledWith({
+        responseId: "myRequestId",
+        errorMsg:
+          "Connection lost. Please wait for the app to reconnect, then try again.",
+      })
     })
   })
 
@@ -4213,9 +4271,9 @@ describe("App", () => {
 
         // Trigger a connection error dialog
         act(() => {
-          getMockConnectionManagerProp("onConnectionError")(
-            "Connection error message."
-          )
+          getMockConnectionManagerProp("onConnectionError")({
+            message: "Connection error message.",
+          })
         })
 
         expect(hostCommunicationMgr.sendMessageToHost).toBeCalledWith({
@@ -4833,11 +4891,11 @@ describe("App.hasReceivedNewSession flag behavior", () => {
   describe("Connection Error Handling", () => {
     const triggerConnectionError = (
       connectionManager: ConnectionManager,
-      errorMessage: string
+      errorDetails: ErrorDetails
     ): void => {
       act(() => {
         // @ts-expect-error - connectionManager.props is private
-        connectionManager.props.onConnectionError(errorMessage)
+        connectionManager.props.onConnectionError(errorDetails)
       })
     }
 
@@ -4846,10 +4904,9 @@ describe("App.hasReceivedNewSession flag behavior", () => {
         renderApp(getProps())
         const connectionManager = getMockConnectionManager(false)
 
-        triggerConnectionError(
-          connectionManager,
-          "Network error: Unable to connect"
-        )
+        triggerConnectionError(connectionManager, {
+          message: "Network error: Unable to connect",
+        })
 
         // Verify error dialog and message are displayed
         expect(screen.getByText("Connection error")).toBeVisible()
@@ -4863,7 +4920,9 @@ describe("App.hasReceivedNewSession flag behavior", () => {
         const connectionManager = getMockConnectionManager(false)
 
         // First error
-        triggerConnectionError(connectionManager, "Connection lost")
+        triggerConnectionError(connectionManager, {
+          message: "Connection lost",
+        })
 
         expect(screen.getByText("Connection error")).toBeVisible()
 
@@ -4877,7 +4936,9 @@ describe("App.hasReceivedNewSession flag behavior", () => {
         expect(screen.queryByText("Connection error")).toBeNull()
 
         // Second error should not display
-        triggerConnectionError(connectionManager, "Another connection error")
+        triggerConnectionError(connectionManager, {
+          message: "Another connection error",
+        })
 
         expect(screen.queryByText("Connection error")).toBeNull()
       })
@@ -4900,7 +4961,9 @@ describe("App.hasReceivedNewSession flag behavior", () => {
         })
 
         // Trigger error
-        triggerConnectionError(connectionManager, "Connection lost")
+        triggerConnectionError(connectionManager, {
+          message: "Connection lost",
+        })
 
         // Dialog should not be displayed
         expect(screen.queryByText("Connection error")).toBeNull()
@@ -4915,16 +4978,15 @@ describe("App.hasReceivedNewSession flag behavior", () => {
         )
       })
 
-      it("displays error with StreamlitMarkdown formatting", () => {
+      it("displays error with DialogErrorMessage formatting", () => {
         renderApp(getProps())
         const connectionManager = getMockConnectionManager(false)
 
-        triggerConnectionError(
-          connectionManager,
-          "**Network Error**: Unable to connect to server"
-        )
+        triggerConnectionError(connectionManager, {
+          message: "Network Error: Unable to connect to server",
+        })
 
-        // Verify both error dialog and markdown content are displayed
+        // Verify both error dialog and error message are displayed
         expect(screen.getByText("Connection error")).toBeVisible()
         expect(screen.getByText(/Network Error/)).toBeVisible()
       })
@@ -4936,7 +4998,9 @@ describe("App.hasReceivedNewSession flag behavior", () => {
         const connectionManager = getMockConnectionManager(false)
 
         // Trigger connection error
-        triggerConnectionError(connectionManager, "Connection lost")
+        triggerConnectionError(connectionManager, {
+          message: "Connection lost",
+        })
 
         expect(screen.getByText("Connection error")).toBeVisible()
 
@@ -4957,7 +5021,9 @@ describe("App.hasReceivedNewSession flag behavior", () => {
         })
 
         // New error should be displayed after reconnection
-        triggerConnectionError(connectionManager, "New connection error")
+        triggerConnectionError(connectionManager, {
+          message: "New connection error",
+        })
 
         expect(screen.getByText("Connection error")).toBeVisible()
         expect(screen.getByText(/New connection error/)).toBeVisible()
@@ -4984,7 +5050,9 @@ describe("App.hasReceivedNewSession flag behavior", () => {
         })
 
         // Trigger connection error
-        triggerConnectionError(connectionManager, "Connection lost")
+        triggerConnectionError(connectionManager, {
+          message: "Connection lost",
+        })
 
         expect(screen.getByText("Connection error")).toBeVisible()
 
@@ -5004,7 +5072,9 @@ describe("App.hasReceivedNewSession flag behavior", () => {
         const connectionManager = getMockConnectionManager(false)
 
         // First, show a connection error dialog
-        triggerConnectionError(connectionManager, "Connection lost")
+        triggerConnectionError(connectionManager, {
+          message: "Connection lost",
+        })
 
         expect(screen.getByText("Connection error")).toBeVisible()
 
@@ -5073,11 +5143,11 @@ describe("App.hasReceivedNewSession flag behavior", () => {
         const connectionManager = getMockConnectionManager(false)
 
         // Trigger multiple errors
-        triggerConnectionError(connectionManager, "Error 1")
+        triggerConnectionError(connectionManager, { message: "Error 1" })
 
-        triggerConnectionError(connectionManager, "Error 2")
+        triggerConnectionError(connectionManager, { message: "Error 2" })
 
-        triggerConnectionError(connectionManager, "Error 3")
+        triggerConnectionError(connectionManager, { message: "Error 3" })
 
         // Should only show the latest error
         expect(screen.getByText("Connection error")).toBeVisible()
@@ -5091,7 +5161,7 @@ describe("App.hasReceivedNewSession flag behavior", () => {
         const connectionManager = getMockConnectionManager(false)
 
         // First error
-        triggerConnectionError(connectionManager, "First error")
+        triggerConnectionError(connectionManager, { message: "First error" })
 
         expect(screen.getByText("Connection error")).toBeVisible()
 
@@ -5118,7 +5188,7 @@ describe("App.hasReceivedNewSession flag behavior", () => {
         })
 
         // Error should still not display (dismissal persists)
-        triggerConnectionError(connectionManager, "Another error")
+        triggerConnectionError(connectionManager, { message: "Another error" })
 
         expect(screen.queryByText("Connection error")).toBeNull()
 
@@ -5129,7 +5199,9 @@ describe("App.hasReceivedNewSession flag behavior", () => {
           )
         })
 
-        triggerConnectionError(connectionManager, "Error after reconnect")
+        triggerConnectionError(connectionManager, {
+          message: "Error after reconnect",
+        })
 
         expect(screen.getByText("Connection error")).toBeVisible()
       })
@@ -5206,7 +5278,9 @@ describe("App.hasReceivedNewSession flag behavior", () => {
         })
 
         // Try to trigger connection error
-        triggerConnectionError(connectionManager, "Error while disconnected")
+        triggerConnectionError(connectionManager, {
+          message: "Error while disconnected",
+        })
 
         // Should still show error dialog even when disconnected
         expect(screen.getByText("Connection error")).toBeVisible()

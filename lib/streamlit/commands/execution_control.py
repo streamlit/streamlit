@@ -33,12 +33,7 @@ from streamlit.runtime.scriptrunner import (
 )
 
 if TYPE_CHECKING:
-    from streamlit.runtime.state.query_params import QueryParams
-
-QueryParamValue = str | Iterable[str]
-SwitchPageQueryParams = (
-    Mapping[str, QueryParamValue] | Iterable[tuple[str, QueryParamValue]]
-)
+    from streamlit.runtime.state.query_params import QueryParams, QueryParamsInput
 
 
 @gather_metrics("stop")
@@ -111,7 +106,7 @@ def _new_fragment_id_queue(
 
 def _set_query_params_for_switch(
     query_params_state: QueryParams,
-    new_query_params: SwitchPageQueryParams | None,
+    new_query_params: QueryParamsInput | None,
 ) -> None:
     """Set query params for a switch page."""
 
@@ -193,7 +188,7 @@ def rerun(  # type: ignore[misc]
 def switch_page(  # type: ignore[misc]
     page: str | Path | StreamlitPage,
     *,
-    query_params: SwitchPageQueryParams | None = None,
+    query_params: QueryParamsInput | None = None,
 ) -> NoReturn:  # ty: ignore[invalid-return-type]
     """Programmatically switch the current page in a multipage app.
 
@@ -208,8 +203,10 @@ def switch_page(  # type: ignore[misc]
     page : str, Path, or st.Page
         The file path (relative to the main script) or an st.Page indicating
         the page to switch to.
+
     query_params : dict, list of tuples, or None
-        Query parameters to apply when navigating to the target page. Values can
+        Query parameters to apply when navigating to the target page.
+        This can be a dictionary or an iterable of key-value tuples. Values can
         be strings or iterables of strings (for repeated keys). When omitted,
         all non-embed query parameters are cleared during navigation.
 

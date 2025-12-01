@@ -421,6 +421,17 @@ class StreamlitMissingPageLabelError(LocalizableStreamlitException):
         )
 
 
+class StreamlitQueryParamDictValueError(LocalizableStreamlitException):
+    """Exception raised when a query param value is a dictionary."""
+
+    def __init__(self, key: str) -> None:
+        super().__init__(
+            "Query param value for `{key}` cannot be set to a dictionary. "
+            "Provide a string or iterable of strings instead.",
+            key=key,
+        )
+
+
 class StreamlitPageNotFoundError(LocalizableStreamlitException):
     """Exception raised the linked page can not be found."""
 

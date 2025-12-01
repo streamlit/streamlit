@@ -22,11 +22,7 @@ import {
   toHex,
   transparentize,
 } from "color2k"
-import cloneDeep from "lodash/cloneDeep"
-import isObject from "lodash/isObject"
-import merge from "lodash/merge"
-import mergeWith from "lodash/mergeWith"
-import once from "lodash/once"
+import { cloneDeep, isObject, merge, mergeWith, once } from "lodash-es"
 import { getLogger } from "loglevel"
 
 import { CustomThemeConfig, ICustomThemeConfig } from "@streamlit/protobuf"

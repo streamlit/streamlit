@@ -33,7 +33,9 @@ import {
 import { Quiver } from "~lib/dataframes/Quiver"
 
 import { AppNode } from "./AppNode.interface"
+import { TransientNode } from "./TransientNode"
 import { AppNodeVisitor } from "./visitors/AppNodeVisitor.interface"
+import { ClearStaleNodeVisitor } from "./visitors/ClearStaleNodeVisitor"
 import { DebugVisitor } from "./visitors/DebugVisitor"
 
 /**
@@ -216,6 +218,42 @@ export class ElementNode implements AppNode {
    */
   public debug(): string {
     return this.accept(new DebugVisitor())
+  }
+
+  public replaceTransientNodeWithSelf(node: TransientNode): AppNode {
+    if (node.scriptRunId !== this.scriptRunId) {
+      // This TransientNode was not defined in this script run, so we return the element node
+      // to replace everything
+      return this
+    }
+
+    // It's essentially an empty transient node, so we return the element node
+    if (node.transientNodes.length === 0) {
+      return this
+    }
+
+    // At this point, we should clear the transient nodes that are stale
+    const newTransientNodes = node.updateTransientNodes(
+      element =>
+        // All transient nodes should be ElementNodes
+        element.accept(new ClearStaleNodeVisitor(this.scriptRunId)) as
+          | ElementNode
+          | undefined
+    )
+
+    // The resulting transient node is empty, so we return this node
+    if (newTransientNodes.length === 0) {
+      return this
+    }
+
+    // In this case, we require the transient node to be included, but we are providing
+    // a new anchor node
+    return new TransientNode(
+      this.scriptRunId,
+      this,
+      newTransientNodes,
+      node.deltaMsgReceivedAt
+    )
   }
 }
 

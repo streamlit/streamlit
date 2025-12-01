@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import kebabCase from "lodash/kebabCase"
+import { kebabCase } from "lodash-es"
 
 import {
   StreamlitTheme,

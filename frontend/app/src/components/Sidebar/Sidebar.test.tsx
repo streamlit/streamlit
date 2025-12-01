@@ -27,9 +27,9 @@ import userEvent from "@testing-library/user-event"
 import {
   mockEndpoints,
   NavigationContextProps,
-  renderWithContexts,
   SidebarConfigContextProps,
 } from "@streamlit/lib"
+import { renderWithContexts } from "@streamlit/lib/testing"
 import { Logo, PageConfig } from "@streamlit/protobuf"
 
 import Sidebar, { SidebarProps } from "./Sidebar"
