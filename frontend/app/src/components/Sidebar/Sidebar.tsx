@@ -35,7 +35,6 @@ import {
   shouldShowNavigation,
   SidebarNav,
 } from "@streamlit/app/src/components/Navigation"
-import { useAppContext } from "@streamlit/app/src/components/StreamlitContextProvider"
 import { StreamlitEndpoints } from "@streamlit/connection"
 import {
   BaseButton,
@@ -91,10 +90,11 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   const { appPages, navSections } = useContext(NavigationContext)
 
-  const { hideSidebarNav, appLogo } = useContext(SidebarConfigContext)
+  const { hideSidebarNav, appLogo, initialSidebarWidth } = useContext(
+    SidebarConfigContext
+  )
 
   const scrollbarGutterSize = useScrollbarGutterSize()
-  const { initialSidebarWidth } = useAppContext()
 
   const sidebarRef = useRef<HTMLDivElement>(null)
 
