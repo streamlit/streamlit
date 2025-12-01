@@ -234,6 +234,7 @@ function Slider({
                 source={formattedValue}
                 allowHTML={false}
                 inheritFont
+                isLabel
               />
             </StyledThumbValue>
           </StyledThumb>
