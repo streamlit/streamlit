@@ -32,44 +32,31 @@ vi.mock("@emotion/react", () => ({
   keyframes: () => "keyframes",
 }))
 
-// Helper to create a mock textarea ref using actual DOM elements
+// Helper to create a mock textarea ref
 const createMockTextareaRef = (
   overrides: Partial<{
     offsetHeight: number
     scrollHeight: number
+    style: { height: string }
   }> = {}
 ): RefObject<HTMLTextAreaElement> => {
-  const textarea = document.createElement("textarea")
+  const defaultElement = {
+    offsetHeight: 40,
+    scrollHeight: 40,
+    style: {
+      height: "",
+    },
+  }
 
-  // Set CSS styles so getComputedStyle returns numeric values
-  // These values match the expected maxHeight calculation: lineHeight * 6.5 + padding = 40 * 6.5 + 0 = 260
-  textarea.style.lineHeight = "40px"
-  textarea.style.padding = "0px"
-
-  // Set up the textarea with default values
-  Object.defineProperty(textarea, "offsetHeight", {
-    value: overrides.offsetHeight ?? 40,
-    writable: true,
-    configurable: true,
-  })
-  Object.defineProperty(textarea, "scrollHeight", {
-    value: overrides.scrollHeight ?? 40,
-    writable: true,
-    configurable: true,
-  })
-
-  // Append to document so getComputedStyle works
-  document.body.appendChild(textarea)
-
-  return { current: textarea }
+  return {
+    current: {
+      ...defaultElement,
+      ...overrides,
+    } as HTMLTextAreaElement,
+  }
 }
 
 describe("useTextInputAutoExpand", () => {
-  afterEach(() => {
-    // Clean up any textarea elements added to the document
-    document.body.innerHTML = ""
-  })
-
   describe("initialization", () => {
     it("should initialize with default values", () => {
       const mockTextareaRef = createMockTextareaRef()
@@ -348,9 +335,8 @@ describe("useTextInputAutoExpand", () => {
 
       // The hook should automatically handle this on initialization
       expect(result.current.isExtended).toBe(true)
-      // Height is capped at maxHeight when content exceeds the limit
-      expect(result.current.height).toBe("260px")
-      expect(result.current.maxHeight).toBe("260px")
+      expect(result.current.height).toBe("1001px")
+      expect(result.current.maxHeight).toBe("260px") // Still limited by max height
     })
   })
 })
