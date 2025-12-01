@@ -110,7 +110,6 @@ st.container(key="st_multiselect").multiselect(
     selected_feature_markdown, ["Blue", "Purple"]
 )
 st.container(key="st_slider").slider(selected_feature_markdown, 0, 10, 1)
-
 st.container(key="st_select_slider").select_slider(
     selected_feature_markdown, ["Blue", "Purple"]
 )
