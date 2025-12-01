@@ -836,31 +836,23 @@ describe("App", () => {
       expect(props.theme.addThemes.mock.calls[1][0]).toEqual([])
     })
 
-    it("removes the cached custom theme from theme options", () => {
-      window.localStorage.setItem(
-        LocalStore.ACTIVE_THEME,
-        JSON.stringify({ name: CUSTOM_THEME_NAME, themeInput: {} })
-      )
-      const props = getProps({
-        theme: {
-          activeTheme: {
-            ...lightTheme,
-            name: CUSTOM_THEME_NAME,
-          },
-          availableThemes: [],
-          setTheme: vi.fn(),
-          addThemes: vi.fn(),
-          setFonts: vi.fn(),
-          setImportedTheme: vi.fn(),
-        },
-      })
+    it("removes custom theme when server sends null for customTheme", () => {
+      const props = getProps()
       renderApp(props)
 
+      // First, send a custom theme to establish it
+      sendForwardMessage("newSession", NEW_SESSION_JSON)
+
+      // @ts-expect-error
+      props.theme.addThemes.mockClear()
+
+      // Then send null to remove the custom theme
       sendForwardMessage("newSession", {
         ...NEW_SESSION_JSON,
         customTheme: null,
       })
 
+      // Should call addThemes with empty array to remove custom themes
       expect(props.theme.addThemes).toHaveBeenCalledTimes(1)
 
       // @ts-expect-error
@@ -976,6 +968,93 @@ describe("App", () => {
 
       expect(props.theme.addThemes).not.toHaveBeenCalled()
       expect(props.theme.setTheme).not.toHaveBeenCalled()
+    })
+
+    it("does not update theme when receiving theme with nested objects in different key orders", () => {
+      const props = getProps()
+      renderApp(props)
+
+      // Create theme config with nested objects in a specific key order
+      const theme1 = new CustomThemeConfig({
+        primaryColor: "blue",
+        backgroundColor: "white",
+        sidebar: {
+          backgroundColor: "gray",
+          textColor: "black",
+        },
+        light: {
+          primaryColor: "lightblue",
+          textColor: "darkgray",
+        },
+      })
+
+      // Send first theme
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        customTheme: theme1,
+      })
+
+      // Reset mocks to check subsequent calls
+      vi.mocked(props.theme.addThemes).mockClear()
+      vi.mocked(props.theme.setTheme).mockClear()
+
+      // Send same theme with keys in different order (including nested objects)
+      const theme2 = new CustomThemeConfig({
+        sidebar: {
+          textColor: "black",
+          backgroundColor: "gray",
+        },
+        primaryColor: "blue",
+        light: {
+          textColor: "darkgray",
+          primaryColor: "lightblue",
+        },
+        backgroundColor: "white",
+      })
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        customTheme: theme2,
+      })
+
+      // Should not update theme since the content is identical
+      expect(props.theme.addThemes).not.toHaveBeenCalled()
+      expect(props.theme.setTheme).not.toHaveBeenCalled()
+    })
+
+    it("updates theme when receiving theme with different values", () => {
+      const props = getProps()
+      renderApp(props)
+
+      const theme1 = new CustomThemeConfig({
+        primaryColor: "blue",
+        backgroundColor: "white",
+      })
+
+      // Send first theme
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        customTheme: theme1,
+      })
+
+      // Reset mocks to check subsequent calls
+      vi.mocked(props.theme.addThemes).mockClear()
+      vi.mocked(props.theme.setTheme).mockClear()
+
+      // Send different theme
+      const theme2 = new CustomThemeConfig({
+        primaryColor: "red",
+        backgroundColor: "white",
+      })
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        customTheme: theme2,
+      })
+
+      // Should update theme since the content is different
+      expect(props.theme.addThemes).toHaveBeenCalled()
+      expect(props.theme.setTheme).toHaveBeenCalled()
     })
 
     it("performs one-time initialization", () => {
@@ -2225,6 +2304,251 @@ describe("App", () => {
           }),
         })
       )
+    })
+  })
+
+  describe("App theme hash change detection", () => {
+    it("detects changes when sidebar config is modified", () => {
+      const props = getProps()
+      renderApp(props)
+
+      const theme1 = new CustomThemeConfig({
+        primaryColor: "blue",
+        sidebar: { backgroundColor: "white" },
+      })
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        customTheme: theme1,
+      })
+
+      expect(props.theme.addThemes).toHaveBeenCalledTimes(1)
+
+      const theme2 = new CustomThemeConfig({
+        primaryColor: "blue",
+        sidebar: { backgroundColor: "gray" }, // Different sidebar color
+      })
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        customTheme: theme2,
+      })
+
+      // Should be called again because the hash changed
+      expect(props.theme.addThemes).toHaveBeenCalledTimes(2)
+    })
+
+    it("detects changes when light section config is modified", () => {
+      const props = getProps()
+      renderApp(props)
+
+      const theme1 = new CustomThemeConfig({
+        primaryColor: "blue",
+        light: { backgroundColor: "white" },
+      })
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        customTheme: theme1,
+      })
+
+      expect(props.theme.addThemes).toHaveBeenCalledTimes(1)
+
+      const theme2 = new CustomThemeConfig({
+        primaryColor: "blue",
+        light: { backgroundColor: "lightgray" }, // Different light background
+      })
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        customTheme: theme2,
+      })
+
+      // Should be called again because the hash changed
+      expect(props.theme.addThemes).toHaveBeenCalledTimes(2)
+    })
+
+    it("detects changes when dark section config is modified", () => {
+      const props = getProps()
+      renderApp(props)
+
+      const theme1 = new CustomThemeConfig({
+        primaryColor: "blue",
+        dark: { backgroundColor: "black" },
+      })
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        customTheme: theme1,
+      })
+
+      expect(props.theme.addThemes).toHaveBeenCalledTimes(1)
+
+      const theme2 = new CustomThemeConfig({
+        primaryColor: "blue",
+        dark: { backgroundColor: "darkgray" }, // Different dark background
+      })
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        customTheme: theme2,
+      })
+
+      // Should be called again because the hash changed
+      expect(props.theme.addThemes).toHaveBeenCalledTimes(2)
+    })
+
+    it("detects changes when nested sidebar in light section is modified", () => {
+      const props = getProps()
+      renderApp(props)
+
+      const theme1 = new CustomThemeConfig({
+        primaryColor: "blue",
+        light: {
+          sidebar: { backgroundColor: "white" },
+        },
+      })
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        customTheme: theme1,
+      })
+
+      expect(props.theme.addThemes).toHaveBeenCalledTimes(1)
+
+      const theme2 = new CustomThemeConfig({
+        primaryColor: "blue",
+        light: {
+          sidebar: { backgroundColor: "lightgray" }, // Different nested sidebar
+        },
+      })
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        customTheme: theme2,
+      })
+
+      // Should be called again because the hash changed
+      expect(props.theme.addThemes).toHaveBeenCalledTimes(2)
+    })
+
+    it("does not re-process theme when hash is unchanged", () => {
+      const props = getProps()
+      renderApp(props)
+
+      const theme = new CustomThemeConfig({
+        primaryColor: "blue",
+        backgroundColor: "white",
+      })
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        customTheme: theme,
+      })
+
+      expect(props.theme.addThemes).toHaveBeenCalledTimes(1)
+
+      // Send the same theme again
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        customTheme: theme,
+      })
+
+      // Should still only be called once (theme not re-processed)
+      expect(props.theme.addThemes).toHaveBeenCalledTimes(1)
+    })
+
+    it("does not re-process when theme with same content but different key order is sent", () => {
+      const props = getProps()
+      renderApp(props)
+
+      const theme1 = new CustomThemeConfig({
+        primaryColor: "blue",
+        backgroundColor: "white",
+        textColor: "black",
+      })
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        customTheme: theme1,
+      })
+
+      expect(props.theme.addThemes).toHaveBeenCalledTimes(1)
+
+      // Create theme with same values but potentially different internal key order
+      const theme2 = new CustomThemeConfig({
+        textColor: "black",
+        backgroundColor: "white",
+        primaryColor: "blue",
+      })
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        customTheme: theme2,
+      })
+
+      // Should still only be called once (hashes should match)
+      expect(props.theme.addThemes).toHaveBeenCalledTimes(1)
+    })
+
+    it("detects changes in font configuration", () => {
+      const props = getProps()
+      renderApp(props)
+
+      const theme1 = new CustomThemeConfig({
+        primaryColor: "blue",
+        bodyFont: "Arial",
+      })
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        customTheme: theme1,
+      })
+
+      expect(props.theme.addThemes).toHaveBeenCalledTimes(1)
+
+      const theme2 = new CustomThemeConfig({
+        primaryColor: "blue",
+        bodyFont: "Helvetica", // Different font
+      })
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        customTheme: theme2,
+      })
+
+      // Should be called again because the hash changed
+      expect(props.theme.addThemes).toHaveBeenCalledTimes(2)
+    })
+
+    it("detects changes in array properties", () => {
+      const props = getProps()
+      renderApp(props)
+
+      const theme1 = new CustomThemeConfig({
+        primaryColor: "blue",
+        headingFontSizes: ["2rem", "1.5rem", "1.25rem"],
+      })
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        customTheme: theme1,
+      })
+
+      expect(props.theme.addThemes).toHaveBeenCalledTimes(1)
+
+      const theme2 = new CustomThemeConfig({
+        primaryColor: "blue",
+        headingFontSizes: ["2rem", "1.5rem", "1rem"], // Different array value
+      })
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        customTheme: theme2,
+      })
+
+      // Should be called again because the hash changed
+      expect(props.theme.addThemes).toHaveBeenCalledTimes(2)
     })
   })
 
