@@ -121,8 +121,8 @@ st.metric("Test 10", -4.56, 1.23, border=True, help="Test help text")
 
 st.metric(
     "Test 11 -> :material/check: :rainbow[Fancy] _**markdown** `label` _support_",
-    123,
-    123,
+    "$123",
+    "-$123",
 )
 
 st.metric("Stretch width", 123, 123, width="stretch")
@@ -139,6 +139,6 @@ with st.container(height=400, key="height_test"):
 
 st.metric(
     "Supports markdown in value and delta",
-    "-1.2 :material/check: :rainbow[Fancy] -> **markdown** _support_",
+    "-1.2$ :material/check: :rainbow[Fancy] -> **markdown** _support_",
     "+1 :orange[:material/currency_bitcoin: -> [:material/attach_money:](https://streamlit.io/)]",
 )
