@@ -184,6 +184,7 @@ def test_dynamic_camera_input_props(app: Page):
     expect_prefixed_markdown(app, "Initial camera input value:", "False")
 
     # Check that the help tooltip is correct:
+    dynamic_camera_input.scroll_into_view_if_needed()
     expect_help_tooltip(app, dynamic_camera_input, "initial help")
 
     # Click the toggle to update the camera input props
@@ -199,4 +200,5 @@ def test_dynamic_camera_input_props(app: Page):
     expect(dynamic_camera_input).to_have_css("width", "300px")
 
     # Check that the help tooltip is correct:
+    dynamic_camera_input.scroll_into_view_if_needed()
     expect_help_tooltip(app, dynamic_camera_input, "updated help")
