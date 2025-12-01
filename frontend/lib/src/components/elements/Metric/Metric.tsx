@@ -358,12 +358,11 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
               />
             )}
             <StyledTruncateText>
-              {" "}
               <StreamlitMarkdown
-                source={delta}
+                source={" " + delta + " "} // Add some extra space to keep the existing spacing.
                 allowHTML={false}
                 inheritFont
-              />{" "}
+              />
             </StyledTruncateText>
           </StyledMetricDeltaText>
         )}
