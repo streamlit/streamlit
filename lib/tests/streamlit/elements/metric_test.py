@@ -92,12 +92,13 @@ class MetricTest(DeltaGeneratorTestCase):
 
     def test_value(self):
         """Test that metric delta returns the correct proto value"""
-        arg_values = ["some str", 123, -1.234, None]
+        arg_values = ["some str", 123, -1.234, None, "**markdown** _support_"]
         proto_values = [
             "some str",
             "123",
             "-1.234",
             "—",
+            "**markdown** _support_",
         ]
 
         for arg_value, proto_value in zip(arg_values, proto_values, strict=False):
