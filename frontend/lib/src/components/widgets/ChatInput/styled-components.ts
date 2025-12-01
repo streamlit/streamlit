@@ -94,7 +94,8 @@ export const StyledInputInstructions = styled.div(({ theme }) => ({
   fontSize: theme.fontSizes.twoSm,
   textAlign: "right",
   whiteSpace: "nowrap",
-  pointerEvents: "none",
+  pointerEvents: "auto",
+  cursor: "text",
   zIndex: theme.zIndices.priority,
   "& .stChatInputInstructions": {
     position: "static",
