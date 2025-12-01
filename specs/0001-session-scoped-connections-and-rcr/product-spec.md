@@ -19,13 +19,14 @@ database connection support, although the API is generic enough to handle any ty
 
 There is one limitation: `st.connection` caches the connection object in a global scope, meaning that any connection
 must be thread-safe, and must contain only sharable configuration. This makes it impossible to use `st.connection` for
-any type of per-user session. For example, this API isn’t suitable for building an app on SPCS that uses caller’s
-rights, since that connection must be scoped to the user’s session. It also wouldn’t be suitable for connecting to any
-other API that required user-scoped tokens - like fetching data from a user’s GitHub account via GitHub’s graphQL API.
+any type of per-user session. For example, this API isn’t suitable for building an app on Snowpark Container Services
+that uses caller’s rights, since that connection must be scoped to the user’s session. It also wouldn’t be suitable for
+connecting to any other API that required user-scoped tokens - like fetching data from a user’s GitHub account via
+GitHub’s graphQL API.
 
 This proposal outlines changes to `st.connection` and `st.cache_resource` that will allow for session-scoped
-connections, and how we will use these changes to write a connection to handle Snowflake SPCS restricted caller’s rights
-connections.
+connections, and how we will use these changes to write a connection to handle Snowpark Conatiner Services restricted
+caller’s rights connections.
 
 The proposed API changes are:
 * Add session-scoped connections. This would be a natural extension to the current connection API, and would support any
@@ -62,7 +63,7 @@ So, an app author is stuck with several bad options:
 * Create a connection with session keepalive enabled, and store the connection in the app’s session state. This will leak memory, since keepalive starts a background thread to periodically ping Snowflake, and this thread is only shut down when the connection is closed.
 
 See [this tutorial](https://docs.snowflake.com/en/developer-guide/snowpark-container-services/tutorials/advanced/tutorial-6-callers-rights)
-for detailed examples and explanation from the SPCS side.
+for detailed examples and explanation from the Snowpark Container Services side.
 
 ### Related issues
 * [#8545](https://github.com/streamlit/streamlit/issues/8545), which can be implemented by a simple session-scoped cached resource with a shutdown hook.
@@ -73,29 +74,32 @@ for detailed examples and explanation from the SPCS side.
 
 ### API Changes
 
-`st.cache_resource` will have two new parameters:
+`st.cache_resource` and `st.cache_data` will have two new parameters:
 
 ```python
-EvictionHook: TypeAlias = Callable[[Any], None]
+OnExpire: TypeAlias = Callable[[Any], None]
+
+# This is showing the cache_resource example, but cache_data will be identical.
 
 # Actually called _decorator in CacheResourceAPI.
 def cache_resource(
     self,
     # Existing args omitted for clarity.
-    session_scoped: bool = False,
-    eviction_hook: EvictionHook | None = None
+    scope: Literal["global", "session"] = "global",
+    on_expire: OnExpire | None = None
 ):
     """
-    session_scoped : bool
-        If True, cache the resource in the current session. If False, cache globally.
+    scope : Literal["global", "session"]
+        The scope for the resource. If "global", cache globally. If "session", cache in
+        the session.
 
         Session-scoped cache entries will be evicted when a user's session ends.
-    eviction_hook : Callable[[Any], None] | None
+    on_expire : OnExpire
         If set, a function to call when a cache entry is removed from the cache. The
         evicted item will be provided to the function as an argument.
 
         This is only useful for caches which will evict normally: Those with
-        ``max_entries`` or ``ttl`` settings, or those using ``session_scoped=True``.
+        ``max_entries`` or ``ttl`` settings, or those using ``scope="session"``.
         Note that eviction only happens on read - so ``ttl`` should not be used
         to guarantee timely cleanup, only cleanup when expired resources are accessed.
 
@@ -107,12 +111,13 @@ Two new methods will be added to `st.connection.BaseConnection`:
 
 ```python
 @property
-def is_session_scoped(self) -> bool:
-    """True if this connection should be cached at the session level.
+def scope(self) -> Literal["global", "session"]:
+    """The scope this connection should be scoped to.
 
-    If False, this will be cached globally when created with st.connection.
+    "global" connections will be created once per app. "session" connections will be
+    created once per session.
     """
-    return False
+    return "global"
 
 def shutdown(self) -> None:
     """A function to invoke when this connection is evicted from the session cache.
@@ -122,7 +127,7 @@ def shutdown(self) -> None:
     # Note that this default implementation is a no-op.
 ```
 
-These two new methods will be passed to the `cache_resource` call in `st.connection`, using the new new parameters.
+These two new methods will be passed to the `cache_resource` call in `st.connection`, using the new parameters.
 
 ### Eviction implementation
 
@@ -134,7 +139,7 @@ When sessions are torn down, we will call a new helper in `ResourceCaches` which
 
 ### RCR connection implementation
 
-We will add a new `BaseConnection` subclass very similar to the current `SnowflakeConnection` class. This will have `is_session_scoped` set to `True`, and will have a shutdown implementation that handles closing the connection.
+We will add a new `BaseConnection` subclass very similar to the current `SnowflakeConnection` class. This will have `scope` set to `"session"`, and will have a shutdown implementation that handles closing the connection. It will be called `SnowflakeCallersRightsConnection`.
 
 Connections will be initiated by reading the current `st.context.headers` for a connection token, and connections will
 error if the token is not found. The other piece of the token will be read from the expected location (from
@@ -144,9 +149,11 @@ with the Python driver.
 
 Note that the token reading here is different from the `snowflake` connection, which relies on the driver to do all internals. We can’t do that here, as the driver doesn’t natively support these RCR tokens.
 
-This new connection type will be registered as `snowflake-rcr`.
+`st.connection` will have two new optional parameters read by the `"snowflake"` connection type.
 
-There will be an optional parameter to `st.connection` to provide the full (user + base) token to make the RCR connection if users wish to implement something custom.
+The parameter `use_callers_rights: bool` will toggle between the global `SnowflakeConnection` class and the new `SnowflakeCallersRightsConnection`.
+
+The parameter `callers_rights_token: str` will allow the user to pass in a full (user + base) token to make the RCR connection if users wish to implement something custom. This allows for future caller's rights connections outside of the current Snowpark Container Services model.
 
 ### Other notes
 All `ttl` and `max_entries` cache evictions happen only on write, not on read. This is how the underlying `TTLCache` works. This will be fine for session-scoped items, since they’ll be evicted manually when the session expires, but needs to be called out in the docs as a limitation of the existing cache. This will really only matter for `ttl` when users treat it as a guaranteed shutdown, and not as an invalidation.
