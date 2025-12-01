@@ -136,3 +136,9 @@ st.metric("Pixel height (200px)", 123, 123, border=True, height=200)
 with st.container(height=400, key="height_test"):
     st.metric("Stretch height", 123, 123, height="stretch")
     st.metric("Content height", 123, 123, height="content")
+
+st.metric(
+    "Supports markdown in value and delta",
+    "-1.2 :material/check: :rainbow[Fancy] -> **markdown** _support_",
+    "+1 :orange[:material/currency_bitcoin: -> [:material/attach_money:](https://streamlit.io/)]",
+)

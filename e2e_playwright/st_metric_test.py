@@ -267,3 +267,12 @@ def test_height_in_container(app: Page, assert_snapshot: ImageCompareFunction):
         container,
         name="st_metric-height_in_container",
     )
+
+
+def test_markdown_in_value_and_delta(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that markdown in value and delta renders correctly."""
+    metric_element = get_metric(app, "Supports markdown in value and delta")
+    assert_snapshot(
+        metric_element,
+        name="st_metric-markdown_in_value_and_delta",
+    )
