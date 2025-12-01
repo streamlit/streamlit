@@ -130,7 +130,8 @@ class MetricTest(DeltaGeneratorTestCase):
             "-123",
             "1.234",
             "-1.5",
-            "",
+            "",  # None returns empty string
+            "",  # Empty string returns empty string
             "**markdown** _support_",
         ]
 
