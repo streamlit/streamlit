@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import shuffle from "lodash/shuffle"
+import { shuffle } from "lodash-es"
 
 import { fuzzyFilterSelectOptions } from "~lib/util/fuzzyFilterSelectOptions"
 

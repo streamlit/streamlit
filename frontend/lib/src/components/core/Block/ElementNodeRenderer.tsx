@@ -81,8 +81,6 @@ import { Skeleton } from "~lib/components/elements/Skeleton"
 import TextElement from "~lib/components/elements/TextElement"
 import ErrorBoundary from "~lib/components/shared/ErrorBoundary"
 import Heading from "~lib/components/shared/StreamlitMarkdown/Heading"
-import { ComponentInstance } from "~lib/components/widgets/CustomComponent"
-import { FormSubmitContent } from "~lib/components/widgets/Form"
 import { getElementId } from "~lib/util/utils"
 
 import { StyledSpace } from "./styled-components"
@@ -96,41 +94,44 @@ import {
 } from "./utils"
 
 // Lazy-load elements.
-const Audio = lazy(() => import("~lib/components/elements/Audio"))
-const Balloons = lazy(() => import("~lib/components/elements/Balloons"))
-const Json = lazy(() => import("~lib/components/elements/Json"))
-const Metric = lazy(() => import("~lib/components/elements/Metric"))
-const Snow = lazy(() => import("~lib/components/elements/Snow"))
 const ArrowTable = lazy(() => import("~lib/components/elements/ArrowTable"))
-const ArrowDataFrame = lazy(() => import("~lib/components/widgets/DataFrame"))
 const ArrowVegaLiteChart = lazy(
   () => import("~lib/components/elements/ArrowVegaLiteChart")
 )
-const Toast = lazy(() => import("~lib/components/elements/Toast"))
-
+const Audio = lazy(() => import("~lib/components/elements/Audio"))
+const Balloons = lazy(() => import("~lib/components/elements/Balloons"))
 const DeckGlJsonChart = lazy(
   () => import("~lib/components/elements/DeckGlJsonChart")
 )
 const GraphVizChart = lazy(
   () => import("~lib/components/elements/GraphVizChart")
 )
+const Html = lazy(() => import("~lib/components/elements/Html"))
 const IFrame = lazy(() => import("~lib/components/elements/IFrame"))
 const ImageList = lazy(() => import("~lib/components/elements/ImageList"))
-
+const Json = lazy(() => import("~lib/components/elements/Json"))
 const LinkButton = lazy(() => import("~lib/components/elements/LinkButton"))
-
+const Metric = lazy(() => import("~lib/components/elements/Metric"))
 const PageLink = lazy(() => import("~lib/components/elements/PageLink"))
-
 const PlotlyChart = lazy(() => import("~lib/components/elements/PlotlyChart"))
+const Progress = lazy(() => import("~lib/components/elements/Progress"))
+const Snow = lazy(() => import("~lib/components/elements/Snow"))
+const Spinner = lazy(() => import("~lib/components/elements/Spinner"))
+const StreamlitSyntaxHighlighter = lazy(
+  () => import("~lib/components/elements/CodeBlock/StreamlitSyntaxHighlighter")
+)
+const Toast = lazy(() => import("~lib/components/elements/Toast"))
 const Video = lazy(() => import("~lib/components/elements/Video"))
 
 // Lazy-load widgets.
 const AudioInput = lazy(() => import("~lib/components/widgets/AudioInput"))
-
+const ArrowDataFrame = lazy(() => import("~lib/components/widgets/DataFrame"))
 const Button = lazy(() => import("~lib/components/widgets/Button"))
 const ButtonGroup = lazy(() => import("~lib/components/widgets/ButtonGroup"))
-const DownloadButton = lazy(
-  () => import("~lib/components/widgets/DownloadButton")
+const ComponentInstance = lazy(() =>
+  import("~lib/components/widgets/CustomComponent").then(module => ({
+    default: module.ComponentInstance,
+  }))
 )
 const CameraInput = lazy(() => import("~lib/components/widgets/CameraInput"))
 const ChatInput = lazy(() => import("~lib/components/widgets/ChatInput"))
@@ -140,21 +141,23 @@ const DateInput = lazy(() => import("~lib/components/widgets/DateInput"))
 const DateTimeInput = lazy(
   () => import("~lib/components/widgets/DateTimeInput")
 )
-const Html = lazy(() => import("~lib/components/elements/Html"))
+const DownloadButton = lazy(
+  () => import("~lib/components/widgets/DownloadButton")
+)
+const FileUploader = lazy(() => import("~lib/components/widgets/FileUploader"))
+const FormSubmitContent = lazy(() =>
+  import("~lib/components/widgets/Form").then(module => ({
+    default: module.FormSubmitContent,
+  }))
+)
 const Multiselect = lazy(() => import("~lib/components/widgets/Multiselect"))
-const Progress = lazy(() => import("~lib/components/elements/Progress"))
-const Spinner = lazy(() => import("~lib/components/elements/Spinner"))
+const NumberInput = lazy(() => import("~lib/components/widgets/NumberInput"))
 const Radio = lazy(() => import("~lib/components/widgets/Radio"))
 const Selectbox = lazy(() => import("~lib/components/widgets/Selectbox"))
 const Slider = lazy(() => import("~lib/components/widgets/Slider"))
-const FileUploader = lazy(() => import("~lib/components/widgets/FileUploader"))
 const TextArea = lazy(() => import("~lib/components/widgets/TextArea"))
 const TextInput = lazy(() => import("~lib/components/widgets/TextInput"))
 const TimeInput = lazy(() => import("~lib/components/widgets/TimeInput"))
-const NumberInput = lazy(() => import("~lib/components/widgets/NumberInput"))
-const StreamlitSyntaxHighlighter = lazy(
-  () => import("~lib/components/elements/CodeBlock/StreamlitSyntaxHighlighter")
-)
 
 const BidiComponent = lazy(
   () => import("~lib/components/widgets/BidiComponent")

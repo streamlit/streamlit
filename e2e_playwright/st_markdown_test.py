@@ -383,3 +383,61 @@ def test_long_word_in_container(app: Page, assert_snapshot: ImageCompareFunction
     container = get_element_by_key(app, "long_word")
     expect(container).to_be_visible()
     assert_snapshot(container, name="st_markdown-long_word_in_container")
+
+
+@pytest.mark.parametrize(
+    ("alignment_value", "text_content"),
+    [
+        ("left", "Left aligned text is the default behavior"),
+        ("center", "Center aligned text with some content"),
+        ("right", "Right aligned text content demonstrates"),
+        ("justify", "Justified text alignment"),
+    ],
+)
+def test_markdown_text_alignment(
+    app: Page,
+    assert_snapshot: ImageCompareFunction,
+    alignment_value: str,
+    text_content: str,
+):
+    """Test st.markdown text alignment for all alignment types.
+
+    This test verifies that text, tables, and nested lists all respond correctly
+    to text-align CSS for each alignment value.
+    """
+    markdown_element = get_markdown(app, text_content)
+    markdown_element.scroll_into_view_if_needed()
+
+    assert_snapshot(
+        markdown_element, name=f"st_markdown-text_alignment_{alignment_value}"
+    )
+
+
+def test_markdown_short_text_alignment_with_help(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test short centered markdown with help tooltip to verify icon alignment."""
+    short_centered = get_markdown(app, "Short text")
+    short_centered.scroll_into_view_if_needed()
+
+    expect_help_tooltip(app, short_centered, "This is a help tooltip!")
+
+    assert_snapshot(short_centered, name="st_markdown-short_text_center_with_help")
+
+
+def test_caption_text_alignment(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test st.caption with text alignment."""
+    # Test center alignment
+    caption_center = get_caption(app, "Centered caption text")
+    caption_center.scroll_into_view_if_needed()
+    assert_snapshot(caption_center, name="st_caption-text_alignment_center")
+
+    # Test right alignment
+    caption_right = get_caption(app, "Right aligned caption")
+    caption_right.scroll_into_view_if_needed()
+    assert_snapshot(caption_right, name="st_caption-text_alignment_right")
+
+    # Test justify alignment
+    caption_justify = get_caption(app, "Justified caption text")
+    caption_justify.scroll_into_view_if_needed()
+    assert_snapshot(caption_justify, name="st_caption-text_alignment_justify")

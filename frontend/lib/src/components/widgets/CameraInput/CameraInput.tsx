@@ -24,7 +24,7 @@ import React, {
 } from "react"
 
 import { X } from "@emotion-icons/open-iconic"
-import isEqual from "lodash/isEqual"
+import { isEqual } from "lodash-es"
 import { getLogger } from "loglevel"
 import { flushSync } from "react-dom"
 

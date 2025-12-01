@@ -62,12 +62,14 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
+from streamlit.runtime.state.query_params import process_query_params
 from streamlit.string_util import validate_icon_or_emoji
 from streamlit.url_util import is_url
 from streamlit.util import in_sidebar
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.runtime.state.query_params import QueryParamsInput
 
 FORM_DOCS_INFO: Final = """
 
@@ -834,6 +836,7 @@ class ButtonMixin:
         disabled: bool = False,
         use_container_width: bool | None = None,
         width: Width = "content",
+        query_params: QueryParamsInput | None = None,
     ) -> DeltaGenerator:
         r"""Display a link to another page in a multipage app or to an external page.
 
@@ -926,6 +929,12 @@ class ButtonMixin:
               the parent container, the width of the button matches the width
               of the parent container.
 
+        query_params : dict, list of tuples, or None
+            Query parameters to apply when navigating to the target page. This
+            can be a dictionary or an iterable of key-value tuples. Values can
+            be strings or iterables of strings (for repeated keys). When
+            omitted, all non-embed query parameters are cleared during navigation.
+
         Example
         -------
         Consider the following example given this file structure:
@@ -939,7 +948,7 @@ class ButtonMixin:
         >>> import streamlit as st
         >>>
         >>> st.page_link("your_app.py", label="Home", icon="🏠")
-        >>> st.page_link("pages/page_1.py", label="Page 1", icon="1️⃣")
+        >>> st.page_link("pages/page_1.py", label="Page 1", icon="1️⃣", query_params={"team": "streamlit"})
         >>> st.page_link("pages/page_2.py", label="Page 2", icon="2️⃣", disabled=True)
         >>> st.page_link("http://www.google.com", label="Google", icon="🌎")
 
@@ -970,6 +979,7 @@ class ButtonMixin:
             help=help,
             disabled=disabled,
             width=width,
+            query_params=query_params,
         )
 
     def _download_button(
@@ -1138,8 +1148,12 @@ class ButtonMixin:
         help: str | None = None,
         disabled: bool = False,
         width: Width = "content",
+        query_params: QueryParamsInput | None = None,
     ) -> DeltaGenerator:
         page_link_proto = PageLinkProto()
+        if query_params:
+            page_link_proto.query_string = process_query_params(query_params)
+
         validate_width(width, allow_content=True)
 
         ctx = get_script_run_ctx()

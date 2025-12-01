@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import isEqual from "lodash/isEqual"
+import { isEqual } from "lodash-es"
 import { getLogger } from "loglevel"
 import { v4 as uuidv4 } from "uuid"
 

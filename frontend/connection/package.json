@@ -33,12 +33,12 @@
     "@streamlit/protobuf": "workspace:^",
     "@streamlit/utils": "workspace:^",
     "axios": "^1.12.1",
-    "lodash": "^4.17.21",
+    "lodash-es": "^4.17.21",
     "loglevel": "^1.9.2"
   },
   "devDependencies": {
     "@types/eslint": "^9.6.1",
-    "@types/lodash": "~4.17.20",
+    "@types/lodash-es": "^4.17.12",
     "axios-mock-adapter": "^2.1.0",
     "eslint": "^9.39.0",
     "prettier": "^3.6.2",

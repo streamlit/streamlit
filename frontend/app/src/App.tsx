@@ -18,7 +18,6 @@ import React, { PureComponent, ReactNode } from "react"
 
 import classNames from "classnames"
 import { enableMapSet, enablePatches } from "immer"
-import without from "lodash/without"
 import { getLogger } from "loglevel"
 import { flushSync } from "react-dom"
 import Hotkeys from "react-hot-keys"
@@ -79,6 +78,7 @@ import {
   getHostSpecifiedTheme,
   getIFrameEnclosingApp,
   getLocaleLanguage,
+  getQueryString,
   getScreencastTimestamp,
   getTimezone,
   getTimezoneOffset,
@@ -364,7 +364,7 @@ export class App extends PureComponent<Props, State> {
         this.setState({ inputsDisabled })
       },
       themeChanged: this.handleThemeMessage,
-      pageChanged: this.onPageChange,
+      pageChanged: pageScriptHash => this.onPageChange(pageScriptHash),
       isOwnerChanged: isOwner => this.setState({ isOwner }),
       fileUploadClientConfigChanged: config => {
         if (this.endpoints.setFileUploadClientConfig !== undefined) {
@@ -1237,8 +1237,14 @@ export class App extends PureComponent<Props, State> {
       })
       this.maybeSetState(this.appNavigation.handleNewSession(newSessionProto))
 
-      // Set the favicon to its default values
-      this.onPageIconChanged(`${import.meta.env.BASE_URL}favicon.png`)
+      // Only set default favicon once per page load, and only if no custom icon has been set
+      if (
+        !this.appNavigation.hasSetDefaultFavicon &&
+        !this.appNavigation.isPageIconSet
+      ) {
+        this.appNavigation.hasSetDefaultFavicon = true
+        this.onPageIconChanged(`${import.meta.env.BASE_URL}favicon.png`)
+      }
     } else {
       this.setState({
         fragmentIdsThisRun,
@@ -1311,7 +1317,11 @@ export class App extends PureComponent<Props, State> {
     if (isNullOrUndefined(targetAppPage) || (hasAnchor && isSamePage)) {
       return
     }
-    this.onPageChange(targetAppPage.pageScriptHash as string)
+    // Pass preserveQueryParams=true to preserve query params from the URL when
+    // navigating via browser history (back/forward buttons). This ensures that
+    // query params present in the URL after history navigation are sent to the
+    // server on the first script run.
+    this.onPageChange(targetAppPage.pageScriptHash as string, undefined, true)
   }
 
   /**
@@ -1665,7 +1675,11 @@ export class App extends PureComponent<Props, State> {
     )
   }
 
-  onPageChange = (pageScriptHash: string): void => {
+  onPageChange = (
+    pageScriptHash: string,
+    queryString?: string,
+    preserveQueryParams?: boolean
+  ): void => {
     const { elements, mainScriptHash } = this.state
 
     // We are about to change the page, so clear all auto reruns
@@ -1689,7 +1703,10 @@ export class App extends PureComponent<Props, State> {
     this.sendRerunBackMsg(
       this.widgetMgr.getActiveWidgetStates(activeWidgetIds),
       undefined,
-      pageScriptHash
+      pageScriptHash,
+      undefined,
+      queryString,
+      preserveQueryParams
     )
   }
 
@@ -1706,7 +1723,9 @@ export class App extends PureComponent<Props, State> {
     widgetStates?: WidgetStates,
     fragmentId?: string,
     pageScriptHash?: string,
-    isAutoRerun?: boolean
+    isAutoRerun?: boolean,
+    queryStringOverride?: string,
+    preserveQueryParams?: boolean
   ): void => {
     const baseUriParts = this.getBaseUriParts()
     if (!baseUriParts) {
@@ -1719,7 +1738,7 @@ export class App extends PureComponent<Props, State> {
     }
 
     const { currentPageScriptHash } = this.state
-    let queryString = this.getQueryString()
+    let queryString = queryStringOverride ?? this.getQueryString()
     let pageName = ""
 
     const contextInfo = {
@@ -1734,15 +1753,19 @@ export class App extends PureComponent<Props, State> {
     if (pageScriptHash) {
       // The user specified exactly which page to run. We can simply use this
       // value in the BackMsg we send to the server.
-      if (pageScriptHash != currentPageScriptHash) {
+      if (pageScriptHash !== currentPageScriptHash && !preserveQueryParams) {
         // Clear non-embed query parameters within a page change while we wait
         // for the server to send updated query params (if any).
+        // Skip clearing if preserveQueryParams is true (e.g., browser back/forward
+        // navigation where query params from the URL should be preserved).
         const preservedQueryParams = preserveEmbedQueryParams()
-        queryString = preservedQueryParams
-        this.setState({ queryParams: preservedQueryParams })
+
+        queryString = getQueryString(queryStringOverride, preservedQueryParams)
+
+        this.setState({ queryParams: queryString })
         this.hostCommunicationMgr.sendMessageToHost({
           type: "SET_QUERY_PARAM",
-          queryParams: preservedQueryParams,
+          queryParams: queryString,
         })
       }
     } else if (currentPageScriptHash) {
@@ -2003,9 +2026,8 @@ export class App extends PureComponent<Props, State> {
   removeScriptFinishedHandler = (func: () => void): void => {
     this.setState((prevState, _) => {
       return {
-        scriptFinishedHandlers: without(
-          prevState.scriptFinishedHandlers,
-          func
+        scriptFinishedHandlers: prevState.scriptFinishedHandlers.filter(
+          h => h !== func
         ),
       }
     })
@@ -2072,9 +2094,21 @@ export class App extends PureComponent<Props, State> {
       backMsg.type = "fileUrlsRequest"
       this.sendBackMsg(backMsg)
     } else {
+      // Reject the request immediately with an error. This can happen on mobile
+      // browsers when the file picker is open for an extended period causing
+      // the WebSocket connection to time out.
+      //
+      // We can't queue and retry because reconnection triggers a script rerun,
+      // which remounts the FileUploader component and invalidates the promise
+      // callback. The user needs to re-select the file after reconnection.
       LOG.warn(
         `Cannot request file URLs (isServerConnected: ${isConnected}, isSessionInfoSet: ${isSessionInfoSet})`
       )
+      this.uploadClient.onFileURLsResponse({
+        responseId: requestId,
+        errorMsg:
+          "Connection lost. Please wait for the app to reconnect, then try again.",
+      })
     }
   }
 

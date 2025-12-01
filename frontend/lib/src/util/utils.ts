@@ -15,7 +15,7 @@
  */
 
 import decamelize from "decamelize"
-import get from "lodash/get"
+import { get } from "lodash-es"
 import xxhash from "xxhashjs"
 
 import {
@@ -132,6 +132,25 @@ export function preserveEmbedQueryParams(): string {
     embedUrlMap.push([EMBED_OPTIONS_QUERY_PARAM_KEY, embedValue])
   })
   return new URLSearchParams(embedUrlMap).toString()
+}
+
+/**
+ * Builds a query string by combining an optional override with preserved embed params.
+ * Used during page navigation to merge user query params with embed options.
+ */
+export function getQueryString(
+  queryStringOverride: string | undefined,
+  preservedQueryParams: string
+): string {
+  if (queryStringOverride !== undefined) {
+    if (preservedQueryParams) {
+      return queryStringOverride
+        ? `${preservedQueryParams}&${queryStringOverride}`
+        : preservedQueryParams
+    }
+    return queryStringOverride
+  }
+  return preservedQueryParams
 }
 
 /**

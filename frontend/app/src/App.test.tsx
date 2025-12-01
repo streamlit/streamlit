@@ -24,7 +24,7 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react"
-import cloneDeep from "lodash/cloneDeep"
+import { cloneDeep } from "lodash-es"
 
 import {
   getMenuStructure,
@@ -86,12 +86,6 @@ import {
 
 import { App, LOG, Props } from "./App"
 import { showDevelopmentOptions } from "./showDevelopmentOptions"
-
-vi.mock("~lib/baseconsts", async () => {
-  return {
-    ...(await vi.importActual("~lib/baseconsts")),
-  }
-})
 
 vi.mock("@streamlit/lib", async () => {
   const actualLib = await vi.importActual("@streamlit/lib")
@@ -1580,6 +1574,52 @@ describe("App", () => {
           .pageScriptHash
       ).toBe("top_hash")
     })
+
+    it("preserves query params from URL on first script run after browser back button", async () => {
+      renderApp(getProps())
+
+      sendForwardMessage("newSession", {
+        ...CURRENT_NEW_SESSION_JSON,
+        pageScriptHash: "top_hash",
+      })
+      sendForwardMessage("navigation", {
+        ...THIS_NAVIGATION_JSON,
+        pageScriptHash: "top_hash",
+      })
+
+      const connectionManager = getMockConnectionManager()
+      // @ts-expect-error
+      connectionManager.sendMessage.mockClear()
+
+      // Navigate to page2
+      sendForwardMessage("newSession", {
+        ...CURRENT_NEW_SESSION_JSON,
+        pageScriptHash: "sub_hash",
+      })
+      sendForwardMessage("navigation", {
+        ...THIS_NAVIGATION_JSON,
+        pageScriptHash: "sub_hash",
+      })
+
+      // @ts-expect-error
+      connectionManager.sendMessage.mockClear()
+
+      // Simulate user clicking browser back button to main page with query params.
+      // In a real browser, the URL would be restored to include query params.
+      // In JSDOM, we need to manually set the URL before triggering popstate.
+      window.history.pushState({}, "", "/?mykey=myvalue")
+      window.dispatchEvent(new PopStateEvent("popstate"))
+
+      await waitFor(() => {
+        expect(connectionManager.sendMessage).toBeCalledTimes(1)
+      })
+
+      // Verify the query params from the URL are preserved in the rerun message
+      expect(
+        // @ts-expect-error
+        connectionManager.sendMessage.mock.calls[0][0].rerunScript.queryString
+      ).toBe("mykey=myvalue")
+    })
   })
 
   describe("App.handlePageConfigChanged", () => {
@@ -2945,11 +2985,20 @@ describe("App", () => {
       })
     })
 
-    it("does nothing if server is disconnected", () => {
+    it("rejects with error when server is disconnected", () => {
+      // When disconnected, file upload requests should be rejected immediately
+      // with an error. We can't queue and retry because reconnection triggers
+      // a script rerun, which remounts the FileUploader component and
+      // invalidates the promise callback.
       renderApp(getProps())
 
       const fileUploadClient =
         getStoredValue<FileUploadClient>(FileUploadClient)
+
+      const onFileURLsResponseSpy = vi.spyOn(
+        fileUploadClient,
+        "onFileURLsResponse"
+      )
 
       // @ts-expect-error - requestFileURLs is private
       fileUploadClient.requestFileURLs("myRequestId", [
@@ -2960,7 +3009,15 @@ describe("App", () => {
 
       const connectionManager = getMockConnectionManager()
 
+      // No message sent when disconnected
       expect(connectionManager.sendMessage).not.toBeCalled()
+
+      // Error response should be sent to reject the pending promise
+      expect(onFileURLsResponseSpy).toHaveBeenCalledWith({
+        responseId: "myRequestId",
+        errorMsg:
+          "Connection lost. Please wait for the app to reconnect, then try again.",
+      })
     })
   })
 

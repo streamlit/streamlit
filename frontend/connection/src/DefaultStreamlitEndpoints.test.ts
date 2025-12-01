@@ -21,6 +21,15 @@ import { buildHttpUri } from "@streamlit/utils"
 
 import { DefaultStreamlitEndpoints } from "./DefaultStreamlitEndpoints"
 
+// Mock the dynamic import to return the same axios instance we're using for testing
+vi.mock("axios", async importOriginal => {
+  const actual = await importOriginal<typeof import("axios")>()
+  return {
+    ...actual,
+    default: actual.default,
+  }
+})
+
 const MOCK_SERVER_URI = {
   protocol: "http:",
   hostname: "streamlit.mock",
@@ -503,19 +512,23 @@ describe("DefaultStreamlitEndpoints", () => {
   // Test our private csrfRequest() API, which is responsible for setting
   // the "X-Xsrftoken" header.
   describe("csrfRequest()", () => {
-    const spyRequest = vi.spyOn(axios, "request")
     let prevDocumentCookie: string
+    let mockRequest: ReturnType<typeof vi.fn>
 
     beforeEach(() => {
       prevDocumentCookie = document.cookie
       document.cookie = "_streamlit_xsrf=mockXsrfCookie;"
+      // Create a mock for axios.request that will be used by the dynamic import
+      mockRequest = vi.fn().mockResolvedValue({ data: {} })
+      vi.spyOn(axios, "request").mockImplementation(mockRequest)
     })
 
     afterEach(() => {
       document.cookie = prevDocumentCookie
+      vi.restoreAllMocks()
     })
 
-    it("sets token when csrfEnabled: true", () => {
+    it("sets token when csrfEnabled: true", async () => {
       const endpoints = new DefaultStreamlitEndpoints({
         getServerUri: () => MOCK_SERVER_URI,
         csrfEnabled: true,
@@ -524,16 +537,16 @@ describe("DefaultStreamlitEndpoints", () => {
 
       const url = buildHttpUri(MOCK_SERVER_URI, "mockUrl")
       // @ts-expect-error
-      void endpoints.csrfRequest(url, {})
+      await endpoints.csrfRequest(url, {})
 
-      expect(spyRequest).toHaveBeenCalledWith({
+      expect(mockRequest).toHaveBeenCalledWith({
         headers: { "X-Xsrftoken": "mockXsrfCookie" },
         withCredentials: true,
         url,
       })
     })
 
-    it("omits token when csrfEnabled: false", () => {
+    it("omits token when csrfEnabled: false", async () => {
       const endpoints = new DefaultStreamlitEndpoints({
         getServerUri: () => MOCK_SERVER_URI,
         csrfEnabled: false,
@@ -542,9 +555,9 @@ describe("DefaultStreamlitEndpoints", () => {
 
       const url = buildHttpUri(MOCK_SERVER_URI, "mockUrl")
       // @ts-expect-error
-      void endpoints.csrfRequest(url, {})
+      await endpoints.csrfRequest(url, {})
 
-      expect(spyRequest).toHaveBeenCalledWith({
+      expect(mockRequest).toHaveBeenCalledWith({
         url,
       })
     })

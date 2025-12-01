@@ -77,6 +77,25 @@ def test_page_link_width_examples(app: Page, assert_snapshot: ImageCompareFuncti
     assert_snapshot(page_elements.nth(2), name="st_page_link-width_500px")
 
 
+def test_page_link_href_includes_query_params(app: Page):
+    """Test that st.page_link href attribute includes query params for internal links."""
+    # Page link with dict query_params: {"foo": ["bar", "baz"]}
+    page_link_with_dict_params = app.get_by_role(
+        "link", name="Page Link with Icon from st.Page"
+    )
+    expect(page_link_with_dict_params).to_have_attribute(
+        "href", "dummy_page?foo=bar&foo=baz"
+    )
+
+    # Page link with iterable query_params: [("foo", "bar"), ("baz", "qux")]
+    page_link_with_iterable_params = app.get_by_role(
+        "link", name="Page Link with Material Icon from st.Page"
+    )
+    expect(page_link_with_iterable_params).to_have_attribute(
+        "href", "dummy_page?foo=bar&baz=qux"
+    )
+
+
 def test_page_link_with_custom_theme(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that page link adjusts for custom theme base radius, not button radius."""
     # Apply custom theme using window injection
