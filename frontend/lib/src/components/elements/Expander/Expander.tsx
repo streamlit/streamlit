@@ -20,6 +20,7 @@ import { Block as BlockProto } from "@streamlit/protobuf"
 
 import { DynamicIcon } from "~lib/components/shared/Icon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 import { notNullOrUndefined } from "~lib/util/utils"
 
 import {
@@ -69,11 +70,17 @@ export const ExpanderIcon = (props: ExpanderIconProps): ReactElement => {
 export interface ExpanderProps {
   element: BlockProto.Expandable
   isStale: boolean
+  widgetMgr?: WidgetStateManager
+  blockId?: string
+  fragmentId?: string
 }
 
 const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
   element,
   isStale,
+  widgetMgr,
+  blockId,
+  fragmentId,
   children,
 }): ReactElement => {
   const { label, expanded: initialExpanded } = element
@@ -151,7 +158,19 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
   const toggle = (e: React.MouseEvent<HTMLDetailsElement>): void => {
     e.preventDefault()
 
-    setExpanded(!expanded)
+    const newExpanded = !expanded
+    setExpanded(newExpanded)
+
+    // Send state update to backend if widgetMgr and blockId are available
+    if (widgetMgr && blockId) {
+      widgetMgr.setBoolValue(
+        { id: blockId },
+        newExpanded,
+        { fromUi: true },
+        fragmentId
+      )
+    }
+
     const detailsEl = detailsRef.current
     if (!detailsEl || !summaryRef.current) {
       return
@@ -163,7 +182,7 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
     // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
     const summaryHeight = summaryRef.current.getBoundingClientRect().height
 
-    if (!expanded) {
+    if (newExpanded) {
       detailsEl.style.height = `${detailsHeight}px`
       detailsEl.open = true
 

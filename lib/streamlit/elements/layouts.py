@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Literal, TypeAlias, cast
 
 from streamlit.delta_generator_singletons import get_dg_singleton_instance
@@ -44,6 +45,8 @@ from streamlit.errors import (
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.GapSize_pb2 import GapConfig
 from streamlit.runtime.metrics_util import gather_metrics
+from streamlit.runtime.scriptrunner import get_script_run_ctx
+from streamlit.runtime.state import register_widget
 from streamlit.string_util import validate_icon_or_emoji
 
 if TYPE_CHECKING:
@@ -53,6 +56,19 @@ if TYPE_CHECKING:
     from streamlit.runtime.state import WidgetCallback
 
 SpecType: TypeAlias = int | Sequence[int | float]
+
+
+@dataclass
+class ExpanderSerde:
+    """Serializer/deserializer for expander widget state."""
+
+    expanded: bool
+
+    def serialize(self, v: bool) -> bool:
+        return bool(v)
+
+    def deserialize(self, ui_value: bool | None) -> bool:
+        return ui_value if ui_value is not None else self.expanded
 
 
 class LayoutsMixin:
@@ -741,6 +757,7 @@ class LayoutsMixin:
         label: str,
         expanded: bool = False,
         *,
+        key: Key | None = None,
         icon: str | None = None,
         width: WidthWithoutContent = "stretch",
     ) -> DeltaGenerator:
@@ -855,19 +872,50 @@ class LayoutsMixin:
         if label is None:
             raise StreamlitAPIException("A label is required for an expander")
 
+        key = to_key(key)
+        ctx = get_script_run_ctx()
+
+        # Register widget to track state
+        element_id = compute_and_register_element_id(
+            "expander",
+            user_key=key,
+            key_as_main_identity=True,
+            dg=self.dg,
+            label=label,
+            expanded=expanded,
+            icon=icon,
+            width=width,
+        )
+
+        # Create serde for state management
+        serde = ExpanderSerde(expanded=expanded)
+
+        # Register the widget and get current state
+        expander_state = register_widget(
+            element_id,
+            deserializer=serde.deserialize,
+            serializer=serde.serialize,
+            ctx=ctx,
+            value_type="bool_value",
+        )
+
+        # Use widget state value if available, otherwise use initial expanded parameter
+        current_expanded = expander_state.value
+
         expandable_proto = BlockProto.Expandable()
-        expandable_proto.expanded = expanded
+        expandable_proto.expanded = current_expanded
         expandable_proto.label = label
         if icon is not None:
             expandable_proto.icon = validate_icon_or_emoji(icon)
 
         block_proto = BlockProto()
         block_proto.allow_empty = True
+        block_proto.id = element_id
         block_proto.expandable.CopyFrom(expandable_proto)
         validate_width(width)
         block_proto.width_config.CopyFrom(get_width_config(width))
 
-        return self.dg._block(block_proto=block_proto)
+        return self.dg._block(block_proto=block_proto, open=current_expanded)
 
     @gather_metrics("popover")
     def popover(

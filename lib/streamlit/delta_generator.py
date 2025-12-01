@@ -264,6 +264,7 @@ class DeltaGenerator(
         cursor: Cursor | None = None,
         parent: DeltaGenerator | None = None,
         block_type: str | None = None,
+        open: bool | None = None,
     ) -> None:
         """Inserts or updates elements in Streamlit apps.
 
@@ -303,6 +304,8 @@ class DeltaGenerator(
 
         # If this an `st.form` block, this will get filled in.
         self._form_data: FormData | None = None
+
+        self._open = open
 
         # Change the module of all mixin'ed functions to be st.delta_generator,
         # instead of the original module (e.g. st.elements.markdown)
@@ -441,6 +444,16 @@ class DeltaGenerator(
             raise NoSessionContext("Cursor is not set")
 
         return cursor.get_transient_cursor()
+    @property
+    def open(self) -> bool | None:
+        """Return the open state of the block if applicable (e.g., for expanders).
+
+        Returns
+        -------
+        bool or None
+            True if the block is open, False if closed, None if not applicable.
+        """
+        return self._open
 
     def _get_delta_path_str(self) -> str:
         """Returns the element's delta path as a string like "[0, 2, 3, 1]".
@@ -565,6 +578,7 @@ class DeltaGenerator(
         self,
         block_proto: Block_pb2.Block | None = None,
         dg_type: type | None = None,
+        open: bool | None = None,
     ) -> DeltaGenerator:
         if block_proto is None:
             block_proto = Block_pb2.Block()
@@ -602,8 +616,10 @@ class DeltaGenerator(
                 cursor=block_cursor,
                 parent=dg,
                 block_type=block_type,
+                open=open,
             ),
         )
+
         # Blocks inherit their parent form ids.
         # NOTE: Container form ids aren't set in proto.
         block_dg._form_data = FormData(current_form_id(dg))
