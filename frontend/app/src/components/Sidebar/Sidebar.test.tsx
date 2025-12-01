@@ -551,5 +551,48 @@ describe("Sidebar Component", () => {
         )
       })
     })
+
+    describe("Cached Width Clamping", () => {
+      it.each([
+        {
+          cached: "1000",
+          expected: "600px",
+          description: "clamps cached value exceeding maximum",
+        },
+        {
+          cached: "100",
+          expected: "200px",
+          description: "clamps cached value below minimum",
+        },
+        {
+          cached: "450",
+          expected: "450px",
+          description: "uses cached value within valid range",
+        },
+        {
+          cached: "200",
+          expected: "200px",
+          description: "uses cached value at minimum boundary",
+        },
+        {
+          cached: "600",
+          expected: "600px",
+          description: "uses cached value at maximum boundary",
+        },
+        {
+          cached: "invalid",
+          expected: "300px",
+          description: "falls back to default when cached value is invalid",
+        },
+      ])("$description", ({ cached, expected }) => {
+        window.localStorage.setItem("sidebarWidth", cached)
+
+        renderSidebar()
+
+        expect(screen.getByTestId("stSidebar")).toHaveStyle(
+          `width: ${expected}`
+        )
+      })
+    })
   })
 })

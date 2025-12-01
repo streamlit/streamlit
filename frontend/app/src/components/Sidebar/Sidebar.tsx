@@ -103,13 +103,29 @@ const Sidebar: React.FC<SidebarProps> = ({
     : undefined
 
   const [sidebarWidth, setSidebarWidth] = useState<string>(() => {
-    // Use initialSidebarWidth if available, otherwise fall back to cached or default
-    if (notNullOrUndefined(initialSidebarWidth)) {
-      const clampedWidth = clampSidebarWidth(initialSidebarWidth)
-      return cachedSidebarWidth || clampedWidth.toString()
+    const getCachedWidth = (): string | null => {
+      if (cachedSidebarWidth) {
+        const cached = Number.parseInt(cachedSidebarWidth, 10)
+        return Number.isNaN(cached)
+          ? null
+          : clampSidebarWidth(cached).toString()
+      }
+      return null
     }
-    return cachedSidebarWidth || DEFAULT_WIDTH
+
+    const clampedCached = getCachedWidth()
+
+    if (clampedCached) {
+      return clampedCached
+    }
+
+    if (notNullOrUndefined(initialSidebarWidth)) {
+      return clampSidebarWidth(initialSidebarWidth).toString()
+    }
+
+    return DEFAULT_WIDTH
   })
+
   const [lastInnerWidth, setLastInnerWidth] = useState<number>(
     innerWidth ?? Infinity
   )
