@@ -59,7 +59,7 @@ DISALLOWED_MARKDOWN_FEATURES: dict[str, list[str]] = {
     "st_selectbox": DISALLOWED_FEATURES_IN_LABEL,
     "st_multiselect": DISALLOWED_FEATURES_IN_LABEL,
     "st_slider": DISALLOWED_FEATURES_IN_LABEL,
-    "st_select_slider": [],
+    "st_select_slider": DISALLOWED_FEATURES_IN_LABEL,
     "st_text_input": DISALLOWED_FEATURES_IN_LABEL,
     "st_number_input": DISALLOWED_FEATURES_IN_LABEL,
     "st_text_area": DISALLOWED_FEATURES_IN_LABEL,
@@ -146,27 +146,20 @@ def test_markdown_restrictions_for_all_elements(app: Page):
                 markdown_container_test_id = "stCaptionContainer"
 
             if element_name == "st_select_slider":
-                # Special case for select-slider options
-                slider_label = container.locator(
+                # st.select_slider has 3 markdown containers:
+                # 1. The min label
+                # 2. The max label
+                # 3. The current option
+                slider_markdown_containers = container.locator(
                     "[data-testid='stMarkdownContainer']"
-                ).nth(0)
-                slider_current_option = container.locator(
-                    "[data-testid='stMarkdownContainer']"
-                ).nth(1)
-                slider_min_label = container.locator(
-                    "[data-testid='stMarkdownContainer']"
-                ).nth(2)
-
+                )
+                feature_locator = locator_fn(slider_markdown_containers)
                 if feature in disallowed_features:
-                    # Feature should not be present
-                    expect(slider_label).not_to_be_attached()
-                    expect(slider_current_option).not_to_be_attached()
-                    expect(slider_min_label).not_to_be_attached()
+                    # Feature should not be present in any markdown container
+                    expect(feature_locator.first).not_to_be_attached()
                 else:
-                    # Feature should be present
-                    expect(slider_label).to_be_visible()
-                    expect(slider_current_option).to_be_visible()
-                    expect(slider_min_label).to_be_visible()
+                    # Feature should be present in at least one markdown container
+                    expect(feature_locator.first).to_be_visible()
 
                 continue
 
