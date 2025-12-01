@@ -251,7 +251,7 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
 
   const { MetricDirection } = MetricProto
   const {
-    body,
+    body: metricValue,
     label,
     delta,
     direction,
@@ -332,9 +332,11 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
         </StyledMetricLabelText>
         <StyledMetricValueText data-testid="stMetricValue">
           <StyledTruncateText>
-            {" "}
-            <StreamlitMarkdown source={body} allowHTML={false} inheritFont />
-            {" "}
+            <StreamlitMarkdown
+              source={" " + metricValue + " "} // Add some extra space to keep the existing spacing.
+              allowHTML={false}
+              inheritFont
+            />
           </StyledTruncateText>
         </StyledMetricValueText>
         {deltaExists && (
@@ -361,8 +363,7 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
                 source={delta}
                 allowHTML={false}
                 inheritFont
-              />
-              {" "}
+              />{" "}
             </StyledTruncateText>
           </StyledMetricDeltaText>
         )}
