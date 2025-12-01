@@ -60,6 +60,9 @@ DISALLOWED_MARKDOWN_FEATURES: dict[str, list[str]] = {
     "st_multiselect": DISALLOWED_FEATURES_IN_LABEL,
     "st_slider": DISALLOWED_FEATURES_IN_LABEL,
     "st_select_slider": DISALLOWED_FEATURES_IN_LABEL,
+    "st_select_slider_min_label": DISALLOWED_FEATURES_IN_LABEL,
+    "st_select_slider_max_label": DISALLOWED_FEATURES_IN_LABEL,
+    "st_select_slider_value": DISALLOWED_FEATURES_IN_LABEL,
     "st_text_input": DISALLOWED_FEATURES_IN_LABEL,
     "st_number_input": DISALLOWED_FEATURES_IN_LABEL,
     "st_text_area": DISALLOWED_FEATURES_IN_LABEL,
@@ -146,24 +149,6 @@ def test_markdown_restrictions_for_all_elements(app: Page):
             # st.caption and st.image caption uses a different container
             if element_name in ["st_caption", "st_image"]:
                 markdown_container_test_id = "stCaptionContainer"
-
-            if element_name == "st_select_slider":
-                # st.select_slider has 3 markdown containers:
-                # 1. The min label
-                # 2. The max label
-                # 3. The current option
-                slider_markdown_containers = container.locator(
-                    "[data-testid='stMarkdownContainer']"
-                )
-                feature_locator = locator_fn(slider_markdown_containers)
-                if feature in disallowed_features:
-                    # Feature should not be present in any markdown container
-                    expect(feature_locator.first).not_to_be_attached()
-                else:
-                    # Feature should be present in at least one markdown container
-                    expect(feature_locator.first).to_be_visible()
-
-                continue
 
             # General case for other elements
             element_locator = locator_fn(
