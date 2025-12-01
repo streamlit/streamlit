@@ -15,6 +15,7 @@
  */
 
 import { block, text } from "~lib/render-tree/test-utils"
+import { TransientNode } from "~lib/render-tree/TransientNode"
 
 import { ElementsSetVisitor } from "./ElementsSetVisitor"
 
@@ -111,6 +112,31 @@ describe("ElementsSetVisitor", () => {
       expect(visitor.elements.size).toBe(2)
       expect(visitor.elements.has(existingElement.element)).toBe(true)
       expect(visitor.elements.has(blockElement.element)).toBe(true)
+    })
+  })
+
+  describe("visitTransientNode", () => {
+    it("collects elements from transient list and anchor", () => {
+      const t1 = text("t1")
+      const t2 = text("t2")
+      const anchor = text("anchor")
+      const transient = new TransientNode("run", anchor, [t1, t2], 1)
+
+      const visitor = new ElementsSetVisitor()
+      const result = visitor.visitTransientNode(transient)
+
+      expect(result).toBe(visitor.elements)
+      expect(visitor.elements.has(t1.element)).toBe(true)
+      expect(visitor.elements.has(t2.element)).toBe(true)
+      expect(visitor.elements.has(anchor.element)).toBe(true)
+    })
+
+    it("handles missing anchor and empty transient list", () => {
+      const transient = new TransientNode("run", undefined, [], 1)
+      const visitor = new ElementsSetVisitor()
+
+      visitor.visitTransientNode(transient)
+      expect(visitor.elements.size).toBe(0)
     })
   })
 

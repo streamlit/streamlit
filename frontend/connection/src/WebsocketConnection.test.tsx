@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-import axios from "axios"
 import { zip } from "lodash-es"
 import { default as WS } from "vitest-websocket-mock"
 
@@ -35,34 +34,87 @@ const MOCK_ALLOWED_ORIGINS_CONFIG = {
   useExternalAuthToken: false,
 }
 
-const MOCK_HOST_CONFIG_RESPONSE = {
-  data: MOCK_ALLOWED_ORIGINS_CONFIG,
-}
+const MOCK_HOST_CONFIG_RESPONSE = MOCK_ALLOWED_ORIGINS_CONFIG
 
 const MOCK_HEALTH_RESPONSE = { status: "ok" }
 
-// Sets up axios get mock to fail a specific number of times before succeeding
-function setupAxiosMockWithFailures(
+/**
+ * Helper to create a successful fetch Response
+ */
+function createSuccessResponse(data: unknown): Response {
+  return new Response(JSON.stringify(data), {
+    status: 200,
+    statusText: "OK",
+    headers: { "Content-Type": "application/json" },
+  })
+}
+
+/**
+ * Helper to create an error fetch Response (non-2xx status)
+ */
+function createErrorResponse(
+  status: number,
+  statusText: string,
+  data?: unknown
+): Response {
+  return new Response(data ? JSON.stringify(data) : "", {
+    status,
+    statusText,
+    headers: { "Content-Type": "application/json" },
+  })
+}
+
+/**
+ * Helper to create an AbortError (simulates timeout)
+ */
+function createAbortError(): DOMException {
+  return new DOMException("The operation was aborted.", "AbortError")
+}
+
+/**
+ * Helper to create a network error (TypeError from fetch)
+ */
+function createNetworkError(message = "Failed to fetch"): TypeError {
+  return new TypeError(message)
+}
+
+// Sets up fetch mock to fail a specific number of times before succeeding
+function setupFetchMockWithFailures(
   retryCount: number,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  errorObj: any
+  errorType: "response" | "network" | "timeout",
+  responseOptions?: { status: number; statusText: string; data?: unknown }
 ): ReturnType<typeof vi.fn> {
   const mockImplementation = vi.fn()
-  axios.get = mockImplementation
 
   // Each "totalTries" increment involves cycling through all URIs
-  // Each URI requires 2 axios calls (health + config)
+  // Each URI requires 2 fetch calls (health + config)
   // So total failed calls needed = retryCount * numUris * 2
   const totalFailedCalls = retryCount * 2 * 2
 
-  // Setup all the rejected calls
+  // Setup all the rejected/error calls
   for (let i = 0; i < totalFailedCalls; i++) {
-    mockImplementation.mockRejectedValueOnce(errorObj)
+    if (errorType === "timeout") {
+      mockImplementation.mockRejectedValueOnce(createAbortError())
+    } else if (errorType === "network") {
+      mockImplementation.mockRejectedValueOnce(createNetworkError())
+    } else if (errorType === "response" && responseOptions) {
+      mockImplementation.mockResolvedValueOnce(
+        createErrorResponse(
+          responseOptions.status,
+          responseOptions.statusText,
+          responseOptions.data
+        )
+      )
+    }
   }
 
   // Add final successful calls to break the loop
-  mockImplementation.mockResolvedValueOnce("") // healthzUri success
-  mockImplementation.mockResolvedValueOnce(MOCK_HOST_CONFIG_RESPONSE) // hostConfigUri success
+  mockImplementation.mockResolvedValueOnce(
+    createSuccessResponse(MOCK_HEALTH_RESPONSE)
+  ) // healthzUri success
+  mockImplementation.mockResolvedValueOnce(
+    createSuccessResponse(MOCK_HOST_CONFIG_RESPONSE)
+  ) // hostConfigUri success
 
   return mockImplementation
 }
@@ -91,14 +143,16 @@ function createMockArgs(overrides?: Partial<Args>): Args {
   }
 }
 
-/** Create a robust axios mock that handles any number of HTTP requests */
-function createAxiosMock(): ReturnType<typeof vi.fn> {
+/** Create a robust fetch mock that handles any number of HTTP requests */
+function createFetchMock(): ReturnType<typeof vi.fn> {
   let callCount = 0
   return vi.fn().mockImplementation(() => {
     callCount++
     // Alternate between health check (empty string) and host config responses
     return Promise.resolve(
-      callCount % 2 === 1 ? "" : MOCK_HOST_CONFIG_RESPONSE
+      callCount % 2 === 1
+        ? createSuccessResponse({})
+        : createSuccessResponse(MOCK_HOST_CONFIG_RESPONSE)
     )
   })
 }
@@ -126,8 +180,7 @@ describe("doInitPings", () => {
     setAllowedOrigins: vi.fn(),
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  let originalAxiosGet: any
+  let originalFetch: typeof global.fetch
 
   // Helper function to create retry callbacks that advance timers
   const createTimerAdvancingRetryCallback = (
@@ -143,7 +196,7 @@ describe("doInitPings", () => {
 
   beforeEach(() => {
     vi.useFakeTimers()
-    originalAxiosGet = axios.get
+    originalFetch = global.fetch
     MOCK_PING_DATA.retryCallback = vi.fn()
     MOCK_PING_DATA.setAllowedOrigins = vi.fn()
   })
@@ -151,15 +204,15 @@ describe("doInitPings", () => {
   afterEach(() => {
     vi.clearAllTimers()
     vi.useRealTimers()
-    axios.get = originalAxiosGet
+    global.fetch = originalFetch
     window.__streamlit = undefined
   })
 
   it("calls the /_stcore/health endpoint when pinging server", async () => {
-    axios.get = vi
+    global.fetch = vi
       .fn()
-      .mockResolvedValueOnce(MOCK_HEALTH_RESPONSE)
-      .mockResolvedValueOnce(MOCK_HOST_CONFIG_RESPONSE)
+      .mockResolvedValueOnce(createSuccessResponse(MOCK_HEALTH_RESPONSE))
+      .mockResolvedValueOnce(createSuccessResponse(MOCK_HOST_CONFIG_RESPONSE))
 
     const { promise } = doInitPings(
       MOCK_PING_DATA.uri,
@@ -178,10 +231,10 @@ describe("doInitPings", () => {
 
   it("makes the host config call using window.__streamlit.HOST_CONFIG_BASE_URL if set", async () => {
     window.__streamlit = { HOST_CONFIG_BASE_URL: "https://example.com:1234" }
-    axios.get = vi
+    global.fetch = vi
       .fn()
-      .mockResolvedValueOnce(MOCK_HEALTH_RESPONSE)
-      .mockResolvedValueOnce(MOCK_HOST_CONFIG_RESPONSE)
+      .mockResolvedValueOnce(createSuccessResponse(MOCK_HEALTH_RESPONSE))
+      .mockResolvedValueOnce(createSuccessResponse(MOCK_HOST_CONFIG_RESPONSE))
 
     const { promise } = doInitPings(
       MOCK_PING_DATA.uri,
@@ -196,18 +249,18 @@ describe("doInitPings", () => {
     expect(MOCK_PING_DATA.setAllowedOrigins).toHaveBeenCalledWith(
       MOCK_ALLOWED_ORIGINS_CONFIG
     )
-    // @ts-expect-error
-    expect(axios.get.mock.calls[1]).toEqual([
+    // Verify the second call was to the custom host config URL
+    expect(global.fetch).toHaveBeenCalledWith(
       "https://example.com:1234/_stcore/host-config",
-      { timeout: 15000 },
-    ])
+      expect.any(Object)
+    )
   })
 
   it("returns the uri index and sets hostConfig for the first successful ping (0)", async () => {
-    axios.get = vi
+    global.fetch = vi
       .fn()
-      .mockResolvedValueOnce("")
-      .mockResolvedValueOnce(MOCK_HOST_CONFIG_RESPONSE)
+      .mockResolvedValueOnce(createSuccessResponse({}))
+      .mockResolvedValueOnce(createSuccessResponse(MOCK_HOST_CONFIG_RESPONSE))
 
     const { promise } = doInitPings(
       MOCK_PING_DATA.uri,
@@ -225,14 +278,14 @@ describe("doInitPings", () => {
   })
 
   it("returns the uri index and sets hostConfig for the first successful ping (1)", async () => {
-    axios.get = vi
+    global.fetch = vi
       .fn()
-      // First Connection attempt
-      .mockRejectedValueOnce(new Error(""))
-      .mockResolvedValueOnce(MOCK_HOST_CONFIG_RESPONSE)
-      // Second Connection attempt
-      .mockResolvedValueOnce("")
-      .mockResolvedValueOnce(MOCK_HOST_CONFIG_RESPONSE)
+      // First Connection attempt - network error
+      .mockRejectedValueOnce(createNetworkError())
+      .mockResolvedValueOnce(createSuccessResponse(MOCK_HOST_CONFIG_RESPONSE))
+      // Second Connection attempt - success
+      .mockResolvedValueOnce(createSuccessResponse({}))
+      .mockResolvedValueOnce(createSuccessResponse(MOCK_HOST_CONFIG_RESPONSE))
 
     const retryCallback = createTimerAdvancingRetryCallback()
 
@@ -258,14 +311,14 @@ describe("doInitPings", () => {
   it("calls retry with the corresponding error message if there was an error", async () => {
     const TEST_ERROR_MESSAGE = "ERROR_MESSAGE"
 
-    axios.get = vi
+    global.fetch = vi
       .fn()
-      // First Connection attempt
-      .mockRejectedValueOnce(new Error(TEST_ERROR_MESSAGE))
-      .mockResolvedValueOnce(MOCK_HOST_CONFIG_RESPONSE)
-      // Second Connection attempt
-      .mockResolvedValueOnce("")
-      .mockResolvedValueOnce(MOCK_HOST_CONFIG_RESPONSE)
+      // First Connection attempt - network error with message
+      .mockRejectedValueOnce(createNetworkError(TEST_ERROR_MESSAGE))
+      .mockResolvedValueOnce(createSuccessResponse(MOCK_HOST_CONFIG_RESPONSE))
+      // Second Connection attempt - success
+      .mockResolvedValueOnce(createSuccessResponse({}))
+      .mockResolvedValueOnce(createSuccessResponse(MOCK_HOST_CONFIG_RESPONSE))
 
     const retryCallback = createTimerAdvancingRetryCallback(
       MOCK_PING_DATA.retryCallback
@@ -286,22 +339,22 @@ describe("doInitPings", () => {
 
     expect(MOCK_PING_DATA.retryCallback).toHaveBeenCalledWith(
       1,
-      { message: TEST_ERROR_MESSAGE },
+      expect.objectContaining({
+        message: expect.stringContaining("Streamlit server is not responding"),
+      }),
       expect.anything()
     )
   })
 
-  it("calls retry with 'Connection timed out.' when the error code is `ECONNABORTED`", async () => {
-    const TEST_ERROR = { code: "ECONNABORTED" }
-
-    axios.get = vi
+  it("calls retry with 'Connection timed out.' when fetch times out (AbortError)", async () => {
+    global.fetch = vi
       .fn()
-      // First Connection attempt
-      .mockRejectedValueOnce(TEST_ERROR)
-      .mockResolvedValueOnce(MOCK_HOST_CONFIG_RESPONSE)
-      // Second Connection attempt
-      .mockResolvedValueOnce("")
-      .mockResolvedValueOnce(MOCK_HOST_CONFIG_RESPONSE)
+      // First Connection attempt - timeout
+      .mockRejectedValueOnce(createAbortError())
+      .mockResolvedValueOnce(createSuccessResponse(MOCK_HOST_CONFIG_RESPONSE))
+      // Second Connection attempt - success
+      .mockResolvedValueOnce(createSuccessResponse({}))
+      .mockResolvedValueOnce(createSuccessResponse(MOCK_HOST_CONFIG_RESPONSE))
 
     const retryCallback = createTimerAdvancingRetryCallback(
       MOCK_PING_DATA.retryCallback
@@ -327,62 +380,15 @@ describe("doInitPings", () => {
     )
   })
 
-  it("calls retry with 'Streamlit server is not responding. Are you connected to the internet?' when there is no response", async () => {
-    const TEST_ERROR = {
-      response: {
-        status: 0,
-      },
-    }
-
-    axios.get = vi
+  it("calls retry with 'Streamlit server is not responding. Are you connected to the internet?' when there is a network error", async () => {
+    global.fetch = vi
       .fn()
-      // First Connection attempt
-      .mockRejectedValueOnce(TEST_ERROR)
-      .mockResolvedValueOnce(MOCK_HOST_CONFIG_RESPONSE)
-      // Second Connection attempt
-      .mockResolvedValueOnce("")
-      .mockResolvedValueOnce(MOCK_HOST_CONFIG_RESPONSE)
-
-    const retryCallback = createTimerAdvancingRetryCallback(
-      MOCK_PING_DATA.retryCallback
-    )
-
-    const { promise } = doInitPings(
-      MOCK_PING_DATA.uri,
-      MOCK_PING_DATA.timeoutMs,
-      MOCK_PING_DATA.maxTimeoutMs,
-      retryCallback,
-      MOCK_PING_DATA.sendClientError,
-      MOCK_PING_DATA.setAllowedOrigins
-    )
-
-    // Run any remaining timers to complete the ping process
-    await vi.runAllTimersAsync()
-    await promise
-
-    expect(MOCK_PING_DATA.retryCallback).toHaveBeenCalledWith(
-      1,
-      {
-        message:
-          "Streamlit server is not responding. Are you connected to the internet?",
-      },
-      expect.anything()
-    )
-  })
-
-  it("calls retry with 'Streamlit server is not responding. Are you connected to the internet?' when the request was made but no response was received", async () => {
-    const TEST_ERROR = {
-      request: {},
-    }
-
-    axios.get = vi
-      .fn()
-      // First Connection attempt
-      .mockRejectedValueOnce(TEST_ERROR)
-      .mockResolvedValueOnce(MOCK_HOST_CONFIG_RESPONSE)
-      // Second Connection attempt
-      .mockResolvedValueOnce("")
-      .mockResolvedValueOnce(MOCK_HOST_CONFIG_RESPONSE)
+      // First Connection attempt - network error
+      .mockRejectedValueOnce(createNetworkError())
+      .mockResolvedValueOnce(createSuccessResponse(MOCK_HOST_CONFIG_RESPONSE))
+      // Second Connection attempt - success
+      .mockResolvedValueOnce(createSuccessResponse({}))
+      .mockResolvedValueOnce(createSuccessResponse(MOCK_HOST_CONFIG_RESPONSE))
 
     const retryCallback = createTimerAdvancingRetryCallback(
       MOCK_PING_DATA.retryCallback
@@ -430,20 +436,14 @@ describe("doInitPings", () => {
       ] as URL[],
     }
 
-    const TEST_ERROR = {
-      response: {
-        status: 0,
-      },
-    }
-
-    axios.get = vi
+    global.fetch = vi
       .fn()
-      // First Connection attempt
-      .mockRejectedValueOnce(TEST_ERROR)
-      .mockResolvedValueOnce(MOCK_HOST_CONFIG_RESPONSE)
-      // Second Connection attempt
-      .mockResolvedValueOnce("")
-      .mockResolvedValueOnce(MOCK_HOST_CONFIG_RESPONSE)
+      // First Connection attempt - network error
+      .mockRejectedValueOnce(createNetworkError())
+      .mockResolvedValueOnce(createSuccessResponse(MOCK_HOST_CONFIG_RESPONSE))
+      // Second Connection attempt - success
+      .mockResolvedValueOnce(createSuccessResponse({}))
+      .mockResolvedValueOnce(createSuccessResponse(MOCK_HOST_CONFIG_RESPONSE))
 
     const retryCallback = createTimerAdvancingRetryCallback(
       MOCK_PING_DATA_LOCALHOST.retryCallback
@@ -470,24 +470,18 @@ describe("doInitPings", () => {
   })
 
   it("calls retry with corresponding fragment when the status is 403 (forbidden)", async () => {
-    const TEST_ERROR = {
-      response: {
-        status: 403,
-      },
-    }
-
     const forbiddenMarkdown = `Cannot connect to Streamlit (HTTP status: 403).
 
 If you are trying to access a Streamlit app running on another server, this could be due to the app's [CORS](${CORS_ERROR_MESSAGE_DOCUMENTATION_LINK}) settings.`
 
-    axios.get = vi
+    global.fetch = vi
       .fn()
-      // First Connection attempt
-      .mockRejectedValueOnce(TEST_ERROR)
-      .mockResolvedValueOnce(MOCK_HOST_CONFIG_RESPONSE)
-      // Second Connection attempt
-      .mockResolvedValueOnce("")
-      .mockResolvedValueOnce(MOCK_HOST_CONFIG_RESPONSE)
+      // First Connection attempt - 403 error
+      .mockResolvedValueOnce(createErrorResponse(403, "Forbidden"))
+      .mockResolvedValueOnce(createSuccessResponse(MOCK_HOST_CONFIG_RESPONSE))
+      // Second Connection attempt - success
+      .mockResolvedValueOnce(createSuccessResponse({}))
+      .mockResolvedValueOnce(createSuccessResponse(MOCK_HOST_CONFIG_RESPONSE))
 
     const retryCallback = createTimerAdvancingRetryCallback(
       MOCK_PING_DATA.retryCallback
@@ -514,21 +508,16 @@ If you are trying to access a Streamlit app running on another server, this coul
   })
 
   it("calls retry with 'Connection failed with status ...' for any status code other than 0, 403, and 2xx", async () => {
-    const TEST_ERROR = {
-      response: {
-        status: 500,
-        data: "TEST_DATA",
-      },
-    }
-
-    axios.get = vi
+    global.fetch = vi
       .fn()
-      // First Connection attempt
-      .mockRejectedValueOnce(TEST_ERROR)
-      .mockResolvedValueOnce(MOCK_HOST_CONFIG_RESPONSE)
-      // Second Connection attempt
-      .mockResolvedValueOnce("")
-      .mockResolvedValueOnce(MOCK_HOST_CONFIG_RESPONSE)
+      // First Connection attempt - 500 error
+      .mockResolvedValueOnce(
+        createErrorResponse(500, "Internal Server Error", "TEST_DATA")
+      )
+      .mockResolvedValueOnce(createSuccessResponse(MOCK_HOST_CONFIG_RESPONSE))
+      // Second Connection attempt - success
+      .mockResolvedValueOnce(createSuccessResponse({}))
+      .mockResolvedValueOnce(createSuccessResponse(MOCK_HOST_CONFIG_RESPONSE))
 
     const retryCallback = createTimerAdvancingRetryCallback(
       MOCK_PING_DATA.retryCallback
@@ -550,31 +539,26 @@ If you are trying to access a Streamlit app running on another server, this coul
     expect(MOCK_PING_DATA.retryCallback).toHaveBeenCalledWith(
       1,
       {
-        message: `Connection failed with status ${TEST_ERROR.response.status}, and response:`,
-        codeBlock: TEST_ERROR.response.data,
+        message: "Connection failed with status 500, and response:",
+        codeBlock: "TEST_DATA",
       },
       expect.anything()
     )
   })
 
   it("calls retry with 'Connection failed with status ...' for any status code other than 0, 403, and 2xx with an object response", async () => {
-    const TEST_ERROR = {
-      response: {
-        status: 500,
-        data: {
-          message: "TEST_DATA",
-        },
-      },
-    }
+    const TEST_DATA = { message: "TEST_DATA" }
 
-    axios.get = vi
+    global.fetch = vi
       .fn()
-      // First Connection attempt
-      .mockRejectedValueOnce(TEST_ERROR)
-      .mockResolvedValueOnce(MOCK_HOST_CONFIG_RESPONSE)
-      // Second Connection attempt
-      .mockResolvedValueOnce("")
-      .mockResolvedValueOnce(MOCK_HOST_CONFIG_RESPONSE)
+      // First Connection attempt - 500 error with object data
+      .mockResolvedValueOnce(
+        createErrorResponse(500, "Internal Server Error", TEST_DATA)
+      )
+      .mockResolvedValueOnce(createSuccessResponse(MOCK_HOST_CONFIG_RESPONSE))
+      // Second Connection attempt - success
+      .mockResolvedValueOnce(createSuccessResponse({}))
+      .mockResolvedValueOnce(createSuccessResponse(MOCK_HOST_CONFIG_RESPONSE))
 
     const retryCallback = createTimerAdvancingRetryCallback(
       MOCK_PING_DATA.retryCallback
@@ -596,36 +580,34 @@ If you are trying to access a Streamlit app running on another server, this coul
     expect(MOCK_PING_DATA.retryCallback).toHaveBeenCalledWith(
       1,
       {
-        message: `Connection failed with status ${TEST_ERROR.response.status}, and response:`,
-        codeBlock: JSON.stringify(TEST_ERROR.response.data, null, 2),
+        message: "Connection failed with status 500, and response:",
+        codeBlock: JSON.stringify(TEST_DATA, null, 2),
       },
       expect.anything()
     )
   })
 
   it("calls retry with correct total tries", async () => {
-    const TEST_ERROR_MESSAGE = "TEST_ERROR_MESSAGE"
-
-    axios.get = vi
+    global.fetch = vi
       .fn()
       // First Connection attempt
-      .mockRejectedValueOnce(TEST_ERROR_MESSAGE)
-      .mockResolvedValueOnce(MOCK_HOST_CONFIG_RESPONSE)
+      .mockRejectedValueOnce(createNetworkError())
+      .mockResolvedValueOnce(createSuccessResponse(MOCK_HOST_CONFIG_RESPONSE))
       // Second Connection attempt
-      .mockRejectedValueOnce(TEST_ERROR_MESSAGE)
-      .mockResolvedValueOnce(MOCK_HOST_CONFIG_RESPONSE)
+      .mockRejectedValueOnce(createNetworkError())
+      .mockResolvedValueOnce(createSuccessResponse(MOCK_HOST_CONFIG_RESPONSE))
       // Third Connection attempt
-      .mockRejectedValueOnce(TEST_ERROR_MESSAGE)
-      .mockResolvedValueOnce(MOCK_HOST_CONFIG_RESPONSE)
+      .mockRejectedValueOnce(createNetworkError())
+      .mockResolvedValueOnce(createSuccessResponse(MOCK_HOST_CONFIG_RESPONSE))
       // Fourth Connection attempt
-      .mockRejectedValueOnce(TEST_ERROR_MESSAGE)
-      .mockResolvedValueOnce(MOCK_HOST_CONFIG_RESPONSE)
+      .mockRejectedValueOnce(createNetworkError())
+      .mockResolvedValueOnce(createSuccessResponse(MOCK_HOST_CONFIG_RESPONSE))
       // Fifth Connection attempt
-      .mockRejectedValueOnce(TEST_ERROR_MESSAGE)
-      .mockResolvedValueOnce(MOCK_HOST_CONFIG_RESPONSE)
+      .mockRejectedValueOnce(createNetworkError())
+      .mockResolvedValueOnce(createSuccessResponse(MOCK_HOST_CONFIG_RESPONSE))
       // Final Attempt (to avoid infinite loop)
-      .mockResolvedValueOnce("")
-      .mockResolvedValueOnce(MOCK_HOST_CONFIG_RESPONSE)
+      .mockResolvedValueOnce(createSuccessResponse({}))
+      .mockResolvedValueOnce(createSuccessResponse(MOCK_HOST_CONFIG_RESPONSE))
 
     const retryCallback = createTimerAdvancingRetryCallback(
       MOCK_PING_DATA.retryCallback
@@ -648,28 +630,26 @@ If you are trying to access a Streamlit app running on another server, this coul
   })
 
   it("has increasing but capped retry backoff", async () => {
-    const TEST_ERROR_MESSAGE = "TEST_ERROR_MESSAGE"
-
-    axios.get = vi
+    global.fetch = vi
       .fn()
       // First Connection attempt
-      .mockRejectedValueOnce(TEST_ERROR_MESSAGE)
-      .mockResolvedValueOnce(MOCK_HOST_CONFIG_RESPONSE)
+      .mockRejectedValueOnce(createNetworkError())
+      .mockResolvedValueOnce(createSuccessResponse(MOCK_HOST_CONFIG_RESPONSE))
       // Second Connection attempt
-      .mockRejectedValueOnce(TEST_ERROR_MESSAGE)
-      .mockResolvedValueOnce(MOCK_HOST_CONFIG_RESPONSE)
+      .mockRejectedValueOnce(createNetworkError())
+      .mockResolvedValueOnce(createSuccessResponse(MOCK_HOST_CONFIG_RESPONSE))
       // Third Connection attempt
-      .mockRejectedValueOnce(TEST_ERROR_MESSAGE)
-      .mockResolvedValueOnce(MOCK_HOST_CONFIG_RESPONSE)
+      .mockRejectedValueOnce(createNetworkError())
+      .mockResolvedValueOnce(createSuccessResponse(MOCK_HOST_CONFIG_RESPONSE))
       // Fourth Connection attempt
-      .mockRejectedValueOnce(TEST_ERROR_MESSAGE)
-      .mockResolvedValueOnce(MOCK_HOST_CONFIG_RESPONSE)
+      .mockRejectedValueOnce(createNetworkError())
+      .mockResolvedValueOnce(createSuccessResponse(MOCK_HOST_CONFIG_RESPONSE))
       // Fifth Connection attempt
-      .mockRejectedValueOnce(TEST_ERROR_MESSAGE)
-      .mockResolvedValueOnce(MOCK_HOST_CONFIG_RESPONSE)
+      .mockRejectedValueOnce(createNetworkError())
+      .mockResolvedValueOnce(createSuccessResponse(MOCK_HOST_CONFIG_RESPONSE))
       // Final Attempt (to avoid infinite loop)
-      .mockResolvedValueOnce("")
-      .mockResolvedValueOnce(MOCK_HOST_CONFIG_RESPONSE)
+      .mockResolvedValueOnce(createSuccessResponse({}))
+      .mockResolvedValueOnce(createSuccessResponse(MOCK_HOST_CONFIG_RESPONSE))
 
     const timeouts: number[] = []
     const retryCallback = (
@@ -685,6 +665,7 @@ If you are trying to access a Streamlit app running on another server, this coul
     const { promise } = doInitPings(
       [
         {
+          protocol: "http:",
           hostname: "not.a.real.host",
           port: "3000",
           pathname: "/",
@@ -714,28 +695,26 @@ If you are trying to access a Streamlit app running on another server, this coul
   })
 
   it("backs off independently for each target url", async () => {
-    const TEST_ERROR_MESSAGE = "TEST_ERROR_MESSAGE"
-
-    axios.get = vi
+    global.fetch = vi
       .fn()
       // First Connection attempt
-      .mockRejectedValueOnce(TEST_ERROR_MESSAGE)
-      .mockResolvedValueOnce(MOCK_HOST_CONFIG_RESPONSE)
+      .mockRejectedValueOnce(createNetworkError())
+      .mockResolvedValueOnce(createSuccessResponse(MOCK_HOST_CONFIG_RESPONSE))
       // Second Connection attempt
-      .mockRejectedValueOnce(TEST_ERROR_MESSAGE)
-      .mockResolvedValueOnce(MOCK_HOST_CONFIG_RESPONSE)
+      .mockRejectedValueOnce(createNetworkError())
+      .mockResolvedValueOnce(createSuccessResponse(MOCK_HOST_CONFIG_RESPONSE))
       // Third Connection attempt
-      .mockRejectedValueOnce(TEST_ERROR_MESSAGE)
-      .mockResolvedValueOnce(MOCK_HOST_CONFIG_RESPONSE)
+      .mockRejectedValueOnce(createNetworkError())
+      .mockResolvedValueOnce(createSuccessResponse(MOCK_HOST_CONFIG_RESPONSE))
       // Fourth Connection attempt
-      .mockRejectedValueOnce(TEST_ERROR_MESSAGE)
-      .mockResolvedValueOnce(MOCK_HOST_CONFIG_RESPONSE)
+      .mockRejectedValueOnce(createNetworkError())
+      .mockResolvedValueOnce(createSuccessResponse(MOCK_HOST_CONFIG_RESPONSE))
       // Fifth Connection attempt
-      .mockRejectedValueOnce(TEST_ERROR_MESSAGE)
-      .mockResolvedValueOnce(MOCK_HOST_CONFIG_RESPONSE)
+      .mockRejectedValueOnce(createNetworkError())
+      .mockResolvedValueOnce(createSuccessResponse(MOCK_HOST_CONFIG_RESPONSE))
       // Final Attempt (to avoid infinite loop)
-      .mockResolvedValueOnce("")
-      .mockResolvedValueOnce(MOCK_HOST_CONFIG_RESPONSE)
+      .mockResolvedValueOnce(createSuccessResponse({}))
+      .mockResolvedValueOnce(createSuccessResponse(MOCK_HOST_CONFIG_RESPONSE))
 
     const timeouts: number[] = []
     const retryCallback = (
@@ -769,28 +748,26 @@ If you are trying to access a Streamlit app running on another server, this coul
   })
 
   it("resets timeout each ping call", async () => {
-    const TEST_ERROR_MESSAGE = "TEST_ERROR_MESSAGE"
-
-    axios.get = vi
+    global.fetch = vi
       .fn()
       // First Connection attempt
-      .mockRejectedValueOnce(TEST_ERROR_MESSAGE)
-      .mockResolvedValueOnce(MOCK_HOST_CONFIG_RESPONSE)
+      .mockRejectedValueOnce(createNetworkError())
+      .mockResolvedValueOnce(createSuccessResponse(MOCK_HOST_CONFIG_RESPONSE))
       // Second Connection attempt
-      .mockRejectedValueOnce(TEST_ERROR_MESSAGE)
-      .mockResolvedValueOnce(MOCK_HOST_CONFIG_RESPONSE)
+      .mockRejectedValueOnce(createNetworkError())
+      .mockResolvedValueOnce(createSuccessResponse(MOCK_HOST_CONFIG_RESPONSE))
       // Third Connection attempt (successful)
-      .mockResolvedValueOnce("")
-      .mockResolvedValueOnce(MOCK_HOST_CONFIG_RESPONSE)
+      .mockResolvedValueOnce(createSuccessResponse({}))
+      .mockResolvedValueOnce(createSuccessResponse(MOCK_HOST_CONFIG_RESPONSE))
       // Fourth Connection attempt
-      .mockRejectedValueOnce(TEST_ERROR_MESSAGE)
-      .mockResolvedValueOnce(MOCK_HOST_CONFIG_RESPONSE)
+      .mockRejectedValueOnce(createNetworkError())
+      .mockResolvedValueOnce(createSuccessResponse(MOCK_HOST_CONFIG_RESPONSE))
       // Fifth Connection attempt
-      .mockRejectedValueOnce(TEST_ERROR_MESSAGE)
-      .mockResolvedValueOnce(MOCK_HOST_CONFIG_RESPONSE)
+      .mockRejectedValueOnce(createNetworkError())
+      .mockResolvedValueOnce(createSuccessResponse(MOCK_HOST_CONFIG_RESPONSE))
       // Final Attempt (to avoid infinite loop)
-      .mockResolvedValueOnce("")
-      .mockResolvedValueOnce(MOCK_HOST_CONFIG_RESPONSE)
+      .mockResolvedValueOnce(createSuccessResponse({}))
+      .mockResolvedValueOnce(createSuccessResponse(MOCK_HOST_CONFIG_RESPONSE))
 
     const timeouts: number[] = []
     const retryCallback = (
@@ -806,6 +783,7 @@ If you are trying to access a Streamlit app running on another server, this coul
     const { promise: promise1 } = doInitPings(
       [
         {
+          protocol: "http:",
           hostname: "not.a.real.host",
           port: "3000",
           pathname: "/",
@@ -836,6 +814,7 @@ If you are trying to access a Streamlit app running on another server, this coul
     const { promise: promise2 } = doInitPings(
       [
         {
+          protocol: "http:",
           hostname: "not.a.real.host",
           port: "3000",
           pathname: "/",
@@ -858,56 +837,15 @@ If you are trying to access a Streamlit app running on another server, this coul
   })
 
   describe("calls sendClientError when we've reached connection error threshold", () => {
-    it("with status = 0 response", async () => {
-      const sendClientErrorSpy = vi.fn()
-
-      // We need to mock axios.get to simulate connection error threshold
-      axios.get = setupAxiosMockWithFailures(MAX_RETRIES_BEFORE_CLIENT_ERROR, {
-        response: {
-          status: 0,
-          statusText: "No response",
-          config: {
-            url: "https://example.com/health",
-          },
-        },
-      })
-
-      const retryCallback = createTimerAdvancingRetryCallback()
-
-      const { promise } = doInitPings(
-        MOCK_PING_DATA.uri,
-        MOCK_PING_DATA.timeoutMs,
-        MOCK_PING_DATA.maxTimeoutMs,
-        retryCallback,
-        sendClientErrorSpy,
-        MOCK_PING_DATA.setAllowedOrigins
-      )
-
-      // Run any remaining timers to complete the ping process
-      await vi.runAllTimersAsync()
-      await promise
-
-      // Verify that sendClientError was called with the expected arguments
-      expect(sendClientErrorSpy).toHaveBeenCalledWith(
-        "Response received with status 0",
-        "No response",
-        "/health"
-      )
-    })
-
     it("with status = 403 response", async () => {
       const sendClientErrorSpy = vi.fn()
 
-      // We need to mock axios.get to simulate connection error threshold
-      axios.get = setupAxiosMockWithFailures(MAX_RETRIES_BEFORE_CLIENT_ERROR, {
-        response: {
-          status: 403,
-          statusText: "Forbidden",
-          config: {
-            url: "https://example.com/health",
-          },
-        },
-      })
+      // We need to mock fetch to simulate connection error threshold
+      global.fetch = setupFetchMockWithFailures(
+        MAX_RETRIES_BEFORE_CLIENT_ERROR,
+        "response",
+        { status: 403, statusText: "Forbidden" }
+      )
 
       const retryCallback = createTimerAdvancingRetryCallback()
 
@@ -927,23 +865,19 @@ If you are trying to access a Streamlit app running on another server, this coul
       expect(sendClientErrorSpy).toHaveBeenCalledWith(
         403,
         "Forbidden",
-        "/health"
+        expect.any(String)
       )
     })
 
     it("with status = 500 response", async () => {
       const sendClientErrorSpy = vi.fn()
 
-      // We need to mock axios.get to simulate connection error threshold
-      axios.get = setupAxiosMockWithFailures(MAX_RETRIES_BEFORE_CLIENT_ERROR, {
-        response: {
-          status: 500,
-          statusText: "Internal Server Error",
-          config: {
-            url: "https://example.com/health",
-          },
-        },
-      })
+      // We need to mock fetch to simulate connection error threshold
+      global.fetch = setupFetchMockWithFailures(
+        MAX_RETRIES_BEFORE_CLIENT_ERROR,
+        "response",
+        { status: 500, statusText: "Internal Server Error" }
+      )
 
       const retryCallback = createTimerAdvancingRetryCallback()
 
@@ -963,19 +897,19 @@ If you are trying to access a Streamlit app running on another server, this coul
       expect(sendClientErrorSpy).toHaveBeenCalledWith(
         500,
         "Internal Server Error",
-        "/health"
+        expect.any(String)
       )
     })
 
-    it("with request error", async () => {
+    it("with network error", async () => {
       const sendClientErrorSpy = vi.fn()
 
-      // We need to mock axios.get to simulate connection error threshold
-      axios.get = setupAxiosMockWithFailures(MAX_RETRIES_BEFORE_CLIENT_ERROR, {
-        request: {
-          path: "https://example.com/health",
-        },
-      })
+      // We need to mock fetch to simulate connection error threshold
+      global.fetch = setupFetchMockWithFailures(
+        MAX_RETRIES_BEFORE_CLIENT_ERROR,
+        "network",
+        undefined
+      )
 
       const retryCallback = createTimerAdvancingRetryCallback()
 
@@ -994,8 +928,8 @@ If you are trying to access a Streamlit app running on another server, this coul
 
       expect(sendClientErrorSpy).toHaveBeenCalledWith(
         "No response received from server",
-        undefined,
-        "/health"
+        "Network error",
+        expect.any(String)
       )
     })
   })
@@ -1004,21 +938,20 @@ If you are trying to access a Streamlit app running on another server, this coul
 describe("WebsocketConnection", () => {
   let client: WebsocketConnection
   let server: WS
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  let originalAxiosGet: any
+  let originalFetch: typeof global.fetch
 
   beforeEach(() => {
     vi.useFakeTimers()
     server = new WS("ws://localhost:1234/_stcore/stream")
 
-    originalAxiosGet = axios.get
-    axios.get = createAxiosMock()
+    originalFetch = global.fetch
+    global.fetch = createFetchMock()
 
     client = new WebsocketConnection(createMockArgs())
   })
 
   afterEach(async () => {
-    axios.get = originalAxiosGet
+    global.fetch = originalFetch
 
     // @ts-expect-error
     if (client.websocket) {
@@ -1077,6 +1010,7 @@ describe("WebsocketConnection", () => {
     // Advance fake timers to allow connection process to complete
     await vi.runAllTimersAsync()
     await server.connected
+
     // @ts-expect-error
     const sendSpy = vi.spyOn(client.websocket, "send")
 
@@ -1106,8 +1040,7 @@ describe("WebsocketConnection", () => {
 })
 
 describe("WebsocketConnection auth token handling", () => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  let originalAxiosGet: any
+  let originalFetch: typeof global.fetch
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   let websocketSpy: any
   let server: WS
@@ -1116,12 +1049,12 @@ describe("WebsocketConnection auth token handling", () => {
     server = new WS("ws://localhost:1234/_stcore/stream")
     websocketSpy = vi.spyOn(window, "WebSocket")
 
-    originalAxiosGet = axios.get
-    axios.get = createAxiosMock()
+    originalFetch = global.fetch
+    global.fetch = createFetchMock()
   })
 
   afterEach(() => {
-    axios.get = originalAxiosGet
+    global.fetch = originalFetch
 
     server.close()
   })

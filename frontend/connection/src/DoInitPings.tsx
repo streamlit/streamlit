@@ -20,7 +20,6 @@
  * Returns a promise with the index of the URI that worked.
  */
 
-import axios from "axios"
 import { getLogger } from "loglevel"
 
 // Note we expect the polyfill to load from this import
@@ -34,7 +33,12 @@ import {
   SERVER_PING_PATH,
 } from "./constants"
 import { ErrorDetails, IHostConfigResponse, OnRetry } from "./types"
-import { parseUriIntoBaseParts } from "./utils"
+import {
+  FetchError,
+  fetchWithTimeout,
+  parseUriIntoBaseParts,
+  serializeForDisplay,
+} from "./utils"
 
 const LOG = getLogger("DoInitPings")
 
@@ -176,22 +180,22 @@ If you are trying to access a Streamlit app running on another server, this coul
     // not to do so as it's semantically cleaner to not give the healthcheck
     // endpoint additional responsibilities.
     Promise.all([
-      axios.get(healthzUri, { timeout: PING_TIMEOUT_MS }),
-      axios.get(hostConfigUri, { timeout: PING_TIMEOUT_MS }),
+      fetchWithTimeout(healthzUri, PING_TIMEOUT_MS),
+      fetchWithTimeout(hostConfigUri, PING_TIMEOUT_MS),
     ])
       .then(([_, hostConfigResp]) => {
-        onHostConfigResp(hostConfigResp.data)
+        onHostConfigResp(hostConfigResp.data as IHostConfigResponse)
         resolve(uriNumber)
       })
-      .catch(error => {
+      .catch((error: FetchError) => {
         // If its our 6th try (retry count at which we show connection error dialog), send a client error
         // to inform the host of connection error
         const tooManyRetries = totalTries >= MAX_RETRIES_BEFORE_CLIENT_ERROR
 
-        if (error.code === "ECONNABORTED") {
+        if (error.isTimeout) {
           if (tooManyRetries) {
             // Handle retrieving the source URL from the error (health or host-config endpoint)
-            const source = determineUrlSource(error.config?.url)
+            const source = determineUrlSource(error.url)
             LOG.error("Client error: DoInitPings timed out")
             sendClientError(
               "DoInitPings timed out",
@@ -208,7 +212,7 @@ If you are trying to access a Streamlit app running on another server, this coul
 
           const { data, status, statusText } = error.response
           // Handle retrieving the source URL from the error (health or host-config endpoint)
-          const source = determineUrlSource(error.response.config?.url)
+          const source = determineUrlSource(error.url)
 
           if (status === /* NO RESPONSE */ 0) {
             if (tooManyRetries) {
@@ -241,32 +245,25 @@ If you are trying to access a Streamlit app running on another server, this coul
             sendClientError(status, statusText, source)
           }
 
-          const responseData =
-            data !== null && typeof data === "object"
-              ? JSON.stringify(data, null, 2)
-              : data
-          const messageEnding = responseData ? ", and response:" : "."
-
+          const responseDataStr = serializeForDisplay(data)
           return retry({
-            message: `Connection failed with status ${status}${messageEnding}`,
-            ...(responseData && { codeBlock: responseData }),
+            message: `Connection failed with status ${status}${responseDataStr ? ", and response:" : "."}`,
+            ...(responseDataStr && { codeBlock: responseDataStr }),
           })
         }
 
-        if (error.request) {
+        if (error.isNetworkError) {
           // The request was made but no response was received
-          // `error.request` is an instance of XMLHttpRequest in the browser and an instance of
-          // http.ClientRequest in node.js
 
           if (tooManyRetries) {
             // Handle retrieving the source URL from the error (health or host-config endpoint)
-            const source = determineUrlSource(error.request.path)
+            const source = determineUrlSource(error.url)
             LOG.error(
               `Client Error in reaching server endpoint - No response received when attempting to reach ${source}`
             )
             sendClientError(
               "No response received from server",
-              error.request.status,
+              "Network error",
               source
             )
           }
@@ -276,7 +273,7 @@ If you are trying to access a Streamlit app running on another server, this coul
         // Something happened in setting up the request that triggered an Error
         if (tooManyRetries) {
           // Handle retrieving the source URL from the error (health or host-config endpoint)
-          const source = determineUrlSource(error.config?.url)
+          const source = determineUrlSource(error.url)
           LOG.error(
             `Client Error in reaching server endpoint - error in setting up request when attempting to reach ${source}`
           )
