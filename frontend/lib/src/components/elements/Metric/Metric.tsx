@@ -333,7 +333,7 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
         <StyledMetricValueText data-testid="stMetricValue">
           <StyledTruncateText>
             <StreamlitMarkdown
-              source={" " + metricValue + " "} // Add some extra space to keep the existing spacing.
+              source={metricValue}
               allowHTML={false}
               isLabel // Treat the metric value with the label limitations.
               inheritFont
@@ -360,7 +360,7 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
             )}
             <StyledTruncateText>
               <StreamlitMarkdown
-                source={" " + delta + " "} // Add some extra space to keep the existing spacing.
+                source={delta}
                 allowHTML={false}
                 isLabel // Treat the metric delta with the label limitations.
                 inheritFont
