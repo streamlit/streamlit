@@ -114,10 +114,10 @@ describe("CameraInput widget", () => {
       vi.spyOn(props.widgetMgr, "setFileUploaderStateValue")
       render(<CameraInput {...props} />)
       const cameraInput = screen.getByTestId("stCameraInput")
-      expect(cameraInput).toBeInTheDocument()
+      expect(cameraInput).toBeVisible()
       expect(cameraInput).toHaveClass("stCameraInput")
 
-      expect(screen.getByText("Take Photo")).toBeInTheDocument()
+      expect(screen.getByText("Take Photo")).toBeVisible()
       // WidgetStateManager should have been called on mounting
       expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenCalledTimes(
         1
@@ -158,7 +158,7 @@ describe("CameraInput widget", () => {
       const props = getProps({ help: "This is a help tooltip" })
       render(<CameraInput {...props} />)
       // TooltipIcon should be present when help is provided
-      expect(screen.getByTestId("stTooltipIcon")).toBeInTheDocument()
+      expect(screen.getByTestId("stTooltipIcon")).toBeVisible()
     })
 
     it("does not show help tooltip when not provided", () => {
@@ -229,7 +229,7 @@ describe("CameraInput widget", () => {
 
       // When there's an existing file, the Clear photo button should be shown
       // (since imgSrc would be RESTORED_FROM_WIDGET_STRING)
-      expect(screen.getByText("Clear photo")).toBeInTheDocument()
+      expect(screen.getByText("Clear photo")).toBeVisible()
     })
 
     it("passes fragmentId to setFileUploaderStateValue", () => {
@@ -252,10 +252,8 @@ describe("CameraInput widget", () => {
       const props = getProps()
       render(<CameraInput {...props} />)
 
-      expect(
-        screen.getByTestId("stCameraInputWebcamComponent")
-      ).toBeInTheDocument()
-      expect(screen.getByText("Take Photo")).toBeInTheDocument()
+      expect(screen.getByTestId("stCameraInputWebcamComponent")).toBeVisible()
+      expect(screen.getByText("Take Photo")).toBeVisible()
     })
 
     it("passes disabled prop to webcam component", () => {
@@ -326,7 +324,7 @@ describe("CameraInput widget", () => {
 
       render(<CameraInput {...props} />)
 
-      expect(screen.getByText("Clear photo")).toBeInTheDocument()
+      expect(screen.getByText("Clear photo")).toBeVisible()
     })
 
     it("clears photo when Clear photo button is clicked", async () => {
@@ -357,7 +355,7 @@ describe("CameraInput widget", () => {
       await waitFor(() => {
         expect(
           screen.getByTestId("stCameraInputWebcamComponent")
-        ).toBeInTheDocument()
+        ).toBeVisible()
       })
 
       // Widget state should be updated with empty files
@@ -472,7 +470,7 @@ describe("CameraInput widget", () => {
       render(<CameraInput {...props} />)
 
       // Verify we have the captured photo state
-      expect(screen.getByText("Clear photo")).toBeInTheDocument()
+      expect(screen.getByText("Clear photo")).toBeVisible()
 
       // Submit the form (which should clear the widget)
       act(() => {
@@ -483,7 +481,7 @@ describe("CameraInput widget", () => {
       await waitFor(() => {
         expect(
           screen.getByTestId("stCameraInputWebcamComponent")
-        ).toBeInTheDocument()
+        ).toBeVisible()
       })
 
       // Widget state should be updated with empty files
@@ -511,9 +509,7 @@ describe("CameraInput widget", () => {
       const props = getProps({}, { disabled: true })
       render(<CameraInput {...props} />)
 
-      expect(
-        screen.getByTestId("stCameraInputWebcamComponent")
-      ).toBeInTheDocument()
+      expect(screen.getByTestId("stCameraInputWebcamComponent")).toBeVisible()
     })
   })
 
@@ -568,7 +564,7 @@ describe("CameraInput widget", () => {
 
       // The StyledBox should be rendered when there's a captured image
       // (with RESTORED_FROM_WIDGET_STRING, image is not shown but box is)
-      expect(screen.getByText("Clear photo")).toBeInTheDocument()
+      expect(screen.getByText("Clear photo")).toBeVisible()
     })
 
     it("does not display image when imgSrc is RESTORED_FROM_WIDGET_STRING", () => {
@@ -591,7 +587,7 @@ describe("CameraInput widget", () => {
       // Image should not be present when restored from widget
       expect(screen.queryByRole("img", { name: "Snapshot" })).toBeNull()
       // But Clear photo button should be present
-      expect(screen.getByText("Clear photo")).toBeInTheDocument()
+      expect(screen.getByText("Clear photo")).toBeVisible()
     })
   })
 
@@ -601,9 +597,7 @@ describe("CameraInput widget", () => {
       render(<CameraInput {...props} />)
 
       // Component renders with default facing mode (user)
-      expect(
-        screen.getByTestId("stCameraInputWebcamComponent")
-      ).toBeInTheDocument()
+      expect(screen.getByTestId("stCameraInputWebcamComponent")).toBeVisible()
     })
   })
 })
