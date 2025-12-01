@@ -186,7 +186,9 @@ def test_dynamic_camera_input_props(app: Page):
     expect_prefixed_markdown(app, "Initial camera input value:", "False")
 
     # Check that the help tooltip is correct:
-    app.wait_for_timeout(2000)
+    app.wait_for_timeout(
+        3000  # Camera input can be a bit unstable and change its height slightly delayed.
+    )
     dynamic_camera_input.scroll_into_view_if_needed()
     expect_help_tooltip(app, dynamic_camera_input, "initial help")
 
@@ -204,5 +206,8 @@ def test_dynamic_camera_input_props(app: Page):
     expect(dynamic_camera_input).to_have_css("width", "300px")
 
     # Check that the help tooltip is correct:
+    app.wait_for_timeout(
+        3000  # Camera input can be a bit unstable and change its height slightly delayed.
+    )
     dynamic_camera_input.scroll_into_view_if_needed()
     expect_help_tooltip(app, dynamic_camera_input, "updated help")
