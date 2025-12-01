@@ -335,6 +335,7 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
             <StreamlitMarkdown
               source={" " + metricValue + " "} // Add some extra space to keep the existing spacing.
               allowHTML={false}
+              isLabel // Treat the metric value with the label limitations.
               inheritFont
             />
           </StyledTruncateText>
@@ -361,6 +362,7 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
               <StreamlitMarkdown
                 source={" " + delta + " "} // Add some extra space to keep the existing spacing.
                 allowHTML={false}
+                isLabel // Treat the metric delta with the label limitations.
                 inheritFont
               />
             </StyledTruncateText>
