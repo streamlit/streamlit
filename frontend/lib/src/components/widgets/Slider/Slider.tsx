@@ -81,8 +81,18 @@ function SliderTickBar({
       isHovered={isHovered}
       isDisabled={isDisabled}
     >
-      <StreamlitMarkdown source={minLabel} allowHTML={false} inheritFont />
-      <StreamlitMarkdown source={maxLabel} allowHTML={false} inheritFont />
+      <StreamlitMarkdown
+        source={minLabel}
+        allowHTML={false}
+        inheritFont
+        isLabel
+      />
+      <StreamlitMarkdown
+        source={maxLabel}
+        allowHTML={false}
+        inheritFont
+        isLabel
+      />
     </StyledSliderTickBar>
   )
 }
