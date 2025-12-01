@@ -1132,18 +1132,25 @@ export const getCachedTheme = (): ThemeConfig | null => {
     return null
   }
 
-  const { name: themeName }: CachedTheme = JSON.parse(cachedThemeStr)
+  try {
+    const { name: themeName }: CachedTheme = JSON.parse(cachedThemeStr)
 
-  // Only "Light" or "Dark" are valid cached preferences
-  switch (themeName) {
-    case lightTheme.name: // "Light"
-      return getMergedLightTheme()
-    case darkTheme.name: // "Dark"
-      return getMergedDarkTheme()
-    default:
-      // Invalid cached value (e.g., from old version) - clear it and return null
-      removeCachedTheme()
-      return null
+    // Only "Light" or "Dark" are valid cached preferences
+    switch (themeName) {
+      case lightTheme.name: // "Light"
+        return getMergedLightTheme()
+      case darkTheme.name: // "Dark"
+        return getMergedDarkTheme()
+      default:
+        // Invalid cached value (e.g., from old version) - clear it and return null
+        removeCachedTheme()
+        return null
+    }
+  } catch (error) {
+    // If localStorage contains invalid JSON or malformed data, clear it and return null
+    LOG.warn("Invalid cached theme data, clearing cache", error)
+    removeCachedTheme()
+    return null
   }
 }
 
@@ -1216,6 +1223,43 @@ export const getDefaultTheme = (): ThemeConfig => {
 
   // Fall back to auto/system preference
   return hostTheme
+}
+
+/**
+ * Selects the appropriate custom theme based on user preference and availability.
+ * For single custom themes, returns that theme immediately.
+ * For light/dark custom themes, tries to match user's cached preference first,
+ * then falls back to auto theme based on system preference.
+ *
+ * @param customThemes - Array of custom themes (1 or 3 themes)
+ * @returns The theme to activate
+ */
+export function selectInitialCustomTheme(
+  customThemes: ThemeConfig[]
+): ThemeConfig {
+  // Single theme - no choice needed
+  if (customThemes.length === 1) {
+    return customThemes[0]
+  }
+
+  // Try to match user's cached preference (Light or Dark)
+  const cachedTheme = getCachedTheme()
+  const cachedSystemPreference = cachedTheme?.name ?? null
+
+  if (cachedSystemPreference) {
+    const matchingTheme = customThemes.find(
+      theme => theme.displayName === cachedSystemPreference
+    )
+    if (matchingTheme) {
+      return matchingTheme
+    }
+  }
+
+  // Default to auto theme, with fallback to first available theme
+  const autoTheme = customThemes.find(
+    theme => theme.name === CUSTOM_THEME_AUTO_NAME
+  )
+  return autoTheme ?? customThemes[0]
 }
 
 const whiteSpace = /\s+/

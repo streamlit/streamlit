@@ -19,6 +19,7 @@ import { act, renderHook } from "@testing-library/react"
 import * as libModule from "@streamlit/lib"
 import {
   AUTO_THEME_NAME,
+  createCustomThemes,
   createPresetThemes,
   CUSTOM_THEME_AUTO_NAME,
   CUSTOM_THEME_NAME,
@@ -28,6 +29,7 @@ import {
   setCachedTheme,
   ThemeConfig,
 } from "@streamlit/lib"
+import { CustomThemeConfig } from "@streamlit/protobuf"
 
 import { useThemeManager } from "./useThemeManager"
 
@@ -1113,6 +1115,141 @@ describe("useThemeManager", () => {
       expect(updatedFontSources).toEqual({
         headingFont: "https://example.com/heading2.css",
       })
+    })
+  })
+
+  describe("updateAutoTheme race conditions", () => {
+    beforeEach(() => {
+      vi.clearAllMocks()
+      window.localStorage.clear()
+    })
+
+    it("handles rapid system theme changes without stale state", async () => {
+      // Set up custom themes with light and dark variants
+      const customThemeInput = new CustomThemeConfig({
+        primaryColor: "blue",
+        light: { primaryColor: "lightblue" },
+        dark: { primaryColor: "darkblue" },
+      })
+
+      const { result } = renderHook(() => useThemeManager())
+      const [themeManager] = result.current
+
+      // Add custom themes
+      act(() => {
+        const customThemes = createCustomThemes(customThemeInput)
+        themeManager.addThemes(customThemes, { keepPresetThemes: false })
+      })
+
+      // Set to auto theme
+      act(() => {
+        const autoTheme = result.current[0].availableThemes.find(
+          t => t.name === CUSTOM_THEME_AUTO_NAME
+        )
+        if (autoTheme) {
+          themeManager.setTheme(autoTheme)
+        }
+      })
+
+      // Get the media query list
+      const mediaQueryList = window.matchMedia("(prefers-color-scheme: dark)")
+
+      // Simulate rapid system theme changes
+      act(() => {
+        mediaQueryList.dispatchEvent(new Event("change"))
+      })
+
+      // Wait a tick for state updates
+      await act(async () => {
+        await new Promise(resolve => setTimeout(resolve, 0))
+      })
+
+      // Simulate another rapid change
+      act(() => {
+        mediaQueryList.dispatchEvent(new Event("change"))
+      })
+
+      // Should not crash and should have valid state
+      const [finalThemeManager] = result.current
+      expect(finalThemeManager.activeTheme).toBeDefined()
+      expect(finalThemeManager.availableThemes.length).toBeGreaterThan(0)
+    })
+
+    it("maintains theme list integrity during concurrent updates", () => {
+      const { result } = renderHook(() => useThemeManager())
+      const [initialThemeManager] = result.current
+
+      // Record initial themes count
+      const initialThemesCount = initialThemeManager.availableThemes.length
+
+      // Trigger multiple rapid updates
+      const mediaQueryList = window.matchMedia("(prefers-color-scheme: dark)")
+
+      act(() => {
+        // Dispatch multiple events in quick succession
+        for (let i = 0; i < 5; i++) {
+          mediaQueryList.dispatchEvent(new Event("change"))
+        }
+      })
+
+      // Verify no theme duplication occurred
+      const [finalThemeManager] = result.current
+      const themeNames = finalThemeManager.availableThemes.map(t => t.name)
+      const uniqueThemeNames = new Set(themeNames)
+
+      expect(themeNames.length).toBe(uniqueThemeNames.size)
+      expect(finalThemeManager.availableThemes.length).toBe(initialThemesCount)
+    })
+
+    it("correctly updates auto theme when system preference changes", () => {
+      const { result } = renderHook(() => useThemeManager())
+
+      // Start with auto theme
+      act(() => {
+        const autoTheme = result.current[0].availableThemes.find(
+          t => t.name === AUTO_THEME_NAME
+        )
+        if (autoTheme) {
+          result.current[0].setTheme(autoTheme)
+        }
+      })
+
+      // Simulate system theme change
+      const mediaQueryList = window.matchMedia("(prefers-color-scheme: dark)")
+      act(() => {
+        mediaQueryList.dispatchEvent(new Event("change"))
+      })
+
+      // Theme should be updated (new object reference)
+      const updatedTheme = result.current[0].activeTheme
+      // The theme object should be updated even if it's the same logical theme
+      // This is because the auto theme is recreated to match system preference
+      expect(updatedTheme).toBeDefined()
+      expect(updatedTheme.name).toBe(AUTO_THEME_NAME)
+    })
+
+    it("handles theme changes during afterprint event", () => {
+      const { result } = renderHook(() => useThemeManager())
+
+      // Set to auto theme
+      act(() => {
+        const autoTheme = result.current[0].availableThemes.find(
+          t => t.name === AUTO_THEME_NAME
+        )
+        if (autoTheme) {
+          result.current[0].setTheme(autoTheme)
+        }
+      })
+
+      // Trigger afterprint event
+      act(() => {
+        window.dispatchEvent(new Event("afterprint"))
+      })
+
+      // Should not crash and should maintain valid state
+      const [themeManager] = result.current
+      expect(themeManager.activeTheme).toBeDefined()
+      expect(themeManager.activeTheme.name).toBe(AUTO_THEME_NAME)
     })
   })
 })

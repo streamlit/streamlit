@@ -200,6 +200,50 @@ describe("Cached theme helpers", () => {
 
       expect(getCachedTheme()).toBe(null)
     })
+
+    it("handles corrupt localStorage gracefully - invalid JSON", () => {
+      // Set invalid JSON in localStorage
+      window.localStorage.setItem(LocalStore.ACTIVE_THEME, "{ invalid json")
+
+      // Should not throw and should return null
+      expect(() => getCachedTheme()).not.toThrow()
+      expect(getCachedTheme()).toBe(null)
+
+      // Should also clear the corrupt cache
+      expect(window.localStorage.getItem(LocalStore.ACTIVE_THEME)).toBeNull()
+    })
+
+    it("handles corrupt localStorage gracefully - non-string value", () => {
+      // Set a value that can't be parsed as JSON
+      window.localStorage.setItem(LocalStore.ACTIVE_THEME, "undefined")
+
+      expect(() => getCachedTheme()).not.toThrow()
+      expect(getCachedTheme()).toBe(null)
+    })
+
+    it("handles localStorage with missing name property", () => {
+      // Set cache with no name property
+      window.localStorage.setItem(
+        LocalStore.ACTIVE_THEME,
+        JSON.stringify({ foo: "bar" })
+      )
+
+      expect(getCachedTheme()).toBe(null)
+    })
+
+    it("clears invalid cached value automatically", () => {
+      // Set an invalid theme name
+      window.localStorage.setItem(
+        LocalStore.ACTIVE_THEME,
+        JSON.stringify({ name: "NonExistentTheme" })
+      )
+
+      // First call should detect invalid and clear it
+      expect(getCachedTheme()).toBe(null)
+
+      // Verify it was actually cleared
+      expect(window.localStorage.getItem(LocalStore.ACTIVE_THEME)).toBeNull()
+    })
   })
 
   describe("removeCachedTheme", () => {

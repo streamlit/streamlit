@@ -64,7 +64,6 @@ import {
   createCustomThemes,
   createFormsData,
   createPresetThemes,
-  CUSTOM_THEME_AUTO_NAME,
   DeployedAppMetadata,
   ensureError,
   ensureHotkeysFilterConfigured,
@@ -72,7 +71,6 @@ import {
   FileUploadClient,
   FormsData,
   generateUID,
-  getCachedTheme,
   getElementId,
   getEmbeddingIdClassName,
   getHostSpecifiedTheme,
@@ -101,6 +99,7 @@ import {
   preserveEmbedQueryParams,
   PresetThemeName,
   ScriptRunState,
+  selectInitialCustomTheme,
   SessionInfo,
   sortThemeInputKeys,
   ThemeConfig,
@@ -1357,51 +1356,7 @@ export class App extends PureComponent<Props, State> {
     }
     this.setState({ themeHash })
 
-    if (themeInput) {
-      // Handle custom fonts first if provided - set the fonts in the
-      // theme manager to make them available.
-      if (
-        (themeInput.fontFaces && themeInput.fontFaces.length > 0) ||
-        (themeInput.fontSources && themeInput.fontSources.length > 0)
-      ) {
-        this.props.theme.setFonts(themeInput)
-      }
-
-      // createCustomThemes can return either 1 theme ("Custom Theme")
-      // or 3 themes ("Custom Theme Light", "Custom Theme Dark", and "Custom Theme Auto")
-      const customThemes: ThemeConfig[] = createCustomThemes(themeInput)
-
-      // Add the new custom themes to the theme manager and remove the preset themes
-      this.props.theme.addThemes(customThemes, { keepPresetThemes: false })
-
-      // Single custom theme - always use it (no preference to consider)
-      if (customThemes.length === 1) {
-        this.setAndSendTheme(customThemes[0])
-        return
-      }
-
-      // Light/Dark Custom themes - try to respect user's light/dark preference from localStorage
-      const cachedTheme = getCachedTheme()
-      const cachedSystemPreference = cachedTheme?.name // "Light" or "Dark" or null
-
-      if (cachedSystemPreference) {
-        const matchingTheme = customThemes.find(
-          theme => theme.displayName === cachedSystemPreference
-        )
-        if (matchingTheme) {
-          this.setAndSendTheme(matchingTheme)
-          return
-        }
-      }
-
-      // No preference or no match - use auto theme (system preference)
-      const autoTheme = customThemes.find(
-        theme => theme.name === CUSTOM_THEME_AUTO_NAME
-      )
-      if (autoTheme) {
-        this.setAndSendTheme(autoTheme)
-      }
-    } else {
+    if (!themeInput) {
       // Since there is no themeInput (no custom theme), remove custom themes and reset to defaults
       this.props.theme.addThemes([])
 
@@ -1412,7 +1367,28 @@ export class App extends PureComponent<Props, State> {
         // aka embed query params.
         this.setAndSendTheme(getHostSpecifiedTheme())
       }
+      return
     }
+
+    // Handle custom fonts first if provided - set the fonts in the
+    // theme manager to make them available.
+    if (
+      (themeInput.fontFaces && themeInput.fontFaces.length > 0) ||
+      (themeInput.fontSources && themeInput.fontSources.length > 0)
+    ) {
+      this.props.theme.setFonts(themeInput)
+    }
+
+    // createCustomThemes can return either 1 theme ("Custom Theme")
+    // or 3 themes ("Custom Theme Light", "Custom Theme Dark", and "Custom Theme Auto")
+    const customThemes: ThemeConfig[] = createCustomThemes(themeInput)
+
+    // Add the new custom themes to the theme manager and remove the preset themes
+    this.props.theme.addThemes(customThemes, { keepPresetThemes: false })
+
+    // Select and activate the appropriate custom theme
+    const selectedTheme = selectInitialCustomTheme(customThemes)
+    this.setAndSendTheme(selectedTheme)
   }
 
   /**

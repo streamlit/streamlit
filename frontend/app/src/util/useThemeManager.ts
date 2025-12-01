@@ -101,63 +101,71 @@ export function useThemeManager(): [
   )
 
   const updateAutoTheme = useCallback((): void => {
-    // Find the auto theme (could be preset or custom)
-    const autoTheme = availableThemes.find(
-      t => t.name === AUTO_THEME_NAME || t.name === CUSTOM_THEME_AUTO_NAME
-    )
-
-    if (!autoTheme) {
-      // No auto theme exists (single custom theme case) - nothing to update
-      return
-    }
-
-    // Determine if we're dealing with custom or preset auto theme
-    const isCustomAuto = autoTheme.name === CUSTOM_THEME_AUTO_NAME
-
-    if (isCustomAuto) {
-      // Custom auto theme - update to match system preference
-      const systemPreference = getSystemThemePreference() // "light" or "dark"
-
-      // Find the matching custom variant to copy properties from
-      const matchingCustomTheme = availableThemes.find(
-        t => t.displayName?.toLowerCase() === systemPreference
+    // Use functional setState to avoid stale closure issues with availableThemes.
+    // This ensures we always work with the most recent state even if multiple
+    // theme changes happen in quick succession.
+    setAvailableThemes(prevAvailableThemes => {
+      // Find the auto theme (could be preset or custom)
+      const autoTheme = prevAvailableThemes.find(
+        t => t.name === AUTO_THEME_NAME || t.name === CUSTOM_THEME_AUTO_NAME
       )
 
-      if (matchingCustomTheme) {
-        // Create updated auto theme with the correct variant's properties
-        const updatedAutoTheme: ThemeConfig = {
-          ...matchingCustomTheme,
-          name: CUSTOM_THEME_AUTO_NAME,
-          displayName: AUTO_THEME_NAME,
-        }
+      if (!autoTheme) {
+        // No auto theme exists (single custom theme case) - nothing to update
+        return prevAvailableThemes
+      }
 
-        // Update active theme if user is on auto
-        if (theme.name === CUSTOM_THEME_AUTO_NAME) {
+      // Determine if we're dealing with custom or preset auto theme
+      const isCustomAuto = autoTheme.name === CUSTOM_THEME_AUTO_NAME
+
+      if (isCustomAuto) {
+        // Custom auto theme - update to match system preference
+        const systemPreference = getSystemThemePreference() // "light" or "dark"
+
+        // Find the matching custom variant to copy properties from
+        const matchingCustomTheme = prevAvailableThemes.find(
+          t => t.displayName?.toLowerCase() === systemPreference
+        )
+
+        if (matchingCustomTheme) {
+          // Create updated auto theme with the correct variant's properties
+          const updatedAutoTheme: ThemeConfig = {
+            ...matchingCustomTheme,
+            name: CUSTOM_THEME_AUTO_NAME,
+            displayName: AUTO_THEME_NAME,
+          }
+
+          // Update active theme if user is on auto
+          if (theme.name === CUSTOM_THEME_AUTO_NAME) {
+            setTheme(updatedAutoTheme)
+          }
+
+          // Update availableThemes list with the refreshed auto theme
+          const otherThemes = prevAvailableThemes.filter(
+            t => t.name !== CUSTOM_THEME_AUTO_NAME
+          )
+          return [...otherThemes, updatedAutoTheme]
+        }
+      } else {
+        // We are using auto from default themes
+        // Create the updated auto theme (respecting embed params if present)
+        const updatedAutoTheme = getHostSpecifiedTheme()
+
+        // Update the auto theme if active theme is auto
+        if (theme.name === AUTO_THEME_NAME) {
           setTheme(updatedAutoTheme)
         }
-
-        // Update availableThemes list with the refreshed auto theme
-        const otherThemes = availableThemes.filter(
-          t => t.name !== CUSTOM_THEME_AUTO_NAME
+        // Refresh the preset auto theme in the list
+        const constantThemes = prevAvailableThemes.filter(
+          currTheme => currTheme.name !== AUTO_THEME_NAME
         )
-        setAvailableThemes([...otherThemes, updatedAutoTheme])
+        return [updatedAutoTheme, ...constantThemes]
       }
-    } else {
-      // We are using auto from default themes
-      // Create the updated auto theme (respecting embed params if present)
-      const updatedAutoTheme = getHostSpecifiedTheme()
 
-      // Update the auto theme if active theme is auto
-      if (theme.name === AUTO_THEME_NAME) {
-        setTheme(updatedAutoTheme)
-      }
-      // Refresh the preset auto theme in the list
-      const constantThemes = availableThemes.filter(
-        currTheme => currTheme.name !== AUTO_THEME_NAME
-      )
-      setAvailableThemes([updatedAutoTheme, ...constantThemes])
-    }
-  }, [theme.name, availableThemes])
+      // No changes needed
+      return prevAvailableThemes
+    })
+  }, [theme.name])
 
   const setFonts = useCallback(
     (themeInfo: ICustomThemeConfig): void => {
