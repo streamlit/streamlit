@@ -13,12 +13,15 @@
 # limitations under the License.
 
 
+import re
+
+import pytest
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
 from e2e_playwright.shared.app_utils import check_top_level_class, get_expander
 
-LINK_BUTTON_ELEMENTS = 15
+LINK_BUTTON_ELEMENTS = 16
 
 
 def test_link_button_display(themed_app: Page, assert_snapshot: ImageCompareFunction):
@@ -40,6 +43,7 @@ def test_link_button_display(themed_app: Page, assert_snapshot: ImageCompareFunc
         link_elements.nth(10), name="st_link_button-tertiary_container_width"
     )
     assert_snapshot(link_elements.nth(11), name="st_link_button-help")
+    assert_snapshot(link_elements.nth(12), name="st_link_button-shortcut")
 
 
 def test_link_button_hover(themed_app: Page, assert_snapshot: ImageCompareFunction):
@@ -73,3 +77,32 @@ def test_link_button_width_examples(app: Page, assert_snapshot: ImageCompareFunc
     assert_snapshot(link_elements.nth(0), name="st_link_button-width_content")
     assert_snapshot(link_elements.nth(1), name="st_link_button-width_stretch")
     assert_snapshot(link_elements.nth(2), name="st_link_button-width_400px")
+
+
+@pytest.mark.only_browser(
+    "webkit"  # Firefox and Chromium are a bit flaky on the expect_popup.
+)
+def test_link_button_shortcut_triggers(app: Page):
+    """Ensure pressing the shortcut opens the link in a new tab."""
+    shortcut_button = (
+        app.get_by_test_id("stLinkButton")
+        .filter(has_text="Link Button with shortcut")
+        .first
+    )
+    expect(shortcut_button).to_be_visible()
+    # Ensure shortcut labels are rendered for link buttons:
+    expect(shortcut_button.locator("kbd")).to_have_text(
+        re.compile(r"(Ctrl|⌘) \+ (Alt|Option|⌥) \+ Z")
+    )
+    expect(shortcut_button).to_be_enabled()
+    shortcut_button.scroll_into_view_if_needed()
+    # This test seems a bit flaky without a timeout:
+    app.wait_for_timeout(3000)
+
+    # Press hotkey to trigger the button:
+    with app.expect_popup() as popup_info:
+        app.keyboard.press("ControlOrMeta+Alt+KeyZ")
+
+    popup = popup_info.value
+    expect(popup).to_have_url(re.compile(r"https://streamlit\.io/?"))
+    popup.close()

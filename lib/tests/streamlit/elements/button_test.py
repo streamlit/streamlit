@@ -148,6 +148,81 @@ class ButtonTest(DeltaGeneratorTestCase):
         c = getattr(self.get_delta_from_queue().new_element, name)
         assert c.disabled
 
+    @parameterized.expand(
+        [
+            (name, command)
+            for name, command in get_button_command_matrix()
+            if name in {"button", "download_button", "link_button"}
+        ]
+    )
+    def test_shortcut_serialization(
+        self, name: str, command: Callable[..., Any]
+    ) -> None:
+        """Test that shortcuts are serialized for supported buttons."""
+        command(shortcut="Ctrl+K")
+
+        proto = getattr(self.get_delta_from_queue().new_element, name)
+        assert proto.shortcut == "ctrl+k"
+
+    def test_cmd_shortcut_alias(self) -> None:
+        """Test that Cmd shortcuts are normalized."""
+        st.button("the label", shortcut="Cmd+O")
+
+        proto = self.get_delta_from_queue().new_element.button
+        assert proto.shortcut == "cmd+o"
+
+    @parameterized.expand(
+        [
+            (name, command)
+            for name, command in get_button_command_matrix()
+            if name in {"button", "download_button", "link_button"}
+        ]
+    )
+    def test_shortcut_ignores_case_and_whitespace(
+        self, name: str, command: Callable[..., Any]
+    ) -> None:
+        """Test that shortcuts ignore casing and extraneous whitespace."""
+        command(shortcut="  CtRl  +  OptIon +   ShIfT   +   N   ")
+
+        proto = getattr(self.get_delta_from_queue().new_element, name)
+        assert proto.shortcut == "ctrl+alt+shift+n"
+
+    @parameterized.expand(
+        [
+            (name, command)
+            for name, command in get_button_command_matrix()
+            if name in {"button", "download_button", "link_button"}
+        ]
+    )
+    def test_modifier_only_shortcuts_raise(
+        self, name: str, command: Callable[..., Any]
+    ) -> None:
+        """Test that modifier-only shortcuts raise an exception."""
+        with pytest.raises(StreamlitAPIException):
+            command(shortcut="ctrl")
+
+        with pytest.raises(StreamlitAPIException):
+            command(shortcut="   shift   ")
+
+    @parameterized.expand(
+        [
+            ("upper_r", "R"),
+            ("lower_r", "r"),
+            ("shift_r", "Shift+R"),
+            ("ctrl_c", "Ctrl+C"),
+            ("cmd_c", "cmd+c"),
+        ]
+    )
+    def test_reserved_shortcuts_raise(self, _name: str, shortcut: str) -> None:
+        """Test that reserved shortcuts raise an exception."""
+        with pytest.raises(StreamlitAPIException):
+            st.button("reserved", shortcut=shortcut)
+
+    def test_invalid_shortcut_raises(self) -> None:
+        """Test that invalid shortcuts raise an exception."""
+        with pytest.raises(StreamlitAPIException):
+            st.button("invalid", shortcut="A+B")
+
     def test_stable_id_button_with_key(self):
         """Test that the button ID is stable when a stable key is provided."""
         with patch(

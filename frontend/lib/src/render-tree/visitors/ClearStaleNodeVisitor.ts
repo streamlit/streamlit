@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { AppNode, BlockNode, ElementNode } from "~lib/AppNode"
+import { AppNode, BlockNode, ElementNode, TransientNode } from "~lib/AppNode"
 import { AppNodeVisitor } from "~lib/render-tree/visitors/AppNodeVisitor.interface"
 
 /**
@@ -137,5 +137,31 @@ export class ClearStaleNodeVisitor
       }
     }
     return node.scriptRunId === this.currentScriptRunId ? node : undefined
+  }
+
+  visitTransientNode(node: TransientNode): AppNode | undefined {
+    // Check whether the anchor element and transient elements are stale
+    const anchorNode = node.anchor?.accept(this)
+    const transientNodes = node.updateTransientNodes(element => {
+      return element.accept(this) as ElementNode | undefined
+    })
+
+    // Everything is stale
+    if (!anchorNode && transientNodes.length === 0) {
+      return undefined
+    }
+
+    // All the transient elements are stale, but not the anchor element
+    // so we return the anchor element
+    if (transientNodes.length === 0) {
+      return anchorNode
+    }
+
+    return new TransientNode(
+      node.scriptRunId,
+      anchorNode,
+      transientNodes,
+      node.deltaMsgReceivedAt
+    )
   }
 }

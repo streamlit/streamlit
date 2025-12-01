@@ -97,7 +97,11 @@ class MetricMixin:
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
         value : int, float, decimal.Decimal, str, or None
-             Value of the metric. ``None`` is rendered as a long dash.
+            Value of the metric. ``None`` is rendered as a long dash.
+
+            The value can optionally contain GitHub-flavored Markdown,
+            including the Markdown directives described in the ``body``
+            parameter of ``st.markdown``.
 
         delta : int, float, decimal.Decimal, str, or None
             Indicator of how the metric changed, rendered with an arrow below
@@ -105,6 +109,10 @@ class MetricMixin:
             sign (str), the arrow points down and the text is red; else the
             arrow points up and the text is green. If None (default), no delta
             indicator is shown.
+
+            The delta can optionally contain GitHub-flavored Markdown
+            including the Markdown directives described in the ``body``
+            parameter of ``st.markdown``.
 
         delta_color : "normal", "inverse", or "off"
              If "normal" (default), the delta indicator is shown as described

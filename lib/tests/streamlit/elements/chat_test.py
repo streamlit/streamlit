@@ -250,7 +250,7 @@ class ChatTest(DeltaGeneratorTestCase):
         ]
 
         deserialize_patch.return_value = ChatInputValue(
-            text="placeholder", files=uploaded_files
+            text="placeholder", files=uploaded_files, _include_files=True
         )
 
         return_val = st.chat_input(accept_file="multiple")
@@ -281,7 +281,7 @@ class ChatTest(DeltaGeneratorTestCase):
         ]
 
         deserialize_patch.return_value = ChatInputValue(
-            text="placeholder", files=uploaded_files
+            text="placeholder", files=uploaded_files, _include_files=True
         )
 
         # These file_uploaders have different labels so that we don't cause
@@ -643,10 +643,14 @@ class ChatTest(DeltaGeneratorTestCase):
         )
 
         deserialize_patch.return_value = ChatInputValue(
-            text="", files=[], audio=audio_file
+            text="",
+            files=[],
+            audio=audio_file,
+            _include_files=True,
+            _include_audio=True,
         )
 
-        return_val = st.chat_input(accept_file="multiple")
+        return_val = st.chat_input(accept_file="multiple", accept_audio=True)
 
         assert return_val.audio == audio_file
         assert return_val.audio.name == "recording.wav"
@@ -657,10 +661,10 @@ class ChatTest(DeltaGeneratorTestCase):
     def test_audio_file_none(self, deserialize_patch):
         """Test that ChatInputValue handles None audio file correctly."""
         deserialize_patch.return_value = ChatInputValue(
-            text="hello", files=[], audio=None
+            text="hello", files=[], audio=None, _include_files=True, _include_audio=True
         )
 
-        return_val = st.chat_input(accept_file="multiple")
+        return_val = st.chat_input(accept_file="multiple", accept_audio=True)
 
         assert return_val.audio is None
         assert return_val.text == "hello"
@@ -674,10 +678,14 @@ class ChatTest(DeltaGeneratorTestCase):
         )
 
         deserialize_patch.return_value = ChatInputValue(
-            text="test", files=[], audio=audio_file
+            text="test",
+            files=[],
+            audio=audio_file,
+            _include_files=True,
+            _include_audio=True,
         )
 
-        return_val = st.chat_input(accept_file="multiple")
+        return_val = st.chat_input(accept_file="multiple", accept_audio=True)
 
         # Test dict-like access
         assert return_val["audio"] == audio_file
@@ -733,3 +741,68 @@ class ChatTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitAPIException) as exc:
             st.chat_input(accept_audio=True, audio_sample_rate=12345)
         assert "Invalid audio_sample_rate" in str(exc.value)
+
+    @parameterized.expand(
+        [
+            (False, False, False, False, {"text"}),
+            ("multiple", False, True, False, {"text", "files"}),
+            (False, True, False, True, {"text", "audio"}),
+            ("multiple", True, True, True, {"text", "files", "audio"}),
+        ]
+    )
+    @patch("streamlit.elements.widgets.chat.ChatInputSerde.deserialize")
+    def test_chat_input_value_conditional_keys(
+        self,
+        accept_file,
+        accept_audio,
+        include_files,
+        include_audio,
+        expected_keys,
+        deserialize_patch,
+    ):
+        """Test that ChatInputValue only includes keys based on accept_file/accept_audio."""
+        deserialize_patch.return_value = ChatInputValue(
+            text="test",
+            files=[],
+            audio=None,
+            _include_files=include_files,
+            _include_audio=include_audio,
+        )
+
+        return_val = st.chat_input(accept_file=accept_file, accept_audio=accept_audio)
+
+        # Verify expected keys are present
+        assert set(return_val.keys()) == expected_keys
+
+        # Verify text is always accessible
+        assert "text" in return_val
+        assert return_val["text"] == "test"
+        assert return_val.text == "test"
+
+        # Verify files key behavior
+        if "files" in expected_keys:
+            assert "files" in return_val
+            assert return_val["files"] == []
+            assert return_val.files == []
+        else:
+            assert "files" not in return_val
+            with pytest.raises(KeyError):
+                _ = return_val["files"]
+            with pytest.raises(AttributeError):
+                _ = return_val.files
+
+        # Verify audio key behavior
+        if "audio" in expected_keys:
+            assert "audio" in return_val
+            assert return_val["audio"] is None
+            assert return_val.audio is None
+        else:
+            assert "audio" not in return_val
+            with pytest.raises(KeyError):
+                _ = return_val["audio"]
+            with pytest.raises(AttributeError):
+                _ = return_val.audio
+
+        # Verify to_dict matches expected keys
+        as_dict = return_val.to_dict()
+        assert set(as_dict.keys()) == expected_keys

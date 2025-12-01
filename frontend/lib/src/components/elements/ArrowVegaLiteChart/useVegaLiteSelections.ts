@@ -16,7 +16,7 @@
 
 import { useCallback } from "react"
 
-import isEqual from "lodash/isEqual"
+import { isEqual } from "lodash-es"
 import { getLogger } from "loglevel"
 import { SignalValue, View as VegaView } from "vega"
 

@@ -31,6 +31,36 @@ import {
   StyledNavLinkText,
 } from "./styled-components"
 
+/**
+ * Builds the href URL for a page link, appending query string parameters if present.
+ */
+export function buildHref(element: PageLinkProto): string {
+  let href = element.page
+  if (element.queryString) {
+    if (element.external) {
+      // External links: use URL API to properly handle fragments
+      try {
+        const url = new URL(element.page)
+        const params = new URLSearchParams(element.queryString)
+        params.forEach((value, key) => url.searchParams.append(key, value))
+        href = url.toString()
+      } catch {
+        // Fallback if URL parsing fails
+        const [urlBase, fragment] = href.split("#")
+        href =
+          urlBase +
+          (urlBase.includes("?") ? "&" : "?") +
+          element.queryString +
+          (fragment ? "#" + fragment : "")
+      }
+    } else {
+      // Internal links: append query string to relative path
+      href += (href.includes("?") ? "&" : "?") + element.queryString
+    }
+  }
+  return href
+}
+
 export interface Props {
   disabled: boolean
   element: PageLinkProto
@@ -55,10 +85,12 @@ function PageLink(props: Readonly<Props>): ReactElement {
       // MPA Page Link
       e.preventDefault()
       if (!disabled) {
-        onPageChange(element.pageScriptHash)
+        onPageChange(element.pageScriptHash, element.queryString)
       }
     }
   }
+
+  const href = buildHref(element)
 
   return (
     <div className="stPageLink" data-testid="stPageLink">
@@ -72,7 +104,7 @@ function PageLink(props: Readonly<Props>): ReactElement {
             data-testid="stPageLink-NavLink"
             disabled={disabled}
             isCurrentPage={isCurrentPage}
-            href={element.page}
+            href={href}
             target={element.external ? "_blank" : ""}
             rel="noreferrer"
             onClick={handleClick}
