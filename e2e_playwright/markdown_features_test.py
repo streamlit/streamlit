@@ -150,7 +150,6 @@ def test_markdown_restrictions_for_all_elements(app: Page):
             if element_name in ["st_caption", "st_image"]:
                 markdown_container_test_id = "stCaptionContainer"
 
-            # General case for other elements
             element_locator = locator_fn(
                 container.get_by_test_id(markdown_container_test_id)
             )
