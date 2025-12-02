@@ -27,18 +27,6 @@ describe("#getContextualFillColor", () => {
     ReturnType<typeof getContextualFillColor>,
   ][] = [
     [
-      "should return the original fill color when not selected",
-      {
-        isSelected: false,
-        object,
-        objectInfo: { index: 0 },
-        originalFillFunction: () => [0, 0, 0, 255],
-        selectedColor,
-        unselectedColor,
-      },
-      [0, 0, 0, 102],
-    ],
-    [
       "should return the original fill color with lower opacity when not selected",
       {
         isSelected: false,
@@ -51,7 +39,7 @@ describe("#getContextualFillColor", () => {
       [0, 0, 0, 102],
     ],
     [
-      "should return the original fill color with its original lower opacity when not selected",
+      "should preserve original lower opacity when not selected",
       {
         isSelected: false,
         object,
@@ -64,7 +52,7 @@ describe("#getContextualFillColor", () => {
     ],
     // @see https://deck.gl/docs/api-reference/json/conversion-reference#functions-and-using-the--prefix
     [
-      "should return the evaluated original fill color with lower opacity when not selected",
+      "should evaluate @@= expression with array syntax (count <= 50)",
       {
         isSelected: false,
         object,
@@ -76,7 +64,7 @@ describe("#getContextualFillColor", () => {
       [255, 255, 0, 102],
     ],
     [
-      "should return the evaluated original fill color with lower opacity when not selected",
+      "should evaluate @@= expression with array syntax (count > 50)",
       {
         isSelected: false,
         object: { count: 200 },
@@ -88,7 +76,7 @@ describe("#getContextualFillColor", () => {
       [255, 255, 255, 102],
     ],
     [
-      "should return the evaluated original fill color with lower opacity when not selected",
+      "should evaluate @@= ternary expression returning array",
       {
         isSelected: false,
         object,
@@ -101,7 +89,7 @@ describe("#getContextualFillColor", () => {
       [0, 255, 200, 102],
     ],
     [
-      "should return the evaluated original fill color with lower opacity when not selected",
+      "should evaluate @@= expression referencing object property (3-element color)",
       {
         isSelected: false,
         object: { color: [124, 54, 66] },
@@ -113,7 +101,7 @@ describe("#getContextualFillColor", () => {
       [124, 54, 66, 102],
     ],
     [
-      "should return the evaluated original fill color with its existing lower opacity when not selected",
+      "should evaluate @@= expression referencing object property (4-element color with low opacity)",
       {
         isSelected: false,
         object: { color: [124, 54, 66, 40] },
@@ -125,7 +113,7 @@ describe("#getContextualFillColor", () => {
       [124, 54, 66, 40],
     ],
     [
-      "should return the original shorthand fill color with lower opacity when not selected",
+      "should handle shorthand single-element color array",
       {
         isSelected: false,
         object,
@@ -137,7 +125,7 @@ describe("#getContextualFillColor", () => {
       [255, 0, 0, 102],
     ],
     [
-      "should return the original color when selected",
+      "should return full opacity when selected",
       {
         isSelected: true,
         object,
@@ -149,7 +137,7 @@ describe("#getContextualFillColor", () => {
       [0, 0, 0, 255],
     ],
     [
-      "should return the original color with higher opacity when selected",
+      "should boost low opacity to full when selected",
       {
         isSelected: true,
         object,

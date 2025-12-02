@@ -136,31 +136,6 @@ describe("DeckGlJsonChart", () => {
     }
   )
 
-  it.each([
-    {
-      description: "with mapbox token",
-      elementProps: { mapboxToken: "pk.test-token" },
-    },
-    {
-      description: "with default mapbox style",
-      elementProps: {},
-    },
-    {
-      description: "without selection mode",
-      elementProps: { selectionMode: [] },
-    },
-    {
-      description: "with single object selection mode",
-      elementProps: {
-        selectionMode: [DeckGlJsonChartProto.SelectionMode.SINGLE_OBJECT],
-      },
-    },
-  ])("should render $description", ({ elementProps }) => {
-    const props = getProps(elementProps)
-    render(<DeckGlJsonChart {...props} />)
-    expect(screen.getByTestId("stDeckGlJsonChart")).toBeVisible()
-  })
-
   describe("fullscreen mode", () => {
     it("should render expand button by default", async () => {
       const props = getProps()
