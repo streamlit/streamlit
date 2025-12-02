@@ -173,6 +173,7 @@ interface State {
   connectionErrorDismissed: boolean
   layout: PageConfig.Layout
   initialSidebarState: PageConfig.SidebarState
+  initialSidebarWidth?: number
   menuItems?: PageConfig.IMenuItems | null
   allowRunOnSave: boolean
   scriptFinishedHandlers: (() => void)[]
@@ -306,6 +307,7 @@ export class App extends PureComponent<Props, State> {
       connectionErrorDismissed: false,
       layout: PageConfig.Layout.CENTERED,
       initialSidebarState: PageConfig.SidebarState.AUTO,
+      initialSidebarWidth: undefined,
       menuItems: undefined,
       allowRunOnSave: true,
       scriptFinishedHandlers: [],
@@ -925,8 +927,14 @@ export class App extends PureComponent<Props, State> {
   }
 
   handlePageConfigChanged = (pageConfig: PageConfig): void => {
-    const { title, favicon, layout, initialSidebarState, menuItems } =
-      pageConfig
+    const {
+      title,
+      favicon,
+      layout,
+      initialSidebarState,
+      initialSidebarWidth,
+      menuItems,
+    } = pageConfig
 
     this.appNavigation.handlePageConfigChanged(pageConfig)
 
@@ -964,6 +972,21 @@ export class App extends PureComponent<Props, State> {
     ) {
       this.setState(() => ({
         initialSidebarState,
+      }))
+    }
+
+    // Extract pixelWidth from SidebarWidthConfig message
+    const sidebarWidthPixels =
+      initialSidebarWidth?.pixelWidth !== undefined
+        ? initialSidebarWidth.pixelWidth
+        : undefined
+
+    if (
+      notNullOrUndefined(sidebarWidthPixels) &&
+      sidebarWidthPixels !== this.state.initialSidebarWidth
+    ) {
+      this.setState(() => ({
+        initialSidebarWidth: sidebarWidthPixels,
       }))
     }
 
@@ -2288,6 +2311,7 @@ export class App extends PureComponent<Props, State> {
     return (
       <StreamlitContextProvider
         initialSidebarState={initialSidebarState}
+        initialSidebarWidth={this.state.initialSidebarWidth}
         pageLinkBaseUrl={pageLinkBaseUrl}
         currentPageScriptHash={currentPageScriptHash}
         onPageChange={this.onPageChange}
