@@ -23,7 +23,7 @@ import {
   BaseColumn,
   getErrorCell,
 } from "~lib/components/widgets/DataFrame/columns"
-import EditingState from "~lib/components/widgets/DataFrame/EditingState"
+import EditingState from "./EditingState"
 import { getStyledCell } from "~lib/dataframes/pandasStylerUtils"
 import { Quiver } from "~lib/dataframes/Quiver"
 import { notNullOrUndefined } from "~lib/util/utils"

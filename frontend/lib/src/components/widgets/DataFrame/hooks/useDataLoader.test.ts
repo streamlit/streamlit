@@ -27,7 +27,7 @@ import {
   isErrorCell,
   TextColumn,
 } from "~lib/components/widgets/DataFrame/columns"
-import EditingState from "~lib/components/widgets/DataFrame/EditingState"
+import EditingState from "./EditingState"
 import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
 import { Quiver } from "~lib/dataframes/Quiver"
 import { MULTI, UNICODE } from "~lib/mocks/arrow"

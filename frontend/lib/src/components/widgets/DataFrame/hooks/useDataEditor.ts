@@ -30,7 +30,7 @@ import {
   BaseColumn,
   isErrorCell,
 } from "~lib/components/widgets/DataFrame/columns"
-import EditingState from "~lib/components/widgets/DataFrame/EditingState"
+import EditingState from "./EditingState"
 import { notNullOrUndefined } from "~lib/util/utils"
 
 /**
