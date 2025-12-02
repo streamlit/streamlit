@@ -84,8 +84,8 @@ clean:
 	rm -rf frontend/lib/node_modules
 	rm -rf frontend/connection/node_modules
 	rm -rf frontend/test_results
-	rm -f frontend/protobuf/src/proto.js
-	rm -f frontend/protobuf/src/proto.d.ts
+	rm -f frontend/protobuf/proto.js
+	rm -f frontend/protobuf/proto.d.ts
 	rm -rf frontend/public/reports
 	rm -rf frontend/lib/dist
 	rm -rf frontend/connection/dist

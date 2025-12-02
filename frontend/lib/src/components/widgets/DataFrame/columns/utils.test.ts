@@ -30,8 +30,10 @@ import {
   getErrorCell,
   getLinkDisplayValueFromRegex,
   getTextCell,
+  hasTooltip,
   isEditableArrayValue,
   isErrorCell,
+  isMaybeJson,
   isMissingValueCell,
   mergeColumnParameters,
   removeLineBreaks,
@@ -892,5 +894,117 @@ describe("toJsonString", () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   ])("converts %o to JSON string %s", (input: any, expected: string) => {
     expect(toJsonString(input)).toBe(expected)
+  })
+})
+
+describe("hasTooltip", () => {
+  it("returns true for cells with non-empty tooltip", () => {
+    const cellWithTooltip = {
+      kind: GridCellKind.Text,
+      data: "test",
+      allowOverlay: true,
+      tooltip: "This is a tooltip",
+    }
+    expect(hasTooltip(cellWithTooltip)).toBe(true)
+  })
+
+  it("returns false for cells with empty tooltip", () => {
+    const cellWithEmptyTooltip = {
+      kind: GridCellKind.Text,
+      data: "test",
+      allowOverlay: true,
+      tooltip: "",
+    }
+    expect(hasTooltip(cellWithEmptyTooltip)).toBe(false)
+  })
+
+  it("returns false for cells without tooltip property", () => {
+    const cellWithoutTooltip = {
+      kind: GridCellKind.Text,
+      data: "test",
+      allowOverlay: true,
+    }
+    expect(hasTooltip(cellWithoutTooltip)).toBe(false)
+  })
+})
+
+describe("isMaybeJson", () => {
+  it.each([
+    ['{"key": "value"}', true],
+    ["{}", true],
+    ['{"nested": {"a": 1}}', true],
+    ["{invalid json}", true], // Still looks like JSON (starts with { ends with })
+  ])(
+    "returns true for string starting with { and ending with }: %p",
+    (input, expected) => {
+      expect(isMaybeJson(input)).toBe(expected)
+    }
+  )
+
+  it.each([
+    ["plain text", false],
+    ["[1, 2, 3]", false], // Arrays don't start with {
+    ["", false],
+    ["{ missing end", false],
+    ["missing start }", false],
+    [" {padded} ", false], // Has spaces around
+  ])(
+    "returns false for string not starting with { or not ending with }: %p",
+    input => {
+      expect(isMaybeJson(input)).toBeFalsy()
+    }
+  )
+
+  it("returns undefined for null and undefined values", () => {
+    expect(isMaybeJson(null)).toBeUndefined()
+    expect(isMaybeJson(undefined)).toBeUndefined()
+  })
+})
+
+describe("getTextCell with different parameters", () => {
+  it("creates a non-faded text cell", () => {
+    const textCell = getTextCell(false, false)
+    expect(textCell.style).toBe("normal")
+    expect(textCell.readonly).toBe(false)
+  })
+
+  it("creates a faded text cell", () => {
+    const textCell = getTextCell(true, true)
+    expect(textCell.style).toBe("faded")
+    expect(textCell.readonly).toBe(true)
+  })
+})
+
+describe("mergeColumnParameters edge cases", () => {
+  it("returns empty object when both params are null", () => {
+    const merged = mergeColumnParameters(null, null)
+    expect(merged).toEqual({})
+  })
+
+  it("returns userParams when defaultParams is undefined", () => {
+    const userParams = { foo: "bar" }
+    const merged = mergeColumnParameters(undefined, userParams)
+    expect(merged).toEqual(userParams)
+  })
+
+  it("returns defaultParams when userParams is undefined", () => {
+    const defaultParams = { foo: "bar" }
+    const merged = mergeColumnParameters(defaultParams, undefined)
+    expect(merged).toEqual(defaultParams)
+  })
+
+  it("deeply merges nested objects", () => {
+    const defaultParams = {
+      nested: { a: 1, b: 2 },
+      top: "value",
+    }
+    const userParams = {
+      nested: { b: 3, c: 4 },
+    }
+    const merged = mergeColumnParameters(defaultParams, userParams)
+    expect(merged).toEqual({
+      nested: { a: 1, b: 3, c: 4 },
+      top: "value",
+    })
   })
 })
