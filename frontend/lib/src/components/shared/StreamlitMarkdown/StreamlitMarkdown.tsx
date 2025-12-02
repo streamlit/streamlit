@@ -640,7 +640,8 @@ function createRemarkColoringAndSmall(
  * This plugin should run last to convert any unsupported text directives
  * to plain text, ensuring they are rendered rather than ignored.
  */
-function createRemarkUnsupportedDirectivesCleanup() {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
+function createRemarkUnsupportedDirectivesCleanup(): () => (tree: any) => any {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   return () => (tree: any) => {
     visit(tree, "textDirective", (node, _index, _parent) => {
