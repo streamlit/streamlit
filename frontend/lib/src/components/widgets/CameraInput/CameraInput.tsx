@@ -250,7 +250,7 @@ const CameraInput = ({
     setFacingMode(prevMode =>
       prevMode === FacingMode.USER ? FacingMode.ENVIRONMENT : FacingMode.USER
     )
-  }, [setFacingMode])
+  }, [])
 
   /**
    * Get a file by its local ID.
@@ -265,34 +265,28 @@ const CameraInput = ({
   /**
    * Add a file to the list of files.
    */
-  const addFile = useCallback(
-    (file: UploadFileInfo): void => {
-      /* eslint-disable-next-line @eslint-react/dom/no-flush-sync --
-       * Using flushSync here because we need the state to be immediately updated
-       * before any subsequent file upload operations occur. Without this, React
-       * can defer the commit and our upload callbacks (progress, completion, or
-       * abort) may run while filesRef.current still points to the previous state.
-       * Those callbacks rely on filesRef.current to locate the in-flight upload,
-       * so deferring the update would cause them to no-op and break progress
-       * tracking. The useLayoutEffect that syncs filesRef runs synchronously
-       * after the flushSync-triggered render completes.
-       */
-      flushSync(() => {
-        setFiles(prevFiles => [...prevFiles, file])
-      })
-    },
-    [setFiles]
-  )
+  const addFile = useCallback((file: UploadFileInfo): void => {
+    /* eslint-disable-next-line @eslint-react/dom/no-flush-sync --
+     * Using flushSync here because we need the state to be immediately updated
+     * before any subsequent file upload operations occur. Without this, React
+     * can defer the commit and our upload callbacks (progress, completion, or
+     * abort) may run while filesRef.current still points to the previous state.
+     * Those callbacks rely on filesRef.current to locate the in-flight upload,
+     * so deferring the update would cause them to no-op and break progress
+     * tracking. The useLayoutEffect that syncs filesRef runs synchronously
+     * after the flushSync-triggered render completes.
+     */
+    flushSync(() => {
+      setFiles(prevFiles => [...prevFiles, file])
+    })
+  }, [])
 
   /**
    * Remove a file from the list by its local ID.
    */
-  const removeFile = useCallback(
-    (idToRemove: number): void => {
-      setFiles(prevFiles => prevFiles.filter(file => file.id !== idToRemove))
-    },
-    [setFiles]
-  )
+  const removeFile = useCallback((idToRemove: number): void => {
+    setFiles(prevFiles => prevFiles.filter(file => file.id !== idToRemove))
+  }, [])
 
   /**
    * Update a file in the list by its local ID.
@@ -303,7 +297,7 @@ const CameraInput = ({
         prevFiles.map(file => (file.id === curFileId ? newFile : file))
       )
     },
-    [setFiles]
+    []
   )
 
   /**
@@ -329,7 +323,7 @@ const CameraInput = ({
         })
       )
     },
-    [getFile, updateFile, setShutter]
+    [getFile, updateFile]
   )
 
   /**
@@ -477,13 +471,7 @@ const CameraInput = ({
           LOG.error(err)
         })
     },
-    [
-      setImgSrc,
-      setShutter,
-      setMinShutterEffectPassed,
-      uploadClient,
-      uploadFile,
-    ]
+    [uploadClient, uploadFile]
   )
 
   /**
@@ -509,7 +497,7 @@ const CameraInput = ({
 
     setImgSrc(null)
     setClearPhotoInProgress(true)
-  }, [files, deleteFile, setImgSrc, setClearPhotoInProgress])
+  }, [files, deleteFile])
 
   /**
    * Set the initial widget value on mount.
@@ -569,7 +557,7 @@ const CameraInput = ({
       { fromUi: true },
       fragmentId
     )
-  }, [element, fragmentId, setFiles, setImgSrc, widgetMgr])
+  }, [element, fragmentId, widgetMgr])
 
   useFormClearHelper({
     element,
