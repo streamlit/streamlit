@@ -19,7 +19,6 @@ import {
   memo,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
   useRef,
   useState,
@@ -71,15 +70,18 @@ const Selectbox: FC<Props> = ({
   const isInSidebar = useContext(IsSidebarContext)
 
   const [value, setValue] = useState<string | null>(propValue)
+  const [prevPropValue, setPrevPropValue] = useState<string | null>(propValue)
   // This ref is used to store the value before the user starts removing characters so that we can restore
   // the value in case the user dismisses the changes by clicking away.
   const valueBeforeRemoval = useRef<string | null>(value)
 
-  // Update the value whenever the value provided by the props changes
-  // TODO: Find a better way to handle this to prevent unneeded re-renders
-  useEffect(() => {
+  // Update the value when the prop value changes (during render, not in effect)
+  // This follows React's recommended pattern for adjusting state based on props:
+  // https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
+  if (propValue !== prevPropValue) {
+    setPrevPropValue(propValue)
     setValue(propValue)
-  }, [propValue])
+  }
 
   const handleChange = useCallback(
     (params: OnChangeParams): void => {

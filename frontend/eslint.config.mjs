@@ -347,6 +347,8 @@ export default defineConfig([
       "react/react-in-jsx-scope": "off",
       // React hooks rules
       ...reactHooks.configs.flat.recommended.rules,
+      // Enforce "You Might Not Need an Effect" pattern - don't derive state in effects
+      "react-hooks/no-deriving-state-in-effects": "error",
       // jsx-a11y rules
       ...jsxA11y.flatConfigs.recommended.rules,
       // prohibit autoFocus prop

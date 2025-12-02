@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { memo, useCallback, useEffect, useState } from "react"
+import React, { memo, useCallback, useState } from "react"
 
 import { StatefulPopover as UIPopover } from "baseui/popover"
 import { ChromePicker, ColorResult } from "react-color"
@@ -87,12 +87,16 @@ const BaseColorPicker = (props: BaseColorPickerProps): React.ReactElement => {
     help,
   } = props
   const [value, setValue] = useState(propValue)
+  const [prevPropValue, setPrevPropValue] = useState(propValue)
   const theme = useEmotionTheme()
 
-  // Reset the value when the prop value changes
-  useEffect(() => {
+  // Reset the value when the prop value changes (during render, not in effect)
+  // This follows React's recommended pattern for adjusting state based on props:
+  // https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
+  if (propValue !== prevPropValue) {
+    setPrevPropValue(propValue)
     setValue(propValue)
-  }, [propValue])
+  }
 
   // Note: This is a "local" onChange handler used to update the color preview
   // (allowing the user to click and drag). this.props.onChange is only called
