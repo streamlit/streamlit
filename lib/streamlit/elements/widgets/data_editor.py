@@ -503,8 +503,7 @@ def _fix_column_headers(data_df: pd.DataFrame) -> None:
     if isinstance(data_df.columns, pd.MultiIndex):
         # Flatten hierarchical column headers to a single level:
         data_df.columns = [
-            "_".join(map(str, header))
-            for header in data_df.columns.to_flat_index()  # type: ignore
+            "_".join(map(str, header)) for header in data_df.columns.to_flat_index()
         ]
     elif pd.api.types.infer_dtype(data_df.columns) != "string":
         # If the column names are not all strings, we need to convert them to strings
@@ -1003,7 +1002,7 @@ class DataEditorMixin:
                     column_config_mapping, str(column_name), {"disabled": True}
                 )
                 # Convert incompatible type to string
-                data_df[column_name] = column_data.astype("string")
+                data_df[cast("Any", column_name)] = column_data.astype("string")
 
         apply_data_specific_configs(column_config_mapping, data_format)
 
