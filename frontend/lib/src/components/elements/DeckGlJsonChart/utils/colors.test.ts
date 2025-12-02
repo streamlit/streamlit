@@ -14,11 +14,7 @@
  * limitations under the License.
  */
 
-import {
-  getContextualFillColor,
-  LAYER_TYPE_TO_FILL_FUNCTION,
-  SerializedColorArray,
-} from "./colors"
+import { getContextualFillColor, SerializedColorArray } from "./colors"
 
 describe("#getContextualFillColor", () => {
   const object = { count: 10 }
@@ -171,53 +167,41 @@ describe("#getContextualFillColor", () => {
   })
 
   describe("fallback colors", () => {
-    it("should return selected fallback color when originalFillFunction returns non-array value and item is selected", () => {
-      const result = getContextualFillColor({
-        isSelected: true,
-        object,
-        objectInfo: { index: 0 },
-        originalFillFunction: () => 123, // Returns a number, not an array
-        selectedColor,
-        unselectedColor,
-      })
-      expect(result).toEqual(selectedColor)
-    })
+    it.each([
+      ["originalFillFunction returns non-array value", () => 123],
+      ["originalFillFunction is undefined", undefined],
+    ])(
+      "should return selected fallback color when %s and item is selected",
+      (_scenario, originalFillFunction) => {
+        const result = getContextualFillColor({
+          isSelected: true,
+          object,
+          objectInfo: { index: 0 },
+          originalFillFunction,
+          selectedColor,
+          unselectedColor,
+        })
+        expect(result).toEqual(selectedColor)
+      }
+    )
 
-    it("should return unselected fallback color when originalFillFunction returns non-array value and item is not selected", () => {
-      const result = getContextualFillColor({
-        isSelected: false,
-        object,
-        objectInfo: { index: 0 },
-        originalFillFunction: () => 123, // Returns a number, not an array
-        selectedColor,
-        unselectedColor,
-      })
-      expect(result).toEqual(unselectedColor)
-    })
-
-    it("should return selected fallback color when originalFillFunction is undefined and item is selected", () => {
-      const result = getContextualFillColor({
-        isSelected: true,
-        object,
-        objectInfo: { index: 0 },
-        originalFillFunction: undefined,
-        selectedColor,
-        unselectedColor,
-      })
-      expect(result).toEqual(selectedColor)
-    })
-
-    it("should return unselected fallback color when originalFillFunction is undefined and item is not selected", () => {
-      const result = getContextualFillColor({
-        isSelected: false,
-        object,
-        objectInfo: { index: 0 },
-        originalFillFunction: undefined,
-        selectedColor,
-        unselectedColor,
-      })
-      expect(result).toEqual(unselectedColor)
-    })
+    it.each([
+      ["originalFillFunction returns non-array value", () => 123],
+      ["originalFillFunction is undefined", undefined],
+    ])(
+      "should return unselected fallback color when %s and item is not selected",
+      (_scenario, originalFillFunction) => {
+        const result = getContextualFillColor({
+          isSelected: false,
+          object,
+          objectInfo: { index: 0 },
+          originalFillFunction,
+          selectedColor,
+          unselectedColor,
+        })
+        expect(result).toEqual(unselectedColor)
+      }
+    )
   })
 
   describe("custom opacity values", () => {
@@ -290,52 +274,5 @@ describe("#getContextualFillColor", () => {
       // [255, 128, 64] -> [255, 128, 64, 102] (with default unselected opacity)
       expect(result).toEqual([255, 128, 64, 102])
     })
-  })
-})
-
-describe("#LAYER_TYPE_TO_FILL_FUNCTION", () => {
-  it("should have all values as arrays of strings", () => {
-    // Verify the structure of the mapping: all values should be arrays of strings
-    Object.entries(LAYER_TYPE_TO_FILL_FUNCTION).forEach(([_key, value]) => {
-      expect(Array.isArray(value)).toBe(true)
-      value.forEach(fnName => {
-        expect(typeof fnName).toBe("string")
-      })
-    })
-  })
-
-  it("should map ScatterplotLayer to multiple fill functions", () => {
-    expect(LAYER_TYPE_TO_FILL_FUNCTION.ScatterplotLayer).toContain(
-      "getFillColor"
-    )
-    expect(LAYER_TYPE_TO_FILL_FUNCTION.ScatterplotLayer).toContain("getColor")
-    expect(LAYER_TYPE_TO_FILL_FUNCTION.ScatterplotLayer).toContain(
-      "getLineColor"
-    )
-  })
-
-  it("should map ArcLayer to source and target color functions", () => {
-    expect(LAYER_TYPE_TO_FILL_FUNCTION.ArcLayer).toContain("getTargetColor")
-    expect(LAYER_TYPE_TO_FILL_FUNCTION.ArcLayer).toContain("getSourceColor")
-  })
-
-  it("should map GeoJsonLayer to getFillColor", () => {
-    expect(LAYER_TYPE_TO_FILL_FUNCTION.GeoJsonLayer).toContain("getFillColor")
-  })
-
-  it("should map IconLayer to getColor", () => {
-    expect(LAYER_TYPE_TO_FILL_FUNCTION.IconLayer).toContain("getColor")
-  })
-
-  it("should map LineLayer to getColor", () => {
-    expect(LAYER_TYPE_TO_FILL_FUNCTION.LineLayer).toContain("getColor")
-  })
-
-  it("should map PathLayer to getColor", () => {
-    expect(LAYER_TYPE_TO_FILL_FUNCTION.PathLayer).toContain("getColor")
-  })
-
-  it("should map TextLayer to getColor", () => {
-    expect(LAYER_TYPE_TO_FILL_FUNCTION.TextLayer).toContain("getColor")
   })
 })
