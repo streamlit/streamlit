@@ -329,47 +329,48 @@ def test_check_top_level_class(app: Page):
     check_top_level_class(app, "stHeading")
 
 
-def test_heading_widths_snapshot(
-    themed_app: Page, assert_snapshot: ImageCompareFunction
-):
-    """Test that headings with different width configurations render correctly."""
+def test_heading_widths_snapshot(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that headings with different width configurations render correctly.
+
+    Width/layout is theme-independent, so we use app fixture (light theme only).
+    """
 
     # Title width examples
-    title_400px = get_heading(themed_app, "Title with 400px width")
+    title_400px = get_heading(app, "Title with 400px width")
     title_400px.scroll_into_view_if_needed()
     assert_snapshot(title_400px, name="st_title-width_400px")
 
-    title_stretch = get_heading(themed_app, "Title with stretch width")
+    title_stretch = get_heading(app, "Title with stretch width")
     title_stretch.scroll_into_view_if_needed()
     assert_snapshot(title_stretch, name="st_title-width_stretch")
 
-    title_content = get_heading(themed_app, "Title with content width")
+    title_content = get_heading(app, "Title with content width")
     title_content.scroll_into_view_if_needed()
     assert_snapshot(title_content, name="st_title-width_content")
 
     # Header width examples
-    header_400px = get_heading(themed_app, "Header with 400px width")
+    header_400px = get_heading(app, "Header with 400px width")
     header_400px.scroll_into_view_if_needed()
     assert_snapshot(header_400px, name="st_header-width_400px")
 
-    header_stretch = get_heading(themed_app, "Header with stretch width")
+    header_stretch = get_heading(app, "Header with stretch width")
     header_stretch.scroll_into_view_if_needed()
     assert_snapshot(header_stretch, name="st_header-width_stretch")
 
-    header_content = get_heading(themed_app, "Header with content width")
+    header_content = get_heading(app, "Header with content width")
     header_content.scroll_into_view_if_needed()
     assert_snapshot(header_content, name="st_header-width_content")
 
     # Subheader width examples
-    subheader_300px = get_heading(themed_app, "Subheader with 300px width")
+    subheader_300px = get_heading(app, "Subheader with 300px width")
     subheader_300px.scroll_into_view_if_needed()
     assert_snapshot(subheader_300px, name="st_subheader-width_300px")
 
-    subheader_stretch = get_heading(themed_app, "Subheader with stretch width")
+    subheader_stretch = get_heading(app, "Subheader with stretch width")
     subheader_stretch.scroll_into_view_if_needed()
     assert_snapshot(subheader_stretch, name="st_subheader-width_stretch")
 
-    subheader_content = get_heading(themed_app, "Subheader with content width")
+    subheader_content = get_heading(app, "Subheader with content width")
     subheader_content.scroll_into_view_if_needed()
     assert_snapshot(subheader_content, name="st_subheader-width_content")
 
