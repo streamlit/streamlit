@@ -182,7 +182,7 @@ function FormattingMenu({
   onChangeFormat,
   onCloseMenu,
   children,
-}: FormattingMenuProps): ReactElement {
+}: FormattingMenuProps): ReactElement | null {
   const theme = useEmotionTheme()
   const { colors, fontSizes, radii, fontWeights } = theme
 
