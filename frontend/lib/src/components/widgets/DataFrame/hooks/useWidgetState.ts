@@ -28,6 +28,7 @@ import { Arrow as ArrowProto } from "@streamlit/protobuf"
 
 import { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
 import { useDebouncedCallback } from "~lib/hooks/useDebouncedCallback"
+import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
 import { WidgetInfo, WidgetStateManager } from "~lib/WidgetStateManager"
 
 import EditingState, { getColumnName } from "./EditingState"
@@ -115,8 +116,11 @@ function useWidgetState({
   const editingState = useRef<EditingState>(new EditingState(originalNumRows))
   const [numRows, setNumRows] = useState(editingState.current.getNumRows())
 
-  // Reset editing state when originalNumRows changes
-  useEffect(() => {
+  // Reset editing state when originalNumRows changes.
+  // Using useExecuteWhenChanged instead of useEffect to follow React best practices
+  // for adjusting state when props change (avoids extra render cycle).
+  // See: https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
+  useExecuteWhenChanged(() => {
     editingState.current = new EditingState(originalNumRows)
     setNumRows(editingState.current.getNumRows())
   }, [originalNumRows])
