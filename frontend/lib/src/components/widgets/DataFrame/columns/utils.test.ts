@@ -955,7 +955,7 @@ describe("isMaybeJson", () => {
     }
   )
 
-  it("returns undefined for null and undefined (uses optional chaining)", () => {
+  it("returns undefined for null and undefined values", () => {
     expect(isMaybeJson(null)).toBeUndefined()
     expect(isMaybeJson(undefined)).toBeUndefined()
   })
