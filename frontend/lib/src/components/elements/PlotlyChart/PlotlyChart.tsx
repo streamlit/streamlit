@@ -41,6 +41,13 @@ import { applyTheming, handleSelection, sendEmptySelection } from "./utils"
 
 // Minimum width for Plotly charts
 const MIN_WIDTH = 150
+
+/**
+ * The timeout duration (milliseconds) for resetting selection info within the plotly figure.
+ * This is required to ensure the reset executes after the onUpdate callback,
+ * preventing the selection state from being immediately overwritten due to plotly's update cycle.
+ */
+const RESET_SELECTION_TIMEOUT_MS = 50
 // Default height for Plotly charts when no height is specified
 const DEFAULT_PLOTLY_HEIGHT = 450
 
@@ -356,23 +363,22 @@ export function PlotlyChart({
           setPlotlyFigure((prevFigure: PlotlyFigureType) => {
             return {
               ...prevFigure,
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-              data: prevFigure.data.map((trace: any) => {
+              data: prevFigure.data.map((trace: Plotly.Data) => {
                 return {
                   ...trace,
                   // Set to null to clear the selection an empty
                   // array here would still show everything as opaque
                   selectedpoints: null,
-                }
+                } as Plotly.Data
               }),
               layout: {
                 ...prevFigure.layout,
                 // selections is not part of the plotly typing:
                 selections: [],
-              },
+              } as PlotlyFigureType["layout"],
             }
           })
-        }, 50)
+        }, RESET_SELECTION_TIMEOUT_MS)
       }
     },
     // We are using element.id here instead of element since we don't

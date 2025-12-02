@@ -198,6 +198,78 @@ describe("Metric element", () => {
     )
   })
 
+  // Markdown support tests
+  describe("Markdown support", () => {
+    const markdownCases = [
+      {
+        name: "bold",
+        markdown: "**bold text**",
+        expectedText: "bold text",
+        expectedElements: ["strong"],
+      },
+      {
+        name: "italic",
+        markdown: "*italic text*",
+        expectedText: "italic text",
+        expectedElements: ["em"],
+      },
+      {
+        name: "inline code",
+        markdown: "`code text`",
+        expectedText: "code text",
+        expectedElements: ["code"],
+      },
+      {
+        name: "combined bold and italic",
+        markdown: "***bold italic***",
+        expectedText: "bold italic",
+        expectedElements: ["strong", "em"],
+      },
+    ]
+
+    it.each(markdownCases)(
+      "renders $name markdown in metric value",
+      ({ markdown, expectedText, expectedElements }) => {
+        const props = getProps({ body: markdown })
+        render(<Metric {...props} />)
+
+        const valueElement = screen.getByTestId("stMetricValue")
+        expectedElements.forEach(element => {
+          expect(valueElement.querySelector(element)).toBeVisible()
+        })
+        expect(valueElement).toHaveTextContent(expectedText)
+      }
+    )
+
+    it.each(markdownCases)(
+      "renders $name markdown in delta",
+      ({ markdown, expectedText, expectedElements }) => {
+        const props = getProps({ delta: markdown })
+        render(<Metric {...props} />)
+
+        const deltaElement = screen.getByTestId("stMetricDelta")
+        expectedElements.forEach(element => {
+          expect(deltaElement.querySelector(element)).toBeVisible()
+        })
+        expect(deltaElement).toHaveTextContent(expectedText)
+      }
+    )
+
+    it.each(["body", "delta"] as const)(
+      "does not render raw HTML in %s",
+      field => {
+        const props = getProps({ [field]: "<b>html text</b>" })
+        render(<Metric {...props} />)
+
+        const testId = field === "body" ? "stMetricValue" : "stMetricDelta"
+        const element = screen.getByTestId(testId)
+        // HTML should be escaped, not rendered as bold
+        expect(element.querySelector("b")).toBeNull()
+        expect(element).toHaveTextContent("<b>html text</b>")
+      }
+    )
+  })
+
   // Chart feature tests
   describe("Chart feature", () => {
     it("renders chart when chartData is provided", () => {

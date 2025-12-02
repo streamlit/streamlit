@@ -27,38 +27,38 @@ from e2e_playwright.shared.app_utils import (
 def test_first_metric_in_first_row(app: Page):
     metric = get_metric(app, "User growth")
     expect(metric.get_by_test_id("stMetricLabel")).to_have_text("User growth")
-    expect(metric.get_by_test_id("stMetricValue")).to_have_text(" 123 ")
-    expect(metric.get_by_test_id("stMetricDelta")).to_have_text(" 123 ")
+    expect(metric.get_by_test_id("stMetricValue")).to_have_text("123")
+    expect(metric.get_by_test_id("stMetricDelta")).to_have_text("123")
 
 
 def test_second_metric_in_first_row(app: Page):
     metric = get_metric(app, "S&P 500")
     expect(metric.get_by_test_id("stMetricLabel")).to_have_text("S&P 500")
-    expect(metric.get_by_test_id("stMetricValue")).to_have_text(" -4.56 ")
-    expect(metric.get_by_test_id("stMetricDelta")).to_have_text(" -50 ")
+    expect(metric.get_by_test_id("stMetricValue")).to_have_text("-4.56$")
+    expect(metric.get_by_test_id("stMetricDelta")).to_have_text("-50")
 
 
 def test_third_metric_in_first_row(app: Page):
     metric = get_metric(app, "Apples I've eaten")
     expect(metric.get_by_test_id("stMetricLabel")).to_have_text("Apples I've eaten")
-    expect(metric.get_by_test_id("stMetricValue")).to_have_text(" 23k ")
-    expect(metric.get_by_test_id("stMetricDelta")).to_have_text(" -20 ")
+    expect(metric.get_by_test_id("stMetricValue")).to_have_text("23k")
+    expect(metric.get_by_test_id("stMetricDelta")).to_have_text(" -20")
 
 
 def test_arrow_overrides(app: Page, assert_snapshot: ImageCompareFunction):
     metric = get_metric(app, "Arrow up override")
-    expect(metric.get_by_test_id("stMetricValue")).to_have_text(" -10 ")
-    expect(metric.get_by_test_id("stMetricDelta")).to_have_text(" -5 ")
+    expect(metric.get_by_test_id("stMetricValue")).to_have_text("-10")
+    expect(metric.get_by_test_id("stMetricDelta")).to_have_text("-5")
     expect(metric.get_by_test_id("stMetricDeltaIcon-Up")).to_be_visible()
 
     metric = get_metric(app, "Arrow down override")
-    expect(metric.get_by_test_id("stMetricValue")).to_have_text(" 15 ")
-    expect(metric.get_by_test_id("stMetricDelta")).to_have_text(" 5 ")
+    expect(metric.get_by_test_id("stMetricValue")).to_have_text("15")
+    expect(metric.get_by_test_id("stMetricDelta")).to_have_text("5")
     expect(metric.get_by_test_id("stMetricDeltaIcon-Down")).to_be_visible()
 
     metric = get_metric(app, "Arrow hidden")
-    expect(metric.get_by_test_id("stMetricValue")).to_have_text(" 42 ")
-    expect(metric.get_by_test_id("stMetricDelta")).to_have_text(" No delta ")
+    expect(metric.get_by_test_id("stMetricValue")).to_have_text("42")
+    expect(metric.get_by_test_id("stMetricDelta")).to_have_text("No delta")
     expect(metric.get_by_test_id("stMetricDeltaIcon-Up")).to_have_count(0)
     expect(metric.get_by_test_id("stMetricDeltaIcon-Down")).to_have_count(0)
 
@@ -138,7 +138,7 @@ def test_label_visibility_set_to_collapse(
     )
 
 
-def test_markdown_label_support(
+def test_markdown_label_value_and_delta_support(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     assert_snapshot(
@@ -146,7 +146,7 @@ def test_markdown_label_support(
             themed_app,
             re.compile("Test 11.+"),
         ),
-        name="st_metric-markdown_label",
+        name="st_metric-markdown_support",
     )
 
 

@@ -25,9 +25,7 @@ import React, {
   Suspense,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
-  useRef,
   useState,
 } from "react"
 
@@ -73,25 +71,23 @@ import {
   StyledPreWrapper,
   StyledStreamlitMarkdown,
 } from "./styled-components"
+import {
+  type EmojiPlugin,
+  isLoadedPlugin,
+  type KatexPlugin,
+  loadKatexPlugin,
+  loadKatexStyles,
+  loadRehypeRaw,
+  loadRemarkEmoji,
+  type RawPlugin,
+  useLazyPlugin,
+  wrapRehypePlugin,
+  wrapRemarkPlugin,
+} from "./utils"
 
 const StreamlitSyntaxHighlighter = lazy(
   () => import("~lib/components/elements/CodeBlock/StreamlitSyntaxHighlighter")
 )
-
-// Lazy load katex dependencies
-const loadKatexPlugin = (): Promise<typeof import("rehype-katex")> =>
-  import("rehype-katex")
-const loadKatexStyles = once((): void => {
-  void import("katex/dist/katex.min.css")
-})
-
-// Lazy load rehype-raw (pulls in parse5)
-const loadRehypeRaw = (): Promise<typeof import("rehype-raw")> =>
-  import("rehype-raw")
-
-// Lazy load remark-emoji (pulls in node-emoji and @sindresorhus/is)
-const loadRemarkEmoji = (): Promise<typeof import("remark-emoji")> =>
-  import("remark-emoji")
 
 /**
  * Heuristic to determine if the markdown source contains emoji shortcodes that require remark-emoji.
@@ -847,96 +843,60 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
   disableLinks,
 }: Readonly<RenderedMarkdownProps>): ReactElement {
   const theme = useEmotionTheme()
-  type KatexPlugin = Awaited<ReturnType<typeof loadKatexPlugin>>["default"]
-  type RawPlugin = Awaited<ReturnType<typeof loadRehypeRaw>>["default"]
-  type EmojiPlugin = Awaited<ReturnType<typeof loadRemarkEmoji>>["default"]
-  const [katexPlugin, setKatexPlugin] = useState<KatexPlugin | null>(null)
-  const isLoadingKatexRef = useRef(false)
-  const [rawPlugin, setRawPlugin] = useState<RawPlugin | null>(null)
-  const isLoadingRawRef = useRef(false)
-  const [emojiPlugin, setEmojiPlugin] = useState<EmojiPlugin | null>(null)
-  const isLoadingEmojiRef = useRef(false)
 
   const needsKatex = useMemo(() => containsMathSyntax(source), [source])
   const needsEmoji = useMemo(() => containsEmojiShortcodes(source), [source])
 
-  // Load katex plugin when needed
-  useEffect(() => {
-    let isMounted = true
+  // Lazy load plugins only when needed
+  const katexPlugin = useLazyPlugin<KatexPlugin>({
+    key: "katex",
+    needed: needsKatex,
+    load: loadKatexPlugin,
+    pluginName: "rehype-katex",
+    onBeforeLoad: loadKatexStyles,
+  })
 
-    if (needsKatex && !katexPlugin && !isLoadingKatexRef.current) {
-      isLoadingKatexRef.current = true
-      loadKatexStyles()
-      void loadKatexPlugin()
-        .then(module => {
-          if (isMounted) {
-            setKatexPlugin(() => module.default)
-          }
-        })
-        .catch(() => {
-          // Silently fail - math will render as plain text
-        })
-        .finally(() => {
-          isLoadingKatexRef.current = false
-        })
-    }
+  const rawPlugin = useLazyPlugin<RawPlugin>({
+    key: "raw",
+    needed: allowHTML,
+    load: loadRehypeRaw,
+    pluginName: "rehype-raw",
+  })
 
-    return () => {
-      isMounted = false
-    }
-  }, [needsKatex, katexPlugin])
-
-  // Load rehype-raw plugin when HTML is allowed
-  useEffect(() => {
-    let isMounted = true
-
-    if (allowHTML && !rawPlugin && !isLoadingRawRef.current) {
-      isLoadingRawRef.current = true
-      void loadRehypeRaw()
-        .then(module => {
-          if (isMounted) {
-            setRawPlugin(() => module.default)
-          }
-        })
-        .catch(() => {
-          // Silently fail - HTML will be escaped
-        })
-        .finally(() => {
-          isLoadingRawRef.current = false
-        })
-    }
-
-    return () => {
-      isMounted = false
-    }
-  }, [allowHTML, rawPlugin])
-
-  // Load remark-emoji plugin when emoji shortcodes are detected
-  useEffect(() => {
-    let isMounted = true
-
-    if (needsEmoji && !emojiPlugin && !isLoadingEmojiRef.current) {
-      isLoadingEmojiRef.current = true
-      void loadRemarkEmoji()
-        .then(module => {
-          if (isMounted) {
-            setEmojiPlugin(() => module.default)
-          }
-        })
-        .catch(() => {
-          // Silently fail - emoji shortcodes will render as plain text
-        })
-        .finally(() => {
-          isLoadingEmojiRef.current = false
-        })
-    }
-
-    return () => {
-      isMounted = false
-    }
-  }, [needsEmoji, emojiPlugin])
+  const emojiPlugin = useLazyPlugin<EmojiPlugin>({
+    key: "emoji",
+    needed: needsEmoji,
+    load: loadRemarkEmoji,
+    pluginName: "remark-emoji",
+  })
 
   const colorMapping = useMemo(() => createColorMapping(theme), [theme])
+
+  // Wrap plugins once when they load, not on every render or when other deps change
+  const wrappedKatexPlugin = useMemo(
+    () =>
+      isLoadedPlugin(katexPlugin)
+        ? wrapRehypePlugin(katexPlugin, "rehype-katex")
+        : null,
+    [katexPlugin]
+  )
+
+  const wrappedRawPlugin = useMemo(
+    () =>
+      isLoadedPlugin(rawPlugin)
+        ? wrapRehypePlugin(rawPlugin, "rehype-raw")
+        : null,
+    [rawPlugin]
+  )
+
+  const wrappedEmojiPlugin = useMemo(
+    () =>
+      isLoadedPlugin(emojiPlugin)
+        ? // eslint-disable-next-line @typescript-eslint/no-explicit-any -- unified's Plugin type is more complex than our wrapper expects
+          wrapRemarkPlugin(emojiPlugin as any, "remark-emoji")
+        : null,
+    [emojiPlugin]
+  )
 
   const remarkPlugins = useMemo<PluggableList>(() => {
     const plugins: PluggableList = [
@@ -945,25 +905,22 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
       createRemarkMaterialIcons(theme),
     ]
 
-    // Only add emoji plugin if it's loaded (lazy-loaded when emoji shortcodes detected)
-    if (emojiPlugin) {
-      plugins.push(emojiPlugin)
+    if (needsEmoji && wrappedEmojiPlugin) {
+      plugins.push(wrappedEmojiPlugin)
     }
 
     return plugins
-  }, [theme, colorMapping, emojiPlugin])
+  }, [theme, colorMapping, needsEmoji, wrappedEmojiPlugin])
 
   const rehypePlugins = useMemo<PluggableList>(() => {
     const plugins: PluggableList = []
 
-    // Only add katex plugin if it's loaded
-    if (katexPlugin) {
-      plugins.push(katexPlugin)
+    if (needsKatex && wrappedKatexPlugin) {
+      plugins.push(wrappedKatexPlugin)
     }
 
-    // Only add raw plugin if it's loaded and HTML is allowed
-    if (allowHTML && rawPlugin) {
-      plugins.push(rawPlugin)
+    if (allowHTML && wrappedRawPlugin) {
+      plugins.push(wrappedRawPlugin)
     }
 
     // This plugin must run last to ensure the inline property is set correctly
@@ -971,7 +928,7 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
     plugins.push(rehypeSetCodeInlineProperty)
 
     return plugins
-  }, [allowHTML, katexPlugin, rawPlugin])
+  }, [allowHTML, needsKatex, wrappedKatexPlugin, wrappedRawPlugin])
 
   const renderers = useMemo(
     () =>
@@ -993,12 +950,14 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
     return disableLinks ? LINKS_DISALLOWED_ELEMENTS : LABEL_DISALLOWED_ELEMENTS
   }, [isLabel, disableLinks])
 
-  // Show skeleton while dependencies are loading
-  if (
-    (needsKatex && !katexPlugin) ||
-    (allowHTML && !rawPlugin) ||
-    (needsEmoji && !emojiPlugin)
-  ) {
+  // Show skeleton while required plugins are still loading
+  // A plugin is "loading" if it's needed but state is still null (not loaded, not failed)
+  const isLoadingPlugins =
+    (needsKatex && katexPlugin === null) ||
+    (allowHTML && rawPlugin === null) ||
+    (needsEmoji && emojiPlugin === null)
+
+  if (isLoadingPlugins) {
     return (
       <ErrorBoundary>
         <Skeleton

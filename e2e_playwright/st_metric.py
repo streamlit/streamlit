@@ -45,7 +45,7 @@ with col1:
 with col2:
     st.metric(
         "S&P 500",
-        -4.56,
+        "-4.56$",
         -50,
         chart_data=generate_sparkline_data(),
         chart_type="area",
@@ -101,7 +101,9 @@ with col2:
 with col3:
     st.metric("Test 5", -4.56, 1.23, label_visibility="collapsed")
 
-st.metric("Relatively long title with help", 123, help="testing help without a column")
+st.metric(
+    "Relatively long title with help", "$123", help="testing help without a column"
+)
 
 st.metric("label title", None, None, help="testing help without a column")
 
@@ -121,8 +123,8 @@ st.metric("Test 10", -4.56, 1.23, border=True, help="Test help text")
 
 st.metric(
     "Test 11 -> :material/check: :rainbow[Fancy] _**markdown** `label` _support_",
-    123,
-    123,
+    "-1.2$ :material/check: :rainbow[Fancy] -> **markdown** _support_",
+    "+1 :orange[:material/currency_bitcoin: -> [:material/attach_money:](https://streamlit.io/)]",
 )
 
 st.metric("Stretch width", 123, 123, width="stretch")
