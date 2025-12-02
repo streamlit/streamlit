@@ -40,7 +40,8 @@ const getWrapper = (
         enforceDownloadInNewTab: undefined,
         locale: "en-US",
       }),
-      []
+      // eslint-disable-next-line react-hooks/exhaustive-deps -- Include for semantic correctness; stable per wrapper instance
+      [resourceCrossOriginMode]
     )
 
     return (
