@@ -441,7 +441,7 @@ describe("StreamlitMarkdown", () => {
     { input: ":material/search:", tag: "span", expected: "search" },
   ]
 
-  test.each(validCases)(
+  it.each(validCases)(
     "renders valid markdown when isLabel is true - $tag",
     async ({ input, tag, expected }) => {
       render(<StreamlitMarkdown source={input} allowHTML={false} isLabel />)
@@ -502,7 +502,7 @@ describe("StreamlitMarkdown", () => {
     { input: "`Code ->`", tag: "code", expected: "Code ->" },
   ]
 
-  test.each(symbolReplacementCases)(
+  it.each(symbolReplacementCases)(
     "replaces symbols with nicer typographical symbols - $input",
     ({ input, tag, expected }) => {
       render(<StreamlitMarkdown source={input} allowHTML={false} isLabel />)
@@ -556,7 +556,7 @@ describe("StreamlitMarkdown", () => {
     { input: "> Blockquote", tag: "blockquote", expected: "Blockquote" },
   ]
 
-  test.each(invalidCases)(
+  it.each(invalidCases)(
     "does NOT render invalid markdown when isLabel is true - $tag",
     ({ input, tag, expected }) => {
       render(<StreamlitMarkdown source={input} allowHTML={false} isLabel />)

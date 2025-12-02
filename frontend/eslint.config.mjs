@@ -160,6 +160,8 @@ export default defineConfig([
       "@eslint-react/hooks-extra/no-direct-set-state-in-use-effect": "off",
       // We don't want to warn about empty fragments
       "@eslint-react/no-useless-fragment": "off",
+      // Prevent context values from being recreated on every render
+      "react/jsx-no-constructed-context-values": "error",
       // We want to enforce display names for context providers for better debugging
       "@eslint-react/no-missing-context-display-name": "error",
       // TypeScript rules with type-checking
@@ -386,6 +388,12 @@ export default defineConfig([
 
       // Testing library rules
       "testing-library/prefer-user-event": "error",
+      // Prefer screen.getBy* over destructured queries for consistency
+      "testing-library/prefer-screen-queries": "warn",
+      // Prefer findBy* over waitFor + getBy* patterns
+      "testing-library/prefer-find-by": "error",
+      // Enforce consistent use of it() over test()
+      "vitest/consistent-test-it": ["error", { fn: "it" }],
       "no-restricted-imports": getNoRestrictedImports([], true),
     },
   },

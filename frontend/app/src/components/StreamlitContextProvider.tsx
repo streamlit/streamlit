@@ -224,9 +224,12 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
     [scriptRunState, scriptRunId, fragmentIdsThisRun]
   )
 
-  const formsContextProps: FormsContextProps = {
-    formsData,
-  }
+  const formsContextProps: FormsContextProps = useMemo(
+    () => ({
+      formsData,
+    }),
+    [formsData]
+  )
 
   const downloadContextProps: DownloadContextProps =
     useMemo<DownloadContextProps>(

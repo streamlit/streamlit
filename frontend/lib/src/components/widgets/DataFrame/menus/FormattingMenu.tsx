@@ -191,7 +191,7 @@ function FormattingMenu({
   if (formats.length === 0) {
     // If there are no formats available for the column kind,
     // we don't show the formatting menu option.
-    return <></>
+    return null
   }
 
   return (
