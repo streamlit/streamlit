@@ -18,10 +18,15 @@ import re
 import pytest
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction
-from e2e_playwright.shared.app_utils import check_top_level_class, get_expander
+from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.shared.app_utils import (
+    check_top_level_class,
+    expect_markdown,
+    get_element_by_key,
+    get_expander,
+)
 
-LINK_BUTTON_ELEMENTS = 16
+LINK_BUTTON_ELEMENTS = 19
 
 
 def test_link_button_display(themed_app: Page, assert_snapshot: ImageCompareFunction):
@@ -106,3 +111,51 @@ def test_link_button_shortcut_triggers(app: Page):
     popup = popup_info.value
     expect(popup).to_have_url(re.compile(r"https://streamlit\.io/?"))
     popup.close()
+
+
+def test_link_button_on_click_callback(app: Page):
+    """Test that on_click callback is triggered and increments the count."""
+    container = get_element_by_key(app, "on_click_tests")
+    expect_markdown(container, "click_count: 0")
+
+    callback_button = container.get_by_role("link", name="Link with on_click callback")
+
+    # Click the button (will open a new tab, but we don't need to follow it)
+    with app.expect_popup() as popup_info:
+        callback_button.click()
+    popup_info.value.close()
+    wait_for_app_run(app)
+
+    # Verify the callback was executed
+    expect_markdown(container, "click_count: 1")
+    expect_markdown(container, "callback_clicked: True")
+
+    # Click again to verify the count increments
+    with app.expect_popup() as popup_info:
+        callback_button.click()
+    popup_info.value.close()
+    wait_for_app_run(app)
+
+    expect_markdown(container, "click_count: 2")
+
+
+def test_link_button_on_click_rerun(app: Page):
+    """Test that on_click='rerun' triggers a rerun."""
+    container = get_element_by_key(app, "on_click_tests")
+
+    rerun_button = container.get_by_role("link", name="Link with on_click rerun")
+
+    # Click the button
+    with app.expect_popup() as popup_info:
+        rerun_button.click()
+    popup_info.value.close()
+    wait_for_app_run(app)
+
+    # Verify the button returned True after the click
+    expect_markdown(container, "rerun_clicked: True")
+
+
+def test_link_button_key(app: Page):
+    """Test that key parameter sets the CSS class correctly."""
+    link_button = get_element_by_key(app, "my_link_button")
+    expect(link_button.get_by_test_id("stLinkButton")).to_be_visible()

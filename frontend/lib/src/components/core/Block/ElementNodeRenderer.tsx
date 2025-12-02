@@ -581,7 +581,14 @@ const RawElementNodeRenderer = (
 
     case "linkButton": {
       const linkButtonProto = node.element.linkButton as LinkButtonProto
-      return <LinkButton element={linkButtonProto} {...elementProps} />
+      widgetProps.disabled = widgetProps.disabled || linkButtonProto.disabled
+      return (
+        <LinkButton
+          key={linkButtonProto.id || undefined}
+          element={linkButtonProto}
+          {...widgetProps}
+        />
+      )
     }
 
     case "multiselect": {

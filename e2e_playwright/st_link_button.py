@@ -86,3 +86,26 @@ with st.expander("Link Button Width Examples", expanded=True):
     st.link_button("Content Width (Default)", "https://example.com", width="content")
     st.link_button("Stretch Width", "https://example.com", width="stretch")
     st.link_button("400px Width", "https://example.com", width=400)
+
+# on_click tests
+with st.container(key="on_click_tests"):
+    st.write(f"click_count: {st.session_state.get('click_count', 0)}")
+
+    def increment_count():
+        st.session_state.click_count = st.session_state.get("click_count", 0) + 1
+
+    if st.link_button(
+        "Link with on_click callback",
+        "https://example.com",
+        on_click=increment_count,
+    ):
+        st.write("callback_clicked: True")
+
+    if st.link_button(
+        "Link with on_click rerun",
+        "https://example.com",
+        on_click="rerun",
+    ):
+        st.write("rerun_clicked: True")
+
+st.link_button("Link with key", "https://example.com", key="my_link_button")

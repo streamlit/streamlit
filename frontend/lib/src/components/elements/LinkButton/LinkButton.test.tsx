@@ -24,6 +24,7 @@ import { LinkButton as LinkButtonProto } from "@streamlit/protobuf"
 
 import { useRegisterShortcut } from "~lib/hooks/useRegisterShortcut"
 import { render } from "~lib/test_util"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import LinkButton, { Props } from "./LinkButton"
 
@@ -43,6 +44,11 @@ const getProps = (
     label: "Label",
     url: "https://streamlit.io",
     ...elementProps,
+  }),
+  disabled: false,
+  widgetMgr: new WidgetStateManager({
+    sendRerunBackMsg: vi.fn(),
+    formsDataChanged: vi.fn(),
   }),
   ...widgetProps,
 })
@@ -144,11 +150,79 @@ describe("LinkButton widget", () => {
       })
 
       it(`renders disabled ${type} correctly`, () => {
-        render(<LinkButton {...getProps({ type, disabled: true })} />)
+        render(<LinkButton {...getProps({ type }, { disabled: true })} />)
 
         const linkButton = screen.getByRole("link")
         expect(linkButton).toHaveAttribute("disabled")
       })
+    })
+  })
+
+  describe("on_click behavior", () => {
+    it("triggers rerun when ignoreRerun is false", async () => {
+      const user = userEvent.setup()
+      const widgetMgr = new WidgetStateManager({
+        sendRerunBackMsg: vi.fn(),
+        formsDataChanged: vi.fn(),
+      })
+      const setTriggerValueSpy = vi.spyOn(widgetMgr, "setTriggerValue")
+
+      render(
+        <LinkButton
+          {...getProps(
+            { id: "link-btn-1", ignoreRerun: false },
+            { widgetMgr }
+          )}
+        />
+      )
+
+      const linkButton = screen.getByRole("link")
+      await user.click(linkButton)
+
+      expect(setTriggerValueSpy).toHaveBeenCalled()
+    })
+
+    it("does not trigger rerun when ignoreRerun is true", async () => {
+      const user = userEvent.setup()
+      const widgetMgr = new WidgetStateManager({
+        sendRerunBackMsg: vi.fn(),
+        formsDataChanged: vi.fn(),
+      })
+      const setTriggerValueSpy = vi.spyOn(widgetMgr, "setTriggerValue")
+
+      render(
+        <LinkButton
+          {...getProps({ id: "link-btn-2", ignoreRerun: true }, { widgetMgr })}
+        />
+      )
+
+      const linkButton = screen.getByRole("link")
+      await user.click(linkButton)
+
+      expect(setTriggerValueSpy).not.toHaveBeenCalled()
+    })
+
+    it("does not trigger rerun when disabled", async () => {
+      const user = userEvent.setup()
+      const widgetMgr = new WidgetStateManager({
+        sendRerunBackMsg: vi.fn(),
+        formsDataChanged: vi.fn(),
+      })
+      const setTriggerValueSpy = vi.spyOn(widgetMgr, "setTriggerValue")
+
+      render(
+        <LinkButton
+          {...getProps(
+            { id: "link-btn-3", ignoreRerun: false },
+            { widgetMgr, disabled: true }
+          )}
+        />
+      )
+
+      const linkButton = screen.getByRole("link")
+      await user.click(linkButton)
+
+      expect(setTriggerValueSpy).not.toHaveBeenCalled()
     })
   })
 })

@@ -32,16 +32,21 @@ import {
   DynamicButtonLabel,
 } from "~lib/components/shared/BaseButton"
 import { useRegisterShortcut } from "~lib/hooks/useRegisterShortcut"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import BaseLinkButton from "./BaseLinkButton"
 
 export interface Props {
   element: LinkButtonProto
+  disabled: boolean
+  widgetMgr: WidgetStateManager
+  fragmentId?: string
 }
 
 function LinkButton(props: Readonly<Props>): ReactElement {
-  const { element } = props
+  const { element, disabled, widgetMgr, fragmentId } = props
   const shortcut = element.shortcut ? element.shortcut : undefined
+  const { ignoreRerun } = element
 
   let kind = BaseButtonKind.SECONDARY
   if (element.type === "primary") {
@@ -53,26 +58,33 @@ function LinkButton(props: Readonly<Props>): ReactElement {
   const anchorRef = useRef<HTMLAnchorElement | null>(null)
 
   const handleShortcut = useCallback((): void => {
-    if (element.disabled) {
+    if (disabled) {
       return
     }
 
     anchorRef.current?.click()
-  }, [element.disabled])
+  }, [disabled])
 
   const handleClick = useCallback(
     (event: MouseEvent<HTMLAnchorElement>): void => {
-      if (element.disabled) {
+      if (disabled) {
         // Prevent the link from being followed if the button is disabled.
         event.preventDefault()
+        return
+      }
+
+      // Trigger a rerun if ignoreRerun is false
+      if (!ignoreRerun) {
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
+        widgetMgr.setTriggerValue(element, { fromUi: true }, fragmentId)
       }
     },
-    [element.disabled]
+    [disabled, ignoreRerun, widgetMgr, element, fragmentId]
   )
 
   useRegisterShortcut({
     shortcut,
-    disabled: element.disabled,
+    disabled,
     onActivate: handleShortcut,
   })
 
@@ -89,12 +101,12 @@ function LinkButton(props: Readonly<Props>): ReactElement {
           ref={anchorRef}
           kind={kind}
           size={BaseButtonSize.SMALL}
-          disabled={element.disabled}
+          disabled={disabled}
           onClick={handleClick}
           href={element.url}
           target="_blank"
           rel="noreferrer"
-          aria-disabled={element.disabled}
+          aria-disabled={disabled}
         >
           <DynamicButtonLabel
             icon={element.icon}

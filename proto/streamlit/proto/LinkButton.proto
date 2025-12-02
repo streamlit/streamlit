@@ -20,7 +20,7 @@ option java_package = "com.snowflake.apps.streamlit";
 option java_outer_classname = "LinkButtonProto";
 
 message LinkButton {
-  // The ID is only needed if a shortcut is provided.
+  // The ID is required when on_click handling is enabled or a shortcut is provided.
   string id = 1;
   string label = 2;
   string help = 4;
@@ -30,4 +30,6 @@ message LinkButton {
   string type = 9;
   string icon = 10;
   string shortcut = 11;
+  // When true, clicking the button will not trigger a rerun (default behavior).
+  bool ignore_rerun = 12;
 }

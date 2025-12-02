@@ -33,6 +33,8 @@ class LinkButtonTest(DeltaGeneratorTestCase):
         assert c.label == "the label"
         assert c.type == "secondary"
         assert not c.disabled
+        # Default is ignore_rerun=True
+        assert c.ignore_rerun is True
 
     def test_just_disabled(self):
         """Test that it can be called with disabled param."""
@@ -78,3 +80,73 @@ class LinkButtonTest(DeltaGeneratorTestCase):
             'The value "invalid" is not a valid emoji. '
             "Shortcodes are not allowed, please use a single character instead."
         )
+
+    def test_on_click_ignore(self):
+        """Test that on_click='ignore' sets ignore_rerun to True."""
+        st.link_button("the label", url="https://streamlit.io", on_click="ignore")
+
+        c = self.get_delta_from_queue().new_element.link_button
+        assert c.ignore_rerun is True
+        # No ID assigned when ignore_rerun is True and no shortcut
+        assert c.id == ""
+
+    def test_on_click_none(self):
+        """Test that on_click=None sets ignore_rerun to True (backward compatible)."""
+        st.link_button("the label", url="https://streamlit.io", on_click=None)
+
+        c = self.get_delta_from_queue().new_element.link_button
+        assert c.ignore_rerun is True
+
+    def test_on_click_rerun(self):
+        """Test that on_click='rerun' sets ignore_rerun to False."""
+        st.link_button("the label", url="https://streamlit.io", on_click="rerun")
+
+        c = self.get_delta_from_queue().new_element.link_button
+        assert c.ignore_rerun is False
+        # ID is assigned when click handling is enabled
+        assert c.id != ""
+
+    def test_on_click_callable(self):
+        """Test that on_click=callable sets ignore_rerun to False."""
+
+        def my_callback():
+            pass
+
+        st.link_button("the label", url="https://streamlit.io", on_click=my_callback)
+
+        c = self.get_delta_from_queue().new_element.link_button
+        assert c.ignore_rerun is False
+        assert c.id != ""
+
+    def test_on_click_rerun_returns_bool(self):
+        """Test that on_click='rerun' returns a bool."""
+        result = st.link_button(
+            "the label", url="https://streamlit.io", on_click="rerun"
+        )
+        assert isinstance(result, bool)
+        assert result is False  # Default value
+
+    def test_on_click_ignore_returns_delta_generator(self):
+        """Test that on_click='ignore' returns a DeltaGenerator."""
+        result = st.link_button(
+            "the label", url="https://streamlit.io", on_click="ignore"
+        )
+        # When ignore_rerun is True, returns DeltaGenerator (not bool)
+        assert result is not True
+        assert result is not False
+
+    def test_key_sets_element_id(self):
+        """Test that key parameter sets the element id."""
+        st.link_button("the label", url="https://streamlit.io", key="my_link_button")
+
+        c = self.get_delta_from_queue().new_element.link_button
+        # ID is set when key is provided
+        assert c.id != ""
+
+    def test_key_without_on_click(self):
+        """Test that key works without on_click (ignore_rerun is still True)."""
+        st.link_button("the label", url="https://streamlit.io", key="my_link")
+
+        c = self.get_delta_from_queue().new_element.link_button
+        assert c.ignore_rerun is True
+        assert c.id != ""

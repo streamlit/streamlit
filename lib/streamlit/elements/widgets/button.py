@@ -672,14 +672,18 @@ class ButtonMixin:
         label: str,
         url: str,
         *,
+        key: Key | None = None,
         help: str | None = None,
+        on_click: WidgetCallback | Literal["rerun", "ignore"] | None = "ignore",
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
         type: Literal["primary", "secondary", "tertiary"] = "secondary",
         icon: str | None = None,
         disabled: bool = False,
         use_container_width: bool | None = None,
         width: Width = "content",
         shortcut: str | None = None,
-    ) -> DeltaGenerator:
+    ) -> DeltaGenerator | bool:
         r"""Display a link button element.
 
         When clicked, a new tab will be opened to the specified URL. This will
@@ -708,6 +712,11 @@ class ButtonMixin:
         url : str
             The url to be opened on user click
 
+        key : str or int
+            An optional string or integer to use as the unique key for the widget.
+            If this is omitted, a key will be generated for the widget
+            based on its content. No two widgets may have the same key.
+
         help : str or None
             A tooltip that gets displayed when the button is hovered over. If
             this is ``None`` (default), no tooltip is displayed.
@@ -715,6 +724,26 @@ class ButtonMixin:
             The tooltip can optionally contain GitHub-flavored Markdown,
             including the Markdown directives described in the ``body``
             parameter of ``st.markdown``.
+
+        on_click : callable, "rerun", "ignore", or None
+            How the button should respond to user interaction. This controls
+            whether or not the button triggers a rerun and if a callback
+            function is called. This can be one of the following values:
+
+            - ``"ignore"`` (default): The link opens in a new tab and no
+              rerun is triggered.
+            - ``"rerun"``: The link opens in a new tab and the app reruns.
+              No callback function is called.
+            - A ``callable``: The link opens in a new tab and app reruns.
+              The callable is called before the rest of the app.
+            - ``None``: This is same as ``on_click="ignore"``. This value
+              exists for backwards compatibility and shouldn't be used.
+
+        args : list or tuple
+            An optional list or tuple of args to pass to the callback.
+
+        kwargs : dict
+            An optional dict of kwargs to pass to the callback.
 
         type : "primary", "secondary", or "tertiary"
             An optional string that specifies the button type. This can be one
@@ -793,8 +822,17 @@ class ButtonMixin:
                 ``"Control"`` on Windows/Linux. Punctuation keys (e.g. ``"."``,
                 ``","``) are not currently supported.
 
-        Example
+        Returns
         -------
+        DeltaGenerator or bool
+            If ``on_click`` is ``"ignore"`` or ``None``, returns a
+            ``DeltaGenerator``. Otherwise, returns ``True`` if the
+            button was clicked on the last run of the app, ``False`` otherwise.
+
+        Examples
+        --------
+        **Example 1: Simple link button**
+
         >>> import streamlit as st
         >>>
         >>> st.link_button("Go to gallery", "https://streamlit.io/gallery")
@@ -814,15 +852,22 @@ class ButtonMixin:
         if use_container_width is not None:
             width = "stretch" if use_container_width else "content"
 
+        ctx = get_script_run_ctx()
+
         return self._link_button(
             label=label,
             url=url,
+            key=key,
             help=help,
+            on_click=on_click,
+            args=args,
+            kwargs=kwargs,
             disabled=disabled,
             type=type,
             icon=icon,
             width=width,
             shortcut=shortcut,
+            ctx=ctx,
         )
 
     @gather_metrics("page_link")
@@ -1089,27 +1134,48 @@ class ButtonMixin:
         self,
         label: str,
         url: str,
+        key: Key | None,
         help: str | None,
+        on_click: WidgetCallback | Literal["rerun", "ignore"] | None = "ignore",
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
         type: Literal["primary", "secondary", "tertiary"] = "secondary",
         icon: str | None = None,
         disabled: bool = False,
         width: Width = "content",
         shortcut: str | None = None,
-    ) -> DeltaGenerator:
+        ctx: ScriptRunContext | None = None,
+    ) -> DeltaGenerator | bool:
+        key = to_key(key)
         link_button_proto = LinkButtonProto()
         normalized_shortcut: str | None = None
         if shortcut is not None:
             normalized_shortcut = normalize_shortcut(shortcut)
 
-        if normalized_shortcut is not None:
-            # We only register the element ID if a shortcut is provide.
-            # The ID is required to correctly register and handle the shortcut
-            # on the client side.
+        on_click_callback: WidgetCallback | None = (
+            None
+            if on_click is None or on_click in {"ignore", "rerun"}
+            else cast("WidgetCallback", on_click)
+        )
+
+        # Determine if we need to handle click events (register as widget)
+        ignore_rerun = on_click is None or on_click == "ignore"
+
+        # Register element ID if we have a key, shortcut, or are handling clicks
+        if key is not None or normalized_shortcut is not None or not ignore_rerun:
+            check_widget_policies(
+                self.dg,
+                key=key,
+                on_change=on_click_callback,
+                default_value=None,
+                writes_allowed=False,
+            )
+
             link_button_proto.id = compute_and_register_element_id(
                 "link_button",
-                user_key=None,
-                key_as_main_identity=False,
+                user_key=key,
+                key_as_main_identity=key is not None,
                 dg=self.dg,
                 label=label,
                 icon=icon,
@@ -1118,11 +1184,14 @@ class ButtonMixin:
                 type=type,
                 width=width,
                 shortcut=normalized_shortcut,
+                ignore_rerun=ignore_rerun,
             )
+
         link_button_proto.label = label
         link_button_proto.url = url
         link_button_proto.type = type
         link_button_proto.disabled = disabled
+        link_button_proto.ignore_rerun = ignore_rerun
 
         if help is not None:
             link_button_proto.help = dedent(help)
@@ -1135,6 +1204,25 @@ class ButtonMixin:
 
         validate_width(width, allow_content=True)
         layout_config = LayoutConfig(width=width)
+
+        # If we're handling click events, register as a widget
+        if not ignore_rerun:
+            serde = ButtonSerde()
+            button_state = register_widget(
+                link_button_proto.id,
+                on_change_handler=on_click_callback,
+                args=args,
+                kwargs=kwargs,
+                deserializer=serde.deserialize,
+                serializer=serde.serialize,
+                ctx=ctx,
+                value_type="trigger_value",
+            )
+            self.dg._enqueue(
+                "link_button", link_button_proto, layout_config=layout_config
+            )
+            return button_state.value
+
         return self.dg._enqueue(
             "link_button", link_button_proto, layout_config=layout_config
         )
