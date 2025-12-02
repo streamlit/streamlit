@@ -911,14 +911,14 @@ describe("NumberInput widget", () => {
           description: "formats value after increment",
           step: 5,
           action: async (user: ReturnType<typeof userEvent.setup>) =>
-            await user.click(screen.getByTestId("stNumberInputStepUp")),
+            user.click(screen.getByTestId("stNumberInputStepUp")),
           expected: "15",
         },
         {
           description: "formats value after decrement",
           step: 3,
           action: async (user: ReturnType<typeof userEvent.setup>) =>
-            await user.click(screen.getByTestId("stNumberInputStepDown")),
+            user.click(screen.getByTestId("stNumberInputStepDown")),
           expected: "7",
         },
       ])("$description", async ({ step, action, expected }) => {

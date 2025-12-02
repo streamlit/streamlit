@@ -215,6 +215,17 @@ export default defineConfig([
       "@typescript-eslint/no-non-null-assertion": "error",
       // Prefer optional chaining over && chains
       "@typescript-eslint/prefer-optional-chain": "error",
+      // Ensure switch statements cover all possible enum/union values
+      "@typescript-eslint/switch-exhaustiveness-check": [
+        "error",
+        {
+          considerDefaultExhaustiveForUnions: true, // Allow default case for unions
+        },
+      ],
+      // Flag class properties that are never modified and should be readonly
+      "@typescript-eslint/prefer-readonly": "warn",
+      // Ensure return await is used in try/catch for proper error stack traces
+      "@typescript-eslint/return-await": ["error", "in-try-catch"],
       // Permit for-of loops
       "no-restricted-syntax": [
         "error",

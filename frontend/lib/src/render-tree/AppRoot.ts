@@ -64,7 +64,7 @@ export class AppRoot {
   readonly mainScriptHash: string
 
   /* The app logo, if it exists. */
-  private appLogo: AppLogo | null
+  private readonly appLogo: AppLogo | null
 
   /**
    * Create an empty AppRoot with a placeholder "skeleton" element.
@@ -98,8 +98,9 @@ export class AppRoot {
         }
         break
 
-      default:
+      case LoadingScreenType.V2:
         waitElement = makeAppSkeletonElement()
+        break
     }
 
     if (waitElement) {

@@ -272,6 +272,9 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
     case MetricDirection.UP:
       metricDirection = ArrowUpward
       break
+    case MetricDirection.NONE:
+      // No arrow icon for NONE direction
+      break
   }
 
   const arrowMargin = "0 threeXS 0 0"
