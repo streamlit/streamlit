@@ -13,7 +13,8 @@ Reference materials for creating pull requests in the Streamlit repository.
 
 ## Available Guides
 
-- [writing-style.md](./writing-style.md) - How to write PR descriptions (selectivity, what to include/omit)
+- [writing-principles.md](./writing-principles.md) - General writing style (brevity, commit messages, PR titles)
+- [describe-changes-guide.md](./describe-changes-guide.md) - How to describe what changed (selectivity, what to include/omit)
 - [testing-plan-guide.md](./testing-plan-guide.md) - How to document tests in PRs
 - [branch-naming.md](./branch-naming.md) - Branch naming conventions
 - [labeling-guide.md](./labeling-guide.md) - Required PR labels
