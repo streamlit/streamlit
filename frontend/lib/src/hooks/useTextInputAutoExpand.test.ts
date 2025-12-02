@@ -272,11 +272,11 @@ describe("useTextInputAutoExpand", () => {
       expect(result.current.height).toBe("81px")
     })
 
-    it("should handle multiple dependencies", () => {
+    it("should handle array of dependencies", () => {
       const multiDepRef = createMockTextareaRef()
 
-      let dep1 = "a"
-      const dep2 = "b"
+      const dep1 = "a"
+      let dep2 = "b"
       const { result, rerender } = renderHook(() =>
         useTextInputAutoExpand({
           textareaRef: multiDepRef,
@@ -292,7 +292,8 @@ describe("useTextInputAutoExpand", () => {
         configurable: true,
       })
 
-      dep1 = "changed1"
+      // Change second dependency to verify any dependency change triggers update
+      dep2 = "changed2"
       rerender()
 
       expect(result.current.isExtended).toBe(true)

@@ -126,6 +126,8 @@ export const useTextInputAutoExpand = ({
     setIsExtended(calculateIsExtended(newScrollHeight, minHeight))
   }, [textareaRef, minHeight])
 
+  // Resets scroll height state. Call this after clearing textarea content
+  // to avoid stale expanded state. The effect will re-measure on next render.
   const clearScrollHeight = useCallback((): void => {
     setScrollHeight(0)
     setIsExtended(false)
