@@ -25,13 +25,13 @@ connecting to any other API that required user-scoped tokens - like fetching dat
 GitHub’s graphQL API.
 
 This proposal outlines changes to `st.connection` and `st.cache_resource` that will allow for session-scoped
-connections, and how we will use these changes to write a connection to handle Snowpark Conatiner Services restricted
+connections, and how we will use these changes to write a connection to handle Snowpark Container Services restricted
 caller’s rights connections.
 
 The proposed API changes are:
 * Add session-scoped connections. This would be a natural extension to the current connection API, and would support any
-    user-scoped connection, like an HTTP client that’s using per-user OAuth credentials to make request.
-* Add connection shutdown hooks. Connections should be able to be closed when they are evicted from a cache.
+    user-scoped connection, like an HTTP client that’s using per-user OAuth credentials to make requests.
+* Add connection shutdown hooks. Connections should be able to be closed when they are removed from a cache.
 * Add a session-scoped `st.cache_resource` with a dedicated store outside of `st.session_state`. This falls out of the
     first two items: If we want session-scoped connections, we need a way to cache them in the session. Keeping this
     out of `session_state` makes it much cleaner to implement shutdown hooks, since we won’t be sharing a namespace
@@ -40,8 +40,8 @@ The proposed API changes are:
     Note that this cache could be scoped to st.connection instead - but since the current connection implementation
     leverages `cache_resource` for all caching, it would be nice if the session-scoped caching leveraged a common
     library as well.
-* Add cache eviction hooks. If we’re building shutdown hooks for connections, we should likely just build these as
-    eviction hooks on `cache_resource`. These are useful for any resource cache with a TTL or max entry count - and
+* Add cache expiration hooks. If we’re building shutdown hooks for connections, we should likely just build these as
+    expiration hooks on `cache_resource`. These are useful for any resource cache with a TTL or max entry count - and
     they’re semi-mandatory for session-scoped cached resources.
 * Add a new session-scoped connection type that creates Snowflake caller's rights sessions when invoked while running
     in an appropriately-configured Snowpark Container Services service.
@@ -87,21 +87,22 @@ def cache_resource(
     # Existing args omitted for clarity.
     scope: Literal["global", "session"] = "global",
     on_expire: OnExpire | None = None
-):
+) -> CachedFunc[P, R] | Callable[[Callable[P, R]], CachedFunc[P, R]]:
     """
     scope : Literal["global", "session"]
         The scope for the resource. If "global", cache globally. If "session", cache in
         the session.
 
-        Session-scoped cache entries will be evicted when a user's session ends.
+        Session-scoped cache entries will be expired when a user's session ends.
     on_expire : OnExpire
         If set, a function to call when a cache entry is removed from the cache. The
-        evicted item will be provided to the function as an argument.
+        expired item will be provided to the function as an argument.
 
-        This is only useful for caches which will evict normally: Those with
+        This is only useful for caches which will expire entries normally: Those with
         ``max_entries`` or ``ttl`` settings, or those using ``scope="session"``.
-        Note that eviction only happens on read - so ``ttl`` should not be used
-        to guarantee timely cleanup, only cleanup when expired resources are accessed.
+        Note that expiration does not happen on all reads - so ``ttl`` should not be
+        used to guarantee timely cleanup, only cleanup when expired resources are
+        accessed.
 
         This will NOT be called when an app is shut down for global resources.
     """
@@ -120,7 +121,7 @@ def scope(self) -> Literal["global", "session"]:
     return "global"
 
 def shutdown(self) -> None:
-    """A function to invoke when this connection is evicted from the session cache.
+    """A function to invoke when this connection is removed from the session cache.
 
     Registered with the resource cache when created with st.connection.
     """
@@ -129,9 +130,9 @@ def shutdown(self) -> None:
 
 These two new methods will be passed to the `cache_resource` call in `st.connection`, using the new parameters.
 
-### Eviction implementation
+### Cache expiration implementation
 
-We will add the eviction hook to the entry stored in [ResourceCache._mem_cache](https://github.com/streamlit/streamlit/blob/fb4a389a7338c9d22e4ea514ca2b20c10e086149/lib/streamlit/runtime/caching/cache_resource_api.py#L492-L494). Instead of storing `CachedResult[R]`, it will store `tuple[CachedResult[R], EvictionHook]`. We will also replace the `TTLCache` with an extension of `TTLCache` that handles eviction, following [the examples in the cachetools library](https://cachetools.readthedocs.io/en/latest/#extending-cache-classes).
+We will add the expiration hook to the entry stored in [ResourceCache._mem_cache](https://github.com/streamlit/streamlit/blob/fb4a389a7338c9d22e4ea514ca2b20c10e086149/lib/streamlit/runtime/caching/cache_resource_api.py#L492-L494). Instead of storing `CachedResult[R]`, it will store `tuple[CachedResult[R], OnExpire]`. We will also replace the `TTLCache` with an extension of `TTLCache` that handles expiration, following [the examples in the cachetools library](https://cachetools.readthedocs.io/en/latest/#extending-cache-classes).
 
 To handle session-scoped items, we will add a new cache to [ResourceCaches](https://github.com/streamlit/streamlit/blob/fb4a389a7338c9d22e4ea514ca2b20c10e086149/lib/streamlit/runtime/caching/cache_resource_api.py#L82) that will have an extra session ID key. When looking up a resource cache, we will provide the current session ID for session-scoped resources, and use that to look up an item in the cache.
 
@@ -156,7 +157,7 @@ The parameter `use_callers_rights: bool` will toggle between the global `Snowfla
 The parameter `callers_rights_token: str` will allow the user to pass in a full (user + base) token to make the RCR connection if users wish to implement something custom. This allows for future caller's rights connections outside of the current Snowpark Container Services model.
 
 ### Other notes
-All `ttl` and `max_entries` cache evictions happen only on write, not on read. This is how the underlying `TTLCache` works. This will be fine for session-scoped items, since they’ll be evicted manually when the session expires, but needs to be called out in the docs as a limitation of the existing cache. This will really only matter for `ttl` when users treat it as a guaranteed shutdown, and not as an invalidation.
+All `ttl` and `max_entries` cache expirations happen only on write and `len` checks, not on normal reads. This is how the underlying `TTLCache` works. This will be fine for session-scoped items, since they’ll be expired manually when the session expires, but needs to be called out in the docs as a limitation of the existing cache. This will really only matter for `ttl` when users treat it as a guaranteed shutdown, and not as an invalidation.
 
 This implementation also will have `max_entries` scoped to the session, not scoped globally. This can be documented, and shouldn’t be an issue for connections, since they will not grow beyond the number of active sessions.
 
