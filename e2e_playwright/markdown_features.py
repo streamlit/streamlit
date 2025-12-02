@@ -161,6 +161,13 @@ st.container(key="st_tabs").tabs([selected_feature_markdown])
 st.header("Other Elements", divider=True)
 
 st.container(key="st_metric").metric(selected_feature_markdown, value=7, delta=0.5)
+st.container(key="st_metric_value").metric(
+    label="Metric with markdown value", value=selected_feature_markdown, delta=0.5
+)
+st.container(key="st_metric_delta").metric(
+    label="Metric with markdown delta", value=7, delta=selected_feature_markdown
+)
+
 st.container(key="st_image").image(
     np.repeat(0, 10000).reshape(100, 100), caption=selected_feature_markdown
 )

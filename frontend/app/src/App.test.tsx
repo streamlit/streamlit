@@ -87,12 +87,6 @@ import {
 import { App, LOG, Props } from "./App"
 import { showDevelopmentOptions } from "./showDevelopmentOptions"
 
-vi.mock("~lib/baseconsts", async () => {
-  return {
-    ...(await vi.importActual("~lib/baseconsts")),
-  }
-})
-
 vi.mock("@streamlit/lib", async () => {
   const actualLib = await vi.importActual("@streamlit/lib")
   return {

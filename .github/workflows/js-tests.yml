@@ -42,6 +42,8 @@ jobs:
           python-version: "${{ env.PYTHON_MAX_VERSION }}"
       - name: Setup virtual env
         uses: ./.github/actions/make_init
+      - name: Ensure frontend yarn.lock is deduped
+        run: ./scripts/check_yarn_dedupe.sh frontend
       - name: Build @streamlit/lib
         run: cd frontend/ ; yarn workspaces foreach --recursive --topological --from @streamlit/lib run build;
       - name: Audit frontend licenses

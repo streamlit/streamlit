@@ -112,6 +112,12 @@ repos:
         language: system
         files: ^(.vscode/(settings|extensions)\.json|\.devcontainer/devcontainer\.json)$
         pass_filenames: false
+      - id: yarn-dedupe
+        name: Check frontend yarn.lock dedupe
+        entry: ./scripts/check_yarn_dedupe.sh frontend
+        language: system
+        pass_filenames: false
+        files: ^frontend/yarn\.lock$
   - repo: https://github.com/Lucas-C/pre-commit-hooks
     rev: v1.5.5
     hooks:

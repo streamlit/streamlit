@@ -593,7 +593,8 @@ def test_uploads_and_deletes_single_file(
 
     wait_for_app_run(themed_app)
 
-    expect(uploaded_files).not_to_have_text(file_name2, use_inner_text=True)
+    # After deletion, the uploaded files container should not be visible
+    expect(chat_input.get_by_test_id("stChatUploadedFiles")).not_to_be_visible()
 
 
 @use_chat_input("multiple_files")

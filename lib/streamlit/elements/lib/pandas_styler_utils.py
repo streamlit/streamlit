@@ -297,6 +297,6 @@ def _use_display_values(df: DataFrame, styles: Mapping[str, Any]) -> DataFrame:
         row_indices = list(values_by_row.keys())
         values = list(values_by_row.values())
         # Batch-assign updates for this column using iloc for performance.
-        new_df.iloc[row_indices, col_idx] = values  # type: ignore[assignment]
+        new_df.iloc[row_indices, col_idx] = values
 
     return new_df
