@@ -42,7 +42,7 @@ if TYPE_CHECKING:
 
 Value: TypeAlias = AnyNumber | str | None
 Delta: TypeAlias = AnyNumber | str | None
-DeltaColor: TypeAlias = Literal["normal", "inverse", "off"]
+DeltaColor: TypeAlias = Literal["normal", "inverse", "green", "red", "off"]
 DeltaArrow: TypeAlias = Literal["auto", "up", "down", "off"]
 
 
@@ -114,12 +114,17 @@ class MetricMixin:
             including the Markdown directives described in the ``body``
             parameter of ``st.markdown``.
 
-        delta_color : "normal", "inverse", or "off"
-             If "normal" (default), the delta indicator is shown as described
-             above. If "inverse", it is red when positive and green when
+        delta_color : "normal", "inverse", "green", "red", or "off"
+
+             - If "normal" (default), the delta indicator is shown
+             in green for a positive change and red for a negative one.
+             - If "inverse", it is red when positive and green when
              negative. This is useful when a negative change is considered
-             good, e.g. if cost decreased. If "off", delta is  shown in gray
-             regardless of its value.
+             good, e.g. if cost decreased.
+             - If "green" or "red" the delta indicator is shown in
+             that color directly. This is useful when a "positive" result
+             doesn't mean ``delta > 0`` but something else like ``delta > 1``.
+             - If "off", delta is shown in gray regardless of its value.
 
         delta_arrow : "auto", "up", "down", or "off"
             Controls the direction of the delta indicator arrow. If "auto"
@@ -300,6 +305,11 @@ class MetricMixin:
             cast("DeltaArrow", clean_text(delta_arrow))
         )
 
+        if delta_color == "green":
+            metric_proto.color = MetricProto.MetricColor.GREEN
+        elif delta_color == "red":
+            metric_proto.color = MetricProto.MetricColor.RED
+
         if parsed_delta_arrow != "auto":
             if parsed_delta_arrow == "off":
                 metric_proto.direction = MetricProto.MetricDirection.NONE
@@ -384,10 +394,10 @@ def _determine_delta_color_and_direction(
     delta_color: DeltaColor,
     delta: Delta,
 ) -> MetricColorAndDirection:
-    if delta_color not in {"normal", "inverse", "off"}:
+    if delta_color not in {"normal", "inverse", "green", "red", "off"}:
         raise StreamlitAPIException(
             f"'{delta_color}' is not an accepted value. delta_color only accepts: "
-            "'normal', 'inverse', or 'off'"
+            "'normal', 'inverse', 'green', 'red', or 'off'"
         )
 
     if delta is None or delta == "":

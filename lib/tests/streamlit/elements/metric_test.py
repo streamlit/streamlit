@@ -144,7 +144,7 @@ class MetricTest(DeltaGeneratorTestCase):
 
     def test_delta_color(self):
         """Test that metric delta colors returns the correct proto value."""
-        arg_delta_values = ["-123", -123, -1.23, "123", 123, 1.23, None, ""]
+        arg_delta_values = ["-123", -123, -1.23, "123", 123, 1.23, None, "", -10, 10]
         arg_delta_color_values = [
             "normal",
             "inverse",
@@ -154,6 +154,8 @@ class MetricTest(DeltaGeneratorTestCase):
             "off",
             "normal",
             "normal",
+            "green",
+            "red",
         ]
         color_values = [
             MetricProto.MetricColor.RED,
@@ -164,6 +166,8 @@ class MetricTest(DeltaGeneratorTestCase):
             MetricProto.MetricColor.GRAY,
             MetricProto.MetricColor.GRAY,
             MetricProto.MetricColor.GRAY,
+            MetricProto.MetricColor.GREEN,
+            MetricProto.MetricColor.RED,
         ]
         direction_values = [
             MetricProto.MetricDirection.DOWN,
@@ -174,6 +178,8 @@ class MetricTest(DeltaGeneratorTestCase):
             MetricProto.MetricDirection.UP,
             MetricProto.MetricDirection.NONE,
             MetricProto.MetricDirection.NONE,
+            MetricProto.MetricDirection.DOWN,
+            MetricProto.MetricDirection.UP,
         ]
 
         for (
@@ -312,9 +318,9 @@ class MetricTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitAPIException) as exc:
             st.metric("Hello World.", 123, 0, delta_color="Invalid")
 
-        assert (
-            str(exc.value)
-            == "'Invalid' is not an accepted value. delta_color only accepts: 'normal', 'inverse', or 'off'"
+        assert str(exc.value) == (
+            "'Invalid' is not an accepted value. delta_color only accepts: "
+            "'normal', 'inverse', 'green', 'red', or 'off'"
         )
 
     def test_help(self):
