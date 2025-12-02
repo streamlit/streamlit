@@ -32,7 +32,8 @@ vi.mock("@emotion/react", () => ({
   keyframes: () => "keyframes",
 }))
 
-// Helper to create a mock textarea ref
+// Helper to create a real textarea element for testing
+// Using real DOM elements is required because getComputedStyle needs actual elements
 const createMockTextareaRef = (
   overrides: Partial<{
     offsetHeight: number
@@ -40,21 +41,33 @@ const createMockTextareaRef = (
     style: { height: string }
   }> = {}
 ): RefObject<HTMLTextAreaElement> => {
-  const defaultElement = {
-    offsetHeight: 40,
-    scrollHeight: 40,
-    style: {
-      height: "",
-    },
-  }
+  const textarea = document.createElement("textarea")
 
-  return {
-    current: {
-      ...defaultElement,
-      ...overrides,
-    } as HTMLTextAreaElement,
-  }
+  // Set CSS styles so getComputedStyle returns numeric values
+  textarea.style.lineHeight = "40px"
+  textarea.style.padding = "0px"
+
+  Object.defineProperty(textarea, "offsetHeight", {
+    value: overrides.offsetHeight ?? 40,
+    writable: true,
+    configurable: true,
+  })
+  Object.defineProperty(textarea, "scrollHeight", {
+    value: overrides.scrollHeight ?? 40,
+    writable: true,
+    configurable: true,
+  })
+
+  // Append to document so getComputedStyle works
+  document.body.appendChild(textarea)
+
+  return { current: textarea }
 }
+
+// Clean up DOM after each test
+afterEach(() => {
+  document.body.innerHTML = ""
+})
 
 describe("useTextInputAutoExpand", () => {
   describe("initialization", () => {
@@ -67,7 +80,7 @@ describe("useTextInputAutoExpand", () => {
 
       expect(result.current.isExtended).toBe(false)
       expect(result.current.height).toBe("2.5rem") // theme.sizes.minElementHeight
-      expect(result.current.maxHeight).toBe("260px") // 40 * 6.5
+      expect(result.current.maxHeight).toBe("260px") // 40px lineHeight * 6.5
       expect(typeof result.current.updateScrollHeight).toBe("function")
     })
 
@@ -291,8 +304,10 @@ describe("useTextInputAutoExpand", () => {
   })
 
   describe("style height manipulation", () => {
-    it("should temporarily reset height to auto during calculation", () => {
+    it("should restore original height after calculation", () => {
       const mockTextareaRef = createMockTextareaRef()
+      // Set an initial height
+      mockTextareaRef.current!.style.height = "50px"
 
       const { result } = renderHook(() =>
         useTextInputAutoExpand({ textareaRef: mockTextareaRef })
@@ -302,8 +317,8 @@ describe("useTextInputAutoExpand", () => {
         result.current.updateScrollHeight()
       })
 
-      // After calculation, height should be reset to empty string
-      expect(mockTextareaRef.current?.style.height).toBe("")
+      // After calculation, height should be restored to original value
+      expect(mockTextareaRef.current?.style.height).toBe("50px")
     })
   })
 
@@ -323,7 +338,7 @@ describe("useTextInputAutoExpand", () => {
       expect(result.current.height).toBe("2.5rem")
     })
 
-    it("should handle very large content", () => {
+    it("should cap height at maxHeight for very large content", () => {
       const largeContentRef = createMockTextareaRef({
         offsetHeight: 40,
         scrollHeight: 1000,
@@ -335,8 +350,9 @@ describe("useTextInputAutoExpand", () => {
 
       // The hook should automatically handle this on initialization
       expect(result.current.isExtended).toBe(true)
-      expect(result.current.height).toBe("1001px")
-      expect(result.current.maxHeight).toBe("260px") // Still limited by max height
+      // Height should be capped at maxHeight (260px) instead of scrollHeight + 1
+      expect(result.current.height).toBe("260px")
+      expect(result.current.maxHeight).toBe("260px")
     })
   })
 })
