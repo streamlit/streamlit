@@ -94,9 +94,6 @@ import Tooltip from "./Tooltip"
 import "@glideapps/glide-data-grid/dist/index.css"
 import "@glideapps/glide-data-grid-cells/dist/index.css"
 
-// Re-export types from useWidgetState for backwards compatibility
-export type { CellPosition, DataframeState } from "./hooks/useWidgetState"
-
 // Number of rows that triggers some optimization features
 // for large tables.
 const LARGE_TABLE_ROWS_THRESHOLD = 150000
