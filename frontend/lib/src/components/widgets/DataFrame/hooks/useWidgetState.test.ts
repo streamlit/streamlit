@@ -191,7 +191,7 @@ describe("useWidgetState hook", () => {
       expect(mockWidgetMgr.setStringValue).toHaveBeenCalledTimes(1)
     })
 
-    it("does not sync if widgetMgr is undefined", () => {
+    it("does not throw if widgetMgr is undefined", () => {
       const { result } = renderHook(() =>
         useWidgetState({
           element: ArrowProto.create({
@@ -206,11 +206,13 @@ describe("useWidgetState hook", () => {
         })
       )
 
-      // Should not throw
-      act(() => {
-        result.current.syncEditState()
-        vi.advanceTimersByTime(200)
-      })
+      // Should not throw when calling syncEditState without a widgetMgr
+      expect(() => {
+        act(() => {
+          result.current.syncEditState()
+          vi.advanceTimersByTime(200)
+        })
+      }).not.toThrow()
     })
 
     it("does not update widget state if no changes", () => {
