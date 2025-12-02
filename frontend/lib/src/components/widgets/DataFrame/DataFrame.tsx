@@ -85,6 +85,7 @@ import {
   useTooltips,
   useWidgetState,
 } from "./hooks"
+import { DEBOUNCE_TIME_MS } from "./hooks/useWidgetState"
 import ColumnMenu from "./menus/ColumnMenu"
 import ColumnVisibilityMenu from "./menus/ColumnVisibilityMenu"
 import { StyledResizableContainer } from "./styled-components"
@@ -96,9 +97,6 @@ import "@glideapps/glide-data-grid-cells/dist/index.css"
 // Re-export types from useWidgetState for backwards compatibility
 export type { CellPosition, DataframeState } from "./hooks/useWidgetState"
 
-// Debounce time for triggering a widget state update
-// This prevents rapid updates to the widget state.
-const DEBOUNCE_TIME_MS = 150
 // Number of rows that triggers some optimization features
 // for large tables.
 const LARGE_TABLE_ROWS_THRESHOLD = 150000

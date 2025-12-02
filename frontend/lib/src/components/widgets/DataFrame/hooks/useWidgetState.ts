@@ -34,7 +34,7 @@ import EditingState, { getColumnName } from "./EditingState"
 
 // Debounce time for triggering a widget state update
 // This prevents rapid updates to the widget state.
-const DEBOUNCE_TIME_MS = 150
+export const DEBOUNCE_TIME_MS = 150
 
 // This is the state that is sent to the backend for selections
 // This needs to be the same structure that is also defined
