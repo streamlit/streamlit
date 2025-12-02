@@ -18,6 +18,7 @@ import React, {
   memo,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -169,38 +170,40 @@ const CameraInput = ({
    */
   const { width, elementRef } = useCalculatedDimensions()
 
-  // Initialize files and local ID counter from widget state
+  // Initialize files and local ID counter from widget state.
+  // Use ref with lazy initialization to guarantee one-time computation.
+  const initialStateRef = useRef<ReturnType<typeof createInitialFiles> | null>(
+    null
+  )
+  if (initialStateRef.current === null) {
+    initialStateRef.current = createInitialFiles(element, widgetMgr)
+  }
   const {
     files: initialFiles,
     nextLocalId: initialNextLocalId,
     imgSrc: initialImgSrc,
-  } = useMemo(
-    () => createInitialFiles(element, widgetMgr),
-    // Only compute initial state once based on element.id
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [element.id]
-  )
+  } = initialStateRef.current
 
   const localFileIdCounterRef = useRef(initialNextLocalId)
 
   // Files and imgSrc use regular useState to ensure they always reflect widget value on mount
   // (matching FileUploader behavior)
-  const [files, setFiles] = useState<UploadFileInfo[]>(() => initialFiles)
-  // Keep a ref to the current files for use in callbacks that need current state
-  const filesRef = useRef<UploadFileInfo[]>(files)
-  useEffect(() => {
+  const [files, setFiles] = useState(() => initialFiles)
+  // Keep a ref to the current files for use in callbacks that need current state.
+  // useLayoutEffect ensures the ref is updated synchronously after render,
+  // which is critical for flushSync in addFile to work correctly.
+  const filesRef = useRef(files)
+  useLayoutEffect(() => {
     filesRef.current = files
   }, [files])
 
-  const [imgSrc, setImgSrc] = useState<string | null>(() => initialImgSrc)
+  const [imgSrc, setImgSrc] = useState(() => initialImgSrc)
 
   // UI state uses useWidgetManagerElementState for persistence across mounts
-  const [shutter, setShutter] = useState<boolean>(false)
-  const [minShutterEffectPassed, setMinShutterEffectPassed] =
-    useState<boolean>(true)
-  const [clearPhotoInProgress, setClearPhotoInProgress] =
-    useState<boolean>(false)
-  const [facingMode, setFacingMode] = useState<FacingMode>(FacingMode.USER)
+  const [shutter, setShutter] = useState(false)
+  const [minShutterEffectPassed, setMinShutterEffectPassed] = useState(true)
+  const [clearPhotoInProgress, setClearPhotoInProgress] = useState(false)
+  const [facingMode, setFacingMode] = useState(FacingMode.USER)
 
   /**
    * Generate a unique ID for a new file.
@@ -271,14 +274,11 @@ const CameraInput = ({
        * abort) may run while filesRef.current still points to the previous state.
        * Those callbacks rely on filesRef.current to locate the in-flight upload,
        * so deferring the update would cause them to no-op and break progress
-       * tracking.
+       * tracking. The useLayoutEffect that syncs filesRef runs synchronously
+       * after the flushSync-triggered render completes.
        */
       flushSync(() => {
-        setFiles(prevFiles => {
-          const next = [...prevFiles, file]
-          filesRef.current = next
-          return next
-        })
+        setFiles(prevFiles => [...prevFiles, file])
       })
     },
     [setFiles]
@@ -289,11 +289,7 @@ const CameraInput = ({
    */
   const removeFile = useCallback(
     (idToRemove: number): void => {
-      setFiles(prevFiles => {
-        const next = prevFiles.filter(file => file.id !== idToRemove)
-        filesRef.current = next
-        return next
-      })
+      setFiles(prevFiles => prevFiles.filter(file => file.id !== idToRemove))
     },
     [setFiles]
   )
@@ -303,13 +299,9 @@ const CameraInput = ({
    */
   const updateFile = useCallback(
     (curFileId: number, newFile: UploadFileInfo): void => {
-      setFiles(prevFiles => {
-        const next = prevFiles.map(file =>
-          file.id === curFileId ? newFile : file
-        )
-        filesRef.current = next
-        return next
-      })
+      setFiles(prevFiles =>
+        prevFiles.map(file => (file.id === curFileId ? newFile : file))
+      )
     },
     [setFiles]
   )
