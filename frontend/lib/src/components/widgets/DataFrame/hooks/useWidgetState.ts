@@ -132,12 +132,14 @@ function useWidgetState({
   /**
    * Updates numRows from the editing state.
    * This is required to keep the component state in sync with the editing state.
+   * Uses functional update form to avoid stale closure issues while keeping the callback stable.
    */
   const updateNumRows = useCallback(() => {
-    if (numRows !== editingState.current.getNumRows()) {
-      setNumRows(editingState.current.getNumRows())
-    }
-  }, [numRows])
+    setNumRows(currentNumRows => {
+      const newNumRows = editingState.current.getNumRows()
+      return currentNumRows !== newNumRows ? newNumRows : currentNumRows
+    })
+  }, [])
 
   /**
    * Load initial editing state from widget manager on first render.
@@ -246,14 +248,10 @@ function useWidgetState({
 
         selectionState.selection.rows = newSelection.rows
           .toArray()
-          .map(row => {
-            return getOriginalIndex(row)
-          })
+          .map(row => getOriginalIndex(row))
         selectionState.selection.columns = newSelection.columns
           .toArray()
-          .map(columnIdx => {
-            return getColumnName(columns[columnIdx])
-          })
+          .map(columnIdx => getColumnName(columns[columnIdx]))
 
         // Parse cell selections into our widget state structure:
         if (syncCellSelections && newSelection.current) {
@@ -350,9 +348,9 @@ function useWidgetState({
         return undefined
       }
 
-      const columnNames: string[] = columns.map(column => {
-        return getColumnName(column)
-      })
+      const columnNames: string[] = columns.map(column =>
+        getColumnName(column)
+      )
 
       const selectionState: DataframeState = JSON.parse(initialWidgetValue)
 
