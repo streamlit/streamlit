@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import { GridCellKind } from "@glideapps/glide-data-grid"
 import {
   Binary,
   Bool as BoolType,
@@ -53,6 +54,7 @@ import {
   getColumnTypeFromArrow,
   initAllColumnsFromArrow,
   initColumnFromArrow,
+  initEmptyIndexColumn,
   initIndexFromArrow,
 } from "./arrowUtils"
 import {
@@ -264,6 +266,93 @@ describe("applyPandasStylerCss", () => {
       bgCell: "yellow",
       textDark: "#31333F",
     })
+  })
+
+  it("should apply font-weight from css", () => {
+    const CSS_STYLES = `#T_f116e_row0_col0 { font-weight: bold }`
+    const styledCell = applyPandasStylerCss(
+      getTextCell(true, false),
+      "#T_f116e_row0_col0",
+      CSS_STYLES
+    )
+    // Font weight should be applied in baseFontStyle
+    expect(styledCell.themeOverride?.baseFontStyle).toContain("bold")
+  })
+
+  it("should apply numeric font-weight from css", () => {
+    const CSS_STYLES = `#T_f116e_row0_col0 { font-weight: 700 }`
+    const styledCell = applyPandasStylerCss(
+      getTextCell(true, false),
+      "#T_f116e_row0_col0",
+      CSS_STYLES
+    )
+    expect(styledCell.themeOverride?.baseFontStyle).toContain("700")
+  })
+
+  it("should apply text color to bubble cells", () => {
+    const CSS_STYLES = `#T_f116e_row0_col0 { color: blue }`
+    const bubbleCell = {
+      kind: GridCellKind.Bubble as const,
+      data: ["tag1", "tag2"],
+      allowOverlay: false,
+    }
+    const styledCell = applyPandasStylerCss(
+      bubbleCell,
+      "#T_f116e_row0_col0",
+      CSS_STYLES
+    )
+    expect(styledCell.themeOverride?.textBubble).toEqual("blue")
+  })
+
+  it("should apply text color to URI cells as link color", () => {
+    const CSS_STYLES = `#T_f116e_row0_col0 { color: green }`
+    const uriCell = {
+      kind: GridCellKind.Uri as const,
+      data: "https://example.com",
+      allowOverlay: false,
+      displayData: "https://example.com",
+    }
+    const styledCell = applyPandasStylerCss(
+      uriCell,
+      "#T_f116e_row0_col0",
+      CSS_STYLES
+    )
+    expect(styledCell.themeOverride?.linkColor).toEqual("green")
+  })
+
+  it("should return cell unchanged when css does not contain element id", () => {
+    const CSS_STYLES = `#T_other_row0_col0 { color: red }`
+    const MOCK_CELL = getTextCell(true, false)
+    const styledCell = applyPandasStylerCss(
+      MOCK_CELL,
+      "#T_f116e_row0_col0",
+      CSS_STYLES
+    )
+    expect(styledCell).toEqual(MOCK_CELL)
+  })
+})
+
+describe("initEmptyIndexColumn", () => {
+  it("creates an empty index column with correct properties", () => {
+    const emptyColumn = initEmptyIndexColumn()
+
+    expect(emptyColumn.id).toBe("_empty-index")
+    expect(emptyColumn.indexNumber).toBe(0)
+    expect(emptyColumn.title).toBe("")
+    expect(emptyColumn.name).toBe("")
+    expect(emptyColumn.isEditable).toBe(false)
+    expect(emptyColumn.isIndex).toBe(true)
+    expect(emptyColumn.isPinned).toBe(true)
+    expect(emptyColumn.isHidden).toBe(false)
+    expect(emptyColumn.isStretched).toBe(false)
+  })
+
+  it("has correct arrow type structure", () => {
+    const emptyColumn = initEmptyIndexColumn()
+
+    expect(emptyColumn.arrowType.type).toBe(DataFrameCellType.INDEX)
+    expect(emptyColumn.arrowType.arrowField).toBeDefined()
+    expect(emptyColumn.arrowType.pandasType).toBeUndefined()
   })
 })
 
