@@ -32,20 +32,24 @@ vi.mock("@emotion/react", () => ({
   keyframes: () => "keyframes",
 }))
 
+// Track created elements for cleanup
+const createdElements: HTMLTextAreaElement[] = []
+
 // Helper to create a real textarea element for testing
 // Using real DOM elements is required because getComputedStyle needs actual elements
 const createMockTextareaRef = (
   overrides: Partial<{
     offsetHeight: number
     scrollHeight: number
-    style: { height: string }
+    lineHeight: string
+    padding: string
   }> = {}
 ): RefObject<HTMLTextAreaElement> => {
   const textarea = document.createElement("textarea")
 
   // Set CSS styles so getComputedStyle returns numeric values
-  textarea.style.lineHeight = "40px"
-  textarea.style.padding = "0px"
+  textarea.style.lineHeight = overrides.lineHeight ?? "40px"
+  textarea.style.padding = overrides.padding ?? "0px"
 
   Object.defineProperty(textarea, "offsetHeight", {
     value: overrides.offsetHeight ?? 40,
@@ -60,13 +64,15 @@ const createMockTextareaRef = (
 
   // Append to document so getComputedStyle works
   document.body.appendChild(textarea)
+  createdElements.push(textarea)
 
   return { current: textarea }
 }
 
-// Clean up DOM after each test
+// Clean up DOM after each test using explicit removal
 afterEach(() => {
-  document.body.innerHTML = ""
+  createdElements.forEach(el => el.remove())
+  createdElements.length = 0
 })
 
 describe("useTextInputAutoExpand", () => {
@@ -106,7 +112,6 @@ describe("useTextInputAutoExpand", () => {
       )
 
       // Should be extended since scrollHeight (80) > minHeight (40) + rounding offset (1)
-      // The hook should automatically calculate this on initialization
       expect(result.current.isExtended).toBe(true)
       expect(result.current.height).toBe("81px") // scrollHeight + ROUNDING_OFFSET
     })
@@ -122,102 +127,119 @@ describe("useTextInputAutoExpand", () => {
       )
 
       // Should not be extended due to rounding offset
-      // The hook should automatically calculate this on initialization
       expect(result.current.isExtended).toBe(false)
       expect(result.current.height).toBe("2.5rem")
+    })
+
+    it("should handle non-zero padding in maxHeight calculation", () => {
+      const paddedRef = createMockTextareaRef({
+        offsetHeight: 56, // 40px line + 16px padding
+        lineHeight: "40px",
+        padding: "8px", // 8px top + 8px bottom = 16px total
+      })
+
+      const { result } = renderHook(() =>
+        useTextInputAutoExpand({ textareaRef: paddedRef })
+      )
+
+      // maxHeight should be (40 * 6.5) + 16 = 276px
+      expect(result.current.maxHeight).toBe("276px")
+    })
+
+    it("should fallback to offsetHeight when lineHeight is 'normal'", () => {
+      const normalLineHeightRef = createMockTextareaRef({
+        offsetHeight: 40,
+        lineHeight: "normal", // parseFloat("normal") = NaN
+      })
+
+      const { result } = renderHook(() =>
+        useTextInputAutoExpand({ textareaRef: normalLineHeightRef })
+      )
+
+      // Should fallback to offsetHeight (40) for calculation
+      // maxHeight = 40 * 6.5 = 260px
+      expect(result.current.maxHeight).toBe("260px")
     })
   })
 
   describe("scroll height calculation", () => {
     it("should update isExtended when textarea scroll height changes", () => {
-      // Start with a non-extended textarea
       const dynamicRef = createMockTextareaRef()
 
       const { result } = renderHook(() =>
         useTextInputAutoExpand({ textareaRef: dynamicRef })
       )
 
-      // Initial state should not be extended
       expect(result.current.isExtended).toBe(false)
       expect(result.current.height).toBe("2.5rem")
 
-      // Simulate content growth by changing scrollHeight
+      // Simulate content growth
       Object.defineProperty(dynamicRef.current!, "scrollHeight", {
-        value: 100, // Now greater than offsetHeight
+        value: 100,
         writable: true,
         configurable: true,
       })
 
-      // Trigger recalculation
       act(() => {
         result.current.updateScrollHeight()
       })
 
-      // Should now be extended
       expect(result.current.isExtended).toBe(true)
-      expect(result.current.height).toBe("101px") // new scrollHeight + ROUNDING_OFFSET
+      expect(result.current.height).toBe("101px")
     })
 
-    it("should become extended when scroll height decreases significantly below offset height", () => {
-      // Start with a non-extended textarea (equal heights)
+    it("should not be extended when scroll height is less than min height", () => {
+      // Start with a non-extended textarea
       const shrinkingRef = createMockTextareaRef()
 
       const { result } = renderHook(() =>
         useTextInputAutoExpand({ textareaRef: shrinkingRef })
       )
 
-      // Initial state should not be extended
       expect(result.current.isExtended).toBe(false)
-      expect(result.current.height).toBe("2.5rem")
 
-      // Simulate content shrinking by changing scrollHeight to smaller value
+      // Simulate content shrinking below minHeight
       Object.defineProperty(shrinkingRef.current!, "scrollHeight", {
-        value: 30, // Now less than offsetHeight (40)
+        value: 30, // Less than offsetHeight (40)
         writable: true,
         configurable: true,
       })
 
-      // Trigger recalculation
       act(() => {
         result.current.updateScrollHeight()
       })
 
-      // Should be extended because Math.abs(30-40) = 10 > ROUNDING_OFFSET
-      // The current hook logic treats significant differences in either direction as extended
-      expect(result.current.isExtended).toBe(true)
-      expect(result.current.height).toBe("31px") // scrollHeight + ROUNDING_OFFSET
+      // Should NOT be extended - scrollHeight < minHeight means content fits
+      expect(result.current.isExtended).toBe(false)
+      expect(result.current.height).toBe("2.5rem")
     })
 
     it("should update isExtended when textarea shrinks back to normal", () => {
-      // Start with an extended textarea
       const shrinkingRef = createMockTextareaRef({
         offsetHeight: 40,
-        scrollHeight: 100, // Greater than offsetHeight - extended
+        scrollHeight: 100, // Extended
       })
 
       const { result } = renderHook(() =>
         useTextInputAutoExpand({ textareaRef: shrinkingRef })
       )
 
-      // Initial state should be extended
       expect(result.current.isExtended).toBe(true)
       expect(result.current.height).toBe("101px")
 
-      // Simulate content shrinking by changing scrollHeight back to normal
+      // Simulate content shrinking
       Object.defineProperty(shrinkingRef.current!, "scrollHeight", {
-        value: 40, // Same as offsetHeight - not extended
+        value: 40,
         writable: true,
         configurable: true,
       })
 
-      // Trigger recalculation
       act(() => {
         result.current.updateScrollHeight()
       })
 
-      // Should no longer be extended
       expect(result.current.isExtended).toBe(false)
-      expect(result.current.height).toBe("2.5rem") // Back to default height
+      expect(result.current.height).toBe("2.5rem")
     })
   })
 
@@ -233,24 +255,21 @@ describe("useTextInputAutoExpand", () => {
         })
       )
 
-      // Initial state should not be extended
       expect(result.current.isExtended).toBe(false)
-      expect(result.current.height).toBe("2.5rem")
 
-      // Simulate content growth by changing scrollHeight
+      // Simulate content growth
       Object.defineProperty(reactiveRef.current!, "scrollHeight", {
-        value: 80, // Now significantly greater than offsetHeight
+        value: 80,
         writable: true,
         configurable: true,
       })
 
-      // Change dependency and rerender - this should trigger updateScrollHeight
+      // Change dependency to trigger recalculation
       dependency = "changed"
       rerender()
 
-      // Should now be extended due to dependency change triggering recalculation
       expect(result.current.isExtended).toBe(true)
-      expect(result.current.height).toBe("81px") // new scrollHeight + ROUNDING_OFFSET
+      expect(result.current.height).toBe("81px")
     })
 
     it("should handle multiple dependencies", () => {
@@ -265,24 +284,19 @@ describe("useTextInputAutoExpand", () => {
         })
       )
 
-      // Initial state should not be extended
       expect(result.current.isExtended).toBe(false)
-      expect(result.current.height).toBe("2.5rem")
 
-      // Simulate content growth by changing scrollHeight
       Object.defineProperty(multiDepRef.current!, "scrollHeight", {
-        value: 100, // Now significantly greater than offsetHeight
+        value: 100,
         writable: true,
         configurable: true,
       })
 
-      // Change one dependency and rerender - this should trigger updateScrollHeight
       dep1 = "changed1"
       rerender()
 
-      // Should now be extended due to dependencies change triggering recalculation
       expect(result.current.isExtended).toBe(true)
-      expect(result.current.height).toBe("101px") // new scrollHeight + ROUNDING_OFFSET
+      expect(result.current.height).toBe("101px")
     })
   })
 
@@ -303,10 +317,31 @@ describe("useTextInputAutoExpand", () => {
     })
   })
 
+  describe("clearScrollHeight function", () => {
+    it("should reset scroll height and extended state", () => {
+      const extendedRef = createMockTextareaRef({
+        offsetHeight: 40,
+        scrollHeight: 100,
+      })
+
+      const { result } = renderHook(() =>
+        useTextInputAutoExpand({ textareaRef: extendedRef })
+      )
+
+      expect(result.current.isExtended).toBe(true)
+
+      act(() => {
+        result.current.clearScrollHeight()
+      })
+
+      expect(result.current.isExtended).toBe(false)
+      expect(result.current.height).toBe("2.5rem")
+    })
+  })
+
   describe("style height manipulation", () => {
     it("should restore original height after calculation", () => {
       const mockTextareaRef = createMockTextareaRef()
-      // Set an initial height
       mockTextareaRef.current!.style.height = "50px"
 
       const { result } = renderHook(() =>
@@ -317,7 +352,6 @@ describe("useTextInputAutoExpand", () => {
         result.current.updateScrollHeight()
       })
 
-      // After calculation, height should be restored to original value
       expect(mockTextareaRef.current?.style.height).toBe("50px")
     })
   })
@@ -333,7 +367,6 @@ describe("useTextInputAutoExpand", () => {
         useTextInputAutoExpand({ textareaRef: zeroScrollRef })
       )
 
-      // The hook should automatically handle this on initialization
       expect(result.current.isExtended).toBe(false)
       expect(result.current.height).toBe("2.5rem")
     })
@@ -348,9 +381,8 @@ describe("useTextInputAutoExpand", () => {
         useTextInputAutoExpand({ textareaRef: largeContentRef })
       )
 
-      // The hook should automatically handle this on initialization
       expect(result.current.isExtended).toBe(true)
-      // Height should be capped at maxHeight (260px) instead of scrollHeight + 1
+      // Height should be capped at maxHeight (260px)
       expect(result.current.height).toBe("260px")
       expect(result.current.maxHeight).toBe("260px")
     })

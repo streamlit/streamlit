@@ -14,13 +14,7 @@
  * limitations under the License.
  */
 
-import {
-  RefObject,
-  useCallback,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "react"
+import { RefObject, useCallback, useLayoutEffect, useState } from "react"
 
 import { useEmotionTheme } from "@streamlit/lib"
 
@@ -31,11 +25,6 @@ const MAX_VISIBLE_NUM_LINES = 6.5
 // Rounding errors can arbitrarily create scrollbars. We add a rounding offset
 // to manage it better.
 const ROUNDING_OFFSET = 1
-
-// Type for height guidance ref
-interface HeightGuidance {
-  minHeight: number
-}
 
 /**
  * Calculates the natural scroll height of a textarea by temporarily resetting its height
@@ -48,7 +37,7 @@ const getScrollHeight = (
   if (textarea) {
     const originalHeight = textarea.style.height
     textarea.style.height = "auto"
-    // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
+    // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Required to measure natural content height
     newScrollHeight = textarea.scrollHeight
     textarea.style.height = originalHeight
   }
@@ -56,43 +45,16 @@ const getScrollHeight = (
 }
 
 /**
- * Determines if the text input should be in extended state based on scroll height
+ * Determines if the text input should be in extended state.
+ * Extended means the content height exceeds the default single-line height.
  */
 const calculateIsExtended = (
   scrollHeight: number,
-  minHeight: number,
-  textareaRef: RefObject<HTMLTextAreaElement>
+  minHeight: number
 ): boolean => {
-  return scrollHeight > 0 && textareaRef.current
-    ? Math.abs(scrollHeight - minHeight) > ROUNDING_OFFSET
-    : false
-}
-
-/**
- * Initializes height guidance based on the current textarea element
- */
-const initializeHeightGuidance = (
-  textareaRef: RefObject<HTMLTextAreaElement>,
-  heightGuidance: RefObject<HeightGuidance>,
-  setMaxHeight: (maxHeight: number) => void
-): void => {
-  if (textareaRef.current && heightGuidance.current) {
-    // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
-    const { offsetHeight } = textareaRef.current
-    // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- One-time initialization in useLayoutEffect to calculate line heights and padding
-    const computedStyle = window.getComputedStyle(textareaRef.current)
-    const lineHeight = parseFloat(computedStyle.lineHeight)
-    const paddingTop = parseFloat(computedStyle.paddingTop)
-    const paddingBottom = parseFloat(computedStyle.paddingBottom)
-    const totalPadding = paddingTop + paddingBottom
-
-    heightGuidance.current.minHeight = offsetHeight
-    // Calculate maxHeight based on line height, not offsetHeight
-    // This ensures we get exactly MAX_VISIBLE_NUM_LINES of content
-    const calculatedMaxHeight =
-      lineHeight * MAX_VISIBLE_NUM_LINES + totalPadding
-    setMaxHeight(calculatedMaxHeight)
-  }
+  // Only consider extended if scrollHeight is greater than minHeight
+  // (accounting for rounding errors)
+  return scrollHeight > 0 && scrollHeight - minHeight > ROUNDING_OFFSET
 }
 
 /**
@@ -107,7 +69,6 @@ const calculateHeight = (
 ): string => {
   if (isExtended) {
     const targetHeight = scrollHeight + ROUNDING_OFFSET
-    // Only cap if maxHeight is initialized (non-zero)
     // Cap height at maxHeight to trigger scrolling when content exceeds limit
     const cappedHeight =
       maxHeight > 0 ? Math.min(targetHeight, maxHeight) : targetHeight
@@ -152,37 +113,56 @@ export const useTextInputAutoExpand = ({
   dependencies = [],
 }: UseTextInputAutoExpandOptions): UseTextInputAutoExpandResult => {
   const theme = useEmotionTheme()
-  const heightGuidance = useRef<HeightGuidance>({ minHeight: 0 })
 
   const [scrollHeight, setScrollHeight] = useState(0)
   const [isExtended, setIsExtended] = useState(false)
+  const [minHeight, setMinHeight] = useState(0)
   const [maxHeight, setMaxHeight] = useState(0)
 
+  // State setters are guaranteed stable by React, no need to include in deps
   const updateScrollHeight = useCallback((): void => {
-    setScrollHeight(getScrollHeight(textareaRef))
-  }, [textareaRef, setScrollHeight])
+    const newScrollHeight = getScrollHeight(textareaRef)
+    setScrollHeight(newScrollHeight)
+    setIsExtended(calculateIsExtended(newScrollHeight, minHeight))
+  }, [textareaRef, minHeight])
 
   const clearScrollHeight = useCallback((): void => {
     setScrollHeight(0)
-  }, [setScrollHeight])
+    setIsExtended(false)
+  }, [])
 
-  // Initialize height guidance
+  // Initialize height guidance on mount
   useLayoutEffect(() => {
-    if (textareaRef.current) {
-      initializeHeightGuidance(textareaRef, heightGuidance, setMaxHeight)
+    if (!textareaRef.current) {
+      return
     }
+
+    // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Required to measure element dimensions
+    const { offsetHeight } = textareaRef.current
+    // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Required to calculate line height and padding
+    const computedStyle = window.getComputedStyle(textareaRef.current)
+
+    // parseFloat("normal") returns NaN, so fallback to offsetHeight
+    const lineHeight = parseFloat(computedStyle.lineHeight) || offsetHeight
+    const paddingTop = parseFloat(computedStyle.paddingTop) || 0
+    const paddingBottom = parseFloat(computedStyle.paddingBottom) || 0
+    const totalPadding = paddingTop + paddingBottom
+
+    setMinHeight(offsetHeight)
+    // Calculate maxHeight based on line height, not offsetHeight
+    // This ensures we get exactly MAX_VISIBLE_NUM_LINES of content
+    const calculatedMaxHeight =
+      lineHeight * MAX_VISIBLE_NUM_LINES + totalPadding
+    setMaxHeight(calculatedMaxHeight)
   }, [textareaRef])
 
-  // Update extended state when scroll height changes
+  // Update scroll height and extended state when dependencies change
+  // Combined into single effect to avoid render cascade
   useLayoutEffect(() => {
-    const { minHeight } = heightGuidance.current
-    setIsExtended(calculateIsExtended(scrollHeight, minHeight, textareaRef))
-  }, [scrollHeight, textareaRef])
-
-  // Update scroll height when dependencies change
-  useLayoutEffect(() => {
-    updateScrollHeight()
-  }, [textareaRef, updateScrollHeight, ...dependencies]) // eslint-disable-line react-hooks/exhaustive-deps
+    const newScrollHeight = getScrollHeight(textareaRef)
+    setScrollHeight(newScrollHeight)
+    setIsExtended(calculateIsExtended(newScrollHeight, minHeight))
+  }, [textareaRef, minHeight, ...dependencies]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Calculate height values using theme default
   const defaultHeight = theme.sizes.minElementHeight
