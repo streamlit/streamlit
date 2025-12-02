@@ -27,7 +27,7 @@ export const StyledChatFileUploadDropzone = styled.div(({ theme }) => ({
 }))
 
 export const StyledChatFileUploadDropzoneLabel = styled.div(({ theme }) => ({
-  position: "absolute", // Changed to absolute
+  position: "absolute",
   inset: 0, // Cover the area
   border: `${theme.sizes.borderWidth} solid`,
   borderColor: theme.colors.primary,
@@ -49,9 +49,8 @@ export interface StyledFileUploadButtonContainerProps {
 export const StyledFileUploadButtonContainer =
   styled.div<StyledFileUploadButtonContainerProps>(({ disabled }) => ({
     display: "flex",
-    alignItems: "center", // Changed from top to center for better alignment in ActionRow
+    alignItems: "center",
     height: "100%",
-    // Removed negative margin
     cursor: disabled ? "not-allowed" : "auto",
   }))
 

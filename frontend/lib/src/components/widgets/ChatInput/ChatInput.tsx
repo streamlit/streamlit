@@ -684,7 +684,7 @@ function ChatInput({
                         overflowY: "auto", // Enable scrolling when content exceeds maxHeight
                         // Baseweb requires long-hand props
                         paddingLeft: theme.spacing.none,
-                        paddingRight: theme.spacing.none, // Removed calculation
+                        paddingRight: theme.spacing.none,
                         paddingBottom: theme.spacing.sm,
                         paddingTop: theme.spacing.sm,
                         width: "100%", // Ensure full width
@@ -709,7 +709,6 @@ function ChatInput({
               />
             )}
 
-            {/* Mic button - moved to left cluster, only show if not recording */}
             {acceptAudio && !isRecording && (
               <>
                 {recordingError ? (
