@@ -14,16 +14,38 @@
  * limitations under the License.
  */
 
-import * as polyfill from "polyfill-pseudoclass-has"
-import "vitest-canvas-mock"
-import { vi } from "vitest"
 import "@testing-library/jest-dom/vitest"
+import { vi } from "vitest"
+import "vitest-canvas-mock"
 
 // In the event a sub-library uses the jest global, we need to make sure it's
 // aliased to the vi global. An example is timers using dom testing library
 // which is used by the react testing library and waitFor.
 // (See https://github.com/testing-library/dom-testing-library/issues/987)
 global.jest = vi
+
+// Initialize the shared mock state for StreamlitConfig.
+// Type declaration is in global.d.ts.
+// This must be done early, before any modules that use StreamlitConfig are loaded.
+//
+// Usage in test files:
+// 1. Add the vi.mock call with a getter (required for dynamic value resolution):
+//    vi.mock("@streamlit/utils", async () => {
+//      const actual = await vi.importActual("@streamlit/utils")
+//      return {
+//        ...actual,
+//        get StreamlitConfig() {
+//          return globalThis.__mockStreamlitConfig
+//        },
+//      }
+//    })
+//
+// 2. Reset in afterEach:
+//    afterEach(() => { globalThis.__mockStreamlitConfig = {} })
+//
+// 3. Set values in tests:
+//    globalThis.__mockStreamlitConfig.BACKEND_BASE_URL = "http://example.com"
+globalThis.__mockStreamlitConfig = {}
 
 if (typeof window.URL.createObjectURL === "undefined") {
   window.URL.createObjectURL = vi.fn()

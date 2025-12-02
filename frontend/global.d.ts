@@ -14,9 +14,24 @@
  * limitations under the License.
  */
 
-import "./polyfills"
+/**
+ * Type for the shared mock StreamlitConfig state used in tests.
+ * This allows tests to control StreamlitConfig values.
+ */
+interface MockStreamlitConfigState {
+  BACKEND_BASE_URL?: string
+  HOST_CONFIG_BASE_URL?: string
+  DOWNLOAD_ASSETS_BASE_URL?: string
+  MAIN_PAGE_BASE_URL?: string
+  CUSTOM_COMPONENT_CLIENT_ID?: string
+  LIGHT_THEME?: unknown
+  DARK_THEME?: unknown
+  ENABLE_RELOAD_BASED_ON_HARDCODED_STREAMLIT_VERSION?: boolean
+}
 
-export * from "./browser"
-export * from "./config"
-export * from "./types"
-export * from "./uri"
+declare global {
+  // eslint-disable-next-line no-var
+  var __mockStreamlitConfig: MockStreamlitConfigState
+}
+
+export {}

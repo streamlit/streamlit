@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import { StreamlitConfig } from "@streamlit/utils"
+
 interface DownloadLinkElementParameters {
   enforceDownloadInNewTab: boolean
   url: string
@@ -33,12 +35,12 @@ const createDownloadLinkElement = ({
     link.setAttribute("target", "_self")
   }
 
-  // We don't set the download attribute when the window.__streamlit?.DOWNLOAD_ASSETS_BASE_URL variable is set
+  // We don't set the download attribute when the StreamlitConfig.DOWNLOAD_ASSETS_BASE_URL variable is set
   // and the passed url is a request to that origin. The reason is that there is a bug for service workers where they
   // don't intercept the download request otherwise (see https://issues.chromium.org/issues/40410035). Firefox does not have
   // the same problem, so we always set the download attribute for Firefox. SiS is using a service worker, so without this logic
   // download requests wouldn't work right now.
-  const downloadBaseUrl = window.__streamlit?.DOWNLOAD_ASSETS_BASE_URL
+  const downloadBaseUrl = StreamlitConfig.DOWNLOAD_ASSETS_BASE_URL
   if (
     !downloadBaseUrl ||
     !url.startsWith(downloadBaseUrl) ||

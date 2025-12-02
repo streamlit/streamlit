@@ -12,5 +12,5 @@
       "@streamlit/utils": ["../utils/src"]
     }
   },
-  "include": ["src/**/*", "../lib/declarations.d.ts", "../lib/emotion.d.ts"]
+  "include": ["src/**/*", "../lib/declarations.d.ts", "../lib/emotion.d.ts", "../global.d.ts"]
 }

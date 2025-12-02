@@ -25,6 +25,17 @@ import {
   serializeForDisplay,
 } from "./utils"
 
+// Mock StreamlitConfig using global mock state (see vitest.setup.ts)
+vi.mock("@streamlit/utils", async () => {
+  const actual = await vi.importActual("@streamlit/utils")
+  return {
+    ...actual,
+    get StreamlitConfig() {
+      return globalThis.__mockStreamlitConfig
+    },
+  }
+})
+
 describe("parseUriIntoBaseParts", () => {
   const location: Partial<Location> = {}
   const { location: originalLocation } = window
@@ -199,7 +210,7 @@ describe("getPossibleBaseUris", () => {
   })
 
   afterEach(() => {
-    window.__streamlit = undefined
+    globalThis.__mockStreamlitConfig = {}
     Object.defineProperty(window, "location", {
       value: { ...originalLocation, pathname: originalPathName },
       writable: true,
@@ -240,8 +251,9 @@ describe("getPossibleBaseUris", () => {
     })
   })
 
-  it("Calculates possibleBaseUris with window.__streamlit.BACKEND_BASE_URL if set", () => {
-    window.__streamlit = { BACKEND_BASE_URL: "https://used_host:443/foo/bar" }
+  it("Calculates possibleBaseUris with StreamlitConfig.BACKEND_BASE_URL if set", () => {
+    globalThis.__mockStreamlitConfig.BACKEND_BASE_URL =
+      "https://used_host:443/foo/bar"
     window.location.href = "https://unused_host:443/foo/bar"
 
     const possibleBaseUris = getPossibleBaseUris()
