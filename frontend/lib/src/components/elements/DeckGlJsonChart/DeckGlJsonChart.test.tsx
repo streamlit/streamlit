@@ -155,7 +155,7 @@ describe("DeckGlJsonChart", () => {
         selectionMode: [DeckGlJsonChartProto.SelectionMode.SINGLE_OBJECT],
       },
     },
-  ])("should render correctly $description", ({ elementProps }) => {
+  ])("should render $description", ({ elementProps }) => {
     const props = getProps(elementProps)
     render(<DeckGlJsonChart {...props} />)
     expect(screen.getByTestId("stDeckGlJsonChart")).toBeVisible()
