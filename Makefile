@@ -413,6 +413,8 @@ autofix:
 	make frontend-init
 	make frontend-format
 	cd frontend/ ; yarn workspaces foreach --all run lint --fix
+	# Dedupe yarn.lock
+	cd frontend ; yarn dedupe
 	# Other fixes:
 	make update-notices
 	# Run all pre-commit fixes but not fail if any of them don't work.

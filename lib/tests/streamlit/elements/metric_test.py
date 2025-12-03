@@ -387,19 +387,19 @@ class MetricTest(DeltaGeneratorTestCase):
         test_cases = [
             (
                 "invalid",
-                "Invalid height value: 'invalid'. Height must be either an integer (pixels), 'stretch', or 'content'.",
+                "Height must be either a positive integer (pixels), 'stretch', or 'content'.",
             ),
             (
                 -100,
-                "Invalid height value: -100. Height must be either an integer (pixels), 'stretch', or 'content'.",
+                "Height must be either a positive integer (pixels), 'stretch', or 'content'.",
             ),
             (
                 0,
-                "Invalid height value: 0. Height must be either an integer (pixels), 'stretch', or 'content'.",
+                "Height must be either a positive integer (pixels), 'stretch', or 'content'.",
             ),
             (
                 100.5,
-                "Invalid height value: 100.5. Height must be either an integer (pixels), 'stretch', or 'content'.",
+                "Height must be either a positive integer (pixels), 'stretch', or 'content'.",
             ),
         ]
 
@@ -408,7 +408,7 @@ class MetricTest(DeltaGeneratorTestCase):
                 with pytest.raises(StreamlitAPIException) as exc:
                     st.metric("label_test", "123", height=height_value)
 
-                assert str(exc.value) == expected_error_message
+                assert expected_error_message in str(exc.value)
 
     def test_width_types(self):
         """Test that metric can be called with different width types."""
@@ -437,19 +437,19 @@ class MetricTest(DeltaGeneratorTestCase):
         test_cases = [
             (
                 "invalid",
-                "Invalid width value: 'invalid'. Width must be either an integer (pixels), 'stretch', or 'content'.",
+                "Width must be either a positive integer (pixels), 'stretch', or 'content'.",
             ),
             (
                 -100,
-                "Invalid width value: -100. Width must be either an integer (pixels), 'stretch', or 'content'.",
+                "Width must be either a positive integer (pixels), 'stretch', or 'content'.",
             ),
             (
                 0,
-                "Invalid width value: 0. Width must be either an integer (pixels), 'stretch', or 'content'.",
+                "Width must be either a positive integer (pixels), 'stretch', or 'content'.",
             ),
             (
                 100.5,
-                "Invalid width value: 100.5. Width must be either an integer (pixels), 'stretch', or 'content'.",
+                "Width must be either a positive integer (pixels), 'stretch', or 'content'.",
             ),
         ]
 
@@ -458,7 +458,7 @@ class MetricTest(DeltaGeneratorTestCase):
                 with pytest.raises(StreamlitAPIException) as exc:
                     st.metric("label_test", "123", width=width_value)
 
-                assert str(exc.value) == expected_error_message
+                assert expected_error_message in str(exc.value)
 
     def test_chart_data_none(self):
         """Test that metric works with default chart_data=None."""

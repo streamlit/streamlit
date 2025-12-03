@@ -114,12 +114,9 @@ describe("convertKeyToClassName", () => {
     { input: "another$Test_case", expected: "st-key-another-Test_case" },
   ]
 
-  test.each(testCases)(
-    "converts $input to $expected",
-    ({ input, expected }) => {
-      expect(convertKeyToClassName(input)).toBe(expected)
-    }
-  )
+  it.each(testCases)("converts $input to $expected", ({ input, expected }) => {
+    expect(convertKeyToClassName(input)).toBe(expected)
+  })
 })
 
 describe("getKeyFromId", () => {
@@ -159,12 +156,9 @@ describe("getKeyFromId", () => {
     },
   ]
 
-  test.each(testCases)(
-    "extracts the key from $input",
-    ({ input, expected }) => {
-      expect(getKeyFromId(input)).toBe(expected)
-    }
-  )
+  it.each(testCases)("extracts the key from $input", ({ input, expected }) => {
+    expect(getKeyFromId(input)).toBe(expected)
+  })
 })
 
 describe("backwardsCompatibleColumnGapSize", () => {
@@ -196,7 +190,7 @@ describe("backwardsCompatibleColumnGapSize", () => {
     { gap: "large", expected: streamlit.GapSize.LARGE },
   ]
 
-  test.each(gapStringCases)(
+  it.each(gapStringCases)(
     "converts '$gap' gap to corresponding GapSize",
     ({ gap, expected }) => {
       const columnProto = { gap }
@@ -217,7 +211,7 @@ describe("backwardsCompatibleColumnGapSize", () => {
     },
   ]
 
-  test.each(fallbackCases)(
+  it.each(fallbackCases)(
     "returns GapSize.SMALL $description",
     ({ proto, expected }) => {
       expect(backwardsCompatibleColumnGapSize(proto)).toBe(expected)
@@ -261,7 +255,7 @@ describe("checkFlexContainerBackwardsCompatibile", () => {
     },
   ]
 
-  test.each(testCases)("$description", ({ blockProto, expected }) => {
+  it.each(testCases)("$description", ({ blockProto, expected }) => {
     expect(
       checkFlexContainerBackwardsCompatibile(blockProto as BlockProto)
     ).toBe(expected)
@@ -303,7 +297,7 @@ describe("getBorderBackwardsCompatible", () => {
     },
   ]
 
-  test.each(testCases)("$description", ({ blockProto, expected }) => {
+  it.each(testCases)("$description", ({ blockProto, expected }) => {
     expect(getBorderBackwardsCompatible(blockProto as BlockProto)).toBe(
       expected
     )

@@ -41,7 +41,7 @@ describe("parseUriIntoBaseParts", () => {
     })
   })
 
-  test("gets all window URI parts", () => {
+  it("gets all window URI parts", () => {
     location.href = "https://the_host:9988/foo"
 
     expect(parseUriIntoBaseParts()).toMatchObject({
@@ -52,7 +52,7 @@ describe("parseUriIntoBaseParts", () => {
     })
   })
 
-  test("gets window URI parts without basePath", () => {
+  it("gets window URI parts without basePath", () => {
     location.href = "https://the_host:9988"
 
     expect(parseUriIntoBaseParts()).toMatchObject({
@@ -63,7 +63,7 @@ describe("parseUriIntoBaseParts", () => {
     })
   })
 
-  test("gets window URI parts with long basePath", () => {
+  it("gets window URI parts with long basePath", () => {
     location.href = "https://the_host:9988/foo/bar"
 
     expect(parseUriIntoBaseParts()).toMatchObject({
@@ -74,7 +74,7 @@ describe("parseUriIntoBaseParts", () => {
     })
   })
 
-  test("gets window URI parts with weird basePath", () => {
+  it("gets window URI parts with weird basePath", () => {
     location.href = "https://the_host:9988///foo/bar//"
 
     expect(parseUriIntoBaseParts()).toMatchObject({
@@ -86,7 +86,7 @@ describe("parseUriIntoBaseParts", () => {
   })
 })
 
-test("Uses provided URL instead of window.location.href to get URI parts if provided", () => {
+it("Uses provided URL instead of window.location.href to get URI parts if provided", () => {
   location.href = "https://the_host:9988/foo/bar"
 
   expect(
@@ -99,7 +99,7 @@ test("Uses provided URL instead of window.location.href to get URI parts if prov
   })
 })
 
-test("builds HTTP URI correctly", () => {
+it("builds HTTP URI correctly", () => {
   location.href = "http://something"
   const uri = buildHttpUri(
     {
@@ -113,7 +113,7 @@ test("builds HTTP URI correctly", () => {
   expect(uri).toBe("http://the_host:9988/foo/bar/baz")
 })
 
-test("builds HTTPS URI correctly", () => {
+it("builds HTTPS URI correctly", () => {
   location.href = "https://something"
   const uri = buildHttpUri(
     {
@@ -127,7 +127,7 @@ test("builds HTTPS URI correctly", () => {
   expect(uri).toBe("https://the_host:9988/foo/bar/baz")
 })
 
-test("builds HTTP URI with no base path", () => {
+it("builds HTTP URI with no base path", () => {
   location.href = "http://something"
   const uri = buildHttpUri(
     {
@@ -141,7 +141,7 @@ test("builds HTTP URI with no base path", () => {
   expect(uri).toBe("http://the_host:9988/baz")
 })
 
-test("builds WS URI correctly", () => {
+it("builds WS URI correctly", () => {
   location.href = "http://something"
   const uri = buildWsUri(
     {
@@ -155,7 +155,7 @@ test("builds WS URI correctly", () => {
   expect(uri).toBe("ws://the_host:9988/foo/bar/baz")
 })
 
-test("builds WSS URI correctly", () => {
+it("builds WSS URI correctly", () => {
   const uri = buildWsUri(
     {
       protocol: "https:",
@@ -168,7 +168,7 @@ test("builds WSS URI correctly", () => {
   expect(uri).toBe("wss://the_host:9988/foo/bar/baz")
 })
 
-test("builds WS URI with no base path", () => {
+it("builds WS URI with no base path", () => {
   location.href = "http://something"
   const uri = buildWsUri(
     {

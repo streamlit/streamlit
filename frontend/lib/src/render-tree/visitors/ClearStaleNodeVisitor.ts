@@ -41,7 +41,7 @@ export class ClearStaleNodeVisitor
 {
   private readonly currentScriptRunId: string
   private readonly fragmentIdsThisRun: string[]
-  private fragmentIdOfBlock?: string
+  private readonly fragmentIdOfBlock?: string
 
   constructor(
     currentScriptRunId: string,
