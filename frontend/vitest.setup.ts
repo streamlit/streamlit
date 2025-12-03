@@ -14,10 +14,9 @@
  * limitations under the License.
  */
 
-import * as polyfill from "polyfill-pseudoclass-has"
-import "vitest-canvas-mock"
-import { vi } from "vitest"
 import "@testing-library/jest-dom/vitest"
+import { vi } from "vitest"
+import "vitest-canvas-mock"
 
 // In the event a sub-library uses the jest global, we need to make sure it's
 // aliased to the vi global. An example is timers using dom testing library
@@ -44,10 +43,32 @@ Element.prototype.animate = vi
   .fn()
   .mockImplementation(() => ({ addEventListener: vi.fn() }))
 
-global.ResizeObserver = vi.fn().mockImplementation(() => ({
-  observe: vi.fn(),
-  unobserve: vi.fn(),
-  disconnect: vi.fn(),
-}))
+// Provide a constructable ResizeObserver mock so `new ResizeObserver(...)`
+// works in tests under Vitest v4.
+const resizeObserverMock = vi.fn()
+
+class ResizeObserverMock {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
+  public callback: any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
+  public observe: any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
+  public unobserve: any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
+  public disconnect: any
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
+  constructor(callback: any) {
+    this.callback = callback
+    resizeObserverMock(callback)
+    this.observe = vi.fn()
+    this.unobserve = vi.fn()
+    this.disconnect = vi.fn()
+  }
+}
+
+// Cast through unknown/any to avoid relying on DOM lib types in this setup file.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
+;(global as any).ResizeObserver = ResizeObserverMock
 
 process.env.TZ = "UTC"
