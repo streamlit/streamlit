@@ -37,3 +37,4 @@ pytest-github-actions-annotate-failures
 pytest-benchmark>=5.1.0
 pytest-repeat>=0.9.3
 pytest-timeout>=2.3.1
+zipp>=3.19.1 # not directly required, pinned by Snyk to avoid a vulnerability
