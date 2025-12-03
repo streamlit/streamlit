@@ -30,7 +30,7 @@ from e2e_playwright.shared.dataframe_utils import (
     open_column_menu,
 )
 
-NUM_DATAFRAME_ELEMENTS = 33
+NUM_DATAFRAME_ELEMENTS = 34
 
 
 def test_dataframe_supports_various_configurations(
