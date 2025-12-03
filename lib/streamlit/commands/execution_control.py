@@ -242,7 +242,7 @@ def switch_page(  # type: ignore[misc]
     **Example 2: Passing query parameters**
 
     The following example shows how to pass query parameters when switching to a
-    different page. This example used ``st.navigation`` to create a multipage app.
+    different page. This example uses ``st.navigation`` to create a multipage app.
 
     .. code-block:: text
 
