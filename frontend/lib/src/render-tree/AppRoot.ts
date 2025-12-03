@@ -98,7 +98,7 @@ export class AppRoot {
         }
         break
 
-      case LoadingScreenType.V2:
+      default:
         waitElement = makeAppSkeletonElement()
         break
     }
