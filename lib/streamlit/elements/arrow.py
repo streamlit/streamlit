@@ -517,9 +517,10 @@ class ArrowMixin:
             which fits one line of text.
 
         placeholder : str or None
-            The text that should be shown for missing values (such as ``"None"``,
-            ``"NaN"``, ``"-"``, or ``""``). If this is ``None`` (default),
-            missing values are displayed as ``"None"``.
+            The text that should be shown for missing values. If this is
+            ``None`` (default), missing values are displayed as "None". To
+            leave a cell empty, use an empty string (``""``). Other common
+            values are ``"null"``, ``"NaN"`` and ``"-"``.
 
         Returns
         -------
