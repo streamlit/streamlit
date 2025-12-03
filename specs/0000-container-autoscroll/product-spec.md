@@ -52,7 +52,7 @@ This proposal exposes this existing functionality as a user-configurable paramet
 ```python
 st.container(
     ...,
-    autoscroll: bool | None = None,
+    autoscroll: bool | None = None,  # NEW
 )
 ```
 
