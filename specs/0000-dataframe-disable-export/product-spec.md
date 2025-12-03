@@ -22,6 +22,9 @@ Currently, `st.dataframe` provides:
 For internal dashboards or applications displaying confidential information, users want to
 restrict these export capabilities to make it less convenient to extract large amounts of data.
 
+**Request:** [#8402](https://github.com/streamlit/streamlit/issues/8402) — Possibility to disable
+the "Download as CSV" button (27+ upvotes)
+
 **Note:** This is a convenience feature, not a security control. Technically skilled users
 can still extract data from the frontend.
 
