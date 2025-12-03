@@ -55,12 +55,22 @@ describe("encodeToWav", () => {
       close: vi.fn(),
     }
 
-    global.AudioContext = vi.fn(
-      () => mockAudioContext
-    ) as unknown as typeof AudioContext
-    global.OfflineAudioContext = vi.fn(
-      () => mockOfflineContext
-    ) as unknown as typeof OfflineAudioContext
+    const AudioContextMock = vi
+      .fn()
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
+      .mockImplementation(function (this: any) {
+        return mockAudioContext as unknown as AudioContext
+      }) as unknown as typeof AudioContext
+
+    const OfflineAudioContextMock = vi
+      .fn()
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
+      .mockImplementation(function (this: any) {
+        return mockOfflineContext as unknown as OfflineAudioContext
+      }) as unknown as typeof OfflineAudioContext
+
+    global.AudioContext = AudioContextMock
+    global.OfflineAudioContext = OfflineAudioContextMock
 
     const testArrayBuffer = new ArrayBuffer(100)
     const testBlob = {
@@ -107,9 +117,14 @@ describe("encodeToWav", () => {
       close: vi.fn(),
     }
 
-    global.AudioContext = vi.fn(
-      () => mockAudioContext
-    ) as unknown as typeof AudioContext
+    const AudioContextMock = vi
+      .fn()
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
+      .mockImplementation(function (this: any) {
+        return mockAudioContext as unknown as AudioContext
+      }) as unknown as typeof AudioContext
+
+    global.AudioContext = AudioContextMock
     const originalOfflineAudioContext = global.OfflineAudioContext
     global.OfflineAudioContext =
       undefined as unknown as typeof OfflineAudioContext
@@ -184,12 +199,22 @@ describe("encodeToWav", () => {
     const originalAudioContext = global.AudioContext
     const originalOfflineAudioContext = global.OfflineAudioContext
 
-    global.AudioContext = vi.fn(
-      () => mockAudioContext
-    ) as unknown as typeof AudioContext
-    global.OfflineAudioContext = vi.fn(
-      () => mockOfflineContext
-    ) as unknown as typeof OfflineAudioContext
+    const AudioContextMock = vi
+      .fn()
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
+      .mockImplementation(function (this: any) {
+        return mockAudioContext as unknown as AudioContext
+      }) as unknown as typeof AudioContext
+
+    const OfflineAudioContextMock = vi
+      .fn()
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
+      .mockImplementation(function (this: any) {
+        return mockOfflineContext as unknown as OfflineAudioContext
+      }) as unknown as typeof OfflineAudioContext
+
+    global.AudioContext = AudioContextMock
+    global.OfflineAudioContext = OfflineAudioContextMock
 
     const testArrayBuffer = new ArrayBuffer(100)
     const testBlob = {

@@ -71,4 +71,42 @@ class ResizeObserverMock {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
 ;(global as any).ResizeObserver = ResizeObserverMock
 
+// Minimal AudioBuffer mock for environments without the Web Audio API (Node).
+// This is sufficient for wavesurfer.js and related audio tests that only
+// require a constructable AudioBuffer with length/sampleRate metadata.
+class AudioBufferMock {
+  public length: number
+  public sampleRate: number
+  public numberOfChannels: number
+
+  constructor(
+    optionsOrLength:
+      | number
+      | {
+          length: number
+          sampleRate: number
+          numberOfChannels?: number
+        },
+    sampleRate?: number
+  ) {
+    if (typeof optionsOrLength === "number") {
+      this.length = optionsOrLength
+      this.sampleRate = sampleRate ?? 44100
+      this.numberOfChannels = 1
+    } else {
+      this.length = optionsOrLength.length
+      this.sampleRate = optionsOrLength.sampleRate
+      this.numberOfChannels = optionsOrLength.numberOfChannels ?? 1
+    }
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  public getChannelData(_channel: number): Float32Array {
+    return new Float32Array(this.length)
+  }
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
+;(globalThis as any).AudioBuffer = AudioBufferMock
+
 process.env.TZ = "UTC"
