@@ -92,12 +92,13 @@ class MetricTest(DeltaGeneratorTestCase):
 
     def test_value(self):
         """Test that metric delta returns the correct proto value"""
-        arg_values = ["some str", 123, -1.234, None]
+        arg_values = ["some str", 123, -1.234, None, "**markdown** _support_"]
         proto_values = [
             "some str",
             "123",
             "-1.234",
             "—",
+            "**markdown** _support_",
         ]
 
         for arg_value, proto_value in zip(arg_values, proto_values, strict=False):
@@ -109,8 +110,30 @@ class MetricTest(DeltaGeneratorTestCase):
 
     def test_delta_values(self):
         """Test that metric delta returns the correct proto value"""
-        arg_values = [" -253", "+25", "26", 123, -123, 1.234, -1.5, None, ""]
-        delta_values = ["-253", "+25", "26", "123", "-123", "1.234", "-1.5", "", ""]
+        arg_values = [
+            " -253",
+            "+25",
+            "26",
+            123,
+            -123,
+            1.234,
+            -1.5,
+            None,
+            "",
+            "**markdown** _support_",
+        ]
+        delta_values = [
+            "-253",
+            "+25",
+            "26",
+            "123",
+            "-123",
+            "1.234",
+            "-1.5",
+            "",  # None returns empty string
+            "",  # Empty string returns empty string
+            "**markdown** _support_",
+        ]
 
         for arg_value, delta_value in zip(arg_values, delta_values, strict=False):
             st.metric("label_test", "4312", arg_value)

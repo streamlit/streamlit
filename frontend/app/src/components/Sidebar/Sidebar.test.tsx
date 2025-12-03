@@ -470,7 +470,7 @@ describe("Sidebar Component", () => {
       renderSidebar()
 
       const sidebar = screen.getByTestId("stSidebar")
-      expect(sidebar).toHaveStyle("width: 256px")
+      expect(sidebar).toHaveStyle("width: 300px")
     })
 
     it("should initialize with saved width when localStorage value exists", () => {
@@ -480,6 +480,119 @@ describe("Sidebar Component", () => {
 
       const sidebar = screen.getByTestId("stSidebar")
       expect(sidebar).toHaveStyle("width: 320px")
+    })
+  })
+
+  describe("Width Initialization Logic", () => {
+    beforeEach(() => {
+      window.localStorage.clear()
+    })
+
+    describe("Priority: Cached > Initial > Default", () => {
+      it.each([
+        {
+          description: "uses default when no cached and no initial",
+          cached: null,
+          initial: undefined,
+          expected: "300px",
+        },
+        {
+          description: "uses cached when cached exists",
+          cached: "450",
+          initial: undefined,
+          expected: "450px",
+        },
+        {
+          description: "uses initial when no cached",
+          cached: null,
+          initial: 400,
+          expected: "400px",
+        },
+        {
+          description: "uses cached over initial when both exist",
+          cached: "500",
+          initial: 350,
+          expected: "500px",
+        },
+      ])("$description", ({ cached, initial, expected }) => {
+        if (cached) {
+          window.localStorage.setItem("sidebarWidth", cached)
+        }
+
+        renderSidebar(
+          {},
+          {
+            sidebarConfigContext: {
+              ...(initial !== undefined && { initialSidebarWidth: initial }),
+            },
+          }
+        )
+
+        expect(screen.getByTestId("stSidebar")).toHaveStyle(
+          `width: ${expected}`
+        )
+      })
+    })
+
+    describe("Width Clamping", () => {
+      it.each([
+        { initial: 150, expected: "200px", description: "clamps to minimum" },
+        { initial: 800, expected: "600px", description: "clamps to maximum" },
+        { initial: 400, expected: "400px", description: "uses value as-is" },
+        { initial: NaN, expected: "300px", description: "handles NaN" },
+      ])("$description", ({ initial, expected }) => {
+        renderSidebar(
+          {},
+          { sidebarConfigContext: { initialSidebarWidth: initial } }
+        )
+
+        expect(screen.getByTestId("stSidebar")).toHaveStyle(
+          `width: ${expected}`
+        )
+      })
+    })
+
+    describe("Cached Width Clamping", () => {
+      it.each([
+        {
+          cached: "1000",
+          expected: "600px",
+          description: "clamps cached value exceeding maximum",
+        },
+        {
+          cached: "100",
+          expected: "200px",
+          description: "clamps cached value below minimum",
+        },
+        {
+          cached: "450",
+          expected: "450px",
+          description: "uses cached value within valid range",
+        },
+        {
+          cached: "200",
+          expected: "200px",
+          description: "uses cached value at minimum boundary",
+        },
+        {
+          cached: "600",
+          expected: "600px",
+          description: "uses cached value at maximum boundary",
+        },
+        {
+          cached: "invalid",
+          expected: "300px",
+          description: "falls back to default when cached value is invalid",
+        },
+      ])("$description", ({ cached, expected }) => {
+        window.localStorage.setItem("sidebarWidth", cached)
+
+        renderSidebar()
+
+        expect(screen.getByTestId("stSidebar")).toHaveStyle(
+          `width: ${expected}`
+        )
+      })
     })
   })
 })

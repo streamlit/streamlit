@@ -251,7 +251,7 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
 
   const { MetricDirection } = MetricProto
   const {
-    body,
+    body: metricValue,
     label,
     delta,
     direction,
@@ -331,7 +331,14 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
           )}
         </StyledMetricLabelText>
         <StyledMetricValueText data-testid="stMetricValue">
-          <StyledTruncateText> {body} </StyledTruncateText>
+          <StyledTruncateText>
+            <StreamlitMarkdown
+              source={metricValue}
+              allowHTML={false}
+              isLabel // Treat the metric value with the label limitations.
+              inheritFont
+            />
+          </StyledTruncateText>
         </StyledMetricValueText>
         {deltaExists && (
           <StyledMetricDeltaText
@@ -351,7 +358,14 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
                 margin={arrowMargin}
               />
             )}
-            <StyledTruncateText> {delta} </StyledTruncateText>
+            <StyledTruncateText>
+              <StreamlitMarkdown
+                source={delta}
+                allowHTML={false}
+                isLabel // Treat the metric delta with the label limitations.
+                inheritFont
+              />
+            </StyledTruncateText>
           </StyledMetricDeltaText>
         )}
       </StyledMetricContent>

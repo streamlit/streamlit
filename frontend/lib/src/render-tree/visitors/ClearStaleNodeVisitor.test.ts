@@ -16,6 +16,8 @@
 
 import { Element, ForwardMsgMetadata } from "@streamlit/protobuf"
 
+import { TransientNode } from "~lib/render-tree/TransientNode"
+
 import { BlockNode } from "src/render-tree/BlockNode"
 import { ElementNode } from "src/render-tree/ElementNode"
 import { block, makeProto, text } from "src/render-tree/test-utils"
@@ -261,6 +263,46 @@ describe("ClearStaleNodeVisitor", () => {
         // and we're not in a fragment context yet (fragmentIdOfBlock is not set)
         expect(result.children).toHaveLength(1)
       })
+    })
+  })
+
+  describe("visitTransientNode", () => {
+    it("returns undefined when both anchor and transients are stale", () => {
+      const t = new TransientNode(
+        "runA",
+        text("a", "old"),
+        [text("t1", "old")],
+        1
+      )
+      const visitor = new ClearStaleNodeVisitor("current")
+      const result = visitor.visitTransientNode(t)
+      expect(result).toBeUndefined()
+    })
+
+    it("returns anchor when only anchor is current and all transients are stale", () => {
+      const anchor = text("a", "current")
+      const t = new TransientNode(
+        "runA",
+        anchor,
+        [text("t1", "old"), text("t2", "old")],
+        1
+      )
+      const visitor = new ClearStaleNodeVisitor("current")
+      const result = visitor.visitTransientNode(t)
+      expect(result).toBe(anchor)
+    })
+
+    it("returns new TransientNode when some transients remain current", () => {
+      const anchor = text("a", "old")
+      const keep = text("keep", "cur")
+      const drop = text("drop", "old")
+      const t = new TransientNode("runA", anchor, [keep, drop], 7)
+      const visitor = new ClearStaleNodeVisitor("cur")
+      const result = visitor.visitTransientNode(t) as TransientNode
+      expect(result).toBeInstanceOf(TransientNode)
+      expect(result.anchor).toBeUndefined() // anchor was stale
+      expect(result.transientNodes).toEqual([keep])
+      expect(result.deltaMsgReceivedAt).toBe(7)
     })
   })
 
