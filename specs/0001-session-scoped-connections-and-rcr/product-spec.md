@@ -9,7 +9,10 @@ Status: Draft
 ## Summary
 
 This proposal adds support for session-scoped values in `st.cache_resource` and `st.connection`. It also proposes using
-this new support to implement a new connection type, `snowflake-rcr`, which handles creating [restricted caller's rights sessions](https://docs.snowflake.com/en/developer-guide/snowpark-container-services/additional-considerations-services-jobs#label-spcs-additional-considerations-configuring-callers-rights) when running in Snowpark Container Services.
+this new support to implement a new connection type, `snowflake` with caller's rights, which handles creating
+[restricted caller's rights
+sessions](https://docs.snowflake.com/en/developer-guide/snowpark-container-services/additional-considerations-services-jobs#label-spcs-additional-considerations-configuring-callers-rights)
+when running in Snowpark Container Services.
 
 ## Problem
 
