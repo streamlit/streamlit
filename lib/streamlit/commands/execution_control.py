@@ -207,8 +207,9 @@ def switch_page(  # type: ignore[misc]
     query_params : dict, list of tuples, or None
         Query parameters to apply when navigating to the target page.
         This can be a dictionary or an iterable of key-value tuples. Values can
-        be strings or iterables of strings (for repeated keys). When omitted,
-        all non-embed query parameters are cleared during navigation.
+        be strings or iterables of strings (for repeated keys). When this is
+        ``None`` (default), all non-embed query parameters are cleared during
+        navigation.
 
     Examples
     --------
@@ -252,7 +253,7 @@ def switch_page(  # type: ignore[misc]
     >>> import streamlit as st
     >>>
     >>> def page_1():
-    >>>     st.write("Page 1")
+    >>>     st.title("Page 1")
     >>>     if st.button("Switch to Page 2"):
     >>>         st.switch_page("page_2.py", query_params={"utm_source": "page_1"})
     >>>

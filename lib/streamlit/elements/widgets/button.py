@@ -984,25 +984,31 @@ class ButtonMixin:
               of the parent container.
 
         query_params : dict, list of tuples, or None
-            Query parameters to apply when navigating to the target page. This
-            can be a dictionary or an iterable of key-value tuples. Values can
-            be strings or iterables of strings (for repeated keys). When
-            omitted, all non-embed query parameters are cleared during navigation.
+            Query parameters to apply when navigating to the target page.
+            This can be a dictionary or an iterable of key-value tuples. Values can
+            be strings or iterables of strings (for repeated keys). When this is
+            ``None`` (default), all non-embed query parameters are cleared during
+            navigation.
 
         Example
         -------
-        Consider the following example given this file structure:
+        **Example 1: Basic usage**
 
-        >>> your-repository/
-        >>> ├── pages/
-        >>> │   ├── page_1.py
-        >>> │   └── page_2.py
-        >>> └── your_app.py
+        The following example shows how to create page links in a multipage app
+        that uses the ``pages/`` directory:
+
+        .. code-block:: text
+
+            your-repository/
+            ├── pages/
+            │   ├── page_1.py
+            │   └── page_2.py
+            └── your_app.py
 
         >>> import streamlit as st
         >>>
         >>> st.page_link("your_app.py", label="Home", icon="🏠")
-        >>> st.page_link("pages/page_1.py", label="Page 1", icon="1️⃣", query_params={"team": "streamlit"})
+        >>> st.page_link("pages/page_1.py", label="Page 1", icon="1️⃣")
         >>> st.page_link("pages/page_2.py", label="Page 2", icon="2️⃣", disabled=True)
         >>> st.page_link("http://www.google.com", label="Google", icon="🌎")
 
@@ -1016,6 +1022,30 @@ class ButtonMixin:
 
         .. output ::
             https://doc-page-link.streamlit.app/
+            height: 350px
+
+        **Example 2: Passing query parameters**
+
+        The following example shows how to pass query parameters when creating a
+        page link in a multipage app:
+
+        .. code-block:: text
+
+            your-repository/
+            ├── page_2.py
+            └── your_app.py
+
+        >>> import streamlit as st
+        >>>
+        >>> def page_1():
+        >>>     st.title("Page 1")
+        >>>     st.page_link("page_2.py", query_params={"utm_source": "page_1"})
+        >>>
+        >>> pg = st.navigation([page_1, "page_2.py"])
+        >>> pg.run()
+
+        .. output ::
+            https://doc-page-link-query-params.streamlit.app/
             height: 350px
 
         """
