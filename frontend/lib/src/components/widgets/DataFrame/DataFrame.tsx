@@ -219,7 +219,6 @@ function DataFrame({
   const isLargeTable = originalNumRows > LARGE_TABLE_ROWS_THRESHOLD
   const isSortingEnabled =
     !isLargeTable && !isEmptyTable && element.editingMode !== DYNAMIC
-
   const isDynamicAndEditable =
     !isEmptyTable && element.editingMode === DYNAMIC && !disabled
 
