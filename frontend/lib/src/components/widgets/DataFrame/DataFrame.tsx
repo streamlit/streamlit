@@ -189,7 +189,7 @@ function DataFrame({
 
   // Determine if the device is primary using touch as input:
   const isTouchDevice = useMemo<boolean>(
-    () => window.matchMedia?.("(pointer: coarse)")?.matches ?? false,
+    () => window.matchMedia && window.matchMedia("(pointer: coarse)").matches,
     []
   )
 
@@ -219,6 +219,7 @@ function DataFrame({
   const isLargeTable = originalNumRows > LARGE_TABLE_ROWS_THRESHOLD
   const isSortingEnabled =
     !isLargeTable && !isEmptyTable && element.editingMode !== DYNAMIC
+
   const isDynamicAndEditable =
     !isEmptyTable && element.editingMode === DYNAMIC && !disabled
 
