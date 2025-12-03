@@ -1,6 +1,6 @@
 ---
 author: "@github-name"
-created: 2025-12-03
+created: YYYY-MM-DD
 status: Draft
 ---
 
