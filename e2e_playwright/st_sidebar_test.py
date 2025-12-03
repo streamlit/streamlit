@@ -109,9 +109,22 @@ def test_sidebar_chart_and_toolbar(app: Page):
     sidebar = app.get_by_test_id("stSidebar")
     # Check for the chart & tooltip
     chart = sidebar.get_by_test_id("stVegaLiteChart")
-    chart.hover(position={"x": 60, "y": 220})
-    tooltip = app.locator("#vg-tooltip-element")
-    expect(tooltip).to_be_visible()
+    expect(chart).to_be_visible()
+
+    chart.scroll_into_view_if_needed()
+
+    graphics_doc = chart.locator("[role='graphics-document']")
+    expect(graphics_doc).to_be_visible()
+
+    bbox = graphics_doc.bounding_box()
+
+    assert bbox is not None
+
+    hover_x = bbox["width"] / 2
+    hover_y = bbox["height"] / 2
+
+    graphics_doc.hover(position={"x": hover_x, "y": hover_y}, force=True)
+    expect(app.locator("#vg-tooltip-element")).to_be_visible()
 
 
 def test_check_top_level_class(app: Page):

@@ -174,6 +174,7 @@ interface State {
   connectionErrorDismissed: boolean
   layout: PageConfig.Layout
   initialSidebarState: PageConfig.SidebarState
+  initialSidebarWidth?: number
   menuItems?: PageConfig.IMenuItems | null
   allowRunOnSave: boolean
   scriptFinishedHandlers: (() => void)[]
@@ -307,6 +308,7 @@ export class App extends PureComponent<Props, State> {
       connectionErrorDismissed: false,
       layout: PageConfig.Layout.CENTERED,
       initialSidebarState: PageConfig.SidebarState.AUTO,
+      initialSidebarWidth: undefined,
       menuItems: undefined,
       allowRunOnSave: true,
       scriptFinishedHandlers: [],
@@ -926,8 +928,14 @@ export class App extends PureComponent<Props, State> {
   }
 
   handlePageConfigChanged = (pageConfig: PageConfig): void => {
-    const { title, favicon, layout, initialSidebarState, menuItems } =
-      pageConfig
+    const {
+      title,
+      favicon,
+      layout,
+      initialSidebarState,
+      initialSidebarWidth,
+      menuItems,
+    } = pageConfig
 
     this.appNavigation.handlePageConfigChanged(pageConfig)
 
@@ -965,6 +973,21 @@ export class App extends PureComponent<Props, State> {
     ) {
       this.setState(() => ({
         initialSidebarState,
+      }))
+    }
+
+    // Extract pixelWidth from SidebarWidthConfig message
+    const sidebarWidthPixels =
+      initialSidebarWidth?.pixelWidth !== undefined
+        ? initialSidebarWidth.pixelWidth
+        : undefined
+
+    if (
+      notNullOrUndefined(sidebarWidthPixels) &&
+      sidebarWidthPixels !== this.state.initialSidebarWidth
+    ) {
+      this.setState(() => ({
+        initialSidebarWidth: sidebarWidthPixels,
       }))
     }
 
@@ -1903,7 +1926,7 @@ export class App extends PureComponent<Props, State> {
   /**
    * Sends a message back to the server.
    */
-  private sendBackMsg = (msg: BackMsg): void => {
+  private readonly sendBackMsg = (msg: BackMsg): void => {
     if (this.connectionManager) {
       LOG.info(msg)
       this.connectionManager.sendMessage(msg)
@@ -2190,7 +2213,7 @@ export class App extends PureComponent<Props, State> {
   /**
    * Checks if there are any app-defined menu items configured via st.set_page_config
    */
-  private hasAppDefinedMenuItems = (): boolean => {
+  private readonly hasAppDefinedMenuItems = (): boolean => {
     const { menuItems } = this.state
     return Boolean(
       menuItems?.aboutSectionMd ||
@@ -2203,7 +2226,7 @@ export class App extends PureComponent<Props, State> {
    * Determines whether the toolbar should be visible based on embed mode,
    * toolbar mode settings, and availability of host menu/toolbar items.
    */
-  private shouldShowToolbar = (
+  private readonly shouldShowToolbar = (
     hostMenuItems: IMenuItem[],
     hostToolbarItems: IToolbarItem[]
   ): boolean => {
@@ -2289,6 +2312,7 @@ export class App extends PureComponent<Props, State> {
     return (
       <StreamlitContextProvider
         initialSidebarState={initialSidebarState}
+        initialSidebarWidth={this.state.initialSidebarWidth}
         pageLinkBaseUrl={pageLinkBaseUrl}
         currentPageScriptHash={currentPageScriptHash}
         onPageChange={this.onPageChange}

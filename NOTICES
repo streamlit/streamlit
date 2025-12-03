@@ -581,7 +581,7 @@ See the License for the specific language governing permissions and limitations 
 
 -----
 
-The following software may be included in this product: @luma.gl/constants, @luma.gl/core, @luma.gl/engine, @luma.gl/gltf, @luma.gl/shadertools, @luma.gl/webgl. A copy of the source code may be downloaded from https://github.com/visgl/luma.gl (@luma.gl/constants), https://github.com/visgl/luma.gl (@luma.gl/core), https://github.com/visgl/luma.gl (@luma.gl/engine), https://github.com/visgl/luma.gl (@luma.gl/gltf), https://github.com/visgl/luma.gl (@luma.gl/shadertools), https://github.com/visgl/luma.gl (@luma.gl/webgl). This software contains the following license and notice below:
+The following software may be included in this product: @luma.gl/constants, @luma.gl/core, @luma.gl/engine, @luma.gl/shadertools, @luma.gl/webgl. A copy of the source code may be downloaded from https://github.com/visgl/luma.gl (@luma.gl/constants), https://github.com/visgl/luma.gl (@luma.gl/core), https://github.com/visgl/luma.gl (@luma.gl/engine), https://github.com/visgl/luma.gl (@luma.gl/shadertools), https://github.com/visgl/luma.gl (@luma.gl/webgl). This software contains the following license and notice below:
 
 luma.gl is provided under the MIT license
 
@@ -1318,33 +1318,6 @@ THE SOFTWARE.
 
 -----
 
-The following software may be included in this product: @probe.gl/env, @probe.gl/log, @probe.gl/stats. A copy of the source code may be downloaded from https://github.com/uber-web/probe.gl.git (@probe.gl/env), https://github.com/uber-web/probe.gl.git (@probe.gl/log), https://github.com/uber-web/probe.gl.git (@probe.gl/stats). This software contains the following license and notice below:
-
-Copyright (c) 2017 Uber Technologies, Inc.
-
-This software includes parts of PhiloGL (https://github.com/philogb/philogl)
-under MIT license. PhiloGL parts Copyright (c) 2013 Sencha Labs.
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
-
------
-
 The following software may be included in this product: @protobufjs/aspromise, @protobufjs/base64, @protobufjs/codegen, @protobufjs/eventemitter, @protobufjs/fetch, @protobufjs/float, @protobufjs/inquire, @protobufjs/path, @protobufjs/pool, @protobufjs/utf8. A copy of the source code may be downloaded from https://github.com/dcodeIO/protobuf.js.git (@protobufjs/aspromise), https://github.com/dcodeIO/protobuf.js.git (@protobufjs/base64), https://github.com/dcodeIO/protobuf.js.git (@protobufjs/codegen), https://github.com/dcodeIO/protobuf.js.git (@protobufjs/eventemitter), https://github.com/dcodeIO/protobuf.js.git (@protobufjs/fetch), https://github.com/dcodeIO/protobuf.js.git (@protobufjs/float), https://github.com/dcodeIO/protobuf.js.git (@protobufjs/inquire), https://github.com/dcodeIO/protobuf.js.git (@protobufjs/path), https://github.com/dcodeIO/protobuf.js.git (@protobufjs/pool), https://github.com/dcodeIO/protobuf.js.git (@protobufjs/utf8). This software contains the following license and notice below:
 
 Copyright (c) 2016, Daniel Wirtz  All rights reserved.
@@ -1824,7 +1797,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 -----
 
-The following software may be included in this product: @types/brotli, @types/command-line-args, @types/command-line-usage, @types/crypto-js, @types/d3-array, @types/d3-color, @types/d3-scale, @types/d3-time, @types/debug, @types/estree, @types/estree-jsx, @types/geojson, @types/geojson-vt, @types/google.maps, @types/hammerjs, @types/hast, @types/katex, @types/mapbox-gl, @types/mapbox__point-geometry, @types/mapbox__vector-tile, @types/mdast, @types/ms, @types/node, @types/offscreencanvas, @types/pako, @types/parse-json, @types/pbf, @types/prop-types, @types/react, @types/react-transition-group, @types/react-virtualized-auto-sizer, @types/react-window, @types/supercluster, @types/trusted-types, @types/unist. A copy of the source code may be downloaded from https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/brotli), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/command-line-args), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/command-line-usage), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/crypto-js), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/d3-array), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/d3-color), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/d3-scale), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/d3-time), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/debug), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/estree), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/estree-jsx), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/geojson), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/geojson-vt), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/google.maps), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/hammerjs), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/hast), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/katex), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/mapbox-gl), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/mapbox__point-geometry), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/mapbox__vector-tile), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/mdast), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/ms), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/node), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/offscreencanvas), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/pako), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/parse-json), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/pbf), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/prop-types), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/react), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/react-transition-group), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/react-virtualized-auto-sizer), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/react-window), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/supercluster), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/trusted-types), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/unist). This software contains the following license and notice below:
+The following software may be included in this product: @types/brotli, @types/command-line-args, @types/command-line-usage, @types/crypto-js, @types/d3-array, @types/d3-color, @types/d3-scale, @types/d3-time, @types/debug, @types/estree, @types/estree-jsx, @types/geojson, @types/geojson-vt, @types/google.maps, @types/hammerjs, @types/hast, @types/katex, @types/mapbox-gl, @types/mapbox__point-geometry, @types/mapbox__vector-tile, @types/mdast, @types/ms, @types/node, @types/offscreencanvas, @types/pako, @types/parse-json, @types/pbf, @types/prop-types, @types/react, @types/react-virtualized-auto-sizer, @types/react-window, @types/supercluster, @types/trusted-types, @types/unist. A copy of the source code may be downloaded from https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/brotli), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/command-line-args), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/command-line-usage), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/crypto-js), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/d3-array), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/d3-color), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/d3-scale), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/d3-time), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/debug), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/estree), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/estree-jsx), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/geojson), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/geojson-vt), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/google.maps), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/hammerjs), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/hast), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/katex), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/mapbox-gl), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/mapbox__point-geometry), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/mapbox__vector-tile), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/mdast), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/ms), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/node), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/offscreencanvas), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/pako), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/parse-json), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/pbf), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/prop-types), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/react), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/react-virtualized-auto-sizer), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/react-window), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/supercluster), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/trusted-types), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/unist). This software contains the following license and notice below:
 
 MIT License
 
@@ -15225,59 +15198,7 @@ The following software may be included in this product: typical. A copy of the s
 
 The MIT License (MIT)
 
-Copyright (c) 2014-25 Lloyd Brookes <75pound@gmail.com>
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-
------
-
-The following software may be included in this product: typical. A copy of the source code may be downloaded from git+https://github.com/75lb/typical.git. This software contains the following license and notice below:
-
-The MIT License (MIT)
-
 Copyright (c) 2014-25 Lloyd Brookes <opensource@75lb.com>
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-
------
-
-The following software may be included in this product: ua-parser-js. A copy of the source code may be downloaded from https://github.com/faisalman/ua-parser-js.git. This software contains the following license and notice below:
-
-MIT License
-
-Copyright (c) 2012-2024 Faisal Salman <<f@faisalman.com>>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

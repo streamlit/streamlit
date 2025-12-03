@@ -52,7 +52,7 @@ export class WaveSurferRecordBackend {
   private recordEndResolve: ((blob: Blob) => void) | null = null
   private recordEndReject: ((error: Error) => void) | null = null
   private events: RecordBackendEvents = {}
-  private options: RecordBackendOptions
+  private readonly options: RecordBackendOptions
 
   constructor(options: RecordBackendOptions = {}) {
     this.options = options
@@ -191,7 +191,7 @@ export class WaveSurferRecordBackend {
     }
 
     try {
-      return new Promise<Blob>((resolve, reject) => {
+      return await new Promise<Blob>((resolve, reject) => {
         this.recordEndResolve = resolve
         this.recordEndReject = reject
         this.recordPlugin?.stopRecording()

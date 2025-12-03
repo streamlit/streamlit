@@ -19,11 +19,9 @@ import styled from "@emotion/styled"
 import { Metric as MetricProto } from "@streamlit/protobuf"
 
 import { StyledWidgetLabel } from "~lib/components/widgets/BaseWidget/styled-components"
-import {
-  getMetricBackgroundColor,
-  getMetricTextColor,
-} from "~lib/theme/getColors"
 import { LabelVisibilityOptions } from "~lib/util/utils"
+
+import { getMetricBackgroundColor, getMetricTextColor } from "./metricColors"
 
 export interface StyledMetricContainerProps {
   showBorder: boolean

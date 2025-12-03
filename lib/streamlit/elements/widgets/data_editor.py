@@ -503,8 +503,7 @@ def _fix_column_headers(data_df: pd.DataFrame) -> None:
     if isinstance(data_df.columns, pd.MultiIndex):
         # Flatten hierarchical column headers to a single level:
         data_df.columns = [
-            "_".join(map(str, header))
-            for header in data_df.columns.to_flat_index()  # type: ignore
+            "_".join(map(str, header)) for header in data_df.columns.to_flat_index()
         ]
     elif pd.api.types.infer_dtype(data_df.columns) != "string":
         # If the column names are not all strings, we need to convert them to strings
@@ -595,7 +594,8 @@ def _check_type_compatibilities(
             configured_column_type = type_config.get("type")
 
             if configured_column_type is None:
-                continue
+                # Just a safeguard, is not expected to happen.
+                continue  # type: ignore[unreachable]
 
             if is_type_compatible(configured_column_type, column_data_kind) is False:
                 raise StreamlitAPIException(
@@ -711,11 +711,14 @@ class DataEditorMixin:
               the parent container, the width of the editor matches the width
               of the parent container.
 
-        height : int, "auto", "content", or "stretch"
+        height : "auto", "content", "stretch", or int
             The height of the data editor. This can be one of the following:
 
             - ``"auto"`` (default): Streamlit sets the height to show at most
               ten rows.
+            - ``"content"``: The height of the editor matches the height of
+              its content. The height is capped at 10,000 pixels to prevent
+              performance issues with very large dataframes.
             - ``"stretch"``: The height of the editor expands to fill the
               available vertical space in its parent container. When multiple
               elements with stretch height are in the same container, they
@@ -725,9 +728,6 @@ class DataEditorMixin:
               container.
             - An integer specifying the height in pixels: The editor has a
               fixed height.
-            - ``"content"``: The height of the editor matches the height of
-              its content. The height is capped at 10,000 pixels to prevent
-              performance issues with very large dataframes.
 
             Vertical scrolling within the editor is enabled when the height
             does not accommodate all rows.
@@ -827,9 +827,10 @@ class DataEditorMixin:
             which fits one line of text.
 
         placeholder : str or None
-            The text that should be shown for missing values (such as ``"None"``,
-            ``"NaN"``, ``"-"``, or ``""``). If this is ``None`` (default),
-            missing values are displayed as ``"None"``.
+            The text that should be shown for missing values. If this is
+            ``None`` (default), missing values are displayed as "None". To
+            leave a cell empty, use an empty string (``""``). Other common
+            values are ``"null"``, ``"NaN"`` and ``"-"``.
 
         Returns
         -------
@@ -1003,7 +1004,7 @@ class DataEditorMixin:
                     column_config_mapping, str(column_name), {"disabled": True}
                 )
                 # Convert incompatible type to string
-                data_df[column_name] = column_data.astype("string")
+                data_df[cast("Any", column_name)] = column_data.astype("string")
 
         apply_data_specific_configs(column_config_mapping, data_format)
 

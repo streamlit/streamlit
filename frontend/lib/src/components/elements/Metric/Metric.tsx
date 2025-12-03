@@ -36,9 +36,9 @@ import { Placement } from "~lib/components/shared/Tooltip"
 import TooltipIcon from "~lib/components/shared/TooltipIcon"
 import { StyledWidgetLabelHelpInline } from "~lib/components/widgets/BaseWidget"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
-import { getMetricBackgroundColor, getMetricColor } from "~lib/theme/getColors"
 import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 
+import { getMetricBackgroundColor, getMetricColor } from "./metricColors"
 import {
   StyledMetricChart,
   StyledMetricContainer,
@@ -271,6 +271,9 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
       break
     case MetricDirection.UP:
       metricDirection = ArrowUpward
+      break
+    case MetricDirection.NONE:
+      // No arrow icon for NONE direction
       break
   }
 

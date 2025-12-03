@@ -409,15 +409,13 @@ describe("Metric element", () => {
       })
 
       const embedCall = vi.mocked(embed).mock.calls[0]
-      const tooltipOptions = embedCall[2]?.tooltip as
-        | { formatTooltip: (value: { y: number }) => string }
-        | undefined
+      const tooltipOptions = embedCall[2]?.tooltip as {
+        formatTooltip: (value: { y: number }) => string
+      }
 
       expect(tooltipOptions).toBeDefined()
-      if (tooltipOptions) {
-        expect(tooltipOptions.formatTooltip({ y: 12.345 })).toBe("12.345")
-        expect(tooltipOptions.formatTooltip({ y: 42 })).toBe("42")
-      }
+      expect(tooltipOptions.formatTooltip({ y: 12.345 })).toBe("12.345")
+      expect(tooltipOptions.formatTooltip({ y: 42 })).toBe("42")
     })
   })
 

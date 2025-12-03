@@ -37,6 +37,11 @@ message Metric {
     RED = 0;
     GREEN = 1;
     GRAY = 2;
+    ORANGE = 3;
+    YELLOW = 4;
+    BLUE = 5;
+    VIOLET = 6;
+    PRIMARY = 7;
   }
   MetricColor color = 5;
   string help = 6;

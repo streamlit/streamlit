@@ -71,49 +71,47 @@ describe("Snow element", () => {
   })
 
   describe("crossOrigin attribute", () => {
-    const scenarios = [
-      {
-        backendBaseUrl: undefined,
-        description: "without BACKEND_BASE_URL",
-      },
-      {
-        backendBaseUrl: "http://localhost:8501",
-        description: "with BACKEND_BASE_URL",
-      },
-    ]
-
     afterEach(() => {
       globalThis.__mockStreamlitConfig = {}
     })
 
-    it.each(scenarios)(
-      "sets crossOrigin attribute when resourceCrossOriginMode is configured ($description)",
-      ({ backendBaseUrl }) => {
-        // Setup StreamlitConfig.BACKEND_BASE_URL if specified
-        if (backendBaseUrl) {
-          globalThis.__mockStreamlitConfig.BACKEND_BASE_URL = backendBaseUrl
-        }
+    it("sets crossOrigin when BACKEND_BASE_URL is configured", () => {
+      // Setup StreamlitConfig.BACKEND_BASE_URL
+      globalThis.__mockStreamlitConfig.BACKEND_BASE_URL =
+        "http://localhost:8501"
 
-        renderWithContexts(<Snow scriptRunId="51522269" />, {
-          libConfigContext: {
-            resourceCrossOriginMode: "anonymous",
-          },
-        })
+      renderWithContexts(<Snow scriptRunId="51522269" />, {
+        libConfigContext: {
+          resourceCrossOriginMode: "anonymous",
+        },
+      })
 
-        const snowImages = screen.getAllByRole("img")
-        snowImages.forEach(node => {
-          if (backendBaseUrl) {
-            // When BACKEND_BASE_URL is set, crossOrigin should be set for relative URLs
-            expect(node).toHaveAttribute("crossOrigin", "anonymous")
-          } else {
-            // When BACKEND_BASE_URL is not set, crossOrigin should not be set for relative URLs (same-origin)
-            expect(node).not.toHaveAttribute("crossOrigin")
-          }
-        })
-      }
-    )
+      const snowImages = screen.getAllByRole("img")
+      snowImages.forEach(node => {
+        expect(node).toHaveAttribute("crossOrigin", "anonymous")
+      })
+    })
 
-    it.each(scenarios)(
+    it("does not set crossOrigin when BACKEND_BASE_URL is not configured (same-origin)", () => {
+      renderWithContexts(<Snow scriptRunId="51522269" />, {
+        libConfigContext: {
+          resourceCrossOriginMode: "anonymous",
+        },
+      })
+
+      const snowImages = screen.getAllByRole("img")
+      snowImages.forEach(node => {
+        expect(node).not.toHaveAttribute("crossOrigin")
+      })
+    })
+
+    it.each([
+      { backendBaseUrl: undefined, description: "without BACKEND_BASE_URL" },
+      {
+        backendBaseUrl: "http://localhost:8501",
+        description: "with BACKEND_BASE_URL",
+      },
+    ])(
       "does not set crossOrigin attribute when resourceCrossOriginMode is undefined ($description)",
       ({ backendBaseUrl }) => {
         // Setup StreamlitConfig.BACKEND_BASE_URL if specified
