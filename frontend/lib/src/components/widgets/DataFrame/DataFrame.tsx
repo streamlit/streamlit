@@ -189,7 +189,7 @@ function DataFrame({
 
   // Determine if the device is primary using touch as input:
   const isTouchDevice = useMemo<boolean>(
-    () => window.matchMedia && window.matchMedia("(pointer: coarse)").matches,
+    () => window.matchMedia?.("(pointer: coarse)")?.matches ?? false,
     []
   )
 
