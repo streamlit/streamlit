@@ -22,7 +22,7 @@ import "vitest-canvas-mock"
 // aliased to the vi global. An example is timers using dom testing library
 // which is used by the react testing library and waitFor.
 // (See https://github.com/testing-library/dom-testing-library/issues/987)
-global.jest = vi
+globalThis.jest = vi
 
 if (typeof window.URL.createObjectURL === "undefined") {
   window.URL.createObjectURL = vi.fn()
@@ -48,17 +48,20 @@ Element.prototype.animate = vi
 const resizeObserverMock = vi.fn()
 
 class ResizeObserverMock {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  public callback: any
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  public observe: any
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  public unobserve: any
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  public disconnect: any
+  public callback: (
+    entries: ResizeObserverEntry[],
+    observer: ResizeObserver
+  ) => void
+  public observe: (element: Element) => void
+  public unobserve: (element: Element) => void
+  public disconnect: () => void
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  constructor(callback: any) {
+  constructor(
+    callback: (
+      entries: ResizeObserverEntry[],
+      observer: ResizeObserver
+    ) => void
+  ) {
     this.callback = callback
     resizeObserverMock(callback)
     this.observe = vi.fn()
@@ -67,9 +70,7 @@ class ResizeObserverMock {
   }
 }
 
-// Cast through unknown/any to avoid relying on DOM lib types in this setup file.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-;(global as any).ResizeObserver = ResizeObserverMock
+globalThis.ResizeObserver = ResizeObserverMock
 
 // Minimal AudioBuffer mock for environments without the Web Audio API (Node).
 // This is sufficient for wavesurfer.js and related audio tests that only

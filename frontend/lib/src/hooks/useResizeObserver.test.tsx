@@ -26,21 +26,23 @@ describe("useResizeObserver", () => {
     vi.useFakeTimers()
     // Mock ResizeObserver with immediate callback execution
     class TestResizeObserver {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-      public observe: any
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-      public disconnect: any
+      public observe: (element: Element) => void
+      public disconnect: () => void
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-      constructor(callback: any) {
+      constructor(callback: (entries: ResizeObserverEntry[]) => void) {
         this.observe = mockObserve.mockImplementation(() => {
-          callback([{ target: document.createElement("div") }])
+          callback([
+            {
+              target: document.createElement("div"),
+            } as unknown as ResizeObserverEntry,
+          ])
         })
         this.disconnect = mockDisconnect
       }
     }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    ;(global as any).ResizeObserver = TestResizeObserver
+
+    globalThis.ResizeObserver =
+      TestResizeObserver as unknown as typeof ResizeObserver
     // Mock requestAnimationFrame
     global.requestAnimationFrame = vi.fn().mockImplementation(cb => {
       cb()

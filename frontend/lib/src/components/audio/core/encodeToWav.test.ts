@@ -55,19 +55,17 @@ describe("encodeToWav", () => {
       close: vi.fn(),
     }
 
-    const AudioContextMock = vi
-      .fn()
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-      .mockImplementation(function (this: any) {
-        return mockAudioContext as unknown as AudioContext
-      }) as unknown as typeof AudioContext
+    const AudioContextMock = vi.fn().mockImplementation(function (
+      this: AudioContext
+    ) {
+      return mockAudioContext
+    })
 
-    const OfflineAudioContextMock = vi
-      .fn()
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-      .mockImplementation(function (this: any) {
-        return mockOfflineContext as unknown as OfflineAudioContext
-      }) as unknown as typeof OfflineAudioContext
+    const OfflineAudioContextMock = vi.fn().mockImplementation(function (
+      this: OfflineAudioContext
+    ) {
+      return mockOfflineContext
+    })
 
     global.AudioContext = AudioContextMock
     global.OfflineAudioContext = OfflineAudioContextMock
@@ -117,12 +115,11 @@ describe("encodeToWav", () => {
       close: vi.fn(),
     }
 
-    const AudioContextMock = vi
-      .fn()
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-      .mockImplementation(function (this: any) {
-        return mockAudioContext as unknown as AudioContext
-      }) as unknown as typeof AudioContext
+    const AudioContextMock = vi.fn().mockImplementation(function (
+      this: AudioContext
+    ) {
+      return mockAudioContext
+    })
 
     global.AudioContext = AudioContextMock
     const originalOfflineAudioContext = global.OfflineAudioContext
@@ -199,19 +196,17 @@ describe("encodeToWav", () => {
     const originalAudioContext = global.AudioContext
     const originalOfflineAudioContext = global.OfflineAudioContext
 
-    const AudioContextMock = vi
-      .fn()
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-      .mockImplementation(function (this: any) {
-        return mockAudioContext as unknown as AudioContext
-      }) as unknown as typeof AudioContext
+    const AudioContextMock = vi.fn().mockImplementation(function (
+      this: AudioContext
+    ) {
+      return mockAudioContext
+    })
 
-    const OfflineAudioContextMock = vi
-      .fn()
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-      .mockImplementation(function (this: any) {
-        return mockOfflineContext as unknown as OfflineAudioContext
-      }) as unknown as typeof OfflineAudioContext
+    const OfflineAudioContextMock = vi.fn().mockImplementation(function (
+      this: OfflineAudioContext
+    ) {
+      return mockOfflineContext
+    })
 
     global.AudioContext = AudioContextMock
     global.OfflineAudioContext = OfflineAudioContextMock

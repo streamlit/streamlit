@@ -1046,29 +1046,26 @@ describe("WebsocketConnection", () => {
 
 describe("WebsocketConnection auth token handling", () => {
   let originalFetch: typeof globalThis.fetch
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  let websocketSpy: any
+
+  let websocketSpy: (url: string, protocols?: string | string[]) => void
   let originalWebSocket: typeof WebSocket
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   let pingServerSpy: any
 
   class MockWebSocket {
     public url: string
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    public protocols?: any
+    public protocols?: string | string[]
     public binaryType = "blob"
     public readyState = 0
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    constructor(url: string, protocols?: any) {
+    constructor(url: string, protocols?: string | string[]) {
       this.url = url
       this.protocols = protocols
     }
 
     public addEventListener(
       _type: string,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- DOM Event typing not critical for these tests.
-      _listener: (event: any) => void
+      _listener: (event: Event) => void
     ): void {
       // No-op: auth tests only care that listeners can be registered
     }
@@ -1077,8 +1074,7 @@ describe("WebsocketConnection auth token handling", () => {
       this.readyState = 3
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    public send(_data: any): void {
+    public send(_data: unknown): void {
       // No-op: auth tests don't assert on sent data
     }
   }
