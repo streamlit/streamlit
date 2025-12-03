@@ -1043,20 +1043,73 @@ describe("WebsocketConnection auth token handling", () => {
   let originalFetch: typeof global.fetch
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   let websocketSpy: any
-  let server: WS
+  let originalWebSocket: typeof WebSocket
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
+  let pingServerSpy: any
+
+  class MockWebSocket {
+    public url: string
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
+    public protocols?: any
+    public binaryType = "blob"
+    public readyState = 0
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
+    constructor(url: string, protocols?: any) {
+      this.url = url
+      this.protocols = protocols
+    }
+
+    public addEventListener(
+      _type: string,
+      _listener: (event: any) => void
+    ): void {
+      // No-op: auth tests only care that listeners can be registered
+    }
+
+    public close(): void {
+      this.readyState = 3
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
+    public send(_data: any): void {
+      // No-op: auth tests don't assert on sent data
+    }
+  }
 
   beforeEach(() => {
-    server = new WS("ws://localhost:1234/_stcore/stream")
-    websocketSpy = vi.spyOn(window, "WebSocket")
+    websocketSpy = vi.fn()
+    originalWebSocket = globalThis.WebSocket
+
+    // Provide a minimal WebSocket implementation for auth tests that
+    // records constructor arguments and supports the methods our code uses.
+    function WebSocketMockImpl(
+      this: MockWebSocket,
+      url: string,
+      protocols?: any
+    ) {
+      websocketSpy(url, protocols)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
+      return new MockWebSocket(url, protocols) as any
+    }
+
+    globalThis.WebSocket = WebSocketMockImpl as unknown as typeof WebSocket
 
     originalFetch = global.fetch
     global.fetch = createFetchMock()
+
+    // Prevent the internal ping loop from scheduling timers or websockets
+    // for these auth-only tests.
+    pingServerSpy = vi
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
+      .spyOn(WebsocketConnection.prototype as any, "pingServer")
+      .mockResolvedValue(undefined)
   })
 
   afterEach(() => {
     global.fetch = originalFetch
-
-    server.close()
+    globalThis.WebSocket = originalWebSocket
+    pingServerSpy.mockRestore()
   })
 
   it("always sets first Sec-WebSocket-Protocol option to 'streamlit'", async () => {
