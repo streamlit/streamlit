@@ -126,7 +126,6 @@
   },
   "resolutions": {
     "@types/react": "^18.2.0",
-    "@types/node": "^18.11.17",
     "ansi-regex": "^5.0.1",
     "async": "^3.2.3",
     "bl": "^6.0.0",

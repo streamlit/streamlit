@@ -20,6 +20,11 @@
     "skipLibCheck": true,
     "strict": true,
     "target": "es6",
-    "types": ["vite/client", "vitest/globals", "@testing-library/jest-dom"]
+    "types": [
+      "vite/client",
+      "vitest/globals",
+      "@testing-library/jest-dom",
+      "node"
+    ]
   }
 }
