@@ -318,49 +318,19 @@ describe("Video Element", () => {
           scenario: "relative URL with use-credentials mode",
         },
         {
-          expected: undefined,
-          resourceCrossOriginMode: undefined,
-          url: "/media/video.mp4",
-          scenario: "relative URL with undefined mode",
-        },
-        {
           expected: "anonymous",
-          resourceCrossOriginMode: "anonymous",
+          resourceCrossOriginMode: "anonymous" as const,
           url: "https://backend.example.com:8080/media/video.mp4",
           scenario: "same origin as BACKEND_BASE_URL with anonymous mode",
         },
         {
           expected: "use-credentials",
-          resourceCrossOriginMode: "use-credentials",
+          resourceCrossOriginMode: "use-credentials" as const,
           url: "https://backend.example.com:8080/media/video.mp4",
           scenario:
             "same origin as BACKEND_BASE_URL with use-credentials mode",
         },
-        {
-          expected: undefined,
-          resourceCrossOriginMode: undefined,
-          url: "https://backend.example.com:8080/media/video.mp4",
-          scenario: "same origin as BACKEND_BASE_URL with undefined mode",
-        },
-        {
-          expected: undefined,
-          resourceCrossOriginMode: "anonymous",
-          url: "https://external.example.com/media/video.mp4",
-          scenario: "different hostname than BACKEND_BASE_URL",
-        },
-        {
-          expected: undefined,
-          resourceCrossOriginMode: "anonymous",
-          url: "https://backend.example.com:9000/media/video.mp4",
-          scenario: "different port than BACKEND_BASE_URL",
-        },
-        {
-          expected: undefined,
-          resourceCrossOriginMode: "anonymous",
-          url: "http://backend.example.com:8080/media/video.mp4",
-          scenario: "different protocol than BACKEND_BASE_URL",
-        },
-      ] as const)(
+      ])(
         "sets crossOrigin to $expected when $scenario",
         async ({ expected, resourceCrossOriginMode, url }) => {
           const props = getProps({ url })
@@ -370,11 +340,47 @@ describe("Video Element", () => {
             },
           })
           const videoElement = await screen.findByTestId("stVideo")
-          if (expected) {
-            expect(videoElement).toHaveAttribute("crossOrigin", expected)
-          } else {
-            expect(videoElement).not.toHaveAttribute("crossOrigin")
-          }
+          expect(videoElement).toHaveAttribute("crossOrigin", expected)
+        }
+      )
+
+      it.each([
+        {
+          resourceCrossOriginMode: undefined,
+          url: "/media/video.mp4",
+          scenario: "relative URL with undefined mode",
+        },
+        {
+          resourceCrossOriginMode: undefined,
+          url: "https://backend.example.com:8080/media/video.mp4",
+          scenario: "same origin as BACKEND_BASE_URL with undefined mode",
+        },
+        {
+          resourceCrossOriginMode: "anonymous" as const,
+          url: "https://external.example.com/media/video.mp4",
+          scenario: "different hostname than BACKEND_BASE_URL",
+        },
+        {
+          resourceCrossOriginMode: "anonymous" as const,
+          url: "https://backend.example.com:9000/media/video.mp4",
+          scenario: "different port than BACKEND_BASE_URL",
+        },
+        {
+          resourceCrossOriginMode: "anonymous" as const,
+          url: "http://backend.example.com:8080/media/video.mp4",
+          scenario: "different protocol than BACKEND_BASE_URL",
+        },
+      ])(
+        "does not set crossOrigin when $scenario",
+        async ({ resourceCrossOriginMode, url }) => {
+          const props = getProps({ url })
+          renderWithContexts(<Video {...props} />, {
+            libConfigContext: {
+              resourceCrossOriginMode,
+            },
+          })
+          const videoElement = await screen.findByTestId("stVideo")
+          expect(videoElement).not.toHaveAttribute("crossOrigin")
         }
       )
     })

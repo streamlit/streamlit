@@ -858,7 +858,7 @@ describe("CustomMediaTag", () => {
       {
         tagName: "img",
         expected: "anonymous",
-        resourceCrossOriginMode: "anonymous",
+        resourceCrossOriginMode: "anonymous" as const,
         src: "/media/image.jpg",
         extraProps: { alt: "Test image" },
         scenario: "img with relative URL and anonymous mode",
@@ -866,73 +866,30 @@ describe("CustomMediaTag", () => {
       {
         tagName: "video",
         expected: "use-credentials",
-        resourceCrossOriginMode: "use-credentials",
+        resourceCrossOriginMode: "use-credentials" as const,
         src: "/media/video.mp4",
         extraProps: { controls: true },
         scenario: "video with relative URL and use-credentials mode",
       },
       {
-        tagName: "audio",
-        expected: undefined,
-        resourceCrossOriginMode: undefined,
-        src: "/media/audio.mp3",
-        extraProps: { controls: true },
-        scenario: "audio with relative URL and undefined mode",
-      },
-      {
         tagName: "img",
         expected: "anonymous",
-        resourceCrossOriginMode: "anonymous",
+        resourceCrossOriginMode: "anonymous" as const,
         src: "https://backend.example.com:8080/media/image.jpg",
         extraProps: { alt: "Test image" },
         scenario:
           "img with same origin as BACKEND_BASE_URL and anonymous mode",
       },
       {
-        tagName: "img",
-        expected: undefined,
-        resourceCrossOriginMode: undefined,
-        src: "https://backend.example.com:8080/media/image.jpg",
-        extraProps: { alt: "Test image" },
-        scenario:
-          "img with same origin as BACKEND_BASE_URL and undefined mode",
-      },
-      {
-        tagName: "img",
-        expected: undefined,
-        resourceCrossOriginMode: "anonymous",
-        src: "https://external.example.com/media/image.jpg",
-        extraProps: { alt: "Test image" },
-        scenario: "img with different hostname than BACKEND_BASE_URL",
-      },
-      {
         tagName: "video",
         expected: "use-credentials",
-        resourceCrossOriginMode: "use-credentials",
+        resourceCrossOriginMode: "use-credentials" as const,
         src: "https://backend.example.com:8080/media/video.mp4",
         extraProps: { controls: true },
         scenario:
           "video with same origin as BACKEND_BASE_URL and use-credentials mode",
       },
-      {
-        tagName: "video",
-        expected: undefined,
-        resourceCrossOriginMode: "anonymous",
-        src: "https://backend.example.com:9000/media/video.mp4",
-        extraProps: { controls: true },
-        scenario:
-          "video with same origin as BACKEND_BASE_URL and different port",
-      },
-      {
-        tagName: "audio",
-        expected: undefined,
-        resourceCrossOriginMode: "anonymous",
-        src: "http://backend.example.com:8080/media/audio.mp3",
-        extraProps: { controls: true },
-        scenario:
-          "audio with same origin as BACKEND_BASE_URL and different protocol",
-      },
-    ] as const)(
+    ])(
       "should render $tagName element with crossOrigin='$expected' when $scenario",
       ({ tagName, expected, resourceCrossOriginMode, src, extraProps }) => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -954,11 +911,73 @@ describe("CustomMediaTag", () => {
             : container.querySelector(tagName)
 
         expect(element).toBeTruthy()
-        if (expected) {
-          expect(element).toHaveAttribute("crossOrigin", expected)
-        } else {
-          expect(element).not.toHaveAttribute("crossOrigin")
-        }
+        expect(element).toHaveAttribute("crossOrigin", expected)
+        expect(element).toHaveAttribute("src", src)
+      }
+    )
+
+    it.each([
+      {
+        tagName: "audio",
+        resourceCrossOriginMode: undefined,
+        src: "/media/audio.mp3",
+        extraProps: { controls: true },
+        scenario: "audio with relative URL and undefined mode",
+      },
+      {
+        tagName: "img",
+        resourceCrossOriginMode: undefined,
+        src: "https://backend.example.com:8080/media/image.jpg",
+        extraProps: { alt: "Test image" },
+        scenario:
+          "img with same origin as BACKEND_BASE_URL and undefined mode",
+      },
+      {
+        tagName: "img",
+        resourceCrossOriginMode: "anonymous" as const,
+        src: "https://external.example.com/media/image.jpg",
+        extraProps: { alt: "Test image" },
+        scenario: "img with different hostname than BACKEND_BASE_URL",
+      },
+      {
+        tagName: "video",
+        resourceCrossOriginMode: "anonymous" as const,
+        src: "https://backend.example.com:9000/media/video.mp4",
+        extraProps: { controls: true },
+        scenario:
+          "video with same origin as BACKEND_BASE_URL and different port",
+      },
+      {
+        tagName: "audio",
+        resourceCrossOriginMode: "anonymous" as const,
+        src: "http://backend.example.com:8080/media/audio.mp3",
+        extraProps: { controls: true },
+        scenario:
+          "audio with same origin as BACKEND_BASE_URL and different protocol",
+      },
+    ])(
+      "should render $tagName element without crossOrigin when $scenario",
+      ({ tagName, resourceCrossOriginMode, src, extraProps }) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const node = { tagName } as any
+        const props = { src, ...extraProps }
+
+        const { container } = renderWithContexts(
+          <CustomMediaTag node={node} {...props} />,
+          {
+            libConfigContext: {
+              resourceCrossOriginMode,
+            },
+          }
+        )
+
+        const element =
+          tagName === "img"
+            ? screen.getByRole("img")
+            : container.querySelector(tagName)
+
+        expect(element).toBeTruthy()
+        expect(element).not.toHaveAttribute("crossOrigin")
         expect(element).toHaveAttribute("src", src)
       }
     )
