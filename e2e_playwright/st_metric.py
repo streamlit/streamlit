@@ -149,7 +149,7 @@ with format_col1:
 with format_col2:
     st.metric("Dollar format", 1234.56, delta=-50.25, format="dollar")
 with format_col3:
-    st.metric("Printf format", 1234.5678, delta=10.126, format="%.2f%%")
+    st.metric("Printf format", 22.5678, delta=10.126, format="%.2f%%")
 with format_col4:
     # Non-numeric string should NOT be formatted
     st.metric("Non-numeric (no format)", "70 °F", delta="+5%", format="compact")
