@@ -34,16 +34,16 @@ caller’s rights connections.
 The proposed API changes are:
 * Add session-scoped connections. This would be a natural extension to the current connection API, and would support any
     user-scoped connection, like an HTTP client that’s using per-user OAuth credentials to make requests.
-* Add connection shutdown hooks. Connections should be able to be closed when they are removed from a cache.
+* Add connection close hooks. Connections should be able to be closed when they are removed from a cache.
 * Add a session-scoped `st.cache_resource` with a dedicated store outside of `st.session_state`. This falls out of the
     first two items: If we want session-scoped connections, we need a way to cache them in the session. Keeping this
-    out of `session_state` makes it much cleaner to implement shutdown hooks, since we won’t be sharing a namespace
+    out of `session_state` makes it much cleaner to implement close hooks, since we won’t be sharing a namespace
     with widget or arbitrary user data.
 
     Note that this cache could be scoped to st.connection instead - but since the current connection implementation
     leverages `cache_resource` for all caching, it would be nice if the session-scoped caching leveraged a common
     library as well.
-* Add cache expiration hooks. If we’re building shutdown hooks for connections, we should likely just build these as
+* Add cache expiration hooks. If we’re building close hooks for connections, we should likely just build these as
     expiration hooks on `cache_resource`. These are useful for any resource cache with a TTL or max entry count - and
     they’re semi-mandatory for session-scoped cached resources.
 * Add a new session-scoped connection type that creates Snowflake caller's rights sessions when invoked while running
@@ -69,9 +69,9 @@ See [this tutorial](https://docs.snowflake.com/en/developer-guide/snowpark-conta
 for detailed examples and explanation from the Snowpark Container Services side.
 
 ### Related issues
-* [#8545](https://github.com/streamlit/streamlit/issues/8545), which can be implemented by a simple session-scoped cached resource with a shutdown hook.
+* [#8545](https://github.com/streamlit/streamlit/issues/8545), which can be implemented by a simple session-scoped cached resource with a close hook.
 * [#10089](https://github.com/streamlit/streamlit/issues/10089), which can be implemented by a simple session-scoped cached resource at the start of the script.
-* [#8674](https://github.com/streamlit/streamlit/issues/8674), asking specifically for shutdown hooks on cached resources. This would implement that request.
+* [#8674](https://github.com/streamlit/streamlit/issues/8674), asking specifically for close hooks on cached resources. This would implement that request.
 
 ## Proposal
 
@@ -123,7 +123,7 @@ def scope(self) -> Literal["global", "session"]:
     """
     return "global"
 
-def shutdown(self) -> None:
+def close(self) -> None:
     """A function to invoke when this connection is removed from the session cache.
 
     Registered with the resource cache when created with st.connection.
@@ -143,7 +143,7 @@ When sessions are torn down, we will call a new helper in `ResourceCaches` which
 
 ### RCR connection implementation
 
-We will add a new `BaseConnection` subclass very similar to the current `SnowflakeConnection` class. This will have `scope` set to `"session"`, and will have a shutdown implementation that handles closing the connection. It will be called `SnowflakeCallersRightsConnection`.
+We will add a new `BaseConnection` subclass very similar to the current `SnowflakeConnection` class. This will have `scope` set to `"session"`, and will have a close implementation that handles closing the connection. It will be called `SnowflakeCallersRightsConnection`.
 
 Connections will be initiated by reading the current `st.context.headers` for a connection token, and connections will
 error if the token is not found. The other piece of the token will be read from the expected location (from
@@ -160,7 +160,7 @@ The parameter `use_callers_rights: bool` will toggle between the global `Snowfla
 The parameter `callers_rights_token: str` will allow the user to pass in a full (user + base) token to make the RCR connection if users wish to implement something custom. This allows for future caller's rights connections outside of the current Snowpark Container Services model.
 
 ### Other notes
-All `ttl` and `max_entries` cache expirations happen only on write and `len` checks, not on normal reads. This is how the underlying `TTLCache` works. This will be fine for session-scoped items, since they’ll be expired manually when the session expires, but needs to be called out in the docs as a limitation of the existing cache. This will really only matter for `ttl` when users treat it as a guaranteed shutdown, and not as an invalidation.
+All `ttl` and `max_entries` cache expirations happen only on write and `len` checks, not on normal reads. This is how the underlying `TTLCache` works. This will be fine for session-scoped items, since they’ll be expired manually when the session expires, but needs to be called out in the docs as a limitation of the existing cache. This will really only matter for `ttl` when users treat it as a guaranteed close, and not as an invalidation.
 
 This implementation also will have `max_entries` scoped to the session, not scoped globally. This can be documented, and shouldn’t be an issue for connections, since they will not grow beyond the number of active sessions.
 
