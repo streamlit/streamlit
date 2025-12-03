@@ -53,6 +53,18 @@ import {
 const LARGE_DATASET_POINT_THRESHOLD = 1000
 
 /**
+ * Safely format a numeric string, returning the original value if formatting fails.
+ */
+function safeFormatNumber(value: string, format: string): string {
+  try {
+    return formatNumber(Number(value), format)
+  } catch {
+    // Fall back to original value if format is invalid
+    return value
+  }
+}
+
+/**
  * Returns a Vega-Lite spec for a metric chart.
  *
  * @param chartData - The data to display in the chart.
@@ -268,12 +280,12 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
   // Apply number formatting if a format is specified and the value is numeric
   const formattedMetricValue =
     format && isNumericString(metricValue)
-      ? formatNumber(Number(metricValue), format)
+      ? safeFormatNumber(metricValue, format)
       : metricValue
 
   const formattedDelta =
     format && delta && isNumericString(delta)
-      ? formatNumber(Number(delta), format)
+      ? safeFormatNumber(delta, format)
       : delta
 
   let metricDirection: EmotionIcon | null = null

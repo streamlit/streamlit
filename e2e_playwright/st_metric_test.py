@@ -282,10 +282,10 @@ def test_format_rendering(themed_app: Page, assert_snapshot: ImageCompareFunctio
     expect(metric.get_by_test_id("stMetricValue")).to_have_text("70 °F")
     expect(metric.get_by_test_id("stMetricDelta")).to_have_text("+5%")
 
-    metric = get_metric(themed_app, "Percent format")
-    # Percent format should include the % symbol
-    expect(metric.get_by_test_id("stMetricValue")).to_contain_text("%")
-    expect(metric.get_by_test_id("stMetricDelta")).to_contain_text("%")
+    metric = get_metric(themed_app, "Printf format")
+    # Printf format "%.2f" should round to 2 decimal places
+    expect(metric.get_by_test_id("stMetricValue")).to_have_text("1234.57%")
+    expect(metric.get_by_test_id("stMetricDelta")).to_have_text("10.13%")
 
     metric = get_metric(themed_app, "Dollar format")
     # Dollar format should include the $ symbol

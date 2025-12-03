@@ -338,6 +338,16 @@ describe("Metric element", () => {
 
       expect(screen.getByTestId("stMetricValue").textContent).toBe("1234567")
     })
+
+    it("falls back to original value when format is invalid", () => {
+      // "%d %d" expects two arguments, which will cause formatNumber to throw
+      const props = getProps({ body: "1234", delta: "100", format: "%d %d" })
+      render(<Metric {...props} />)
+
+      // Should fall back to unformatted values instead of crashing
+      expect(screen.getByTestId("stMetricValue").textContent).toBe("1234")
+      expect(screen.getByTestId("stMetricDelta").textContent).toBe("100")
+    })
   })
 
   // Chart feature tests
