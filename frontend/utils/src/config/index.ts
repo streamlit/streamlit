@@ -59,20 +59,35 @@ function deepClone<T>(obj: T): T {
 }
 
 /**
- * Recursively freezes an object and all nested objects.
+ * Recursively freezes an object and all nested objects/arrays.
  */
 function deepFreeze<T extends object>(obj: T): Readonly<T> {
   Object.freeze(obj)
-  Object.getOwnPropertyNames(obj).forEach(prop => {
-    const value = (obj as Record<string, unknown>)[prop]
-    if (
-      value !== null &&
-      typeof value === "object" &&
-      !Object.isFrozen(value)
-    ) {
-      deepFreeze(value)
-    }
-  })
+
+  // For arrays, iterate through elements
+  if (Array.isArray(obj)) {
+    obj.forEach(item => {
+      if (
+        item !== null &&
+        typeof item === "object" &&
+        !Object.isFrozen(item)
+      ) {
+        deepFreeze(item)
+      }
+    })
+  } else {
+    // For objects, iterate through property values
+    Object.values(obj).forEach(value => {
+      if (
+        value !== null &&
+        typeof value === "object" &&
+        !Object.isFrozen(value)
+      ) {
+        deepFreeze(value)
+      }
+    })
+  }
+
   return obj as Readonly<T>
 }
 
@@ -135,10 +150,10 @@ export const StreamlitConfig = {
   get CUSTOM_COMPONENT_CLIENT_ID(): string | undefined {
     return capturedConfig?.CUSTOM_COMPONENT_CLIENT_ID
   },
-  get LIGHT_THEME() {
+  get LIGHT_THEME(): ICustomThemeConfig | undefined {
     return capturedConfig?.LIGHT_THEME
   },
-  get DARK_THEME() {
+  get DARK_THEME(): ICustomThemeConfig | undefined {
     return capturedConfig?.DARK_THEME
   },
   get ENABLE_RELOAD_BASED_ON_HARDCODED_STREAMLIT_VERSION():

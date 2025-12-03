@@ -16,93 +16,14 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { getStreamlitConfig, StreamlitConfig } from "./index"
-
-describe("StreamlitConfig", () => {
-  // Note: These tests verify the module's behavior after import.
-  // Since the capture happens at module load time, we can't easily test
-  // the "capture on load" behavior without module isolation.
-  // The main security benefit is verified by the fact that values are frozen.
-
-  describe("getStreamlitConfig", () => {
-    it("returns undefined when window.__streamlit was not set", () => {
-      // This test verifies behavior when config was not set before module load
-      // Note: In the test environment, window.__streamlit is typically undefined
-      const config = getStreamlitConfig()
-      // The config will be undefined if window.__streamlit wasn't set before module load
-      expect(config === undefined || typeof config === "object").toBe(true)
-    })
-
-    it("returns a frozen object when config exists", () => {
-      const config = getStreamlitConfig()
-      if (config !== undefined) {
-        expect(Object.isFrozen(config)).toBe(true)
-      }
-    })
-
-    it("StreamlitConfig accessors return expected types", () => {
-      // These should return undefined or the expected type
-      expect(
-        StreamlitConfig.BACKEND_BASE_URL === undefined ||
-          typeof StreamlitConfig.BACKEND_BASE_URL === "string"
-      ).toBe(true)
-      expect(
-        StreamlitConfig.HOST_CONFIG_BASE_URL === undefined ||
-          typeof StreamlitConfig.HOST_CONFIG_BASE_URL === "string"
-      ).toBe(true)
-      expect(
-        StreamlitConfig.DOWNLOAD_ASSETS_BASE_URL === undefined ||
-          typeof StreamlitConfig.DOWNLOAD_ASSETS_BASE_URL === "string"
-      ).toBe(true)
-      expect(
-        StreamlitConfig.MAIN_PAGE_BASE_URL === undefined ||
-          typeof StreamlitConfig.MAIN_PAGE_BASE_URL === "string"
-      ).toBe(true)
-      expect(
-        StreamlitConfig.CUSTOM_COMPONENT_CLIENT_ID === undefined ||
-          typeof StreamlitConfig.CUSTOM_COMPONENT_CLIENT_ID === "string"
-      ).toBe(true)
-      expect(
-        StreamlitConfig.ENABLE_RELOAD_BASED_ON_HARDCODED_STREAMLIT_VERSION ===
-          undefined ||
-          typeof StreamlitConfig.ENABLE_RELOAD_BASED_ON_HARDCODED_STREAMLIT_VERSION ===
-            "boolean"
-      ).toBe(true)
-    })
-  })
-
-  describe("immutability", () => {
-    it("captured config cannot be modified", () => {
-      const config = getStreamlitConfig()
-
-      if (config !== undefined) {
-        // Attempting to modify should throw in strict mode or silently fail
-        expect(() => {
-          ;(config as Record<string, unknown>).BACKEND_BASE_URL = "hacked"
-        }).toThrow()
-      }
-    })
-
-    it("nested objects in config are also frozen", () => {
-      const config = getStreamlitConfig()
-
-      if (config?.LIGHT_THEME) {
-        expect(Object.isFrozen(config.LIGHT_THEME)).toBe(true)
-      }
-      if (config?.DARK_THEME) {
-        expect(Object.isFrozen(config.DARK_THEME)).toBe(true)
-      }
-    })
-  })
-})
-
 /**
- * Tests that verify module isolation behavior with a full config structure.
+ * Tests for StreamlitConfig module.
+ *
  * These tests use vi.resetModules() to re-import the module after setting
  * window.__streamlit, simulating the real-world scenario where the host
  * sets the config before loading the Streamlit bundle.
  */
-describe("StreamlitConfig with module isolation", () => {
+describe("StreamlitConfig", () => {
   // Store original window.__streamlit value
   const originalStreamlit = window.__streamlit
 
@@ -217,10 +138,15 @@ describe("StreamlitConfig with module isolation", () => {
       throw new Error("Config or themes should be defined")
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const lightTheme = config.LIGHT_THEME as any
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const darkTheme = config.DARK_THEME as any
+    // Use specific types for accessing nested properties
+    const lightTheme = config.LIGHT_THEME as {
+      radii: { baseWidgetRadius: number }
+      fontFaces: { url: string }[]
+    }
+    const darkTheme = config.DARK_THEME as {
+      radii: { baseWidgetRadius: number }
+      fontFaces: { url: string }[]
+    }
 
     // Verify LIGHT_THEME is frozen
     expect(Object.isFrozen(config.LIGHT_THEME)).toBe(true)
@@ -260,13 +186,16 @@ describe("StreamlitConfig with module isolation", () => {
       throw new Error("Config and LIGHT_THEME should be defined")
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const lightTheme = config.LIGHT_THEME as any
+    // Use a specific type for LIGHT_THEME to avoid 'any'
+    const lightTheme = config.LIGHT_THEME as {
+      primaryColor: string
+      radii: { baseWidgetRadius: number }
+      fontFaces: { url: string }[]
+    }
 
     // Attempt to modify top-level property
     expect(() => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ;(config as any).BACKEND_BASE_URL = "hacked"
+      ;(config as { BACKEND_BASE_URL: string }).BACKEND_BASE_URL = "hacked"
     }).toThrow(TypeError)
 
     // Attempt to modify LIGHT_THEME property
