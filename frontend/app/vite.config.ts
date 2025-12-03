@@ -13,6 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+/// <reference types="vitest/config" />
 import { defineConfig } from "vite"
 import { analyzer } from "vite-bundle-analyzer"
 import { version } from "./package.json"
@@ -194,10 +196,6 @@ export default defineConfig({
           include: ["vitest-canvas-mock"],
         },
       },
-    },
-    server: {
-      // Want a Non-Dev port for testing
-      port: 3001,
     },
   },
 })
