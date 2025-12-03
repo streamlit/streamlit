@@ -242,8 +242,8 @@ class ButtonMixin:
             The following modifiers are supported: Alt, Ctrl, Cmd, Meta, Mod,
             Option, Shift.
 
-            - Ctrl, Cmd, and Mod are interchangeable and will display to the
-              user to match their platform.
+            - Ctrl, Cmd, Meta, and Mod are interchangeable and will display to
+              the user to match their platform.
             - Option and Alt are interchangeable and will display to the user
               to match their platform.
 
@@ -301,10 +301,10 @@ class ButtonMixin:
         >>> import streamlit as st
         >>>
         >>> with st.container(horizontal=True, horizontal_alignment="distribute"):
-        >>>     "`A`" if st.button("A", width=100, shortcut="Shift+A") else "` `"
-        >>>     "`S`" if st.button("S", width=100, shortcut="Ctrl+S") else "` `"
-        >>>     "`D`" if st.button("D", width=100, shortcut="Cmd+D") else "` `"
-        >>>     "`F`" if st.button("F", width=100, shortcut="Mod+F") else "` `"
+        >>>     "`A`" if st.button("A", shortcut="A") else "` `"
+        >>>     "`S`" if st.button("S", shortcut="Ctrl+S") else "` `"
+        >>>     "`D`" if st.button("D", shortcut="Cmd+Shift+D") else "` `"
+        >>>     "`F`" if st.button("F", shortcut="Mod+Alt+Shift+F") else "` `"
 
         .. output::
            https://doc-button-shortcuts.streamlit.app/
