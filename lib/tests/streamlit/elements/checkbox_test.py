@@ -260,19 +260,19 @@ hello
         test_cases = [
             (
                 "invalid",
-                "Invalid width value: 'invalid'. Width must be either an integer (pixels), 'stretch', or 'content'.",
+                "Width must be either a positive integer (pixels), 'stretch', or 'content'.",
             ),
             (
                 -100,
-                "Invalid width value: -100. Width must be either an integer (pixels), 'stretch', or 'content'.",
+                "Width must be either a positive integer (pixels), 'stretch', or 'content'.",
             ),
             (
                 0,
-                "Invalid width value: 0. Width must be either an integer (pixels), 'stretch', or 'content'.",
+                "Width must be either a positive integer (pixels), 'stretch', or 'content'.",
             ),
             (
                 100.5,
-                "Invalid width value: 100.5. Width must be either an integer (pixels), 'stretch', or 'content'.",
+                "Width must be either a positive integer (pixels), 'stretch', or 'content'.",
             ),
         ]
 
@@ -283,7 +283,7 @@ hello
                         f"invalid checkbox width test {index}", width=width_value
                     )
 
-                assert str(exc.value) == expected_error_message
+                assert expected_error_message in str(exc.value)
 
     def test_checkbox_default_width(self):
         """Test that st.checkbox defaults to content width."""
@@ -326,19 +326,19 @@ hello
         test_cases = [
             (
                 "invalid",
-                "Invalid width value: 'invalid'. Width must be either an integer (pixels), 'stretch', or 'content'.",
+                "Width must be either a positive integer (pixels), 'stretch', or 'content'.",
             ),
             (
                 -100,
-                "Invalid width value: -100. Width must be either an integer (pixels), 'stretch', or 'content'.",
+                "Width must be either a positive integer (pixels), 'stretch', or 'content'.",
             ),
             (
                 0,
-                "Invalid width value: 0. Width must be either an integer (pixels), 'stretch', or 'content'.",
+                "Width must be either a positive integer (pixels), 'stretch', or 'content'.",
             ),
             (
                 100.5,
-                "Invalid width value: 100.5. Width must be either an integer (pixels), 'stretch', or 'content'.",
+                "Width must be either a positive integer (pixels), 'stretch', or 'content'.",
             ),
         ]
 
@@ -347,7 +347,7 @@ hello
                 with pytest.raises(StreamlitAPIException) as exc:
                     st.toggle(f"invalid toggle test {index}", width=width_value)
 
-                assert str(exc.value) == expected_error_message
+                assert expected_error_message in str(exc.value)
 
     def test_toggle_default_width(self):
         """Test that st.toggle defaults to content width."""

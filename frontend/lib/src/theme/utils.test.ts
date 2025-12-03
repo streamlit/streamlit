@@ -100,7 +100,7 @@ const mockWindow = (...overrides: object[]): MockInstance => {
 
 describe("Styling utils", () => {
   describe("computeSpacingStyle", () => {
-    test("pulls correct theme values", () => {
+    it("pulls correct theme values", () => {
       expect(computeSpacingStyle("sm md lg none", lightTheme.emotion)).toEqual(
         "0.5rem 0.75rem 1rem 0"
       )
