@@ -334,9 +334,11 @@ class ButtonMixin:
         This is useful when you would like to provide a way for your users
         to download a file directly from your app.
 
-        Note that the data to be downloaded is stored in-memory while the
-        user is connected, so it's a good idea to keep file sizes under a
-        couple hundred megabytes to conserve memory.
+        If you pass the data directly to the ``data`` parameter, then the data
+        is stored in-memory while the user is connected. It's a good idea to
+        keep file sizes under a couple hundred megabytes to conserve memory or
+        use deferred data generation by passing a callable to the ``data``
+        parameter.
 
         If you want to prevent your app from rerunning when a user clicks the
         download button, wrap the download button in a `fragment
@@ -362,15 +364,20 @@ class ButtonMixin:
             .. |st.markdown| replace:: ``st.markdown``
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
-        data : str, bytes, file, or callable
-            The contents of the file to be downloaded.
+        data : str, bytes, file-like, or callable
+            The contents of the file to be downloaded or a callable that
+            returns the contents of the file.
 
-            You can also pass a ``callable`` (no-arg function) that returns
-            ``str``, ``bytes``, or a file-like object. The callable is executed
-            when the user clicks the download button (deferred generation).
-            Streamlit commands inside the callable (for example,
-            ``st.write("Deferred data prepared")``) are ignored and will not
-            render.
+            File contents can be a string, bytes, or file-like object.
+            File-like objects include ``io.BytesIO``, ``io.StringIO``, or any
+            class that implements the abstract base class ``io.RawIOBase``.
+
+            If a callable is passed, it is executed when the user clicks
+            the download button and runs on a separate thread from the
+            resulting script rerun. This deferred generation is helpful for
+            large files to avoid blocking the page script. The callable can't
+            accept any arguments. If any Streamlit commands are executed inside
+            the callable, they will be ignored.
 
             To prevent unnecessary recomputation, use caching when converting
             your data for download. For more information, see the Example 1
@@ -615,26 +622,30 @@ class ButtonMixin:
            https://doc-download-button-file.streamlit.app/
            height: 200px
 
-        **Example 4: Generate the data on click with a callable**
+        **Example 4: Generate the data on-click with a callable**
 
-        Pass a function to ``data`` to generate the bytes lazily when the user
-        clicks the button. Streamlit commands inside this function are ignored.
+        Pass a callable to ``data`` to generate the bytes lazily when the user
+        clicks the button. Streamlit commands inside this callable are ignored.
+        The callable can't accept any arguments and must return a file-like
+        object.
 
         >>> import streamlit as st
         >>> import time
         >>>
         >>> def make_report():
-        >>>     # Runs on click; Streamlit commands here won't render
         >>>     time.sleep(1)
-        >>>     # st.write("Deferred data prepared")  # Ignored
         >>>     return "col1,col2\n1,2\n3,4".encode("utf-8")
         >>>
         >>> st.download_button(
         ...     label="Download report",
-        ...     data=make_report,  # pass the function, don't call it
+        ...     data=make_report,
         ...     file_name="report.csv",
         ...     mime="text/csv",
         ... )
+
+        .. output::
+           https://doc-download-button-deferred.streamlit.app/
+           height: 200px
 
         """
         ctx = get_script_run_ctx()
