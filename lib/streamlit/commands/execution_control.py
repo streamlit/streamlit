@@ -235,7 +235,7 @@ def switch_page(  # type: ignore[misc]
     >>> if st.button("Page 2"):
     >>>     st.switch_page("pages/page_2.py")
 
-    .. output ::
+    .. output::
         https://doc-switch-page.streamlit.app/
         height: 350px
 
@@ -260,7 +260,7 @@ def switch_page(  # type: ignore[misc]
     >>> pg = st.navigation([page_1, "page_2.py"])
     >>> pg.run()
 
-    .. output ::
+    .. output::
         https://doc-switch-page-query-params.streamlit.app/
         height: 350px
 

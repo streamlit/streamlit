@@ -92,7 +92,7 @@ class TextMixin:
         >>>
         >>> st.text("This is text\n[and more text](that's not a Markdown link).")
 
-        .. output ::
+        .. output::
             https://doc-text.streamlit.app/
             height: 220px
 

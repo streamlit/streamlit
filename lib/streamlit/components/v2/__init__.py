@@ -322,7 +322,7 @@ def component(
         if result.clicked:
             st.write(f"You clicked {result.clicked}!")
 
-    .. output ::
+    .. output::
         https://doc-components-markdown-links.streamlit.app/
         height: 250px
 
@@ -386,7 +386,7 @@ def component(
         elif result.clicked == "link_2":
             st.write("You clicked the second link!")
 
-    .. output ::
+    .. output::
         https://doc-components-custom-anchors.streamlit.app/
         height: 250px
 
@@ -445,7 +445,7 @@ def component(
         result = my_component(on_clicked_change=lambda: None)
         result
 
-    .. output ::
+    .. output::
         https://doc-components-interactive-svg.streamlit.app/
         height: 550px
 
@@ -501,7 +501,7 @@ def component(
         result = my_component(on_expanded_change=lambda: None)
         result
 
-    .. output ::
+    .. output::
         https://doc-components-cleanup-function.streamlit.app/
         height: 250px
 

@@ -485,7 +485,7 @@ class ChatMixin:
         ...     st.write("Hello 👋")
         ...     st.line_chart(np.random.randn(30, 3))
 
-        .. output ::
+        .. output::
             https://doc-chat-message-user.streamlit.app/
             height: 450px
 
@@ -498,7 +498,7 @@ class ChatMixin:
         >>> message.write("Hello human")
         >>> message.bar_chart(np.random.randn(30, 3))
 
-        .. output ::
+        .. output::
             https://doc-chat-message-user1.streamlit.app/
             height: 450px
 
@@ -759,7 +759,7 @@ class ChatMixin:
         >>> if prompt:
         ...     st.write(f"User has sent the following prompt: {prompt}")
 
-        .. output ::
+        .. output::
             https://doc-chat-input.streamlit.app/
             height: 350px
 
@@ -778,7 +778,7 @@ class ChatMixin:
         >>>         messages.chat_message("user").write(prompt)
         >>>         messages.chat_message("assistant").write(f"Echo: {prompt}")
 
-        .. output ::
+        .. output::
             https://doc-chat-input-inline.streamlit.app/
             height: 350px
 
@@ -803,7 +803,7 @@ class ChatMixin:
         >>> if prompt and prompt["files"]:
         >>>     st.image(prompt["files"][0])
 
-        .. output ::
+        .. output::
             https://doc-chat-input-file-uploader.streamlit.app/
             height: 350px
 
@@ -818,7 +818,7 @@ class ChatMixin:
         >>> st.chat_input(key="chat_input")
         >>> st.write("Chat input value:", st.session_state.chat_input)
 
-        .. output ::
+        .. output::
             https://doc-chat-input-session-state.streamlit.app/
             height: 350px
 
@@ -840,7 +840,7 @@ class ChatMixin:
         >>>     st.audio(prompt.audio)
         >>>     st.write("Audio file:", prompt.audio.name)
 
-        .. output ::
+        .. output::
             https://doc-chat-input-audio.streamlit.app/
             height: 350px
 

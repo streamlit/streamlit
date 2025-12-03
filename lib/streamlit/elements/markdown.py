@@ -496,7 +496,7 @@ class MarkdownMixin:
         >>>     ":violet-badge[:material/star: Favorite] :orange-badge[⚠️ Needs review] :gray-badge[Deprecated]"
         >>> )
 
-        .. output ::
+        .. output::
             https://doc-badge.streamlit.app/
             height: 220px
 

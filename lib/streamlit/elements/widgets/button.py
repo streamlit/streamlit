@@ -1020,7 +1020,7 @@ class ButtonMixin:
         .. |client.showSidebarNavigation| replace:: ``client.showSidebarNavigation``
         .. _client.showSidebarNavigation: https://docs.streamlit.io/develop/api-reference/configuration/config.toml#client
 
-        .. output ::
+        .. output::
             https://doc-page-link.streamlit.app/
             height: 350px
 
@@ -1044,7 +1044,7 @@ class ButtonMixin:
         >>> pg = st.navigation([page_1, "page_2.py"])
         >>> pg.run()
 
-        .. output ::
+        .. output::
             https://doc-page-link-query-params.streamlit.app/
             height: 350px
 
