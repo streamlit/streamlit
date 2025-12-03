@@ -80,6 +80,12 @@ class TextMixin:
             - ``"justify"``: Text is justified (stretched to fill the available
               width with the last line left-aligned).
 
+            .. note::
+                For text alignment to have a visible effect, the element's
+                width must be wider than its content. If you use
+                ``width="content"`` with short text, the alignment may not be
+                noticeable.
+
         Example
         -------
         >>> import streamlit as st
