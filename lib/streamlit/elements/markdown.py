@@ -467,12 +467,12 @@ class MarkdownMixin:
               of the parent container.
 
         help : str or None
-            A tooltip that gets displayed when the badge is hovered over. If
-            this is ``None`` (default), no tooltip is displayed.
+            A tooltip to display when hovering over the badge. If this is
+            ``None`` (default), no tooltip is displayed.
 
-            The tooltip can optionally contain GitHub-flavored Markdown, including
-            the Markdown directives described in the ``body`` parameter of
-            ``st.markdown``.
+            The tooltip can optionally contain GitHub-flavored Markdown,
+            including the Markdown directives described in the ``body``
+            parameter of ``st.markdown``.
 
         Examples
         --------
