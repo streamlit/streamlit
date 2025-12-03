@@ -678,7 +678,7 @@ class ChatMixin:
             optimal for speech recognition.
 
             The following values are supported: ``8000`` (telephone quality),
-            ``11025``, ``16000`` (speech-recognition qaulity), ``22050``,
+            ``11025``, ``16000`` (speech-recognition quality), ``22050``,
             ``24000``, ``32000``, ``44100``, ``48000`` (high-quality), or
             ``None``. If this is ``None``, the widget uses the browser's
             default sample rate (typically 44100 or 48000 Hz).

@@ -379,7 +379,7 @@ class FormMixin:
             - A single alphanumeric key like ``"K"`` or ``"4"``.
             - A function key like ``"F11"``.
             - A special key like ``"Enter"``, ``"Esc"``, or ``"Tab"``.
-            - Any of the above combined with modifies. For example, you can use
+            - Any of the above combined with modifiers. For example, you can use
               ``"Ctrl+K"`` or ``"Cmd+Shift+O"``.
 
             .. important::
