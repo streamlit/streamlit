@@ -79,7 +79,7 @@ function getSizeStyle(size: BaseButtonSize, theme: EmotionTheme): CSSObject {
       return {
         padding: `${theme.spacing.md} ${theme.spacing.md}`,
       }
-    case BaseButtonSize.MEDIUM:
+    default:
       return {
         padding: `${theme.spacing.xs} ${theme.spacing.md}`,
       }
