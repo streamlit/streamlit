@@ -53,7 +53,7 @@ st.table(
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `hide_index` | `bool \| None` | `None` | Whether to hide the index column. If `None`, auto-hide default RangeIndex. |
+| `hide_index` | `bool | None` | `None` | Whether to hide the index column. If `None`, auto-hide default RangeIndex. |
 | `hide_header` | `bool` | `False` | Whether to hide the column headers row. |
 
 ### Behavior
@@ -67,7 +67,7 @@ st.table(
 **`hide_header`:**
 
 - `False` (default): Show column headers
-- `True`: Hide all header rows
+- `True`: Hide all header rows, including all levels of the MultiIndex headers.
 
 ### Examples
 
