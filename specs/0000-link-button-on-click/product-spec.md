@@ -18,7 +18,7 @@ already available in `st.download_button`.
 when clicked. Users often need to track or respond to link clicks—for example, marking a
 result as "read" when a user opens it via a hyperlink.
 
-**User request:**
+**Requests:**
 
 - [#7453](https://github.com/streamlit/streamlit/issues/7453) - Add `on_click` parameter to
   `st.link_button` (15+ upvotes)
