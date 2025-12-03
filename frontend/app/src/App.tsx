@@ -1925,7 +1925,7 @@ export class App extends PureComponent<Props, State> {
   /**
    * Sends a message back to the server.
    */
-  private sendBackMsg = (msg: BackMsg): void => {
+  private readonly sendBackMsg = (msg: BackMsg): void => {
     if (this.connectionManager) {
       LOG.info(msg)
       this.connectionManager.sendMessage(msg)
@@ -2212,7 +2212,7 @@ export class App extends PureComponent<Props, State> {
   /**
    * Checks if there are any app-defined menu items configured via st.set_page_config
    */
-  private hasAppDefinedMenuItems = (): boolean => {
+  private readonly hasAppDefinedMenuItems = (): boolean => {
     const { menuItems } = this.state
     return Boolean(
       menuItems?.aboutSectionMd ||
@@ -2225,7 +2225,7 @@ export class App extends PureComponent<Props, State> {
    * Determines whether the toolbar should be visible based on embed mode,
    * toolbar mode settings, and availability of host menu/toolbar items.
    */
-  private shouldShowToolbar = (
+  private readonly shouldShowToolbar = (
     hostMenuItems: IMenuItem[],
     hostToolbarItems: IToolbarItem[]
   ): boolean => {

@@ -249,7 +249,7 @@ class StreamlitLibExample extends PureComponent<Props, State> {
     )
   }
 
-  private sendRerunBackMsg = (): void => {}
+  private readonly sendRerunBackMsg = (): void => {}
 }
 
 describe("StreamlitLibExample", () => {

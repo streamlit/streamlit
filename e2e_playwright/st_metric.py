@@ -139,6 +139,29 @@ with st.container(height=400, key="height_test"):
     st.metric("Stretch height", 123, 123, height="stretch")
     st.metric("Content height", 123, 123, height="content")
 
+# Test named delta colors
+col1, col2 = st.columns(2)
+with col1:
+    st.metric(
+        "Yellow delta",
+        100,
+        "+5%",
+        delta_color="yellow",
+        border=True,
+        chart_data=generate_sparkline_data(),
+        chart_type="bar",
+    )
+with col2:
+    st.metric(
+        "Primary delta",
+        75,
+        "-2",
+        delta_color="primary",
+        border=True,
+        chart_data=generate_sparkline_data(),
+        chart_type="line",
+    )
+
 # Format parameter tests
 format_col1, format_col2, format_col3, format_col4 = st.container(
     key="metric_format_config"

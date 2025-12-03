@@ -296,3 +296,17 @@ def test_format_rendering(themed_app: Page, assert_snapshot: ImageCompareFunctio
         get_element_by_key(themed_app, "metric_format_config"),
         name="st_metric-format_options",
     )
+
+
+def test_custom_delta_color_render(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that custom delta colors render correctly."""
+    assert_snapshot(
+        get_metric(themed_app, "Yellow delta"),
+        name="st_metric-yellow_delta",
+    )
+    assert_snapshot(
+        get_metric(themed_app, "Primary delta"),
+        name="st_metric-primary_delta",
+    )

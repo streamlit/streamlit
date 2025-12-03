@@ -545,7 +545,7 @@ withTimezones(() => {
   })
 })
 
-test("removeLineBreaks should remove line breaks", () => {
+it("removeLineBreaks should remove line breaks", () => {
   expect(removeLineBreaks("\n")).toBe(" ")
   expect(removeLineBreaks("\nhello\n\nworld")).toBe(" hello  world")
 })

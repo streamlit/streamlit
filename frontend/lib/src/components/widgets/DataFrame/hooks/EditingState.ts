@@ -52,7 +52,7 @@ class EditingState {
   private deletedRows: number[] = []
 
   // The original number of rows in the table (without potential additions & deletions)
-  private numRows = 0
+  private readonly numRows: number = 0
 
   constructor(numRows: number) {
     this.numRows = numRows

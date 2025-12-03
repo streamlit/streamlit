@@ -113,7 +113,7 @@ export class Quiver {
   [immerable] = true
 
   /** Index & data column names (matrix of column names to support multi-level headers). */
-  private _columnNames: ColumnNames
+  private readonly _columnNames: ColumnNames
 
   /** Column type information for the (Pandas) index columns.
    *
@@ -145,7 +145,7 @@ export class Quiver {
   private readonly _styler?: PandasStylerData
 
   /** Number of bytes in the Arrow IPC bytes. */
-  private _num_bytes: number
+  private readonly _num_bytes: number
 
   constructor(element: IArrow) {
     const {
