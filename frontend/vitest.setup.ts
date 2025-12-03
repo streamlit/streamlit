@@ -43,10 +43,6 @@ Element.prototype.animate = vi
   .fn()
   .mockImplementation(() => ({ addEventListener: vi.fn() }))
 
-// Provide a constructable ResizeObserver mock so `new ResizeObserver(...)`
-// works in tests under Vitest v4.
-const resizeObserverMock = vi.fn()
-
 class ResizeObserverMock {
   public callback: (
     entries: ResizeObserverEntry[],
@@ -63,7 +59,7 @@ class ResizeObserverMock {
     ) => void
   ) {
     this.callback = callback
-    resizeObserverMock(callback)
+    vi.fn(callback)
   }
 }
 
