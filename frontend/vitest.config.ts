@@ -32,6 +32,7 @@ export default defineConfig({
       include: ["*/src/**/*.{js,jsx,ts,tsx}"],
       exclude: [
         "**/*.d.ts",
+        "**/vitest.setup.ts",
         "lib/src/vendor/**",
         "eslint-plugin-streamlit-custom/src/**",
         "**/src/assets/**",
