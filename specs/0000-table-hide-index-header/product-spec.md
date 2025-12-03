@@ -4,7 +4,7 @@ created: 2025-11-28
 status: Draft
 ---
 
-# `hide_index` and `hide_header` parameters for `st.table`
+# Allow hiding index and header columns in `st.table`
 
 ## Summary
 
