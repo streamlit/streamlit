@@ -915,3 +915,16 @@ st.dataframe(
     placeholder="-",
     width="content",
 )
+
+st.header("Disable export:")
+st.dataframe(
+    pd.DataFrame(
+        {
+            "col_0": [1, 2, 3],
+            "col_1": ["a", "b", "c"],
+        }
+    ),
+    disable_export=True,
+    width="content",
+    key="disable_export_df",
+)

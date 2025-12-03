@@ -136,4 +136,26 @@ describe("DataFrame widget", () => {
       {}
     )
   })
+
+  it("disableExport disables copy and getCellsForSelection", () => {
+    const propsWithDisableExport = {
+      ...getProps(new Quiver({ data: TEN_BY_TEN })),
+      element: ArrowProto.create({
+        data: new Uint8Array(),
+        disableExport: true,
+      }),
+    }
+
+    render(<DataFrame {...propsWithDisableExport} />)
+
+    expect(glideDataGridModule.DataEditor).toHaveBeenCalledWith(
+      expect.objectContaining({
+        getCellsForSelection: undefined,
+        keybindings: expect.objectContaining({
+          copy: false,
+        }),
+      }),
+      {}
+    )
+  })
 })

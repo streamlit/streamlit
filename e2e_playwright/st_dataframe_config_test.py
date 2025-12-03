@@ -327,3 +327,23 @@ def test_localized_date_and_number_formatting(
     assert_snapshot(
         dataframe_element, name="st_dataframe-localized_date_and_number_formatting"
     )
+
+
+def test_disable_export_hides_download_button(app: Page):
+    """Test that disable_export hides the download button."""
+    dataframe_element = app.get_by_test_id("stDataFrame").nth(33)
+    expect_canvas_to_be_visible(dataframe_element)
+    dataframe_element.scroll_into_view_if_needed()
+
+    # Hover over the dataframe to make the toolbar visible
+    dataframe_element.hover()
+    toolbar = dataframe_element.get_by_test_id("stElementToolbar")
+    expect(toolbar).to_be_visible()
+
+    # Verify that the download button is not attached
+    download_button = toolbar.get_by_label("Download as CSV")
+    expect(download_button).not_to_be_attached()
+
+    # Verify search button is still present (other toolbar items should still work)
+    search_button = toolbar.get_by_label("Search")
+    expect(search_button).to_be_visible()

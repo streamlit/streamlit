@@ -158,6 +158,20 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.arrow_data_frame
         assert proto.placeholder == "-"
 
+    def test_disable_export_parameter(self):
+        """Test that disable_export parameter sets the proto field correctly."""
+        st.dataframe(pd.DataFrame(), disable_export=True)
+
+        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        assert proto.disable_export is True
+
+    def test_disable_export_default_is_false(self):
+        """Test that disable_export defaults to False."""
+        st.dataframe(pd.DataFrame())
+
+        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        assert proto.disable_export is False
+
     def test_uuid(self):
         df = mock_data_frame()
         styler = df.style
