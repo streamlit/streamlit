@@ -336,7 +336,10 @@ describe("Video Element", () => {
           const props = getProps({ url })
           renderWithContexts(<Video {...props} />, {
             libConfigContext: {
-              resourceCrossOriginMode,
+              resourceCrossOriginMode: resourceCrossOriginMode as
+                | "anonymous"
+                | "use-credentials"
+                | undefined,
             },
           })
           const videoElement = await screen.findByTestId("stVideo")
