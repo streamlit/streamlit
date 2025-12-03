@@ -27,6 +27,7 @@ import {
   WidgetLabel,
 } from "~lib/components/widgets/BaseWidget"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
 import { LabelVisibilityOptions } from "~lib/util/utils"
 
 import {
@@ -87,16 +88,9 @@ const BaseColorPicker = (props: BaseColorPickerProps): React.ReactElement => {
     help,
   } = props
   const [value, setValue] = useState(propValue)
-  const [prevPropValue, setPrevPropValue] = useState(propValue)
   const theme = useEmotionTheme()
 
-  // Reset the value when the prop value changes (during render, not in effect)
-  // This follows React's recommended pattern for adjusting state based on props:
-  // https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
-  if (propValue !== prevPropValue) {
-    setPrevPropValue(propValue)
-    setValue(propValue)
-  }
+  useExecuteWhenChanged(() => setValue(propValue), [propValue])
 
   // Note: This is a "local" onChange handler used to update the color preview
   // (allowing the user to click and drag). this.props.onChange is only called
