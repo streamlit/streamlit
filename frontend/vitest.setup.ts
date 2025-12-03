@@ -52,9 +52,9 @@ class ResizeObserverMock {
     entries: ResizeObserverEntry[],
     observer: ResizeObserver
   ) => void
-  public observe: (element: Element) => void
-  public unobserve: (element: Element) => void
-  public disconnect: () => void
+  public observe: (element: Element) => void = vi.fn()
+  public unobserve: (element: Element) => void = vi.fn()
+  public disconnect: () => void = vi.fn()
 
   constructor(
     callback: (
@@ -64,9 +64,6 @@ class ResizeObserverMock {
   ) {
     this.callback = callback
     resizeObserverMock(callback)
-    this.observe = vi.fn()
-    this.unobserve = vi.fn()
-    this.disconnect = vi.fn()
   }
 }
 
@@ -101,13 +98,35 @@ class AudioBufferMock {
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  // The duration (in seconds) of the buffer.
+  public get duration(): number {
+    return this.length / this.sampleRate
+  }
+
   public getChannelData(_channel: number): Float32Array {
     return new Float32Array(this.length)
   }
+
+  // Minimal stub for copyFromChannel.
+  public copyFromChannel(
+    destination: Float32Array,
+    _channelNumber: number,
+    _startInChannel = 0
+  ): void {
+    destination.fill(0)
+  }
+
+  // Minimal stub for copyToChannel.
+  public copyToChannel(
+    _source: Float32Array,
+    _channelNumber: number,
+    _startInChannel = 0
+  ): void {
+    // No-op for mock
+  }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-;(globalThis as any).AudioBuffer = AudioBufferMock
+;(globalThis as { AudioBuffer: typeof AudioBufferMock }).AudioBuffer =
+  AudioBufferMock
 
 process.env.TZ = "UTC"

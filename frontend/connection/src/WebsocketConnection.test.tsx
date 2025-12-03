@@ -148,17 +148,22 @@ function createMockArgs(overrides?: Partial<Args>): Args {
 }
 
 /** Create a robust fetch mock that handles any number of HTTP requests */
-function createFetchMock(): ReturnType<typeof vi.fn> {
+function createFetchMock(): typeof fetch {
   let callCount = 0
-  return vi.fn().mockImplementation(() => {
-    callCount++
-    // Alternate between health check (empty string) and host config responses
-    return Promise.resolve(
-      callCount % 2 === 1
-        ? createSuccessResponse({})
-        : createSuccessResponse(MOCK_HOST_CONFIG_RESPONSE)
+  const mock = vi
+    .fn<typeof fetch>()
+    .mockImplementation(
+      async (_input: RequestInfo | URL, _init?: RequestInit) => {
+        callCount++
+        // Alternate between health check (empty string) and host config responses
+        return Promise.resolve(
+          callCount % 2 === 1
+            ? createSuccessResponse({})
+            : createSuccessResponse(MOCK_HOST_CONFIG_RESPONSE)
+        )
+      }
     )
-  })
+  return mock
 }
 
 describe("doInitPings", () => {
@@ -950,7 +955,7 @@ describe("WebsocketConnection", () => {
     server = new WS("ws://localhost:1234/_stcore/stream")
 
     originalFetch = globalThis.fetch
-    globalThis.fetch = createFetchMock() as typeof fetch
+    globalThis.fetch = createFetchMock()
 
     client = new WebsocketConnection(createMockArgs())
   })
@@ -1085,20 +1090,17 @@ describe("WebsocketConnection auth token handling", () => {
 
     // Provide a minimal WebSocket implementation for auth tests that
     // records constructor arguments and supports the methods our code uses.
-    function WebSocketMockImpl(
-      this: MockWebSocket,
-      url: string,
-      protocols?: string | string[]
-    ): void {
-      websocketSpy(url, protocols)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-      return new MockWebSocket(url, protocols) as any
+    const MockWebSocketWithSpy = class extends MockWebSocket {
+      constructor(url: string, protocols?: string | string[]) {
+        websocketSpy(url, protocols)
+        super(url, protocols)
+      }
     }
 
-    globalThis.WebSocket = WebSocketMockImpl as unknown as typeof WebSocket
+    globalThis.WebSocket = MockWebSocketWithSpy as unknown as typeof WebSocket
 
     originalFetch = globalThis.fetch
-    globalThis.fetch = createFetchMock() as typeof fetch
+    globalThis.fetch = createFetchMock()
 
     // Prevent the internal ping loop from scheduling timers or websockets
     // for these auth-only tests.
