@@ -3263,7 +3263,6 @@ __metadata:
     lodash-es: "npm:^4.17.21"
     loglevel: "npm:^1.9.2"
     moment: "npm:^2.29.4"
-    polyfill-pseudoclass-has: "npm:^1.1.0"
     prettier: "npm:^3.6.2"
     prop-types: "npm:^15.7.2"
     rc-overflow: "npm:^1.4.1"
@@ -14624,13 +14623,6 @@ __metadata:
     bignumber.js: "npm:^9.1.0"
     splaytree-ts: "npm:^1.0.2"
   checksum: 10c0/8de02c32e566421875c70890fe6d3d7bd55a92fc39867446e65999e042c4632fb27ab1a7e106e96edd12d63b32a643f3a690d9a980aeda655a41ddf4e8750f5d
-  languageName: node
-  linkType: hard
-
-"polyfill-pseudoclass-has@npm:^1.1.0":
-  version: 1.1.0
-  resolution: "polyfill-pseudoclass-has@npm:1.1.0"
-  checksum: 10c0/19bfb2ded08aa82b8dd96b471431db763bcd6e2c93ba468d290bcab73f82a0834e8869371a167636bc3cbeb9e1e03b70e7549731aa541faa1e4ab3f3b0a4adea
   languageName: node
   linkType: hard
 
