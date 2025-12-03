@@ -77,8 +77,8 @@ class TextMixin:
             - ``"left"`` (default): Text is aligned to the left edge.
             - ``"center"``: Text is centered.
             - ``"right"``: Text is aligned to the right edge.
-            - ``"justify"``: Text is justified (stretched to align on both
-              left and right edges, with the last line left-aligned).
+            - ``"justify"``: Text is justified (stretched to fill the available
+              width with the last line left-aligned).
 
         Example
         -------
