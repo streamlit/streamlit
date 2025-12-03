@@ -15,6 +15,11 @@
  */
 
 /**
+ * Type declarations for test-only globals.
+ * These are initialized in vitest.setup.ts.
+ */
+
+/**
  * Type for the shared mock StreamlitConfig state used in tests.
  * This allows tests to control StreamlitConfig values.
  */
@@ -30,7 +35,6 @@ interface MockStreamlitConfigState {
 }
 
 declare global {
-  // eslint-disable-next-line no-var
   var __mockStreamlitConfig: MockStreamlitConfigState
 }
 

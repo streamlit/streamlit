@@ -25,7 +25,6 @@ import "vitest-canvas-mock"
 global.jest = vi
 
 // Initialize the shared mock state for StreamlitConfig.
-// Type declaration is in global.d.ts.
 // This must be done early, before any modules that use StreamlitConfig are loaded.
 //
 // Usage in test files:
