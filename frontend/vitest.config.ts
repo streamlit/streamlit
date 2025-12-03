@@ -39,6 +39,7 @@ export default defineConfig({
     },
     exclude: [
       ...configDefaults.exclude,
+      "**/src/assets/**",
       "**/dist/**",
       "**/cypress/**",
       "**/.{idea,git,cache,output,temp}/**",
