@@ -11,7 +11,9 @@ status: Draft
 Add `on_click` and `action` parameters to `st.metric` to enable click interactions. When
 `on_click="rerun"` or a callback is provided, click events are activated and `st.metric`
 returns `True` when clicked. The optional `action` parameter displays a customizable icon
-button (in the top-right corner?); when `action=None`, the entire metric card becomes clickable.
+button; when `action=None`, the entire metric card becomes clickable.
+
+![alt text](metric-clickable-action.png "Clickable metrics")
 
 ## Problem
 
@@ -50,8 +52,8 @@ st.metric(
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `on_click` | `"ignore"`, `"rerun"`, or `callable` | `"ignore"` | How the metric should respond to click events. `"ignore"` (default): No click handling, metric behaves as today. `"rerun"`: Clicking triggers a rerun and returns `True`. `callable`: Clicking triggers a rerun and executes the callback before the rest of the app. |
-| `action` | `str \| None` | `None` | Label for a clickable button in the top-right corner of the metric. Only relevant when `on_click` is `"rerun"` or a callable. The label can optionally contain GitHub-flavored Markdown of the following types: Bold, Italics, Strikethroughs, Inline Code, Links, and Images. Images display like icons, with a max height equal to the font height. Supports Material Symbols icons in the format `":material/icon_name:"` and single-character emojis. If `None`, the entire metric card is clickable instead of showing an action button. |
+| `on_click` | `"ignore"`, `"rerun"`, or `callable` | `"ignore"` | How the metric should respond to click events. `"ignore"` (default): No click handling. `"rerun"`: Clicking triggers a rerun and returns `True`. `callable`: Clicking triggers a rerun and executes the callback. |
+| `action` | `str \| None` | `None` | Label for a clickable button (in the top-right corner?). Only relevant when `on_click` is set. Supports short text, emojis, Material Symbols (e.g. `:material/icon_name:`), and basic Markdown (Bold, Italics, Images). If `None`, the entire metric card is clickable. |
 
 #### Return Value
 
@@ -79,7 +81,7 @@ st.metric(
 - **`action=None` (default)**: The entire metric card is clickable
   - Cursor changes to pointer on hover to indicate interactivity
   - Subtle hover effect on the entire card
-- **`action` is set**: A tertiary/ghost-style icon button appears in the top-right corner
+- **`action` is set**: A tertiary/ghost-style icon button appears (in the top-right corner?)
   - Only the button is clickable, not the entire card
   - The button has no background with a subtle hover effect
   - Button visibility: always visible when `border=True`, appears on hover when `border=False`
@@ -211,48 +213,13 @@ st.metric("Revenue", "$45K", on_click="rerun")  # Always shows ⋯ or ⛶ icon
 - The icon meaning isn't clear without context
 - No option for full-card clickability without icon
 
-#### Alternative 3: Multiple actions via `actions` parameter
-
-```python
-st.metric(
-    "Revenue", "$45K",
-    actions=[
-        ":material/expand_content: Expand",
-        ":material/download: Download",
-        ":material/share: Share",
-    ]
-)
-```
-
-**Pros:**
-
-- Supports multiple actions per metric
-- More flexible for complex dashboards
-
-**Cons:**
-
-- More complex API
-- Clutters the metric UI with multiple buttons
-- Requires returning which action was clicked
-- Adds complexity for a minority use case
-
-#### Alternative 4: Multiple actions returning clicked label
+#### Alternative 3: Multiple actions returning clicked label
 
 ```python
 clicked_action = st.metric(..., actions=["View More", "Download", "Share"])
 if clicked_action == "View More":
     show_dialog()
 ```
-
-**Pros:**
-
-- API is extensible to multiple actions
-- Explicit about which action was clicked
-
-**Cons:**
-
-- Overly complex for the common single-action case
-- String matching is error-prone
 
 ### Design
 
@@ -264,8 +231,6 @@ if clicked_action == "View More":
   No button is shown and no click handling occurs.
 - **`action` with `help`**: Both can be used together. Help tooltip appears next to the
   label, action button in top-right corner.
-- **Mobile/touch**: Action button (or clickable card) has sufficient touch target size
-  (minimum 44x44px tap area).
 - **Accessibility**: Action button is keyboard-focusable and has appropriate ARIA labels.
 - **`border=False` with `action`**: Icon appears on hover to avoid cluttering borderless
   metrics.
