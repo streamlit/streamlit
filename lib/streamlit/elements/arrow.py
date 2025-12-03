@@ -530,9 +530,9 @@ class ArrowMixin:
             clipboard. If this is ``False`` (default), exporting is enabled.
 
             .. note::
-                While this makes it more difficult and inconvenient for users to export
-                large chunks of data, it is still technically possible to extract data
-                from the frontend with advanced skills.
+                This is a convenience feature, not a security control. Technically skilled users
+                can still extract data from the frontend.
+
 
         Returns
         -------

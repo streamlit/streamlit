@@ -75,6 +75,7 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
         assert proto.columns == "{}"
         # ID should not be set:
         assert proto.id == ""
+        assert proto.disable_export is False
         # Row height is marked optional should not be set if not specified
         assert not proto.HasField("row_height")
         assert proto.row_height == 0
@@ -164,13 +165,6 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
 
         proto = self.get_delta_from_queue().new_element.arrow_data_frame
         assert proto.disable_export is True
-
-    def test_disable_export_default_is_false(self):
-        """Test that disable_export defaults to False."""
-        st.dataframe(pd.DataFrame())
-
-        proto = self.get_delta_from_queue().new_element.arrow_data_frame
-        assert proto.disable_export is False
 
     def test_uuid(self):
         df = mock_data_frame()
