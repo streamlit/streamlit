@@ -21,7 +21,7 @@ implementing custom validation logic in Python. This creates a poor user experie
 2. **Complex implementation**: Developers must manually track and display validation errors
 3. **Unnecessary reruns**: Invalid inputs still trigger reruns even when they should be rejected
 
-**User requests:**
+**Requests:**
 
 - [#8790](https://github.com/streamlit/streamlit/issues/8790) - Support client-side validation via
   regex pattern for `st.text_input` (28+ upvotes)
