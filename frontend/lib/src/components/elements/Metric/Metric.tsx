@@ -37,6 +37,7 @@ import TooltipIcon from "~lib/components/shared/TooltipIcon"
 import { StyledWidgetLabelHelpInline } from "~lib/components/widgets/BaseWidget"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { getMetricBackgroundColor, getMetricColor } from "~lib/theme/getColors"
+import { formatNumber, isNumericString } from "~lib/util/formatNumber"
 import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 
 import {
@@ -261,7 +262,19 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
     showBorder,
     chartData,
     chartType,
+    format,
   } = element
+
+  // Apply number formatting if a format is specified and the value is numeric
+  const formattedMetricValue =
+    format && isNumericString(metricValue)
+      ? formatNumber(Number(metricValue), format)
+      : metricValue
+
+  const formattedDelta =
+    format && delta && isNumericString(delta)
+      ? formatNumber(Number(delta), format)
+      : delta
 
   let metricDirection: EmotionIcon | null = null
 
@@ -333,7 +346,7 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
         <StyledMetricValueText data-testid="stMetricValue">
           <StyledTruncateText>
             <StreamlitMarkdown
-              source={metricValue}
+              source={formattedMetricValue}
               allowHTML={false}
               isLabel // Treat the metric value with the label limitations.
               inheritFont
@@ -360,7 +373,7 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
             )}
             <StyledTruncateText>
               <StreamlitMarkdown
-                source={delta}
+                source={formattedDelta}
                 allowHTML={false}
                 isLabel // Treat the metric delta with the label limitations.
                 inheritFont

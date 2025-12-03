@@ -267,3 +267,32 @@ def test_height_in_container(app: Page, assert_snapshot: ImageCompareFunction):
         container,
         name="st_metric-height_in_container",
     )
+
+
+def test_format_rendering(themed_app: Page, assert_snapshot: ImageCompareFunction):
+    """Test usage of client-side formatting options."""
+    metric = get_metric(themed_app, "Compact format")
+    # 1234567 with compact format should show as "1.2M" or similar
+    expect(metric.get_by_test_id("stMetricValue")).not_to_have_text("1234567")
+    # 50000 with compact format should show as "50K" or similar
+    expect(metric.get_by_test_id("stMetricDelta")).not_to_have_text("50000")
+
+    metric = get_metric(themed_app, "Non-numeric (no format)")
+    # Non-numeric strings should remain unchanged
+    expect(metric.get_by_test_id("stMetricValue")).to_have_text("70 °F")
+    expect(metric.get_by_test_id("stMetricDelta")).to_have_text("+5%")
+
+    metric = get_metric(themed_app, "Percent format")
+    # Percent format should include the % symbol
+    expect(metric.get_by_test_id("stMetricValue")).to_contain_text("%")
+    expect(metric.get_by_test_id("stMetricDelta")).to_contain_text("%")
+
+    metric = get_metric(themed_app, "Dollar format")
+    # Dollar format should include the $ symbol
+    expect(metric.get_by_test_id("stMetricValue")).to_contain_text("$")
+    expect(metric.get_by_test_id("stMetricDelta")).to_contain_text("$")
+
+    assert_snapshot(
+        get_element_by_key(themed_app, "metric_format_config"),
+        name="st_metric-format_options",
+    )

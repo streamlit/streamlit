@@ -270,6 +270,76 @@ describe("Metric element", () => {
     )
   })
 
+  // Format parameter tests
+  describe("Format parameter", () => {
+    it.each([
+      {
+        value: "1234567",
+        format: "compact",
+        contains: ["M"],
+        notEqual: "1234567",
+      },
+      { value: "1234.56", format: "dollar", contains: ["$"] },
+      { value: "0.5", format: "percent", contains: ["50", "%"] },
+      {
+        value: "-1234567",
+        format: "compact",
+        contains: ["-"],
+        notEqual: "-1234567",
+      },
+      { value: "1234.5678", format: "%.2f", exact: "1234.57" },
+    ])(
+      "formats value '$value' with format '$format'",
+      ({ value, format, contains, notEqual, exact }) => {
+        const props = getProps({ body: value, format })
+        render(<Metric {...props} />)
+
+        const valueElement = screen.getByTestId("stMetricValue")
+        if (exact) {
+          expect(valueElement.textContent).toBe(exact)
+        }
+        if (contains) {
+          contains.forEach(text => {
+            expect(valueElement.textContent).toContain(text)
+          })
+        }
+        if (notEqual) {
+          expect(valueElement.textContent).not.toBe(notEqual)
+        }
+      }
+    )
+
+    it("formats numeric delta with compact format", () => {
+      const props = getProps({ delta: "1000", format: "compact" })
+      render(<Metric {...props} />)
+
+      const deltaElement = screen.getByTestId("stMetricDelta")
+      expect(deltaElement.textContent).not.toBe("1000")
+    })
+
+    it.each([
+      { field: "body", value: "70 °F", testId: "stMetricValue" },
+      { field: "delta", value: "+5%", testId: "stMetricDelta" },
+      { field: "body", value: "—", testId: "stMetricValue" },
+      { field: "body", value: "$100", testId: "stMetricValue" },
+    ])(
+      "does not format non-numeric $field '$value'",
+      ({ field, value, testId }) => {
+        const props = getProps({ [field]: value, format: "compact" })
+        render(<Metric {...props} />)
+
+        expect(screen.getByTestId(testId).textContent).toBe(value)
+      }
+    )
+
+    it("does not format when format is empty", () => {
+      const props = getProps({ body: "1234567", format: "" })
+      render(<Metric {...props} />)
+
+      expect(screen.getByTestId("stMetricValue").textContent).toBe("1234567")
+    })
+  })
+
   // Chart feature tests
   describe("Chart feature", () => {
     it("renders chart when chartData is provided", () => {

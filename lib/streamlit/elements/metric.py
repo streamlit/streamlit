@@ -38,6 +38,7 @@ from streamlit.string_util import AnyNumber, clean_text, from_number
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.elements.lib.column_types import NumberFormat
 
 
 Value: TypeAlias = AnyNumber | str | None
@@ -69,6 +70,7 @@ class MetricMixin:
         chart_data: OptionSequence[Any] | None = None,
         chart_type: Literal["line", "bar", "area"] = "line",
         delta_arrow: DeltaArrow = "auto",
+        format: str | NumberFormat | None = None,
     ) -> DeltaGenerator:
         r"""Display a metric in big bold font, with an optional indicator of how the metric changed.
 
@@ -187,6 +189,29 @@ class MetricMixin:
             - ``"line"`` (default): A simple sparkline.
             - ``"area"``: A sparkline with area shading.
             - ``"bar"``: A bar chart.
+
+        format : str or None
+            A format string controlling how numbers are displayed for ``value``
+            and ``delta``. The format is only applied if the value or delta is
+            numeric (int, float, or decimal.Decimal). If the value or delta is
+            a string with non-numeric characters, the format is ignored.
+            This can be one of the following values:
+
+            - ``None`` (default): No formatting is applied.
+            - ``"plain"``: Show the full number without any formatting (e.g. "1234.567").
+            - ``"localized"``: Show the number in the default locale format (e.g. "1,234.567").
+            - ``"percent"``: Show the number as a percentage (e.g. "123456.70%").
+            - ``"dollar"``: Show the number as a dollar amount (e.g. "$1,234.57").
+            - ``"euro"``: Show the number as a euro amount (e.g. "€1,234.57").
+            - ``"yen"``: Show the number as a yen amount (e.g. "¥1,235").
+            - ``"accounting"``: Show the number in an accounting format (e.g. "1,234.00").
+            - ``"bytes"``: Show the number in a byte format (e.g. "1.2KB").
+            - ``"compact"``: Show the number in a compact format (e.g. "1.2K").
+            - ``"scientific"``: Show the number in scientific notation (e.g. "1.235E3").
+            - ``"engineering"``: Show the number in engineering notation (e.g. "1.235E3").
+            - printf-style format string: Format the number with a printf
+              specifier, like ``"%d"`` to show a signed integer (e.g. "1234") or
+              ``"%.2f"`` to show a float with 2 decimal places.
 
         Examples
         --------
@@ -326,6 +351,9 @@ class MetricMixin:
                 metric_proto.chart_data.extend(prepared_data)
 
         metric_proto.chart_type = _parse_chart_type(chart_type)
+
+        if format is not None:
+            metric_proto.format = format
 
         validate_height(height, allow_content=True)
         validate_width(width, allow_content=True)
