@@ -99,24 +99,29 @@ vi.mock("@streamlit/lib", async () => {
 vi.mock("@streamlit/connection", async () => {
   const actualModule = await vi.importActual("@streamlit/connection")
 
-  const MockedClass = vi.fn().mockImplementation(props => {
-    return {
-      props,
-      connect: vi.fn(),
-      isConnected: vi.fn(),
-      disconnect: vi.fn(),
-      sendMessage: vi.fn(),
-      incrementMessageCacheRunCount: vi.fn(),
-      getCachedMessageHashes: vi.fn(),
-      getBaseUriParts() {
-        return {
-          pathname: "/",
-          hostname: "",
-          port: "8501",
-        } as URL
-      },
-    }
-  })
+  const MockedClass = vi
+    .fn()
+    // Ensure constructable under Vitest v4 when used with `new ConnectionManager(...)`.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
+    .mockImplementation(function (this: any, props: any) {
+      return {
+        props,
+        connect: vi.fn(),
+        isConnected: vi.fn(),
+        disconnect: vi.fn(),
+        sendMessage: vi.fn(),
+        incrementMessageCacheRunCount: vi.fn(),
+        getCachedMessageHashes: vi.fn(),
+        getBaseUriParts() {
+          return {
+            pathname: "/",
+            hostname: "",
+            port: "8501",
+          } as URL
+        },
+      }
+    })
+
   const MockedEndpoints = vi.fn().mockImplementation(() => {
     return mockEndpoints()
   })
@@ -131,10 +136,16 @@ vi.mock("~lib/SessionInfo", async () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   const actualModule = await vi.importActual<any>("~lib/SessionInfo")
 
-  const MockedClass = vi.fn().mockImplementation(() => {
-    return new actualModule.SessionInfo()
-  })
+  const MockedClass = vi
+    .fn()
+    // Use a regular function implementation so the mock remains constructable
+    // under Vitest v4 when used with `new SessionInfo()`.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
+    .mockImplementation(function (this: any) {
+      return new actualModule.SessionInfo()
+    })
 
+  // Preserve the static helper while allowing it to be spied on in tests.
   // @ts-expect-error
   MockedClass.propsFromNewSessionMessage = vi
     .fn()
@@ -152,12 +163,15 @@ vi.mock("~lib/hostComm/HostCommunicationManager", async () => {
     "~lib/hostComm/HostCommunicationManager"
   )
 
-  const MockedClass = vi.fn().mockImplementation((...props) => {
-    const hostCommunicationMgr = new actualModule.default(...props)
-    vi.spyOn(hostCommunicationMgr, "sendMessageToHost")
-    vi.spyOn(hostCommunicationMgr, "sendMessageToSameOriginHost")
-    return hostCommunicationMgr
-  })
+  const MockedClass = vi
+    .fn()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
+    .mockImplementation(function (this: any, ...props: any[]) {
+      const hostCommunicationMgr = new actualModule.default(...props)
+      vi.spyOn(hostCommunicationMgr, "sendMessageToHost")
+      vi.spyOn(hostCommunicationMgr, "sendMessageToSameOriginHost")
+      return hostCommunicationMgr
+    })
 
   return {
     __esModule: true,
@@ -170,13 +184,16 @@ vi.mock("~lib/WidgetStateManager", async () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   const actualModule = await vi.importActual<any>("~lib/WidgetStateManager")
 
-  const MockedClass = vi.fn().mockImplementation((...props) => {
-    const widgetStateManager = new actualModule.WidgetStateManager(...props)
+  const MockedClass = vi
+    .fn()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
+    .mockImplementation(function (this: any, ...props: any[]) {
+      const widgetStateManager = new actualModule.WidgetStateManager(...props)
 
-    vi.spyOn(widgetStateManager, "sendUpdateWidgetsMessage")
+      vi.spyOn(widgetStateManager, "sendUpdateWidgetsMessage")
 
-    return widgetStateManager
-  })
+      return widgetStateManager
+    })
 
   return {
     ...actualModule,
@@ -190,11 +207,14 @@ vi.mock("@streamlit/app/src/MetricsManager", async () => {
     "@streamlit/app/src/MetricsManager"
   )
 
-  const MockedClass = vi.fn().mockImplementation((...props) => {
-    const metricsMgr = new actualModule.MetricsManager(...props)
-    vi.spyOn(metricsMgr, "enqueue")
-    return metricsMgr
-  })
+  const MockedClass = vi
+    .fn()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
+    .mockImplementation(function (this: any, ...props: any[]) {
+      const metricsMgr = new actualModule.MetricsManager(...props)
+      vi.spyOn(metricsMgr, "enqueue")
+      return metricsMgr
+    })
 
   return {
     ...actualModule,
@@ -206,9 +226,12 @@ vi.mock("~lib/FileUploadClient", async () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   const actualModule = await vi.importActual<any>("~lib/FileUploadClient")
 
-  const MockedClass = vi.fn().mockImplementation((...props) => {
-    return new actualModule.FileUploadClient(...props)
-  })
+  const MockedClass = vi
+    .fn()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
+    .mockImplementation(function (this: any, ...props: any[]) {
+      return new actualModule.FileUploadClient(...props)
+    })
 
   return {
     ...actualModule,
