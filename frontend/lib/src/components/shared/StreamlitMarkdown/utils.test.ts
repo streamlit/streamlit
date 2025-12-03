@@ -570,7 +570,9 @@ describe("useLazyPlugin", () => {
 
 describe("PluginState type", () => {
   it("can hold a plugin function", () => {
-    const plugin: PluginState<() => void> = vi.fn()
+    const plugin: PluginState<() => void> = () => {
+      // no-op plugin for type test
+    }
     expect(typeof plugin).toBe("function")
   })
 
