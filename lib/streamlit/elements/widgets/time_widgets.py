@@ -586,9 +586,9 @@ class TimeWidgetsMixin:
             - ``"now"`` (default): The widget initializes with the current time.
             - A ``datetime.time`` or ``datetime.datetime`` object: The widget
               initializes with the given time, ignoring any date if included.
-            - An ISO-formatted time ("hh:mm", "hh:mm:ss", or "hh:mm:ss.sss") or
-              datetime ("YYYY-MM-DD hh:mm:ss") string: The widget initializes
-              with the given time, ignoring any date if included.
+            - An ISO-formatted time (hh:mm[:ss.sss]) or datetime
+              (YYYY-MM-DD hh:mm[:ss]) string: The widget initializes with the
+              given time, ignoring any date if included.
             - ``None``: The widget initializes with no time and returns
               ``None`` until the user selects a time.
 
@@ -626,8 +626,9 @@ class TimeWidgetsMixin:
             If this is ``"collapsed"``, Streamlit displays no label or spacer.
 
         step : int or timedelta
-            The stepping interval in seconds. Defaults to 900, i.e. 15 minutes.
-            You can also pass a datetime.timedelta object.
+            The stepping interval in seconds. This defaults to ``900`` (15
+            minutes). You can also pass a ``datetime.timedelta`` object. The
+            value must be between 60 seconds and 23 hours.
 
         width : "stretch" or int
             The width of the time input widget. This can be one of the following:
@@ -647,6 +648,8 @@ class TimeWidgetsMixin:
 
         Example
         -------
+        **Example 1: Basic usage**
+
         >>> import datetime
         >>> import streamlit as st
         >>>
@@ -656,6 +659,8 @@ class TimeWidgetsMixin:
         .. output::
            https://doc-time-input.streamlit.app/
            height: 260px
+
+        **Example 2: Empty initial value**
 
         To initialize an empty time input, use ``None`` as the value:
 
@@ -875,25 +880,29 @@ class TimeWidgetsMixin:
             - A ``datetime.datetime`` object: The widget initializes with the given
               datetime, stripping any timezone information.
             - A ``datetime.date`` object: The widget initializes with the given date
-              at ``00:00``.
+              at 00:00.
             - A ``datetime.time`` object: The widget initializes with today's date
               and the provided time.
-            - An ISO-formatted datetime (``"YYYY-MM-DD hh:mm[:ss]"``) or date/time
+            - An ISO-formatted datetime (YYYY-MM-DD hh:mm[:ss]) or date/time
               string: The widget initializes with the parsed value.
             - ``None``: The widget initializes with no value and returns ``None``
               until the user selects a datetime.
 
         min_value : "now", datetime.datetime, datetime.date, datetime.time, str, or None
-            The minimum selectable datetime. Accepts the same input types as
-            ``value``. When ``None`` (default), the minimum selectable
-            datetime is ten years before the initial value. If no initial value is set,
-            the minimum selectable datetime is ten years before today at ``00:00``.
+            The minimum selectable datetime. This can be any of the datetime
+            types accepted by ``value``.
+
+            If this is ``None`` (default), the minimum selectable datetime is
+            ten years before the initial value. If no initial value is set, the
+            minimum selectable datetime is ten years before today at 00:00.
 
         max_value : "now", datetime.datetime, datetime.date, datetime.time, str, or None
-            The maximum selectable datetime. Accepts the same input types as
-            ``value``. When ``None`` (default), the maximum selectable
-            datetime is ten years after the initial value. If no initial value is set,
-            the maximum selectable datetime is ten years after today at ``23:59``.
+            The maximum selectable datetime. This can be any of the datetime
+            types accepted by ``value``.
+
+            If this is ``None`` (default), the maximum selectable datetime is
+            ten years after the initial value. If no initial value is set, the
+            maximum selectable datetime is ten years after today at 23:59.
 
         key : str or int
             An optional string or integer to use as the unique key for the widget.
@@ -921,12 +930,13 @@ class TimeWidgetsMixin:
         format : str
             A format string controlling how the interface displays dates.
             Supports ``"YYYY/MM/DD"`` (default), ``"DD/MM/YYYY"``, or ``"MM/DD/YYYY"``.
-            You may also use a period (.) or hyphen (-) as separators.
+            You may also use a period (.) or hyphen (-) as separators. This
+            doesn't affect the time format.
 
         step : int or timedelta
-            The stepping interval in seconds. Defaults to ``900`` (15 minutes).
-            You can also pass a ``datetime.timedelta`` object. Values must be
-            between 60 seconds and 23 hours.
+            The stepping interval in seconds. This defaults to ``900`` (15
+            minutes). You can also pass a ``datetime.timedelta`` object. The
+            value must be between 60 seconds and 23 hours.
 
         disabled : bool
             An optional boolean that disables the widget if set to ``True``.
@@ -950,11 +960,13 @@ class TimeWidgetsMixin:
         Returns
         -------
         datetime.datetime or None
-            The current value of the datetime input widget (timezone-naive) or ``None``
-            if no value has been selected.
+            The current value of the datetime input widget (without timezone)
+            or ``None`` if no value has been selected.
 
-        Example
-        -------
+        Examples
+        --------
+        **Example 1: Basic usage**
+
         >>> import datetime
         >>> import streamlit as st
         >>>
@@ -963,6 +975,25 @@ class TimeWidgetsMixin:
         ...     datetime.datetime(2025, 11, 19, 16, 45),
         ... )
         >>> st.write("Event scheduled for", event_time)
+
+        .. output::
+           https://doc-datetime-input.streamlit.app/
+           height: 500px
+
+        **Example 2: Empty initial value**
+
+        To initialize an empty datetime input, use ``None`` as the value:
+
+        >>> import datetime
+        >>> import streamlit as st
+        >>>
+        >>> event_time = st.datetime_input("Schedule your event", value=None)
+        >>> st.write("Event scheduled for", event_time)
+
+        .. output::
+           https://doc-datetime-input-empty.streamlit.app/
+           height: 500px
+
         """
         ctx = get_script_run_ctx()
         return self._datetime_input(
@@ -1236,8 +1267,8 @@ class TimeWidgetsMixin:
             - ``"today"`` (default): The widget initializes with the current date.
             - A ``datetime.date`` or ``datetime.datetime`` object: The widget
               initializes with the given date, ignoring any time if included.
-            - An ISO-formatted date ("YYYY-MM-DD") or datetime
-              ("YYYY-MM-DD hh:mm:ss") string: The widget initializes with the
+            - An ISO-formatted date (YYYY-MM-DD) or datetime
+              (YYYY-MM-DD hh:mm:ss) string: The widget initializes with the
               given date, ignoring any time if included.
             - A list or tuple with up to two of the above: The widget will
               initialize with the given date interval and return a tuple of the
@@ -1292,7 +1323,7 @@ class TimeWidgetsMixin:
 
         format : str
             A format string controlling how the interface should display dates.
-            Supports "YYYY/MM/DD" (default), "DD/MM/YYYY", or "MM/DD/YYYY".
+            Supports ``"YYYY/MM/DD"`` (default), ``"DD/MM/YYYY"``, or ``"MM/DD/YYYY"``.
             You may also use a period (.) or hyphen (-) as separators.
 
         disabled : bool
@@ -1323,6 +1354,8 @@ class TimeWidgetsMixin:
 
         Examples
         --------
+        **Example 1: Basic usage**
+
         >>> import datetime
         >>> import streamlit as st
         >>>
@@ -1332,6 +1365,8 @@ class TimeWidgetsMixin:
         .. output::
            https://doc-date-input.streamlit.app/
            height: 380px
+
+        **Example 2: Date range**
 
         >>> import datetime
         >>> import streamlit as st
@@ -1353,6 +1388,8 @@ class TimeWidgetsMixin:
         .. output::
            https://doc-date-input1.streamlit.app/
            height: 380px
+
+        **Example 3: Empty initial value**
 
         To initialize an empty date input, use ``None`` as the value:
 

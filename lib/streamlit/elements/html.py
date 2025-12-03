@@ -54,8 +54,8 @@ class HtmlMixin:
         app.
 
         ``st.html`` content is **not** iframed. By default, JavaScript is
-        ignored. To execute JavaScript contained in the HTML, set
-        ``unsafe_allow_javascript=True``. Use with caution and never pass
+        ignored. To execute JavaScript contained in your HTML, set
+        ``unsafe_allow_javascript=True``. Use this with caution and never pass
         untrusted input.
 
         Parameters
@@ -91,6 +91,12 @@ class HtmlMixin:
               fixed width. If the specified width is greater than the width of
               the parent container, the width of the element matches the width
               of the parent container.
+
+        unsafe_allow_javascript : bool
+            Whether to execute JavaScript contained in your HTML. If this is
+            ``False`` (default), JavaScript is ignored. If this is ``True``,
+            JavaScript is executed. Use this with caution and never pass
+            untrusted input.
 
         Example
         -------
