@@ -43,14 +43,14 @@ st.dataframe(
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `disable_export` | `bool` | `False` | Whether to disable data export (CSV download and cell copying). |
+| `disable_export` | `bool` | `False` | Whether to disable data export (CSV download and copying to clipboard). |
 
 ### Behavior
 
 When `disable_export=True`:
 
 - **Download button**: Hidden from the toolbar
-- **Copy to clipboard**: Disabled (Ctrl/Cmd+C does nothing for cell selections)
+- **Copy to clipboard**: Completely disabled — pressing Ctrl/Cmd+C while the dataframe is focused will not copy any cell data to the clipboard (applies to both single and multi-cell selections)
 - **Other features**: Unaffected (search, fullscreen, sorting, selections all work normally)
 
 ### Example
