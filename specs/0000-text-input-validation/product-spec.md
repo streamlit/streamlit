@@ -104,7 +104,7 @@ st.text_input(
 #### Server-side validation (callable)
 
 When `validate` is a callable, it's executed on the backend when the user submits the value
-(pressing Enter or clicking away). This uses a deferred execution pattern similar to
+(pressing Enter or on blur). This uses a deferred execution pattern similar to
 `st.download_button` with callable data.
 
 ```python
@@ -285,15 +285,14 @@ password = st.text_input(
 
 ### Edge cases
 
-- **Empty input**: Validation is not run on empty input unless the input had a value before (user
-  cleared it). Empty values are always accepted (use `required` parameter in forms for mandatory
-  fields).
+- **Empty input**: Empty values are always accepted and bypass validation. To require non-empty
+  input, use the `required` parameter in forms or combine with a regex like `^.+$`.
 - **Invalid regex**: If the regex pattern is invalid, a warning is logged and validation is skipped.
   The input behaves as if no validation was specified.
 - **Callable exception**: If the callable raises an exception, the error message is displayed to the
   user and the value is rejected. Exception is logged on the backend.
-- **Slow callable**: Loading state is shown while waiting for server response. Consider adding a
-  timeout (e.g., 10 seconds) after which the validation fails with a timeout error.
+- **Slow callable**: Loading state is shown while waiting for server response. A 10-second timeout
+  is enforced, after which validation fails with a timeout error.
 - **Concurrent validation**: If user modifies input while server-side validation is in progress,
   the pending validation is cancelled and a new one is triggered on the next submit.
 - **Password type**: Validation works the same for `type="password"` inputs.
