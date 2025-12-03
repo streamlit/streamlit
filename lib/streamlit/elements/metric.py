@@ -76,15 +76,7 @@ _VALID_DELTA_COLORS: Final[set[str]] = {
     "normal",
     "inverse",
     "off",
-    "red",
-    "orange",
-    "yellow",
-    "green",
-    "blue",
-    "violet",
-    "gray",
-    "grey",
-    "primary",
+    *_DELTA_COLOR_TO_PROTO.keys(),
 }
 
 
