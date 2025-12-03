@@ -16,10 +16,13 @@
 
 import { GridCell } from "@glideapps/glide-data-grid"
 
+import {
+  BaseColumn,
+  isMissingValueCell,
+} from "~lib/components/widgets/DataFrame/columns"
 import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
 
-import { BaseColumn, isMissingValueCell } from "./columns"
-import { INDEX_IDENTIFIER } from "./hooks/useColumnLoader"
+import { INDEX_IDENTIFIER } from "./useColumnLoader"
 
 /**
  * Get the column name for a given column to use in the widget state.

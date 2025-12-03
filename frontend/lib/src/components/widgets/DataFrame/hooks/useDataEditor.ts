@@ -30,8 +30,9 @@ import {
   BaseColumn,
   isErrorCell,
 } from "~lib/components/widgets/DataFrame/columns"
-import EditingState from "~lib/components/widgets/DataFrame/EditingState"
 import { notNullOrUndefined } from "~lib/util/utils"
+
+import EditingState from "./EditingState"
 
 /**
  * Create return type for useDataLoader hook based on the DataEditorProps.

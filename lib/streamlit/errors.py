@@ -587,9 +587,9 @@ class StreamlitInvalidWidthError(LocalizableStreamlitException):
     """Exception raised when an invalid width value is provided."""
 
     def __init__(self, width: Any, allow_content: bool = False) -> None:
-        valid_values = "an integer (pixels) or 'stretch'"
+        valid_values = "a positive integer (pixels) or 'stretch'"
         if allow_content:
-            valid_values = "an integer (pixels), 'stretch', or 'content'"
+            valid_values = "a positive integer (pixels), 'stretch', or 'content'"
 
         super().__init__(
             "Invalid width value: {width}. Width must be either {valid_values}.",
@@ -602,9 +602,9 @@ class StreamlitInvalidHeightError(LocalizableStreamlitException):
     """Exception raised when an invalid height value is provided."""
 
     def __init__(self, height: Any, allow_content: bool = False) -> None:
-        valid_values = "an integer (pixels) or 'stretch'"
+        valid_values = "a positive integer (pixels) or 'stretch'"
         if allow_content:
-            valid_values = "an integer (pixels), 'stretch', or 'content'"
+            valid_values = "a positive integer (pixels), 'stretch', or 'content'"
 
         super().__init__(
             "Invalid height value: {height}. Height must be either {valid_values}.",
@@ -618,7 +618,7 @@ class StreamlitInvalidSizeError(LocalizableStreamlitException):
 
     def __init__(self, size: Any) -> None:
         super().__init__(
-            "Invalid size value: {size}. Size must be either an integer (pixels), "
+            "Invalid size value: {size}. Size must be either a positive integer (pixels), "
             "'stretch', 'small', 'medium', or 'large'.",
             size=repr(size),
         )
