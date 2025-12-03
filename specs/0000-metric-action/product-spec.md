@@ -11,14 +11,14 @@ status: Draft
 Add `on_click` and `action` parameters to `st.metric` to enable click interactions. When
 `on_click="rerun"` or a callback is provided, click events are activated and `st.metric`
 returns `True` when clicked. The optional `action` parameter displays a customizable icon
-button in the top-right corner; when `action=None`, the entire metric card becomes clickable.
+button (in the top-right corner?); when `action=None`, the entire metric card becomes clickable.
 
 ## Problem
 
 `st.metric` is widely used for displaying KPIs and summary statistics in dashboards. Users
 often want to make metrics interactive—clicking a metric to see more details, open a dialog
 with historical data, or navigate to a related page. Currently, there's no way to add
-interactivity to `st.metric` without wrapping it in custom components or using workarounds.
+interactivity to `st.metric` without combining it with other widgets inside a container.
 
 **User requests:**
 
