@@ -182,7 +182,7 @@ function FormattingMenu({
   onChangeFormat,
   onCloseMenu,
   children,
-}: FormattingMenuProps): ReactElement | null {
+}: FormattingMenuProps): ReactElement {
   const theme = useEmotionTheme()
   const { colors, fontSizes, radii, fontWeights } = theme
 
@@ -191,7 +191,7 @@ function FormattingMenu({
   if (formats.length === 0) {
     // If there are no formats available for the column kind,
     // we don't show the formatting menu option.
-    return null
+    return <></>
   }
 
   return (
