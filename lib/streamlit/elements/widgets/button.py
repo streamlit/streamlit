@@ -221,19 +221,31 @@ class ButtonMixin:
               of the parent container.
 
         shortcut : str or None
-            An optional keyboard shortcut that triggers the button. Provide a
-            single alphanumeric key (e.g. ``"K"``, ``"4"``), a function key
-            (e.g. ``"F11"``), or a supported special key (e.g. ``"Enter"``,
-            ``"Esc"``), optionally combined with modifiers.
+            An optional keyboard shortcut that triggers the button. This can be
+            one of the following strings:
 
-            Examples: ``"Ctrl+K"``, ``"Cmd+Shift+O"``, ``"Mod+Enter"``.
+            - A single alphanumeric key like ``"K"`` or ``"4"``.
+            - A function key like ``"F11"``.
+            - A special key like ``"Enter"``, ``"Esc"``, or ``"Tab"``.
+            - Any of the above combined with modifies. For example, you can use
+              ``"Ctrl+K"`` or ``"Cmd+Shift+O"``.
 
-            .. note::
-                The keys ``"C"`` and ``"R"`` are reserved and cannot be used,
-                even with modifiers. ``"Ctrl"``, ``"Cmd"``, and ``"Mod"`` are
-                platform-dependent: they map to ``"Command"`` (⌘) on macOS and
-                ``"Control"`` on Windows/Linux. Punctuation keys (e.g. ``"."``,
-                ``","``) are not currently supported.
+            .. important::
+                The keys ``"C"`` and ``"R"`` are reserved and can't be used,
+                even with modifiers. Punctuation keys like ``"."`` and ``","``
+                aren't currently supported.
+
+            The following special keys are supported: Backspace, Delete, Down,
+            End, Enter, Esc, Home, Left, PageDown, PageUp, Right, Space, Tab,
+            and Up.
+
+            The following modifiers are supported: Alt, Ctrl, Cmd, Meta, Mod,
+            Option, Shift.
+
+            - Ctrl, Cmd, and Mod are interchangeable and will display to the
+              user to match their platform.
+            - Option and Alt are interchangeable and will display to the user
+              to match their platform.
 
         Returns
         -------
@@ -277,6 +289,25 @@ class ButtonMixin:
 
         .. output::
            https://doc-button-icons.streamlit.app/
+           height: 220px
+
+        **Example 3: Use keyboard shortcuts**
+
+        The following example shows how to use keyboard shortcuts to trigger a
+        button. If you use any of the platform-dependent modifiers (Ctrl, Cmd,
+        or Mod), they are interpreted interchangeably and always displayed to
+        the user to match their platform.
+
+        >>> import streamlit as st
+        >>>
+        >>> with st.container(horizontal=True, horizontal_alignment="distribute"):
+        >>>     "`A`" if st.button("A", width=100, shortcut="Shift+A") else "` `"
+        >>>     "`S`" if st.button("S", width=100, shortcut="Ctrl+S") else "` `"
+        >>>     "`D`" if st.button("D", width=100, shortcut="Cmd+D") else "` `"
+        >>>     "`F`" if st.button("F", width=100, shortcut="Mod+F") else "` `"
+
+        .. output::
+           https://doc-button-shortcuts.streamlit.app/
            height: 220px
 
         """
@@ -498,19 +529,25 @@ class ButtonMixin:
               of the parent container.
 
         shortcut : str or None
-            An optional keyboard shortcut that triggers the download button.
-            Provide a single alphanumeric key (e.g. ``"K"``, ``"4"``), a
-            function key (e.g. ``"F11"``), or a supported special key (e.g.
-            ``"Enter"``, ``"Esc"``), optionally combined with modifiers.
+            An optional keyboard shortcut that triggers the button. This can be
+            one of the following strings:
 
-            Examples: ``"Ctrl+K"``, ``"Cmd+Shift+O"``, ``"Mod+Enter"``.
+            - A single alphanumeric key like ``"K"`` or ``"4"``.
+            - A function key like ``"F11"``.
+            - A special key like ``"Enter"``, ``"Esc"``, or ``"Tab"``.
+            - Any of the above combined with modifies. For example, you can use
+              ``"Ctrl+K"`` or ``"Cmd+Shift+O"``.
 
-            .. note::
-                The keys ``"C"`` and ``"R"`` are reserved and cannot be used,
-                even with modifiers. ``"Ctrl"``, ``"Cmd"``, and ``"Mod"`` are
-                platform-dependent: they map to ``"Command"`` (⌘) on macOS and
-                ``"Control"`` on Windows/Linux. Punctuation keys (e.g. ``"."``,
-                ``","``) are not currently supported.
+            .. important::
+                The keys ``"C"`` and ``"R"`` are reserved and can't be used,
+                even with modifiers. Punctuation keys like ``"."`` and ``","``
+                aren't currently supported.
+
+            For a list of supported keys and modifiers, see the documentation
+            for |st.button|_.
+
+            .. |st.button| replace:: ``st.button``
+            .. _st.button: https://docs.streamlit.io/develop/api-reference/widgets/st.button
 
         Returns
         -------
@@ -790,19 +827,25 @@ class ButtonMixin:
               of the parent container.
 
         shortcut : str or None
-            An optional keyboard shortcut that triggers the link button.
-            Provide a single alphanumeric key (e.g. ``"K"``, ``"4"``), a
-            function key (e.g. ``"F11"``), or a supported special key (e.g.
-            ``"Enter"``, ``"Esc"``), optionally combined with modifiers.
+            An optional keyboard shortcut that triggers the button. This can be
+            one of the following strings:
 
-            Examples: ``"Ctrl+K"``, ``"Cmd+Shift+O"``, ``"Mod+Enter"``.
+            - A single alphanumeric key like ``"K"`` or ``"4"``.
+            - A function key like ``"F11"``.
+            - A special key like ``"Enter"``, ``"Esc"``, or ``"Tab"``.
+            - Any of the above combined with modifies. For example, you can use
+              ``"Ctrl+K"`` or ``"Cmd+Shift+O"``.
 
-            .. note::
-                The keys ``"C"`` and ``"R"`` are reserved and cannot be used,
-                even with modifiers. ``"Ctrl"``, ``"Cmd"``, and ``"Mod"`` are
-                platform-dependent: they map to ``"Command"`` (⌘) on macOS and
-                ``"Control"`` on Windows/Linux. Punctuation keys (e.g. ``"."``,
-                ``","``) are not currently supported.
+            .. important::
+                The keys ``"C"`` and ``"R"`` are reserved and can't be used,
+                even with modifiers. Punctuation keys like ``"."`` and ``","``
+                aren't currently supported.
+
+            For a list of supported keys and modifiers, see the documentation
+            for |st.button|_.
+
+            .. |st.button| replace:: ``st.button``
+            .. _st.button: https://docs.streamlit.io/develop/api-reference/widgets/st.button
 
         Example
         -------
