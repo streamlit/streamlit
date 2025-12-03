@@ -182,7 +182,7 @@ class PydeckSelectionState(TypedDict, total=False):
     >>>
     >>> event.selection
 
-    .. output ::
+    .. output::
         https://doc-pydeck-event-state-selections.streamlit.app/
         height: 700px
 

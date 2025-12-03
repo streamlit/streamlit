@@ -79,7 +79,7 @@ class ExceptionMixin:
         >>> e = RuntimeError("This is an exception of type RuntimeError")
         >>> st.exception(e)
 
-        .. output ::
+        .. output::
             https://doc-status-exception.streamlit.app/
             height: 220px
 

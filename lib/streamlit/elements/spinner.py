@@ -91,7 +91,7 @@ class SpinnerMixin:
         >>> st.success("Done!")
         >>> st.button("Rerun")
 
-        .. output ::
+        .. output::
             https://doc-spinner.streamlit.app/
             height: 210px
 

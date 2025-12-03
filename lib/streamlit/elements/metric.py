@@ -121,12 +121,6 @@ class MetricMixin:
              good, e.g. if cost decreased. If "off", delta is  shown in gray
              regardless of its value.
 
-        delta_arrow : "auto", "up", "down", or "off"
-            Controls the direction of the delta indicator arrow. If "auto"
-            (default), the arrow direction follows the sign of ``delta``. If
-            "up" or "down", the arrow is forced to point in that direction.
-            If "off", no arrow is shown, but the delta value remains visible.
-
         help : str or None
             A tooltip that gets displayed next to the metric label. Streamlit
             only displays the tooltip when ``label_visibility="visible"``. If
@@ -187,6 +181,17 @@ class MetricMixin:
             - ``"line"`` (default): A simple sparkline.
             - ``"area"``: A sparkline with area shading.
             - ``"bar"``: A bar chart.
+
+        delta_arrow : "auto", "up", "down", or "off"
+            Controls the direction of the delta indicator arrow. This can be
+            one of the following strings:
+
+            - ``"auto"`` (default): The arrow direction follows the sign of
+              ``delta``.
+            - ``"up"`` or ``"down"``: The arrow is forced to point in the
+              specified direction.
+            - ``"off"``: No arrow is shown, but the delta value remains
+              visible.
 
         Examples
         --------

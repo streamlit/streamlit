@@ -158,6 +158,8 @@ def test_list_cell_overlay(themed_app: Page, assert_snapshot: ImageCompareFuncti
     click_on_cell(dataframe_element, 1, 1, double_click=True, column_width="medium")
 
     cell_overlay = get_open_cell_overlay(themed_app)
+    # Reset the hovering to ensure that there aren't unexpected UI elements visible
+    reset_hovering(themed_app)
     assert_snapshot(cell_overlay, name="st_dataframe-list_column_overlay")
 
 
