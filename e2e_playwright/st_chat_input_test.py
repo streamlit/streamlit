@@ -289,15 +289,6 @@ def test_chat_input_rendering(themed_app: Page, assert_snapshot: ImageCompareFun
         get_element_by_key(themed_app, "multiple_files"),
         name="st_chat_input-multiple-files",
     )
-    goto_chat_input(themed_app, "width_300")
-    assert_snapshot(
-        get_element_by_key(themed_app, "width_300"), name="st_chat_input-width_300px"
-    )
-    goto_chat_input(themed_app, "width_stretch")
-    assert_snapshot(
-        get_element_by_key(themed_app, "width_stretch"),
-        name="st_chat_input-width_stretch",
-    )
     # The bottom chat input appears last in DOM order because st.chat_input() renders at bottom
     goto_chat_input(themed_app, "bottom_max_chars")
     assert_snapshot(
@@ -336,6 +327,24 @@ def test_chat_input_rendering(themed_app: Page, assert_snapshot: ImageCompareFun
     assert_snapshot(
         get_element_by_key(themed_app, "audio_column_b"),
         name="st_chat_input-column_audio_with_files",
+    )
+
+
+def test_chat_input_width_layout(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test chat input width configurations.
+
+    Uses single-theme (app) fixture since width/layout behavior is theme-independent.
+    """
+    app.set_viewport_size({"width": 750, "height": 2000})
+
+    goto_chat_input(app, "width_300")
+    assert_snapshot(
+        get_element_by_key(app, "width_300"), name="st_chat_input-width_300px"
+    )
+    goto_chat_input(app, "width_stretch")
+    assert_snapshot(
+        get_element_by_key(app, "width_stretch"),
+        name="st_chat_input-width_stretch",
     )
 
 
@@ -459,22 +468,23 @@ def test_enter_submits_clears_input(app: Page):
     expect_markdown(app, "bottom_max_chars - value: Corgi")
 
 
-def test_shift_enter_creates_new_line(
-    themed_app: Page, assert_snapshot: ImageCompareFunction
-):
-    """Test that Shift+Enter creates a new line."""
-    themed_app.set_viewport_size({"width": 750, "height": 2000})
+def test_shift_enter_creates_new_line(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that Shift+Enter creates a new line.
 
-    goto_chat_input(themed_app, "bottom_max_chars")
-    chat_input = get_element_by_key(themed_app, "bottom_max_chars")
+    Uses single-theme (app) fixture since text wrapping/layout is theme-independent.
+    """
+    app.set_viewport_size({"width": 750, "height": 2000})
+
+    goto_chat_input(app, "bottom_max_chars")
+    chat_input = get_element_by_key(app, "bottom_max_chars")
     chat_input_area = chat_input.locator("textarea").first
     chat_input_area.fill("")  # Clear the input first
     chat_input_area.press("Shift+Enter")
     chat_input_area.type("New Line")
     assert_snapshot(chat_input, name="st_chat_input-shift_enter_new_line")
 
-    goto_chat_input(themed_app, "single_file")
-    chat_input = get_element_by_key(themed_app, "single_file")
+    goto_chat_input(app, "single_file")
+    chat_input = get_element_by_key(app, "single_file")
     chat_input_area = chat_input.locator("textarea").first
     chat_input_area.fill("")  # Clear the input first
     chat_input_area.press("Shift+Enter")
@@ -512,14 +522,15 @@ def test_chat_input_focus_state(
 
 
 @use_chat_input("bottom_max_chars")
-def test_grows_shrinks_input_text(
-    themed_app: Page, assert_snapshot: ImageCompareFunction
-):
-    """Test that input grows with long text and shrinks when text is deleted."""
-    num_backspaces = 20  # Number of backspaces to simulate shrinking the input
-    themed_app.set_viewport_size({"width": 750, "height": 2000})
+def test_grows_shrinks_input_text(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that input grows with long text and shrinks when text is deleted.
 
-    chat_input = get_element_by_key(themed_app, "bottom_max_chars")
+    Uses single-theme (app) fixture since textarea sizing behavior is theme-independent.
+    """
+    num_backspaces = 20  # Number of backspaces to simulate shrinking the input
+    app.set_viewport_size({"width": 750, "height": 2000})
+
+    chat_input = get_element_by_key(app, "bottom_max_chars")
     chat_input_area = chat_input.locator("textarea").first
     chat_input_area.type(
         "Lorem ipsum dolor amet, consectetur adipiscing elit. "
@@ -798,12 +809,15 @@ def test_directory_upload_button_interaction(app: Page):
 
 @use_chat_input("bottom_max_chars")
 def test_chat_input_adjusts_for_long_placeholder(
-    themed_app: Page, assert_snapshot: ImageCompareFunction
+    app: Page, assert_snapshot: ImageCompareFunction
 ):
-    """Test that chat input properly adjusts its height for long placeholder text."""
-    themed_app.set_viewport_size({"width": 750, "height": 2000})
+    """Test that chat input properly adjusts its height for long placeholder text.
 
-    chat_input = get_element_by_key(themed_app, "bottom_max_chars")
+    Uses single-theme (app) fixture since placeholder height is theme-independent.
+    """
+    app.set_viewport_size({"width": 750, "height": 2000})
+
+    chat_input = get_element_by_key(app, "bottom_max_chars")
     expect(chat_input).to_be_visible()
 
     # Take a snapshot of the initial state with the long placeholder
@@ -865,11 +879,12 @@ def test_programmatically_set_value_in_session_state(app: Page):
 
 
 @use_chat_input("inline")
-def test_height_resets_after_submit(
-    themed_app: Page, assert_snapshot: ImageCompareFunction
-):
-    """Test that chat input height resets to compact state after submission."""
-    chat_input = get_element_by_key(themed_app, "inline")
+def test_height_resets_after_submit(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that chat input height resets to compact state after submission.
+
+    Uses single-theme (app) fixture since height behavior is theme-independent.
+    """
+    chat_input = get_element_by_key(app, "inline")
     chat_input_area = chat_input.locator("textarea").first
 
     assert_snapshot(chat_input, name="st_chat_input-initial_compact_state")
@@ -885,7 +900,7 @@ def test_height_resets_after_submit(
     assert_snapshot(chat_input, name="st_chat_input-expanded_multiline_state")
 
     chat_input_area.press("Enter")
-    wait_for_app_run(themed_app)
+    wait_for_app_run(app)
 
     expect(chat_input_area).to_have_value("")
 
@@ -896,7 +911,7 @@ def test_height_resets_after_submit(
         # Compact textarea should be roughly 40-50px (minElementHeight)
         return box["height"] < 60 if box else False
 
-    wait_until(themed_app, check_compact_height)
+    wait_until(app, check_compact_height)
 
     assert_snapshot(chat_input, name="st_chat_input-reset_after_submit")
 
