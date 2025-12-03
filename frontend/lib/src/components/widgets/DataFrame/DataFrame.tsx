@@ -688,7 +688,7 @@ function DataFrame({
             />
           </ColumnVisibilityMenu>
         )}
-        {!isLargeTable && !isEmptyTable && (
+        {!isLargeTable && !isEmptyTable && !element.disableExport && (
           <ToolbarAction
             label="Download as CSV"
             icon={FileDownload}
@@ -778,8 +778,8 @@ function DataFrame({
           smoothScrollY={true}
           // Show borders between cells:
           verticalBorder={true}
-          // Activate copy to clipboard functionality:
-          getCellsForSelection={true}
+          // Activate copy to clipboard functionality (disabled when export is disabled):
+          getCellsForSelection={element.disableExport ? undefined : true}
           // Deactivate row markers and numbers:
           rowMarkers={"none"}
           // Deactivate selections:
@@ -799,6 +799,8 @@ function DataFrame({
           // Activate keybindings:
           keybindings={{
             downFill: true,
+            // Disable copy keybinding when export is disabled:
+            copy: !element.disableExport,
             ...(isCellSelectionActivated || isLargeTable
               ? {
                   // Deactivate select all to prevent potential performance issues

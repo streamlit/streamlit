@@ -51,6 +51,8 @@ message Arrow {
   BorderMode border_mode = 14;
   // Placeholder string used when rendering missing values (e.g. nulls, NaNs).
   optional string placeholder = 15;
+  // If true, disables exporting (CSV download) and copying cells.
+  bool disable_export = 16;
 
   // Available editing modes:
   enum EditingMode {

@@ -298,6 +298,7 @@ class ArrowMixin:
         selection_mode: SelectionMode | Iterable[SelectionMode] = "multi-row",
         row_height: int | None = None,
         placeholder: str | None = None,
+        disable_export: bool = False,
     ) -> DeltaGenerator: ...
 
     @overload
@@ -316,6 +317,7 @@ class ArrowMixin:
         selection_mode: SelectionMode | Iterable[SelectionMode] = "multi-row",
         row_height: int | None = None,
         placeholder: str | None = None,
+        disable_export: bool = False,
     ) -> DataframeState: ...
 
     @gather_metrics("dataframe")
@@ -334,6 +336,7 @@ class ArrowMixin:
         selection_mode: SelectionMode | Iterable[SelectionMode] = "multi-row",
         row_height: int | None = None,
         placeholder: str | None = None,
+        disable_export: bool = False,
     ) -> DeltaGenerator | DataframeState:
         """Display a dataframe as an interactive table.
 
@@ -521,6 +524,16 @@ class ArrowMixin:
             ``"NaN"``, ``"-"``, or ``""``). If this is ``None`` (default),
             missing values are displayed as ``"None"``.
 
+        disable_export : bool
+            Whether to disable exporting the data. If this is ``True``, users
+            cannot download the data as a CSV file or copy cells to the
+            clipboard. If this is ``False`` (default), exporting is enabled.
+
+            .. note::
+                While this makes it more difficult and inconvenient for users to export
+                large chunks of data, it is still technically possible to extract data
+                from the frontend with advanced skills.
+
         Returns
         -------
         element or dict
@@ -704,7 +717,7 @@ class ArrowMixin:
 
         if placeholder is not None:
             proto.placeholder = placeholder
-
+        proto.disable_export = disable_export
         proto.editing_mode = ArrowProto.EditingMode.READ_ONLY
 
         has_range_index: bool = False
@@ -782,6 +795,7 @@ class ArrowMixin:
                 is_selection_activated=is_selection_activated,
                 row_height=row_height,
                 placeholder=placeholder,
+                disable_export=disable_export,
             )
 
             serde = DataframeSelectionSerde()
