@@ -245,6 +245,7 @@ def test_top_nav_with_logo(app: Page, assert_snapshot: ImageCompareFunction):
     close_button = app.get_by_test_id("stSidebarCollapseButton")
     expect(close_button).to_be_visible()
     close_button.click()
+    expect(app.get_by_test_id("stSidebar")).not_to_be_visible()
 
     # Wait for logo to be visible
     logo = app.get_by_test_id("stHeaderLogo")
