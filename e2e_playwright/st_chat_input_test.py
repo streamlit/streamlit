@@ -1612,3 +1612,73 @@ def test_audio_sample_rate_validation(app: Page, option_text: str, expected_hz: 
     ).to_be_visible()
     expect(app.get_by_text(f"Expected {expected_hz} Hz", exact=False)).to_be_visible()
     expect(app.get_by_text(f"got {expected_hz} Hz", exact=False)).to_be_visible()
+
+
+def upload_single_file_and_snapshot(
+    app: Page,
+    chat_input: Locator,
+    file: FilePayload,
+    snapshot_name: str,
+    assert_snapshot: ImageCompareFunction,
+) -> None:
+    """Helper to upload a single file and take a snapshot of just that file chip."""
+    file_upload_helper(app, chat_input, [file])
+
+    uploaded_files = chat_input.get_by_test_id("stChatUploadedFiles").first
+    file_chip = uploaded_files.get_by_test_id("stChatInputFile").first
+    expect(file_chip).to_be_visible()
+
+    reset_hovering(app)
+
+    assert_snapshot(file_chip, name=snapshot_name)
+
+    # Delete the file to reset for next test
+    uploaded_files.get_by_test_id("stChatInputDeleteBtn").first.click()
+    wait_for_app_run(app, 500)
+
+
+# File chip test cases: (test_id, filename, mimetype, content)
+# Each test case will generate a snapshot named "st_chat_input-file_chip_{test_id}"
+FILE_CHIP_TEST_CASES = [
+    ("image", "photo.png", "image/png", b"fake image"),
+    ("pdf", "document.pdf", "application/pdf", b"fake pdf"),
+    ("spreadsheet", "data.csv", "text/csv", b"a,b,c"),
+    ("text", "readme.txt", "text/plain", b"Hello world"),
+    ("code", "script.py", "text/x-python", b"print('hi')"),
+    ("audio", "song.mp3", "audio/mpeg", b"fake audio"),
+    ("video", "movie.mp4", "video/mp4", b"fake video"),
+    ("archive", "archive.zip", "application/zip", b"fake zip"),
+    ("unknown", "data.unknown", "application/octet-stream", b"mystery"),
+    (
+        "truncated",
+        "this-is-a-very-long-filename-that-should-be-truncated.pdf",
+        "application/pdf",
+        b"content",
+    ),
+]
+
+
+@use_chat_input("multiple_files")
+@pytest.mark.parametrize(
+    ("test_id", "filename", "mimetype", "content"),
+    FILE_CHIP_TEST_CASES,
+    ids=[case[0] for case in FILE_CHIP_TEST_CASES],
+)
+def test_file_chip(
+    themed_app: Page,
+    assert_snapshot: ImageCompareFunction,
+    test_id: str,
+    filename: str,
+    mimetype: str,
+    content: bytes,
+):
+    """Test file chip rendering for various file types (light and dark themes)."""
+    chat_input = get_element_by_key(themed_app, "multiple_files")
+    file = FilePayload(name=filename, mimeType=mimetype, buffer=content)
+    upload_single_file_and_snapshot(
+        themed_app,
+        chat_input,
+        file,
+        f"st_chat_input-file_chip_{test_id}",
+        assert_snapshot,
+    )

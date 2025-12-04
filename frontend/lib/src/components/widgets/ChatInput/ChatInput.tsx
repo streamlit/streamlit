@@ -213,6 +213,29 @@ function ChatInput({
     [deleteUploadedFile]
   )
 
+  // Reference to dropHandler for retry functionality
+  // This is set after dropHandler is created below
+  const dropHandlerRef = useRef<
+    ((acceptedFiles: File[], rejectedFiles: never[]) => void) | null
+  >(null)
+
+  const handleRetry = useCallback(
+    (fileInfo: UploadFileInfo): void => {
+      if (!fileInfo.file || fileInfo.status.type !== "error") {
+        return
+      }
+
+      // Remove the failed file from state
+      setFiles(prevFiles => prevFiles.filter(f => f.id !== fileInfo.id))
+
+      // Re-trigger the upload using the drop handler
+      if (dropHandlerRef.current) {
+        dropHandlerRef.current([fileInfo.file], [])
+      }
+    },
+    [] // No dependencies - uses ref for dropHandler
+  )
+
   const createChatInputWidgetFilesValue =
     useCallback((): FileUploaderStateProto => {
       const uploadedFileInfo: UploadedFileInfoProto[] = files
@@ -307,6 +330,9 @@ function ChatInput({
     },
     element,
   })
+
+  // Store dropHandler in ref for retry functionality
+  dropHandlerRef.current = dropHandler
 
   const { getRootProps, getInputProps } = useDropzone({
     onDrop: dropHandler,
@@ -628,7 +654,11 @@ function ChatInput({
           )}
 
           {acceptFile !== AcceptFileValue.None && files.length > 0 && (
-            <ChatUploadedFiles items={[...files]} onDelete={deleteFile} />
+            <ChatUploadedFiles
+              items={[...files]}
+              onDelete={deleteFile}
+              onRetry={handleRetry}
+            />
           )}
 
           <StyledPrimaryRegion>
@@ -705,7 +735,6 @@ function ChatInput({
                 getInputProps={getInputProps}
                 acceptFile={acceptFile}
                 disabled={disabled}
-                theme={theme}
               />
             )}
 
