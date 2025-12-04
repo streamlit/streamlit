@@ -152,21 +152,21 @@ export const StyledSidebarHeaderContainer = styled.div(({ theme }) => ({
   height: theme.sizes.headerHeight,
 }))
 
-const logoLinkStyles = {
+export const StyledLogoLink = styled.a({
   "&:hover": {
     opacity: "0.7",
   },
-}
-
-export const StyledLogoLink = styled.a(logoLinkStyles)
+})
 
 export const StyledLogoButton = styled.button({
-  ...logoLinkStyles,
   // Reset button styles
   background: "none",
   border: "none",
   padding: 0,
   cursor: "pointer",
+  "&:hover": {
+    opacity: "0.7",
+  },
 })
 
 export interface StyledLogoProps {
