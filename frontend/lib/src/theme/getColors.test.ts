@@ -68,11 +68,12 @@ describe("getDividerColors", () => {
         `linear-gradient(to right, ${colors.redColor}, ${colors.orangeColor}, ${colors.yellowColor}, ${colors.greenColor}, ${colors.blueColor}, ${colors.violetColor})`
       )
 
-      // Verify all colors are valid hex strings
-      Object.entries(result).forEach(([key, value]) => {
-        if (key !== "rainbow") {
-          expect(value).toMatch(/^#[0-9a-fA-F]{6}$/)
-        }
+      // Verify all colors are valid hex strings (excluding rainbow which is a gradient)
+      const colorEntries = Object.entries(result).filter(
+        ([key]) => key !== "rainbow"
+      )
+      colorEntries.forEach(([_, value]) => {
+        expect(value).toMatch(/^#[0-9a-fA-F]{6}$/)
       })
     })
 
@@ -142,11 +143,12 @@ describe("getDividerColors", () => {
         `linear-gradient(to right, ${colors.redColor}, ${colors.orangeColor}, ${colors.yellowColor}, ${colors.greenColor}, ${colors.blueColor}, ${colors.violetColor})`
       )
 
-      // Verify all colors are valid hex strings
-      Object.entries(result).forEach(([key, value]) => {
-        if (key !== "rainbow") {
-          expect(value).toMatch(/^#[0-9a-fA-F]{6}$/)
-        }
+      // Verify all colors are valid hex strings (excluding rainbow which is a gradient)
+      const colorEntries = Object.entries(result).filter(
+        ([key]) => key !== "rainbow"
+      )
+      colorEntries.forEach(([_, value]) => {
+        expect(value).toMatch(/^#[0-9a-fA-F]{6}$/)
       })
     })
 
