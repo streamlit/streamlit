@@ -86,7 +86,7 @@ st.text_input("Username", validate=r"^.{5,}$")
    - Submit/Enter is blocked; value is not sent to backend
    - Similar to the error state update planned for number input:
   ![alt text](number-input-validation.png "Number input validation error")
-1. If input matches the pattern:
+4. If input matches the pattern:
    - Normal styling is restored
    - Value can be submitted
 
@@ -100,6 +100,8 @@ st.text_input(
     validate=r"^[\w.+-]+@[\w-]+\.[\w.-]+$",
 )
 ```
+
+> **Note:** We need to document that client-side validation can be bypassed by an "attacker". If the validation is security-relevant, it should be performed on the server-side.
 
 #### Server-side validation (callable)
 
