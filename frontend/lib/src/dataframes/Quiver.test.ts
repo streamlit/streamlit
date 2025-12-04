@@ -47,19 +47,19 @@ describe("Quiver", () => {
       const mockElement = { data: UNICODE }
       const q = new Quiver(mockElement)
 
-      test("cssId", () => {
+      it("cssId", () => {
         expect(q.styler?.cssId).toBeUndefined()
       })
 
-      test("cssStyles", () => {
+      it("cssStyles", () => {
         expect(q.styler?.cssStyles).toBeUndefined()
       })
 
-      test("caption", () => {
+      it("caption", () => {
         expect(q.styler?.caption).toBeUndefined()
       })
 
-      test("dimensions", () => {
+      it("dimensions", () => {
         expect(q.dimensions).toStrictEqual({
           numHeaderRows: 1,
           numIndexColumns: 1,
@@ -70,7 +70,7 @@ describe("Quiver", () => {
         })
       })
 
-      test("indexNames", () => {
+      it("indexNames", () => {
         const currMockElement = { data: NAMED_INDEX }
         const currQ = new Quiver(currMockElement)
         expect(currQ.columnTypes[0]).toStrictEqual({
@@ -105,19 +105,19 @@ describe("Quiver", () => {
       }
       const q = new Quiver(mockElement)
 
-      test("cssId", () => {
+      it("cssId", () => {
         expect(q.styler?.cssId).toEqual("T_FAKE_UUID")
       })
 
-      test("cssStyles", () => {
+      it("cssStyles", () => {
         expect(q.styler?.cssStyles).toEqual("FAKE_CSS")
       })
 
-      test("caption", () => {
+      it("caption", () => {
         expect(q.styler?.caption).toEqual("FAKE_CAPTION")
       })
 
-      test("dimensions", () => {
+      it("dimensions", () => {
         expect(q.dimensions).toStrictEqual({
           numHeaderRows: 1,
           numIndexColumns: 1,
@@ -133,7 +133,7 @@ describe("Quiver", () => {
       const mockElement = { data: UNICODE }
       const q = new Quiver(mockElement)
 
-      test("index cell", () => {
+      it("index cell", () => {
         expect(q.getCell(0, 0)).toStrictEqual({
           type: "index",
           content: "i1",
@@ -153,7 +153,7 @@ describe("Quiver", () => {
         })
       })
 
-      test("data cell", () => {
+      it("data cell", () => {
         expect(q.getCell(0, 2)).toStrictEqual({
           type: "data",
           content: "1",
@@ -187,7 +187,7 @@ describe("Quiver", () => {
 
   describe("Display", () => {
     describe("Pandas index types", () => {
-      test("categorical", () => {
+      it("categorical", () => {
         const mockElement = { data: CATEGORICAL }
         const q = new Quiver(mockElement)
 
@@ -245,7 +245,7 @@ describe("Quiver", () => {
         ])
       })
 
-      test("date", () => {
+      it("date", () => {
         const mockElement = { data: DATE }
         const q = new Quiver(mockElement)
 
@@ -311,7 +311,7 @@ describe("Quiver", () => {
         ])
       })
 
-      test("float64", () => {
+      it("float64", () => {
         const mockElement = { data: FLOAT64 }
         const q = new Quiver(mockElement)
 
@@ -366,7 +366,7 @@ describe("Quiver", () => {
         ])
       })
 
-      test("int64", () => {
+      it("int64", () => {
         const mockElement = { data: INT64 }
         const q = new Quiver(mockElement)
 
@@ -421,7 +421,7 @@ describe("Quiver", () => {
         ])
       })
 
-      test("interval datetime64[ns]", () => {
+      it("interval datetime64[ns]", () => {
         const mockElement = { data: INTERVAL_DATETIME64 }
         const q = new Quiver(mockElement)
 
@@ -482,7 +482,7 @@ describe("Quiver", () => {
         ])
       })
 
-      test("interval float64", () => {
+      it("interval float64", () => {
         const mockElement = { data: INTERVAL_FLOAT64 }
         const q = new Quiver(mockElement)
 
@@ -541,7 +541,7 @@ describe("Quiver", () => {
         ])
       })
 
-      test("interval int64", () => {
+      it("interval int64", () => {
         const mockElement = { data: INTERVAL_INT64 }
         const q = new Quiver(mockElement)
 
@@ -600,7 +600,7 @@ describe("Quiver", () => {
         ])
       })
 
-      test("interval uint64", () => {
+      it("interval uint64", () => {
         const mockElement = { data: INTERVAL_UINT64 }
         const q = new Quiver(mockElement)
 
@@ -659,7 +659,7 @@ describe("Quiver", () => {
         ])
       })
 
-      test("range", () => {
+      it("range", () => {
         const mockElement = { data: RANGE }
         const q = new Quiver(mockElement)
 
@@ -720,7 +720,7 @@ describe("Quiver", () => {
         ])
       })
 
-      test("uint64", () => {
+      it("uint64", () => {
         const mockElement = { data: UINT64 }
         const q = new Quiver(mockElement)
 
@@ -775,7 +775,7 @@ describe("Quiver", () => {
         ])
       })
 
-      test("unicode", () => {
+      it("unicode", () => {
         const mockElement = { data: UNICODE }
         const q = new Quiver(mockElement)
 
@@ -832,7 +832,7 @@ describe("Quiver", () => {
     })
 
     describe("Special cases", () => {
-      test("empty", () => {
+      it("empty", () => {
         const mockElement = { data: EMPTY }
         const q = new Quiver(mockElement)
 
@@ -862,7 +862,7 @@ describe("Quiver", () => {
         ])
       })
 
-      test("multi-index", () => {
+      it("multi-index", () => {
         const mockElement = { data: MULTI }
         const q = new Quiver(mockElement)
 
@@ -938,7 +938,7 @@ describe("Quiver", () => {
 
   describe("Add rows", () => {
     describe("Pandas index types", () => {
-      test("categorical", () => {
+      it("categorical", () => {
         const mockElement = { data: CATEGORICAL }
         const q = new Quiver(mockElement)
 
@@ -1004,7 +1004,7 @@ describe("Quiver", () => {
         ])
       })
 
-      test("date", () => {
+      it("date", () => {
         const mockElement = { data: DATE }
         const q = new Quiver(mockElement)
 
@@ -1085,7 +1085,7 @@ describe("Quiver", () => {
         ])
       })
 
-      test("float64", () => {
+      it("float64", () => {
         const mockElement = { data: FLOAT64 }
         const q = new Quiver(mockElement)
 
@@ -1148,7 +1148,7 @@ describe("Quiver", () => {
         ])
       })
 
-      test("int64", () => {
+      it("int64", () => {
         const mockElement = { data: INT64 }
         const q = new Quiver(mockElement)
 
@@ -1211,7 +1211,7 @@ describe("Quiver", () => {
         ])
       })
 
-      test("interval datetime64[ns]", () => {
+      it("interval datetime64[ns]", () => {
         const mockElement = { data: INTERVAL_DATETIME64 }
         const q = new Quiver(mockElement)
 
@@ -1285,7 +1285,7 @@ describe("Quiver", () => {
         ])
       })
 
-      test("interval float64", () => {
+      it("interval float64", () => {
         const mockElement = { data: INTERVAL_FLOAT64 }
         const q = new Quiver(mockElement)
 
@@ -1356,7 +1356,7 @@ describe("Quiver", () => {
         ])
       })
 
-      test("interval int64", () => {
+      it("interval int64", () => {
         const mockElement = { data: INTERVAL_INT64 }
         const q = new Quiver(mockElement)
 
@@ -1423,7 +1423,7 @@ describe("Quiver", () => {
         ])
       })
 
-      test("interval uint64", () => {
+      it("interval uint64", () => {
         const mockElement = { data: INTERVAL_UINT64 }
         const q = new Quiver(mockElement)
 
@@ -1494,7 +1494,7 @@ describe("Quiver", () => {
         ])
       })
 
-      test("range", () => {
+      it("range", () => {
         const mockElement = { data: RANGE }
         const q = new Quiver(mockElement)
 
@@ -1563,7 +1563,7 @@ describe("Quiver", () => {
         ])
       })
 
-      test("uint64", () => {
+      it("uint64", () => {
         const mockElement = { data: UINT64 }
         const q = new Quiver(mockElement)
 
@@ -1626,7 +1626,7 @@ describe("Quiver", () => {
         ])
       })
 
-      test("unicode", () => {
+      it("unicode", () => {
         const mockElement = { data: UNICODE }
         const q = new Quiver(mockElement)
 
@@ -1700,7 +1700,7 @@ describe("Quiver", () => {
         expect(q).toEqual(qClone)
       })
 
-      test("multi-index", () => {
+      it("multi-index", () => {
         const mockElement = { data: MULTI }
         const q = new Quiver(mockElement)
 
@@ -1773,7 +1773,7 @@ describe("Quiver", () => {
         ])
       })
 
-      test("DataFrames with different column types", () => {
+      it("DataFrames with different column types", () => {
         const mockElement1 = { data: UNICODE }
         const mockElement2 = { data: DIFFERENT_COLUMN_TYPES }
         const q1 = new Quiver(mockElement1)

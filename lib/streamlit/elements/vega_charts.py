@@ -2093,6 +2093,11 @@ class VegaChartsMixin:
             The Vega-Lite spec for the chart as keywords. This is an alternative
             to ``spec``.
 
+            .. deprecated::
+               ``**kwargs`` are deprecated and will be removed in a future
+               release. To specify Vega-Lite configuration options, use the
+               ``spec`` argument instead.
+
         Returns
         -------
         element or dict

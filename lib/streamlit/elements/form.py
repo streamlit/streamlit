@@ -373,19 +373,25 @@ class FormMixin:
               of the parent container.
 
         shortcut : str or None
-            An optional keyboard shortcut that triggers the submit button.
-            Provide a single alphanumeric key (e.g. ``"K"``, ``"4"``), a
-            function key (e.g. ``"F11"``), or a supported special key (e.g.
-            ``"Enter"``, ``"Esc"``), optionally combined with modifiers.
+            An optional keyboard shortcut that triggers the button. This can be
+            one of the following strings:
 
-            Examples: ``"Ctrl+K"``, ``"Cmd+Shift+O"``, ``"Mod+Enter"``.
+            - A single alphanumeric key like ``"K"`` or ``"4"``.
+            - A function key like ``"F11"``.
+            - A special key like ``"Enter"``, ``"Esc"``, or ``"Tab"``.
+            - Any of the above combined with modifiers. For example, you can use
+              ``"Ctrl+K"`` or ``"Cmd+Shift+O"``.
 
-            .. note::
-                The keys ``"C"`` and ``"R"`` are reserved and cannot be used,
-                even with modifiers. ``"Ctrl"``, ``"Cmd"``, and ``"Mod"`` are
-                platform-dependent: they map to ``"Command"`` (⌘) on macOS and
-                ``"Control"`` on Windows/Linux. Punctuation keys (e.g. ``"."``,
-                ``","``) are not currently supported.
+            .. important::
+                The keys ``"C"`` and ``"R"`` are reserved and can't be used,
+                even with modifiers. Punctuation keys like ``"."`` and ``","``
+                aren't currently supported.
+
+            For a list of supported keys and modifiers, see the documentation
+            for |st.button|_.
+
+            .. |st.button| replace:: ``st.button``
+            .. _st.button: https://docs.streamlit.io/develop/api-reference/widgets/st.button
 
         Returns
         -------
