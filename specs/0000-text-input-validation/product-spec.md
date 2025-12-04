@@ -147,8 +147,8 @@ def validator(value: str) -> bool | str:
    - Backend executes the callable with the current value
    - Backend returns validation result to frontend
 3. Based on result:
-   - `True`: Value is accepted, `on_change` callback is invoked, rerun is triggered
-   - `False` or error string: Input shows error state, no rerun, user can correct input
+   - `True`: Value is accepted, a normal rerun is triggered
+   - `False` or error string: Input shows error state, no rerun, user can correct input (see mockup above for error state).
 4. While validation is in progress:
    - Input shows a loading indicator (spinner icon)
    - Submit is disabled to prevent duplicate requests
@@ -165,33 +165,6 @@ User submits → Frontend sends validation request → Backend executes callable
                                               Returns True/False/error string
                                                          ↓
 Frontend receives result → Shows error OR triggers rerun with validated value
-```
-
-### Validation timing
-
-| Event | Regex (client-side) | Callable (server-side) |
-|-------|---------------------|------------------------|
-| Keystroke | Validate (debounced) | No validation |
-| Blur (click away) | Validate | Validate |
-| Enter key | Validate | Validate |
-| Form submit | Validate | Validate |
-
-### Combining with `on_change`
-
-When using `validate` with `on_change`:
-
-- **Regex validation**: `on_change` is only called when validation passes
-- **Callable validation**: `on_change` is called after successful server-side validation
-
-```python
-def on_email_change():
-    st.session_state.email_verified = True
-
-st.text_input(
-    "Email",
-    validate=r"^[\w.+-]+@[\w-]+\.[\w.-]+$",
-    on_change=on_email_change,
-)
 ```
 
 ### Examples
@@ -287,17 +260,15 @@ password = st.text_input(
 
 ### Edge cases
 
-- **Empty input**: Empty values are always accepted and bypass validation. To require non-empty
-  input, use the `required` parameter in forms or combine with a regex like `^.+$`.
+- **None value**: If the text input is initialized with `value=None`, resetting to `None` (empty state) is allowed and bypasses validation.
 - **Invalid regex**: If the regex pattern is invalid, a warning is logged and validation is skipped.
   The input behaves as if no validation was specified.
 - **Callable exception**: If the callable raises an exception, the error message is displayed to the
   user and the value is rejected. Exception is logged on the backend.
-- **Slow callable**: Loading state is shown while waiting for server response. A 10-second timeout
+- **Slow callable**: Loading state is shown while waiting for server response. A X-second timeout
   is enforced, after which validation fails with a timeout error.
 - **Concurrent validation**: If user modifies input while server-side validation is in progress,
   the pending validation is cancelled and a new one is triggered on the next submit.
-- **Password type**: Validation works the same for `type="password"` inputs.
 - **Forms**: Validation runs before form submission. Invalid inputs block form submit.
 
 ### Future extensions
