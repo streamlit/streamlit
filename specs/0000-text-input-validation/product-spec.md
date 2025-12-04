@@ -80,7 +80,7 @@ st.text_input("Username", validate=r"^.{5,}$")
 **Behavior:**
 
 1. Regex is compiled on the frontend with `us` flags (unicode, dotAll)
-2. Validation runs on blur/submit events
+2. Validation runs on blur/submit events; error state is cleared when user types in the input field.
 3. If input doesn't match the pattern:
    - Input turns red (error state) showing an error icon and a tooltip with the error message
    - Submit/Enter is blocked; value is not sent to backend
@@ -88,7 +88,7 @@ st.text_input("Username", validate=r"^.{5,}$")
   ![alt text](number-input-validation.png "Number input validation error")
 4. If input matches the pattern:
    - Normal styling is restored
-   - Value can be submitted
+   - Value can be submitted, triggering a normal rerun and on_change callback execution if provided.
 
 **Error messages:**
 
@@ -141,13 +141,13 @@ def validator(value: str) -> bool | str:
 
 **Behavior:**
 
-1. User types in the input field (no validation yet)
+1. User types in the input field (no validation yet; clears existing error state)
 2. User submits (Enter key or blur):
    - Frontend sends a validation request to backend (no full rerun triggered)
    - Backend executes the callable with the current value
    - Backend returns validation result to frontend
 3. Based on result:
-   - `True`: Value is accepted, a normal rerun is triggered
+   - `True`: Value is accepted, a normal rerun is triggered and on_change executed if provided.
    - `False` or error string: Input shows error state, no rerun, user can correct input (see mockup above for error state).
 4. While validation is in progress:
    - Input shows a loading indicator (spinner icon)
