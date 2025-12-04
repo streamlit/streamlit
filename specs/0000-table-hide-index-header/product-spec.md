@@ -90,11 +90,12 @@ st.table(df_custom)  # Index shown
 
 ```python
 # Clean key-value table for metrics
-metrics = pd.DataFrame({
-    "Metric": ["Price", "Customer", "Address", "Store"],
-    "Value": ["$145.00", "Bobby Jones", "129 Market St, NYC", "Trader Joe's"]
-})
-st.table(metrics, hide_header=True)
+st.table({
+    "Price": "$145.00",
+    "Customer": "Bobby Jones",
+    "Address": "129 Market St, NYC",
+    "Store": "Trader Joe's"
+}, hide_header=True)
 ```
 
 **Minimal table:**
