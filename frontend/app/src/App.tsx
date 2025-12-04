@@ -2320,7 +2320,11 @@ export class App extends PureComponent<Props, State> {
         appLogo={elements.logo}
         sidebarChevronDownshift={sidebarChevronDownshift}
         expandSidebarNav={expandSidebarNav}
-        hideSidebarNav={hideSidebarNav || hostHideSidebarNav}
+        hideSidebarNav={
+          hideSidebarNav ||
+          hostHideSidebarNav ||
+          effectiveNavigationPosition === Navigation.Position.TOP
+        }
         isFullScreen={isFullScreen}
         setFullScreen={this.handleFullScreen}
         activeTheme={this.props.theme.activeTheme}
