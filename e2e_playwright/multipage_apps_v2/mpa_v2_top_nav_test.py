@@ -228,6 +228,40 @@ def test_switching_navigation_modes(app: Page):
     expect(app.get_by_test_id("stHeading").filter(has_text="Page 3")).to_be_visible()
 
 
+def test_top_nav_with_logo_visual_regression(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Visual regression test for top navigation with logo.
+
+    Tests that the logo maintains its size correctly when used with top navigation,
+    particularly during viewport resizing. This validates the fix for the issue where
+    the logo would shrink due to the flex layout interaction between the logo container
+    and the navigation overflow container.
+    """
+    app.set_viewport_size({"width": 1280, "height": 800})
+
+    # Enable logo
+    click_checkbox(app, "Test Logo")
+    wait_for_app_run(app)
+
+    # Wait for logo to be visible
+    logo = app.get_by_test_id("stLogo")
+    expect(logo).to_be_visible()
+
+    # Take snapshot of the header with logo at full width
+    header = app.locator("header").first
+    assert_snapshot(header, name="st_navigation-top_nav_with_logo")
+
+    # Test that logo size is preserved at a narrower viewport
+    # This validates the flexShrink: 0 fix on StyledHeaderLeftSection
+    app.set_viewport_size({"width": 800, "height": 600})
+    wait_for_app_run(app)
+
+    # Logo should still be visible and maintain its size
+    expect(logo).to_be_visible()
+    assert_snapshot(header, name="st_navigation-top_nav_with_logo_narrow_viewport")
+
+
 def test_top_nav_visual_regression(app: Page, assert_snapshot: ImageCompareFunction):
     """Visual regression test for top navigation."""
     app.set_viewport_size({"width": 1280, "height": 800})
