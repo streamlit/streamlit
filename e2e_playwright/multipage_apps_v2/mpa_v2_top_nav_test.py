@@ -14,7 +14,7 @@
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.conftest import ImageCompareFunction, rerun_app, wait_for_app_run
 from e2e_playwright.shared.app_utils import click_checkbox, goto_app
 
 
@@ -228,24 +228,17 @@ def test_switching_navigation_modes(app: Page):
     expect(app.get_by_test_id("stHeading").filter(has_text="Page 3")).to_be_visible()
 
 
-def test_top_nav_with_logo_visual_regression(
-    app: Page, assert_snapshot: ImageCompareFunction
-):
-    """Visual regression test for top navigation with logo.
-
-    Tests that the logo maintains its size correctly when used with top navigation,
-    particularly during viewport resizing. This validates the fix for the issue where
-    the logo would shrink due to the flex layout interaction between the logo container
-    and the navigation overflow container.
+def test_top_nav_with_logo(app: Page, assert_snapshot: ImageCompareFunction):
+    """Tests that the logo with a top navigation is shown in the correct size,
+    even when the viewport is narrowed.
     """
-    app.set_viewport_size({"width": 1280, "height": 800})
 
+    app.set_viewport_size({"width": 1280, "height": 800})
+    rerun_app(app)
     # Enable logo
     click_checkbox(app, "Test Logo")
-    wait_for_app_run(app)
-
     # Wait for logo to be visible
-    logo = app.get_by_test_id("stLogo")
+    logo = app.get_by_test_id("stHeaderLogo")
     expect(logo).to_be_visible()
 
     # Take snapshot of the header with logo at full width
@@ -255,7 +248,6 @@ def test_top_nav_with_logo_visual_regression(
     # Test that logo size is preserved at a narrower viewport
     # This validates the flexShrink: 0 fix on StyledHeaderLeftSection
     app.set_viewport_size({"width": 800, "height": 600})
-    wait_for_app_run(app)
 
     # Logo should still be visible and maintain its size
     expect(logo).to_be_visible()
