@@ -120,6 +120,8 @@ def check_username(value: str) -> bool | str:
 st.text_input("Username", validate=check_username)
 ```
 
+> **Note:** if the validation callable returns anything other than bool or str, an exception will be raised which will be shown to the developer in the validation error message and logged to the console.
+
 **Callable signature:**
 
 ```python
