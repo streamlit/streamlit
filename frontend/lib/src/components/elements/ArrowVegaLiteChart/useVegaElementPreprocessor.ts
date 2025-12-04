@@ -92,6 +92,21 @@ const generateSpec = (
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
 ): any => {
   const spec = JSON.parse(inputSpec)
+
+  // Normalize legacy "0"/non-positive sizing semantics: Historically, a
+  // top-level width/height of 0 behaved like "unspecified" (Vega-Lite fell back
+  // to its default height/auto width). After
+  // https://github.com/vega/vega-lite/commit/0ff85059ef1c444b78218a36678fc2af7131a7aa
+  // a value of 0 is treated as an explicit size, which results in charts
+  // effectively rendering at 0px. To ensure charts render, treat non-positive
+  // numeric values as "no value" and let Vega-Lite apply its own defaults.
+  if (typeof spec.height === "number" && spec.height <= 0) {
+    delete spec.height
+  }
+
+  if (typeof spec.width === "number" && spec.width <= 0) {
+    delete spec.width
+  }
   if (vegaLiteTheme === "streamlit") {
     spec.config = applyStreamlitTheme(spec.config, theme)
   } else if (spec.usermeta?.embedOptions?.theme === "streamlit") {
@@ -117,11 +132,19 @@ const generateSpec = (
       Math.max(containerWidth - 40, 0)
   }
 
-  if (useContainerHeight) {
+  // Only apply a container-derived height when we have a positive measurement.
+  // `containerHeight` is -1 until the ResizeObserver has measured the element
+  // and we also avoid writing 0, since Vega-Lite now treats 0 as an explicit
+  // size.
+  // @see https://github.com/vega/vega-lite/commit/0ff85059ef1c444b78218a36678fc2af7131a7aa
+  if (useContainerHeight && containerHeight && containerHeight > 0) {
     spec.height = containerHeight
   }
 
-  if (useContainerWidth) {
+  // Same rationale as height: guard against the initial -1 sentinel and 0 so
+  // that we only set `spec.width` when the container has a real, positive
+  // width measurement.
+  if (useContainerWidth && containerWidth && containerWidth > 0) {
     spec.width = containerWidth
 
     if ("vconcat" in spec) {
