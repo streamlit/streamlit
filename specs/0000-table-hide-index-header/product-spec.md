@@ -17,7 +17,7 @@ enabling users to control the visibility of the index column and column headers.
 clarify their roles:
 
 - **`st.dataframe`**: Large datasets with interactive exploration (sorting, filtering, selection)
-- **`st.table`**: Small, text-based tables for displaying a few metrics or key-value pairs
+- **`st.table`**: Small, text-based customizable tables for displaying a few metrics or key-value pairs
 
 To make `st.table` better for its intended use case, users need more control over visual
 clutter. Currently, `st.table` always shows the index column (even meaningless 0, 1, 2...
