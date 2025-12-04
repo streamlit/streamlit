@@ -231,11 +231,11 @@ class MetricMixin:
             one of the following strings:
 
             - ``"auto"`` (default): The arrow direction follows the sign of
-              ``delta``.
+                ``delta``.
             - ``"up"`` or ``"down"``: The arrow is forced to point in the
-              specified direction.
+                specified direction.
             - ``"off"``: No arrow is shown, but the delta value remains
-              visible.
+                visible.
 
         format : str or None
             A format string controlling how numbers are displayed for ``value``
@@ -259,7 +259,6 @@ class MetricMixin:
             - printf-style format string: Format the number with a printf
             specifier, like ``"%d"`` to show a signed integer (e.g. "1234") or
             ``"%.2f"`` to show a float with 2 decimal places.
-        >>>>>>> upstream/develop
 
         Examples
         --------
