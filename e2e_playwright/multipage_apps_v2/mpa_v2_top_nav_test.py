@@ -14,7 +14,7 @@
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, rerun_app, wait_for_app_run
+from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 from e2e_playwright.shared.app_utils import click_checkbox, goto_app
 
 
@@ -234,9 +234,12 @@ def test_top_nav_with_logo(app: Page, assert_snapshot: ImageCompareFunction):
     """
 
     app.set_viewport_size({"width": 1280, "height": 800})
-    rerun_app(app)
-    # Enable logo
+
+    # Enable features:
+    click_checkbox(app, "Test Overflow (5 pages)")
+    click_checkbox(app, "Test Sidebar Content")
     click_checkbox(app, "Test Logo")
+
     # Wait for logo to be visible
     logo = app.get_by_test_id("stHeaderLogo")
     expect(logo).to_be_visible()
