@@ -62,6 +62,15 @@ st.text_input(
 
 ### Behavior
 
+The `validate` parameter supports two validation modes with different trade-offs:
+
+| Mode | Syntax | Latency | Security | Use Cases |
+|------|--------|---------|----------|-----------|
+| **Client-side** | Regex string | Zero latency (runs in browser) | Can be bypassed | Format validation (email, phone), length constraints, pattern matching |
+| **Server-side** | Callable | Network round-trip | Secure, tamper-proof | Database lookups (username availability), complex business logic, security-sensitive validation |
+
+**Recommendation:** Use client-side regex for instant UX feedback on format constraints. Use server-side callables when validation requires backend resources or must be secure.
+
 #### Client-side validation (regex string)
 
 When `validate` is a string, it's treated as a JavaScript-flavored regular expression (same as with `st.column_config.TextColumn`):
