@@ -161,3 +161,18 @@ with col2:
         chart_data=generate_sparkline_data(),
         chart_type="line",
     )
+
+# Format parameter tests
+format_col1, format_col2, format_col3, format_col4 = st.container(
+    key="metric_format_config"
+).columns(4)
+
+with format_col1:
+    st.metric("Compact format", 1234567, delta=50000, format="compact")
+with format_col2:
+    st.metric("Dollar format", 1234.56, delta=-50.25, format="dollar")
+with format_col3:
+    st.metric("Printf format", 22.5678, delta=10.126, format="%.2f%%")
+with format_col4:
+    # Non-numeric string should NOT be formatted
+    st.metric("Non-numeric (no format)", "70 °F", delta="+5%", format="compact")

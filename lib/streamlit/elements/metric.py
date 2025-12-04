@@ -38,6 +38,7 @@ from streamlit.string_util import AnyNumber, clean_text, from_number
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.elements.lib.column_types import NumberFormat
 
 
 Value: TypeAlias = AnyNumber | str | None
@@ -103,137 +104,161 @@ class MetricMixin:
         chart_data: OptionSequence[Any] | None = None,
         chart_type: Literal["line", "bar", "area"] = "line",
         delta_arrow: DeltaArrow = "auto",
+        format: str | NumberFormat | None = None,
     ) -> DeltaGenerator:
         r"""Display a metric in big bold font, with an optional indicator of how the metric changed.
 
-                Tip: If you want to display a large number, it may be a good idea to
-                shorten it using packages like `millify <https://github.com/azaitsev/millify>`_
-                or `numerize <https://github.com/davidsa03/numerize>`_. E.g. ``1234`` can be
-                displayed as ``1.2k`` using ``st.metric("Short number", millify(1234))``.
+        Tip: If you want to display a large number, it may be a good idea to
+        shorten it using packages like `millify <https://github.com/azaitsev/millify>`_
+        or `numerize <https://github.com/davidsa03/numerize>`_. E.g. ``1234`` can be
+        displayed as ``1.2k`` using ``st.metric("Short number", millify(1234))``.
 
         Parameters
         ----------
-                label : str
-                    The header or title for the metric. The label can optionally
-                    contain GitHub-flavored Markdown of the following types: Bold, Italics,
-                    Strikethroughs, Inline Code, Links, and Images. Images display like
-                    icons, with a max height equal to the font height.
+        label : str
+            The header or title for the metric. The label can optionally
+            contain GitHub-flavored Markdown of the following types: Bold, Italics,
+            Strikethroughs, Inline Code, Links, and Images. Images display like
+            icons, with a max height equal to the font height.
 
-                    Unsupported Markdown elements are unwrapped so only their children
-                    (text contents) render. Display unsupported elements as literal
-                    characters by backslash-escaping them. E.g.,
-                    ``"1\. Not an ordered list"``.
+            Unsupported Markdown elements are unwrapped so only their children
+            (text contents) render. Display unsupported elements as literal
+            characters by backslash-escaping them. E.g.,
+            ``"1\. Not an ordered list"``.
 
-                    See the ``body`` parameter of |st.markdown|_ for additional,
-                    supported Markdown directives.
+            See the ``body`` parameter of |st.markdown|_ for additional,
+            supported Markdown directives.
 
-                    .. |st.markdown| replace:: ``st.markdown``
-                    .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
+            .. |st.markdown| replace:: ``st.markdown``
+            .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
-                value : int, float, decimal.Decimal, str, or None
-                    Value of the metric. ``None`` is rendered as a long dash.
+        value : int, float, decimal.Decimal, str, or None
+            Value of the metric. ``None`` is rendered as a long dash.
 
-                    The value can optionally contain GitHub-flavored Markdown,
-                    including the Markdown directives described in the ``body``
-                    parameter of ``st.markdown``.
+            The value can optionally contain GitHub-flavored Markdown,
+            including the Markdown directives described in the ``body``
+            parameter of ``st.markdown``.
 
-                delta : int, float, decimal.Decimal, str, or None
-                    Indicator of how the metric changed, rendered with an arrow below
-                    the metric. If delta is negative (int/float) or starts with a minus
-                    sign (str), the arrow points down and the text is red; else the
-                    arrow points up and the text is green. If None (default), no delta
-                    indicator is shown.
+        delta : int, float, decimal.Decimal, str, or None
+            Indicator of how the metric changed, rendered with an arrow below
+            the metric. If delta is negative (int/float) or starts with a minus
+            sign (str), the arrow points down and the text is red; else the
+            arrow points up and the text is green. If None (default), no delta
+            indicator is shown.
 
-                    The delta can optionally contain GitHub-flavored Markdown
-                    including the Markdown directives described in the ``body``
-                    parameter of ``st.markdown``.
+            The delta can optionally contain GitHub-flavored Markdown
+            including the Markdown directives described in the ``body``
+            parameter of ``st.markdown``.
 
-                delta_color : str
-                    The color of the delta indicator. This can be one of the following:
+        delta_color : str
+            The color of the delta indicator. This can be one of the following:
 
-                    - ``"normal"`` (default): The delta indicator is green when
-                      positive and red when negative.
-                    - ``"inverse"``: The delta indicator is red when positive and
-                      green when negative. This is useful when a negative change is
-                      considered good, e.g. if cost decreased.
-                    - ``"off"``: The delta indicator is shown in gray regardless of
-                      its value.
-                    - A named color from the basic palette: ``"red"``, ``"orange"``,
-                      ``"yellow"``, ``"green"``, ``"blue"``, ``"violet"``,
-                      ``"gray"``/``"grey"``, or ``"primary"``. The delta indicator
-                      and chart uses that color regardless of its value.
+            - ``"normal"`` (default): The delta indicator is green when
+                positive and red when negative.
+            - ``"inverse"``: The delta indicator is red when positive and
+                green when negative. This is useful when a negative change is
+                considered good, e.g. if cost decreased.
+            - ``"off"``: The delta indicator is shown in gray regardless of
+                its value.
+            - A named color from the basic palette: ``"red"``, ``"orange"``,
+                ``"yellow"``, ``"green"``, ``"blue"``, ``"violet"``,
+                ``"gray"``/``"grey"``, or ``"primary"``. The delta indicator
+                and chart uses that color regardless of its value.
 
-                help : str or None
-                    A tooltip that gets displayed next to the metric label. Streamlit
-                    only displays the tooltip when ``label_visibility="visible"``. If
-                    this is ``None`` (default), no tooltip is displayed.
+        help : str or None
+            A tooltip that gets displayed next to the metric label. Streamlit
+            only displays the tooltip when ``label_visibility="visible"``. If
+            this is ``None`` (default), no tooltip is displayed.
 
-                    The tooltip can optionally contain GitHub-flavored Markdown,
-                    including the Markdown directives described in the ``body``
-                    parameter of ``st.markdown``.
+            The tooltip can optionally contain GitHub-flavored Markdown,
+            including the Markdown directives described in the ``body``
+            parameter of ``st.markdown``.
 
-                label_visibility : "visible", "hidden", or "collapsed"
-                    The visibility of the label. The default is ``"visible"``. If this
-                    is ``"hidden"``, Streamlit displays an empty spacer instead of the
-                    label, which can help keep the widget aligned with other widgets.
-                    If this is ``"collapsed"``, Streamlit displays no label or spacer.
+        label_visibility : "visible", "hidden", or "collapsed"
+            The visibility of the label. The default is ``"visible"``. If this
+            is ``"hidden"``, Streamlit displays an empty spacer instead of the
+            label, which can help keep the widget aligned with other widgets.
+            If this is ``"collapsed"``, Streamlit displays no label or spacer.
 
-                border : bool
-                    Whether to show a border around the metric container. If this is
-                    ``False`` (default), no border is shown. If this is ``True``, a
-                    border is shown.
+        border : bool
+            Whether to show a border around the metric container. If this is
+            ``False`` (default), no border is shown. If this is ``True``, a
+            border is shown.
 
-                height : "content", "stretch", or int
-                    The height of the metric element. This can be one of the following:
+        height : "content", "stretch", or int
+            The height of the metric element. This can be one of the following:
 
-                    - ``"content"`` (default): The height of the element matches the
-                      height of its content.
-                    - ``"stretch"``: The height of the element matches the height of
-                      its content or the height of the parent container, whichever is
-                      larger. If the element is not in a parent container, the height
-                      of the element matches the height of its content.
-                    - An integer specifying the height in pixels: The element has a
-                      fixed height. If the content is larger than the specified
-                      height, scrolling is enabled.
+            - ``"content"`` (default): The height of the element matches the
+                height of its content.
+            - ``"stretch"``: The height of the element matches the height of
+                its content or the height of the parent container, whichever is
+                larger. If the element is not in a parent container, the height
+                of the element matches the height of its content.
+            - An integer specifying the height in pixels: The element has a
+                fixed height. If the content is larger than the specified
+                height, scrolling is enabled.
 
-                width : "stretch", "content", or int
-                    The width of the metric element. This can be one of the following:
+        width : "stretch", "content", or int
+            The width of the metric element. This can be one of the following:
 
-                    - ``"stretch"`` (default): The width of the element matches the
-                      width of the parent container.
-                    - ``"content"``: The width of the element matches the width of its
-                      content, but doesn't exceed the width of the parent container.
-                    - An integer specifying the width in pixels: The element has a
-                      fixed width. If the specified width is greater than the width of
-                      the parent container, the width of the element matches the width
-                      of the parent container.
+            - ``"stretch"`` (default): The width of the element matches the
+                width of the parent container.
+            - ``"content"``: The width of the element matches the width of its
+                content, but doesn't exceed the width of the parent container.
+            - An integer specifying the width in pixels: The element has a
+                fixed width. If the specified width is greater than the width of
+                the parent container, the width of the element matches the width
+                of the parent container.
 
-                chart_data : Iterable or None
-                    A sequence of numeric values to display as a sparkline chart. If
-                    this is ``None`` (default), no chart is displayed. The sequence can
-                    be anything supported by ``st.dataframe``, including a ``list`` or
-                    ``set``. If the sequence is dataframe-like, the first column will
-                    be used. Each value will be cast to ``float`` internally by
-                    default.
+        chart_data : Iterable or None
+            A sequence of numeric values to display as a sparkline chart. If
+            this is ``None`` (default), no chart is displayed. The sequence can
+            be anything supported by ``st.dataframe``, including a ``list`` or
+            ``set``. If the sequence is dataframe-like, the first column will
+            be used. Each value will be cast to ``float`` internally by
+            default.
 
-                chart_type : "line", "bar", or "area"
-                    The type of sparkline chart to display. This can be one of the
-                    following:
+        chart_type : "line", "bar", or "area"
+            The type of sparkline chart to display. This can be one of the
+            following:
 
-                    - ``"line"`` (default): A simple sparkline.
-                    - ``"area"``: A sparkline with area shading.
-                    - ``"bar"``: A bar chart.
+            - ``"line"`` (default): A simple sparkline.
+            - ``"area"``: A sparkline with area shading.
+            - ``"bar"``: A bar chart.
 
-                delta_arrow : "auto", "up", "down", or "off"
-                    Controls the direction of the delta indicator arrow. This can be
-                    one of the following strings:
+        delta_arrow : "auto", "up", "down", or "off"
+            Controls the direction of the delta indicator arrow. This can be
+            one of the following strings:
 
-                    - ``"auto"`` (default): The arrow direction follows the sign of
-                      ``delta``.
-                    - ``"up"`` or ``"down"``: The arrow is forced to point in the
-                      specified direction.
-                    - ``"off"``: No arrow is shown, but the delta value remains
-                      visible.
+            - ``"auto"`` (default): The arrow direction follows the sign of
+                ``delta``.
+            - ``"up"`` or ``"down"``: The arrow is forced to point in the
+                specified direction.
+            - ``"off"``: No arrow is shown, but the delta value remains
+                visible.
+
+        format : str or None
+            A format string controlling how numbers are displayed for ``value``
+            and ``delta``. The format is only applied if the value or delta is
+            numeric (int, float, or decimal.Decimal). If the value or delta is
+            a string with non-numeric characters, the format is ignored.
+            This can be one of the following values:
+
+            - ``None`` (default): No formatting is applied.
+            - ``"plain"``: Show the full number without any formatting (e.g. "1234.567").
+            - ``"localized"``: Show the number in the default locale format (e.g. "1,234.567").
+            - ``"percent"``: Show the number as a percentage (e.g. "123456.70%").
+            - ``"dollar"``: Show the number as a dollar amount (e.g. "$1,234.57").
+            - ``"euro"``: Show the number as a euro amount (e.g. "€1,234.57").
+            - ``"yen"``: Show the number as a yen amount (e.g. "¥1,235").
+            - ``"accounting"``: Show the number in an accounting format (e.g. "1,234.00").
+            - ``"bytes"``: Show the number in a byte format (e.g. "1.2KB").
+            - ``"compact"``: Show the number in a compact format (e.g. "1.2K").
+            - ``"scientific"``: Show the number in scientific notation (e.g. "1.235E3").
+            - ``"engineering"``: Show the number in engineering notation (e.g. "1.235E3").
+            - printf-style format string: Format the number with a printf
+            specifier, like ``"%d"`` to show a signed integer (e.g. "1234") or
+            ``"%.2f"`` to show a float with 2 decimal places.
 
         Examples
         --------
@@ -375,6 +400,9 @@ class MetricMixin:
                 metric_proto.chart_data.extend(prepared_data)
 
         metric_proto.chart_type = _parse_chart_type(chart_type)
+
+        if format is not None:
+            metric_proto.format = format
 
         validate_height(height, allow_content=True)
         validate_width(width, allow_content=True)
