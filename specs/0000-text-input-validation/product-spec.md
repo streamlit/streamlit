@@ -14,8 +14,7 @@ error state and an error message is displayed, preventing the value from being s
 
 ## Problem
 
-Currently, validating user input in `st.text_input` requires triggering a full app rerun and
-implementing custom validation logic in Python. This creates a poor user experience:
+Currently, validating user input in `st.text_input` requires triggering a full app  or fragment rerun. This creates a poor user experience:
 
 1. **Slow feedback**: Users must wait for a round-trip to the server before seeing validation errors
 2. **Complex implementation**: Developers must manually track and display validation errors
@@ -59,13 +58,13 @@ st.text_input(
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `validate` | `str \| Callable[[str], bool \| str] \| None` | `None` | Validation rule for input. If string, treated as JS-flavored regex for client-side validation. If callable, executed server-side when value is submitted. |
+| `validate` | `str \| Callable[[str], bool \| str] \| None` | `None` | Validation rule for input. If string, treated as JS-flavored regex for client-side validation. If callable, executed server-side when value is submitted. If `None`, no validation is performed. |
 
 ### Behavior
 
 #### Client-side validation (regex string)
 
-When `validate` is a string, it's treated as a JavaScript-flavored regular expression:
+When `validate` is a string, it's treated as a JavaScript-flavored regular expression (same as with `st.column_config.TextColumn`):
 
 ```python
 # Only accept valid email-like patterns
@@ -83,9 +82,10 @@ st.text_input("Username", validate=r"^.{5,}$")
 1. Regex is compiled on the frontend with `us` flags (unicode, dotAll)
 2. Validation runs on every keystroke (debounced) and on blur/submit
 3. If input doesn't match the pattern:
-   - Input border turns red (error state)
-   - Error message is displayed below the input
+   - Input turns red (error state) showing an error icon and a tooltip with the error message
    - Submit/Enter is blocked; value is not sent to backend
+   - Similar to the error state update planned for number input:
+  ![alt text](text-input-validation-error.png "Text input validation error")
 4. If input matches the pattern:
    - Normal styling is restored
    - Value can be submitted
