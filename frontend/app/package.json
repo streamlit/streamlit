@@ -91,7 +91,7 @@
     "@vitest/eslint-plugin": "^1.5.0",
     "axios-mock-adapter": "^2.1.0",
     "buffer": "^6.0.3",
-    "chrome-launcher": "^1.2.0",
+    "chrome-launcher": "^1.2.1",
     "eslint": "^9.39.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-import-resolver-typescript": "^4.4.4",
