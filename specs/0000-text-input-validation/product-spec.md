@@ -80,13 +80,13 @@ st.text_input("Username", validate=r"^.{5,}$")
 **Behavior:**
 
 1. Regex is compiled on the frontend with `us` flags (unicode, dotAll)
-2. Validation runs on every keystroke (debounced) and on blur/submit
+2. Validation runs on blur/submit events
 3. If input doesn't match the pattern:
    - Input turns red (error state) showing an error icon and a tooltip with the error message
    - Submit/Enter is blocked; value is not sent to backend
    - Similar to the error state update planned for number input:
   ![alt text](number-input-validation.png "Number input validation error")
-4. If input matches the pattern:
+1. If input matches the pattern:
    - Normal styling is restored
    - Value can be submitted
 
