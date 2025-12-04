@@ -240,6 +240,12 @@ def test_top_nav_with_logo(app: Page, assert_snapshot: ImageCompareFunction):
     click_checkbox(app, "Test Sidebar Content")
     click_checkbox(app, "Test Logo")
 
+    # Collapse sidebar
+    app.get_by_test_id("stSidebar").hover()
+    close_button = app.get_by_test_id("stSidebarCollapseButton")
+    expect(close_button).to_be_visible()
+    close_button.click()
+
     # Wait for logo to be visible
     logo = app.get_by_test_id("stHeaderLogo")
     expect(logo).to_be_visible()
