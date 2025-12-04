@@ -55,6 +55,8 @@ st.metric(
 | `on_click` | `"ignore"`, `"rerun"`, or `callable` | `"ignore"` | How the metric should respond to click events. `"ignore"` (default): No click handling. `"rerun"`: Clicking triggers a rerun and returns `True`. `callable`: Clicking triggers a rerun and executes the callback. |
 | `action` | `str \| None` | `None` | Label for a clickable button (in the top-right corner?). Only relevant when `on_click` is set. Supports short text, emojis, Material Symbols (e.g. `:material/icon_name:`), and basic Markdown (Bold, Italics, Images). If `None`, the entire metric card is clickable. |
 
+> Alternative parameter names for `action`: `action_label`, `button`, `button_label`
+
 #### Return Value
 
 | Condition | Return Value |
