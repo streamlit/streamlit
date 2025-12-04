@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import TYPE_CHECKING, Any, Literal, TypeAlias, cast
+from typing import TYPE_CHECKING, Any, Final, Literal, TypeAlias, cast
 
 from streamlit.dataframe_util import OptionSequence, convert_anything_to_list
 from streamlit.elements.lib.layout_utils import (
@@ -38,12 +38,47 @@ from streamlit.string_util import AnyNumber, clean_text, from_number
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.elements.lib.column_types import NumberFormat
 
 
 Value: TypeAlias = AnyNumber | str | None
 Delta: TypeAlias = AnyNumber | str | None
-DeltaColor: TypeAlias = Literal["normal", "inverse", "off"]
+DeltaColor: TypeAlias = Literal[
+    "normal",
+    "inverse",
+    "off",
+    "red",
+    "orange",
+    "yellow",
+    "green",
+    "blue",
+    "violet",
+    "gray",
+    "grey",
+    "primary",
+]
 DeltaArrow: TypeAlias = Literal["auto", "up", "down", "off"]
+
+# Mapping from delta_color string values to proto enum values
+_DELTA_COLOR_TO_PROTO: Final[dict[str, MetricProto.MetricColor.ValueType]] = {
+    "red": MetricProto.MetricColor.RED,
+    "orange": MetricProto.MetricColor.ORANGE,
+    "yellow": MetricProto.MetricColor.YELLOW,
+    "green": MetricProto.MetricColor.GREEN,
+    "blue": MetricProto.MetricColor.BLUE,
+    "violet": MetricProto.MetricColor.VIOLET,
+    "gray": MetricProto.MetricColor.GRAY,
+    "grey": MetricProto.MetricColor.GRAY,
+    "primary": MetricProto.MetricColor.PRIMARY,
+}
+
+# Valid delta_color values for validation
+_VALID_DELTA_COLORS: Final[set[str]] = {
+    "normal",
+    "inverse",
+    "off",
+    *_DELTA_COLOR_TO_PROTO.keys(),
+}
 
 
 @dataclass(frozen=True)
@@ -69,6 +104,7 @@ class MetricMixin:
         chart_data: OptionSequence[Any] | None = None,
         chart_type: Literal["line", "bar", "area"] = "line",
         delta_arrow: DeltaArrow = "auto",
+        format: str | NumberFormat | None = None,
     ) -> DeltaGenerator:
         r"""Display a metric in big bold font, with an optional indicator of how the metric changed.
 
@@ -97,7 +133,11 @@ class MetricMixin:
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
         value : int, float, decimal.Decimal, str, or None
-             Value of the metric. ``None`` is rendered as a long dash.
+            Value of the metric. ``None`` is rendered as a long dash.
+
+            The value can optionally contain GitHub-flavored Markdown,
+            including the Markdown directives described in the ``body``
+            parameter of ``st.markdown``.
 
         delta : int, float, decimal.Decimal, str, or None
             Indicator of how the metric changed, rendered with an arrow below
@@ -106,12 +146,24 @@ class MetricMixin:
             arrow points up and the text is green. If None (default), no delta
             indicator is shown.
 
-        delta_color : "normal", "inverse", or "off"
-             If "normal" (default), the delta indicator is shown as described
-             above. If "inverse", it is red when positive and green when
-             negative. This is useful when a negative change is considered
-             good, e.g. if cost decreased. If "off", delta is  shown in gray
-             regardless of its value.
+            The delta can optionally contain GitHub-flavored Markdown
+            including the Markdown directives described in the ``body``
+            parameter of ``st.markdown``.
+
+        delta_color : str
+            The color of the delta indicator. This can be one of the following:
+
+            - ``"normal"`` (default): The delta indicator is green when
+                positive and red when negative.
+            - ``"inverse"``: The delta indicator is red when positive and
+                green when negative. This is useful when a negative change is
+                considered good, e.g. if cost decreased.
+            - ``"off"``: The delta indicator is shown in gray regardless of
+                its value.
+            - A named color from the basic palette: ``"red"``, ``"orange"``,
+                ``"yellow"``, ``"green"``, ``"blue"``, ``"violet"``,
+                ``"gray"``/``"grey"``, or ``"primary"``. The delta indicator
+                and chart uses that color regardless of its value.
 
         help : str or None
             A tooltip that gets displayed next to the metric label. Streamlit
@@ -137,26 +189,26 @@ class MetricMixin:
             The height of the metric element. This can be one of the following:
 
             - ``"content"`` (default): The height of the element matches the
-              height of its content.
+                height of its content.
             - ``"stretch"``: The height of the element matches the height of
-              its content or the height of the parent container, whichever is
-              larger. If the element is not in a parent container, the height
-              of the element matches the height of its content.
+                its content or the height of the parent container, whichever is
+                larger. If the element is not in a parent container, the height
+                of the element matches the height of its content.
             - An integer specifying the height in pixels: The element has a
-              fixed height. If the content is larger than the specified
-              height, scrolling is enabled.
+                fixed height. If the content is larger than the specified
+                height, scrolling is enabled.
 
         width : "stretch", "content", or int
             The width of the metric element. This can be one of the following:
 
             - ``"stretch"`` (default): The width of the element matches the
-              width of the parent container.
+                width of the parent container.
             - ``"content"``: The width of the element matches the width of its
-              content, but doesn't exceed the width of the parent container.
+                content, but doesn't exceed the width of the parent container.
             - An integer specifying the width in pixels: The element has a
-              fixed width. If the specified width is greater than the width of
-              the parent container, the width of the element matches the width
-              of the parent container.
+                fixed width. If the specified width is greater than the width of
+                the parent container, the width of the element matches the width
+                of the parent container.
 
         chart_data : Iterable or None
             A sequence of numeric values to display as a sparkline chart. If
@@ -185,97 +237,123 @@ class MetricMixin:
             - ``"off"``: No arrow is shown, but the delta value remains
               visible.
 
+        format : str or None
+            A format string controlling how numbers are displayed for ``value``
+            and ``delta``. The format is only applied if the value or delta is
+            numeric (int, float, or decimal.Decimal). If the value or delta is
+            a string with non-numeric characters, the format is ignored.
+            This can be one of the following values:
+
+            - ``None`` (default): No formatting is applied.
+            - ``"plain"``: Show the full number without any formatting (e.g. "1234.567").
+            - ``"localized"``: Show the number in the default locale format (e.g. "1,234.567").
+            - ``"percent"``: Show the number as a percentage (e.g. "123456.70%").
+            - ``"dollar"``: Show the number as a dollar amount (e.g. "$1,234.57").
+            - ``"euro"``: Show the number as a euro amount (e.g. "€1,234.57").
+            - ``"yen"``: Show the number as a yen amount (e.g. "¥1,235").
+            - ``"accounting"``: Show the number in an accounting format (e.g. "1,234.00").
+            - ``"bytes"``: Show the number in a byte format (e.g. "1.2KB").
+            - ``"compact"``: Show the number in a compact format (e.g. "1.2K").
+            - ``"scientific"``: Show the number in scientific notation (e.g. "1.235E3").
+            - ``"engineering"``: Show the number in engineering notation (e.g. "1.235E3").
+            - printf-style format string: Format the number with a printf
+            specifier, like ``"%d"`` to show a signed integer (e.g. "1234") or
+            ``"%.2f"`` to show a float with 2 decimal places.
+        >>>>>>> upstream/develop
+
         Examples
         --------
-        **Example 1: Show a metric**
+                **Example 1: Show a metric**
 
-        >>> import streamlit as st
-        >>>
-        >>> st.metric(label="Temperature", value="70 °F", delta="1.2 °F")
+                >>> import streamlit as st
+                >>>
+                >>> st.metric(label="Temperature", value="70 °F", delta="1.2 °F")
 
-        .. output::
-            https://doc-metric-example1.streamlit.app/
-            height: 210px
+                .. output::
+                    https://doc-metric-example1.streamlit.app/
+                    height: 210px
 
-        **Example 2: Create a row of metrics**
+                **Example 2: Create a row of metrics**
 
-        ``st.metric`` looks especially nice in combination with ``st.columns``.
+                ``st.metric`` looks especially nice in combination with ``st.columns``.
 
-        >>> import streamlit as st
-        >>>
-        >>> col1, col2, col3 = st.columns(3)
-        >>> col1.metric("Temperature", "70 °F", "1.2 °F")
-        >>> col2.metric("Wind", "9 mph", "-8%")
-        >>> col3.metric("Humidity", "86%", "4%")
+                >>> import streamlit as st
+                >>>
+                >>> col1, col2, col3 = st.columns(3)
+                >>> col1.metric("Temperature", "70 °F", "1.2 °F")
+                >>> col2.metric("Wind", "9 mph", "-8%")
+                >>> col3.metric("Humidity", "86%", "4%")
 
-        .. output::
-            https://doc-metric-example2.streamlit.app/
-            height: 210px
+                .. output::
+                    https://doc-metric-example2.streamlit.app/
+                    height: 210px
 
-        **Example 3: Modify the delta indicator**
+                **Example 3: Modify the delta indicator**
 
-        The delta indicator color can also be inverted or turned off.
+                The delta indicator color can also be inverted or turned off.
 
-        >>> import streamlit as st
-        >>>
-        >>> st.metric(label="Gas price", value=4, delta=-0.5, delta_color="inverse")
-        >>>
-        >>> st.metric(
-        ...     label="Active developers",
-        ...     value=123,
-        ...     delta=123,
-        ...     delta_color="off",
-        ... )
+                >>> import streamlit as st
+                >>>
+                >>> st.metric(
+                ...     label="Gas price", value=4, delta=-0.5, delta_color="inverse"
+                ... )
+                >>>
+                >>> st.metric(
+                ...     label="Active developers",
+                ...     value=123,
+                ...     delta=123,
+                ...     delta_color="off",
+                ... )
 
-        .. output::
-            https://doc-metric-example3.streamlit.app/
-            height: 320px
+                .. output::
+                    https://doc-metric-example3.streamlit.app/
+                    height: 320px
 
-        **Example 4: Create a grid of metric cards**
+                **Example 4: Create a grid of metric cards**
 
-        Add borders to your metrics to create a dashboard look.
+                Add borders to your metrics to create a dashboard look.
 
-        >>> import streamlit as st
-        >>>
-        >>> a, b = st.columns(2)
-        >>> c, d = st.columns(2)
-        >>>
-        >>> a.metric("Temperature", "30°F", "-9°F", border=True)
-        >>> b.metric("Wind", "4 mph", "2 mph", border=True)
-        >>>
-        >>> c.metric("Humidity", "77%", "5%", border=True)
-        >>> d.metric("Pressure", "30.34 inHg", "-2 inHg", border=True)
+                >>> import streamlit as st
+                >>>
+                >>> a, b = st.columns(2)
+                >>> c, d = st.columns(2)
+                >>>
+                >>> a.metric("Temperature", "30°F", "-9°F", border=True)
+                >>> b.metric("Wind", "4 mph", "2 mph", border=True)
+                >>>
+                >>> c.metric("Humidity", "77%", "5%", border=True)
+                >>> d.metric("Pressure", "30.34 inHg", "-2 inHg", border=True)
 
-        .. output::
-            https://doc-metric-example4.streamlit.app/
-            height: 350px
+                .. output::
+                    https://doc-metric-example4.streamlit.app/
+                    height: 350px
 
-        **Example 5: Show sparklines**
+                **Example 5: Show sparklines**
 
-        To show trends over time, add sparklines.
+                To show trends over time, add sparklines.
 
-        >>> import streamlit as st
-        >>> from numpy.random import default_rng as rng
-        >>>
-        >>> changes = list(rng(4).standard_normal(20))
-        >>> data = [sum(changes[:i]) for i in range(20)]
-        >>> delta = round(data[-1], 2)
-        >>>
-        >>> row = st.container(horizontal=True)
-        >>> with row:
-        >>>     st.metric(
-        ...         "Line", 10, delta, chart_data=data, chart_type="line", border=True
-        ...     )
-        >>>     st.metric(
-        ...         "Area", 10, delta, chart_data=data, chart_type="area", border=True
-        ...     )
-        >>>     st.metric(
-        ...         "Bar", 10, delta, chart_data=data, chart_type="bar", border=True
-        ...     )
+                >>> import streamlit as st
+                >>> from numpy.random import default_rng as rng
+                >>>
+                >>> changes = list(rng(4).standard_normal(20))
+                >>> data = [sum(changes[:i]) for i in range(20)]
+                >>> delta = round(data[-1], 2)
+                >>>
+                >>> row = st.container(horizontal=True)
+                >>> with row:
+                >>>     st.metric(
+                ...         "Line", 10, delta, chart_data=data, chart_type="line", border=True
+                ...     )
+                >>>     st.metric(
+                ...         "Area", 10, delta, chart_data=data, chart_type="area", border=True
+                ...     )
+                >>>     st.metric(
+                ...         "Bar", 10, delta, chart_data=data, chart_type="bar", border=True
+                ...     )
 
-        .. output::
-            https://doc-metric-example5.streamlit.app/
-            height: 300px
+                .. output::
+                    https://doc-metric-example5.streamlit.app/
+                    height: 300px
 
         """
         maybe_raise_label_warnings(label, label_visibility)
@@ -323,6 +401,9 @@ class MetricMixin:
                 metric_proto.chart_data.extend(prepared_data)
 
         metric_proto.chart_type = _parse_chart_type(chart_type)
+
+        if format is not None:
+            metric_proto.format = format
 
         validate_height(height, allow_content=True)
         validate_width(width, allow_content=True)
@@ -381,10 +462,11 @@ def _determine_delta_color_and_direction(
     delta_color: DeltaColor,
     delta: Delta,
 ) -> MetricColorAndDirection:
-    if delta_color not in {"normal", "inverse", "off"}:
+    if delta_color not in _VALID_DELTA_COLORS:
         raise StreamlitAPIException(
             f"'{delta_color}' is not an accepted value. delta_color only accepts: "
-            "'normal', 'inverse', or 'off'"
+            "'normal', 'inverse', 'off', or a color name ('red', 'orange', 'yellow', "
+            "'green', 'blue', 'violet', 'gray'/'grey', 'primary')"
         )
 
     if delta is None or delta == "":
@@ -393,22 +475,36 @@ def _determine_delta_color_and_direction(
             direction=MetricProto.MetricDirection.NONE,
         )
 
-    if _is_negative_delta(delta):
-        if delta_color == "normal":
-            cd_color = MetricProto.MetricColor.RED
-        elif delta_color == "inverse":
-            cd_color = MetricProto.MetricColor.GREEN
-        else:
-            cd_color = MetricProto.MetricColor.GRAY
-        cd_direction = MetricProto.MetricDirection.DOWN
-    else:
-        if delta_color == "normal":
-            cd_color = MetricProto.MetricColor.GREEN
-        elif delta_color == "inverse":
-            cd_color = MetricProto.MetricColor.RED
-        else:
-            cd_color = MetricProto.MetricColor.GRAY
-        cd_direction = MetricProto.MetricDirection.UP
+    # Determine direction based on delta sign
+    cd_direction = (
+        MetricProto.MetricDirection.DOWN
+        if _is_negative_delta(delta)
+        else MetricProto.MetricDirection.UP
+    )
+
+    # Handle explicit color names
+    if delta_color in _DELTA_COLOR_TO_PROTO:
+        return MetricColorAndDirection(
+            color=_DELTA_COLOR_TO_PROTO[delta_color],
+            direction=cd_direction,
+        )
+
+    # Handle "normal", "inverse", "off" modes
+    is_negative = cd_direction == MetricProto.MetricDirection.DOWN
+    if delta_color == "normal":
+        cd_color = (
+            MetricProto.MetricColor.RED
+            if is_negative
+            else MetricProto.MetricColor.GREEN
+        )
+    elif delta_color == "inverse":
+        cd_color = (
+            MetricProto.MetricColor.GREEN
+            if is_negative
+            else MetricProto.MetricColor.RED
+        )
+    else:  # "off"
+        cd_color = MetricProto.MetricColor.GRAY
 
     return MetricColorAndDirection(
         color=cd_color,

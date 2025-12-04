@@ -16,6 +16,7 @@
 
 import { BlockNode } from "~lib/render-tree/BlockNode"
 import { block, text } from "~lib/render-tree/test-utils"
+import { TransientNode } from "~lib/render-tree/TransientNode"
 
 import { GetNodeByDeltaPathVisitor } from "./GetNodeByDeltaPathVisitor"
 import { SetNodeByDeltaPathVisitor } from "./SetNodeByDeltaPathVisitor"
@@ -434,6 +435,41 @@ describe("SetNodeByDeltaPathVisitor", () => {
       expect(nestedResult.scriptRunId).toBe("update_run_id")
       expect(nestedResult.fragmentId).toBe("nested_fragment")
       expect(nestedResult.deltaMsgReceivedAt).toBe(9876543210)
+    })
+  })
+
+  describe("visitTransientNode", () => {
+    it("drills through anchor when remaining path exists", () => {
+      const inner = block([text("child")])
+      const t = new TransientNode("run", inner, [text("t1")], 1)
+      const nodeToSet = text("new_child")
+      const visitor = new SetNodeByDeltaPathVisitor([0, 0], nodeToSet, "run")
+
+      const result = visitor.visitTransientNode(t) as BlockNode
+      expect(
+        GetNodeByDeltaPathVisitor.getNodeAtPath(result, [0])
+      ).toBeTextNode("new_child")
+    })
+
+    it("throws when drilling required but no anchor exists", () => {
+      const t = new TransientNode("run", undefined, [text("t1")], 1)
+      const nodeToSet = text("x")
+      // Use a path with a remaining segment after the first index to force drill
+      const visitor = new SetNodeByDeltaPathVisitor([0, 1], nodeToSet, "run")
+      expect(() => visitor.visitTransientNode(t)).toThrow(
+        "TransientNode has no anchor to set node at"
+      )
+    })
+
+    it("delegates to nodeToSet.replaceTransientNodeWithSelf when path consumed", () => {
+      const t = new TransientNode("run", text("anchor"), [text("t1")], 5)
+      const nodeToSet = new BlockNode("hash", [])
+      const spy = vi.spyOn(nodeToSet, "replaceTransientNodeWithSelf")
+      const visitor = new SetNodeByDeltaPathVisitor([0], nodeToSet, "run")
+
+      // Path consumed after slicing in visitTransientNode; this should call replaceTransientNodeWithSelf
+      visitor.visitTransientNode(t)
+      expect(spy).toHaveBeenCalledWith(t)
     })
   })
 

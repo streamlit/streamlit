@@ -17,7 +17,10 @@
 import { Block as BlockProto } from "@streamlit/protobuf"
 
 import { AppNode, NO_SCRIPT_RUN_ID } from "./AppNode.interface"
+import { ElementNode } from "./ElementNode"
+import { TransientNode } from "./TransientNode"
 import { AppNodeVisitor } from "./visitors/AppNodeVisitor.interface"
+import { ClearStaleNodeVisitor } from "./visitors/ClearStaleNodeVisitor"
 import { DebugVisitor } from "./visitors/DebugVisitor"
 
 /**
@@ -56,6 +59,41 @@ export class BlockNode implements AppNode {
   /** True if this Block has no children. */
   public get isEmpty(): boolean {
     return this.children.length === 0
+  }
+
+  public replaceTransientNodeWithSelf(node: TransientNode): AppNode {
+    if (node.scriptRunId !== this.scriptRunId) {
+      // This TransientNode was not defined in this script run, so we return the block node
+      // to replace everything
+      return this
+    }
+
+    // It's essentially an empty transient node, so we return the block node
+    if (node.transientNodes.length === 0) {
+      return this
+    }
+
+    // At this point, we should clear the transient nodes that are stale
+    const newTransientNodes = node.updateTransientNodes(
+      element =>
+        element.accept(new ClearStaleNodeVisitor(this.scriptRunId)) as
+          | ElementNode
+          | undefined
+    )
+
+    // The resulting transient node is empty, so we return this node
+    if (newTransientNodes.length === 0) {
+      return this
+    }
+
+    // In this case, the transient node is to be included, but we are
+    // providing a new anchor node.
+    return new TransientNode(
+      this.scriptRunId,
+      this,
+      newTransientNodes,
+      node.deltaMsgReceivedAt
+    )
   }
 
   /**

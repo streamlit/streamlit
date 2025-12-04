@@ -72,7 +72,7 @@ describe("DataFrame ColumnMenu", () => {
     vi.clearAllMocks()
   })
 
-  test("renders the column menu at the correct position", () => {
+  it("renders the column menu at the correct position", () => {
     render(<ColumnMenu {...defaultProps} />)
 
     const menu = screen.getByTestId("stDataFrameColumnMenu")
@@ -85,21 +85,21 @@ describe("DataFrame ColumnMenu", () => {
     expect(menuTarget).toHaveStyle("left: 100px")
   })
 
-  test("renders the column menu with the correct column name", () => {
+  it("renders the column menu with the correct column name", () => {
     render(<ColumnMenu {...defaultProps} />)
 
     const columnName = screen.getByText("testColumn")
     expect(columnName).toBeVisible()
   })
 
-  test("renders sort options", () => {
+  it("renders sort options", () => {
     render(<ColumnMenu {...defaultProps} />)
 
     expect(screen.getByText("Sort ascending")).toBeInTheDocument()
     expect(screen.getByText("Sort descending")).toBeInTheDocument()
   })
 
-  test("calls sortColumn with 'asc' when clicking sort ascending", async () => {
+  it("calls sortColumn with 'asc' when clicking sort ascending", async () => {
     render(<ColumnMenu {...defaultProps} />)
 
     await userEvent.click(screen.getByText("Sort ascending"))
@@ -107,7 +107,7 @@ describe("DataFrame ColumnMenu", () => {
     expect(defaultProps.onCloseMenu).toHaveBeenCalled()
   })
 
-  test("calls sortColumn with 'desc' when clicking sort descending", async () => {
+  it("calls sortColumn with 'desc' when clicking sort descending", async () => {
     render(<ColumnMenu {...defaultProps} />)
 
     await userEvent.click(screen.getByText("Sort descending"))
@@ -132,21 +132,21 @@ describe("DataFrame ColumnMenu", () => {
   })
 
   describe("pin/unpin functionality", () => {
-    test("renders 'Pin column' when column is not pinned", () => {
+    it("renders 'Pin column' when column is not pinned", () => {
       render(<ColumnMenu {...defaultProps} isColumnPinned={false} />)
 
       expect(screen.getByText("Pin column")).toBeInTheDocument()
       expect(screen.queryByText("Unpin column")).not.toBeInTheDocument()
     })
 
-    test("renders 'Unpin column' when column is pinned", () => {
+    it("renders 'Unpin column' when column is pinned", () => {
       render(<ColumnMenu {...defaultProps} isColumnPinned={true} />)
 
       expect(screen.getByText("Unpin column")).toBeInTheDocument()
       expect(screen.queryByText("Pin column")).not.toBeInTheDocument()
     })
 
-    test("calls pinColumn when clicking 'Pin column'", async () => {
+    it("calls pinColumn when clicking 'Pin column'", async () => {
       render(<ColumnMenu {...defaultProps} isColumnPinned={false} />)
 
       await userEvent.click(screen.getByText("Pin column"))
@@ -154,7 +154,7 @@ describe("DataFrame ColumnMenu", () => {
       expect(defaultProps.onCloseMenu).toHaveBeenCalled()
     })
 
-    test("calls unpinColumn when clicking 'Unpin column'", async () => {
+    it("calls unpinColumn when clicking 'Unpin column'", async () => {
       render(<ColumnMenu {...defaultProps} isColumnPinned={true} />)
 
       await userEvent.click(screen.getByText("Unpin column"))
@@ -164,13 +164,13 @@ describe("DataFrame ColumnMenu", () => {
   })
 
   describe("format menu functionality", () => {
-    test("renders format option when onChangeFormat is provided", () => {
+    it("renders format option when onChangeFormat is provided", () => {
       render(<ColumnMenu {...defaultProps} onChangeFormat={() => {}} />)
 
       expect(screen.getByText("Format")).toBeInTheDocument()
     })
 
-    test("does not render format option when onChangeFormat is undefined", () => {
+    it("does not render format option when onChangeFormat is undefined", () => {
       render(<ColumnMenu {...defaultProps} onChangeFormat={undefined} />)
 
       expect(screen.queryByText("Format")).not.toBeInTheDocument()
@@ -178,19 +178,19 @@ describe("DataFrame ColumnMenu", () => {
   })
 
   describe("autosize functionality", () => {
-    test("renders 'Autosize' when onAutosize is defined", () => {
+    it("renders 'Autosize' when onAutosize is defined", () => {
       render(<ColumnMenu {...defaultProps} />)
 
       expect(screen.getByText("Autosize")).toBeInTheDocument()
     })
 
-    test("does not render 'Autosize' when onAutosize is undefined", () => {
+    it("does not render 'Autosize' when onAutosize is undefined", () => {
       render(<ColumnMenu {...defaultProps} onAutosize={undefined} />)
 
       expect(screen.queryByText("Autosize")).not.toBeInTheDocument()
     })
 
-    test("calls onAutosize when clicking 'Autosize'", async () => {
+    it("calls onAutosize when clicking 'Autosize'", async () => {
       render(<ColumnMenu {...defaultProps} />)
 
       await userEvent.click(screen.getByText("Autosize"))
@@ -200,19 +200,19 @@ describe("DataFrame ColumnMenu", () => {
   })
 
   describe("hide column functionality", () => {
-    test("renders 'Hide column' when onHideColumn is provided", () => {
+    it("renders 'Hide column' when onHideColumn is provided", () => {
       render(<ColumnMenu {...defaultProps} onHideColumn={() => {}} />)
 
       expect(screen.getByText("Hide column")).toBeInTheDocument()
     })
 
-    test("does not render 'Hide column' when onHideColumn is undefined", () => {
+    it("does not render 'Hide column' when onHideColumn is undefined", () => {
       render(<ColumnMenu {...defaultProps} onHideColumn={undefined} />)
 
       expect(screen.queryByText("Hide column")).not.toBeInTheDocument()
     })
 
-    test("calls onHideColumn when clicking 'Hide column'", async () => {
+    it("calls onHideColumn when clicking 'Hide column'", async () => {
       const onHideColumn = vi.fn()
       render(<ColumnMenu {...defaultProps} onHideColumn={onHideColumn} />)
 
@@ -226,7 +226,7 @@ describe("DataFrame ColumnMenu", () => {
     // eslint-disable-next-line no-restricted-properties -- This is fine in tests
     const mockWriteText = vi.mocked(navigator.clipboard.writeText)
 
-    test("shows copy icon initially and switches to check icon after copy", async () => {
+    it("shows copy icon initially and switches to check icon after copy", async () => {
       mockWriteText.mockResolvedValue()
 
       render(<ColumnMenu {...defaultProps} />)

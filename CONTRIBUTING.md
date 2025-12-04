@@ -180,6 +180,9 @@ make protobuf
 make init
 ```
 
+> [!IMPORTANT]
+> If your change updates `frontend/yarn.lock` (for example, after adding or upgrading dependencies), run `cd frontend && yarn dedupe` before committing. Our `scripts/check_yarn_dedupe.sh` hook enforces this locally (via pre-commit) and in CI, so handling it upfront keeps your PR green.
+
 ### 6. Running tests
 
 You should always write unit tests and end-to-end tests! This is true for new features, but also for bugs; this way when you fix a bug you can be sure it will not show up again. So bug-fixing is actually a great way to increase our test coverage where it actually matters.

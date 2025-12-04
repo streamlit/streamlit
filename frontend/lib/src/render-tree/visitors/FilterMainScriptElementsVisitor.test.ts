@@ -17,6 +17,7 @@
 import { BlockNode } from "~lib/render-tree/BlockNode"
 import { ElementNode } from "~lib/render-tree/ElementNode"
 import { block, text } from "~lib/render-tree/test-utils"
+import { TransientNode } from "~lib/render-tree/TransientNode"
 
 import { FilterMainScriptElementsVisitor } from "./FilterMainScriptElementsVisitor"
 
@@ -206,6 +207,88 @@ describe("FilterMainScriptElementsVisitor", () => {
       expect(result).toBeInstanceOf(BlockNode)
       expect(result.children).toHaveLength(0)
       expect(result.isEmpty).toBe(true)
+    })
+  })
+
+  describe("visitTransientNode", () => {
+    it("returns undefined when both anchor and transients are filtered out", () => {
+      const t = new TransientNode(
+        "run",
+        new ElementNode(
+          text("a").element,
+          text("a").metadata,
+          "run",
+          OTHER_SCRIPT_HASH
+        ),
+        [
+          new ElementNode(
+            text("t").element,
+            text("t").metadata,
+            "run",
+            OTHER_SCRIPT_HASH
+          ),
+        ],
+        1
+      )
+      const visitor = new FilterMainScriptElementsVisitor(MAIN_SCRIPT_HASH)
+      const result = visitor.visitTransientNode(t)
+      expect(result).toBeUndefined()
+    })
+
+    it("returns anchor when transients are filtered and anchor matches", () => {
+      const anchor = new ElementNode(
+        text("a").element,
+        text("a").metadata,
+        "run",
+        MAIN_SCRIPT_HASH
+      )
+      const t = new TransientNode(
+        "run",
+        anchor,
+        [
+          new ElementNode(
+            text("t").element,
+            text("t").metadata,
+            "run",
+            OTHER_SCRIPT_HASH
+          ),
+        ],
+        1
+      )
+
+      const visitor = new FilterMainScriptElementsVisitor(MAIN_SCRIPT_HASH)
+      const result = visitor.visitTransientNode(t)
+      expect(result).toBe(anchor)
+    })
+
+    it("returns new TransientNode when some transients match and anchor is filtered", () => {
+      const anchor = new ElementNode(
+        text("a").element,
+        text("a").metadata,
+        "run",
+        OTHER_SCRIPT_HASH
+      )
+      const keep = new ElementNode(
+        text("keep").element,
+        text("keep").metadata,
+        "run",
+        MAIN_SCRIPT_HASH
+      )
+      const drop = new ElementNode(
+        text("drop").element,
+        text("drop").metadata,
+        "run",
+        OTHER_SCRIPT_HASH
+      )
+
+      const t = new TransientNode("run", anchor, [keep, drop], 9)
+      const visitor = new FilterMainScriptElementsVisitor(MAIN_SCRIPT_HASH)
+      const result = visitor.visitTransientNode(t) as TransientNode
+
+      expect(result).toBeInstanceOf(TransientNode)
+      expect(result.anchor).toBeUndefined()
+      expect(result.transientNodes).toEqual([keep])
+      expect(result.deltaMsgReceivedAt).toBe(9)
     })
   })
 
