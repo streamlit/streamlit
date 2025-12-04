@@ -92,7 +92,7 @@ st.text_input("Username", validate=r"^.{5,}$")
 
 **Error messages:**
 
-- Default: "Please enter a valid value."
+TBD; see open questions. Do we need a way to specify the error message?
 
 ```python
 st.text_input(
