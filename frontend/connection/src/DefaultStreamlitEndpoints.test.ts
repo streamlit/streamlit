@@ -568,7 +568,7 @@ describe("DefaultStreamlitEndpoints", () => {
   describe("checkSourceUrlResponse", () => {
     it("sends error to host if error on response", async () => {
       // Mock fetch for checkSourceUrlResponse - response is not ok
-      global.fetch = vi.fn(() =>
+      globalThis.fetch = vi.fn(() =>
         Promise.resolve({
           ok: false,
           status: 404,
@@ -611,7 +611,7 @@ describe("DefaultStreamlitEndpoints", () => {
       })
 
       // Mock fetch for checkSourceUrlResponse - fetch fails
-      global.fetch = vi.fn(() => Promise.reject(new Error("mockError")))
+      globalThis.fetch = vi.fn(() => Promise.reject(new Error("mockError")))
 
       const sendClientErrorToHostSpy = vi.spyOn(
         endpoints,

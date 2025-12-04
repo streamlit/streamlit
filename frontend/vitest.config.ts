@@ -22,6 +22,7 @@ import {
 
 export default defineConfig({
   test: {
+    globals: true,
     // Include all packages that have a vite.config.ts file
     projects: ["*/vite.config.ts"],
 
