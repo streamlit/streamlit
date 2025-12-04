@@ -226,6 +226,32 @@ describe("LogoComponent", () => {
       expect(mockOnPageChange).toHaveBeenCalledWith("home_hash")
     })
 
+    it("does not call onPageChange when already on home page", async () => {
+      const user = userEvent.setup()
+      const mockOnPageChange = vi.fn()
+
+      renderWithContexts(
+        <LogoComponent
+          {...getProps({
+            appLogo: logoWithoutLink,
+            dataTestId: "stHeaderLogo",
+          })}
+        />,
+        {
+          navigationContext: {
+            appPages: multiPageAppPages,
+            onPageChange: mockOnPageChange,
+            currentPageScriptHash: "home_hash", // Already on home page
+          },
+        }
+      )
+
+      const logoButton = screen.getByTestId("stLogoLink")
+      await user.click(logoButton)
+
+      expect(mockOnPageChange).not.toHaveBeenCalled()
+    })
+
     it("uses external link when link is provided, even in multi-page app", () => {
       renderWithContexts(
         <LogoComponent

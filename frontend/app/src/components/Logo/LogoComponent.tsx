@@ -52,7 +52,8 @@ const LogoComponent = ({
   dataTestId = "stLogo",
 }: LogoComponentProps): ReactElement | null => {
   const { resourceCrossOriginMode } = useContext(LibConfigContext)
-  const { appPages, onPageChange } = useContext(NavigationContext)
+  const { appPages, onPageChange, currentPageScriptHash } =
+    useContext(NavigationContext)
 
   // Find the home page (the default page) and check if this is a multi-page app
   const homePage = useMemo(
@@ -62,10 +63,14 @@ const LogoComponent = ({
   const isMultiPageApp = appPages.length > 1
 
   const handleLogoClick = useCallback(() => {
-    if (homePage?.pageScriptHash) {
+    // Only navigate if we're not already on the home page
+    if (
+      homePage?.pageScriptHash &&
+      currentPageScriptHash !== homePage.pageScriptHash
+    ) {
       onPageChange(homePage.pageScriptHash)
     }
-  }, [homePage, onPageChange])
+  }, [homePage, onPageChange, currentPageScriptHash])
 
   if (!appLogo) {
     return null
