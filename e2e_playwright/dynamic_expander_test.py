@@ -14,28 +14,39 @@
 
 import streamlit as st
 
-st.title("Expander Widget State Test")
+st.title("Dynamic Expander Test")
 
-# Initialize state
-if "expander_1" not in st.session_state:
-    st.session_state["expander_1"] = True
-
-# Button to toggle state (must be BEFORE expander creation)
-if st.button("Toggle Expander"):
-    st.session_state["expander_1"] = not st.session_state["expander_1"]
-
-# Create expander - it will use the state from session_state
-exp = st.expander("Expand me", expanded=True, key="expander_1")
-with exp:
-    st.write("This is the expander content")
-    st.write(f"Current state in session_state: {st.session_state['expander_1']}")
-
-# Show current state outside expander
-st.write(f"The Expander is {'open' if st.session_state['expander_1'] else 'closed'}")
-
-# Show rerun counter
+# Track reruns to verify rerun happens on toggle
 if "counter" not in st.session_state:
     st.session_state.counter = 0
-
 st.session_state.counter += 1
+
+st.header("on_change='rerun'")
+
+# Create expander with on_change="rerun" to enable state tracking
+exp_rerun = st.expander("Rerun expander", expanded=False, on_change="rerun")
+
+# Use .open to decide whether to render content
+if exp_rerun.open:
+    with exp_rerun:
+        st.write("Rerun expander content is visible")
+
+# Display the current state using .open
+st.write(f"exp_rerun.open = {exp_rerun.open}")
+
+st.divider()
+
+st.header("on_change='ignore'")
+
+# Create expander with on_change="ignore" (default) - no state tracking
+exp_ignore = st.expander("Ignore expander", expanded=False, on_change="ignore")
+
+with exp_ignore:
+    st.write("Ignore expander content (always rendered)")
+
+# .open returns None when on_change="ignore"
+st.write(f"exp_ignore.open = {exp_ignore.open}")
+
+st.divider()
+
 st.write(f"Script has run {st.session_state.counter} times")

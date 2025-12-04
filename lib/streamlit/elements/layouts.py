@@ -36,6 +36,7 @@ from streamlit.elements.lib.layout_utils import (
     validate_vertical_alignment,
     validate_width,
 )
+from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
 from streamlit.errors import (
     StreamlitAPIException,
@@ -760,6 +761,7 @@ class LayoutsMixin:
         key: Key | None = None,
         icon: str | None = None,
         width: WidthWithoutContent = "stretch",
+        on_change: Literal["ignore", "rerun"] = "ignore",
     ) -> DeltaGenerator:
         r"""Insert a multi-element container that can be expanded/collapsed.
 
@@ -830,6 +832,21 @@ class LayoutsMixin:
               the parent container, the width of the container matches the width
               of the parent container.
 
+        on_change : "ignore" or "rerun"
+            How the expander should respond to user toggle events. This controls
+            whether or not the expander behaves like an input widget with
+            persistent state. ``on_change`` can be one of the following:
+
+            - ``"ignore"`` (default): Streamlit will not track the expander's
+              state. The ``.open`` attribute will return ``None``. The expander
+              can be used inside ``@st.cache_data`` decorated functions.
+
+            - ``"rerun"``: Streamlit will rerun the app when the user expands
+              or collapses the expander. The ``.open`` attribute will return
+              the current state (``True`` if expanded, ``False`` if collapsed).
+              The expander cannot be used inside ``@st.cache_data`` decorated
+              functions.
+
         Examples
         --------
         You can use the ``with`` notation to insert any element into an expander
@@ -872,35 +889,62 @@ class LayoutsMixin:
         if label is None:
             raise StreamlitAPIException("A label is required for an expander")
 
+        if on_change not in ["ignore", "rerun"]:
+            raise StreamlitAPIException(
+                f"You have passed {on_change} to `on_change`. But only 'ignore' "
+                "or 'rerun' is supported."
+            )
+
         key = to_key(key)
-        ctx = get_script_run_ctx()
 
-        # Register widget to track state
-        element_id = compute_and_register_element_id(
-            "expander",
-            user_key=key,
-            key_as_main_identity=True,
-            dg=self.dg,
-            label=label,
-            expanded=expanded,
-            icon=icon,
-            width=width,
-        )
+        # Determine if state tracking is enabled (widget mode)
+        is_stateful = on_change == "rerun"
 
-        # Create serde for state management
-        serde = ExpanderSerde(expanded=expanded)
+        if is_stateful:
+            # Widget path: check policies, register widget, track state
+            check_widget_policies(
+                self.dg,
+                key,
+                on_change=None,
+                default_value=None,
+                writes_allowed=False,
+                enable_check_callback_rules=False,
+            )
 
-        # Register the widget and get current state
-        expander_state = register_widget(
-            element_id,
-            deserializer=serde.deserialize,
-            serializer=serde.serialize,
-            ctx=ctx,
-            value_type="bool_value",
-        )
+        # Default to the expanded parameter for non-stateful mode
+        current_expanded = expanded
+        element_id: str | None = None
 
-        # Use widget state value if available, otherwise use initial expanded parameter
-        current_expanded = expander_state.value
+        if is_stateful:
+            ctx = get_script_run_ctx()
+
+            # Register element ID for widget
+            element_id = compute_and_register_element_id(
+                "expander",
+                user_key=key,
+                key_as_main_identity=True,
+                dg=self.dg,
+                label=label,
+                expanded=expanded,
+                icon=icon,
+                width=width,
+                on_change=on_change,
+            )
+
+            # Create serde for state management
+            serde = ExpanderSerde(expanded=expanded)
+
+            # Register the widget and get current state
+            expander_state = register_widget(
+                element_id,
+                deserializer=serde.deserialize,
+                serializer=serde.serialize,
+                ctx=ctx,
+                value_type="bool_value",
+            )
+
+            # Use widget state value
+            current_expanded = expander_state.value
 
         expandable_proto = BlockProto.Expandable()
         expandable_proto.expanded = current_expanded
@@ -910,12 +954,16 @@ class LayoutsMixin:
 
         block_proto = BlockProto()
         block_proto.allow_empty = True
-        block_proto.id = element_id
+        if element_id is not None:
+            block_proto.id = element_id
         block_proto.expandable.CopyFrom(expandable_proto)
         validate_width(width)
         block_proto.width_config.CopyFrom(get_width_config(width))
 
-        return self.dg._block(block_proto=block_proto, open=current_expanded)
+        return self.dg._block(
+            block_proto=block_proto,
+            open=current_expanded if is_stateful else None,
+        )
 
     @gather_metrics("popover")
     def popover(
