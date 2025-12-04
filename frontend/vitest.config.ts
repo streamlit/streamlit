@@ -14,10 +14,15 @@
  * limitations under the License.
  */
 
-import { coverageConfigDefaults, defineConfig } from "vitest/config"
+import {
+  configDefaults,
+  coverageConfigDefaults,
+  defineConfig,
+} from "vitest/config"
 
 export default defineConfig({
   test: {
+    globals: true,
     // Include all packages that have a vite.config.ts file
     projects: ["*/vite.config.ts"],
 
@@ -25,13 +30,24 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       reporter: ["text-summary", "json-summary", "html"],
-      include: ["*/src/**/*"],
+      include: ["*/src/**/*.{js,jsx,ts,tsx}"],
       exclude: [
+        "**/*.d.ts",
+        "**/vitest.setup.ts",
         "lib/src/vendor/**",
         "eslint-plugin-streamlit-custom/src/**",
+        "**/src/assets/**",
+        "**/dist/**",
+        "**/protobuf/**",
         "**/*.interface.ts",
         ...coverageConfigDefaults.exclude,
       ],
     },
+    exclude: [
+      ...configDefaults.exclude,
+      "**/dist/**",
+      "**/.{idea,git,cache,output,temp}/**",
+      "**/{karma,rollup,webpack,vite,vitest,jest,ava,babel,nyc,cypress,tsup,build,eslint,prettier}.config.*",
+    ],
   },
 })

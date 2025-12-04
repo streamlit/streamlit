@@ -396,30 +396,37 @@ describe("Sidebar Component", () => {
     })
 
     describe("Logo properties", () => {
+      it("renders logo without link when no link provided", () => {
+        renderSidebar(
+          {},
+          { sidebarConfigContext: { appLogo: testLogos.imageOnly } }
+        )
+
+        const sidebar = screen.getByTestId("stSidebar")
+        const sidebarLogo = within(sidebar).getByTestId("stSidebarLogo")
+
+        expect(sidebarLogo).toHaveStyle({ height: "1.5rem" })
+        expect(
+          within(sidebar).queryByTestId("stLogoLink")
+        ).not.toBeInTheDocument()
+      })
+
       it.each([
         {
-          description: "default image has no link & medium size",
-          logo: testLogos.imageOnly,
-          expectLink: false,
-          expectedHeight: "1.5rem",
-        },
-        {
-          description: "image has link if provided",
+          description: "medium size",
           logo: testLogos.imageWithLink,
-          expectLink: true,
           expectedHeight: "1.5rem",
           expectedHref: EXAMPLE_LINK,
         },
         {
           description: "small size when specified",
           logo: testLogos.logoWithSize,
-          expectLink: true,
           expectedHeight: "1.25rem",
           expectedHref: EXAMPLE_LINK,
         },
       ])(
-        "renders logo - $description",
-        ({ logo, expectLink, expectedHeight, expectedHref }) => {
+        "renders logo with link and $description",
+        ({ logo, expectedHeight, expectedHref }) => {
           renderSidebar({}, { sidebarConfigContext: { appLogo: logo } })
 
           const sidebar = screen.getByTestId("stSidebar")
@@ -427,13 +434,8 @@ describe("Sidebar Component", () => {
 
           expect(sidebarLogo).toHaveStyle({ height: expectedHeight })
 
-          if (expectLink) {
-            const sidebarLogoLink = within(sidebar).getByTestId("stLogoLink")
-            expect(sidebarLogoLink).toHaveAttribute("href", expectedHref)
-          } else {
-            const sidebarLogoLink = within(sidebar).queryByTestId("stLogoLink")
-            expect(sidebarLogoLink).not.toBeInTheDocument()
-          }
+          const sidebarLogoLink = within(sidebar).getByTestId("stLogoLink")
+          expect(sidebarLogoLink).toHaveAttribute("href", expectedHref)
         }
       )
     })

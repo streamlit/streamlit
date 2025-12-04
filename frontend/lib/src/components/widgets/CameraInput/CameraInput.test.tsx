@@ -97,6 +97,8 @@ describe("CameraInput widget", () => {
   fetchMocker.enableMocks()
 
   beforeEach(() => {
+    // Use fake timers to control debounced functions in WebcamComponent
+    vi.useFakeTimers()
     vi.spyOn(UseResizeObserver, "useResizeObserver").mockReturnValue({
       elementRef: { current: null },
       values: [250],
@@ -105,6 +107,11 @@ describe("CameraInput widget", () => {
   })
 
   afterEach(() => {
+    // Clean up timers to prevent "window is not defined" errors
+    // from debounced callbacks firing after test environment is torn down
+    vi.runOnlyPendingTimers()
+    vi.clearAllTimers()
+    vi.useRealTimers()
     vi.restoreAllMocks()
   })
 
@@ -328,7 +335,7 @@ describe("CameraInput widget", () => {
     })
 
     it("clears photo when Clear photo button is clicked", async () => {
-      const user = userEvent.setup()
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
       const props = getProps()
       vi.spyOn(props.widgetMgr, "setFileUploaderStateValue")
 
@@ -368,7 +375,7 @@ describe("CameraInput widget", () => {
     })
 
     it("calls deleteFile when clearing uploaded photo", async () => {
-      const user = userEvent.setup()
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
       const props = getProps()
 
       // Set initial state with a photo

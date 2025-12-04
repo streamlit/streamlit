@@ -55,22 +55,9 @@ describe("parseBidiComponentData", () => {
       expected: null,
     },
     {
-      description: "returns arrow data bytes when provided",
-      args: createArgs({
-        data: "arrowData",
-        arrowData: new Uint8Array([1, 2, 3]),
-      }),
-      expected: new Uint8Array([1, 2, 3]),
-    },
-    {
       description: "returns null when arrow data is missing",
       args: createArgs({ data: "arrowData" }),
       expected: null,
-    },
-    {
-      description: "returns raw bytes when provided",
-      args: createArgs({ data: "bytes", bytes: new Uint8Array([4, 5, 6]) }),
-      expected: new Uint8Array([4, 5, 6]),
     },
     {
       description: "returns null when bytes payload is empty",
@@ -79,13 +66,27 @@ describe("parseBidiComponentData", () => {
     },
   ])("$description", ({ args, expected }) => {
     const result = parseBidiComponentData(args)
+    expect(result).toEqual(expected)
+  })
 
-    if (expected instanceof Uint8Array) {
-      expect(result).toBeInstanceOf(Uint8Array)
-      expect(Array.from(result as Uint8Array)).toEqual(Array.from(expected))
-    } else {
-      expect(result).toEqual(expected)
-    }
+  it.each([
+    {
+      description: "returns arrow data bytes when provided",
+      args: createArgs({
+        data: "arrowData",
+        arrowData: new Uint8Array([1, 2, 3]),
+      }),
+      expected: new Uint8Array([1, 2, 3]),
+    },
+    {
+      description: "returns raw bytes when provided",
+      args: createArgs({ data: "bytes", bytes: new Uint8Array([4, 5, 6]) }),
+      expected: new Uint8Array([4, 5, 6]),
+    },
+  ])("$description", ({ args, expected }) => {
+    const result = parseBidiComponentData(args)
+    expect(result).toBeInstanceOf(Uint8Array)
+    expect(Array.from(result as Uint8Array)).toEqual(Array.from(expected))
   })
 
   it("reconstructs mixed data when json payload exists", () => {
