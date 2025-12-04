@@ -77,6 +77,7 @@ st.metric(
 - Click events are activated on the metric
 - Returns `bool` - `True` if clicked, `False` otherwise
 - If a callable is provided, it executes as a callback before the app reruns
+- Border is automatically enabled unless explicitly set to `False`
 
 **Click target based on `action`:**
 
@@ -116,7 +117,6 @@ if st.metric(
     "+2,350",
     "+180.1% from last month",
     on_click="rerun",
-    border=True,
 ):
     show_details()
 ```
@@ -137,7 +137,6 @@ if st.metric(
     "+180.1% from last month",
     on_click="rerun",
     action=":material/open_in_full:",
-    border=True,
 ):
     show_details()
 ```
@@ -157,7 +156,6 @@ clicked = st.metric(
     delta_color="inverse",
     on_click=handle_click,
     action=":material/open_in_new:",
-    border=True,
 )
 
 if clicked:
@@ -175,7 +173,6 @@ if st.metric(
     "+180.1%",
     on_click="rerun",
     action="View More",
-    border=True,
 ):
     show_details()
 ```
