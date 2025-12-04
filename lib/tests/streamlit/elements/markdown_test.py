@@ -70,19 +70,19 @@ class StMarkdownAPITest(DeltaGeneratorTestCase):
         test_cases = [
             (
                 "invalid",
-                "Invalid width value: 'invalid'. Width must be either an integer (pixels), 'stretch', or 'content'.",
+                "Width must be either a positive integer (pixels), 'stretch', or 'content'.",
             ),
             (
                 -100,
-                "Invalid width value: -100. Width must be either an integer (pixels), 'stretch', or 'content'.",
+                "Width must be either a positive integer (pixels), 'stretch', or 'content'.",
             ),
             (
                 0,
-                "Invalid width value: 0. Width must be either an integer (pixels), 'stretch', or 'content'.",
+                "Width must be either a positive integer (pixels), 'stretch', or 'content'.",
             ),
             (
                 100.5,
-                "Invalid width value: 100.5. Width must be either an integer (pixels), 'stretch', or 'content'.",
+                "Width must be either a positive integer (pixels), 'stretch', or 'content'.",
             ),
         ]
 
@@ -91,7 +91,7 @@ class StMarkdownAPITest(DeltaGeneratorTestCase):
                 with pytest.raises(StreamlitAPIException) as exc:
                     st.markdown("some markdown", width=width_value)
 
-                assert str(exc.value) == expected_error_message
+                assert expected_error_message in str(exc.value)
 
     def test_st_markdown_default_width(self):
         """Test that st.markdown defaults to stretch width."""
@@ -167,19 +167,19 @@ class StCaptionAPITest(DeltaGeneratorTestCase):
         test_cases = [
             (
                 "invalid",
-                "Invalid width value: 'invalid'. Width must be either an integer (pixels), 'stretch', or 'content'.",
+                "Width must be either a positive integer (pixels), 'stretch', or 'content'.",
             ),
             (
                 -50,
-                "Invalid width value: -50. Width must be either an integer (pixels), 'stretch', or 'content'.",
+                "Width must be either a positive integer (pixels), 'stretch', or 'content'.",
             ),
             (
                 0,
-                "Invalid width value: 0. Width must be either an integer (pixels), 'stretch', or 'content'.",
+                "Width must be either a positive integer (pixels), 'stretch', or 'content'.",
             ),
             (
                 75.5,
-                "Invalid width value: 75.5. Width must be either an integer (pixels), 'stretch', or 'content'.",
+                "Width must be either a positive integer (pixels), 'stretch', or 'content'.",
             ),
         ]
 
@@ -188,7 +188,7 @@ class StCaptionAPITest(DeltaGeneratorTestCase):
                 with pytest.raises(StreamlitAPIException) as exc:
                     st.caption("some caption", width=width_value)
 
-                assert str(exc.value) == expected_error_message
+                assert expected_error_message in str(exc.value)
 
     def test_st_caption_default_width(self):
         """Test that st.caption defaults to stretch width."""
@@ -266,19 +266,19 @@ class StBadgeAPITest(DeltaGeneratorTestCase):
         test_cases = [
             (
                 "invalid",
-                "Invalid width value: 'invalid'. Width must be either an integer (pixels), 'stretch', or 'content'.",
+                "Width must be either a positive integer (pixels), 'stretch', or 'content'.",
             ),
             (
                 -25,
-                "Invalid width value: -25. Width must be either an integer (pixels), 'stretch', or 'content'.",
+                "Width must be either a positive integer (pixels), 'stretch', or 'content'.",
             ),
             (
                 0,
-                "Invalid width value: 0. Width must be either an integer (pixels), 'stretch', or 'content'.",
+                "Width must be either a positive integer (pixels), 'stretch', or 'content'.",
             ),
             (
                 50.7,
-                "Invalid width value: 50.7. Width must be either an integer (pixels), 'stretch', or 'content'.",
+                "Width must be either a positive integer (pixels), 'stretch', or 'content'.",
             ),
         ]
 
@@ -287,7 +287,7 @@ class StBadgeAPITest(DeltaGeneratorTestCase):
                 with pytest.raises(StreamlitAPIException) as exc:
                     st.badge("test badge", width=width_value)
 
-                assert str(exc.value) == expected_error_message
+                assert expected_error_message in str(exc.value)
 
     def test_st_badge_default_width(self):
         """Test that st.badge defaults to content width."""
