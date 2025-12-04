@@ -85,7 +85,7 @@ st.text_input("Username", validate=r"^.{5,}$")
    - Input turns red (error state) showing an error icon and a tooltip with the error message
    - Submit/Enter is blocked; value is not sent to backend
    - Similar to the error state update planned for number input:
-  ![alt text](text-input-validation-error.png "Text input validation error")
+  ![alt text](number-input-validation.png "Number input validation error")
 4. If input matches the pattern:
    - Normal styling is restored
    - Value can be submitted
