@@ -93,6 +93,14 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
         args: dict[str, list[bytes]] = {}
         files: dict[str, list[Any]] = {}
 
+        if not self.path_kwargs:
+            # This is not expected to happen with normal Streamlit usage.
+            self.send_error(
+                400,
+                reason="No path arguments provided. Please provide a session_id and file_id in the URL.",
+            )
+            return
+
         session_id = self.path_kwargs["session_id"]
         file_id = self.path_kwargs["file_id"]
 
@@ -135,6 +143,14 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
 
     def delete(self, **kwargs: Any) -> None:
         """Delete file request handler."""
+
+        if not self.path_kwargs:
+            self.send_error(
+                400,
+                reason="No path arguments provided. Please provide a session_id and file_id in the URL.",
+            )
+            return
+
         session_id = self.path_kwargs["session_id"]
         file_id = self.path_kwargs["file_id"]
 

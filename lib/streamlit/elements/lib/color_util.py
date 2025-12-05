@@ -219,7 +219,7 @@ def _normalize_tuple(
         r = rgb_formatter(color_4tuple[0], color_4tuple)
         g = rgb_formatter(color_4tuple[1], color_4tuple)
         b = rgb_formatter(color_4tuple[2], color_4tuple)
-        alpha = alpha_formatter(color_4tuple[3], color_4tuple)
+        alpha = alpha_formatter(color_4tuple[3], color_4tuple)  # ty: ignore[index-out-of-bounds]
         return r, g, b, alpha
 
     raise StreamlitInvalidColorError(color)

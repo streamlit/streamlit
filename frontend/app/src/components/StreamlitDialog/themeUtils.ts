@@ -16,7 +16,7 @@
 
 import { toHex } from "color2k"
 import humanizeString from "humanize-string"
-import mapValues from "lodash/mapValues"
+import { mapValues } from "lodash-es"
 
 import {
   BaseColorPicker,

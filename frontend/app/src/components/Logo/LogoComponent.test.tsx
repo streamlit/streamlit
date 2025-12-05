@@ -18,7 +18,7 @@ import React from "react"
 
 import { screen } from "@testing-library/react"
 
-import { render, renderWithContexts } from "@streamlit/lib"
+import { render, renderWithContexts } from "@streamlit/lib/testing"
 import { Logo as LogoProto } from "@streamlit/protobuf"
 
 import LogoComponent from "./LogoComponent"
@@ -27,6 +27,9 @@ const mockEndpoints = {
   setStaticConfigUrl: vi.fn(),
   sendClientErrorToHost: vi.fn(),
   checkSourceUrlResponse: vi.fn(),
+  buildBidiComponentURL: vi.fn(
+    (componentName: string, path: string) => `${componentName}/${path}`
+  ),
   buildComponentURL: vi.fn(
     (componentName: string, path: string) => `${componentName}/${path}`
   ),
@@ -203,17 +206,6 @@ describe("LogoComponent", () => {
   })
 
   describe("crossOrigin attribute", () => {
-    const scenarios = [
-      {
-        backendBaseUrl: undefined,
-        description: "without BACKEND_BASE_URL",
-      },
-      {
-        backendBaseUrl: "http://localhost:8501",
-        description: "with BACKEND_BASE_URL",
-      },
-    ]
-
     afterEach(() => {
       // Clean up window.__streamlit after each test
       if (window.__streamlit) {
@@ -221,42 +213,56 @@ describe("LogoComponent", () => {
       }
     })
 
-    it.each(scenarios)(
-      "sets crossOrigin attribute for relative URLs when resourceCrossOriginMode is configured ($description)",
-      ({ backendBaseUrl }) => {
-        // Setup window.__streamlit.BACKEND_BASE_URL if specified
-        if (backendBaseUrl) {
-          window.__streamlit = window.__streamlit || {}
-          window.__streamlit.BACKEND_BASE_URL = backendBaseUrl
+    it("sets crossOrigin for relative URLs when BACKEND_BASE_URL is set", () => {
+      window.__streamlit = window.__streamlit || {}
+      window.__streamlit.BACKEND_BASE_URL = "http://localhost:8501"
+
+      const logoWithRelativeUrl = LogoProto.create({
+        image: "/media/logo.png",
+        size: "medium",
+      })
+
+      renderWithContexts(
+        <LogoComponent
+          {...getProps({
+            appLogo: logoWithRelativeUrl,
+            dataTestId: "stHeaderLogo",
+          })}
+        />,
+        {
+          libConfigContext: {
+            resourceCrossOriginMode: "anonymous",
+          },
         }
+      )
 
-        const logoWithRelativeUrl = LogoProto.create({
-          image: "/media/logo.png",
-          size: "medium",
-        })
+      const logo = screen.getByTestId("stHeaderLogo")
+      expect(logo).toHaveAttribute("crossOrigin", "anonymous")
+    })
 
-        renderWithContexts(
-          <LogoComponent
-            {...getProps({
-              appLogo: logoWithRelativeUrl,
-              dataTestId: "stHeaderLogo",
-            })}
-          />,
-          {
-            libConfig: { resourceCrossOriginMode: "anonymous" },
-          }
-        )
+    it("does not set crossOrigin for relative URLs when BACKEND_BASE_URL is not set (same-origin)", () => {
+      const logoWithRelativeUrl = LogoProto.create({
+        image: "/media/logo.png",
+        size: "medium",
+      })
 
-        const logo = screen.getByTestId("stHeaderLogo")
-        if (backendBaseUrl) {
-          // When BACKEND_BASE_URL is set, crossOrigin should be set for relative URLs
-          expect(logo).toHaveAttribute("crossOrigin", "anonymous")
-        } else {
-          // When BACKEND_BASE_URL is not set, crossOrigin should not be set for relative URLs (same-origin)
-          expect(logo).not.toHaveAttribute("crossOrigin")
+      renderWithContexts(
+        <LogoComponent
+          {...getProps({
+            appLogo: logoWithRelativeUrl,
+            dataTestId: "stHeaderLogo",
+          })}
+        />,
+        {
+          libConfigContext: {
+            resourceCrossOriginMode: "anonymous",
+          },
         }
-      }
-    )
+      )
+
+      const logo = screen.getByTestId("stHeaderLogo")
+      expect(logo).not.toHaveAttribute("crossOrigin")
+    })
 
     it("sets crossOrigin attribute for backend URLs when configured", () => {
       window.__streamlit = window.__streamlit || {}
@@ -277,7 +283,7 @@ describe("LogoComponent", () => {
           })}
         />,
         {
-          libConfig: { resourceCrossOriginMode: "anonymous" },
+          libConfigContext: { resourceCrossOriginMode: "anonymous" },
         }
       )
 
@@ -320,7 +326,7 @@ describe("LogoComponent", () => {
           })}
         />,
         {
-          libConfig: { resourceCrossOriginMode: "anonymous" },
+          libConfigContext: { resourceCrossOriginMode: "anonymous" },
         }
       )
 
@@ -330,7 +336,13 @@ describe("LogoComponent", () => {
       expect(logo).toHaveAttribute("src", "https://example.com/logo.png")
     })
 
-    it.each(scenarios)(
+    it.each([
+      { backendBaseUrl: undefined, description: "without BACKEND_BASE_URL" },
+      {
+        backendBaseUrl: "http://localhost:8501",
+        description: "with BACKEND_BASE_URL",
+      },
+    ])(
       "does not set crossOrigin attribute when resourceCrossOriginMode is undefined ($description)",
       ({ backendBaseUrl }) => {
         // Setup window.__streamlit.BACKEND_BASE_URL if specified
@@ -352,7 +364,7 @@ describe("LogoComponent", () => {
             })}
           />,
           {
-            libConfig: { resourceCrossOriginMode: undefined },
+            libConfigContext: { resourceCrossOriginMode: undefined },
           }
         )
 
@@ -378,7 +390,9 @@ describe("LogoComponent", () => {
           })}
         />,
         {
-          libConfig: { resourceCrossOriginMode: "use-credentials" },
+          libConfigContext: {
+            resourceCrossOriginMode: "use-credentials",
+          },
         }
       )
 

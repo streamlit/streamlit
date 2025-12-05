@@ -487,7 +487,10 @@ class FileUploaderMixin:
             "file_uploader",
             user_key=key,
             max_upload_size=max_upload_size,
-            key_as_main_identity=False,
+            # Treat the provided key as the main identity; only include
+            # changes to the type and accept_multiple_files parameters in
+            # the identity computation as those can invalidate the current value.
+            key_as_main_identity={"type", "accept_multiple_files"},
             dg=self.dg,
             label=label,
             type=type,

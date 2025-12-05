@@ -262,7 +262,9 @@ describe("Video Element", () => {
       async ({ resourceCrossOriginMode }) => {
         const props = getProps({ url: "/media/mockVideoFile.mp4" })
         renderWithContexts(<Video {...props} />, {
-          libConfig: { resourceCrossOriginMode },
+          libConfigContext: {
+            resourceCrossOriginMode,
+          },
         })
         const videoElement = await screen.findByTestId("stVideo")
         expect(videoElement).not.toHaveAttribute("crossOrigin")
@@ -278,7 +280,9 @@ describe("Video Element", () => {
         subtitles: [{ url: "https://mock.subtitle.url" }],
       })
       renderWithContexts(<Video {...props} />, {
-        libConfig: { resourceCrossOriginMode: undefined },
+        libConfigContext: {
+          resourceCrossOriginMode: undefined,
+        },
       })
       const videoElement = await screen.findByTestId("stVideo")
       expect(videoElement).toHaveAttribute("crossOrigin", "anonymous")
@@ -314,61 +318,72 @@ describe("Video Element", () => {
           scenario: "relative URL with use-credentials mode",
         },
         {
-          expected: undefined,
-          resourceCrossOriginMode: undefined,
-          url: "/media/video.mp4",
-          scenario: "relative URL with undefined mode",
-        },
-        {
           expected: "anonymous",
-          resourceCrossOriginMode: "anonymous",
+          resourceCrossOriginMode: "anonymous" as const,
           url: "https://backend.example.com:8080/media/video.mp4",
           scenario: "same origin as BACKEND_BASE_URL with anonymous mode",
         },
         {
           expected: "use-credentials",
-          resourceCrossOriginMode: "use-credentials",
+          resourceCrossOriginMode: "use-credentials" as const,
           url: "https://backend.example.com:8080/media/video.mp4",
           scenario:
             "same origin as BACKEND_BASE_URL with use-credentials mode",
         },
+      ])(
+        "sets crossOrigin to $expected when $scenario",
+        async ({ expected, resourceCrossOriginMode, url }) => {
+          const props = getProps({ url })
+          renderWithContexts(<Video {...props} />, {
+            libConfigContext: {
+              resourceCrossOriginMode: resourceCrossOriginMode as
+                | "anonymous"
+                | "use-credentials"
+                | undefined,
+            },
+          })
+          const videoElement = await screen.findByTestId("stVideo")
+          expect(videoElement).toHaveAttribute("crossOrigin", expected)
+        }
+      )
+
+      it.each([
         {
-          expected: undefined,
+          resourceCrossOriginMode: undefined,
+          url: "/media/video.mp4",
+          scenario: "relative URL with undefined mode",
+        },
+        {
           resourceCrossOriginMode: undefined,
           url: "https://backend.example.com:8080/media/video.mp4",
           scenario: "same origin as BACKEND_BASE_URL with undefined mode",
         },
         {
-          expected: undefined,
-          resourceCrossOriginMode: "anonymous",
+          resourceCrossOriginMode: "anonymous" as const,
           url: "https://external.example.com/media/video.mp4",
           scenario: "different hostname than BACKEND_BASE_URL",
         },
         {
-          expected: undefined,
-          resourceCrossOriginMode: "anonymous",
+          resourceCrossOriginMode: "anonymous" as const,
           url: "https://backend.example.com:9000/media/video.mp4",
           scenario: "different port than BACKEND_BASE_URL",
         },
         {
-          expected: undefined,
-          resourceCrossOriginMode: "anonymous",
+          resourceCrossOriginMode: "anonymous" as const,
           url: "http://backend.example.com:8080/media/video.mp4",
           scenario: "different protocol than BACKEND_BASE_URL",
         },
-      ] as const)(
-        "sets crossOrigin to $expected when $scenario",
-        async ({ expected, resourceCrossOriginMode, url }) => {
+      ])(
+        "does not set crossOrigin when $scenario",
+        async ({ resourceCrossOriginMode, url }) => {
           const props = getProps({ url })
           renderWithContexts(<Video {...props} />, {
-            libConfig: { resourceCrossOriginMode },
+            libConfigContext: {
+              resourceCrossOriginMode,
+            },
           })
           const videoElement = await screen.findByTestId("stVideo")
-          if (expected) {
-            expect(videoElement).toHaveAttribute("crossOrigin", expected)
-          } else {
-            expect(videoElement).not.toHaveAttribute("crossOrigin")
-          }
+          expect(videoElement).not.toHaveAttribute("crossOrigin")
         }
       )
     })

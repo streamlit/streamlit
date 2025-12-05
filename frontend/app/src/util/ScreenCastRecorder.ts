@@ -35,7 +35,7 @@ class ScreenCastRecorder {
 
   private mediaRecorder: MediaRecorder | null
 
-  private onErrorOrStopCallback: () => void
+  private readonly onErrorOrStopCallback: () => void
 
   /** True if the current browser likely supports screencasts. */
   public static isSupportedBrowser(): boolean {

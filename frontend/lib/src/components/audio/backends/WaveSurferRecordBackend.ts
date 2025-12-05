@@ -17,6 +17,18 @@
 import type WaveSurfer from "wavesurfer.js"
 import type RecordPlugin from "wavesurfer.js/dist/plugins/record"
 
+/**
+ * Check if an error is a permission denied error from getUserMedia.
+ * WaveSurfer may wrap the native error, so check both the error name and message.
+ */
+function isPermissionDeniedError(error: Error): boolean {
+  return (
+    error.name === "NotAllowedError" ||
+    error.name === "PermissionDeniedError" ||
+    error.message?.toLowerCase().includes("permission denied")
+  )
+}
+
 export interface RecordBackendOptions {
   sampleRate?: number | null
 }
@@ -40,7 +52,7 @@ export class WaveSurferRecordBackend {
   private recordEndResolve: ((blob: Blob) => void) | null = null
   private recordEndReject: ((error: Error) => void) | null = null
   private events: RecordBackendEvents = {}
-  private options: RecordBackendOptions
+  private readonly options: RecordBackendOptions
 
   constructor(options: RecordBackendOptions = {}) {
     this.options = options
@@ -65,10 +77,7 @@ export class WaveSurferRecordBackend {
       this.setupEventListeners()
     } catch (error) {
       const err = error instanceof Error ? error : new Error(String(error))
-      if (
-        err.name === "NotAllowedError" ||
-        err.name === "PermissionDeniedError"
-      ) {
+      if (isPermissionDeniedError(err)) {
         this.events.onPermissionDenied?.()
         throw new Error("Microphone permission denied")
       }
@@ -154,10 +163,7 @@ export class WaveSurferRecordBackend {
     } catch (error) {
       const err = error instanceof Error ? error : new Error(String(error))
 
-      if (
-        err.name === "NotAllowedError" ||
-        err.name === "PermissionDeniedError"
-      ) {
+      if (isPermissionDeniedError(err)) {
         this.events.onPermissionDenied?.()
         throw new Error("Microphone permission denied")
       }
@@ -185,7 +191,7 @@ export class WaveSurferRecordBackend {
     }
 
     try {
-      return new Promise<Blob>((resolve, reject) => {
+      return await new Promise<Blob>((resolve, reject) => {
         this.recordEndResolve = resolve
         this.recordEndReject = reject
         this.recordPlugin?.stopRecording()

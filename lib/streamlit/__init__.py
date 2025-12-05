@@ -87,10 +87,10 @@ _dg_singleton = _DeltaGeneratorSingleton(
     status_container_cls=_StatusContainer,
     dialog_container_cls=_Dialog,
 )
-_main = _dg_singleton._main_dg
-sidebar = _dg_singleton._sidebar_dg
-_event = _dg_singleton._event_dg
-_bottom = _dg_singleton._bottom_dg
+_main: _DeltaGenerator = _dg_singleton._main_dg
+sidebar: _DeltaGenerator = _dg_singleton._sidebar_dg
+_event: _DeltaGenerator = _dg_singleton._event_dg
+_bottom: _DeltaGenerator = _dg_singleton._bottom_dg
 
 
 from streamlit.elements.dialog_decorator import dialog_decorator as _dialog_decorator
@@ -135,7 +135,6 @@ from streamlit.commands.echo import echo as echo
 from streamlit.commands.logo import logo as logo
 from streamlit.commands.navigation import navigation as navigation
 from streamlit.navigation.page import Page as Page
-from streamlit.elements.spinner import spinner as spinner
 
 from streamlit.commands.page_config import set_page_config as set_page_config
 from streamlit.commands.execution_control import (
@@ -165,6 +164,7 @@ audio_input = _main.audio_input
 badge = _main.badge
 balloons = _main.balloons
 bar_chart = _main.bar_chart
+_bidi_component = _main._bidi_component
 bokeh_chart = _main.bokeh_chart
 button = _main.button
 caption = _main.caption
@@ -179,6 +179,7 @@ container = _main.container
 dataframe = _main.dataframe
 data_editor = _main.data_editor
 date_input = _main.date_input
+datetime_input = _main.datetime_input
 divider = _main.divider
 download_button = _main.download_button
 expander = _main.expander
@@ -219,6 +220,8 @@ select_slider = _main.select_slider
 segmented_control = _main.segmented_control
 slider = _main.slider
 snow = _main.snow
+space = _main.space
+spinner = _main.spinner
 subheader = _main.subheader
 success = _main.success
 table = _main.table
@@ -304,4 +307,5 @@ experimental_set_query_params = _deprecate_func_name(
 # make it possible to call streamlit.components.v1.html etc. by importing it here
 # import in the very end to avoid partially-initialized module import errors, because
 # streamlit.components.v1 also uses some streamlit imports
-import streamlit.components.v1  # noqa: F401
+import streamlit.components.v1
+import streamlit.components.v2  # noqa: F401

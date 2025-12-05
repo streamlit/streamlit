@@ -19,7 +19,6 @@ import {
   memo,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
   useRef,
   useState,
@@ -29,6 +28,7 @@ import { ChevronDown } from "baseui/icon"
 import { type OnChangeParams, Select as UISelect } from "baseui/select"
 
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
+import { getBorderColor } from "~lib/components/shared/Base/styled-components"
 import VirtualDropdown from "~lib/components/shared/Dropdown/VirtualDropdown"
 import { Placement } from "~lib/components/shared/Tooltip"
 import TooltipIcon from "~lib/components/shared/TooltipIcon"
@@ -37,6 +37,7 @@ import {
   WidgetLabel,
 } from "~lib/components/widgets/BaseWidget"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
 import { useSelectCommon } from "~lib/hooks/useSelectCommon"
 import { LabelVisibilityOptions } from "~lib/util/utils"
 
@@ -74,11 +75,7 @@ const Selectbox: FC<Props> = ({
   // the value in case the user dismisses the changes by clicking away.
   const valueBeforeRemoval = useRef<string | null>(value)
 
-  // Update the value whenever the value provided by the props changes
-  // TODO: Find a better way to handle this to prevent unneeded re-renders
-  useEffect(() => {
-    setValue(propValue)
-  }, [propValue])
+  useExecuteWhenChanged(() => setValue(propValue), [propValue])
 
   const handleChange = useCallback(
     (params: OnChangeParams): void => {
@@ -191,14 +188,22 @@ const Selectbox: FC<Props> = ({
             },
           },
           ControlContainer: {
-            style: () => ({
-              height: theme.sizes.minElementHeight,
-              // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
-              borderLeftWidth: theme.sizes.borderWidth,
-              borderRightWidth: theme.sizes.borderWidth,
-              borderTopWidth: theme.sizes.borderWidth,
-              borderBottomWidth: theme.sizes.borderWidth,
-            }),
+            style: ({ $isFocused }: { $isFocused: boolean }) => {
+              const borderColor = getBorderColor(theme.colors, $isFocused)
+              return {
+                height: theme.sizes.minElementHeight,
+                // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
+                borderLeftWidth: theme.sizes.borderWidth,
+                borderRightWidth: theme.sizes.borderWidth,
+                borderTopWidth: theme.sizes.borderWidth,
+                borderBottomWidth: theme.sizes.borderWidth,
+
+                borderTopColor: borderColor,
+                borderRightColor: borderColor,
+                borderBottomColor: borderColor,
+                borderLeftColor: borderColor,
+              }
+            },
           },
           IconsContainer: {
             style: () => ({

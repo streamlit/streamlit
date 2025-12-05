@@ -24,9 +24,12 @@ import {
 } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
-import { AppContextProps } from "@streamlit/app/src/components/AppContext"
-import * as StreamlitContextProviderModule from "@streamlit/app/src/components/StreamlitContextProvider"
-import { mockEndpoints, render } from "@streamlit/lib"
+import {
+  mockEndpoints,
+  NavigationContextProps,
+  SidebarConfigContextProps,
+} from "@streamlit/lib"
+import { renderWithContexts } from "@streamlit/lib/testing"
 import { Logo, PageConfig } from "@streamlit/protobuf"
 
 import Sidebar, { SidebarProps } from "./Sidebar"
@@ -44,59 +47,65 @@ const mockEndpointProp = mockEndpoints({
   sendClientErrorToHost,
 })
 
+// Wrapper component to access AppContext values
 function SidebarWrapper(props: Partial<SidebarProps> = {}): ReactElement {
-  const context = StreamlitContextProviderModule.useAppContext()
   return (
     <Sidebar
       endpoints={mockEndpointProp}
       hasElements
-      // Props from context
-      appLogo={context.appLogo}
-      appPages={context.appPages}
-      navSections={context.navSections}
-      onPageChange={context.onPageChange}
-      currentPageScriptHash={context.currentPageScriptHash}
-      hideSidebarNav={context.hideSidebarNav}
-      expandSidebarNav={context.expandSidebarNav}
       // Defaulted props for Sidebar itself
       isCollapsed={false}
       onToggleCollapse={vi.fn()}
+      widgetsDisabled={false}
       {...props}
     />
   )
 }
 
-function renderSidebar(props: Partial<SidebarProps> = {}): RenderResult {
-  return render(<SidebarWrapper {...props} />)
+function renderSidebar(
+  props: Partial<SidebarProps> = {},
+  options?: {
+    sidebarConfigContext?: Partial<SidebarConfigContextProps>
+    navigationContext?: Partial<NavigationContextProps>
+  }
+): RenderResult {
+  const navigationContextValues = getNavigationContextOutput(
+    options?.navigationContext || {}
+  )
+  const sidebarConfigContextValues = getSidebarConfigContextOutput(
+    options?.sidebarConfigContext || {}
+  )
+  return renderWithContexts(<SidebarWrapper {...props} />, {
+    sidebarConfigContext: sidebarConfigContextValues,
+    navigationContext: navigationContextValues,
+  })
 }
 
-// Helper function to create mock app context with overrides
-function getContextOutput(
-  context: Partial<AppContextProps> = {}
-): AppContextProps {
+function getSidebarConfigContextOutput(
+  context: Partial<SidebarConfigContextProps> = {}
+): SidebarConfigContextProps {
   return {
     initialSidebarState: PageConfig.SidebarState.AUTO,
+    appLogo: null,
+    sidebarChevronDownshift: 0,
+    expandSidebarNav: false,
+    hideSidebarNav: false,
+    ...context,
+  }
+}
+
+// Helper function to create mock navigation context with overrides
+function getNavigationContextOutput(
+  context: Partial<NavigationContextProps> = {}
+): NavigationContextProps {
+  return {
     pageLinkBaseUrl: "",
     currentPageScriptHash: "",
     onPageChange: vi.fn(),
     navSections: [],
     appPages: [],
-    appLogo: null,
-    sidebarChevronDownshift: 0,
-    expandSidebarNav: false,
-    hideSidebarNav: false,
-    widgetsDisabled: false,
-    gitInfo: null,
-    showToolbar: true,
     ...context,
   }
-}
-
-// Helper function to setup app context mock
-function mockAppContext(context: Partial<AppContextProps> = {}): void {
-  vi.spyOn(StreamlitContextProviderModule, "useAppContext").mockReturnValue(
-    getContextOutput(context)
-  )
 }
 
 // Test data constants
@@ -126,15 +135,10 @@ const SAMPLE_PAGES_WITH_URLS = [
 describe("Sidebar Component", () => {
   beforeEach(() => {
     window.localStorage.clear()
-    mockAppContext({})
-  })
-
-  afterEach(() => {
-    vi.restoreAllMocks()
   })
 
   it("should render without crashing", () => {
-    renderSidebar({})
+    renderSidebar()
     expect(screen.getByTestId("stSidebar")).toBeInTheDocument()
   })
 
@@ -153,8 +157,10 @@ describe("Sidebar Component", () => {
     ])(
       "should render $state correctly",
       ({ state, isCollapsed, expectedAria }) => {
-        mockAppContext({ initialSidebarState: state })
-        renderSidebar({ isCollapsed })
+        renderSidebar(
+          { isCollapsed },
+          { sidebarConfigContext: { initialSidebarState: state } }
+        )
 
         expect(screen.getByTestId("stSidebar")).toHaveAttribute(
           "aria-expanded",
@@ -202,8 +208,7 @@ describe("Sidebar Component", () => {
   describe("Collapse Button Visibility", () => {
     it("shows/hides the collapse arrow when hovering over top of sidebar", async () => {
       const user = userEvent.setup()
-      mockAppContext({ appPages: SAMPLE_PAGES })
-      renderSidebar()
+      renderSidebar({}, { navigationContext: { appPages: SAMPLE_PAGES } })
 
       const collapseButton = screen.getByTestId("stSidebarCollapseButton")
 
@@ -218,8 +223,10 @@ describe("Sidebar Component", () => {
 
   describe("Sidebar Navigation", () => {
     it("renders SidebarNav component when multiple pages exist", () => {
-      mockAppContext({ appPages: SAMPLE_PAGES_WITH_URLS })
-      renderSidebar()
+      renderSidebar(
+        {},
+        { navigationContext: { appPages: SAMPLE_PAGES_WITH_URLS } }
+      )
 
       expect(screen.getByTestId("stSidebarNav")).toBeInTheDocument()
 
@@ -230,11 +237,13 @@ describe("Sidebar Component", () => {
     })
 
     it("can hide SidebarNav with the hideSidebarNav option", () => {
-      mockAppContext({
-        hideSidebarNav: true,
-        appPages: SAMPLE_PAGES,
-      })
-      renderSidebar()
+      renderSidebar(
+        {},
+        {
+          sidebarConfigContext: { hideSidebarNav: true },
+          navigationContext: { appPages: SAMPLE_PAGES },
+        }
+      )
 
       expect(screen.queryByTestId("stSidebarNav")).not.toBeInTheDocument()
     })
@@ -251,8 +260,7 @@ describe("Sidebar Component", () => {
         expectedPadding: "1.5rem",
       },
     ])("$description", ({ appPages, expectedPadding }) => {
-      mockAppContext({ appPages })
-      renderSidebar()
+      renderSidebar({}, { navigationContext: { appPages } })
 
       expect(screen.getByTestId("stSidebarUserContent")).toHaveStyle(
         `padding-top: ${expectedPadding}`
@@ -272,11 +280,15 @@ describe("Sidebar Component", () => {
           sectionHeader: "Section 1",
         },
       ]
-      mockAppContext({
-        appPages: appPagesWithSection,
-        navSections: ["Section 1"],
-      })
-      renderSidebar()
+      renderSidebar(
+        {},
+        {
+          navigationContext: {
+            appPages: appPagesWithSection,
+            navSections: ["Section 1"],
+          },
+        }
+      )
 
       expect(screen.getByTestId("stSidebarNav")).toBeInTheDocument()
     })
@@ -289,18 +301,22 @@ describe("Sidebar Component", () => {
           sectionHeader: "Section 1",
         },
       ]
-      mockAppContext({
-        appPages: appPagesWithSection,
-        navSections: ["Section 1"],
-      })
-      renderSidebar()
+      renderSidebar(
+        {},
+        {
+          navigationContext: {
+            appPages: appPagesWithSection,
+            navSections: ["Section 1"],
+          },
+        }
+      )
 
       expect(screen.queryByTestId("stSidebarNav")).not.toBeInTheDocument()
     })
   })
 
   it("applies scrollbarGutter style to sidebar content", () => {
-    renderSidebar({})
+    renderSidebar()
 
     const sidebarContent = screen.getByTestId("stSidebarContent")
     const styles = window.getComputedStyle(sidebarContent)
@@ -350,9 +366,11 @@ describe("Sidebar Component", () => {
           expectedUrl: LOGO_IMAGE_URL,
         },
       ])("$description", ({ logo, expectedUrl }) => {
-        mockAppContext({ appLogo: logo })
         const sourceSpy = vi.spyOn(mockEndpointProp, "buildMediaURL")
-        renderSidebar({ isCollapsed: true })
+        renderSidebar(
+          { isCollapsed: true },
+          { sidebarConfigContext: { appLogo: logo } }
+        )
 
         const collapsedLogo = screen.getByTestId("stSidebarLogo")
         expect(collapsedLogo).toBeInTheDocument()
@@ -361,9 +379,11 @@ describe("Sidebar Component", () => {
     })
 
     it("renders logo's image param when sidebar expanded", () => {
-      mockAppContext({ appLogo: testLogos.fullAppLogo })
       const sourceSpy = vi.spyOn(mockEndpointProp, "buildMediaURL")
-      renderSidebar({})
+      renderSidebar(
+        {},
+        { sidebarConfigContext: { appLogo: testLogos.fullAppLogo } }
+      )
 
       const sidebarLogoContainer = screen.getByTestId("stSidebarHeader")
       expect(sidebarLogoContainer).toBeInTheDocument()
@@ -376,52 +396,55 @@ describe("Sidebar Component", () => {
     })
 
     describe("Logo properties", () => {
+      it("renders logo without link when no link provided", () => {
+        renderSidebar(
+          {},
+          { sidebarConfigContext: { appLogo: testLogos.imageOnly } }
+        )
+
+        const sidebar = screen.getByTestId("stSidebar")
+        const sidebarLogo = within(sidebar).getByTestId("stSidebarLogo")
+
+        expect(sidebarLogo).toHaveStyle({ height: "1.5rem" })
+        expect(
+          within(sidebar).queryByTestId("stLogoLink")
+        ).not.toBeInTheDocument()
+      })
+
       it.each([
         {
-          description: "default image has no link & medium size",
-          logo: testLogos.imageOnly,
-          expectLink: false,
-          expectedHeight: "1.5rem",
-        },
-        {
-          description: "image has link if provided",
+          description: "medium size",
           logo: testLogos.imageWithLink,
-          expectLink: true,
           expectedHeight: "1.5rem",
           expectedHref: EXAMPLE_LINK,
         },
         {
           description: "small size when specified",
           logo: testLogos.logoWithSize,
-          expectLink: true,
           expectedHeight: "1.25rem",
           expectedHref: EXAMPLE_LINK,
         },
       ])(
-        "renders logo - $description",
-        ({ logo, expectLink, expectedHeight, expectedHref }) => {
-          mockAppContext({ appLogo: logo })
-          renderSidebar()
+        "renders logo with link and $description",
+        ({ logo, expectedHeight, expectedHref }) => {
+          renderSidebar({}, { sidebarConfigContext: { appLogo: logo } })
 
           const sidebar = screen.getByTestId("stSidebar")
           const sidebarLogo = within(sidebar).getByTestId("stSidebarLogo")
 
           expect(sidebarLogo).toHaveStyle({ height: expectedHeight })
 
-          if (expectLink) {
-            const sidebarLogoLink = within(sidebar).getByTestId("stLogoLink")
-            expect(sidebarLogoLink).toHaveAttribute("href", expectedHref)
-          } else {
-            const sidebarLogoLink = within(sidebar).queryByTestId("stLogoLink")
-            expect(sidebarLogoLink).not.toBeInTheDocument()
-          }
+          const sidebarLogoLink = within(sidebar).getByTestId("stLogoLink")
+          expect(sidebarLogoLink).toHaveAttribute("href", expectedHref)
         }
       )
     })
 
     it("sends an CLIENT_ERROR message when the logo source fails to load", () => {
-      mockAppContext({ appLogo: testLogos.fullAppLogo })
-      renderSidebar()
+      renderSidebar(
+        {},
+        { sidebarConfigContext: { appLogo: testLogos.fullAppLogo } }
+      )
 
       const sidebarLogo = within(
         screen.getByTestId("stSidebarHeader")
@@ -446,19 +469,132 @@ describe("Sidebar Component", () => {
     })
 
     it("should initialize with default width when no localStorage value exists", () => {
-      renderSidebar({})
+      renderSidebar()
 
       const sidebar = screen.getByTestId("stSidebar")
-      expect(sidebar).toHaveStyle("width: 256px")
+      expect(sidebar).toHaveStyle("width: 300px")
     })
 
     it("should initialize with saved width when localStorage value exists", () => {
       window.localStorage.setItem("sidebarWidth", "320")
 
-      renderSidebar({})
+      renderSidebar()
 
       const sidebar = screen.getByTestId("stSidebar")
       expect(sidebar).toHaveStyle("width: 320px")
+    })
+  })
+
+  describe("Width Initialization Logic", () => {
+    beforeEach(() => {
+      window.localStorage.clear()
+    })
+
+    describe("Priority: Cached > Initial > Default", () => {
+      it.each([
+        {
+          description: "uses default when no cached and no initial",
+          cached: null,
+          initial: undefined,
+          expected: "300px",
+        },
+        {
+          description: "uses cached when cached exists",
+          cached: "450",
+          initial: undefined,
+          expected: "450px",
+        },
+        {
+          description: "uses initial when no cached",
+          cached: null,
+          initial: 400,
+          expected: "400px",
+        },
+        {
+          description: "uses cached over initial when both exist",
+          cached: "500",
+          initial: 350,
+          expected: "500px",
+        },
+      ])("$description", ({ cached, initial, expected }) => {
+        if (cached) {
+          window.localStorage.setItem("sidebarWidth", cached)
+        }
+
+        renderSidebar(
+          {},
+          {
+            sidebarConfigContext: {
+              ...(initial !== undefined && { initialSidebarWidth: initial }),
+            },
+          }
+        )
+
+        expect(screen.getByTestId("stSidebar")).toHaveStyle(
+          `width: ${expected}`
+        )
+      })
+    })
+
+    describe("Width Clamping", () => {
+      it.each([
+        { initial: 150, expected: "200px", description: "clamps to minimum" },
+        { initial: 800, expected: "600px", description: "clamps to maximum" },
+        { initial: 400, expected: "400px", description: "uses value as-is" },
+        { initial: NaN, expected: "300px", description: "handles NaN" },
+      ])("$description", ({ initial, expected }) => {
+        renderSidebar(
+          {},
+          { sidebarConfigContext: { initialSidebarWidth: initial } }
+        )
+
+        expect(screen.getByTestId("stSidebar")).toHaveStyle(
+          `width: ${expected}`
+        )
+      })
+    })
+
+    describe("Cached Width Clamping", () => {
+      it.each([
+        {
+          cached: "1000",
+          expected: "600px",
+          description: "clamps cached value exceeding maximum",
+        },
+        {
+          cached: "100",
+          expected: "200px",
+          description: "clamps cached value below minimum",
+        },
+        {
+          cached: "450",
+          expected: "450px",
+          description: "uses cached value within valid range",
+        },
+        {
+          cached: "200",
+          expected: "200px",
+          description: "uses cached value at minimum boundary",
+        },
+        {
+          cached: "600",
+          expected: "600px",
+          description: "uses cached value at maximum boundary",
+        },
+        {
+          cached: "invalid",
+          expected: "300px",
+          description: "falls back to default when cached value is invalid",
+        },
+      ])("$description", ({ cached, expected }) => {
+        window.localStorage.setItem("sidebarWidth", cached)
+
+        renderSidebar()
+
+        expect(screen.getByTestId("stSidebar")).toHaveStyle(
+          `width: ${expected}`
+        )
+      })
     })
   })
 })

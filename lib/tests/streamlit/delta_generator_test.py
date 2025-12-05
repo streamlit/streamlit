@@ -97,7 +97,6 @@ class RunWarningTest(unittest.TestCase):
         # Remove commands that are only exposed in the top-level namespace (st.*)
         # and cannot be called on a DeltaGenerator object.
         expected_api = expected_api - {
-            "spinner",
             "dialog",
             "echo",
             "logo",
@@ -144,6 +143,7 @@ class DeltaGeneratorTest(DeltaGeneratorTestCase):
             "text_input": lambda key=None: st.text_input("", key=key),
             "time_input": lambda key=None: st.time_input("", key=key),
             "date_input": lambda key=None: st.date_input("", key=key),
+            "datetime_input": lambda key=None: st.datetime_input("", key=key),
             "number_input": lambda key=None: st.number_input("", key=key),
         }
 
@@ -526,44 +526,48 @@ class DeltaGeneratorWithTest(DeltaGeneratorTestCase):
         container1 = st.container()
         container2 = st.container()
 
-        with_2 = asyncio.Event()
-        object_1 = asyncio.Event()
+        async def runner():
+            with_2 = asyncio.Event()
+            object_1 = asyncio.Event()
 
-        async def task1():
-            with container1:
-                task = asyncio.create_task(task2())
-
-                await with_2.wait()
-
-                st.markdown("Object 1b")
+            async def task2():
+                st.markdown("Object 1a")
                 msg = self.get_message_from_queue()
                 assert (
-                    make_delta_path(RootContainer.MAIN, (0,), 1)
+                    make_delta_path(RootContainer.MAIN, (0,), 0)
                     == msg.metadata.delta_path
                 )
 
-                object_1.set()
-                await task
+                with container2:
+                    with_2.set()
+                    st.markdown("Object 2")
+                    msg = self.get_message_from_queue()
+                    assert (
+                        make_delta_path(RootContainer.MAIN, (1,), 0)
+                        == msg.metadata.delta_path
+                    )
 
-        async def task2():
-            st.markdown("Object 1a")
-            msg = self.get_message_from_queue()
-            assert (
-                make_delta_path(RootContainer.MAIN, (0,), 0) == msg.metadata.delta_path
-            )
+                    await object_1.wait()
 
-            with container2:
-                with_2.set()
-                st.markdown("Object 2")
-                msg = self.get_message_from_queue()
-                assert (
-                    make_delta_path(RootContainer.MAIN, (1,), 0)
-                    == msg.metadata.delta_path
-                )
+            async def task1():
+                with container1:
+                    task = asyncio.create_task(task2())
 
-                await object_1.wait()
+                    await with_2.wait()
 
-        asyncio.get_event_loop().run_until_complete(task1())
+                    st.markdown("Object 1b")
+                    msg = self.get_message_from_queue()
+                    assert (
+                        make_delta_path(RootContainer.MAIN, (0,), 1)
+                        == msg.metadata.delta_path
+                    )
+
+                    object_1.set()
+                    await task
+
+            await task1()
+
+        asyncio.run(runner())
 
 
 class DeltaGeneratorWriteTest(DeltaGeneratorTestCase):

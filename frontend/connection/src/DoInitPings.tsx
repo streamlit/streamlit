@@ -20,7 +20,6 @@
  * Returns a promise with the index of the URI that worked.
  */
 
-import axios from "axios"
 import { getLogger } from "loglevel"
 
 // Note we expect the polyfill to load from this import
@@ -33,8 +32,13 @@ import {
   PING_TIMEOUT_MS,
   SERVER_PING_PATH,
 } from "./constants"
-import { IHostConfigResponse, OnRetry } from "./types"
-import { parseUriIntoBaseParts } from "./utils"
+import { ErrorDetails, IHostConfigResponse, OnRetry } from "./types"
+import {
+  FetchError,
+  fetchWithTimeout,
+  parseUriIntoBaseParts,
+  serializeForDisplay,
+} from "./utils"
 
 const LOG = getLogger("DoInitPings")
 
@@ -64,7 +68,7 @@ export function doInitPings(
   const { promise, resolve, reject } = Promise.withResolvers<number>()
   let totalTries = 0
   let uriNumber = 0
-  let timeout: NodeJS.Timeout | number | undefined
+  let timeout: ReturnType<typeof setTimeout> | undefined
 
   // Hoist the connect() declaration.
   let connect = (): void => {}
@@ -78,7 +82,7 @@ export function doInitPings(
     connect()
   }
 
-  const retry = (errorMarkdown: string): void => {
+  const retry = (errorDetails: ErrorDetails): void => {
     // Adjust retry time by +- 20% to spread out load
     const jitter = Math.random() * 0.4 - 0.2
     // Exponential backoff to reduce load from health pings when experiencing
@@ -89,7 +93,7 @@ export function doInitPings(
         : minimumTimeoutMs * 2 ** (totalTries - 1) * (1 + jitter)
     const retryTimeout = Math.min(maximumTimeoutMs, timeoutMs)
 
-    retryCallback(totalTries, errorMarkdown, retryTimeout)
+    retryCallback(totalTries, errorDetails, retryTimeout)
 
     if (typeof window === "undefined") {
       // There seems to be a race condition when tearing down test env
@@ -107,28 +111,25 @@ export function doInitPings(
     const uri = new URL(buildHttpUri(uriParts, ""))
 
     if (uri.hostname === "localhost") {
-      const markdownMessage = `
-Is Streamlit still running? If you accidentally stopped Streamlit, just restart it in your terminal:
-
-\`\`\`bash
-streamlit run yourscript.py
-\`\`\`
-      `
-      retry(markdownMessage)
+      retry({
+        message:
+          "Is Streamlit still running? If you accidentally stopped Streamlit, just restart it in your terminal:",
+        codeBlock: "streamlit run yourscript.py",
+      })
     } else {
-      retry(
-        "Streamlit server is not responding. " +
-          "Are you connected to the internet?"
-      )
+      retry({
+        message:
+          "Streamlit server is not responding. Are you connected to the internet?",
+      })
     }
   }
 
   const retryWhenIsForbidden = (): void => {
-    const forbiddenMessage = `Cannot connect to Streamlit (HTTP status: 403).
+    retry({
+      message: `Cannot connect to Streamlit (HTTP status: 403).
 
-If you are trying to access a Streamlit app running on another server, this could be due to the app's [CORS](${CORS_ERROR_MESSAGE_DOCUMENTATION_LINK}) settings.`
-
-    retry(forbiddenMessage)
+If you are trying to access a Streamlit app running on another server, this could be due to the app's [CORS](${CORS_ERROR_MESSAGE_DOCUMENTATION_LINK}) settings.`,
+    })
   }
 
   // Handle retrieving the source URL, otherwise fallback to "DoInitPings"
@@ -179,22 +180,22 @@ If you are trying to access a Streamlit app running on another server, this coul
     // not to do so as it's semantically cleaner to not give the healthcheck
     // endpoint additional responsibilities.
     Promise.all([
-      axios.get(healthzUri, { timeout: PING_TIMEOUT_MS }),
-      axios.get(hostConfigUri, { timeout: PING_TIMEOUT_MS }),
+      fetchWithTimeout(healthzUri, PING_TIMEOUT_MS),
+      fetchWithTimeout(hostConfigUri, PING_TIMEOUT_MS),
     ])
       .then(([_, hostConfigResp]) => {
-        onHostConfigResp(hostConfigResp.data)
+        onHostConfigResp(hostConfigResp.data as IHostConfigResponse)
         resolve(uriNumber)
       })
-      .catch(error => {
+      .catch((error: FetchError) => {
         // If its our 6th try (retry count at which we show connection error dialog), send a client error
         // to inform the host of connection error
         const tooManyRetries = totalTries >= MAX_RETRIES_BEFORE_CLIENT_ERROR
 
-        if (error.code === "ECONNABORTED") {
+        if (error.isTimeout) {
           if (tooManyRetries) {
             // Handle retrieving the source URL from the error (health or host-config endpoint)
-            const source = determineUrlSource(error.config?.url)
+            const source = determineUrlSource(error.url)
             LOG.error("Client error: DoInitPings timed out")
             sendClientError(
               "DoInitPings timed out",
@@ -202,7 +203,7 @@ If you are trying to access a Streamlit app running on another server, this coul
               source
             )
           }
-          return retry("Connection timed out.")
+          return retry({ message: "Connection timed out." })
         }
 
         if (error.response) {
@@ -211,7 +212,7 @@ If you are trying to access a Streamlit app running on another server, this coul
 
           const { data, status, statusText } = error.response
           // Handle retrieving the source URL from the error (health or host-config endpoint)
-          const source = determineUrlSource(error.response.config?.url)
+          const source = determineUrlSource(error.url)
 
           if (status === /* NO RESPONSE */ 0) {
             if (tooManyRetries) {
@@ -243,26 +244,26 @@ If you are trying to access a Streamlit app running on another server, this coul
             )
             sendClientError(status, statusText, source)
           }
-          return retry(
-            `Connection failed with status ${status}, ` +
-              `and response "${data}".`
-          )
+
+          const responseDataStr = serializeForDisplay(data)
+          return retry({
+            message: `Connection failed with status ${status}${responseDataStr ? ", and response:" : "."}`,
+            ...(responseDataStr && { codeBlock: responseDataStr }),
+          })
         }
 
-        if (error.request) {
+        if (error.isNetworkError) {
           // The request was made but no response was received
-          // `error.request` is an instance of XMLHttpRequest in the browser and an instance of
-          // http.ClientRequest in node.js
 
           if (tooManyRetries) {
             // Handle retrieving the source URL from the error (health or host-config endpoint)
-            const source = determineUrlSource(error.request.path)
+            const source = determineUrlSource(error.url)
             LOG.error(
               `Client Error in reaching server endpoint - No response received when attempting to reach ${source}`
             )
             sendClientError(
               "No response received from server",
-              error.request.status,
+              "Network error",
               source
             )
           }
@@ -272,7 +273,7 @@ If you are trying to access a Streamlit app running on another server, this coul
         // Something happened in setting up the request that triggered an Error
         if (tooManyRetries) {
           // Handle retrieving the source URL from the error (health or host-config endpoint)
-          const source = determineUrlSource(error.config?.url)
+          const source = determineUrlSource(error.url)
           LOG.error(
             `Client Error in reaching server endpoint - error in setting up request when attempting to reach ${source}`
           )
@@ -282,7 +283,7 @@ If you are trying to access a Streamlit app running on another server, this coul
             source
           )
         }
-        return retry(error.message)
+        return retry({ message: error.message })
       })
   }
 

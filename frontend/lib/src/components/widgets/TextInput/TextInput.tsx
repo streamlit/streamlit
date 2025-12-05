@@ -17,11 +17,12 @@
 import React, { memo, ReactElement, useCallback, useState } from "react"
 
 import { Input as UIInput } from "baseui/input"
-import uniqueId from "lodash/uniqueId"
+import { uniqueId } from "lodash-es"
 
 import { TextInput as TextInputProto } from "@streamlit/protobuf"
 
-import { DynamicIcon } from "~lib/components/shared/Icon"
+import { getBorderColor } from "~lib/components/shared/Base/styled-components"
+import { DynamicIcon, isMaterialIcon } from "~lib/components/shared/Icon"
 import InputInstructions from "~lib/components/shared/InputInstructions/InputInstructions"
 import { Placement } from "~lib/components/shared/Tooltip"
 import TooltipIcon from "~lib/components/shared/TooltipIcon"
@@ -142,11 +143,6 @@ function TextInput({
     fragmentId
   )
 
-  // Material icons need to be larger to render similar size of emojis,
-  // and we change their text color
-  const isMaterialIcon = icon?.startsWith(":material")
-  const dynamicIconSize = isMaterialIcon ? "lg" : "base"
-
   return (
     <StyledTextInput
       className="stTextInput"
@@ -187,7 +183,7 @@ function TextInput({
             <DynamicIcon
               data-testid="stTextInputIcon"
               iconValue={icon}
-              size={dynamicIconSize}
+              size="lg"
             />
           )
         }
@@ -215,14 +211,23 @@ function TextInput({
             props: {
               "data-testid": "stTextInputRootElement",
             },
-            style: {
-              height: theme.sizes.minElementHeight,
-              // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
-              borderLeftWidth: theme.sizes.borderWidth,
-              borderRightWidth: theme.sizes.borderWidth,
-              borderTopWidth: theme.sizes.borderWidth,
-              borderBottomWidth: theme.sizes.borderWidth,
-              paddingLeft: icon ? theme.spacing.sm : 0,
+            style: ({ $isFocused }: { $isFocused: boolean }) => {
+              const borderColor = getBorderColor(theme.colors, $isFocused)
+              return {
+                height: theme.sizes.minElementHeight,
+                // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
+                borderLeftWidth: theme.sizes.borderWidth,
+                borderRightWidth: theme.sizes.borderWidth,
+                borderTopWidth: theme.sizes.borderWidth,
+                borderBottomWidth: theme.sizes.borderWidth,
+
+                borderTopColor: borderColor,
+                borderRightColor: borderColor,
+                borderBottomColor: borderColor,
+                borderLeftColor: borderColor,
+
+                paddingLeft: icon ? theme.spacing.sm : 0,
+              }
             },
           },
           StartEnhancer: {
@@ -232,7 +237,9 @@ function TextInput({
               // Keeps emoji icons from being cut off on the right
               minWidth: theme.iconSizes.lg,
               // Material icons color changed as inactionable
-              color: isMaterialIcon ? theme.colors.fadedText60 : "inherit",
+              color: isMaterialIcon(icon)
+                ? theme.colors.fadedText60
+                : "inherit",
             },
           },
         }}

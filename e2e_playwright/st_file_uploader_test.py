@@ -29,9 +29,14 @@ from e2e_playwright.conftest import (
 )
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
+    click_toggle,
+    expect_help_tooltip,
+    expect_prefixed_markdown,
     get_element_by_key,
     goto_app,
 )
+
+NUM_FILE_UPLOADERS = 17
 
 
 def create_temp_directory_with_files(file_data: list[dict[str, Any]]) -> str:
@@ -103,7 +108,7 @@ def test_file_uploader_render_correctly(
 ):
     """Test that the file uploader render as expected via screenshot matching."""
     file_uploaders = themed_app.get_by_test_id("stFileUploader")
-    expect(file_uploaders).to_have_count(16)
+    expect(file_uploaders).to_have_count(NUM_FILE_UPLOADERS)
 
     assert_snapshot(file_uploaders.nth(0), name="st_file_uploader-single_file")
     assert_snapshot(file_uploaders.nth(1), name="st_file_uploader-disabled")
@@ -825,7 +830,7 @@ def test_file_uploader_widths(
     """Test that file_uploader renders correctly with different width settings."""
     file_uploaders = app.get_by_test_id("stFileUploader")
 
-    expect(file_uploaders).to_have_count(16)
+    expect(file_uploaders).to_have_count(NUM_FILE_UPLOADERS)
 
     stretch_uploader = file_uploaders.nth(11)
     pixel_width_uploader = file_uploaders.nth(12)
@@ -868,3 +873,90 @@ def test_toggle_disable_after_upload_snapshot(
     assert_snapshot(
         toggled_uploader, name="st_file_uploader-toggle_disabled_after_upload"
     )
+
+
+def test_dynamic_file_uploader_props(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that the file uploader can be updated dynamically while keeping the state."""
+    # Find the dynamic file uploader using its key
+    dynamic_uploader = get_element_by_key(app, "dynamic_file_uploader_key")
+    expect(dynamic_uploader).to_be_visible()
+
+    # Check initial state:
+    expect(dynamic_uploader).to_contain_text("Initial dynamic file uploader")
+    expect_help_tooltip(app, dynamic_uploader, "initial help")
+    expect_prefixed_markdown(app, "Initial uploader value:", "None")
+
+    # Take a snapshot of the initial state:
+    assert_snapshot(dynamic_uploader, name="st_file_uploader-dynamic_initial")
+
+    # Upload a file
+    file_name = "test_dynamic.txt"
+    file_content = b"Dynamic test content"
+
+    file_dropzone = dynamic_uploader.get_by_test_id("stFileUploaderDropzone")
+    expect(file_dropzone).to_be_visible()
+
+    with app.expect_file_chooser() as fc_info:
+        file_dropzone.click()
+
+    file_chooser = fc_info.value
+    file_chooser.set_files(
+        files=[FilePayload(name=file_name, mimeType="text/plain", buffer=file_content)]
+    )
+
+    wait_for_app_run(app)
+
+    # Verify file was uploaded
+    expect(dynamic_uploader.get_by_test_id("stFileUploaderFileName")).to_have_text(
+        file_name, use_inner_text=True
+    )
+
+    # Look for the output text showing the file name
+    expect_prefixed_markdown(app, "Initial uploader value:", file_name)
+
+    # Toggle to update props (changes sample_rate)
+    click_toggle(app, "Update file uploader props")
+
+    # Check that properties have been updated
+    expect(dynamic_uploader).to_contain_text("Updated dynamic file uploader")
+
+    # Verify the file is still uploaded (widget state preserved)
+    expect(dynamic_uploader.get_by_test_id("stFileUploaderFileName")).to_have_text(
+        file_name, use_inner_text=True
+    )
+
+    # Look for the output text showing the file name with updated label
+    expect_prefixed_markdown(app, "Updated uploader value:", file_name)
+    # Verify new width:
+    expect(dynamic_uploader).to_have_css("width", "300px")
+
+    # Check that the help tooltip is correct:
+    expect_help_tooltip(app, dynamic_uploader, "updated help")
+
+    # Take a snapshot of the updated state:
+    assert_snapshot(dynamic_uploader, name="st_file_uploader-dynamic_updated")
+
+    # Upload a new file
+    file_name = "test_dynamic_2.txt"
+    file_content = b"Dynamic test content 2"
+
+    file_dropzone = dynamic_uploader.get_by_test_id("stFileUploaderDropzone")
+    expect(file_dropzone).to_be_visible()
+
+    with app.expect_file_chooser() as fc_info:
+        file_dropzone.click()
+
+    file_chooser = fc_info.value
+    file_chooser.set_files(
+        files=[FilePayload(name=file_name, mimeType="text/plain", buffer=file_content)]
+    )
+
+    wait_for_app_run(app)
+
+    # Verify file was uploaded
+    expect(dynamic_uploader.get_by_test_id("stFileUploaderFileName")).to_have_text(
+        file_name, use_inner_text=True
+    )
+
+    # Look for the output text showing the file name with updated label
+    expect_prefixed_markdown(app, "Updated uploader value:", file_name)

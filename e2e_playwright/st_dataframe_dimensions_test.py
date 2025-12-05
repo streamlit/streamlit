@@ -46,10 +46,12 @@ def test_data_frame_with_different_sizes(app: Page):
         },
         {"width": "704px", "height": "177px"},
         {"width": "672px", "height": "144px"},
+        {"width": "704px", "height": "563px"},
+        {"width": "704px", "height": "10048px"},  # 300 rows content height (capped)
     ]
 
     dataframe_elements = app.get_by_test_id("stDataFrame")
-    expect(dataframe_elements).to_have_count(20)
+    expect(dataframe_elements).to_have_count(22)
 
     for i, element in enumerate(dataframe_elements.all()):
         expected_width = expected[i]["width"]
@@ -106,3 +108,8 @@ def test_data_frame_rendering(app: Page, assert_snapshot: ImageCompareFunction):
 
     stretch_height_container = get_element_by_key(app, "test_height_stretch")
     assert_snapshot(stretch_height_container, name="st_dataframe-stretch-height")
+
+    content_height_dataframe_element = app.get_by_test_id("stDataFrame").nth(20)
+    assert_snapshot(
+        content_height_dataframe_element, name="st_dataframe-content-height"
+    )

@@ -14,14 +14,16 @@
 
 from __future__ import annotations
 
-import mimetypes
-import os
 from typing import TYPE_CHECKING, Final, cast
 
 import tornado.web
 
 import streamlit.web.server.routes
 from streamlit.logger import get_logger
+from streamlit.web.server.component_file_utils import (
+    build_safe_abspath,
+    guess_content_type,
+)
 
 if TYPE_CHECKING:
     from streamlit.components.types.base_component_registry import BaseComponentRegistry
@@ -42,13 +44,10 @@ class ComponentRequestHandler(tornado.web.RequestHandler):
             self.set_status(404)
             return
 
-        # follow symlinks to get an accurate normalized path
-        component_root = os.path.realpath(component_root)
+        # Build a safe absolute path within the component root
         filename = "/".join(parts[1:])
-        abspath = os.path.normpath(os.path.join(component_root, filename))
-
-        # Do NOT expose anything outside of the component root.
-        if os.path.commonpath([component_root, abspath]) != component_root:
+        abspath = build_safe_abspath(component_root, filename)
+        if abspath is None:
             self.write("forbidden")
             self.set_status(403)
             return
@@ -100,19 +99,7 @@ class ComponentRequestHandler(tornado.web.RequestHandler):
         """Returns the ``Content-Type`` header to be used for this request.
         From tornado.web.StaticFileHandler.
         """
-        mime_type, encoding = mimetypes.guess_type(abspath)
-        # per RFC 6713, use the appropriate type for a gzip compressed file
-        if encoding == "gzip":
-            return "application/gzip"
-        # As of 2015-07-21 there is no bzip2 encoding defined at
-        # http://www.iana.org/assignments/media-types/media-types.xhtml
-        # So for that (and any other encoding), use octet-stream.
-        if encoding is not None:
-            return "application/octet-stream"
-        if mime_type is not None:
-            return mime_type
-        # if mime_type not detected, use application/octet-stream
-        return "application/octet-stream"
+        return guess_content_type(abspath)
 
     @staticmethod
     def get_url(file_id: str) -> str:

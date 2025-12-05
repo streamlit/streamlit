@@ -14,10 +14,9 @@
  * limitations under the License.
  */
 
-export { default, EmojiIcon } from "./Icon"
 export {
   DynamicIcon,
   getFilledStarIconSrc,
   isMaterialIcon,
 } from "./DynamicIcon"
-export { StyledIcon, StyledSpinnerIcon } from "./styled-components"
+export { default, EmojiIcon } from "./Icon"

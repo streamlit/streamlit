@@ -262,7 +262,7 @@ class StHelpTest(DeltaGeneratorTestCase):
                 "Static method 1"
 
             @classmethod
-            def classmethod1(self, y=20):
+            def classmethod1(cls, y=20):
                 "Class method 1"
 
         with patch_varname_getter():
@@ -304,7 +304,7 @@ class StHelpTest(DeltaGeneratorTestCase):
                 "Static method 1"
 
             @classmethod
-            def classmethod1(self, y=20):
+            def classmethod1(cls, y=20):
                 "Class method 1"
 
         my_instance = MyClass()

@@ -19,12 +19,12 @@ import React, { useMemo } from "react"
 import { renderHook } from "@testing-library/react"
 
 import {
-  LibContext,
+  LibConfigContext,
+  LibConfigContextProps,
   mockTheme,
   ThemeProvider,
   WindowDimensionsProvider,
 } from "@streamlit/lib"
-import type { LibContextProps } from "@streamlit/lib"
 
 import { useCrossOriginAttribute } from "./useCrossOriginAttribute"
 
@@ -33,19 +33,23 @@ const getWrapper = (
   resourceCrossOriginMode: undefined | "anonymous" | "use-credentials"
 ): React.FC<{ children: React.ReactNode }> => {
   return ({ children }: { children: React.ReactNode }): JSX.Element => {
-    const libContextValue = useMemo(
-      () =>
-        ({
-          libConfig: { resourceCrossOriginMode },
-        }) as unknown as LibContextProps,
-      []
+    const libConfigContextValue: LibConfigContextProps = useMemo(
+      () => ({
+        resourceCrossOriginMode,
+        mapboxToken: undefined,
+        enforceDownloadInNewTab: undefined,
+        locale: "en-US",
+      }),
+      // eslint-disable-next-line react-hooks/exhaustive-deps -- Include for semantic correctness; stable per wrapper instance
+      [resourceCrossOriginMode]
     )
+
     return (
-      <LibContext.Provider value={libContextValue}>
+      <LibConfigContext.Provider value={libConfigContextValue}>
         <ThemeProvider theme={mockTheme.emotion}>
           <WindowDimensionsProvider>{children}</WindowDimensionsProvider>
         </ThemeProvider>
-      </LibContext.Provider>
+      </LibConfigContext.Provider>
     )
   }
 }

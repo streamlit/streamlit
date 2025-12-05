@@ -53,7 +53,7 @@ from streamlit.watcher import LocalSourcesWatcher
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from streamlit.proto.BackMsg_pb2 import BackMsg
+    from streamlit.proto.BackMsg_pb2 import BackMsg, DeferredFileRequest
     from streamlit.runtime.script_data import ScriptData
     from streamlit.runtime.scriptrunner.script_cache import ScriptCache
     from streamlit.runtime.state import SessionState
@@ -304,6 +304,15 @@ class AppSession:
                 self._handle_stop_script_request()
             elif msg_type == "file_urls_request":
                 self._handle_file_urls_request(msg.file_urls_request)
+            elif msg_type == "deferred_file_request":
+                # Execute deferred callable in a separate thread to avoid blocking
+                # the main event loop. Use create_task to run the async handler.
+                # Store task reference to prevent garbage collection.
+                task = asyncio.create_task(
+                    self._handle_deferred_file_request(msg.deferred_file_request)
+                )
+                # Add task name for better debugging
+                task.set_name(f"deferred_file_{msg.deferred_file_request.file_id}")
             else:
                 _LOGGER.warning('No handler for "%s"', msg_type)
 
@@ -921,6 +930,34 @@ class AppSession:
             )
 
         self._enqueue_forward_msg(msg)
+
+    async def _handle_deferred_file_request(self, request: DeferredFileRequest) -> None:
+        """Handle a deferred_file_request BackMsg sent by the client.
+
+        Execute the deferred callable in a separate thread and send the URL back
+        to the frontend. This prevents blocking the main event loop if the callable
+        is slow.
+        """
+        response = ForwardMsg()
+        response.deferred_file_response.file_id = request.file_id
+
+        try:
+            # Execute the deferred callable in a separate thread to avoid blocking
+            # the main event loop. This is critical for shared apps where a slow
+            # callable could freeze all sessions.
+            url = await asyncio.to_thread(
+                runtime.get_instance().media_file_mgr.execute_deferred,
+                request.file_id,
+            )
+            response.deferred_file_response.url = url
+        except Exception as e:
+            # Send error response if callable execution fails
+            _LOGGER.exception(
+                "Error executing deferred callable for file_id %s", request.file_id
+            )
+            response.deferred_file_response.error_msg = str(e)
+
+        self._enqueue_forward_msg(response)
 
     def _populate_app_pages(
         self, msg: NewSession, pages: dict[PageHash, PageInfo]

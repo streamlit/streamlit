@@ -17,7 +17,8 @@
 // We add some polyfills in order to support older browsers for the exports below
 import "@streamlit/utils"
 // These imports are each exported specifically in order to minimize public apis.
-export { AppRoot, BlockNode, ElementNode } from "./AppNode"
+export type { LibConfig } from "@streamlit/connection"
+export { AppRoot, BlockNode, ElementNode, TransientNode } from "./AppNode"
 export {
   ContainerContentsWrapper,
   VerticalBlock,
@@ -25,16 +26,28 @@ export {
 export type { BlockPropsWithoutWidth } from "./components/core/Block"
 export { default as ElementNodeRenderer } from "./components/core/Block/ElementNodeRenderer"
 export type { ElementNodeRendererProps } from "./components/core/Block/ElementNodeRenderer"
+export { DownloadContext } from "./components/core/DownloadContext"
+export type { DownloadContextProps } from "./components/core/DownloadContext"
 export { FormsContext } from "./components/core/FormsContext"
 export type { FormsContextProps } from "./components/core/FormsContext"
 export { default as IsDialogContext } from "./components/core/IsDialogContext"
 export { default as IsSidebarContext } from "./components/core/IsSidebarContext"
-export { LibContext } from "./components/core/LibContext"
-export type { LibConfig, LibContextProps } from "./components/core/LibContext"
+export { LibConfigContext } from "./components/core/LibConfigContext"
+export type { LibConfigContextProps } from "./components/core/LibConfigContext"
+export { NavigationContext } from "./components/core/NavigationContext"
+export type { NavigationContextProps } from "./components/core/NavigationContext"
 export { PortalProvider } from "./components/core/Portal/PortalProvider"
+export { ScriptRunContext } from "./components/core/ScriptRunContext"
+export type { ScriptRunContextProps } from "./components/core/ScriptRunContext"
+export { SidebarConfigContext } from "./components/core/SidebarConfigContext"
+export type { SidebarConfigContextProps } from "./components/core/SidebarConfigContext"
+export { ThemeContext } from "./components/core/ThemeContext"
+export type { ThemeContextProps } from "./components/core/ThemeContext"
 export { default as ThemeProvider } from "./components/core/ThemeProvider"
+export { ViewStateContext } from "./components/core/ViewStateContext"
+export type { ViewStateContextProps } from "./components/core/ViewStateContext"
 export { default as AlertElement } from "./components/elements/AlertElement"
-export { default as StreamlitSyntaxHighlighter } from "./components/elements/CodeBlock/StreamlitSyntaxHighlighter"
+export { default as StreamlitErrorCodeBlock } from "./components/elements/CodeBlock/StreamlitErrorCodeBlock"
 export { handleFavicon } from "./components/elements/Favicon"
 export { default as TextElement } from "./components/elements/TextElement"
 export {
@@ -70,6 +83,7 @@ export { useCopyToClipboard } from "./hooks/useCopyToClipboard"
 export { useCrossOriginAttribute } from "./hooks/useCrossOriginAttribute"
 export { useEmotionTheme } from "./hooks/useEmotionTheme"
 export { useExecuteWhenChanged } from "./hooks/useExecuteWhenChanged"
+export { ensureHotkeysFilterConfigured } from "./hooks/useRegisterShortcut"
 export { useRequiredContext } from "./hooks/useRequiredContext"
 export {
   measureScrollbarGutterSize,
@@ -94,7 +108,6 @@ export { mockTheme } from "./mocks/mockTheme"
 export { RootStyleProvider } from "./RootStyleProvider"
 export { ScriptRunState } from "./ScriptRunState"
 export { SessionInfo } from "./SessionInfo"
-export { mockWindowLocation, render, renderWithContexts } from "./test_util"
 export {
   AUTO_THEME_NAME,
   baseTheme,
@@ -145,6 +158,8 @@ export {
   getEmbeddingIdClassName,
   getIFrameEnclosingApp,
   getLocaleLanguage,
+  getQueryString,
+  getScreencastTimestamp,
   getTimezone,
   getTimezoneOffset,
   getUrl,

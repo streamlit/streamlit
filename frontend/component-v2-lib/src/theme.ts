@@ -82,6 +82,15 @@ export interface StreamlitTheme {
   greenBackgroundColor: string
   violetBackgroundColor: string
   grayBackgroundColor: string
+
+  // Text colors
+  redTextColor: string
+  orangeTextColor: string
+  yellowTextColor: string
+  blueTextColor: string
+  greenTextColor: string
+  violetTextColor: string
+  grayTextColor: string
 }
 
 /**

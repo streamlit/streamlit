@@ -1,0 +1,152 @@
+name: Update Browserslist DB
+
+on:
+  schedule:
+    # Run job at 6:30 am GMT every Tuesday
+    - cron: "30 6 * * Tue"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        # Dry run used for workflow testing
+        description: "Run without creating PR"
+        type: boolean
+        required: false
+        default: false
+
+permissions:
+  # Permissions required for workflow to create/push branch and PR
+  contents: write
+  pull-requests: write
+
+jobs:
+  update-browserslist-db:
+    runs-on: ubuntu-latest
+
+    # Only run in the upstream repository
+    if: github.repository == 'streamlit/streamlit'
+
+    steps:
+      - name: Checkout Streamlit code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: ".nvmrc"
+          cache: "yarn"
+          cache-dependency-path: "component-lib/yarn.lock"
+
+      - name: Run update-browserslist-db in frontend
+        id: run-update
+        working-directory: frontend
+        run: npx --yes update-browserslist-db@latest
+
+      - name: Check if yarn.lock changed
+        id: check-lock
+        run: |
+          if [ -n "$(git status --porcelain frontend/yarn.lock)" ]; then
+            echo "lock_changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "lock_changed=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Configure Git
+        if: steps.check-lock.outputs.lock_changed == 'true'
+        run: |
+          git config user.name "Streamlit Bot"
+          git config user.email "core+streamlitbot-github@streamlit.io"
+
+      - name: Create & switch to new branch
+        id: create-branch
+        if: steps.check-lock.outputs.lock_changed == 'true'
+        run: |
+          BRANCH_NAME="update-browserslist-db-$(date +%Y-%m-%d)"
+          echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+          git checkout -b "$BRANCH_NAME"
+
+      - name: Add changes to the branch
+        if: steps.check-lock.outputs.lock_changed == 'true'
+        run: |
+          git add frontend/yarn.lock
+          git commit -m "[chore] Update Browserslist DB"
+          git push origin "${{ steps.create-branch.outputs.branch_name }}"
+
+      - name: Create PR to merge changes into develop
+        id: create_pr
+        if: ${{ steps.check-lock.outputs.lock_changed == 'true' && inputs.dry_run != true }}
+        uses: actions/github-script@v8
+        env:
+          BRANCH_NAME: ${{ steps.create-branch.outputs.branch_name }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const head = process.env.BRANCH_NAME;
+            const base = 'develop';
+
+            const title = `[chore] Update Browserslist DB`;
+            const body = `Automated PR to update Browserslist database via update-browserslist-db.`;
+
+            const created = await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              head,
+              base,
+              body,
+              draft: false,
+            });
+
+            const pr = created.data;
+
+            core.setOutput('pr_url', pr.html_url);
+
+            const labels = ['change:chore', 'impact:internal'];
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.number,
+              labels,
+            });
+
+      - name: Write step summary
+        env:
+          LOCK_CHANGED: ${{ steps.check-lock.outputs.lock_changed }}
+          PR_URL: ${{ steps.create_pr.outputs.pr_url }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          {
+            echo "## Browserslist DB Update Summary";
+            echo "- yarn.lock changed: ${LOCK_CHANGED}";
+            if [ "${DRY_RUN}" = "true" ]; then
+              echo "- Dry run: true (no PR created)";
+            elif [ "${LOCK_CHANGED}" = "true" ]; then
+              echo "- PR: ${PR_URL:-n/a}";
+            else
+              echo "- No updates found, no PR created";
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Slack notification - PR created
+        if: ${{ success() && steps.check-lock.outputs.lock_changed == 'true' && inputs.dry_run != true }}
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+          PR_URL: ${{ steps.create_pr.outputs.pr_url }}
+        run: |
+          python scripts/slack_notifications.py browserslist success
+
+      - name: Slack notification - PR creation failed
+        if: ${{ failure() && steps.check-lock.outputs.lock_changed == 'true' && inputs.dry_run != true }}
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          python scripts/slack_notifications.py browserslist failure

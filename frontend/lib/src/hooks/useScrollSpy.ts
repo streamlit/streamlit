@@ -109,6 +109,7 @@ export default function useScrollSpy(
 
   const debouncer = useMemo(
     () =>
+      // eslint-disable-next-line react-hooks/refs -- TODO: Do not access ref during render
       debounce(event => {
         onEventRef.current(event)
       }, DEFAULT_DEBOUNCE_MS),

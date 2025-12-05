@@ -153,6 +153,11 @@ class DataEditorUtilTest(unittest.TestCase):
                 ColumnDataKind.LIST,
                 ["foo"],
             ),
+            (
+                ["foo"],
+                ColumnDataKind.EMPTY,
+                ["foo"],
+            ),
         ]
     )
     def test_parse_value(
@@ -219,12 +224,25 @@ class DataEditorUtilTest(unittest.TestCase):
                     datetime.datetime.now(),
                     datetime.datetime.now(),
                 ],
+                "col5": [["x"], ["y"], ["z"]],
             }
         )
 
         added_rows: list[dict[str, Any]] = [
-            {"col1": 10, "col2": "foo", "col3": False, "col4": "2020-03-20T14:28:23"},
-            {"col1": 11, "col2": "bar", "col3": True, "col4": "2023-03-20T14:28:23"},
+            {
+                "col1": 10,
+                "col2": "foo",
+                "col3": False,
+                "col4": "2020-03-20T14:28:23",
+                "col5": ["x", "y"],
+            },
+            {
+                "col1": 11,
+                "col2": "bar",
+                "col3": True,
+                "col4": "2023-03-20T14:28:23",
+                "col5": ["z"],
+            },
         ]
 
         _apply_row_additions(
@@ -232,6 +250,9 @@ class DataEditorUtilTest(unittest.TestCase):
         )
 
         assert len(df) == 5
+        assert df.loc[3, "col5"] == ["x", "y"]
+        assert df.loc[4, "col5"] == ["z"]
+        assert pd.api.types.is_bool_dtype(df["col3"])
 
     def test_apply_row_deletions(self):
         """Test applying row deletions to a DataFrame."""
@@ -545,6 +566,7 @@ class DataEditorTest(DeltaGeneratorTestCase):
         assert proto.id != ""
         # Row height should not be set if not specified
         assert not proto.HasField("row_height")
+        assert not proto.HasField("placeholder")
 
     def test_just_disabled_true(self):
         """Test that it can be called with disabled=True param."""
@@ -604,6 +626,13 @@ class DataEditorTest(DeltaGeneratorTestCase):
 
         proto = self.get_delta_from_queue().new_element.arrow_data_frame
         assert proto.row_height == 100
+
+    def test_placeholder_parameter(self):
+        """Test that it can be called with placeholder."""
+        st.data_editor(pd.DataFrame(), placeholder="N/A")
+
+        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        assert proto.placeholder == "N/A"
 
     def test_just_use_container_width(self):
         """Test that use_container_width parameter works and shows deprecation warning."""
@@ -708,6 +737,20 @@ class DataEditorTest(DeltaGeneratorTestCase):
 
         proto = self.get_delta_from_queue().new_element.arrow_data_frame
         assert proto.columns == json.dumps({INDEX_IDENTIFIER: {"hidden": False}})
+
+    @patch("streamlit.elements.widgets.data_editor._LOGGER")
+    def test_hide_index_true_dynamic_non_range_index_logs_warning(
+        self, mock_logger: MagicMock
+    ):
+        """Test that hide_index=True with dynamic rows and non-range index logs a warning."""
+        df = pd.DataFrame({"a": [1, 2]}, index=["row_0", "row_1"])
+
+        st.data_editor(df, hide_index=True, num_rows="dynamic")
+
+        mock_logger.warning.assert_called_once()
+        warning_message = mock_logger.warning.call_args[0][0]
+        assert "hide_index=True" in warning_message
+        assert "num_rows='dynamic'" in warning_message
 
     @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
     def test_inside_form(self):
@@ -1064,3 +1107,14 @@ class DataEditorTest(DeltaGeneratorTestCase):
             == HeightConfigFields.USE_STRETCH.value
         )
         assert el.height_config.use_stretch is True
+
+    def test_height_content(self):
+        """Test that height='content' sets heightConfig correctly."""
+        st.data_editor(pd.DataFrame({"a": [1, 2, 3]}), height="content")
+
+        el = self.get_delta_from_queue().new_element
+        assert (
+            el.height_config.WhichOneof("height_spec")
+            == HeightConfigFields.USE_CONTENT.value
+        )
+        assert el.height_config.use_content is True

@@ -15,7 +15,10 @@
 from __future__ import annotations
 
 import mimetypes
+import os
+import tempfile
 import threading
+from pathlib import Path
 from unittest import mock
 
 import tornado.testing
@@ -185,6 +188,61 @@ class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
 
         assert response.code == 404
         assert response.body == b"read error"
+
+    def test_directory_request_results_in_read_error(self) -> None:
+        """Requesting a directory (trailing slash) should result in 404 read error."""
+
+        with mock.patch(MOCK_IS_DIR_PATH):
+            declare_component("test", path=PATH)
+
+        response = self._request_component(
+            "tests.streamlit.web.server.component_request_handler_test.test/"
+        )
+
+        assert response.code == 404
+        assert response.body == b"read error"
+
+    def test_missing_file_segment_results_in_read_error(self) -> None:
+        """Requesting component without a file should result in 404 read error."""
+
+        with mock.patch(MOCK_IS_DIR_PATH):
+            declare_component("test", path=PATH)
+
+        response = self._request_component(
+            "tests.streamlit.web.server.component_request_handler_test.test"
+        )
+
+        assert response.code == 404
+        assert response.body == b"read error"
+
+    def test_symlink_escape_outside_component_root_forbidden(self) -> None:
+        """Symlink inside component directory pointing outside should be forbidden (403)."""
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            comp_root = Path(tmpdir)
+            comp_root.mkdir(parents=True, exist_ok=True)
+
+            outside_dir = Path(tempfile.mkdtemp())
+            outside_file = outside_dir / "outside.js"
+            outside_file.write_text("console.log('outside');")
+
+            link_path = comp_root / "link_out.js"
+            try:
+                os.symlink(outside_file, link_path)
+            except (OSError, NotImplementedError):
+                self.skipTest("Symlinks not supported in this environment")
+
+            # Register the component with the real directory
+            declare_component("symlink", path=str(comp_root))
+
+            # Use the fully-qualified component name pattern used in other tests
+            fq_comp = (
+                "tests.streamlit.web.server.component_request_handler_test.symlink"
+            )
+            response = self._request_component(f"{fq_comp}/link_out.js")
+
+            assert response.code == 403
+            assert response.body == b"forbidden"
 
     def test_support_binary_files_request(self):
         """Test support for binary files reads."""

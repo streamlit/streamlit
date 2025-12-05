@@ -47,6 +47,7 @@ from streamlit.elements.lib.utils import (
 )
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.DateInput_pb2 import DateInput as DateInputProto
+from streamlit.proto.DateTimeInput_pb2 import DateTimeInput as DateTimeInputProto
 from streamlit.proto.TimeInput_pb2 import TimeInput as TimeInputProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
@@ -64,6 +65,8 @@ if TYPE_CHECKING:
 
 # Type for things that point to a specific time (even if a default time, though not None).
 TimeValue: TypeAlias = time | datetime | str | Literal["now"]
+DateTimeScalarValue: TypeAlias = datetime | date | time | str | Literal["now"]
+DateTimeValue: TypeAlias = DateTimeScalarValue | None
 
 # Type for things that point to a specific date (even if a default date, including None).
 NullableScalarDateValue: TypeAlias = date | datetime | str | Literal["today"] | None
@@ -80,6 +83,9 @@ DEFAULT_STEP_MINUTES: Final = 15
 ALLOWED_DATE_FORMATS: Final = re.compile(
     r"^(YYYY[/.\-]MM[/.\-]DD|DD[/.\-]MM[/.\-]YYYY|MM[/.\-]DD[/.\-]YYYY)$"
 )
+_DATETIME_UI_FORMAT: Final = "%Y/%m/%d, %H:%M"
+_DEFAULT_MIN_BOUND_TIME: Final = time(hour=0, minute=0)
+_DEFAULT_MAX_BOUND_TIME: Final = time(hour=23, minute=59)
 
 
 def _convert_timelike_to_time(value: TimeValue) -> time:
@@ -158,7 +164,7 @@ def _parse_date_value(value: DateValue) -> tuple[list[date] | None, bool]:
             "0 - 2 date/datetime values"
         )
 
-    parsed_dates = [_convert_datelike_to_date(v) for v in value_tuple]
+    parsed_dates = [_convert_datelike_to_date(v) for v in value_tuple]  # ty: ignore[invalid-argument-type]
 
     return parsed_dates, is_range
 
@@ -199,6 +205,171 @@ def _parse_max_date(
             "DateInput max should either be a date/datetime or None"
         )
     return parsed_max_date
+
+
+def _normalize_time(value: time) -> time:
+    """Return a time without seconds, microseconds, or timezone info."""
+    return value.replace(second=0, microsecond=0, tzinfo=None)
+
+
+def _normalize_datetime_value(value: datetime) -> datetime:
+    """Return a datetime without seconds, microseconds, or timezone info."""
+    if value.tzinfo is not None:
+        value = value.replace(tzinfo=None)
+    return value.replace(second=0, microsecond=0)
+
+
+def _combine_date_time(component_date: date, component_time: time) -> datetime:
+    """Combine a date and time into a normalized datetime."""
+    return datetime.combine(component_date, _normalize_time(component_time))
+
+
+def _try_parse_datetime_with_format(value: str, fmt: str) -> datetime | None:
+    """Try to parse a datetime string with a specific format."""
+    try:
+        return datetime.strptime(value, fmt)
+    except ValueError:
+        return None
+
+
+def _convert_datetimelike_to_datetime(
+    value: DateTimeScalarValue,
+    *,
+    fallback_date: date,
+    fallback_time: time,
+) -> datetime:
+    """Convert supported datetime inputs into a normalized datetime."""
+    fallback_time = _normalize_time(fallback_time)
+
+    if value == "now":
+        return _normalize_datetime_value(datetime.now())
+
+    if isinstance(value, datetime):
+        return _normalize_datetime_value(value)
+
+    if isinstance(value, date) and not isinstance(value, datetime):
+        return _combine_date_time(value, fallback_time)
+
+    if isinstance(value, time):
+        return _combine_date_time(fallback_date, value)
+
+    if isinstance(value, str):
+        stripped_value = value.strip()
+
+        try:
+            parsed_dt = datetime.fromisoformat(stripped_value)
+            return _normalize_datetime_value(parsed_dt)
+        except ValueError:
+            pass
+
+        for fmt in (
+            "%Y/%m/%d %H:%M",
+            "%Y/%m/%d %H:%M:%S",
+            "%Y-%m-%d %H:%M",
+            "%Y-%m-%d %H:%M:%S",
+        ):
+            maybe_parsed_dt = _try_parse_datetime_with_format(stripped_value, fmt)
+            if maybe_parsed_dt is not None:
+                return _normalize_datetime_value(maybe_parsed_dt)
+
+        try:
+            parsed_date = date.fromisoformat(stripped_value)
+            return _combine_date_time(parsed_date, fallback_time)
+        except ValueError:
+            pass
+
+        try:
+            parsed_time = time.fromisoformat(stripped_value)
+            return _combine_date_time(fallback_date, parsed_time)
+        except ValueError:
+            pass
+
+    raise StreamlitAPIException(
+        "The type of value should be one of datetime, date, time, ISO string, or 'now'."
+    )
+
+
+def _default_min_datetime(base_date: date) -> datetime:
+    return _combine_date_time(
+        adjust_years(base_date, years=-10), _DEFAULT_MIN_BOUND_TIME
+    )
+
+
+def _default_max_datetime(base_date: date) -> datetime:
+    return _combine_date_time(
+        adjust_years(base_date, years=10), _DEFAULT_MAX_BOUND_TIME
+    )
+
+
+def _datetime_to_proto_string(value: datetime) -> str:
+    return _normalize_datetime_value(value).strftime(_DATETIME_UI_FORMAT)
+
+
+@dataclass(frozen=True)
+class _DateTimeInputValues:
+    value: datetime | None
+    min: datetime
+    max: datetime
+
+    @classmethod
+    def from_raw_values(
+        cls,
+        value: DateTimeValue,
+        min_value: DateTimeValue,
+        max_value: DateTimeValue,
+    ) -> _DateTimeInputValues:
+        parsed_value = (
+            None
+            if value is None
+            else _convert_datetimelike_to_datetime(
+                value,
+                fallback_date=date.today(),
+                fallback_time=_DEFAULT_MIN_BOUND_TIME,
+            )
+        )
+
+        base_date_for_bounds = (
+            parsed_value.date() if parsed_value is not None else date.today()
+        )
+
+        parsed_min = (
+            _default_min_datetime(base_date_for_bounds)
+            if min_value is None
+            else _convert_datetimelike_to_datetime(
+                min_value,
+                fallback_date=base_date_for_bounds,
+                fallback_time=_DEFAULT_MIN_BOUND_TIME,
+            )
+        )
+
+        parsed_max = (
+            _default_max_datetime(base_date_for_bounds)
+            if max_value is None
+            else _convert_datetimelike_to_datetime(
+                max_value,
+                fallback_date=base_date_for_bounds,
+                fallback_time=_DEFAULT_MAX_BOUND_TIME,
+            )
+        )
+
+        return cls(
+            value=parsed_value,
+            min=parsed_min,
+            max=parsed_max,
+        )
+
+    def __post_init__(self) -> None:
+        if self.min > self.max:
+            raise StreamlitAPIException(
+                f"The `min_value`, set to {self.min}, shouldn't be larger "
+                f"than the `max_value`, set to {self.max}."
+            )
+
+        if self.value is not None and (self.value < self.min or self.value > self.max):
+            raise StreamlitAPIException(
+                f"The default `value` of {self.value} must lie between the `min_value` "
+                f"of {self.min} and the `max_value` of {self.max}, inclusively."
+            )
 
 
 @dataclass(frozen=True)
@@ -256,6 +427,30 @@ class _DateInputValues:
                     f"must lie between the `min_value` of {self.min} "
                     f"and the `max_value` of {self.max}, inclusively."
                 )
+
+
+@dataclass
+class DateTimeInputSerde:
+    value: datetime | None
+    min: datetime
+    max: datetime
+
+    def deserialize(self, ui_value: list[str] | None) -> datetime | None:
+        if ui_value is not None and len(ui_value) > 0:
+            deserialized = _normalize_datetime_value(
+                datetime.strptime(ui_value[0], _DATETIME_UI_FORMAT)
+            )
+            # Validate against min/max bounds
+            # If the value is out of bounds, return the previous valid value
+            if deserialized < self.min or deserialized > self.max:
+                return self.value
+            return deserialized
+        return self.value
+
+    def serialize(self, v: datetime | None) -> list[str]:
+        if v is None:
+            return []
+        return [_datetime_to_proto_string(v)]
 
 
 @dataclass
@@ -391,9 +586,9 @@ class TimeWidgetsMixin:
             - ``"now"`` (default): The widget initializes with the current time.
             - A ``datetime.time`` or ``datetime.datetime`` object: The widget
               initializes with the given time, ignoring any date if included.
-            - An ISO-formatted time ("hh:mm", "hh:mm:ss", or "hh:mm:ss.sss") or
-              datetime ("YYYY-MM-DD hh:mm:ss") string: The widget initializes
-              with the given time, ignoring any date if included.
+            - An ISO-formatted time (hh:mm[:ss.sss]) or datetime
+              (YYYY-MM-DD hh:mm[:ss]) string: The widget initializes with the
+              given time, ignoring any date if included.
             - ``None``: The widget initializes with no time and returns
               ``None`` until the user selects a time.
 
@@ -431,8 +626,9 @@ class TimeWidgetsMixin:
             If this is ``"collapsed"``, Streamlit displays no label or spacer.
 
         step : int or timedelta
-            The stepping interval in seconds. Defaults to 900, i.e. 15 minutes.
-            You can also pass a datetime.timedelta object.
+            The stepping interval in seconds. This defaults to ``900`` (15
+            minutes). You can also pass a ``datetime.timedelta`` object. The
+            value must be between 60 seconds and 23 hours.
 
         width : "stretch" or int
             The width of the time input widget. This can be one of the following:
@@ -452,6 +648,8 @@ class TimeWidgetsMixin:
 
         Example
         -------
+        **Example 1: Basic usage**
+
         >>> import datetime
         >>> import streamlit as st
         >>>
@@ -461,6 +659,8 @@ class TimeWidgetsMixin:
         .. output::
            https://doc-time-input.streamlit.app/
            height: 260px
+
+        **Example 2: Empty initial value**
 
         To initialize an empty time input, use ``None`` as the value:
 
@@ -588,6 +788,372 @@ class TimeWidgetsMixin:
         return widget_state.value
 
     @overload
+    def datetime_input(
+        self,
+        label: str,
+        value: None,
+        min_value: DateTimeValue = None,
+        max_value: DateTimeValue = None,
+        *,  # keyword-only arguments:
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        format: str = "YYYY/MM/DD",
+        step: int | timedelta = timedelta(minutes=DEFAULT_STEP_MINUTES),
+        disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
+        width: WidthWithoutContent = "stretch",
+    ) -> datetime | None: ...
+
+    @overload
+    def datetime_input(
+        self,
+        label: str,
+        value: DateTimeScalarValue = "now",
+        min_value: DateTimeValue = None,
+        max_value: DateTimeValue = None,
+        *,  # keyword-only arguments:
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        format: str = "YYYY/MM/DD",
+        step: int | timedelta = timedelta(minutes=DEFAULT_STEP_MINUTES),
+        disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
+        width: WidthWithoutContent = "stretch",
+    ) -> datetime: ...
+
+    @gather_metrics("datetime_input")
+    def datetime_input(
+        self,
+        label: str,
+        value: DateTimeValue = "now",
+        min_value: DateTimeValue = None,
+        max_value: DateTimeValue = None,
+        *,  # keyword-only arguments:
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        format: str = "YYYY/MM/DD",
+        step: int | timedelta = timedelta(minutes=DEFAULT_STEP_MINUTES),
+        disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
+        width: WidthWithoutContent = "stretch",
+    ) -> datetime | None:
+        r"""Display a date and time input widget.
+
+        Parameters
+        ----------
+        label : str
+            A short label explaining to the user what this datetime input is for.
+            The label can optionally contain GitHub-flavored Markdown of the
+            following types: Bold, Italics, Strikethroughs, Inline Code, Links,
+            and Images. Images display like icons, with a max height equal to
+            the font height.
+
+            Unsupported Markdown elements are unwrapped so only their children
+            (text contents) render. Display unsupported elements as literal
+            characters by backslash-escaping them. E.g.,
+            ``"1\. Not an ordered list"``.
+
+            See the ``body`` parameter of |st.markdown|_ for additional,
+            supported Markdown directives.
+
+            For accessibility reasons, you should never set an empty label, but
+            you can hide it with ``label_visibility`` if needed. In the future,
+            we may disallow empty labels by raising an exception.
+
+            .. |st.markdown| replace:: ``st.markdown``
+            .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
+
+        value : "now", datetime.datetime, datetime.date, datetime.time, str, or None
+            The value of this widget when it first renders. This can be one of
+            the following:
+
+            - ``"now"`` (default): The widget initializes with the current date and time.
+            - A ``datetime.datetime`` object: The widget initializes with the given
+              datetime, stripping any timezone information.
+            - A ``datetime.date`` object: The widget initializes with the given date
+              at 00:00.
+            - A ``datetime.time`` object: The widget initializes with today's date
+              and the provided time.
+            - An ISO-formatted datetime (YYYY-MM-DD hh:mm[:ss]) or date/time
+              string: The widget initializes with the parsed value.
+            - ``None``: The widget initializes with no value and returns ``None``
+              until the user selects a datetime.
+
+        min_value : "now", datetime.datetime, datetime.date, datetime.time, str, or None
+            The minimum selectable datetime. This can be any of the datetime
+            types accepted by ``value``.
+
+            If this is ``None`` (default), the minimum selectable datetime is
+            ten years before the initial value. If no initial value is set, the
+            minimum selectable datetime is ten years before today at 00:00.
+
+        max_value : "now", datetime.datetime, datetime.date, datetime.time, str, or None
+            The maximum selectable datetime. This can be any of the datetime
+            types accepted by ``value``.
+
+            If this is ``None`` (default), the maximum selectable datetime is
+            ten years after the initial value. If no initial value is set, the
+            maximum selectable datetime is ten years after today at 23:59.
+
+        key : str or int
+            An optional string or integer to use as the unique key for the widget.
+            If this is omitted, a key will be generated for the widget based on its
+            content. No two widgets may have the same key.
+
+        help : str or None
+            A tooltip that gets displayed next to the widget label. Streamlit
+            only displays the tooltip when ``label_visibility="visible"``. If
+            this is ``None`` (default), no tooltip is displayed.
+
+            The tooltip can optionally contain GitHub-flavored Markdown,
+            including the Markdown directives described in the ``body``
+            parameter of ``st.markdown``.
+
+        on_change : callable
+            An optional callback invoked when this datetime_input's value changes.
+
+        args : list or tuple
+            An optional list or tuple of args to pass to the callback.
+
+        kwargs : dict
+            An optional dict of kwargs to pass to the callback.
+
+        format : str
+            A format string controlling how the interface displays dates.
+            Supports ``"YYYY/MM/DD"`` (default), ``"DD/MM/YYYY"``, or ``"MM/DD/YYYY"``.
+            You may also use a period (.) or hyphen (-) as separators. This
+            doesn't affect the time format.
+
+        step : int or timedelta
+            The stepping interval in seconds. This defaults to ``900`` (15
+            minutes). You can also pass a ``datetime.timedelta`` object. The
+            value must be between 60 seconds and 23 hours.
+
+        disabled : bool
+            An optional boolean that disables the widget if set to ``True``.
+            The default is ``False``.
+
+        label_visibility : "visible", "hidden", or "collapsed"
+            The visibility of the label. The default is ``"visible"``. If this
+            is ``"hidden"``, Streamlit displays an empty spacer instead of the
+            label, which can help keep the widget aligned with other widgets.
+            If this is ``"collapsed"``, Streamlit displays no label or spacer.
+
+        width : "stretch" or int
+            The width of the widget. This can be one of the following:
+
+            - ``"stretch"`` (default): The width of the widget matches the width
+              of the parent container.
+            - An integer specifying the width in pixels: The widget has a fixed
+              width. If the specified width is greater than the width of the
+              parent container, the widget matches the container width.
+
+        Returns
+        -------
+        datetime.datetime or None
+            The current value of the datetime input widget (without timezone)
+            or ``None`` if no value has been selected.
+
+        Examples
+        --------
+        **Example 1: Basic usage**
+
+        >>> import datetime
+        >>> import streamlit as st
+        >>>
+        >>> event_time = st.datetime_input(
+        ...     "Schedule your event",
+        ...     datetime.datetime(2025, 11, 19, 16, 45),
+        ... )
+        >>> st.write("Event scheduled for", event_time)
+
+        .. output::
+           https://doc-datetime-input.streamlit.app/
+           height: 500px
+
+        **Example 2: Empty initial value**
+
+        To initialize an empty datetime input, use ``None`` as the value:
+
+        >>> import datetime
+        >>> import streamlit as st
+        >>>
+        >>> event_time = st.datetime_input("Schedule your event", value=None)
+        >>> st.write("Event scheduled for", event_time)
+
+        .. output::
+           https://doc-datetime-input-empty.streamlit.app/
+           height: 500px
+
+        """
+        ctx = get_script_run_ctx()
+        return self._datetime_input(
+            label=label,
+            value=value,
+            min_value=min_value,
+            max_value=max_value,
+            key=key,
+            help=help,
+            on_change=on_change,
+            args=args,
+            kwargs=kwargs,
+            format=format,
+            step=step,
+            disabled=disabled,
+            label_visibility=label_visibility,
+            width=width,
+            ctx=ctx,
+        )
+
+    def _datetime_input(
+        self,
+        label: str,
+        value: DateTimeValue = "now",
+        min_value: DateTimeValue = None,
+        max_value: DateTimeValue = None,
+        *,  # keyword-only arguments:
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        format: str = "YYYY/MM/DD",
+        step: int | timedelta = timedelta(minutes=DEFAULT_STEP_MINUTES),
+        disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
+        width: WidthWithoutContent = "stretch",
+        ctx: ScriptRunContext | None = None,
+    ) -> datetime | None:
+        key = to_key(key)
+
+        check_widget_policies(
+            self.dg,
+            key,
+            on_change,
+            default_value=value if value != "now" else None,
+        )
+        maybe_raise_label_warnings(label, label_visibility)
+
+        datetime_values = _DateTimeInputValues.from_raw_values(
+            value=value,
+            min_value=min_value,
+            max_value=max_value,
+        )
+
+        default_value = datetime_values.value
+        min_value_proto = _datetime_to_proto_string(datetime_values.min)
+        max_value_proto = _datetime_to_proto_string(datetime_values.max)
+
+        if isinstance(value, (datetime, date, time)):
+            value_for_id: Any = (
+                None
+                if default_value is None
+                else _datetime_to_proto_string(default_value)
+            )
+        else:
+            value_for_id = value
+
+        element_id = compute_and_register_element_id(
+            "date_time_input",
+            user_key=key,
+            # Ensure stable IDs when the key is provided; whitelist parameters that
+            # affect the selectable range or formatting.
+            key_as_main_identity={"min_value", "max_value", "format", "step"},
+            dg=self.dg,
+            label=label,
+            value=value_for_id,
+            min_value=min_value_proto,
+            max_value=max_value_proto,
+            help=help,
+            format=format,
+            step=step,
+            width=width,
+        )
+        del value
+
+        if not bool(ALLOWED_DATE_FORMATS.match(format)):
+            raise StreamlitAPIException(
+                f"The provided format (`{format}`) is not valid. DateTimeInput format "
+                "should be one of `YYYY/MM/DD`, `DD/MM/YYYY`, or `MM/DD/YYYY` "
+                "and can also use a period (.) or hyphen (-) as separators."
+            )
+
+        if not isinstance(step, (int, timedelta)):
+            raise StreamlitAPIException(
+                f"`step` can only be `int` or `timedelta` but {type(step)} is provided."
+            )
+        step_seconds = (
+            int(step.total_seconds()) if isinstance(step, timedelta) else step
+        )
+        if step_seconds < 60 or step_seconds > timedelta(hours=23).seconds:
+            raise StreamlitAPIException(
+                f"`step` must be between 60 seconds and 23 hours but is currently set to {step_seconds} seconds."
+            )
+
+        session_state = get_session_state().filtered_state
+        default_value_for_proto = default_value
+        if key is not None and key in session_state and session_state[key] is None:
+            default_value_for_proto = None
+
+        date_time_input_proto = DateTimeInputProto()
+        date_time_input_proto.id = element_id
+        date_time_input_proto.label = label
+        if default_value_for_proto is not None:
+            date_time_input_proto.default[:] = [
+                _datetime_to_proto_string(default_value_for_proto)
+            ]
+        date_time_input_proto.min = min_value_proto
+        date_time_input_proto.max = max_value_proto
+        date_time_input_proto.form_id = current_form_id(self.dg)
+        date_time_input_proto.step = step_seconds
+        date_time_input_proto.disabled = disabled
+        date_time_input_proto.label_visibility.value = get_label_visibility_proto_value(
+            label_visibility
+        )
+        date_time_input_proto.format = format
+        date_time_input_proto.is_range = False
+
+        if help is not None:
+            date_time_input_proto.help = dedent(help)
+
+        serde = DateTimeInputSerde(
+            value=default_value_for_proto,
+            min=datetime_values.min,
+            max=datetime_values.max,
+        )
+        widget_state = register_widget(
+            date_time_input_proto.id,
+            on_change_handler=on_change,
+            args=args,
+            kwargs=kwargs,
+            deserializer=serde.deserialize,
+            serializer=serde.serialize,
+            ctx=ctx,
+            value_type="string_array_value",
+        )
+
+        if widget_state.value_changed:
+            date_time_input_proto.value[:] = serde.serialize(widget_state.value)
+            date_time_input_proto.set_value = True
+
+        validate_width(width)
+        layout_config = LayoutConfig(width=width)
+
+        self.dg._enqueue(
+            "date_time_input", date_time_input_proto, layout_config=layout_config
+        )
+        return widget_state.value
+
+    @overload
     def date_input(
         self,
         label: str,
@@ -701,8 +1267,8 @@ class TimeWidgetsMixin:
             - ``"today"`` (default): The widget initializes with the current date.
             - A ``datetime.date`` or ``datetime.datetime`` object: The widget
               initializes with the given date, ignoring any time if included.
-            - An ISO-formatted date ("YYYY-MM-DD") or datetime
-              ("YYYY-MM-DD hh:mm:ss") string: The widget initializes with the
+            - An ISO-formatted date (YYYY-MM-DD) or datetime
+              (YYYY-MM-DD hh:mm:ss) string: The widget initializes with the
               given date, ignoring any time if included.
             - A list or tuple with up to two of the above: The widget will
               initialize with the given date interval and return a tuple of the
@@ -757,7 +1323,7 @@ class TimeWidgetsMixin:
 
         format : str
             A format string controlling how the interface should display dates.
-            Supports "YYYY/MM/DD" (default), "DD/MM/YYYY", or "MM/DD/YYYY".
+            Supports ``"YYYY/MM/DD"`` (default), ``"DD/MM/YYYY"``, or ``"MM/DD/YYYY"``.
             You may also use a period (.) or hyphen (-) as separators.
 
         disabled : bool
@@ -788,6 +1354,8 @@ class TimeWidgetsMixin:
 
         Examples
         --------
+        **Example 1: Basic usage**
+
         >>> import datetime
         >>> import streamlit as st
         >>>
@@ -797,6 +1365,8 @@ class TimeWidgetsMixin:
         .. output::
            https://doc-date-input.streamlit.app/
            height: 380px
+
+        **Example 2: Date range**
 
         >>> import datetime
         >>> import streamlit as st
@@ -818,6 +1388,8 @@ class TimeWidgetsMixin:
         .. output::
            https://doc-date-input1.streamlit.app/
            height: 380px
+
+        **Example 3: Empty initial value**
 
         To initialize an empty date input, use ``None`` as the value:
 

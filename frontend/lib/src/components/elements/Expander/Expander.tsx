@@ -18,9 +18,8 @@ import React, { memo, ReactElement, useEffect, useRef, useState } from "react"
 
 import { Block as BlockProto } from "@streamlit/protobuf"
 
-import { DynamicIcon, StyledSpinnerIcon } from "~lib/components/shared/Icon"
+import { DynamicIcon } from "~lib/components/shared/Icon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
-import { IconSize } from "~lib/theme"
 import { notNullOrUndefined } from "~lib/util/utils"
 
 import {
@@ -50,34 +49,17 @@ export interface ExpanderIconProps {
 export const ExpanderIcon = (props: ExpanderIconProps): ReactElement => {
   const { icon } = props
 
-  const isMaterialIcon = icon?.startsWith(":material")
-  // Material icons need to be larger to render similar size of emojis
-  const iconSize = isMaterialIcon ? "lg" : "base"
-  const iconMargin = isMaterialIcon ? "0 sm 0 0" : "0 md 0 0"
-
-  const iconProps = {
-    size: iconSize as IconSize,
-    margin: iconMargin,
-    padding: "0",
-  }
-
   const statusIconTestIds: Record<string, string> = {
     ":material/check:": "stExpanderIconCheck",
     ":material/error:": "stExpanderIconError",
-  }
-
-  if (icon === "spinner") {
-    return (
-      <StyledSpinnerIcon data-testid="stExpanderIconSpinner" {...iconProps} />
-    )
+    spinner: "stExpanderIconSpinner",
   }
 
   return icon ? (
     <DynamicIcon
-      color="inherit"
+      size="lg"
       iconValue={icon}
       testid={statusIconTestIds[icon] || "stExpanderIcon"}
-      {...iconProps}
     />
   ) : (
     <></>
@@ -106,6 +88,7 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
   useEffect(() => {
     // Only apply the expanded state if it was actually set in the proto.
     if (notNullOrUndefined(initialExpanded)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- TODO: Do not set state in effect
       setExpanded(initialExpanded)
 
       // We manage the open attribute via the detailsRef and not with React state
@@ -251,15 +234,12 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
           <StyledSummaryHeading>
             {showChevron && (
               <DynamicIcon
-                color="inherit"
                 iconValue={
                   expanded
                     ? ":material/keyboard_arrow_down:"
                     : ":material/keyboard_arrow_right:"
                 }
                 size="lg"
-                margin="0 sm 0 0"
-                padding="0"
               />
             )}
             {showUserIcon && <ExpanderIcon icon={element.icon} />}
