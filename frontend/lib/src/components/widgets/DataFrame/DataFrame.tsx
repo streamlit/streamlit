@@ -1001,15 +1001,16 @@ function DataFrame({
               // Support deleting cells & rows:
               onDelete,
             })}
-          // If element allows adding rows (DYNAMIC or ADD_ONLY), enable trailing row:
+          // If element allows adding rows (DYNAMIC or ADD_ONLY), enable trailing row
+          // and deactivate sorting:
           {...(canAddRows && {
-            // Support adding rows:
             trailingRowOptions: {
               sticky: false,
               tint: true,
             },
-            // Support adding rows:
             onRowAppended,
+            // Deactivate sorting for modes that allow adding rows:
+            onHeaderClicked: undefined,
           })}
           // If element allows deleting rows (DYNAMIC or DELETE_ONLY), enable row selection:
           {...(canDeleteRows && {
@@ -1023,10 +1024,6 @@ function DataFrame({
             },
             rowSelectionMode: "multi",
             rowSelect: disabled ? "none" : "multi",
-          })}
-          // Deactivate sorting for modes that allow adding rows (DYNAMIC, ADD_ONLY):
-          {...(canAddRows && {
-            onHeaderClicked: undefined,
           })}
         />
       </Resizable>
