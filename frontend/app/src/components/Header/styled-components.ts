@@ -97,6 +97,9 @@ export const StyledHeaderContent = styled.div(() => ({
 export const StyledHeaderLeftSection = styled.div(() => ({
   display: "flex",
   alignItems: "center",
+  // Prevent the logo area from shrinking when TopNav's overflow container expands.
+  // Without this, the logo would shrink due to its maxWidth: 100% style.
+  flexShrink: 0,
 }))
 
 export const StyledHeaderRightSection = styled.div(({ theme }) => ({

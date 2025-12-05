@@ -31,7 +31,7 @@ import { getDataArray } from "./arrowUtils"
 
 describe("Types of dataframe indexes as x axis", () => {
   describe("Supported", () => {
-    test("datetimetz", () => {
+    it("datetimetz", () => {
       const mockElement = { data: DATETIMETZ }
       const q = new Quiver(mockElement)
 
@@ -57,7 +57,7 @@ describe("Types of dataframe indexes as x axis", () => {
       ])
     })
 
-    test("date", () => {
+    it("date", () => {
       const mockElement = { data: DATE }
       const q = new Quiver(mockElement)
 
@@ -75,7 +75,7 @@ describe("Types of dataframe indexes as x axis", () => {
       ])
     })
 
-    test("datetime", () => {
+    it("datetime", () => {
       const mockElement = { data: DATETIME }
       const q = new Quiver(mockElement)
 
@@ -93,7 +93,7 @@ describe("Types of dataframe indexes as x axis", () => {
       ])
     })
 
-    test("float64", () => {
+    it("float64", () => {
       const mockElement = { data: FLOAT64 }
       const q = new Quiver(mockElement)
 
@@ -103,7 +103,7 @@ describe("Types of dataframe indexes as x axis", () => {
       ])
     })
 
-    test("int64", () => {
+    it("int64", () => {
       const mockElement = { data: INT64 }
       const q = new Quiver(mockElement)
       expect(getDataArray(q)).toEqual([
@@ -120,7 +120,7 @@ describe("Types of dataframe indexes as x axis", () => {
       ])
     })
 
-    test("range", () => {
+    it("range", () => {
       const mockElement = { data: RANGE }
       const q = new Quiver(mockElement)
 
@@ -130,7 +130,7 @@ describe("Types of dataframe indexes as x axis", () => {
       ])
     })
 
-    test("uint64", () => {
+    it("uint64", () => {
       const mockElement = { data: UINT64 }
       const q = new Quiver(mockElement)
       expect(getDataArray(q)).toEqual([
@@ -149,7 +149,7 @@ describe("Types of dataframe indexes as x axis", () => {
   })
 
   describe("Unsupported", () => {
-    test("categorical", () => {
+    it("categorical", () => {
       const mockElement = { data: CATEGORICAL }
       const q = new Quiver(mockElement)
       expect(getDataArray(q)).toEqual([
@@ -158,7 +158,7 @@ describe("Types of dataframe indexes as x axis", () => {
       ])
     })
 
-    test("unicode", () => {
+    it("unicode", () => {
       const mockElement = { data: UNICODE }
       const q = new Quiver(mockElement)
 
