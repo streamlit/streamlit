@@ -104,9 +104,11 @@ jobs:
       - name: Comment on PR if snapshots found
         if: failure() && github.event_name == 'pull_request'
         uses: actions/github-script@v8
+        env:
+          SNAPSHOT_OUTPUT: ${{ steps.check-snapshots.outputs.snapshot_list }}
         with:
           script: |
-            const snapshotOutput = `${{ steps.check-snapshots.outputs.snapshot_list }}`;
+            const snapshotOutput = process.env.SNAPSHOT_OUTPUT || '';
 
             // Extract the orphaned snapshots summary
             const lines = snapshotOutput.split('\n');
