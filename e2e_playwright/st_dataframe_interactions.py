@@ -108,6 +108,38 @@ st.write("Edited DF:", str(result))
 
 st.dataframe(fullscreen_df, width="content")
 
+st.header("Test num_rows modes")
+
+# Data editor with num_rows="add" - can only add rows, cannot delete rows
+st.subheader("Add-only mode")
+st.container(key="add-only-editor").data_editor(
+    pd.DataFrame(
+        {"name": ["Alice", "Bob"], "age": [25, 30]},
+    ),
+    num_rows="add",
+    hide_index=True,
+    use_container_width=False,
+    column_config={
+        "name": st.column_config.Column(width="small"),
+        "age": st.column_config.Column(width="small"),
+    },
+)
+
+# Data editor with num_rows="delete" - can only delete rows, cannot add rows
+st.subheader("Delete-only mode")
+st.container(key="delete-only-editor").data_editor(
+    pd.DataFrame(
+        {"name": ["Alice", "Bob", "Charlie"], "age": [25, 30, 35]},
+    ),
+    num_rows="delete",
+    hide_index=True,
+    use_container_width=False,
+    column_config={
+        "name": st.column_config.Column(width="small"),
+        "age": st.column_config.Column(width="small"),
+    },
+)
+
 st.header("Column menu interaction")
 
 st.container(key="column-menu-test").dataframe(

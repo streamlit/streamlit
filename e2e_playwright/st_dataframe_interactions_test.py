@@ -32,6 +32,7 @@ from e2e_playwright.shared.dataframe_utils import (
     get_open_cell_overlay,
     open_column_menu,
     retry_interaction,
+    select_row,
     unfocus_dataframe,
 )
 from e2e_playwright.shared.react18_utils import (
@@ -863,6 +864,95 @@ def test_column_pinning_via_ui(app: Page, assert_snapshot: ImageCompareFunction)
     app.get_by_test_id("stDataFrameColumnMenu").get_by_text("Unpin column").click()
     unfocus_dataframe(app)
     assert_snapshot(df, name="st_dataframe-column_unpinned")
+
+
+def test_data_editor_add_only_mode(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that num_rows='add' mode only allows adding rows, not deleting."""
+    add_only_editor = (
+        get_element_by_key(app, "add-only-editor").get_by_test_id("stDataFrame").first
+    )
+    expect(add_only_editor).to_be_visible()
+    expect_canvas_to_be_stable(add_only_editor)
+
+    toolbar = add_only_editor.get_by_test_id("stElementToolbar")
+
+    # Initial height with 2 rows
+    initial_height = add_only_editor.evaluate("el => el.offsetHeight")
+
+    # Hover to activate toolbar
+    add_only_editor.hover()
+    expect(toolbar).to_have_css("opacity", "1")
+
+    # Verify "Add row" button exists
+    add_row_button = toolbar.get_by_test_id("stElementToolbarButton").get_by_label(
+        "Add row"
+    )
+    expect(add_row_button).to_be_visible()
+
+    # Add a row via toolbar
+    add_row_button.click()
+    wait_for_app_run(app)
+
+    # Verify height increased (row was added)
+    new_height = add_only_editor.evaluate("el => el.offsetHeight")
+    assert new_height > initial_height, "Height should increase after adding a row"
+
+    # Take a snapshot to check if the row was added:
+    assert_snapshot(add_only_editor, name="st_data_editor-add_only_mode")
+
+    # Now select a row and verify delete button is NOT shown
+    select_row(add_only_editor, 1)
+
+    # The toolbar should NOT have a delete button in add-only mode
+    delete_button = toolbar.get_by_test_id("stElementToolbarButton").get_by_label(
+        "Delete row(s)"
+    )
+    expect(delete_button).not_to_be_visible()
+
+
+def test_data_editor_delete_only_mode(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that num_rows='delete' mode only allows deleting rows, not adding."""
+    delete_only_editor = (
+        get_element_by_key(app, "delete-only-editor")
+        .get_by_test_id("stDataFrame")
+        .first
+    )
+    expect(delete_only_editor).to_be_visible()
+    expect_canvas_to_be_stable(delete_only_editor)
+
+    toolbar = delete_only_editor.get_by_test_id("stElementToolbar")
+
+    # Initial height with 3 rows
+    initial_height = delete_only_editor.evaluate("el => el.offsetHeight")
+
+    # Hover to activate toolbar
+    delete_only_editor.hover()
+    expect(toolbar).to_have_css("opacity", "1")
+
+    # Verify "Add row" button does NOT exist in delete-only mode
+    add_row_button = toolbar.get_by_test_id("stElementToolbarButton").get_by_label(
+        "Add row"
+    )
+    expect(add_row_button).not_to_be_visible()
+
+    # Select a row
+    select_row(delete_only_editor, 1)
+
+    # Verify "Delete row(s)" button exists
+    delete_button = toolbar.get_by_test_id("stElementToolbarButton").get_by_label(
+        "Delete row(s)"
+    )
+    expect(delete_button).to_be_visible()
+
+    # Delete the row
+    delete_button.click()
+    wait_for_app_run(app)
+
+    # Verify height decreased (row was deleted)
+    new_height = delete_only_editor.evaluate("el => el.offsetHeight")
+    assert new_height < initial_height, "Height should decrease after deleting a row"
+
+    assert_snapshot(delete_only_editor, name="st_data_editor-delete_only_mode")
 
 
 # TODO(lukasmasuch): Add additional interactive tests:
