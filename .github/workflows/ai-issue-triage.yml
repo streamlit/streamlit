@@ -133,7 +133,8 @@ jobs:
   # Job 2: Post the triage results with WRITE access (no agent)
   ai-issue-post-triage:
     needs: ai-issue-triage
-    if: always()
+    # Run on success or failure, but NOT when skipped (i.e., label wasn't 'ai-review')
+    if: always() && needs.ai-issue-triage.result != 'skipped'
     runs-on: ubuntu-latest
     permissions:
       contents: read

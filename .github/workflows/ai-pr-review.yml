@@ -106,7 +106,8 @@ jobs:
   # Job 2: Post the review with WRITE access (no agent)
   ai-pr-post-review:
     needs: ai-pr-review
-    if: always()
+    # Run on success or failure, but NOT when skipped (i.e., label wasn't 'ai-review')
+    if: always() && needs.ai-pr-review.result != 'skipped'
     runs-on: ubuntu-latest
     permissions:
       contents: read
