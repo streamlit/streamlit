@@ -30,6 +30,13 @@ export interface SidebarConfigContextProps {
   initialSidebarState: PageConfig.SidebarState
 
   /**
+   * The sidebar's initial width in pixels.
+   * Set from the PageConfig protobuf when initial_sidebar_state is an integer.
+   * @see Sidebar
+   */
+  initialSidebarWidth?: number
+
+  /**
    * The app logo configuration (image, link, icon).
    * Displayed in the header when sidebar is collapsed or in the sidebar when expanded.
    *

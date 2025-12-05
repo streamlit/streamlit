@@ -78,6 +78,7 @@ import {
   getHostSpecifiedTheme,
   getIFrameEnclosingApp,
   getLocaleLanguage,
+  getQueryString,
   getScreencastTimestamp,
   getTimezone,
   getTimezoneOffset,
@@ -172,6 +173,7 @@ interface State {
   connectionErrorDismissed: boolean
   layout: PageConfig.Layout
   initialSidebarState: PageConfig.SidebarState
+  initialSidebarWidth?: number
   menuItems?: PageConfig.IMenuItems | null
   allowRunOnSave: boolean
   scriptFinishedHandlers: (() => void)[]
@@ -305,6 +307,7 @@ export class App extends PureComponent<Props, State> {
       connectionErrorDismissed: false,
       layout: PageConfig.Layout.CENTERED,
       initialSidebarState: PageConfig.SidebarState.AUTO,
+      initialSidebarWidth: undefined,
       menuItems: undefined,
       allowRunOnSave: true,
       scriptFinishedHandlers: [],
@@ -363,7 +366,7 @@ export class App extends PureComponent<Props, State> {
         this.setState({ inputsDisabled })
       },
       themeChanged: this.handleThemeMessage,
-      pageChanged: this.onPageChange,
+      pageChanged: pageScriptHash => this.onPageChange(pageScriptHash),
       isOwnerChanged: isOwner => this.setState({ isOwner }),
       fileUploadClientConfigChanged: config => {
         if (this.endpoints.setFileUploadClientConfig !== undefined) {
@@ -924,8 +927,14 @@ export class App extends PureComponent<Props, State> {
   }
 
   handlePageConfigChanged = (pageConfig: PageConfig): void => {
-    const { title, favicon, layout, initialSidebarState, menuItems } =
-      pageConfig
+    const {
+      title,
+      favicon,
+      layout,
+      initialSidebarState,
+      initialSidebarWidth,
+      menuItems,
+    } = pageConfig
 
     this.appNavigation.handlePageConfigChanged(pageConfig)
 
@@ -963,6 +972,21 @@ export class App extends PureComponent<Props, State> {
     ) {
       this.setState(() => ({
         initialSidebarState,
+      }))
+    }
+
+    // Extract pixelWidth from SidebarWidthConfig message
+    const sidebarWidthPixels =
+      initialSidebarWidth?.pixelWidth !== undefined
+        ? initialSidebarWidth.pixelWidth
+        : undefined
+
+    if (
+      notNullOrUndefined(sidebarWidthPixels) &&
+      sidebarWidthPixels !== this.state.initialSidebarWidth
+    ) {
+      this.setState(() => ({
+        initialSidebarWidth: sidebarWidthPixels,
       }))
     }
 
@@ -1316,7 +1340,11 @@ export class App extends PureComponent<Props, State> {
     if (isNullOrUndefined(targetAppPage) || (hasAnchor && isSamePage)) {
       return
     }
-    this.onPageChange(targetAppPage.pageScriptHash as string)
+    // Pass preserveQueryParams=true to preserve query params from the URL when
+    // navigating via browser history (back/forward buttons). This ensures that
+    // query params present in the URL after history navigation are sent to the
+    // server on the first script run.
+    this.onPageChange(targetAppPage.pageScriptHash as string, undefined, true)
   }
 
   /**
@@ -1670,7 +1698,11 @@ export class App extends PureComponent<Props, State> {
     )
   }
 
-  onPageChange = (pageScriptHash: string): void => {
+  onPageChange = (
+    pageScriptHash: string,
+    queryString?: string,
+    preserveQueryParams?: boolean
+  ): void => {
     const { elements, mainScriptHash } = this.state
 
     // We are about to change the page, so clear all auto reruns
@@ -1694,7 +1726,10 @@ export class App extends PureComponent<Props, State> {
     this.sendRerunBackMsg(
       this.widgetMgr.getActiveWidgetStates(activeWidgetIds),
       undefined,
-      pageScriptHash
+      pageScriptHash,
+      undefined,
+      queryString,
+      preserveQueryParams
     )
   }
 
@@ -1711,7 +1746,9 @@ export class App extends PureComponent<Props, State> {
     widgetStates?: WidgetStates,
     fragmentId?: string,
     pageScriptHash?: string,
-    isAutoRerun?: boolean
+    isAutoRerun?: boolean,
+    queryStringOverride?: string,
+    preserveQueryParams?: boolean
   ): void => {
     const baseUriParts = this.getBaseUriParts()
     if (!baseUriParts) {
@@ -1724,7 +1761,7 @@ export class App extends PureComponent<Props, State> {
     }
 
     const { currentPageScriptHash } = this.state
-    let queryString = this.getQueryString()
+    let queryString = queryStringOverride ?? this.getQueryString()
     let pageName = ""
 
     const contextInfo = {
@@ -1739,15 +1776,19 @@ export class App extends PureComponent<Props, State> {
     if (pageScriptHash) {
       // The user specified exactly which page to run. We can simply use this
       // value in the BackMsg we send to the server.
-      if (pageScriptHash != currentPageScriptHash) {
+      if (pageScriptHash !== currentPageScriptHash && !preserveQueryParams) {
         // Clear non-embed query parameters within a page change while we wait
         // for the server to send updated query params (if any).
+        // Skip clearing if preserveQueryParams is true (e.g., browser back/forward
+        // navigation where query params from the URL should be preserved).
         const preservedQueryParams = preserveEmbedQueryParams()
-        queryString = preservedQueryParams
-        this.setState({ queryParams: preservedQueryParams })
+
+        queryString = getQueryString(queryStringOverride, preservedQueryParams)
+
+        this.setState({ queryParams: queryString })
         this.hostCommunicationMgr.sendMessageToHost({
           type: "SET_QUERY_PARAM",
-          queryParams: preservedQueryParams,
+          queryParams: queryString,
         })
       }
     } else if (currentPageScriptHash) {
@@ -1884,7 +1925,7 @@ export class App extends PureComponent<Props, State> {
   /**
    * Sends a message back to the server.
    */
-  private sendBackMsg = (msg: BackMsg): void => {
+  private readonly sendBackMsg = (msg: BackMsg): void => {
     if (this.connectionManager) {
       LOG.info(msg)
       this.connectionManager.sendMessage(msg)
@@ -2076,9 +2117,21 @@ export class App extends PureComponent<Props, State> {
       backMsg.type = "fileUrlsRequest"
       this.sendBackMsg(backMsg)
     } else {
+      // Reject the request immediately with an error. This can happen on mobile
+      // browsers when the file picker is open for an extended period causing
+      // the WebSocket connection to time out.
+      //
+      // We can't queue and retry because reconnection triggers a script rerun,
+      // which remounts the FileUploader component and invalidates the promise
+      // callback. The user needs to re-select the file after reconnection.
       LOG.warn(
         `Cannot request file URLs (isServerConnected: ${isConnected}, isSessionInfoSet: ${isSessionInfoSet})`
       )
+      this.uploadClient.onFileURLsResponse({
+        responseId: requestId,
+        errorMsg:
+          "Connection lost. Please wait for the app to reconnect, then try again.",
+      })
     }
   }
 
@@ -2159,7 +2212,7 @@ export class App extends PureComponent<Props, State> {
   /**
    * Checks if there are any app-defined menu items configured via st.set_page_config
    */
-  private hasAppDefinedMenuItems = (): boolean => {
+  private readonly hasAppDefinedMenuItems = (): boolean => {
     const { menuItems } = this.state
     return Boolean(
       menuItems?.aboutSectionMd ||
@@ -2172,7 +2225,7 @@ export class App extends PureComponent<Props, State> {
    * Determines whether the toolbar should be visible based on embed mode,
    * toolbar mode settings, and availability of host menu/toolbar items.
    */
-  private shouldShowToolbar = (
+  private readonly shouldShowToolbar = (
     hostMenuItems: IMenuItem[],
     hostToolbarItems: IToolbarItem[]
   ): boolean => {
@@ -2258,6 +2311,7 @@ export class App extends PureComponent<Props, State> {
     return (
       <StreamlitContextProvider
         initialSidebarState={initialSidebarState}
+        initialSidebarWidth={this.state.initialSidebarWidth}
         pageLinkBaseUrl={pageLinkBaseUrl}
         currentPageScriptHash={currentPageScriptHash}
         onPageChange={this.onPageChange}
@@ -2266,7 +2320,11 @@ export class App extends PureComponent<Props, State> {
         appLogo={elements.logo}
         sidebarChevronDownshift={sidebarChevronDownshift}
         expandSidebarNav={expandSidebarNav}
-        hideSidebarNav={hideSidebarNav || hostHideSidebarNav}
+        hideSidebarNav={
+          hideSidebarNav ||
+          hostHideSidebarNav ||
+          effectiveNavigationPosition === Navigation.Position.TOP
+        }
         isFullScreen={isFullScreen}
         setFullScreen={this.handleFullScreen}
         activeTheme={this.props.theme.activeTheme}

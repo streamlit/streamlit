@@ -29,6 +29,7 @@ import {
   EMBED_QUERY_PARAM_VALUES,
   getEmbedUrlParams,
   getLoadingScreenType,
+  getQueryString,
   getScreencastTimestamp,
   getSelectPlaceholder,
   getUrl,
@@ -788,4 +789,54 @@ describe("getScreencastTimestamp", () => {
     vi.setSystemTime(new Date("2025-05-15T10:20:30.999Z"))
     expect(getScreencastTimestamp()).toBe("2025-05-15-10-20-30")
   })
+})
+
+describe("getQueryString", () => {
+  it.each([
+    {
+      queryStringOverride: undefined,
+      preservedQueryParams: "embed=true",
+      expected: "embed=true",
+      description:
+        "returns preservedQueryParams when queryStringOverride is undefined",
+    },
+    {
+      queryStringOverride: undefined,
+      preservedQueryParams: "",
+      expected: "",
+      description: "returns empty string when both are empty/undefined",
+    },
+    {
+      queryStringOverride: "foo=bar",
+      preservedQueryParams: "",
+      expected: "foo=bar",
+      description: "returns queryStringOverride when no preservedQueryParams",
+    },
+    {
+      queryStringOverride: "foo=bar",
+      preservedQueryParams: "embed=true",
+      expected: "embed=true&foo=bar",
+      description: "combines preservedQueryParams and queryStringOverride",
+    },
+    {
+      queryStringOverride: "",
+      preservedQueryParams: "embed=true",
+      expected: "embed=true",
+      description:
+        "returns only preservedQueryParams when queryStringOverride is empty string",
+    },
+    {
+      queryStringOverride: "page=1&sort=asc",
+      preservedQueryParams: "embed=true&embed_options=dark",
+      expected: "embed=true&embed_options=dark&page=1&sort=asc",
+      description: "handles complex query strings",
+    },
+  ])(
+    "$description",
+    ({ queryStringOverride, preservedQueryParams, expected }) => {
+      expect(getQueryString(queryStringOverride, preservedQueryParams)).toBe(
+        expected
+      )
+    }
+  )
 })

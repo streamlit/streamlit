@@ -135,6 +135,25 @@ export function preserveEmbedQueryParams(): string {
 }
 
 /**
+ * Builds a query string by combining an optional override with preserved embed params.
+ * Used during page navigation to merge user query params with embed options.
+ */
+export function getQueryString(
+  queryStringOverride: string | undefined,
+  preservedQueryParams: string
+): string {
+  if (queryStringOverride !== undefined) {
+    if (preservedQueryParams) {
+      return queryStringOverride
+        ? `${preservedQueryParams}&${queryStringOverride}`
+        : preservedQueryParams
+    }
+    return queryStringOverride
+  }
+  return preservedQueryParams
+}
+
+/**
  * Returns true if the URL parameters contain ?embed=true (case insensitive).
  */
 export function isEmbed(): boolean {

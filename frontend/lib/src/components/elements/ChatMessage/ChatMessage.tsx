@@ -47,6 +47,9 @@ function ChatMessageAvatar(
 
   if (avatar) {
     switch (avatarType) {
+      case undefined:
+        // Fall through to default avatar
+        break
       case BlockProto.ChatMessage.AvatarType.IMAGE:
         return (
           <StyledAvatarImage

@@ -8,6 +8,12 @@ Central registry of resources available to AI agents working on Streamlit.
 
 ## Available Resources
 
+### [Processes](processes/)
+
+Development workflows and procedures:
+
+- [pr-creation/](processes/pr-creation/) - Complete PR creation workflow with guidance on filling `.github/pull_request_template.md` (see README.md for details)
+
 ### [Guides](references/guides/)
 
 System overviews and comprehensive documentation (e.g., layout system, caching, state management)
