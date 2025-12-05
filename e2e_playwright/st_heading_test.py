@@ -147,8 +147,6 @@ def test_display_subheaders_with_anchors_and_style_icons(app: Page):
 
 
 def test_clicking_on_anchor_changes_url(app: Page):
-    import re
-
     header = get_heading(app, "This header is awesome!").locator("h2")
     header.hover()
     link = header.locator("a")

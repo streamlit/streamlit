@@ -14,7 +14,6 @@
 from __future__ import annotations
 
 import re
-from re import Pattern
 from typing import TYPE_CHECKING
 
 from playwright.sync_api import Locator, Page, expect
@@ -36,7 +35,9 @@ if TYPE_CHECKING:
 NUM_SELECTBOXES = 20
 
 
-def get_selectbox_input(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
+def get_selectbox_input(
+    locator: Locator | Page, label: str | re.Pattern[str]
+) -> Locator:
     """Get the input of a selectbox with the given label.
 
     Parameters

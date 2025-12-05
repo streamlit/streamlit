@@ -214,7 +214,7 @@ class HashTest(unittest.TestCase):
         try:
             get_hash(Mock())
             get_hash(MagicMock())
-        except BaseException:
+        except Exception:
             self.fail("get_hash raised an exception")
 
     def test_list(self):

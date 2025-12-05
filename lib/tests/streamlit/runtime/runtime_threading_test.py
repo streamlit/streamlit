@@ -59,7 +59,7 @@ class RuntimeThreadingTest(IsolatedAsyncioTestCase):
                     cache_storage_manager=MagicMock(),
                 )
                 queue.put(Runtime(config))
-            except BaseException as e:
+            except Exception as e:
                 queue.put(e)
 
         thread = threading.Thread(target=create_runtime_on_another_thread)
