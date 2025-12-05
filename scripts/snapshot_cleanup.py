@@ -407,6 +407,11 @@ def main() -> None:
             count = len(orphaned_by_test[test_name])
             print(f"  {test_name}: {count} orphaned files")
 
+        print("\n--- COPY_PASTE_START ---")
+        for filename in sorted([os.path.basename(f) for f in orphaned_files]):
+            print(f'    "{filename}",')
+        print("--- COPY_PASTE_END ---")
+
         print("\nTo fix this, run: python scripts/snapshot_cleanup.py")
         print("Or review the snapshots manually to ensure they're actually orphaned.")
         sys.exit(1)
