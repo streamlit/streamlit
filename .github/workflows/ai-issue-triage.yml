@@ -12,6 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
+      # Do not give the agent write access to keep it a safe operation
       contents: read
       issues: read
 
@@ -91,34 +92,28 @@ jobs:
           6. Create 'labels.txt':
              - One label per line
              - Only include labels that exist in 'gh label list -L 300'
-             - Include a relevant type label (type:bug, type:enhancement, etc.)
-             - Include relevant feature labels (feature:st.*, etc.)
-             - Include a status label if appropriate (status:needs-triage, status:confirmed, etc.)
-             - Include a relevant priority label (priority:P0, priority:P1, priority:P2, priority:P3, priority:P4)
+             - Please focus on adding one type label (type:*) and relevant feature labels (feature:st.*, area:*), no other type of labels.
 
           7. Create 'comment.txt':
-             - Start with a brief summary of the issue analysis
+             - Start with a brief summary (~2-7 sentences) of the issue analysis
              - List up to 3 potentially duplicate or closely related issues with links and brief explanations of why they're related
-             - For bug issues: include a 'Root Cause Analysis' section with your findings
              - Be concise but informative
              - Use GitHub-flavored markdown formatting
 
           # Output Format for comment.txt:
 
+          <output-start>
           ## 🤖 AI Triage Summary
 
-          [Brief analysis of what this issue is about]
+          [Brief analysis of what this issue is about and the potential root cause if applicable.]
 
           ### Related Issues
 
           [List of up to 3 related issues with links and brief explanations. If no related issues found, state that.]
 
-          ### Root Cause Analysis (for bugs only)
-
-          [Your analysis of the potential root cause based on codebase examination. Skip this section for non-bug issues.]
-
           ---
           *This is an automated triage comment. Please verify the suggested labels and related issues.*
+          <output-end>
 
           # Important Notes:
           - Do NOT attempt to post comments, edit issues, or perform any write operations - they will fail.

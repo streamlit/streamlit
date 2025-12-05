@@ -110,6 +110,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      # Required for posting comments, but this step is safe since it is not running the agent operation:
       pull-requests: write
 
     steps:
