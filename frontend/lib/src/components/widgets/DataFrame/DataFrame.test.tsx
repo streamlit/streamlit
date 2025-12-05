@@ -136,4 +136,73 @@ describe("DataFrame widget", () => {
       {}
     )
   })
+
+  it("enables trailing row for ADD_ONLY editing mode", () => {
+    render(
+      <DataFrame
+        {...getProps(
+          new Quiver({ data: TEN_BY_TEN }),
+          false,
+          ArrowProto.EditingMode.ADD_ONLY
+        )}
+      />
+    )
+
+    // ADD_ONLY mode should enable trailingRowOptions for adding rows
+    expect(glideDataGridModule.DataEditor).toHaveBeenCalledWith(
+      expect.objectContaining({
+        trailingRowOptions: expect.objectContaining({
+          sticky: false,
+          tint: true,
+        }),
+      }),
+      {}
+    )
+  })
+
+  it("enables row selection for DELETE_ONLY editing mode", () => {
+    render(
+      <DataFrame
+        {...getProps(
+          new Quiver({ data: TEN_BY_TEN }),
+          false,
+          ArrowProto.EditingMode.DELETE_ONLY
+        )}
+      />
+    )
+
+    // DELETE_ONLY mode should enable row selection for deleting rows
+    expect(glideDataGridModule.DataEditor).toHaveBeenCalledWith(
+      expect.objectContaining({
+        rowSelect: "multi",
+        rowSelectionMode: "multi",
+      }),
+      {}
+    )
+  })
+
+  it("enables both trailing row and row selection for DYNAMIC editing mode", () => {
+    render(
+      <DataFrame
+        {...getProps(
+          new Quiver({ data: TEN_BY_TEN }),
+          false,
+          ArrowProto.EditingMode.DYNAMIC
+        )}
+      />
+    )
+
+    // DYNAMIC mode should enable both adding and deleting rows
+    expect(glideDataGridModule.DataEditor).toHaveBeenCalledWith(
+      expect.objectContaining({
+        trailingRowOptions: expect.objectContaining({
+          sticky: false,
+          tint: true,
+        }),
+        rowSelect: "multi",
+        rowSelectionMode: "multi",
+      }),
+      {}
+    )
+  })
 })
