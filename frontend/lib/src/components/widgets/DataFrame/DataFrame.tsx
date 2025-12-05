@@ -379,16 +379,11 @@ function DataFrame({
     enforceDownloadInNewTab
   )
 
-  // Row operations are allowed for DYNAMIC, ADD_ONLY, and DELETE_ONLY modes
-  const isFixedRowMode =
-    element.editingMode !== DYNAMIC &&
-    element.editingMode !== ADD_ONLY &&
-    element.editingMode !== DELETE_ONLY
-
   const { onCellEdited, onPaste, onRowAppended, onDelete, validateCell } =
     useDataEditor(
       columns,
-      isFixedRowMode,
+      canAddRows,
+      canDeleteRows,
       editingState,
       getCellContent,
       getOriginalIndex,

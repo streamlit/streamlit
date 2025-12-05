@@ -64,6 +64,7 @@ describe("DataFrame widget", () => {
   const props = getProps(new Quiver({ data: TEN_BY_TEN }))
 
   beforeEach(() => {
+    vi.clearAllMocks()
     vi.spyOn(UseResizeObserver, "useResizeObserver").mockReturnValue({
       elementRef: { current: null },
       values: [250],
@@ -158,6 +159,15 @@ describe("DataFrame widget", () => {
       }),
       {}
     )
+
+    // ADD_ONLY mode should NOT enable row deletion features
+    expect(glideDataGridModule.DataEditor).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        rowSelect: "multi",
+        rowSelectionMode: "multi",
+      }),
+      {}
+    )
   })
 
   it("enables row selection for DELETE_ONLY editing mode", () => {
@@ -176,6 +186,14 @@ describe("DataFrame widget", () => {
       expect.objectContaining({
         rowSelect: "multi",
         rowSelectionMode: "multi",
+      }),
+      {}
+    )
+
+    // DELETE_ONLY mode should NOT enable row adding features
+    expect(glideDataGridModule.DataEditor).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        trailingRowOptions: expect.anything(),
       }),
       {}
     )
