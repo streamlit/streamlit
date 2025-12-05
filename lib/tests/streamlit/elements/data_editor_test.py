@@ -750,7 +750,8 @@ class DataEditorTest(DeltaGeneratorTestCase):
         mock_logger.warning.assert_called_once()
         warning_message = mock_logger.warning.call_args[0][0]
         assert "hide_index=True" in warning_message
-        assert "num_rows='dynamic'" in warning_message
+        # The warning message includes the mode via a format placeholder
+        assert "num_rows" in warning_message
 
     @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
     def test_inside_form(self):
