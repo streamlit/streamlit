@@ -61,16 +61,14 @@ const LogoComponent = ({
     [appPages]
   )
   const isMultiPageApp = appPages.length > 1
+  const isOnHomePage = homePage?.pageScriptHash === currentPageScriptHash
 
   const handleLogoClick = useCallback(() => {
     // Only navigate if we're not already on the home page
-    if (
-      homePage?.pageScriptHash &&
-      currentPageScriptHash !== homePage.pageScriptHash
-    ) {
+    if (homePage?.pageScriptHash && !isOnHomePage) {
       onPageChange(homePage.pageScriptHash)
     }
-  }, [homePage, onPageChange, currentPageScriptHash])
+  }, [homePage, onPageChange, isOnHomePage])
 
   if (!appLogo) {
     return null
@@ -126,7 +124,8 @@ const LogoComponent = ({
   }
 
   // In multi-page apps without an explicit link, clicking the logo navigates to home page
-  if (isMultiPageApp && homePage) {
+  // Only use the clickable button when not already on the home page
+  if (isMultiPageApp && homePage && !isOnHomePage) {
     return (
       <StyledLogoButton
         onClick={handleLogoClick}
