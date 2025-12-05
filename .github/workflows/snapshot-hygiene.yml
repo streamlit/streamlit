@@ -57,12 +57,18 @@ jobs:
         id: check-snapshots
         run: |
           source venv/bin/activate
-          python scripts/snapshot_cleanup.py --ci > snapshot_output.txt 2>&1 || echo "orphaned=true" >> $GITHUB_OUTPUT
+          set +e  # Don't exit immediately on error
+          python scripts/snapshot_cleanup.py --ci > snapshot_output.txt 2>&1
+          EXIT_CODE=$?
           if [ -f snapshot_output.txt ]; then
             cat snapshot_output.txt
             echo "snapshot_list<<EOF" >> $GITHUB_OUTPUT
             cat snapshot_output.txt >> $GITHUB_OUTPUT
             echo "EOF" >> $GITHUB_OUTPUT
+          fi
+          if [ $EXIT_CODE -ne 0 ]; then
+            echo "orphaned=true" >> $GITHUB_OUTPUT
+            exit 1
           fi
       - name: Delete comment on success
         if: success() && github.event_name == 'pull_request'
