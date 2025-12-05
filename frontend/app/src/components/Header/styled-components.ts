@@ -28,14 +28,15 @@ export interface StyledHeaderProps {
 
 export const StyledHeader = styled.header<StyledHeaderProps>(
   ({ theme, isTransparentBackground }) => ({
-    position: "absolute",
+    position: "sticky",
     top: 0,
     left: 0,
     right: 0,
     display: "flex",
     alignItems: "center",
-    height: theme.sizes.headerHeight,
-    minHeight: theme.sizes.headerHeight,
+    // When header has no content (transparent), don't take up space
+    height: isTransparentBackground ? 0 : theme.sizes.headerHeight,
+    minHeight: isTransparentBackground ? 0 : theme.sizes.headerHeight,
     width: "100%",
     background: isTransparentBackground ? "transparent" : theme.colors.bgColor,
     outline: "none",

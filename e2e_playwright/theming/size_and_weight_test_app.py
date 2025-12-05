@@ -30,7 +30,7 @@ def run_size_and_weight_test_app():
     st.html("""
         <style>
             .stMainBlockContainer {
-                padding-top: 4rem;
+                padding-top: 0;
             }
         </style>
     """)

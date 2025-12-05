@@ -15,10 +15,27 @@
  */
 
 import { screen } from "@testing-library/react"
+import { vi } from "vitest"
 
 import { render } from "@streamlit/lib/testing"
 
 import EventContainer from "./EventContainer"
+
+vi.mock("baseui/toast", () => ({
+  PLACEMENT: {
+    topRight: "topRight",
+  },
+  ToasterContainer: ({
+    overrides,
+  }: {
+    overrides: {
+      Root: {
+        style: Record<string, number | string>
+        props: Record<string, string>
+      }
+    }
+  }) => <div {...overrides.Root.props} style={overrides.Root.style} />,
+}))
 
 describe("EventContainer Component", () => {
   it("renders Toast Container", () => {
@@ -27,5 +44,21 @@ describe("EventContainer Component", () => {
     const toastContainer = screen.getByTestId("stToastContainer")
     expect(toastContainer).toBeInTheDocument()
     expect(toastContainer).toHaveClass("stToastContainer")
+  })
+
+  it("offsets toasts below a visible header", () => {
+    render(<EventContainer hasHeader={true} />)
+
+    expect(screen.getByTestId("stToastContainer")).toHaveStyle({
+      top: "3.75rem",
+    })
+  })
+
+  it("pins toasts to the top when the header is collapsed", () => {
+    render(<EventContainer hasHeader={false} />)
+
+    expect(screen.getByTestId("stToastContainer")).toHaveStyle({
+      top: "0px",
+    })
   })
 })

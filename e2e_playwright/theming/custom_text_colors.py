@@ -35,7 +35,7 @@ st.set_page_config(initial_sidebar_state="expanded", layout="wide")
 st.html("""
     <style>
         .stMainBlockContainer {
-            padding-top: 4rem;
+            padding-top: 0;
         }
     </style>
 """)

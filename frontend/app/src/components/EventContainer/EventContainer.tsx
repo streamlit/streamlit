@@ -22,12 +22,15 @@ import { useEmotionTheme } from "@streamlit/lib"
 
 export interface EventContainerProps {
   children?: ReactNode
+  hasHeader?: boolean
 }
 
 function EventContainer({
   children,
+  hasHeader = true,
 }: Readonly<EventContainerProps>): ReactElement {
   const theme = useEmotionTheme()
+  const topOffset = hasHeader ? theme.sizes.headerHeight : 0
 
   return (
     <>
@@ -39,8 +42,8 @@ function EventContainer({
         overrides={{
           Root: {
             style: {
-              // Avoids blocking the header
-              top: theme.sizes.headerHeight,
+              // Keep toasts below the sticky header only when it is visible.
+              top: topOffset,
               zIndex: theme.zIndices.toast,
             },
             props: {

@@ -104,6 +104,7 @@ function getProps(props: Partial<AppViewProps> = {}): AppViewProps {
     showToolbar: true,
     showPadding: false,
     disableScrolling: false,
+    topRightContent: <div data-testid="mock-toolbar">Toolbar</div>,
     navigationPosition: Navigation.Position.SIDEBAR,
     addScriptFinishedHandler: vi.fn(),
     removeScriptFinishedHandler: vi.fn(),
@@ -357,12 +358,14 @@ describe("AppView element", () => {
         screen.getByTestId("stMainBlockContainer")
       )
     }
+    const getHeaderAdjustedPadding = (padding: string): string =>
+      `calc(${padding} - ${mockTheme.emotion.sizes.headerHeight})`
 
     describe("non-embedded apps", () => {
       it("uses 6rem top padding by default", () => {
         render(<AppView {...getProps({ embedded: false })} />)
         const style = getMainBlockContainerStyle()
-        expect(style.paddingTop).toEqual("6rem")
+        expect(style.paddingTop).toEqual(getHeaderAdjustedPadding("6rem"))
       })
 
       it("uses 6rem top padding regardless of showPadding", () => {
@@ -370,7 +373,7 @@ describe("AppView element", () => {
           <AppView {...getProps({ embedded: false, showPadding: true })} />
         )
         const style = getMainBlockContainerStyle()
-        expect(style.paddingTop).toEqual("6rem")
+        expect(style.paddingTop).toEqual(getHeaderAdjustedPadding("6rem"))
       })
 
       it("uses 6rem top padding regardless of showToolbar", () => {
@@ -378,7 +381,7 @@ describe("AppView element", () => {
           <AppView {...getProps({ embedded: false, showToolbar: true })} />
         )
         const style = getMainBlockContainerStyle()
-        expect(style.paddingTop).toEqual("6rem")
+        expect(style.paddingTop).toEqual(getHeaderAdjustedPadding("6rem"))
       })
 
       it("uses 8rem top padding when top nav is showing (>1 page)", () => {
@@ -397,7 +400,7 @@ describe("AppView element", () => {
           }
         )
         const style = getMainBlockContainerStyle()
-        expect(style.paddingTop).toEqual("8rem")
+        expect(style.paddingTop).toEqual(getHeaderAdjustedPadding("8rem"))
       })
 
       it("uses 6rem top padding when top nav is not showing (single page)", () => {
@@ -413,7 +416,7 @@ describe("AppView element", () => {
           }
         )
         const style = getMainBlockContainerStyle()
-        expect(style.paddingTop).toEqual("6rem")
+        expect(style.paddingTop).toEqual(getHeaderAdjustedPadding("6rem"))
       })
 
       it("uses 6rem top padding regardless of sidebar content (hasSidebar does not affect non-embedded)", () => {
@@ -451,7 +454,7 @@ describe("AppView element", () => {
           }
         )
         const style = getMainBlockContainerStyle()
-        expect(style.paddingTop).toEqual("6rem") // Should be 6rem, not affected by sidebar
+        expect(style.paddingTop).toEqual(getHeaderAdjustedPadding("6rem"))
       })
     })
 
@@ -462,7 +465,7 @@ describe("AppView element", () => {
             <AppView {...getProps({ embedded: true, showPadding: true })} />
           )
           const style = getMainBlockContainerStyle()
-          expect(style.paddingTop).toEqual("6rem")
+          expect(style.paddingTop).toEqual(getHeaderAdjustedPadding("6rem"))
           expect(style.paddingBottom).toEqual("10rem")
         })
 
@@ -484,7 +487,7 @@ describe("AppView element", () => {
           )
 
           const style = getMainBlockContainerStyle()
-          expect(style.paddingTop).toEqual("6rem")
+          expect(style.paddingTop).toEqual(getHeaderAdjustedPadding("6rem"))
         })
 
         it("uses 6rem top padding even with top nav (never 8rem for embedded apps)", () => {
@@ -499,7 +502,8 @@ describe("AppView element", () => {
           )
 
           const style = getMainBlockContainerStyle()
-          expect(style.paddingTop).toEqual("6rem")
+          // Embedded apps never get 8rem padding; total offset is still ~6rem
+          expect(style.paddingTop).toEqual(getHeaderAdjustedPadding("6rem"))
         })
       })
 
@@ -509,7 +513,7 @@ describe("AppView element", () => {
             <AppView {...getProps({ embedded: true, showToolbar: true })} />
           )
           const style = getMainBlockContainerStyle()
-          expect(style.paddingTop).toEqual("6rem")
+          expect(style.paddingTop).toEqual(getHeaderAdjustedPadding("6rem"))
         })
 
         it("uses 6rem top padding when showToolbar=true regardless of header content", () => {
@@ -530,7 +534,7 @@ describe("AppView element", () => {
           )
 
           const style = getMainBlockContainerStyle()
-          expect(style.paddingTop).toEqual("6rem")
+          expect(style.paddingTop).toEqual(getHeaderAdjustedPadding("6rem"))
         })
       })
 
@@ -546,7 +550,8 @@ describe("AppView element", () => {
             />
           )
           const style = getMainBlockContainerStyle()
-          expect(style.paddingTop).toEqual("6rem")
+          // Combined header + padding still results in ~6rem total offset
+          expect(style.paddingTop).toEqual(getHeaderAdjustedPadding("6rem"))
         })
       })
 
@@ -585,7 +590,7 @@ describe("AppView element", () => {
           )
 
           const style = getMainBlockContainerStyle()
-          expect(style.paddingTop).toEqual("4.5rem")
+          expect(style.paddingTop).toEqual(getHeaderAdjustedPadding("4.5rem"))
           expect(style.paddingBottom).toEqual("1rem")
         })
 
@@ -611,7 +616,7 @@ describe("AppView element", () => {
           )
 
           const style = getMainBlockContainerStyle()
-          expect(style.paddingTop).toEqual("4.5rem")
+          expect(style.paddingTop).toEqual(getHeaderAdjustedPadding("4.5rem"))
           expect(style.paddingBottom).toEqual("1rem")
         })
 
@@ -653,7 +658,7 @@ describe("AppView element", () => {
             }
           )
           const style = getMainBlockContainerStyle()
-          expect(style.paddingTop).toEqual("4.5rem")
+          expect(style.paddingTop).toEqual(getHeaderAdjustedPadding("4.5rem"))
           expect(style.paddingBottom).toEqual("1rem")
         })
 
@@ -712,7 +717,7 @@ describe("AppView element", () => {
         )
 
         const style = getMainBlockContainerStyle()
-        expect(style.paddingTop).toEqual("6rem")
+        expect(style.paddingTop).toEqual(getHeaderAdjustedPadding("6rem"))
       })
 
       it("prioritizes showToolbar over header content", () => {
@@ -732,6 +737,54 @@ describe("AppView element", () => {
         )
 
         const style = getMainBlockContainerStyle()
+        expect(style.paddingTop).toEqual(getHeaderAdjustedPadding("6rem"))
+      })
+
+      it("uses full padding when showToolbar=true but no topRightContent", () => {
+        render(
+          <AppView
+            {...getProps({
+              embedded: true,
+              showPadding: true,
+              showToolbar: true,
+              topRightContent: undefined,
+            })}
+          />
+        )
+        const style = getMainBlockContainerStyle()
+        // Header renders transparent (no actual visible content), so full
+        // 6rem padding is needed — not the reduced 2.25rem.
+        expect(style.paddingTop).toEqual("6rem")
+      })
+
+      it("uses full padding when showToolbar=true but topRightContent is an empty fragment", () => {
+        render(
+          <AppView
+            {...getProps({
+              embedded: true,
+              showPadding: true,
+              showToolbar: true,
+              topRightContent: <></>,
+            })}
+          />
+        )
+        const style = getMainBlockContainerStyle()
+        expect(style.paddingTop).toEqual("6rem")
+      })
+
+      it("uses full 6rem padding when non-embedded header has no visible content", () => {
+        render(
+          <AppView
+            {...getProps({
+              embedded: false,
+              showToolbar: false,
+              topRightContent: undefined,
+            })}
+          />
+        )
+        const style = getMainBlockContainerStyle()
+        // No visible header content → header is transparent (0 height).
+        // Full 6rem padding is needed, not calc(6rem - headerHeight).
         expect(style.paddingTop).toEqual("6rem")
       })
     })
@@ -1014,18 +1067,19 @@ describe("AppView element", () => {
 
   describe("header transparency and padding logic", () => {
     it("header has transparent background when no content is shown", () => {
-      // Minimal setup with no logo, no sidebar, no navigation, no toolbar
+      // No logo, no sidebar, no top-nav, and toolbar disabled — the header
+      // should collapse to zero height with a transparent background.
       render(
         <AppView
           {...getProps({
             navigationPosition: Navigation.Position.SIDEBAR,
+            showToolbar: false,
+            topRightContent: undefined,
           })}
         />
       )
 
       const header = screen.getByTestId("stHeader")
-      // The Header component should be rendered with isTransparentBackground=true
-      // when no content is shown
       expect(header).toBeInTheDocument()
       expect(header).toHaveStyle("background-color: rgba(0, 0, 0, 0)")
     })

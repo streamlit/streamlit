@@ -142,22 +142,36 @@ export const StyledAppViewBlockContainer =
       embedded,
       theme,
     }) => {
-      const littlePadding = "2.25rem"
+      // The sticky header occupies flow space (headerHeight) when it has
+      // visible content, and collapses to 0 when transparent.  All padding
+      // values below target a specific *total* visual offset from the
+      // viewport top (padding + header height).  When the header is visible
+      // we subtract its height; when transparent we use the full value.
 
-      // Top padding logic per specification:
-      let topPadding = littlePadding // Default: 2.25rem
+      const embeddedDefaultPadding = "2.25rem"
+      const embeddedHeaderOnlyPadding = `calc(4.5rem - ${theme.sizes.headerHeight})`
+      const embeddedToolbarPadding = `calc(6rem - ${theme.sizes.headerHeight})`
 
-      if (!embedded) {
-        // Non-embedded apps always get 6rem or 8rem
-        topPadding = hasTopNav ? "8rem" : "6rem"
-      } else if (showPadding || showToolbar) {
-        // 6rem if embedded with show_padding or show_toolbar
-        topPadding = "6rem"
-      } else if (hasHeader || hasSidebar) {
-        // 4.5rem if embedded with header but no padding/toolbar
-        topPadding = "4.5rem"
+      let paddingTop = embeddedDefaultPadding
+
+      if (embedded) {
+        // Target totals: 6rem (padding/toolbar), 4.5rem (header/sidebar
+        // only), 2.25rem (bare embed).  When the header is visible its
+        // height is already part of the offset, so padding is reduced.
+        // When only hasSidebar is true (sidebar open, no header chrome
+        // visible), the header is transparent so we use the full 4.5rem.
+        if (showPadding || showToolbar) {
+          paddingTop = hasHeader ? embeddedToolbarPadding : "6rem"
+        } else if (hasHeader || hasSidebar) {
+          paddingTop = hasHeader ? embeddedHeaderOnlyPadding : "4.5rem"
+        }
+      } else {
+        // Non-embedded apps target 6rem (default) or 8rem (with top nav).
+        const basePadding = hasTopNav ? "8rem" : "6rem"
+        paddingTop = hasHeader
+          ? `calc(${basePadding} - ${theme.sizes.headerHeight})`
+          : basePadding
       }
-      // Otherwise use default: 2.25rem if embedded with no header and no padding/toolbar
 
       const bottomEmbedPadding =
         showPadding && !hasBottom ? "10rem" : theme.spacing.lg
@@ -166,12 +180,12 @@ export const StyledAppViewBlockContainer =
         width: theme.sizes.full,
         paddingLeft: theme.spacing.lg,
         paddingRight: theme.spacing.lg,
-        paddingTop: topPadding,
+        paddingTop,
         paddingBottom: bottomEmbedPadding,
         maxWidth: theme.sizes.contentMaxWidth,
         ...(isWideMode && applyWideModePadding(theme)),
         [`@media print`]: {
-          paddingTop: littlePadding,
+          paddingTop: embeddedDefaultPadding,
         },
       }
     }
