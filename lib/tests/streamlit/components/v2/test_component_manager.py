@@ -92,7 +92,7 @@ def test_concurrent_record_and_change_no_exceptions(tmp_path: Path) -> None:
     manager, comp_name = _setup_manager_with_manifest(tmp_path)
 
     stop_event = threading.Event()
-    errors: list[BaseException] = []
+    errors: list[Exception] = []
 
     def writer() -> None:
         try:

@@ -1137,7 +1137,7 @@ class TestScriptRunner(ScriptRunner):
         )
 
         # Accumulates uncaught exceptions thrown by our run thread.
-        self.script_thread_exceptions: list[BaseException] = []
+        self.script_thread_exceptions: list[Exception] = []
 
         # Accumulates all ScriptRunnerEvents emitted by us.
         self.events: list[ScriptRunnerEvent] = []

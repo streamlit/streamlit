@@ -69,7 +69,7 @@ class RuntimeThreadingTest(IsolatedAsyncioTestCase):
             raise RuntimeError("Thread.join timed out!")
 
         runtime = queue.get(block=True, timeout=1)
-        if isinstance(runtime, BaseException):
+        if isinstance(runtime, Exception):
             raise runtime
 
         # Ensure we can start and stop the Runtime
