@@ -226,10 +226,7 @@ describe("LogoComponent", () => {
       expect(mockOnPageChange).toHaveBeenCalledWith("home_hash")
     })
 
-    it("does not call onPageChange when already on home page", async () => {
-      const user = userEvent.setup()
-      const mockOnPageChange = vi.fn()
-
+    it("renders non-clickable logo when already on home page", () => {
       renderWithContexts(
         <LogoComponent
           {...getProps({
@@ -240,16 +237,15 @@ describe("LogoComponent", () => {
         {
           navigationContext: {
             appPages: multiPageAppPages,
-            onPageChange: mockOnPageChange,
             currentPageScriptHash: "home_hash", // Already on home page
           },
         }
       )
 
-      const logoButton = screen.getByTestId("stLogoLink")
-      await user.click(logoButton)
-
-      expect(mockOnPageChange).not.toHaveBeenCalled()
+      // Should not render a clickable button when already on home page
+      expect(screen.queryByTestId("stLogoLink")).not.toBeInTheDocument()
+      // Logo should still be rendered
+      screen.getByTestId("stHeaderLogo")
     })
 
     it("uses external link when link is provided, even in multi-page app", () => {
