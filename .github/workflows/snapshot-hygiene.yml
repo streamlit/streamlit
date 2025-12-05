@@ -125,7 +125,7 @@ jobs:
                 captureSummary = false;
                 captureCopyPaste = true;
                 summarySection += '```\n';
-                copyPasteSection += '\n**Copy-pastable list for DISALLOWED_SNAPSHOTS:**\n```python\n';
+                copyPasteSection += '\n**These are the snapshots I found that appear to be orphaned:**\n```python\n';
                 continue;
               }
               if (line.includes('--- COPY_PASTE_END ---')) {
