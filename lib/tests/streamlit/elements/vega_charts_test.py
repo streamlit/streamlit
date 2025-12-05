@@ -1814,6 +1814,101 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
         # So if there's no exception, then the test passes.
         st.line_chart(df, x="b", y="c", color="d")
 
+    @unittest.skipIf(
+        is_altair_version_less_than("5.0.0") is True,
+        "This test only runs if altair is >= 5.0.0",
+    )
+    def test_line_chart_hover_selection_small_dataset(self):
+        """Test that line chart hover selection uses correct events for small datasets."""
+        df = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+
+        st.line_chart(df, x="a", y="b")
+
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        chart_spec = json.loads(proto.spec)
+
+        # Line charts should have 3 layers: base chart, detection points, highlighted points
+        assert "layer" in chart_spec
+        assert len(chart_spec["layer"]) == 3
+
+        # Params are hoisted to the top level by Altair
+        assert "params" in chart_spec
+        # Find the hover selection param (has nearest=True)
+        hover_params = [
+            p for p in chart_spec["params"] if p.get("select", {}).get("nearest")
+        ]
+        assert len(hover_params) == 1
+
+        selection_param = hover_params[0]
+        assert selection_param["select"]["on"] == "mousemove"
+        assert selection_param["select"]["clear"] == "mouseleave"
+        assert selection_param["select"]["nearest"] is True
+
+        # The highlighted layer (index 2) should have a filter transform
+        highlighted_layer = chart_spec["layer"][2]
+        assert "transform" in highlighted_layer
+        assert any("filter" in t for t in highlighted_layer["transform"])
+
+    @unittest.skipIf(
+        is_altair_version_less_than("5.0.0") is True,
+        "This test only runs if altair is >= 5.0.0",
+    )
+    def test_line_chart_hover_selection_large_dataset_throttling(self):
+        """Test that line chart hover selection uses throttled events for large datasets."""
+        import numpy as np
+
+        # Create a dataset larger than the 1000 point threshold
+        large_n = 1500
+        df = pd.DataFrame({"a": np.arange(large_n), "b": np.arange(large_n)})
+
+        st.line_chart(df, x="a", y="b")
+
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        chart_spec = json.loads(proto.spec)
+
+        # Line charts should have 3 layers
+        assert "layer" in chart_spec
+        assert len(chart_spec["layer"]) == 3
+
+        # Params are hoisted to the top level by Altair
+        # Find the hover selection param (has nearest=True)
+        hover_params = [
+            p for p in chart_spec["params"] if p.get("select", {}).get("nearest")
+        ]
+        assert len(hover_params) == 1
+
+        # Should have throttled hover events (16ms = ~60fps) for large datasets
+        selection_param = hover_params[0]
+        assert selection_param["select"]["on"] == "mousemove{16}"
+        assert selection_param["select"]["clear"] == "mouseleave"
+
+    @parameterized.expand(
+        [
+            (1000, "mousemove"),  # At threshold - no throttling
+            (1001, "mousemove{16}"),  # Just above threshold - throttled
+        ]
+    )
+    @unittest.skipIf(
+        is_altair_version_less_than("5.0.0") is True,
+        "This test only runs if altair is >= 5.0.0",
+    )
+    def test_line_chart_hover_throttling_threshold_boundary(
+        self, num_points: int, expected_event: str
+    ):
+        """Test hover throttling at the exact threshold boundary (1000 points)."""
+        import numpy as np
+
+        df = pd.DataFrame({"a": np.arange(num_points), "b": np.arange(num_points)})
+        st.line_chart(df, x="a", y="b")
+
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        chart_spec = json.loads(proto.spec)
+
+        hover_params = [
+            p for p in chart_spec["params"] if p.get("select", {}).get("nearest")
+        ]
+        assert hover_params[0]["select"]["on"] == expected_event
+
     @parameterized.expand(ST_CHART_ARGS)
     def test_unused_columns_are_dropped(
         self, chart_command: Callable, altair_type: str

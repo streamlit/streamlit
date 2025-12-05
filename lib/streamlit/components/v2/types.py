@@ -245,7 +245,7 @@ class BidiComponentCallable(Protocol):
         st.write("Result:", result)
         st.write("Session state:", st.session_state)
 
-    .. output ::
+    .. output::
         https://doc-components-text-input.streamlit.app/
         height: 600px
 
@@ -296,7 +296,7 @@ class BidiComponentCallable(Protocol):
         )
         result_2
 
-    .. output ::
+    .. output::
         https://doc-components-tailwind-button.streamlit.app/
         height: 350px
 

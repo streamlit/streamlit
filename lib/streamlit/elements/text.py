@@ -77,8 +77,14 @@ class TextMixin:
             - ``"left"`` (default): Text is aligned to the left edge.
             - ``"center"``: Text is centered.
             - ``"right"``: Text is aligned to the right edge.
-            - ``"justify"``: Text is justified (stretched to align on both
-              left and right edges, with the last line left-aligned).
+            - ``"justify"``: Text is justified (stretched to fill the available
+              width with the last line left-aligned).
+
+            .. note::
+                For text alignment to have a visible effect, the element's
+                width must be wider than its content. If you use
+                ``width="content"`` with short text, the alignment may not be
+                noticeable.
 
         Example
         -------
@@ -86,7 +92,7 @@ class TextMixin:
         >>>
         >>> st.text("This is text\n[and more text](that's not a Markdown link).")
 
-        .. output ::
+        .. output::
             https://doc-text.streamlit.app/
             height: 220px
 

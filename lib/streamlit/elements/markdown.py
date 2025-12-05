@@ -138,13 +138,14 @@ class MarkdownMixin:
             - ``"left"`` (default): Text is aligned to the left edge.
             - ``"center"``: Text is centered.
             - ``"right"``: Text is aligned to the right edge.
-            - ``"justify"``: Text is justified (stretched to align on both
-              left and right edges, with the last line left-aligned).
+            - ``"justify"``: Text is justified (stretched to fill the available
+              width with the last line left-aligned).
 
             .. note::
                 For text alignment to have a visible effect, the element's
-                width must be wider than its content. If using ``width="content"``
-                with short text, alignment may not be noticeable.
+                width must be wider than its content. If you use
+                ``width="content"`` with short text, the alignment may not be
+                noticeable.
 
         Examples
         --------
@@ -249,8 +250,14 @@ class MarkdownMixin:
             - ``"left"`` (default): Text is aligned to the left edge.
             - ``"center"``: Text is centered.
             - ``"right"``: Text is aligned to the right edge.
-            - ``"justify"``: Text is justified (stretched to align on both
-              left and right edges, with the last line left-aligned).
+            - ``"justify"``: Text is justified (stretched to fill the available
+              width with the last line left-aligned).
+
+            .. note::
+                For text alignment to have a visible effect, the element's
+                width must be wider than its content. If you use
+                ``width="content"`` with short text, the alignment may not be
+                noticeable.
 
         Examples
         --------
@@ -467,12 +474,12 @@ class MarkdownMixin:
               of the parent container.
 
         help : str or None
-            A tooltip that gets displayed when the badge is hovered over. If
-            this is ``None`` (default), no tooltip is displayed.
+            A tooltip to display when hovering over the badge. If this is
+            ``None`` (default), no tooltip is displayed.
 
-            The tooltip can optionally contain GitHub-flavored Markdown, including
-            the Markdown directives described in the ``body`` parameter of
-            ``st.markdown``.
+            The tooltip can optionally contain GitHub-flavored Markdown,
+            including the Markdown directives described in the ``body``
+            parameter of ``st.markdown``.
 
         Examples
         --------
@@ -489,7 +496,7 @@ class MarkdownMixin:
         >>>     ":violet-badge[:material/star: Favorite] :orange-badge[⚠️ Needs review] :gray-badge[Deprecated]"
         >>> )
 
-        .. output ::
+        .. output::
             https://doc-badge.streamlit.app/
             height: 220px
 

@@ -69,7 +69,7 @@ function createRefMsg(msg: ForwardMsg): ForwardMsg {
   })
 }
 
-test("caches messages correctly", async () => {
+it("caches messages correctly", async () => {
   const { cache, getCachedMessage } = createCache()
 
   // Cacheable messages should be cached
@@ -99,7 +99,7 @@ test("caches messages correctly", async () => {
   expect(unreferenced).not.toBe(msg3)
 })
 
-test("caches messages as a deep copy", async () => {
+it("caches messages as a deep copy", async () => {
   const { cache, getCachedMessage } = createCache()
 
   const msg = ForwardMsg.fromObject({
@@ -130,7 +130,7 @@ test("caches messages as a deep copy", async () => {
   expect(getCachedMessage("Cacheable")).not.toEqual(msg)
 })
 
-test("throws an error message on cache miss", async () => {
+it("throws an error message on cache miss", async () => {
   // Create a reference message to a non-existent cache entry
   const msg = createForwardMsg("non-existent-hash", true)
   const refMsg = createRefMsg(msg)
@@ -143,7 +143,7 @@ test("throws an error message on cache miss", async () => {
   ).rejects.toThrow("Cached ForwardMsg MISS [hash=non-existent-hash]")
 })
 
-test("removes expired messages", () => {
+it("removes expired messages", () => {
   const { cache, getCachedMessage } = createCache()
   const msg = createForwardMsg("Cacheable", true)
   const encodedMsg = ForwardMsg.encode(msg).finish()
@@ -162,7 +162,7 @@ test("removes expired messages", () => {
   expect(getCachedMessage(msg.hash)).toBeUndefined()
 })
 
-test("only expires messages with matching fragment IDs", () => {
+it("only expires messages with matching fragment IDs", () => {
   const { cache, getCachedMessage } = createCache()
 
   // Create messages with different fragment IDs
@@ -212,7 +212,7 @@ test("only expires messages with matching fragment IDs", () => {
   expect(getCachedMessage("msg3")).toBeUndefined()
 })
 
-test("throws error when reference message has no metadata", async () => {
+it("throws error when reference message has no metadata", async () => {
   const { cache } = createCache()
   const msg1 = createForwardMsg("msg1")
   const encodedMsg1 = ForwardMsg.encode(msg1).finish()
