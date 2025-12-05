@@ -547,6 +547,7 @@ class ChatMixin:
         *,
         key: Key | None = None,
         max_chars: int | None = None,
+        max_upload_size: int | None = None,
         accept_file: Literal[False] = False,
         file_type: str | Sequence[str] | None = None,
         accept_audio: Literal[False] = False,
@@ -564,6 +565,7 @@ class ChatMixin:
         *,
         key: Key | None = None,
         max_chars: int | None = None,
+        max_upload_size: int | None = None,
         accept_file: Literal[False] = False,
         file_type: str | Sequence[str] | None = None,
         accept_audio: Literal[True],
@@ -582,6 +584,7 @@ class ChatMixin:
         *,
         key: Key | None = None,
         max_chars: int | None = None,
+        max_upload_size: int | None = None,
         accept_file: Literal[True, "multiple", "directory"],
         file_type: str | Sequence[str] | None = None,
         accept_audio: bool = False,
@@ -600,6 +603,7 @@ class ChatMixin:
         *,
         key: Key | None = None,
         max_chars: int | None = None,
+        max_upload_size: int | None = None,
         accept_file: bool | Literal["multiple", "directory"] = False,
         file_type: str | Sequence[str] | None = None,
         accept_audio: bool = False,
@@ -627,6 +631,18 @@ class ChatMixin:
         max_chars : int or None
             The maximum number of characters that can be entered. If this is
             ``None`` (default), there will be no maximum.
+
+        max_upload_size : int or None
+            The maximum allowed size of each uploaded file for this chat input,
+            in megabytes.
+
+            When set to a positive integer, this per-widget limit takes
+            precedence over the global ``server.maxUploadSize`` configuration
+            option.
+
+            When this is ``None`` (default), the chat input falls back to
+            ``server.maxUploadSize`` for its file size limit. For more
+            information on how to set config options, see |config.toml|_.
 
         accept_file : bool, "multiple", or "directory"
             Whether the chat input should accept files. This can be one of the
@@ -860,6 +876,15 @@ class ChatMixin:
                 "The `accept_file` parameter must be a boolean or 'multiple' or 'directory'."
             )
 
+        if max_upload_size is not None and (
+            not isinstance(max_upload_size, int) or max_upload_size <= 0
+        ):
+            raise StreamlitAPIException(
+                "The `max_upload_size` parameter must be a positive integer "
+                "representing the maximum file size in megabytes, or None "
+                "to fall back to the `server.maxUploadSize` configuration option."
+            )
+
         ctx = get_script_run_ctx()
 
         element_id = compute_and_register_element_id(
@@ -871,10 +896,17 @@ class ChatMixin:
             # - accept_file: Changes whether files can be attached (and how)
             # - file_type: Restricts the accepted file types
             # - max_chars: Changes the maximum allowed characters for the input
-            key_as_main_identity={"accept_file", "file_type", "max_chars"},
+            # - max_upload_size: Changes the maximum allowed file size
+            key_as_main_identity={
+                "accept_file",
+                "file_type",
+                "max_chars",
+                "max_upload_size",
+            },
             dg=self.dg,
             placeholder=placeholder,
             max_chars=max_chars,
+            max_upload_size=max_upload_size,
             accept_file=accept_file,
             file_type=file_type,
             accept_audio=accept_audio,
@@ -932,7 +964,12 @@ class ChatMixin:
         )
 
         chat_input_proto.file_type[:] = file_type if file_type is not None else []
-        chat_input_proto.max_upload_size_mb = config.get_option("server.maxUploadSize")
+        if max_upload_size is not None:
+            chat_input_proto.max_upload_size_mb = max_upload_size
+        else:
+            chat_input_proto.max_upload_size_mb = config.get_option(
+                "server.maxUploadSize"
+            )
         chat_input_proto.accept_audio = accept_audio
 
         if audio_sample_rate is not None:

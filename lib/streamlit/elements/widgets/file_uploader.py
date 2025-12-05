@@ -40,6 +40,7 @@ from streamlit.elements.lib.utils import (
     get_label_visibility_proto_value,
     to_key,
 )
+from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Common_pb2 import FileUploaderState as FileUploaderStateProto
 from streamlit.proto.Common_pb2 import UploadedFileInfo as UploadedFileInfoProto
 from streamlit.proto.FileUploader_pb2 import FileUploader as FileUploaderProto
@@ -169,7 +170,8 @@ class FileUploaderMixin:
         self,
         label: str,
         type: str | Sequence[str] | None,
-        accept_multiple_files: Literal[True, "directory"],
+        max_upload_size: int | None = None,
+        accept_multiple_files: Literal[True, "directory"] = True,
         key: Key | None = None,
         help: str | None = None,
         on_change: WidgetCallback | None = None,
@@ -188,6 +190,7 @@ class FileUploaderMixin:
         self,
         label: str,
         type: str | Sequence[str] | None,
+        max_upload_size: int | None = None,
         accept_multiple_files: Literal[False] = False,
         key: Key | None = None,
         help: str | None = None,
@@ -214,6 +217,7 @@ class FileUploaderMixin:
         *,
         accept_multiple_files: Literal[True, "directory"],
         type: str | Sequence[str] | None = None,
+        max_upload_size: int | None = None,
         key: Key | None = None,
         help: str | None = None,
         on_change: WidgetCallback | None = None,
@@ -233,6 +237,7 @@ class FileUploaderMixin:
         *,
         accept_multiple_files: Literal[False] = False,
         type: str | Sequence[str] | None = None,
+        max_upload_size: int | None = None,
         key: Key | None = None,
         help: str | None = None,
         on_change: WidgetCallback | None = None,
@@ -308,6 +313,18 @@ class FileUploaderMixin:
                 security guarantee against users uploading files of other types
                 or type extensions. The correct handling of uploaded files is
                 part of the app developer's responsibility.
+
+        max_upload_size : int or None
+            The maximum allowed size of each uploaded file for this uploader,
+            in megabytes.
+
+            When set to a positive integer, this per-widget limit takes
+            precedence over the global ``server.maxUploadSize`` configuration
+            option.
+
+            When this is ``None`` (default), the uploader falls back to
+            ``server.maxUploadSize`` for its file size limit. For more
+            information on how to set config options, see |config.toml|_.
 
         accept_multiple_files : bool or "directory"
             Whether to accept more than one file in a submission. This can be one
@@ -473,6 +490,16 @@ class FileUploaderMixin:
         width: WidthWithoutContent = "stretch",
     ) -> UploadedFile | list[UploadedFile] | None:
         key = to_key(key)
+
+        # Validate max_upload_size early to provide a clear error message
+        if max_upload_size is not None and (
+            not isinstance(max_upload_size, int) or max_upload_size <= 0
+        ):
+            raise StreamlitAPIException(
+                "The `max_upload_size` parameter must be a positive integer "
+                "representing the maximum file size in megabytes, or None "
+                "to fall back to the `server.maxUploadSize` configuration option."
+            )
 
         check_widget_policies(
             self.dg,
