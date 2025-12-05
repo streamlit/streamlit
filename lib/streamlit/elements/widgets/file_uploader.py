@@ -514,10 +514,11 @@ class FileUploaderMixin:
             "file_uploader",
             user_key=key,
             max_upload_size=max_upload_size,
-            # Treat the provided key as the main identity; only include
-            # changes to the type and accept_multiple_files parameters in
-            # the identity computation as those can invalidate the current value.
-            key_as_main_identity={"type", "accept_multiple_files"},
+            # Treat the provided key as the main identity; only include changes
+            # to the type, accept_multiple_files, and max_upload_size parameters
+            # in the identity computation as those can invalidate the current
+            # value
+            key_as_main_identity={"type", "accept_multiple_files", "max_upload_size"},
             dg=self.dg,
             label=label,
             type=type,
@@ -535,7 +536,7 @@ class FileUploaderMixin:
             normalized_type if normalized_type is not None else []
         )
         if max_upload_size is not None:
-            file_uploader_proto.max_upload_size_mb = int(max_upload_size)
+            file_uploader_proto.max_upload_size_mb = max_upload_size
         else:
             file_uploader_proto.max_upload_size_mb = config.get_option(
                 "server.maxUploadSize"
