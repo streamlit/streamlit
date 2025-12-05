@@ -595,7 +595,7 @@ def _check_type_compatibilities(
 
             if configured_column_type is None:
                 # Just a safeguard, is not expected to happen.
-                continue  # type: ignore[unreachable]
+                continue
 
             if is_type_compatible(configured_column_type, column_data_kind) is False:
                 raise StreamlitAPIException(
