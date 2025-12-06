@@ -136,6 +136,24 @@ function BaseDateTimeColumn(
     maxDate = toSafeDate(parameters.max_value) || undefined
   }
 
+  // For date columns, use custom editor for all formats (including default) to ensure
+  // edit mode matches display mode. Check props.columnTypeOptions?.format directly
+  // (not merged parameters) to detect explicit user input.
+  const userProvidedFormat = props.columnTypeOptions?.format
+  const SPECIAL_FORMATS = ["localized", "distance", "iso8601"] as const
+  const hasCustomFormat =
+    kind === "date" &&
+    (notNullOrUndefined(userProvidedFormat)
+      ? userProvidedFormat !== "" &&
+        !SPECIAL_FORMATS.includes(
+          userProvidedFormat as (typeof SPECIAL_FORMATS)[number]
+        )
+      : true)
+
+  const formatToUse = hasCustomFormat
+    ? (userProvidedFormat ?? defaultFormat)
+    : undefined
+
   const cellTemplate: DatePickerType = {
     kind: GridCellKind.Custom,
     allowOverlay: true,
@@ -152,7 +170,9 @@ function BaseDateTimeColumn(
       format: inputType,
       min: minDate,
       max: maxDate,
-    },
+      userFormat: formatToUse,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any,
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
@@ -173,13 +193,12 @@ function BaseDateTimeColumn(
     // Apply min_value configuration option:
     if (
       notNullOrUndefined(minDate) &&
-      // We compare on a string level so that it also works correctly for time and date values
       toISOString(cellData) < toISOString(minDate)
     ) {
       return false
     }
 
-    // Apply min_value configuration option:
+    // Apply max_value configuration option:
     if (
       notNullOrUndefined(maxDate) &&
       toISOString(cellData) > toISOString(maxDate)
@@ -221,7 +240,7 @@ function BaseDateTimeColumn(
 
       let copyData = ""
       let displayDate = ""
-      // Initialize with default offset base on today's date
+      // Initialize with default offset based on today's date
       let timezoneOffset = defaultTimezoneOffset
 
       if (cellData === undefined) {
@@ -271,7 +290,7 @@ function BaseDateTimeColumn(
             `Failed to format the date for rendering with: ${parameters.format}. \nError: ${error}`
           )
         }
-        // Copy data should always use the default format
+        // Copy data always uses the default format
         copyData = formatMoment(momentDate, defaultFormat, kind)
       }
 
@@ -284,7 +303,9 @@ function BaseDateTimeColumn(
           date: cellData,
           displayDate,
           timezoneOffset,
-        },
+          userFormat: formatToUse,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } as any,
       } as DatePickerType
     },
     getCellValue(cell: DatePickerType): string | null {

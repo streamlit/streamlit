@@ -23,8 +23,10 @@ import {
   ProvideEditorCallback,
   ProvideEditorCallbackResult,
 } from "@glideapps/glide-data-grid"
+import { DatePickerType } from "@glideapps/glide-data-grid-cells"
 
 import { isMaybeJson } from "~lib/components/widgets/DataFrame/columns"
+import { DateTextCellEditor } from "~lib/components/widgets/DataFrame/columns/cells/DateTextCellEditor"
 import { JsonTextCellEditor } from "~lib/components/widgets/DataFrame/columns/cells/JsonCell"
 
 /**
@@ -35,7 +37,9 @@ type CustomEditorsReturn = Pick<DataEditorProps, "provideEditor">
 /**
  * Custom hook that creates some custom cell editors compatible with glide-data-grid.
  *
- * This adds support for showing a JSON viewer for text cells that contain JSON-compatible data.
+ * This adds support for:
+ * - Showing a JSON viewer for text cells that contain JSON-compatible data
+ * - Custom text input editor for DatePickerCell with custom date formats
  *
  * @returns An object containing the following properties:
  * - `provideEditor`: A function that can be passed to the `DataEditor` component.
@@ -43,6 +47,7 @@ type CustomEditorsReturn = Pick<DataEditorProps, "provideEditor">
 function useCustomEditors(): CustomEditorsReturn {
   const provideEditor: ProvideEditorCallback<GridCell> = useCallback(
     (cell: GridCell): ProvideEditorCallbackResult<GridCell> => {
+      // Handle JSON text cells
       if (
         cell.kind === GridCellKind.Text &&
         cell.readonly &&
@@ -52,6 +57,23 @@ function useCustomEditors(): CustomEditorsReturn {
           editor: JsonTextCellEditor,
         } as ProvideEditorCallbackResult<GridCell>
       }
+
+      // Handle DatePickerCell with custom formats
+      if (
+        cell.kind === GridCellKind.Custom &&
+        (cell as DatePickerType).data?.kind === "date-picker-cell"
+      ) {
+        // Use custom editor if the cell has a userFormat (custom format)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const userFormat = ((cell as DatePickerType).data as any)?.userFormat
+        if (userFormat) {
+          return {
+            editor: DateTextCellEditor,
+            // Type assertion: DateTextCellEditor is for DatePickerType, but we use it as GridCell editor
+          } as unknown as ProvideEditorCallbackResult<GridCell>
+        }
+      }
+
       return undefined
     },
     []
