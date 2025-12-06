@@ -28,6 +28,7 @@ from streamlit.runtime.scriptrunner_utils.script_run_context import (
     get_script_run_ctx,
 )
 from streamlit.runtime.state import register_widget
+from streamlit.string_util import validate_icon_or_emoji
 
 if TYPE_CHECKING:
     from types import TracebackType
@@ -86,6 +87,7 @@ class Dialog(DeltaGenerator):
         *,
         dismissible: bool = True,
         width: DialogWidth = "small",
+        icon: str | None = None,
         on_dismiss: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
     ) -> Dialog:
         # Validation for on_dismiss parameter
@@ -99,6 +101,7 @@ class Dialog(DeltaGenerator):
         block_proto.dialog.title = title
         block_proto.dialog.dismissible = dismissible
         block_proto.dialog.width = _process_dialog_width_input(width)
+        block_proto.dialog.icon = validate_icon_or_emoji(icon)
 
         # Handle on_dismiss functionality
         is_dismiss_activated = on_dismiss != "ignore"
@@ -117,6 +120,7 @@ class Dialog(DeltaGenerator):
                 title=title,
                 dismissible=dismissible,
                 width=width,
+                icon=icon,
                 on_dismiss=str(on_dismiss) if not callable(on_dismiss) else "callback",
             )
             block_proto.dialog.id = element_id

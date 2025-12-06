@@ -65,6 +65,7 @@ def _dialog_decorator(
     *,
     width: DialogWidth = "small",
     dismissible: bool = True,
+    icon: str | None = None,
     on_dismiss: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
 ) -> F:
     if title is None or title == "":
@@ -80,7 +81,11 @@ def _dialog_decorator(
         # Streamlit UI flow. For example, if it is called from the sidebar, it should
         # not inherit the sidebar theming.
         dialog = get_dg_singleton_instance().event_dg._dialog(
-            title=title, dismissible=dismissible, width=width, on_dismiss=on_dismiss
+            title=title,
+            dismissible=dismissible,
+            width=width,
+            icon=icon,
+            on_dismiss=on_dismiss,
         )
         dialog.open()
 
@@ -111,6 +116,7 @@ def dialog_decorator(
     *,
     width: DialogWidth = "small",
     dismissible: bool = True,
+    icon: str | None = None,
     on_dismiss: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
 ) -> Callable[[F], F]: ...
 
@@ -127,6 +133,7 @@ def dialog_decorator(
     *,
     width: DialogWidth = "small",
     dismissible: bool = True,
+    icon: str | None = None,
     on_dismiss: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
 ) -> F: ...
 
@@ -137,6 +144,7 @@ def dialog_decorator(
     *,
     width: DialogWidth = "small",
     dismissible: bool = True,
+    icon: str | None = None,
     on_dismiss: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
 ) -> F | Callable[[F], F]:
     r"""Function decorator to create a modal dialog.
@@ -220,6 +228,12 @@ def dialog_decorator(
             interactions in the main app are blocked. Don't rely on
             ``dismissible`` for security-critical checks.
 
+    icon : str or None
+        Optional emoji or icon to display next to the dialog title. Accepts a
+        single-character emoji (for example, ``"🎉"``), a Material Symbol
+        shortcode (for example, ``":material/info:"``), or ``"spinner"``. If
+        ``None`` (default), no icon is shown.
+
     on_dismiss : "ignore", "rerun", or callable
         How the dialog should respond to dismissal events.
         This can be one of the following:
@@ -271,17 +285,25 @@ def dialog_decorator(
     if isinstance(func_or_title, str):
         # Support passing the params via function decorator
         def wrapper(f: F) -> F:
+            _icon = icon
             return _dialog_decorator(
                 non_optional_func=f,
                 title=func_or_title,
                 width=width,
                 dismissible=dismissible,
+                icon=_icon,
                 on_dismiss=on_dismiss,
             )
 
         return wrapper
 
     func: F = func_or_title
+    _icon = icon
     return _dialog_decorator(
-        func, "", width=width, dismissible=dismissible, on_dismiss=on_dismiss
+        func,
+        "",
+        width=width,
+        dismissible=dismissible,
+        icon=_icon,
+        on_dismiss=on_dismiss,
     )
