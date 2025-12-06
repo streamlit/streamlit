@@ -15,8 +15,10 @@
  */
 
 import { GridCellKind, NumberCell, TextCell } from "@glideapps/glide-data-grid"
+import { DatePickerType } from "@glideapps/glide-data-grid-cells"
 import { renderHook } from "@testing-library/react"
 
+import { DateTextCellEditor } from "~lib/components/widgets/DataFrame/columns/cells/DateTextCellEditor"
 import { JsonTextCellEditor } from "~lib/components/widgets/DataFrame/columns/cells/JsonCell"
 
 import useCustomEditors from "./useCustomEditors"
@@ -93,5 +95,117 @@ describe("useCustomEditors hook", () => {
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const editor = result.current.provideEditor!(cell)
     expect(editor).toBeUndefined()
+  })
+
+  describe("DatePickerCell with custom formats", () => {
+    it("returns DateTextCellEditor for DatePickerCell with custom format", () => {
+      const { result } = renderHook(() => useCustomEditors())
+
+      const cell: DatePickerType = {
+        kind: GridCellKind.Custom,
+        allowOverlay: true,
+        copyData: "",
+        readonly: false,
+        contentAlign: "left",
+        style: "normal",
+        data: {
+          kind: "date-picker-cell",
+          date: new Date("2024-05-19"),
+          displayDate: "19.05.2024",
+          format: "date",
+          step: "1",
+
+          userFormat: "DD.MM.YYYY",
+        } as any,
+      }
+
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      const editor = result.current.provideEditor!(cell)
+      expect(editor).toEqual({
+        editor: DateTextCellEditor,
+      })
+    })
+
+    it("returns undefined for DatePickerCell without custom format", () => {
+      const { result } = renderHook(() => useCustomEditors())
+
+      const cell: DatePickerType = {
+        kind: GridCellKind.Custom,
+        allowOverlay: true,
+        copyData: "",
+        readonly: false,
+        contentAlign: "left",
+        style: "normal",
+        data: {
+          kind: "date-picker-cell",
+          date: new Date("2024-05-19"),
+          displayDate: "2024-05-19",
+          format: "date",
+          step: "1",
+          // No userFormat - should use default editor
+        },
+      }
+
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      const editor = result.current.provideEditor!(cell)
+      expect(editor).toBeUndefined()
+    })
+
+    it("returns undefined for DatePickerCell with special format (localized)", () => {
+      const { result } = renderHook(() => useCustomEditors())
+
+      const cell: DatePickerType = {
+        kind: GridCellKind.Custom,
+        allowOverlay: true,
+        copyData: "",
+        readonly: false,
+        contentAlign: "left",
+        style: "normal",
+        data: {
+          kind: "date-picker-cell",
+          date: new Date("2024-05-19"),
+          displayDate: "May 19, 2024",
+          format: "date",
+          step: "1",
+          // Special formats don't get userFormat
+        },
+      }
+
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      const editor = result.current.provideEditor!(cell)
+      expect(editor).toBeUndefined()
+    })
+
+    it("handles different custom date formats", () => {
+      const { result } = renderHook(() => useCustomEditors())
+
+      const formats = ["DD.MM.YYYY", "MM/DD/YYYY", "YYYY-MM-DD"]
+
+      formats.forEach(format => {
+        const cell: DatePickerType = {
+          kind: GridCellKind.Custom,
+          allowOverlay: true,
+          copyData: "",
+          readonly: false,
+          contentAlign: "left",
+          style: "normal",
+          data: {
+            kind: "date-picker-cell",
+            date: new Date("2024-05-19"),
+            displayDate: "19.05.2024",
+            format: "date",
+            step: "1",
+
+            userFormat: format,
+          } as any,
+        }
+
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        const editor = result.current.provideEditor!(cell)
+        expect(editor).toEqual({
+          editor: DateTextCellEditor,
+        })
+      })
+    })
   })
 })

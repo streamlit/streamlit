@@ -459,6 +459,94 @@ describe("DateColumn", () => {
     expect((cell as DatePickerType).data.displayDate).toEqual("Apr 25th, 2023")
   })
 
+  // Issue #12850 - st.column_config.DateColumn editor formatting
+  it("sets userFormat to default format (YYYY-MM-DD) when no format is provided", () => {
+    const mockColumn = DateColumn(MOCK_DATE_COLUMN_TEMPLATE)
+    const cell = mockColumn.getCell(EXAMPLE_DATE) as DatePickerType
+    expect(cell.data.format).toEqual("date")
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect((cell.data as any).userFormat).toEqual("YYYY-MM-DD")
+  })
+
+  it("uses default inputType for special formats like localized", () => {
+    const MOCK_DATE_COLUMN_LOCALIZED = {
+      ...MOCK_DATE_COLUMN_TEMPLATE,
+      columnTypeOptions: {
+        format: "localized",
+      },
+    }
+
+    const mockColumn = DateColumn(MOCK_DATE_COLUMN_LOCALIZED)
+    const cell = mockColumn.getCell(EXAMPLE_DATE) as DatePickerType
+    expect(cell.data.format).toEqual("date")
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect((cell.data as any).userFormat).toBeUndefined()
+  })
+
+  it("sets userFormat for custom date formats", () => {
+    const formats = ["DD.MM.YYYY", "MM/DD/YYYY", "YYYY-MM-DD"]
+
+    formats.forEach(format => {
+      const MOCK_DATE_COLUMN = {
+        ...MOCK_DATE_COLUMN_TEMPLATE,
+        columnTypeOptions: {
+          format,
+        },
+      }
+
+      const mockColumn = DateColumn(MOCK_DATE_COLUMN)
+      const cell = mockColumn.getCell(EXAMPLE_DATE) as DatePickerType
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      expect((cell.data as any).userFormat).toEqual(format)
+    })
+  })
+
+  it("sets userFormat even when format matches default (explicitly provided)", () => {
+    const MOCK_DATE_COLUMN_DEFAULT_FORMAT = {
+      ...MOCK_DATE_COLUMN_TEMPLATE,
+      columnTypeOptions: {
+        format: "YYYY-MM-DD", // Same as default
+      },
+    }
+
+    const mockColumn = DateColumn(MOCK_DATE_COLUMN_DEFAULT_FORMAT)
+    const cell = mockColumn.getCell(EXAMPLE_DATE) as DatePickerType
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect((cell.data as any).userFormat).toEqual("YYYY-MM-DD")
+  })
+
+  it("does not set userFormat for empty string format", () => {
+    const MOCK_DATE_COLUMN_EMPTY = {
+      ...MOCK_DATE_COLUMN_TEMPLATE,
+      columnTypeOptions: {
+        format: "",
+      },
+    }
+
+    const mockColumn = DateColumn(MOCK_DATE_COLUMN_EMPTY)
+    const cell = mockColumn.getCell(EXAMPLE_DATE) as DatePickerType
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect((cell.data as any).userFormat).toBeUndefined()
+  })
+
+  it("does not set userFormat for special formats", () => {
+    const specialFormats = ["localized", "distance", "iso8601"]
+
+    specialFormats.forEach(format => {
+      const MOCK_DATE_COLUMN = {
+        ...MOCK_DATE_COLUMN_TEMPLATE,
+        columnTypeOptions: {
+          format,
+        },
+      }
+
+      const mockColumn = DateColumn(MOCK_DATE_COLUMN)
+      const cell = mockColumn.getCell(EXAMPLE_DATE) as DatePickerType
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      expect((cell.data as any).userFormat).toBeUndefined()
+    })
+  })
+
   // Issue #11291 - st.column_config 'localized' option
   it("handles localized format", () => {
     // Update navigator.languages for this test
