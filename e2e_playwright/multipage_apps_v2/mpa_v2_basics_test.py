@@ -439,6 +439,32 @@ def test_removes_non_embed_query_params_when_swapping_pages(app: Page, app_port:
     )
 
 
+def test_preserves_query_params_on_browser_back_navigation(app: Page, app_port: int):
+    """Test that query params are preserved on first script run after browser back button.
+
+    Regression test for https://github.com/streamlit/streamlit/issues/9279
+    """
+    # Navigate to main page with query params
+    goto_app(app, f"http://localhost:{app_port}/?mykey=myvalue")
+    expect(app).to_have_url(f"http://localhost:{app_port}/?mykey=myvalue")
+
+    # Verify query params are displayed
+    expect_prefixed_markdown(app, "Query Params:", "{'mykey': 'myvalue'}")
+
+    # Navigate to another page via sidebar (this clears query params)
+    get_page_link(app, "page 4").click()
+    wait_for_app_loaded(app)
+    expect(app).to_have_url(f"http://localhost:{app_port}/page_4")
+
+    # Use browser back button to return to main page with query params
+    app.go_back()
+    wait_for_app_loaded(app)
+
+    # Verify query params are preserved on the first script run after back navigation
+    expect(app).to_have_url(f"http://localhost:{app_port}/?mykey=myvalue")
+    expect_prefixed_markdown(app, "Query Params:", "{'mykey': 'myvalue'}")
+
+
 def test_renders_logos(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that logos display properly in sidebar and main sections."""
 
@@ -469,6 +495,23 @@ def test_page_link_with_st_file(app: Page):
     wait_for_app_loaded(app)
 
     expect(page_heading(app)).to_contain_text("Page 9")
+
+
+def test_page_link_with_query_params(app: Page, app_port: int):
+    """Test st.page_link with query params works."""
+
+    page_link = app.get_by_test_id("stPageLink-NavLink").filter(
+        has_text="page 9 with query params"
+    )
+    expect(page_link).to_be_visible()
+    expect(page_link).to_have_attribute("href", "page_9?foo=bar&baz=1&baz=2")
+
+    page_link.click()
+    wait_for_app_loaded(app)
+
+    expect(page_heading(app)).to_contain_text("Page 9")
+    expect(app).to_have_url(f"http://localhost:{app_port}/page_9?foo=bar&baz=1&baz=2")
+    expect_prefixed_markdown(app, "Query Params:", "{'foo': 'bar', 'baz': ['1', '2']}")
 
 
 def test_hidden_navigation(app: Page):

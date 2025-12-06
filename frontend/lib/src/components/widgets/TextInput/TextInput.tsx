@@ -17,7 +17,7 @@
 import React, { memo, ReactElement, useCallback, useState } from "react"
 
 import { Input as UIInput } from "baseui/input"
-import uniqueId from "lodash/uniqueId"
+import { uniqueId } from "lodash-es"
 
 import { TextInput as TextInputProto } from "@streamlit/protobuf"
 

@@ -39,8 +39,16 @@ page_with_material_icon = st.Page(
 )
 
 # Test passing st.Page objects to st.page_link
-st.page_link(page_with_icon, label="Page Link with Icon from st.Page")
-st.page_link(page_with_material_icon, label="Page Link with Material Icon from st.Page")
+st.page_link(
+    page_with_icon,
+    label="Page Link with Icon from st.Page",
+    query_params={"foo": ["bar", "baz"]},
+)
+st.page_link(
+    page_with_material_icon,
+    label="Page Link with Material Icon from st.Page",
+    query_params=[("foo", "bar"), ("baz", "qux")],
+)
 
 # Test overriding page icons in st.page_link
 st.page_link(page_with_icon, label="Override Page Icon from st.Page", icon="🔥")

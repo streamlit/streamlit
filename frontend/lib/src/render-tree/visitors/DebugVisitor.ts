@@ -14,9 +14,13 @@
  * limitations under the License.
  */
 
-import { AppNode, NO_SCRIPT_RUN_ID } from "~lib/render-tree/AppNode.interface"
-import { BlockNode } from "~lib/render-tree/BlockNode"
-import { ElementNode } from "~lib/render-tree/ElementNode"
+import {
+  AppNode,
+  BlockNode,
+  ElementNode,
+  NO_SCRIPT_RUN_ID,
+  TransientNode,
+} from "~lib/AppNode"
 
 import { AppNodeVisitor } from "./AppNodeVisitor.interface"
 
@@ -75,6 +79,40 @@ export class DebugVisitor implements AppNodeVisitor<string> {
     result += ` (activeScriptHash: ${node.activeScriptHash.substring(0, MAX_HASH_LENGTH)})`
 
     result += "\n"
+    return result
+  }
+
+  visitTransientNode(node: TransientNode): string {
+    const connector = this.isLast ? "└── " : "├── "
+    const childPrefix = this.prefix + (this.isLast ? "    " : "│   ")
+
+    let result = `${this.prefix}${connector}TransientNode [${node.transientNodes.length} transient]`
+    if (node.scriptRunId !== NO_SCRIPT_RUN_ID) {
+      result += ` (run: ${node.scriptRunId.substring(0, MAX_HASH_LENGTH)})`
+    }
+    result += "\n"
+
+    if (node.anchor) {
+      result += `${childPrefix}├── anchor:\n`
+      const anchorVisitor = new DebugVisitor(childPrefix + "│   ", true)
+      result += node.anchor.accept(anchorVisitor)
+    }
+
+    if (node.transientNodes.length > 0) {
+      result += `${childPrefix}└── transient nodes:\n`
+
+      node.transientNodes.forEach((transientNode, index) => {
+        const isLastTransient = index === node.transientNodes.length - 1
+        const transientConnector = isLastTransient ? "└── " : "├── "
+        const transientChildPrefix =
+          childPrefix + "    " + (isLastTransient ? "    " : "│   ")
+
+        result += `${childPrefix}    ${transientConnector}:\n`
+        const transientVisitor = new DebugVisitor(transientChildPrefix, true)
+        result += transientNode.accept(transientVisitor)
+      })
+    }
+
     return result
   }
 

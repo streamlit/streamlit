@@ -14,13 +14,19 @@
  * limitations under the License.
  */
 
-import React from "react"
+import React, { useMemo } from "react"
 
 import { DynamicIcon } from "~lib/components/shared/Icon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
+import { formatShortcutForDisplay } from "~lib/hooks/useRegisterShortcut"
 import { IconSize } from "~lib/theme"
+import { isFromMac } from "~lib/util/utils"
 
-import { StyledButtonLabel } from "./styled-components"
+import {
+  StyledButtonLabel,
+  StyledButtonMainLabel,
+  StyledButtonShortcut,
+} from "./styled-components"
 
 export interface DynamicButtonLabelProps {
   icon?: string
@@ -28,6 +34,7 @@ export interface DynamicButtonLabelProps {
   iconSize?: IconSize
   useSmallerFont?: boolean
   iconPosition?: "left" | "right"
+  shortcut?: string | null
 }
 
 export const DynamicButtonLabel = ({
@@ -36,26 +43,36 @@ export const DynamicButtonLabel = ({
   iconSize,
   useSmallerFont = false,
   iconPosition = "left",
+  shortcut,
 }: DynamicButtonLabelProps): React.ReactElement | null => {
-  const normalizedIconPosition = iconPosition === "right" ? "right" : "left"
+  const displayShortcut = useMemo(() => {
+    return formatShortcutForDisplay(shortcut, { isMac: isFromMac() })
+  }, [shortcut])
 
   return (
     <StyledButtonLabel>
-      {icon && normalizedIconPosition === "left" && (
-        <DynamicIcon size={iconSize ?? "lg"} iconValue={icon} />
-      )}
-      {label && (
-        <StreamlitMarkdown
-          source={label}
-          allowHTML={false}
-          isLabel
-          largerLabel={!useSmallerFont}
-          disableLinks
-        />
-      )}
-      {icon && normalizedIconPosition === "right" && (
-        <DynamicIcon size={iconSize ?? "lg"} iconValue={icon} />
-      )}
+      <StyledButtonMainLabel data-has-shortcut={Boolean(displayShortcut)}>
+        {icon && iconPosition === "left" && (
+          <DynamicIcon size={iconSize ?? "lg"} iconValue={icon} />
+        )}
+        {label && (
+          <StreamlitMarkdown
+            source={label}
+            allowHTML={false}
+            isLabel
+            largerLabel={!useSmallerFont}
+            disableLinks
+          />
+        )}
+        {icon && iconPosition === "right" && (
+          <DynamicIcon size={iconSize ?? "lg"} iconValue={icon} />
+        )}
+        {displayShortcut && (
+          <StyledButtonShortcut aria-label={`Shortcut ${displayShortcut}`}>
+            {displayShortcut}
+          </StyledButtonShortcut>
+        )}
+      </StyledButtonMainLabel>
     </StyledButtonLabel>
   )
 }

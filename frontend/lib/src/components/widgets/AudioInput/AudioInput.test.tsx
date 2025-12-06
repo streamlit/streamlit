@@ -27,6 +27,8 @@ import type {
 import { render } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
+import { FormClearHelper } from "src/components/widgets/Form"
+
 import AudioInput, { Props } from "./AudioInput"
 
 const useWaveformControllerMock = vi.fn()
@@ -43,7 +45,12 @@ vi.mock("~lib/util/uploadFiles", () => ({
 }))
 
 vi.mock("~lib/components/widgets/Form", () => ({
-  FormClearHelper: vi.fn((...args: unknown[]) => FormClearHelperMock(...args)),
+  FormClearHelper: vi.fn().mockImplementation(function (
+    this: FormClearHelper,
+    ...args: unknown[]
+  ) {
+    return FormClearHelperMock(...args)
+  }),
   useFormClearHelper: vi.fn(),
 }))
 

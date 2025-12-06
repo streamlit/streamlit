@@ -243,4 +243,125 @@ describe("LinkColumn", () => {
 
     expect(cell.displayData).toBe("https://roadmap.streamlit.app")
   })
+
+  it("displays material icon when display_text is a material icon", () => {
+    const mockColumn = LinkColumn({
+      ...MOCK_LINK_COLUMN_PROPS,
+      columnTypeOptions: { display_text: ":material/open_in_new:" },
+    })
+
+    const cell = mockColumn.getCell("https://streamlit.io", true) as UriCell
+
+    // The display should be the icon name for the icon font
+    expect(cell.displayData).toBe("open_in_new")
+    // Should center align when using icon
+    expect(cell.contentAlign).toBe("center")
+    // Should have theme override for icon font
+    expect(cell.themeOverride).toBeDefined()
+  })
+
+  it("does not allow overlay when using material icon display", () => {
+    const mockColumn = LinkColumn({
+      ...MOCK_LINK_COLUMN_PROPS,
+      columnTypeOptions: { display_text: ":material/link:" },
+    })
+
+    const cell = mockColumn.getCell("https://streamlit.io", true) as UriCell
+
+    expect(cell.allowOverlay).toBe(false)
+  })
+
+  it("returns false for validateInput when value is null and column is required", () => {
+    const mockColumn = LinkColumn({
+      ...MOCK_LINK_COLUMN_PROPS,
+      isRequired: true,
+    })
+
+    expect(mockColumn.validateInput!(null)).toBe(false)
+    expect(mockColumn.validateInput!(undefined)).toBe(false)
+  })
+
+  it("returns true for validateInput when value is null and column is not required", () => {
+    const mockColumn = LinkColumn(MOCK_LINK_COLUMN_PROPS)
+
+    expect(mockColumn.validateInput!(null)).toBe(true)
+    expect(mockColumn.validateInput!(undefined)).toBe(true)
+  })
+
+  it("returns null for getCellValue when cell data is null", () => {
+    const mockColumn = LinkColumn(MOCK_LINK_COLUMN_PROPS)
+    const cell = mockColumn.getCell(null) as UriCell
+
+    expect(mockColumn.getCellValue(cell)).toBeNull()
+  })
+
+  it("creates a missing value cell for null data", () => {
+    const mockColumn = LinkColumn(MOCK_LINK_COLUMN_PROPS)
+    const cell = mockColumn.getCell(null) as UriCell
+
+    expect(cell.data).toBeNull()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
+    expect((cell as any).isMissingValue).toBe(true)
+  })
+
+  it("opens link in new tab with correct parameters", () => {
+    const mockColumn = LinkColumn(MOCK_LINK_COLUMN_PROPS)
+    const cell = mockColumn.getCell("https://streamlit.io") as UriCell
+
+    const mockOpen = vi.spyOn(window, "open").mockImplementation(() => null)
+    const mockPreventDefault = vi.fn()
+
+    cell.onClickUri?.({ preventDefault: mockPreventDefault } as never)
+
+    expect(mockOpen).toHaveBeenCalledWith(
+      "https://streamlit.io",
+      "_blank",
+      "noopener,noreferrer"
+    )
+    expect(mockPreventDefault).toHaveBeenCalled()
+
+    mockOpen.mockRestore()
+  })
+
+  it("prepends https:// for www. links", () => {
+    const mockColumn = LinkColumn(MOCK_LINK_COLUMN_PROPS)
+    const cell = mockColumn.getCell("www.streamlit.io") as UriCell
+
+    const mockOpen = vi.spyOn(window, "open").mockImplementation(() => null)
+
+    cell.onClickUri?.({ preventDefault: vi.fn() } as never)
+
+    expect(mockOpen).toHaveBeenCalledWith(
+      "https://www.streamlit.io",
+      "_blank",
+      "noopener,noreferrer"
+    )
+
+    mockOpen.mockRestore()
+  })
+
+  it("has correct typeIcon", () => {
+    const mockColumn = LinkColumn(MOCK_LINK_COLUMN_PROPS)
+    expect(mockColumn.typeIcon).toBe(":material/link:")
+  })
+
+  it("has correct sortMode", () => {
+    const mockColumn = LinkColumn(MOCK_LINK_COLUMN_PROPS)
+    expect(mockColumn.sortMode).toBe("default")
+  })
+
+  it("sets correct copyData", () => {
+    const mockColumn = LinkColumn(MOCK_LINK_COLUMN_PROPS)
+    const cell = mockColumn.getCell("https://streamlit.io") as UriCell
+
+    expect(cell.copyData).toBe("https://streamlit.io")
+  })
+
+  it("handles empty href correctly", () => {
+    const mockColumn = LinkColumn(MOCK_LINK_COLUMN_PROPS)
+    const cell = mockColumn.getCell("") as UriCell
+
+    // Empty string should be treated similar to null for display
+    expect(cell.displayData).toBe("")
+  })
 })

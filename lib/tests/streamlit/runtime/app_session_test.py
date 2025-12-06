@@ -18,9 +18,7 @@ import asyncio
 import gc
 import threading
 import unittest
-from asyncio import AbstractEventLoop
 from typing import TYPE_CHECKING, Any, cast
-from unittest import IsolatedAsyncioTestCase
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -70,7 +68,7 @@ def del_path(monkeypatch):
 
 
 def _create_test_session(
-    event_loop: AbstractEventLoop | None = None,
+    event_loop: asyncio.AbstractEventLoop | None = None,
     session_id_override: str | None = None,
 ) -> AppSession:
     """Create an AppSession instance with some default mocked data."""
@@ -908,7 +906,7 @@ def _mock_get_options_for_section(
     return get_options_for_section
 
 
-class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
+class AppSessionScriptEventTest(unittest.IsolatedAsyncioTestCase):
     """Tests for AppSession's ScriptRunner event handling."""
 
     @patch(

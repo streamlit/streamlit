@@ -36,4 +36,5 @@ message Button {
   bool use_container_width = 9 [deprecated = true];
   string icon = 10;
   string icon_position = 11;
+  string shortcut = 12;
 }
