@@ -92,6 +92,7 @@ describe("BidiComponent/utils/theme", () => {
       greenBackgroundColor: "rgba(0,255,0,0.1)",
       violetBackgroundColor: "rgba(170,0,255,0.1)",
       grayBackgroundColor: "rgba(136,136,136,0.1)",
+      widgetBorderColor: "transparent",
 
       redTextColor: "#ff0000",
       orangeTextColor: "#ff8800",
@@ -109,10 +110,26 @@ describe("BidiComponent/utils/theme", () => {
       expect(result["--st-primary-color"]).toBe("#ff0000")
       expect(result["--st-background-color"]).toBe("#ffffff")
       expect(result["--st-font"]).toBe("Source Sans Pro, sans-serif")
-
-      // This is an optional property, so if it doesn't exist, it should not be included in the result
-      expect(Object.keys(result)).not.toContain("--st-widget-border-color")
+      expect(result["--st-widget-border-color"]).toBe("transparent")
     })
+
+    it.each([
+      ["undefined", undefined],
+      ["null", null],
+    ])(
+      "serializes explicitly %s non-widget properties as CSS-wide 'unset'",
+      (_label, value) => {
+        const themeWithOverrides = createTheme({
+          borderColor: value as never,
+        })
+
+        const result = objectToCssCustomProperties(themeWithOverrides)
+        const dict = result as unknown as Record<string, string>
+
+        expect(dict["--st-border-color"]).toBe("unset")
+        expectTypeOf(dict["--st-border-color"]).toEqualTypeOf<string>()
+      }
+    )
 
     it.each([
       [true, "1"],
@@ -251,10 +268,8 @@ describe("BidiComponent/utils/theme", () => {
     // expect to be present in the extracted theme object.
     const protoFieldsToIgnore: Array<keyof ICustomThemeConfig> = [
       "base",
-      "font",
       "bodyFont",
       "widgetBackgroundColor",
-      "widgetBorderColor",
       "radii",
       "fontFaces",
       "fontSources",
@@ -353,6 +368,13 @@ describe("BidiComponent/utils/theme", () => {
 
       expectedThemeKeys.forEach(expectedKey => {
         expect(extractedThemeKeys).toContain(expectedKey)
+      })
+
+      protoFieldsToIgnore.forEach(ignoredKey => {
+        expect(
+          extractedThemeKeys,
+          `Expected ignored protobuf theme field "${ignoredKey}" to be omitted from extracted theme keys.`
+        ).not.toContain(ignoredKey)
       })
     })
   })
