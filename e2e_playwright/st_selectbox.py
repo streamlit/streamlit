@@ -90,7 +90,7 @@ v10 = st.selectbox(
 )
 st.write("value 10:", v10)
 
-v11 = st.selectbox(
+v11: str = st.selectbox(
     "selectbox 11 (options from dataframe)", pd.DataFrame({"foo": list(options)})
 )
 st.write("value 11:", v11)

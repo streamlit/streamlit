@@ -294,6 +294,132 @@ describe("DateTimeColumn", () => {
     )
     expect((mockCell as DatePickerType).data.timezoneOffset).toEqual(300)
   })
+
+  it("supports columns with named timezone (e.g., America/New_York)", () => {
+    const MOCK_DATETIME_COLUMN_TEMPLATE_WITH_NAMED_TZ: BaseColumnProps = {
+      ...MOCK_DATETIME_COLUMN_TEMPLATE,
+      arrowType: {
+        ...MOCK_DATETIME_COLUMN_TEMPLATE.arrowType,
+        pandasType: {
+          ...MOCK_DATETIME_COLUMN_TEMPLATE.arrowType.pandasType,
+          metadata: { timezone: "America/New_York" },
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
+        } as any,
+      },
+    }
+
+    const mockColumn = DateTimeColumn(
+      MOCK_DATETIME_COLUMN_TEMPLATE_WITH_NAMED_TZ
+    )
+    const mockCell = mockColumn.getCell(EXAMPLE_DATE)
+    expect((mockCell as DatePickerType).data.date).toEqual(EXAMPLE_DATE)
+    // America/New_York in April is EDT (UTC-4)
+    expect((mockCell as DatePickerType).data.displayDate).toEqual(
+      "2023-04-25 06:30:00-04:00"
+    )
+  })
+
+  it("supports user-configured timezone in columnTypeOptions", () => {
+    const MOCK_DATETIME_COLUMN_WITH_USER_TZ: BaseColumnProps = {
+      ...MOCK_DATETIME_COLUMN_TEMPLATE,
+      columnTypeOptions: {
+        timezone: "UTC",
+      },
+    }
+
+    const mockColumn = DateTimeColumn(MOCK_DATETIME_COLUMN_WITH_USER_TZ)
+    const mockCell = mockColumn.getCell(EXAMPLE_DATE)
+    expect((mockCell as DatePickerType).data.displayDate).toEqual(
+      "2023-04-25 10:30:00+00:00"
+    )
+  })
+
+  it("returns false for validateInput when value is null and column is required", () => {
+    const MOCK_DATETIME_COLUMN_REQUIRED: BaseColumnProps = {
+      ...MOCK_DATETIME_COLUMN_TEMPLATE,
+      isRequired: true,
+    }
+
+    const mockColumn = DateTimeColumn(MOCK_DATETIME_COLUMN_REQUIRED)
+    expect(mockColumn.validateInput!(null)).toBe(false)
+    expect(mockColumn.validateInput!(undefined)).toBe(false)
+    expect(mockColumn.validateInput!("")).toBe(false)
+  })
+
+  it("returns true for validateInput when value is null and column is not required", () => {
+    const mockColumn = DateTimeColumn(MOCK_DATETIME_COLUMN_TEMPLATE)
+    expect(mockColumn.validateInput!(null)).toBe(true)
+    expect(mockColumn.validateInput!(undefined)).toBe(true)
+    expect(mockColumn.validateInput!("")).toBe(true)
+  })
+
+  it("returns false for validateInput when value cannot be interpreted as date", () => {
+    const mockColumn = DateTimeColumn(MOCK_DATETIME_COLUMN_TEMPLATE)
+    expect(mockColumn.validateInput!("not-a-date")).toBe(false)
+    expect(mockColumn.validateInput!(NaN)).toBe(false)
+  })
+
+  it("adapts default format based on step size >= 60", () => {
+    const MOCK_DATETIME_COLUMN_WITH_STEP: BaseColumnProps = {
+      ...MOCK_DATETIME_COLUMN_TEMPLATE,
+      columnTypeOptions: {
+        step: 60,
+      },
+    }
+
+    const mockColumn = DateTimeColumn(MOCK_DATETIME_COLUMN_WITH_STEP)
+    const newCell = mockColumn.getCell(EXAMPLE_DATE)
+    // With step >= 60, format should omit seconds
+    expect((newCell as DatePickerType).data.displayDate).toBe(
+      "2023-04-25 10:30"
+    )
+  })
+
+  it("adapts default format based on step size < 1 (milliseconds)", () => {
+    const MOCK_DATETIME_COLUMN_WITH_MS_STEP: BaseColumnProps = {
+      ...MOCK_DATETIME_COLUMN_TEMPLATE,
+      columnTypeOptions: {
+        step: 0.001,
+      },
+    }
+
+    const mockColumn = DateTimeColumn(MOCK_DATETIME_COLUMN_WITH_MS_STEP)
+    const newCell = mockColumn.getCell(EXAMPLE_DATE)
+    // With step < 1, format should include milliseconds
+    expect((newCell as DatePickerType).data.displayDate).toBe(
+      "2023-04-25 10:30:00.000"
+    )
+  })
+
+  it("includes Z suffix for datetime with timezone", () => {
+    const MOCK_DATETIME_COLUMN_WITH_TZ: BaseColumnProps = {
+      ...MOCK_DATETIME_COLUMN_TEMPLATE,
+      columnTypeOptions: {
+        timezone: "UTC",
+      },
+    }
+
+    const mockColumn = DateTimeColumn(MOCK_DATETIME_COLUMN_WITH_TZ)
+    const cell = mockColumn.getCell(EXAMPLE_DATE)
+    // copyData should have Z suffix for timezone-aware datetimes
+    expect((cell as DatePickerType).copyData).toEqual(
+      "2023-04-25 10:30:00+00:00"
+    )
+  })
+
+  it("returns ISO string with Z suffix from getCellValue for timezone-aware columns", () => {
+    const MOCK_DATETIME_COLUMN_WITH_TZ: BaseColumnProps = {
+      ...MOCK_DATETIME_COLUMN_TEMPLATE,
+      columnTypeOptions: {
+        timezone: "UTC",
+      },
+    }
+
+    const mockColumn = DateTimeColumn(MOCK_DATETIME_COLUMN_WITH_TZ)
+    const cell = mockColumn.getCell(EXAMPLE_DATE)
+    // getCellValue should return ISO string with Z suffix
+    expect(mockColumn.getCellValue(cell)).toEqual("2023-04-25T10:30:00.000Z")
+  })
 })
 
 describe("DateColumn", () => {

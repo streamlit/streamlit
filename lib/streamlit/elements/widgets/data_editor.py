@@ -30,6 +30,8 @@ from typing import (
     overload,
 )
 
+from typing_extensions import Required
+
 from streamlit import dataframe_util
 from streamlit import logger as _logger
 from streamlit.deprecation_util import (
@@ -100,8 +102,8 @@ EditableData = TypeVar(
 # All data types supported by the data editor.
 DataTypes: TypeAlias = Union[
     "pd.DataFrame",
-    "pd.Series",
-    "pd.Index",
+    "pd.Series[Any]",
+    "pd.Index[Any]",
     "Styler",
     "pa.Table",
     "np.ndarray[Any, np.dtype[np.float64]]",
@@ -131,9 +133,9 @@ class EditingState(TypedDict, total=False):
         the deleted row.
     """
 
-    edited_rows: dict[int, dict[str, str | int | float | bool | None]]
-    added_rows: list[dict[str, str | int | float | bool | None]]
-    deleted_rows: list[int]
+    edited_rows: Required[dict[int, dict[str, str | int | float | bool | None]]]
+    added_rows: Required[list[dict[str, str | int | float | bool | None]]]
+    deleted_rows: Required[list[int]]
 
 
 @dataclass
@@ -141,25 +143,26 @@ class DataEditorSerde:
     """DataEditorSerde is used to serialize and deserialize the data editor state."""
 
     def deserialize(self, ui_value: str | None) -> EditingState:
-        data_editor_state: EditingState = (
+        data_editor_state: EditingState = cast(
+            "EditingState",
             {
                 "edited_rows": {},
                 "added_rows": [],
                 "deleted_rows": [],
             }
             if ui_value is None
-            else json.loads(ui_value)
+            else json.loads(ui_value),
         )
 
         # Make sure that all editing state keys are present:
         if "edited_rows" not in data_editor_state:
-            data_editor_state["edited_rows"] = {}
+            data_editor_state["edited_rows"] = {}  # type: ignore[unreachable]
 
         if "deleted_rows" not in data_editor_state:
-            data_editor_state["deleted_rows"] = []
+            data_editor_state["deleted_rows"] = []  # type: ignore[unreachable]
 
         if "added_rows" not in data_editor_state:
-            data_editor_state["added_rows"] = []
+            data_editor_state["added_rows"] = []  # type: ignore[unreachable]
 
         # Convert the keys (numerical row positions) to integers.
         # The keys are strings because they are serialized to JSON.
@@ -237,8 +240,8 @@ def _parse_value(
         ]:
             datetime_value = pd.Timestamp(value)  # ty: ignore
 
-            if datetime_value is pd.NaT:
-                return None
+            if pd.isna(datetime_value):
+                return None  # type: ignore[unreachable]
 
             if column_data_kind == ColumnDataKind.DATETIME:
                 return datetime_value
@@ -295,7 +298,7 @@ def _apply_cell_edits(
                 )
             else:
                 col_pos = df.columns.get_loc(col_name)
-                df.iat[row_pos, col_pos] = _parse_value(
+                df.iat[row_pos, col_pos] = _parse_value(  # type: ignore
                     value, dataframe_schema[col_name]
                 )
 
@@ -456,7 +459,7 @@ def _apply_dataframe_edits(
         _apply_row_additions(df, data_editor_state["added_rows"], dataframe_schema)
 
 
-def _is_supported_index(df_index: pd.Index) -> bool:
+def _is_supported_index(df_index: pd.Index[Any]) -> bool:
     """Check if the index is supported by the data editor component.
 
     Parameters
@@ -572,7 +575,7 @@ def _check_type_compatibilities(
     indices = [(INDEX_IDENTIFIER, data_df.index)]
 
     for column in indices + list(data_df.items()):
-        column_name, _ = column
+        column_name = str(column[0])
         column_data_kind = dataframe_schema[column_name]
 
         # TODO(lukasmasuch): support column config via numerical index here?
@@ -591,7 +594,8 @@ def _check_type_compatibilities(
             configured_column_type = type_config.get("type")
 
             if configured_column_type is None:
-                continue
+                # Just a safeguard, is not expected to happen.
+                continue  # type: ignore[unreachable]
 
             if is_type_compatible(configured_column_type, column_data_kind) is False:
                 raise StreamlitAPIException(
@@ -707,11 +711,14 @@ class DataEditorMixin:
               the parent container, the width of the editor matches the width
               of the parent container.
 
-        height : int, "auto", "content", or "stretch"
+        height : "auto", "content", "stretch", or int
             The height of the data editor. This can be one of the following:
 
             - ``"auto"`` (default): Streamlit sets the height to show at most
               ten rows.
+            - ``"content"``: The height of the editor matches the height of
+              its content. The height is capped at 10,000 pixels to prevent
+              performance issues with very large dataframes.
             - ``"stretch"``: The height of the editor expands to fill the
               available vertical space in its parent container. When multiple
               elements with stretch height are in the same container, they
@@ -721,9 +728,6 @@ class DataEditorMixin:
               container.
             - An integer specifying the height in pixels: The editor has a
               fixed height.
-            - ``"content"``: The height of the editor matches the height of
-              its content. The height is capped at 10,000 pixels to prevent
-              performance issues with very large dataframes.
 
             Vertical scrolling within the editor is enabled when the height
             does not accommodate all rows.
@@ -823,9 +827,10 @@ class DataEditorMixin:
             which fits one line of text.
 
         placeholder : str or None
-            The text that should be shown for missing values (such as ``"None"``,
-            ``"NaN"``, ``"-"``, or ``""``). If this is ``None`` (default),
-            missing values are displayed as ``"None"``.
+            The text that should be shown for missing values. If this is
+            ``None`` (default), missing values are displayed as "None". To
+            leave a cell empty, use an empty string (``""``). Other common
+            values are ``"null"``, ``"NaN"`` and ``"-"``.
 
         Returns
         -------
@@ -996,10 +1001,10 @@ class DataEditorMixin:
         for column_name, column_data in data_df.items():
             if dataframe_util.is_colum_type_arrow_incompatible(column_data):
                 update_column_config(
-                    column_config_mapping, column_name, {"disabled": True}
+                    column_config_mapping, str(column_name), {"disabled": True}
                 )
                 # Convert incompatible type to string
-                data_df[column_name] = column_data.astype("string")
+                data_df[cast("Any", column_name)] = column_data.astype("string")
 
         apply_data_specific_configs(column_config_mapping, data_format)
 

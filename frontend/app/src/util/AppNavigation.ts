@@ -62,6 +62,8 @@ export class AppNavigation {
 
   isPageIconSet: boolean
 
+  hasSetDefaultFavicon: boolean
+
   mainScriptHash: string | null
 
   appPages: IAppPage[]
@@ -82,6 +84,7 @@ export class AppNavigation {
     this.onPageIconChange = onPageIconChange
     this.isPageIconSet = false
     this.isPageTitleSet = false
+    this.hasSetDefaultFavicon = false
     this.mainScriptHash = null
     this.appPages = []
     this.mainPage = null
@@ -89,8 +92,12 @@ export class AppNavigation {
   }
 
   handleNewSession(newSession: NewSession): MaybeStateUpdate {
-    this.isPageTitleSet = false
-    this.isPageIconSet = false
+    // Reset flags only when script hash changes (new page in multi-page app)
+    if (this.mainScriptHash !== newSession.mainScriptHash) {
+      this.isPageTitleSet = false
+      this.isPageIconSet = false
+      this.hasSetDefaultFavicon = false
+    }
 
     this.mainScriptHash = newSession.mainScriptHash
     // Initialize to the config value if provided
@@ -196,8 +203,14 @@ export class AppNavigation {
   }
 
   handlePageConfigChanged(pageConfig: PageConfig): void {
-    this.isPageIconSet = Boolean(pageConfig.favicon)
-    this.isPageTitleSet = Boolean(pageConfig.title)
+    // Make flags "sticky" - once set, they stay true for the session.
+    // This ensures that multiple set_page_config calls don't reset the flags.
+    if (pageConfig.favicon) {
+      this.isPageIconSet = true
+    }
+    if (pageConfig.title) {
+      this.isPageTitleSet = true
+    }
   }
 
   clearPageElements(elements: AppRoot, mainScriptHash: string): AppRoot {

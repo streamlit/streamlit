@@ -14,8 +14,7 @@
  * limitations under the License.
  */
 
-import merge from "lodash/merge"
-import mergeWith from "lodash/mergeWith"
+import { merge, mergeWith } from "lodash-es"
 
 import {
   convertRemToPx,

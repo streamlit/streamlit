@@ -481,12 +481,18 @@ class PlotlyMixin:
               the parent container, the width of the element matches the width
               of the parent container.
 
-        height : "stretch", "content", or int
-            How to size the chart's height. Can be one of:
+        height : "content", "stretch", or int
+            The height of the chart element. This can be one of the following:
 
-            - ``"content"`` (default): Size the chart to fit its contents.
-            - ``"stretch"``: Expand to the height of the parent container.
-            - An integer: Set the chart height to this many pixels.
+            - ``"content"`` (default): The height of the element matches the
+              height of its content.
+            - ``"stretch"``: The height of the element matches the height of
+              its content or the height of the parent container, whichever is
+              larger. If the element is not in a parent container, the height
+              of the element matches the height of its content.
+            - An integer specifying the height in pixels: The element has a
+              fixed height. If the content is larger than the specified
+              height, scrolling is enabled.
 
         use_container_width : bool or None
             Whether to override the figure's native width with the width of

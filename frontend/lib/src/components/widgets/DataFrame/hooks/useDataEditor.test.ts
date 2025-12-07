@@ -27,10 +27,10 @@ import {
   NumberColumn,
   TextColumn,
 } from "~lib/components/widgets/DataFrame/columns"
-import EditingState from "~lib/components/widgets/DataFrame/EditingState"
 import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
 import { notNullOrUndefined } from "~lib/util/utils"
 
+import EditingState from "./EditingState"
 import useDataEditor from "./useDataEditor"
 
 const MOCK_COLUMNS: BaseColumn[] = [

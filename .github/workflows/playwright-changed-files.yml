@@ -4,8 +4,11 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
     paths-ignore:
-      # Don't run CI if changes are only in the specs folder:
+      # Don't run CI if changes are only in documentation/spec folders:
       - "specs/**"
+      - "agent-knowledge/**"
+      - "wiki/**"
+
   workflow_call:
     inputs:
       ref:
@@ -64,7 +67,7 @@ jobs:
           exit 1
       - name: Checkout Streamlit code (ref input)
         if: inputs.ref != ''
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           ref: ${{ inputs.ref }}
           persist-credentials: false
@@ -72,7 +75,7 @@ jobs:
           fetch-depth: 0
       - name: Checkout Streamlit code (PR head)
         if: inputs.ref == '' && github.event_name == 'pull_request'
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           repository: ${{ github.event.pull_request.head.repo.full_name }}
           ref: ${{ github.head_ref }}
@@ -86,7 +89,7 @@ jobs:
         run: |
           # Fetch base branch/SHA for comparison
           # If BASE_REF is not a SHA (not 40 hex chars), fetch it as a branch name
-          if [[ ! "$BASE_REF" =~ ^[0-9a-f]{40}$ ]]; then
+          if [[ ! "$BASE_REF" =~ ^[0-9a-fA-F]{40}$ ]]; then
             git fetch origin "${BASE_REF}:${BASE_REF}" 2>/dev/null || true
           fi
           # If it's a SHA, git already has it (we used fetch-depth: 0)
@@ -202,7 +205,7 @@ jobs:
           cd e2e_playwright
           rm -rf ./test-results
           echo "Running changed test files: ${{ steps.changed-files.outputs.all_changed_files }}"
-          pytest ${{ steps.changed-files.outputs.all_changed_files }} --browser webkit --browser chromium --browser firefox --tracing retain-on-failure -n auto --reruns 0 --cov=streamlit --cov-config=.coveragerc --cov-report=html
+          pytest ${{ steps.changed-files.outputs.all_changed_files }} --browser webkit --browser chromium --browser firefox --tracing retain-on-failure -n auto --reruns 0 --cov=streamlit --cov-config=.coveragerc --cov-report=html -m "not performance"
       - name: Upload failed test results
         uses: actions/upload-artifact@v5
         if: always()

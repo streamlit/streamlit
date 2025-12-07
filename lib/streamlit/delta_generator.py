@@ -64,7 +64,9 @@ from streamlit.elements.layouts import LayoutsMixin
 from streamlit.elements.lib.form_utils import FormData, current_form_id
 from streamlit.elements.lib.layout_utils import (
     get_height_config,
+    get_text_alignment_config,
     get_width_config,
+    validate_text_alignment,
 )
 from streamlit.elements.map import MapMixin
 from streamlit.elements.markdown import MarkdownMixin
@@ -76,6 +78,7 @@ from streamlit.elements.progress import ProgressMixin
 from streamlit.elements.pyplot import PyplotMixin
 from streamlit.elements.snow import SnowMixin
 from streamlit.elements.space import SpaceMixin
+from streamlit.elements.spinner import SpinnerMixin
 from streamlit.elements.text import TextMixin
 from streamlit.elements.toast import ToastMixin
 from streamlit.elements.vega_charts import VegaChartsMixin
@@ -208,6 +211,7 @@ class DeltaGenerator(
     SliderMixin,
     SnowMixin,
     SpaceMixin,
+    SpinnerMixin,
     JsonMixin,
     TextMixin,
     TextWidgetsMixin,
@@ -494,6 +498,11 @@ class DeltaGenerator(
             if layout_config.width is not None:
                 msg.delta.new_element.width_config.CopyFrom(
                     get_width_config(layout_config.width)
+                )
+            if layout_config.text_alignment is not None:
+                validate_text_alignment(layout_config.text_alignment)
+                msg.delta.new_element.text_alignment_config.CopyFrom(
+                    get_text_alignment_config(layout_config.text_alignment)
                 )
 
         # Only enqueue message and fill in metadata if there's a container.

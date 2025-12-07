@@ -18,14 +18,23 @@ import React from "react"
 
 import { screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
+import { vi } from "vitest"
 
 import { Button as ButtonProto } from "@streamlit/protobuf"
 
+import { useRegisterShortcut } from "~lib/hooks/useRegisterShortcut"
 import { render } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import Button, { Props } from "./Button"
 
+vi.mock("~lib/hooks/useRegisterShortcut", () => ({
+  useRegisterShortcut: vi.fn(),
+  formatShortcutForDisplay: vi.fn(
+    (shortcut: string | null | undefined) =>
+      shortcut?.replace(/\+/g, " + ") || undefined
+  ),
+}))
 vi.mock("~lib/WidgetStateManager")
 
 const sendBackMsg = vi.fn()
@@ -46,6 +55,10 @@ const getProps = (
 })
 
 describe("Button widget", () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
   it("renders without crashing", () => {
     const props = getProps()
     render(<Button {...props} />)
@@ -142,5 +155,40 @@ describe("Button widget", () => {
 
     const buttonWidget = screen.getByRole("button")
     expect(buttonWidget).toHaveStyle("width: 100%")
+  })
+
+  it("renders shortcut label when provided", () => {
+    const props = getProps({ shortcut: "Ctrl+Enter" })
+    render(<Button {...props} />)
+
+    expect(screen.getByText("Ctrl + Enter")).toBeVisible()
+  })
+
+  it("triggers the widget manager when shortcut is activated", () => {
+    const props = getProps({ shortcut: "Ctrl+Enter" })
+    const useRegisterShortcutMock = vi.mocked(useRegisterShortcut)
+
+    render(<Button {...props} />)
+
+    const { onActivate } = useRegisterShortcutMock.mock.calls[0][0]
+    onActivate()
+
+    expect(props.widgetMgr.setTriggerValue).toHaveBeenCalledWith(
+      props.element,
+      { fromUi: true },
+      undefined
+    )
+  })
+
+  it("does not trigger the widget manager when shortcut is activated but button is disabled", () => {
+    const props = getProps({ shortcut: "Ctrl+Enter" }, { disabled: true })
+    const useRegisterShortcutMock = vi.mocked(useRegisterShortcut)
+
+    render(<Button {...props} />)
+
+    const { onActivate } = useRegisterShortcutMock.mock.calls[0][0]
+    onActivate()
+
+    expect(props.widgetMgr.setTriggerValue).not.toHaveBeenCalled()
   })
 })

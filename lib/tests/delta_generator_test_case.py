@@ -21,6 +21,7 @@ import unittest
 from typing import TYPE_CHECKING
 from unittest.mock import MagicMock
 
+from streamlit.components.v2.component_manager import BidiComponentManager
 from streamlit.runtime import Runtime
 from streamlit.runtime.caching.storage.dummy_cache_storage import (
     MemoryCacheStorageManager,
@@ -47,6 +48,8 @@ if TYPE_CHECKING:
 
 
 class DeltaGeneratorTestCase(unittest.TestCase):
+    _bidi_component_manager: BidiComponentManager | None = None
+
     def setUp(self):
         self.forward_msg_queue = ForwardMsgQueue()
 
@@ -72,7 +75,17 @@ class DeltaGeneratorTestCase(unittest.TestCase):
         # singleton.
         self.media_file_storage = MemoryMediaFileStorage(MEDIA_ENDPOINT)
 
+        if DeltaGeneratorTestCase._bidi_component_manager is None:
+            manager = BidiComponentManager()
+            manager.discover_and_register_components(start_file_watching=False)
+            DeltaGeneratorTestCase._bidi_component_manager = manager
+        else:
+            manager = DeltaGeneratorTestCase._bidi_component_manager
+
+        self.bidi_component_manager = manager
+
         mock_runtime = MagicMock(spec=Runtime)
+        mock_runtime.bidi_component_registry = self.bidi_component_manager
         mock_runtime.cache_storage_manager = MemoryCacheStorageManager()
         mock_runtime.media_file_mgr = MediaFileManager(self.media_file_storage)
         mock_runtime.uploaded_file_mgr = self.script_run_ctx.uploaded_file_mgr

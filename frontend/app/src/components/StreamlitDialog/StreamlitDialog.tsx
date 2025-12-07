@@ -25,8 +25,8 @@ import {
   ModalFooter,
   ModalHeader,
   SessionInfo,
+  StreamlitErrorCodeBlock,
   StreamlitMarkdown,
-  StreamlitSyntaxHighlighter,
 } from "@streamlit/lib"
 import { IException } from "@streamlit/protobuf"
 
@@ -162,9 +162,9 @@ function ScriptCompileErrorDialog(
     <Modal isOpen onClose={props.onClose} size="auto" autoFocus={false}>
       <ModalHeader>Script execution error</ModalHeader>
       <ModalBody>
-        <StreamlitSyntaxHighlighter showLineNumbers={false} wrapLines={false}>
+        <StreamlitErrorCodeBlock>
           {props.exception?.message ? props.exception.message : "No message"}
-        </StreamlitSyntaxHighlighter>
+        </StreamlitErrorCodeBlock>
       </ModalBody>
       <ModalFooter>
         <ModalButton kind={BaseButtonKind.SECONDARY} onClick={props.onClose}>

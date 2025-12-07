@@ -23,7 +23,7 @@ import {
   TYPE,
   Select as UISelect,
 } from "baseui/select"
-import without from "lodash/without"
+import { without } from "lodash-es"
 
 import { MultiSelect as MultiSelectProto } from "@streamlit/protobuf"
 

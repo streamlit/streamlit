@@ -19,8 +19,7 @@
  * the add row functionality for dataframe, table & charts.
  */
 
-import range from "lodash/range"
-import zip from "lodash/zip"
+import { range, zip } from "lodash-es"
 
 import { Data, IndexData } from "./arrowParseUtils"
 import {
