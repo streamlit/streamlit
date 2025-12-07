@@ -91,10 +91,25 @@ export function getMetricChartSpec(
   const data =
     chartData.length === 1 ? [chartData[0], chartData[0]] : chartData
 
+  // For area charts, determine the y2 baseline:
+  // If 0 is within the data range, use 0; otherwise use the data minimum
+  const areaY2Baseline =
+    chartType === MetricProto.ChartType.AREA
+      ? (() => {
+          const dataMin = Math.min(...data)
+          const dataMax = Math.max(...data)
+          // If 0 is within the range, use 0 as baseline; otherwise use data minimum
+          return dataMin <= 0 && dataMax >= 0 ? 0 : dataMin
+        })()
+      : undefined
+
+  // All charts extend to the bottom, so we use the base height
+  const baseHeight = Math.round(convertRemToPx("3.5rem"))
+
   const spec: TopLevelSpec = {
     $schema: "https://vega.github.io/schema/vega-lite/v5.json",
     width: Math.round(availableWidth),
-    height: Math.round(convertRemToPx("3.5rem")),
+    height: baseHeight,
     data: {
       values: data.map((value, index) => ({ x: index, y: value })),
     },
@@ -143,9 +158,14 @@ export function getMetricChartSpec(
             axis: null,
             scale: {
               zero: false,
-              nice: false,
+              nice: chartType === MetricProto.ChartType.AREA ? true : false,
             },
           },
+          ...(chartType === MetricProto.ChartType.AREA && {
+            // Set y2 baseline: use 0 if it's within the data range, otherwise use data minimum
+            // This makes the shaded area extend to the appropriate baseline
+            y2: { datum: areaY2Baseline },
+          }),
         },
       },
       {
@@ -172,7 +192,7 @@ export function getMetricChartSpec(
             axis: null,
             scale: {
               zero: false,
-              nice: false,
+              nice: chartType === MetricProto.ChartType.AREA ? true : false,
             },
           },
         },
@@ -225,21 +245,26 @@ export function getMetricChartSpec(
             axis: null,
             scale: {
               zero: false,
-              nice: false,
+              nice: chartType === MetricProto.ChartType.AREA ? true : false,
             },
           },
         },
       },
     ],
     config: {
-      view: { stroke: null },
+      view: {
+        stroke: null,
+        // Disable clipping for all charts so they can extend to the bottom
+        clip: false,
+      },
       // We need negative padding here to allow the chart to go from
       // left to right. For whatever reason, there is a ~3px padding
       // otherwise.
-      padding: { left: -3, right: -3, top: 2, bottom: 2 },
+      // All charts extend to the bottom with no bottom padding:
+      padding: { left: -3, right: -3, top: 2, bottom: 0 },
       ...(chartType === MetricProto.ChartType.BAR && {
-        // Bar chart doesn't need the negative padding:
-        padding: { left: 0, right: 0, top: 2, bottom: 2 },
+        // Bar chart doesn't need the negative left/right padding:
+        padding: { left: 0, right: 0, top: 2, bottom: 0 },
       }),
       mark: {
         tooltip: { content: "encoding" },
