@@ -90,7 +90,7 @@ describe("Dialog container", () => {
     )
 
     const icon = screen.getByTestId("stDialogIcon")
-    expect(icon).toBeInTheDocument()
+    expect(icon).toBeVisible()
     expect(icon).toHaveTextContent("🎉")
   })
 

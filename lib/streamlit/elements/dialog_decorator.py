@@ -285,25 +285,23 @@ def dialog_decorator(
     if isinstance(func_or_title, str):
         # Support passing the params via function decorator
         def wrapper(f: F) -> F:
-            _icon = icon
             return _dialog_decorator(
                 non_optional_func=f,
                 title=func_or_title,
                 width=width,
                 dismissible=dismissible,
-                icon=_icon,
+                icon=icon,
                 on_dismiss=on_dismiss,
             )
 
         return wrapper
 
     func: F = func_or_title
-    _icon = icon
     return _dialog_decorator(
         func,
         "",
         width=width,
         dismissible=dismissible,
-        icon=_icon,
+        icon=icon,
         on_dismiss=on_dismiss,
     )
