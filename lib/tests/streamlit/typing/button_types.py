@@ -27,6 +27,7 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.elements.form import FormMixin
     from streamlit.elements.widgets.button import ButtonMixin
+    from streamlit.navigation.page import Page
 
     button = ButtonMixin().button
     download_button = ButtonMixin().download_button
@@ -41,6 +42,7 @@ if TYPE_CHECKING:
     # Basic button - returns bool
     assert_type(button("Click me"), bool)
     assert_type(button("Click me", key="my_button"), bool)
+    assert_type(button("Click me", key=123), bool)
 
     # Button type parameter - Literal["primary", "secondary", "tertiary"]
     assert_type(button("Primary", type="primary"), bool)
@@ -111,11 +113,13 @@ if TYPE_CHECKING:
     assert_type(download_button("Download", data="text content"), bool)
     assert_type(download_button("Download", data=b"binary content"), bool)
 
-    # Download button with different data types
+    # Download button with different data types (TextIO, BinaryIO, RawIOBase)
     text_io = io.StringIO("text")
     binary_io = io.BytesIO(b"binary")
+    raw_io: io.RawIOBase = io.FileIO("/dev/null")  # RawIOBase example
     assert_type(download_button("Download", data=text_io), bool)
     assert_type(download_button("Download", data=binary_io), bool)
+    assert_type(download_button("Download", data=raw_io), bool)
 
     # Download button with callable data (deferred)
     def generate_data() -> bytes:
@@ -153,11 +157,12 @@ if TYPE_CHECKING:
     assert_type(download_button("Download", data="content", width="stretch"), bool)
     assert_type(download_button("Download", data="content", width=150), bool)
 
-    # Download button with icon, disabled, help, key, shortcut
+    # Download button with icon, disabled, help, key (str or int), shortcut
     assert_type(download_button("Download", data="content", icon="📥"), bool)
     assert_type(download_button("Download", data="content", disabled=True), bool)
     assert_type(download_button("Download", data="content", help="Help text"), bool)
     assert_type(download_button("Download", data="content", key="dl_key"), bool)
+    assert_type(download_button("Download", data="content", key=456), bool)
     assert_type(download_button("Download", data="content", shortcut="Ctrl+D"), bool)
 
     # Download button with all parameters combined
@@ -262,9 +267,14 @@ if TYPE_CHECKING:
     # =====================================================================
 
     # Basic page link - returns DeltaGenerator
+    # page parameter accepts str, Path, or StreamlitPage
     assert_type(page_link("pages/page1.py"), DeltaGenerator)
     assert_type(page_link(Path("pages/page1.py")), DeltaGenerator)
     assert_type(page_link("https://example.com", label="External"), DeltaGenerator)
+
+    # Page link with StreamlitPage object
+    streamlit_page = Page("page1.py")
+    assert_type(page_link(streamlit_page), DeltaGenerator)
 
     # Page link with label
     assert_type(page_link("pages/page1.py", label="Page 1"), DeltaGenerator)
