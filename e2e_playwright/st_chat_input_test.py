@@ -672,11 +672,10 @@ def test_file_upload_error_message_disallowed_files(
 
     assert_snapshot(uploaded_files, name="st_chat_input-file_uploaded_error")
 
-    # Reset hovering again before hovering on error tooltip to ensure upload tooltip is dismissed
-    reset_hovering(themed_app)
-
-    uploaded_files.get_by_test_id("stTooltipHoverTarget").first.hover()
-    expect(themed_app.get_by_text("json files are not allowed.")).to_be_visible()
+    # Verify error message is displayed inline (no longer in tooltip)
+    error_message = uploaded_files.get_by_test_id("stChatInputFileError").first
+    expect(error_message).to_be_visible()
+    expect(error_message).to_have_text("application/json files are not allowed.")
 
 
 @use_chat_input("single_file")
@@ -707,18 +706,13 @@ def test_file_upload_error_message_file_too_large(app: Page):
 
     uploaded_files.scroll_into_view_if_needed()
 
-    # Reset hovering to not cause issues with the upload tooltip being
-    # shown over the uploaded file tooltip hover target:
+    # Reset hovering to dismiss any upload tooltips
     reset_hovering(app)
 
-    # Ensure the upload button tooltip has disappeared before checking the error tooltip
-    expect(app.get_by_text("Upload or drag and drop a file")).not_to_be_attached()
-
-    # Ensure the tooltip hover target is in viewport before hovering (WebKit requirement)
-    hover_target = uploaded_files.get_by_test_id("stTooltipHoverTarget")
-    hover_target.scroll_into_view_if_needed()
-
-    expect_help_tooltip(app, uploaded_files, "File must be 1.0MB or smaller.")
+    # Verify error message is displayed inline (no longer in tooltip)
+    error_message = uploaded_files.get_by_test_id("stChatInputFileError").first
+    expect(error_message).to_be_visible()
+    expect(error_message).to_have_text("File must be 1.0MB or smaller.")
 
 
 @use_chat_input("single_file")
