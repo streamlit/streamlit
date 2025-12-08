@@ -29,6 +29,7 @@ import {
   makeProto,
   text,
 } from "./test-utils"
+import { TransientNode } from "./TransientNode"
 import { ElementsSetVisitor } from "./visitors/ElementsSetVisitor"
 import { GetNodeByDeltaPathVisitor } from "./visitors/GetNodeByDeltaPathVisitor"
 
@@ -289,6 +290,38 @@ describe("AppRoot", () => {
           ?.scriptRunId
       ).toBe("new_session_id")
       expect(newNode.activeScriptHash).toBe(FAKE_SCRIPT_HASH)
+      expect(newRoot.sidebar.scriptRunId).toBe(NO_SCRIPT_RUN_ID)
+    })
+
+    it("handles 'newTransient' deltas", () => {
+      const delta = makeProto(DeltaProto, {
+        newTransient: {
+          elements: [{ text: { body: "transientElement!" } }],
+        },
+      })
+      const newRoot = ROOT.applyDelta(
+        "new_session_id",
+        delta,
+        forwardMsgMetadata([0, 1, 1])
+      )
+
+      const newNode = GetNodeByDeltaPathVisitor.getNodeAtPath(
+        newRoot.main,
+        [1, 1]
+      ) as TransientNode
+      expect(newNode).toBeInstanceOf(TransientNode)
+      expect(newNode.transientNodes).toHaveLength(1)
+      expect(newNode.transientNodes[0]).toBeTextNode("transientElement!")
+
+      // Check that our new scriptRunId has been set only on the touched nodes
+      expect(newRoot.main.scriptRunId).toBe("new_session_id")
+      expect(
+        GetNodeByDeltaPathVisitor.getNodeAtPath(newRoot.main, [0])?.scriptRunId
+      ).toBe(NO_SCRIPT_RUN_ID)
+      expect(
+        GetNodeByDeltaPathVisitor.getNodeAtPath(newRoot.main, [1])?.scriptRunId
+      ).toBe("new_session_id")
+      expect(newNode.scriptRunId).toBe("new_session_id")
       expect(newRoot.sidebar.scriptRunId).toBe(NO_SCRIPT_RUN_ID)
     })
 

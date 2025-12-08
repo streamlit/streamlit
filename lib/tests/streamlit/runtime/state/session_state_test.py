@@ -75,8 +75,8 @@ class WStateTests(unittest.TestCase):
         wstates.set_widget_metadata(
             WidgetMetadata(
                 id="widget_id_1",
-                deserializer=lambda x: str(x),
-                serializer=lambda x: int(x),
+                deserializer=str,
+                serializer=int,
                 value_type="int_value",
             )
         )
@@ -236,8 +236,8 @@ class WStateTests(unittest.TestCase):
     def test_call_callback(self):
         metadata = WidgetMetadata(
             id="widget_id_1",
-            deserializer=lambda x: str(x),
-            serializer=lambda x: int(x),
+            deserializer=str,
+            serializer=int,
             value_type="int_value",
             callback=MagicMock(),
             callback_args=(1,),
@@ -872,16 +872,16 @@ class SessionStateMethodTests(unittest.TestCase):
         wstates.set_widget_metadata(
             WidgetMetadata(
                 id=existing_widget_key,
-                deserializer=lambda x: str(x),
-                serializer=lambda x: bool(x),
+                deserializer=str,
+                serializer=bool,
                 value_type="bool_value",
             )
         )
         wstates.set_widget_metadata(
             WidgetMetadata(
                 id=generated_widget_key,
-                deserializer=lambda x: str(x),
-                serializer=lambda x: bool(x),
+                deserializer=str,
+                serializer=bool,
                 value_type="bool_value",
             )
         )
@@ -1008,8 +1008,8 @@ class IsStaleWidgetTests(unittest.TestCase):
     def test_is_stale_widget_active_id(self):
         metadata = WidgetMetadata(
             id="widget_id_1",
-            deserializer=lambda x: str(x),
-            serializer=lambda x: int(x),
+            deserializer=str,
+            serializer=int,
             value_type="int_value",
         )
         assert not _is_stale_widget(metadata, {"widget_id_1"}, {})
@@ -1017,8 +1017,8 @@ class IsStaleWidgetTests(unittest.TestCase):
     def test_is_stale_widget_unrelated_fragment(self):
         metadata = WidgetMetadata(
             id="widget_id_1",
-            deserializer=lambda x: str(x),
-            serializer=lambda x: int(x),
+            deserializer=str,
+            serializer=int,
             value_type="int_value",
             fragment_id="my_fragment",
         )
@@ -1027,8 +1027,8 @@ class IsStaleWidgetTests(unittest.TestCase):
     def test_is_stale_widget_actually_stale_fragment(self):
         metadata = WidgetMetadata(
             id="widget_id_1",
-            deserializer=lambda x: str(x),
-            serializer=lambda x: int(x),
+            deserializer=str,
+            serializer=int,
             value_type="int_value",
             fragment_id="my_fragment",
         )
@@ -1037,8 +1037,8 @@ class IsStaleWidgetTests(unittest.TestCase):
     def test_is_stale_widget_actually_stale_no_fragment(self):
         metadata = WidgetMetadata(
             id="widget_id_1",
-            deserializer=lambda x: str(x),
-            serializer=lambda x: int(x),
+            deserializer=str,
+            serializer=int,
             value_type="int_value",
             fragment_id="my_fragment",
         )

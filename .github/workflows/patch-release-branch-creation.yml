@@ -161,6 +161,6 @@ jobs:
           RELEASE_VERSION: ${{ inputs.patch_version }}
           RELEASE_BRANCH: ${{ steps.vars.outputs.release_branch }}
           RUN_ID: ${{ github.run_id }}
-          NIGHTLY_TAG: ${{ inputs.base_tag }}
+          RELEASE_BASE_REF: ${{ inputs.base_tag }}
         run: |
           python scripts/slack_notifications.py release_automation branch_created
