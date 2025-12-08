@@ -90,6 +90,7 @@ import {
   IMenuItem,
   isEmbed,
   isInChildFrame,
+  isKeyboardEventFromEditableTarget,
   isPaddingDisplayed,
   isPresetTheme,
   isScrollingHidden,
@@ -2186,7 +2187,16 @@ export class App extends PureComponent<Props, State> {
     this.deferredFileListeners.delete(response.fileId)
   }
 
-  handleKeyDown = (keyName: string): void => {
+  handleKeyDown = (keyName: string, keyboardEvent?: KeyboardEvent): void => {
+    // See `isKeyboardEventFromEditableTarget` for editable/shadow DOM behavior.
+    // We never fire global single-letter shortcuts while the user is typing.
+    if (
+      (keyName === "c" || keyName === "r") &&
+      isKeyboardEventFromEditableTarget(keyboardEvent)
+    ) {
+      return
+    }
+
     switch (keyName) {
       case "c":
         // CLEAR CACHE
