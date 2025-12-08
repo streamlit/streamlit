@@ -29,15 +29,36 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 
-@gather_metrics("Page")
-def Page(  # noqa: N802
-    page: str | Path | Callable[[], None],
-    *,
-    title: str | None = None,
-    icon: str | None = None,
-    url_path: str | None = None,
-    default: bool = False,
-) -> StreamlitPage:
+class Page:
+    @gather_metrics("Page")
+    def __init__(
+        self,
+        page: str | Path | Callable[[], None],
+        *,
+        title: str | None = None,
+        icon: str | None = None,
+        url_path: str | None = None,
+        default: bool = False,
+    ):
+        self._streamlit_page = StreamlitPage(
+            page, title=title, icon=icon, url_path=url_path, default=default
+        )
+
+    @property
+    def title(self) -> str:
+        return self._streamlit_page.title
+
+    @property
+    def icon(self) -> str:
+        return self._streamlit_page.icon
+
+    @property
+    def url_path(self) -> str:
+        return self._streamlit_page.url_path
+
+    def run(self) -> None:
+        return self._streamlit_page.run()
+
     """Configure a page for ``st.navigation`` in a multipage app.
 
     Call ``st.Page`` to initialize a ``StreamlitPage`` object, and pass it to
@@ -125,9 +146,6 @@ def Page(  # noqa: N802
     >>> ])
     >>> pg.run()
     """
-    return StreamlitPage(
-        page, title=title, icon=icon, url_path=url_path, default=default
-    )
 
 
 class StreamlitPage:
