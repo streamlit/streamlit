@@ -29,7 +29,8 @@ jobs:
       - name: Checkout Streamlit code
         uses: actions/checkout@v6
         with:
-          ref: ${{ github.head_ref }}
+          # Use SHA instead of branch name to support fork PRs
+          ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
           submodules: "recursive"
           fetch-depth: 1
