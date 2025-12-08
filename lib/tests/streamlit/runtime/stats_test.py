@@ -18,14 +18,14 @@ import unittest
 
 from streamlit.runtime.stats import (
     CacheStat,
-    CacheStatsProvider,
     StatsManager,
-    group_stats,
+    StatsProvider,
+    group_cache_stats,
 )
 
 
-class MockStatsProvider(CacheStatsProvider):
-    def __init__(self):
+class MockStatsProvider(StatsProvider):
+    def __init__(self) -> None:
         self.stats: list[CacheStat] = []
 
     def get_stats(self) -> list[CacheStat]:
@@ -33,16 +33,16 @@ class MockStatsProvider(CacheStatsProvider):
 
 
 class StatsManagerTest(unittest.TestCase):
-    def test_get_stats(self):
-        """StatsManager.get_stats should return all providers' stats."""
+    def test_get_stats(self) -> None:
+        """StatsManager.get_stats should return all providers' stats grouped by family."""
         manager = StatsManager()
         provider1 = MockStatsProvider()
         provider2 = MockStatsProvider()
-        manager.register_provider(provider1)
-        manager.register_provider(provider2)
+        manager.register_provider("cache_memory_bytes", provider1)
+        manager.register_provider("cache_memory_bytes", provider2)
 
         # No stats
-        assert manager.get_stats() == []
+        assert manager.get_stats() == {"cache_memory_bytes": []}
 
         # Some stats
         provider1.stats = [
@@ -55,12 +55,32 @@ class StatsManagerTest(unittest.TestCase):
             CacheStat("provider2", "qux", 4),
         ]
 
-        assert provider1.stats + provider2.stats == manager.get_stats()
+        result = manager.get_stats()
+        assert "cache_memory_bytes" in result
+        assert provider1.stats + provider2.stats == result["cache_memory_bytes"]
 
-    def test_group_stats(self):
+    def test_get_stats_multiple_families(self) -> None:
+        """StatsManager should support multiple metric families."""
+        manager = StatsManager()
+        provider1 = MockStatsProvider()
+        provider2 = MockStatsProvider()
+        manager.register_provider("family_a", provider1)
+        manager.register_provider("family_b", provider2)
+
+        provider1.stats = [CacheStat("category1", "cache1", 100)]
+        provider2.stats = [CacheStat("category2", "cache2", 200)]
+
+        result = manager.get_stats()
+        assert "family_a" in result
+        assert "family_b" in result
+        assert result["family_a"] == provider1.stats
+        assert result["family_b"] == provider2.stats
+
+    def test_group_cache_stats(self) -> None:
         """Should return stats grouped by category_name and cache_name.
-        byte_length should be summed."""
 
+        byte_length should be summed.
+        """
         # Similar stats sequential
         stats1 = [
             CacheStat("provider1", "foo", 1),
@@ -86,14 +106,31 @@ class StatsManagerTest(unittest.TestCase):
             CacheStat("provider3", "boo", 1),
         ]
 
-        assert set(group_stats(stats1)) == {
+        assert set(group_cache_stats(stats1)) == {
             CacheStat("provider1", "foo", 1),
             CacheStat("provider1", "bar", 7),
         }
 
-        assert set(group_stats(stats2)) == {
+        assert set(group_cache_stats(stats2)) == {
             CacheStat("provider2", "baz", 31),
             CacheStat("provider2", "qux", 4),
         }
 
-        assert set(group_stats(stats3)) == {CacheStat("provider3", "boo", 7)}
+        assert set(group_cache_stats(stats3)) == {CacheStat("provider3", "boo", 7)}
+
+
+class CacheStatProtocolTest(unittest.TestCase):
+    def test_cache_stat_implements_stat_protocol(self) -> None:
+        """CacheStat should have all the properties required by the Stat protocol."""
+        stat = CacheStat("test_category", "test_cache", 1024)
+
+        assert stat.family_name == "cache_memory_bytes"
+        assert stat.type == "gauge"
+        assert stat.unit == "bytes"
+        assert stat.help == "Total memory consumed by a cache."
+
+    def test_cache_stat_to_metric_str(self) -> None:
+        """CacheStat.to_metric_str should use family_name."""
+        stat = CacheStat("st.cache_data", "my_func", 512)
+        expected = 'cache_memory_bytes{cache_type="st.cache_data",cache="my_func"} 512'
+        assert stat.to_metric_str() == expected
