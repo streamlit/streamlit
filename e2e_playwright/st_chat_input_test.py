@@ -672,12 +672,12 @@ def test_file_upload_error_message_disallowed_files(
 
     assert_snapshot(uploaded_files, name="st_chat_input-file_uploaded_error")
 
-    # Verify error message is displayed inline (no longer in tooltip)
+    # Verify error message is displayed inline
     error_message = uploaded_files.get_by_test_id("stChatInputFileError").first
     expect(error_message).to_be_visible()
     expect(error_message).to_have_text("application/json files are not allowed.")
 
-    # Verify file chip has retry attributes (role, tabindex, title for accessibility)
+    # Verify file chip has retry attributes (all errors are retryable)
     file_chip = uploaded_files.get_by_test_id("stChatInputFile").first
     expect(file_chip).to_have_attribute("role", "button")
     expect(file_chip).to_have_attribute("tabindex", "0")
@@ -715,7 +715,7 @@ def test_file_upload_error_message_file_too_large(app: Page):
     # Reset hovering to dismiss any upload tooltips
     reset_hovering(app)
 
-    # Verify error message is displayed inline (no longer in tooltip)
+    # Verify error message is displayed inline
     error_message = uploaded_files.get_by_test_id("stChatInputFileError").first
     expect(error_message).to_be_visible()
     expect(error_message).to_have_text("File must be 1.0MB or smaller.")
@@ -1742,7 +1742,7 @@ def test_file_upload_full_filename_tooltip(app: Page):
 
 
 @use_chat_input("multiple_files")
-@pytest.mark.skip_browser("webkit")  # Network timing issues in webkit
+@pytest.mark.skip_browser("webkit")
 def test_file_upload_retry_click_success(app: Page):
     """Test that clicking retry on error chip successfully re-uploads the file."""
     from playwright.sync_api import Route
