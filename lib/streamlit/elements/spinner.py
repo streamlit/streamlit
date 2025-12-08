@@ -23,7 +23,11 @@ from streamlit.elements.lib.layout_utils import (
     Width,
     validate_width,
 )
-from streamlit.runtime.scriptrunner import add_script_run_ctx
+from streamlit.errors import NoSessionContext
+from streamlit.proto.Element_pb2 import Element as ElementProto
+from streamlit.proto.Spinner_pb2 import Spinner as SpinnerProto
+from streamlit.runtime.scriptrunner import add_script_run_ctx, enqueue_message
+from streamlit.string_util import clean_text
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -96,49 +100,51 @@ class SpinnerMixin:
             height: 210px
 
         """
-        from streamlit.proto.Spinner_pb2 import Spinner as SpinnerProto
-        from streamlit.string_util import clean_text
-
         validate_width(width, allow_content=True)
         layout_config = LayoutConfig(width=width)
 
-        message = self.dg.empty()
+        spinner_proto = SpinnerProto()
+        spinner_proto.text = clean_text(text)
+        spinner_proto.cache = _cache
+        spinner_proto.show_time = show_time
+        element_proto = ElementProto()
+        element_proto.spinner.CopyFrom(spinner_proto)
+
+        # Ensure we are targeting the correct DeltaGenerator
+        # even though we will wait to enqueue the message
+        try:
+            create_transient, clear_transient = self.dg._transient(
+                element_proto,
+                layout_config=layout_config,
+            )
+        except NoSessionContext:
+            # Means we are not in a script thread, so we will just yield and return
+            yield
+            return
 
         display_message = True
         display_message_lock = threading.Lock()
-
+        timer: threading.Timer | None = None
         try:
 
             def set_message() -> None:
                 with display_message_lock:
                     if display_message:
-                        spinner_proto = SpinnerProto()
-                        spinner_proto.text = clean_text(text)
-                        spinner_proto.cache = _cache
-                        spinner_proto.show_time = show_time
-                        message._enqueue(
-                            "spinner", spinner_proto, layout_config=layout_config
-                        )
+                        # Ignore the DeltaGenerator conveniences because Transients are special
+                        enqueue_message(create_transient())
 
-            add_script_run_ctx(threading.Timer(DELAY_SECS, set_message)).start()
-
+            timer = threading.Timer(DELAY_SECS, set_message)
+            add_script_run_ctx(timer)
+            timer.start()
             # Yield control back to the context.
             yield
         finally:
-            if display_message_lock:
-                with display_message_lock:
-                    display_message = False
-                if "chat_message" in set(message._active_dg._ancestor_block_types):
-                    # Temporary stale element fix:
-                    # For chat messages, we are resetting the spinner placeholder to an
-                    # empty container instead of an empty placeholder (st.empty) to have
-                    # it removed from the delta path. Empty containers are ignored in the
-                    # frontend since they are configured with allow_empty=False. This
-                    # prevents issues with stale elements caused by the spinner being
-                    # rendered only in some situations (e.g. for caching).
-                    message.container()
-                else:
-                    message.empty()
+            if timer:
+                timer.cancel()
+            with display_message_lock:
+                display_message = False
+
+                enqueue_message(clear_transient())
 
     @property
     def dg(self) -> DeltaGenerator:

@@ -472,11 +472,29 @@ def test_renders_logos(app: Page, assert_snapshot: ImageCompareFunction):
     get_page_link(app, "page 8").click()
     wait_for_app_loaded(app)
 
-    # Sidebar logo
-    expect(app.get_by_test_id("stSidebarHeader").locator("a")).to_have_attribute(
-        "href", "https://www.example.com"
-    )
     assert_snapshot(app.get_by_test_id("stSidebar"), name="sidebar-logo")
+
+
+def test_logo_navigates_to_home_page(app: Page):
+    """Test that clicking the logo navigates to the home page in multi-page apps."""
+
+    # Navigate to a different page first
+    get_page_link(app, "page 8").click()
+    wait_for_app_loaded(app)
+    expect(page_heading(app)).to_contain_text("Page 8")
+
+    # The logo should be a clickable button (not an external link) when no link is provided
+    logo_button = app.get_by_test_id("stSidebarHeader").get_by_test_id("stLogoLink")
+    expect(logo_button).to_be_visible()
+    # Verify it's a button, not an anchor tag
+    expect(logo_button).to_have_attribute("aria-label", "Navigate to home page")
+
+    # Click the logo to navigate to the home page
+    logo_button.click()
+    wait_for_app_loaded(app)
+
+    # Verify we're on the main page (home)
+    expect(main_heading(app)).to_contain_text("Main Page")
 
 
 def test_page_link_with_path(app: Page):
