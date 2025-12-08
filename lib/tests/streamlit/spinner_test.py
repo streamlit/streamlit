@@ -18,7 +18,7 @@ import time
 
 import pytest
 
-from streamlit.elements.spinner import spinner
+import streamlit as st
 from streamlit.errors import StreamlitAPIException
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
@@ -27,7 +27,7 @@ from tests.streamlit.elements.layout_test_utils import WidthConfigFields
 class SpinnerTest(DeltaGeneratorTestCase):
     def test_spinner(self):
         """Test st.spinner."""
-        with spinner("some text"):
+        with st.spinner("some text"):
             # Without the timeout, the spinner is sometimes not available
             time.sleep(0.7)
             el = self.get_delta_from_queue().new_element
@@ -41,9 +41,7 @@ class SpinnerTest(DeltaGeneratorTestCase):
 
     def test_spinner_within_chat_message(self):
         """Test st.spinner in st.chat_message resets to empty container block."""
-        import streamlit as st
-
-        with st.chat_message("user"), spinner("some text"):
+        with st.chat_message("user"), st.spinner("some text"):
             # Without the timeout, the spinner is sometimes not available
             time.sleep(0.7)
             el = self.get_delta_from_queue().new_element
@@ -60,7 +58,7 @@ class SpinnerTest(DeltaGeneratorTestCase):
 
     def test_spinner_for_caching(self):
         """Test st.spinner in cache functions."""
-        with spinner("some text", _cache=True):
+        with st.spinner("some text", _cache=True):
             # Without the timeout, the spinner is sometimes not available
             time.sleep(0.7)
             el = self.get_delta_from_queue().new_element
@@ -73,7 +71,7 @@ class SpinnerTest(DeltaGeneratorTestCase):
 
     def test_spinner_time(self):
         """Test st.spinner with show_time."""
-        with spinner("some text", show_time=True):
+        with st.spinner("some text", show_time=True):
             time.sleep(0.7)
             el = self.get_delta_from_queue().new_element
             assert el.spinner.text == "some text"
@@ -98,7 +96,7 @@ class SpinnerTest(DeltaGeneratorTestCase):
             field_value,
         ) in enumerate(test_cases):
             with self.subTest(width_value=width_value):
-                with spinner(f"test text {index}", width=width_value):
+                with st.spinner(f"test text {index}", width=width_value):
                     time.sleep(0.7)
                     el = self.get_delta_from_queue().new_element
                     assert el.spinner.text == f"test text {index}"
@@ -113,32 +111,32 @@ class SpinnerTest(DeltaGeneratorTestCase):
         test_cases = [
             (
                 "invalid",
-                "Invalid width value: 'invalid'. Width must be either an integer (pixels), 'stretch', or 'content'.",
+                "Width must be either a positive integer (pixels), 'stretch', or 'content'.",
             ),
             (
                 -100,
-                "Invalid width value: -100. Width must be either an integer (pixels), 'stretch', or 'content'.",
+                "Width must be either a positive integer (pixels), 'stretch', or 'content'.",
             ),
             (
                 0,
-                "Invalid width value: 0. Width must be either an integer (pixels), 'stretch', or 'content'.",
+                "Width must be either a positive integer (pixels), 'stretch', or 'content'.",
             ),
             (
                 100.5,
-                "Invalid width value: 100.5. Width must be either an integer (pixels), 'stretch', or 'content'.",
+                "Width must be either a positive integer (pixels), 'stretch', or 'content'.",
             ),
         ]
 
         for width_value, expected_error_message in test_cases:
             with self.subTest(width_value=width_value):
                 with pytest.raises(StreamlitAPIException) as exc:
-                    with spinner("test text", width=width_value):
+                    with st.spinner("test text", width=width_value):
                         time.sleep(0.1)
-                assert str(exc.value) == expected_error_message
+                assert expected_error_message in str(exc.value)
 
     def test_spinner_default_width(self):
         """Test that st.spinner defaults to content width."""
-        with spinner("test text"):
+        with st.spinner("test text"):
             time.sleep(0.7)
             el = self.get_delta_from_queue().new_element
             assert el.spinner.text == "test text"

@@ -460,4 +460,77 @@ describe("AppNavigation", () => {
     )
     expect(onPageIconChange).not.toBeCalled()
   })
+
+  describe("hasSetDefaultFavicon flag", () => {
+    it("resets hasSetDefaultFavicon when mainScriptHash changes", () => {
+      // Initialize with a script hash
+      appNavigation.handleNewSession(
+        generateNewSession({ mainScriptHash: "hash1" })
+      )
+      expect(appNavigation.hasSetDefaultFavicon).toBe(false)
+
+      // Simulate setting the default favicon
+      appNavigation.hasSetDefaultFavicon = true
+      expect(appNavigation.hasSetDefaultFavicon).toBe(true)
+
+      // Handle new session with different script hash - should reset
+      appNavigation.handleNewSession(
+        generateNewSession({ mainScriptHash: "hash2" })
+      )
+      expect(appNavigation.hasSetDefaultFavicon).toBe(false)
+    })
+
+    it("does not reset hasSetDefaultFavicon when mainScriptHash stays the same", () => {
+      // Initialize with a script hash
+      appNavigation.handleNewSession(
+        generateNewSession({ mainScriptHash: "hash1" })
+      )
+      expect(appNavigation.hasSetDefaultFavicon).toBe(false)
+
+      // Simulate setting the default favicon
+      appNavigation.hasSetDefaultFavicon = true
+      expect(appNavigation.hasSetDefaultFavicon).toBe(true)
+
+      // Handle new session with same script hash - should NOT reset
+      appNavigation.handleNewSession(
+        generateNewSession({ mainScriptHash: "hash1" })
+      )
+      expect(appNavigation.hasSetDefaultFavicon).toBe(true)
+    })
+
+    it("resets isPageTitleSet and isPageIconSet along with hasSetDefaultFavicon", () => {
+      // Initialize with a script hash
+      appNavigation.handleNewSession(
+        generateNewSession({ mainScriptHash: "hash1" })
+      )
+
+      // Set all flags
+      appNavigation.hasSetDefaultFavicon = true
+      appNavigation.isPageTitleSet = true
+      appNavigation.isPageIconSet = true
+
+      expect(appNavigation.hasSetDefaultFavicon).toBe(true)
+      expect(appNavigation.isPageTitleSet).toBe(true)
+      expect(appNavigation.isPageIconSet).toBe(true)
+
+      // Handle new session with different script hash - should reset all flags
+      appNavigation.handleNewSession(
+        generateNewSession({ mainScriptHash: "hash2" })
+      )
+
+      expect(appNavigation.hasSetDefaultFavicon).toBe(false)
+      expect(appNavigation.isPageTitleSet).toBe(false)
+      expect(appNavigation.isPageIconSet).toBe(false)
+    })
+
+    it("initializes hasSetDefaultFavicon to false", () => {
+      const cleanAppNavigation = new AppNavigation(
+        hostCommunicationMgr,
+        onUpdatePageUrl,
+        onPageNotFound,
+        onPageIconChange
+      )
+      expect(cleanAppNavigation.hasSetDefaultFavicon).toBe(false)
+    })
+  })
 })

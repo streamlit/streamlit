@@ -20,13 +20,16 @@ applyTo: "**/*.ts, **/*.tsx"
 - Use descriptive variable names with auxiliary verbs (e.g., isLoading).
 - Use the Receive an Object, Return an Object (RORO) pattern.
 - Ensure functions have explicit return types.
+- **Omit trivially inferred types**: Do not add type annotations when TypeScript can trivially infer them (e.g., `const count = 0` not `const count: number = 0`). Add explicit types only when they improve clarity or are required.
 - **Prefer optional chaining**: Use optional chaining (`?.`) instead of `&&` chains for property access. This is enforced by the `@typescript-eslint/prefer-optional-chain` rule.
 
 ## Key Frontend Principles
 
 - Leverage all of best practices of React 18.
+- Follow the [Rules of React](https://react.dev/reference/rules): pure components and hooks, immutable props and state, and call hooks at the top level of React functions.
 - Write performant frontend code.
 - Ensure referential stability by leveraging React Hooks.
+- **Updater functions must be pure**: `setState(prev => newState)` updaters must not mutate `prev` or have side effects—return a new object. See [useState](https://react.dev/reference/react/useState#setstate-parameters).
 - Prefix event handlers with "handle" (e.g., handleClick, handleSubmit).
 - Favor leveraging @emotion/styled instead of inline styles.
 - Leverage object style notation in Emotion.
@@ -36,6 +39,39 @@ applyTo: "**/*.ts, **/*.tsx"
 - When using BaseWeb, be sure to import our theme via `useEmotionTheme` and use those values in overrides.
 - Use the following pattern for naming custom CSS classes and test IDs: `stComponentSubcomponent`, for example: `stTextInputIcon`.
 - Avoid using pixel sizes for styling, always use rem, em, percentage, or other relative units.
+
+## Static Data Structures
+
+- Extract static lookup maps and constants to module-level scope outside functions/components
+- Static data recreated on every call/render wastes memory and CPU
+- Exception: Keep inside function only if data depends on parameters, props, or state
+
+<good-example>
+```tsx
+// ✅ Module-level - created once
+const ALIGNMENT_MAP: Record<Alignment, CSSProperties["textAlign"]> = {
+  [Alignment.LEFT]: "left",
+  [Alignment.CENTER]: "center",
+  // ...
+} as const
+
+function getAlignment(config: AlignmentConfig) {
+  return ALIGNMENT_MAP[config.alignment]
+}
+
+```
+</good-example>
+
+<bad-example>
+```tsx
+// ❌ Recreated every call
+function getAlignment(config: AlignmentConfig) {
+  const alignmentMap = { /* same data */ }
+  return alignmentMap[config.alignment]
+}
+```
+
+</bad-example>
 
 ## Yarn Workspaces
 
@@ -259,4 +295,4 @@ const initialTab = props.defaultTab ?? "overview"
 
 ### References
 
-- React docs: You Might Not Need an Effect — https://react.dev/learn/you-might-not-need-an-effect
+- React docs: [You Might Not Need an Effect](https://react.dev/learn/you-might-not-need-an-effect)

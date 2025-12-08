@@ -66,7 +66,7 @@ def test_can_switch_between_pages_and_edit_widgets(app: Page):
     sidebar_nav_link = app.get_by_test_id("stSidebarNav").locator("a").nth(2)
     expect(sidebar_nav_link).to_be_visible()
     sidebar_nav_link.click()
-    wait_for_app_run(app, wait_delay=1000)
+    wait_for_app_run(app, wait_delay=2000)
     expect(app.get_by_role("heading", name="Page 3")).to_be_visible()
 
     expect(app.get_by_test_id("stHeading")).to_contain_text("Page 3")

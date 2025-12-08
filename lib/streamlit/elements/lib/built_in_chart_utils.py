@@ -46,6 +46,11 @@ if TYPE_CHECKING:
 VegaLiteType: TypeAlias = Literal["quantitative", "ordinal", "temporal", "nominal"]
 ChartStackType: TypeAlias = Literal["normalize", "center", "layered"]
 
+# Threshold for applying hover event throttling on large datasets.
+# For datasets with more points than this threshold, hover events are throttled
+# to 16ms (~60fps) to improve performance.
+_LARGE_DATASET_POINT_THRESHOLD: Final = 1000
+
 
 class PrepDataColumns(TypedDict):
     """Columns used for the prep_data step in Altair Arrow charts."""
@@ -286,37 +291,65 @@ def generate_chart(
         and is_altair_version_5_or_greater
     ):
         return _add_improved_hover_tooltips(
-            chart, x_column, chart_width, chart_height
+            chart, x_column, chart_width, chart_height, len(df)
         ).interactive(), add_rows_metadata
 
     return chart.interactive(), add_rows_metadata
 
 
 def _add_improved_hover_tooltips(
-    chart: alt.Chart, x_column: str, width: int | None, height: int | None
+    chart: alt.Chart,
+    x_column: str,
+    width: int | None,
+    height: int | None,
+    data_point_count: int,
 ) -> alt.LayerChart:
-    """Adds improved hover tooltips to an existing line chart."""
+    """Adds improved hover tooltips to an existing line chart.
+
+    This implementation uses a three-layer approach for better performance:
+    1. Base chart layer: The original line chart
+    2. Detection layer: Invisible points for detecting the nearest point on hover
+    3. Highlight layer: Only renders the selected point(s) using transform_filter
+
+    The filter-based approach is more efficient than using conditional opacity
+    because it only renders the selected point(s) rather than evaluating opacity
+    for every single data point on each hover event.
+    """
 
     import altair as alt
 
-    # Create a selection that chooses the nearest point & selects based on x-value
-    nearest = alt.selection_point(
-        nearest=True,
-        on="pointerover",
-        fields=[x_column],
-        empty=False,
-        clear="pointerout",
+    # Throttle hover events for large datasets to 16ms (~60fps) to improve performance.
+    # For smaller datasets, use standard mousemove without throttling.
+    hover_event = (
+        "mousemove{16}"
+        if data_point_count > _LARGE_DATASET_POINT_THRESHOLD
+        else "mousemove"
     )
 
-    # Draw points on the line, and highlight based on selection
-    points = (
-        chart.mark_point(filled=True, size=65)
-        .encode(opacity=alt.condition(nearest, alt.value(1), alt.value(0)))
-        .add_params(nearest)
+    # Create a selection that chooses the nearest point & selects based on x-value.
+    # Uses mouseleave instead of mouseout/pointerout for more reliable hover clearing
+    # (mouseout fires when moving over child elements like tooltips).
+    nearest = alt.selection_point(
+        nearest=True,
+        on=hover_event,
+        fields=[x_column],
+        empty=False,
+        clear="mouseleave",
+    )
+
+    # Detection layer: Invisible points for detecting the nearest point.
+    # This layer is needed because selections must be attached to a mark.
+    detection_points = chart.mark_point(opacity=0).add_params(nearest)
+
+    # Highlight layer: Only renders the selected point(s) using transform_filter.
+    # This is more efficient than conditional opacity because it only renders
+    # the filtered data (typically 1-2 points) rather than all points.
+    highlighted_points = chart.mark_point(filled=True, size=65).transform_filter(
+        nearest
     )
 
     layer_chart = (
-        alt.layer(chart, points)
+        alt.layer(chart, detection_points, highlighted_points)
         .configure_legend(symbolType="stroke")
         .properties(
             width=width or 0,
@@ -338,7 +371,7 @@ def prep_chart_data_for_add_rows(
     """
     import pandas as pd
 
-    df = cast("pd.DataFrame", dataframe_util.convert_anything_to_pandas_df(data))
+    df = dataframe_util.convert_anything_to_pandas_df(data)
 
     # Make range indices start at last_index.
     if isinstance(df.index, pd.RangeIndex):
@@ -431,7 +464,7 @@ def _infer_vegalite_type(
 
 
 def _get_pandas_index_attr(
-    data: pd.DataFrame | pd.Series,
+    data: pd.DataFrame | pd.Series[Any],
     attr: str,
 ) -> Any | None:
     return getattr(data.index, attr, None)
@@ -634,7 +667,7 @@ def _drop_unused_columns(df: pd.DataFrame, *column_names: str | None) -> pd.Data
         seen.add(x)
         keep.append(x)
 
-    return df[keep]
+    return df[keep]  # ty: ignore[invalid-return-type]
 
 
 def _maybe_convert_color_column_in_place(
@@ -651,7 +684,7 @@ def _maybe_convert_color_column_in_place(
         pass
     elif is_color_tuple_like(first_color_datum):
         # Tuples need to be converted to CSS-valid.
-        df.loc[:, color_column] = df[color_column].map(to_css_color)
+        df.loc[:, color_column] = df[color_column].apply(to_css_color)
     else:
         # Other kinds of colors columns (i.e. pure numbers or nominal strings) shouldn't
         # be converted since they are treated by Vega-Lite as sequential or categorical

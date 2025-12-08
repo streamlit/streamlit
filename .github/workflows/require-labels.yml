@@ -3,9 +3,6 @@ name: Pull Request Labels
 on:
   pull_request:
     types: [opened, labeled, unlabeled, synchronize]
-    paths-ignore:
-      # Don't run CI if changes are only in the specs folder:
-      - "specs/**"
 
 jobs:
   check-required-labels:
@@ -33,7 +30,7 @@ jobs:
               'change-description': {
                 mode: 'exactly',
                 count: 1,
-                labels: ['change:feature', 'change:bugfix', 'change:refactor', 'change:chore', 'change:docs', 'change:other']
+                labels: ['change:feature', 'change:bugfix', 'change:refactor', 'change:chore', 'change:docs', 'change:other', 'change:spec']
               },
               'impact-defined': {
                 mode: 'exactly',
@@ -54,8 +51,15 @@ jobs:
 
             let hasErrors = false;
             let errorMessages = [];
+            const bypassLabel = 'change:spec';
+            const hasBypassLabel = prLabelNames.includes(bypassLabel);
+            const bypassedChecks = hasBypassLabel ? new Set(['security-assessment', 'impact-defined']) : new Set();
 
             for (const [checkName, check] of Object.entries(requiredLabels)) {
+              if (bypassedChecks.has(checkName)) {
+                errorMessages.push(`⚠️ ${checkName}: Skipped because "${bypassLabel}" label is present`);
+                continue;
+              }
               const { mode, count, labels } = check;
               const matchedLabels = prLabelNames.filter(name => labels.includes(name));
 

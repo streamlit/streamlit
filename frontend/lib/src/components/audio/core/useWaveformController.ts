@@ -39,7 +39,7 @@ import type {
   WaveformControllerEvents,
 } from "~lib/components/audio/core/types"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { blend } from "~lib/theme/utils"
+import { blend, convertRemToPx } from "~lib/theme/utils"
 
 const BAR_WIDTH = 4
 const BAR_GAP = 4
@@ -56,12 +56,18 @@ interface UseWaveformControllerParams {
   containerRef: RefObject<HTMLDivElement>
   sampleRate?: number | null
   events: WaveformControllerEvents
+  /**
+   * Vertical padding in pixels to apply around the waveform.
+   * This reduces the waveform height to prevent it from touching container edges.
+   */
+  waveformPadding?: number
 }
 
 export function useWaveformController({
   containerRef,
   sampleRate,
   events,
+  waveformPadding = 0,
 }: UseWaveformControllerParams): WaveformController {
   const theme = useEmotionTheme()
 
@@ -190,7 +196,11 @@ export function useWaveformController({
         container: containerRef.current,
         waveColor: theme.colors.primary,
         progressColor: theme.colors.bodyText,
-        height: "auto",
+        height:
+          waveformPadding > 0
+            ? convertRemToPx(theme.sizes.largestElementHeight) -
+              2 * waveformPadding
+            : "auto",
         barWidth: BAR_WIDTH,
         barGap: BAR_GAP,
         barRadius: BAR_RADIUS,
@@ -233,7 +243,13 @@ export function useWaveformController({
     } finally {
       isInitializingRef.current = false
     }
-  }, [containerRef, theme, effectiveSampleRate, configurePlayerEvents])
+  }, [
+    containerRef,
+    theme,
+    effectiveSampleRate,
+    configurePlayerEvents,
+    waveformPadding,
+  ])
 
   useEffect(() => {
     void initializeWaveSurfer()

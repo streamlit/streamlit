@@ -162,8 +162,11 @@ class AuthCallbackHandler(AuthHandlerMixin, tornado.web.RequestHandler):
             return
 
         if provider is None:
-            _LOGGER.error(
-                "Error, missing provider for oauth callback.",
+            # See https://github.com/streamlit/streamlit/issues/13101
+            _LOGGER.warning(
+                "Missing provider for OAuth callback; this often indicates a stale "
+                "or replayed callback (for example, from browser back/forward "
+                "navigation).",
             )
             self.redirect_to_base()
             return

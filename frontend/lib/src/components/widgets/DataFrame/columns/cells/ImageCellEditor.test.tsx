@@ -23,7 +23,7 @@ import { render } from "~lib/test_util"
 import { ImageCellEditor } from "./ImageCellEditor"
 
 describe("ImageCellEditor", () => {
-  test("renders an image with the correct src", () => {
+  it("renders an image with the correct src", () => {
     const urls = ["https://example.com/image.jpg"]
     render(
       <ImageCellEditor
@@ -38,7 +38,7 @@ describe("ImageCellEditor", () => {
     expect(imageElement).toHaveAttribute("src", urls[0])
   })
 
-  test("renders a link with the correct href when imageData starts with 'http'", () => {
+  it("renders a link with the correct href when imageData starts with 'http'", () => {
     const urls = ["https://example.com/image.jpg"]
     render(
       <ImageCellEditor
@@ -55,7 +55,7 @@ describe("ImageCellEditor", () => {
     expect(linkElement).toHaveAttribute("rel", "noreferrer noopener")
   })
 
-  test("renders an image without a link when imageData does not start with 'http'", () => {
+  it("renders an image without a link when imageData does not start with 'http'", () => {
     const urls = ["/local/path/to/image.jpg"]
     render(
       <ImageCellEditor
@@ -71,7 +71,7 @@ describe("ImageCellEditor", () => {
     expect(screen.queryByRole("link")).toBeNull()
   })
 
-  test("renders an empty image when urls prop is empty", () => {
+  it("renders an empty image when urls prop is empty", () => {
     render(
       <ImageCellEditor
         urls={[]}

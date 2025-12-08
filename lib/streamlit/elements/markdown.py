@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING, Final, Literal, cast
 
 from streamlit.elements.lib.layout_utils import (
     LayoutConfig,
+    TextAlignment,
     Width,
     WidthWithoutContent,
     validate_width,
@@ -44,6 +45,7 @@ class MarkdownMixin:
         *,  # keyword-only arguments:
         help: str | None = None,
         width: Width = "stretch",
+        text_alignment: TextAlignment = "left",
     ) -> DeltaGenerator:
         r"""Display string formatted as Markdown.
 
@@ -129,6 +131,22 @@ class MarkdownMixin:
               the parent container, the width of the element matches the width
               of the parent container.
 
+        text_alignment : "left", "center", "right", or "justify"
+            The horizontal alignment of the text within the element. This can
+            be one of the following:
+
+            - ``"left"`` (default): Text is aligned to the left edge.
+            - ``"center"``: Text is centered.
+            - ``"right"``: Text is aligned to the right edge.
+            - ``"justify"``: Text is justified (stretched to fill the available
+              width with the last line left-aligned).
+
+            .. note::
+                For text alignment to have a visible effect, the element's
+                width must be wider than its content. If you use
+                ``width="content"`` with short text, the alignment may not be
+                noticeable.
+
         Examples
         --------
         >>> import streamlit as st
@@ -161,7 +179,7 @@ class MarkdownMixin:
             markdown_proto.help = help
 
         validate_width(width, allow_content=True)
-        layout_config = LayoutConfig(width=width)
+        layout_config = LayoutConfig(width=width, text_alignment=text_alignment)
 
         return self.dg._enqueue("markdown", markdown_proto, layout_config=layout_config)
 
@@ -173,6 +191,7 @@ class MarkdownMixin:
         *,  # keyword-only arguments:
         help: str | None = None,
         width: Width = "stretch",
+        text_alignment: TextAlignment = "left",
     ) -> DeltaGenerator:
         """Display text in small font.
 
@@ -224,6 +243,22 @@ class MarkdownMixin:
               the parent container, the width of the element matches the width
               of the parent container.
 
+        text_alignment : "left", "center", "right", or "justify"
+            The horizontal alignment of the text within the element. This can
+            be one of the following:
+
+            - ``"left"`` (default): Text is aligned to the left edge.
+            - ``"center"``: Text is centered.
+            - ``"right"``: Text is aligned to the right edge.
+            - ``"justify"``: Text is justified (stretched to fill the available
+              width with the last line left-aligned).
+
+            .. note::
+                For text alignment to have a visible effect, the element's
+                width must be wider than its content. If you use
+                ``width="content"`` with short text, the alignment may not be
+                noticeable.
+
         Examples
         --------
         >>> import streamlit as st
@@ -241,7 +276,7 @@ class MarkdownMixin:
             caption_proto.help = help
 
         validate_width(width, allow_content=True)
-        layout_config = LayoutConfig(width=width)
+        layout_config = LayoutConfig(width=width, text_alignment=text_alignment)
 
         return self.dg._enqueue("markdown", caption_proto, layout_config=layout_config)
 
@@ -439,12 +474,12 @@ class MarkdownMixin:
               of the parent container.
 
         help : str or None
-            A tooltip that gets displayed when the badge is hovered over. If
-            this is ``None`` (default), no tooltip is displayed.
+            A tooltip to display when hovering over the badge. If this is
+            ``None`` (default), no tooltip is displayed.
 
-            The tooltip can optionally contain GitHub-flavored Markdown, including
-            the Markdown directives described in the ``body`` parameter of
-            ``st.markdown``.
+            The tooltip can optionally contain GitHub-flavored Markdown,
+            including the Markdown directives described in the ``body``
+            parameter of ``st.markdown``.
 
         Examples
         --------
@@ -461,7 +496,7 @@ class MarkdownMixin:
         >>>     ":violet-badge[:material/star: Favorite] :orange-badge[⚠️ Needs review] :gray-badge[Deprecated]"
         >>> )
 
-        .. output ::
+        .. output::
             https://doc-badge.streamlit.app/
             height: 220px
 

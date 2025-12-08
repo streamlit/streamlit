@@ -23,3 +23,5 @@ Not every change requires a spec. Things that don't require a spec:
 4. When ready, mark the PR "Ready for review" on GitHub. All discussion on the spec
    should happen on the PR.
 5. Merging requires at least two approvals from core maintainers.
+   - If approved: Maintainers will assign the final number, rename the directory, update the Status to Approved, add the `change:spec` label, merge the PR, and link the spec in related issues. The spec is considered ready for implementation.
+   - If rejected: The PR is closed with an explanation.

@@ -18,12 +18,14 @@ import React from "react"
 
 import { screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
+import { vi } from "vitest"
 
 import {
   DeferredFileResponse,
   DownloadButton as DownloadButtonProto,
 } from "@streamlit/protobuf"
 
+import { useRegisterShortcut } from "~lib/hooks/useRegisterShortcut"
 import { mockEndpoints } from "~lib/mocks/mocks"
 import { render, renderWithContexts } from "~lib/test_util"
 import createDownloadLinkElement from "~lib/util/createDownloadLinkElement"
@@ -31,6 +33,13 @@ import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import DownloadButton, { Props } from "./DownloadButton"
 
+vi.mock("~lib/hooks/useRegisterShortcut", () => ({
+  useRegisterShortcut: vi.fn(),
+  formatShortcutForDisplay: vi.fn(
+    (shortcut: string | null | undefined) =>
+      shortcut?.replace(/\+/g, " + ") || undefined
+  ),
+}))
 vi.mock("~lib/WidgetStateManager")
 vi.mock("~lib/StreamlitEndpoints")
 
@@ -62,6 +71,10 @@ const getProps = (
 })
 
 describe("DownloadButton widget", () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
   it("renders without crashing", () => {
     const props = getProps()
     render(<DownloadButton {...props} />)
@@ -88,6 +101,13 @@ describe("DownloadButton widget", () => {
     })
 
     expect(downloadButton).toBeInTheDocument()
+  })
+
+  it("renders shortcut label when provided", () => {
+    const props = getProps({ shortcut: "Ctrl+Enter" })
+    render(<DownloadButton {...props} />)
+
+    expect(screen.getByText("Ctrl + Enter")).toBeVisible()
   })
 
   it("renders with help properly", async () => {
@@ -167,6 +187,22 @@ describe("DownloadButton widget", () => {
 
       const downloadButton = screen.getByRole("button")
       expect(downloadButton).toBeDisabled()
+    })
+
+    it("triggers the click handler when shortcut is activated", () => {
+      const props = getProps({ shortcut: "Ctrl+Enter" })
+      const useRegisterShortcutMock = vi.mocked(useRegisterShortcut)
+
+      render(<DownloadButton {...props} />)
+
+      const { onActivate } = useRegisterShortcutMock.mock.calls[0][0]
+      onActivate()
+
+      expect(props.widgetMgr.setTriggerValue).toHaveBeenCalledWith(
+        props.element,
+        { fromUi: true },
+        undefined
+      )
     })
   })
 

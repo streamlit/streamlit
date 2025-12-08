@@ -212,7 +212,7 @@ export class WidgetStateManager {
    * backend only handles the *latest* message before rerunning the script,
    * which means earlier triggers can be lost. We fix this by batching.
    */
-  private pendingTriggerIds = new Set<string>()
+  private readonly pendingTriggerIds = new Set<string>()
 
   /** Promise resolvers that should run once the pending trigger batch has
    *  been flushed to the backend. */

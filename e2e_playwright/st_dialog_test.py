@@ -222,13 +222,17 @@ def test_dialog_stays_dismissed_when_interacting_with_different_fragment(app: Pa
     expect(main_dialog).to_have_count(1)
 
 
+# The viewport check is flaky on webkit, but the
+# videos from the flaky tests look fine.
+@pytest.mark.skip_browser("webkit")
 def test_dialog_is_scrollable(app: Page):
     """Test that the dialog is scrollable."""
     open_dialog_with_images(app)
     wait_for_app_run(app)
     main_dialog = app.get_by_test_id(modal_test_id)
-    close_button = main_dialog.get_by_test_id("stButton")
+    close_button = get_button(main_dialog, "Submit")
     expect(close_button).not_to_be_in_viewport()
+    close_button.hover()
     close_button.scroll_into_view_if_needed()
     expect(close_button).to_be_in_viewport()
 
