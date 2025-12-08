@@ -20,6 +20,7 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
+from streamlit import config
 from streamlit.elements.widgets.chat import ChatInputValue
 from streamlit.errors import (
     StreamlitAPIException,
@@ -441,6 +442,11 @@ class ChatTest(DeltaGeneratorTestCase):
                 100,
                 200,
             ),
+            (
+                "max_upload_size",
+                100,
+                200,
+            ),
         ]
     )
     def test_whitelisted_stable_key_kwargs(
@@ -536,6 +542,36 @@ class ChatTest(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.chat_input
         assert c.placeholder == "the label"
         assert c.max_chars == 10
+
+    def test_max_upload_size_default(self):
+        """Test that chat_input uses the configuration value by default for max upload size."""
+        st.chat_input("the label")
+
+        c = self.get_delta_from_queue().new_element.chat_input
+        assert c.max_upload_size_mb == config.get_option("server.maxUploadSize")
+
+    def test_max_upload_size_override(self):
+        """Test that a per-widget max_upload_size overrides the configuration value for chat_input."""
+        st.chat_input("the label", max_upload_size=321, accept_file="multiple")
+
+        c = self.get_delta_from_queue().new_element.chat_input
+        assert c.max_upload_size_mb == 321
+
+    @parameterized.expand(
+        [
+            ("zero", 0),
+            ("negative", -1),
+            ("float", 1.5),
+            ("string", "10"),
+        ]
+    )
+    def test_max_upload_size_invalid(self, _: str, max_upload_size: object) -> None:
+        """Test that invalid max_upload_size values raise an exception for chat_input."""
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.chat_input("the label", max_upload_size=max_upload_size)
+        assert "The `max_upload_size` parameter must be a positive integer" in str(
+            exc.value
+        )
 
     def test_accept_file_single(self):
         """Test st.chat_input with accept_file=True."""

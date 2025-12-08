@@ -619,6 +619,7 @@ jobs:
 
   build-component-v2-lib:
     runs-on: ubuntu-latest
+    continue-on-error: true # Ensure failure doesn't block update-pr-comment job
 
     permissions:
       contents: read # This is required for actions/checkout

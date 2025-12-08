@@ -29,7 +29,7 @@ from e2e_playwright.shared.app_utils import (
     get_slider,
 )
 
-NUM_SELECT_SLIDERS = 15
+NUM_SELECT_SLIDERS = 16
 
 
 def test_select_slider_rendering(
@@ -67,6 +67,10 @@ def test_select_slider_rendering(
     assert_snapshot(
         get_slider(themed_app, "Label 14 - Width Stretch"),
         name="st_select_slider-width_stretch",
+    )
+    assert_snapshot(
+        get_slider(themed_app, "Label 15 - Markdown in options"),
+        name="st_select_slider-markdown_in_options",
     )
 
 

@@ -26,7 +26,7 @@ import {
 } from "./constants"
 import { doInitPings } from "./DoInitPings"
 import { mockEndpoints } from "./testUtils"
-import { ErrorDetails } from "./types"
+import { ErrorDetails, OnRetry } from "./types"
 import { Args, WebsocketConnection } from "./WebsocketConnection"
 
 const MOCK_ALLOWED_ORIGINS_CONFIG = {
@@ -83,8 +83,8 @@ function setupFetchMockWithFailures(
   retryCount: number,
   errorType: "response" | "network" | "timeout",
   responseOptions?: { status: number; statusText: string; data?: unknown }
-): ReturnType<typeof vi.fn> {
-  const mockImplementation = vi.fn()
+): typeof fetch {
+  const mock = vi.fn()
 
   // Each "totalTries" increment involves cycling through all URIs
   // Each URI requires 2 fetch calls (health + config)
@@ -94,11 +94,15 @@ function setupFetchMockWithFailures(
   // Setup all the rejected/error calls
   for (let i = 0; i < totalFailedCalls; i++) {
     if (errorType === "timeout") {
-      mockImplementation.mockRejectedValueOnce(createAbortError())
+      ;(mock as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
+        createAbortError()
+      )
     } else if (errorType === "network") {
-      mockImplementation.mockRejectedValueOnce(createNetworkError())
+      ;(mock as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
+        createNetworkError()
+      )
     } else if (errorType === "response" && responseOptions) {
-      mockImplementation.mockResolvedValueOnce(
+      ;(mock as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
         createErrorResponse(
           responseOptions.status,
           responseOptions.statusText,
@@ -109,14 +113,14 @@ function setupFetchMockWithFailures(
   }
 
   // Add final successful calls to break the loop
-  mockImplementation.mockResolvedValueOnce(
+  ;(mock as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
     createSuccessResponse(MOCK_HEALTH_RESPONSE)
   ) // healthzUri success
-  mockImplementation.mockResolvedValueOnce(
+  ;(mock as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
     createSuccessResponse(MOCK_HOST_CONFIG_RESPONSE)
   ) // hostConfigUri success
 
-  return mockImplementation
+  return mock
 }
 
 /** Create mock WebsocketConnection arguments */
@@ -144,17 +148,22 @@ function createMockArgs(overrides?: Partial<Args>): Args {
 }
 
 /** Create a robust fetch mock that handles any number of HTTP requests */
-function createFetchMock(): ReturnType<typeof vi.fn> {
+function createFetchMock(): typeof fetch {
   let callCount = 0
-  return vi.fn().mockImplementation(() => {
-    callCount++
-    // Alternate between health check (empty string) and host config responses
-    return Promise.resolve(
-      callCount % 2 === 1
-        ? createSuccessResponse({})
-        : createSuccessResponse(MOCK_HOST_CONFIG_RESPONSE)
+  const mock = vi
+    .fn<typeof fetch>()
+    .mockImplementation(
+      async (_input: RequestInfo | URL, _init?: RequestInit) => {
+        callCount++
+        // Alternate between health check (empty string) and host config responses
+        return Promise.resolve(
+          callCount % 2 === 1
+            ? createSuccessResponse({})
+            : createSuccessResponse(MOCK_HOST_CONFIG_RESPONSE)
+        )
+      }
     )
-  })
+  return mock
 }
 
 describe("doInitPings", () => {
@@ -180,23 +189,24 @@ describe("doInitPings", () => {
     setAllowedOrigins: vi.fn(),
   }
 
-  let originalFetch: typeof global.fetch
+  let originalFetch: typeof globalThis.fetch
 
   // Helper function to create retry callbacks that advance timers
   const createTimerAdvancingRetryCallback = (
     originalCallback?: typeof MOCK_PING_DATA.retryCallback
-  ): ReturnType<typeof vi.fn> => {
-    return vi.fn((_times, _errorNode, timeout) => {
+  ): OnRetry => {
+    const callback: OnRetry = (totalTries, errorDetails, retryTimeout) => {
       if (originalCallback) {
-        originalCallback(_times, _errorNode, timeout)
+        originalCallback(totalTries, errorDetails, retryTimeout)
       }
-      vi.advanceTimersByTime(timeout)
-    })
+      vi.advanceTimersByTime(retryTimeout)
+    }
+    return vi.fn(callback)
   }
 
   beforeEach(() => {
     vi.useFakeTimers()
-    originalFetch = global.fetch
+    originalFetch = globalThis.fetch
     MOCK_PING_DATA.retryCallback = vi.fn()
     MOCK_PING_DATA.setAllowedOrigins = vi.fn()
   })
@@ -204,12 +214,12 @@ describe("doInitPings", () => {
   afterEach(() => {
     vi.clearAllTimers()
     vi.useRealTimers()
-    global.fetch = originalFetch
+    globalThis.fetch = originalFetch
     window.__streamlit = undefined
   })
 
   it("calls the /_stcore/health endpoint when pinging server", async () => {
-    global.fetch = vi
+    globalThis.fetch = vi
       .fn()
       .mockResolvedValueOnce(createSuccessResponse(MOCK_HEALTH_RESPONSE))
       .mockResolvedValueOnce(createSuccessResponse(MOCK_HOST_CONFIG_RESPONSE))
@@ -231,7 +241,7 @@ describe("doInitPings", () => {
 
   it("makes the host config call using window.__streamlit.HOST_CONFIG_BASE_URL if set", async () => {
     window.__streamlit = { HOST_CONFIG_BASE_URL: "https://example.com:1234" }
-    global.fetch = vi
+    globalThis.fetch = vi
       .fn()
       .mockResolvedValueOnce(createSuccessResponse(MOCK_HEALTH_RESPONSE))
       .mockResolvedValueOnce(createSuccessResponse(MOCK_HOST_CONFIG_RESPONSE))
@@ -250,14 +260,14 @@ describe("doInitPings", () => {
       MOCK_ALLOWED_ORIGINS_CONFIG
     )
     // Verify the second call was to the custom host config URL
-    expect(global.fetch).toHaveBeenCalledWith(
+    expect(globalThis.fetch).toHaveBeenCalledWith(
       "https://example.com:1234/_stcore/host-config",
       expect.any(Object)
     )
   })
 
   it("returns the uri index and sets hostConfig for the first successful ping (0)", async () => {
-    global.fetch = vi
+    globalThis.fetch = vi
       .fn()
       .mockResolvedValueOnce(createSuccessResponse({}))
       .mockResolvedValueOnce(createSuccessResponse(MOCK_HOST_CONFIG_RESPONSE))
@@ -278,7 +288,7 @@ describe("doInitPings", () => {
   })
 
   it("returns the uri index and sets hostConfig for the first successful ping (1)", async () => {
-    global.fetch = vi
+    globalThis.fetch = vi
       .fn()
       // First Connection attempt - network error
       .mockRejectedValueOnce(createNetworkError())
@@ -311,7 +321,7 @@ describe("doInitPings", () => {
   it("calls retry with the corresponding error message if there was an error", async () => {
     const TEST_ERROR_MESSAGE = "ERROR_MESSAGE"
 
-    global.fetch = vi
+    globalThis.fetch = vi
       .fn()
       // First Connection attempt - network error with message
       .mockRejectedValueOnce(createNetworkError(TEST_ERROR_MESSAGE))
@@ -347,7 +357,7 @@ describe("doInitPings", () => {
   })
 
   it("calls retry with 'Connection timed out.' when fetch times out (AbortError)", async () => {
-    global.fetch = vi
+    globalThis.fetch = vi
       .fn()
       // First Connection attempt - timeout
       .mockRejectedValueOnce(createAbortError())
@@ -381,7 +391,7 @@ describe("doInitPings", () => {
   })
 
   it("calls retry with 'Streamlit server is not responding. Are you connected to the internet?' when there is a network error", async () => {
-    global.fetch = vi
+    globalThis.fetch = vi
       .fn()
       // First Connection attempt - network error
       .mockRejectedValueOnce(createNetworkError())
@@ -436,7 +446,7 @@ describe("doInitPings", () => {
       ] as URL[],
     }
 
-    global.fetch = vi
+    globalThis.fetch = vi
       .fn()
       // First Connection attempt - network error
       .mockRejectedValueOnce(createNetworkError())
@@ -474,7 +484,7 @@ describe("doInitPings", () => {
 
 If you are trying to access a Streamlit app running on another server, this could be due to the app's [CORS](${CORS_ERROR_MESSAGE_DOCUMENTATION_LINK}) settings.`
 
-    global.fetch = vi
+    globalThis.fetch = vi
       .fn()
       // First Connection attempt - 403 error
       .mockResolvedValueOnce(createErrorResponse(403, "Forbidden"))
@@ -508,7 +518,7 @@ If you are trying to access a Streamlit app running on another server, this coul
   })
 
   it("calls retry with 'Connection failed with status ...' for any status code other than 0, 403, and 2xx", async () => {
-    global.fetch = vi
+    globalThis.fetch = vi
       .fn()
       // First Connection attempt - 500 error
       .mockResolvedValueOnce(
@@ -549,7 +559,7 @@ If you are trying to access a Streamlit app running on another server, this coul
   it("calls retry with 'Connection failed with status ...' for any status code other than 0, 403, and 2xx with an object response", async () => {
     const TEST_DATA = { message: "TEST_DATA" }
 
-    global.fetch = vi
+    globalThis.fetch = vi
       .fn()
       // First Connection attempt - 500 error with object data
       .mockResolvedValueOnce(
@@ -588,7 +598,7 @@ If you are trying to access a Streamlit app running on another server, this coul
   })
 
   it("calls retry with correct total tries", async () => {
-    global.fetch = vi
+    globalThis.fetch = vi
       .fn()
       // First Connection attempt
       .mockRejectedValueOnce(createNetworkError())
@@ -630,7 +640,7 @@ If you are trying to access a Streamlit app running on another server, this coul
   })
 
   it("has increasing but capped retry backoff", async () => {
-    global.fetch = vi
+    globalThis.fetch = vi
       .fn()
       // First Connection attempt
       .mockRejectedValueOnce(createNetworkError())
@@ -695,7 +705,7 @@ If you are trying to access a Streamlit app running on another server, this coul
   })
 
   it("backs off independently for each target url", async () => {
-    global.fetch = vi
+    globalThis.fetch = vi
       .fn()
       // First Connection attempt
       .mockRejectedValueOnce(createNetworkError())
@@ -748,7 +758,7 @@ If you are trying to access a Streamlit app running on another server, this coul
   })
 
   it("resets timeout each ping call", async () => {
-    global.fetch = vi
+    globalThis.fetch = vi
       .fn()
       // First Connection attempt
       .mockRejectedValueOnce(createNetworkError())
@@ -841,7 +851,7 @@ If you are trying to access a Streamlit app running on another server, this coul
       const sendClientErrorSpy = vi.fn()
 
       // We need to mock fetch to simulate connection error threshold
-      global.fetch = setupFetchMockWithFailures(
+      globalThis.fetch = setupFetchMockWithFailures(
         MAX_RETRIES_BEFORE_CLIENT_ERROR,
         "response",
         { status: 403, statusText: "Forbidden" }
@@ -873,7 +883,7 @@ If you are trying to access a Streamlit app running on another server, this coul
       const sendClientErrorSpy = vi.fn()
 
       // We need to mock fetch to simulate connection error threshold
-      global.fetch = setupFetchMockWithFailures(
+      globalThis.fetch = setupFetchMockWithFailures(
         MAX_RETRIES_BEFORE_CLIENT_ERROR,
         "response",
         { status: 500, statusText: "Internal Server Error" }
@@ -905,7 +915,7 @@ If you are trying to access a Streamlit app running on another server, this coul
       const sendClientErrorSpy = vi.fn()
 
       // We need to mock fetch to simulate connection error threshold
-      global.fetch = setupFetchMockWithFailures(
+      globalThis.fetch = setupFetchMockWithFailures(
         MAX_RETRIES_BEFORE_CLIENT_ERROR,
         "network",
         undefined
@@ -938,20 +948,20 @@ If you are trying to access a Streamlit app running on another server, this coul
 describe("WebsocketConnection", () => {
   let client: WebsocketConnection
   let server: WS
-  let originalFetch: typeof global.fetch
+  let originalFetch: typeof globalThis.fetch
 
   beforeEach(() => {
     vi.useFakeTimers()
     server = new WS("ws://localhost:1234/_stcore/stream")
 
-    originalFetch = global.fetch
-    global.fetch = createFetchMock()
+    originalFetch = globalThis.fetch
+    globalThis.fetch = createFetchMock()
 
     client = new WebsocketConnection(createMockArgs())
   })
 
   afterEach(async () => {
-    global.fetch = originalFetch
+    globalThis.fetch = originalFetch
 
     // @ts-expect-error
     if (client.websocket) {
@@ -1040,23 +1050,70 @@ describe("WebsocketConnection", () => {
 })
 
 describe("WebsocketConnection auth token handling", () => {
-  let originalFetch: typeof global.fetch
+  let originalFetch: typeof globalThis.fetch
+
+  let websocketSpy: (url: string, protocols?: string | string[]) => void
+  let originalWebSocket: typeof WebSocket
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  let websocketSpy: any
-  let server: WS
+  let pingServerSpy: any
+
+  class MockWebSocket {
+    public url: string
+    public protocols?: string | string[]
+    public binaryType = "blob"
+    public readyState = 0
+
+    constructor(url: string, protocols?: string | string[]) {
+      this.url = url
+      this.protocols = protocols
+    }
+
+    public addEventListener(
+      _type: string,
+      _listener: (event: Event) => void
+    ): void {
+      // No-op: auth tests only care that listeners can be registered
+    }
+
+    public close(): void {
+      this.readyState = 3
+    }
+
+    public send(_data: unknown): void {
+      // No-op: auth tests don't assert on sent data
+    }
+  }
 
   beforeEach(() => {
-    server = new WS("ws://localhost:1234/_stcore/stream")
-    websocketSpy = vi.spyOn(window, "WebSocket")
+    websocketSpy = vi.fn()
+    originalWebSocket = globalThis.WebSocket
 
-    originalFetch = global.fetch
-    global.fetch = createFetchMock()
+    // Provide a minimal WebSocket implementation for auth tests that
+    // records constructor arguments and supports the methods our code uses.
+    const MockWebSocketWithSpy = class extends MockWebSocket {
+      constructor(url: string, protocols?: string | string[]) {
+        websocketSpy(url, protocols)
+        super(url, protocols)
+      }
+    }
+
+    globalThis.WebSocket = MockWebSocketWithSpy as unknown as typeof WebSocket
+
+    originalFetch = globalThis.fetch
+    globalThis.fetch = createFetchMock()
+
+    // Prevent the internal ping loop from scheduling timers or websockets
+    // for these auth-only tests.
+    pingServerSpy = vi
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
+      .spyOn(WebsocketConnection.prototype as any, "pingServer")
+      .mockResolvedValue(undefined)
   })
 
   afterEach(() => {
-    global.fetch = originalFetch
-
-    server.close()
+    globalThis.fetch = originalFetch
+    globalThis.WebSocket = originalWebSocket
+    pingServerSpy.mockRestore()
   })
 
   it("always sets first Sec-WebSocket-Protocol option to 'streamlit'", async () => {

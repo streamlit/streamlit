@@ -158,9 +158,20 @@ def test_camera_input_widths(
     assert_snapshot(pixel_width_camera, name="st_camera_input-width_300px")
 
 
-@pytest.mark.skip_browser("webkit")  # Webkit CI camera permission issue
+@pytest.mark.skip_browser(
+    "webkit"  # Webkit CI camera permission issue
+)
 def test_dynamic_camera_input_props(app: Page):
     """Test that the camera input can be updated dynamically while keeping the state."""
+    # Hide the header to avoid the header toolbar from interfering with hover action below:
+    app.add_style_tag(
+        content="""
+    .stAppHeader {
+        display: none;
+    }
+    """
+    )
+
     dynamic_camera_input = get_element_by_key(app, "dynamic_camera_input_with_key")
     expect(dynamic_camera_input).to_be_visible()
 
@@ -175,10 +186,15 @@ def test_dynamic_camera_input_props(app: Page):
     expect_prefixed_markdown(app, "Initial camera input value:", "False")
 
     # Check that the help tooltip is correct:
+    app.wait_for_timeout(
+        3000  # Camera input can be a bit unstable and change its height slightly delayed.
+    )
+    dynamic_camera_input.scroll_into_view_if_needed()
     expect_help_tooltip(app, dynamic_camera_input, "initial help")
 
     # Click the toggle to update the camera input props
     click_toggle(app, "Update camera input props")
+    wait_until(app, check_dimensions)
 
     # Check updated state
     expect(dynamic_camera_input).to_contain_text("Updated dynamic camera input")
@@ -190,4 +206,8 @@ def test_dynamic_camera_input_props(app: Page):
     expect(dynamic_camera_input).to_have_css("width", "300px")
 
     # Check that the help tooltip is correct:
+    app.wait_for_timeout(
+        3000  # Camera input can be a bit unstable and change its height slightly delayed.
+    )
+    dynamic_camera_input.scroll_into_view_if_needed()
     expect_help_tooltip(app, dynamic_camera_input, "updated help")
