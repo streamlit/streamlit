@@ -673,6 +673,37 @@ describe("DateColumn", () => {
     })
   })
 
+  it("sets required flag when isRequired is true", () => {
+    const MOCK_DATE_COLUMN_REQUIRED = {
+      ...MOCK_DATE_COLUMN_TEMPLATE,
+      isRequired: true,
+    }
+
+    const mockColumn = DateColumn(MOCK_DATE_COLUMN_REQUIRED)
+    const cell = mockColumn.getCell(EXAMPLE_DATE) as DatePickerType
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect((cell.data as any).required).toBe(true)
+  })
+
+  it("sets required flag to false when isRequired is false", () => {
+    const MOCK_DATE_COLUMN_NOT_REQUIRED = {
+      ...MOCK_DATE_COLUMN_TEMPLATE,
+      isRequired: false,
+    }
+
+    const mockColumn = DateColumn(MOCK_DATE_COLUMN_NOT_REQUIRED)
+    const cell = mockColumn.getCell(EXAMPLE_DATE) as DatePickerType
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect((cell.data as any).required).toBe(false)
+  })
+
+  it("does not set required flag when isRequired is undefined", () => {
+    const mockColumn = DateColumn(MOCK_DATE_COLUMN_TEMPLATE)
+    const cell = mockColumn.getCell(EXAMPLE_DATE) as DatePickerType
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect((cell.data as any).required).toBeUndefined()
+  })
+
   // Issue #11291 - st.column_config 'localized' option
   it("handles localized format", () => {
     // Update navigator.languages for this test

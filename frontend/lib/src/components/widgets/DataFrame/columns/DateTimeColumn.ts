@@ -171,6 +171,7 @@ function BaseDateTimeColumn(
       min: minDate,
       max: maxDate,
       userFormat: formatToUse,
+      required: props.isRequired,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any,
   }
@@ -304,6 +305,7 @@ function BaseDateTimeColumn(
           displayDate,
           timezoneOffset,
           userFormat: formatToUse,
+          required: props.isRequired,
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } as any,
       } as DatePickerType

@@ -28,7 +28,7 @@ import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
  * allowing users to enter dates in the format specified by the column config.
  *
  * This editor is used when a DatePickerCell has a custom format (not "localized",
- * "distance", "iso8601", or when no format is provided).
+ * "distance", or "iso8601") or when using the default format (i.e., when no format is provided).
  */
 export const DateTextCellEditor: ReturnType<
   ProvideEditorCallback<DatePickerType>
@@ -38,8 +38,24 @@ export const DateTextCellEditor: ReturnType<
   const { colors, fontSizes, spacing } = useEmotionTheme()
 
   const cellData = value.data
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const userFormat = (cellData as any)?.userFormat as string | undefined
+  interface DatePickerCellDataWithFormat {
+    kind: "date-picker-cell"
+    userFormat?: string
+    required?: boolean
+  }
+  function hasUserFormat(data: unknown): data is DatePickerCellDataWithFormat {
+    return (
+      typeof data === "object" &&
+      data !== null &&
+      (data as { kind?: unknown }).kind === "date-picker-cell"
+    )
+  }
+  const cellDataUnknown = cellData as unknown
+  const cellDataWithFormat = hasUserFormat(cellDataUnknown)
+    ? cellDataUnknown
+    : null
+  const userFormat = cellDataWithFormat?.userFormat
+  const isRequired = cellDataWithFormat?.required === true
   const displayDate = cellData.displayDate || ""
   const currentDate = cellData.date
 
@@ -74,14 +90,12 @@ export const DateTextCellEditor: ReturnType<
       }
 
       try {
-        // Use strict mode to ensure exact format matching
         const parsed = moment(input.trim(), format, true)
         if (parsed.isValid()) {
-          // Convert to UTC date (since dates are stored in UTC)
           return parsed.utc().toDate()
         }
       } catch {
-        // Parsing failed
+        // Ignore parsing errors
       }
 
       return null
@@ -102,15 +116,12 @@ export const DateTextCellEditor: ReturnType<
         return
       }
 
-      // If input is empty, allow it (will be handled as null)
       if (!newValue?.trim()) {
         return
       }
 
-      // Try to parse the input
       const parsedDate = parseDateInput(newValue, userFormat)
       if (parsedDate) {
-        // Valid date: update the cell
         const updatedCell: DatePickerType = {
           ...value,
           data: {
@@ -121,20 +132,21 @@ export const DateTextCellEditor: ReturnType<
         }
         onChange(updatedCell)
       } else {
-        // Invalid date: show error but don't update cell yet
-        setError("Invalid date format")
+        const errorMessage = isRequired
+          ? `Invalid date format. Date is required. Expected format: ${userFormat}`
+          : `Invalid date format. Expected format: ${userFormat}`
+        setError(errorMessage)
       }
     },
-    [userFormat, parseDateInput, value, cellData, onChange]
+    [userFormat, isRequired, parseDateInput, value, cellData, onChange]
   )
 
   /**
-   * Handle blur - finalize the edit or show error if invalid.
+   * Handle blur - finalize the edit or restore original value if invalid.
    */
   const handleBlur = useCallback(() => {
     if (!inputValue?.trim()) {
-      // Empty input: set to null if allowed
-      if (!value.data.min) {
+      if (!isRequired) {
         const updatedCell: DatePickerType = {
           ...value,
           data: {
@@ -144,11 +156,11 @@ export const DateTextCellEditor: ReturnType<
           },
         }
         onChange(updatedCell)
-        onFinishedEditing(undefined)
+        onFinishedEditing(updatedCell)
       } else {
-        // Required field - restore original value
         setInputValue(displayDate)
-        setError("Date is required")
+        setError(null)
+        onFinishedEditing(undefined)
       }
       return
     }
@@ -160,7 +172,6 @@ export const DateTextCellEditor: ReturnType<
 
     const parsedDate = parseDateInput(inputValue, userFormat)
     if (parsedDate) {
-      // Valid date - ensure cell is updated
       const updatedCell: DatePickerType = {
         ...value,
         data: {
@@ -172,14 +183,14 @@ export const DateTextCellEditor: ReturnType<
       onChange(updatedCell)
       onFinishedEditing(updatedCell)
     } else {
-      // Invalid - restore original value
       setInputValue(displayDate)
-      setError(`Invalid date. Expected format: ${userFormat}`)
-      // Keep editor open to let user fix it
+      setError(null)
+      onFinishedEditing(undefined)
     }
   }, [
     inputValue,
     userFormat,
+    isRequired,
     parseDateInput,
     value,
     cellData,
@@ -198,7 +209,6 @@ export const DateTextCellEditor: ReturnType<
         handleBlur()
       } else if (e.key === "Escape") {
         e.preventDefault()
-        // Restore original value
         setInputValue(displayDate)
         setError(null)
         onFinishedEditing(undefined)
@@ -207,19 +217,19 @@ export const DateTextCellEditor: ReturnType<
     [displayDate, handleBlur, onFinishedEditing]
   )
 
-  // Get theme colors - use provided theme or fallback to emotion theme
   const bgColor = theme?.bgCell ?? colors.bgColor
   const textColor = theme?.textDark ?? colors.bodyText
   const borderColor = theme?.borderColor ?? colors.fadedText10
   const errorColor = colors.redTextColor
 
+  const errorId = "date-error"
   return (
     <div
       style={{
         padding: `${spacing.twoXS}px ${spacing.xs}px`,
         backgroundColor: bgColor,
         border: `1px solid ${error ? errorColor : borderColor}`,
-        borderRadius: "none",
+        borderRadius: 0,
       }}
     >
       <input
@@ -230,6 +240,8 @@ export const DateTextCellEditor: ReturnType<
         onBlur={handleBlur}
         onKeyDown={handleKeyDown}
         placeholder={userFormat || "YYYY-MM-DD"}
+        aria-invalid={!!error}
+        aria-describedby={error ? errorId : undefined}
         style={{
           width: "100%",
           backgroundColor: "transparent",
@@ -244,6 +256,8 @@ export const DateTextCellEditor: ReturnType<
       />
       {error && (
         <div
+          id={errorId}
+          role="alert"
           style={{
             fontSize: fontSizes.sm,
             color: errorColor,

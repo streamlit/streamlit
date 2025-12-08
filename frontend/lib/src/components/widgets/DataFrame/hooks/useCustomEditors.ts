@@ -64,13 +64,30 @@ function useCustomEditors(): CustomEditorsReturn {
         (cell as DatePickerType).data?.kind === "date-picker-cell"
       ) {
         // Use custom editor if the cell has a userFormat (custom format)
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const userFormat = ((cell as DatePickerType).data as any)?.userFormat
-        if (userFormat) {
-          return {
-            editor: DateTextCellEditor,
-            // Type assertion: DateTextCellEditor is for DatePickerType, but we use it as GridCell editor
-          } as unknown as ProvideEditorCallbackResult<GridCell>
+        interface DatePickerCellDataWithFormat {
+          kind: "date-picker-cell"
+          userFormat?: string
+          required?: boolean
+        }
+        function hasUserFormat(
+          data: unknown
+        ): data is DatePickerCellDataWithFormat {
+          return (
+            typeof data === "object" &&
+            data !== null &&
+            (data as { kind?: unknown }).kind === "date-picker-cell"
+          )
+        }
+        const data = (cell as DatePickerType).data
+        const dataUnknown = data as unknown
+        if (hasUserFormat(dataUnknown)) {
+          const userFormat = dataUnknown.userFormat
+          if (userFormat) {
+            return {
+              editor: DateTextCellEditor,
+              // Type assertion: DateTextCellEditor is for DatePickerType, but we use it as GridCell editor
+            } as unknown as ProvideEditorCallbackResult<GridCell>
+          }
         }
       }
 
