@@ -16,7 +16,7 @@
 
 import React, { memo } from "react"
 
-import { AttachFile } from "@emotion-icons/material-outlined"
+import { Add } from "@emotion-icons/material-rounded"
 
 import BaseButton, { BaseButtonKind } from "~lib/components/shared/BaseButton"
 import Icon from "~lib/components/shared/Icon"
@@ -32,7 +32,6 @@ import {
 import {
   StyledFileUploadButton,
   StyledFileUploadButtonContainer,
-  StyledVerticalDivider,
 } from "./styled-components"
 
 export interface Props {
@@ -69,7 +68,7 @@ const ChatFileUploadButton = ({
         >
           <BaseButton kind={BaseButtonKind.MINIMAL} disabled={disabled}>
             <Icon
-              content={AttachFile}
+              content={Add}
               size="lg"
               color={
                 disabled ? theme.colors.fadedText40 : theme.colors.fadedText60
@@ -78,7 +77,6 @@ const ChatFileUploadButton = ({
           </BaseButton>
         </TooltipIcon>
       </StyledFileUploadButton>
-      <StyledVerticalDivider />
     </StyledFileUploadButtonContainer>
   )
 }

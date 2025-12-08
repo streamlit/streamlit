@@ -24,7 +24,7 @@ const SOURCE_SANS_REGULAR_HASH = "BsWL4Kly"
 const HTML = fs.readFileSync(path.resolve(__dirname, "../index.html"), "utf8")
 document.documentElement.innerHTML = HTML.toString()
 
-test("index.html preloads expected font with expected hash", () => {
+it("index.html preloads expected font with expected hash", () => {
   const preloadedFonts = document.querySelectorAll<HTMLLinkElement>(
     "link[rel='preload']"
   )

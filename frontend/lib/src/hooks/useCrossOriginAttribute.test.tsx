@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React from "react"
+import React, { useMemo } from "react"
 
 import { renderHook } from "@testing-library/react"
 
@@ -33,12 +33,16 @@ const getWrapper = (
   resourceCrossOriginMode: undefined | "anonymous" | "use-credentials"
 ): React.FC<{ children: React.ReactNode }> => {
   return ({ children }: { children: React.ReactNode }): JSX.Element => {
-    const libConfigContextValue: LibConfigContextProps = {
-      resourceCrossOriginMode,
-      mapboxToken: undefined,
-      enforceDownloadInNewTab: undefined,
-      locale: "en-US",
-    }
+    const libConfigContextValue: LibConfigContextProps = useMemo(
+      () => ({
+        resourceCrossOriginMode,
+        mapboxToken: undefined,
+        enforceDownloadInNewTab: undefined,
+        locale: "en-US",
+      }),
+      // eslint-disable-next-line react-hooks/exhaustive-deps -- Include for semantic correctness; stable per wrapper instance
+      [resourceCrossOriginMode]
+    )
 
     return (
       <LibConfigContext.Provider value={libConfigContextValue}>

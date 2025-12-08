@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { describe, expect, test } from "vitest"
+import { describe, expect } from "vitest"
 
 import { getStyledCell, getStyledHeaders } from "./pandasStylerUtils"
 import { Quiver } from "./Quiver"
@@ -22,7 +22,7 @@ import { Quiver } from "./Quiver"
 const T_FAKE_UUID = "T_FAKE_UUID"
 
 describe("getStyledHeaders", () => {
-  test("returns correct headers for single-level headers", () => {
+  it("returns correct headers for single-level headers", () => {
     const mockQuiver = {
       dimensions: {
         numHeaderRows: 1,
@@ -45,7 +45,7 @@ describe("getStyledHeaders", () => {
     ])
   })
 
-  test("returns correct headers for multi-level headers", () => {
+  it("returns correct headers for multi-level headers", () => {
     const mockQuiver = {
       dimensions: {
         numHeaderRows: 2,
@@ -78,7 +78,7 @@ describe("getStyledHeaders", () => {
     ])
   })
 
-  test("handles empty data", () => {
+  it("handles empty data", () => {
     const mockQuiver = {
       dimensions: {
         numHeaderRows: 1,
@@ -99,7 +99,7 @@ describe("getStyledHeaders", () => {
 })
 
 describe("getStyledCell", () => {
-  test("returns undefined when no styler is present", () => {
+  it("returns undefined when no styler is present", () => {
     const mockQuiver = {
       dimensions: {
         numHeaderRows: 1,
@@ -116,7 +116,7 @@ describe("getStyledCell", () => {
     expect(cell).toBeUndefined()
   })
 
-  test("returns correct styling for index cells", () => {
+  it("returns correct styling for index cells", () => {
     const mockQuiver = {
       dimensions: {
         numHeaderRows: 1,
@@ -139,7 +139,7 @@ describe("getStyledCell", () => {
     })
   })
 
-  test("returns correct styling for data cells", () => {
+  it("returns correct styling for data cells", () => {
     const mockQuiver = {
       dimensions: {
         numHeaderRows: 1,
@@ -167,7 +167,7 @@ describe("getStyledCell", () => {
     })
   })
 
-  test("throws error for out of range row index", () => {
+  it("throws error for out of range row index", () => {
     const mockQuiver = {
       dimensions: {
         numHeaderRows: 1,
@@ -187,7 +187,7 @@ describe("getStyledCell", () => {
     )
   })
 
-  test("throws error for out of range column index", () => {
+  it("throws error for out of range column index", () => {
     const mockQuiver = {
       dimensions: {
         numHeaderRows: 1,

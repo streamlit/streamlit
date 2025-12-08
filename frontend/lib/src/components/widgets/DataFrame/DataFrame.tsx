@@ -38,10 +38,10 @@ import {
   DataEditorRef,
   DataEditor as GlideDataEditor,
   GridCell,
-  Item as GridCellPosition,
   GridColumn,
   GridMouseEventArgs,
   GridSelection,
+  type Item,
   Rectangle,
 } from "@glideapps/glide-data-grid"
 import { Resizable } from "re-resizable"
@@ -62,10 +62,9 @@ import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import { useScrollbarGutterSize } from "~lib/hooks/useScrollbarGutterSize"
 import { convertRemToPx } from "~lib/theme/utils"
 import { isNullOrUndefined } from "~lib/util/utils"
-import { WidgetInfo, WidgetStateManager } from "~lib/WidgetStateManager"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { getTextCell, ImageCellEditor, toGlideColumn } from "./columns"
-import EditingState, { getColumnName } from "./EditingState"
 import {
   useColumnFormatting,
   useColumnLoader,
@@ -84,7 +83,9 @@ import {
   useSelectionHandler,
   useTableSizer,
   useTooltips,
+  useWidgetState,
 } from "./hooks"
+import { DEBOUNCE_TIME_MS } from "./hooks/useWidgetState"
 import ColumnMenu from "./menus/ColumnMenu"
 import ColumnVisibilityMenu from "./menus/ColumnVisibilityMenu"
 import { StyledResizableContainer } from "./styled-components"
@@ -93,9 +94,6 @@ import Tooltip from "./Tooltip"
 import "@glideapps/glide-data-grid/dist/index.css"
 import "@glideapps/glide-data-grid-cells/dist/index.css"
 
-// Debounce time for triggering a widget state update
-// This prevents rapid updates to the widget state.
-const DEBOUNCE_TIME_MS = 150
 // Number of rows that triggers some optimization features
 // for large tables.
 const LARGE_TABLE_ROWS_THRESHOLD = 150000
@@ -105,22 +103,6 @@ const LARGE_TABLE_ROWS_THRESHOLD = 150000
 // a scrollbar size of ~8px to prevent clicks on the scrollbar to be applied
 // in the data grid.
 const SCROLLBAR_FALLBACK_SIZE_REM = "0.5rem"
-
-// This is the state that is sent to the backend
-// This needs to be the same structure that is also defined
-// in the Python code.
-export type CellPosition = readonly [row: number, column: string]
-
-export interface DataframeState {
-  selection: {
-    rows: number[]
-    // We use column names instead of indices to make
-    // it easier to use and unify with how data editor edits
-    // are stored.
-    columns: string[]
-    cells: CellPosition[]
-  }
-}
 
 export interface DataFrameProps {
   element: ArrowProto
@@ -241,20 +223,6 @@ function DataFrame({
   const isDynamicAndEditable =
     !isEmptyTable && element.editingMode === DYNAMIC && !disabled
 
-  const editingState = useRef<EditingState>(new EditingState(originalNumRows))
-
-  const [numRows, setNumRows] = useState(editingState.current.getNumRows())
-
-  useEffect(() => {
-    editingState.current = new EditingState(originalNumRows)
-    setNumRows(editingState.current.getNumRows())
-  }, [originalNumRows])
-
-  const resetEditingState = useCallback(() => {
-    editingState.current = new EditingState(originalNumRows)
-    setNumRows(editingState.current.getNumRows())
-  }, [originalNumRows])
-
   const [columnOrder, setColumnOrder] = useState(element.columnOrder)
 
   // Update the column order if the element.columnOrder value changes
@@ -270,41 +238,23 @@ function DataFrame({
     setColumnConfigMapping,
   } = useColumnLoader(element, data, disabled, columnOrder, widthConfig)
 
-  /**
-   * On the first rendering, try to load initial widget state if
-   * it exists. This is required in the case that other elements
-   * are inserted before this widget. In this case, it can happen
-   * that the dataframe component is unmounted and thereby loses
-   * its state. Once the same element is rendered again, we try to
-   * reconstruct the state from the widget manager values.
-   */
-  useEffect(
-    () => {
-      if (element.editingMode === READ_ONLY || !widgetMgr) {
-        // We don't need to load the initial widget state
-        // for read-only dataframes.
-        return
-      }
-
-      const initialWidgetValue = widgetMgr.getStringValue({
-        id: element.id,
-        formId: element.formId,
-      } as WidgetInfo)
-
-      if (!initialWidgetValue) {
-        // No initial widget value was saved in the widget manager.
-        // No need to reconstruct something.
-        return
-      }
-
-      editingState.current.fromJson(initialWidgetValue, originalColumns)
-      setNumRows(editingState.current.getNumRows())
-    },
-    // We only want to run this effect once during the initial component load
-    // so we disable the eslint rule.
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
-    []
-  )
+  // Widget state management hook - handles editing state, syncing with widget manager,
+  // and form clear handling
+  const {
+    editingState,
+    numRows,
+    updateNumRows,
+    syncEditState,
+    createSyncSelectionState,
+    onFormCleared: handleFormCleared,
+    loadInitialSelectionState,
+  } = useWidgetState({
+    element,
+    widgetMgr,
+    fragmentId,
+    originalNumRows,
+    originalColumns,
+  })
 
   const { getCellContent: getOriginalCellContent } = useDataLoader(
     data,
@@ -316,104 +266,11 @@ function DataFrame({
   const { columns, sortColumn, getOriginalIndex, getCellContent } =
     useColumnSort(originalNumRows, originalColumns, getOriginalCellContent)
 
-  /**
-   * Synchronizes the selection state with the state of the widget state of the component.
-   * This might also send a rerun message to the backend if the selection state has changed.
-   *
-   * This is the inner version to be used by the debounce callback below.
-   * Its split out to allow better dependency inspection.
-   *
-   * @param newSelection - The new selection state
-   * @param syncCellSelections - Whether to sync cell selections. We don't want to sync selected
-   *   cells when cell selections are not activated.
-   */
-  const innerSyncSelectionState = useCallback(
-    (newSelection: GridSelection, syncCellSelections: boolean) => {
-      // If we want to support selections also with the editable mode,
-      // we would need to integrate the `syncEditState` and `syncSelections` functions
-      // into a single function that updates the widget state with both the editing
-      // state and the selection state.
-
-      if (!widgetMgr) {
-        return
-      }
-
-      const selectionState: DataframeState = {
-        selection: {
-          rows: [] as number[],
-          columns: [] as string[],
-          cells: [] as CellPosition[],
-        },
-      }
-
-      selectionState.selection.rows = newSelection.rows.toArray().map(row => {
-        return getOriginalIndex(row)
-      })
-      selectionState.selection.columns = newSelection.columns
-        .toArray()
-        .map(columnIdx => {
-          return getColumnName(columns[columnIdx])
-        })
-
-      // Parse cell selections into our widget state structure:
-      if (syncCellSelections && newSelection.current) {
-        const { cell, range } = newSelection.current
-        if (range) {
-          // Multi-cell selection (rectangular structure)
-          for (let r = range.y; r < range.y + range.height; r++) {
-            for (let c = range.x; c < range.x + range.width; c++) {
-              if (!columns[c].isIndex) {
-                selectionState.selection.cells.push([
-                  getOriginalIndex(r),
-                  getColumnName(columns[c]),
-                ])
-              }
-            }
-          }
-        } else if (cell) {
-          // Single-cell selection
-          const [col, row] = cell
-          if (!columns[col].isIndex) {
-            selectionState.selection.cells.push([
-              getOriginalIndex(row),
-              getColumnName(columns[col]),
-            ])
-          }
-        }
-      }
-
-      const newWidgetState = JSON.stringify(selectionState)
-      const currentWidgetState = widgetMgr.getStringValue({
-        id: element.id,
-        formId: element.formId,
-      } as WidgetInfo)
-
-      // Only update if there is actually a difference to the previous selection state
-      if (
-        currentWidgetState === undefined ||
-        currentWidgetState !== newWidgetState
-      ) {
-        widgetMgr.setStringValue(
-          {
-            id: element.id,
-            formId: element.formId,
-          } as WidgetInfo,
-          newWidgetState,
-          {
-            fromUi: true,
-          },
-          fragmentId
-        )
-      }
-    },
-    [
-      columns,
-      element.id,
-      element.formId,
-      widgetMgr,
-      fragmentId,
-      getOriginalIndex,
-    ]
+  // Create the sync selection state callback using the sorted columns and getOriginalIndex.
+  // This is done here because it needs the output from useColumnSort.
+  const innerSyncSelectionState = useMemo(
+    () => createSyncSelectionState(columns, getOriginalIndex),
+    [createSyncSelectionState, columns, getOriginalIndex]
   )
 
   // Use a debounce to prevent rapid updates to the widget state.
@@ -462,7 +319,7 @@ function DataFrame({
   const refreshCells = useCallback(
     (
       cells: {
-        cell: GridCellPosition
+        cell: Item
       }[]
     ) => {
       dataEditorRef.current?.updateCells(cells)
@@ -480,143 +337,22 @@ function DataFrame({
    */
   useEffect(
     () => {
-      if (
-        (!isRowSelectionActivated &&
-          !isColumnSelectionActivated &&
-          !isCellSelectionActivated) ||
-        !widgetMgr
-      ) {
-        // Only run this if selections are activated.
-        return
-      }
+      const initialSelection = loadInitialSelectionState({
+        columns,
+        isRowSelectionActivated,
+        isColumnSelectionActivated,
+        isCellSelectionActivated,
+        isMultiCellSelectionActivated,
+      })
 
-      const initialWidgetValue = widgetMgr.getStringValue({
-        id: element.id,
-        formId: element.formId,
-      } as WidgetInfo)
-
-      if (initialWidgetValue) {
-        const columnNames: string[] = columns.map(column => {
-          return getColumnName(column)
-        })
-
-        const selectionState: DataframeState = JSON.parse(initialWidgetValue)
-
-        let rowSelection = CompactSelection.empty()
-        let columnSelection = CompactSelection.empty()
-        let cellSelection: GridCellPosition | undefined = undefined
-
-        selectionState.selection?.rows?.forEach(row => {
-          rowSelection = rowSelection.add(row)
-        })
-
-        selectionState.selection?.columns?.forEach(column => {
-          columnSelection = columnSelection.add(columnNames.indexOf(column))
-        })
-
-        // Reconstruct for single cell selection:
-        if (isCellSelectionActivated && !isMultiCellSelectionActivated) {
-          // If cell selection is activated but multi-cell selection is not,
-          // we need to set the current cell selection to the first cell in the selection.
-          const [rowIdx, columnName] =
-            selectionState.selection?.cells?.[0] ?? []
-          if (rowIdx !== undefined && columnName !== undefined) {
-            const columnIdx = columnNames.indexOf(columnName)
-
-            cellSelection = [columnIdx, rowIdx]
-          }
-        }
-
-        if (
-          rowSelection.length > 0 ||
-          columnSelection.length > 0 ||
-          cellSelection !== undefined
-        ) {
-          // Update the initial selection state if something was selected
-          const initialSelection: GridSelection = {
-            rows: rowSelection,
-            columns: columnSelection,
-            current: cellSelection
-              ? {
-                  cell: cellSelection,
-                  range: {
-                    x: cellSelection[0],
-                    y: cellSelection[1],
-                    // eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values
-                    width: 1,
-                    // eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values
-                    height: 1,
-                  },
-                  rangeStack: [],
-                }
-              : undefined,
-          }
-          processSelectionChange(initialSelection)
-        }
+      if (initialSelection) {
+        processSelectionChange(initialSelection)
       }
     },
     // We only want to run this effect once during the initial component load
     // so we disable the eslint rule.
     // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
     []
-  )
-
-  /**
-   * This callback is used to update the number of rows based
-   * on the latest editing state. This is required to keep the
-   * component state in sync with the editing state.
-   */
-  const updateNumRows = useCallback(() => {
-    if (numRows !== editingState.current.getNumRows()) {
-      // Reset the number of rows if it has been changed in the editing state
-      setNumRows(editingState.current.getNumRows())
-    }
-  }, [numRows])
-
-  /**
-   * This callback is used to synchronize the editing state with
-   * the widget state of the component. This might also send a rerun message
-   * to the backend if the editing state has changed.
-   *
-   * This is the inner version to be used by the debounce callback below.
-   * Its split out to allow better dependency inspection.
-   */
-  const innerSyncEditState = useCallback(() => {
-    if (!widgetMgr) {
-      return
-    }
-
-    const currentEditingState = editingState.current.toJson(columns)
-    let currentWidgetState = widgetMgr.getStringValue({
-      id: element.id,
-      formId: element.formId,
-    } as WidgetInfo)
-
-    if (currentWidgetState === undefined) {
-      // Create an empty widget state
-      currentWidgetState = new EditingState(0).toJson([])
-    }
-
-    // Only update if there is actually a difference between editing and widget state
-    if (currentEditingState !== currentWidgetState) {
-      widgetMgr.setStringValue(
-        {
-          id: element.id,
-          formId: element.formId,
-        } as WidgetInfo,
-        currentEditingState,
-        {
-          fromUi: true,
-        },
-        fragmentId
-      )
-    }
-  }, [columns, element.id, element.formId, widgetMgr, fragmentId])
-
-  // Use a debounce to prevent rapid updates to the widget state.
-  const { debouncedCallback: syncEditState } = useDebouncedCallback(
-    innerSyncEditState,
-    DEBOUNCE_TIME_MS
   )
 
   const { exportToCsv } = useDataExporter(
@@ -728,9 +464,9 @@ function DataFrame({
 
   const onFormCleared = useCallback(() => {
     // Clear the editing state and the selection state
-    resetEditingState()
+    handleFormCleared()
     clearSelection()
-  }, [resetEditingState, clearSelection])
+  }, [handleFormCleared, clearSelection])
 
   useFormClearHelper({ element, widgetMgr, onFormCleared })
 

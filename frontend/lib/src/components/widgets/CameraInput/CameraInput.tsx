@@ -14,11 +14,20 @@
  * limitations under the License.
  */
 
-import React, { PureComponent } from "react"
+import React, {
+  memo,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react"
 
 import { X } from "@emotion-icons/open-iconic"
 import { isEqual } from "lodash-es"
 import { getLogger } from "loglevel"
+import { flushSync } from "react-dom"
 
 import {
   CameraInput as CameraInputProto,
@@ -28,7 +37,6 @@ import {
   UploadedFileInfo as UploadedFileInfoProto,
 } from "@streamlit/protobuf"
 
-import { withCalculatedWidth } from "~lib/components/core/Layout/withCalculatedWidth"
 import Icon from "~lib/components/shared/Icon"
 import { Placement } from "~lib/components/shared/Tooltip"
 import TooltipIcon from "~lib/components/shared/TooltipIcon"
@@ -41,8 +49,9 @@ import {
   UploadFileInfo,
   UploadingStatus,
 } from "~lib/components/widgets/FileUploader/UploadFileInfo"
-import { FormClearHelper } from "~lib/components/widgets/Form"
+import { useFormClearHelper } from "~lib/components/widgets/Form"
 import { FileUploadClient } from "~lib/FileUploadClient"
+import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import {
   isNullOrUndefined,
   labelVisibilityProtoValueToEnum,
@@ -59,222 +68,468 @@ import {
 import { FacingMode } from "./SwitchFacingModeButton"
 import WebcamComponent, { WebcamPermission } from "./WebcamComponent"
 
-export interface Props {
-  element: CameraInputProto
-  widgetMgr: WidgetStateManager
-  uploadClient: FileUploadClient
-  disabled: boolean
-  width: number
-  fragmentId?: string
-  // Allow for unit testing
-  testOverride?: WebcamPermission
-}
+const RESTORED_FROM_WIDGET_STRING = "RESTORED_FROM_WIDGET"
+const MIN_SHUTTER_EFFECT_TIME_MS = 150
+const LOG = getLogger("CameraInput")
 
 type FileUploaderStatus =
   | "ready" // FileUploader can upload or delete files
   | "updating" // at least one file is being uploaded or deleted
 
-export interface State {
-  /**
-   * Base64-encoded image data of the current frame from the camera.
-   */
-  imgSrc: string | null
-
-  shutter: boolean
-
-  minShutterEffectPassed: boolean
-  /**
-   * List of files (snapshots) captured by the user.
-   * Should contain exact one element if the user has taken a snapshot.
-   */
-  files: UploadFileInfo[]
-
-  /**
-   * Represents whether the component is in clear photo mode,
-   * when snapshot removed and new Webcam component is not shown yet.
-   * Time interval between `Clear Photo` button clicked and access to Webcam received again
-   */
-  clearPhotoInProgress: boolean
-
-  /**
-   * User facing mode for mobile devices. If `user`, the camera will be facing the user (front camera).
-   * If `environment`, the camera will be facing the environment (back camera).
-   */
-  facingMode: FacingMode
+export interface Props {
+  element: CameraInputProto
+  widgetMgr: WidgetStateManager
+  uploadClient: FileUploadClient
+  disabled: boolean
+  fragmentId?: string
+  // Allow for unit testing
+  testOverride?: WebcamPermission
 }
 
-const MIN_SHUTTER_EFFECT_TIME_MS = 150
-const LOG = getLogger("CameraInput")
+/**
+ * Convert a list of uploaded file info to the widget state.
+ */
+const toWidgetState = (
+  targetFiles: UploadFileInfo[]
+): FileUploaderStateProto => {
+  const uploadedFileInfo: UploadedFileInfoProto[] = targetFiles
+    .filter(f => f.status.type === "uploaded")
+    .map(f => {
+      const { name, size, status } = f
+      const { fileId, fileUrls } = status as UploadedStatus
 
-class CameraInput extends PureComponent<Props, State> {
-  private localFileIdCounter = 1
-
-  private RESTORED_FROM_WIDGET_STRING = "RESTORED_FROM_WIDGET"
-
-  private readonly formClearHelper = new FormClearHelper()
-
-  public constructor(props: Props) {
-    super(props)
-    this.state = this.initialValue
-  }
-
-  private getProgress = (): number | null | undefined => {
-    if (
-      this.state.files.length > 0 &&
-      this.state.files[this.state.files.length - 1].status.type === "uploading"
-    ) {
-      const status = this.state.files[this.state.files.length - 1]
-        .status as UploadingStatus
-      return status.progress
-    }
-    return undefined
-  }
-
-  private setClearPhotoInProgress = (clearPhotoInProgress: boolean): void => {
-    this.setState({ clearPhotoInProgress })
-  }
-
-  private setFacingMode = (): void => {
-    this.setState(prevState => ({
-      facingMode:
-        prevState.facingMode === FacingMode.USER
-          ? FacingMode.ENVIRONMENT
-          : FacingMode.USER,
-    }))
-  }
-
-  private handleCapture = (imgSrc: string | null): Promise<void> => {
-    if (imgSrc === null) {
-      return Promise.resolve()
-    }
-
-    this.setState({
-      imgSrc,
-      shutter: true,
-      minShutterEffectPassed: false,
+      return new UploadedFileInfoProto({
+        fileId,
+        fileUrls,
+        name,
+        size,
+      })
     })
 
-    const delay = (t: number): Promise<ReturnType<typeof setTimeout>> =>
-      new Promise(resolve => setTimeout(resolve, t))
+  return new FileUploaderStateProto({ uploadedFileInfo })
+}
 
-    return urltoFile(
-      imgSrc,
-      `camera-input-${new Date().toISOString().replace(/:/g, "_")}.jpg`
-    )
-      .then(file =>
-        this.props.uploadClient
-          .fetchFileURLs([file])
-          .then(fileURLsArray => ({ file: file, fileUrls: fileURLsArray[0] }))
-      )
-      .then(({ file, fileUrls }) => this.uploadFile(fileUrls, file))
-      .then(() => delay(MIN_SHUTTER_EFFECT_TIME_MS))
-      .then(() => {
-        this.setState((prevState, _) => {
-          return {
-            imgSrc,
-            shutter: prevState.shutter,
-            minShutterEffectPassed: true,
-          }
-        })
-      })
-      .catch(err => {
-        LOG.error(err)
-      })
+/**
+ * Create the initial files and next local ID from the widget state.
+ */
+const createInitialFiles = (
+  element: CameraInputProto,
+  widgetMgr: WidgetStateManager
+): { files: UploadFileInfo[]; nextLocalId: number; imgSrc: string | null } => {
+  const widgetValue = widgetMgr.getFileUploaderStateValue(element)
+  if (isNullOrUndefined(widgetValue)) {
+    return { files: [], nextLocalId: 1, imgSrc: null }
   }
 
-  private removeCapture = (): void => {
-    if (this.state.files.length === 0) {
-      return
-    }
+  const { uploadedFileInfo } = widgetValue
+  if (isNullOrUndefined(uploadedFileInfo) || uploadedFileInfo.length === 0) {
+    return { files: [], nextLocalId: 1, imgSrc: null }
+  }
 
-    this.state.files.forEach(file => this.deleteFile(file.id))
+  let nextLocalId = 1
+  const files = uploadedFileInfo.map(f => {
+    const name = f.name as string
+    const size = f.size as number
+    const fileId = f.fileId as string
+    const fileUrls = f.fileUrls as FileURLsProto
 
-    this.setState({
-      imgSrc: null,
-      clearPhotoInProgress: true,
+    const uploadFile = new UploadFileInfo(name, size, nextLocalId, {
+      type: "uploaded",
+      fileId,
+      fileUrls,
     })
+    nextLocalId += 1
+    return uploadFile
+  })
+
+  return {
+    files,
+    nextLocalId,
+    imgSrc: files.length > 0 ? RESTORED_FROM_WIDGET_STRING : null,
   }
+}
 
-  get initialValue(): State {
-    const emptyState = {
-      files: [],
-      imgSrc: null,
-      shutter: false,
-      minShutterEffectPassed: true,
-      clearPhotoInProgress: false,
-      facingMode: FacingMode.USER,
-    }
-    const { widgetMgr, element } = this.props
+function urltoFile(url: string, filename: string): Promise<File> {
+  return fetch(url)
+    .then(res => res.arrayBuffer())
+    .then(buf => new File([buf], filename, { type: "image/jpeg" }))
+}
 
-    const widgetValue = widgetMgr.getFileUploaderStateValue(element)
+const CameraInput = ({
+  element,
+  widgetMgr,
+  uploadClient,
+  disabled,
+  fragmentId,
+  testOverride,
+}: Props): React.ReactElement => {
+  /**
+   * TODO: This component should be refactored to remove the width calculation
+   * from JS entirely and instead utilize width: 100%; height: 100%;
+   * aspect-ratio: 16 / 9; on the StyledBox CSS instead.
+   */
+  const { width, elementRef } = useCalculatedDimensions()
 
-    if (isNullOrUndefined(widgetValue)) {
-      return emptyState
-    }
-
-    const { uploadedFileInfo } = widgetValue
-    if (isNullOrUndefined(uploadedFileInfo) || uploadedFileInfo.length === 0) {
-      return emptyState
-    }
-
-    return {
-      files: uploadedFileInfo.map(f => {
-        const name = f.name as string
-        const size = f.size as number
-
-        const fileId = f.fileId as string
-        const fileUrls = f.fileUrls as FileURLsProto
-
-        return new UploadFileInfo(name, size, this.nextLocalFileId(), {
-          type: "uploaded",
-          fileId,
-          fileUrls,
-        })
-      }),
-      imgSrc:
-        uploadedFileInfo.length === 0 ? "" : this.RESTORED_FROM_WIDGET_STRING,
-      shutter: false,
-      minShutterEffectPassed: false,
-      clearPhotoInProgress: false,
-      facingMode: FacingMode.USER,
-    }
+  // Initialize files and local ID counter from widget state.
+  // Use ref with lazy initialization to guarantee one-time computation.
+  const initialStateRef = useRef<ReturnType<typeof createInitialFiles> | null>(
+    null
+  )
+  if (initialStateRef.current === null) {
+    initialStateRef.current = createInitialFiles(element, widgetMgr)
   }
+  const {
+    files: initialFiles,
+    nextLocalId: initialNextLocalId,
+    imgSrc: initialImgSrc,
+  } = initialStateRef.current
 
-  public override componentWillUnmount(): void {
-    this.formClearHelper.disconnect()
-  }
+  const localFileIdCounterRef = useRef(initialNextLocalId)
+
+  // Files and imgSrc use regular useState to ensure they always reflect widget value on mount
+  // (matching FileUploader behavior)
+  const [files, setFiles] = useState(() => initialFiles)
+  // Keep a ref to the current files for use in callbacks that need current state.
+  // useLayoutEffect ensures the ref is updated synchronously after render,
+  // which is critical for flushSync in addFile to work correctly.
+  const filesRef = useRef(files)
+  useLayoutEffect(() => {
+    filesRef.current = files
+  }, [files])
+
+  const [imgSrc, setImgSrc] = useState(() => initialImgSrc)
+
+  // UI state uses useWidgetManagerElementState for persistence across mounts
+  const [shutter, setShutter] = useState(false)
+  const [minShutterEffectPassed, setMinShutterEffectPassed] = useState(true)
+  const [clearPhotoInProgress, setClearPhotoInProgress] = useState(false)
+  const [facingMode, setFacingMode] = useState(FacingMode.USER)
 
   /**
-   * Return the FileUploader's current status, which is derived from
-   * its state.
+   * Generate a unique ID for a new file.
    */
-  public get status(): FileUploaderStatus {
+  const nextLocalFileId = useCallback((): number => {
+    const id = localFileIdCounterRef.current
+    localFileIdCounterRef.current += 1
+    return id
+  }, [])
+
+  /**
+   * Return the component's current status, which is derived from its state.
+   */
+  const status: FileUploaderStatus = useMemo(() => {
     const isFileUpdating = (file: UploadFileInfo): boolean =>
       file.status.type === "uploading"
 
-    // If any of our files is Uploading or Deleting, then we're currently
-    // updating.
-    if (this.state.files.some(isFileUpdating)) {
+    // If any of our files is Uploading, then we're currently updating.
+    if (files.some(isFileUpdating)) {
       return "updating"
     }
 
     return "ready"
-  }
+  }, [files])
 
-  public override componentDidUpdate = (): void => {
-    // If our status is not "ready", then we have uploads in progress.
-    // We won't submit a new widgetValue until all uploads have resolved.
-    if (this.status !== "ready") {
+  /**
+   * Upload progress for the current file, derived during render.
+   */
+  const progress: number | undefined = useMemo(() => {
+    if (
+      files.length > 0 &&
+      files[files.length - 1].status.type === "uploading"
+    ) {
+      const lastFileStatus = files[files.length - 1].status as UploadingStatus
+      return lastFileStatus.progress
+    }
+    return undefined
+  }, [files])
+
+  /**
+   * Toggle between front and back camera.
+   */
+  const handleSetFacingMode = useCallback((): void => {
+    setFacingMode(prevMode =>
+      prevMode === FacingMode.USER ? FacingMode.ENVIRONMENT : FacingMode.USER
+    )
+  }, [])
+
+  /**
+   * Get a file by its local ID.
+   * Uses filesRef to always access the current state in async callbacks.
+   */
+  const getFile = useCallback(
+    (fileId: number): UploadFileInfo | undefined =>
+      filesRef.current.find(file => file.id === fileId),
+    []
+  )
+
+  /**
+   * Add a file to the list of files.
+   */
+  const addFile = useCallback((file: UploadFileInfo): void => {
+    /* eslint-disable-next-line @eslint-react/dom/no-flush-sync --
+     * Using flushSync here because we need the state to be immediately updated
+     * before any subsequent file upload operations occur. Without this, React
+     * can defer the commit and our upload callbacks (progress, completion, or
+     * abort) may run while filesRef.current still points to the previous state.
+     * Those callbacks rely on filesRef.current to locate the in-flight upload,
+     * so deferring the update would cause them to no-op and break progress
+     * tracking. The useLayoutEffect that syncs filesRef runs synchronously
+     * after the flushSync-triggered render completes.
+     */
+    flushSync(() => {
+      setFiles(prevFiles => [...prevFiles, file])
+    })
+  }, [])
+
+  /**
+   * Remove a file from the list by its local ID.
+   */
+  const removeFile = useCallback((idToRemove: number): void => {
+    setFiles(prevFiles => prevFiles.filter(file => file.id !== idToRemove))
+  }, [])
+
+  /**
+   * Update a file in the list by its local ID.
+   */
+  const updateFile = useCallback(
+    (curFileId: number, newFile: UploadFileInfo): void => {
+      setFiles(prevFiles =>
+        prevFiles.map(file => (file.id === curFileId ? newFile : file))
+      )
+    },
+    []
+  )
+
+  /**
+   * Called when an upload has completed. Updates the file's status.
+   */
+  const onUploadComplete = useCallback(
+    (localFileId: number, fileUrls: IFileURLs): void => {
+      setShutter(false)
+
+      const curFile = getFile(localFileId)
+      if (isNullOrUndefined(curFile) || curFile.status.type !== "uploading") {
+        // The file may have been canceled right before the upload
+        // completed. In this case, we just bail.
+        return
+      }
+
+      updateFile(
+        curFile.id,
+        curFile.setStatus({
+          type: "uploaded",
+          fileId: fileUrls.fileId as string,
+          fileUrls,
+        })
+      )
+    },
+    [getFile, updateFile]
+  )
+
+  /**
+   * Callback for file upload progress. Updates a single file's local progress state.
+   */
+  const onUploadProgress = useCallback(
+    (event: ProgressEvent, fileId: number): void => {
+      const file = getFile(fileId)
+      if (isNullOrUndefined(file) || file.status.type !== "uploading") {
+        return
+      }
+
+      const newProgress = Math.round((event.loaded * 100) / event.total)
+      if (file.status.progress === newProgress) {
+        return
+      }
+
+      // Update file.progress
+      updateFile(
+        fileId,
+        file.setStatus({
+          type: "uploading",
+          abortController: file.status.abortController,
+          progress: newProgress,
+        })
+      )
+    },
+    [getFile, updateFile]
+  )
+
+  /**
+   * Upload a file to the backend.
+   */
+  const uploadFile = useCallback(
+    (fileURLs: IFileURLs, file: File): void => {
+      // Create an UploadFileInfo for this file and add it to our state.
+      const abortController = new AbortController()
+      const uploadingFileInfo = new UploadFileInfo(
+        file.name,
+        file.size,
+        nextLocalFileId(),
+        {
+          type: "uploading",
+          abortController,
+          progress: 1,
+        }
+      )
+      addFile(uploadingFileInfo)
+
+      uploadClient
+        .uploadFile(
+          element,
+          fileURLs.uploadUrl as string,
+          file,
+          e => onUploadProgress(e, uploadingFileInfo.id),
+          abortController.signal
+        )
+        .then(() => onUploadComplete(uploadingFileInfo.id, fileURLs))
+        .catch(err => {
+          // If this was an abort error, we don't show the user an error -
+          // the cancellation was in response to an action they took.
+          if (!(err instanceof DOMException && err.name === "AbortError")) {
+            updateFile(
+              uploadingFileInfo.id,
+              uploadingFileInfo.setStatus({
+                type: "error",
+                errorMessage: err ? err.toString() : "Unknown error",
+              })
+            )
+          }
+        })
+    },
+    [
+      addFile,
+      element,
+      nextLocalFileId,
+      onUploadComplete,
+      onUploadProgress,
+      updateFile,
+      uploadClient,
+    ]
+  )
+
+  /**
+   * Delete the file with the given ID:
+   * - Cancel the file upload if it's in progress
+   * - Remove the fileID from our local state
+   * We don't actually tell the server to delete the file. It will garbage collect it.
+   */
+  const deleteFile = useCallback(
+    (fileId: number): void => {
+      const file = getFile(fileId)
+      if (isNullOrUndefined(file)) {
+        return
+      }
+
+      if (file.status.type === "uploading") {
+        // The file hasn't been uploaded. Let's cancel the request.
+        // However, it may have been received by the server so we'll still
+        // send out a request to delete.
+        file.status.abortController.abort()
+      }
+
+      if (file.status.type === "uploaded" && file.status.fileUrls.deleteUrl) {
+        // Fire and forget deletion
+        void uploadClient.deleteFile(file.status.fileUrls.deleteUrl)
+      }
+      removeFile(fileId)
+    },
+    [getFile, removeFile, uploadClient]
+  )
+
+  /**
+   * Handle the capture of a photo. Returns a Promise for internal use.
+   */
+  const handleCaptureAsync = useCallback(
+    (capturedImgSrc: string | null): Promise<void> => {
+      if (capturedImgSrc === null) {
+        return Promise.resolve()
+      }
+
+      setImgSrc(capturedImgSrc)
+      setShutter(true)
+      setMinShutterEffectPassed(false)
+
+      const delay = (t: number): Promise<ReturnType<typeof setTimeout>> =>
+        new Promise(resolve => setTimeout(resolve, t))
+
+      return urltoFile(
+        capturedImgSrc,
+        `camera-input-${new Date().toISOString().replace(/:/g, "_")}.jpg`
+      )
+        .then(file =>
+          uploadClient.fetchFileURLs([file]).then(fileURLsArray => ({
+            file: file,
+            fileUrls: fileURLsArray[0],
+          }))
+        )
+        .then(({ file, fileUrls }) => uploadFile(fileUrls, file))
+        .then(() => delay(MIN_SHUTTER_EFFECT_TIME_MS))
+        .then(() => {
+          setMinShutterEffectPassed(true)
+        })
+        .catch(err => {
+          LOG.error(err)
+        })
+    },
+    [uploadClient, uploadFile]
+  )
+
+  /**
+   * Wrapper for handleCaptureAsync that doesn't return a promise.
+   * Used as event handler for WebcamComponent.
+   */
+  const handleCapture = useCallback(
+    (capturedImgSrc: string | null): void => {
+      void handleCaptureAsync(capturedImgSrc)
+    },
+    [handleCaptureAsync]
+  )
+
+  /**
+   * Remove the captured photo.
+   */
+  const removeCapture = useCallback((): void => {
+    if (files.length === 0) {
       return
     }
 
-    // If we have had no completed uploads, our widgetValue will be
-    // undefined, and we can early-out of the state update.
-    const newWidgetValue = this.createWidgetValue()
+    files.forEach(file => deleteFile(file.id))
 
-    const { element, widgetMgr, fragmentId } = this.props
+    setImgSrc(null)
+    setClearPhotoInProgress(true)
+  }, [files, deleteFile])
 
-    // Maybe send a widgetValue update to the widgetStateManager.
+  /**
+   * Set the initial widget value on mount.
+   */
+  useEffect(() => {
+    const prevWidgetValue = widgetMgr.getFileUploaderStateValue(element)
+    if (prevWidgetValue === undefined) {
+      widgetMgr.setFileUploaderStateValue(
+        element,
+        toWidgetState(files),
+        {
+          fromUi: false,
+        },
+        fragmentId
+      )
+    }
+    // Only run on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  /**
+   * Set the widget value when the status is ready.
+   */
+  useEffect(() => {
+    // If we're part of a form and our status is not "ready",
+    // then we have uploads in progress.
+    // We won't submit a new widgetValue until all uploads have resolved.
+    if (status !== "ready") {
+      return
+    }
+
+    const newWidgetValue = toWidgetState(files)
     const prevWidgetValue = widgetMgr.getFileUploaderStateValue(element)
     if (!isEqual(newWidgetValue, prevWidgetValue)) {
       widgetMgr.setFileUploaderStateValue(
@@ -286,318 +541,93 @@ class CameraInput extends PureComponent<Props, State> {
         fragmentId
       )
     }
-  }
-
-  public override componentDidMount(): void {
-    const newWidgetValue = this.createWidgetValue()
-    const { element, widgetMgr, fragmentId } = this.props
-
-    // Set the state value on mount, to avoid triggering an extra rerun after
-    // the first rerun.
-    // We use same primitives as in file uploader widget,
-    // since simanticly camera_input is just a special case of file uploader.
-    const prevWidgetValue = widgetMgr.getFileUploaderStateValue(element)
-    if (prevWidgetValue === undefined) {
-      widgetMgr.setFileUploaderStateValue(
-        element,
-        newWidgetValue,
-        {
-          fromUi: false,
-        },
-        fragmentId
-      )
-    }
-  }
-
-  private createWidgetValue(): FileUploaderStateProto {
-    const uploadedFileInfo: UploadedFileInfoProto[] = this.state.files
-      .filter(f => f.status.type === "uploaded")
-      .map(f => {
-        const { name, size, status } = f
-        return new UploadedFileInfoProto({
-          fileId: (status as UploadedStatus).fileId,
-          fileUrls: (status as UploadedStatus).fileUrls,
-          name,
-          size,
-        })
-      })
-
-    return new FileUploaderStateProto({ uploadedFileInfo })
-  }
+  }, [status, files, widgetMgr, element, fragmentId])
 
   /**
-   * If we're part of a clear_on_submit form, this will be called when our
-   * form is submitted. Restore our default value and update the WidgetManager.
+   * Handle form clear event - reset state when the form is cleared.
    */
-  private onFormCleared = (): void => {
-    this.setState({ files: [] }, () => {
-      const newWidgetValue = this.createWidgetValue()
-      if (isNullOrUndefined(newWidgetValue)) {
-        return
-      }
+  const onFormCleared = useCallback((): void => {
+    setFiles([])
+    setImgSrc(null)
 
-      this.setState({
-        imgSrc: null,
-      })
-
-      const { widgetMgr, element, fragmentId } = this.props
-      widgetMgr.setFileUploaderStateValue(
-        element,
-        newWidgetValue,
-        { fromUi: true },
-        fragmentId
-      )
-    })
-  }
-
-  public override render(): React.ReactNode {
-    const { element, widgetMgr, disabled, width } = this.props
-
-    // Manage our form-clear event handler.
-    this.formClearHelper.manageFormClearListener(
-      widgetMgr,
-      element.formId,
-      this.onFormCleared
+    const newWidgetValue = toWidgetState([])
+    widgetMgr.setFileUploaderStateValue(
+      element,
+      newWidgetValue,
+      { fromUi: true },
+      fragmentId
     )
+  }, [element, fragmentId, widgetMgr])
 
-    return (
-      <StyledCameraInput className="stCameraInput" data-testid="stCameraInput">
-        <WidgetLabel
-          label={element.label}
-          disabled={disabled}
-          labelVisibility={labelVisibilityProtoValueToEnum(
-            element.labelVisibility?.value
-          )}
-        >
-          {element.help && (
-            <StyledWidgetLabelHelp>
-              <TooltipIcon
-                content={element.help}
-                placement={Placement.TOP_RIGHT}
-              />
-            </StyledWidgetLabelHelp>
-          )}
-        </WidgetLabel>
-        {this.state.imgSrc ? (
-          <>
-            <StyledBox width={width}>
-              {this.state.imgSrc !== this.RESTORED_FROM_WIDGET_STRING && (
-                <StyledImg
-                  src={this.state.imgSrc}
-                  alt="Snapshot"
-                  opacity={
-                    this.state.shutter || !this.state.minShutterEffectPassed
-                      ? "50%"
-                      : "100%"
-                  }
-                  width={width}
-                  height={(width * 9) / 16}
-                />
-              )}
-            </StyledBox>
-            <CameraInputButton
-              onClick={this.removeCapture}
-              progress={this.getProgress()}
-              disabled={!!this.getProgress() || disabled}
-            >
-              {this.getProgress() ? (
-                "Uploading..."
-              ) : (
-                <StyledSpan>
-                  <Icon content={X} margin="0 xs 0 0" size="sm" /> Clear photo
-                </StyledSpan>
-              )}
-            </CameraInputButton>
-          </>
-        ) : (
-          <WebcamComponent
-            // eslint-disable-next-line @typescript-eslint/no-misused-promises
-            handleCapture={this.handleCapture}
-            width={width}
-            disabled={disabled}
-            clearPhotoInProgress={this.state.clearPhotoInProgress}
-            setClearPhotoInProgress={this.setClearPhotoInProgress}
-            facingMode={this.state.facingMode}
-            setFacingMode={this.setFacingMode}
-            testOverride={this.props.testOverride}
-          />
+  useFormClearHelper({
+    element,
+    widgetMgr,
+    onFormCleared,
+  })
+
+  return (
+    <StyledCameraInput
+      className="stCameraInput"
+      data-testid="stCameraInput"
+      ref={elementRef}
+    >
+      <WidgetLabel
+        label={element.label}
+        disabled={disabled}
+        labelVisibility={labelVisibilityProtoValueToEnum(
+          element.labelVisibility?.value
         )}
-      </StyledCameraInput>
-    )
-  }
-
-  private nextLocalFileId(): number {
-    return this.localFileIdCounter++
-  }
-
-  /**
-   * Delete the file with the given ID:
-   * - Cancel the file upload if it's in progress
-   * - Remove the fileID from our local state
-   * We don't actually tell the server to delete the file. It will garbage
-   * collect it.
-   */
-  public deleteFile = (fileId: number): void => {
-    const file = this.getFile(fileId)
-    if (isNullOrUndefined(file)) {
-      return
-    }
-
-    if (file.status.type === "uploading") {
-      // The file hasn't been uploaded. Let's cancel the request.
-      // However, it may have been received by the server so we'll still
-      // send out a request to delete.
-      file.status.abortController.abort()
-    }
-
-    if (file.status.type === "uploaded" && file.status.fileUrls.deleteUrl) {
-      // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
-      this.props.uploadClient.deleteFile(file.status.fileUrls.deleteUrl)
-    }
-    this.removeFile(fileId)
-  }
-
-  /** Append the given file to `state.files`. */
-  private addFile = (file: UploadFileInfo): void => {
-    this.setState(state => ({ files: [...state.files, file] }))
-  }
-
-  /** Remove the file with the given ID from `state.files`. */
-  private removeFile = (idToRemove: number): void => {
-    this.setState(state => ({
-      files: state.files.filter(file => file.id !== idToRemove),
-    }))
-  }
-
-  /**
-   * Return the file with the given ID, if one exists.
-   */
-  private getFile = (fileId: number): UploadFileInfo | undefined => {
-    return this.state.files.find(file => file.id === fileId)
-  }
-
-  /** Replace the file with the given id in `state.files`. */
-  private updateFile = (curFileId: number, newFile: UploadFileInfo): void => {
-    this.setState(curState => {
-      return {
-        files: curState.files.map(file =>
-          file.id === curFileId ? newFile : file
-        ),
-      }
-    })
-  }
-
-  /**
-   * Called when an upload has completed. Updates the file's status, and
-   * assigns it the new file ID returned from the server.
-   */
-  private onUploadComplete = (
-    localFileId: number,
-    fileUrls: IFileURLs
-  ): void => {
-    this.setState(() => ({
-      shutter: false,
-    }))
-
-    const curFile = this.getFile(localFileId)
-    if (isNullOrUndefined(curFile) || curFile.status.type !== "uploading") {
-      // The file may have been canceled right before the upload
-      // completed. In this case, we just bail.
-      return
-    }
-
-    this.updateFile(
-      curFile.id,
-      curFile.setStatus({
-        type: "uploaded",
-        fileId: fileUrls.fileId as string,
-        fileUrls,
-      })
-    )
-  }
-
-  /**
-   * Callback for file upload progress. Updates a single file's local `progress`
-   * state.
-   */
-  private onUploadProgress = (event: ProgressEvent, fileId: number): void => {
-    const file = this.getFile(fileId)
-    if (isNullOrUndefined(file) || file.status.type !== "uploading") {
-      return
-    }
-
-    const newProgress = Math.round((event.loaded * 100) / event.total)
-    if (file.status.progress === newProgress) {
-      return
-    }
-
-    // Update file.progress
-    this.updateFile(
-      fileId,
-      file.setStatus({
-        type: "uploading",
-        abortController: file.status.abortController,
-        progress: newProgress,
-      })
-    )
-  }
-
-  /**
-   * Clear files and errors, and reset the widget to its READY state.
-   */
-  private reset = (): void => {
-    this.setState({ files: [], imgSrc: null })
-  }
-
-  public uploadFile = (fileURLs: IFileURLs, file: File): void => {
-    // Create an UploadFileInfo for this file and add it to our state.
-    const abortController = new AbortController()
-    const uploadingFileInfo = new UploadFileInfo(
-      file.name,
-      file.size,
-      this.nextLocalFileId(),
-      {
-        type: "uploading",
-        abortController,
-        progress: 1,
-      }
-    )
-    this.addFile(uploadingFileInfo)
-
-    this.props.uploadClient
-      .uploadFile(
-        this.props.element,
-        fileURLs.uploadUrl as string,
-        file,
-        e => this.onUploadProgress(e, uploadingFileInfo.id),
-        abortController.signal
-      )
-      .then(() => this.onUploadComplete(uploadingFileInfo.id, fileURLs))
-      .catch(err => {
-        // If this was an abort error, we don't show the user an error -
-        // the cancellation was in response to an action they took.
-        if (!(err instanceof DOMException && err.name === "AbortError")) {
-          this.updateFile(
-            uploadingFileInfo.id,
-            uploadingFileInfo.setStatus({
-              type: "error",
-              errorMessage: err ? err.toString() : "Unknown error",
-            })
-          )
-        }
-      })
-  }
+      >
+        {element.help && (
+          <StyledWidgetLabelHelp>
+            <TooltipIcon
+              content={element.help}
+              placement={Placement.TOP_RIGHT}
+            />
+          </StyledWidgetLabelHelp>
+        )}
+      </WidgetLabel>
+      {imgSrc ? (
+        <>
+          <StyledBox width={width}>
+            {imgSrc !== RESTORED_FROM_WIDGET_STRING && (
+              <StyledImg
+                src={imgSrc}
+                alt="Snapshot"
+                opacity={shutter || !minShutterEffectPassed ? "50%" : "100%"}
+                width={width}
+                height={(width * 9) / 16}
+              />
+            )}
+          </StyledBox>
+          <CameraInputButton
+            onClick={removeCapture}
+            progress={progress}
+            disabled={!!progress || disabled}
+          >
+            {progress ? (
+              "Uploading..."
+            ) : (
+              <StyledSpan>
+                <Icon content={X} margin="0 xs 0 0" size="sm" /> Clear photo
+              </StyledSpan>
+            )}
+          </CameraInputButton>
+        </>
+      ) : (
+        <WebcamComponent
+          handleCapture={handleCapture}
+          width={width}
+          disabled={disabled}
+          clearPhotoInProgress={clearPhotoInProgress}
+          setClearPhotoInProgress={setClearPhotoInProgress}
+          facingMode={facingMode}
+          setFacingMode={handleSetFacingMode}
+          testOverride={testOverride}
+        />
+      )}
+    </StyledCameraInput>
+  )
 }
 
-function urltoFile(url: string, filename: string): Promise<File> {
-  return fetch(url)
-    .then(res => res.arrayBuffer())
-    .then(buf => new File([buf], filename, { type: "image/jpeg" }))
-}
-
-/**
- * This component should be refactored to remove the width calculation from JS
- * entirely and instead utilize width: 100%; height: 100%; aspect-ratio: 16 / 9;
- * on the StyledBox CSS instead.
- */
-export default withCalculatedWidth(CameraInput)
+export default memo(CameraInput)

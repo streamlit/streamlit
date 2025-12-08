@@ -19,14 +19,14 @@ import { mockEndpoints } from "~lib/mocks/mocks"
 import { ComponentRegistry } from "./ComponentRegistry"
 
 describe("ComponentRegistry", () => {
-  test("Constructs component URLs", () => {
+  it("Constructs component URLs", () => {
     const endpoint = mockEndpoints()
     const registry = new ComponentRegistry(endpoint)
     const url = registry.getComponentURL("foo", "index.html")
     expect(url).toEqual(endpoint.buildComponentURL("foo", "index.html"))
   })
 
-  test("Dispatches messages to listeners", () => {
+  it("Dispatches messages to listeners", () => {
     const registry = new ComponentRegistry(mockEndpoints())
     // @ts-expect-error
     const { onMessageEvent } = registry
@@ -90,7 +90,7 @@ describe("ComponentRegistry", () => {
     expect(msgListener2).toHaveBeenCalledWith(messageData.type, messageData)
   })
 
-  test("Sends CLIENT_ERROR when sendTimeoutError is called", () => {
+  it("Sends CLIENT_ERROR when sendTimeoutError is called", () => {
     const registry = new ComponentRegistry(mockEndpoints())
     const sendClientErrorToHostSpy = vi.spyOn(
       // @ts-expect-error - registry.endpoints is private
@@ -108,7 +108,7 @@ describe("ComponentRegistry", () => {
     )
   })
 
-  test("Triggers call to endpoint's checkSourceUrlResponse when registry's checkSourceUrlResponse is called", async () => {
+  it("Triggers call to endpoint's checkSourceUrlResponse when registry's checkSourceUrlResponse is called", async () => {
     const registry = new ComponentRegistry(mockEndpoints())
     const url = registry.getComponentURL("foo", "index.html")
     const registryCheckSourceResponseSpy = vi.spyOn(

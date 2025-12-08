@@ -689,6 +689,8 @@ def test_multi_row_column_and_cell_select(
     wait_for_app_run(app)
     select_column(canvas, 3, has_row_marker_col=True)
     app.keyboard.up(COMMAND_KEY)
+    wait_for_app_run(app)
+    canvas.scroll_into_view_if_needed()
 
     # Select some individual cells
     # Get canvas bounding box for mouse operations
