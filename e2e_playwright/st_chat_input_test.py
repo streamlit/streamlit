@@ -1739,3 +1739,63 @@ def test_file_upload_full_filename_tooltip(app: Page):
     # But displayed text should NOT be truncated
     displayed_text = filename_element.inner_text()
     assert displayed_text == short_filename, "Short filename should not be truncated"
+
+
+@use_chat_input("multiple_files")
+@pytest.mark.skip_browser("webkit")  # Network timing issues in webkit
+def test_file_upload_retry_click_success(app: Page):
+    """Test that clicking retry on error chip successfully re-uploads the file."""
+    from playwright.sync_api import Route
+
+    app.set_viewport_size({"width": 750, "height": 2000})
+
+    chat_input = get_element_by_key(app, "multiple_files")
+    expect(chat_input).to_be_visible()
+
+    # Track upload request count to fail first request, succeed on retry
+    request_count = {"value": 0}
+
+    def handle_route(route: Route):
+        request_count["value"] += 1
+        if request_count["value"] == 1:
+            # First request fails
+            route.abort("failed")
+        else:
+            # Subsequent requests succeed
+            route.continue_()
+
+    # Set up route interception BEFORE uploading
+    app.route("**/_stcore/upload_file/**", handle_route)
+
+    file_name = "test_retry.txt"
+    file = FilePayload(name=file_name, mimeType="text/plain", buffer=b"test content")
+
+    try:
+        file_upload_helper(app, chat_input, [file])
+
+        # Wait for error state to appear
+        uploaded_files = chat_input.get_by_test_id("stChatUploadedFiles").first
+        file_chip = uploaded_files.get_by_test_id("stChatInputFile").first
+        expect(file_chip).to_be_visible()
+
+        # Verify file is in error state with retry attributes
+        expect(file_chip).to_have_attribute("role", "button")
+        expect(file_chip).to_have_attribute("title", "Click to retry upload")
+
+        error_message = uploaded_files.get_by_test_id("stChatInputFileError").first
+        expect(error_message).to_be_visible()
+
+        # Click to retry - this should succeed since we now allow requests through
+        file_chip.click()
+
+        # Wait for successful upload - error should disappear, file size should appear
+        # After successful upload, there should be no error message
+        expect(error_message).not_to_be_visible(timeout=5000)
+
+        # Verify file is now in uploaded state (shows size instead of error)
+        file_size = uploaded_files.get_by_test_id("stChatInputFileName").first
+        expect(file_size).to_be_visible()
+
+    finally:
+        # Clean up route interception
+        app.unroute("**/_stcore/upload_file/**")
