@@ -32,7 +32,7 @@ jobs:
           ref: ${{ github.head_ref }}
           persist-credentials: false
           submodules: "recursive"
-          fetch-depth: 0
+          fetch-depth: 1
 
       - name: Install Cursor CLI
         run: |
@@ -129,7 +129,9 @@ jobs:
           name: review-output
 
       - name: Post review comment
+        id: post_review
         if: steps.download.outcome == 'success'
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -140,7 +142,7 @@ jobs:
           gh pr comment ${{ github.event.pull_request.number }} --body-file review.md --repo ${{ github.repository }}
 
       - name: Post failure notice
-        if: steps.download.outcome == 'failure'
+        if: steps.download.outcome == 'failure' || steps.post_review.outcome == 'failure'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -148,7 +150,7 @@ jobs:
 
           The AI review job failed to complete. Please check the [workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) for details.
 
-          You can retry by adding the \`ai-review\` label again." --repo ${{ github.repository }}
+          You can retry by adding the 'ai-review' label again." --repo ${{ github.repository }}
 
       - name: Apply label based on verdict
         if: steps.download.outcome == 'success'

@@ -39,7 +39,14 @@ jobs:
 
       - name: Download open issues CSV
         run: |
-          curl -sL "https://raw.githubusercontent.com/streamlit/st-issues/refs/heads/main/static/github_issues_open_cleaned_all_summarized.csv" -o open_issues.csv
+          if ! curl -sfL "https://raw.githubusercontent.com/streamlit/st-issues/refs/heads/main/static/github_issues_open_cleaned_all_summarized.csv" -o open_issues.csv; then
+            echo "Error: Failed to download issues CSV"
+            exit 1
+          fi
+          if [ ! -s open_issues.csv ]; then
+            echo "Error: Downloaded CSV is empty"
+            exit 1
+          fi
 
       - name: Run AI Triage
         env:
@@ -164,14 +171,7 @@ jobs:
             exit 0
           fi
 
-          # Remove all existing labels first (full update)
-          EXISTING_LABELS=$(gh issue view ${{ github.event.issue.number }} --repo ${{ github.repository }} --json labels -q '.labels[].name' | tr '\n' ',' | sed 's/,$//')
-          if [ -n "$EXISTING_LABELS" ]; then
-            echo "Removing existing labels: $EXISTING_LABELS"
-            gh issue edit ${{ github.event.issue.number }} --repo ${{ github.repository }} --remove-label "$EXISTING_LABELS" || echo "Warning: Failed to remove some labels"
-          fi
-
-          # Apply the new labels from labels.txt
+          # Only add new labels from labels.txt, never remove existing ones
           while IFS= read -r label || [ -n "$label" ]; do
             # Skip empty lines
             if [ -n "$label" ]; then
