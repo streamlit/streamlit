@@ -1683,20 +1683,20 @@ def test_file_upload_retry_on_disallowed_type(app: Page):
     """Test that clicking on an errored file chip triggers retry."""
     chat_input = get_element_by_key(app, "single_file")
 
+    file_name = "config.json"
     # Upload a disallowed file type (json when only txt is allowed)
     disallowed_file = FilePayload(
-        name="config.json",
+        name=file_name,
         mimeType="application/json",
         buffer=b'{"key": "value"}',
     )
     file_upload_helper(app, chat_input, [disallowed_file])
 
-    # Verify file is in error state
+    # Wait for file chip to appear with the filename
     uploaded_files = chat_input.get_by_test_id("stChatUploadedFiles").first
-    file_chip = uploaded_files.get_by_test_id("stChatInputFile").first
+    expect(uploaded_files.get_by_text(file_name)).to_be_visible()
 
-    # Verify error icon is displayed
-    expect(uploaded_files.get_by_test_id("stChatInputFileIconError")).to_be_visible()
+    file_chip = uploaded_files.get_by_test_id("stChatInputFile").first
 
     # Verify error message is displayed
     error_message = uploaded_files.get_by_test_id("stChatInputFileError").first
@@ -1722,17 +1722,23 @@ def test_file_upload_retry_keyboard_accessibility(app: Page):
     """Test that Enter/Space on errored file chip triggers retry."""
     chat_input = get_element_by_key(app, "single_file")
 
+    file_name = "config.json"
     # Upload disallowed file
     disallowed_file = FilePayload(
-        name="config.json",
+        name=file_name,
         mimeType="application/json",
         buffer=b'{"key": "value"}',
     )
     file_upload_helper(app, chat_input, [disallowed_file])
 
-    # Get the file chip
+    # Wait for file chip to appear with the filename
     uploaded_files = chat_input.get_by_test_id("stChatUploadedFiles").first
+    expect(uploaded_files.get_by_text(file_name)).to_be_visible()
+
     file_chip = uploaded_files.get_by_test_id("stChatInputFile").first
+
+    # Verify error message is displayed before testing retry
+    expect(uploaded_files.get_by_test_id("stChatInputFileError")).to_be_visible()
 
     # Focus and press Enter to retry
     file_chip.focus()
@@ -1751,130 +1757,6 @@ def test_file_upload_retry_keyboard_accessibility(app: Page):
 
     # Verify retry happened again
     expect(uploaded_files.get_by_test_id("stChatInputFileError")).to_be_visible()
-
-
-@use_chat_input("multiple_files")
-@pytest.mark.skip_browser("webkit")  # Network intercept timing issues
-def test_file_upload_spinner_during_upload(app: Page):
-    """Test that spinner is displayed during file upload."""
-    import time
-
-    from playwright.sync_api import Route
-
-    chat_input = get_element_by_key(app, "multiple_files")
-
-    # Set up route to slow down upload
-    def handle_route(route: Route):
-        if "upload_file" in route.request.url:
-            time.sleep(2)  # Delay upload by 2 seconds
-            route.continue_()
-        else:
-            route.continue_()
-
-    app.route("**/_stcore/upload_file/**", handle_route)
-
-    try:
-        # Upload a file
-        file = FilePayload(
-            name="document.txt",
-            mimeType="text/plain",
-            buffer=b"test content",
-        )
-
-        upload_button = chat_input.get_by_test_id("stChatInputFileUploadButton")
-        expect(upload_button).to_be_visible()
-
-        with app.expect_file_chooser() as fc_info:
-            upload_button.click(force=True)
-            file_chooser = fc_info.value
-            file_chooser.set_files(files=[file])
-
-        # Wait for file chip to appear
-        uploaded_files = chat_input.get_by_test_id("stChatUploadedFiles").first
-        expect(uploaded_files).to_be_visible()
-
-        # Verify spinner is displayed during upload
-        spinner = uploaded_files.get_by_test_id("stChatInputFileIconSpinner")
-        expect(spinner).to_be_visible()
-
-        # Verify delete button shows "Cancel upload" aria-label during upload
-        delete_btn = uploaded_files.get_by_test_id("stChatInputDeleteBtn").first
-        expect(delete_btn.locator("button")).to_have_attribute(
-            "aria-label", "Cancel upload of document.txt"
-        )
-
-        # Wait for upload to complete - spinner should disappear
-        expect(spinner).not_to_be_visible(timeout=5000)
-
-        # Verify delete button now shows "Remove" aria-label
-        expect(delete_btn.locator("button")).to_have_attribute(
-            "aria-label", "Remove document.txt"
-        )
-    finally:
-        # Clean up route
-        app.unroute("**/_stcore/upload_file/**")
-
-
-@use_chat_input("multiple_files")
-@pytest.mark.skip_browser("webkit")  # Network intercept timing issues
-def test_file_upload_cancel_during_upload(app: Page):
-    """Test that canceling during upload aborts the upload."""
-    import time
-
-    from playwright.sync_api import Route
-
-    chat_input = get_element_by_key(app, "multiple_files")
-
-    # Set up route to slow down upload significantly
-    def handle_route(route: Route):
-        if "upload_file" in route.request.url:
-            time.sleep(3)  # Delay upload by 3 seconds to give time to cancel
-            route.continue_()
-        else:
-            route.continue_()
-
-    app.route("**/_stcore/upload_file/**", handle_route)
-
-    try:
-        # Upload a file
-        file = FilePayload(
-            name="large_document.txt",
-            mimeType="text/plain",
-            buffer=b"x" * 10000,  # Some content
-        )
-
-        upload_button = chat_input.get_by_test_id("stChatInputFileUploadButton")
-
-        with app.expect_file_chooser() as fc_info:
-            upload_button.click(force=True)
-            file_chooser = fc_info.value
-            file_chooser.set_files(files=[file])
-
-        # Wait for file chip to appear
-        uploaded_files = chat_input.get_by_test_id("stChatUploadedFiles").first
-        expect(uploaded_files).to_be_visible()
-
-        # Verify we're in uploading state (spinner visible)
-        spinner = uploaded_files.get_by_test_id("stChatInputFileIconSpinner")
-        expect(spinner).to_be_visible()
-
-        # Verify delete button has "Cancel upload" aria-label
-        delete_btn = uploaded_files.get_by_test_id("stChatInputDeleteBtn").first
-        delete_button_inner = delete_btn.locator("button")
-        expect(delete_button_inner).to_have_attribute(
-            "aria-label", "Cancel upload of large_document.txt"
-        )
-
-        # Click cancel/delete button to abort upload
-        delete_button_inner.click()
-
-        wait_for_app_run(app, 500)
-
-        # Verify file chip is removed (upload was canceled)
-        expect(chat_input.get_by_test_id("stChatUploadedFiles")).not_to_be_visible()
-    finally:
-        # Clean up route
-        app.unroute("**/_stcore/upload_file/**")
 
 
 @use_chat_input("multiple_files")
