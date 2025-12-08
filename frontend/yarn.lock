@@ -3377,7 +3377,7 @@ __metadata:
     "@types/lodash-es": "npm:~4.17.12"
     "@types/mapbox-gl": "npm:~1.13.10"
     "@types/moment-duration-format": "npm:~2.2.6"
-    "@types/plotly.js": "npm:^3.0.5"
+    "@types/plotly.js": "npm:^3.0.8"
     "@types/react": "npm:^18.2.0"
     "@types/react-color": "npm:^3.0.13"
     "@types/react-dom": "npm:^18.2.0"
@@ -3419,7 +3419,7 @@ __metadata:
     node-emoji: "npm:^2.2.0"
     node-fetch: "npm:3.3.2"
     numbro: "npm:^2.5.0"
-    plotly.js: "npm:^3.1.0"
+    plotly.js: "npm:^3.3.0"
     postinstall-postinstall: "npm:^2.1.0"
     prettier: "npm:^3.6.2"
     protobufjs: "npm:^7.5.4"
@@ -4789,10 +4789,17 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/plotly.js@npm:*, @types/plotly.js@npm:^3.0.5":
+"@types/plotly.js@npm:*":
   version: 3.0.6
   resolution: "@types/plotly.js@npm:3.0.6"
   checksum: 10c0/61fd8dcce28599ec19d1513a31348781256af86ba3d7b6f15f6e734bd7c771fc85db4a14afe1dd9a06c236b68d2c03a93a11ac516a83995c5c47834f5784e9e6
+  languageName: node
+  linkType: hard
+
+"@types/plotly.js@npm:^3.0.8":
+  version: 3.0.8
+  resolution: "@types/plotly.js@npm:3.0.8"
+  checksum: 10c0/7b8b26a07c8fb863ab1950089eb5c6f67896d65628409f17ab1beaf0a0ffa338cb2171aec108b2460205267ad65e67b10e739f8f74fbf476229202d4487d869b
   languageName: node
   linkType: hard
 
@@ -14519,9 +14526,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"plotly.js@npm:^3.1.0":
-  version: 3.1.0
-  resolution: "plotly.js@npm:3.1.0"
+"plotly.js@npm:^3.3.0":
+  version: 3.3.0
+  resolution: "plotly.js@npm:3.3.0"
   dependencies:
     "@plotly/d3": "npm:3.8.2"
     "@plotly/d3-sankey": "npm:0.7.2"
@@ -14573,7 +14580,7 @@ __metadata:
     topojson-client: "npm:^3.1.0"
     webgl-context: "npm:^2.2.0"
     world-calendars: "npm:^1.0.4"
-  checksum: 10c0/8a761514c9d977b8d1d611ed7e8683b79e6d2160d850178129e1546644ebbdfeaaae696cac942d8eb636da536338f553389e72de0fccea8ec8a2f37812e5f582
+  checksum: 10c0/e9c6966348480d8dded5fc1102fbe245a20578e6a5f2de1356217a0a6cb2c96376cb99c57fe639826e4f91581016fbc50771e1e6fad13f824fb2a4f8c5816fe7
   languageName: node
   linkType: hard
 
