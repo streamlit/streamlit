@@ -208,7 +208,11 @@ def _get_provider_by_state(state_code_from_url: str | None) -> str | None:
     current_cache_keys = list(auth_cache.get_dict().keys())
     state_provider_mapping = {}
     for key in current_cache_keys:
-        _, _, recorded_provider, code = key.split("_")
+        try:
+            _, _, recorded_provider, code = key.split("_")
+        except ValueError:
+            # Skip malformed cache keys that don't match the expected format.
+            continue
         state_provider_mapping[code] = recorded_provider
 
     provider: str | None = state_provider_mapping.get(state_code_from_url)

@@ -444,6 +444,14 @@ def create_upload_routes(
         if not runtime.is_active_session(session_id):
             raise HTTPException(status_code=400, detail="Invalid session_id")
 
+        max_size_mb = config.get_option("server.maxUploadSize")
+        max_size_bytes = max_size_mb * 1024 * 1024
+
+        # 1. Fast fail via header (if present) - check before reading the body
+        content_length = request.headers.get("content-length")
+        if content_length and int(content_length) > max_size_bytes:
+            raise HTTPException(status_code=413, detail="File too large")
+
         form = await request.form()
         uploads = [value for value in form.values() if isinstance(value, UploadFile)]
 
@@ -452,17 +460,9 @@ def create_upload_routes(
                 status_code=400, detail=f"Expected 1 file, but got {len(uploads)}"
             )
 
-        max_size_mb = config.get_option("server.maxUploadSize")
-        max_size_bytes = max_size_mb * 1024 * 1024
-
-        # 1. Fast fail via header (if present)
-        content_length = request.headers.get("content-length")
-        if content_length and int(content_length) > max_size_bytes:
-            raise HTTPException(status_code=413, detail="File too large")
-
         upload = uploads[0]
 
-        # 2. Check actual file size
+        # 2. Check actual file size (Content-Length may be absent or inaccurate)
         upload.file.seek(0, 2)  # Seek to end
         size = upload.file.tell()
         upload.file.seek(0)  # Reset
