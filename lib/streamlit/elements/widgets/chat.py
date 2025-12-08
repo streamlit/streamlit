@@ -485,7 +485,7 @@ class ChatMixin:
         ...     st.write("Hello 👋")
         ...     st.line_chart(np.random.randn(30, 3))
 
-        .. output ::
+        .. output::
             https://doc-chat-message-user.streamlit.app/
             height: 450px
 
@@ -498,7 +498,7 @@ class ChatMixin:
         >>> message.write("Hello human")
         >>> message.bar_chart(np.random.randn(30, 3))
 
-        .. output ::
+        .. output::
             https://doc-chat-message-user1.streamlit.app/
             height: 450px
 
@@ -547,6 +547,7 @@ class ChatMixin:
         *,
         key: Key | None = None,
         max_chars: int | None = None,
+        max_upload_size: int | None = None,
         accept_file: Literal[False] = False,
         file_type: str | Sequence[str] | None = None,
         accept_audio: Literal[False] = False,
@@ -564,6 +565,7 @@ class ChatMixin:
         *,
         key: Key | None = None,
         max_chars: int | None = None,
+        max_upload_size: int | None = None,
         accept_file: Literal[False] = False,
         file_type: str | Sequence[str] | None = None,
         accept_audio: Literal[True],
@@ -582,6 +584,7 @@ class ChatMixin:
         *,
         key: Key | None = None,
         max_chars: int | None = None,
+        max_upload_size: int | None = None,
         accept_file: Literal[True, "multiple", "directory"],
         file_type: str | Sequence[str] | None = None,
         accept_audio: bool = False,
@@ -600,6 +603,7 @@ class ChatMixin:
         *,
         key: Key | None = None,
         max_chars: int | None = None,
+        max_upload_size: int | None = None,
         accept_file: bool | Literal["multiple", "directory"] = False,
         file_type: str | Sequence[str] | None = None,
         accept_audio: bool = False,
@@ -627,6 +631,18 @@ class ChatMixin:
         max_chars : int or None
             The maximum number of characters that can be entered. If this is
             ``None`` (default), there will be no maximum.
+
+        max_upload_size : int or None
+            The maximum allowed size of each uploaded file for this chat input,
+            in megabytes.
+
+            When set to a positive integer, this per-widget limit takes
+            precedence over the global ``server.maxUploadSize`` configuration
+            option.
+
+            When this is ``None`` (default), the chat input falls back to
+            ``server.maxUploadSize`` for its file size limit. For more
+            information on how to set config options, see |config.toml|_.
 
         accept_file : bool, "multiple", or "directory"
             Whether the chat input should accept files. This can be one of the
@@ -667,27 +683,21 @@ class ChatMixin:
                 part of the app developer's responsibility.
 
         accept_audio : bool
-            Whether to show an audio recording button in the chat input.
-            When enabled, users can record and submit audio messages.
-            Recorded audio is uploaded as a WAV file and can be accessed
-            through the ``audio`` attribute of the returned dict-like object.
-            The ``audio`` attribute is only present when ``accept_audio=True``.
-            When present, it contains an ``UploadedFile`` object or ``None``
-            if no audio was recorded.
-            This defaults to ``False``.
+            Whether to show an audio recording button in the chat input. This
+            defaults to ``False``. If this is ``True``, users can record and
+            submit audio messages. Recorded audio is available as an
+            ``UploadedFile`` object with MIME type ``audio/wav``.
 
         audio_sample_rate : int or None
-            The target sample rate for audio recording in Hz. This defaults to
-            16000 Hz, which is optimal for speech recognition. Common sample
-            rates include:
+            The target sample rate for audio recording in Hz when
+            ``accept_audio`` is ``True``. This defaults to ``16000``, which is
+            optimal for speech recognition.
 
-            - ``8000`` Hz: Telephone quality
-            - ``16000`` Hz: Speech recognition (default)
-            - ``48000`` Hz: High-quality recording
-
-            Set to ``None`` to use the browser's default sample rate (no
-            resampling). Allowed values are ``8000``, ``11025``, ``16000``,
-            ``22050``, ``24000``, ``32000``, ``44100``, ``48000``, or ``None``.
+            The following values are supported: ``8000`` (telephone quality),
+            ``11025``, ``16000`` (speech-recognition quality), ``22050``,
+            ``24000``, ``32000``, ``44100``, ``48000`` (high-quality), or
+            ``None``. If this is ``None``, the widget uses the browser's
+            default sample rate (typically 44100 or 48000 Hz).
 
         disabled : bool
             Whether the chat input should be disabled. This defaults to
@@ -719,39 +729,38 @@ class ChatMixin:
             The user's submission. This is one of the following types:
 
             - ``None``: If the user didn't submit a message, file, or audio
-              in the last rerun, the widget returns ``None``.
-            - A string: When the widget is not configured to accept files or
-              audio and the user submitted a message in the last rerun, the
-              widget returns the user's message as a string.
+              recording in the last rerun, the widget returns ``None``.
+            - A string: When the widget isn't configured to accept files or
+              audio recordings, and the user submitted a message in the last
+              rerun, the widget returns the user's message as a string.
             - A dict-like object: When the widget is configured to accept files
-              and/or audio and the user submitted a message and/or file(s)
-              and/or audio in the last rerun, the widget returns a dict-like
-              object. The object always includes the ``text`` attribute, and
+              or audio recordings, and the user submitted any content in the
+              last rerun, the widget returns a dict-like object.
+              The object always includes the ``text`` attribute, and
               optionally includes ``files`` and/or ``audio`` attributes depending
               on the ``accept_file`` and ``accept_audio`` parameters.
 
-            When the widget is configured to accept files or audio and the user
-            submits something in the last rerun, you can access the user's
-            submission with key or attribute notation from the dict-like object.
-            This is shown in Example 3 below.
+            When the widget is configured to accept files or audio recordings,
+            and the user submitted content in the last rerun, you can access
+            the user's submission with key or attribute notation from the
+            dict-like object. This is shown in Example 3 below.
 
-            The ``text`` attribute holds a string, which is the user's message.
-            This is an empty string if the user only submitted one or more
-            files or audio.
+            - The ``text`` attribute holds a string that is the user's message.
+              This is an empty string if the user only submitted one or more
+              files or audio recordings.
+            - The ``files`` attribute is only present when ``accept_file``
+              isn't ``False``. When present, it holds a list of
+              ``UploadedFile`` objects. The list is empty if the user only
+              submitted a message or audio recording. Unlike
+              ``st.file_uploader``, this attribute always returns a list, even
+              when the widget is configured to accept only one file at a time.
+            - The ``audio`` attribute is only present when ``accept_audio`` is
+              ``True``. When present, it holds an ``UploadedFile`` object if
+              audio was recorded or ``None`` if no audio was recorded.
 
-            The ``files`` attribute is only present when ``accept_file`` is not
-            ``False``. When present, it holds a list of ``UploadedFile`` objects.
-            The list is empty if the user only submitted a message or audio.
-            Unlike ``st.file_uploader``, this attribute always returns a list,
-            even when the widget is configured to accept only one file at a time.
-
-            The ``audio`` attribute is only present when ``accept_audio=True``.
-            When present, it holds an ``UploadedFile`` object representing
-            the recorded audio, or ``None`` if no audio was recorded.
-
-            The UploadedFile class is a subclass of BytesIO, and therefore is
-            "file-like". This means you can pass an instance of it anywhere a
-            file is expected.
+            The ``UploadedFile`` class is a subclass of ``BytesIO`` and
+            therefore is "file-like". This means you can pass an instance of it
+            anywhere a file is expected.
 
         Examples
         --------
@@ -766,7 +775,7 @@ class ChatMixin:
         >>> if prompt:
         ...     st.write(f"User has sent the following prompt: {prompt}")
 
-        .. output ::
+        .. output::
             https://doc-chat-input.streamlit.app/
             height: 350px
 
@@ -780,12 +789,12 @@ class ChatMixin:
         >>> import streamlit as st
         >>>
         >>> with st.sidebar:
-        >>>     messages = st.container(height=300)
+        >>>     messages = st.container(height=200)
         >>>     if prompt := st.chat_input("Say something"):
         >>>         messages.chat_message("user").write(prompt)
         >>>         messages.chat_message("assistant").write(f"Echo: {prompt}")
 
-        .. output ::
+        .. output::
             https://doc-chat-input-inline.streamlit.app/
             height: 350px
 
@@ -810,7 +819,7 @@ class ChatMixin:
         >>> if prompt and prompt["files"]:
         >>>     st.image(prompt["files"][0])
 
-        .. output ::
+        .. output::
             https://doc-chat-input-file-uploader.streamlit.app/
             height: 350px
 
@@ -825,7 +834,7 @@ class ChatMixin:
         >>> st.chat_input(key="chat_input")
         >>> st.write("Chat input value:", st.session_state.chat_input)
 
-        .. output ::
+        .. output::
             https://doc-chat-input-session-state.streamlit.app/
             height: 350px
 
@@ -841,12 +850,16 @@ class ChatMixin:
         >>>     "Say or record something",
         >>>     accept_audio=True,
         >>> )
-        >>> if prompt:
-        >>>     if prompt.text:
-        >>>         st.write("Text:", prompt.text)
-        >>>     if prompt.audio:
-        >>>         st.audio(prompt.audio)
-        >>>         st.write("Audio file:", prompt.audio.name)
+        >>> if prompt and prompt.text:
+        >>>     st.write("Text:", prompt.text)
+        >>> if prompt and prompt.audio:
+        >>>     st.audio(prompt.audio)
+        >>>     st.write("Audio file:", prompt.audio.name)
+
+        .. output::
+            https://doc-chat-input-audio.streamlit.app/
+            height: 350px
+
         """
         key = to_key(key)
 
@@ -863,6 +876,15 @@ class ChatMixin:
                 "The `accept_file` parameter must be a boolean or 'multiple' or 'directory'."
             )
 
+        if max_upload_size is not None and (
+            not isinstance(max_upload_size, int) or max_upload_size <= 0
+        ):
+            raise StreamlitAPIException(
+                "The `max_upload_size` parameter must be a positive integer "
+                "representing the maximum file size in megabytes, or None "
+                "to fall back to the `server.maxUploadSize` configuration option."
+            )
+
         ctx = get_script_run_ctx()
 
         element_id = compute_and_register_element_id(
@@ -874,10 +896,17 @@ class ChatMixin:
             # - accept_file: Changes whether files can be attached (and how)
             # - file_type: Restricts the accepted file types
             # - max_chars: Changes the maximum allowed characters for the input
-            key_as_main_identity={"accept_file", "file_type", "max_chars"},
+            # - max_upload_size: Changes the maximum allowed file size
+            key_as_main_identity={
+                "accept_file",
+                "file_type",
+                "max_chars",
+                "max_upload_size",
+            },
             dg=self.dg,
             placeholder=placeholder,
             max_chars=max_chars,
+            max_upload_size=max_upload_size,
             accept_file=accept_file,
             file_type=file_type,
             accept_audio=accept_audio,
@@ -935,7 +964,12 @@ class ChatMixin:
         )
 
         chat_input_proto.file_type[:] = file_type if file_type is not None else []
-        chat_input_proto.max_upload_size_mb = config.get_option("server.maxUploadSize")
+        if max_upload_size is not None:
+            chat_input_proto.max_upload_size_mb = max_upload_size
+        else:
+            chat_input_proto.max_upload_size_mb = config.get_option(
+                "server.maxUploadSize"
+            )
         chat_input_proto.accept_audio = accept_audio
 
         if audio_sample_rate is not None:

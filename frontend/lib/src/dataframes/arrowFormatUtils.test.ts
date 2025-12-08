@@ -51,7 +51,7 @@ import {
 import { DataFrameCellType } from "./arrowTypeUtils"
 
 describe("format", () => {
-  test("null", () => {
+  it("null", () => {
     expect(
       format(null, {
         type: DataFrameCellType.DATA,
@@ -61,7 +61,7 @@ describe("format", () => {
     ).toEqual("")
   })
 
-  test("string", () => {
+  it("string", () => {
     expect(
       format("foo", {
         type: DataFrameCellType.DATA,
@@ -71,7 +71,7 @@ describe("format", () => {
     ).toEqual("foo")
   })
 
-  test("boolean", () => {
+  it("boolean", () => {
     expect(
       format(true, {
         type: DataFrameCellType.DATA,
@@ -81,7 +81,7 @@ describe("format", () => {
     ).toEqual("true")
   })
 
-  test("float64", () => {
+  it("float64", () => {
     expect(
       format(1.25, {
         type: DataFrameCellType.DATA,
@@ -91,7 +91,7 @@ describe("format", () => {
     ).toEqual("1.2500")
   })
 
-  test("int64", () => {
+  it("int64", () => {
     const mockElement = { data: INT64 }
     const q = new Quiver(mockElement)
     const { content } = q.getCell(0, 2)
@@ -105,7 +105,7 @@ describe("format", () => {
     ).toEqual("1")
   })
 
-  test("uint64", () => {
+  it("uint64", () => {
     const mockElement = { data: UINT64 }
     const q = new Quiver(mockElement)
     const { content } = q.getCell(0, 2)
@@ -119,7 +119,7 @@ describe("format", () => {
     ).toEqual("2")
   })
 
-  test("bytes", () => {
+  it("bytes", () => {
     expect(
       format(new Uint8Array([1, 2, 3]), {
         type: DataFrameCellType.DATA,
@@ -129,7 +129,7 @@ describe("format", () => {
     ).toEqual("1,2,3")
   })
 
-  test("date", () => {
+  it("date", () => {
     expect(
       format(new Date(Date.UTC(1970, 0, 1)), {
         type: DataFrameCellType.DATA,
@@ -139,7 +139,7 @@ describe("format", () => {
     ).toEqual("1970-01-01")
   })
 
-  test("datetime", () => {
+  it("datetime", () => {
     expect(
       format(0, {
         type: DataFrameCellType.DATA,
@@ -149,7 +149,7 @@ describe("format", () => {
     ).toEqual("1970-01-01 00:00:00")
   })
 
-  test("datetimetz", () => {
+  it("datetimetz", () => {
     expect(
       format(0, {
         type: DataFrameCellType.DATA,
@@ -163,7 +163,7 @@ describe("format", () => {
     ).toEqual("1970-01-01 03:00:00+03:00")
   })
 
-  test("datetimetz with offset", () => {
+  it("datetimetz with offset", () => {
     expect(
       format(0, {
         type: DataFrameCellType.DATA,
@@ -177,7 +177,7 @@ describe("format", () => {
     ).toEqual("1970-01-01 01:00:00+01:00")
   })
 
-  test("interval datetime64[ns]", () => {
+  it("interval datetime64[ns]", () => {
     const mockElement = { data: INTERVAL_DATETIME64 }
     const q = new Quiver(mockElement)
     const { content, contentType } = q.getCell(0, 0)
@@ -187,7 +187,7 @@ describe("format", () => {
     )
   })
 
-  test("interval float64", () => {
+  it("interval float64", () => {
     const mockElement = { data: INTERVAL_FLOAT64 }
     const q = new Quiver(mockElement)
     const { content, contentType } = q.getCell(0, 0)
@@ -195,7 +195,7 @@ describe("format", () => {
     expect(format(content, contentType)).toEqual("(0.0000, 1.5000]")
   })
 
-  test("interval int64", () => {
+  it("interval int64", () => {
     const mockElement = { data: INTERVAL_INT64 }
     const q = new Quiver(mockElement)
     const { content, contentType } = q.getCell(0, 0)
@@ -203,7 +203,7 @@ describe("format", () => {
     expect(format(content, contentType)).toEqual("(0, 1]")
   })
 
-  test("interval uint64", () => {
+  it("interval uint64", () => {
     const mockElement = { data: INTERVAL_UINT64 }
     const q = new Quiver(mockElement)
     const { content, contentType } = q.getCell(0, 0)
@@ -211,7 +211,7 @@ describe("format", () => {
     expect(format(content, contentType)).toEqual("(0, 1]")
   })
 
-  test("decimal", () => {
+  it("decimal", () => {
     const mockElement = { data: DECIMAL }
     const q = new Quiver(mockElement)
     const cell1 = q.getCell(0, 1)
@@ -227,7 +227,7 @@ describe("format", () => {
     expect(format(cell4.content, cell4.contentType)).toEqual("-0.1")
   })
 
-  test("timedelta", () => {
+  it("timedelta", () => {
     const mockElement = { data: TIMEDELTA }
     const q = new Quiver(mockElement)
     const cell1 = q.getCell(0, 1)
@@ -243,14 +243,14 @@ describe("format", () => {
     expect(format(cell4.content, cell4.contentType)).toEqual("2 hours")
   })
 
-  test("dictionary", () => {
+  it("dictionary", () => {
     const mockElement = { data: DICTIONARY }
     const q = new Quiver(mockElement)
     const { content, contentType } = q.getCell(0, 1)
     expect(format(content, contentType)).toEqual(`{"a":1,"b":2}`)
   })
 
-  test("period", () => {
+  it("period", () => {
     const mockElement = { data: PERIOD }
     const q = new Quiver(mockElement)
     const { numDataRows, numColumns } = q.dimensions
@@ -309,7 +309,7 @@ describe("format", () => {
     })
   })
 
-  test("list[unicode]", () => {
+  it("list[unicode]", () => {
     expect(
       format(vectorFromArray(["foo", "bar", "baz"]), {
         type: DataFrameCellType.DATA,
@@ -353,7 +353,7 @@ describe("formatPeriodFromFreq", () => {
 })
 
 describe("convertTimestampToDate", () => {
-  test.each([
+  it.each([
     // [timestamp, unit, expected date string]
     [1000, TimeUnit.SECOND, "1970-01-01T00:16:40.000Z"],
     [1000, TimeUnit.MILLISECOND, "1970-01-01T00:00:01.000Z"],

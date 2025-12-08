@@ -113,6 +113,30 @@ st.container(key="st_slider").slider(selected_feature_markdown, 0, 10, 1)
 st.container(key="st_select_slider").select_slider(
     selected_feature_markdown, ["Blue", "Purple"]
 )
+st.container(key="st_select_slider_min_label").select_slider(
+    "Select slider min label",
+    options=["min", "max"],
+    value="max",
+    format_func=lambda option: (
+        selected_feature_markdown if option == "min" else "Plain Option"
+    ),
+)
+st.container(key="st_select_slider_max_label").select_slider(
+    "Select slider max label",
+    options=["min", "max"],
+    value="min",
+    format_func=lambda option: (
+        selected_feature_markdown if option == "max" else "Plain Option"
+    ),
+)
+st.container(key="st_select_slider_value").select_slider(
+    "Select slider current value",
+    options=["min", "value", "max"],
+    value="value",
+    format_func=lambda option: (
+        selected_feature_markdown if option == "value" else "Plain Option"
+    ),
+)
 st.container(key="st_text_input").text_input(selected_feature_markdown)
 st.container(key="st_number_input").number_input(selected_feature_markdown)
 st.container(key="st_text_area").text_area(selected_feature_markdown)

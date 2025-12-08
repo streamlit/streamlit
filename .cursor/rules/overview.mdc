@@ -32,6 +32,7 @@ Streamlit is an open-source (Apache 2.0) Python library for creating interactive
 - `scripts/`: Utility scripts for development and CI/CD.
 - `component-lib/`: Library for building Streamlit custom components.
 - `.github/workflows/`: GitHub Actions workflows used for CI/CD.
+- `wiki/`: Documentation relevant for development of Streamlit.
 
 ### Shell & Build Policy (AI Agents)
 

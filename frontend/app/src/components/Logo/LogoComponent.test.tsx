@@ -17,6 +17,7 @@
 import React from "react"
 
 import { screen } from "@testing-library/react"
+import { userEvent } from "@testing-library/user-event"
 
 import { render, renderWithContexts } from "@streamlit/lib/testing"
 import { Logo as LogoProto } from "@streamlit/protobuf"
@@ -150,7 +151,7 @@ describe("LogoComponent", () => {
     expect(logoLink).toHaveAttribute("href", "https://example.com")
   })
 
-  it("renders logo without link when no link provided", () => {
+  it("renders logo without link when no link provided and single-page app", () => {
     const logoWithoutLink = LogoProto.create({
       image: "https://example.com/logo.png",
       size: "medium",
@@ -167,6 +168,148 @@ describe("LogoComponent", () => {
 
     expect(screen.queryByTestId("stLogoLink")).not.toBeInTheDocument()
     screen.getByTestId("stHeaderLogo")
+  })
+
+  describe("multi-page app home navigation", () => {
+    const logoWithoutLink = LogoProto.create({
+      image: "https://example.com/logo.png",
+      size: "medium",
+    })
+
+    const multiPageAppPages = [
+      { pageName: "Home", pageScriptHash: "home_hash", isDefault: true },
+      { pageName: "Page 2", pageScriptHash: "page2_hash", isDefault: false },
+    ]
+
+    it("renders clickable button when no link provided in multi-page app", () => {
+      renderWithContexts(
+        <LogoComponent
+          {...getProps({
+            appLogo: logoWithoutLink,
+            dataTestId: "stHeaderLogo",
+          })}
+        />,
+        {
+          navigationContext: {
+            appPages: multiPageAppPages,
+          },
+        }
+      )
+
+      const logoButton = screen.getByTestId("stLogoLink")
+      expect(logoButton.tagName).toBe("BUTTON")
+      expect(logoButton).toHaveAttribute("aria-label", "Navigate to home page")
+    })
+
+    it("calls onPageChange with home page hash when clicked", async () => {
+      const user = userEvent.setup()
+      const mockOnPageChange = vi.fn()
+
+      renderWithContexts(
+        <LogoComponent
+          {...getProps({
+            appLogo: logoWithoutLink,
+            dataTestId: "stHeaderLogo",
+          })}
+        />,
+        {
+          navigationContext: {
+            appPages: multiPageAppPages,
+            onPageChange: mockOnPageChange,
+          },
+        }
+      )
+
+      const logoButton = screen.getByTestId("stLogoLink")
+      await user.click(logoButton)
+
+      expect(mockOnPageChange).toHaveBeenCalledWith("home_hash")
+    })
+
+    it("renders non-clickable logo when already on home page", () => {
+      renderWithContexts(
+        <LogoComponent
+          {...getProps({
+            appLogo: logoWithoutLink,
+            dataTestId: "stHeaderLogo",
+          })}
+        />,
+        {
+          navigationContext: {
+            appPages: multiPageAppPages,
+            currentPageScriptHash: "home_hash", // Already on home page
+          },
+        }
+      )
+
+      // Should not render a clickable button when already on home page
+      expect(screen.queryByTestId("stLogoLink")).not.toBeInTheDocument()
+      // Logo should still be rendered
+      screen.getByTestId("stHeaderLogo")
+    })
+
+    it("uses external link when link is provided, even in multi-page app", () => {
+      renderWithContexts(
+        <LogoComponent
+          {...getProps({
+            appLogo: sampleLogo, // Has link: "https://example.com"
+            dataTestId: "stHeaderLogo",
+          })}
+        />,
+        {
+          navigationContext: {
+            appPages: multiPageAppPages,
+          },
+        }
+      )
+
+      const logoLink = screen.getByTestId("stLogoLink")
+      expect(logoLink.tagName).toBe("A")
+      expect(logoLink).toHaveAttribute("href", "https://example.com")
+      expect(logoLink).toHaveAttribute("target", "_blank")
+    })
+
+    it("renders non-clickable logo when single-page app with no link", () => {
+      const singlePageAppPages = [
+        { pageName: "Home", pageScriptHash: "home_hash", isDefault: true },
+      ]
+
+      renderWithContexts(
+        <LogoComponent
+          {...getProps({
+            appLogo: logoWithoutLink,
+            dataTestId: "stHeaderLogo",
+          })}
+        />,
+        {
+          navigationContext: {
+            appPages: singlePageAppPages,
+          },
+        }
+      )
+
+      expect(screen.queryByTestId("stLogoLink")).not.toBeInTheDocument()
+      screen.getByTestId("stHeaderLogo")
+    })
+
+    it("renders non-clickable logo when no pages are available", () => {
+      renderWithContexts(
+        <LogoComponent
+          {...getProps({
+            appLogo: logoWithoutLink,
+            dataTestId: "stHeaderLogo",
+          })}
+        />,
+        {
+          navigationContext: {
+            appPages: [],
+          },
+        }
+      )
+
+      expect(screen.queryByTestId("stLogoLink")).not.toBeInTheDocument()
+      screen.getByTestId("stHeaderLogo")
+    })
   })
 
   it("applies correct size classes", () => {
@@ -206,17 +349,6 @@ describe("LogoComponent", () => {
   })
 
   describe("crossOrigin attribute", () => {
-    const scenarios = [
-      {
-        backendBaseUrl: undefined,
-        description: "without BACKEND_BASE_URL",
-      },
-      {
-        backendBaseUrl: "http://localhost:8501",
-        description: "with BACKEND_BASE_URL",
-      },
-    ]
-
     afterEach(() => {
       // Clean up window.__streamlit after each test
       if (window.__streamlit) {
@@ -224,44 +356,56 @@ describe("LogoComponent", () => {
       }
     })
 
-    it.each(scenarios)(
-      "sets crossOrigin attribute for relative URLs when resourceCrossOriginMode is configured ($description)",
-      ({ backendBaseUrl }) => {
-        // Setup window.__streamlit.BACKEND_BASE_URL if specified
-        if (backendBaseUrl) {
-          window.__streamlit = window.__streamlit || {}
-          window.__streamlit.BACKEND_BASE_URL = backendBaseUrl
+    it("sets crossOrigin for relative URLs when BACKEND_BASE_URL is set", () => {
+      window.__streamlit = window.__streamlit || {}
+      window.__streamlit.BACKEND_BASE_URL = "http://localhost:8501"
+
+      const logoWithRelativeUrl = LogoProto.create({
+        image: "/media/logo.png",
+        size: "medium",
+      })
+
+      renderWithContexts(
+        <LogoComponent
+          {...getProps({
+            appLogo: logoWithRelativeUrl,
+            dataTestId: "stHeaderLogo",
+          })}
+        />,
+        {
+          libConfigContext: {
+            resourceCrossOriginMode: "anonymous",
+          },
         }
+      )
 
-        const logoWithRelativeUrl = LogoProto.create({
-          image: "/media/logo.png",
-          size: "medium",
-        })
+      const logo = screen.getByTestId("stHeaderLogo")
+      expect(logo).toHaveAttribute("crossOrigin", "anonymous")
+    })
 
-        renderWithContexts(
-          <LogoComponent
-            {...getProps({
-              appLogo: logoWithRelativeUrl,
-              dataTestId: "stHeaderLogo",
-            })}
-          />,
-          {
-            libConfigContext: {
-              resourceCrossOriginMode: "anonymous",
-            },
-          }
-        )
+    it("does not set crossOrigin for relative URLs when BACKEND_BASE_URL is not set (same-origin)", () => {
+      const logoWithRelativeUrl = LogoProto.create({
+        image: "/media/logo.png",
+        size: "medium",
+      })
 
-        const logo = screen.getByTestId("stHeaderLogo")
-        if (backendBaseUrl) {
-          // When BACKEND_BASE_URL is set, crossOrigin should be set for relative URLs
-          expect(logo).toHaveAttribute("crossOrigin", "anonymous")
-        } else {
-          // When BACKEND_BASE_URL is not set, crossOrigin should not be set for relative URLs (same-origin)
-          expect(logo).not.toHaveAttribute("crossOrigin")
+      renderWithContexts(
+        <LogoComponent
+          {...getProps({
+            appLogo: logoWithRelativeUrl,
+            dataTestId: "stHeaderLogo",
+          })}
+        />,
+        {
+          libConfigContext: {
+            resourceCrossOriginMode: "anonymous",
+          },
         }
-      }
-    )
+      )
+
+      const logo = screen.getByTestId("stHeaderLogo")
+      expect(logo).not.toHaveAttribute("crossOrigin")
+    })
 
     it("sets crossOrigin attribute for backend URLs when configured", () => {
       window.__streamlit = window.__streamlit || {}
@@ -335,7 +479,13 @@ describe("LogoComponent", () => {
       expect(logo).toHaveAttribute("src", "https://example.com/logo.png")
     })
 
-    it.each(scenarios)(
+    it.each([
+      { backendBaseUrl: undefined, description: "without BACKEND_BASE_URL" },
+      {
+        backendBaseUrl: "http://localhost:8501",
+        description: "with BACKEND_BASE_URL",
+      },
+    ])(
       "does not set crossOrigin attribute when resourceCrossOriginMode is undefined ($description)",
       ({ backendBaseUrl }) => {
         // Setup window.__streamlit.BACKEND_BASE_URL if specified

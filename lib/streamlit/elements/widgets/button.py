@@ -221,19 +221,31 @@ class ButtonMixin:
               of the parent container.
 
         shortcut : str or None
-            An optional keyboard shortcut that triggers the button. Provide a
-            single alphanumeric key (e.g. ``"K"``, ``"4"``), a function key
-            (e.g. ``"F11"``), or a supported special key (e.g. ``"Enter"``,
-            ``"Esc"``), optionally combined with modifiers.
+            An optional keyboard shortcut that triggers the button. This can be
+            one of the following strings:
 
-            Examples: ``"Ctrl+K"``, ``"Cmd+Shift+O"``, ``"Mod+Enter"``.
+            - A single alphanumeric key like ``"K"`` or ``"4"``.
+            - A function key like ``"F11"``.
+            - A special key like ``"Enter"``, ``"Esc"``, or ``"Tab"``.
+            - Any of the above combined with modifiers. For example, you can use
+              ``"Ctrl+K"`` or ``"Cmd+Shift+O"``.
 
-            .. note::
-                The keys ``"C"`` and ``"R"`` are reserved and cannot be used,
-                even with modifiers. ``"Ctrl"``, ``"Cmd"``, and ``"Mod"`` are
-                platform-dependent: they map to ``"Command"`` (⌘) on macOS and
-                ``"Control"`` on Windows/Linux. Punctuation keys (e.g. ``"."``,
-                ``","``) are not currently supported.
+            .. important::
+                The keys ``"C"`` and ``"R"`` are reserved and can't be used,
+                even with modifiers. Punctuation keys like ``"."`` and ``","``
+                aren't currently supported.
+
+            The following special keys are supported: Backspace, Delete, Down,
+            End, Enter, Esc, Home, Left, PageDown, PageUp, Right, Space, Tab,
+            and Up.
+
+            The following modifiers are supported: Alt, Ctrl, Cmd, Meta, Mod,
+            Option, Shift.
+
+            - Ctrl, Cmd, Meta, and Mod are interchangeable and will display to
+              the user to match their platform.
+            - Option and Alt are interchangeable and will display to the user
+              to match their platform.
 
         Returns
         -------
@@ -277,6 +289,25 @@ class ButtonMixin:
 
         .. output::
            https://doc-button-icons.streamlit.app/
+           height: 220px
+
+        **Example 3: Use keyboard shortcuts**
+
+        The following example shows how to use keyboard shortcuts to trigger a
+        button. If you use any of the platform-dependent modifiers (Ctrl, Cmd,
+        or Mod), they are interpreted interchangeably and always displayed to
+        the user to match their platform.
+
+        >>> import streamlit as st
+        >>>
+        >>> with st.container(horizontal=True, horizontal_alignment="distribute"):
+        >>>     "`A`" if st.button("A", shortcut="A") else "` `"
+        >>>     "`S`" if st.button("S", shortcut="Ctrl+S") else "` `"
+        >>>     "`D`" if st.button("D", shortcut="Cmd+Shift+D") else "` `"
+        >>>     "`F`" if st.button("F", shortcut="Mod+Alt+Shift+F") else "` `"
+
+        .. output::
+           https://doc-button-shortcuts.streamlit.app/
            height: 220px
 
         """
@@ -334,9 +365,11 @@ class ButtonMixin:
         This is useful when you would like to provide a way for your users
         to download a file directly from your app.
 
-        Note that the data to be downloaded is stored in-memory while the
-        user is connected, so it's a good idea to keep file sizes under a
-        couple hundred megabytes to conserve memory.
+        If you pass the data directly to the ``data`` parameter, then the data
+        is stored in-memory while the user is connected. It's a good idea to
+        keep file sizes under a couple hundred megabytes to conserve memory or
+        use deferred data generation by passing a callable to the ``data``
+        parameter.
 
         If you want to prevent your app from rerunning when a user clicks the
         download button, wrap the download button in a `fragment
@@ -362,15 +395,20 @@ class ButtonMixin:
             .. |st.markdown| replace:: ``st.markdown``
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
-        data : str, bytes, file, or callable
-            The contents of the file to be downloaded.
+        data : str, bytes, file-like, or callable
+            The contents of the file to be downloaded or a callable that
+            returns the contents of the file.
 
-            You can also pass a ``callable`` (no-arg function) that returns
-            ``str``, ``bytes``, or a file-like object. The callable is executed
-            when the user clicks the download button (deferred generation).
-            Streamlit commands inside the callable (for example,
-            ``st.write("Deferred data prepared")``) are ignored and will not
-            render.
+            File contents can be a string, bytes, or file-like object.
+            File-like objects include ``io.BytesIO``, ``io.StringIO``, or any
+            class that implements the abstract base class ``io.RawIOBase``.
+
+            If a callable is passed, it is executed when the user clicks
+            the download button and runs on a separate thread from the
+            resulting script rerun. This deferred generation is helpful for
+            large files to avoid blocking the page script. The callable can't
+            accept any arguments. If any Streamlit commands are executed inside
+            the callable, they will be ignored.
 
             To prevent unnecessary recomputation, use caching when converting
             your data for download. For more information, see the Example 1
@@ -491,19 +529,25 @@ class ButtonMixin:
               of the parent container.
 
         shortcut : str or None
-            An optional keyboard shortcut that triggers the download button.
-            Provide a single alphanumeric key (e.g. ``"K"``, ``"4"``), a
-            function key (e.g. ``"F11"``), or a supported special key (e.g.
-            ``"Enter"``, ``"Esc"``), optionally combined with modifiers.
+            An optional keyboard shortcut that triggers the button. This can be
+            one of the following strings:
 
-            Examples: ``"Ctrl+K"``, ``"Cmd+Shift+O"``, ``"Mod+Enter"``.
+            - A single alphanumeric key like ``"K"`` or ``"4"``.
+            - A function key like ``"F11"``.
+            - A special key like ``"Enter"``, ``"Esc"``, or ``"Tab"``.
+            - Any of the above combined with modifiers. For example, you can use
+              ``"Ctrl+K"`` or ``"Cmd+Shift+O"``.
 
-            .. note::
-                The keys ``"C"`` and ``"R"`` are reserved and cannot be used,
-                even with modifiers. ``"Ctrl"``, ``"Cmd"``, and ``"Mod"`` are
-                platform-dependent: they map to ``"Command"`` (⌘) on macOS and
-                ``"Control"`` on Windows/Linux. Punctuation keys (e.g. ``"."``,
-                ``","``) are not currently supported.
+            .. important::
+                The keys ``"C"`` and ``"R"`` are reserved and can't be used,
+                even with modifiers. Punctuation keys like ``"."`` and ``","``
+                aren't currently supported.
+
+            For a list of supported keys and modifiers, see the documentation
+            for |st.button|_.
+
+            .. |st.button| replace:: ``st.button``
+            .. _st.button: https://docs.streamlit.io/develop/api-reference/widgets/st.button
 
         Returns
         -------
@@ -615,26 +659,30 @@ class ButtonMixin:
            https://doc-download-button-file.streamlit.app/
            height: 200px
 
-        **Example 4: Generate the data on click with a callable**
+        **Example 4: Generate the data on-click with a callable**
 
-        Pass a function to ``data`` to generate the bytes lazily when the user
-        clicks the button. Streamlit commands inside this function are ignored.
+        Pass a callable to ``data`` to generate the bytes lazily when the user
+        clicks the button. Streamlit commands inside this callable are ignored.
+        The callable can't accept any arguments and must return a file-like
+        object.
 
         >>> import streamlit as st
         >>> import time
         >>>
         >>> def make_report():
-        >>>     # Runs on click; Streamlit commands here won't render
         >>>     time.sleep(1)
-        >>>     # st.write("Deferred data prepared")  # Ignored
         >>>     return "col1,col2\n1,2\n3,4".encode("utf-8")
         >>>
         >>> st.download_button(
         ...     label="Download report",
-        ...     data=make_report,  # pass the function, don't call it
+        ...     data=make_report,
         ...     file_name="report.csv",
         ...     mime="text/csv",
         ... )
+
+        .. output::
+           https://doc-download-button-deferred.streamlit.app/
+           height: 200px
 
         """
         ctx = get_script_run_ctx()
@@ -779,19 +827,25 @@ class ButtonMixin:
               of the parent container.
 
         shortcut : str or None
-            An optional keyboard shortcut that triggers the link button.
-            Provide a single alphanumeric key (e.g. ``"K"``, ``"4"``), a
-            function key (e.g. ``"F11"``), or a supported special key (e.g.
-            ``"Enter"``, ``"Esc"``), optionally combined with modifiers.
+            An optional keyboard shortcut that triggers the button. This can be
+            one of the following strings:
 
-            Examples: ``"Ctrl+K"``, ``"Cmd+Shift+O"``, ``"Mod+Enter"``.
+            - A single alphanumeric key like ``"K"`` or ``"4"``.
+            - A function key like ``"F11"``.
+            - A special key like ``"Enter"``, ``"Esc"``, or ``"Tab"``.
+            - Any of the above combined with modifiers. For example, you can use
+              ``"Ctrl+K"`` or ``"Cmd+Shift+O"``.
 
-            .. note::
-                The keys ``"C"`` and ``"R"`` are reserved and cannot be used,
-                even with modifiers. ``"Ctrl"``, ``"Cmd"``, and ``"Mod"`` are
-                platform-dependent: they map to ``"Command"`` (⌘) on macOS and
-                ``"Control"`` on Windows/Linux. Punctuation keys (e.g. ``"."``,
-                ``","``) are not currently supported.
+            .. important::
+                The keys ``"C"`` and ``"R"`` are reserved and can't be used,
+                even with modifiers. Punctuation keys like ``"."`` and ``","``
+                aren't currently supported.
+
+            For a list of supported keys and modifiers, see the documentation
+            for |st.button|_.
+
+            .. |st.button| replace:: ``st.button``
+            .. _st.button: https://docs.streamlit.io/develop/api-reference/widgets/st.button
 
         Example
         -------
@@ -930,25 +984,31 @@ class ButtonMixin:
               of the parent container.
 
         query_params : dict, list of tuples, or None
-            Query parameters to apply when navigating to the target page. This
-            can be a dictionary or an iterable of key-value tuples. Values can
-            be strings or iterables of strings (for repeated keys). When
-            omitted, all non-embed query parameters are cleared during navigation.
+            Query parameters to apply when navigating to the target page.
+            This can be a dictionary or an iterable of key-value tuples. Values can
+            be strings or iterables of strings (for repeated keys). When this is
+            ``None`` (default), all non-embed query parameters are cleared during
+            navigation.
 
         Example
         -------
-        Consider the following example given this file structure:
+        **Example 1: Basic usage**
 
-        >>> your-repository/
-        >>> ├── pages/
-        >>> │   ├── page_1.py
-        >>> │   └── page_2.py
-        >>> └── your_app.py
+        The following example shows how to create page links in a multipage app
+        that uses the ``pages/`` directory:
+
+        .. code-block:: text
+
+            your-repository/
+            ├── pages/
+            │   ├── page_1.py
+            │   └── page_2.py
+            └── your_app.py
 
         >>> import streamlit as st
         >>>
         >>> st.page_link("your_app.py", label="Home", icon="🏠")
-        >>> st.page_link("pages/page_1.py", label="Page 1", icon="1️⃣", query_params={"team": "streamlit"})
+        >>> st.page_link("pages/page_1.py", label="Page 1", icon="1️⃣")
         >>> st.page_link("pages/page_2.py", label="Page 2", icon="2️⃣", disabled=True)
         >>> st.page_link("http://www.google.com", label="Google", icon="🌎")
 
@@ -960,8 +1020,32 @@ class ButtonMixin:
         .. |client.showSidebarNavigation| replace:: ``client.showSidebarNavigation``
         .. _client.showSidebarNavigation: https://docs.streamlit.io/develop/api-reference/configuration/config.toml#client
 
-        .. output ::
+        .. output::
             https://doc-page-link.streamlit.app/
+            height: 350px
+
+        **Example 2: Passing query parameters**
+
+        The following example shows how to pass query parameters when creating a
+        page link in a multipage app:
+
+        .. code-block:: text
+
+            your-repository/
+            ├── page_2.py
+            └── your_app.py
+
+        >>> import streamlit as st
+        >>>
+        >>> def page_1():
+        >>>     st.title("Page 1")
+        >>>     st.page_link("page_2.py", query_params={"utm_source": "page_1"})
+        >>>
+        >>> pg = st.navigation([page_1, "page_2.py"])
+        >>> pg.run()
+
+        .. output::
+            https://doc-page-link-query-params.streamlit.app/
             height: 350px
 
         """
