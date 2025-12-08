@@ -116,6 +116,7 @@ describe("useCustomEditors hook", () => {
           step: "1",
 
           userFormat: "DD.MM.YYYY",
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } as any,
       }
 
@@ -197,6 +198,7 @@ describe("useCustomEditors hook", () => {
             step: "1",
 
             userFormat: format,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
           } as any,
         }
 
