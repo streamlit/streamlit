@@ -33,7 +33,8 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
           submodules: "recursive"
-          fetch-depth: 1
+          # Give the agent full git history access:
+          fetch-depth: 0
 
       - name: Install Cursor CLI
         run: |

@@ -31,6 +31,8 @@ jobs:
         with:
           persist-credentials: false
           submodules: "recursive"
+          # Give the agent full git history access:
+          fetch-depth: 0
 
       - name: Install Cursor CLI
         run: |
