@@ -55,6 +55,9 @@ jobs:
           CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           MODEL: opus-4.5-thinking
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_URL: ${{ github.event.issue.html_url }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
         run: |
           cursor-agent -p "You are operating in a GitHub Actions runner to triage a GitHub issue.
 
@@ -63,14 +66,14 @@ jobs:
 
           # Context:
           - Repo: ${{ github.repository }}
-          - Issue Number: ${{ github.event.issue.number }}
-          - Issue URL: ${{ github.event.issue.html_url }}
-          - Issue Title: ${{ github.event.issue.title }}
+          - Issue Number: $ISSUE_NUMBER
+          - Issue URL: $ISSUE_URL
+          - Issue Title: $ISSUE_TITLE
 
           # Available Resources:
           - A CSV file 'open_issues.csv' in the current directory contains all open issues with summaries. Use this to find duplicate or related issues.
           - Use 'gh label list -L 300' to get all existing labels in the repository. ONLY use labels that exist.
-          - Use 'gh issue view ${{ github.event.issue.number }}' to get full issue details.
+          - Use 'gh issue view $ISSUE_NUMBER' to get full issue details.
           - Use 'gh search issues' to search for related issues if needed.
           - Other read-only operations are available via 'gh' client.
 
@@ -80,7 +83,7 @@ jobs:
           # Instructions:
 
           1. First, get the full issue details:
-             - Run 'gh issue view ${{ github.event.issue.number }}' to get the issue body and metadata.
+             - Run 'gh issue view $ISSUE_NUMBER' to get the issue body and metadata.
 
           2. Get all existing labels:
              - Run 'gh label list -L 300' to get all valid labels.
