@@ -155,7 +155,7 @@
     "@types/react-window": "~1.8.8",
     "@types/sprintf-js": "^1.1.4",
     "@types/ua-parser-js": "^0.7.39",
-    "@types/uuid": "^10.0.0",
+    "@types/uuid": "^11.0.0",
     "@types/wavesurfer.js": "^6.0.12",
     "@types/xxhashjs": "^0.2.2",
     "@vitejs/plugin-react-swc": "^4.2.2",
