@@ -1980,15 +1980,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@mapbox/tile-cover@npm:3.0.1":
-  version: 3.0.1
-  resolution: "@mapbox/tile-cover@npm:3.0.1"
-  dependencies:
-    tilebelt: "npm:^1.0.1"
-  checksum: 10c0/dd66725282ab6570280e91485b66846c4a3f18d71a53e43b2449c77691853ca6a0f6f03174b4ea00eade7d32376e13ad4f5a077399c97c105ef9348c080a38a7
-  languageName: node
-  linkType: hard
-
 "@mapbox/tiny-sdf@npm:^1.1.1":
   version: 1.2.5
   resolution: "@mapbox/tiny-sdf@npm:1.2.5"
@@ -15022,17 +15013,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"quadbin@npm:^0.4.0":
-  version: 0.4.0
-  resolution: "quadbin@npm:0.4.0"
-  dependencies:
-    "@mapbox/tile-cover": "npm:3.0.1"
-    "@math.gl/web-mercator": "npm:^4.1.0"
-  checksum: 10c0/24a49abadd820cbdd0187b6c16604401c6df9b3cfe1a5ac2cd02acf500de9f93cfd5a857f5882bfd8ce3e4bf9176512d9b6fe879158c7003ebca951b1b39457d
-  languageName: node
-  linkType: hard
-
-"quadbin@npm:^0.4.1-alpha.0":
+"quadbin@npm:^0.4.0, quadbin@npm:^0.4.1-alpha.0":
   version: 0.4.2
   resolution: "quadbin@npm:0.4.2"
   dependencies:
@@ -17329,13 +17310,6 @@ __metadata:
     readable-stream: "npm:~2.3.6"
     xtend: "npm:~4.0.1"
   checksum: 10c0/cbfe5b57943fa12b4f8c043658c2a00476216d79c014895cef1ac7a1d9a8b31f6b438d0e53eecbb81054b93128324a82ecd59ec1a4f91f01f7ac113dcb14eade
-  languageName: node
-  linkType: hard
-
-"tilebelt@npm:^1.0.1":
-  version: 1.0.1
-  resolution: "tilebelt@npm:1.0.1"
-  checksum: 10c0/40d05eb7b84eabd5155347cdbfa3cbe459c634fa76a0c442c8c339b4e443e03f5f8576da37e373645305891bb49f6ba993bfe8ceb89093cae1e13053244c66c5
   languageName: node
   linkType: hard
 
