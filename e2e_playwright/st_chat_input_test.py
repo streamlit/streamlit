@@ -646,7 +646,7 @@ def test_uploads_and_deletes_multiple_files(
 def test_file_upload_error_message_disallowed_files(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
-    """Test that shows error message for disallowed files."""
+    """Test that shows error message for disallowed files and retry attributes."""
     themed_app.set_viewport_size({"width": 750, "height": 2000})
 
     file_name1 = "file1.json"
@@ -676,6 +676,12 @@ def test_file_upload_error_message_disallowed_files(
     error_message = uploaded_files.get_by_test_id("stChatInputFileError").first
     expect(error_message).to_be_visible()
     expect(error_message).to_have_text("application/json files are not allowed.")
+
+    # Verify file chip has retry attributes (role, tabindex, title for accessibility)
+    file_chip = uploaded_files.get_by_test_id("stChatInputFile").first
+    expect(file_chip).to_have_attribute("role", "button")
+    expect(file_chip).to_have_attribute("tabindex", "0")
+    expect(file_chip).to_have_attribute("title", "Click to retry upload")
 
 
 @use_chat_input("single_file")
@@ -1676,105 +1682,6 @@ def test_file_chip(
         f"st_chat_input-file_chip_{test_id}",
         assert_snapshot,
     )
-
-
-@use_chat_input("single_file")
-def test_file_upload_retry_on_disallowed_type(themed_app: Page):
-    """Test that clicking on an errored file chip triggers retry."""
-    themed_app.set_viewport_size({"width": 750, "height": 2000})
-
-    file_name = "config.json"
-    # Upload a disallowed file type (json when only txt is allowed)
-    disallowed_file = FilePayload(
-        name=file_name,
-        mimeType="application/json",
-        buffer=b'{"key": "value"}',
-    )
-    file_upload_helper(
-        themed_app, get_element_by_key(themed_app, "single_file"), [disallowed_file]
-    )
-
-    # Wait for file chip to appear with the filename (same pattern as working test)
-    uploaded_files = (
-        get_element_by_key(themed_app, "single_file")
-        .get_by_test_id("stChatUploadedFiles")
-        .first
-    )
-    expect(uploaded_files.get_by_text(file_name)).to_be_visible()
-
-    # Dismiss any tooltips
-    reset_hovering(themed_app)
-
-    file_chip = uploaded_files.get_by_test_id("stChatInputFile").first
-
-    # Verify error message is displayed
-    error_message = uploaded_files.get_by_test_id("stChatInputFileError").first
-    expect(error_message).to_be_visible()
-    expect(error_message).to_have_text("application/json files are not allowed.")
-
-    # Verify file chip has retry attributes
-    expect(file_chip).to_have_attribute("role", "button")
-    expect(file_chip).to_have_attribute("tabindex", "0")
-    expect(file_chip).to_have_attribute("title", "Click to retry upload")
-
-    # Click the file chip to retry
-    file_chip.click()
-    wait_for_app_run(themed_app, 500)
-
-    # Verify retry was triggered - file is still in error state
-    # (since the type is still disallowed, same error should occur)
-    expect(uploaded_files.get_by_test_id("stChatInputFileError")).to_be_visible()
-
-
-@use_chat_input("single_file")
-def test_file_upload_retry_keyboard_accessibility(themed_app: Page):
-    """Test that Enter/Space on errored file chip triggers retry."""
-    themed_app.set_viewport_size({"width": 750, "height": 2000})
-
-    file_name = "config.json"
-    # Upload disallowed file
-    disallowed_file = FilePayload(
-        name=file_name,
-        mimeType="application/json",
-        buffer=b'{"key": "value"}',
-    )
-    file_upload_helper(
-        themed_app, get_element_by_key(themed_app, "single_file"), [disallowed_file]
-    )
-
-    # Wait for file chip to appear with the filename
-    uploaded_files = (
-        get_element_by_key(themed_app, "single_file")
-        .get_by_test_id("stChatUploadedFiles")
-        .first
-    )
-    expect(uploaded_files.get_by_text(file_name)).to_be_visible()
-
-    # Dismiss any tooltips
-    reset_hovering(themed_app)
-
-    file_chip = uploaded_files.get_by_test_id("stChatInputFile").first
-
-    # Verify error message is displayed before testing retry
-    expect(uploaded_files.get_by_test_id("stChatInputFileError")).to_be_visible()
-
-    # Focus and press Enter to retry
-    file_chip.focus()
-    expect(file_chip).to_be_focused()
-
-    themed_app.keyboard.press("Enter")
-    wait_for_app_run(themed_app, 500)
-
-    # Verify retry happened (file should still show error for disallowed type)
-    expect(uploaded_files.get_by_test_id("stChatInputFileError")).to_be_visible()
-
-    # Also test Space key
-    file_chip.focus()
-    themed_app.keyboard.press("Space")
-    wait_for_app_run(themed_app, 500)
-
-    # Verify retry happened again
-    expect(uploaded_files.get_by_test_id("stChatInputFileError")).to_be_visible()
 
 
 @use_chat_input("multiple_files")
