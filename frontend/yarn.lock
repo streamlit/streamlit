@@ -3265,7 +3265,7 @@ __metadata:
     moment: "npm:^2.29.4"
     prettier: "npm:^3.6.2"
     prop-types: "npm:^15.7.2"
-    rc-overflow: "npm:^1.4.1"
+    rc-overflow: "npm:^1.5.0"
     re-resizable: "npm:^6.11.2"
     react: "npm:^18.2.0"
     react-dom: "npm:^18.2.0"
@@ -15130,9 +15130,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"rc-overflow@npm:^1.4.1":
-  version: 1.4.1
-  resolution: "rc-overflow@npm:1.4.1"
+"rc-overflow@npm:^1.5.0":
+  version: 1.5.0
+  resolution: "rc-overflow@npm:1.5.0"
   dependencies:
     "@babel/runtime": "npm:^7.11.1"
     classnames: "npm:^2.2.1"
@@ -15141,7 +15141,7 @@ __metadata:
   peerDependencies:
     react: ">=16.9.0"
     react-dom: ">=16.9.0"
-  checksum: 10c0/ac47d2c7b4cfc99e8ca20c75f99e601eac4d524f6690d9a36fb65d84b9f627f13aa70f11fc5c09b24c1e9a0395a15c16998a57f2517c08a6abe545539cb5e162
+  checksum: 10c0/7e9ce2fc3db7eb6e960b2848c0da9f67dcdc2a06eadd22baebe9933253424f6243c98fa7f093b765cb355d5fc3a880542748e199bee279dabc790fcf1bb2d34b
   languageName: node
   linkType: hard
 
