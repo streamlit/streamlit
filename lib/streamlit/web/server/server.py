@@ -315,7 +315,9 @@ class Server:
             ),
         )
 
-        self._runtime.stats_mgr.register_provider(media_file_storage)
+        self._runtime.stats_mgr.register_provider(
+            "cache_memory_bytes", media_file_storage
+        )
 
     @classmethod
     def initialize_mimetypes(cls) -> None:

@@ -18,12 +18,15 @@ from typing import TYPE_CHECKING, cast
 
 import tornado.web
 
+from streamlit.runtime.stats import metric_type_string_to_proto
 from streamlit.web.server import allow_all_cross_origin_requests, is_allowed_origin
 from streamlit.web.server.server_util import emit_endpoint_deprecation_notice
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     from streamlit.proto.openmetrics_data_model_pb2 import MetricSet as MetricSetProto
-    from streamlit.runtime.stats import CacheStat, StatsManager
+    from streamlit.runtime.stats import Stat, StatsManager
 
 
 class StatsRequestHandler(tornado.web.RequestHandler):
@@ -41,6 +44,9 @@ class StatsRequestHandler(tornado.web.RequestHandler):
         self.set_status(204)
         self.finish()
 
+    # TODO(vdonato): Allow a caller to request specific metric families since we
+    # know cache stats are slow to compute so would like to avoid paying the
+    # cost of doing so frequently.
     def get(self) -> None:
         if self.request.uri and "_stcore/" not in self.request.uri:
             emit_endpoint_deprecation_notice(self, new_path="/_stcore/metrics")
@@ -54,44 +60,55 @@ class StatsRequestHandler(tornado.web.RequestHandler):
             self.set_header("Content-Type", "application/x-protobuf")
             self.set_status(200)
         else:
-            self.write(self._stats_to_text(self._manager.get_stats()))
+            self.write(self._stats_to_text(stats))
             self.set_header("Content-Type", "application/openmetrics-text")
             self.set_status(200)
 
     @staticmethod
-    def _stats_to_text(stats: list[CacheStat]) -> str:
-        metric_type = "# TYPE cache_memory_bytes gauge"
-        metric_unit = "# UNIT cache_memory_bytes bytes"
-        metric_help = "# HELP Total memory consumed by a cache."
-        openmetrics_eof = "# EOF\n"
+    def _stats_to_text(stats_by_family: dict[str, Sequence[Stat]]) -> str:
+        result: list[str] = []
 
-        # Format: header, stats, EOF
-        result = [metric_type, metric_unit, metric_help]
-        result.extend(stat.to_metric_str() for stat in stats)
-        result.append(openmetrics_eof)
+        for stats in stats_by_family.values():
+            if not stats:
+                continue
 
+            # All of the stats in a family will have the same family_name, type,
+            # unit, and help text, so we can just use the first one to construct
+            # our OpenMetrics comments.
+            first_stat = stats[0]
+            result.append(f"# TYPE {first_stat.family_name} {first_stat.type}")
+            result.append(f"# UNIT {first_stat.family_name} {first_stat.unit}")
+            result.append(f"# HELP {first_stat.help}")
+            result.extend(stat.to_metric_str() for stat in stats)
+
+        result.append("# EOF\n")
         return "\n".join(result)
 
     @staticmethod
-    def _stats_to_proto(stats: list[CacheStat]) -> MetricSetProto:
+    def _stats_to_proto(stats_by_family: dict[str, Sequence[Stat]]) -> MetricSetProto:
         # Lazy load the import of this proto message for better performance:
-        from streamlit.proto.openmetrics_data_model_pb2 import GAUGE
         from streamlit.proto.openmetrics_data_model_pb2 import (
             MetricSet as MetricSetProto,
         )
 
         metric_set = MetricSetProto()
 
-        metric_family = metric_set.metric_families.add()
-        metric_family.name = "cache_memory_bytes"
-        metric_family.type = GAUGE
-        metric_family.unit = "bytes"
-        metric_family.help = "Total memory consumed by a cache."
+        for stats in stats_by_family.values():
+            if not stats:
+                continue
 
-        for stat in stats:
-            metric_proto = metric_family.metrics.add()
-            stat.marshall_metric_proto(metric_proto)
+            # All of the stats in a family will have the same family_name, type,
+            # unit, and help text, so we can just use the first one to fill in
+            # these metric_family fields.
+            first_stat = stats[0]
+            metric_family = metric_set.metric_families.add()
+            metric_family.name = first_stat.family_name
+            metric_family.type = metric_type_string_to_proto(first_stat.type)
+            metric_family.unit = first_stat.unit
+            metric_family.help = first_stat.help
 
-        metric_set = MetricSetProto()
-        metric_set.metric_families.append(metric_family)
+            for stat in stats:
+                metric_proto = metric_family.metrics.add()
+                stat.marshall_metric_proto(metric_proto)
+
         return metric_set

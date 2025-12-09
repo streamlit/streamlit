@@ -224,10 +224,16 @@ class Runtime:
         )
 
         self._stats_mgr = StatsManager()
-        self._stats_mgr.register_provider(get_data_cache_stats_provider())
-        self._stats_mgr.register_provider(get_resource_cache_stats_provider())
-        self._stats_mgr.register_provider(self._uploaded_file_mgr)
-        self._stats_mgr.register_provider(SessionStateStatProvider(self._session_mgr))
+        self._stats_mgr.register_provider(
+            "cache_memory_bytes", get_data_cache_stats_provider()
+        )
+        self._stats_mgr.register_provider(
+            "cache_memory_bytes", get_resource_cache_stats_provider()
+        )
+        self._stats_mgr.register_provider("cache_memory_bytes", self._uploaded_file_mgr)
+        self._stats_mgr.register_provider(
+            "cache_memory_bytes", SessionStateStatProvider(self._session_mgr)
+        )
 
     @property
     def state(self) -> RuntimeState:
