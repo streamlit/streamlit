@@ -4,11 +4,27 @@ name: AI Issue Triage
 on:
   issues:
     types: [labeled]
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: "Issue number to triage"
+        required: true
+        type: number
+      model:
+        description: "Model to use for the triage"
+        required: false
+        type: string
+        default: "opus-4.5-thinking"
+
+# Computed issue number and model for use in jobs
+env:
+  ISSUE_NUMBER: ${{ github.event.inputs.issue_number || github.event.issue.number }}
+  MODEL: ${{ github.event.inputs.model || 'opus-4.5-thinking' }}
 
 jobs:
   # Job 1: AI performs the triage analysis with READ-ONLY access
   ai-issue-triage:
-    if: github.event.label.name == 'ai-review'
+    if: github.event_name == 'workflow_dispatch' || github.event.label.name == 'ai-review'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -18,7 +34,7 @@ jobs:
 
     # Avoid duplicate workflows on same issue
     concurrency:
-      group: ${{ github.workflow }}-${{ github.event.issue.number }}-ai-triage
+      group: ${{ github.workflow }}-${{ env.ISSUE_NUMBER }}-ai-triage
       cancel-in-progress: true
 
     defaults:
@@ -50,6 +66,15 @@ jobs:
             exit 1
           fi
 
+      - name: Get issue details
+        id: issue-info
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ISSUE_DATA=$(gh api repos/${{ github.repository }}/issues/${{ env.ISSUE_NUMBER }})
+          echo "html_url=$(echo "$ISSUE_DATA" | jq -r '.html_url')" >> $GITHUB_OUTPUT
+          echo "title=$(echo "$ISSUE_DATA" | jq -r '.title')" >> $GITHUB_OUTPUT
+
       # Runs only very basic triage (first-level support) based on the
       # issue information and historical issues. This will detect
       # related issues / duplicates, suggest feature labels, and gives
@@ -57,12 +82,10 @@ jobs:
       # issue analysis in future iterations.
       - name: "AI Issue Triage - Duplicates & Labels"
         env:
-          MODEL: opus-4.5-thinking
           CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          ISSUE_NUMBER: ${{ github.event.issue.number }}
-          ISSUE_URL: ${{ github.event.issue.html_url }}
-          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_URL: ${{ steps.issue-info.outputs.html_url }}
+          ISSUE_TITLE: ${{ steps.issue-info.outputs.title }}
         run: |
           cursor-agent -p "You are operating in a GitHub Actions runner to triage a GitHub issue.
 
@@ -73,14 +96,14 @@ jobs:
 
           # Context:
           - Repo: ${{ github.repository }}
-          - Issue Number: $ISSUE_NUMBER
+          - Issue Number: ${{ env.ISSUE_NUMBER }}
           - Issue URL: $ISSUE_URL
           - Issue Title: $ISSUE_TITLE
 
           # Available Resources:
           - A CSV file 'open_issues.csv' in the current directory contains all open issues with summaries. Use this to find duplicate or related issues.
           - Use 'gh label list -L 300' to get all existing labels in the repository. ONLY use labels that exist.
-          - Use 'gh issue view $ISSUE_NUMBER' to get full issue details.
+          - Use 'gh issue view ${{ env.ISSUE_NUMBER }}' to get full issue details.
           - Use 'gh search issues' to search for related issues if needed.
           - Other read-only operations are available via 'gh' client or `git` command.
 
@@ -90,7 +113,7 @@ jobs:
           # Instructions:
 
           1. First, get the full issue details:
-             - Run 'gh issue view $ISSUE_NUMBER' to get the issue body and metadata.
+             - Run 'gh issue view ${{ env.ISSUE_NUMBER }}' to get the issue body and metadata.
 
           2. Get all existing labels:
              - Run 'gh label list -L 300' to get all valid labels.
@@ -101,7 +124,7 @@ jobs:
           4. Analyze the issue:
              - Determine the issue type (bug, enhancement, question, etc.)
              - Identify the relevant feature area(s)
-             - Find up to 3 potentially duplicates or existing issues that are closely related to this issue ($ISSUE_NUMBER).
+             - Find up to 3 potentially duplicates or existing issues that are closely related to this issue (${{ env.ISSUE_NUMBER }}).
                Its fine to also suggest 0 issues if no related issues or duplicates are found.
 
           5. For BUG issues specifically:
@@ -137,7 +160,7 @@ jobs:
           - Do NOT attempt to post comments, edit issues, or perform any write operations - they will fail.
           - Do NOT run test, lint, or build commands (the dev environment is not setup!).
           - Focus on analysis and generating the output files.
-          " --force --model "$MODEL" --output-format=text
+          " --force --model "${{ env.MODEL }}" --output-format=text
 
       - name: Upload triage artifacts
         uses: actions/upload-artifact@v5
@@ -160,10 +183,11 @@ jobs:
 
     steps:
       - name: Remove 'ai-review' label
+        if: github.event_name == 'issues'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh issue edit ${{ github.event.issue.number }} --remove-label "ai-review" --repo ${{ github.repository }}
+          gh issue edit ${{ env.ISSUE_NUMBER }} --remove-label "ai-review" --repo ${{ github.repository }}
 
       - name: Download triage artifacts
         id: download
@@ -187,7 +211,7 @@ jobs:
             # Skip empty lines
             if [ -n "$label" ]; then
               echo "Adding label: $label"
-              gh issue edit ${{ github.event.issue.number }} --add-label "$label" --repo ${{ github.repository }} || echo "Warning: Failed to add label '$label'"
+              gh issue edit ${{ env.ISSUE_NUMBER }} --add-label "$label" --repo ${{ github.repository }} || echo "Warning: Failed to add label '$label'"
             fi
           done < labels.txt
 
@@ -200,15 +224,15 @@ jobs:
             echo "Warning: comment.txt not found, skipping comment"
             exit 0
           fi
-          gh issue comment ${{ github.event.issue.number }} --body-file comment.txt --repo ${{ github.repository }}
+          gh issue comment ${{ env.ISSUE_NUMBER }} --body-file comment.txt --repo ${{ github.repository }}
 
       - name: Post failure notice
         if: steps.download.outcome == 'failure'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh issue comment ${{ github.event.issue.number }} --body "⚠️ **AI Triage Failed**
+          gh issue comment ${{ env.ISSUE_NUMBER }} --body "⚠️ **AI Triage Failed**
 
           The AI triage job failed to complete. Please check the [workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) for details.
 
-          You can retry by adding the \`ai-review\` label again." --repo ${{ github.repository }}
+          You can retry by adding the \`ai-review\` label again or manually triggering the workflow." --repo ${{ github.repository }}
