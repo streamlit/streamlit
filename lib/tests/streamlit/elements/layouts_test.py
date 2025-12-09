@@ -154,7 +154,7 @@ class ColumnsTest(DeltaGeneratorTestCase):
         assert len(all_deltas) == 4
         assert (
             horizontal_container.add_block.flex_container.gap_config.WhichOneof(
-                "gap_spec"
+                "gap_value"
             )
             == "gap_size"
         )
@@ -165,7 +165,7 @@ class ColumnsTest(DeltaGeneratorTestCase):
 
         for col_block in columns_blocks:
             assert (
-                col_block.add_block.column.gap_config.WhichOneof("gap_spec")
+                col_block.add_block.column.gap_config.WhichOneof("gap_value")
                 == "gap_size"
             )
             assert col_block.add_block.column.gap_config.gap_size == GapSize.SMALL
@@ -185,7 +185,7 @@ class ColumnsTest(DeltaGeneratorTestCase):
         assert len(all_deltas) == 4
         assert (
             horizontal_container.add_block.flex_container.gap_config.WhichOneof(
-                "gap_spec"
+                "gap_value"
             )
             == "gap_size"
         )
@@ -196,7 +196,7 @@ class ColumnsTest(DeltaGeneratorTestCase):
 
         for col_block in columns_blocks:
             assert (
-                col_block.add_block.column.gap_config.WhichOneof("gap_spec")
+                col_block.add_block.column.gap_config.WhichOneof("gap_value")
                 == "gap_size"
             )
             assert col_block.add_block.column.gap_config.gap_size == GapSize.MEDIUM
@@ -216,7 +216,7 @@ class ColumnsTest(DeltaGeneratorTestCase):
         assert len(all_deltas) == 4
         assert (
             horizontal_container.add_block.flex_container.gap_config.WhichOneof(
-                "gap_spec"
+                "gap_value"
             )
             == "gap_size"
         )
@@ -227,7 +227,7 @@ class ColumnsTest(DeltaGeneratorTestCase):
 
         for col_block in columns_blocks:
             assert (
-                col_block.add_block.column.gap_config.WhichOneof("gap_spec")
+                col_block.add_block.column.gap_config.WhichOneof("gap_value")
                 == "gap_size"
             )
             assert col_block.add_block.column.gap_config.gap_size == GapSize.LARGE
@@ -246,7 +246,7 @@ class ColumnsTest(DeltaGeneratorTestCase):
         # "none" gap arg
         assert (
             horizontal_container.add_block.flex_container.gap_config.WhichOneof(
-                "gap_spec"
+                "gap_value"
             )
             == "gap_size"
         )
@@ -257,7 +257,7 @@ class ColumnsTest(DeltaGeneratorTestCase):
 
         for col_block in columns_blocks:
             assert (
-                col_block.add_block.column.gap_config.WhichOneof("gap_spec")
+                col_block.add_block.column.gap_config.WhichOneof("gap_value")
                 == "gap_size"
             )
             assert col_block.add_block.column.gap_config.gap_size == GapSize.NONE
@@ -265,7 +265,7 @@ class ColumnsTest(DeltaGeneratorTestCase):
     @parameterized.expand(
         [
             "invalid",
-            5,
+            -1,
             "5rem",
             "10px",
         ]
@@ -316,6 +316,25 @@ class ColumnsTest(DeltaGeneratorTestCase):
         """Test that invalid width values raise an error"""
         with pytest.raises(StreamlitAPIException):
             st.columns(3, width=invalid_width)
+
+    def test_columns_with_pixel_gap(self):
+        """Test that columns works correctly with pixel gap."""
+        st.columns(3, gap=10)
+
+        all_deltas = self.get_all_deltas_from_queue()
+        horizontal_block = all_deltas[0]
+        assert horizontal_block.add_block.flex_container.gap_config.pixel_gap == 10
+
+    def test_columns_with_zero_gap(self):
+        """Test that columns works correctly with 0 gap."""
+        st.columns(3, gap=0)
+
+        all_deltas = self.get_all_deltas_from_queue()
+        horizontal_block = all_deltas[0]
+        assert (
+            horizontal_block.add_block.flex_container.gap_config.gap_size
+            == GapSize.NONE
+        )
 
 
 class ExpanderTest(DeltaGeneratorTestCase):
@@ -409,6 +428,8 @@ class ExpanderTest(DeltaGeneratorTestCase):
 
 
 class ContainerTest(DeltaGeneratorTestCase):
+    """Test st.container."""
+
     def test_border_parameter(self):
         """Test that it can be called with border parameter"""
         st.container(border=True)
@@ -637,6 +658,24 @@ class ContainerTest(DeltaGeneratorTestCase):
 
         with pytest.raises(StreamlitInvalidVerticalAlignmentError):
             st.container(horizontal=True, vertical_alignment=vertical_alignment)
+
+    def test_container_with_pixel_gap(self):
+        """Test that container works correctly with pixel gap."""
+        st.container(gap=10)
+
+        all_deltas = self.get_all_deltas_from_queue()
+        container_block = all_deltas[0]
+        assert container_block.add_block.flex_container.gap_config.pixel_gap == 10
+
+    def test_container_with_zero_gap(self):
+        """Test that container works correctly with 0 gap."""
+        st.container(gap=0)
+
+        all_deltas = self.get_all_deltas_from_queue()
+        container_block = all_deltas[0]
+        assert (
+            container_block.add_block.flex_container.gap_config.gap_size == GapSize.NONE
+        )
 
 
 class PopoverContainerTest(DeltaGeneratorTestCase):

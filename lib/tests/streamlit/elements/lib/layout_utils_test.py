@@ -22,6 +22,7 @@ from parameterized import parameterized
 from streamlit.elements.lib.layout_utils import (
     SpaceSize,
     get_align,
+    get_gap_config,
     get_gap_size,
     get_height_config,
     get_justify,
@@ -41,7 +42,7 @@ from streamlit.errors import (
     StreamlitInvalidWidthError,
 )
 from streamlit.proto.Block_pb2 import Block
-from streamlit.proto.GapSize_pb2 import GapSize
+from streamlit.proto.GapSize_pb2 import GapConfig, GapSize
 
 
 class LayoutUtilsTest(unittest.TestCase):
@@ -351,3 +352,36 @@ class LayoutUtilsTest(unittest.TestCase):
         assert not config.use_content
         assert not config.use_stretch
         assert config.pixel_height == 0
+
+    def test_get_gap_config(self):
+        """Test get_gap_config."""
+        # Test None
+        assert get_gap_config(None, "st.container") == GapConfig(gap_size=GapSize.NONE)
+
+        # Test named gaps
+        assert get_gap_config("small", "st.container") == GapConfig(
+            gap_size=GapSize.SMALL
+        )
+        assert get_gap_config("medium", "st.container") == GapConfig(
+            gap_size=GapSize.MEDIUM
+        )
+        assert get_gap_config("large", "st.container") == GapConfig(
+            gap_size=GapSize.LARGE
+        )
+
+        # Test integer gaps
+        assert get_gap_config(0, "st.container") == GapConfig(gap_size=GapSize.NONE)
+        assert get_gap_config(8, "st.container") == GapConfig(pixel_gap=8)
+        assert get_gap_config(1000, "st.container") == GapConfig(pixel_gap=1000)
+
+        # Test invalid gaps
+        with pytest.raises(StreamlitInvalidColumnGapError):
+            get_gap_config(-1, "st.container")
+        with pytest.raises(StreamlitInvalidColumnGapError):
+            get_gap_config(2000, "st.container")
+        with pytest.raises(StreamlitInvalidColumnGapError):
+            get_gap_config(True, "st.container")
+        with pytest.raises(StreamlitInvalidColumnGapError):
+            get_gap_config(1.5, "st.container")
+        with pytest.raises(StreamlitInvalidColumnGapError):
+            get_gap_config("weird", "st.container")
