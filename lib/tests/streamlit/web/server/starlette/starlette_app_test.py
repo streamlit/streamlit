@@ -303,7 +303,7 @@ def test_media_endpoint_supports_head_requests(
 def test_media_endpoint_no_content_encoding_for_video(
     starlette_client: tuple[TestClient, _DummyRuntime],
 ) -> None:
-    """Ensure video files don't have Content-Encoding header (bypasses gzip middleware)."""
+    """Ensure video files are not gzip-compressed."""
     client, runtime = starlette_client
     storage = runtime.media_file_mgr._storage
     file_id = storage.load_and_get_id(
@@ -317,14 +317,15 @@ def test_media_endpoint_no_content_encoding_for_video(
     response = client.get(media_url)
 
     assert response.status_code == 200
-    # Media routes bypass gzip middleware, so no Content-Encoding header
-    assert response.headers.get("Content-Encoding") is None
+    # Media routes use Content-Encoding: identity to prevent gzip compression.
+    # Both None and "identity" indicate no encoding is applied.
+    assert response.headers.get("Content-Encoding") in (None, "identity")
 
 
 def test_media_endpoint_no_content_encoding_for_audio(
     starlette_client: tuple[TestClient, _DummyRuntime],
 ) -> None:
-    """Ensure audio files don't have Content-Encoding header (bypasses gzip middleware)."""
+    """Ensure audio files are not gzip-compressed."""
     client, runtime = starlette_client
     storage = runtime.media_file_mgr._storage
     file_id = storage.load_and_get_id(
@@ -338,14 +339,15 @@ def test_media_endpoint_no_content_encoding_for_audio(
     response = client.get(media_url)
 
     assert response.status_code == 200
-    # Media routes bypass gzip middleware, so no Content-Encoding header
-    assert response.headers.get("Content-Encoding") is None
+    # Media routes use Content-Encoding: identity to prevent gzip compression.
+    # Both None and "identity" indicate no encoding is applied.
+    assert response.headers.get("Content-Encoding") in (None, "identity")
 
 
 def test_media_endpoint_no_content_encoding_for_range_requests(
     starlette_client: tuple[TestClient, _DummyRuntime],
 ) -> None:
-    """Ensure video range requests don't have Content-Encoding header."""
+    """Ensure video range requests are not gzip-compressed."""
     client, runtime = starlette_client
     storage = runtime.media_file_mgr._storage
     file_id = storage.load_and_get_id(
@@ -359,8 +361,8 @@ def test_media_endpoint_no_content_encoding_for_range_requests(
     response = client.get(media_url, headers={"Range": "bytes=0-4"})
 
     assert response.status_code == HTTPStatus.PARTIAL_CONTENT
-    # Media routes bypass gzip middleware, so no Content-Encoding header
-    assert response.headers.get("Content-Encoding") is None
+    # Range requests for media don't include Content-Encoding
+    assert response.headers.get("Content-Encoding") in (None, "identity")
 
 
 def test_upload_put_adds_file(
