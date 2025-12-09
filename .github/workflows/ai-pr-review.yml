@@ -182,7 +182,7 @@ jobs:
           You can retry by adding the 'ai-review' label again or manually triggering the workflow." --repo ${{ github.repository }}
 
       - name: Apply label based on verdict
-        if: steps.download.outcome == 'success'
+        if: steps.download.outcome == 'success' && steps.post_review.outcome == 'success'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
