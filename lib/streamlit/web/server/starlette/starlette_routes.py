@@ -331,12 +331,15 @@ def create_media_routes(
 
         headers: dict[str, str] = {
             "X-Content-Type-Options": "nosniff",
-            # Prevent GZip middleware from compressing media files.
-            # Audio/video elements in browsers (especially Firefox) fail when
-            # binary media content is gzip-compressed. Setting Content-Encoding
-            # tells GZipMiddleware to skip compression for this response.
-            "Content-Encoding": "identity",
         }
+
+        # Prevent GZip middleware from compressing audio/video files.
+        # Audio/video elements in browsers (especially Firefox) fail when
+        # streamed binary content is gzip-compressed. Setting Content-Encoding
+        # tells GZipMiddleware to skip compression for this response.
+        mimetype = media_file.mimetype or ""
+        if mimetype.startswith(("audio/", "video/")):
+            headers["Content-Encoding"] = "identity"
 
         if media_file.kind == MediaFileKind.DOWNLOADABLE:
             filename = media_file.filename

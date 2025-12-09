@@ -161,10 +161,13 @@ def create_starlette_app(runtime: Runtime) -> Starlette:
         session_cookie="_streamlit_session",
     )
 
-    # Add GZip compression middleware
+    # Add GZip compression middleware.
     # TODO(lukasmasuch): Validate the performance gain of GZip compression by comparing
     # response sizes and latency between Tornado (compress_response=True) and Starlette.
     # Consider making this configurable or adjusting minimum_size threshold if needed.
+    # Note: Media routes set Content-Encoding: identity to prevent compression,
+    # as audio/video elements in browsers (especially Firefox) fail when binary
+    # media content is gzip-compressed.
     from starlette.middleware.gzip import GZipMiddleware
 
     app.add_middleware(
