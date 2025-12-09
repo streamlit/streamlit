@@ -21,9 +21,6 @@ import json
 from typing import TYPE_CHECKING, Any, Final, cast
 from urllib.parse import urlparse
 
-from starlette.responses import RedirectResponse, Response
-from starlette.routing import Route
-
 from streamlit.auth_util import (
     AuthCache,
     decode_provider_token,
@@ -36,6 +33,10 @@ from streamlit.url_util import make_url_path
 from streamlit.web.server.oauth_authlib_routes import auth_cache
 from streamlit.web.server.server_util import AUTH_COOKIE_NAME, get_cookie_secret
 from streamlit.web.server.starlette.starlette_app_utils import create_signed_value
+
+if TYPE_CHECKING:
+    from starlette.responses import RedirectResponse, Response
+    from starlette.routing import Route
 
 # Auth route path constants (without base URL prefix)
 ROUTE_AUTH_LOGIN: Final = "auth/login"
@@ -131,6 +132,8 @@ class _AuthlibConfig(dict[str, Any]):
 
 
 async def _redirect_to_base(base_url: str) -> RedirectResponse:
+    from starlette.responses import RedirectResponse
+
     return RedirectResponse(make_url_path(base_url, "/"), status_code=302)
 
 
@@ -245,6 +248,8 @@ async def _auth_login(request: Request, base_url: str) -> Response:
         response = await client.authorize_redirect(request, redirect_uri)
         return cast("Response", response)
     except Exception as exc:  # pragma: no cover - error path
+        from starlette.responses import Response
+
         _LOGGER.warning("Error during authentication.", exc_info=True)
         return Response(str(exc), status_code=400)
 
@@ -303,6 +308,8 @@ async def _auth_callback(request: Request, base_url: str) -> Response:
 
 
 def get_auth_routes(base_url: str) -> list[Route]:
+    from starlette.routing import Route
+
     async def login(request: Request) -> Response:
         return await _auth_login(request, base_url)
 
