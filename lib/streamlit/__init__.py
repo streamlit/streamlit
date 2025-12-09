@@ -90,7 +90,7 @@ _dg_singleton = _DeltaGeneratorSingleton(
 _main: _DeltaGenerator = _dg_singleton._main_dg
 sidebar: _DeltaGenerator = _dg_singleton._sidebar_dg
 _event: _DeltaGenerator = _dg_singleton._event_dg
-_bottom: _DeltaGenerator = _dg_singleton._bottom_dg
+bottom: _DeltaGenerator = _dg_singleton._bottom_dg
 
 
 from streamlit.elements.dialog_decorator import dialog_decorator as _dialog_decorator

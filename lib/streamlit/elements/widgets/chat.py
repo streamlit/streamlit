@@ -940,8 +940,13 @@ class ChatMixin:
         # Use bottom position if chat input is within the main container
         # either directly or within a vertical container. If it has any
         # other container types as parents, we use inline position.
+        # If already in the bottom container, render inline since we're
+        # already at the bottom.
         ancestor_block_types = set(self.dg._active_dg._ancestor_block_types)
-        if (
+        if self.dg._active_dg._root_container == RootContainer.BOTTOM:
+            # Already in bottom container - render inline
+            position = "inline"
+        elif (
             self.dg._active_dg._root_container == RootContainer.MAIN
             and not ancestor_block_types
         ):

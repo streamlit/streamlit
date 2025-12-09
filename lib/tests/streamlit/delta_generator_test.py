@@ -125,6 +125,20 @@ class DeltaGeneratorTest(DeltaGeneratorTestCase):
         ):
             st.sidebar.echo()
 
+    def test_bottom_is_public_api(self):
+        """Test that st.bottom is accessible as a public API."""
+        # st.bottom should be a DeltaGenerator, accessible like st.sidebar
+        assert hasattr(st, "bottom")
+        assert isinstance(st.bottom, DeltaGenerator)
+
+    def test_bottom_nonexistent_method(self):
+        """Test that st.bottom raises error for nonexistent methods."""
+        with pytest.raises(
+            StreamlitAPIException,
+            match="Method `echo\\(\\)` does not exist for `st\\.bottom`\\. Did you mean `st\\.echo\\(\\)`\\?",
+        ):
+            st.bottom.echo()
+
     def set_widget_requires_args(self):
         st.text_input()
         c = self.get_delta_from_queue().new_element.exception

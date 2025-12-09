@@ -1956,6 +1956,12 @@ class ElementTree(Block):
         return s
 
     @property
+    def bottom(self) -> Block:
+        b = self[3]  # BOTTOM is index 3 (MAIN=0, SIDEBAR=1, EVENT=2, BOTTOM=3)
+        assert isinstance(b, Block)
+        return b
+
+    @property
     def session_state(self) -> SafeSessionState:
         assert self._runner is not None
         return self._runner.session_state

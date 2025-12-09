@@ -452,6 +452,19 @@ class AppTest:
         return self._tree.sidebar
 
     @property
+    def bottom(self) -> Block:
+        """Sequence of all elements within ``st.bottom``.
+
+        Returns
+        -------
+        Block
+            A container of elements. Block can be queried for elements in the
+            same manner as ``AppTest``. For example, ``Block.button`` will
+            return all ``st.button`` within the bottom container.
+        """
+        return self._tree.bottom
+
+    @property
     def button(self) -> WidgetList[Button]:
         """Sequence of all ``st.button`` and ``st.form_submit_button`` widgets.
 

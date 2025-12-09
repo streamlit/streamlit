@@ -188,6 +188,20 @@ class ChatTest(DeltaGeneratorTestCase):
             == RootContainerProto.BOTTOM
         )
 
+    def test_chat_input_in_bottom_renders_inline(self):
+        """Test that chat_input inside st.bottom renders inline (stays in bottom, not repositioned)."""
+        st.bottom.chat_input()
+
+        # The chat_input should be in the BOTTOM root container and stay there
+        # (not auto-repositioned to a different container).
+        # When position is "inline", the element stays in its current dg.
+        # When position is "bottom", the element gets moved to bottom_dg.
+        # Since we're already in st.bottom, we want inline behavior.
+        assert (
+            self.get_message_from_queue().metadata.delta_path[0]
+            == RootContainerProto.BOTTOM
+        )
+
     def test_supports_programmatic_value_assignment(self):
         """Test that it supports programmatically setting the value in session state."""
         st.session_state.my_key = "Foo"

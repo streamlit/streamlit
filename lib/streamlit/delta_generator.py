@@ -371,6 +371,11 @@ class DeltaGenerator(
                         f"Method `{name}()` does not exist for "
                         f"`st.sidebar`. Did you mean `st.{name}()`?"
                     )
+                elif self._root_container == RootContainer.BOTTOM:
+                    message = (
+                        f"Method `{name}()` does not exist for "
+                        f"`st.bottom`. Did you mean `st.{name}()`?"
+                    )
                 else:
                     message = (
                         f"Method `{name}()` does not exist for "
