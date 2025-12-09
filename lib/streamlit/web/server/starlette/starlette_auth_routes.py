@@ -35,8 +35,11 @@ from streamlit.web.server.server_util import AUTH_COOKIE_NAME, get_cookie_secret
 from streamlit.web.server.starlette.starlette_app_utils import create_signed_value
 
 if TYPE_CHECKING:
+    from starlette.requests import Request
     from starlette.responses import RedirectResponse, Response
     from starlette.routing import Route
+
+_LOGGER: Final = get_logger(__name__)
 
 # Auth route path constants (without base URL prefix)
 ROUTE_AUTH_LOGIN: Final = "auth/login"
@@ -71,12 +74,6 @@ class _AsyncAuthCache:
 # the underlying auth_cache in oauth_authlib_routes.py would need to be made
 # per-runtime rather than module-level.
 _STARLETTE_AUTH_CACHE: Final = _AsyncAuthCache(auth_cache)
-
-
-if TYPE_CHECKING:
-    from starlette.requests import Request
-
-_LOGGER: Final = get_logger(__name__)
 
 
 def _normalize_nested_config(value: Any) -> Any:
