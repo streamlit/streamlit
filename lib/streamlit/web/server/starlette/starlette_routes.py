@@ -521,7 +521,7 @@ def create_component_routes(
     """Create custom component route handlers."""
     import anyio
     from starlette.exceptions import HTTPException
-    from starlette.responses import Response, StreamingResponse
+    from starlette.responses import Response
     from starlette.routing import Route
 
     async def _component_endpoint(request: Request) -> Response:
@@ -550,9 +550,7 @@ def create_component_routes(
         except OSError as exc:
             raise HTTPException(status_code=404, detail="read error") from exc
 
-        response = StreamingResponse(
-            iter([data]), media_type=guess_content_type(abspath)
-        )
+        response = Response(content=data, media_type=guess_content_type(abspath))
         await _set_cors_headers(request, response)
 
         if not filename or filename.endswith(".html"):
@@ -586,7 +584,7 @@ def create_bidi_component_routes(
 ) -> list[Any]:
     """Create bidirectional component route handlers."""
     import anyio
-    from starlette.responses import PlainTextResponse, Response, StreamingResponse
+    from starlette.responses import PlainTextResponse, Response
     from starlette.routing import Route
 
     async def _bidi_component_endpoint(request: Request) -> Response:
@@ -629,9 +627,7 @@ def create_bidi_component_routes(
             )
             return await _text_response("read error", 404)
 
-        response = StreamingResponse(
-            iter([data]), media_type=guess_content_type(abspath)
-        )
+        response = Response(content=data, media_type=guess_content_type(abspath))
         await _set_cors_headers(request, response)
 
         if filename.endswith(".html"):
