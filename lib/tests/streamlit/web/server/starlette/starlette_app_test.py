@@ -360,10 +360,10 @@ def test_media_endpoint_no_identity_encoding_for_non_media(
     assert response.headers.get("Content-Encoding") is None
 
 
-def test_media_endpoint_no_identity_encoding_for_range_requests(
+def test_media_endpoint_sets_identity_encoding_for_range_requests(
     starlette_client: tuple[TestClient, _DummyRuntime],
 ) -> None:
-    """Ensure range requests don't have Content-Encoding: identity."""
+    """Ensure video range requests also have Content-Encoding: identity."""
     client, runtime = starlette_client
     storage = runtime.media_file_mgr._storage
     file_id = storage.load_and_get_id(
@@ -377,8 +377,8 @@ def test_media_endpoint_no_identity_encoding_for_range_requests(
     response = client.get(media_url, headers={"Range": "bytes=0-4"})
 
     assert response.status_code == HTTPStatus.PARTIAL_CONTENT
-    # Range requests should NOT have identity encoding
-    assert response.headers.get("Content-Encoding") is None
+    # Range requests for video should also have identity encoding for consistency
+    assert response.headers.get("Content-Encoding") == "identity"
 
 
 def test_upload_put_adds_file(

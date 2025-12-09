@@ -347,6 +347,14 @@ def create_media_routes(
                 disposition = f"filename*=utf-8''{quote(filename)}"
             headers["Content-Disposition"] = f"attachment; {disposition}"
 
+        # Prevent GZip middleware from compressing audio/video files.
+        # Audio/video elements in browsers (especially Firefox in iframe
+        # contexts with CSP, and WebKit) fail when binary content is gzip-compressed.
+        # Setting Content-Encoding tells GZipMiddleware to skip compression.
+        mimetype = media_file.mimetype or ""
+        if mimetype.startswith(("audio/", "video/")):
+            headers["Content-Encoding"] = "identity"
+
         # Ensure support for range requests (e.g. for video files)
         headers["Accept-Ranges"] = "bytes"
         content = media_file.content
@@ -372,14 +380,6 @@ def create_media_routes(
             headers["Content-Length"] = str(len(content))
         else:
             headers["Content-Length"] = str(content_length)
-            # Prevent GZip middleware from compressing audio/video files.
-            # Audio/video elements in browsers (especially Firefox in iframe
-            # contexts with CSP) fail when binary content is gzip-compressed.
-            # Only set for non-range requests (full file fetch); range requests
-            # for seeking/buffering work correctly without this header.
-            mimetype = media_file.mimetype or ""
-            if mimetype.startswith(("audio/", "video/")):
-                headers["Content-Encoding"] = "identity"
 
         response = Response(
             content,
