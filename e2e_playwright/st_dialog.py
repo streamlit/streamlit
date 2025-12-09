@@ -61,6 +61,16 @@ if st.button("Open Dialog without Images"):
     simple_dialog()
 
 
+@st.dialog("Dialog with Icon", icon="🌟")
+def dialog_with_icon() -> None:
+    st.write("This dialog title renders a star icon.")
+    st.text_input("Icon dialog input", key="icon-dialog-input")
+
+
+if st.button("Open Dialog with Icon"):
+    dialog_with_icon()
+
+
 @st.dialog("Medium-width Dialog", width="medium")
 def medium_width_dialog() -> None:
     st.write("This dialog has a medium width.")

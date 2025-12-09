@@ -46,6 +46,10 @@ def open_dialog_without_images(app: Page):
     click_button(app, "Open Dialog without Images")
 
 
+def open_dialog_with_icon(app: Page):
+    click_button(app, "Open Dialog with Icon")
+
+
 def open_large_width_dialog(app: Page):
     click_button(app, "Open large-width Dialog")
 
@@ -282,6 +286,15 @@ def test_dialog_displays_correctly(app: Page, assert_snapshot: ImageCompareFunct
     submit_button = get_button(dialog, "Submit")
     submit_button.hover()
     assert_snapshot(dialog, name="st_dialog-default")
+
+
+def test_dialog_icon_is_displayed(app: Page):
+    """Ensure dialogs render the optional icon next to the title."""
+    open_dialog_with_icon(app)
+    dialog = app.get_by_role("dialog")
+    icon = dialog.get_by_test_id("stDialogIcon")
+    expect(icon).to_be_visible()
+    expect(icon).to_have_text("🌟")
 
 
 def test_large_width_dialog_displays_correctly(
