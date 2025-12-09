@@ -12,12 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-Streamlit app for testing server endpoints and behavior.
-
-This app is used to test various server aspects that are important
-for ensuring parity between Tornado and Starlette server implementations.
-"""
+"""Streamlit app for testing server endpoints and behavior."""
 
 import base64
 
