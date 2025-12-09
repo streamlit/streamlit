@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import json
+import re
 from collections.abc import Callable, Mapping
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Any, Final, TypedDict, cast
@@ -87,7 +88,7 @@ def get_secrets_auth_section() -> AttrDict:
     auth_section = AttrDict({})
     """Get the 'auth' section of the secrets.toml."""
     if secrets_singleton.load_if_toml_exists():
-        auth_section = cast("AttrDict", secrets_singleton.get("auth"))
+        auth_section = cast("AttrDict", secrets_singleton.get("auth", AttrDict({})))
 
     return auth_section
 
@@ -239,15 +240,16 @@ def _set_split_cookie(
         chunk = value[i : i + chunk_size]
         chunks.append(chunk)
 
-    # Store number of chunks in a metadata cookie
-    set_single_cookie_fn(f"{cookie_name}_count", str(len(chunks)))
+    if len(chunks) == 1:
+        set_single_cookie_fn(cookie_name, chunks[0])
+        return
 
-    # Store first chunk in the main cookie
-    set_single_cookie_fn(cookie_name, chunks[0])
+    # Store count in the main cookie
+    set_single_cookie_fn(cookie_name, f"chunks-{len(chunks)}")
 
     # Store remaining chunks as cookie_name_1, cookie_name_2, etc.
-    for i in range(1, len(chunks)):
-        chunk_name = f"{cookie_name}_{i}"
+    for i in range(len(chunks)):
+        chunk_name = f"{cookie_name}_{i + 1}"
         set_single_cookie_fn(chunk_name, chunks[i])
 
     _LOGGER.info(
@@ -255,6 +257,9 @@ def _set_split_cookie(
         cookie_name,
         len(chunks),
     )
+
+
+chunks_regex = re.compile(rb"chunks-(\d+)")
 
 
 def get_cookie_with_chunks(
@@ -275,33 +280,26 @@ def get_cookie_with_chunks(
     -------
         Cookie value as bytes, or None if not found
     """
-    # Check if there's a count cookie indicating split cookies
-    count_cookie_name = f"{cookie_name}_count"
-    count_value = get_single_cookie_fn(count_cookie_name)
+    cookie_value = get_single_cookie_fn(cookie_name)
+    if cookie_value is None:
+        return cookie_value
 
-    # If no count cookie, just return the main cookie
-    if count_value is None:
-        return get_single_cookie_fn(cookie_name)
+    match = chunks_regex.match(cookie_value)
+    if match is None:
+        return cookie_value
 
     # Parse chunk count
     try:
-        chunk_count = int(count_value)
+        chunk_count = int(match.group(1))
     except (ValueError, TypeError):
         _LOGGER.exception("Invalid chunk count for cookie '%s'", cookie_name)
         return None
 
     # Reconstruct the original value from chunks
-    # First chunk is in the main cookie
     chunks = []
-    main_chunk = get_single_cookie_fn(cookie_name)
-    if main_chunk is None:
-        _LOGGER.exception("Missing main cookie (chunk 0) for '%s'", cookie_name)
-        return None
-    chunks.append(main_chunk)
 
-    # Remaining chunks are in cookie_name_1, cookie_name_2, etc.
-    for i in range(1, chunk_count):
-        chunk_name = f"{cookie_name}_{i}"
+    for i in range(chunk_count):
+        chunk_name = f"{cookie_name}_{i + 1}"
         chunk_value = get_single_cookie_fn(chunk_name)
         if chunk_value is None:
             _LOGGER.exception("Missing chunk %d for cookie '%s'", i, cookie_name)
@@ -327,24 +325,24 @@ def clear_cookie_and_chunks(
         clear_single_cookie_fn: Function to clear a single cookie (cookie_name)
         cookie_name: Name of the cookie
     """
-    # Clear the main cookie (always exists)
+    cookie_value = get_single_cookie_fn(cookie_name)
     clear_single_cookie_fn(cookie_name)
+    if cookie_value is None:
+        return
 
-    # Check if there's a count cookie indicating split cookies
-    count_cookie_name = f"{cookie_name}_count"
-    count_value = get_single_cookie_fn(count_cookie_name)
+    match = chunks_regex.match(cookie_value)
+    if match is None:
+        return
 
-    if count_value:
-        try:
-            chunk_count = int(count_value)
-            # Clear additional chunk cookies (starting from 1, since main cookie is chunk 0)
-            for i in range(1, chunk_count):
-                clear_single_cookie_fn(f"{cookie_name}_{i}")
-            # Clear the count cookie
-            clear_single_cookie_fn(count_cookie_name)
-        except (ValueError, TypeError):
-            # If count is invalid, just clear the count cookie
-            clear_single_cookie_fn(count_cookie_name)
+    try:
+        chunk_count = int(match.group(1))
+        # Clear additional chunk cookies (starting from 1, since main cookie is chunk 0)
+        for i in range(1, chunk_count + 1):
+            clear_single_cookie_fn(f"{cookie_name}_{i}")
+    except (ValueError, TypeError):
+        # If count is invalid, but we already cleared the main cookie
+        # so we can ignore it
+        pass
 
 
 def validate_auth_credentials(provider: str) -> None:

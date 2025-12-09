@@ -227,7 +227,6 @@ class AuthCallbackHandlerTest(tornado.testing.AsyncHTTPTestCase):
             },
             {
                 "access_token": "test_access_token",
-                "refresh_token": "test_refresh_token",
                 "id_token": "test_id_token",
             },
         )

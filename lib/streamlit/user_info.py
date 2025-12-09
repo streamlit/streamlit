@@ -20,6 +20,7 @@ from typing import (
     Any,
     Final,
     NoReturn,
+    cast,
 )
 
 from streamlit import config, logger, runtime
@@ -42,7 +43,7 @@ from streamlit.runtime.scriptrunner_utils.script_run_context import (
 from streamlit.url_util import make_url_path
 
 if TYPE_CHECKING:
-    from streamlit.runtime.scriptrunner_utils.script_run_context import UserInfo
+    from streamlit.runtime.scriptrunner_utils.script_run_context import UserInfoType
 
 
 _LOGGER: Final = logger.get_logger(__name__)
@@ -361,7 +362,7 @@ def generate_login_redirect_url(provider: str) -> str:
     return f"{login_path}?provider={provider_token}"
 
 
-def _get_user_info() -> UserInfo:
+def _get_user_info() -> UserInfoType:
     ctx = _get_script_run_ctx()
     if ctx is None:
         _LOGGER.warning(
@@ -480,13 +481,13 @@ class TokensProxy(Mapping[str, str]):
         except KeyError:
             raise AttributeError(f'Token "{key}" is not exposed or does not exist.')
 
-    def __setattr__(self, name: str, value: str | None) -> None:
+    def __setattr__(self, name: str, value: Any) -> None:
         if name.startswith("_"):
             super().__setattr__(name, value)
         else:
             raise StreamlitAPIException("st.user.tokens cannot be modified")
 
-    def __setitem__(self, name: str, value: str | None) -> None:
+    def __setitem__(self, name: str, value: Any) -> None:
         raise StreamlitAPIException("st.user.tokens cannot be modified")
 
     def __iter__(self) -> Iterator[str]:
@@ -496,7 +497,7 @@ class TokensProxy(Mapping[str, str]):
         return len(self._tokens)
 
 
-class UserInfoProxy(Mapping[str, str | bool | None]):
+class UserInfoProxy(Mapping[str, str | bool | TokensProxy | None]):
     """
     A read-only, dict-like object for accessing information about the current\
     user.
@@ -611,7 +612,7 @@ class UserInfoProxy(Mapping[str, str | bool | None]):
         if key == "tokens":
             return self.tokens
         try:
-            return _get_user_info()[key]
+            return cast("str | bool | None", _get_user_info()[key])
         except KeyError:
             raise KeyError(f'st.user has no key "{key}".')
 
@@ -619,7 +620,7 @@ class UserInfoProxy(Mapping[str, str | bool | None]):
         if key == "tokens":
             return self.tokens
         try:
-            return _get_user_info()[key]
+            return cast("str | bool | None", _get_user_info()[key])
         except KeyError:
             raise AttributeError(f'st.user has no attribute "{key}".')
 
@@ -635,7 +636,7 @@ class UserInfoProxy(Mapping[str, str | bool | None]):
     def __len__(self) -> int:
         return len(_get_user_info())
 
-    def to_dict(self) -> UserInfo:
+    def to_dict(self) -> UserInfoType:
         """
         Get user info as a dictionary.
 
@@ -654,7 +655,7 @@ class UserInfoProxy(Mapping[str, str | bool | None]):
     def tokens(self) -> TokensProxy:
         """Access exposed tokens via a dict-like object."""
         user_info = _get_user_info()
-        return TokensProxy(user_info.get("tokens", {}))
+        return TokensProxy(cast("dict[str, str]", user_info.get("tokens", {})))
 
 
 has_shown_experimental_user_warning = False
