@@ -28,6 +28,7 @@ if TYPE_CHECKING:
     from collections.abc import MutableMapping
 
     from starlette.responses import Response
+    from starlette.types import Receive, Scope, Send
 
 # Reserved paths that should return 404 instead of index.html fallback.
 _RESERVED_STATIC_PATH_SUFFIXES: Final = ("_stcore/health", "_stcore/host-config")
@@ -40,9 +41,11 @@ def create_streamlit_static_files(directory: str, base_url: str | None) -> Any:
     - SPA fallback (serving index.html on 404s for client-side routing)
     - Long-term caching of hashed assets
     - No-cache for HTML/manifest files
+    - Trailing slash redirect (301)
+    - Double-slash protection (403 for protocol-relative URL security)
     """
     from starlette.exceptions import HTTPException
-    from starlette.responses import FileResponse
+    from starlette.responses import FileResponse, RedirectResponse, Response
     from starlette.staticfiles import StaticFiles
 
     class _StreamlitStaticFiles(StaticFiles):
@@ -50,6 +53,43 @@ def create_streamlit_static_files(directory: str, base_url: str | None) -> Any:
             super().__init__(directory=directory, html=True)
             self._base_url = (base_url or "").strip("/")
             self._index_path = os.path.join(directory, "index.html")
+
+        async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+            """Handle incoming requests with security checks and redirects."""
+            if scope["type"] != "http":
+                await super().__call__(scope, receive, send)
+                return
+
+            path = scope.get("path", "")
+
+            # Security check: Block paths starting with double slash (protocol-relative
+            # URL protection). A path like //example.com could be misinterpreted as a
+            # protocol-relative URL if redirected, which is a security risk.
+            # This matches Tornado's behavior where such paths would escape the static
+            # directory and trigger a 403 Forbidden.
+            if path.startswith("//"):
+                response = Response(content="Forbidden", status_code=403)
+                await response(scope, receive, send)
+                return
+
+            # Handle trailing slash redirect: return
+            # 301 for paths with trailing slashes (except root "/"). We replicate this
+            # for consistent URL handling and to avoid duplicate content issues.
+            if len(path) > 1 and path.endswith("/"):
+                # Build redirect URL without trailing slash
+                redirect_path = path.rstrip("/")
+                query_string = scope.get("query_string", b"")
+                if query_string:
+                    redirect_path += "?" + query_string.decode("latin-1")
+                response = RedirectResponse(
+                    url=redirect_path,
+                    status_code=301,
+                    headers={"Cache-Control": "no-cache"},
+                )
+                await response(scope, receive, send)
+                return
+
+            await super().__call__(scope, receive, send)
 
         async def get_response(
             self, path: str, scope: MutableMapping[str, Any]
