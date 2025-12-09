@@ -29,6 +29,6 @@ message LinkButton {
   bool use_container_width = 8;
   string type = 9;
   string icon = 10;
-  string icon_position = 11;
-  string shortcut = 12;
+  string shortcut = 11;
+  string icon_position = 12;
 }

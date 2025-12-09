@@ -32,6 +32,6 @@ message DownloadButton {
   string icon = 10;
   bool ignore_rerun = 11;
   optional string deferred_file_id = 12;
-  string icon_position = 13;
-  string shortcut = 14;
+  string shortcut = 13;
+  string icon_position = 14;
 }

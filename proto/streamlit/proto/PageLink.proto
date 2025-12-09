@@ -28,6 +28,6 @@ message PageLink {
   optional bool use_container_width = 6;
   bool disabled = 7;
   bool external = 8;
-  string icon_position = 9;
-  string query_string = 10;
+  string query_string = 9;
+  string icon_position = 10;
 }
