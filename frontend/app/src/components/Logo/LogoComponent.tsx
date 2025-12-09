@@ -14,16 +14,21 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useContext } from "react"
+import React, { ReactElement, useCallback, useContext, useMemo } from "react"
 
 import { getLogger } from "loglevel"
 
 import {
   StyledLogo,
+  StyledLogoButton,
   StyledLogoLink,
 } from "@streamlit/app/src/components/Sidebar/styled-components"
 import { StreamlitEndpoints } from "@streamlit/connection"
-import { getCrossOriginAttribute, LibConfigContext } from "@streamlit/lib"
+import {
+  getCrossOriginAttribute,
+  LibConfigContext,
+  NavigationContext,
+} from "@streamlit/lib"
 import { Logo } from "@streamlit/protobuf"
 
 const LOG = getLogger("LogoComponent")
@@ -47,6 +52,23 @@ const LogoComponent = ({
   dataTestId = "stLogo",
 }: LogoComponentProps): ReactElement | null => {
   const { resourceCrossOriginMode } = useContext(LibConfigContext)
+  const { appPages, onPageChange, currentPageScriptHash } =
+    useContext(NavigationContext)
+
+  // Find the home page (the default page) and check if this is a multi-page app
+  const homePage = useMemo(
+    () => appPages.find(page => page.isDefault),
+    [appPages]
+  )
+  const isMultiPageApp = appPages.length > 1
+  const isOnHomePage = homePage?.pageScriptHash === currentPageScriptHash
+
+  const handleLogoClick = useCallback(() => {
+    // Only navigate if we're not already on the home page
+    if (homePage?.pageScriptHash && !isOnHomePage) {
+      onPageChange(homePage.pageScriptHash)
+    }
+  }, [homePage, onPageChange, isOnHomePage])
 
   if (!appLogo) {
     return null
@@ -87,6 +109,7 @@ const LogoComponent = ({
     />
   )
 
+  // If an explicit link is provided, use it (opens in new tab)
   if (appLogo.link) {
     return (
       <StyledLogoLink
@@ -97,6 +120,20 @@ const LogoComponent = ({
       >
         {logo}
       </StyledLogoLink>
+    )
+  }
+
+  // In multi-page apps without an explicit link, clicking the logo navigates to home page
+  // Only use the clickable button when not already on the home page
+  if (isMultiPageApp && homePage && !isOnHomePage) {
+    return (
+      <StyledLogoButton
+        onClick={handleLogoClick}
+        data-testid="stLogoLink"
+        aria-label="Navigate to home page"
+      >
+        {logo}
+      </StyledLogoButton>
     )
   }
 
