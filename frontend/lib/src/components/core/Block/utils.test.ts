@@ -20,6 +20,7 @@ import { BlockNode, ElementNode } from "~lib/AppNode"
 import { ScriptRunState } from "~lib/ScriptRunState"
 
 import {
+  backwardsCompatibleColumnGapConfig,
   backwardsCompatibleColumnGapSize,
   checkFlexContainerBackwardsCompatibile,
   convertKeyToClassName,
@@ -234,6 +235,56 @@ describe("backwardsCompatibleColumnGapSize", () => {
     expect(backwardsCompatibleColumnGapSize(columnProto)).toBe(
       streamlit.GapSize.LARGE
     )
+  })
+})
+
+describe("backwardsCompatibleColumnGapConfig", () => {
+  it("returns pixelGap when it exists", () => {
+    const columnProto = {
+      gapConfig: {
+        pixelGap: 10,
+      },
+    }
+    expect(backwardsCompatibleColumnGapConfig(columnProto)).toEqual({
+      pixelGap: 10,
+    })
+  })
+
+  it("returns gapSize when it exists", () => {
+    const columnProto = {
+      gapConfig: {
+        gapSize: streamlit.GapSize.MEDIUM,
+      },
+    }
+    expect(backwardsCompatibleColumnGapConfig(columnProto)).toEqual({
+      gapSize: streamlit.GapSize.MEDIUM,
+    })
+  })
+
+  it("prioritizes pixelGap over gapSize", () => {
+    const columnProto = {
+      gapConfig: {
+        pixelGap: 10,
+        gapSize: streamlit.GapSize.MEDIUM,
+      },
+    }
+    expect(backwardsCompatibleColumnGapConfig(columnProto)).toEqual({
+      pixelGap: 10,
+    })
+  })
+
+  it("falls back to gap string when gapConfig is missing", () => {
+    const columnProto = { gap: "large" }
+    expect(backwardsCompatibleColumnGapConfig(columnProto)).toEqual({
+      gapSize: streamlit.GapSize.LARGE,
+    })
+  })
+
+  it("defaults to SMALL when nothing is set", () => {
+    const columnProto = {}
+    expect(backwardsCompatibleColumnGapConfig(columnProto)).toEqual({
+      gapSize: streamlit.GapSize.SMALL,
+    })
   })
 })
 
