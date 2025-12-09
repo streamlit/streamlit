@@ -399,7 +399,8 @@ def create_media_routes(
         Route(
             _with_base(ROUTE_MEDIA, base_url),
             _media_endpoint,
-            methods=["GET"],
+            # HEAD is needed for browsers (especially WebKit) to probe media files
+            methods=["GET", "HEAD"],
         ),
         Route(
             _with_base(ROUTE_MEDIA, base_url),
