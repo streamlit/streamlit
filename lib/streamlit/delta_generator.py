@@ -444,6 +444,7 @@ class DeltaGenerator(
             raise NoSessionContext("Cursor is not set")
 
         return cursor.get_transient_cursor()
+
     @property
     def open(self) -> bool | None:
         """Return the open state of the block if applicable (e.g., for expanders).
