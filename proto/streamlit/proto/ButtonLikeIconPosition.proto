@@ -17,19 +17,10 @@
 syntax = "proto3";
 
 option java_package = "com.snowflake.apps.streamlit";
-option java_outer_classname = "PageLinkProto";
+option java_outer_classname = "ButtonLikeIconPositionProto";
 
-import "streamlit/proto/ButtonLikeIconPosition.proto";
-
-message PageLink {
-  string page = 1;
-  string label = 2;
-  string icon = 3;
-  string page_script_hash = 4;
-  string help = 5;
-  optional bool use_container_width = 6;
-  bool disabled = 7;
-  bool external = 8;
-  string query_string = 9;
-  ButtonLikeIconPosition icon_position = 10;
+// Shared enum for icon positions used by button-like elements.
+enum ButtonLikeIconPosition {
+  LEFT = 0;
+  RIGHT = 1;
 }

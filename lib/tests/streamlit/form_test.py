@@ -23,6 +23,7 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
+from streamlit.proto.IconPosition_pb2 import IconPosition
 from streamlit.runtime.state.session_state import RegisterWidgetResult
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
@@ -380,7 +381,8 @@ class FormSubmitButtonTest(DeltaGeneratorTestCase):
         form.form_submit_button(icon_position=icon_position)
 
         last_delta = self.get_delta_from_queue()
-        assert last_delta.new_element.button.icon_position == icon_position
+        expected = IconPosition.RIGHT if icon_position == "right" else IconPosition.LEFT
+        assert last_delta.new_element.button.icon_position == expected
 
     def test_submit_button_invalid_icon_position(self):
         """Test that invalid submit button icon positions raise an error."""

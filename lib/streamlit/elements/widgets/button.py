@@ -49,6 +49,9 @@ from streamlit.errors import (
 from streamlit.file_util import get_main_script_directory, normalize_path_join
 from streamlit.navigation.page import StreamlitPage
 from streamlit.proto.Button_pb2 import Button as ButtonProto
+from streamlit.proto.ButtonLikeIconPosition_pb2 import (
+    ButtonLikeIconPosition as ProtoButtonLikeIconPosition,
+)
 from streamlit.proto.DownloadButton_pb2 import DownloadButton as DownloadButtonProto
 from streamlit.proto.LinkButton_pb2 import LinkButton as LinkButtonProto
 from streamlit.proto.PageLink_pb2 import PageLink as PageLinkProto
@@ -1192,7 +1195,11 @@ class ButtonMixin:
 
         if icon is not None:
             download_button_proto.icon = validate_icon_or_emoji(icon)
-        download_button_proto.icon_position = icon_position
+        download_button_proto.icon_position = (
+            ProtoButtonLikeIconPosition.RIGHT
+            if icon_position == "right"
+            else ProtoButtonLikeIconPosition.LEFT
+        )
 
         if on_click == "ignore":
             download_button_proto.ignore_rerun = True
@@ -1267,7 +1274,11 @@ class ButtonMixin:
 
         if icon is not None:
             link_button_proto.icon = validate_icon_or_emoji(icon)
-        link_button_proto.icon_position = icon_position
+        link_button_proto.icon_position = (
+            ProtoButtonLikeIconPosition.RIGHT
+            if icon_position == "right"
+            else ProtoButtonLikeIconPosition.LEFT
+        )
 
         if normalized_shortcut is not None:
             link_button_proto.shortcut = normalized_shortcut
@@ -1297,7 +1308,11 @@ class ButtonMixin:
         validate_width(width, allow_content=True)
 
         # Set icon_position early so it's set even in early return paths
-        page_link_proto.icon_position = icon_position
+        page_link_proto.icon_position = (
+            ProtoButtonLikeIconPosition.RIGHT
+            if icon_position == "right"
+            else ProtoButtonLikeIconPosition.LEFT
+        )
 
         ctx = get_script_run_ctx()
         if not ctx:
@@ -1455,7 +1470,11 @@ class ButtonMixin:
 
         if icon is not None:
             button_proto.icon = validate_icon_or_emoji(icon)
-        button_proto.icon_position = icon_position
+        button_proto.icon_position = (
+            ProtoButtonLikeIconPosition.RIGHT
+            if icon_position == "right"
+            else ProtoButtonLikeIconPosition.LEFT
+        )
 
         if normalized_shortcut is not None:
             button_proto.shortcut = normalized_shortcut

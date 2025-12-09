@@ -34,6 +34,7 @@ from streamlit.navigation.page import StreamlitPage
 from streamlit.proto.DownloadButton_pb2 import (
     DownloadButton as DownloadButtonProto,
 )
+from streamlit.proto.IconPosition_pb2 import IconPosition
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
 
@@ -159,7 +160,8 @@ class ButtonTest(DeltaGeneratorTestCase):
         command(icon_position=icon_position)
 
         c = getattr(self.get_delta_from_queue().new_element, name)
-        assert c.icon_position == icon_position
+        expected = IconPosition.RIGHT if icon_position == "right" else IconPosition.LEFT
+        assert c.icon_position == expected
 
     @parameterized.expand(get_button_command_matrix())
     def test_just_disabled(self, name: str, command: Callable[..., Any]):

@@ -19,6 +19,7 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
+from streamlit.proto.IconPosition_pb2 import IconPosition
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
@@ -75,7 +76,7 @@ class LinkButtonTest(DeltaGeneratorTestCase):
         st.link_button("the label", url="https://streamlit.io", icon_position="right")
 
         c = self.get_delta_from_queue().new_element.link_button
-        assert c.icon_position == "right"
+        assert c.icon_position == IconPosition.RIGHT
 
     def test_invalid_icon(self):
         """Test that an error is raised if an invalid icon is provided."""

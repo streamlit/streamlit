@@ -1,4 +1,4 @@
-/**!
+/**
  * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,22 +14,22 @@
  * limitations under the License.
  */
 
-syntax = "proto3";
+/**
+ * Shared mapping from protobuf IconPosition enum to UI icon position values.
+ */
 
-option java_package = "com.snowflake.apps.streamlit";
-option java_outer_classname = "PageLinkProto";
+import { ButtonLikeIconPosition as ProtoButtonLikeIconPosition } from "@streamlit/protobuf"
 
-import "streamlit/proto/ButtonLikeIconPosition.proto";
+export type UiIconPosition = "left" | "right"
 
-message PageLink {
-  string page = 1;
-  string label = 2;
-  string icon = 3;
-  string page_script_hash = 4;
-  string help = 5;
-  optional bool use_container_width = 6;
-  bool disabled = 7;
-  bool external = 8;
-  string query_string = 9;
-  ButtonLikeIconPosition icon_position = 10;
+const ICON_POSITION_MAP: Record<ProtoButtonLikeIconPosition, UiIconPosition> =
+  {
+    [ProtoButtonLikeIconPosition.LEFT]: "left",
+    [ProtoButtonLikeIconPosition.RIGHT]: "right",
+  } as const
+
+export function mapProtoIconPosition(
+  iconPosition: ProtoButtonLikeIconPosition | null | undefined
+): UiIconPosition {
+  return ICON_POSITION_MAP[iconPosition ?? ProtoButtonLikeIconPosition.LEFT]
 }

@@ -24,6 +24,7 @@ import { DynamicIcon } from "~lib/components/shared/Icon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
 import { Placement } from "~lib/components/shared/Tooltip"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { mapProtoIconPosition } from "~lib/components/shared/BaseButton/iconPosition"
 
 import {
   StyledNavLink,
@@ -90,7 +91,7 @@ function PageLink(props: Readonly<Props>): ReactElement {
     }
   }
 
-  const iconPosition = element.iconPosition === "right" ? "right" : "left"
+  const iconPosition = mapProtoIconPosition(element.iconPosition)
   const href = buildHref(element)
 
   return (
