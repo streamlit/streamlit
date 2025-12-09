@@ -276,6 +276,111 @@ def test_media_endpoint_rejects_invalid_ranges(
     assert response.headers["Content-Range"] == "bytes */4"
 
 
+def test_media_endpoint_supports_head_requests(
+    starlette_client: tuple[TestClient, _DummyRuntime],
+) -> None:
+    """Ensure the media endpoint supports HEAD requests for browser probing."""
+    client, runtime = starlette_client
+    storage = runtime.media_file_mgr._storage
+    file_id = storage.load_and_get_id(
+        b"abcdefghij", "video/mp4", MediaFileKind.MEDIA, "clip.mp4"
+    )
+    runtime.media_file_mgr._file_metadata[file_id] = MediaFileMetadata(
+        MediaFileKind.MEDIA
+    )
+
+    media_url = storage.get_url(file_id)
+    response = client.head(media_url)
+
+    assert response.status_code == 200
+    assert response.headers["Content-Length"] == "10"
+    assert response.headers["Accept-Ranges"] == "bytes"
+    assert response.headers["Content-Type"] == "video/mp4"
+    # HEAD requests should not return body
+    assert response.content == b""
+
+
+def test_media_endpoint_sets_identity_encoding_for_video(
+    starlette_client: tuple[TestClient, _DummyRuntime],
+) -> None:
+    """Ensure video files have Content-Encoding: identity to prevent gzip."""
+    client, runtime = starlette_client
+    storage = runtime.media_file_mgr._storage
+    file_id = storage.load_and_get_id(
+        b"video-data", "video/mp4", MediaFileKind.MEDIA, "clip.mp4"
+    )
+    runtime.media_file_mgr._file_metadata[file_id] = MediaFileMetadata(
+        MediaFileKind.MEDIA
+    )
+
+    media_url = storage.get_url(file_id)
+    response = client.get(media_url)
+
+    assert response.status_code == 200
+    assert response.headers.get("Content-Encoding") == "identity"
+
+
+def test_media_endpoint_sets_identity_encoding_for_audio(
+    starlette_client: tuple[TestClient, _DummyRuntime],
+) -> None:
+    """Ensure audio files have Content-Encoding: identity to prevent gzip."""
+    client, runtime = starlette_client
+    storage = runtime.media_file_mgr._storage
+    file_id = storage.load_and_get_id(
+        b"audio-data", "audio/mpeg", MediaFileKind.MEDIA, "sound.mp3"
+    )
+    runtime.media_file_mgr._file_metadata[file_id] = MediaFileMetadata(
+        MediaFileKind.MEDIA
+    )
+
+    media_url = storage.get_url(file_id)
+    response = client.get(media_url)
+
+    assert response.status_code == 200
+    assert response.headers.get("Content-Encoding") == "identity"
+
+
+def test_media_endpoint_no_identity_encoding_for_non_media(
+    starlette_client: tuple[TestClient, _DummyRuntime],
+) -> None:
+    """Ensure non-audio/video files don't have Content-Encoding: identity."""
+    client, runtime = starlette_client
+    storage = runtime.media_file_mgr._storage
+    file_id = storage.load_and_get_id(
+        b"text-data", "text/plain", MediaFileKind.MEDIA, "file.txt"
+    )
+    runtime.media_file_mgr._file_metadata[file_id] = MediaFileMetadata(
+        MediaFileKind.MEDIA
+    )
+
+    media_url = storage.get_url(file_id)
+    response = client.get(media_url)
+
+    assert response.status_code == 200
+    assert response.headers.get("Content-Encoding") is None
+
+
+def test_media_endpoint_no_identity_encoding_for_range_requests(
+    starlette_client: tuple[TestClient, _DummyRuntime],
+) -> None:
+    """Ensure range requests don't have Content-Encoding: identity."""
+    client, runtime = starlette_client
+    storage = runtime.media_file_mgr._storage
+    file_id = storage.load_and_get_id(
+        b"video-data-here", "video/mp4", MediaFileKind.MEDIA, "clip.mp4"
+    )
+    runtime.media_file_mgr._file_metadata[file_id] = MediaFileMetadata(
+        MediaFileKind.MEDIA
+    )
+
+    media_url = storage.get_url(file_id)
+    response = client.get(media_url, headers={"Range": "bytes=0-4"})
+
+    assert response.status_code == HTTPStatus.PARTIAL_CONTENT
+    # Range requests should NOT have identity encoding
+    assert response.headers.get("Content-Encoding") is None
+
+
 def test_upload_put_adds_file(
     starlette_client: tuple[TestClient, _DummyRuntime],
 ) -> None:
