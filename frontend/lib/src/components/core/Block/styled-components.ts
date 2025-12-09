@@ -131,16 +131,23 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
 
 interface StyledColumnProps {
   weight: number
-  gap: streamlit.GapSize | undefined
+  gap: streamlit.GapSize | number | undefined
+  gapConfig?: streamlit.IGapConfig
   showBorder: boolean
   verticalAlignment?: BlockProto.Column.VerticalAlignment
 }
 
 export const StyledColumn = styled.div<StyledColumnProps>(
-  ({ theme, weight, gap, showBorder, verticalAlignment }) => {
+  ({ theme, weight, gap, gapConfig, showBorder, verticalAlignment }) => {
     const { VerticalAlignment } = BlockProto.Column
     const percentage = weight * 100
-    const gapWidth = translateGapWidth(gap, theme)
+    let gapWidth
+    if (gapConfig?.pixelGap !== undefined && gapConfig?.pixelGap !== null) {
+      gapWidth = `${gapConfig.pixelGap}px`
+    } else {
+      gapWidth = translateGapWidth(gap as streamlit.GapSize, theme)
+    }
+
     const width =
       gapWidth === theme.spacing.none
         ? `${percentage}%`
@@ -227,7 +234,8 @@ const getJustifyContent = (
 
 export interface StyledFlexContainerBlockProps {
   direction: React.CSSProperties["flexDirection"]
-  gap?: streamlit.GapSize | undefined
+  gap?: streamlit.GapSize | number | undefined
+  gapConfig?: streamlit.IGapConfig
   flex?: React.CSSProperties["flex"]
   // This marks the prop as a transient property so it is
   // not passed to the DOM. It overlaps with a valid attribute
@@ -246,6 +254,7 @@ export const StyledFlexContainerBlock =
       theme,
       direction,
       gap,
+      gapConfig,
       flex,
       $wrap,
       height,
@@ -255,8 +264,10 @@ export const StyledFlexContainerBlock =
       overflow,
     }) => {
       let gapWidth
-      if (gap !== undefined) {
-        gapWidth = translateGapWidth(gap, theme)
+      if (gapConfig?.pixelGap !== undefined && gapConfig?.pixelGap !== null) {
+        gapWidth = `${gapConfig.pixelGap}px`
+      } else if (gap !== undefined) {
+        gapWidth = translateGapWidth(gap as streamlit.GapSize, theme)
       }
 
       return {

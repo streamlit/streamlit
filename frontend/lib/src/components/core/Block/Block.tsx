@@ -53,7 +53,7 @@ import {
 } from "./styled-components"
 import {
   assignDividerColor,
-  backwardsCompatibleColumnGapSize,
+  backwardsCompatibleColumnGapConfig,
   BaseBlockProps,
   checkFlexContainerBackwardsCompatibile,
   convertKeyToClassName,
@@ -127,6 +127,7 @@ export const ContainerContentsWrapper = (
     direction: Direction.VERTICAL,
     flex: 1,
     gap: streamlit.GapSize.SMALL,
+    gapConfig: { gapSize: streamlit.GapSize.SMALL },
     height: props.height,
     // eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values
     border: false,
@@ -173,12 +174,23 @@ export const FlexBoxContainer = (
     subElement: getLayoutSubElement(props.node.deltaBlock),
   })
 
+  const flexGapConfig = props.node.deltaBlock.flexContainer?.gapConfig
+  const hasPixelGap =
+    flexGapConfig?.pixelGap !== undefined && flexGapConfig?.pixelGap !== null
+
+  const hasGapSize =
+    flexGapConfig?.gapSize !== undefined &&
+    flexGapConfig?.gapSize !== null &&
+    flexGapConfig?.gapSize !== streamlit.GapSize.GAP_UNDEFINED
+
+  const resolvedGapConfig: streamlit.IGapConfig =
+    (hasPixelGap || hasGapSize) && flexGapConfig
+      ? flexGapConfig
+      : { gapSize: streamlit.GapSize.SMALL }
+
   const styles = {
-    gap:
-      // This is backwards compatible with old proto messages since previously
-      // the gap size was defaulted to small.
-      props.node.deltaBlock.flexContainer?.gapConfig?.gapSize ??
-      streamlit.GapSize.SMALL,
+    gap: resolvedGapConfig.pixelGap ?? resolvedGapConfig.gapSize ?? undefined,
+    gapConfig: resolvedGapConfig,
     direction: direction,
     // This is also backwards compatible since previously wrap was not added
     // to the flex container.
@@ -372,10 +384,14 @@ export const BlockNodeRenderer = (
   }
 
   if (node.deltaBlock.column) {
+    const colGapConfig = backwardsCompatibleColumnGapConfig(
+      node.deltaBlock.column
+    )
     return (
       <StyledColumn
         weight={node.deltaBlock.column.weight ?? 0}
-        gap={backwardsCompatibleColumnGapSize(node.deltaBlock.column)}
+        gap={colGapConfig.pixelGap ?? colGapConfig.gapSize ?? undefined}
+        gapConfig={colGapConfig}
         verticalAlignment={
           node.deltaBlock.column.verticalAlignment ?? undefined
         }
