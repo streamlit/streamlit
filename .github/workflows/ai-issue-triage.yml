@@ -32,9 +32,9 @@ jobs:
       contents: read
       issues: read
 
-    # Avoid duplicate workflows on same issue
+    # Avoid duplicate workflows on same issue (use issue number for per-issue isolation)
     concurrency:
-      group: ${{ github.workflow }}-${{ env.ISSUE_NUMBER }}-ai-triage
+      group: ${{ github.workflow }}-${{ github.event.inputs.issue_number || github.event.issue.number }}-ai-triage
       cancel-in-progress: true
 
     defaults:
