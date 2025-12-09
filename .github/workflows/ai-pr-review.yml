@@ -68,7 +68,7 @@ jobs:
           curl https://cursor.com/install -fsS | bash
           echo "$HOME/.cursor/bin" >> $GITHUB_PATH
 
-      - name: Basic AI PR Review
+      - name: Cursor AI PR Review
         env:
           CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -109,16 +109,41 @@ jobs:
           8. Write either 'APPROVED' or 'CHANGES_REQUESTED' (exactly one of these) to a file named 'verdict.txt'.
 
           # Output Format for review.md:
-          Structure your review with the following sections:
-          - **Summary**: Brief overview of what the PR does
-          - **Code Quality**: Assessment of code structure, patterns, and maintainability
-          - **Test Coverage**: Evaluation of unit and e2e test coverage
-          - **Backwards Compatibility**: Analysis of any breaking changes
-          - **Security & Risk**: Any security concerns or regression risks
-          - **Recommendations**: Specific suggestions for improvement (if any)
-          - **Verdict**: Overall assessment (Ready for merge / Needs changes)
 
-          Do NOT run linting, tests, or build commands, this will be done by the CI system. Focus only on code review.
+          <output-start>
+          ## Summary
+
+          [Brief overview of what the PR does and the main changes introduced.]
+
+          ## Code Quality
+
+          [Assessment of code structure, patterns, and maintainability. Note any issues with specific file references and line numbers.]
+
+          ## Test Coverage
+
+          [Evaluation of unit and e2e test coverage. Are the changes adequately tested?]
+
+          ## Backwards Compatibility
+
+          [Analysis of any breaking changes. Will this affect existing users?]
+
+          ## Security & Risk
+
+          [Any security concerns or regression risks identified.]
+
+          ## Recommendations
+
+          [Specific suggestions for improvement, if any. Use a numbered list for actionable items.]
+
+          ## Verdict
+
+          **[APPROVED / CHANGES REQUESTED]**: [One sentence summary of the overall assessment.]
+
+          ---
+          *This is an automated AI review. Please verify the feedback and use your judgment.*
+          <output-end>
+
+          Do NOT run linting, tests, or build commands, this will be done by the CI system (the dev environment is not setup). Focus only on code review.
           Do NOT attempt to post comments, edit PRs, or perform any write operations - they will fail.
           " --force --model "${{ env.MODEL }}" --output-format=text
 
