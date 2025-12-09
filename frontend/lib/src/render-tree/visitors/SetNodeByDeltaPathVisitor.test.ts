@@ -35,13 +35,6 @@ describe("SetNodeByDeltaPathVisitor", () => {
       )
       expect(visitor).toBeDefined()
     })
-
-    it("throws error when deltaPath is empty", () => {
-      const nodeToSet = text("new")
-      expect(
-        () => new SetNodeByDeltaPathVisitor([], nodeToSet, "test_run_id")
-      ).toThrow("deltaPath cannot be empty")
-    })
   })
 
   describe("visitElementNode", () => {
@@ -55,8 +48,41 @@ describe("SetNodeByDeltaPathVisitor", () => {
       )
 
       expect(() => visitor.visitElementNode(elementNode)).toThrow(
-        "'SetNodeByDeltaPathVisitor' cannot visit an ElementNode"
+        "'setIn' cannot be called on an ElementNode"
       )
+    })
+
+    it("replaces element when delta path is empty", () => {
+      const elementNode = text("element")
+      const nodeToSet = text("new")
+      const visitor = new SetNodeByDeltaPathVisitor(
+        [],
+        nodeToSet,
+        "test_run_id"
+      )
+
+      expect(visitor.visitElementNode(elementNode)).toBe(nodeToSet)
+    })
+
+    it("wraps element node as anchor when setting TransientNode without anchor", () => {
+      const elementNode = text("element")
+      const transientNode = new TransientNode(
+        "run_id",
+        undefined, // No anchor provided
+        [text("t1")],
+        123
+      )
+      const visitor = new SetNodeByDeltaPathVisitor(
+        [],
+        transientNode,
+        "run_id"
+      )
+
+      // Should wrap elementNode as the anchor
+      const result = visitor.visitElementNode(elementNode) as TransientNode
+      expect(result).toBeInstanceOf(TransientNode)
+      expect(result.anchor).toBe(elementNode)
+      expect(result.transientNodes).toEqual(transientNode.transientNodes)
     })
   })
 
@@ -193,6 +219,45 @@ describe("SetNodeByDeltaPathVisitor", () => {
         GetNodeByDeltaPathVisitor.getNodeAtPath(result, [1])
       ).toStrictEqual(GetNodeByDeltaPathVisitor.getNodeAtPath(BLOCK, [1]))
     })
+
+    it("replaces block node with nodeToSet when delta path is empty", () => {
+      const originalBlock = block([text("1")])
+      const nodeToSet = text("replacement")
+      const visitor = new SetNodeByDeltaPathVisitor([], nodeToSet, "run_id")
+
+      const result = visitor.visitBlockNode(originalBlock)
+      expect(result).toBe(nodeToSet)
+    })
+
+    it("inserts TransientNode before child when anchors do not match", () => {
+      const childA = text("A")
+      const childB = text("B")
+      const blockNode = block([childA, childB])
+
+      // TransientNode with a pre-set anchor that is DIFFERENT from childA
+      const otherAnchor = text("other")
+      const transientNode = new TransientNode(
+        "run_id",
+        otherAnchor,
+        [text("t1")],
+        123
+      )
+
+      const visitor = new SetNodeByDeltaPathVisitor(
+        [0],
+        transientNode,
+        "run_id"
+      )
+
+      const result = visitor.visitBlockNode(blockNode) as BlockNode
+
+      // Logic check: Since the returned TransientNode's anchor (otherAnchor)
+      // does not match the original child (childA), it should be inserted BEFORE childA.
+      expect(result.children).toHaveLength(3)
+      expect(result.children[0]).toBe(transientNode) // Inserted
+      expect(result.children[1]).toBe(childA) // Original preserved/shifted
+      expect(result.children[2]).toBe(childB)
+    })
   })
 
   describe("recursive behavior", () => {
@@ -311,7 +376,7 @@ describe("SetNodeByDeltaPathVisitor", () => {
           nodeToSet,
           "test_run_id"
         )
-      ).toThrow("'SetNodeByDeltaPathVisitor' cannot visit an ElementNode")
+      ).toThrow("'setIn' cannot be called on an ElementNode")
     })
 
     it("creates new visitor instance for each static call", () => {

@@ -305,11 +305,11 @@ class CacheResourceStatsProviderTest(unittest.TestCase):
         assert get_resource_cache_stats_provider().get_stats() == []
 
     def test_multiple_stats(self):
-        @st.cache_resource
+        @st.cache_resource(show_spinner=False)
         def foo(count):
             return [3.14] * count
 
-        @st.cache_resource
+        @st.cache_resource(show_spinner=False)
         def bar():
             return threading.Lock()
 
@@ -378,12 +378,15 @@ class CacheResourceMessageReplayTest(DeltaGeneratorTestCase):
     ):
         """Test that it works with element replay if used as non-widget element."""
 
-        if element_name == "toast":
-            # The toast element is not supported in the cache_data API
-            # since elements on the event dg are not supported.
+        if element_name in ("toast", "spinner", "logo", "echo"):
+            # These elements are not supported in the cache_resource API
+            #   - toast only corresponds to the event dg
+            #   - spinner is transient and not replayed
+            #   - logo is not replayed because it's not tied to a specific dg
+            #   - echo does not produce an element unless it's executed with code
             return
 
-        @st.cache_resource
+        @st.cache_resource(show_spinner=False)
         def cache_element():
             element_producer()
 
@@ -442,7 +445,7 @@ class CacheResourceMessageReplayTest(DeltaGeneratorTestCase):
         expected_width = 300
         expected_height = 150
 
-        @st.cache_resource
+        @st.cache_resource(show_spinner=False)
         def cache_resource_code_with_layout():
             # Use code element with both width and height since it supports both
             st.code(

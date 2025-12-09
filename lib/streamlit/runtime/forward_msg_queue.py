@@ -188,7 +188,7 @@ def _is_composable_message(msg: ForwardMsg) -> bool:
     # operation can raise errors, and we don't have a good way of handling
     # those errors in the message queue.
     delta_type = msg.delta.WhichOneof("type")
-    return delta_type not in {"add_rows", "arrow_add_rows"}
+    return delta_type not in {"add_rows", "arrow_add_rows", "new_transient"}
 
 
 def _maybe_compose_delta_msgs(

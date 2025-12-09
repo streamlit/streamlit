@@ -92,20 +92,20 @@ def test_concurrent_record_and_change_no_exceptions(tmp_path: Path) -> None:
     manager, comp_name = _setup_manager_with_manifest(tmp_path)
 
     stop_event = threading.Event()
-    errors: list[BaseException] = []
+    errors: list[Exception] = []
 
     def writer() -> None:
         try:
             while not stop_event.is_set():
                 manager.record_api_inputs(comp_name, css="*.css", js="js/*.js")
-        except BaseException as e:  # pragma: no cover - diagnostic capture
+        except Exception as e:  # pragma: no cover - diagnostic capture
             errors.append(e)
 
     def reader() -> None:
         try:
             while not stop_event.is_set():
                 manager._on_components_changed([comp_name])
-        except BaseException as e:  # pragma: no cover - diagnostic capture
+        except Exception as e:  # pragma: no cover - diagnostic capture
             errors.append(e)
 
     threads = [threading.Thread(target=writer), threading.Thread(target=reader)]

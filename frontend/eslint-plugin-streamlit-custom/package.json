@@ -25,7 +25,7 @@
     "@vitest/coverage-v8": "^4.0.14",
     "eslint": "^9.39.0",
     "prettier": "^3.6.2",
-    "typescript": "^5.9.2",
+    "typescript": "^5.9.3",
     "typesync": "^0.14.3",
     "vitest": "^4.0.14"
   },

@@ -18,7 +18,6 @@ import collections
 import contextlib
 import contextvars
 import threading
-from collections import Counter
 from dataclasses import dataclass, field
 from typing import (
     TYPE_CHECKING,
@@ -93,7 +92,9 @@ class ScriptRunContext:
     gather_usage_stats: bool = False
     command_tracking_deactivated: bool = False
     tracked_commands: list[Command] = field(default_factory=list)
-    tracked_commands_counter: Counter[str] = field(default_factory=collections.Counter)
+    tracked_commands_counter: collections.Counter[str] = field(
+        default_factory=collections.Counter
+    )
     _has_script_started: bool = False
     widget_ids_this_run: set[str] = field(default_factory=set)
     widget_user_keys_this_run: set[str] = field(default_factory=set)
