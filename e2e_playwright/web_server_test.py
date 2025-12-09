@@ -337,13 +337,12 @@ def test_xsrf_cookie_format(app: Page):
             xsrf_cookie = cookie
             break
 
-    # In e2e test mode with XSRF enabled, cookie should be set
-    # Note: XSRF may be disabled in development mode
-    if xsrf_cookie is not None:
-        # Cookie should have a value
-        assert len(xsrf_cookie["value"]) > 0
-        # Cookie should have SameSite=Lax
-        assert xsrf_cookie.get("sameSite") == "Lax"
+    assert xsrf_cookie is not None
+
+    # Cookie should have a value
+    assert len(xsrf_cookie["value"]) > 0
+    # Cookie should have SameSite=Lax
+    assert xsrf_cookie.get("sameSite") == "Lax"
 
 
 # =============================================================================
@@ -406,18 +405,14 @@ def test_trailing_slash_redirect_on_static_paths(app: Page, app_port: int):
         max_redirects=0,  # Don't follow redirects to see the redirect response
     )
 
-    # Should either redirect (301/302) or serve content (200)
-    # Both behaviors are acceptable as long as consistent
-    assert response.status in {200, 301, 302, 307, 308}, (
-        f"Expected redirect or OK status, got {response.status}"
-    )
+    # Tornado uses 301 (permanent redirect) via @removeslash decorator
+    assert response.status == 301, f"Expected 301, got {response.status}"
 
-    if response.status in {301, 302, 307, 308}:
-        # If redirecting, should redirect to path without trailing slash
-        location = response.headers.get("location", "")
-        assert not location.endswith("/") or location == "/", (
-            f"Redirect should remove trailing slash, got: {location}"
-        )
+    # Should redirect to path without trailing slash
+    location = response.headers.get("location", "")
+    assert not location.endswith("/") or location == "/", (
+        f"Redirect should remove trailing slash, got: {location}"
+    )
 
 
 def test_base_url_without_trailing_slash(app: Page, app_port: int):
@@ -439,7 +434,7 @@ def test_double_slash_not_redirected_to_external(app: Page, app_port: int):
     """Test that double slashes don't cause redirect to external host.
 
     A path like //example.com could be misinterpreted as a protocol-relative URL.
-    The server should handle this safely without redirecting to an external host.
+    Server blocks these paths with 403 Forbidden for security.
     """
     # Request with double slash at start
     response = app.request.get(
@@ -447,13 +442,8 @@ def test_double_slash_not_redirected_to_external(app: Page, app_port: int):
         max_redirects=0,
     )
 
-    # Should NOT redirect to an external host
-    if response.status in {301, 302, 307, 308}:
-        location = response.headers.get("location", "")
-        # Location should either be relative or point to localhost
-        assert location.startswith(("/", f"http://localhost:{app_port}")), (
-            f"Should not redirect to external host, got: {location}"
-        )
+    # Should be blocked with 403 Forbidden (not redirected to external host)
+    assert response.status == 403, f"Expected 403, got {response.status}"
 
 
 # =============================================================================
