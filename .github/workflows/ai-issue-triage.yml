@@ -55,7 +55,7 @@ jobs:
       # related issues / duplicates, suggest feature labels, and gives
       # a brief initial assessment of the issue. We will add more advanced
       # issue analysis in future iterations.
-      - name: Basic AI Triage
+      - name: "AI Triage: Duplicates & Feature Labels"
         env:
           MODEL: opus-4.5-thinking
           CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
