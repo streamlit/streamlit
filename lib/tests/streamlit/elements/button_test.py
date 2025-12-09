@@ -31,10 +31,12 @@ import streamlit as st
 from streamlit.elements.widgets.button import marshall_file
 from streamlit.errors import StreamlitAPIException, StreamlitPageNotFoundError
 from streamlit.navigation.page import StreamlitPage
+from streamlit.proto.ButtonLikeIconPosition_pb2 import (
+    ButtonLikeIconPosition as ProtoButtonLikeIconPosition,
+)
 from streamlit.proto.DownloadButton_pb2 import (
     DownloadButton as DownloadButtonProto,
 )
-from streamlit.proto.IconPosition_pb2 import IconPosition
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
 
@@ -141,10 +143,13 @@ class ButtonTest(DeltaGeneratorTestCase):
         c = getattr(self.get_delta_from_queue().new_element, name)
         assert c.icon == icon
 
-    def test_invalid_icon_position_raises(self):
+    @parameterized.expand(get_button_command_matrix())
+    def test_invalid_icon_position_raises(
+        self, name: str, command: Callable[..., Any]
+    ) -> None:
         """Test that invalid icon_position values raise an error."""
         with pytest.raises(StreamlitAPIException):
-            st.button("label", icon_position="center")  # type: ignore[arg-type]
+            command(icon_position="center")  # type: ignore[arg-type]
 
     @parameterized.expand(
         [
@@ -160,7 +165,11 @@ class ButtonTest(DeltaGeneratorTestCase):
         command(icon_position=icon_position)
 
         c = getattr(self.get_delta_from_queue().new_element, name)
-        expected = IconPosition.RIGHT if icon_position == "right" else IconPosition.LEFT
+        expected = (
+            ProtoButtonLikeIconPosition.RIGHT
+            if icon_position == "right"
+            else ProtoButtonLikeIconPosition.LEFT
+        )
         assert c.icon_position == expected
 
     @parameterized.expand(get_button_command_matrix())

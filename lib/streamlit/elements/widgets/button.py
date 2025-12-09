@@ -836,6 +836,10 @@ class ButtonMixin:
 
             - ``"spinner"``: Displays a spinner as an icon.
 
+        icon_position : "left" or "right"
+            The position of the icon relative to the button label. Defaults to
+            ``"left"``.
+
         disabled : bool
             An optional boolean that disables the link button if set to
             ``True``. The default is ``False``.
@@ -985,8 +989,8 @@ class ButtonMixin:
               or ``icon="🔥"``. Emoji short codes are not supported.
 
             - An icon from the Material Symbols library (rounded style) in the
-              format ``":material/icon_name:"`` where "icon_name" is the name
-              of the icon in snake case.
+            format ``":material/icon_name:"`` where "icon_name" is the name
+            of the icon in snake case.
 
               For example, ``icon=":material/thumb_up:"`` will display the
               Thumb Up icon. Find additional icons in the `Material Symbols \
@@ -994,6 +998,10 @@ class ButtonMixin:
               font library.
 
             - ``"spinner"``: Displays a spinner as an icon.
+
+        icon_position : "left" or "right"
+            The position of the icon relative to the page link label. Defaults
+            to ``"left"``.
 
         help : str or None
             A tooltip that gets displayed when the link is hovered over. If
