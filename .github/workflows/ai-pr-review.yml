@@ -4,11 +4,27 @@ name: AI PR Review
 on:
   pull_request:
     types: [labeled]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: "PR number to review"
+        required: true
+        type: number
+      model:
+        description: "Model to use for the review"
+        required: false
+        type: string
+        default: "opus-4.5-thinking"
+
+# Computed PR number and model for use in jobs
+env:
+  PR_NUMBER: ${{ github.event.inputs.pr_number || github.event.pull_request.number }}
+  MODEL: ${{ github.event.inputs.model || 'opus-4.5-thinking' }}
 
 jobs:
   # Job 1: AI performs the review with READ-ONLY access
   ai-pr-review:
-    if: github.event.label.name == 'ai-review'
+    if: github.event_name == 'workflow_dispatch' || github.event.label.name == 'ai-review'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -26,11 +42,22 @@ jobs:
         shell: bash
 
     steps:
+      - name: Get PR details
+        id: pr-info
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR_DATA=$(gh api repos/${{ github.repository }}/pulls/${{ env.PR_NUMBER }})
+          echo "head_sha=$(echo "$PR_DATA" | jq -r '.head.sha')" >> $GITHUB_OUTPUT
+          echo "head_ref=$(echo "$PR_DATA" | jq -r '.head.ref')" >> $GITHUB_OUTPUT
+          echo "base_ref=$(echo "$PR_DATA" | jq -r '.base.ref')" >> $GITHUB_OUTPUT
+          echo "html_url=$(echo "$PR_DATA" | jq -r '.html_url')" >> $GITHUB_OUTPUT
+
       - name: Checkout Streamlit code
         uses: actions/checkout@v6
         with:
           # Use SHA instead of branch name to support fork PRs
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: ${{ steps.pr-info.outputs.head_sha }}
           persist-credentials: false
           submodules: "recursive"
           # Give the agent full git history access:
@@ -45,7 +72,6 @@ jobs:
         env:
           CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          MODEL: opus-4.5-thinking
         run: |
           cursor-agent -p "You are operating in a GitHub Actions runner to perform a code review on a pull request.
 
@@ -54,13 +80,13 @@ jobs:
 
           # Context:
           - Repo: ${{ github.repository }}
-          - PR Number: ${{ github.event.pull_request.number }}
-          - PR URL: ${{ github.event.pull_request.html_url }}
-          - Base Ref: ${{ github.base_ref }}
-          - Head Ref: ${{ github.head_ref }}
+          - PR Number: ${{ env.PR_NUMBER }}
+          - PR URL: ${{ steps.pr-info.outputs.html_url }}
+          - Base Ref: ${{ steps.pr-info.outputs.base_ref }}
+          - Head Ref: ${{ steps.pr-info.outputs.head_ref }}
 
           # Goal:
-          Review this branch (PR: ${{ github.event.pull_request.html_url }}) and ensure the changes are bug-free, backwards compatible, and ready for merge.
+          Review this branch (PR: ${{ steps.pr-info.outputs.html_url }}) and ensure the changes are bug-free, backwards compatible, and ready for merge.
 
           # Review Checklist:
           - Unit and e2e tests are covering the changes well.
@@ -73,7 +99,7 @@ jobs:
           - The code follows other best practices from the Streamlit code base.
 
           # Instructions:
-          1. Use 'gh pr diff ${{ github.event.pull_request.number }}' to get the changes in the PR.
+          1. Use 'gh pr diff ${{ env.PR_NUMBER }}' to get the changes in the PR.
           2. Read and analyze the changed files to understand the full context.
           3. Read the best practices files (.cursor/rules/e2e_playwright.mdc, .cursor/rules/python_tests.mdc, .cursor/rules/typescript.mdc) to understand the testing standards.
           4. Perform a thorough code review based on the checklist above.
@@ -94,7 +120,7 @@ jobs:
 
           Do NOT run linting, tests, or build commands, this will be done by the CI system. Focus only on code review.
           Do NOT attempt to post comments, edit PRs, or perform any write operations - they will fail.
-          " --force --model "$MODEL" --output-format=text
+          " --force --model "${{ env.MODEL }}" --output-format=text
 
       - name: Upload review artifacts
         uses: actions/upload-artifact@v5
@@ -118,10 +144,11 @@ jobs:
 
     steps:
       - name: Remove 'ai-review' label
+        if: github.event_name == 'pull_request'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh pr edit ${{ github.event.pull_request.number }} --remove-label "ai-review" --repo ${{ github.repository }}
+          gh pr edit ${{ env.PR_NUMBER }} --remove-label "ai-review" --repo ${{ github.repository }}
 
       - name: Download review artifacts
         id: download
@@ -141,18 +168,18 @@ jobs:
             echo "Error: review.md not found"
             exit 1
           fi
-          gh pr comment ${{ github.event.pull_request.number }} --body-file review.md --repo ${{ github.repository }}
+          gh pr comment ${{ env.PR_NUMBER }} --body-file review.md --repo ${{ github.repository }}
 
       - name: Post failure notice
         if: steps.download.outcome == 'failure' || steps.post_review.outcome == 'failure'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh pr comment ${{ github.event.pull_request.number }} --body "⚠️ **AI Review Failed**
+          gh pr comment ${{ env.PR_NUMBER }} --body "⚠️ **AI Review Failed**
 
           The AI review job failed to complete. Please check the [workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) for details.
 
-          You can retry by adding the 'ai-review' label again." --repo ${{ github.repository }}
+          You can retry by adding the 'ai-review' label again or manually triggering the workflow." --repo ${{ github.repository }}
 
       - name: Apply label based on verdict
         if: steps.download.outcome == 'success'
@@ -167,5 +194,5 @@ jobs:
           VERDICT=$(cat verdict.txt | tr -d '[:space:]')
           if [ "$VERDICT" = "CHANGES_REQUESTED" ]; then
             echo "Adding 'do-not-merge' label"
-            gh pr edit ${{ github.event.pull_request.number }} --add-label "do-not-merge" --repo ${{ github.repository }}
+            gh pr edit ${{ env.PR_NUMBER }} --add-label "do-not-merge" --repo ${{ github.repository }}
           fi
