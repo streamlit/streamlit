@@ -92,7 +92,7 @@ DownloadButtonDataType: TypeAlias = (
 IconPosition: TypeAlias = Literal["left", "right"]
 
 _DEFAULT_ICON_POSITION: Final[IconPosition] = "left"
-_VALID_ICON_POSITIONS: Final = ("left", "right")
+_VALID_ICON_POSITIONS: Final[tuple[IconPosition, ...]] = ("left", "right")
 
 
 def _normalize_icon_position(
@@ -108,6 +108,16 @@ def _normalize_icon_position(
         )
 
     return cast("IconPosition", icon_position)
+
+
+def _icon_position_to_proto(
+    icon_position: IconPosition,
+) -> ProtoButtonLikeIconPosition.ValueType:
+    return (
+        ProtoButtonLikeIconPosition.RIGHT
+        if icon_position == "right"
+        else ProtoButtonLikeIconPosition.LEFT
+    )
 
 
 @dataclass
@@ -1203,11 +1213,7 @@ class ButtonMixin:
 
         if icon is not None:
             download_button_proto.icon = validate_icon_or_emoji(icon)
-        download_button_proto.icon_position = (
-            ProtoButtonLikeIconPosition.RIGHT
-            if icon_position == "right"
-            else ProtoButtonLikeIconPosition.LEFT
-        )
+        download_button_proto.icon_position = _icon_position_to_proto(icon_position)
 
         if on_click == "ignore":
             download_button_proto.ignore_rerun = True
@@ -1282,11 +1288,7 @@ class ButtonMixin:
 
         if icon is not None:
             link_button_proto.icon = validate_icon_or_emoji(icon)
-        link_button_proto.icon_position = (
-            ProtoButtonLikeIconPosition.RIGHT
-            if icon_position == "right"
-            else ProtoButtonLikeIconPosition.LEFT
-        )
+        link_button_proto.icon_position = _icon_position_to_proto(icon_position)
 
         if normalized_shortcut is not None:
             link_button_proto.shortcut = normalized_shortcut
@@ -1316,11 +1318,7 @@ class ButtonMixin:
         validate_width(width, allow_content=True)
 
         # Set icon_position early so it's set even in early return paths
-        page_link_proto.icon_position = (
-            ProtoButtonLikeIconPosition.RIGHT
-            if icon_position == "right"
-            else ProtoButtonLikeIconPosition.LEFT
-        )
+        page_link_proto.icon_position = _icon_position_to_proto(icon_position)
 
         ctx = get_script_run_ctx()
         if not ctx:
@@ -1478,11 +1476,7 @@ class ButtonMixin:
 
         if icon is not None:
             button_proto.icon = validate_icon_or_emoji(icon)
-        button_proto.icon_position = (
-            ProtoButtonLikeIconPosition.RIGHT
-            if icon_position == "right"
-            else ProtoButtonLikeIconPosition.LEFT
-        )
+        button_proto.icon_position = _icon_position_to_proto(icon_position)
 
         if normalized_shortcut is not None:
             button_proto.shortcut = normalized_shortcut
