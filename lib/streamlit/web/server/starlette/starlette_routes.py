@@ -329,9 +329,7 @@ def create_media_routes(
         except MediaFileStorageError as exc:
             raise HTTPException(status_code=404, detail="File not found") from exc
 
-        headers: dict[str, str] = {
-            "X-Content-Type-Options": "nosniff",
-        }
+        headers: dict[str, str] = {}
 
         if media_file.kind == MediaFileKind.DOWNLOADABLE:
             filename = media_file.filename
@@ -346,14 +344,6 @@ def create_media_routes(
             except UnicodeEncodeError:
                 disposition = f"filename*=utf-8''{quote(filename)}"
             headers["Content-Disposition"] = f"attachment; {disposition}"
-
-        # Prevent GZip middleware from compressing audio/video files.
-        # Audio/video elements in browsers (especially Firefox in iframe
-        # contexts with CSP, and WebKit) fail when binary content is gzip-compressed.
-        # Setting Content-Encoding tells GZipMiddleware to skip compression.
-        mimetype = media_file.mimetype or ""
-        if mimetype.startswith(("audio/", "video/")):
-            headers["Content-Encoding"] = "identity"
 
         # Ensure support for range requests (e.g. for video files)
         headers["Accept-Ranges"] = "bytes"
@@ -380,6 +370,13 @@ def create_media_routes(
             headers["Content-Length"] = str(len(content))
         else:
             headers["Content-Length"] = str(content_length)
+
+            # Prevent GZip middleware from compressing audio/video files.
+            # Audio/video elements in browsers can fail when binary content is gzip-compressed.
+            # Setting Content-Encoding tells GZipMiddleware to skip compression.
+            mimetype = media_file.mimetype or ""
+            if mimetype.startswith(("audio/", "video/")):
+                headers["Content-Encoding"] = "identity"
 
         response = Response(
             content,
