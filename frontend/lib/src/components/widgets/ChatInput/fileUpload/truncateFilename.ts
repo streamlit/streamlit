@@ -41,7 +41,8 @@ export function truncateFilename(
   if (!hasExtension) {
     // No extension: just truncate in the middle
     const half = Math.floor((maxLength - 3) / 2)
-    return `${filename.slice(0, half)}...${filename.slice(-half)}`
+    const endPart = half > 0 ? filename.slice(-half) : ""
+    return `${filename.slice(0, half)}...${endPart}`
   }
 
   const extension = filename.slice(lastDotIndex)
@@ -53,11 +54,13 @@ export function truncateFilename(
   if (availableForName <= 0) {
     // Extension is too long, just do simple truncation
     const half = Math.floor((maxLength - 3) / 2)
-    return `${filename.slice(0, half)}...${filename.slice(-half)}`
+    const endPart = half > 0 ? filename.slice(-half) : ""
+    return `${filename.slice(0, half)}...${endPart}`
   }
 
   const startLength = Math.ceil(availableForName / 2)
   const endLength = Math.floor(availableForName / 2)
 
-  return `${name.slice(0, startLength)}...${name.slice(-endLength)}${extension}`
+  const endPart = endLength > 0 ? name.slice(-endLength) : ""
+  return `${name.slice(0, startLength)}...${endPart}${extension}`
 }

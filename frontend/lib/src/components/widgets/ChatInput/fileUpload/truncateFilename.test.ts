@@ -177,6 +177,15 @@ describe("truncateFilename", () => {
 
       expect(result.length).toBeLessThanOrEqual(10)
       expect(result).toContain("...")
+
+      // Edge case: maxLength that results in zero endLength (slice(-0) returns full string)
+      // filename="abcdefgh.pdf" (12 chars), maxLength=8
+      // extension=".pdf" (4), ellipsis (3) → availableForName = 8 - 4 - 3 = 1
+      // startLength=ceil(1/2)=1, endLength=floor(1/2)=0
+      // Result should be "a....pdf" (8 chars), NOT "a...abcdefgh.pdf"
+      const edgeResult = truncateFilename("abcdefgh.pdf", 8)
+      expect(edgeResult.length).toBeLessThanOrEqual(8)
+      expect(edgeResult).not.toContain("abcdefgh")
     })
   })
 })

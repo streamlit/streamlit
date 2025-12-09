@@ -110,9 +110,13 @@ const ChatUploadedFile = ({
     [canRetry, onRetry, fileInfo]
   )
 
-  const handleDeleteClick = useCallback(() => {
-    onDelete(fileInfo.id)
-  }, [onDelete, fileInfo.id])
+  const handleDeleteClick = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation()
+      onDelete(fileInfo.id)
+    },
+    [onDelete, fileInfo.id]
+  )
 
   // Determine aria-label for delete button based on state
   const deleteButtonAriaLabel = isUploading

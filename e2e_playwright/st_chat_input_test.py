@@ -1628,6 +1628,10 @@ def upload_single_file_and_snapshot(
     file_chip = uploaded_files.get_by_test_id("stChatInputFile").first
     expect(file_chip).to_be_visible()
 
+    # Verify title attribute contains full filename (for native tooltip on hover)
+    filename_element = uploaded_files.get_by_test_id("stChatInputFileName").first
+    expect(filename_element).to_have_attribute("title", file["name"])
+
     reset_hovering(app)
 
     assert_snapshot(file_chip, name=snapshot_name)
@@ -1682,63 +1686,6 @@ def test_file_chip(
         f"st_chat_input-file_chip_{test_id}",
         assert_snapshot,
     )
-
-
-@use_chat_input("multiple_files")
-def test_file_upload_full_filename_tooltip(app: Page):
-    """Test that truncated filenames have full filename in title attribute."""
-    chat_input = get_element_by_key(app, "multiple_files")
-
-    # Create a file with a very long name (>36 characters triggers truncation)
-    long_filename = (
-        "this-is-a-very-long-filename-that-should-be-truncated-in-the-ui.txt"
-    )
-    file = FilePayload(
-        name=long_filename,
-        mimeType="text/plain",
-        buffer=b"content",
-    )
-
-    file_upload_helper(app, chat_input, [file])
-
-    # Get the uploaded file element
-    uploaded_files = chat_input.get_by_test_id("stChatUploadedFiles").first
-    filename_element = uploaded_files.get_by_test_id("stChatInputFileName").first
-
-    expect(filename_element).to_be_visible()
-
-    # Verify the title attribute contains the full filename (for native tooltip)
-    expect(filename_element).to_have_attribute("title", long_filename)
-
-    # Verify the displayed text is truncated (not equal to full filename)
-    displayed_text = filename_element.inner_text()
-    assert displayed_text != long_filename, "Filename should be truncated in UI"
-    assert "..." in displayed_text, "Truncated filename should contain ellipsis"
-
-    # Delete the existing file
-    uploaded_files.get_by_test_id("stChatInputDeleteBtn").first.click()
-    wait_for_app_run(app, 500)
-
-    # Upload a short filename to test it's NOT truncated
-    short_filename = "short.txt"
-    short_file = FilePayload(
-        name=short_filename,
-        mimeType="text/plain",
-        buffer=b"content",
-    )
-
-    file_upload_helper(app, chat_input, [short_file])
-
-    # Get the new uploaded file element
-    uploaded_files = chat_input.get_by_test_id("stChatUploadedFiles").first
-    filename_element = uploaded_files.get_by_test_id("stChatInputFileName").first
-
-    # Short filename should still have title attribute
-    expect(filename_element).to_have_attribute("title", short_filename)
-
-    # But displayed text should NOT be truncated
-    displayed_text = filename_element.inner_text()
-    assert displayed_text == short_filename, "Short filename should not be truncated"
 
 
 @use_chat_input("multiple_files")
