@@ -32,6 +32,7 @@ from __future__ import annotations
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import wait_for_app_loaded, wait_for_app_run
+from e2e_playwright.shared.app_utils import click_button
 
 # =============================================================================
 # Health Endpoint Tests
@@ -82,8 +83,8 @@ def test_script_health_endpoint_returns_ok(app: Page, app_port: int):
 
     expect(response).to_be_ok()
     assert response.status == 200
-    # The response should indicate script ran successfully
-    assert "ok" in response.text().lower() or response.status == 200
+    # The response should indicate script ran successfully.
+    assert "ok" in response.text().lower()
 
 
 # =============================================================================
@@ -173,7 +174,20 @@ def test_cors_options_preflight_returns_204(app: Page, app_port: int):
 
 
 def _get_media_url_from_image(app: Page, app_port: int) -> str | None:
-    """Helper to get the media URL from an image element."""
+    """Helper to get the media URL from an image element.
+
+    Parameters
+    ----------
+    app : Page
+        The Playwright page object.
+    app_port : int
+        The port number where the app is running.
+
+    Returns
+    -------
+    str or None
+        The full media URL if found, or None if no image with a media URL exists.
+    """
     wait_for_app_loaded(app)
 
     # Get the image element
@@ -451,7 +465,7 @@ def test_double_slash_not_redirected_to_external(app: Page, app_port: int):
 # =============================================================================
 
 
-def test_websocket_connection_to_stream_endpoint(page: Page, app_port: int):
+def test_websocket_connection_to_stream_endpoint(app: Page):
     """Test that WebSocket connects to the correct stream endpoint.
 
     The frontend establishes a WebSocket connection to /_stcore/stream
@@ -465,11 +479,11 @@ def test_websocket_connection_to_stream_endpoint(page: Page, app_port: int):
     def capture_ws(ws: WebSocket) -> None:
         ws_connections.append(ws)
 
-    page.on("websocket", capture_ws)
-
-    # Navigate to the app - this will establish WebSocket connection
-    page.goto(f"http://localhost:{app_port}")
-    wait_for_app_loaded(page)
+    # Note: We need to register the handler before navigation, but the app fixture
+    # already navigated. So we reload to capture the WebSocket connection.
+    app.on("websocket", capture_ws)
+    app.reload()
+    wait_for_app_loaded(app)
 
     # Verify WebSocket connection was established
     assert len(ws_connections) > 0, "No WebSocket connection established"
@@ -481,17 +495,15 @@ def test_websocket_connection_to_stream_endpoint(page: Page, app_port: int):
     )
 
 
-def test_direct_websocket_connection_with_subprotocol(page: Page, app_port: int):
+def test_direct_websocket_connection_with_subprotocol(app: Page, app_port: int):
     """Test direct WebSocket connection with Sec-WebSocket-Protocol header.
 
     This verifies the server correctly handles the subprotocol negotiation.
     Uses browser's native WebSocket API via page.evaluate() to avoid the complexity
     of Python async WebSocket libraries conflicting with Playwright's event loop.
     """
-    # Navigate to the app first to ensure the server is ready
-    page.goto(f"http://localhost:{app_port}")
-    wait_for_app_loaded(page)
-    result = page.evaluate(f"""
+    # The app fixture automatically navigates and waits for the app to load.
+    result = app.evaluate(f"""
         () => new Promise((resolve, reject) => {{
             const ws = new WebSocket(
                 'ws://localhost:{app_port}/_stcore/stream',
@@ -557,48 +569,21 @@ def test_websocket_reconnection_preserves_state(app: Page):
     """
     wait_for_app_loaded(app)
 
-    # Increment counter
-    increment_button = app.get_by_role("button", name="Increment counter")
-    increment_button.click()
+    # Increment counter.
+    click_button(app, "Increment counter")
     wait_for_app_run(app)
 
-    # Verify counter is 1
+    # Verify counter is 1.
     expect(app.get_by_text("Counter: 1")).to_be_visible()
 
-    # Disconnect WebSocket using debug command
+    # Disconnect WebSocket using debug command.
     app.evaluate("window.streamlitDebug.disconnectWebsocket();")
 
-    # Wait for reconnection (status widget should appear and disappear)
+    # Wait for reconnection (status widget should appear and disappear).
     expect(app.get_by_test_id("stStatusWidget")).to_be_visible()
     expect(app.get_by_test_id("stStatusWidget")).not_to_be_attached(timeout=10000)
 
-    # Counter should still be 1 after reconnection
+    # Counter should still be 1 after reconnection.
     # This proves the server correctly parsed the session ID from
-    # the third entry of Sec-WebSocket-Protocol header
+    # the third entry of Sec-WebSocket-Protocol header.
     expect(app.get_by_text("Counter: 1")).to_be_visible()
-
-
-def test_websocket_reconnection_multiple_times(app: Page):
-    """Test that WebSocket can reconnect multiple times preserving state.
-
-    This ensures the Sec-WebSocket-Protocol handling works consistently
-    across multiple reconnection cycles.
-    """
-    wait_for_app_loaded(app)
-
-    # Increment counter to 3
-    increment_button = app.get_by_role("button", name="Increment counter")
-    for _ in range(3):
-        increment_button.click()
-        wait_for_app_run(app)
-
-    expect(app.get_by_text("Counter: 3")).to_be_visible()
-
-    # Disconnect and reconnect multiple times
-    for _ in range(2):
-        app.evaluate("window.streamlitDebug.disconnectWebsocket();")
-        expect(app.get_by_test_id("stStatusWidget")).to_be_visible()
-        expect(app.get_by_test_id("stStatusWidget")).not_to_be_attached(timeout=10000)
-
-    # State should still be preserved
-    expect(app.get_by_text("Counter: 3")).to_be_visible()

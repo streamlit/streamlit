@@ -30,10 +30,9 @@ if uploaded_file is not None:
     st.text(f"Uploaded: {uploaded_file.name}")
     st.text(f"Size: {uploaded_file.size} bytes")
 
-# Image for testing media endpoint - using bytes triggers the media endpoint
+# Image for testing media endpoint - using bytes triggers the media endpoint.
 st.subheader("Image (Media Endpoint)")
-# Create a simple 1x1 red pixel PNG for testing
-
+# Create a simple 1x1 red pixel PNG for testing.
 RED_PIXEL_PNG = base64.b64decode(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg=="
 )
