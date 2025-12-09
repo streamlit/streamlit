@@ -26,7 +26,7 @@ from streamlit.errors import (
     StreamlitInvalidWidthError,
 )
 from streamlit.proto.Block_pb2 import Block
-from streamlit.proto.GapSize_pb2 import GapSize
+from streamlit.proto.GapSize_pb2 import GapConfig, GapSize
 from streamlit.proto.HeightConfig_pb2 import HeightConfig
 from streamlit.proto.TextAlignmentConfig_pb2 import TextAlignmentConfig
 from streamlit.proto.WidthConfig_pb2 import WidthConfig
@@ -178,6 +178,51 @@ def get_height_config(height: Height | SpaceSize) -> HeightConfig:
     else:
         height_config.use_stretch = True
     return height_config
+
+
+def get_gap_config(gap: Gap | int | None, element_type: str) -> GapConfig:
+    """Return a GapConfig for the given gap.
+
+    Parameters
+    ----------
+    gap : Literal["small", "medium", "large"] | int | None
+        The user-supplied gap value.
+    element_type : str
+        The API element name (e.g. "st.container", "st.columns") for error messages.
+
+    Returns
+    -------
+    GapConfig
+        A configuration with either gap_size or pixel_gap set.
+
+    Raises
+    ------
+    StreamlitInvalidColumnGapError
+        If the gap is not a supported type or outside the allowed range.
+    """
+    if gap is None:
+        return GapConfig(gap_size=GapSize.NONE)
+
+    if isinstance(gap, str):
+        gap_mapping = {
+            "small": GapSize.SMALL,
+            "medium": GapSize.MEDIUM,
+            "large": GapSize.LARGE,
+        }
+        gap_lower = gap.lower()
+        if gap_lower in gap_mapping:
+            return GapConfig(gap_size=gap_mapping[gap_lower])
+
+    if isinstance(gap, int) and not isinstance(gap, bool):
+        if gap < 0:
+            raise StreamlitInvalidColumnGapError(gap=gap, element_type=element_type)
+        if gap == 0:
+            return GapConfig(gap_size=GapSize.NONE)
+        if gap <= 1000:
+            return GapConfig(pixel_gap=gap)
+        # gap > 1000 falls through to raise error
+
+    raise StreamlitInvalidColumnGapError(gap=gap, element_type=element_type)
 
 
 def get_gap_size(gap: str | None, element_type: str) -> GapSize.ValueType:

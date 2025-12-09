@@ -30,7 +30,8 @@ enum GapSize {
 }
 
 message GapConfig {
-  oneof gap_spec {
+  oneof gap_value {
     GapSize gap_size = 1;
+    uint32 pixel_gap = 2;
   }
 }

@@ -26,7 +26,7 @@ from streamlit.elements.lib.layout_utils import (
     Width,
     WidthWithoutContent,
     get_align,
-    get_gap_size,
+    get_gap_config,
     get_height_config,
     get_justify,
     get_width_config,
@@ -42,7 +42,6 @@ from streamlit.errors import (
     StreamlitInvalidVerticalAlignmentError,
 )
 from streamlit.proto.Block_pb2 import Block as BlockProto
-from streamlit.proto.GapSize_pb2 import GapConfig
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.string_util import validate_icon_or_emoji
 
@@ -167,14 +166,18 @@ class LayoutsMixin:
               When ``horizontal`` is ``True``, ``"distribute"`` aligns the
               elements the same as ``"top"``.
 
-        gap : "small", "medium", "large", or None
+        gap : "small", "medium", "large", int, or None
             The minimum gap size between the elements inside the container.
             This can be one of the following:
 
             - ``"small"`` (default): 1rem gap between the elements.
             - ``"medium"``: 2rem gap between the elements.
             - ``"large"``: 4rem gap between the elements.
+            - An integer specifying the gap in pixels (0-1000).
             - ``None``: No gap between the elements.
+
+            Integer values are pixels, not rem-based. ``0`` and ``None`` both
+            mean no gap.
 
             The rem unit is relative to the ``theme.baseFontSize``
             configuration option.
@@ -279,8 +282,8 @@ class LayoutsMixin:
         block_proto = BlockProto()
         block_proto.allow_empty = False
         block_proto.flex_container.border = border or False
-        block_proto.flex_container.gap_config.gap_size = get_gap_size(
-            gap, "st.container"
+        block_proto.flex_container.gap_config.CopyFrom(
+            get_gap_config(gap, "st.container")
         )
 
         validate_horizontal_alignment(horizontal_alignment)
@@ -364,14 +367,18 @@ class LayoutsMixin:
               Or ``[1, 2, 3]`` creates three columns where the second one is two times
               the width of the first one, and the third one is three times that width.
 
-        gap : "small", "medium", "large", or None
+        gap : "small", "medium", "large", int, or None
             The size of the gap between the columns. This can be one of the
             following:
 
             - ``"small"`` (default): 1rem gap between the columns.
             - ``"medium"``: 2rem gap between the columns.
             - ``"large"``: 4rem gap between the columns.
+            - An integer specifying the gap in pixels (0-1000).
             - ``None``: No gap between the columns.
+
+            Integer values are pixels, not rem-based. ``0`` and ``None`` both
+            mean no gap.
 
             The rem unit is relative to the ``theme.baseFontSize``
             configuration option.
@@ -524,9 +531,7 @@ class LayoutsMixin:
                 element_type="st.columns",
             )
 
-        gap_size = get_gap_size(gap, "st.columns")
-        gap_config = GapConfig()
-        gap_config.gap_size = gap_size
+        gap_config = get_gap_config(gap, "st.columns")
 
         def column_proto(normalized_weight: float) -> BlockProto:
             col_proto = BlockProto()
