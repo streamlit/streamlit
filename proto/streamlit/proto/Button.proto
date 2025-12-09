@@ -38,5 +38,5 @@ message Button {
   bool use_container_width = 9 [deprecated = true];
   string icon = 10;
   string shortcut = 11;
-  ButtonLikeIconPosition icon_position = 12;
+  streamlit.ButtonLikeIconPosition icon_position = 12;
 }

@@ -35,5 +35,5 @@ message DownloadButton {
   bool ignore_rerun = 11;
   optional string deferred_file_id = 12;
   string shortcut = 13;
-  ButtonLikeIconPosition icon_position = 14;
+  streamlit.ButtonLikeIconPosition icon_position = 14;
 }

@@ -32,5 +32,5 @@ message LinkButton {
   string type = 9;
   string icon = 10;
   string shortcut = 11;
-  ButtonLikeIconPosition icon_position = 12;
+  streamlit.ButtonLikeIconPosition icon_position = 12;
 }

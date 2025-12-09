@@ -18,18 +18,21 @@
  * Shared mapping from protobuf IconPosition enum to UI icon position values.
  */
 
-import { ButtonLikeIconPosition as ProtoButtonLikeIconPosition } from "@streamlit/protobuf"
-
+import { streamlit } from "@streamlit/protobuf"
 export type UiIconPosition = "left" | "right"
 
-const ICON_POSITION_MAP: Record<ProtoButtonLikeIconPosition, UiIconPosition> =
-  {
-    [ProtoButtonLikeIconPosition.LEFT]: "left",
-    [ProtoButtonLikeIconPosition.RIGHT]: "right",
-  } as const
+const ICON_POSITION_MAP: Record<
+  streamlit.ButtonLikeIconPosition,
+  UiIconPosition
+> = {
+  [streamlit.ButtonLikeIconPosition.LEFT]: "left",
+  [streamlit.ButtonLikeIconPosition.RIGHT]: "right",
+} as const
 
 export function mapProtoIconPosition(
-  iconPosition: ProtoButtonLikeIconPosition | null | undefined
+  iconPosition: streamlit.ButtonLikeIconPosition | null | undefined
 ): UiIconPosition {
-  return ICON_POSITION_MAP[iconPosition ?? ProtoButtonLikeIconPosition.LEFT]
+  return ICON_POSITION_MAP[
+    iconPosition ?? streamlit.ButtonLikeIconPosition.LEFT
+  ]
 }

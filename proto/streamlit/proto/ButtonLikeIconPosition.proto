@@ -19,6 +19,8 @@ syntax = "proto3";
 option java_package = "com.snowflake.apps.streamlit";
 option java_outer_classname = "ButtonLikeIconPositionProto";
 
+package streamlit;
+
 // Shared enum for icon positions used by button-like elements.
 enum ButtonLikeIconPosition {
   LEFT = 0;
