@@ -16,10 +16,50 @@
 
 import { Quiver } from "~lib/dataframes/Quiver"
 
-export type SummaryType = "count" | "sum" | "average" | "min" | "max"
+export type SummaryType =
+  | "count"
+  | "sum"
+  | "average"
+  | "min"
+  | "max"
+  | "median"
+
+// All available summary types for dropdown
+export const ALL_SUMMARY_TYPES: SummaryType[] = [
+  "count",
+  "sum",
+  "average",
+  "median",
+  "min",
+  "max",
+]
+
+// Parsed summary value from backend
+// Either {"type": "sum"} for static or {"type": "all", "default": "count"} for dropdown
+export interface SummaryConfigValue {
+  type: SummaryType | "all"
+  default?: SummaryType // Only present when type is "all"
+}
 
 export interface SummaryConfig {
-  [columnName: string]: SummaryType
+  [columnName: string]: SummaryConfigValue
+}
+
+/**
+ * Check if a summary config value is the "all" dropdown type.
+ */
+export function isAllType(value: SummaryConfigValue): boolean {
+  return value.type === "all"
+}
+
+/**
+ * Get the default summary type for an "all" config.
+ */
+export function getDefaultType(value: SummaryConfigValue): SummaryType {
+  if (value.type === "all") {
+    return value.default ?? "count"
+  }
+  return value.type
 }
 
 /**
@@ -30,6 +70,7 @@ export function getSummaryLabel(summaryType: SummaryType): string {
     count: "Count",
     sum: "Sum",
     average: "Avg",
+    median: "Med",
     min: "Min",
     max: "Max",
   }
@@ -51,8 +92,39 @@ export function parseSummaryConfig(configJson: string): SummaryConfig | null {
 }
 
 /**
+ * Parse a value as a number, handling comma-formatted strings.
+ */
+function parseNumericValue(value: unknown): number | null {
+  if (value === null || value === undefined) {
+    return null
+  }
+
+  // If it's already a number, return it
+  if (typeof value === "number") {
+    return isNaN(value) ? null : value
+  }
+
+  // Handle bigint
+  if (typeof value === "bigint") {
+    return Number(value)
+  }
+
+  // For strings, try to parse (removing commas for thousands separators)
+  if (typeof value === "string") {
+    const strValue = value.replace(/,/g, "")
+    const numValue = Number(strValue)
+    return isNaN(numValue) ? null : numValue
+  }
+
+  // For other types, try direct number conversion
+  const numValue = Number(value)
+  return isNaN(numValue) ? null : numValue
+}
+
+/**
  * Get all column values for a specific column index.
  * Returns an array of numeric values (nulls are filtered out).
+ * Handles comma-formatted numbers (e.g., "1,234").
  */
 function getColumnNumericValues(table: Quiver, columnIndex: number): number[] {
   const { numDataRows } = table.dimensions
@@ -60,13 +132,10 @@ function getColumnNumericValues(table: Quiver, columnIndex: number): number[] {
 
   for (let rowIndex = 0; rowIndex < numDataRows; rowIndex++) {
     const cell = table.getCell(rowIndex, columnIndex)
-    const value = cell.content
+    const numValue = parseNumericValue(cell.content)
 
-    if (value !== null && value !== undefined) {
-      const numValue = Number(value)
-      if (!isNaN(numValue)) {
-        values.push(numValue)
-      }
+    if (numValue !== null) {
+      values.push(numValue)
     }
   }
 
@@ -128,11 +197,56 @@ function computeMax(values: number[]): number | null {
 }
 
 /**
- * Format a summary value for display.
+ * Compute the median value in a column.
+ */
+function computeMedian(values: number[]): number | null {
+  if (values.length === 0) {
+    return null
+  }
+  const sorted = [...values].sort((a, b) => a - b)
+  const mid = Math.floor(sorted.length / 2)
+  if (sorted.length % 2 === 0) {
+    return (sorted[mid - 1] + sorted[mid]) / 2
+  }
+  return sorted[mid]
+}
+
+/**
+ * Detect the maximum number of decimal places used in column values.
+ */
+function detectColumnDecimalPlaces(
+  table: Quiver,
+  columnIndex: number
+): number {
+  const { numDataRows } = table.dimensions
+  let maxDecimals = 0
+
+  for (let rowIndex = 0; rowIndex < numDataRows; rowIndex++) {
+    const cell = table.getCell(rowIndex, columnIndex)
+    const value = cell.content
+
+    if (value !== null && value !== undefined) {
+      // Remove commas before checking decimals (for comma-formatted strings)
+      const strValue = String(value).replace(/,/g, "")
+      const decimalIndex = strValue.indexOf(".")
+      if (decimalIndex !== -1) {
+        const decimals = strValue.length - decimalIndex - 1
+        maxDecimals = Math.max(maxDecimals, decimals)
+      }
+    }
+  }
+
+  return maxDecimals
+}
+
+/**
+ * Format a summary value for display with locale formatting.
+ * Always uses commas for thousands for better readability.
  */
 function formatSummaryValue(
   value: number | null,
-  summaryType: SummaryType
+  summaryType: SummaryType,
+  decimalPlaces: number
 ): string {
   if (value === null) {
     return "-"
@@ -143,15 +257,10 @@ function formatSummaryValue(
     return value.toLocaleString()
   }
 
-  // For numeric summaries, format appropriately
-  if (Number.isInteger(value)) {
-    return value.toLocaleString()
-  }
-
-  // Format floats with 2 decimal places
+  // Format with locale (commas) and matching decimal places
   return value.toLocaleString(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
+    minimumFractionDigits: decimalPlaces,
+    maximumFractionDigits: decimalPlaces,
   })
 }
 
@@ -164,10 +273,13 @@ export function computeSummary(
   columnIndex: number,
   summaryType: SummaryType
 ): string {
+  // Detect the decimal places used in the column
+  const decimalPlaces = detectColumnDecimalPlaces(table, columnIndex)
+
   // For count, we can work with any column type
   if (summaryType === "count") {
     const count = computeCount(table, columnIndex)
-    return formatSummaryValue(count, summaryType)
+    return formatSummaryValue(count, summaryType, 0)
   }
 
   // For other summary types, get numeric values
@@ -182,6 +294,9 @@ export function computeSummary(
     case "average":
       result = computeAverage(values)
       break
+    case "median":
+      result = computeMedian(values)
+      break
     case "min":
       result = computeMin(values)
       break
@@ -190,7 +305,7 @@ export function computeSummary(
       break
   }
 
-  return formatSummaryValue(result, summaryType)
+  return formatSummaryValue(result, summaryType, decimalPlaces)
 }
 
 /**

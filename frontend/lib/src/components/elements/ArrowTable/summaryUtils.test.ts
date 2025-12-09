@@ -16,7 +16,7 @@
 
 import { describe, expect, it } from "vitest"
 
-import { parseSummaryConfig } from "./summaryUtils"
+import { getDefaultType, isAllType, parseSummaryConfig } from "./summaryUtils"
 
 describe("parseSummaryConfig", () => {
   it("returns null for empty string", () => {
@@ -27,13 +27,49 @@ describe("parseSummaryConfig", () => {
     expect(parseSummaryConfig("not valid json")).toBeNull()
   })
 
-  it("parses valid JSON config", () => {
-    const config = parseSummaryConfig('{"revenue": "sum", "count": "count"}')
-    expect(config).toEqual({ revenue: "sum", count: "count" })
+  it("parses valid JSON config with static types", () => {
+    const config = parseSummaryConfig(
+      '{"revenue": {"type": "sum"}, "count": {"type": "count"}}'
+    )
+    expect(config).toEqual({
+      revenue: { type: "sum" },
+      count: { type: "count" },
+    })
   })
 
   it("parses single column config", () => {
-    const config = parseSummaryConfig('{"sales": "average"}')
-    expect(config).toEqual({ sales: "average" })
+    const config = parseSummaryConfig('{"sales": {"type": "average"}}')
+    expect(config).toEqual({ sales: { type: "average" } })
+  })
+
+  it("parses all type config with default", () => {
+    const config = parseSummaryConfig(
+      '{"revenue": {"type": "all", "default": "sum"}}'
+    )
+    expect(config).toEqual({ revenue: { type: "all", default: "sum" } })
+  })
+})
+
+describe("isAllType", () => {
+  it("returns true for all type", () => {
+    expect(isAllType({ type: "all", default: "count" })).toBe(true)
+  })
+
+  it("returns false for static type", () => {
+    expect(isAllType({ type: "sum" })).toBe(false)
+  })
+})
+
+describe("getDefaultType", () => {
+  it("returns default for all type", () => {
+    expect(getDefaultType({ type: "all", default: "sum" })).toBe("sum")
+  })
+
+  it("returns count for all type without default", () => {
+    expect(getDefaultType({ type: "all" })).toBe("count")
+  })
+
+  it("returns type for static type", () => {
+    expect(getDefaultType({ type: "sum" })).toBe("sum")
   })
 })

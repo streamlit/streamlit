@@ -191,17 +191,122 @@ export const StyledSummaryValue = styled.span(({ theme }) => ({
   color: theme.colors.fadedText60,
 }))
 
+// Container for stacked items that maintains width of the widest
+export const StyledStackedContainer = styled.span({
+  display: "inline-grid",
+  justifyItems: "end", // Right-align all items within the grid
+  "& > *": {
+    gridArea: "1 / 1", // Stack all children in the same grid cell
+  },
+})
+
+// Hidden item used to maintain width but not visible
+export const StyledHiddenItem = styled.span({
+  visibility: "hidden",
+})
+
 // Truncation info icon styling
 export const StyledTruncationIcon = styled.span(({ theme }) => ({
   display: "inline-flex",
   alignItems: "center",
+  alignSelf: "center",
   justifyContent: "center",
   color: theme.colors.fadedText40,
   fontSize: theme.fontSizes.sm,
   cursor: "help",
-  // marginLeft: theme.spacing.twoXS,
   "& svg": {
     width: theme.fontSizes.sm,
     height: theme.fontSizes.sm,
   },
+}))
+
+// Summary dropdown button container
+export const StyledSummaryDropdownContainer = styled.div({
+  position: "relative",
+  display: "inline-flex",
+})
+
+// Summary dropdown button styling
+export const StyledSummaryDropdownButton = styled.button(({ theme }) => ({
+  display: "inline-flex",
+  alignItems: "baseline",
+  gap: theme.spacing.twoXS,
+  background: "none",
+  border: "none",
+  padding: 0,
+  cursor: "pointer",
+  fontFamily: "inherit",
+  "&:hover": {
+    opacity: 0.8,
+  },
+  "&:focus": {
+    outline: "none",
+  },
+}))
+
+// Dropdown arrow icon
+export const StyledDropdownArrow = styled.span(({ theme }) => ({
+  display: "inline-flex",
+  alignItems: "center",
+  alignSelf: "center",
+  color: theme.colors.fadedText60,
+  "& svg": {
+    width: theme.fontSizes.md,
+    height: theme.fontSizes.md,
+  },
+}))
+
+// Summary dropdown menu styling (used with portal, positioned via inline styles)
+export const StyledSummaryDropdownMenu = styled.div(({ theme }) => ({
+  position: "fixed",
+  backgroundColor: theme.colors.bgColor,
+  border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
+  borderRadius: theme.radii.default,
+  zIndex: theme.zIndices.popup,
+  minWidth: theme.sizes.minMenuWidth,
+  overflow: "hidden",
+}))
+
+// Summary dropdown menu item styling
+// Matches st.dataframe column menu item styling
+export const StyledSummaryDropdownItem = styled.button<{
+  isSelected?: boolean
+  isFocused?: boolean
+}>(({ theme, isSelected, isFocused }) => ({
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  gap: theme.spacing.lg,
+  width: "100%",
+  padding: `${theme.spacing.twoXS} ${theme.spacing.sm}`,
+  textAlign: "left",
+  background: isSelected
+    ? theme.colors.darkenedBgMix15
+    : isFocused
+      ? theme.colors.darkenedBgMix15
+      : "none",
+  border: "none",
+  cursor: "pointer",
+  fontFamily: "inherit",
+  fontSize: theme.fontSizes.sm,
+  color: theme.colors.bodyText,
+  fontWeight: theme.fontWeights.normal,
+  whiteSpace: "nowrap",
+  "&:hover": {
+    backgroundColor: theme.colors.darkenedBgMix15,
+  },
+  "&:focus": {
+    outline: "none",
+    backgroundColor: theme.colors.darkenedBgMix15,
+  },
+}))
+
+// Label part of dropdown item
+export const StyledDropdownItemLabel = styled.span(({ theme }) => ({
+  color: theme.colors.fadedText40,
+}))
+
+// Value part of dropdown item
+export const StyledDropdownItemValue = styled.span(({ theme }) => ({
+  color: theme.colors.fadedText60,
 }))
