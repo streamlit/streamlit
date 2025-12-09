@@ -19,6 +19,8 @@ import unittest
 from typing import Any
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from streamlit.auth_util import (
     AuthCache,
     clear_cookie_and_chunks,
@@ -27,6 +29,7 @@ from streamlit.auth_util import (
     get_signing_secret,
     set_cookie_with_chunks,
 )
+from streamlit.errors import StreamlitAuthError
 
 CONFIG_MOCK: dict[str, Any] = {}
 
@@ -155,6 +158,28 @@ class ExposeTokensConfigTest(unittest.TestCase):
             result = get_expose_tokens_config()
             assert result == []
 
+    def test_expose_tokens_invalid_value_raises_error(self):
+        """Test expose_tokens with invalid token value raises StreamlitAuthError."""
+        with patch(
+            "streamlit.auth_util.secrets_singleton",
+            MagicMock(
+                load_if_toml_exists=MagicMock(return_value=True),
+                get=MagicMock(
+                    return_value={
+                        "redirect_uri": "http://localhost:8501/oauth2callback",
+                        "cookie_secret": "test_cookie_secret",
+                        "expose_tokens": ["id", "invalid"],  # Invalid token value
+                    }
+                ),
+            ),
+        ):
+            with pytest.raises(StreamlitAuthError) as exc_info:
+                get_expose_tokens_config()
+            assert (
+                "Invalid expose_tokens configuration. Only 'id' and 'access' are allowed."
+                in str(exc_info.value)
+            )
+
 
 class CookieChunkingTest(unittest.TestCase):
     """Test cookie chunking functionality."""
@@ -205,8 +230,7 @@ class CookieChunkingTest(unittest.TestCase):
 
         # Main cookie should exist (contains first chunk)
         assert "test_cookie" in cookies
-        assert "test_cookie_count" in cookies
-        chunk_count = int(cookies["test_cookie_count"])
+        chunk_count = int(cookies["test_cookie"].split("-")[1])
         assert chunk_count > 1  # Should have multiple chunks
 
         # Verify additional chunks exist (1, 2, 3, etc.)
@@ -228,13 +252,13 @@ class CookieChunkingTest(unittest.TestCase):
     def test_get_cookie_with_chunks_chunked_cookie(self):
         """Test retrieving a chunked cookie."""
         original_value = '{"key": "value123"}'
-        chunk0 = '{"key": '  # Main cookie contains first chunk
-        chunk1 = '"value123"}'
+        chunk1 = '{"key": '  # Main cookie contains first chunk
+        chunk2 = '"value123"}'
 
         cookies: dict[str, bytes] = {
-            "test_cookie_count": b"2",
-            "test_cookie": chunk0.encode(),  # Main cookie is first chunk
-            "test_cookie_1": chunk1.encode(),
+            "test_cookie": b"chunks-2",
+            "test_cookie_1": chunk1.encode(),  # Main cookie is first chunk
+            "test_cookie_2": chunk2.encode(),
         }
 
         def mock_get_cookie(name: str) -> bytes | None:
@@ -255,10 +279,10 @@ class CookieChunkingTest(unittest.TestCase):
     def test_get_cookie_with_chunks_missing_chunk(self):
         """Test retrieving a chunked cookie with a missing chunk."""
         cookies: dict[str, bytes] = {
-            "test_cookie_count": b"3",
-            "test_cookie": b"chunk0",  # Main cookie is first chunk
-            # test_cookie_1 is missing
-            "test_cookie_2": b"chunk2",
+            "test_cookie": b"chunks-3",
+            "test_cookie_1": b"chunk0",  # Main cookie is first chunk
+            # test_cookie_2 is missing
+            "test_cookie_3": b"chunk2",
         }
 
         def mock_get_cookie(name: str) -> bytes | None:
@@ -270,14 +294,14 @@ class CookieChunkingTest(unittest.TestCase):
     def test_get_cookie_with_chunks_invalid_count(self):
         """Test retrieving a chunked cookie with invalid count."""
         cookies: dict[str, bytes] = {
-            "test_cookie_count": b"invalid",
+            "test_cookie": b"chunks-invalid",
         }
 
         def mock_get_cookie(name: str) -> bytes | None:
             return cookies.get(name)
 
         result = get_cookie_with_chunks(mock_get_cookie, "test_cookie")
-        assert result is None
+        assert result == b"chunks-invalid"
 
     def test_clear_cookie_and_chunks_single_cookie(self):
         """Test clearing a single (non-chunked) cookie."""
@@ -301,10 +325,10 @@ class CookieChunkingTest(unittest.TestCase):
     def test_clear_cookie_and_chunks_chunked_cookie(self):
         """Test clearing a chunked cookie."""
         cookies: dict[str, bytes] = {
-            "test_cookie_count": b"3",
-            "test_cookie": b"chunk0",  # Main cookie is first chunk
+            "test_cookie": b"chunks-3",
             "test_cookie_1": b"chunk1",
             "test_cookie_2": b"chunk2",
+            "test_cookie_3": b"chunk3",
         }
         cleared: list[str] = []
 
@@ -321,13 +345,13 @@ class CookieChunkingTest(unittest.TestCase):
         assert "test_cookie" in cleared
         assert "test_cookie_1" in cleared
         assert "test_cookie_2" in cleared
-        assert "test_cookie_count" in cleared
-        assert len(cleared) == 4  # main, 1, 2, count
+        assert "test_cookie_3" in cleared
+        assert len(cleared) == 4  # main, 1, 2, 3
 
     def test_clear_cookie_and_chunks_invalid_count(self):
         """Test clearing a chunked cookie with invalid count."""
         cookies: dict[str, bytes] = {
-            "test_cookie_count": b"invalid",
+            "test_cookie": b"chunks-invalid",
         }
         cleared: list[str] = []
 
@@ -342,8 +366,7 @@ class CookieChunkingTest(unittest.TestCase):
 
         # Should clear the main cookie and the count cookie
         assert "test_cookie" in cleared
-        assert "test_cookie_count" in cleared
-        assert len(cleared) == 2
+        assert len(cleared) == 1
 
     def test_round_trip_small_cookie(self):
         """Test setting and getting a small cookie."""
@@ -399,7 +422,7 @@ class CookieChunkingTest(unittest.TestCase):
         )
 
         # Verify chunks were created
-        assert "auth_cookie_count" in cookies
+        assert "auth_cookie" in cookies
 
         # Get the cookie (should reconstruct it)
         result = get_cookie_with_chunks(mock_get_cookie, "auth_cookie")

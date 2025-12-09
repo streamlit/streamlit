@@ -40,6 +40,7 @@ if TYPE_CHECKING:
 
     from streamlit.runtime.script_data import ScriptData
     from streamlit.runtime.scriptrunner.script_cache import ScriptCache
+    from streamlit.runtime.scriptrunner_utils.script_run_context import UserInfoType
     from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 
 _LOGGER: Final = get_logger(__name__)
@@ -89,7 +90,7 @@ class WebsocketSessionManager(SessionManager, StatsProvider):
         self,
         client: SessionClient,
         script_data: ScriptData,
-        user_info: dict[str, str | bool | None],
+        user_info: UserInfoType,
         existing_session_id: str | None = None,
         session_id_override: str | None = None,
     ) -> str:

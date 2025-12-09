@@ -112,14 +112,16 @@ class AuthHandlerMixin(tornado.web.RequestHandler):
         try:
             return self.create_signed_value(cookie_name, value)
         except AttributeError:
-            return self.create_secure_cookie_value(cookie_name, value)
+            # Default to the older method for compatibility with Tornado < 6.3.0
+            return cast("bytes", self.create_secure_cookie_value(cookie_name, value))  # type: ignore[attr-defined]
 
     def _get_signed_cookie(self, cookie_name: str) -> bytes | None:
         """Get a signed cookie."""
         try:
-            return self.get_signed_cookie(cookie_name)
+            return cast("bytes", self.get_signed_cookie(cookie_name))
         except AttributeError:
-            return self.get_secure_cookie(cookie_name)
+            # Default to the older method for compatibility with Tornado < 6.3.0
+            return cast("bytes", self.get_secure_cookie(cookie_name))
         except Exception:
             # Handle cases where cookie_secret is not configured or other errors
             return None
@@ -213,11 +215,7 @@ class AuthCallbackHandler(AuthHandlerMixin, tornado.web.RequestHandler):
         user = cast("dict[str, Any]", token.get("userinfo"))
 
         cookie_value = dict(user, origin=origin, is_logged_in=True)
-        tokens = {
-            k: v
-            for k, v in token.items()
-            if k in ["id_token", "access_token", "refresh_token"]
-        }
+        tokens = {k: token[k] for k in ["id_token", "access_token"] if k in token}
 
         if user:
             self.set_auth_cookie(cookie_value, tokens)

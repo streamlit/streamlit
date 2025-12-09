@@ -62,6 +62,7 @@ if TYPE_CHECKING:
     from streamlit.proto.BackMsg_pb2 import BackMsg
     from streamlit.runtime.caching.storage import CacheStorageManager
     from streamlit.runtime.media_file_storage import MediaFileStorage
+    from streamlit.runtime.scriptrunner_utils.script_run_context import UserInfoType
     from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 
 # Wait for the script run result for 60s and if no result is available give up
@@ -362,7 +363,7 @@ class Runtime:
     def connect_session(
         self,
         client: SessionClient,
-        user_info: dict[str, str | bool | None],
+        user_info: UserInfoType,
         existing_session_id: str | None = None,
         session_id_override: str | None = None,
     ) -> str:
@@ -425,7 +426,7 @@ class Runtime:
     def create_session(
         self,
         client: SessionClient,
-        user_info: dict[str, str | bool | None],
+        user_info: UserInfoType,
         existing_session_id: str | None = None,
         session_id_override: str | None = None,
     ) -> str:

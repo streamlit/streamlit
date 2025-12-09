@@ -286,7 +286,7 @@ class UserInfoAuthTest(DeltaGeneratorTestCase):
         assert c.url.startswith("/auth/logout")
 
 
-class TokensProxyTest:
+class TestTokensProxy:
     """Test TokensProxy class functionality."""
 
     def test_tokens_proxy_access(self):
