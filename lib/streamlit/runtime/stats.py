@@ -15,8 +15,7 @@
 from __future__ import annotations
 
 import itertools
-from abc import abstractmethod
-from typing import TYPE_CHECKING, NamedTuple, Protocol, cast, runtime_checkable
+from typing import TYPE_CHECKING, NamedTuple, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -170,7 +169,6 @@ def metric_type_string_to_proto(type_string: str) -> MetricType.ValueType:
 
 @runtime_checkable
 class StatsProvider(Protocol):
-    @abstractmethod
     def get_stats(self) -> Sequence[Stat]:
         raise NotImplementedError
 
@@ -200,11 +198,19 @@ class StatsManager:
         self._stats_providers[family_name].append(provider)
 
     def get_stats(self) -> dict[str, Sequence[Stat]]:
-        """Return a dict mapping family names to sequences of stats from each registered provider."""
+        """Return all registered stats grouped by metric family name.
+
+        Returns
+        -------
+        dict[str, Sequence[Stat]]
+            A dictionary mapping metric family names (as registered with
+            register_provider) to sequences of Stat objects from all providers
+            registered under that family name.
+        """
         result: dict[str, Sequence[Stat]] = {}
         for family_name, providers in self._stats_providers.items():
             all_stats: list[Stat] = []
             for provider in providers:
                 all_stats.extend(provider.get_stats())
-            result[family_name] = cast("Sequence[Stat]", all_stats)
+            result[family_name] = all_stats
         return result

@@ -16,11 +16,24 @@ from __future__ import annotations
 
 import unittest
 
+from parameterized import parameterized
+
+from streamlit.proto.openmetrics_data_model_pb2 import (
+    COUNTER,
+    GAUGE,
+    GAUGE_HISTOGRAM,
+    HISTOGRAM,
+    INFO,
+    STATE_SET,
+    SUMMARY,
+    UNKNOWN,
+)
 from streamlit.runtime.stats import (
     CacheStat,
     StatsManager,
     StatsProvider,
     group_cache_stats,
+    metric_type_string_to_proto,
 )
 
 
@@ -67,8 +80,8 @@ class StatsManagerTest(unittest.TestCase):
         manager.register_provider("family_a", provider1)
         manager.register_provider("family_b", provider2)
 
-        provider1.stats = [CacheStat("category1", "cache1", 100)]
-        provider2.stats = [CacheStat("category2", "cache2", 200)]
+        provider1.stats = [CacheStat("family_a", "cache1", 100)]
+        provider2.stats = [CacheStat("family_b", "cache2", 200)]
 
         result = manager.get_stats()
         assert "family_a" in result
@@ -134,3 +147,25 @@ class CacheStatProtocolTest(unittest.TestCase):
         stat = CacheStat("st.cache_data", "my_func", 512)
         expected = 'cache_memory_bytes{cache_type="st.cache_data",cache="my_func"} 512'
         assert stat.to_metric_str() == expected
+
+
+class MetricTypeStringToProtoTest(unittest.TestCase):
+    @parameterized.expand(
+        [
+            ("gauge", GAUGE),
+            ("counter", COUNTER),
+            ("state_set", STATE_SET),
+            ("info", INFO),
+            ("histogram", HISTOGRAM),
+            ("gauge_histogram", GAUGE_HISTOGRAM),
+            ("summary", SUMMARY),
+        ]
+    )
+    def test_known_types(self, type_string: str, expected: int) -> None:
+        """Test that known metric type strings map to correct proto enum values."""
+        assert metric_type_string_to_proto(type_string) == expected
+
+    def test_unknown_type_returns_unknown(self) -> None:
+        """Test that unknown type strings return the UNKNOWN enum value."""
+        assert metric_type_string_to_proto("not_a_real_type") == UNKNOWN
+        assert metric_type_string_to_proto("") == UNKNOWN
