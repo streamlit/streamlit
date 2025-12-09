@@ -41,9 +41,11 @@ if TYPE_CHECKING:
 
 class _DummyStatsManager:
     def __init__(self) -> None:
-        self._stats = [CacheStat("test", "", 1)]
+        self._stats: dict[str, list[CacheStat]] = {
+            "cache_memory_bytes": [CacheStat("cache_memory_bytes", "", 1)]
+        }
 
-    def get_stats(self) -> list[CacheStat]:
+    def get_stats(self) -> dict[str, list[CacheStat]]:
         return self._stats
 
 
