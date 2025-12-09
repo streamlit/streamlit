@@ -39,25 +39,25 @@ class TestProcessSummaryConfig:
         """Test valid summary config with column names."""
         df = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
         result = process_summary_config({"a": "sum", "b": "average"}, df)
-        assert result == {"a": "sum", "b": "average"}
+        assert result == {"a": {"type": "sum"}, "b": {"type": "average"}}
 
     def test_valid_summary_with_column_index(self):
         """Test valid summary config with column indices."""
         df = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
         result = process_summary_config({0: "sum", 1: "max"}, df)
-        assert result == {"a": "sum", "b": "max"}
+        assert result == {"a": {"type": "sum"}, "b": {"type": "max"}}
 
     def test_mixed_column_names_and_indices(self):
         """Test valid summary config with mixed column names and indices."""
         df = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
         result = process_summary_config({"a": "sum", 1: "max"}, df)
-        assert result == {"a": "sum", "b": "max"}
+        assert result == {"a": {"type": "sum"}, "b": {"type": "max"}}
 
     def test_count_works_on_text_columns(self):
         """Test that count works on text columns."""
         df = pd.DataFrame({"name": ["Alice", "Bob", "Charlie"]})
         result = process_summary_config({"name": "count"}, df)
-        assert result == {"name": "count"}
+        assert result == {"name": {"type": "count"}}
 
     def test_sum_fails_on_text_columns(self):
         """Test that sum raises error for text columns."""
@@ -122,7 +122,40 @@ class TestProcessSummaryConfig:
         df = pd.DataFrame({"a": [1, 2, 3]})
         for summary_type in ["count", "sum", "average", "min", "max"]:
             result = process_summary_config({"a": summary_type}, df)  # type: ignore
-            assert result == {"a": summary_type}
+            assert result == {"a": {"type": summary_type}}
+
+    def test_all_without_default(self):
+        """Test 'all' without default uses 'count' as default."""
+        df = pd.DataFrame({"a": [1, 2, 3]})
+        result = process_summary_config({"a": "all"}, df)
+        assert result == {"a": {"type": "all", "default": "count"}}
+
+    def test_all_with_default(self):
+        """Test 'all:sum' parses correctly."""
+        df = pd.DataFrame({"a": [1, 2, 3]})
+        result = process_summary_config({"a": "all:sum"}, df)
+        assert result == {"a": {"type": "all", "default": "sum"}}
+
+    def test_all_with_empty_default(self):
+        """Test 'all:' uses 'count' as default."""
+        df = pd.DataFrame({"a": [1, 2, 3]})
+        result = process_summary_config({"a": "all:"}, df)
+        assert result == {"a": {"type": "all", "default": "count"}}
+
+    def test_all_fails_on_text_columns(self):
+        """Test that 'all' raises error for text columns."""
+        df = pd.DataFrame({"name": ["Alice", "Bob", "Charlie"]})
+        with pytest.raises(StreamlitAPIException) as exc_info:
+            process_summary_config({"name": "all"}, df)
+        assert 'Cannot use "all"' in str(exc_info.value)
+        assert "non-numeric data" in str(exc_info.value)
+
+    def test_all_with_invalid_default_raises_error(self):
+        """Test that 'all:invalid' raises error."""
+        df = pd.DataFrame({"a": [1, 2, 3]})
+        with pytest.raises(StreamlitAPIException) as exc_info:
+            process_summary_config({"a": "all:invalid"}, df)
+        assert 'Invalid default summary type "invalid"' in str(exc_info.value)
 
 
 class TestConvertSummaryConfigToJson:
@@ -135,10 +168,19 @@ class TestConvertSummaryConfigToJson:
 
     def test_valid_config_returns_json(self):
         """Test that valid config returns proper JSON."""
-        result = convert_summary_config_to_json({"a": "sum", "b": "average"})
-        assert result == '{"a": "sum", "b": "average"}'
+        result = convert_summary_config_to_json(
+            {"a": {"type": "sum"}, "b": {"type": "average"}}
+        )
+        assert result == '{"a": {"type": "sum"}, "b": {"type": "average"}}'
 
     def test_single_column_config(self):
         """Test single column config."""
-        result = convert_summary_config_to_json({"revenue": "sum"})
-        assert result == '{"revenue": "sum"}'
+        result = convert_summary_config_to_json({"revenue": {"type": "sum"}})
+        assert result == '{"revenue": {"type": "sum"}}'
+
+    def test_all_config_returns_json(self):
+        """Test that 'all' config returns proper JSON."""
+        result = convert_summary_config_to_json(
+            {"revenue": {"type": "all", "default": "sum"}}
+        )
+        assert result == '{"revenue": {"type": "all", "default": "sum"}}'

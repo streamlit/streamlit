@@ -27,28 +27,59 @@ from streamlit.errors import StreamlitAPIException
 if TYPE_CHECKING:
     from pandas import DataFrame
 
-# Summary types that can be applied to columns
-SummaryType: TypeAlias = Literal["count", "sum", "average", "min", "max"]
+# Summary types that can be applied to columns (actual statistics)
+SummaryType: TypeAlias = Literal["count", "sum", "average", "min", "max", "median"]
 
 # Valid summary types as a set for validation
-_VALID_SUMMARY_TYPES: frozenset[SummaryType] = frozenset(
-    ["count", "sum", "average", "min", "max"]
+_VALID_SUMMARY_TYPES: frozenset[str] = frozenset(
+    ["count", "sum", "average", "min", "max", "median"]
 )
 
 # Summary types that require numeric data
-_NUMERIC_ONLY_SUMMARY_TYPES: frozenset[SummaryType] = frozenset(
-    ["sum", "average", "min", "max"]
+_NUMERIC_ONLY_SUMMARY_TYPES: frozenset[str] = frozenset(
+    ["sum", "average", "min", "max", "median"]
 )
 
+# Input value type: can be a stat type, "all", or "all:stat"
+SummaryInputValue: TypeAlias = str
+
 # User-provided summary configuration input type
-SummaryConfigInput: TypeAlias = Mapping[str | int, SummaryType]
+SummaryConfigInput: TypeAlias = Mapping[str | int, SummaryInputValue]
+
+# Internal parsed summary value (after parsing "all:stat" format)
+# Either {"type": "sum"} or {"type": "all", "default": "count"}
+ParsedSummaryValue: TypeAlias = dict[str, str]
 
 # Internal normalized summary configuration (column names only, no indices)
-SummaryConfig: TypeAlias = dict[str, SummaryType]
+SummaryConfig: TypeAlias = dict[str, ParsedSummaryValue]
+
+
+def _parse_numeric_string(value: str) -> float | None:
+    """Try to parse a string as a number, handling comma formatting.
+
+    Parameters
+    ----------
+    value : str
+        The string to parse.
+
+    Returns
+    -------
+    float | None
+        The parsed number, or None if parsing fails.
+    """
+    try:
+        # Remove commas (thousands separators) and try to parse
+        cleaned = value.replace(",", "")
+        return float(cleaned)
+    except (ValueError, AttributeError):
+        return None
 
 
 def _is_numeric_column(column: pd.Series) -> bool:
     """Check if a pandas Series contains numeric data.
+
+    This handles both native numeric dtypes and string columns that contain
+    formatted numbers (e.g., "1,234" or "1,234.56").
 
     Parameters
     ----------
@@ -58,9 +89,74 @@ def _is_numeric_column(column: pd.Series) -> bool:
     Returns
     -------
     bool
-        True if the column is numeric, False otherwise.
+        True if the column is numeric or contains parseable numeric strings.
     """
-    return pd.api.types.is_numeric_dtype(column)
+    # First check native numeric dtype
+    if pd.api.types.is_numeric_dtype(column):
+        return True
+
+    # For object/string columns, check if values can be parsed as numbers
+    if column.dtype == object or pd.api.types.is_string_dtype(column):
+        non_null_values = column.dropna()
+        if len(non_null_values) == 0:
+            return False
+        # Check if all non-null values can be parsed as numbers
+        return all(
+            _parse_numeric_string(str(val)) is not None for val in non_null_values
+        )
+
+    return False
+
+
+def _parse_summary_value(value: SummaryInputValue) -> ParsedSummaryValue:
+    """Parse a summary input value into the internal format.
+
+    Handles:
+    - Simple types: "sum" -> {"type": "sum"}
+    - All with default: "all:sum" -> {"type": "all", "default": "sum"}
+    - All without default: "all" -> {"type": "all", "default": "count"}
+
+    Parameters
+    ----------
+    value : SummaryInputValue
+        The user-provided summary value (e.g., "sum", "all", "all:sum").
+
+    Returns
+    -------
+    ParsedSummaryValue
+        The parsed summary value as a dict.
+
+    Raises
+    ------
+    StreamlitAPIException
+        If the value format is invalid.
+    """
+    # Check if it's an "all" format
+    if value == "all":
+        return {"type": "all", "default": "count"}
+
+    if value.startswith("all:"):
+        default_stat = value[4:]  # Get everything after "all:"
+        if not default_stat:
+            # "all:" with empty default -> use "count"
+            return {"type": "all", "default": "count"}
+        if default_stat not in _VALID_SUMMARY_TYPES:
+            valid_types = ", ".join(f'"{t}"' for t in sorted(_VALID_SUMMARY_TYPES))
+            raise StreamlitAPIException(
+                f'Invalid default summary type "{default_stat}" in "all:{default_stat}". '
+                f"Valid types are: {valid_types}"
+            )
+        return {"type": "all", "default": default_stat}
+
+    # Simple summary type
+    if value not in _VALID_SUMMARY_TYPES:
+        valid_types = ", ".join(f'"{t}"' for t in sorted(_VALID_SUMMARY_TYPES))
+        raise StreamlitAPIException(
+            f'Invalid summary type "{value}". '
+            f'Valid types are: {valid_types}, "all", or "all:<type>"'
+        )
+
+    return {"type": value}
 
 
 def _resolve_column_reference(
@@ -108,20 +204,20 @@ def _resolve_column_reference(
     return column_ref
 
 
-def _validate_summary_type_for_column(
+def _validate_summary_for_column(
     column_name: str,
-    summary_type: SummaryType,
+    parsed_value: ParsedSummaryValue,
     data_df: DataFrame,
 ) -> None:
-    """Validate that the summary type is compatible with the column's data type.
+    """Validate that the summary configuration is compatible with the column's data type.
 
     Parameters
     ----------
     column_name : str
         The name of the column.
 
-    summary_type : SummaryType
-        The summary type to validate.
+    parsed_value : ParsedSummaryValue
+        The parsed summary value (e.g., {"type": "sum"} or {"type": "all", "default": "sum"}).
 
     data_df : DataFrame
         The DataFrame containing the column.
@@ -129,16 +225,27 @@ def _validate_summary_type_for_column(
     Raises
     ------
     StreamlitAPIException
-        If the summary type is not compatible with the column's data type.
+        If the summary configuration is not compatible with the column's data type.
     """
     column = data_df[column_name]
+    summary_type = parsed_value["type"]
+    is_numeric = _is_numeric_column(column)
+
+    # "all" requires numeric columns (since it shows sum, avg, min, max options)
+    if summary_type == "all" and not is_numeric:
+        raise StreamlitAPIException(
+            f'Cannot use "all" for column "{column_name}" '
+            f"because it contains non-numeric data. "
+            f'"all" requires a numeric column to show all summary options. '
+            f'Use "count" for text columns.'
+        )
 
     # Count works on any column type
     if summary_type == "count":
         return
 
     # Other summary types require numeric data
-    if summary_type in _NUMERIC_ONLY_SUMMARY_TYPES and not _is_numeric_column(column):
+    if summary_type in _NUMERIC_ONLY_SUMMARY_TYPES and not is_numeric:
         raise StreamlitAPIException(
             f'Cannot compute "{summary_type}" for column "{column_name}" '
             f"because it contains non-numeric data. "
@@ -154,15 +261,18 @@ def process_summary_config(
 
     This function:
     1. Converts column indices to column names
-    2. Validates that all column references exist
-    3. Validates that summary types are valid
+    2. Parses summary values (handles "all", "all:stat", and simple types)
+    3. Validates that all column references exist
     4. Validates that summary types are compatible with column data types
 
     Parameters
     ----------
     summary : SummaryConfigInput | None
         The user-provided summary configuration mapping column names/indices
-        to summary types.
+        to summary types. Values can be:
+        - Simple type: "sum", "count", "average", "min", "max"
+        - All with default: "all:sum", "all:count", etc.
+        - All without default: "all" (defaults to "count")
 
     data_df : DataFrame
         The DataFrame to validate the configuration against.
@@ -170,7 +280,8 @@ def process_summary_config(
     Returns
     -------
     SummaryConfig
-        The normalized summary configuration with column names as keys.
+        The normalized summary configuration with column names as keys
+        and parsed values as dicts.
 
     Raises
     ------
@@ -182,22 +293,18 @@ def process_summary_config(
 
     normalized_config: SummaryConfig = {}
 
-    for column_ref, summary_type in summary.items():
-        # Validate summary type
-        if summary_type not in _VALID_SUMMARY_TYPES:
-            valid_types = ", ".join(f'"{t}"' for t in sorted(_VALID_SUMMARY_TYPES))
-            raise StreamlitAPIException(
-                f'Invalid summary type "{summary_type}". Valid types are: {valid_types}'
-            )
+    for column_ref, summary_value in summary.items():
+        # Parse the summary value (handles "all", "all:stat", and simple types)
+        parsed_value = _parse_summary_value(summary_value)
 
         # Resolve column reference to name
         column_name = _resolve_column_reference(column_ref, data_df)
 
-        # Validate summary type is compatible with column data type
-        _validate_summary_type_for_column(column_name, summary_type, data_df)
+        # Validate summary is compatible with column data type
+        _validate_summary_for_column(column_name, parsed_value, data_df)
 
         # Add to normalized config
-        normalized_config[column_name] = summary_type
+        normalized_config[column_name] = parsed_value
 
     return normalized_config
 

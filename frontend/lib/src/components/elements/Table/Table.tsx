@@ -50,11 +50,15 @@ import {
   StyledTableContainer,
   StyledTruncationIcon,
 } from "./styled-components"
+import SummaryDropdown from "./SummaryDropdown"
 import {
   computeSummary,
+  getDefaultType,
   getSummaryLabel,
+  isAllType,
   parseSummaryConfig,
   SummaryConfig,
+  SummaryType,
 } from "./summaryUtils"
 
 export interface TableProps {
@@ -432,9 +436,9 @@ function generateTableFooter(
               ? String(lastHeaderRow[colIndex])
               : ""
 
-          const summaryType = summaryConfig[columnName]
+          const summaryConfigValue = summaryConfig[columnName]
 
-          if (!summaryType) {
+          if (!summaryConfigValue) {
             return (
               <StyledTableCellFooter
                 key={colIndex}
@@ -446,6 +450,24 @@ function generateTableFooter(
             )
           }
 
+          if (isAllType(summaryConfigValue)) {
+            const defaultType = getDefaultType(summaryConfigValue)
+            return (
+              <StyledTableCellFooter
+                key={colIndex}
+                borderMode={borderMode}
+                data-testid="stTableFooterCell"
+              >
+                <SummaryDropdown
+                  table={table}
+                  columnIndex={colIndex}
+                  defaultType={defaultType}
+                />
+              </StyledTableCellFooter>
+            )
+          }
+
+          const summaryType = summaryConfigValue.type as SummaryType
           const summaryValue = computeSummary(table, colIndex, summaryType)
           const summaryLabel = getSummaryLabel(summaryType)
 
