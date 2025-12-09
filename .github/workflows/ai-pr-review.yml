@@ -32,9 +32,9 @@ jobs:
       pull-requests: read
       issues: read
 
-    # Avoid duplicate workflows on same branch
+    # Avoid duplicate workflows on same PR (use PR number for per-PR isolation)
     concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}-ai-review
+      group: ${{ github.workflow }}-pr-${{ github.event.inputs.pr_number || github.event.pull_request.number }}
       cancel-in-progress: true
 
     defaults:
