@@ -52,6 +52,15 @@ message Arrow {
   // Placeholder string used when rendering missing values (e.g. nulls, NaNs).
   optional string placeholder = 15;
 
+  // Summary configuration as JSON (column name -> summary type).
+  // Only used for st.table. Maps column names to summary types like
+  // "count", "sum", "average", "min", "max".
+  optional string summary_config = 16;
+
+  // Indicates if the data was truncated (e.g., lazy data limited to 100 rows).
+  // Used to show info indicator on summary stats in st.table.
+  optional bool is_data_truncated = 17;
+
   // Available editing modes:
   enum EditingMode {
     READ_ONLY = 0; // Read-only table.

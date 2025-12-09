@@ -50,6 +50,11 @@ from streamlit.elements.lib.layout_utils import (
 )
 from streamlit.elements.lib.pandas_styler_utils import marshall_styler
 from streamlit.elements.lib.policies import check_widget_policies
+from streamlit.elements.lib.summary_utils import (
+    SummaryConfigInput,
+    convert_summary_config_to_json,
+    process_summary_config,
+)
 from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
 from streamlit.errors import StreamlitAPIException, StreamlitValueError
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
@@ -800,7 +805,11 @@ class ArrowMixin:
 
     @gather_metrics("table")
     def table(
-        self, data: Data = None, *, border: bool | Literal["horizontal"] = True
+        self,
+        data: Data = None,
+        *,
+        border: bool | Literal["horizontal"] = True,
+        summary: SummaryConfigInput | None = None,
     ) -> DeltaGenerator:
         """Display a static table.
 
@@ -832,6 +841,22 @@ class ArrowMixin:
             - ``True`` (default): Show borders around the table and between cells.
             - ``False``: Don't show any borders.
             - ``"horizontal"``: Show only horizontal borders between rows.
+
+        summary : dict or None
+            Configuration for displaying summary statistics in a footer row.
+            If this is ``None`` (default), no summary row is shown.
+
+            If this is a dictionary, the keys are column names (strings) or
+            positional column indices (integers, 0-based), and the values are
+            one of the following summary types:
+
+            - ``"count"``: The count of non-null values in the column.
+            - ``"sum"``: The sum of values in the column (numeric columns only).
+            - ``"average"``: The average of values in the column (numeric only).
+            - ``"min"``: The minimum value in the column (numeric columns only).
+            - ``"max"``: The maximum value in the column (numeric columns only).
+
+            For non-numeric columns, only ``"count"`` is supported.
 
         Examples
         --------
@@ -876,9 +901,29 @@ class ArrowMixin:
            https://doc-table-horizontal-border.streamlit.app/
            height: 200px
 
+        **Example 3: Display a table with summary statistics**
+
+        >>> import pandas as pd
+        >>> import streamlit as st
+        >>>
+        >>> sales_data = pd.DataFrame(
+        ...     {
+        ...         "Product": ["Widget A", "Widget B", "Widget C"],
+        ...         "Units": [150, 280, 95],
+        ...         "Revenue": [4500, 8400, 2850],
+        ...     }
+        ... )
+        >>> st.table(
+        ...     sales_data,
+        ...     summary={"Units": "sum", "Revenue": "sum", "Product": "count"},
+        ... )
+
         """
         # Parse border parameter to enum value
         border_mode = parse_border_mode(border)
+
+        # Track if data was truncated (for lazy data sources)
+        is_data_truncated = False
 
         # Check if data is uncollected, and collect it but with 100 rows max, instead of
         # 10k rows, which is done in all other cases.
@@ -888,6 +933,31 @@ class ArrowMixin:
             data = dataframe_util.convert_anything_to_pandas_df(
                 data, max_unevaluated_rows=100
             )
+            is_data_truncated = True
+
+        # Process summary configuration if provided
+        summary_config_json = ""
+        if summary is not None:
+            # Convert data to DataFrame to validate summary config
+            # (if not already converted above)
+            if not dataframe_util.is_pandas_data_object(data):
+                data_df = dataframe_util.convert_anything_to_pandas_df(
+                    data, ensure_copy=False
+                )
+            else:
+                import pandas as pd
+
+                if isinstance(data, pd.DataFrame):
+                    data_df = data
+                else:
+                    # Handle Series, Index, etc.
+                    data_df = dataframe_util.convert_anything_to_pandas_df(
+                        data, ensure_copy=False
+                    )
+
+            # Validate and normalize summary config
+            normalized_summary = process_summary_config(summary, data_df)
+            summary_config_json = convert_summary_config_to_json(normalized_summary)
 
         # If pandas.Styler uuid is not provided, a hash of the position
         # of the element will be used. This will cause a rerender of the table
@@ -905,6 +975,12 @@ class ArrowMixin:
         proto = ArrowProto()
         marshall(proto, data, default_uuid)
         proto.border_mode = border_mode
+
+        # Set summary configuration if provided
+        if summary_config_json:
+            proto.summary_config = summary_config_json
+            proto.is_data_truncated = is_data_truncated
+
         return self.dg._enqueue("arrow_table", proto, layout_config=layout_config)
 
     @gather_metrics("add_rows")

@@ -16,11 +16,13 @@
 
 import React, { memo, ReactElement } from "react"
 
+import { Info } from "@emotion-icons/material-outlined"
 import { range } from "lodash-es"
 
 import { Arrow as ArrowProto } from "@streamlit/protobuf"
 
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
+import Tooltip, { Placement } from "~lib/components/shared/Tooltip"
 import { format as formatArrowCell } from "~lib/dataframes/arrowFormatUtils"
 import {
   DataFrameCellType,
@@ -34,13 +36,24 @@ import { Quiver } from "~lib/dataframes/Quiver"
 
 import {
   StyledEmptyTableCell,
+  StyledSummaryContent,
+  StyledSummaryLabel,
+  StyledSummaryValue,
   StyledTable,
   StyledTableBorder,
   StyledTableCaption,
   StyledTableCell,
+  StyledTableCellFooter,
   StyledTableCellHeader,
   StyledTableContainer,
+  StyledTruncationIcon,
 } from "./styled-components"
+import {
+  computeSummary,
+  getSummaryLabel,
+  parseSummaryConfig,
+  SummaryConfig,
+} from "./summaryUtils"
 
 export interface TableProps {
   element: ArrowProto
@@ -53,6 +66,10 @@ export function ArrowTable(props: Readonly<TableProps>): ReactElement {
   const { numHeaderRows, numDataRows, numColumns } = table.dimensions
   const dataRowIndices = range(numDataRows)
   const borderMode = props.element.borderMode
+
+  // Parse summary configuration from element
+  const summaryConfig = parseSummaryConfig(props.element.summaryConfig ?? "")
+  const isDataTruncated = props.element.isDataTruncated ?? false
 
   return (
     <StyledTableContainer className="stTable" data-testid="stTable">
@@ -79,6 +96,13 @@ export function ArrowTable(props: Readonly<TableProps>): ReactElement {
               )
             )}
           </tbody>
+          {summaryConfig &&
+            generateTableFooter(
+              table,
+              summaryConfig,
+              borderMode,
+              isDataTruncated
+            )}
         </StyledTable>
       </StyledTableBorder>
       {/* One negative side effect of having the border on a wrapper is that we need
@@ -232,6 +256,85 @@ function generateTableCell(
       throw new Error(`Cannot parse type "${type}".`)
     }
   }
+}
+
+/**
+ * Generate the table footer (summary) row from a Quiver object.
+ */
+function generateTableFooter(
+  table: Quiver,
+  summaryConfig: SummaryConfig,
+  borderMode: ArrowProto.BorderMode,
+  isDataTruncated: boolean
+): ReactElement | null {
+  const { numColumns, numDataRows } = table.dimensions
+
+  // Don't show footer if there's no data
+  if (numDataRows === 0) {
+    return null
+  }
+
+  return (
+    <tfoot data-testid="stTableFooter">
+      <tr>
+        {range(numColumns).map(colIndex => {
+          // Find the column name for this index
+          const columnNames = table.columnNames
+          const lastHeaderRow =
+            columnNames && columnNames.length > 0
+              ? columnNames[columnNames.length - 1]
+              : []
+          const columnName =
+            colIndex < lastHeaderRow.length
+              ? String(lastHeaderRow[colIndex])
+              : ""
+
+          // Check if this column has a summary configured
+          const summaryType = summaryConfig[columnName]
+
+          // Render empty cell if no summary for this column
+          if (!summaryType) {
+            return (
+              <StyledTableCellFooter
+                key={colIndex}
+                borderMode={borderMode}
+                data-testid="stTableFooterCell"
+              >
+                {"\u00A0"}
+              </StyledTableCellFooter>
+            )
+          }
+
+          // Compute and render the summary value with label
+          const summaryValue = computeSummary(table, colIndex, summaryType)
+          const summaryLabel = getSummaryLabel(summaryType)
+
+          return (
+            <StyledTableCellFooter
+              key={colIndex}
+              borderMode={borderMode}
+              data-testid="stTableFooterCell"
+            >
+              <StyledSummaryContent>
+                <StyledSummaryLabel>{summaryLabel}:</StyledSummaryLabel>
+                <StyledSummaryValue>{summaryValue}</StyledSummaryValue>
+                {isDataTruncated && (
+                  <Tooltip
+                    content="Calculated on displayed rows only"
+                    placement={Placement.TOP}
+                  >
+                    <StyledTruncationIcon data-testid="stTableTruncationIcon">
+                      <Info size={14} />
+                    </StyledTruncationIcon>
+                  </Tooltip>
+                )}
+              </StyledSummaryContent>
+            </StyledTableCellFooter>
+          )
+        })}
+      </tr>
+    </tfoot>
+  )
 }
 
 export default memo(ArrowTable)

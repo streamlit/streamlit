@@ -329,7 +329,7 @@ def is_unevaluated_data_object(obj: object) -> bool:
     - Dask DataFrame / Series / Index
     - Ray Dataset
     - Polars LazyFrame
-    - Generator functions
+    - Generator functions and generator objects
     - DB API 2.0 Cursor (PEP 249)
     - DuckDB Relation (Relational API)
 
@@ -348,6 +348,7 @@ def is_unevaluated_data_object(obj: object) -> bool:
         or is_duckdb_relation(obj)
         or is_dbapi_cursor(obj)
         or inspect.isgeneratorfunction(obj)
+        or inspect.isgenerator(obj)
     )
 
 
@@ -716,10 +717,14 @@ def convert_anything_to_pandas_df(
         data_df = pd.api.interchange.from_dataframe(data)
         return data_df.copy() if ensure_copy else data_df
 
-    # Support for generator functions
+    # Support for generator functions and generator objects
     if inspect.isgeneratorfunction(data):
         data = _fix_column_naming(
             pd.DataFrame(_iterable_to_list(data(), max_iterations=max_unevaluated_rows))
+        )
+    elif inspect.isgenerator(data):
+        data = _fix_column_naming(
+            pd.DataFrame(_iterable_to_list(data, max_iterations=max_unevaluated_rows))
         )
 
         if data.shape[0] == max_unevaluated_rows:

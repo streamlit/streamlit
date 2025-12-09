@@ -67,14 +67,11 @@ const styleCellFunction = (
     border !== Arrow.BorderMode.NONE
       ? `${theme.sizes.borderWidth} solid ${theme.colors.dataframeBorderColor}`
       : "none",
+  // Remove bottom border of last tbody row to prevent double border.
+  // This works both when there's a tfoot (where tfoot has top border) and
+  // when there's no tfoot (to prevent double border with table border).
   "tbody tr:last-child &": {
-    // For "all" borders, remove bottom border of last row to prevent double border with
-    // table border. For "horizontal" borders, also remove bottom border of last row
-    // since there's no content after it.
-    borderBottom:
-      border === Arrow.BorderMode.ALL || border === Arrow.BorderMode.HORIZONTAL
-        ? "none"
-        : undefined,
+    borderBottom: "none",
   },
   borderRight:
     border === Arrow.BorderMode.ALL
@@ -135,4 +132,76 @@ export const StyledEmptyTableCell = styled(StyledTableCell)<{
   fontStyle: "italic",
   fontSize: theme.fontSizes.md,
   textAlign: "center",
+}))
+
+// Footer cell styling - similar to header cells but for summary row
+export const StyledTableCellFooter = styled.td<{
+  borderMode: Arrow.BorderMode
+}>(({ theme, borderMode }) => ({
+  padding: `${theme.spacing.twoXS} ${theme.spacing.xs}`,
+  verticalAlign: "bottom",
+  textAlign: "right",
+  // Footer row should have top border when table has horizontal or all borders
+  borderTop:
+    borderMode !== Arrow.BorderMode.NONE
+      ? `${theme.sizes.borderWidth} solid ${theme.colors.dataframeBorderColor}`
+      : "none",
+  // Remove bottom border for footer cells
+  borderBottom: "none",
+  // Right border for ALL mode
+  borderRight:
+    borderMode === Arrow.BorderMode.ALL
+      ? `${theme.sizes.borderWidth} solid ${theme.colors.dataframeBorderColor}`
+      : "none",
+  "&:last-child": {
+    borderRight: borderMode === Arrow.BorderMode.ALL ? "none" : undefined,
+    paddingRight:
+      borderMode === Arrow.BorderMode.NONE ? "0" : theme.spacing.xs,
+  },
+  // Remove left padding from first cell when no borders
+  "&:first-of-type": {
+    paddingLeft: borderMode === Arrow.BorderMode.NONE ? "0" : theme.spacing.sm,
+  },
+  // Increase the space between columns when there are no vertical borders
+  "&:not(:first-of-type)": {
+    paddingLeft:
+      borderMode === Arrow.BorderMode.NONE ||
+      borderMode === Arrow.BorderMode.HORIZONTAL
+        ? theme.spacing.lg
+        : theme.spacing.sm,
+  },
+}))
+
+// Container for summary value and truncation icon
+export const StyledSummaryContent = styled.span(({ theme }) => ({
+  display: "inline-flex",
+  alignItems: "baseline",
+  gap: theme.spacing.twoXS,
+}))
+
+// Summary label styling (e.g., "Avg", "Sum")
+export const StyledSummaryLabel = styled.span(({ theme }) => ({
+  fontSize: theme.fontSizes.sm,
+  color: theme.colors.fadedText40,
+}))
+
+// Summary value styling
+export const StyledSummaryValue = styled.span(({ theme }) => ({
+  fontSize: theme.fontSizes.md,
+  color: theme.colors.fadedText60,
+}))
+
+// Truncation info icon styling
+export const StyledTruncationIcon = styled.span(({ theme }) => ({
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  color: theme.colors.fadedText40,
+  fontSize: theme.fontSizes.sm,
+  cursor: "help",
+  // marginLeft: theme.spacing.twoXS,
+  "& svg": {
+    width: theme.fontSizes.sm,
+    height: theme.fontSizes.sm,
+  },
 }))

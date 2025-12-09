@@ -115,4 +115,67 @@ describe("st._arrow_table", () => {
     const cellStyle = getComputedStyle(tableCell)
     expect(cellStyle.borderBottomStyle).toBe("solid")
   })
+
+  it("does not render footer when no summary config", () => {
+    const props = getProps(UNICODE)
+    render(<ArrowTable {...props} />)
+
+    expect(screen.queryByTestId("stTableFooter")).not.toBeInTheDocument()
+  })
+
+  it("renders footer when summary config is provided", () => {
+    // UNICODE mock has columns: c1, c2 (both strings)
+    const propsWithSummary: TableProps = {
+      element: ArrowProto.create({
+        borderMode: ArrowProto.BorderMode.ALL,
+        summaryConfig: '{"c1": "count"}',
+      }),
+      data: new Quiver({ data: UNICODE }),
+    }
+
+    render(<ArrowTable {...propsWithSummary} />)
+
+    expect(screen.getByTestId("stTableFooter")).toBeInTheDocument()
+    expect(screen.getAllByTestId("stTableFooterCell").length).toBeGreaterThan(
+      0
+    )
+  })
+
+  it("shows truncation icon when data is truncated", () => {
+    // UNICODE mock has columns: c1, c2 (both strings)
+    const propsWithTruncation: TableProps = {
+      element: ArrowProto.create({
+        borderMode: ArrowProto.BorderMode.ALL,
+        summaryConfig: '{"c1": "count"}',
+        isDataTruncated: true,
+      }),
+      data: new Quiver({ data: UNICODE }),
+    }
+
+    render(<ArrowTable {...propsWithTruncation} />)
+
+    expect(screen.getByTestId("stTableFooter")).toBeInTheDocument()
+    expect(
+      screen.getAllByTestId("stTableTruncationIcon").length
+    ).toBeGreaterThan(0)
+  })
+
+  it("does not show truncation icon when data is not truncated", () => {
+    // UNICODE mock has columns: c1, c2 (both strings)
+    const propsWithoutTruncation: TableProps = {
+      element: ArrowProto.create({
+        borderMode: ArrowProto.BorderMode.ALL,
+        summaryConfig: '{"c1": "count"}',
+        isDataTruncated: false,
+      }),
+      data: new Quiver({ data: UNICODE }),
+    }
+
+    render(<ArrowTable {...propsWithoutTruncation} />)
+
+    expect(screen.getByTestId("stTableFooter")).toBeInTheDocument()
+    expect(
+      screen.queryByTestId("stTableTruncationIcon")
+    ).not.toBeInTheDocument()
+  })
 })
