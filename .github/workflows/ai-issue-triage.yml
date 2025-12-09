@@ -50,19 +50,26 @@ jobs:
             exit 1
           fi
 
-      - name: Run AI Triage
+      # Runs only very basic triage (first-level support) based on the
+      # issue information and historical issues. This will detect
+      # related issues / duplicates, suggest feature labels, and gives
+      # a brief initial assessment of the issue. We will add more advanced
+      # issue analysis in future iterations.
+      - name: Basic AI Triage
         env:
+          MODEL: opus-4.5-thinking
           CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          MODEL: opus-4.5-thinking
           ISSUE_NUMBER: ${{ github.event.issue.number }}
           ISSUE_URL: ${{ github.event.issue.html_url }}
           ISSUE_TITLE: ${{ github.event.issue.title }}
         run: |
           cursor-agent -p "You are operating in a GitHub Actions runner to triage a GitHub issue.
 
-          The GitHub CLI (gh) is available for READ operations only. Use it to fetch issue details and search for related issues.
-          Git is also available for read operations.
+          The GitHub CLI (gh) is available for READ operations only. Use it to fetch issue details and search
+          for related issues. Git is also available for read operations. The repository is available in the
+          current directory with the full git history, but the dev environment is not setup, so you cannot run
+          the code or development tasks.
 
           # Context:
           - Repo: ${{ github.repository }}
@@ -75,7 +82,7 @@ jobs:
           - Use 'gh label list -L 300' to get all existing labels in the repository. ONLY use labels that exist.
           - Use 'gh issue view $ISSUE_NUMBER' to get full issue details.
           - Use 'gh search issues' to search for related issues if needed.
-          - Other read-only operations are available via 'gh' client.
+          - Other read-only operations are available via 'gh' client or `git` command.
 
           # Goal:
           Analyze this issue and prepare triage information including appropriate labels and related issues.
@@ -89,12 +96,13 @@ jobs:
              - Run 'gh label list -L 300' to get all valid labels.
              - You MUST only use labels from this list.
 
-          3. Read the open_issues.csv file to understand existing issues, the applied labels and find potential duplicates.
+          3. Read the open_issues.csv file to understand existing issues, their descriptions, the applied labels.
 
           4. Analyze the issue:
              - Determine the issue type (bug, enhancement, question, etc.)
              - Identify the relevant feature area(s)
-             - Find up to 3 potentially duplicate or closely related existing issues.
+             - Find up to 3 potentially duplicates or existing issues that are closely related to this issue ($ISSUE_NUMBER).
+               Its fine to also suggest 0 issues if no related issues or duplicates are found.
 
           5. For BUG issues specifically:
              - Perform a quick root cause analysis by examining the codebase
@@ -115,8 +123,6 @@ jobs:
           # Output Format for comment.txt:
 
           <output-start>
-          ## 🤖 AI Triage Summary
-
           [Brief analysis of what this issue is about and the potential root cause if applicable.]
 
           ### Related Issues
@@ -129,7 +135,7 @@ jobs:
 
           # Important Notes:
           - Do NOT attempt to post comments, edit issues, or perform any write operations - they will fail.
-          - Do NOT run test, lint, or build commands.
+          - Do NOT run test, lint, or build commands (the dev environment is not setup!).
           - Focus on analysis and generating the output files.
           " --force --model "$MODEL" --output-format=text
 
