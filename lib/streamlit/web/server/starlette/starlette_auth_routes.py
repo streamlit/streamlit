@@ -67,6 +67,9 @@ class _AsyncAuthCache:
         return self._cache.get_dict()
 
 
+# Note: For true multi-tenant support (multiple Streamlit apps in one process),
+# the underlying auth_cache in oauth_authlib_routes.py would need to be made
+# per-runtime rather than module-level.
 _STARLETTE_AUTH_CACHE = _AsyncAuthCache(auth_cache)
 
 
