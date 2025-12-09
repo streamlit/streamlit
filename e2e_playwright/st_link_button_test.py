@@ -19,13 +19,9 @@ import pytest
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
-from e2e_playwright.shared.app_utils import (
-    check_top_level_class,
-    get_element_by_key,
-    get_expander,
-)
+from e2e_playwright.shared.app_utils import check_top_level_class, get_expander
 
-LINK_BUTTON_ELEMENTS = 21
+LINK_BUTTON_ELEMENTS = 22
 
 
 def test_link_button_display(themed_app: Page, assert_snapshot: ImageCompareFunction):
@@ -48,6 +44,30 @@ def test_link_button_display(themed_app: Page, assert_snapshot: ImageCompareFunc
     )
     assert_snapshot(link_elements.nth(11), name="st_link_button-help")
     assert_snapshot(link_elements.nth(12), name="st_link_button-shortcut")
+    assert_snapshot(
+        link_elements.filter(has_text="Icon Left (Default)").first,
+        name="st_link_button-icon_position_left_material",
+    )
+    assert_snapshot(
+        link_elements.filter(has_text="Icon Right").first,
+        name="st_link_button-icon_position_right_material",
+    )
+    assert_snapshot(
+        link_elements.filter(has_text="Emoji Left").first,
+        name="st_link_button-icon_position_left_emoji",
+    )
+    assert_snapshot(
+        link_elements.filter(has_text="Emoji Right").first,
+        name="st_link_button-icon_position_right_emoji",
+    )
+    assert_snapshot(
+        link_elements.filter(has_text="Primary Icon Left").first,
+        name="st_link_button-icon_position_left_primary",
+    )
+    assert_snapshot(
+        link_elements.filter(has_text="Primary Icon Right").first,
+        name="st_link_button-icon_position_right_primary",
+    )
 
 
 def test_link_button_hover(themed_app: Page, assert_snapshot: ImageCompareFunction):
@@ -81,41 +101,6 @@ def test_link_button_width_examples(app: Page, assert_snapshot: ImageCompareFunc
     assert_snapshot(link_elements.nth(0), name="st_link_button-width_content")
     assert_snapshot(link_elements.nth(1), name="st_link_button-width_stretch")
     assert_snapshot(link_elements.nth(2), name="st_link_button-width_400px")
-
-
-def test_link_button_icon_position(
-    themed_app: Page, assert_snapshot: ImageCompareFunction
-):
-    """Test that icon_position correctly positions icons on link buttons."""
-    # Test Material icon positioning
-    assert_snapshot(
-        get_element_by_key(themed_app, "link_icon_left"),
-        name="st_link_button-icon_position_left_material",
-    )
-    assert_snapshot(
-        get_element_by_key(themed_app, "link_icon_right"),
-        name="st_link_button-icon_position_right_material",
-    )
-
-    # Test emoji icon positioning
-    assert_snapshot(
-        get_element_by_key(themed_app, "link_emoji_left"),
-        name="st_link_button-icon_position_left_emoji",
-    )
-    assert_snapshot(
-        get_element_by_key(themed_app, "link_emoji_right"),
-        name="st_link_button-icon_position_right_emoji",
-    )
-
-    # Test primary button with icon positioning
-    assert_snapshot(
-        get_element_by_key(themed_app, "link_primary_icon_left"),
-        name="st_link_button-icon_position_left_primary",
-    )
-    assert_snapshot(
-        get_element_by_key(themed_app, "link_primary_icon_right"),
-        name="st_link_button-icon_position_right_primary",
-    )
 
 
 @pytest.mark.only_browser(

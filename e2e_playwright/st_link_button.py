@@ -94,14 +94,12 @@ st.link_button(
     "https://streamlit.io",
     icon=":material/bolt:",
     icon_position="left",
-    key="link_icon_left",
 )
 st.link_button(
     "Icon Right",
     "https://streamlit.io",
     icon=":material/bolt:",
     icon_position="right",
-    key="link_icon_right",
 )
 
 st.link_button(
@@ -109,14 +107,12 @@ st.link_button(
     "https://streamlit.io",
     icon="🎈",
     icon_position="left",
-    key="link_emoji_left",
 )
 st.link_button(
     "Emoji Right",
     "https://streamlit.io",
     icon="🎈",
     icon_position="right",
-    key="link_emoji_right",
 )
 
 st.link_button(
@@ -125,7 +121,6 @@ st.link_button(
     icon=":material/check:",
     icon_position="left",
     type="primary",
-    key="link_primary_icon_left",
 )
 st.link_button(
     "Primary Icon Right",
@@ -133,5 +128,4 @@ st.link_button(
     icon=":material/check:",
     icon_position="right",
     type="primary",
-    key="link_primary_icon_right",
 )

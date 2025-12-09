@@ -29,7 +29,7 @@ from e2e_playwright.shared.app_utils import (
     get_expander,
 )
 
-TOTAL_BUTTONS = 36
+TOTAL_BUTTONS = 37
 
 
 def test_button_widget_rendering(
@@ -89,6 +89,38 @@ def test_button_widget_rendering(
     assert_snapshot(
         get_button(themed_app, "Shortcut Button"),
         name="st_button-shortcut_button",
+    )
+    assert_snapshot(
+        get_element_by_key(themed_app, "icon_left_default"),
+        name="st_button-icon_position_left_material",
+    )
+    assert_snapshot(
+        get_element_by_key(themed_app, "icon_right_material"),
+        name="st_button-icon_position_right_material",
+    )
+    assert_snapshot(
+        get_element_by_key(themed_app, "emoji_left"),
+        name="st_button-icon_position_left_emoji",
+    )
+    assert_snapshot(
+        get_element_by_key(themed_app, "emoji_right"),
+        name="st_button-icon_position_right_emoji",
+    )
+    assert_snapshot(
+        get_element_by_key(themed_app, "primary_icon_left"),
+        name="st_button-icon_position_left_primary",
+    )
+    assert_snapshot(
+        get_element_by_key(themed_app, "primary_icon_right"),
+        name="st_button-icon_position_right_primary",
+    )
+    assert_snapshot(
+        get_element_by_key(themed_app, "tertiary_icon_left"),
+        name="st_button-icon_position_left_tertiary",
+    )
+    assert_snapshot(
+        get_element_by_key(themed_app, "tertiary_icon_right"),
+        name="st_button-icon_position_right_tertiary",
     )
 
     # The rest is tested in one screenshot in the following test
@@ -282,48 +314,3 @@ def test_button_with_spinner_icon(app: Page):
     button = get_button(app, "Button with spinner icon")
     # Check that the spinner icon is visible:
     expect(button.get_by_test_id("stSpinnerIcon")).to_be_visible()
-
-
-def test_icon_position_left_and_right(
-    themed_app: Page, assert_snapshot: ImageCompareFunction
-):
-    """Test that icon_position correctly positions icons on left and right."""
-    # Test Material icon positioning
-    assert_snapshot(
-        get_element_by_key(themed_app, "icon_left_default"),
-        name="st_button-icon_position_left_material",
-    )
-    assert_snapshot(
-        get_element_by_key(themed_app, "icon_right_material"),
-        name="st_button-icon_position_right_material",
-    )
-
-    # Test emoji icon positioning
-    assert_snapshot(
-        get_element_by_key(themed_app, "emoji_left"),
-        name="st_button-icon_position_left_emoji",
-    )
-    assert_snapshot(
-        get_element_by_key(themed_app, "emoji_right"),
-        name="st_button-icon_position_right_emoji",
-    )
-
-    # Test primary button with icon positioning
-    assert_snapshot(
-        get_element_by_key(themed_app, "primary_icon_left"),
-        name="st_button-icon_position_left_primary",
-    )
-    assert_snapshot(
-        get_element_by_key(themed_app, "primary_icon_right"),
-        name="st_button-icon_position_right_primary",
-    )
-
-    # Test tertiary button with icon positioning
-    assert_snapshot(
-        get_element_by_key(themed_app, "tertiary_icon_left"),
-        name="st_button-icon_position_left_tertiary",
-    )
-    assert_snapshot(
-        get_element_by_key(themed_app, "tertiary_icon_right"),
-        name="st_button-icon_position_right_tertiary",
-    )
