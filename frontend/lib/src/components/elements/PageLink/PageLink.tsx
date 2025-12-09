@@ -20,11 +20,11 @@ import { PageLink as PageLinkProto } from "@streamlit/protobuf"
 
 import { NavigationContext } from "~lib/components/core/NavigationContext"
 import { BaseButtonTooltip } from "~lib/components/shared/BaseButton"
+import { mapProtoIconPosition } from "~lib/components/shared/BaseButton/iconPosition"
 import { DynamicIcon } from "~lib/components/shared/Icon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
 import { Placement } from "~lib/components/shared/Tooltip"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { mapProtoIconPosition } from "~lib/components/shared/BaseButton/iconPosition"
 
 import {
   StyledNavLink,
