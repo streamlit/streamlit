@@ -26,6 +26,14 @@ message Table {
   // How to show borders around the table and between cells.
   BorderMode border_mode = 2;
 
+  // Summary configuration as JSON (column name -> summary type).
+  // Maps column names to summary types like "count", "sum", "average", "min", "max".
+  optional string summary_config = 3;
+
+  // Indicates if the data was truncated (e.g., lazy data limited to 100 rows).
+  // Used to show info indicator on summary stats.
+  optional bool is_data_truncated = 4;
+
   // Available border modes:
   enum BorderMode {
     ALL = 0; // Show borders around the table and between cells.

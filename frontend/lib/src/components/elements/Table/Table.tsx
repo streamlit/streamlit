@@ -16,11 +16,13 @@
 
 import { memo, ReactElement, useMemo } from "react"
 
+import { Info } from "@emotion-icons/material-outlined"
 import { range } from "lodash-es"
 
 import { streamlit, Table as TableProto } from "@streamlit/protobuf"
 
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
+import Tooltip, { Placement } from "~lib/components/shared/Tooltip"
 import { format as formatArrowCell } from "~lib/dataframes/arrowFormatUtils"
 import {
   DataFrameCellType,
@@ -36,13 +38,24 @@ import { convertRemToPx } from "~lib/theme"
 import {
   StickyType,
   StyledEmptyTableCell,
+  StyledSummaryContent,
+  StyledSummaryLabel,
+  StyledSummaryValue,
   StyledTable,
   StyledTableBorder,
   StyledTableCaption,
   StyledTableCell,
+  StyledTableCellFooter,
   StyledTableCellHeader,
   StyledTableContainer,
+  StyledTruncationIcon,
 } from "./styled-components"
+import {
+  computeSummary,
+  getSummaryLabel,
+  parseSummaryConfig,
+  SummaryConfig,
+} from "./summaryUtils"
 
 export interface TableProps {
   element: TableProto
@@ -112,6 +125,10 @@ export function Table(props: Readonly<TableProps>): ReactElement {
   // With sticky index limited to single index columns, the offset is always 0
   const indexLeftOffsets = [0]
 
+  // Parse summary configuration from element
+  const summaryConfig = parseSummaryConfig(props.element.summaryConfig ?? "")
+  const isDataTruncated = props.element.isDataTruncated ?? false
+
   return (
     <StyledTableContainer className="stTable" data-testid="stTable">
       {cssStyles && <style>{cssStyles}</style>}
@@ -174,6 +191,13 @@ export function Table(props: Readonly<TableProps>): ReactElement {
               )
             )}
           </tbody>
+          {summaryConfig &&
+            generateTableFooter(
+              table,
+              summaryConfig,
+              borderMode,
+              isDataTruncated
+            )}
         </StyledTable>
       </StyledTableBorder>
       {/* One negative side effect of having the border on a wrapper is that we need
@@ -377,6 +401,80 @@ function generateTableCell(
       throw new Error(`Cannot parse type "${type}".`)
     }
   }
+}
+
+/**
+ * Generate the table footer (summary) row from a Quiver object.
+ */
+function generateTableFooter(
+  table: Quiver,
+  summaryConfig: SummaryConfig,
+  borderMode: TableProto.BorderMode,
+  isDataTruncated: boolean
+): ReactElement | null {
+  const { numColumns, numDataRows } = table.dimensions
+
+  if (numDataRows === 0) {
+    return null
+  }
+
+  return (
+    <tfoot data-testid="stTableFooter">
+      <tr>
+        {range(numColumns).map(colIndex => {
+          const columnNames = table.columnNames
+          const lastHeaderRow =
+            columnNames && columnNames.length > 0
+              ? columnNames[columnNames.length - 1]
+              : []
+          const columnName =
+            colIndex < lastHeaderRow.length
+              ? String(lastHeaderRow[colIndex])
+              : ""
+
+          const summaryType = summaryConfig[columnName]
+
+          if (!summaryType) {
+            return (
+              <StyledTableCellFooter
+                key={colIndex}
+                borderMode={borderMode}
+                data-testid="stTableFooterCell"
+              >
+                {"\u00A0"}
+              </StyledTableCellFooter>
+            )
+          }
+
+          const summaryValue = computeSummary(table, colIndex, summaryType)
+          const summaryLabel = getSummaryLabel(summaryType)
+
+          return (
+            <StyledTableCellFooter
+              key={colIndex}
+              borderMode={borderMode}
+              data-testid="stTableFooterCell"
+            >
+              <StyledSummaryContent>
+                <StyledSummaryLabel>{summaryLabel}:</StyledSummaryLabel>
+                <StyledSummaryValue>{summaryValue}</StyledSummaryValue>
+                {isDataTruncated && (
+                  <Tooltip
+                    content="Calculated on displayed rows only"
+                    placement={Placement.TOP}
+                  >
+                    <StyledTruncationIcon data-testid="stTableTruncationIcon">
+                      <Info size={14} />
+                    </StyledTruncationIcon>
+                  </Tooltip>
+                )}
+              </StyledSummaryContent>
+            </StyledTableCellFooter>
+          )
+        })}
+      </tr>
+    </tfoot>
+  )
 }
 
 export default memo(Table)

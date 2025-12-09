@@ -225,4 +225,64 @@ describe("st.table", () => {
     expect(wrapper).not.toHaveAttribute("tabindex")
     expect(wrapper).not.toHaveAttribute("aria-label")
   })
+
+  it("does not render footer when no summary config", () => {
+    const props = getProps(UNICODE)
+    render(<Table {...props} />)
+
+    expect(screen.queryByTestId("stTableFooter")).not.toBeInTheDocument()
+  })
+
+  it("renders footer when summary config is provided", () => {
+    const propsWithSummary: TableProps = {
+      element: TableProto.create({
+        borderMode: TableProto.BorderMode.ALL,
+        summaryConfig: '{"c1": "count"}',
+      }),
+      data: new Quiver({ data: UNICODE }),
+    }
+
+    render(<Table {...propsWithSummary} />)
+
+    expect(screen.getByTestId("stTableFooter")).toBeVisible()
+    expect(screen.getAllByTestId("stTableFooterCell").length).toBeGreaterThan(
+      0
+    )
+  })
+
+  it("shows truncation icon when data is truncated", () => {
+    const propsWithTruncation: TableProps = {
+      element: TableProto.create({
+        borderMode: TableProto.BorderMode.ALL,
+        summaryConfig: '{"c1": "count"}',
+        isDataTruncated: true,
+      }),
+      data: new Quiver({ data: UNICODE }),
+    }
+
+    render(<Table {...propsWithTruncation} />)
+
+    expect(screen.getByTestId("stTableFooter")).toBeVisible()
+    expect(
+      screen.getAllByTestId("stTableTruncationIcon").length
+    ).toBeGreaterThan(0)
+  })
+
+  it("does not show truncation icon when data is not truncated", () => {
+    const propsWithoutTruncation: TableProps = {
+      element: TableProto.create({
+        borderMode: TableProto.BorderMode.ALL,
+        summaryConfig: '{"c1": "count"}',
+        isDataTruncated: false,
+      }),
+      data: new Quiver({ data: UNICODE }),
+    }
+
+    render(<Table {...propsWithoutTruncation} />)
+
+    expect(screen.getByTestId("stTableFooter")).toBeVisible()
+    expect(
+      screen.queryByTestId("stTableTruncationIcon")
+    ).not.toBeInTheDocument()
+  })
 })

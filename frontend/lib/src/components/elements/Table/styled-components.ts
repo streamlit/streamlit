@@ -278,3 +278,64 @@ export const StyledEmptyTableCell = styled(StyledTableCell)<{
   fontSize: theme.fontSizes.md,
   textAlign: "center",
 }))
+
+export const StyledTableCellFooter = styled.td<{
+  borderMode: Table.BorderMode
+}>(({ theme, borderMode }) => ({
+  padding: `${theme.spacing.twoXS} ${theme.spacing.xs}`,
+  verticalAlign: "bottom",
+  textAlign: "right",
+  borderTop:
+    borderMode !== Table.BorderMode.NONE
+      ? `${theme.sizes.borderWidth} solid ${theme.colors.dataframeBorderColor}`
+      : "none",
+  borderBottom: "none",
+  borderRight:
+    borderMode === Table.BorderMode.ALL
+      ? `${theme.sizes.borderWidth} solid ${theme.colors.dataframeBorderColor}`
+      : "none",
+  "&:last-child": {
+    borderRight: borderMode === Table.BorderMode.ALL ? "none" : undefined,
+    paddingRight:
+      borderMode === Table.BorderMode.NONE ? "0" : theme.spacing.xs,
+  },
+  "&:first-of-type": {
+    paddingLeft: borderMode === Table.BorderMode.NONE ? "0" : theme.spacing.sm,
+  },
+  "&:not(:first-of-type)": {
+    paddingLeft:
+      borderMode === Table.BorderMode.NONE ||
+      borderMode === Table.BorderMode.HORIZONTAL
+        ? theme.spacing.lg
+        : theme.spacing.sm,
+  },
+}))
+
+export const StyledSummaryContent = styled.span(({ theme }) => ({
+  display: "inline-flex",
+  alignItems: "baseline",
+  gap: theme.spacing.twoXS,
+}))
+
+export const StyledSummaryLabel = styled.span(({ theme }) => ({
+  fontSize: theme.fontSizes.sm,
+  color: theme.colors.fadedText40,
+}))
+
+export const StyledSummaryValue = styled.span(({ theme }) => ({
+  fontSize: theme.fontSizes.md,
+  color: theme.colors.fadedText60,
+}))
+
+export const StyledTruncationIcon = styled.span(({ theme }) => ({
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  color: theme.colors.fadedText40,
+  fontSize: theme.fontSizes.sm,
+  cursor: "help",
+  "& svg": {
+    width: theme.fontSizes.sm,
+    height: theme.fontSizes.sm,
+  },
+}))

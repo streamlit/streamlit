@@ -25,6 +25,11 @@ from streamlit.elements.lib.layout_utils import (
     validate_width,
 )
 from streamlit.elements.lib.pandas_styler_utils import marshall_styler
+from streamlit.elements.lib.summary_utils import (
+    SummaryConfigInput,
+    convert_summary_config_to_json,
+    process_summary_config,
+)
 from streamlit.errors import StreamlitAPIException, StreamlitValueError
 from streamlit.proto.Table_pb2 import Table as TableProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -87,6 +92,7 @@ class TableMixin:
         border: bool | Literal["horizontal"] = True,
         width: Width = "stretch",
         height: Height = "content",
+        summary: SummaryConfigInput | None = None,
     ) -> DeltaGenerator:
         """Display a static table.
 
@@ -147,6 +153,22 @@ class TableMixin:
               fixed height. If the table content exceeds this height,
               scrolling is enabled with sticky headers.
 
+        summary : dict or None
+            Configuration for displaying summary statistics in a footer row.
+            If this is ``None`` (default), no summary row is shown.
+
+            If this is a dictionary, the keys are column names (strings) or
+            positional column indices (integers, 0-based), and the values are
+            one of the following summary types:
+
+            - ``"count"``: The count of non-null values in the column.
+            - ``"sum"``: The sum of values in the column (numeric columns only).
+            - ``"average"``: The average of values in the column (numeric only).
+            - ``"min"``: The minimum value in the column (numeric columns only).
+            - ``"max"``: The maximum value in the column (numeric columns only).
+
+            For non-numeric columns, only ``"count"`` is supported.
+
         Examples
         --------
         **Example 1: Display a confusion matrix as a static table**
@@ -201,6 +223,23 @@ class TableMixin:
         ... )
         >>> st.table(df, height=300)
 
+        **Example 4: Display a table with summary statistics**
+
+        >>> import pandas as pd
+        >>> import streamlit as st
+        >>>
+        >>> sales_data = pd.DataFrame(
+        ...     {
+        ...         "Product": ["Widget A", "Widget B", "Widget C"],
+        ...         "Units": [150, 280, 95],
+        ...         "Revenue": [4500, 8400, 2850],
+        ...     }
+        ... )
+        >>> st.table(
+        ...     sales_data,
+        ...     summary={"Units": "sum", "Revenue": "sum", "Product": "count"},
+        ... )
+
         """
         # Validate width and height parameters
         validate_width(width, allow_content=True)
@@ -208,6 +247,9 @@ class TableMixin:
 
         # Parse border parameter to enum value
         border_mode = parse_border_mode(border)
+
+        # Track if data was truncated (for lazy data sources)
+        is_data_truncated = False
 
         # Check if data is uncollected, and collect it but with 100 rows max, instead of
         # 10k rows, which is done in all other cases.
@@ -217,6 +259,27 @@ class TableMixin:
             data = dataframe_util.convert_anything_to_pandas_df(
                 data, max_unevaluated_rows=100
             )
+            is_data_truncated = True
+
+        # Process summary configuration if provided
+        summary_config_json = ""
+        if summary is not None:
+            if not dataframe_util.is_pandas_data_object(data):
+                data_df = dataframe_util.convert_anything_to_pandas_df(
+                    data, ensure_copy=False
+                )
+            else:
+                import pandas as pd
+
+                if isinstance(data, pd.DataFrame):
+                    data_df = data
+                else:
+                    data_df = dataframe_util.convert_anything_to_pandas_df(
+                        data, ensure_copy=False
+                    )
+
+            normalized_summary = process_summary_config(summary, data_df)
+            summary_config_json = convert_summary_config_to_json(normalized_summary)
 
         # If pandas.Styler uuid is not provided, a hash of the position
         # of the element will be used. This will cause a rerender of the table
@@ -233,6 +296,11 @@ class TableMixin:
         proto = TableProto()
         marshall_table(proto.arrow_data, data, default_uuid)
         proto.border_mode = border_mode
+
+        if summary_config_json:
+            proto.summary_config = summary_config_json
+            proto.is_data_truncated = is_data_truncated
+
         return self.dg._enqueue("table", proto, layout_config=layout_config)
 
     @property
