@@ -427,8 +427,9 @@ def test_trailing_slash_redirect_on_static_paths(app: Page, app_port: int):
     # Tornado uses 301 (permanent redirect) via @removeslash decorator
     assert response.status == 301, f"Expected 301, got {response.status}"
 
-    # Should redirect to path without trailing slash
+    # Should redirect to path without trailing slash.
     location = response.headers.get("location", "")
+    assert location, "Redirect location header is empty"
     assert not location.endswith("/") or location == "/", (
         f"Redirect should remove trailing slash, got: {location}"
     )
