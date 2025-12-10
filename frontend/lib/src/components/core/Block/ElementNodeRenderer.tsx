@@ -58,6 +58,7 @@ import {
   Skeleton as SkeletonProto,
   Slider as SliderProto,
   Spinner as SpinnerProto,
+  TagInput as TagInputProto,
   TextArea as TextAreaProto,
   TextInput as TextInputProto,
   Text as TextProto,
@@ -155,6 +156,7 @@ const NumberInput = lazy(() => import("~lib/components/widgets/NumberInput"))
 const Radio = lazy(() => import("~lib/components/widgets/Radio"))
 const Selectbox = lazy(() => import("~lib/components/widgets/Selectbox"))
 const Slider = lazy(() => import("~lib/components/widgets/Slider"))
+const TagInput = lazy(() => import("~lib/components/widgets/TagInput"))
 const TextArea = lazy(() => import("~lib/components/widgets/TextArea"))
 const TextInput = lazy(() => import("~lib/components/widgets/TextInput"))
 const TimeInput = lazy(() => import("~lib/components/widgets/TimeInput"))
@@ -644,6 +646,18 @@ const RawElementNodeRenderer = (
       widgetProps.disabled = widgetProps.disabled || sliderProto.disabled
       return (
         <Slider key={sliderProto.id} element={sliderProto} {...widgetProps} />
+      )
+    }
+
+    case "tagInput": {
+      const tagInputProto = node.element.tagInput as TagInputProto
+      widgetProps.disabled = widgetProps.disabled || tagInputProto.disabled
+      return (
+        <TagInput
+          key={tagInputProto.id}
+          element={tagInputProto}
+          {...widgetProps}
+        />
       )
     }
 

@@ -225,6 +225,7 @@ spinner = _main.spinner
 subheader = _main.subheader
 success = _main.success
 table = _main.table
+tag_input = _main.tag_input
 text = _main.text
 text_area = _main.text_area
 text_input = _main.text_input

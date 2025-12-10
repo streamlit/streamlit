@@ -98,6 +98,7 @@ from streamlit.elements.widgets.radio import RadioMixin
 from streamlit.elements.widgets.select_slider import SelectSliderMixin
 from streamlit.elements.widgets.selectbox import SelectboxMixin
 from streamlit.elements.widgets.slider import SliderMixin
+from streamlit.elements.widgets.tag_input import TagInputMixin
 from streamlit.elements.widgets.text_widgets import TextWidgetsMixin
 from streamlit.elements.widgets.time_widgets import TimeWidgetsMixin
 from streamlit.elements.write import WriteMixin
@@ -217,6 +218,7 @@ class DeltaGenerator(
     SpaceMixin,
     SpinnerMixin,
     JsonMixin,
+    TagInputMixin,
     TextMixin,
     TextWidgetsMixin,
     TimeWidgetsMixin,

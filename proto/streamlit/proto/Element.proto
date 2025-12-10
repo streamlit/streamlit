@@ -65,6 +65,7 @@ import "streamlit/proto/Skeleton.proto";
 import "streamlit/proto/Slider.proto";
 import "streamlit/proto/Space.proto";
 import "streamlit/proto/Text.proto";
+import "streamlit/proto/TagInput.proto";
 import "streamlit/proto/TextArea.proto";
 import "streamlit/proto/TextInput.proto";
 import "streamlit/proto/TimeInput.proto";
@@ -140,13 +141,14 @@ message Element {
     TextInput text_input = 24;
     TimeInput time_input = 26;
     DateTimeInput date_time_input = 62;
+    TagInput tag_input = 63;
     Toast toast = 50;
     // DEPRECATED: This element is deprecated and unused:
     VegaLiteChart vega_lite_chart = 10;
     Video video = 14;
     Heading heading = 47;
     Code code = 48;
-    // Next ID: 63
+    // Next ID: 64
   }
 
   reserved 9;

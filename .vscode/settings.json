@@ -98,5 +98,8 @@
   },
   "typescript.tsdk": "frontend/node_modules/typescript/lib",
   "typescript.enablePromptUseWorkspaceTsdk": true,
-  "git.branchProtection": ["develop"]
+  "git.branchProtection": [
+    "develop"
+  ],
+  "kiroAgent.configureMCP": "Disabled"
 }
