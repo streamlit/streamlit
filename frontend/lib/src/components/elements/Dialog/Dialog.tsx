@@ -152,7 +152,7 @@ const Dialog: React.FC<React.PropsWithChildren<Props>> = ({
       {/* Hidden focus anchor that receives initial focus when the dialog opens.
           This maintains accessibility while preventing focus-visible styling
           on visible UI elements. */}
-      <StyledFocusAnchor tabIndex={0} aria-hidden="true" />
+      <StyledFocusAnchor tabIndex={0} aria-label="Inside dialog" />
       <ModalHeader>
         <StyledDialogTitle>
           <StreamlitMarkdown

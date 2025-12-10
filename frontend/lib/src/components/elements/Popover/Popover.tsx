@@ -81,7 +81,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
           <>
             {/* Hidden focus anchor that receives initial focus when the popover opens.
                 This prevents widgets like date_input from auto-opening their dropdowns. */}
-            <StyledFocusAnchor tabIndex={0} aria-hidden="true" />
+            <StyledFocusAnchor tabIndex={0} aria-label="Inside popover" />
             {children}
           </>
         )}
