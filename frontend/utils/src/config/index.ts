@@ -49,12 +49,16 @@ declare global {
 /**
  * Deep clones an object using structuredClone if available, otherwise falls back
  * to JSON parse/stringify for older environments.
+ *
+ * Note: The JSON fallback will omit properties with undefined values. This is acceptable
+ * because the application treats undefined properties the same as missing properties.
  */
 function deepClone<T>(obj: T): T {
   if (typeof structuredClone === "function") {
     return structuredClone(obj)
   }
   // Fallback for environments without structuredClone
+  // Note: This will omit undefined values, which is fine for our use case
   return JSON.parse(JSON.stringify(obj)) as T
 }
 
