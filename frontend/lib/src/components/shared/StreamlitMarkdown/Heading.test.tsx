@@ -33,7 +33,7 @@ const getHeadingProps = (
     anchor: "some-anchor",
     tag: "h1",
     body: `hello world
-             this is a new line`,
+this is a new line`,
     ...elementProps,
   }),
 })

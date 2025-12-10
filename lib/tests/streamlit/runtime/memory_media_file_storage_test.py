@@ -178,7 +178,7 @@ class MemoryMediaFileStorageTest(unittest.TestCase):
         self.storage.delete_file("mock_file_id")
 
     def test_cache_stats(self):
-        """Test our CacheStatsProvider implementation."""
+        """Test our StatsProvider implementation."""
         assert len(self.storage.get_stats()) == 0
 
         # Add several files to storage. We'll unique-ify them by filename.

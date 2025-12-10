@@ -1771,7 +1771,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 -----
 
-The following software may be included in this product: @types/brotli, @types/command-line-args, @types/command-line-usage, @types/crypto-js, @types/d3-array, @types/d3-color, @types/d3-scale, @types/d3-time, @types/debug, @types/estree, @types/estree-jsx, @types/geojson, @types/geojson-vt, @types/google.maps, @types/hammerjs, @types/hast, @types/katex, @types/mapbox-gl, @types/mapbox__point-geometry, @types/mapbox__vector-tile, @types/mdast, @types/ms, @types/node, @types/offscreencanvas, @types/pako, @types/parse-json, @types/pbf, @types/prop-types, @types/react, @types/react-virtualized-auto-sizer, @types/react-window, @types/supercluster, @types/trusted-types, @types/unist. A copy of the source code may be downloaded from https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/brotli), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/command-line-args), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/command-line-usage), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/crypto-js), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/d3-array), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/d3-color), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/d3-scale), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/d3-time), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/debug), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/estree), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/estree-jsx), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/geojson), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/geojson-vt), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/google.maps), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/hammerjs), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/hast), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/katex), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/mapbox-gl), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/mapbox__point-geometry), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/mapbox__vector-tile), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/mdast), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/ms), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/node), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/offscreencanvas), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/pako), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/parse-json), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/pbf), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/prop-types), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/react), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/react-virtualized-auto-sizer), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/react-window), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/supercluster), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/trusted-types), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/unist). This software contains the following license and notice below:
+The following software may be included in this product: @types/brotli, @types/command-line-args, @types/command-line-usage, @types/crypto-js, @types/d3-array, @types/d3-color, @types/d3-scale, @types/d3-time, @types/debug, @types/estree, @types/estree-jsx, @types/geojson, @types/geojson-vt, @types/google.maps, @types/hammerjs, @types/hast, @types/katex, @types/mapbox-gl, @types/mapbox__point-geometry, @types/mapbox__vector-tile, @types/mdast, @types/ms, @types/node, @types/offscreencanvas, @types/pako, @types/parse-json, @types/pbf, @types/prismjs, @types/prop-types, @types/react, @types/react-virtualized-auto-sizer, @types/react-window, @types/supercluster, @types/trusted-types, @types/unist. A copy of the source code may be downloaded from https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/brotli), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/command-line-args), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/command-line-usage), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/crypto-js), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/d3-array), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/d3-color), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/d3-scale), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/d3-time), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/debug), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/estree), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/estree-jsx), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/geojson), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/geojson-vt), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/google.maps), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/hammerjs), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/hast), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/katex), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/mapbox-gl), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/mapbox__point-geometry), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/mapbox__vector-tile), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/mdast), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/ms), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/node), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/offscreencanvas), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/pako), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/parse-json), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/pbf), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/prismjs), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/prop-types), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/react), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/react-virtualized-auto-sizer), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/react-window), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/supercluster), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/trusted-types), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/unist). This software contains the following license and notice below:
 
 MIT License
 
@@ -3180,7 +3180,7 @@ THE SOFTWARE.
 
 -----
 
-The following software may be included in this product: comma-separated-tokens, hast-util-is-element, hast-util-parse-selector, hast-util-to-parse5, hast-util-whitespace, hastscript, html-element-attributes, html-void-elements, is-alphabetical, is-alphanumerical, is-decimal, is-hexadecimal, lowlight, mdast-util-to-hast, rehype-raw, space-separated-tokens, unist-util-remove-position, unist-util-stringify-position, unist-util-visit-parents, vfile-location, web-namespaces, zwitch. A copy of the source code may be downloaded from git+https://github.com/wooorm/comma-separated-tokens.git (comma-separated-tokens), git+https://github.com/syntax-tree/hast-util-is-element.git (hast-util-is-element), git+https://github.com/syntax-tree/hast-util-parse-selector.git (hast-util-parse-selector), git+https://github.com/syntax-tree/hast-util-to-parse5.git (hast-util-to-parse5), git+https://github.com/syntax-tree/hast-util-whitespace.git (hast-util-whitespace), git+https://github.com/syntax-tree/hastscript.git (hastscript), git+https://github.com/wooorm/html-element-attributes.git (html-element-attributes), git+https://github.com/wooorm/html-void-elements.git (html-void-elements), git+https://github.com/wooorm/is-alphabetical.git (is-alphabetical), git+https://github.com/wooorm/is-alphanumerical.git (is-alphanumerical), git+https://github.com/wooorm/is-decimal.git (is-decimal), git+https://github.com/wooorm/is-hexadecimal.git (is-hexadecimal), git+https://github.com/wooorm/lowlight.git (lowlight), git+https://github.com/syntax-tree/mdast-util-to-hast.git (mdast-util-to-hast), git+https://github.com/rehypejs/rehype-raw.git (rehype-raw), git+https://github.com/wooorm/space-separated-tokens.git (space-separated-tokens), git+https://github.com/syntax-tree/unist-util-remove-position.git (unist-util-remove-position), git+https://github.com/syntax-tree/unist-util-stringify-position.git (unist-util-stringify-position), git+https://github.com/syntax-tree/unist-util-visit-parents.git (unist-util-visit-parents), git+https://github.com/vfile/vfile-location.git (vfile-location), git+https://github.com/wooorm/web-namespaces.git (web-namespaces), git+https://github.com/wooorm/zwitch.git (zwitch). This software contains the following license and notice below:
+The following software may be included in this product: comma-separated-tokens, hast-util-is-element, hast-util-parse-selector, hast-util-to-parse5, hast-util-whitespace, html-element-attributes, html-void-elements, is-alphabetical, is-alphanumerical, is-decimal, is-hexadecimal, lowlight, mdast-util-to-hast, rehype-raw, space-separated-tokens, unist-util-remove-position, unist-util-stringify-position, unist-util-visit-parents, vfile-location, web-namespaces, zwitch. A copy of the source code may be downloaded from git+https://github.com/wooorm/comma-separated-tokens.git (comma-separated-tokens), git+https://github.com/syntax-tree/hast-util-is-element.git (hast-util-is-element), git+https://github.com/syntax-tree/hast-util-parse-selector.git (hast-util-parse-selector), git+https://github.com/syntax-tree/hast-util-to-parse5.git (hast-util-to-parse5), git+https://github.com/syntax-tree/hast-util-whitespace.git (hast-util-whitespace), git+https://github.com/wooorm/html-element-attributes.git (html-element-attributes), git+https://github.com/wooorm/html-void-elements.git (html-void-elements), git+https://github.com/wooorm/is-alphabetical.git (is-alphabetical), git+https://github.com/wooorm/is-alphanumerical.git (is-alphanumerical), git+https://github.com/wooorm/is-decimal.git (is-decimal), git+https://github.com/wooorm/is-hexadecimal.git (is-hexadecimal), git+https://github.com/wooorm/lowlight.git (lowlight), git+https://github.com/syntax-tree/mdast-util-to-hast.git (mdast-util-to-hast), git+https://github.com/rehypejs/rehype-raw.git (rehype-raw), git+https://github.com/wooorm/space-separated-tokens.git (space-separated-tokens), git+https://github.com/syntax-tree/unist-util-remove-position.git (unist-util-remove-position), git+https://github.com/syntax-tree/unist-util-stringify-position.git (unist-util-stringify-position), git+https://github.com/syntax-tree/unist-util-visit-parents.git (unist-util-visit-parents), git+https://github.com/vfile/vfile-location.git (vfile-location), git+https://github.com/wooorm/web-namespaces.git (web-namespaces), git+https://github.com/wooorm/zwitch.git (zwitch). This software contains the following license and notice below:
 
 (The MIT License)
 
@@ -12054,11 +12054,12 @@ SOFTWARE.
 
 -----
 
-The following software may be included in this product: refractor, vfile-message. A copy of the source code may be downloaded from git+https://github.com/wooorm/refractor.git (refractor), git+https://github.com/vfile/vfile-message.git (vfile-message). This software contains the following license and notice below:
+The following software may be included in this product: refractor. A copy of the source code may be downloaded from git+https://github.com/wooorm/refractor.git. This software contains the following license and notice below:
 
 (The MIT License)
 
-Copyright (c) 2017 Titus Wormer <tituswormer@gmail.com>
+Copyright (c) Titus Wormer <tituswormer@gmail.com>
+Copyright (c) Lea Verou
 
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the
@@ -12078,32 +12079,6 @@ IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
 CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
 TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-
------
-
-The following software may be included in this product: regenerator-runtime. A copy of the source code may be downloaded from https://github.com/facebook/regenerator/tree/main/packages/runtime. This software contains the following license and notice below:
-
-MIT License
-
-Copyright (c) 2014-present, Facebook, Inc.
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
 
 -----
 
@@ -15622,6 +15597,33 @@ Redistribution and use in source and binary forms, with or without modification,
 3. Neither the name of the copyright holder nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+-----
+
+The following software may be included in this product: vfile-message. A copy of the source code may be downloaded from git+https://github.com/vfile/vfile-message.git. This software contains the following license and notice below:
+
+(The MIT License)
+
+Copyright (c) 2017 Titus Wormer <tituswormer@gmail.com>
+
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of this software and associated documentation files (the
+'Software'), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 -----
 

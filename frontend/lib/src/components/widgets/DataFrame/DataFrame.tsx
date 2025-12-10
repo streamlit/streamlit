@@ -201,7 +201,7 @@ function DataFrame({
     element.editingMode = ArrowProto.EditingMode.READ_ONLY
   }
 
-  const { READ_ONLY, DYNAMIC } = ArrowProto.EditingMode
+  const { READ_ONLY, DYNAMIC, ADD_ONLY, DELETE_ONLY } = ArrowProto.EditingMode
 
   // Number of rows of the table minus 1 for the header row:
   const dataDimensions = data.dimensions
@@ -211,17 +211,34 @@ function DataFrame({
   // contains "empty" as a way to indicate that the table is empty.
   const isEmptyTable =
     originalNumRows === 0 &&
-    // We don't show empty state for dynamic mode with a table that has
-    // data columns defined.
-    !(element.editingMode === DYNAMIC && dataDimensions.numDataColumns > 0)
+    // We don't show empty state for modes that allow adding rows
+    // with a table that has data columns defined.
+    !(
+      (element.editingMode === DYNAMIC || element.editingMode === ADD_ONLY) &&
+      dataDimensions.numDataColumns > 0
+    )
 
   // For large tables, we apply some optimizations to handle large data
   const isLargeTable = originalNumRows > LARGE_TABLE_ROWS_THRESHOLD
+  // Sorting is disabled for modes that allow adding rows (DYNAMIC, ADD_ONLY)
+  // because sorting and row addition can conflict
   const isSortingEnabled =
-    !isLargeTable && !isEmptyTable && element.editingMode !== DYNAMIC
+    !isLargeTable &&
+    !isEmptyTable &&
+    element.editingMode !== DYNAMIC &&
+    element.editingMode !== ADD_ONLY
 
-  const isDynamicAndEditable =
-    !isEmptyTable && element.editingMode === DYNAMIC && !disabled
+  // Check if the editing mode allows adding rows (DYNAMIC or ADD_ONLY)
+  const canAddRows =
+    !isEmptyTable &&
+    (element.editingMode === DYNAMIC || element.editingMode === ADD_ONLY) &&
+    !disabled
+
+  // Check if the editing mode allows deleting rows (DYNAMIC or DELETE_ONLY)
+  const canDeleteRows =
+    !isEmptyTable &&
+    (element.editingMode === DYNAMIC || element.editingMode === DELETE_ONLY) &&
+    !disabled
 
   const [columnOrder, setColumnOrder] = useState(element.columnOrder)
 
@@ -363,32 +380,33 @@ function DataFrame({
   )
 
   const { onCellEdited, onPaste, onRowAppended, onDelete, validateCell } =
-    useDataEditor(
+    useDataEditor({
       columns,
-      element.editingMode !== DYNAMIC,
+      canAddRows,
+      canDeleteRows,
       editingState,
       getCellContent,
       getOriginalIndex,
       refreshCells,
       updateNumRows,
       syncEditState,
-      clearSelection
-    )
+      clearSelection,
+    })
 
   const ignoredRowIndices = useMemo(() => {
     // If empty table, ignore row index 0 which is just a visual gimmick
-    // If dynamic editing is enabled, we need to ignore the last row (trailing row)
+    // If row adding is enabled, we need to ignore the last row (trailing row)
     // because it would result in some undesired errors in the tooltips.
     // The index are 0-based -> therefore, numRows will point to the trailing row
     // (which is not part of the actual data).
     if (isEmptyTable) {
       return [0]
     }
-    if (isDynamicAndEditable) {
+    if (canAddRows) {
       return [numRows]
     }
     return []
-  }, [isEmptyTable, isDynamicAndEditable, numRows])
+  }, [isEmptyTable, canAddRows, numRows])
 
   const {
     tooltip,
@@ -643,7 +661,7 @@ function DataFrame({
             }}
           />
         )}
-        {isDynamicAndEditable && isRowSelected && (
+        {canDeleteRows && isRowSelected && (
           <ToolbarAction
             label="Delete row(s)"
             icon={Delete}
@@ -655,7 +673,7 @@ function DataFrame({
             }}
           />
         )}
-        {isDynamicAndEditable && !isRowSelected && (
+        {canAddRows && !isRowSelected && (
           <ToolbarAction
             label="Add row"
             icon={Add}
@@ -978,29 +996,30 @@ function DataFrame({
               // Support deleting cells & rows:
               onDelete,
             })}
-          // If element is dynamic, enable adding & deleting rows:
-          {...(!isEmptyTable &&
-            element.editingMode === DYNAMIC && {
-              // Support adding rows:
-              trailingRowOptions: {
-                sticky: false,
-                tint: true,
+          // If element allows adding rows (DYNAMIC or ADD_ONLY), enable trailing row
+          // and deactivate sorting:
+          {...(canAddRows && {
+            trailingRowOptions: {
+              sticky: false,
+              tint: true,
+            },
+            onRowAppended,
+            // Deactivate sorting for modes that allow adding rows:
+            onHeaderClicked: undefined,
+          })}
+          // If element allows deleting rows (DYNAMIC or DELETE_ONLY), enable row selection:
+          {...(canDeleteRows && {
+            rowMarkers: {
+              kind: "checkbox",
+              checkboxStyle: "square",
+              theme: {
+                bgCell: gridTheme.glideTheme.bgHeader,
+                bgCellMedium: gridTheme.glideTheme.bgHeader,
               },
-              rowMarkers: {
-                kind: "checkbox",
-                checkboxStyle: "square",
-                theme: {
-                  bgCell: gridTheme.glideTheme.bgHeader,
-                  bgCellMedium: gridTheme.glideTheme.bgHeader,
-                },
-              },
-              rowSelectionMode: "multi",
-              rowSelect: disabled ? "none" : "multi",
-              // Support adding rows:
-              onRowAppended: disabled ? undefined : onRowAppended,
-              // Deactivate sorting, since it is not supported with dynamic editing:
-              onHeaderClicked: undefined,
-            })}
+            },
+            rowSelectionMode: "multi",
+            rowSelect: disabled ? "none" : "multi",
+          })}
         />
       </Resizable>
       {tooltip?.content && (

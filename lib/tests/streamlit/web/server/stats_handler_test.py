@@ -29,7 +29,7 @@ from streamlit.web.server.stats_request_handler import StatsRequestHandler
 
 class StatsHandlerTest(tornado.testing.AsyncHTTPTestCase):
     def get_app(self):
-        self.mock_stats = []
+        self.mock_stats: dict[str, list[CacheStat]] = {"cache_memory_bytes": []}
         mock_stats_manager = MagicMock()
         mock_stats_manager.get_stats = MagicMock(side_effect=lambda: self.mock_stats)
         return tornado.web.Application(
@@ -43,16 +43,11 @@ class StatsHandlerTest(tornado.testing.AsyncHTTPTestCase):
         )
 
     def test_no_stats(self):
-        """If we have no stats, we expect to see just the header and footer."""
+        """If we have no stats, we expect to see just the EOF comment."""
         response = self.fetch("/_stcore/metrics")
         assert response.code == 200
 
-        expected_body = (
-            b"# TYPE cache_memory_bytes gauge\n"
-            b"# UNIT cache_memory_bytes bytes\n"
-            b"# HELP Total memory consumed by a cache.\n"
-            b"# EOF\n"
-        )
+        expected_body = b"# EOF\n"
 
         assert expected_body == response.body
 
@@ -67,18 +62,20 @@ class StatsHandlerTest(tornado.testing.AsyncHTTPTestCase):
         assert response.headers["deprecation"] == "True"
 
     def test_has_stats(self):
-        self.mock_stats = [
-            CacheStat(
-                category_name="st.singleton",
-                cache_name="foo",
-                byte_length=128,
-            ),
-            CacheStat(
-                category_name="st.memo",
-                cache_name="bar",
-                byte_length=256,
-            ),
-        ]
+        self.mock_stats = {
+            "cache_memory_bytes": [
+                CacheStat(
+                    category_name="st.singleton",
+                    cache_name="foo",
+                    byte_length=128,
+                ),
+                CacheStat(
+                    category_name="st.memo",
+                    cache_name="bar",
+                    byte_length=256,
+                ),
+            ]
+        }
 
         response = self.fetch("/_stcore/metrics")
         assert response.code == 200
@@ -104,18 +101,20 @@ class StatsHandlerTest(tornado.testing.AsyncHTTPTestCase):
         """Stats requests are returned in OpenMetrics protobuf format
         if the request's Content-Type header is protobuf.
         """
-        self.mock_stats = [
-            CacheStat(
-                category_name="st.singleton",
-                cache_name="foo",
-                byte_length=128,
-            ),
-            CacheStat(
-                category_name="st.memo",
-                cache_name="bar",
-                byte_length=256,
-            ),
-        ]
+        self.mock_stats = {
+            "cache_memory_bytes": [
+                CacheStat(
+                    category_name="st.singleton",
+                    cache_name="foo",
+                    byte_length=128,
+                ),
+                CacheStat(
+                    category_name="st.memo",
+                    cache_name="bar",
+                    byte_length=256,
+                ),
+            ]
+        }
 
         # Requests can have multiple Accept headers. Only one of them needs
         # to specify protobuf in order to get back protobuf.
