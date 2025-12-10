@@ -72,6 +72,7 @@ import "streamlit/proto/Toast.proto";
 import "streamlit/proto/VegaLiteChart.proto";
 import "streamlit/proto/Video.proto";
 import "streamlit/proto/WidthConfig.proto";
+import "streamlit/proto/PivotTable.proto";
 
 // An element which can be displayed on the screen.
 message Element {
@@ -135,6 +136,7 @@ message Element {
     Video video = 14;
     Heading heading = 47;
     Code code = 48;
+    PivotTable pivot_table = 63;
     // Next ID: 64
   }
 

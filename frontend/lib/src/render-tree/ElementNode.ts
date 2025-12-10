@@ -77,7 +77,11 @@ export class ElementNode implements AppNode {
       return this.lazyQuiverElement
     }
 
-    if (this.element.type !== "table" && this.element.type !== "dataframe") {
+    if (
+      this.element.type !== "table" &&
+      this.element.type !== "dataframe" &&
+      this.element.type !== "pivotTable"
+    ) {
       throw new Error(
         `elementType '${this.element.type}' is not a valid Quiver element!`
       )
