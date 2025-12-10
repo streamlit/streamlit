@@ -1641,10 +1641,26 @@ def upload_single_file_and_snapshot(
     wait_for_app_run(app, 500)
 
 
-# File chip test cases: (test_id, filename, mimetype, content)
-# Each test case will generate a snapshot named "st_chat_input-file_chip_{test_id}"
-FILE_CHIP_TEST_CASES = [
-    ("image", "photo.png", "image/png", b"fake image"),
+@use_chat_input("multiple_files")
+def test_file_chip_theming(
+    themed_app: Page,
+    assert_snapshot: ImageCompareFunction,
+):
+    """Test file chip theming with one representative file type (light and dark)."""
+    # Use image file type as representative - theme styling is shared across all file types
+    chat_input = get_element_by_key(themed_app, "multiple_files")
+    file = FilePayload(name="photo.png", mimeType="image/png", buffer=b"fake image")
+    upload_single_file_and_snapshot(
+        themed_app,
+        chat_input,
+        file,
+        "st_chat_input-file_chip_themed",
+        assert_snapshot,
+    )
+
+
+# File types to test (excluding image which is tested in test_file_chip_theming)
+FILE_CHIP_VARIATIONS = [
     ("pdf", "document.pdf", "application/pdf", b"fake pdf"),
     ("spreadsheet", "data.csv", "text/csv", b"a,b,c"),
     ("text", "readme.txt", "text/plain", b"Hello world"),
@@ -1665,22 +1681,22 @@ FILE_CHIP_TEST_CASES = [
 @use_chat_input("multiple_files")
 @pytest.mark.parametrize(
     ("test_id", "filename", "mimetype", "content"),
-    FILE_CHIP_TEST_CASES,
-    ids=[case[0] for case in FILE_CHIP_TEST_CASES],
+    FILE_CHIP_VARIATIONS,
+    ids=[case[0] for case in FILE_CHIP_VARIATIONS],
 )
-def test_file_chip(
-    themed_app: Page,
+def test_file_chip_variations(
+    app: Page,
     assert_snapshot: ImageCompareFunction,
     test_id: str,
     filename: str,
     mimetype: str,
     content: bytes,
 ):
-    """Test file chip rendering for various file types (light and dark themes)."""
-    chat_input = get_element_by_key(themed_app, "multiple_files")
+    """Test file chip rendering for various file types (icon and truncation variations)."""
+    chat_input = get_element_by_key(app, "multiple_files")
     file = FilePayload(name=filename, mimeType=mimetype, buffer=content)
     upload_single_file_and_snapshot(
-        themed_app,
+        app,
         chat_input,
         file,
         f"st_chat_input-file_chip_{test_id}",
