@@ -270,8 +270,6 @@ if st.button("Open on_dismiss callback Dialog"):
 if st.session_state.get("callback_executed"):
     st.write("Callback executions:", st.session_state.get("dismiss_count", 0))
 
-st.text_input("Text input", key="text-input-key")
-
 
 @st.dialog("Dialog with widget")
 def dialog_with_widget() -> None:
