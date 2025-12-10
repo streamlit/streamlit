@@ -229,10 +229,23 @@ def dialog_decorator(
             ``dismissible`` for security-critical checks.
 
     icon : str or None
-        Optional emoji or icon to display next to the dialog title. Accepts a
-        single-character emoji (for example, ``"🎉"``), a Material Symbol
-        shortcode (for example, ``":material/info:"``), or ``"spinner"``. If
-        ``None`` (default), no icon is shown.
+        An optional emoji or icon to display next to the dialog title. If ``icon``
+        is ``None`` (default), no icon is displayed. If ``icon`` is a
+        string, the following options are valid:
+
+        - A single-character emoji. For example, you can set ``icon="🚨"``
+          or ``icon="🔥"``. Emoji short codes are not supported.
+
+        - An icon from the Material Symbols library (rounded style) in the
+          format ``":material/icon_name:"`` where "icon_name" is the name
+          of the icon in snake case.
+
+          For example, ``icon=":material/thumb_up:"`` will display the
+          Thumb Up icon. Find additional icons in the `Material Symbols \
+          <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
+          font library.
+
+        - ``"spinner"``: Displays a spinner as an icon.
 
     on_dismiss : "ignore", "rerun", or callable
         How the dialog should respond to dismissal events.
