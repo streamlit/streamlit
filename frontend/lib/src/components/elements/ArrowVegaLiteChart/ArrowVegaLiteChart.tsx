@@ -14,7 +14,14 @@
  * limitations under the License.
  */
 
-import React, { FC, memo, useEffect, useLayoutEffect, useState } from "react"
+import React, {
+  FC,
+  memo,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react"
 
 import { Global } from "@emotion/react"
 import { InsertChart, TableChart } from "@emotion-icons/material-outlined"
@@ -33,6 +40,7 @@ import Toolbar, {
 } from "~lib/components/shared/Toolbar"
 import { ReadOnlyGrid } from "~lib/components/widgets/DataFrame"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
+import { useDebouncedCallback } from "~lib/hooks/useDebouncedCallback"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -133,38 +141,80 @@ const ArrowVegaLiteChart: FC<Props> = ({
 
   // This hook provides lifecycle functions for creating and removing the view.
   // It also will update the view if the data changes (and not the spec)
-  const { createView, updateView, finalizeView } = useVegaEmbed(
-    element,
-    widgetMgr,
-    fragmentId
-  )
+  const { createView, updateView, updateDimensions, finalizeView } =
+    useVegaEmbed(element, widgetMgr, fragmentId)
 
-  const { data, datasets, spec } = element
+  const { data, datasets, spec, specWithoutDimensions, dimensions } = element
+
+  // Debounce dimension updates during continuous resizing to prevent lag
+  // when there are many charts on screen.
+  const RESIZE_DEBOUNCE_MS = 100
+  const {
+    debouncedCallback: debouncedUpdateDimensions,
+    cancel: cancelResize,
+  } = useDebouncedCallback((width: number, height: number) => {
+    void updateDimensions(
+      width,
+      height,
+      isFullScreen ? true : useStretchWidth,
+      isFullScreen ? true : useStretchHeight
+    )
+  }, RESIZE_DEBOUNCE_MS)
+
+  // Track if this is the initial mount to skip dimension updates on first render
+  const isInitialMount = useRef(true)
 
   // Create the view once the container is ready and re-create
-  // if the spec changes or the dimensions change.
+  // only if the structural spec changes (not just dimensions).
   // We utilize useLayoutEffect to ensure that the view is created
   // after the container is mounted to avoid layout shift.
   useLayoutEffect(() => {
-    // TODO(lawilby): Can we just update the view if the width/height changes?
     if (containerRef.current !== null) {
       // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
       createView(containerRef, spec)
+      // Mark that initial mount has completed after view creation
+      isInitialMount.current = false
     }
 
-    return finalizeView
-    // We can't use chartContainerWidth/containerHeight in this dependency array because it causes facet charts to enter a loop.
-    // TODO(lawilby): Do we need width/height in this dependency array? It seems any changes
-    // Are the changes in the spec enough?
+    return () => {
+      finalizeView()
+      // Cancel any pending resize updates when view is finalized
+      cancelResize()
+      // Reset initial mount flag for next view creation
+      isInitialMount.current = true
+    }
+    // Use specWithoutDimensions to only recreate when structure changes.
+    // Dimension changes are handled separately via updateDimensions.
   }, [
     createView,
     finalizeView,
-    spec,
+    cancelResize,
+    specWithoutDimensions,
     fullScreenWidth,
     fullScreenHeight,
     showData,
     containerRef,
+    // Include spec for initial render to have correct dimensions
+    spec,
   ])
+
+  // Handle dimension changes efficiently by updating the existing view
+  // instead of recreating it. This is debounced to prevent performance
+  // issues when resizing the window with many charts.
+  useEffect(() => {
+    // Skip the initial mount - the view is created with the correct dimensions
+    if (isInitialMount.current) {
+      return
+    }
+
+    // For facet charts, we skip dimension updates as they don't work well
+    // with container width and can enter loops
+    if (isFacet) {
+      return
+    }
+
+    debouncedUpdateDimensions(dimensions.width, dimensions.height)
+  }, [dimensions.width, dimensions.height, isFacet, debouncedUpdateDimensions])
 
   // The references to data and datasets will always change each rerun
   // because the forward message always produces new references, so

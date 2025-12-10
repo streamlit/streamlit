@@ -19,6 +19,7 @@ import React, { memo, ReactElement, useEffect, useRef } from "react"
 import { Global } from "@emotion/react"
 import { EmotionIcon } from "@emotion-icons/emotion-icon"
 import { ArrowDownward, ArrowUpward } from "@emotion-icons/material-outlined"
+import { View as VegaView } from "vega"
 import embed from "vega-embed"
 import { expressionInterpreter } from "vega-interpreter"
 import { TopLevelSpec } from "vega-lite"
@@ -36,6 +37,7 @@ import { Placement } from "~lib/components/shared/Tooltip"
 import TooltipIcon from "~lib/components/shared/TooltipIcon"
 import { StyledWidgetLabelHelpInline } from "~lib/components/widgets/BaseWidget"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
+import { useDebouncedCallback } from "~lib/hooks/useDebouncedCallback"
 import { formatNumber, isNumericString } from "~lib/util/formatNumber"
 import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 
@@ -305,6 +307,26 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
   const arrowMargin = "0 threeXS 0 0"
   const deltaExists = delta !== ""
 
+  // Store Vega view reference for efficient dimension updates
+  const vegaViewRef = useRef<VegaView | null>(null)
+  const vegaFinalizerRef = useRef<(() => void) | null>(null)
+  const isInitialMount = useRef(true)
+
+  // Debounce dimension updates to prevent lag when resizing with many metrics
+  const RESIZE_DEBOUNCE_MS = 100
+  const { debouncedCallback: debouncedUpdateWidth, cancel: cancelResize } =
+    useDebouncedCallback((width: number) => {
+      if (vegaViewRef.current && width > 0) {
+        try {
+          vegaViewRef.current.width(width)
+          void vegaViewRef.current.resize().runAsync()
+        } catch {
+          // Ignore errors during dimension updates
+        }
+      }
+    }, RESIZE_DEBOUNCE_MS)
+
+  // Create the chart when data, type, theme, or color changes
   useEffect(() => {
     if (
       chartData &&
@@ -313,6 +335,13 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
       // Having a chart width <= 0 causes issues with vega-embed:
       chartWidth > 0
     ) {
+      // Finalize previous view before creating a new one
+      if (vegaFinalizerRef.current) {
+        vegaFinalizerRef.current()
+        vegaFinalizerRef.current = null
+        vegaViewRef.current = null
+      }
+
       const spec = getMetricChartSpec(
         chartData,
         chartType,
@@ -321,7 +350,7 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
         color
       )
 
-      void embed(chartRef.current, spec, {
+      const embedResult = embed(chartRef.current, spec, {
         actions: false,
         renderer: "svg",
         ast: true,
@@ -335,8 +364,43 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
           },
         },
       })
+
+      // Handle the embed result if it returns a promise (may be mocked in tests)
+      if (embedResult?.then) {
+        void embedResult.then(result => {
+          vegaViewRef.current = result.view
+          vegaFinalizerRef.current = result.finalize
+          isInitialMount.current = false
+        })
+      }
     }
-  }, [chartData, color, theme, chartWidth, chartType, chartRef])
+
+    return () => {
+      // Cleanup on unmount or before recreating
+      if (vegaFinalizerRef.current) {
+        vegaFinalizerRef.current()
+        vegaFinalizerRef.current = null
+        vegaViewRef.current = null
+      }
+      cancelResize()
+      isInitialMount.current = true
+    }
+    // Note: chartWidth is intentionally excluded - dimension changes are
+    // handled separately via updateWidth for better performance
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chartData, color, theme, chartType, chartRef, cancelResize])
+
+  // Handle dimension changes efficiently by updating the existing view
+  useEffect(() => {
+    // Skip initial mount - the view is created with correct dimensions
+    if (isInitialMount.current) {
+      return
+    }
+
+    if (chartWidth > 0) {
+      debouncedUpdateWidth(chartWidth)
+    }
+  }, [chartWidth, debouncedUpdateWidth])
 
   return (
     <StyledMetricContainer

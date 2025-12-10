@@ -150,10 +150,37 @@ const generateSpec = (
   return spec
 }
 
+export interface PreprocessedVegaElement extends VegaLiteChartElement {
+  /**
+   * The spec with dimensions applied - used for rendering.
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Vega spec type
+  spec: any
+  /**
+   * A stable reference to the spec without dimensions - used for detecting
+   * when the chart structure changes (and needs full re-creation).
+   * Dimension changes alone should not trigger view re-creation.
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Vega spec type
+  specWithoutDimensions: any
+  /**
+   * Current container dimensions for the chart.
+   */
+  dimensions: {
+    width: number
+    height: number
+  }
+}
+
 /**
  * Preprocesses the element to generate the VegaLite spec.
  * It stabilizes some of the references (e.g. selectionMode and spec)
  * and avoids further processing if unnecessary.
+ *
+ * Returns both the full spec (with dimensions) and a spec without dimensions
+ * to allow distinguishing between structural spec changes (which require view
+ * re-creation) and dimension-only changes (which can be handled by updating
+ * the existing view).
  */
 export const useVegaElementPreprocessor = (
   element: VegaLiteChartElement,
@@ -161,7 +188,7 @@ export const useVegaElementPreprocessor = (
   containerHeight: number,
   useContainerWidth: boolean,
   useContainerHeight: boolean
-): VegaLiteChartElement => {
+): PreprocessedVegaElement => {
   const theme = useEmotionTheme()
 
   const {
@@ -182,6 +209,32 @@ export const useVegaElementPreprocessor = (
     // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
   }, [JSON.stringify(inputSelectionMode)])
 
+  // Generate the spec without container dimensions - this is used to detect
+  // structural changes that require view re-creation
+  const specWithoutDimensions = useMemo(
+    () =>
+      generateSpec(
+        inputSpec,
+        useContainerWidth,
+        useContainerHeight,
+        vegaLiteTheme,
+        selectionMode,
+        theme,
+        // Use 0 as placeholder - actual dimensions are applied separately
+        0,
+        0
+      ),
+    [
+      inputSpec,
+      useContainerWidth,
+      useContainerHeight,
+      vegaLiteTheme,
+      selectionMode,
+      theme,
+    ]
+  )
+
+  // Generate the full spec with actual dimensions for initial rendering
   const spec = useMemo(
     () =>
       generateSpec(
@@ -206,11 +259,22 @@ export const useVegaElementPreprocessor = (
     ]
   )
 
+  // Memoize dimensions object to provide a stable reference
+  const dimensions = useMemo(
+    () => ({
+      width: containerWidth,
+      height: containerHeight,
+    }),
+    [containerWidth, containerHeight]
+  )
+
   return {
     id,
     formId,
     vegaLiteTheme,
     spec,
+    specWithoutDimensions,
+    dimensions,
     selectionMode,
     data,
     datasets,

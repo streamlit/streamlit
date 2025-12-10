@@ -491,4 +491,133 @@ describe("useVegaEmbed hook", () => {
       expect.any(Function)
     )
   })
+
+  describe("updateDimensions", () => {
+    it("returns early if no view exists", async () => {
+      const chartElement = {
+        id: "chartId",
+        data: null,
+        datasets: [],
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Test mock
+      } as any
+
+      const { result } = renderHook(() =>
+        useVegaEmbed(chartElement, mockWidgetMgr)
+      )
+
+      // Call updateDimensions without creating a view first
+      await act(async () => {
+        await result.current.updateDimensions(800, 600, true, true)
+      })
+
+      // Should not throw and should not call any view methods
+      expect(mockVegaView.resize).not.toHaveBeenCalled()
+    })
+
+    it("updates width and height when useContainer flags are true", async () => {
+      const chartElement = {
+        id: "chartId",
+        data: null,
+        datasets: [],
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Test mock
+      } as any
+
+      // Add width and height methods to mock
+      mockVegaView.width = vi.fn().mockReturnThis()
+      mockVegaView.height = vi.fn().mockReturnThis()
+
+      const { result } = renderHook(() =>
+        useVegaEmbed(chartElement, mockWidgetMgr)
+      )
+
+      const containerRef = { current: document.createElement("div") }
+
+      await act(async () => {
+        await result.current.createView(containerRef, {})
+      })
+
+      // Reset call counts after createView
+      mockVegaView.resize.mockClear()
+      mockVegaView.runAsync.mockClear()
+
+      await act(async () => {
+        await result.current.updateDimensions(800, 600, true, true)
+      })
+
+      expect(mockVegaView.width).toHaveBeenCalledWith(800)
+      expect(mockVegaView.height).toHaveBeenCalledWith(600)
+      expect(mockVegaView.resize).toHaveBeenCalled()
+      expect(mockVegaView.runAsync).toHaveBeenCalled()
+    })
+
+    it("only updates width when useContainerWidth is true and useContainerHeight is false", async () => {
+      const chartElement = {
+        id: "chartId",
+        data: null,
+        datasets: [],
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Test mock
+      } as any
+
+      mockVegaView.width = vi.fn().mockReturnThis()
+      mockVegaView.height = vi.fn().mockReturnThis()
+
+      const { result } = renderHook(() =>
+        useVegaEmbed(chartElement, mockWidgetMgr)
+      )
+
+      const containerRef = { current: document.createElement("div") }
+
+      await act(async () => {
+        await result.current.createView(containerRef, {})
+      })
+
+      mockVegaView.resize.mockClear()
+      mockVegaView.runAsync.mockClear()
+
+      await act(async () => {
+        await result.current.updateDimensions(800, 600, true, false)
+      })
+
+      expect(mockVegaView.width).toHaveBeenCalledWith(800)
+      expect(mockVegaView.height).not.toHaveBeenCalled()
+      expect(mockVegaView.resize).toHaveBeenCalled()
+    })
+
+    it("skips dimension update when values are zero or negative", async () => {
+      const chartElement = {
+        id: "chartId",
+        data: null,
+        datasets: [],
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Test mock
+      } as any
+
+      mockVegaView.width = vi.fn().mockReturnThis()
+      mockVegaView.height = vi.fn().mockReturnThis()
+
+      const { result } = renderHook(() =>
+        useVegaEmbed(chartElement, mockWidgetMgr)
+      )
+
+      const containerRef = { current: document.createElement("div") }
+
+      await act(async () => {
+        await result.current.createView(containerRef, {})
+      })
+
+      mockVegaView.resize.mockClear()
+      mockVegaView.runAsync.mockClear()
+      ;(mockVegaView.width as Mock).mockClear()
+      ;(mockVegaView.height as Mock).mockClear()
+
+      await act(async () => {
+        await result.current.updateDimensions(0, -1, true, true)
+      })
+
+      // Width and height should not be called with invalid values
+      expect(mockVegaView.width).not.toHaveBeenCalled()
+      expect(mockVegaView.height).not.toHaveBeenCalled()
+      // But resize should still be called
+      expect(mockVegaView.resize).toHaveBeenCalled()
+    })
+  })
 })

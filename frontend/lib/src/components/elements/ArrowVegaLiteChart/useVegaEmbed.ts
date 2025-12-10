@@ -48,6 +48,16 @@ interface UseVegaEmbedOutput {
     data: Quiver | null,
     datasets: WrappedNamedDataset[]
   ) => Promise<VegaView | null>
+  /**
+   * Updates the view dimensions without recreating the view.
+   * This is much more performant than recreating the view on resize.
+   */
+  updateDimensions: (
+    width: number,
+    height: number,
+    useContainerWidth: boolean,
+    useContainerHeight: boolean
+  ) => Promise<void>
   finalizeView: () => void
 }
 
@@ -275,5 +285,36 @@ export function useVegaEmbed(
     [updateData, isCreatingView]
   )
 
-  return { createView, updateView, finalizeView }
+  const updateDimensions = useCallback(
+    async (
+      width: number,
+      height: number,
+      useContainerWidth: boolean,
+      useContainerHeight: boolean
+    ): Promise<void> => {
+      if (vegaView.current === null || isCreatingView) {
+        return
+      }
+
+      try {
+        // Update the view dimensions using Vega's signal system
+        // This is much more efficient than recreating the view
+        if (useContainerWidth && width > 0) {
+          vegaView.current.width(width)
+        }
+        if (useContainerHeight && height > 0) {
+          vegaView.current.height(height)
+        }
+
+        // Resize and re-render the view
+        await vegaView.current.resize().runAsync()
+      } catch (error) {
+        // Log but don't throw - dimension updates failing shouldn't break the chart
+        LOG.warn("Failed to update Vega chart dimensions:", error)
+      }
+    },
+    [isCreatingView]
+  )
+
+  return { createView, updateView, updateDimensions, finalizeView }
 }
