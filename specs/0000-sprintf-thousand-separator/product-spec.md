@@ -39,7 +39,10 @@ Add two new flags to printf-style format specifiers (placed after the `%` sign):
 | `,` | Comma | `%,d` | `1,234,567` |
 | `_` | Underscore | `%_d` | `1_234_567` |
 
-The flags work with numeric format types: `d`, `i`, `f`, `e`, `g` and with all other sprintf features.
+The flags work with numeric format types: `d`, `i`, `f` and with all other sprintf features.
+
+These flags are equivalent to Python's [format specifiers for thousand separators](https://www.w3schools.com/python/python_string_formatting.asp)
+`:,` and `:_` (e.g., `f"{x:,}"` or `f"{x:_}"`).
 
 ### Examples
 
