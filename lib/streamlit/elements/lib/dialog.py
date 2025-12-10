@@ -166,8 +166,9 @@ class Dialog(DeltaGenerator):
         cursor: Cursor | None,
         parent: DeltaGenerator | None,
         block_type: str | None,
+        open: bool | None = None,
     ) -> None:
-        super().__init__(root_container, cursor, parent, block_type)
+        super().__init__(root_container, cursor, parent, block_type, open)
 
         # Initialized in `_create()`:
         self._current_proto: BlockProto | None = None
