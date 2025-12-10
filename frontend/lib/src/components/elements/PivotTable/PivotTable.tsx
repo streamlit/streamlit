@@ -54,12 +54,14 @@ export function PivotTable(props: PivotTableProps): ReactElement {
   )
 
   // Create an ArrowProto element for the transformed data
+  // Use editingMode to apply DataFrame-like styling
   const arrowElement = useMemo(() => {
     return ArrowProto.create({
       data: new Uint8Array(), // ArrowTable uses the Quiver data directly
       useContainerWidth: false,
       width: 0,
       borderMode: props.element.borderMode as ArrowProto.BorderMode,
+      editingMode: ArrowProto.EditingMode.READ_ONLY, // Triggers DataFrame-like styling
     })
   }, [props.element.borderMode])
 

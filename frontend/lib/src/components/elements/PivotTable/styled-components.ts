@@ -16,24 +16,27 @@
 
 import styled from "@emotion/styled"
 
-// Reuse table styling from ArrowTable to ensure consistency
-export {
-  StyledTable,
-  StyledTableBorder,
-  StyledTableCell,
-  StyledTableCellHeader,
-  StyledTableContainer,
-} from "~lib/components/elements/ArrowTable/styled-components"
-
 export const StyledPivotTableContainer = styled.div(({ theme }) => ({
   position: "relative",
-  fontSize: theme.fontSizes.md,
+  fontSize: theme.fontSizes.sm, // Smaller font size like DataFrame
   fontFamily: theme.genericFonts.bodyFont,
   lineHeight: theme.lineHeights.small,
   "&:hover": {
     "[data-testid='stElementToolbar']": {
       opacity: 1,
     },
+  },
+
+  // Override ArrowTable styling for DataFrame-like appearance
+  "thead th": {
+    backgroundColor: `${theme.colors.dataframeHeaderBackgroundColor} !important`,
+    fontSize: `${theme.fontSizes.sm} !important`,
+    fontWeight: `${theme.fontWeights.normal} !important`,
+    color: `${theme.colors.fadedText60} !important`,
+  },
+
+  "tbody td, tbody th": {
+    fontSize: `${theme.fontSizes.sm} !important`,
   },
 }))
 
@@ -155,6 +158,63 @@ export const StyledFieldMenu = styled.div(({ theme }) => ({
   top: theme.sizes.full,
   left: 0,
   right: 0,
+  backgroundColor: theme.colors.bgColor,
+  border: `1px solid ${theme.colors.borderColorLight}`,
+  borderRadius: theme.radii.md,
+  boxShadow: `0 ${theme.spacing.twoXS} ${theme.spacing.md} rgba(0, 0, 0, 0.1)`,
+  zIndex: theme.zIndices.popup,
+  marginTop: theme.spacing.twoXS,
+
+  button: {
+    display: "block",
+    width: theme.sizes.full,
+    padding: theme.spacing.sm,
+    background: "none",
+    border: "none",
+    textAlign: "left",
+    cursor: "pointer",
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.bodyText,
+
+    "&:hover": {
+      backgroundColor: theme.colors.secondaryBg,
+    },
+
+    "&:not(:last-child)": {
+      borderBottom: `1px solid ${theme.colors.borderColorLight}`,
+    },
+  },
+}))
+
+export const StyledAggregationButton = styled.button(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  gap: theme.spacing.twoXS,
+  padding: `${theme.spacing.twoXS} ${theme.spacing.sm}`,
+  backgroundColor: theme.colors.darkenedBgMix15,
+  border: `1px solid ${theme.colors.borderColorLight}`,
+  borderRadius: theme.radii.md,
+  fontSize: theme.fontSizes.sm,
+  color: theme.colors.bodyText,
+  cursor: "pointer",
+  transition: "all 0.2s ease",
+
+  "&:hover": {
+    backgroundColor: theme.colors.darkenedBgMix25,
+    borderColor: theme.colors.primary,
+  },
+
+  "&:focus": {
+    outline: "none",
+    borderColor: theme.colors.primary,
+  },
+}))
+
+export const StyledAggregationMenu = styled.div(({ theme }) => ({
+  position: "absolute",
+  top: theme.sizes.full,
+  left: 0,
+  minWidth: "120px",
   backgroundColor: theme.colors.bgColor,
   border: `1px solid ${theme.colors.borderColorLight}`,
   borderRadius: theme.radii.md,
