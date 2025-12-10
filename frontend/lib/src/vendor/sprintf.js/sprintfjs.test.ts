@@ -68,7 +68,7 @@ describe("sprintf", () => {
       ["%T", [Math.log], "function"],
       ["%T", [[1, 2, 3]], "array"],
       ["%T", [{ foo: "bar" }], "object"],
-      ["%T", [/<('[^']*'|'[^']*'|[^''>])*>/], "regexp"],
+      ["%T", [/<('[^']*'|[^'>])*>/], "regexp"],
       // valueOf
       ["%v", [true], "true"],
       ["%v", [42], "42"],
