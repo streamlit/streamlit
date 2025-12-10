@@ -14,14 +14,16 @@
  * limitations under the License.
  */
 
-import React, { memo, ReactElement } from "react"
+import React, { memo, ReactElement, useEffect, useRef, useState } from "react"
 
-import { Close } from "@emotion-icons/material-outlined"
+import { Close, KeyboardArrowDown } from "@emotion-icons/material-outlined"
 
 import Icon from "~lib/components/shared/Icon"
 
-import { ValueField } from "./pivotTransform"
+import { AggregationType, ValueField } from "./pivotTransform"
 import {
+  StyledAggregationButton,
+  StyledAggregationMenu,
   StyledDroppedField,
   StyledDropZone,
   StyledDropZoneContent,
@@ -37,20 +39,23 @@ interface DropZoneProps {
   onRemove: (fieldName: string) => void
   onUpdateAggregation?: (
     fieldName: string,
-    aggregation: ValueField["aggregation"]
+    aggregation: AggregationType
   ) => void
   showAggregation?: boolean
 }
 
-const AGGREGATION_OPTIONS = [
+const AGGREGATION_OPTIONS: Array<{
+  label: string
+  value: AggregationType
+}> = [
   { label: "Sum", value: "sum" },
-  { label: "Mean", value: "mean" },
+  { label: "Average", value: "mean" },
   { label: "Count", value: "count" },
   { label: "Min", value: "min" },
   { label: "Max", value: "max" },
 ]
 
-export default function DropZone({
+function DropZone({
   label,
   fields = [],
   valueFields = [],
@@ -58,9 +63,45 @@ export default function DropZone({
   onUpdateAggregation,
   showAggregation = false,
 }: DropZoneProps): ReactElement {
+  const [activeAggregation, setActiveAggregation] = useState<string | null>(
+    null
+  )
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent): void => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setActiveAggregation(null)
+      }
+    }
+
+    if (activeAggregation) {
+      document.addEventListener("mousedown", handleClickOutside)
+      return () => {
+        document.removeEventListener("mousedown", handleClickOutside)
+      }
+    }
+    return undefined
+  }, [activeAggregation])
+
   const displayFields = showAggregation
     ? valueFields
     : fields.map(f => ({ field: f }))
+
+  const handleAggregationClick = (fieldName: string): void => {
+    setActiveAggregation(activeAggregation === fieldName ? null : fieldName)
+  }
+
+  const handleAggregationChange = (
+    fieldName: string,
+    aggregation: AggregationType
+  ): void => {
+    if (onUpdateAggregation) {
+      onUpdateAggregation(fieldName, aggregation)
+    }
+    setActiveAggregation(null)
+  }
 
   return (
     <StyledDropZone>
@@ -73,28 +114,68 @@ export default function DropZone({
         ) : (
           displayFields.map((item, index) => {
             const fieldName = "field" in item ? item.field : item
+            const currentAggregation =
+              showAggregation && "aggregation" in item
+                ? item.aggregation
+                : "sum"
+
             return (
               <StyledDroppedField key={index}>
+                <StyledFieldName>{fieldName}</StyledFieldName>
                 <div
                   style={{
                     display: "flex",
                     alignItems: "center",
                     gap: "0.5rem",
+                    marginLeft: "auto",
                   }}
                 >
-                  <StyledFieldName>{fieldName}</StyledFieldName>
-                  {showAggregation && "aggregation" in item && (
-                    <span style={{ fontSize: "0.75rem", color: "#888" }}>
-                      ({item.aggregation})
-                    </span>
+                  {showAggregation && (
+                    <div
+                      style={{ position: "relative" }}
+                      ref={activeAggregation === fieldName ? menuRef : null}
+                    >
+                      <StyledAggregationButton
+                        onClick={() => handleAggregationClick(fieldName)}
+                        title="Change aggregation"
+                      >
+                        {AGGREGATION_OPTIONS.find(
+                          opt => opt.value === currentAggregation
+                        )?.label || "Sum"}
+                        <Icon content={KeyboardArrowDown} size="sm" />
+                      </StyledAggregationButton>
+                      {activeAggregation === fieldName && (
+                        <StyledAggregationMenu>
+                          {AGGREGATION_OPTIONS.map(option => (
+                            <button
+                              key={option.value}
+                              onClick={() =>
+                                handleAggregationChange(
+                                  fieldName,
+                                  option.value
+                                )
+                              }
+                              style={{
+                                fontWeight:
+                                  option.value === currentAggregation
+                                    ? "bold"
+                                    : "normal",
+                              }}
+                            >
+                              {option.label}
+                            </button>
+                          ))}
+                        </StyledAggregationMenu>
+                      )}
+                    </div>
                   )}
+                  <StyledRemoveButton
+                    onClick={() => onRemove(fieldName)}
+                    title={`Remove ${fieldName}`}
+                  >
+                    <Icon content={Close} size="sm" />
+                  </StyledRemoveButton>
                 </div>
-                <StyledRemoveButton
-                  onClick={() => onRemove(fieldName)}
-                  title={`Remove ${fieldName}`}
-                >
-                  <Icon content={Close} size="sm" />
-                </StyledRemoveButton>
               </StyledDroppedField>
             )
           })
@@ -103,3 +184,5 @@ export default function DropZone({
     </StyledDropZone>
   )
 }
+
+export default memo(DropZone)

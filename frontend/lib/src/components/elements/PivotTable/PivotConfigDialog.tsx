@@ -124,7 +124,7 @@ function PivotConfigDialog({
   }
 
   return (
-    <Modal isOpen onClose={onCancel} size="large">
+    <Modal isOpen onClose={onCancel} size="medium">
       <ModalHeader>Configure Pivot Table</ModalHeader>
       <ModalBody>
         <StyledDialogContent>

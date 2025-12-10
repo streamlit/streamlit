@@ -14,7 +14,14 @@
  * limitations under the License.
  */
 
-import { tableFromArrays, tableToIPC } from "apache-arrow"
+import {
+  Field,
+  Float64,
+  Schema,
+  tableFromArrays,
+  tableToIPC,
+  Utf8,
+} from "apache-arrow"
 
 import { Arrow as ArrowProto } from "@streamlit/protobuf"
 
@@ -31,7 +38,7 @@ export interface PivotConfig {
   rows: string[]
   columns: string[]
   values: ValueField[]
-  filters: Record<string, any[]>
+  filters: Record<string, unknown[]>
 }
 
 /**
@@ -203,6 +210,114 @@ export function groupAndAggregate(
 }
 
 /**
+ * Detect the number of decimal places in the original data for a field.
+ * Samples up to 100 rows to find the maximum decimal precision.
+ */
+function detectDecimalPlaces(data: Quiver, fieldName: string): number {
+  const columnNames = data.columnNames?.[0] || []
+  const colIndex = columnNames.indexOf(fieldName)
+
+  if (colIndex === -1) {
+    return 0 // Default to 0 decimal places if field not found
+  }
+
+  let maxDecimals = 0
+  const { numDataRows } = data.dimensions
+  const samplesToCheck = Math.min(numDataRows, 100)
+
+  for (let rowIndex = 0; rowIndex < samplesToCheck; rowIndex++) {
+    const { content } = data.getCell(rowIndex, colIndex)
+
+    if (content === null || content === undefined) {
+      continue
+    }
+
+    let numValue: number
+    if (typeof content === "number") {
+      numValue = content
+    } else if (typeof content === "string") {
+      numValue = parseFloat(content)
+      if (isNaN(numValue)) {
+        continue
+      }
+    } else {
+      continue
+    }
+
+    // Skip if not a finite number
+    if (!isFinite(numValue)) {
+      continue
+    }
+
+    // Convert to string to count decimal places
+    const stringValue = numValue.toString()
+
+    // Skip scientific notation
+    if (stringValue.includes("e") || stringValue.includes("E")) {
+      continue
+    }
+
+    const decimalIndex = stringValue.indexOf(".")
+    if (decimalIndex !== -1) {
+      // Count significant decimal places (excluding trailing zeros)
+      let decimals = 0
+      let hasNonZero = false
+
+      for (let i = stringValue.length - 1; i > decimalIndex; i--) {
+        const char = stringValue[i]
+        if (char === "0" && !hasNonZero) {
+          continue // Skip trailing zeros
+        }
+        hasNonZero = true
+        decimals++
+      }
+
+      maxDecimals = Math.max(maxDecimals, decimals)
+    }
+  }
+
+  return Math.min(maxDecimals, 6) // Cap at 6 decimal places for reasonable display
+}
+
+/**
+ * Format a number with the appropriate decimal places for display.
+ * Returns a number rounded to the appropriate precision.
+ */
+function formatNumber(value: number, decimalPlaces: number): number {
+  if (!isFinite(value)) {
+    return value
+  }
+
+  if (decimalPlaces === 0) {
+    return Math.round(value)
+  }
+
+  // Round to the specified decimal places
+  const factor = Math.pow(10, decimalPlaces)
+  return Math.round(value * factor) / factor
+}
+
+/**
+ * Get abbreviated label for aggregation type (matching ArrowTable summary style).
+ */
+function getAggregationLabel(aggregation: AggregationType): string {
+  switch (aggregation) {
+    case "sum":
+      return "Sum"
+    case "mean":
+      return "Avg"
+    case "count":
+      return "Count"
+    case "min":
+      return "Min"
+    case "max":
+      return "Max"
+    default:
+      return aggregation
+  }
+}
+
+/**
  * Transform data into a pivot table and return a new Quiver object.
  */
 export function transformToPivotQuiver(
@@ -227,13 +342,23 @@ export function transformToPivotQuiver(
     config.values
   )
 
-  // Build column names and data arrays
+  // Detect decimal places for each value field
+  const decimalPlaces: Record<string, number> = {}
+  config.values.forEach(vf => {
+    const detectedPlaces = detectDecimalPlaces(data, vf.field)
+    // For count, always use 0 decimals
+    decimalPlaces[vf.field] = vf.aggregation === "count" ? 0 : detectedPlaces
+  })
+
+  // Build column names, data arrays, and schema fields
   const columnNamesArray: string[] = []
   const columnDataArrays: (string | number)[][] = []
+  const schemaFields: Field[] = []
 
-  // Add row field columns
+  // Add row field columns (as strings)
   config.rows.forEach(fieldName => {
     columnNamesArray.push(fieldName)
+    schemaFields.push(new Field(fieldName, new Utf8(), true))
     const columnData = rowKeys.map(rowKey => {
       const parts = rowKey.split("|")
       const index = config.rows.indexOf(fieldName)
@@ -242,29 +367,40 @@ export function transformToPivotQuiver(
     columnDataArrays.push(columnData)
   })
 
-  // Add value columns for each column key combination
+  // Add value columns for each column key combination (as Float64)
   columnKeys.forEach(colKey => {
     config.values.forEach(vf => {
       const colParts = colKey.split("|")
+      const aggLabel = getAggregationLabel(vf.aggregation)
+
+      // Format header with abbreviated aggregation label
       const header =
         columnKeys.length > 1
-          ? `${colParts.join(" - ")} ${vf.field} (${vf.aggregation})`
-          : `${vf.field} (${vf.aggregation})`
+          ? `${colParts.join(" - ")} ${vf.field} (${aggLabel})`
+          : `${vf.field} (${aggLabel})`
       columnNamesArray.push(header)
+
+      // Mark as Float64 so it's right-aligned
+      schemaFields.push(new Field(header, new Float64(), true))
 
       const cellKey =
         columnKeys.length > 1 ? `${colKey}|${vf.field}` : vf.field
-      const columnData = rowKeys.map(rowKey => values[rowKey]?.[cellKey] ?? 0)
+      const columnData = rowKeys.map(rowKey => {
+        const value = values[rowKey]?.[cellKey] ?? 0
+        const dp = decimalPlaces[vf.field] || 0
+        return formatNumber(value, dp)
+      })
       columnDataArrays.push(columnData)
     })
   })
 
-  // Create Arrow table from arrays
+  // Create Arrow table with explicit schema
   const columnObject: Record<string, (string | number)[]> = {}
   columnNamesArray.forEach((name, index) => {
     columnObject[name] = columnDataArrays[index]
   })
 
+  const schema = new Schema(schemaFields)
   const arrowTable = tableFromArrays(columnObject)
   const arrowBytes = tableToIPC(arrowTable)
 
