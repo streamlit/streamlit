@@ -20,3 +20,16 @@ export const StyledDialogTitle = styled.div(({ theme }) => ({
   // Add right margin to prevent overlap with close button
   marginRight: theme.spacing.threeXL,
 }))
+
+/**
+ * Visually hidden element that receives initial focus when the dialog opens.
+ * This maintains accessibility (focus moves into the dialog) while preventing
+ * visible focus-visible styling on actual UI elements like the close button.
+ */
+export const StyledFocusAnchor = styled.span({
+  // Make the element invisible but still focusable
+  position: "absolute",
+  width: 0,
+  height: 0,
+  overflow: "hidden",
+})

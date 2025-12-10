@@ -31,7 +31,7 @@ import { assertNever } from "~lib/util/assertNever"
 import { notNullOrUndefined } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import { StyledDialogTitle } from "./styled-components"
+import { StyledDialogTitle, StyledFocusAnchor } from "./styled-components"
 
 /**
  * Maps the dialog width to the modal size.
@@ -149,6 +149,10 @@ const Dialog: React.FC<React.PropsWithChildren<Props>> = ({
       onClose={handleClose}
       size={mapDialogWidthToModalSize(width)}
     >
+      {/* Hidden focus anchor that receives initial focus when the dialog opens.
+          This maintains accessibility while preventing focus-visible styling
+          on visible UI elements. */}
+      <StyledFocusAnchor tabIndex={0} aria-hidden="true" />
       <ModalHeader>
         <StyledDialogTitle>
           <StreamlitMarkdown

@@ -29,7 +29,7 @@ def test_popover_button_rendering(
 ):
     """Test that the popover buttons are correctly rendered via screenshot matching."""
     popover_elements = themed_app.get_by_test_id("stPopover")
-    expect(popover_elements).to_have_count(14)
+    expect(popover_elements).to_have_count(15)
 
     assert_snapshot(
         get_popover(themed_app, "popover 5 (in sidebar)"), name="st_popover-sidebar"
@@ -204,3 +204,24 @@ def test_show_tooltip_on_hover(app: Page):
 def test_check_top_level_class(app: Page):
     """Check that the top level class is correctly set."""
     check_top_level_class(app, "stPopover")
+
+
+def test_popover_with_date_input_does_not_auto_open_calendar(app: Page):
+    """Test that opening a popover with a date_input doesn't auto-open the calendar.
+
+    This is a regression test for https://github.com/streamlit/streamlit/issues/13263
+    and https://github.com/streamlit/streamlit/issues/9243.
+    """
+    # Open the popover with date_input
+    popover_container = open_popover(app, "popover 20 (with date_input)")
+
+    # Verify the popover is visible
+    expect(popover_container).to_be_visible()
+
+    # Verify the date input is present
+    date_input = popover_container.get_by_test_id("stDateInput")
+    expect(date_input).to_be_visible()
+
+    # The calendar popover should NOT be visible (date_input should not auto-open)
+    calendar_popover = app.locator("[data-baseweb='calendar']")
+    expect(calendar_popover).not_to_be_attached()

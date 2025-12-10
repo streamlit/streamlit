@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from datetime import date
 
 import numpy as np
 import pandas as pd
@@ -83,3 +84,6 @@ with st.popover("popover 18 (primary)", type="primary"):
 
 with st.popover("popover 19 (tertiary)", type="tertiary"):
     st.markdown("Dummy content")
+
+with st.popover("popover 20 (with date_input)"):
+    st.date_input("Date input", date(2025, 1, 1))

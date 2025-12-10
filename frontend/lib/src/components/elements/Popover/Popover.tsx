@@ -34,6 +34,7 @@ import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { hasLightBackgroundColor } from "~lib/theme"
 
 import {
+  StyledFocusAnchor,
   StyledPopoverExpansionIcon,
   StyledPopoverLabelContainer,
 } from "./styled-components"
@@ -76,7 +77,14 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
       <UIPopover
         triggerType={TRIGGER_TYPE.click}
         placement={PLACEMENT.bottomLeft}
-        content={() => children}
+        content={() => (
+          <>
+            {/* Hidden focus anchor that receives initial focus when the popover opens.
+                This prevents widgets like date_input from auto-opening their dropdowns. */}
+            <StyledFocusAnchor tabIndex={0} aria-hidden="true" />
+            {children}
+          </>
+        )}
         isOpen={open}
         onClickOutside={() => setOpen(false)}
         // We need to handle the click here as well to allow closing the

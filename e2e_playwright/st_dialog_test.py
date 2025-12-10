@@ -651,3 +651,31 @@ def test_dialog_on_dismiss_callback(app: Page):
     expect(dialog).not_to_be_attached()
     # Callback should have been executed
     expect_prefixed_markdown(app, "Callback executions:", "3")
+
+
+def test_dialog_opened_via_shortcut_does_not_show_focus_visible_styling(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that opening a dialog via keyboard shortcut does not cause focus-visible
+    styling on dialog elements, and that widgets like date_input don't auto-open.
+
+    This is a regression test for https://github.com/streamlit/streamlit/issues/13263
+    and https://github.com/streamlit/streamlit/issues/9243.
+    """
+    # Open the dialog using the keyboard shortcut (Shift+D)
+    app.keyboard.press("Shift+D")
+    wait_for_app_run(app)
+
+    dialog = app.get_by_role("dialog")
+    expect(dialog).to_be_visible()
+
+    # Verify the date input is present but its calendar popover is NOT open
+    date_input = dialog.get_by_test_id("stDateInput")
+    expect(date_input).to_be_visible()
+
+    # The calendar popover should NOT be visible (date_input should not auto-open)
+    calendar_popover = app.locator("[data-baseweb='calendar']")
+    expect(calendar_popover).not_to_be_attached()
+
+    # Take snapshot to verify no focus-visible styling on close button or widgets
+    assert_snapshot(dialog, name="st_dialog-opened_via_shortcut")

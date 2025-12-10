@@ -37,3 +37,16 @@ export const StyledPopoverExpansionIcon = styled.div(({ theme }) => ({
   // Small hack to better align the expansion icon with the label.
   marginTop: theme.spacing.threeXS,
 }))
+
+/**
+ * Visually hidden element that receives initial focus when the popover opens.
+ * This prevents widgets like date_input from auto-opening their dropdowns
+ * when they are the first focusable element in the popover.
+ */
+export const StyledFocusAnchor = styled.span({
+  // Make the element invisible but still focusable
+  position: "absolute",
+  width: 0,
+  height: 0,
+  overflow: "hidden",
+})

@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import time
+from datetime import date
 
 import numpy as np
 import pandas as pd
@@ -268,3 +269,14 @@ if st.button("Open on_dismiss callback Dialog"):
 
 if st.session_state.get("callback_executed"):
     st.write("Callback executions:", st.session_state.get("dismiss_count", 0))
+
+st.text_input("Text input", key="text-input-key")
+
+
+@st.dialog("Dialog with widget")
+def dialog_with_widget() -> None:
+    st.date_input("Date input", date(2025, 1, 1))
+
+
+if st.button("Open Dialog with widget", shortcut="Shift+D"):
+    dialog_with_widget()
