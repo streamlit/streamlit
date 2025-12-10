@@ -326,7 +326,7 @@ export const BlockNodeRenderer = (
         isStale={isStale}
         element={node.deltaBlock.expandable as BlockProto.Expandable}
         widgetMgr={props.widgetMgr}
-        blockId={node.deltaBlock.id}
+        blockId={node.deltaBlock.id ?? undefined}
         fragmentId={node.fragmentId}
       >
         {child}
