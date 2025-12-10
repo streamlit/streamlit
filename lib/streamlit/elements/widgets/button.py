@@ -83,6 +83,7 @@ DownloadButtonDataType: TypeAlias = (
     | TextIO
     | BinaryIO
     | io.RawIOBase
+    | Path
     | Callable[[], str | bytes | TextIO | BinaryIO | io.RawIOBase]
 )
 
@@ -399,7 +400,7 @@ class ButtonMixin:
             The contents of the file to be downloaded or a callable that
             returns the contents of the file.
 
-            File contents can be a string, bytes, or file-like object.
+            File contents can be a string (path , S3 URI or HTTP(S)) , bytes or file-like object.
             File-like objects include ``io.BytesIO``, ``io.StringIO``, or any
             class that implements the abstract base class ``io.RawIOBase``.
 
@@ -683,6 +684,26 @@ class ButtonMixin:
         .. output::
            https://doc-download-button-deferred.streamlit.app/
            height: 200px
+
+        **Example 5: Download from S3**
+
+        Download files directly from S3 by passing an S3 URI. This requires
+        the ``boto3`` package to be installed.
+
+        >>> import streamlit as st
+        >>>
+        >>> # Download from S3 (requires: pip install boto3)
+        >>> st.download_button(
+        ...     label="Download report from S3",
+        ...     data="s3://my-bucket/reports/annual_report.pdf",
+        ...     file_name="annual_report.pdf",
+        ...     icon=":material/cloud_download:",
+        ... )
+
+        .. note::
+        Make sure your AWS credentials are properly configured (via
+        environment variables, AWS CLI, or IAM roles).
+
 
         """
         ctx = get_script_run_ctx()
@@ -1130,6 +1151,7 @@ class ButtonMixin:
         download_button_proto.label = label
         download_button_proto.default = False
         download_button_proto.type = type
+
         marshall_file(
             self.dg._get_delta_path_str(), data, download_button_proto, mime, file_name
         )

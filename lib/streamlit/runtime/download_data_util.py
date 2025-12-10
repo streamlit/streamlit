@@ -13,8 +13,9 @@
 # limitations under the License.
 
 from __future__ import annotations
+from ..elements.lib.file_util import local_file_down, s3_file_down, http_down
 
-import io
+import io,os,mimetypes
 
 
 def convert_data_to_bytes_and_infer_mime(
@@ -25,8 +26,20 @@ def convert_data_to_bytes_and_infer_mime(
     inferred_mime_type: str
 
     if isinstance(data, str):
-        data_as_bytes = data.encode()
-        inferred_mime_type = "text/plain"
+        if os.path.isfile(data):
+            data_as_bytes = local_file_down(data)
+            inferred_mime_type = mimetypes.guess_type(data)[0] or "application/octet-stream"
+        elif data.startswith(('s3://','s3a://')):
+            data_as_bytes = s3_file_down(data)
+            filename = data.split('/')[-1]
+            inferred_mime_type = mimetypes.guess_type(data)[0] or "application/octet-stream"
+        elif data.startswith(('http://','https://')):
+            data_as_bytes = http_down(data)
+            inferred_mime_type = "application/octet-stream"
+        else:
+            data_as_bytes = data.encode()
+            inferred_mime_type = "text/plain"
+
     elif isinstance(data, io.TextIOWrapper):
         string_data = data.read()
         data_as_bytes = string_data.encode()
