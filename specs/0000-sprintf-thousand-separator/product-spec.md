@@ -114,6 +114,7 @@ add this feature independently while also allowing us to maintain it ourselves. 
 
 - [x] Will this work on all deployment platforms (e.g. [Streamlit Community Cloud](https://streamlit.io/cloud), [Streamlit in Snowflake](https://www.snowflake.com/en/product/features/streamlit-in-snowflake/), [Hugging Face Spaces](https://huggingface.co/spaces))?
 - [x] No breaking API changes?
+  - Using `,` or `_` after `%` previously caused an error, so existing format strings are unaffected
 - [x] No new dependencies?
   - Vendors sprintf-js instead of using npm package; reduces external dependencies
 - [x] Metrics collected?
