@@ -619,7 +619,7 @@ class DataEditorMixin:
         hide_index: bool | None = None,
         column_order: Iterable[str] | None = None,
         column_config: ColumnConfigMappingInput | None = None,
-        num_rows: Literal["fixed", "dynamic"] = "fixed",
+        num_rows: Literal["fixed", "dynamic", "add", "delete"] = "fixed",
         disabled: bool | Iterable[str | int] = False,
         key: Key | None = None,
         on_change: WidgetCallback | None = None,
@@ -641,7 +641,7 @@ class DataEditorMixin:
         hide_index: bool | None = None,
         column_order: Iterable[str] | None = None,
         column_config: ColumnConfigMappingInput | None = None,
-        num_rows: Literal["fixed", "dynamic"] = "fixed",
+        num_rows: Literal["fixed", "dynamic", "add", "delete"] = "fixed",
         disabled: bool | Iterable[str | int] = False,
         key: Key | None = None,
         on_change: WidgetCallback | None = None,
@@ -663,7 +663,7 @@ class DataEditorMixin:
         hide_index: bool | None = None,
         column_order: Iterable[str] | None = None,
         column_config: ColumnConfigMappingInput | None = None,
-        num_rows: Literal["fixed", "dynamic"] = "fixed",
+        num_rows: Literal["fixed", "dynamic", "add", "delete"] = "fixed",
         disabled: bool | Iterable[str | int] = False,
         key: Key | None = None,
         on_change: WidgetCallback | None = None,
@@ -786,11 +786,16 @@ class DataEditorMixin:
             name, or use a positional column index where ``0`` refers to the
             first index column.
 
-        num_rows : "fixed" or "dynamic"
+        num_rows : "fixed", "dynamic", "add", or "delete"
             Specifies if the user can add and delete rows in the data editor.
-            If "fixed", the user cannot add or delete rows. If "dynamic", the user can
-            add and delete rows in the data editor, but column sorting is disabled.
-            Defaults to "fixed".
+
+            - ``"fixed"`` (default): The user cannot add or delete rows.
+            - ``"dynamic"``: The user can add and delete rows, but column
+              sorting is disabled.
+            - ``"add"``: The user can only add rows (no deleting), and column
+              sorting is disabled.
+            - ``"delete"``: The user can only delete rows (no adding), and
+              column sorting remains enabled.
 
         disabled : bool or Iterable[str | int]
             Controls the editing of columns. This can be one of the following:
@@ -1019,17 +1024,18 @@ class DataEditorMixin:
             update_column_config(
                 column_config_mapping, INDEX_IDENTIFIER, {"required": True}
             )
-            if num_rows == "dynamic" and hide_index is True:
+            if num_rows in ("dynamic", "add") and hide_index is True:
                 _LOGGER.warning(
                     "Setting `hide_index=True` in data editor with a non-range index will not have any effect "
-                    "when `num_rows='dynamic'`. It is required for the user to fill in index values for "
+                    "when `num_rows` is '%s'. It is required for the user to fill in index values for "
                     "adding new rows. To hide the index, make sure to set the DataFrame "
-                    "index to a range index."
+                    "index to a range index.",
+                    num_rows,
                 )
 
-        if hide_index is None and has_range_index and num_rows == "dynamic":
+        if hide_index is None and has_range_index and num_rows in ("dynamic", "add"):
             # Temporary workaround:
-            # We hide range indices if num_rows is dynamic.
+            # We hide range indices if num_rows allows adding rows.
             # since the current way of handling this index during editing is a
             # bit confusing. The user can still decide to show the index by
             # setting hide_index explicitly to False.
@@ -1098,11 +1104,14 @@ class DataEditorMixin:
         # It can also be a list of columns, which should result in false here.
         proto.disabled = disabled is True
 
-        proto.editing_mode = (
-            ArrowProto.EditingMode.DYNAMIC
-            if num_rows == "dynamic"
-            else ArrowProto.EditingMode.FIXED
-        )
+        if num_rows == "dynamic":
+            proto.editing_mode = ArrowProto.EditingMode.DYNAMIC
+        elif num_rows == "add":
+            proto.editing_mode = ArrowProto.EditingMode.ADD_ONLY
+        elif num_rows == "delete":
+            proto.editing_mode = ArrowProto.EditingMode.DELETE_ONLY
+        else:
+            proto.editing_mode = ArrowProto.EditingMode.FIXED
 
         proto.form_id = current_form_id(self.dg)
 

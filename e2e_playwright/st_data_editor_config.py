@@ -32,15 +32,17 @@ df = pd.DataFrame(
 )
 
 st.header("Disabled parameter:")
-st.data_editor(df, disabled=True, width="content")
-st.data_editor(df, disabled=["col_4", "col_1"], width="content")
+st.data_editor(df, disabled=True, width="content", key="disabled-all")
+st.data_editor(df, disabled=["col_4", "col_1"], width="content", key="disabled-two")
 
 st.header("Hide index parameter:")
-st.data_editor(df, hide_index=True, width="content")
-st.data_editor(df, hide_index=False, width="content")
+st.data_editor(df, hide_index=True, width="content", key="hide-index")
+st.data_editor(df, hide_index=False, width="content", key="show-index")
 
 st.header("Column order parameter:")
-st.data_editor(df, column_order=["col_4", "col_3", "col_0"], width="content")
+st.data_editor(
+    df, column_order=["col_4", "col_3", "col_0"], width="content", key="column-order"
+)
 
 st.header("Set column labels:")
 st.data_editor(
@@ -51,6 +53,7 @@ st.data_editor(
         "col_2": st.column_config.Column("Column 1"),
     },
     width="content",
+    key="column-labels",
 )
 
 st.header("Hide columns:")
@@ -58,6 +61,7 @@ st.data_editor(
     df,
     column_config={"col_1": None, "col_3": {"hidden": True}},
     width="content",
+    key="hide-columns",
 )
 
 st.header("Set column width:")
@@ -69,6 +73,7 @@ st.data_editor(
         "col_4": {"width": "large"},
     },
     width="content",
+    key="column-width",
 )
 
 st.header("Set help tooltips:")
@@ -84,6 +89,7 @@ st.data_editor(
         "_index": {"help": "Index tooltip!"},
     },
     width="content",
+    key="help-tooltips",
 )
 
 st.header("Text column:")
@@ -114,6 +120,7 @@ st.data_editor(
     },
     width="content",
     hide_index=True,
+    key="text-column",
 )
 
 st.header("Number column:")
@@ -146,6 +153,7 @@ st.data_editor(
     },
     width="content",
     hide_index=True,
+    key="number-column",
 )
 
 st.header("Checkbox column:")
@@ -169,6 +177,7 @@ st.data_editor(
     },
     width="content",
     hide_index=True,
+    key="checkbox-column",
 )
 
 st.header("Selectbox column:")
@@ -195,6 +204,7 @@ st.data_editor(
     },
     width="content",
     hide_index=True,
+    key="selectbox-column",
 )
 
 st.header("Link column:")
@@ -240,6 +250,7 @@ st.data_editor(
     },
     width="content",
     hide_index=True,
+    key="link-column",
 )
 
 st.header("Datetime column:")
@@ -274,6 +285,7 @@ st.data_editor(
     },
     width="content",
     hide_index=True,
+    key="datetime-column",
 )
 
 st.header("Date column:")
@@ -307,6 +319,7 @@ st.data_editor(
     },
     width="content",
     hide_index=True,
+    key="date-column",
 )
 
 st.header("Time column:")
@@ -340,6 +353,7 @@ st.data_editor(
     },
     width="content",
     hide_index=True,
+    key="time-column",
 )
 
 st.header("Progress column:")
@@ -363,6 +377,7 @@ st.data_editor(
     },
     width="content",
     hide_index=True,
+    key="progress-column",
 )
 
 st.header("List column:")
@@ -388,6 +403,7 @@ st.data_editor(
     },
     width="content",
     hide_index=True,
+    key="list-column",
 )
 
 st.header("Bar chart column:")
@@ -411,6 +427,7 @@ st.data_editor(
     },
     width="content",
     hide_index=True,
+    key="bar-chart-column",
 )
 
 
@@ -435,6 +452,7 @@ st.data_editor(
     },
     width="content",
     hide_index=True,
+    key="line-chart-column",
 )
 
 st.header("Image column:")
@@ -459,6 +477,7 @@ st.data_editor(
     },
     width="content",
     hide_index=True,
+    key="image-column",
 )
 
 st.header("Multiselect column:")
@@ -500,6 +519,7 @@ result = st.data_editor(
     },
     width="content",
     hide_index=True,
+    key="multiselect-column",
 )
 
 st.write("Multiselect column return:", str(result))
@@ -515,4 +535,55 @@ st.data_editor(
     ),
     placeholder="-",
     width="content",
+    key="missing-placeholder",
+)
+
+st.header("Test num_rows modes")
+
+# Data editor with num_rows="add" - can only add rows, cannot delete rows
+st.subheader("Add-only mode")
+st.data_editor(
+    pd.DataFrame(
+        {"name": ["Alice", "Bob"], "age": [25, 30]},
+    ),
+    num_rows="add",
+    hide_index=True,
+    width="content",
+    column_config={
+        "name": st.column_config.Column(width="small"),
+        "age": st.column_config.Column(width="small"),
+    },
+    key="add-only-editor",
+)
+
+# Data editor with num_rows="delete" - can only delete rows, cannot add rows
+st.subheader("Delete-only mode")
+st.data_editor(
+    pd.DataFrame(
+        {"name": ["Alice", "Bob", "Charlie"], "age": [25, 30, 35]},
+    ),
+    num_rows="delete",
+    hide_index=True,
+    width="content",
+    column_config={
+        "name": st.column_config.Column(width="small"),
+        "age": st.column_config.Column(width="small"),
+    },
+    key="delete-only-editor",
+)
+
+# Data editor with num_rows="dynamic" - can add and delete rows
+st.subheader("Dynamic mode")
+st.data_editor(
+    pd.DataFrame(
+        {"name": ["Alice", "Bob"], "age": [25, 30]},
+    ),
+    num_rows="dynamic",
+    hide_index=True,
+    width="content",
+    column_config={
+        "name": st.column_config.Column(width="small"),
+        "age": st.column_config.Column(width="small"),
+    },
+    key="dynamic-editor",
 )
