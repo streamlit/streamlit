@@ -20,6 +20,29 @@ const FINAL_SLASH_RE = /\/+$/
 const INITIAL_SLASH_RE = /^\/+/
 
 /**
+ * Returns true when host-specific fast-path behavior for establishing the
+ * initial websocket connection should be enabled.
+ *
+ * Fast-path mode relies on minimal host configuration provided via
+ * window.__streamlit (StreamlitConfig) instead of waiting for the host-config endpoint.
+ *
+ * Required fields in HOST_CONFIG:
+ * - allowedOrigins: non-empty array of allowed origins
+ * - useExternalAuthToken: boolean (true or false)
+ */
+export function isHostConfigFastPathEnabled(): boolean {
+  const initialConfig = StreamlitConfig.HOST_CONFIG
+
+  return Boolean(
+    StreamlitConfig.BACKEND_BASE_URL &&
+      initialConfig &&
+      Array.isArray(initialConfig.allowedOrigins) &&
+      initialConfig.allowedOrigins.length > 0 &&
+      typeof initialConfig.useExternalAuthToken === "boolean"
+  )
+}
+
+/**
  * Return the BaseUriParts for either the given url or the global window
  */
 export function parseUriIntoBaseParts(url?: string): URL {

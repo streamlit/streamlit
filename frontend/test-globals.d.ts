@@ -32,6 +32,12 @@ interface MockStreamlitConfigState {
   LIGHT_THEME?: unknown
   DARK_THEME?: unknown
   ENABLE_RELOAD_BASED_ON_HARDCODED_STREAMLIT_VERSION?: boolean
+  HOST_CONFIG?: {
+    useExternalAuthToken?: boolean
+    allowedOrigins?: string[]
+    // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
+    metricsUrl?: string | "postMessage" | "off"
+  }
 }
 
 declare global {

@@ -104,6 +104,15 @@ export interface Args {
    * scenario).
    */
   onHostConfigResp: (resp: IHostConfigResponse) => void
+
+  /**
+   * Enables host-specific fast-path behavior for establishing the initial
+   * websocket connection. When true, the connection state machine will
+   * connect to the websocket immediately without waiting for the initial
+   * ping cycle to complete. Health and host-config pings continue to run
+   * asynchronously in the background for error handling and configuration.
+   */
+  enableFastPath?: boolean
 }
 
 interface MessageQueue {
@@ -289,7 +298,17 @@ export class WebsocketConnection {
     switch (this.state) {
       case ConnectionState.INITIAL:
         if (event === "INITIALIZED") {
-          this.setFsmState(ConnectionState.PINGING_SERVER)
+          if (this.args.enableFastPath) {
+            // Fast-path: Start connecting to the websocket immediately while
+            // running health and host-config pings asynchronously in the
+            // background. The ping cycle is used for error handling and
+            // configuration only and does not gate the initial connection.
+            this.setFsmState(ConnectionState.CONNECTING)
+            // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
+            this.pingServerInBackground()
+          } else {
+            this.setFsmState(ConnectionState.PINGING_SERVER)
+          }
           return
         }
         break
@@ -369,6 +388,36 @@ export class WebsocketConnection {
       }
     } finally {
       // Reset the ping request to avoid memory leaks
+      this.pingRequest = undefined
+    }
+  }
+
+  /**
+   * Run the ping cycle in the background without driving the FSM. This is
+   * used by certain environments for fast-path mode to keep health and host-config
+   * behavior (error handling, configuration, base-path discovery) while allowing
+   * the initial websocket connection to proceed immediately.
+   */
+  private async pingServerInBackground(): Promise<void> {
+    this.pingRequest = doInitPings(
+      this.args.baseUriPartsList,
+      PING_MINIMUM_RETRY_PERIOD_MS,
+      PING_MAXIMUM_RETRY_PERIOD_MS,
+      this.args.onRetry,
+      this.args.sendClientError,
+      this.args.onHostConfigResp
+    )
+
+    try {
+      const uriIndex = await this.pingRequest.promise
+      this.uriIndex = uriIndex
+    } catch (e) {
+      if (e instanceof PingCancelledError) {
+        LOG.info("Ping cancelled (background)")
+      } else {
+        this.stepFsm("FATAL_ERROR", e instanceof Error ? e.message : String(e))
+      }
+    } finally {
       this.pingRequest = undefined
     }
   }

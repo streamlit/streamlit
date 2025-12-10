@@ -221,6 +221,13 @@ const INITIAL_SCRIPT_RUN_ID = "<null>"
 
 export const LOG = getLogger("App")
 
+function preferWindowValue<T>(
+  windowValue: T | undefined,
+  endpointValue: T
+): T {
+  return windowValue !== undefined ? windowValue : endpointValue
+}
+
 declare global {
   interface Window {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
@@ -456,8 +463,50 @@ export class App extends PureComponent<Props, State> {
     }
   }
 
+  private getInitialHostConfig():
+    | {
+        useExternalAuthToken?: boolean
+        allowedOrigins?: string[]
+        metricsUrl?: string
+      }
+    | undefined {
+    return StreamlitConfig.HOST_CONFIG
+  }
+
+  private applyInitialHostConfig(): void {
+    // Apply minimal host configuration from StreamlitConfig.HOST_CONFIG, if present.
+    // This enables a fast-path for establishing the websocket connection and
+    // host communication without waiting for the host-config endpoint.
+    const initialHostConfig = this.getInitialHostConfig()
+    if (!initialHostConfig) {
+      return
+    }
+
+    const { allowedOrigins, useExternalAuthToken, metricsUrl } =
+      initialHostConfig
+
+    const appConfig: AppConfig = {
+      allowedOrigins,
+      useExternalAuthToken,
+      enableCustomParentMessages: false,
+      blockErrorDialogs: false,
+    }
+
+    const libConfig: LibConfig = {}
+
+    if (metricsUrl !== undefined) {
+      this.metricsMgr.setMetricsConfig(metricsUrl)
+    }
+
+    this.hostCommunicationMgr.setAllowedOrigins(appConfig)
+    this.setAppConfig(appConfig)
+    this.setLibConfig(libConfig)
+  }
+
   initializeConnectionManager(): void {
     this.isInitializingConnectionManager = true
+
+    this.applyInitialHostConfig()
 
     this.connectionManager = new ConnectionManager({
       getLastSessionId: () => this.sessionInfo.last?.sessionId,
@@ -481,22 +530,39 @@ export class App extends PureComponent<Props, State> {
         })
       },
       onHostConfigResp: (response: IHostConfigResponse) => {
+        const initialHostConfig = this.getInitialHostConfig()
+
         const {
-          allowedOrigins,
-          useExternalAuthToken,
+          allowedOrigins: hostAllowedOrigins,
+          useExternalAuthToken: hostUseExternalAuthToken,
           disableFullscreenMode,
           enableCustomParentMessages,
           mapboxToken,
           enforceDownloadInNewTab,
-          metricsUrl,
+          metricsUrl: hostMetricsUrl,
           blockErrorDialogs,
           setAnonymousCrossOriginPropertyOnMediaElements,
           resourceCrossOriginMode,
         } = response
 
+        // Values from the initial window config take precedence
+        // over the same properties returned by the host-config endpoint.
+        const effectiveAllowedOrigins = preferWindowValue(
+          initialHostConfig?.allowedOrigins,
+          hostAllowedOrigins
+        )
+        const effectiveUseExternalAuthToken = preferWindowValue(
+          initialHostConfig?.useExternalAuthToken,
+          hostUseExternalAuthToken
+        )
+        const effectiveMetricsUrl = preferWindowValue(
+          initialHostConfig?.metricsUrl,
+          hostMetricsUrl
+        )
+
         const appConfig: AppConfig = {
-          allowedOrigins,
-          useExternalAuthToken,
+          allowedOrigins: effectiveAllowedOrigins,
+          useExternalAuthToken: effectiveUseExternalAuthToken,
           enableCustomParentMessages,
           blockErrorDialogs,
         }
@@ -513,7 +579,7 @@ export class App extends PureComponent<Props, State> {
         }
 
         // Set the metrics configuration:
-        this.metricsMgr.setMetricsConfig(metricsUrl)
+        this.metricsMgr.setMetricsConfig(effectiveMetricsUrl)
         // Set the allowed origins configuration for the host communication:
         this.hostCommunicationMgr.setAllowedOrigins(appConfig)
         // Set the streamlit-app specific config settings in AppContext:

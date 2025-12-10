@@ -37,6 +37,13 @@ interface StreamlitWindowConfig {
   DARK_THEME?: ICustomThemeConfig
   // Other options.
   ENABLE_RELOAD_BASED_ON_HARDCODED_STREAMLIT_VERSION?: boolean
+  // Minimal host configuration for fast-path websocket connection.
+  HOST_CONFIG?: {
+    useExternalAuthToken?: boolean
+    allowedOrigins?: string[]
+    // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
+    metricsUrl?: string | "postMessage" | "off"
+  }
 }
 
 // Extend Window interface for TypeScript
@@ -164,5 +171,15 @@ export const StreamlitConfig = {
     | boolean
     | undefined {
     return capturedConfig?.ENABLE_RELOAD_BASED_ON_HARDCODED_STREAMLIT_VERSION
+  },
+  get HOST_CONFIG():
+    | {
+        useExternalAuthToken?: boolean
+        allowedOrigins?: string[]
+        // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
+        metricsUrl?: string | "postMessage" | "off"
+      }
+    | undefined {
+    return capturedConfig?.HOST_CONFIG
   },
 } as const

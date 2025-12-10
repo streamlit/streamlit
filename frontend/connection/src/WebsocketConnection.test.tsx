@@ -229,6 +229,22 @@ describe("doInitPings", () => {
     globalThis.__mockStreamlitConfig = {}
   })
 
+  it("uses fast-path to connect immediately when enableFastPath is true", () => {
+    const fetchMock = createFetchMock()
+    globalThis.fetch = fetchMock
+
+    const args = createMockArgs({ enableFastPath: true })
+    const ws = new WebsocketConnection(args)
+
+    // Fast-path should transition directly to CONNECTING and attempt to
+    // create the websocket without waiting for SERVER_PING_SUCCEEDED.
+    expect(
+      args.onConnectionStateChange as ReturnType<typeof vi.fn>
+    ).toHaveBeenCalledWith(ConnectionState.CONNECTING, undefined)
+
+    ws.disconnect()
+  })
+
   it("calls the /_stcore/health endpoint when pinging server", async () => {
     globalThis.fetch = vi
       .fn()
@@ -1206,5 +1222,95 @@ describe("WebsocketConnection auth token handling", () => {
       ["streamlit", "iAmAnAuthToken", "lastSessionId"]
     )
     expect(resetHostAuthToken).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe("WebsocketConnection FSM fast-path behavior", () => {
+  let originalFetch: typeof globalThis.fetch
+
+  beforeEach(() => {
+    vi.useFakeTimers()
+    originalFetch = globalThis.fetch
+  })
+
+  afterEach(() => {
+    vi.clearAllTimers()
+    vi.useRealTimers()
+    globalThis.fetch = originalFetch
+    window.__streamlit = undefined
+  })
+
+  it("uses default path (PINGING_SERVER) when enableFastPath is false", () => {
+    globalThis.fetch = createFetchMock()
+
+    const args = createMockArgs({ enableFastPath: false })
+    const ws = new WebsocketConnection(args)
+
+    // Should transition to PINGING_SERVER, not CONNECTING
+    expect(
+      args.onConnectionStateChange as ReturnType<typeof vi.fn>
+    ).toHaveBeenCalledWith(ConnectionState.PINGING_SERVER, undefined)
+
+    ws.disconnect()
+  })
+
+  it("uses default path when enableFastPath is undefined", () => {
+    globalThis.fetch = createFetchMock()
+
+    const args = createMockArgs({ enableFastPath: undefined })
+    const ws = new WebsocketConnection(args)
+
+    // Should transition to PINGING_SERVER (default behavior)
+    expect(
+      args.onConnectionStateChange as ReturnType<typeof vi.fn>
+    ).toHaveBeenCalledWith(ConnectionState.PINGING_SERVER, undefined)
+
+    ws.disconnect()
+  })
+
+  it("runs background pings and calls onHostConfigResp in fast-path mode", async () => {
+    globalThis.fetch = vi
+      .fn()
+      .mockResolvedValueOnce(createSuccessResponse(MOCK_HEALTH_RESPONSE))
+      .mockResolvedValueOnce(createSuccessResponse(MOCK_HOST_CONFIG_RESPONSE))
+
+    const args = createMockArgs({ enableFastPath: true })
+    const ws = new WebsocketConnection(args)
+
+    // Fast-path: should be in CONNECTING immediately
+    expect(
+      args.onConnectionStateChange as ReturnType<typeof vi.fn>
+    ).toHaveBeenCalledWith(ConnectionState.CONNECTING, undefined)
+
+    // Flush the microtask queue to allow the fetch promises to resolve
+    await vi.advanceTimersByTimeAsync(0)
+
+    // onHostConfigResp should have been called by background pings
+    expect(args.onHostConfigResp).toHaveBeenCalledWith(
+      expect.objectContaining({
+        allowedOrigins: expect.any(Array),
+      })
+    )
+
+    ws.disconnect()
+  })
+
+  it("does not transition to PINGING_SERVER in fast-path mode", () => {
+    globalThis.fetch = createFetchMock()
+
+    const args = createMockArgs({ enableFastPath: true })
+    const ws = new WebsocketConnection(args)
+
+    const stateChangeCalls = (
+      args.onConnectionStateChange as ReturnType<typeof vi.fn>
+    ).mock.calls
+
+    // Should NOT have called with PINGING_SERVER
+    const hasPingingState = stateChangeCalls.some(
+      call => call[0] === ConnectionState.PINGING_SERVER
+    )
+    expect(hasPingingState).toBe(false)
+
+    ws.disconnect()
   })
 })
