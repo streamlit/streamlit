@@ -999,8 +999,8 @@ class ButtonMixin:
               or ``icon="🔥"``. Emoji short codes are not supported.
 
             - An icon from the Material Symbols library (rounded style) in the
-            format ``":material/icon_name:"`` where "icon_name" is the name
-            of the icon in snake case.
+              format ``":material/icon_name:"`` where "icon_name" is the name
+              of the icon in snake case.
 
               For example, ``icon=":material/thumb_up:"`` will display the
               Thumb Up icon. Find additional icons in the `Material Symbols \
