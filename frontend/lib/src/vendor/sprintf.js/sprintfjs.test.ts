@@ -191,6 +191,21 @@ describe("sprintf", () => {
       // Custom pad character with thousand separator (legacy syntax)
       ["%'_,.2f", [1234567.89], "1_234_567.89"],
       ["%'_,d", [1234567], "1_234_567"],
+      ["%'*,d", [1234567], "1*234*567"],
+      ["%'.,d", [1234567], "1.234.567"],
+      ["%' ,d", [1234567], "1 234 567"],
+
+      // Separator flag with non-numeric types (flag captured but not applied)
+      ["%,s", ["hello"], "hello"],
+      ["%,t", [true], "true"],
+      ["%,T", [42], "number"],
+
+      // Separator flag with hex/octal/binary (not applied - not in 'diefg')
+      ["%,x", [1234567], "12d687"],
+      ["%,X", [1234567], "12D687"],
+      ["%,o", [1234567], "4553207"],
+      ["%,b", [255], "11111111"],
+      ["%,u", [1234567], "1234567"],
     ])("formats '%s' with %j to '%s'", (format, args, expected) => {
       expect(sprintf(format, ...args)).toBe(expected)
     })
@@ -237,6 +252,18 @@ describe("sprintf", () => {
       ["$%_d", [1234567], "$1_234_567"],
       ["%_d items", [1234567], "1_234_567 items"],
       ["$%_.2f USD", [1234.56], "$1_234.56 USD"],
+
+      // Separator flag with non-numeric types (flag captured but not applied)
+      ["%_s", ["hello"], "hello"],
+      ["%_t", [true], "true"],
+      ["%_T", [42], "number"],
+
+      // Separator flag with hex/octal/binary (not applied - not in 'diefg')
+      ["%_x", [1234567], "12d687"],
+      ["%_X", [1234567], "12D687"],
+      ["%_o", [1234567], "4553207"],
+      ["%_b", [255], "11111111"],
+      ["%_u", [1234567], "1234567"],
     ])("formats '%s' with %j to '%s'", (format, args, expected) => {
       expect(sprintf(format, ...args)).toBe(expected)
     })
