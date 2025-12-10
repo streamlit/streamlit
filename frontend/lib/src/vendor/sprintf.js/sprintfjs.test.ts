@@ -1,20 +1,4 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
-/**
  * Tests for sprintf.ts - vendored from sprintf.js with thousand separator support.
  * Test cases derived from: https://github.com/alexei/sprintf.js/blob/master/test/test.js
  * and https://github.com/alexei/sprintf.js/blob/master/test/test_validation.js
@@ -22,7 +6,7 @@
 
 import { describe, expect, it } from "vitest"
 
-import { sprintf, vsprintf } from "../../util/sprintf.js/index"
+import { sprintf, vsprintf } from "./sprintfjs.js"
 
 describe("sprintf", () => {
   const pi = 3.141592653589793
