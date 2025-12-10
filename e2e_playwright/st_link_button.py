@@ -87,45 +87,10 @@ with st.expander("Link Button Width Examples", expanded=True):
     st.link_button("Stretch Width", "https://example.com", width="stretch")
     st.link_button("400px Width", "https://example.com", width=400)
 
-st.markdown("### Link Button Icon Position Examples")
 
-st.link_button(
-    "Icon Left (Default)",
-    "https://streamlit.io",
-    icon=":material/bolt:",
-    icon_position="left",
-)
 st.link_button(
     "Icon Right",
     "https://streamlit.io",
     icon=":material/bolt:",
     icon_position="right",
-)
-
-st.link_button(
-    "Emoji Left",
-    "https://streamlit.io",
-    icon="🎈",
-    icon_position="left",
-)
-st.link_button(
-    "Emoji Right",
-    "https://streamlit.io",
-    icon="🎈",
-    icon_position="right",
-)
-
-st.link_button(
-    "Primary Icon Left",
-    "https://streamlit.io",
-    icon=":material/check:",
-    icon_position="left",
-    type="primary",
-)
-st.link_button(
-    "Primary Icon Right",
-    "https://streamlit.io",
-    icon=":material/check:",
-    icon_position="right",
-    type="primary",
 )
