@@ -259,7 +259,7 @@ def _set_split_cookie(
     )
 
 
-chunks_regex = re.compile(rb"chunks-(\d+)")
+_chunks_regex = re.compile(rb"chunks-(\d+)")
 
 
 def get_cookie_with_chunks(
@@ -284,7 +284,7 @@ def get_cookie_with_chunks(
     if cookie_value is None:
         return cookie_value
 
-    match = chunks_regex.match(cookie_value)
+    match = _chunks_regex.match(cookie_value)
     if match is None:
         return cookie_value
 
@@ -330,7 +330,7 @@ def clear_cookie_and_chunks(
     if cookie_value is None:
         return
 
-    match = chunks_regex.match(cookie_value)
+    match = _chunks_regex.match(cookie_value)
     if match is None:
         return
 
