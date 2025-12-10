@@ -567,3 +567,38 @@ class MetricTest(DeltaGeneratorTestCase):
         assert c.body == "123"
         assert list(c.chart_data) == [10.0, 20.0, 15.0, 25.0, 30.0]
         assert c.chart_type == MetricProto.ChartType.BAR
+
+    def test_format_none(self):
+        """Test that metric works with default format=None."""
+        st.metric("label_test", "123")
+
+        c = self.get_delta_from_queue().new_element.metric
+        assert c.label == "label_test"
+        assert c.body == "123"
+        assert c.format == ""
+
+    @parameterized.expand(
+        [
+            ("plain", "plain"),
+            ("localized", "localized"),
+            ("percent", "percent"),
+            ("dollar", "dollar"),
+            ("euro", "euro"),
+            ("yen", "yen"),
+            ("accounting", "accounting"),
+            ("compact", "compact"),
+            ("scientific", "scientific"),
+            ("engineering", "engineering"),
+            ("bytes", "bytes"),
+            ("%.2f", "%.2f"),
+            ("$%d", "$%d"),
+        ]
+    )
+    def test_format_valid_values(self, format_value, expected_proto_value):
+        """Test that metric can be called with valid format values."""
+        st.metric("label_test", "123", format=format_value)
+
+        c = self.get_delta_from_queue().new_element.metric
+        assert c.label == "label_test"
+        assert c.body == "123"
+        assert c.format == expected_proto_value

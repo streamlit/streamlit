@@ -108,7 +108,7 @@ class StMarkdownAPITest(DeltaGeneratorTestCase):
     def test_works_with_element_replay(self):
         """Test that element replay works for a markdown element."""
 
-        @st.cache_data
+        @st.cache_data(show_spinner=False)
         def cache_element():
             st.markdown("some markdown")
 

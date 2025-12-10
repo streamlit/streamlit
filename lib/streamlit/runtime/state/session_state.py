@@ -46,7 +46,7 @@ from streamlit.runtime.state.common import (
 )
 from streamlit.runtime.state.presentation import apply_presenter
 from streamlit.runtime.state.query_params import QueryParams
-from streamlit.runtime.stats import CacheStat, CacheStatsProvider, group_stats
+from streamlit.runtime.stats import CacheStat, StatsProvider, group_cache_stats
 
 if TYPE_CHECKING:
     from streamlit.runtime.session_manager import SessionManager
@@ -992,7 +992,7 @@ def _is_stale_widget(
 
 
 @dataclass
-class SessionStateStatProvider(CacheStatsProvider):
+class SessionStateStatProvider(StatsProvider):
     _session_mgr: SessionManager
 
     def get_stats(self) -> list[CacheStat]:
@@ -1000,4 +1000,4 @@ class SessionStateStatProvider(CacheStatsProvider):
         for session_info in self._session_mgr.list_active_sessions():
             session_state = session_info.session.session_state
             stats.extend(session_state.get_stats())
-        return group_stats(stats)
+        return group_cache_stats(stats)

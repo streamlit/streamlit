@@ -55,4 +55,7 @@ message Metric {
     AREA = 2;
   }
   ChartType chart_type = 10;
+
+  // Format string for the value and delta (applied only if they are numeric).
+  string format = 11;
 }

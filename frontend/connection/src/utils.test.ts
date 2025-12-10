@@ -372,7 +372,7 @@ describe("fetchWithTimeout", () => {
 
   it("returns data on successful JSON fetch", async () => {
     const mockData = { success: true }
-    global.fetch = vi.fn().mockResolvedValue({
+    globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
       text: () => Promise.resolve(JSON.stringify(mockData)),
     })
@@ -382,7 +382,7 @@ describe("fetchWithTimeout", () => {
   })
 
   it("returns plain text when response is not JSON (e.g., healthz returns 'ok')", async () => {
-    global.fetch = vi.fn().mockResolvedValue({
+    globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
       text: () => Promise.resolve("ok"),
     })
@@ -393,7 +393,7 @@ describe("fetchWithTimeout", () => {
 
   it("throws FetchError with response on HTTP error", async () => {
     const errorData = { error: "Not found" }
-    global.fetch = vi.fn().mockResolvedValue({
+    globalThis.fetch = vi.fn().mockResolvedValue({
       ok: false,
       status: 404,
       statusText: "Not Found",
@@ -411,7 +411,7 @@ describe("fetchWithTimeout", () => {
   })
 
   it("correctly passes status 403 for CORS/forbidden errors", async () => {
-    global.fetch = vi.fn().mockResolvedValue({
+    globalThis.fetch = vi.fn().mockResolvedValue({
       ok: false,
       status: 403,
       statusText: "Forbidden",
@@ -431,7 +431,7 @@ describe("fetchWithTimeout", () => {
   it("correctly passes status 0 for no-response scenarios", async () => {
     // Status 0 typically indicates the request was blocked (CORS) or couldn't complete
     // With native fetch this is rare (usually throws TypeError), but we handle it for completeness
-    global.fetch = vi.fn().mockResolvedValue({
+    globalThis.fetch = vi.fn().mockResolvedValue({
       ok: false,
       status: 0,
       statusText: "",
@@ -450,7 +450,7 @@ describe("fetchWithTimeout", () => {
   })
 
   it("falls back to text when JSON parsing fails on error response", async () => {
-    global.fetch = vi.fn().mockResolvedValue({
+    globalThis.fetch = vi.fn().mockResolvedValue({
       ok: false,
       status: 500,
       statusText: "Internal Server Error",
@@ -465,7 +465,7 @@ describe("fetchWithTimeout", () => {
   })
 
   it("sets data to null when both JSON and text parsing fail", async () => {
-    global.fetch = vi.fn().mockResolvedValue({
+    globalThis.fetch = vi.fn().mockResolvedValue({
       ok: false,
       status: 500,
       statusText: "Internal Server Error",
@@ -481,7 +481,7 @@ describe("fetchWithTimeout", () => {
 
   it("throws FetchError with isTimeout on abort", async () => {
     // Mock fetch to never resolve, forcing the timeout to trigger
-    global.fetch = vi.fn().mockImplementation((_url, options) => {
+    globalThis.fetch = vi.fn().mockImplementation((_url, options) => {
       return new Promise((_, reject) => {
         // Listen to the abort signal and reject when aborted
         options?.signal?.addEventListener("abort", () => {
@@ -499,7 +499,9 @@ describe("fetchWithTimeout", () => {
   })
 
   it("throws FetchError with isNetworkError on TypeError", async () => {
-    global.fetch = vi.fn().mockRejectedValue(new TypeError("Failed to fetch"))
+    globalThis.fetch = vi
+      .fn()
+      .mockRejectedValue(new TypeError("Failed to fetch"))
 
     await expect(fetchWithTimeout(mockUrl, 5000)).rejects.toMatchObject({
       name: "FetchError",
@@ -509,7 +511,9 @@ describe("fetchWithTimeout", () => {
   })
 
   it("throws FetchError with generic message on unknown error", async () => {
-    global.fetch = vi.fn().mockRejectedValue(new Error("Something went wrong"))
+    globalThis.fetch = vi
+      .fn()
+      .mockRejectedValue(new Error("Something went wrong"))
 
     await expect(fetchWithTimeout(mockUrl, 5000)).rejects.toMatchObject({
       name: "FetchError",
@@ -520,7 +524,7 @@ describe("fetchWithTimeout", () => {
   })
 
   it("handles non-Error thrown values", async () => {
-    global.fetch = vi.fn().mockRejectedValue("string error")
+    globalThis.fetch = vi.fn().mockRejectedValue("string error")
 
     await expect(fetchWithTimeout(mockUrl, 5000)).rejects.toMatchObject({
       name: "FetchError",
@@ -532,7 +536,7 @@ describe("fetchWithTimeout", () => {
     const testUrl = "http://test-server.com/healthz"
 
     // Test HTTP error
-    global.fetch = vi.fn().mockResolvedValue({
+    globalThis.fetch = vi.fn().mockResolvedValue({
       ok: false,
       status: 500,
       statusText: "Server Error",
@@ -543,15 +547,17 @@ describe("fetchWithTimeout", () => {
     })
 
     // Test network error
-    global.fetch = vi.fn().mockRejectedValue(new TypeError("Failed to fetch"))
+    globalThis.fetch = vi
+      .fn()
+      .mockRejectedValue(new TypeError("Failed to fetch"))
     await expect(fetchWithTimeout(testUrl, 5000)).rejects.toMatchObject({
       url: testUrl,
     })
   })
 
   it("clears timeout on successful response", async () => {
-    const clearTimeoutSpy = vi.spyOn(global, "clearTimeout")
-    global.fetch = vi.fn().mockResolvedValue({
+    const clearTimeoutSpy = vi.spyOn(globalThis, "clearTimeout")
+    globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
       text: () => Promise.resolve(JSON.stringify({ status: "ok" })),
     })
@@ -561,8 +567,8 @@ describe("fetchWithTimeout", () => {
   })
 
   it("clears timeout on error response", async () => {
-    const clearTimeoutSpy = vi.spyOn(global, "clearTimeout")
-    global.fetch = vi.fn().mockRejectedValue(new Error("Network error"))
+    const clearTimeoutSpy = vi.spyOn(globalThis, "clearTimeout")
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error("Network error"))
 
     await expect(fetchWithTimeout(mockUrl, 5000)).rejects.toThrow()
     expect(clearTimeoutSpy).toHaveBeenCalled()

@@ -21,6 +21,7 @@ import {
   Element,
   ForwardMsgMetadata,
   Logo,
+  Transient as TransientProto,
 } from "@streamlit/protobuf"
 
 import { ensureError } from "~lib/util/ErrorHandling"
@@ -36,6 +37,7 @@ import {
 import { AppNode, NO_SCRIPT_RUN_ID } from "./AppNode.interface"
 import { BlockNode } from "./BlockNode"
 import { ElementNode } from "./ElementNode"
+import { TransientNode } from "./TransientNode"
 import { ClearStaleNodeVisitor } from "./visitors/ClearStaleNodeVisitor"
 import { DebugVisitor } from "./visitors/DebugVisitor"
 import { ElementsSetVisitor } from "./visitors/ElementsSetVisitor"
@@ -247,6 +249,18 @@ export class AppRoot {
         )
       }
 
+      case "newTransient": {
+        const transient = delta.newTransient as TransientProto
+        return this.addTransient(
+          deltaPath,
+          scriptRunId,
+          transient,
+          metadata,
+          activeScriptHash,
+          delta.fragmentId
+        )
+      }
+
       case "arrowAddRows": {
         try {
           return this.arrowAddRows(
@@ -421,6 +435,43 @@ export class AppRoot {
         this.root,
         deltaPath,
         blockNode,
+        scriptRunId
+      ) as BlockNode,
+      this.appLogo
+    )
+  }
+
+  addTransient(
+    deltaPath: number[],
+    scriptRunId: string,
+    transient: TransientProto,
+    metadata: ForwardMsgMetadata,
+    activeScriptHash: string,
+    fragmentId?: string,
+    deltaMsgReceivedAt?: number
+  ): AppRoot {
+    const transientNode = new TransientNode(
+      scriptRunId,
+      undefined, // We do not have an anchor yet
+      transient.elements.map(
+        element =>
+          new ElementNode(
+            element as Element,
+            metadata,
+            scriptRunId,
+            activeScriptHash,
+            fragmentId
+          )
+      ),
+      deltaMsgReceivedAt
+    )
+
+    return new AppRoot(
+      this.mainScriptHash,
+      SetNodeByDeltaPathVisitor.setNodeAtPath(
+        this.root,
+        deltaPath,
+        transientNode,
         scriptRunId
       ) as BlockNode,
       this.appLogo

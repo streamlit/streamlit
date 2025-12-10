@@ -36,6 +36,7 @@ import { Placement } from "~lib/components/shared/Tooltip"
 import TooltipIcon from "~lib/components/shared/TooltipIcon"
 import { StyledWidgetLabelHelpInline } from "~lib/components/widgets/BaseWidget"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
+import { formatNumber, isNumericString } from "~lib/util/formatNumber"
 import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 
 import { getMetricBackgroundColor, getMetricColor } from "./metricColors"
@@ -50,6 +51,18 @@ import {
 } from "./styled-components"
 
 const LARGE_DATASET_POINT_THRESHOLD = 1000
+
+/**
+ * Safely format a numeric string, returning the original value if formatting fails.
+ */
+function safeFormatNumber(value: string, format: string): string {
+  try {
+    return formatNumber(Number(value), format)
+  } catch {
+    // Fall back to original value if format is invalid
+    return value
+  }
+}
 
 /**
  * Returns a Vega-Lite spec for a metric chart.
@@ -261,7 +274,19 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
     showBorder,
     chartData,
     chartType,
+    format,
   } = element
+
+  // Apply number formatting if a format is specified and the value is numeric
+  const formattedMetricValue =
+    format && isNumericString(metricValue)
+      ? safeFormatNumber(metricValue, format)
+      : metricValue
+
+  const formattedDelta =
+    format && delta && isNumericString(delta)
+      ? safeFormatNumber(delta, format)
+      : delta
 
   let metricDirection: EmotionIcon | null = null
 
@@ -336,7 +361,7 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
         <StyledMetricValueText data-testid="stMetricValue">
           <StyledTruncateText>
             <StreamlitMarkdown
-              source={metricValue}
+              source={formattedMetricValue}
               allowHTML={false}
               isLabel // Treat the metric value with the label limitations.
               inheritFont
@@ -363,7 +388,7 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
             )}
             <StyledTruncateText>
               <StreamlitMarkdown
-                source={delta}
+                source={formattedDelta}
                 allowHTML={false}
                 isLabel // Treat the metric delta with the label limitations.
                 inheritFont

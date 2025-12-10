@@ -660,8 +660,10 @@ st.dataframe(
     pd.DataFrame(
         {
             "col_0": [
-                "this is a very long sentence that does not contain any reasonable content.this is a "
-                "very long sentence that does not contain any reasonable content.",
+                (
+                    "this is a very long sentence that does not contain any reasonable content.this is a "
+                    "very long sentence that does not contain any reasonable content."
+                ),
                 "Hello World",
             ],
             "col_1": [

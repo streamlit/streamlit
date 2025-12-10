@@ -314,6 +314,13 @@ describe("StreamlitLibExample", () => {
     } as ConnectionLibConfig
 
     // This test passes if TypeScript compilation succeeds
-    expect(true).toBe(true)
+    // Just do some basic checks to mark the variables as used:
+    expect(appConfig).toEqual({})
+    expect(libConfigCheck).toEqual({
+      mapboxToken: "test",
+      disableFullscreenMode: false,
+      enforceDownloadInNewTab: true,
+      resourceCrossOriginMode: "anonymous",
+    })
   })
 })

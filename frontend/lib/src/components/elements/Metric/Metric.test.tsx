@@ -270,6 +270,74 @@ describe("Metric element", () => {
     )
   })
 
+  // Format parameter tests
+  describe("Format parameter", () => {
+    it("formats value with %.2f format to exact decimal places", () => {
+      const props = getProps({ body: "1234.5678", format: "%.2f" })
+      render(<Metric {...props} />)
+
+      expect(screen.getByTestId("stMetricValue").textContent).toBe("1234.57")
+    })
+
+    it.each([
+      { value: "1234567", format: "compact", contains: ["M"] },
+      { value: "-1234567", format: "compact", contains: ["-"] },
+      { value: "1234.56", format: "dollar", contains: ["$"] },
+      { value: "0.5", format: "percent", contains: ["50", "%"] },
+    ])(
+      "formats value '$value' with format '$format'",
+      ({ value, format, contains }) => {
+        const props = getProps({ body: value, format })
+        render(<Metric {...props} />)
+
+        const valueElement = screen.getByTestId("stMetricValue")
+        contains.forEach(text => {
+          expect(valueElement.textContent).toContain(text)
+        })
+      }
+    )
+
+    it("formats numeric delta with compact format", () => {
+      const props = getProps({ delta: "1000", format: "compact" })
+      render(<Metric {...props} />)
+
+      const deltaElement = screen.getByTestId("stMetricDelta")
+      expect(deltaElement.textContent).not.toBe("1000")
+    })
+
+    it.each([
+      { field: "body", value: "70 °F", testId: "stMetricValue" },
+      { field: "delta", value: "+5%", testId: "stMetricDelta" },
+      { field: "body", value: "—", testId: "stMetricValue" },
+      { field: "body", value: "$100", testId: "stMetricValue" },
+    ])(
+      "does not format non-numeric $field '$value'",
+      ({ field, value, testId }) => {
+        const props = getProps({ [field]: value, format: "compact" })
+        render(<Metric {...props} />)
+
+        expect(screen.getByTestId(testId).textContent).toBe(value)
+      }
+    )
+
+    it("does not format when format is empty", () => {
+      const props = getProps({ body: "1234567", format: "" })
+      render(<Metric {...props} />)
+
+      expect(screen.getByTestId("stMetricValue").textContent).toBe("1234567")
+    })
+
+    it("falls back to original value when format is invalid", () => {
+      // "%d %d" expects two arguments, which will cause formatNumber to throw
+      const props = getProps({ body: "1234", delta: "100", format: "%d %d" })
+      render(<Metric {...props} />)
+
+      // Should fall back to unformatted values instead of crashing
+      expect(screen.getByTestId("stMetricValue").textContent).toBe("1234")
+      expect(screen.getByTestId("stMetricDelta").textContent).toBe("100")
+    })
+  })
+
   // Chart feature tests
   describe("Chart feature", () => {
     it("renders chart when chartData is provided", () => {
