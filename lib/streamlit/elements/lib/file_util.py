@@ -8,7 +8,7 @@ def local_file_down(path: str) -> Iterator[bytes]:
 def s3_file_down(link: str) -> Iterator[bytes]:
     try:
         import boto3
-        from botocore.exceptions import ClientError  # ← Fixed import!
+        from botocore.exceptions import ClientError
     except ImportError:
         raise ImportError("boto3 is required ")
 
