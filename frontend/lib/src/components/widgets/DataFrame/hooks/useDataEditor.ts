@@ -35,12 +35,44 @@ import { notNullOrUndefined } from "~lib/util/utils"
 import EditingState from "./EditingState"
 
 /**
- * Create return type for useDataLoader hook based on the DataEditorProps.
+ * Create return type for useDataEditor hook based on the DataEditorProps.
  */
 type DataEditorReturn = Pick<
   DataEditorProps,
   "onCellEdited" | "onPaste" | "onRowAppended" | "onDelete" | "validateCell"
 >
+
+/**
+ * Parameters for the useDataEditor hook.
+ */
+interface UseDataEditorParams {
+  /** The columns of the table. */
+  columns: BaseColumn[]
+  /** Whether rows can be added (DYNAMIC or ADD_ONLY modes). */
+  canAddRows: boolean
+  /** Whether rows can be deleted (DYNAMIC or DELETE_ONLY modes). */
+  canDeleteRows: boolean
+  /** The editing state of the data editor. */
+  editingState: MutableRefObject<EditingState>
+  /** Function to get a specific cell. */
+  getCellContent: ([col, row]: readonly [number, number]) => GridCell
+  /**
+   * Function to map a row ID of the current state to the original row ID.
+   * This mainly changed by sorting of columns.
+   */
+  getOriginalIndex: (index: number) => number
+  /** Callback that allows to trigger a UI refresh of a selection of cells. */
+  refreshCells: (cells: { cell: [number, number] }[]) => void
+  /** Callback to sync the number of rows from editing state with the component state. */
+  updateNumRows: () => void
+  /**
+   * Callback that needs to be called on all edits. This will also trigger a rerun
+   * and send widget state to the backend.
+   */
+  syncEditState: () => void
+  /** Callback to clear the current selection. */
+  clearSelection: () => void
+}
 
 const LOG = getLogger("useDataEditor")
 
@@ -48,36 +80,20 @@ const LOG = getLogger("useDataEditor")
  * Custom hook to handle all aspects related to data editing. This includes editing cells,
  * pasting from clipboard, and appending & deleting rows.
  *
- * @param columns - The columns of the table.
- * @param canAddRows - Whether rows can be added (DYNAMIC or ADD_ONLY modes).
- * @param canDeleteRows - Whether rows can be deleted (DYNAMIC or DELETE_ONLY modes).
- * @param editingState - The editing state of the data editor.
- * @param getCellContent - Function to get a specific cell.
- * @param getOriginalIndex - Function to map a row ID of the current state to the original row ID.
- *                           This mainly changed by sorting of columns.
- * @param updateNumRows - Callback to sync the number of rows from editing state with the component state.
- * @param refreshCells - Callback that allows to trigger a UI refresh of a selection of cells.
- * @param syncEditState - Callback that needs to be called on all edits. This will also trigger a rerun
- *                     and send widget state to the backend.
- *
  * @returns Glide-data-grid compatible functions for editing capabilities.
  */
-function useDataEditor(
-  columns: BaseColumn[],
-  canAddRows: boolean,
-  canDeleteRows: boolean,
-  editingState: MutableRefObject<EditingState>,
-  getCellContent: ([col, row]: readonly [number, number]) => GridCell,
-  getOriginalIndex: (index: number) => number,
-  refreshCells: (
-    cells: {
-      cell: [number, number]
-    }[]
-  ) => void,
-  updateNumRows: () => void,
-  syncEditState: () => void,
-  clearSelection: () => void
-): DataEditorReturn {
+function useDataEditor({
+  columns,
+  canAddRows,
+  canDeleteRows,
+  editingState,
+  getCellContent,
+  getOriginalIndex,
+  refreshCells,
+  updateNumRows,
+  syncEditState,
+  clearSelection,
+}: UseDataEditorParams): DataEditorReturn {
   const onCellEdited = useCallback(
     (
       [col, row]: readonly [number, number],

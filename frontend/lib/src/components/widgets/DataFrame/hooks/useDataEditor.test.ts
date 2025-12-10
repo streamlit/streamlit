@@ -113,18 +113,18 @@ describe("useDataEditor hook", () => {
     }
 
     const { result } = renderHook(() => {
-      return useDataEditor(
-        MOCK_COLUMNS,
-        true, // canAddRows
-        true, // canDeleteRows
+      return useDataEditor({
+        columns: MOCK_COLUMNS,
+        canAddRows: true,
+        canDeleteRows: true,
         editingState,
-        getCellContentMock,
-        getOriginalIndexMock,
-        refreshCellsMock,
+        getCellContent: getCellContentMock,
+        getOriginalIndex: getOriginalIndexMock,
+        refreshCells: refreshCellsMock,
         updateNumRows,
-        syncEditsMock,
-        clearSelectionMock
-      )
+        syncEditState: syncEditsMock,
+        clearSelection: clearSelectionMock,
+      })
     })
 
     if (typeof result.current.onCellEdited !== "function") {
@@ -157,18 +157,18 @@ describe("useDataEditor hook", () => {
     }
 
     const { result } = renderHook(() => {
-      return useDataEditor(
-        [{ ...MOCK_COLUMNS[0], isIndex: true }, MOCK_COLUMNS[1]],
-        true, // canAddRows
-        true, // canDeleteRows
+      return useDataEditor({
+        columns: [{ ...MOCK_COLUMNS[0], isIndex: true }, MOCK_COLUMNS[1]],
+        canAddRows: true,
+        canDeleteRows: true,
         editingState,
-        getCellContentMock,
-        getOriginalIndexMock,
-        refreshCellsMock,
+        getCellContent: getCellContentMock,
+        getOriginalIndex: getOriginalIndexMock,
+        refreshCells: refreshCellsMock,
         updateNumRows,
-        syncEditsMock,
-        clearSelectionMock
-      )
+        syncEditState: syncEditsMock,
+        clearSelection: clearSelectionMock,
+      })
     })
 
     if (typeof result.current.onCellEdited !== "function") {
@@ -200,18 +200,18 @@ describe("useDataEditor hook", () => {
       current: new EditingState(INITIAL_NUM_ROWS),
     }
     const { result } = renderHook(() => {
-      return useDataEditor(
-        MOCK_COLUMNS,
-        true, // canAddRows
-        true, // canDeleteRows
+      return useDataEditor({
+        columns: MOCK_COLUMNS,
+        canAddRows: true,
+        canDeleteRows: true,
         editingState,
-        getCellContentMock,
-        getOriginalIndexMock,
-        refreshCellsMock,
+        getCellContent: getCellContentMock,
+        getOriginalIndex: getOriginalIndexMock,
+        refreshCells: refreshCellsMock,
         updateNumRows,
-        syncEditsMock,
-        clearSelectionMock
-      )
+        syncEditState: syncEditsMock,
+        clearSelection: clearSelectionMock,
+      })
     })
 
     if (typeof result.current.onPaste !== "function") {
@@ -249,18 +249,18 @@ describe("useDataEditor hook", () => {
       current: new EditingState(INITIAL_NUM_ROWS),
     }
     const { result } = renderHook(() => {
-      return useDataEditor(
-        MOCK_COLUMNS,
-        true, // canAddRows - activates addition of rows
-        true, // canDeleteRows - activates deletion of rows
+      return useDataEditor({
+        columns: MOCK_COLUMNS,
+        canAddRows: true,
+        canDeleteRows: true,
         editingState,
-        getCellContentMock,
-        getOriginalIndexMock,
-        refreshCellsMock,
+        getCellContent: getCellContentMock,
+        getOriginalIndex: getOriginalIndexMock,
+        refreshCells: refreshCellsMock,
         updateNumRows,
-        syncEditsMock,
-        clearSelectionMock
-      )
+        syncEditState: syncEditsMock,
+        clearSelection: clearSelectionMock,
+      })
     })
 
     if (typeof result.current.onPaste !== "function") {
@@ -293,18 +293,18 @@ describe("useDataEditor hook", () => {
       current: new EditingState(INITIAL_NUM_ROWS),
     }
     const { result } = renderHook(() => {
-      return useDataEditor(
-        MOCK_COLUMNS,
-        false, // canAddRows - deactivate the addition of new rows
-        true, // canDeleteRows
+      return useDataEditor({
+        columns: MOCK_COLUMNS,
+        canAddRows: false,
+        canDeleteRows: true,
         editingState,
-        getCellContentMock,
-        getOriginalIndexMock,
-        refreshCellsMock,
+        getCellContent: getCellContentMock,
+        getOriginalIndex: getOriginalIndexMock,
+        refreshCells: refreshCellsMock,
         updateNumRows,
-        syncEditsMock,
-        clearSelectionMock
-      )
+        syncEditState: syncEditsMock,
+        clearSelection: clearSelectionMock,
+      })
     })
 
     if (typeof result.current.onPaste !== "function") {
@@ -337,18 +337,18 @@ describe("useDataEditor hook", () => {
       current: new EditingState(INITIAL_NUM_ROWS),
     }
     const { result } = renderHook(() => {
-      return useDataEditor(
-        MOCK_COLUMNS,
-        true, // canAddRows - activates addition of rows
-        true, // canDeleteRows - activates deletion of rows
+      return useDataEditor({
+        columns: MOCK_COLUMNS,
+        canAddRows: true,
+        canDeleteRows: true,
         editingState,
-        getCellContentMock,
-        getOriginalIndexMock,
-        refreshCellsMock,
+        getCellContent: getCellContentMock,
+        getOriginalIndex: getOriginalIndexMock,
+        refreshCells: refreshCellsMock,
         updateNumRows,
-        syncEditsMock,
-        clearSelectionMock
-      )
+        syncEditState: syncEditsMock,
+        clearSelection: clearSelectionMock,
+      })
     })
 
     if (typeof result.current.onRowAppended !== "function") {
@@ -368,18 +368,18 @@ describe("useDataEditor hook", () => {
       current: new EditingState(INITIAL_NUM_ROWS),
     }
     const { result } = renderHook(() => {
-      return useDataEditor(
-        MOCK_COLUMNS,
-        true, // canAddRows - activates addition of rows
-        true, // canDeleteRows - activates deletion of rows
+      return useDataEditor({
+        columns: MOCK_COLUMNS,
+        canAddRows: true,
+        canDeleteRows: true,
         editingState,
-        getCellContentMock,
-        getOriginalIndexMock,
-        refreshCellsMock,
+        getCellContent: getCellContentMock,
+        getOriginalIndex: getOriginalIndexMock,
+        refreshCells: refreshCellsMock,
         updateNumRows,
-        syncEditsMock,
-        clearSelectionMock
-      )
+        syncEditState: syncEditsMock,
+        clearSelection: clearSelectionMock,
+      })
     })
 
     if (typeof result.current.onRowAppended !== "function") {
@@ -399,18 +399,18 @@ describe("useDataEditor hook", () => {
       current: new EditingState(INITIAL_NUM_ROWS),
     }
     const { result } = renderHook(() => {
-      return useDataEditor(
-        MOCK_COLUMNS,
-        false, // canAddRows - deactivates addition of rows
-        true, // canDeleteRows - deletion of rows still allowed
+      return useDataEditor({
+        columns: MOCK_COLUMNS,
+        canAddRows: false,
+        canDeleteRows: true,
         editingState,
-        getCellContentMock,
-        getOriginalIndexMock,
-        refreshCellsMock,
+        getCellContent: getCellContentMock,
+        getOriginalIndex: getOriginalIndexMock,
+        refreshCells: refreshCellsMock,
         updateNumRows,
-        syncEditsMock,
-        clearSelectionMock
-      )
+        syncEditState: syncEditsMock,
+        clearSelection: clearSelectionMock,
+      })
     })
 
     if (typeof result.current.onRowAppended !== "function") {
@@ -430,18 +430,18 @@ describe("useDataEditor hook", () => {
       current: new EditingState(INITIAL_NUM_ROWS),
     }
     const { result } = renderHook(() => {
-      return useDataEditor(
-        MOCK_COLUMNS,
-        true, // canAddRows
-        true, // canDeleteRows
+      return useDataEditor({
+        columns: MOCK_COLUMNS,
+        canAddRows: true,
+        canDeleteRows: true,
         editingState,
-        getCellContentMock,
-        getOriginalIndexMock,
-        refreshCellsMock,
+        getCellContent: getCellContentMock,
+        getOriginalIndex: getOriginalIndexMock,
+        refreshCells: refreshCellsMock,
         updateNumRows,
-        syncEditsMock,
-        clearSelectionMock
-      )
+        syncEditState: syncEditsMock,
+        clearSelection: clearSelectionMock,
+      })
     })
 
     if (typeof result.current.onDelete !== "function") {
@@ -482,18 +482,18 @@ describe("useDataEditor hook", () => {
       current: new EditingState(INITIAL_NUM_ROWS),
     }
     const { result } = renderHook(() => {
-      return useDataEditor(
-        MOCK_COLUMNS,
-        true, // canAddRows - activates addition of rows
-        true, // canDeleteRows - activates deletion of rows
+      return useDataEditor({
+        columns: MOCK_COLUMNS,
+        canAddRows: true,
+        canDeleteRows: true,
         editingState,
-        getCellContentMock,
-        getOriginalIndexMock,
-        refreshCellsMock,
+        getCellContent: getCellContentMock,
+        getOriginalIndex: getOriginalIndexMock,
+        refreshCells: refreshCellsMock,
         updateNumRows,
-        syncEditsMock,
-        clearSelectionMock
-      )
+        syncEditState: syncEditsMock,
+        clearSelection: clearSelectionMock,
+      })
     })
 
     if (typeof result.current.onDelete !== "function") {
@@ -526,18 +526,18 @@ describe("useDataEditor hook", () => {
       current: new EditingState(INITIAL_NUM_ROWS),
     }
     const { result } = renderHook(() => {
-      return useDataEditor(
-        MOCK_COLUMNS,
-        true, // canAddRows - addition of rows still allowed
-        false, // canDeleteRows - deactivates deletion of rows
+      return useDataEditor({
+        columns: MOCK_COLUMNS,
+        canAddRows: true,
+        canDeleteRows: false,
         editingState,
-        getCellContentMock,
-        getOriginalIndexMock,
-        refreshCellsMock,
+        getCellContent: getCellContentMock,
+        getOriginalIndex: getOriginalIndexMock,
+        refreshCells: refreshCellsMock,
         updateNumRows,
-        syncEditsMock,
-        clearSelectionMock
-      )
+        syncEditState: syncEditsMock,
+        clearSelection: clearSelectionMock,
+      })
     })
 
     if (typeof result.current.onDelete !== "function") {
@@ -571,18 +571,18 @@ describe("useDataEditor hook", () => {
       current: new EditingState(INITIAL_NUM_ROWS),
     }
     const { result } = renderHook(() => {
-      return useDataEditor(
-        MOCK_COLUMNS,
-        false, // canAddRows - cannot add rows
-        true, // canDeleteRows - can delete rows
+      return useDataEditor({
+        columns: MOCK_COLUMNS,
+        canAddRows: false,
+        canDeleteRows: true,
         editingState,
-        getCellContentMock,
-        getOriginalIndexMock,
-        refreshCellsMock,
+        getCellContent: getCellContentMock,
+        getOriginalIndex: getOriginalIndexMock,
+        refreshCells: refreshCellsMock,
         updateNumRows,
-        syncEditsMock,
-        clearSelectionMock
-      )
+        syncEditState: syncEditsMock,
+        clearSelection: clearSelectionMock,
+      })
     })
 
     if (typeof result.current.onPaste !== "function") {
@@ -628,18 +628,18 @@ describe("useDataEditor hook", () => {
       current: new EditingState(INITIAL_NUM_ROWS),
     }
     const { result } = renderHook(() => {
-      return useDataEditor(
-        MOCK_COLUMNS,
-        true, // canAddRows - can add rows
-        false, // canDeleteRows - cannot delete rows
+      return useDataEditor({
+        columns: MOCK_COLUMNS,
+        canAddRows: true,
+        canDeleteRows: false,
         editingState,
-        getCellContentMock,
-        getOriginalIndexMock,
-        refreshCellsMock,
+        getCellContent: getCellContentMock,
+        getOriginalIndex: getOriginalIndexMock,
+        refreshCells: refreshCellsMock,
         updateNumRows,
-        syncEditsMock,
-        clearSelectionMock
-      )
+        syncEditState: syncEditsMock,
+        clearSelection: clearSelectionMock,
+      })
     })
 
     if (typeof result.current.onPaste !== "function") {
@@ -685,18 +685,18 @@ describe("useDataEditor hook", () => {
     }
 
     const { result } = renderHook(() => {
-      return useDataEditor(
-        MOCK_COLUMNS,
-        true, // canAddRows
-        true, // canDeleteRows
+      return useDataEditor({
+        columns: MOCK_COLUMNS,
+        canAddRows: true,
+        canDeleteRows: true,
         editingState,
-        getCellContentMock,
-        getOriginalIndexMock,
-        refreshCellsMock,
+        getCellContent: getCellContentMock,
+        getOriginalIndex: getOriginalIndexMock,
+        refreshCells: refreshCellsMock,
         updateNumRows,
-        syncEditsMock,
-        clearSelectionMock
-      )
+        syncEditState: syncEditsMock,
+        clearSelection: clearSelectionMock,
+      })
     })
 
     if (typeof result.current.validateCell !== "function") {
@@ -720,18 +720,18 @@ describe("useDataEditor hook", () => {
     }
 
     const { result } = renderHook(() => {
-      return useDataEditor(
-        MOCK_COLUMNS,
-        true, // canAddRows
-        true, // canDeleteRows
+      return useDataEditor({
+        columns: MOCK_COLUMNS,
+        canAddRows: true,
+        canDeleteRows: true,
         editingState,
-        getCellContentMock,
-        getOriginalIndexMock,
-        refreshCellsMock,
+        getCellContent: getCellContentMock,
+        getOriginalIndex: getOriginalIndexMock,
+        refreshCells: refreshCellsMock,
         updateNumRows,
-        syncEditsMock,
-        clearSelectionMock
-      )
+        syncEditState: syncEditsMock,
+        clearSelection: clearSelectionMock,
+      })
     })
 
     if (typeof result.current.validateCell !== "function") {
@@ -754,18 +754,18 @@ describe("useDataEditor hook", () => {
     }
 
     const { result } = renderHook(() => {
-      return useDataEditor(
-        MOCK_COLUMNS,
-        true, // canAddRows
-        true, // canDeleteRows
+      return useDataEditor({
+        columns: MOCK_COLUMNS,
+        canAddRows: true,
+        canDeleteRows: true,
         editingState,
-        getCellContentMock,
-        getOriginalIndexMock,
-        refreshCellsMock,
+        getCellContent: getCellContentMock,
+        getOriginalIndex: getOriginalIndexMock,
+        refreshCells: refreshCellsMock,
         updateNumRows,
-        syncEditsMock,
-        clearSelectionMock
-      )
+        syncEditState: syncEditsMock,
+        clearSelection: clearSelectionMock,
+      })
     })
 
     if (typeof result.current.validateCell !== "function") {

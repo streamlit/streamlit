@@ -380,7 +380,7 @@ function DataFrame({
   )
 
   const { onCellEdited, onPaste, onRowAppended, onDelete, validateCell } =
-    useDataEditor(
+    useDataEditor({
       columns,
       canAddRows,
       canDeleteRows,
@@ -390,8 +390,8 @@ function DataFrame({
       refreshCells,
       updateNumRows,
       syncEditState,
-      clearSelection
-    )
+      clearSelection,
+    })
 
   const ignoredRowIndices = useMemo(() => {
     // If empty table, ignore row index 0 which is just a visual gimmick
