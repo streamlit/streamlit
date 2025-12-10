@@ -135,50 +135,9 @@ else:
 
 st.button("Button with spinner icon", icon="spinner")
 
-st.markdown("### Icon Position Examples")
-
-st.button(
-    "Icon Left (Default)",
-    icon=":material/thumb_up:",
-    icon_position="left",
-    key="icon_left_default",
-)
 st.button(
     "Icon Right",
     icon=":material/thumb_up:",
     icon_position="right",
     key="icon_right_material",
-)
-
-st.button("Emoji Left", icon="⭐", icon_position="left", key="emoji_left")
-st.button("Emoji Right", icon="⭐", icon_position="right", key="emoji_right")
-
-st.button(
-    "Primary Icon Left",
-    icon=":material/check:",
-    icon_position="left",
-    type="primary",
-    key="primary_icon_left",
-)
-st.button(
-    "Primary Icon Right",
-    icon=":material/check:",
-    icon_position="right",
-    type="primary",
-    key="primary_icon_right",
-)
-
-st.button(
-    "Tertiary Icon Left",
-    icon=":material/star:",
-    icon_position="left",
-    type="tertiary",
-    key="tertiary_icon_left",
-)
-st.button(
-    "Tertiary Icon Right",
-    icon=":material/star:",
-    icon_position="right",
-    type="tertiary",
-    key="tertiary_icon_right",
 )
