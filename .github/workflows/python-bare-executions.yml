@@ -21,6 +21,8 @@ concurrency:
 
 jobs:
   py-bare-executions:
+    # Skip if PR is labeled with 'change:spec' (spec-only changes don't need these tests)
+    if: github.event_name != 'pull_request' || !contains(github.event.pull_request.labels.*.name, 'change:spec')
     runs-on: ubuntu-latest
 
     defaults:
