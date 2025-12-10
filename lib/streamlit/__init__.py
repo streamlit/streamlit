@@ -209,6 +209,7 @@ number_input = _main.number_input
 page_link = _main.page_link
 pdf = _main.pdf
 pills = _main.pills
+pivot_table = _main.pivot_table
 plotly_chart = _main.plotly_chart
 popover = _main.popover
 progress = _main.progress

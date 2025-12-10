@@ -51,6 +51,7 @@ import {
   MultiSelect as MultiSelectProto,
   NumberInput as NumberInputProto,
   PageLink as PageLinkProto,
+  PivotTable as PivotTableProto,
   PlotlyChart as PlotlyChartProto,
   Progress as ProgressProto,
   Radio as RadioProto,
@@ -113,6 +114,7 @@ const Json = lazy(() => import("~lib/components/elements/Json"))
 const LinkButton = lazy(() => import("~lib/components/elements/LinkButton"))
 const Metric = lazy(() => import("~lib/components/elements/Metric"))
 const PageLink = lazy(() => import("~lib/components/elements/PageLink"))
+const PivotTable = lazy(() => import("~lib/components/elements/PivotTable"))
 const PlotlyChart = lazy(() => import("~lib/components/elements/PlotlyChart"))
 const Progress = lazy(() => import("~lib/components/elements/Progress"))
 const Snow = lazy(() => import("~lib/components/elements/Snow"))
@@ -347,6 +349,17 @@ const RawElementNodeRenderer = (
         <PageLink
           element={pageLinkProto}
           disabled={isDisabled}
+          {...elementProps}
+        />
+      )
+    }
+
+    case "pivotTable": {
+      const pivotTableProto = node.element.pivotTable as PivotTableProto
+      return (
+        <PivotTable
+          element={pivotTableProto}
+          data={node.quiverElement}
           {...elementProps}
         />
       )

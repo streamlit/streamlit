@@ -76,6 +76,7 @@ import "streamlit/proto/BidiComponent.proto";
 import "streamlit/proto/HeightConfig.proto";
 import "streamlit/proto/WidthConfig.proto";
 import "streamlit/proto/TextAlignmentConfig.proto";
+import "streamlit/proto/PivotTable.proto";
 
 // An element which can be displayed on the screen.
 message Element {
@@ -146,7 +147,8 @@ message Element {
     Video video = 14;
     Heading heading = 47;
     Code code = 48;
-    // Next ID: 63
+    PivotTable pivot_table = 63;
+    // Next ID: 64
   }
 
   reserved 9;

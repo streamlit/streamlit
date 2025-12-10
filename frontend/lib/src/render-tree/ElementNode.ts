@@ -79,7 +79,8 @@ export class ElementNode implements AppNode {
 
     if (
       this.element.type !== "arrowTable" &&
-      this.element.type !== "arrowDataFrame"
+      this.element.type !== "arrowDataFrame" &&
+      this.element.type !== "pivotTable"
     ) {
       throw new Error(
         `elementType '${this.element.type}' is not a valid Quiver element!`
