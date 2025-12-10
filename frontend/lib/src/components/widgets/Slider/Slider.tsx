@@ -33,7 +33,6 @@ import {
 } from "baseui/slider"
 import { pick } from "lodash-es"
 import moment from "moment"
-import { sprintf } from "sprintf-js"
 
 import { Slider as SliderProto } from "@streamlit/protobuf"
 
@@ -51,6 +50,7 @@ import {
 } from "~lib/hooks/useBasicWidgetState"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
+import { sprintf } from "~lib/vendor/sprintf.js/sprintfjs.js"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
