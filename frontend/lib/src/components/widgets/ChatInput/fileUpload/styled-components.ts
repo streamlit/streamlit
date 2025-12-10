@@ -78,6 +78,7 @@ export const StyledChatUploadedFile = styled.div<StyledChatUploadedFileProps>(
     display: "inline-flex",
     alignItems: "center",
     width: "fit-content",
+    minWidth: "9rem",
     maxWidth: "100%",
     backgroundColor: isError
       ? theme.colors.redBackgroundColor
