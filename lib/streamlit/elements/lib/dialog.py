@@ -100,25 +100,29 @@ class Dialog(DeltaGenerator):
         block_proto.dialog.dismissible = dismissible
         block_proto.dialog.width = _process_dialog_width_input(width)
 
+        # Compute a stable identity for the dialog based on its attributes.
+        # This ID is used in the frontend to distinguish between different dialogs
+        # and prevent showing stale content from a previous dialog (issue #10907).
+        # It's also used for widget registration when on_dismiss is activated.
+        element_id = compute_and_register_element_id(
+            "dialog",
+            user_key=None,
+            key_as_main_identity=False,
+            dg=parent,
+            title=title,
+            dismissible=dismissible,
+            width=width,
+            on_dismiss=str(on_dismiss) if not callable(on_dismiss) else "callback",
+        )
+        block_proto.id = element_id
+
         # Handle on_dismiss functionality
         is_dismiss_activated = on_dismiss != "ignore"
-        element_id = None
 
         if is_dismiss_activated:
-            # Register as widget when on_dismiss is activated
-
+            # Register the dialog as a widget when on_dismiss is activated.
+            # The same element_id is used for widget registration.
             ctx = get_script_run_ctx()
-
-            element_id = compute_and_register_element_id(
-                "dialog",
-                user_key=None,
-                key_as_main_identity=False,
-                dg=parent,
-                title=title,
-                dismissible=dismissible,
-                width=width,
-                on_dismiss=str(on_dismiss) if not callable(on_dismiss) else "callback",
-            )
             block_proto.dialog.id = element_id
 
             register_widget(
