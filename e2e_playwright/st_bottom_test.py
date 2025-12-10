@@ -82,14 +82,16 @@ def test_chat_input_in_main_auto_positions_to_bottom(app: Page):
 
 def test_main_content_is_separate_from_bottom(app: Page):
     """Test that main content is not in the bottom container."""
-    main = app.get_by_test_id("stMain")
+    main_block = app.get_by_test_id("stMainBlockContainer")
     bottom = app.get_by_test_id("stBottom")
 
-    # Title should be in main, not in bottom
-    expect(main.get_by_text("st.bottom Test App")).to_be_visible()
+    # Title should be in main block container, not in bottom
+    expect(main_block.get_by_role("heading", name="st.bottom Test App")).to_be_visible()
 
     # Title should not be in bottom
-    expect(bottom.get_by_text("st.bottom Test App")).not_to_be_visible()
+    expect(
+        bottom.get_by_role("heading", name="st.bottom Test App")
+    ).not_to_be_attached()
 
 
 def test_bottom_container_is_sticky(app: Page):
