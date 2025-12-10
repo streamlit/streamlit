@@ -42,3 +42,19 @@ jobs:
         uses: github/codeql-action/analyze@v4
         with:
           category: "/language:${{matrix.language}}"
+
+  # Gate job for branch protection - reports success if analysis passed or was skipped
+  codeql-status:
+    if: always()
+    needs: [codeql-analysis]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check analysis results
+        run: |
+          if [[ "${{ needs.codeql-analysis.result }}" =~ ^(success|skipped)$ ]]; then
+            echo "Analysis passed or was skipped"
+            exit 0
+          else
+            echo "Analysis failed"
+            exit 1
+          fi

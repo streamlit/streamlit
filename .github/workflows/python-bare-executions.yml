@@ -47,3 +47,19 @@ jobs:
         uses: ./.github/actions/make_init
       - name: Run Bare Execution Tests
         run: make bare-execution-tests
+
+  # Gate job for branch protection - reports success if tests passed or were skipped
+  py-bare-executions-status:
+    if: always()
+    needs: [py-bare-executions]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check test results
+        run: |
+          if [[ "${{ needs.py-bare-executions.result }}" =~ ^(success|skipped)$ ]]; then
+            echo "Tests passed or were skipped"
+            exit 0
+          else
+            echo "Tests failed"
+            exit 1
+          fi

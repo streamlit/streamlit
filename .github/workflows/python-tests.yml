@@ -419,3 +419,22 @@ jobs:
               console.error(`Error checking coverage changes: ${error.message}`);
               throw error;
             }
+
+  # Gate job for branch protection - reports success if tests passed or were skipped
+  python-tests-status:
+    if: always()
+    needs: [build_info, py-unit-tests, py-integration-tests, py-min-deps-test]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check test results
+        run: |
+          if [[ "${{ needs.build_info.result }}" =~ ^(success|skipped)$ ]] && \
+             [[ "${{ needs.py-unit-tests.result }}" =~ ^(success|skipped)$ ]] && \
+             [[ "${{ needs.py-integration-tests.result }}" =~ ^(success|skipped)$ ]] && \
+             [[ "${{ needs.py-min-deps-test.result }}" =~ ^(success|skipped)$ ]]; then
+            echo "All tests passed or were skipped"
+            exit 0
+          else
+            echo "Some tests failed"
+            exit 1
+          fi

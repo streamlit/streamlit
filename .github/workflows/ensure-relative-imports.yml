@@ -52,3 +52,19 @@ jobs:
         # Ensure relative imports exist within the lib/dist folder
         run: |
           ./scripts/ensure_relative_imports.sh
+
+  # Gate job for branch protection - reports success if check passed or was skipped
+  ensure-relative-imports-status:
+    if: always()
+    needs: [ensure-relative-imports]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check results
+        run: |
+          if [[ "${{ needs.ensure-relative-imports.result }}" =~ ^(success|skipped)$ ]]; then
+            echo "Check passed or was skipped"
+            exit 0
+          else
+            echo "Check failed"
+            exit 1
+          fi

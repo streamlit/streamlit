@@ -264,3 +264,20 @@ jobs:
             } catch (error) {
               console.error(`Error checking coverage changes: ${error.message}`);
             }
+
+  # Gate job for branch protection - reports success if tests passed or were skipped
+  js-tests-status:
+    if: always()
+    needs: [js-unit-tests, components-lib-tests]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check test results
+        run: |
+          if [[ "${{ needs.js-unit-tests.result }}" =~ ^(success|skipped)$ ]] && \
+             [[ "${{ needs.components-lib-tests.result }}" =~ ^(success|skipped)$ ]]; then
+            echo "All tests passed or were skipped"
+            exit 0
+          else
+            echo "Some tests failed"
+            exit 1
+          fi

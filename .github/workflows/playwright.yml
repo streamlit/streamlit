@@ -69,3 +69,19 @@ jobs:
         with:
           name: playwright_test_results_${{ steps.short_sha.outputs.sha_short }}
           path: e2e_playwright/test-results
+
+  # Gate job for branch protection - reports success if tests passed or were skipped
+  playwright-e2e-tests-status:
+    if: always()
+    needs: [playwright-e2e-tests]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check test results
+        run: |
+          if [[ "${{ needs.playwright-e2e-tests.result }}" =~ ^(success|skipped)$ ]]; then
+            echo "Tests passed or were skipped"
+            exit 0
+          else
+            echo "Tests failed"
+            exit 1
+          fi

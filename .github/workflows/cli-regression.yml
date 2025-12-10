@@ -48,3 +48,19 @@ jobs:
       - name: Run CLI regression tests
         run: |
           export SKIP_VERSION_CHECK=true; pytest scripts/cli_regression_tests.py
+
+  # Gate job for branch protection - reports success if tests passed or were skipped
+  cli-regression-status:
+    if: always()
+    needs: [cli-regression]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check test results
+        run: |
+          if [[ "${{ needs.cli-regression.result }}" =~ ^(success|skipped)$ ]]; then
+            echo "Tests passed or were skipped"
+            exit 0
+          else
+            echo "Tests failed"
+            exit 1
+          fi
