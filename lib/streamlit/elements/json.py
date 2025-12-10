@@ -32,6 +32,7 @@ from streamlit.type_util import (
     is_namedtuple,
     is_pydantic_model,
 )
+from streamlit.user_info import UserInfoProxy
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -109,7 +110,10 @@ class JsonMixin:
         """
 
         if is_custom_dict(body):
+            is_user = isinstance(body, UserInfoProxy)
             body = body.to_dict()  # ty: ignore[unresolved-attribute]
+            if is_user and "tokens" in body:
+                body["tokens"] = dict.fromkeys(body["tokens"], "***")
 
         if is_namedtuple(body):
             body = body._asdict()  # ty: ignore[unresolved-attribute]
