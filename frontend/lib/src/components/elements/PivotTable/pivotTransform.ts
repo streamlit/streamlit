@@ -17,7 +17,6 @@
 import {
   Field,
   Float64,
-  Schema,
   tableFromArrays,
   tableToIPC,
   Utf8,
@@ -25,6 +24,7 @@ import {
 
 import { Arrow as ArrowProto } from "@streamlit/protobuf"
 
+import { isNumericType } from "~lib/dataframes/arrowTypeUtils"
 import { Quiver } from "~lib/dataframes/Quiver"
 
 export type AggregationType = "sum" | "mean" | "count" | "min" | "max"
@@ -281,7 +281,7 @@ function detectDecimalPlaces(data: Quiver, fieldName: string): number {
 
 /**
  * Format a number with the appropriate decimal places for display.
- * Returns a number rounded to the appropriate precision.
+ * Returns a number for Arrow, which we'll control via Decimal type with scale.
  */
 function formatNumber(value: number, decimalPlaces: number): number {
   if (!isFinite(value)) {
@@ -295,6 +295,33 @@ function formatNumber(value: number, decimalPlaces: number): number {
   // Round to the specified decimal places
   const factor = Math.pow(10, decimalPlaces)
   return Math.round(value * factor) / factor
+}
+
+/**
+ * Format a number as string for display (used for totals and custom formatting).
+ * NOTE: Currently unused but kept for potential future use.
+ */
+function _formatNumberAsString(value: number, decimalPlaces: number): string {
+  if (!isFinite(value)) {
+    return String(value)
+  }
+
+  if (decimalPlaces === 0) {
+    return Math.round(value).toString()
+  }
+
+  // Round to the specified decimal places
+  const rounded = formatNumber(value, decimalPlaces)
+
+  // Format with fixed decimals, then remove trailing zeros
+  let formatted = rounded.toFixed(decimalPlaces)
+
+  // Remove trailing zeros after decimal point
+  if (formatted.includes(".")) {
+    formatted = formatted.replace(/\.?0+$/, "")
+  }
+
+  return formatted
 }
 
 /**
@@ -318,18 +345,178 @@ function getAggregationLabel(aggregation: AggregationType): string {
 }
 
 /**
+ * Add totals row/column to original unpivoted data.
+ * NOTE: Currently disabled to preserve decimal formatting from original data.
+ */
+function _addTotalsToOriginalData(
+  data: Quiver,
+  showRowTotals: boolean,
+  showColumnTotals: boolean
+): Quiver {
+  const { numDataRows, numColumns } = data.dimensions
+  const columnNames = data.columnNames?.[0] || []
+
+  // Build new data arrays
+  const columnNamesArray: string[] = []
+  const columnDataArrays: (string | number)[][] = []
+  const schemaFields: Field[] = []
+
+  // Add all original columns
+  for (let colIndex = 0; colIndex < numColumns; colIndex++) {
+    const colName = columnNames[colIndex]
+    const isIndexColumn = !colName || colName === "" // Unnamed columns are treated as index columns
+
+    // For unnamed columns, use the index number as the display name to avoid "null"
+    const displayName = colName || String(colIndex)
+    columnNamesArray.push(displayName)
+
+    const columnData: (string | number)[] = []
+    // Index columns should always be treated as strings, not numeric
+    let isNumeric = !isIndexColumn
+
+    // Get the original field from the first cell to preserve type metadata
+    const { field: originalField } = data.getCell(0, colIndex)
+
+    // Get all values for this column
+    for (let rowIndex = 0; rowIndex < numDataRows; rowIndex++) {
+      const { content, contentType } = data.getCell(rowIndex, colIndex)
+      columnData.push(content)
+      if (!isIndexColumn && !isNumericType(contentType)) {
+        isNumeric = false
+      }
+    }
+
+    // Add row total if needed
+    if (showRowTotals) {
+      if (isNumeric && !isIndexColumn) {
+        // Sum for numeric named columns only
+        const sum = columnData.reduce((acc, val) => {
+          const num = typeof val === "number" ? val : parseFloat(String(val))
+          return acc + (isNaN(num) ? 0 : num)
+        }, 0)
+        // Detect decimal places for this column and format accordingly
+        const dp = detectDecimalPlaces(data, colName)
+        columnData.push(formatNumber(sum, dp))
+      } else if (colIndex === 0) {
+        // First column gets "Total" label
+        columnData.push("Total")
+      } else {
+        columnData.push("")
+      }
+    }
+
+    columnDataArrays.push(columnData)
+
+    // Preserve original field type with metadata, or use string for index columns
+    if (isIndexColumn) {
+      schemaFields.push(new Field(displayName, new Utf8(), true))
+    } else {
+      // Preserve the original field type including decimal precision metadata
+      schemaFields.push(
+        new Field(displayName, originalField.type, originalField.nullable)
+      )
+    }
+  }
+
+  // Add column totals if needed
+  if (showColumnTotals) {
+    columnNamesArray.push("Total")
+    const totalColumn: (string | number)[] = []
+
+    // Detect max decimal places across all numeric columns for proper formatting
+    let maxDecimals = 0
+    for (let colIndex = 0; colIndex < numColumns; colIndex++) {
+      const colName = columnNames[colIndex]
+      const { contentType } = data.getCell(0, colIndex)
+      if (isNumericType(contentType) && colName) {
+        const dp = detectDecimalPlaces(data, colName)
+        maxDecimals = Math.max(maxDecimals, dp)
+      }
+    }
+    // Default to 2 if no numeric columns found with names
+    if (maxDecimals === 0) {
+      maxDecimals = 2
+    }
+
+    for (let rowIndex = 0; rowIndex < numDataRows; rowIndex++) {
+      let rowSum = 0
+      for (let colIndex = 0; colIndex < numColumns; colIndex++) {
+        const { content, contentType } = data.getCell(rowIndex, colIndex)
+        if (isNumericType(contentType)) {
+          const num =
+            typeof content === "number" ? content : parseFloat(String(content))
+          rowSum += isNaN(num) ? 0 : num
+        }
+      }
+      totalColumn.push(formatNumber(rowSum, maxDecimals))
+    }
+
+    // Grand total if both row and column totals
+    if (showRowTotals) {
+      const grandTotal = totalColumn.reduce((acc, val) => {
+        const num = typeof val === "number" ? val : parseFloat(String(val))
+        return acc + (isNaN(num) ? 0 : num)
+      }, 0)
+      totalColumn.push(formatNumber(grandTotal, maxDecimals))
+    }
+
+    columnDataArrays.push(totalColumn)
+    schemaFields.push(new Field("Total", new Float64(), true))
+  }
+
+  // Create Arrow table - ensure all data has consistent types
+  const columnObject: Record<string, any[]> = {}
+
+  // Process each column to ensure type consistency
+  for (let i = 0; i < columnNamesArray.length; i++) {
+    const name = columnNamesArray[i]
+    const field = schemaFields[i]
+    const isNumeric = field.type.toString().includes("Float")
+
+    if (isNumeric) {
+      // Numeric columns - preserve original values, only convert strings if needed
+      columnObject[name] = columnDataArrays[i].map(v => {
+        if (typeof v === "number") {
+          return v
+        }
+        // For string values, convert carefully
+        const parsed = parseFloat(String(v))
+        return isNaN(parsed) ? 0 : parsed
+      })
+    } else {
+      // String columns - ensure all values are strings
+      columnObject[name] = columnDataArrays[i].map(v => String(v))
+    }
+  }
+
+  const arrowTable = tableFromArrays(columnObject)
+  const arrowBytes = tableToIPC(arrowTable)
+
+  const arrowProto: ArrowProto = ArrowProto.create({
+    data: arrowBytes,
+  })
+
+  return new Quiver(arrowProto)
+}
+
+/**
  * Transform data into a pivot table and return a new Quiver object.
  */
 export function transformToPivotQuiver(
   data: Quiver,
-  config: PivotConfig
+  config: PivotConfig,
+  showRowTotals = false,
+  showColumnTotals = false
 ): Quiver {
-  // If no configuration, return original data
-  if (
-    config.rows.length === 0 &&
-    config.columns.length === 0 &&
-    config.values.length === 0
-  ) {
+  // Check if pivot configuration is active
+  const hasConfig =
+    config.rows.length > 0 ||
+    config.columns.length > 0 ||
+    config.values.length > 0
+
+  // If no pivot configuration, return original data unchanged
+  // (Totals without pivot would require recreating the table and lose decimal formatting)
+  if (!hasConfig) {
     return data
   }
 
@@ -342,17 +529,27 @@ export function transformToPivotQuiver(
     config.values
   )
 
-  // Detect decimal places for each value field
+  // Detect decimal places and preserve original field types
   const decimalPlaces: Record<string, number> = {}
+  const originalFields: Record<string, Field> = {}
+
   config.values.forEach(vf => {
     const detectedPlaces = detectDecimalPlaces(data, vf.field)
     // For count, always use 0 decimals
     decimalPlaces[vf.field] = vf.aggregation === "count" ? 0 : detectedPlaces
+
+    // Find and preserve the original field type for this column
+    const columnNames = data.columnNames?.[0] || []
+    const colIndex = columnNames.indexOf(vf.field)
+    if (colIndex >= 0) {
+      const { field } = data.getCell(0, colIndex)
+      originalFields[vf.field] = field
+    }
   })
 
   // Build column names, data arrays, and schema fields
   const columnNamesArray: string[] = []
-  const columnDataArrays: (string | number)[][] = []
+  const columnDataArrays: any[][] = []
   const schemaFields: Field[] = []
 
   // Add row field columns (as strings)
@@ -380,27 +577,116 @@ export function transformToPivotQuiver(
           : `${vf.field} (${aggLabel})`
       columnNamesArray.push(header)
 
-      // Mark as Float64 so it's right-aligned
-      schemaFields.push(new Field(header, new Float64(), true))
+      // Preserve original field type if available, otherwise use Float64
+      const originalField = originalFields[vf.field]
+      const fieldType = originalField ? originalField.type : new Float64()
+      schemaFields.push(new Field(header, fieldType, true))
 
       const cellKey =
         columnKeys.length > 1 ? `${colKey}|${vf.field}` : vf.field
+      const dp = decimalPlaces[vf.field] || 0
       const columnData = rowKeys.map(rowKey => {
         const value = values[rowKey]?.[cellKey] ?? 0
-        const dp = decimalPlaces[vf.field] || 0
         return formatNumber(value, dp)
       })
       columnDataArrays.push(columnData)
     })
   })
 
-  // Create Arrow table with explicit schema
-  const columnObject: Record<string, (string | number)[]> = {}
-  columnNamesArray.forEach((name, index) => {
-    columnObject[name] = columnDataArrays[index]
-  })
+  // Add column totals if requested
+  if (showColumnTotals && columnKeys.length > 0) {
+    config.values.forEach(vf => {
+      const aggLabel = getAggregationLabel(vf.aggregation)
+      const header = `Total ${vf.field} (${aggLabel})`
+      columnNamesArray.push(header)
 
-  const schema = new Schema(schemaFields)
+      // Preserve original field type for totals
+      const originalField = originalFields[vf.field]
+      const fieldType = originalField ? originalField.type : new Float64()
+      schemaFields.push(new Field(header, fieldType, true))
+
+      // Calculate totals across all columns for each row
+      const dp = decimalPlaces[vf.field] || 0
+      const columnData = rowKeys.map(rowKey => {
+        let total = 0
+        columnKeys.forEach(colKey => {
+          const cellKey =
+            columnKeys.length > 1 ? `${colKey}|${vf.field}` : vf.field
+          total += values[rowKey]?.[cellKey] ?? 0
+        })
+        return formatNumber(total, dp)
+      })
+      columnDataArrays.push(columnData)
+    })
+  }
+
+  // Add row totals if requested
+  if (showRowTotals && rowKeys.length > 0) {
+    // Add a "Total" row at the end
+    // Add row identifier columns
+    config.rows.forEach((_fieldName, index) => {
+      if (index === 0) {
+        columnDataArrays[index].push("Total")
+      } else {
+        columnDataArrays[index].push("")
+      }
+    })
+
+    // Calculate totals for each value column
+    let valueColIndex = config.rows.length
+    columnKeys.forEach(() => {
+      config.values.forEach(vf => {
+        let total = 0
+        rowKeys.forEach(rowKey => {
+          const existingValue =
+            columnDataArrays[valueColIndex][rowKeys.indexOf(rowKey)]
+          total +=
+            typeof existingValue === "number"
+              ? existingValue
+              : parseFloat(String(existingValue)) || 0
+        })
+        const dp = decimalPlaces[vf.field] || 0
+        columnDataArrays[valueColIndex].push(formatNumber(total, dp))
+        valueColIndex++
+      })
+    })
+
+    // Add column totals cell if both totals are shown
+    if (showColumnTotals && columnKeys.length > 0) {
+      config.values.forEach(() => {
+        let grandTotal = 0
+        rowKeys.forEach(rowKey => {
+          const existingValue =
+            columnDataArrays[valueColIndex][rowKeys.indexOf(rowKey)]
+          grandTotal +=
+            typeof existingValue === "number"
+              ? existingValue
+              : parseFloat(String(existingValue)) || 0
+        })
+        const dp = decimalPlaces[config.values[0].field] || 0
+        columnDataArrays[valueColIndex].push(formatNumber(grandTotal, dp))
+        valueColIndex++
+      })
+    }
+  }
+
+  // Create Arrow table - ensure all data has consistent types
+  const columnObject: Record<string, any[]> = {}
+
+  // Row columns (string type) - ensure all values are strings
+  for (let i = 0; i < config.rows.length; i++) {
+    const name = columnNamesArray[i]
+    columnObject[name] = columnDataArrays[i].map(v => String(v))
+  }
+
+  // Value columns (numeric type) - ensure all values are numbers
+  for (let i = config.rows.length; i < columnNamesArray.length; i++) {
+    const name = columnNamesArray[i]
+    columnObject[name] = columnDataArrays[i].map(v =>
+      typeof v === "number" ? v : parseFloat(String(v)) || 0
+    )
+  }
+
   const arrowTable = tableFromArrays(columnObject)
   const arrowBytes = tableToIPC(arrowTable)
 

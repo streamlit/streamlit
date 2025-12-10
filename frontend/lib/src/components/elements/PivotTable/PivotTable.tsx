@@ -14,7 +14,14 @@
  * limitations under the License.
  */
 
-import React, { memo, ReactElement, useMemo, useState } from "react"
+import React, {
+  memo,
+  ReactElement,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react"
 
 import { Settings } from "@emotion-icons/material-outlined"
 
@@ -24,12 +31,23 @@ import {
 } from "@streamlit/protobuf"
 
 import { ArrowTable } from "~lib/components/elements/ArrowTable/ArrowTable"
-import Toolbar, { ToolbarAction } from "~lib/components/shared/Toolbar"
+import Icon from "~lib/components/shared/Icon"
 import { Quiver } from "~lib/dataframes/Quiver"
 
-import PivotConfigDialog from "./PivotConfigDialog"
-import { PivotConfig, transformToPivotQuiver } from "./pivotTransform"
-import { StyledPivotTableContainer } from "./styled-components"
+import FieldsList from "./FieldsList"
+import PivotConfigBar from "./PivotConfigBar"
+import {
+  AggregationType,
+  PivotConfig,
+  transformToPivotQuiver,
+} from "./pivotTransform"
+import {
+  StyledPivotContent,
+  StyledPivotTableContainer,
+  StyledTableArea,
+  StyledToggleStrip,
+  StyledToggleStripButton,
+} from "./styled-components"
 
 export interface PivotTableProps {
   element: PivotTableProto
@@ -39,7 +57,9 @@ export interface PivotTableProps {
 }
 
 export function PivotTable(props: PivotTableProps): ReactElement {
-  const [showDialog, setShowDialog] = useState(false)
+  const [sidebarVisible, setSidebarVisible] = useState(true)
+  const [showRowTotals, setShowRowTotals] = useState(false)
+  const [showColumnTotals, setShowColumnTotals] = useState(false)
   const [pivotConfig, setPivotConfig] = useState<PivotConfig>({
     rows: [],
     columns: [],
@@ -47,10 +67,16 @@ export function PivotTable(props: PivotTableProps): ReactElement {
     filters: {},
   })
 
-  // Transform data based on pivot configuration
+  // Transform data based on pivot configuration (live updates)
   const transformedData = useMemo(
-    () => transformToPivotQuiver(props.data, pivotConfig),
-    [props.data, pivotConfig]
+    () =>
+      transformToPivotQuiver(
+        props.data,
+        pivotConfig,
+        showRowTotals,
+        showColumnTotals
+      ),
+    [props.data, pivotConfig, showRowTotals, showColumnTotals]
   )
 
   // Create an ArrowProto element for the transformed data
@@ -65,32 +91,184 @@ export function PivotTable(props: PivotTableProps): ReactElement {
     })
   }, [props.element.borderMode])
 
+  const handleToggleSidebar = useCallback(() => {
+    setSidebarVisible(prev => !prev)
+  }, [])
+
+  // Apply bold styling to totals after render
+  useEffect(() => {
+    if (!showRowTotals && !showColumnTotals) {
+      return
+    }
+
+    const table = document.querySelector(".stPivotTable table")
+    if (!table) {
+      return
+    }
+
+    // Bold last row if showing row totals
+    if (showRowTotals) {
+      const lastRow = table.querySelector("tbody tr:last-child")
+      if (lastRow) {
+        lastRow.querySelectorAll("td, th").forEach(cell => {
+          ;(cell as HTMLElement).style.fontWeight = "bold"
+        })
+      }
+    }
+
+    // Bold last column if showing column totals
+    if (showColumnTotals) {
+      table
+        .querySelectorAll("thead th:last-child, tbody td:last-child")
+        .forEach(cell => {
+          ;(cell as HTMLElement).style.fontWeight = "bold"
+        })
+    }
+  }, [showRowTotals, showColumnTotals, transformedData])
+
+  // Handler functions for field management
+  const handleAddToRows = useCallback((fieldName: string) => {
+    setPivotConfig(prev => ({
+      ...prev,
+      rows: [...prev.rows, fieldName],
+    }))
+  }, [])
+
+  const handleAddToColumns = useCallback((fieldName: string) => {
+    setPivotConfig(prev => ({
+      ...prev,
+      columns: [...prev.columns, fieldName],
+    }))
+  }, [])
+
+  const handleAddToValues = useCallback((fieldName: string) => {
+    setPivotConfig(prev => ({
+      ...prev,
+      values: [...prev.values, { field: fieldName, aggregation: "sum" }],
+    }))
+  }, [])
+
+  const handleRemoveRow = useCallback((fieldName: string) => {
+    setPivotConfig(prev => ({
+      ...prev,
+      rows: prev.rows.filter(f => f !== fieldName),
+    }))
+  }, [])
+
+  const handleRemoveColumn = useCallback((fieldName: string) => {
+    setPivotConfig(prev => ({
+      ...prev,
+      columns: prev.columns.filter(f => f !== fieldName),
+    }))
+  }, [])
+
+  const handleRemoveValue = useCallback((fieldName: string) => {
+    setPivotConfig(prev => ({
+      ...prev,
+      values: prev.values.filter(v => v.field !== fieldName),
+    }))
+  }, [])
+
+  const handleUpdateAggregation = useCallback(
+    (fieldName: string, aggregation: AggregationType) => {
+      setPivotConfig(prev => ({
+        ...prev,
+        values: prev.values.map(v =>
+          v.field === fieldName ? { ...v, aggregation } : v
+        ),
+      }))
+    },
+    []
+  )
+
+  const handleReorderRows = useCallback(
+    (fromIndex: number, toIndex: number) => {
+      setPivotConfig(prev => {
+        const newRows = [...prev.rows]
+        const [movedField] = newRows.splice(fromIndex, 1)
+        newRows.splice(toIndex, 0, movedField)
+        return { ...prev, rows: newRows }
+      })
+    },
+    []
+  )
+
+  const handleReorderColumns = useCallback(
+    (fromIndex: number, toIndex: number) => {
+      setPivotConfig(prev => {
+        const newColumns = [...prev.columns]
+        const [movedField] = newColumns.splice(fromIndex, 1)
+        newColumns.splice(toIndex, 0, movedField)
+        return { ...prev, columns: newColumns }
+      })
+    },
+    []
+  )
+
+  const handleReorderValues = useCallback(
+    (fromIndex: number, toIndex: number) => {
+      setPivotConfig(prev => {
+        const newValues = [...prev.values]
+        const [movedField] = newValues.splice(fromIndex, 1)
+        newValues.splice(toIndex, 0, movedField)
+        return { ...prev, values: newValues }
+      })
+    },
+    []
+  )
+
   return (
     <StyledPivotTableContainer
       className="stPivotTable"
       data-testid="stPivotTable"
     >
-      <Toolbar target={StyledPivotTableContainer}>
-        <ToolbarAction
-          label="Configure Pivot"
-          icon={Settings}
-          onClick={() => setShowDialog(true)}
-        />
-      </Toolbar>
+      {/* Config Bar at top */}
+      <PivotConfigBar
+        config={pivotConfig}
+        onAddToRows={handleAddToRows}
+        onAddToColumns={handleAddToColumns}
+        onAddToValues={handleAddToValues}
+        onRemoveRow={handleRemoveRow}
+        onRemoveColumn={handleRemoveColumn}
+        onRemoveValue={handleRemoveValue}
+        onUpdateAggregation={handleUpdateAggregation}
+        onReorderRows={handleReorderRows}
+        onReorderColumns={handleReorderColumns}
+        onReorderValues={handleReorderValues}
+      />
 
-      <ArrowTable element={arrowElement} data={transformedData} />
-
-      {showDialog && (
-        <PivotConfigDialog
+      {/* Main content: Left Sidebar + Table with Toggle */}
+      <StyledPivotContent $sidebarVisible={sidebarVisible}>
+        <FieldsList
           data={props.data}
           config={pivotConfig}
-          onApply={newConfig => {
-            setPivotConfig(newConfig)
-            setShowDialog(false)
-          }}
-          onCancel={() => setShowDialog(false)}
+          isVisible={sidebarVisible}
+          onToggleSidebar={handleToggleSidebar}
+          showRowTotals={showRowTotals}
+          showColumnTotals={showColumnTotals}
+          onToggleRowTotals={() => setShowRowTotals(prev => !prev)}
+          onToggleColumnTotals={() => setShowColumnTotals(prev => !prev)}
+          onAddToRows={handleAddToRows}
+          onAddToColumns={handleAddToColumns}
+          onAddToValues={handleAddToValues}
+          onUpdateAggregation={handleUpdateAggregation}
         />
-      )}
+
+        <StyledTableArea>
+          <ArrowTable element={arrowElement} data={transformedData} />
+        </StyledTableArea>
+
+        {!sidebarVisible && (
+          <StyledToggleStrip>
+            <StyledToggleStripButton
+              onClick={handleToggleSidebar}
+              title="Show Config"
+            >
+              <Icon content={Settings} size="md" />
+            </StyledToggleStripButton>
+          </StyledToggleStrip>
+        )}
+      </StyledPivotContent>
     </StyledPivotTableContainer>
   )
 }

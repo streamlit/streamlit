@@ -41,6 +41,7 @@ interface DropZoneProps {
     fieldName: string,
     aggregation: AggregationType
   ) => void
+  onReorder?: (fromIndex: number, toIndex: number) => void
   showAggregation?: boolean
 }
 
@@ -61,11 +62,14 @@ function DropZone({
   valueFields = [],
   onRemove,
   onUpdateAggregation,
+  onReorder,
   showAggregation = false,
 }: DropZoneProps): ReactElement {
   const [activeAggregation, setActiveAggregation] = useState<string | null>(
     null
   )
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
   const menuRef = useRef<HTMLDivElement>(null)
 
   // Close dropdown when clicking outside
@@ -103,6 +107,36 @@ function DropZone({
     setActiveAggregation(null)
   }
 
+  // Drag and drop handlers
+  const handleDragStart = (index: number): void => {
+    setDraggedIndex(index)
+  }
+
+  const handleDragOver = (
+    event: React.DragEvent<HTMLDivElement>,
+    index: number
+  ): void => {
+    event.preventDefault()
+    setDragOverIndex(index)
+  }
+
+  const handleDragLeave = (): void => {
+    setDragOverIndex(null)
+  }
+
+  const handleDrop = (index: number): void => {
+    if (draggedIndex !== null && draggedIndex !== index && onReorder) {
+      onReorder(draggedIndex, index)
+    }
+    setDraggedIndex(null)
+    setDragOverIndex(null)
+  }
+
+  const handleDragEnd = (): void => {
+    setDraggedIndex(null)
+    setDragOverIndex(null)
+  }
+
   return (
     <StyledDropZone>
       <StyledDropZoneLabel>{label}</StyledDropZoneLabel>
@@ -120,7 +154,23 @@ function DropZone({
                 : "sum"
 
             return (
-              <StyledDroppedField key={index}>
+              <StyledDroppedField
+                key={index}
+                draggable={!!onReorder}
+                onDragStart={() => handleDragStart(index)}
+                onDragOver={event => handleDragOver(event, index)}
+                onDragLeave={handleDragLeave}
+                onDrop={() => handleDrop(index)}
+                onDragEnd={handleDragEnd}
+                style={{
+                  opacity: draggedIndex === index ? 0.5 : 1,
+                  borderColor:
+                    dragOverIndex === index
+                      ? "var(--primary-color)"
+                      : undefined,
+                  cursor: onReorder ? "move" : "default",
+                }}
+              >
                 <StyledFieldName>{fieldName}</StyledFieldName>
                 <div
                   style={{
