@@ -956,18 +956,22 @@ describe("App", () => {
       expect(props.theme.setTheme).not.toHaveBeenCalled()
     })
 
-    it("does nothing if no custom theme is received and themeHash is 'hash_for_undefined_custom_theme'", () => {
+    it("processes null theme on first newSession to clear any cached custom themes", () => {
       const props = getProps()
       renderApp(props)
 
-      // Send Forward message with custom theme
+      // Send first newSession with null custom theme
+      // This should process the theme (themeHash changes from "" to "hash_for_undefined_custom_theme")
+      // and call addThemes([]) to clear any cached custom themes from localStorage
       sendForwardMessage("newSession", {
         ...NEW_SESSION_JSON,
         customTheme: null,
       })
 
-      expect(props.theme.addThemes).not.toHaveBeenCalled()
-      expect(props.theme.setTheme).not.toHaveBeenCalled()
+      // Should call addThemes to clear custom themes
+      expect(props.theme.addThemes).toHaveBeenCalledTimes(1)
+      // @ts-expect-error
+      expect(props.theme.addThemes.mock.calls[0][0]).toEqual([])
     })
 
     it("does not update theme when receiving theme with nested objects in different key orders", () => {

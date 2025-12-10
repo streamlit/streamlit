@@ -282,11 +282,6 @@ export class App extends PureComponent<Props, State> {
     enablePatches()
     enableMapSet()
 
-    // Theme hash is initially set to default (undefined custom theme).
-    // When a custom theme is received from the server via handleNewSession,
-    // processThemeInput will update the hash based on the server's theme config.
-    const themeHash = this.createThemeHash()
-
     this.state = {
       connectionState: ConnectionState.INITIAL,
       elements: AppRoot.empty("", true), // Blank Main Script Hash for initial render
@@ -306,7 +301,11 @@ export class App extends PureComponent<Props, State> {
       menuItems: undefined,
       allowRunOnSave: true,
       scriptFinishedHandlers: [],
-      themeHash,
+      // Initialize themeHash to empty string to ensure the first processThemeInput
+      // call always processes the theme (whether null or custom theme from server).
+      // This prevents the bug where a cached custom theme isn't cleared when the
+      // server sends null, because null and undefined both hash to the same value.
+      themeHash: "",
       gitInfo: null,
       formsData: createFormsData(),
       appPages: [],
