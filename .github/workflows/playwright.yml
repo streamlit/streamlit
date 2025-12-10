@@ -21,6 +21,8 @@ concurrency:
 
 jobs:
   playwright-e2e-tests:
+    # Skip if PR is labeled with 'change:spec' (spec-only changes don't need E2E tests)
+    if: github.event_name != 'pull_request' || !contains(github.event.pull_request.labels.*.name, 'change:spec')
     runs-on: ubuntu-latest-64-cores
     timeout-minutes: 30
 
