@@ -27,7 +27,6 @@ from streamlit.web.server.routes import (
 if TYPE_CHECKING:
     from collections.abc import MutableMapping
 
-    from starlette.responses import Response
     from starlette.types import Receive, Scope, Send
 
 # Reserved paths that should return 404 instead of index.html fallback.
