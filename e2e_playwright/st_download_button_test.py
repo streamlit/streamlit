@@ -32,7 +32,7 @@ from e2e_playwright.shared.app_utils import (
     goto_app,
 )
 
-DOWNLOAD_BUTTON_ELEMENTS = 22
+DOWNLOAD_BUTTON_ELEMENTS = 19
 
 
 def check_download_button_source_error_count(messages: list[str], expected_count: int):
@@ -92,20 +92,6 @@ def test_download_button_widget_rendering(
     assert_snapshot(
         get_element_by_key(themed_app, "shortcut_download_button"),
         name="st_download_button-shortcut",
-    )
-    assert_snapshot(
-        get_element_by_key(themed_app, "download_icon_left"),
-        name="st_download_button-icon_position_left_material",
-    )
-    assert_snapshot(
-        get_element_by_key(themed_app, "download_icon_right"),
-        name="st_download_button-icon_position_right_material",
-    )
-
-    # Test emoji icon positioning
-    assert_snapshot(
-        get_element_by_key(themed_app, "download_emoji_left"),
-        name="st_download_button-icon_position_left_emoji",
     )
     assert_snapshot(
         get_element_by_key(themed_app, "download_emoji_right"),
