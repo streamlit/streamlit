@@ -15,11 +15,54 @@
 from __future__ import annotations
 
 import itertools
-from abc import abstractmethod
 from typing import TYPE_CHECKING, NamedTuple, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
-    from streamlit.proto.openmetrics_data_model_pb2 import Metric as MetricProto
+    from collections.abc import Sequence
+
+    from streamlit.proto.openmetrics_data_model_pb2 import (
+        Metric as MetricProto,
+    )
+    from streamlit.proto.openmetrics_data_model_pb2 import (
+        MetricType,
+    )
+
+
+@runtime_checkable
+class Stat(Protocol):
+    """Protocol for a stat that can be serialized to OpenMetrics format.
+
+    All stats must have these fields to identify the metric family they belong to
+    and provide metadata for OpenMetrics serialization.
+    """
+
+    @property
+    def family_name(self) -> str:
+        """The name of the metric family (e.g. 'cache_memory_bytes')."""
+        pass
+
+    @property
+    def type(self) -> str:
+        """The OpenMetrics type (e.g. 'gauge', 'counter')."""
+        pass
+
+    @property
+    def unit(self) -> str:
+        """The unit of the metric (e.g. 'bytes')."""
+        pass
+
+    @property
+    def help(self) -> str:
+        """A description of the metric."""
+        pass
+
+    def to_metric_str(self) -> str:
+        """Convert this stat to an OpenMetrics-formatted string."""
+        pass
+
+    def marshall_metric_proto(self, metric: MetricProto) -> None:
+        """Fill an OpenMetrics `Metric` protobuf object."""
+        pass
 
 
 class CacheStat(NamedTuple):
@@ -43,8 +86,25 @@ class CacheStat(NamedTuple):
     cache_name: str
     byte_length: int
 
+    # Stat Protocol fields with default values for cache metrics
+    @property
+    def family_name(self) -> str:
+        return "cache_memory_bytes"
+
+    @property
+    def type(self) -> str:
+        return "gauge"
+
+    @property
+    def unit(self) -> str:
+        return "bytes"
+
+    @property
+    def help(self) -> str:
+        return "Total memory consumed by a cache."
+
     def to_metric_str(self) -> str:
-        return f'cache_memory_bytes{{cache_type="{self.category_name}",cache="{self.cache_name}"}} {self.byte_length}'
+        return f'{self.family_name}{{cache_type="{self.category_name}",cache="{self.cache_name}"}} {self.byte_length}'
 
     def marshall_metric_proto(self, metric: MetricProto) -> None:
         """Fill an OpenMetrics `Metric` protobuf object."""
@@ -60,7 +120,7 @@ class CacheStat(NamedTuple):
         metric_point.gauge_value.int_value = self.byte_length
 
 
-def group_stats(stats: list[CacheStat]) -> list[CacheStat]:
+def group_cache_stats(stats: list[CacheStat]) -> list[CacheStat]:
     """Group a list of CacheStats by category_name and cache_name and sum byte_length."""
 
     def key_function(individual_stat: CacheStat) -> tuple[str, str]:
@@ -82,28 +142,75 @@ def group_stats(stats: list[CacheStat]) -> list[CacheStat]:
     return result
 
 
+def metric_type_string_to_proto(type_string: str) -> MetricType.ValueType:
+    """Convert a metric type string to its corresponding proto enum value."""
+    from streamlit.proto.openmetrics_data_model_pb2 import (
+        COUNTER,
+        GAUGE,
+        GAUGE_HISTOGRAM,
+        HISTOGRAM,
+        INFO,
+        STATE_SET,
+        SUMMARY,
+        UNKNOWN,
+    )
+
+    type_map = {
+        "gauge": GAUGE,
+        "counter": COUNTER,
+        "state_set": STATE_SET,
+        "info": INFO,
+        "histogram": HISTOGRAM,
+        "gauge_histogram": GAUGE_HISTOGRAM,
+        "summary": SUMMARY,
+    }
+    return type_map.get(type_string, UNKNOWN)
+
+
 @runtime_checkable
-class CacheStatsProvider(Protocol):
-    @abstractmethod
-    def get_stats(self) -> list[CacheStat]:
+class StatsProvider(Protocol):
+    def get_stats(self) -> Sequence[Stat]:
         raise NotImplementedError
 
 
 class StatsManager:
     def __init__(self) -> None:
-        self._cache_stats_providers: list[CacheStatsProvider] = []
+        self._stats_providers: dict[str, list[StatsProvider]] = {}
 
-    def register_provider(self, provider: CacheStatsProvider) -> None:
-        """Register a CacheStatsProvider with the manager.
+    def register_provider(self, family_name: str, provider: StatsProvider) -> None:
+        """Register a StatsProvider with the manager for a given metric family.
+
+        Multiple providers can be registered for the same family name, and their
+        stats will be combined when get_stats() is called.
+
         This function is not thread-safe. Call it immediately after
         creation.
+
+        Parameters
+        ----------
+        family_name : str
+            The name of the metric family that this provider produces stats for.
+        provider : StatsProvider
+            The stats provider to register.
         """
-        self._cache_stats_providers.append(provider)
+        if family_name not in self._stats_providers:
+            self._stats_providers[family_name] = []
+        self._stats_providers[family_name].append(provider)
 
-    def get_stats(self) -> list[CacheStat]:
-        """Return a list containing all stats from each registered provider."""
-        all_stats: list[CacheStat] = []
-        for provider in self._cache_stats_providers:
-            all_stats.extend(provider.get_stats())
+    def get_stats(self) -> dict[str, Sequence[Stat]]:
+        """Return all registered stats grouped by metric family name.
 
-        return all_stats
+        Returns
+        -------
+        dict[str, Sequence[Stat]]
+            A dictionary mapping metric family names (as registered with
+            register_provider) to sequences of Stat objects from all providers
+            registered under that family name.
+        """
+        result: dict[str, Sequence[Stat]] = {}
+        for family_name, providers in self._stats_providers.items():
+            all_stats: list[Stat] = []
+            for provider in providers:
+                all_stats.extend(provider.get_stats())
+            result[family_name] = all_stats
+        return result

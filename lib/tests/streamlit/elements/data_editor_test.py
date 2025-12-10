@@ -613,6 +613,20 @@ class DataEditorTest(DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.arrow_data_frame
         assert proto.editing_mode == ArrowProto.EditingMode.DYNAMIC
 
+    def test_num_rows_add(self):
+        """Test that it can be called with num_rows add."""
+        st.data_editor(pd.DataFrame(), num_rows="add")
+
+        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        assert proto.editing_mode == ArrowProto.EditingMode.ADD_ONLY
+
+    def test_num_rows_delete(self):
+        """Test that it can be called with num_rows delete."""
+        st.data_editor(pd.DataFrame(), num_rows="delete")
+
+        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        assert proto.editing_mode == ArrowProto.EditingMode.DELETE_ONLY
+
     def test_column_order_parameter(self):
         """Test that it can be called with column_order."""
         st.data_editor(pd.DataFrame(), column_order=["a", "b"])
@@ -750,7 +764,37 @@ class DataEditorTest(DeltaGeneratorTestCase):
         mock_logger.warning.assert_called_once()
         warning_message = mock_logger.warning.call_args[0][0]
         assert "hide_index=True" in warning_message
-        assert "num_rows='dynamic'" in warning_message
+        # The warning message includes the mode via a format placeholder
+        assert "num_rows" in warning_message
+
+    @patch("streamlit.elements.widgets.data_editor._LOGGER")
+    def test_hide_index_true_add_only_non_range_index_logs_warning(
+        self, mock_logger: MagicMock
+    ):
+        """Test that hide_index=True with add-only rows and non-range index logs a warning."""
+        df = pd.DataFrame({"a": [1, 2]}, index=["row_0", "row_1"])
+
+        st.data_editor(df, hide_index=True, num_rows="add")
+
+        mock_logger.warning.assert_called_once()
+        warning_message = mock_logger.warning.call_args[0][0]
+        assert "hide_index=True" in warning_message
+        assert "num_rows" in warning_message
+
+    @patch("streamlit.elements.widgets.data_editor._LOGGER")
+    def test_hide_index_true_delete_only_non_range_index_no_warning(
+        self, mock_logger: MagicMock
+    ):
+        """Test that hide_index=True with delete-only mode does not log a warning.
+
+        Unlike dynamic and add modes, delete-only mode doesn't need index values
+        for adding rows, so hiding the index should work without issues.
+        """
+        df = pd.DataFrame({"a": [1, 2]}, index=["row_0", "row_1"])
+
+        st.data_editor(df, hide_index=True, num_rows="delete")
+
+        mock_logger.warning.assert_not_called()
 
     @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
     def test_inside_form(self):
