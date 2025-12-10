@@ -11,7 +11,7 @@ on:
 
 jobs:
   codeql-analysis:
-    # Skip if PR is labeled with 'change:spec' (spec-only changes don't need security analysis)
+    # Skip if PR is labeled with 'change:spec' (spec-only changes don't need these checks)
     if: github.event_name != 'pull_request' || !contains(github.event.pull_request.labels.*.name, 'change:spec')
     name: Analyze
     runs-on: ubuntu-latest
