@@ -6,8 +6,8 @@
  *
  * Modifications by Streamlit:
  * - Converted to TypeScript
- * - Added thousand separator support via the `,` flag (e.g., "%,d" or "%,.2f")
- *   This mirrors Python's format mini-language: f"{x:,}" or f"{x:,.2f}"
+ * - Added thousand separator support via `,` and `_` flags (e.g., "%,d" or "%_d")
+ *   This mirrors Python's format mini-language: f"{x:,}" or f"{x:_}"
  */
 
 interface Placeholder {
@@ -36,9 +36,9 @@ const re = {
   not_json: /[^j]/,
   text: /^[^\x25]+/,
   modulo: /^\x25{2}/,
-  // Added (,)? capture group for thousand separator flag after alignment flag
+  // Added (,|_)? capture group for thousand separator flag after alignment flag
   placeholder:
-    /^\x25(?:([1-9]\d*)\$|\(([^)]+)\))?(\+)?(0|'[^$])?(-)?(,)?(\d+)?(?:\.(\d+))?([b-gijostTuvxX])/,
+    /^\x25(?:([1-9]\d*)\$|\(([^)]+)\))?(\+)?(0|'[^$])?(-)?(,|_)?(\d+)?(?:\.(\d+))?([b-gijostTuvxX])/,
   key: /^([a-z_][a-z_\d]*)/i,
   key_access: /^\.([a-z_][a-z_\d]*)/i,
   index_access: /^\[(\d+)\]/,
@@ -221,13 +221,19 @@ function sprintfFormat(parseTree: ParseTree, argv: unknown[]): string {
         argStr = argStr.replace(re.sign, "")
       }
 
-      // Apply thousand separators if the `,` flag is set and it's a numeric type
-      // If a custom pad char is specified (e.g., %'_,d), use it as the separator
+      // Apply thousand separators if `,` or `_` flag is set and it's a numeric type
+      // - `_` flag: use underscore as separator (e.g., %_d → 1_234_567)
+      // - `,` flag with custom pad char: use pad char as separator (e.g., %'*,d → 1*234*567)
+      // - `,` flag alone: use comma as separator (e.g., %,d → 1,234,567)
       if (ph.thousand_sep && re.number.test(ph.type)) {
-        const separator =
-          ph.pad_char && ph.pad_char.startsWith("'")
-            ? ph.pad_char.charAt(1)
-            : ","
+        let separator: string
+        if (ph.thousand_sep === "_") {
+          separator = "_"
+        } else if (ph.pad_char?.startsWith("'")) {
+          separator = ph.pad_char.charAt(1)
+        } else {
+          separator = ","
+        }
         argStr = addThousandSeparators(argStr, separator)
       }
 
@@ -333,14 +339,15 @@ function sprintfParse(fmt: string): ParseTree {
  * Format a string using printf-style format specifiers.
  *
  * Supports standard printf specifiers plus:
- * - `,` flag for thousand separators (e.g., "%,d" → "1,234,567")
+ * - `,` flag for comma thousand separators (e.g., "%,d" → "1,234,567")
+ * - `_` flag for underscore thousand separators (e.g., "%_d" → "1_234_567")
  *
  * @example
  * sprintf("%d", 1234567)      // "1234567"
  * sprintf("%,d", 1234567)     // "1,234,567"
+ * sprintf("%_d", 1234567)     // "1_234_567"
  * sprintf("%,.2f", 1234.5)    // "1,234.50"
- * sprintf("%+,d", 1234567)    // "+1,234,567"
- * sprintf("%,15d", 1234567)   // "      1,234,567"
+ * sprintf("%_.2f", 1234.5)    // "1_234.50"
  *
  * @param fmt - The format string
  * @param args - Values to substitute into the format string

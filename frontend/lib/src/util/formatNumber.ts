@@ -80,7 +80,8 @@ function formatIntlNumberWithLocales(
  *   - "scientific": Show the number in scientific notation (e.g. "1.235E3").
  *   - "engineering": Show the number in engineering notation (e.g. "1.235E3").
  *   - printf-style format string: Format the number with a printf specifier.
- *     Supports the `,` flag for thousand separators (e.g., "%,d" or "%,.2f").
+ *     Supports `,` flag for comma separators (e.g., "%,d") and `_` flag for
+ *     underscore separators (e.g., "%_d"), mirroring Python's format spec.
  * @param maxPrecision - The maximum number of decimals to show. If not provided,
  *                     a reasonable default is used based on the configured format.
  *

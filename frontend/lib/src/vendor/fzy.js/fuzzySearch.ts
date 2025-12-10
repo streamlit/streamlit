@@ -197,10 +197,11 @@ function hasMatch(needle: string, haystack: string): boolean {
 }
 
 export {
+  /* functions */
   hasMatch,
   positions,
-  /* functions */
   score,
+  /* constants */
   SCORE_GAP_INNER,
   SCORE_GAP_LEADING,
   SCORE_GAP_TRAILING,
@@ -210,6 +211,5 @@ export {
   SCORE_MATCH_SLASH,
   SCORE_MATCH_WORD,
   SCORE_MAX,
-  /* constants */
   SCORE_MIN,
 }

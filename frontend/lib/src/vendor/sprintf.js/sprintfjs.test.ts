@@ -188,9 +188,55 @@ describe("sprintf", () => {
       ["%,d items", [1234567], "1,234,567 items"],
       ["$%,.2f USD", [1234.56], "$1,234.56 USD"],
 
-      // Custom pad character with thousand separator
+      // Custom pad character with thousand separator (legacy syntax)
       ["%'_,.2f", [1234567.89], "1_234_567.89"],
       ["%'_,d", [1234567], "1_234_567"],
+    ])("formats '%s' with %j to '%s'", (format, args, expected) => {
+      expect(sprintf(format, ...args)).toBe(expected)
+    })
+  })
+
+  describe("thousand separator (underscore flag)", () => {
+    it.each([
+      // Basic integer formatting (mirrors Python's f"{x:_}")
+      ["%_d", [1000], "1_000"],
+      ["%_d", [1234567], "1_234_567"],
+      ["%_d", [999], "999"],
+      ["%_d", [0], "0"],
+
+      // Negative numbers
+      ["%_d", [-1000], "-1_000"],
+      ["%_d", [-1234567], "-1_234_567"],
+
+      // Float formatting
+      ["%_f", [1234567.89], "1_234_567.89"],
+      ["%_.2f", [1234567.89], "1_234_567.89"],
+      ["%_.0f", [1234567.89], "1_234_568"],
+      ["%_.3f", [1234.5678], "1_234.568"],
+
+      // Small numbers (no separators needed)
+      ["%_d", [123], "123"],
+      ["%_.2f", [0.12], "0.12"],
+
+      // Combined with sign flag
+      ["%+_d", [1234567], "+1_234_567"],
+      ["%+_d", [-1234567], "-1_234_567"],
+
+      // Combined with width
+      ["%_15d", [1234567], "      1_234_567"],
+      ["%-_15d", [1234567], "1_234_567      "],
+      ["%_10.2f", [1234.56], "  1_234.56"],
+
+      // Combined with zero padding
+      ["%0_10d", [1234], "000001_234"],
+
+      // Very large numbers
+      ["%_d", [1234567890123], "1_234_567_890_123"],
+
+      // With text around
+      ["$%_d", [1234567], "$1_234_567"],
+      ["%_d items", [1234567], "1_234_567 items"],
+      ["$%_.2f USD", [1234.56], "$1_234.56 USD"],
     ])("formats '%s' with %j to '%s'", (format, args, expected) => {
       expect(sprintf(format, ...args)).toBe(expected)
     })

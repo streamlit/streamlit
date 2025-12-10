@@ -211,6 +211,14 @@ describe("formatNumber", () => {
     [0.123, "%,.3f", "0.123"],
     [999, "%,d", "999"],
     [1234567.89, "%'_,.2f", "1_234_567.89"],
+    // Test thousand separator with underscore flag (Python-like: f"{x:_}"):
+    [1000, "%_d", "1_000"],
+    [1234567, "%_d", "1_234_567"],
+    [-1234567, "%_d", "-1_234_567"],
+    [1234567.89, "%_.2f", "1_234_567.89"],
+    [25000.25, "$%_.2f", "$25_000.25"],
+    [1234567, "%+_d", "+1_234_567"],
+    [1234567, "%_15d", "      1_234_567"],
   ])("formats %s with format %s to '%s'", (value, format, expected) => {
     expect(formatNumber(value, format)).toEqual(expected)
   })
