@@ -87,6 +87,53 @@ if TYPE_CHECKING:
 
 _LOGGER: Final = _logger.get_logger(__name__)
 
+
+def _compute_schema_hash(
+    data_df: pd.DataFrame,
+    arrow_schema: pa.Schema,
+) -> str:
+    """Compute a hash of the dataframe schema (structure, not values).
+
+    This hash captures the structural identity of a dataframe:
+    - Column names and order
+    - Column types (from Arrow schema)
+    - Index type
+    - Row count (positions in editing state must remain valid)
+
+    The hash does NOT include actual data values, allowing the widget ID
+    to remain stable when only cell values change (not structure).
+
+    Parameters
+    ----------
+    data_df : pd.DataFrame
+        The dataframe to compute the schema hash for.
+
+    arrow_schema : pa.Schema
+        The Arrow schema of the dataframe.
+
+    Returns
+    -------
+    str
+        An MD5 hash of the schema components.
+    """
+    schema_components: list[str] = []
+
+    # Include column names and order
+    schema_components.extend(str(col) for col in data_df.columns)
+
+    # Include column types from Arrow schema
+    schema_components.extend(f"{field.name}:{field.type}" for field in arrow_schema)
+
+    # Include index type information
+    schema_components.append(f"index_type:{type(data_df.index).__name__}")
+
+    # Include row count - editing state uses positional indices,
+    # so row count changes would invalidate edit positions
+    schema_components.append(f"num_rows:{len(data_df)}")
+
+    return calc_md5("|".join(schema_components))
+
+
 # All formats that support direct editing, meaning that these
 # formats will be returned with the same type when used with data_editor.
 EditableData = TypeVar(
@@ -1067,6 +1114,11 @@ class DataEditorMixin:
 
         arrow_bytes = dataframe_util.convert_arrow_table_to_arrow_bytes(arrow_table)
 
+        # Compute schema hash for stable widget identity when key is provided.
+        # The schema hash captures structure (columns, types, row count) but not
+        # data values, allowing edits to persist when only values change.
+        schema_hash = _compute_schema_hash(data_df, arrow_table.schema)
+
         # We want to do this as early as possible to avoid introducing nondeterminism,
         # but it isn't clear how much processing is needed to have the data in a
         # format that will hash consistently, so we do it late here to have it
@@ -1075,8 +1127,13 @@ class DataEditorMixin:
         element_id = compute_and_register_element_id(
             "data_editor",
             user_key=key,
-            key_as_main_identity=False,
+            # When a key is provided, use schema_hash as the main identity.
+            # This keeps the widget ID stable when only data values change,
+            # allowing editing state to persist across reruns.
+            # When no key is provided, fall back to current behavior (data in ID).
+            key_as_main_identity={"schema_hash"} if key else False,
             dg=self.dg,
+            schema_hash=schema_hash,
             data=arrow_bytes,
             width=width,
             height=height,

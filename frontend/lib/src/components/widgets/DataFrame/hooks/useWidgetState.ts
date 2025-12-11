@@ -59,6 +59,13 @@ export interface UseWidgetStateParams {
   fragmentId?: string
   originalNumRows: number
   originalColumns: BaseColumn[]
+  /**
+   * Hash of the underlying data. Used to detect when data content changes
+   * (e.g., cell values modified externally) to trigger state reconciliation.
+   * When used with a stable widget ID (user-provided key), this allows
+   * detecting value changes while preserving valid editing state.
+   */
+  dataHash: string
 }
 
 export interface UseWidgetStateReturn {
@@ -109,6 +116,7 @@ function useWidgetState({
   fragmentId,
   originalNumRows,
   originalColumns,
+  dataHash,
 }: UseWidgetStateParams): UseWidgetStateReturn {
   const { READ_ONLY } = ArrowProto.EditingMode
 
@@ -116,14 +124,28 @@ function useWidgetState({
   const editingState = useRef<EditingState>(new EditingState(originalNumRows))
   const [numRows, setNumRows] = useState(editingState.current.getNumRows())
 
-  // Reset editing state when originalNumRows changes.
+  // Reset or reconcile editing state when originalNumRows or dataHash changes.
   // Using useExecuteWhenChanged instead of useEffect to follow React best practices
   // for adjusting state when props change (avoids extra render cycle).
   // See: https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
+  //
+  // KEY INSIGHT: This hook only runs on UPDATES (not first render). If we're here,
+  // it means the component persisted across reruns (user provided a key) and
+  // either the row count or data content changed. The backend's schema_hash
+  // determines widget identity:
+  //   - Schema changed (cols/rows) → New widget ID → Component REMOUNTS → Fresh state
+  //   - Only values changed → Same widget ID → Component UPDATES → This triggers
+  //
+  // Since Phase 1 includes row count in the schema hash, reaching here means
+  // only data values changed (same rows, same columns). We reset to a fresh
+  // state since we don't have detailed tracking of which specific values changed.
+  // The widget manager will restore any pending edits that are still valid.
   useExecuteWhenChanged(() => {
+    // Either row count or data content changed.
+    // Reset editing state to match the new source data.
     editingState.current = new EditingState(originalNumRows)
     setNumRows(editingState.current.getNumRows())
-  }, [originalNumRows])
+  }, [originalNumRows, dataHash])
 
   /**
    * Resets the editing state to a fresh state

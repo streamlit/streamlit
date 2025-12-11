@@ -82,6 +82,7 @@ describe("useWidgetState hook", () => {
           fragmentId: undefined,
           originalNumRows: 10,
           originalColumns: [],
+          dataHash: "hash1",
         })
       )
 
@@ -101,6 +102,7 @@ describe("useWidgetState hook", () => {
             fragmentId: undefined,
             originalNumRows,
             originalColumns: [],
+            dataHash: "hash1",
           }),
         { initialProps: { originalNumRows: 10 } }
       )
@@ -113,6 +115,49 @@ describe("useWidgetState hook", () => {
       expect(result.current.editingState.current.getNumRows()).toBe(20)
     })
 
+    it("resets editingState when dataHash changes (data content changed)", () => {
+      // This tests the fix for issue #7749 - when data values change
+      // (e.g., a computed column is updated), the editing state should reset
+      // so that the component reflects the new source data.
+      const { result, rerender } = renderHook(
+        ({ dataHash }) =>
+          useWidgetState({
+            element: ArrowProto.create({
+              editingMode: ArrowProto.EditingMode.DYNAMIC,
+            }),
+            widgetMgr: undefined,
+            fragmentId: undefined,
+            originalNumRows: 10,
+            originalColumns: [createMockColumn("col1", 0)],
+            dataHash,
+          }),
+        { initialProps: { dataHash: "hash1" } }
+      )
+
+      // Make an edit to the editing state
+      act(() => {
+        result.current.editingState.current.addRow(new Map())
+        result.current.updateNumRows()
+      })
+
+      // Verify the edit was applied
+      expect(result.current.numRows).toBe(11)
+      expect(result.current.editingState.current.getNumRows()).toBe(11)
+
+      // Capture the current editingState reference
+      const oldEditingState = result.current.editingState.current
+
+      // Simulate data content change (e.g., computed column updated)
+      rerender({ dataHash: "hash2" })
+
+      // Editing state should be reset to a fresh state with original row count
+      expect(result.current.numRows).toBe(10)
+      expect(result.current.editingState.current.getNumRows()).toBe(10)
+
+      // Verify it's actually a new EditingState instance
+      expect(result.current.editingState.current).not.toBe(oldEditingState)
+    })
+
     it("updateNumRows syncs component state with editing state", () => {
       const { result } = renderHook(() =>
         useWidgetState({
@@ -123,6 +168,7 @@ describe("useWidgetState hook", () => {
           fragmentId: undefined,
           originalNumRows: 10,
           originalColumns: [createMockColumn("col1", 0)],
+          dataHash: "hash1",
         })
       )
 
@@ -163,6 +209,7 @@ describe("useWidgetState hook", () => {
           fragmentId: "test-fragment",
           originalNumRows: 5,
           originalColumns: columns,
+          dataHash: "hash1",
         })
       )
 
@@ -203,6 +250,7 @@ describe("useWidgetState hook", () => {
           fragmentId: undefined,
           originalNumRows: 5,
           originalColumns: [],
+          dataHash: "hash1",
         })
       )
 
@@ -237,6 +285,7 @@ describe("useWidgetState hook", () => {
           fragmentId: "test-fragment",
           originalNumRows: 0,
           originalColumns: columns,
+          dataHash: "hash1",
         })
       )
 
@@ -271,6 +320,7 @@ describe("useWidgetState hook", () => {
           fragmentId: "test-fragment",
           originalNumRows: 10,
           originalColumns: columns,
+          dataHash: "hash1",
         })
       )
 
@@ -319,6 +369,7 @@ describe("useWidgetState hook", () => {
           fragmentId: "test-fragment",
           originalNumRows: 10,
           originalColumns: columns,
+          dataHash: "hash1",
         })
       )
 
@@ -366,6 +417,7 @@ describe("useWidgetState hook", () => {
           fragmentId: "test-fragment",
           originalNumRows: 10,
           originalColumns: columns,
+          dataHash: "hash1",
         })
       )
 
@@ -414,6 +466,7 @@ describe("useWidgetState hook", () => {
           fragmentId: "test-fragment",
           originalNumRows: 10,
           originalColumns: columns,
+          dataHash: "hash1",
         })
       )
 
@@ -461,6 +514,7 @@ describe("useWidgetState hook", () => {
           fragmentId: "test-fragment",
           originalNumRows: 10,
           originalColumns: columns,
+          dataHash: "hash1",
         })
       )
 
@@ -503,6 +557,7 @@ describe("useWidgetState hook", () => {
           fragmentId: undefined,
           originalNumRows: 10,
           originalColumns: [],
+          dataHash: "hash1",
         })
       )
 
@@ -529,6 +584,7 @@ describe("useWidgetState hook", () => {
           fragmentId: undefined,
           originalNumRows: 10,
           originalColumns: [],
+          dataHash: "hash1",
         })
       )
 
@@ -560,6 +616,7 @@ describe("useWidgetState hook", () => {
           fragmentId: undefined,
           originalNumRows: 10,
           originalColumns: [],
+          dataHash: "hash1",
         })
       )
 
@@ -601,6 +658,7 @@ describe("useWidgetState hook", () => {
           fragmentId: undefined,
           originalNumRows: 10,
           originalColumns: columns,
+          dataHash: "hash1",
         })
       )
 
@@ -648,6 +706,7 @@ describe("useWidgetState hook", () => {
           fragmentId: undefined,
           originalNumRows: 10,
           originalColumns: columns,
+          dataHash: "hash1",
         })
       )
 
@@ -691,6 +750,7 @@ describe("useWidgetState hook", () => {
           fragmentId: undefined,
           originalNumRows: 10,
           originalColumns: columns,
+          dataHash: "hash1",
         })
       )
 
@@ -724,6 +784,7 @@ describe("useWidgetState hook", () => {
           fragmentId: undefined,
           originalNumRows: 10,
           originalColumns: [createMockColumn("col1", 0)],
+          dataHash: "hash1",
         })
       )
 
@@ -771,6 +832,7 @@ describe("useWidgetState hook", () => {
           fragmentId: undefined,
           originalNumRows: 5,
           originalColumns: columns,
+          dataHash: "hash1",
         })
       )
 
@@ -803,6 +865,7 @@ describe("useWidgetState hook", () => {
           fragmentId: undefined,
           originalNumRows: 5,
           originalColumns: columns,
+          dataHash: "hash1",
         })
       )
 

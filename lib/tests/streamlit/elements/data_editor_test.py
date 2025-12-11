@@ -47,6 +47,7 @@ from streamlit.elements.widgets.data_editor import (
     _apply_row_deletions,
     _check_column_names,
     _check_type_compatibilities,
+    _compute_schema_hash,
     _parse_value,
 )
 from streamlit.errors import StreamlitAPIException
@@ -533,6 +534,98 @@ class DataEditorUtilTest(unittest.TestCase):
         expected_col2_values = [f"value_{i}" for i in range(8)]
         assert df["col1"].tolist() == expected_col1_values
         assert df["col2"].tolist() == expected_col2_values
+
+
+class ComputeSchemaHashTest(unittest.TestCase):
+    """Tests for _compute_schema_hash function."""
+
+    def test_same_schema_same_values_produces_same_hash(self) -> None:
+        """Test that identical dataframes produce the same hash."""
+        df1 = pd.DataFrame({"A": [1, 2, 3], "B": ["x", "y", "z"]})
+        df2 = pd.DataFrame({"A": [1, 2, 3], "B": ["x", "y", "z"]})
+
+        hash1 = _compute_schema_hash(df1, _get_arrow_schema(df1))
+        hash2 = _compute_schema_hash(df2, _get_arrow_schema(df2))
+
+        assert hash1 == hash2
+
+    def test_same_schema_different_values_produces_same_hash(self) -> None:
+        """Test that dataframes with same schema but different values produce the same hash.
+
+        This is the key behavior for issue #7749 - the widget ID should remain stable
+        when only cell values change, not the structure.
+        """
+        df1 = pd.DataFrame({"A": [1, 2, 3], "B": ["x", "y", "z"]})
+        df2 = pd.DataFrame({"A": [10, 20, 30], "B": ["a", "b", "c"]})
+
+        hash1 = _compute_schema_hash(df1, _get_arrow_schema(df1))
+        hash2 = _compute_schema_hash(df2, _get_arrow_schema(df2))
+
+        assert hash1 == hash2
+
+    def test_different_column_name_produces_different_hash(self) -> None:
+        """Test that different column names produce different hashes."""
+        df1 = pd.DataFrame({"A": [1, 2, 3], "B": ["x", "y", "z"]})
+        df2 = pd.DataFrame({"A": [1, 2, 3], "C": ["x", "y", "z"]})  # B -> C
+
+        hash1 = _compute_schema_hash(df1, _get_arrow_schema(df1))
+        hash2 = _compute_schema_hash(df2, _get_arrow_schema(df2))
+
+        assert hash1 != hash2
+
+    def test_different_column_order_produces_different_hash(self) -> None:
+        """Test that different column order produces different hashes."""
+        df1 = pd.DataFrame({"A": [1, 2, 3], "B": ["x", "y", "z"]})
+        df2 = pd.DataFrame({"B": ["x", "y", "z"], "A": [1, 2, 3]})
+
+        hash1 = _compute_schema_hash(df1, _get_arrow_schema(df1))
+        hash2 = _compute_schema_hash(df2, _get_arrow_schema(df2))
+
+        assert hash1 != hash2
+
+    def test_different_row_count_produces_different_hash(self) -> None:
+        """Test that different row counts produce different hashes.
+
+        Row count is included in the hash because editing state uses positional
+        indices, so changes in row count would invalidate edit positions.
+        """
+        df1 = pd.DataFrame({"A": [1, 2, 3], "B": ["x", "y", "z"]})
+        df2 = pd.DataFrame({"A": [1, 2], "B": ["x", "y"]})
+
+        hash1 = _compute_schema_hash(df1, _get_arrow_schema(df1))
+        hash2 = _compute_schema_hash(df2, _get_arrow_schema(df2))
+
+        assert hash1 != hash2
+
+    def test_different_column_type_produces_different_hash(self) -> None:
+        """Test that different column types produce different hashes."""
+        df1 = pd.DataFrame({"A": [1, 2, 3]})  # int64
+        df2 = pd.DataFrame({"A": [1.0, 2.0, 3.0]})  # float64
+
+        hash1 = _compute_schema_hash(df1, _get_arrow_schema(df1))
+        hash2 = _compute_schema_hash(df2, _get_arrow_schema(df2))
+
+        assert hash1 != hash2
+
+    def test_empty_dataframe_produces_consistent_hash(self) -> None:
+        """Test that empty dataframes produce consistent hashes."""
+        df1 = pd.DataFrame({"A": [], "B": []})
+        df2 = pd.DataFrame({"A": [], "B": []})
+
+        hash1 = _compute_schema_hash(df1, _get_arrow_schema(df1))
+        hash2 = _compute_schema_hash(df2, _get_arrow_schema(df2))
+
+        assert hash1 == hash2
+
+    def test_hash_is_deterministic(self) -> None:
+        """Test that the hash function is deterministic."""
+        df = pd.DataFrame({"A": [1, 2, 3], "B": ["x", "y", "z"]})
+        schema = _get_arrow_schema(df)
+
+        hashes = [_compute_schema_hash(df, schema) for _ in range(10)]
+
+        # All hashes should be identical
+        assert len(set(hashes)) == 1
 
 
 class DataEditorTest(DeltaGeneratorTestCase):
