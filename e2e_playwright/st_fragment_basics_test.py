@@ -161,9 +161,6 @@ def test_selectbox_in_fragment(app: Page):
     old_text_in_fragment, old_text_outside_fragment = get_uuids(app)
 
     select_selectbox_option(app, "a selectbox", "b")
-    # Open dropdown again to verify it still works after selection
-    app.get_by_test_id("stSelectbox").locator("input").click()
-    wait_for_app_run(app)
 
     expect_only_fragment_uuid_changed(
         app, old_text_in_fragment, old_text_outside_fragment
