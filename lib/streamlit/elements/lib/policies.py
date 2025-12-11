@@ -190,6 +190,6 @@ def maybe_raise_label_warnings(label: str | None, label_visibility: str | None) 
         )
     if label_visibility not in ("visible", "hidden", "collapsed"):
         raise errors.StreamlitAPIException(
-            f"Unsupported label_visibility option '{label_visibility}'. "
-            f"Valid values are 'visible', 'hidden' or 'collapsed'."
+            f"Unsupported `label_visibility` option `'{label_visibility}'`. "
+            f"Valid values are `'visible'`, `'hidden'` or `'collapsed'`."
         )

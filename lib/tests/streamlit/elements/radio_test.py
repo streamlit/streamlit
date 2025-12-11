@@ -219,9 +219,9 @@ class RadioTest(DeltaGeneratorTestCase):
     def test_label_visibility_wrong_value(self):
         with pytest.raises(StreamlitAPIException) as e:
             st.radio("the label", ("m", "f"), label_visibility="wrong_value")
-        assert (
-            str(e.value)
-            == "Unsupported label_visibility option 'wrong_value'. Valid values are 'visible', 'hidden' or 'collapsed'."
+        assert str(e.value) == (
+            "Unsupported `label_visibility` option `'wrong_value'`. "
+            "Valid values are `'visible'`, `'hidden'` or `'collapsed'`."
         )
 
     def test_no_captions(self):

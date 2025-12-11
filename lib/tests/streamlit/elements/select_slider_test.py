@@ -258,9 +258,9 @@ class SliderTest(DeltaGeneratorTestCase):
             st.select_slider(
                 "the label", options=["red", "orange"], label_visibility="wrong_value"
             )
-        assert (
-            str(e.value)
-            == "Unsupported label_visibility option 'wrong_value'. Valid values are 'visible', 'hidden' or 'collapsed'."
+        assert str(e.value) == (
+            "Unsupported `label_visibility` option `'wrong_value'`. "
+            "Valid values are `'visible'`, `'hidden'` or `'collapsed'`."
         )
 
     def test_shows_cached_widget_replay_warning(self):

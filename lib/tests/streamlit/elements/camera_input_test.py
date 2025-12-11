@@ -64,9 +64,9 @@ class CameraInputTest(DeltaGeneratorTestCase):
     def test_label_visibility_wrong_value(self):
         with pytest.raises(StreamlitAPIException) as e:
             st.camera_input("the label", label_visibility="wrong_value")
-        assert (
-            str(e.value)
-            == "Unsupported label_visibility option 'wrong_value'. Valid values are 'visible', 'hidden' or 'collapsed'."
+        assert str(e.value) == (
+            "Unsupported `label_visibility` option `'wrong_value'`. "
+            "Valid values are `'visible'`, `'hidden'` or `'collapsed'`."
         )
 
     def test_cached_widget_replay_warning(self):

@@ -20,7 +20,10 @@ import { screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 import { vi } from "vitest"
 
-import { Button as ButtonProto } from "@streamlit/protobuf"
+import {
+  Button as ButtonProto,
+  LabelVisibilityMessage,
+} from "@streamlit/protobuf"
 
 import { useRegisterShortcut } from "~lib/hooks/useRegisterShortcut"
 import { render } from "~lib/test_util"
@@ -190,5 +193,42 @@ describe("Button widget", () => {
     onActivate()
 
     expect(props.widgetMgr.setTriggerValue).not.toHaveBeenCalled()
+  })
+
+  describe("label visibility", () => {
+    it("shows label when label_visibility is visible (default)", () => {
+      const props = getProps({ label: "Test Button" })
+      render(<Button {...props} />)
+
+      expect(screen.getByText("Test Button")).toBeVisible()
+    })
+
+    it("shows label when label_visibility is explicitly visible", () => {
+      const props = getProps({
+        label: "Test Button",
+        labelVisibility: {
+          value: LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE,
+        },
+      })
+      render(<Button {...props} />)
+
+      expect(screen.getByText("Test Button")).toBeVisible()
+    })
+
+    it("renders icon without label when label_visibility is collapsed", () => {
+      const props = getProps({
+        label: "Test Button",
+        icon: "⚡",
+        labelVisibility: {
+          value: LabelVisibilityMessage.LabelVisibilityOptions.COLLAPSED,
+        },
+      })
+      render(<Button {...props} />)
+
+      // Icon should be visible
+      expect(screen.getByText("⚡")).toBeVisible()
+      // Label should not be visible
+      expect(screen.queryByText("Test Button")).not.toBeInTheDocument()
+    })
   })
 })

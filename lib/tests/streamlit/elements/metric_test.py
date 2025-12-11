@@ -272,9 +272,9 @@ class MetricTest(DeltaGeneratorTestCase):
     def test_invalid_label_visibility(self):
         with pytest.raises(StreamlitAPIException) as e:
             st.metric("label_test", "123", label_visibility="wrong_value")
-        assert (
-            str(e.value)
-            == "Unsupported label_visibility option 'wrong_value'. Valid values are 'visible', 'hidden' or 'collapsed'."
+        assert str(e.value) == (
+            "Unsupported `label_visibility` option `'wrong_value'`. "
+            "Valid values are `'visible'`, `'hidden'` or `'collapsed'`."
         )
 
     def test_empty_label_warning(self):

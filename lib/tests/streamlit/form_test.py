@@ -635,3 +635,37 @@ class FormDimensionsTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitAPIException):
             with st.form("test_form"):
                 st.form_submit_button("Submit", width=value)
+
+    def test_form_submit_button_label_visibility_visible(self) -> None:
+        """Test form_submit_button with label_visibility='visible'."""
+        with st.form("test_form"):
+            st.form_submit_button("Submit", label_visibility="visible")
+
+        c = self.get_delta_from_queue().new_element.button
+        # 0 is the proto value for VISIBLE
+        assert c.label_visibility.value == 0
+
+    def test_form_submit_button_label_visibility_collapsed_with_icon(self) -> None:
+        """Test form_submit_button with label_visibility='collapsed' requires icon."""
+        with st.form("test_form"):
+            st.form_submit_button("Submit", label_visibility="collapsed", icon="⚡")
+
+        c = self.get_delta_from_queue().new_element.button
+        # 2 is the proto value for COLLAPSED
+        assert c.label_visibility.value == 2
+
+    def test_form_submit_button_label_visibility_invalid(self) -> None:
+        """Test that invalid label_visibility raises an error on form_submit_button."""
+        with pytest.raises(StreamlitAPIException) as exc_info:
+            with st.form("test_form"):
+                st.form_submit_button("Submit", label_visibility="hidden")
+        assert "Unsupported `label_visibility` option `'hidden'`" in str(exc_info.value)
+        assert "`'visible'` or `'collapsed'`" in str(exc_info.value)
+
+    def test_form_submit_button_label_visibility_collapsed_without_icon(self) -> None:
+        """Test that collapsed label_visibility without icon raises an error."""
+        with pytest.raises(StreamlitAPIException) as exc_info:
+            with st.form("test_form"):
+                st.form_submit_button("Submit", label_visibility="collapsed")
+        assert "`label_visibility='collapsed'`" in str(exc_info.value)
+        assert "have an `icon` set" in str(exc_info.value)

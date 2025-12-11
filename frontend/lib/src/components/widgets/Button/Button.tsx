@@ -26,6 +26,10 @@ import BaseButton, {
   DynamicButtonLabel,
 } from "~lib/components/shared/BaseButton"
 import { useRegisterShortcut } from "~lib/hooks/useRegisterShortcut"
+import {
+  LabelVisibilityOptions,
+  labelVisibilityProtoValueToEnum,
+} from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 export interface Props {
@@ -45,6 +49,11 @@ function Button(props: Props): ReactElement {
   } else if (element.type === "tertiary") {
     kind = BaseButtonKind.TERTIARY
   }
+
+  const labelVisibility = labelVisibilityProtoValueToEnum(
+    element.labelVisibility?.value
+  )
+  const isLabelCollapsed = labelVisibility === LabelVisibilityOptions.Collapsed
 
   const handleTrigger = useCallback(() => {
     if (disabled) {
@@ -77,7 +86,7 @@ function Button(props: Props): ReactElement {
         >
           <DynamicButtonLabel
             icon={element.icon}
-            label={element.label}
+            label={isLabelCollapsed ? "" : element.label}
             shortcut={shortcut}
           />
         </BaseButton>

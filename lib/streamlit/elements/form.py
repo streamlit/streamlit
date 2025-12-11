@@ -29,7 +29,7 @@ from streamlit.elements.lib.policies import (
     check_cache_replay_rules,
     check_session_state_rules,
 )
-from streamlit.elements.lib.utils import Key, to_key
+from streamlit.elements.lib.utils import ButtonLabelVisibility, Key, to_key
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto import Block_pb2
 from streamlit.runtime.metrics_util import gather_metrics
@@ -251,6 +251,7 @@ class FormMixin:
         use_container_width: bool | None = None,
         width: Width = "content",
         shortcut: str | None = None,
+        label_visibility: ButtonLabelVisibility = "visible",
     ) -> bool:
         r"""Display a form submit button.
 
@@ -387,6 +388,11 @@ class FormMixin:
                 ``"Control"`` on Windows/Linux. Punctuation keys (e.g. ``"."``,
                 ``","``) are not currently supported.
 
+        label_visibility : "visible" or "collapsed"
+            The visibility of the label. The default is ``"visible"``. If this
+            is ``"collapsed"``, the label is removed, leaving only the icon
+            visible. An ``icon`` is required when using ``label_visibility="collapsed"``.
+
         Returns
         -------
         bool
@@ -417,6 +423,7 @@ class FormMixin:
             width=width,
             key=key,
             shortcut=shortcut,
+            label_visibility=label_visibility,
         )
 
     def _form_submit_button(
@@ -434,6 +441,7 @@ class FormMixin:
         ctx: ScriptRunContext | None = None,
         width: Width = "content",
         shortcut: str | None = None,
+        label_visibility: ButtonLabelVisibility = "visible",
     ) -> bool:
         form_id = current_form_id(self.dg)
         submit_button_key = to_key(key) or f"FormSubmitter:{form_id}-{label}"
@@ -451,6 +459,7 @@ class FormMixin:
             ctx=ctx,
             width=width,
             shortcut=shortcut,
+            label_visibility=label_visibility,
         )
 
     @property

@@ -52,6 +52,7 @@ if TYPE_CHECKING:
 Key: TypeAlias = str | int
 
 LabelVisibility: TypeAlias = Literal["visible", "hidden", "collapsed"]
+ButtonLabelVisibility: TypeAlias = Literal["visible", "collapsed"]
 
 PROTO_SCALAR_VALUE: TypeAlias = float | int | bool | str | bytes
 SAFE_VALUES: TypeAlias = Union[

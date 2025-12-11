@@ -714,3 +714,41 @@ class ButtonTest(DeltaGeneratorTestCase):
         st.download_button("test", data="data", on_click=callback)
         c = self.get_delta_from_queue().new_element.download_button
         assert c.ignore_rerun is False
+
+    def test_button_label_visibility_visible(self) -> None:
+        """Test button with label_visibility='visible'."""
+        st.button("test", label_visibility="visible")
+
+        c = self.get_delta_from_queue().new_element.button
+        # 0 is the proto value for VISIBLE
+        assert c.label_visibility.value == 0
+
+    def test_button_label_visibility_collapsed_with_icon(self) -> None:
+        """Test button with label_visibility='collapsed' requires icon."""
+        st.button("test", label_visibility="collapsed", icon="⚡")
+
+        c = self.get_delta_from_queue().new_element.button
+        # 2 is the proto value for COLLAPSED
+        assert c.label_visibility.value == 2
+
+    def test_button_label_visibility_invalid(self) -> None:
+        """Test that invalid label_visibility raises an error."""
+        with pytest.raises(StreamlitAPIException) as exc_info:
+            st.button("test", label_visibility="hidden")
+        assert "Unsupported `label_visibility` option `'hidden'`" in str(exc_info.value)
+        assert "`'visible'` or `'collapsed'`" in str(exc_info.value)
+
+    def test_button_label_visibility_collapsed_without_icon(self) -> None:
+        """Test that collapsed label_visibility without icon raises an error."""
+        with pytest.raises(StreamlitAPIException) as exc_info:
+            st.button("test", label_visibility="collapsed")
+        assert "`label_visibility='collapsed'`" in str(exc_info.value)
+        assert "have an `icon` set" in str(exc_info.value)
+
+    def test_button_label_visibility_default_visible(self) -> None:
+        """Test button defaults to label_visibility='visible'."""
+        st.button("test")
+
+        c = self.get_delta_from_queue().new_element.button
+        # 0 is the proto value for VISIBLE
+        assert c.label_visibility.value == 0
