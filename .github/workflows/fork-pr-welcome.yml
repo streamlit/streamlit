@@ -17,10 +17,10 @@ jobs:
       pull-requests: write
     steps:
       - name: Add fork PR welcome comment
-        run: gh pr comment ${{ github.event.pull_request.html_url }} --body "$PR_BODY"
+        run: gh pr comment ${{ github.event.pull_request.html_url }} --body "$PR_COMMENT_BODY"
         env:
           GH_TOKEN: ${{ github.token }}
-          PR_BODY: |
+          PR_COMMENT_BODY: |
             Thanks for contributing to Streamlit! 🎈
 
             Please make sure you have read our [Contributing Guide](https://github.com/streamlit/streamlit/blob/develop/CONTRIBUTING.md). You can find additional information about Streamlit development in the [wiki](https://github.com/streamlit/streamlit/tree/develop/wiki).
