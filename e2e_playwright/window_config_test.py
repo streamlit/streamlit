@@ -23,7 +23,11 @@ from typing import Any
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_loaded
+from e2e_playwright.conftest import (
+    ImageCompareFunction,
+    wait_for_app_loaded,
+    wait_until,
+)
 
 
 def test_window_config_captured_at_preload(
@@ -81,10 +85,11 @@ def test_window_config_immutable_after_load(
     wait_for_app_loaded(app)
 
     # Verify window.__streamlit exists and has our value
-    original_window_value = app.evaluate("""
-        () => window.__streamlit?.LIGHT_THEME?.primaryColor
-    """)
-    assert original_window_value == "#042604", "Initial config should be set"
+    wait_until(
+        app,
+        lambda: app.evaluate("() => window.__streamlit?.LIGHT_THEME?.primaryColor")
+        == "#042604",
+    )
 
     # Take snapshot of the initial green theme
     assert_snapshot(app, name="window_config_initial_green_theme")
@@ -105,11 +110,10 @@ def test_window_config_immutable_after_load(
     """)
 
     # Verify window.__streamlit was actually changed
-    modified_window_value = app.evaluate("""
-        () => window.__streamlit?.LIGHT_THEME?.primaryColor
-    """)
-    assert modified_window_value == "#FF0000", (
-        "window.__streamlit should be modifiable (but it doesn't affect the app)"
+    wait_until(
+        app,
+        lambda: app.evaluate("() => window.__streamlit?.LIGHT_THEME?.primaryColor")
+        == "#FF0000",
     )
 
     # Take another snapshot immediately - should still show green theme, NOT red
@@ -189,11 +193,11 @@ def test_window_config_backend_base_url_immutable(app: Page):
     """)
 
     # Verify window.__streamlit was modified
-    modified_url = app.evaluate("""
-        () => window.__streamlit?.BACKEND_BASE_URL
-    """)
-
-    assert modified_url == "https://malicious.example.com"
+    wait_until(
+        app,
+        lambda: app.evaluate("() => window.__streamlit?.BACKEND_BASE_URL")
+        == "https://malicious.example.com",
+    )
 
     # App should still be functional with original frozen config
     # The internal frozen config still has the original values
@@ -223,10 +227,11 @@ def test_window_config_main_page_url(app: Page):
     wait_for_app_loaded(app)
 
     # Verify config was captured
-    captured_url = app.evaluate("""
-        () => window.__streamlit?.MAIN_PAGE_BASE_URL
-    """)
-    assert captured_url == "https://example.com/my-app"
+    wait_until(
+        app,
+        lambda: app.evaluate("() => window.__streamlit?.MAIN_PAGE_BASE_URL")
+        == "https://example.com/my-app",
+    )
 
     # Now modify window.__streamlit AFTER load to a DIFFERENT pathname
     app.evaluate("""
@@ -238,10 +243,11 @@ def test_window_config_main_page_url(app: Page):
     """)
 
     # Verify window.__streamlit was modified
-    modified_url = app.evaluate("""
-        () => window.__streamlit?.MAIN_PAGE_BASE_URL
-    """)
-    assert modified_url == "https://example.com/hacked-path"
+    wait_until(
+        app,
+        lambda: app.evaluate("() => window.__streamlit?.MAIN_PAGE_BASE_URL")
+        == "https://example.com/hacked-path",
+    )
 
     # Navigate to Page 2 - this triggers maybeUpdatePageUrl() which retrieves the
     # pathname from parseUriIntoBaseParts(StreamlitConfig.MAIN_PAGE_BASE_URL).pathname
@@ -252,31 +258,11 @@ def test_window_config_main_page_url(app: Page):
     # Wait for navigation
     wait_for_app_loaded(app)
 
-    # Get the new pathname after navigation
-    page2_pathname = app.evaluate("() => window.location.pathname")
-
-    # CRITICAL ASSERTION: The pathname should use the FROZEN base (/my-app)
-    # NOT the modified base (/hacked-path)
-    # If the frozen config is used correctly, pathname should be /my-app/page2
+    # CRITICAL ASSERTION: The pathname should be /my-app/page2 (using frozen config)
     # If the modified config was used, pathname would be /hacked-path/page2
-
-    # The pathname should contain the frozen base path
-    assert "/my-app" in page2_pathname or page2_pathname == "/page2", (
-        f"Pathname should use frozen base '/my-app', got: {page2_pathname}"
+    wait_until(
+        app, lambda: app.evaluate("() => window.location.pathname") == "/my-app/page2"
     )
-
-    # The pathname should NOT contain the hacked path
-    assert "/hacked-path" not in page2_pathname, (
-        f"Pathname is using the MODIFIED config! "
-        f"Found '/hacked-path' in: {page2_pathname}. "
-        f"This proves the app used window.__streamlit instead of frozen config!"
-    )
-
-    # Verify we navigated to page2
-    assert (
-        "page2" in page2_pathname.lower()
-        or app.get_by_text("This is page 2").is_visible()
-    ), f"Should be on page2. Pathname: {page2_pathname}"
 
 
 def test_window_config_download_url(app: Page):
@@ -286,6 +272,9 @@ def test_window_config_download_url(app: Page):
     download URL that gets constructed. The download button creates a URL using
     StreamlitConfig.DOWNLOAD_ASSETS_BASE_URL - we verify it uses the FROZEN value,
     not the modified window.__streamlit value.
+
+    NOTE: We don't test download success/failure since these are not real base urls,
+    just the URL construction.
     """
     # Set DOWNLOAD_ASSETS_BASE_URL before load
     app.add_init_script("""
@@ -299,10 +288,11 @@ def test_window_config_download_url(app: Page):
     wait_for_app_loaded(app)
 
     # Verify config was captured
-    captured_url = app.evaluate("""
-        () => window.__streamlit?.DOWNLOAD_ASSETS_BASE_URL
-    """)
-    assert captured_url == "https://cdn.example.com"
+    wait_until(
+        app,
+        lambda: app.evaluate("() => window.__streamlit?.DOWNLOAD_ASSETS_BASE_URL")
+        == "https://cdn.example.com",
+    )
 
     # Now modify window.__streamlit AFTER load to a DIFFERENT URL
     app.evaluate("""
@@ -314,10 +304,11 @@ def test_window_config_download_url(app: Page):
     """)
 
     # Verify window.__streamlit was modified
-    modified_url = app.evaluate("""
-        () => window.__streamlit?.DOWNLOAD_ASSETS_BASE_URL
-    """)
-    assert modified_url == "https://malicious.example.com"
+    wait_until(
+        app,
+        lambda: app.evaluate("() => window.__streamlit?.DOWNLOAD_ASSETS_BASE_URL")
+        == "https://malicious.example.com",
+    )
 
     # Set up request interception to capture any URL requests
     # This will catch the media/download URL that gets accessed
@@ -340,27 +331,26 @@ def test_window_config_download_url(app: Page):
     expect(download_button).to_be_visible()
     download_button.click()
 
-    # Wait for the request to be made (using app.wait_for_load_state instead of timeout)
+    # Wait for the request to be made
     app.wait_for_load_state("networkidle")
 
     # Verify we captured a URL
-    assert len(captured_urls) > 0, (
-        "Should have captured a download/media URL. "
-        "Check if the download button actually makes a request."
-    )
+    wait_until(app, lambda: len(captured_urls) > 0)
 
     download_url = captured_urls[0]
 
     # CRITICAL ASSERTION: The URL should use the FROZEN config (cdn.example.com)
     # NOT the modified config (malicious.example.com)
-    assert "cdn.example.com" in download_url, (
-        f"Download URL uses WRONG config! "
-        f"Expected URL to contain 'cdn.example.com' (frozen config), "
-        f"but got: {download_url}."
-    )
+    if "cdn.example.com" not in download_url:
+        raise AssertionError(
+            f"Download URL uses WRONG config! "
+            f"Expected URL to contain 'cdn.example.com' (frozen config), "
+            f"but got: {download_url}."
+        )
 
-    assert "malicious.example.com" not in download_url, (
-        f"Download URL is using the MODIFIED config! "
-        f"URL contains 'malicious.example.com': {download_url}. "
-        f"This proves the app is using window.__streamlit instead of frozen config!"
-    )
+    if "malicious.example.com" in download_url:
+        raise AssertionError(
+            f"Download URL is using the MODIFIED config! "
+            f"URL contains 'malicious.example.com': {download_url}. "
+            f"This proves the app is using window.__streamlit instead of frozen config!"
+        )
