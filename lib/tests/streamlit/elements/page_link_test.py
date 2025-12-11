@@ -20,6 +20,9 @@ import pytest
 
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
+from streamlit.proto.ButtonLikeIconPosition_pb2 import (
+    ButtonLikeIconPosition as ProtoButtonLikeIconPosition,
+)
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
@@ -62,6 +65,19 @@ class PageLinkTest(DeltaGeneratorTestCase):
         assert c.page == "https://streamlit.io"
         assert c.external
         assert c.icon == "🐶"
+        assert c.icon_position == ProtoButtonLikeIconPosition.LEFT
+
+    def test_icon_position(self):
+        """Test that custom icon positions are serialized."""
+        st.page_link(
+            page="https://streamlit.io",
+            label="the label",
+            icon="🐶",
+            icon_position="right",
+        )
+
+        c = self.get_delta_from_queue().new_element.page_link
+        assert c.icon_position == ProtoButtonLikeIconPosition.RIGHT
 
     def test_disabled(self):
         """Test that it can be called with disabled param."""

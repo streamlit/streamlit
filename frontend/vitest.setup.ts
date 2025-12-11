@@ -24,6 +24,28 @@ import "vitest-canvas-mock"
 // (See https://github.com/testing-library/dom-testing-library/issues/987)
 globalThis.jest = vi
 
+// Initialize the shared mock state for StreamlitConfig.
+// This must be done early, before any modules that use StreamlitConfig are loaded.
+//
+// Usage in test files:
+// 1. Add the vi.mock call with a getter (required for dynamic value resolution):
+//    vi.mock("@streamlit/utils", async () => {
+//      const actual = await vi.importActual("@streamlit/utils")
+//      return {
+//        ...actual,
+//        get StreamlitConfig() {
+//          return globalThis.__mockStreamlitConfig
+//        },
+//      }
+//    })
+//
+// 2. Reset in afterEach:
+//    afterEach(() => { globalThis.__mockStreamlitConfig = {} })
+//
+// 3. Set values in tests:
+//    globalThis.__mockStreamlitConfig.BACKEND_BASE_URL = "http://example.com"
+globalThis.__mockStreamlitConfig = {}
+
 if (typeof window.URL.createObjectURL === "undefined") {
   window.URL.createObjectURL = vi.fn()
 }

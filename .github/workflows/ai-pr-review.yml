@@ -31,6 +31,8 @@ jobs:
       contents: read
       pull-requests: read
       issues: read
+    outputs:
+      has_key: ${{ steps.check-key.outputs.has_key }}
 
     # Avoid duplicate workflows on same PR (use PR number for per-PR isolation)
     concurrency:
@@ -42,7 +44,20 @@ jobs:
         shell: bash
 
     steps:
+      - name: Check for API key
+        id: check-key
+        env:
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+        run: |
+          if [ -z "$CURSOR_API_KEY" ]; then
+            echo "has_key=false" >> $GITHUB_OUTPUT
+            echo "::warning::CURSOR_API_KEY is not available. This typically happens for PRs from forks."
+          else
+            echo "has_key=true" >> $GITHUB_OUTPUT
+          fi
+
       - name: Get PR details
+        if: steps.check-key.outputs.has_key == 'true'
         id: pr-info
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -54,6 +69,7 @@ jobs:
           echo "html_url=$(echo "$PR_DATA" | jq -r '.html_url')" >> $GITHUB_OUTPUT
 
       - name: Checkout Streamlit code
+        if: steps.check-key.outputs.has_key == 'true'
         uses: actions/checkout@v6
         with:
           # Use SHA instead of branch name to support fork PRs
@@ -64,11 +80,13 @@ jobs:
           fetch-depth: 0
 
       - name: Install Cursor CLI
+        if: steps.check-key.outputs.has_key == 'true'
         run: |
           curl https://cursor.com/install -fsS | bash
           echo "$HOME/.cursor/bin" >> $GITHUB_PATH
 
       - name: Cursor AI PR Review
+        if: steps.check-key.outputs.has_key == 'true'
         env:
           CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -148,6 +166,7 @@ jobs:
           " --force --model "${{ env.MODEL }}" --output-format=text
 
       - name: Upload review artifacts
+        if: steps.check-key.outputs.has_key == 'true'
         uses: actions/upload-artifact@v5
         with:
           name: review-output
@@ -177,14 +196,30 @@ jobs:
 
       - name: Download review artifacts
         id: download
+        if: needs.ai-pr-review.outputs.has_key == 'true'
         uses: actions/download-artifact@v6
         continue-on-error: true
         with:
           name: review-output
 
+      - name: Post missing key notice
+        if: needs.ai-pr-review.outputs.has_key == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr comment ${{ env.PR_NUMBER }} --body "ℹ️ **AI Review Not Available via Label**
+
+          The \`ai-review\` label cannot trigger AI reviews for this PR because the required API key is not available. This typically happens for PRs from forked repositories.
+
+          **To request an AI review, a maintainer can:**
+          1. Go to the [AI PR Review workflow](https://github.com/streamlit/streamlit/actions/workflows/ai-pr-review.yml)
+          2. Click **Run workflow**
+          3. Enter the PR number: \`${{ env.PR_NUMBER }}\`
+          4. Click **Run workflow**" --repo ${{ github.repository }}
+
       - name: Post review comment
         id: post_review
-        if: steps.download.outcome == 'success'
+        if: needs.ai-pr-review.outputs.has_key == 'true' && steps.download.outcome == 'success'
         continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -196,7 +231,7 @@ jobs:
           gh pr comment ${{ env.PR_NUMBER }} --body-file review.md --repo ${{ github.repository }}
 
       - name: Post failure notice
-        if: steps.download.outcome == 'failure' || steps.post_review.outcome == 'failure'
+        if: needs.ai-pr-review.outputs.has_key == 'true' && (steps.download.outcome == 'failure' || steps.post_review.outcome == 'failure')
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -207,7 +242,7 @@ jobs:
           You can retry by adding the 'ai-review' label again or manually triggering the workflow." --repo ${{ github.repository }}
 
       - name: Apply label based on verdict
-        if: steps.download.outcome == 'success' && steps.post_review.outcome == 'success'
+        if: needs.ai-pr-review.outputs.has_key == 'true' && steps.download.outcome == 'success' && steps.post_review.outcome == 'success'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |

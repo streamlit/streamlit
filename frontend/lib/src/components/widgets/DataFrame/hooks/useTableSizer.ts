@@ -87,7 +87,10 @@ function useTableSizer(
   // Group row + column header row
   const numHeaderRows = usesGroupRow ? 2 : 1
   const numTrailingRows =
-    element.editingMode === ArrowProto.EditingMode.DYNAMIC ? 1 : 0
+    element.editingMode === ArrowProto.EditingMode.DYNAMIC ||
+    element.editingMode === ArrowProto.EditingMode.ADD_ONLY
+      ? 1
+      : 0
 
   // Calculate the height of the table based on the number of rows:
   const totalDataRows = numRows + numTrailingRows

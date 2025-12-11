@@ -26,8 +26,11 @@ import { cloneDeep, isObject, merge, mergeWith, once } from "lodash-es"
 import { getLogger } from "loglevel"
 
 import { CustomThemeConfig, ICustomThemeConfig } from "@streamlit/protobuf"
-import type { StreamlitWindowObject } from "@streamlit/utils"
-import { localStorageAvailable } from "@streamlit/utils"
+import {
+  localStorageAvailable,
+  StreamlitConfig,
+  type StreamlitWindowObject,
+} from "@streamlit/utils"
 
 import { CircularBuffer } from "~lib/components/shared/Profiler/CircularBuffer"
 import {
@@ -74,6 +77,38 @@ declare global {
 }
 const LOG = getLogger("theme:utils")
 
+/**
+ * Recursively sorts the theme input keys to ensure consistent theme hashing.
+ * Used in App.tsx createThemeHash method.
+ *
+ * @param obj - The theme input object (or any nested value within it)
+ * @returns The same structure with all object keys sorted alphabetically
+ */
+export function sortThemeInputKeys(obj: unknown): unknown {
+  if (obj === null || obj === undefined) {
+    return obj
+  }
+
+  // Handle arrays by recursively sorting their elements
+  if (Array.isArray(obj)) {
+    return obj.map(item => sortThemeInputKeys(item))
+  }
+
+  // Handle objects (including nested theme sections)
+  if (typeof obj === "object") {
+    const sorted: Record<string, unknown> = {}
+    Object.keys(obj)
+      .sort()
+      .forEach(key => {
+        sorted[key] = sortThemeInputKeys((obj as Record<string, unknown>)[key])
+      })
+    return sorted
+  }
+
+  // Return primitives as-is
+  return obj
+}
+
 function mergeTheme(
   theme: ThemeConfig,
   injectedTheme: ICustomThemeConfig | undefined
@@ -91,10 +126,10 @@ function mergeTheme(
 }
 
 export const getMergedLightTheme = once(() =>
-  mergeTheme(lightTheme, window.__streamlit?.LIGHT_THEME)
+  mergeTheme(lightTheme, StreamlitConfig.LIGHT_THEME)
 )
 export const getMergedDarkTheme = once(() =>
-  mergeTheme(darkTheme, window.__streamlit?.DARK_THEME)
+  mergeTheme(darkTheme, StreamlitConfig.DARK_THEME)
 )
 
 export const getSystemThemePreference = (): "light" | "dark" => {
