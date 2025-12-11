@@ -19,12 +19,14 @@ import re
 from playwright.sync_api import Locator, Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run, wait_until
-from e2e_playwright.shared.app_utils import select_selectbox_option
+from e2e_playwright.shared.app_utils import reset_hovering, select_selectbox_option
 
 
 def _select_pdf_scenario(app: Page, scenario: str):
     """Select a PDF test scenario from the dropdown."""
     select_selectbox_option(app, "PDF Test Scenarios", scenario)
+    # reset hovering to avoid some flakiness:
+    reset_hovering(app)
 
 
 def _expect_pdf_container_attached(app: Page):
