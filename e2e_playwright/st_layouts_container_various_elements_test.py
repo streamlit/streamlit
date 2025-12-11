@@ -106,6 +106,9 @@ def test_layouts_container_expanders(app: Page, assert_snapshot: ImageCompareFun
         # Wait for the expander to open
         expect(expander.get_by_test_id("stExpanderDetails")).to_be_visible()
 
+        # Additional timeout to avoid flakiness with rendering
+        app.wait_for_timeout(1000)
+
         assert_snapshot(
             container,
             name=f"st_layouts_container_various_elements-{container_key}-expander-opened",
