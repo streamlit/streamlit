@@ -589,8 +589,6 @@ st.data_editor(
 )
 
 st.header("Test editing empty columns")
-# Regression test for issues #13305 and #13307:
-# Editing cells in columns with None values should return scalar values, not lists.
 
 empty_column_df = pd.DataFrame(
     {
