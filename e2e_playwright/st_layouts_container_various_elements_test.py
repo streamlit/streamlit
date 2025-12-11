@@ -56,20 +56,22 @@ def test_layouts_container_various_elements(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Snapshot test for each top-level container in st_layouts_container_various_elements.py."""
-    for key in CONTAINER_KEYS:
-        select_selectbox_option(app, "Select container case", key)
+    for container_key in CONTAINER_KEYS:
+        select_selectbox_option(app, "Select container case", container_key)
 
-        locator = get_element_by_key(app, key)
+        locator = get_element_by_key(app, container_key)
         expect(locator).to_be_visible()
-        assert_snapshot(locator, name=f"st_layouts_container_various_elements-{key}")
+        assert_snapshot(
+            locator, name=f"st_layouts_container_various_elements-{container_key}"
+        )
 
 
 # Firefox seems to be failing but can't reproduce locally and video produces an empty page for firefox
 @pytest.mark.skip_browser("firefox")
 def test_layouts_container_with_map(app: Page, assert_snapshot: ImageCompareFunction):
     """Snapshot test for containers with maps in st_layouts_container_various_elements.py."""
-    for key in MAP_CONTAINER_KEYS:
-        select_selectbox_option(app, "Select container case", key)
+    for container_key in MAP_CONTAINER_KEYS:
+        select_selectbox_option(app, "Select container case", container_key)
 
         # Wait for map elements to load
         map_element = app.get_by_test_id("stDeckGlJsonChart")
@@ -78,12 +80,12 @@ def test_layouts_container_with_map(app: Page, assert_snapshot: ImageCompareFunc
         # to prevent flakiness.
         app.wait_for_timeout(5000)
 
-        locator = get_element_by_key(app, key)
+        locator = get_element_by_key(app, container_key)
         expect(locator).to_be_visible()
         # Use higher pixel threshold for containers with maps due to their flakiness
         assert_snapshot(
             locator,
-            name=f"st_layouts_container_various_elements-{key}",
+            name=f"st_layouts_container_various_elements-{container_key}",
             pixel_threshold=1.0,
         )
 
@@ -91,10 +93,10 @@ def test_layouts_container_with_map(app: Page, assert_snapshot: ImageCompareFunc
 @pytest.mark.flaky(reruns=3)
 def test_layouts_container_expanders(app: Page, assert_snapshot: ImageCompareFunction):
     """Test expander functionality in containers that contain expanders."""
-    for key in CONTAINER_KEYS_WITH_EXPANDERS:
-        select_selectbox_option(app, "Select container case", key)
+    for container_key in CONTAINER_KEYS_WITH_EXPANDERS:
+        select_selectbox_option(app, "Select container case", container_key)
 
-        container = get_element_by_key(app, key)
+        container = get_element_by_key(app, container_key)
         expect(container).to_be_visible()
 
         # Get the expander in this container
@@ -106,5 +108,5 @@ def test_layouts_container_expanders(app: Page, assert_snapshot: ImageCompareFun
 
         assert_snapshot(
             container,
-            name=f"st_layouts_container_various_elements-{key}-expander-opened",
+            name=f"st_layouts_container_various_elements-{container_key}-expander-opened",
         )
