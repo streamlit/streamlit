@@ -32,6 +32,7 @@ export const StyledWidgetLabel = styled.label<StyledWidgetProps>(
     visibility:
       labelVisibility === LabelVisibilityOptions.Hidden ? "hidden" : "visible",
     marginBottom: theme.spacing.twoXS,
+    gap: theme.spacing.twoXS,
     height: "auto",
     minHeight: theme.fontSizes.xl,
     verticalAlign: "middle",
@@ -44,7 +45,6 @@ export const StyledWidgetLabelHelp = styled.div({
   display: "flex",
   flexDirection: "row",
   justifyContent: "flex-end",
-  flex: 1,
 })
 
 export const StyledWidgetInstructions = styled.div(({ theme }) => ({
