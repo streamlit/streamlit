@@ -216,13 +216,16 @@ def select_selectbox_option(
     """
     selectbox = get_selectbox(locator, label)
 
-    # Click to open the dropdown
-    selectbox.click()
-
     # Get the page from the locator
     page = locator.page if isinstance(locator, Locator) else locator
 
-    # Select the option by exact text from the virtual dropdown
+    # Type to filter the dropdown (handles virtualized lists where options
+    # may not be rendered until scrolled into view)
+    selectbox_input = selectbox.locator("input")
+    selectbox_input.click()
+    selectbox_input.fill(option)
+
+    # Select the option by exact text from the filtered virtual dropdown
     dropdown = page.get_by_test_id("stSelectboxVirtualDropdown")
     dropdown.get_by_text(option, exact=True).click()
 
