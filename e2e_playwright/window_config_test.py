@@ -36,9 +36,11 @@ def test_window_config_captured_at_preload(
     """Test that window.__streamlit configuration works when set before load.
 
     This verifies the normal use case where embedding environments set
-    configuration before the Streamlit bundle loads.
+    configuration before the Streamlit bundle loads. Tests multiple config
+    property types: themes, URLs, client IDs, and boolean flags.
     """
-    # Inject custom configuration BEFORE the page loads
+    # Inject comprehensive configuration BEFORE the page loads
+    # This includes theme, URL, client ID, and boolean flag configs
     app.add_init_script("""
         window.__streamlit = {
             LIGHT_THEME: {
@@ -47,7 +49,10 @@ def test_window_config_captured_at_preload(
                 backgroundColor: "#c8ccf7",
                 secondaryBackgroundColor: "#ebecf5",
                 textColor: "#1A1A1A",
-            }
+            },
+            MAIN_PAGE_BASE_URL: "https://host.example.com/my-app",
+            CUSTOM_COMPONENT_CLIENT_ID: "preload-test-client-id",
+            ENABLE_RELOAD_BASED_ON_HARDCODED_STREAMLIT_VERSION: false
         }
     """)
 
@@ -55,18 +60,45 @@ def test_window_config_captured_at_preload(
     app.reload()
     wait_for_app_loaded(app)
 
-    # Take snapshot to verify custom theme is applied
+    # Verify theme config was captured (visual verification)
     assert_snapshot(app, name="window_config_preload_applied")
 
+    # Verify URL config was captured
+    wait_until(
+        app,
+        lambda: app.evaluate("() => window.__streamlit?.MAIN_PAGE_BASE_URL")
+        == "https://host.example.com/my-app",
+    )
 
-def test_window_config_immutable_after_load(
+    # Verify client ID config was captured
+    wait_until(
+        app,
+        lambda: app.evaluate("() => window.__streamlit?.CUSTOM_COMPONENT_CLIENT_ID")
+        == "preload-test-client-id",
+    )
+
+    # Verify boolean flag config was captured
+    wait_until(
+        app,
+        lambda: app.evaluate(
+            "() => window.__streamlit?.ENABLE_RELOAD_BASED_ON_HARDCODED_STREAMLIT_VERSION"
+        )
+        is False,
+    )
+
+    # Verify app is functional with all configs applied
+    button = app.get_by_role("button", name="Click me")
+    expect(button).to_be_visible()
+    button.click()
+
+
+def test_window_theme_config_immutable_after_load(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
-    """Test that window.__streamlit modifications after load are ignored.
+    """Test that theme changes after load are ignored.
 
-    This is a critical security test. The configuration is frozen at load time,
-    so any attempt to modify it afterwards (e.g., by malicious scripts) should
-    have no effect on the app.
+    This test specifically verifies that theme configuration cannot be
+    changed after the initial load, which would be a security/consistency issue.
     """
     # Set initial green theme configuration before load
     app.add_init_script("""
@@ -128,53 +160,6 @@ def test_window_config_immutable_after_load(
     expect(text_input).to_be_visible()
     text_input.fill("security test passed")
     expect(text_input).to_have_value("security test passed")
-
-
-def test_window_config_theme_not_updated_after_load(
-    app: Page, assert_snapshot: ImageCompareFunction
-):
-    """Test that theme changes after load are ignored.
-
-    This test specifically verifies that theme configuration cannot be
-    changed after the initial load, which would be a security/consistency issue.
-    """
-    # Set initial blue theme
-    app.add_init_script("""
-        window.__streamlit = {
-            LIGHT_THEME: {
-                base: "light",
-                primaryColor: "#0068C9",
-                backgroundColor: "#FFFFFF",
-                secondaryBackgroundColor: "#F0F2F6",
-                textColor: "#262730",
-            }
-        }
-    """)
-
-    # Reload to apply the injected script
-    app.reload()
-    wait_for_app_loaded(app)
-
-    # Take snapshot of initial theme
-    assert_snapshot(app, name="window_config_blue_theme_initial")
-
-    # Try to change the theme to red after load
-    app.evaluate("""
-        () => {
-            window.__streamlit = {
-                LIGHT_THEME: {
-                    base: "light",
-                    primaryColor: "#FF0000",
-                    backgroundColor: "#FFF0F0",
-                    textColor: "#8B0000",
-                }
-            };
-        }
-    """)
-
-    # Take another snapshot immediately - should still be blue, proving theme wasn't updated
-    # (no re-render should occur, so no need to wait)
-    assert_snapshot(app, name="window_config_blue_theme_unchanged")
 
 
 def test_window_config_backend_base_url_immutable(app: Page):
