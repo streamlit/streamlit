@@ -194,7 +194,9 @@ def user_key_from_element_id(element_id: str) -> str | None:
     string representation of the no-user-key sentinel as part of the element id.
     """
     user_key: str | None = element_id.split("-", maxsplit=2)[-1]
-    return None if user_key == "None" else user_key
+    # Treat empty string as no user key (can happen when frontend sends back
+    # widget state with id="" for elements that don't have an ID set)
+    return None if user_key in ("None", "") else user_key
 
 
 def is_element_id(key: str) -> bool:
@@ -206,7 +208,8 @@ def is_keyed_element_id(key: str) -> bool:
     """True if the given session_state key has the structure of a element ID
     with a user_key.
     """
-    return is_element_id(key) and not key.endswith("-None")
+    # Check for both "-None" (explicit None) and "-" at the end (empty string key)
+    return is_element_id(key) and not key.endswith("-None") and not key.endswith("-")
 
 
 def require_valid_user_key(key: str) -> None:

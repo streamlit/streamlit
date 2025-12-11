@@ -172,6 +172,11 @@ class WStates(MutableMapping[str, Any]):
 
     def set_widget_from_proto(self, widget_state: WidgetStateProto) -> None:
         """Set a widget's serialized value, overwriting any existing value it has."""
+        # Skip widget states with empty IDs. This can happen when the frontend
+        # sends back state for elements that don't have an ID set (e.g.,
+        # non-selection dataframes have proto.id="" by default).
+        if not widget_state.id:
+            return
         self[widget_state.id] = Serialized(widget_state)
 
     def set_from_value(self, k: str, v: Any) -> None:

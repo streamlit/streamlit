@@ -89,6 +89,33 @@ class WidgetManagerTests(unittest.TestCase):
         with pytest.raises(KeyError):
             session_state["fake_widget_id"]
 
+    def test_set_widgets_from_proto_ignores_empty_id(self):
+        """Verify that widget states with empty IDs are ignored.
+
+        This can happen when the frontend sends widget state for elements
+        that don't have an ID set (e.g., non-selection dataframes have
+        proto.id="" by default).
+        """
+        states = WidgetStates()
+        # Create a widget state with an empty ID
+        empty_id_widget = states.widgets.add()
+        empty_id_widget.id = ""
+        empty_id_widget.string_value = "should be ignored"
+
+        # Create a valid widget state
+        _create_widget("valid_widget", states).string_value = "valid"
+
+        session_state = SessionState()
+        session_state.set_widgets_from_proto(states)
+        session_state._set_widget_metadata(
+            create_metadata("valid_widget", "string_value")
+        )
+
+        # Empty ID should not be stored
+        assert "" not in session_state
+        # Valid widget should be stored
+        assert session_state["valid_widget"] == "valid"
+
     def test_get_prev_widget_value_nonexistent(self):
         session_state = SessionState()
         with pytest.raises(KeyError):
@@ -677,3 +704,14 @@ class WidgetUserKeyTests(DeltaGeneratorTestCase):
         k = next(iter(state._keys()))
         # Incorrectly indicates no user key
         assert user_key_from_element_id(k) is None
+
+    def test_get_widget_user_key_empty_string(self):
+        """Verify that empty string user key is treated as no user key.
+
+        This can happen when the frontend sends widget state for elements
+        that don't have an ID set (e.g., non-selection dataframes).
+        """
+        # Empty string element_id
+        assert user_key_from_element_id("") is None
+        # Element ID ending with "-" (empty user_key suffix)
+        assert user_key_from_element_id("$$STREAMLIT_INTERNAL_KEY-abc123-") is None

@@ -87,10 +87,17 @@ export class WidgetStateDict {
   /**
    * Create a new WidgetState proto for the widget with the given ID,
    * overwriting any that currently exists.
+   *
+   * If widgetId is empty, returns a dummy WidgetState that is not stored.
+   * This prevents sending widget state for elements that don't have a
+   * proper ID (e.g., non-selection dataframes with proto.id="").
    */
   public createState(widgetId: string): WidgetState {
     const state = new WidgetState({ id: widgetId })
-    this.widgetStates.set(widgetId, state)
+    // Don't store widget states with empty IDs
+    if (widgetId) {
+      this.widgetStates.set(widgetId, state)
+    }
     return state
   }
 

@@ -1041,6 +1041,19 @@ describe("WidgetStateDict", () => {
     expect(widgetStateDict.getState(widgetId)).toEqual({ id: widgetId })
   })
 
+  it("does not store state for empty widget id", () => {
+    // Calling createState with empty string should return a state object
+    // but not actually store it in the dict
+    const state = widgetStateDict.createState("")
+
+    // State object is returned (so callers can set values without crashing)
+    expect(state).toEqual({ id: "" })
+
+    // But it should not be stored in the dict
+    expect(widgetStateDict.getState("")).toBeUndefined()
+    expect(widgetStateDict.isEmpty).toBeTruthy()
+  })
+
   it("deletes a state with the given widget id", () => {
     widgetStateDict.createState(widgetId)
     widgetStateDict.deleteState(widgetId)
