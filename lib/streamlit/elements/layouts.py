@@ -66,7 +66,7 @@ class LayoutsMixin:
         horizontal: bool = False,
         horizontal_alignment: HorizontalAlignment = "left",
         vertical_alignment: VerticalAlignment = "top",
-        gap: Gap | None = "small",
+        gap: Gap | int | None = "small",
     ) -> DeltaGenerator:
         """Insert a multi-element container.
 
@@ -336,7 +336,7 @@ class LayoutsMixin:
         self,
         spec: SpecType,
         *,
-        gap: Gap | None = "small",
+        gap: Gap | int | None = "small",
         vertical_alignment: Literal["top", "center", "bottom"] = "top",
         border: bool = False,
         width: WidthWithoutContent = "stretch",

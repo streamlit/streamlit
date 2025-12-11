@@ -154,7 +154,7 @@ class ColumnsTest(DeltaGeneratorTestCase):
         assert len(all_deltas) == 4
         assert (
             horizontal_container.add_block.flex_container.gap_config.WhichOneof(
-                "gap_value"
+                "gap_spec"
             )
             == "gap_size"
         )
@@ -165,7 +165,7 @@ class ColumnsTest(DeltaGeneratorTestCase):
 
         for col_block in columns_blocks:
             assert (
-                col_block.add_block.column.gap_config.WhichOneof("gap_value")
+                col_block.add_block.column.gap_config.WhichOneof("gap_spec")
                 == "gap_size"
             )
             assert col_block.add_block.column.gap_config.gap_size == GapSize.SMALL
@@ -185,7 +185,7 @@ class ColumnsTest(DeltaGeneratorTestCase):
         assert len(all_deltas) == 4
         assert (
             horizontal_container.add_block.flex_container.gap_config.WhichOneof(
-                "gap_value"
+                "gap_spec"
             )
             == "gap_size"
         )
@@ -196,7 +196,7 @@ class ColumnsTest(DeltaGeneratorTestCase):
 
         for col_block in columns_blocks:
             assert (
-                col_block.add_block.column.gap_config.WhichOneof("gap_value")
+                col_block.add_block.column.gap_config.WhichOneof("gap_spec")
                 == "gap_size"
             )
             assert col_block.add_block.column.gap_config.gap_size == GapSize.MEDIUM
@@ -216,7 +216,7 @@ class ColumnsTest(DeltaGeneratorTestCase):
         assert len(all_deltas) == 4
         assert (
             horizontal_container.add_block.flex_container.gap_config.WhichOneof(
-                "gap_value"
+                "gap_spec"
             )
             == "gap_size"
         )
@@ -227,7 +227,7 @@ class ColumnsTest(DeltaGeneratorTestCase):
 
         for col_block in columns_blocks:
             assert (
-                col_block.add_block.column.gap_config.WhichOneof("gap_value")
+                col_block.add_block.column.gap_config.WhichOneof("gap_spec")
                 == "gap_size"
             )
             assert col_block.add_block.column.gap_config.gap_size == GapSize.LARGE
@@ -246,7 +246,7 @@ class ColumnsTest(DeltaGeneratorTestCase):
         # "none" gap arg
         assert (
             horizontal_container.add_block.flex_container.gap_config.WhichOneof(
-                "gap_value"
+                "gap_spec"
             )
             == "gap_size"
         )
@@ -257,7 +257,7 @@ class ColumnsTest(DeltaGeneratorTestCase):
 
         for col_block in columns_blocks:
             assert (
-                col_block.add_block.column.gap_config.WhichOneof("gap_value")
+                col_block.add_block.column.gap_config.WhichOneof("gap_spec")
                 == "gap_size"
             )
             assert col_block.add_block.column.gap_config.gap_size == GapSize.NONE
