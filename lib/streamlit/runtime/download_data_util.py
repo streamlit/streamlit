@@ -20,6 +20,7 @@ import os
 
 from streamlit.runtime.file_util import http_down, local_file_down, s3_file_down
 
+
 def convert_data_to_bytes_and_infer_mime(
     data: object, unsupported_error: Exception
 ) -> tuple[bytes, str]:
@@ -29,15 +30,21 @@ def convert_data_to_bytes_and_infer_mime(
     if isinstance(data, str):
         if os.path.isfile(data):
             data_as_bytes = local_file_down(data)
-            inferred_mime_type = mimetypes.guess_type(data)[0] or "application/octet-stream"
-        elif data.startswith(('s3://', 's3a://')):
+            inferred_mime_type = (
+                mimetypes.guess_type(data)[0] or "application/octet-stream"
+            )
+        elif data.startswith(("s3://", "s3a://")):
             data_as_bytes = s3_file_down(data)
-            filename = data.split('/')[-1].split('?')[0]
-            inferred_mime_type = mimetypes.guess_type(filename)[0] or "application/octet-stream"
-        elif data.startswith(('http://', 'https://')):
+            filename = data.split("/")[-1].split("?")[0]
+            inferred_mime_type = (
+                mimetypes.guess_type(filename)[0] or "application/octet-stream"
+            )
+        elif data.startswith(("http://", "https://")):
             data_as_bytes = http_down(data)
-            filename = data.split('/')[-1].split('?')[0]
-            inferred_mime_type = mimetypes.guess_type(filename)[0] or "application/octet-stream"
+            filename = data.split("/")[-1].split("?")[0]
+            inferred_mime_type = (
+                mimetypes.guess_type(filename)[0] or "application/octet-stream"
+            )
         else:
             data_as_bytes = data.encode()
             inferred_mime_type = "text/plain"
