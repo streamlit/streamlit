@@ -62,17 +62,44 @@ def is_material_icon(maybe_icon: str) -> bool:
     return maybe_icon in ALL_MATERIAL_ICONS
 
 
-def validate_icon_or_emoji(icon: str | None) -> str:
-    """Validate an icon or emoji and return it in normalized format if valid."""
+## Change function name to validate_icon_or_emoji_or_img, need to change parameter type
+def validate_icon_or_emoji(icon: str | None, delta_path: str | None = None) -> str:
+    """Validate an icon, emoji, or image and return normalized format."""
     if icon is None:
         return ""
 
-    # Support the special case of the spinner icon:
-    if icon == "spinner":
-        return "spinner"
-
-    if icon.startswith(":material"):
+    if isinstance(icon, str) and icon.startswith(":material"):
         return validate_material_icon(icon)
+
+    # Check if it's an obvious URL/data URI/absolute path -> return as-is
+    if isinstance(icon, str) and re.match(r"^(https?://|data:|/)", icon):
+        return icon
+
+    if isinstance(icon, str) and _contains_special_chars(icon):
+        return validate_emoji(icon)
+
+    # At this point: alphanumeric string like "local_image.png" or invalid like "invalid"
+    # Try to load as image if delta_path is provided
+    if delta_path is not None:
+        try:
+            from streamlit.elements.lib.image_utils import image_to_url
+            from streamlit.elements.lib.layout_utils import LayoutConfig
+
+            url = image_to_url(
+                icon,
+                layout_config=LayoutConfig(width="content"),
+                clamp=False,
+                channels="RGB",
+                output_format="auto",
+                image_id=delta_path,
+            )
+            return url
+        except Exception:
+            raise StreamlitAPIException(
+                "Image loading failed, fall through to emoji validation"
+            )
+
+    # validate as emoji (Previous test cases assumed validate_emoji was last)
     return validate_emoji(icon)
 
 
