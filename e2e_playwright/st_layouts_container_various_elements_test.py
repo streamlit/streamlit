@@ -52,7 +52,11 @@ def test_layouts_container_various_elements(
 ):
     """Snapshot test for each top-level container in st_layouts_container_various_elements.py."""
 
-    wait_for_react_stability(app, timeout_ms=5000)
+    # Wait for the app to load and render all elements, this is required since the
+    # app is showing a lot of elements which impacts the overall canvas rendering
+    # causing some dataframes to be not fully rendered yet.
+    app.wait_for_timeout(5000)
+    wait_for_react_stability(app)
 
     for key in CONTAINER_KEYS:
         locator = get_element_by_key(app, key)
