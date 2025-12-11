@@ -18,7 +18,7 @@
 import "@streamlit/utils"
 // These imports are each exported specifically in order to minimize public apis.
 export type { LibConfig } from "@streamlit/connection"
-export { AppRoot, BlockNode, ElementNode } from "./AppNode"
+export { AppRoot, BlockNode, ElementNode, TransientNode } from "./AppNode"
 export {
   ContainerContentsWrapper,
   VerticalBlock,
@@ -47,7 +47,7 @@ export { default as ThemeProvider } from "./components/core/ThemeProvider"
 export { ViewStateContext } from "./components/core/ViewStateContext"
 export type { ViewStateContextProps } from "./components/core/ViewStateContext"
 export { default as AlertElement } from "./components/elements/AlertElement"
-export { default as StreamlitSyntaxHighlighter } from "./components/elements/CodeBlock/StreamlitSyntaxHighlighter"
+export { default as StreamlitErrorCodeBlock } from "./components/elements/CodeBlock/StreamlitErrorCodeBlock"
 export { handleFavicon } from "./components/elements/Favicon"
 export { default as TextElement } from "./components/elements/TextElement"
 export {
@@ -83,6 +83,10 @@ export { useCopyToClipboard } from "./hooks/useCopyToClipboard"
 export { useCrossOriginAttribute } from "./hooks/useCrossOriginAttribute"
 export { useEmotionTheme } from "./hooks/useEmotionTheme"
 export { useExecuteWhenChanged } from "./hooks/useExecuteWhenChanged"
+export {
+  ensureHotkeysFilterConfigured,
+  isKeyboardEventFromEditableTarget,
+} from "./hooks/useRegisterShortcut"
 export { useRequiredContext } from "./hooks/useRequiredContext"
 export {
   measureScrollbarGutterSize,
@@ -132,6 +136,7 @@ export {
   lightTheme,
   removeCachedTheme,
   setCachedTheme,
+  sortThemeInputKeys,
   toExportedTheme,
   toThemeInput,
 } from "./theme"
@@ -157,6 +162,8 @@ export {
   getEmbeddingIdClassName,
   getIFrameEnclosingApp,
   getLocaleLanguage,
+  getQueryString,
+  getScreencastTimestamp,
   getTimezone,
   getTimezoneOffset,
   getUrl,

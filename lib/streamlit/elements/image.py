@@ -171,7 +171,7 @@ class ImageMixin:
 
             show_deprecation_warning(
                 "The `use_column_width` parameter has been deprecated and will be removed "
-                "in a future release. Please utilize the `use_container_width` parameter instead."
+                "in a future release. Please utilize the `width` parameter instead."
             )
             if use_column_width in {"auto", "never"} or use_column_width is False:
                 width = "content"

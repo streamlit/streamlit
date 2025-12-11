@@ -41,6 +41,11 @@ def _expect_iframe_attached(app: Page):
     expect(app.locator("iframe").first).to_be_attached()
 
 
+def _expect_ccv2_attached(app: Page):
+    """Expect the CCv2 DOM element should be attached to the DOM."""
+    expect(app.locator(".stBidiComponent")).to_be_attached()
+
+
 def test_components_html(app: Page):
     """Test that components.html can be imported and used."""
     _select_component(app, "componentsHtml")
@@ -150,4 +155,4 @@ def test_bokeh(app: Page):
     """Test that the bokeh component renders."""
     _select_component(app, "bokeh")
     _expect_no_exception(app)
-    _expect_iframe_attached(app)
+    _expect_ccv2_attached(app)

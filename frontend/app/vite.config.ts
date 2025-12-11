@@ -13,6 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+/// <reference types="vitest/config" />
 import { defineConfig } from "vite"
 import { analyzer } from "vite-bundle-analyzer"
 import { version } from "./package.json"
@@ -90,6 +92,11 @@ export default defineConfig({
       {
         find: "react-syntax-highlighter",
         replacement: "react-syntax-highlighter/dist/cjs/index.js",
+      },
+      // Redirect old lodash to lodash-es to avoid duplication
+      {
+        find: "lodash",
+        replacement: "lodash-es",
       },
       ...profilerAliases,
     ],
@@ -189,10 +196,6 @@ export default defineConfig({
           include: ["vitest-canvas-mock"],
         },
       },
-    },
-    server: {
-      // Want a Non-Dev port for testing
-      port: 3001,
     },
   },
 })

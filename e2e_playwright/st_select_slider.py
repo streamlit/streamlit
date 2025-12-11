@@ -188,3 +188,23 @@ else:
         options=["red", "orange", "yellow", "green", "blue"],
     )
     st.write("Initial select slider value:", dyn_val)
+
+
+MARKDOWN_SELECT_SLIDER_OPTIONS = [
+    "~~Strikethrough~~",
+    "*Italics*",
+    "**Bold**",
+    "`Inline code`",
+    ":material/check: Icon option",
+    ":orange-background[Highlighted text]",
+    ":green[Success text]",
+    "[Docs](https://streamlit.io)",
+]
+
+markdown_select_slider_value = st.select_slider(
+    "Label 15 - Markdown in options",
+    options=MARKDOWN_SELECT_SLIDER_OPTIONS,
+    value=MARKDOWN_SELECT_SLIDER_OPTIONS[0],
+    key="markdown_options_select_slider",
+)
+st.write("Markdown option selection:", markdown_select_slider_value)

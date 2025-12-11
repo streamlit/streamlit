@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import zip from "lodash/zip"
+import { zip } from "lodash-es"
 import { ErrorCode as FileErrorCode, FileRejection } from "react-dropzone"
 
 import {

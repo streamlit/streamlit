@@ -57,6 +57,8 @@ message Arrow {
     READ_ONLY = 0; // Read-only table.
     FIXED = 1; // Activates editing but only allow editing of existing cells.
     DYNAMIC = 2; // Activates editing and allow adding & deleting rows.
+    ADD_ONLY = 3; // Activates editing and allow adding rows (no deleting).
+    DELETE_ONLY = 4; // Activates editing and allow deleting rows (no adding).
   }
 
   // Available selection modes:

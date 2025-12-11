@@ -25,6 +25,7 @@ from typing import (
     Literal,
     TypeAlias,
     TypeVar,
+    cast,
     overload,
 )
 
@@ -61,11 +62,11 @@ from streamlit.runtime.caching.storage.dummy_cache_storage import (
     MemoryCacheStorageManager,
 )
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.runtime.stats import CacheStat, CacheStatsProvider, group_stats
+from streamlit.runtime.stats import CacheStat, StatsProvider, group_cache_stats
 from streamlit.time_util import time_to_seconds
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Sequence
     from datetime import timedelta
 
     from streamlit.runtime.caching.hashing import HashFuncsDict
@@ -148,7 +149,7 @@ class CachedDataFuncInfo(CachedFuncInfo[P, R]):
         )
 
 
-class DataCaches(CacheStatsProvider):
+class DataCaches(StatsProvider):
     """Manages all DataCache instances."""
 
     def __init__(self) -> None:
@@ -249,7 +250,7 @@ class DataCaches(CacheStatsProvider):
         stats: list[CacheStat] = []
         for cache in function_caches.values():
             stats.extend(cache.get_stats())
-        return group_stats(stats)
+        return group_cache_stats(stats)
 
     def validate_cache_params(
         self,
@@ -315,7 +316,7 @@ class DataCaches(CacheStatsProvider):
 _data_caches = DataCaches()
 
 
-def get_data_cache_stats_provider() -> CacheStatsProvider:
+def get_data_cache_stats_provider() -> StatsProvider:
     """Return the StatsProvider for all @st.cache_data functions."""
     return _data_caches
 
@@ -630,9 +631,9 @@ class DataCache(Cache[R]):
         self.max_entries = max_entries
         self.persist = persist
 
-    def get_stats(self) -> list[CacheStat]:
-        if isinstance(self.storage, CacheStatsProvider):
-            return self.storage.get_stats()
+    def get_stats(self) -> Sequence[CacheStat]:
+        if isinstance(self.storage, StatsProvider):
+            return cast("Sequence[CacheStat]", self.storage.get_stats())
         return []
 
     def read_result(self, key: str) -> CachedResult[R]:
