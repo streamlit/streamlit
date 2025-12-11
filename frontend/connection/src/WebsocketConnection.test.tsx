@@ -34,6 +34,7 @@ import { ConnectionState } from "./ConnectionState"
 import {
   CORS_ERROR_MESSAGE_DOCUMENTATION_LINK,
   MAX_RETRIES_BEFORE_CLIENT_ERROR,
+  PING_MINIMUM_RETRY_PERIOD_MS,
 } from "./constants"
 import { doInitPings } from "./DoInitPings"
 import { mockEndpoints } from "./testUtils"
@@ -1312,5 +1313,124 @@ describe("WebsocketConnection FSM fast-path behavior", () => {
     expect(hasPingingState).toBe(false)
 
     ws.disconnect()
+  })
+
+  it("keeps retrying background pings on failure without disconnecting", async () => {
+    // Simulate persistent network failure for pings
+    globalThis.fetch = vi
+      .fn()
+      .mockRejectedValue(new TypeError("Network error"))
+
+    const args = createMockArgs({ enableFastPath: true })
+    const ws = new WebsocketConnection(args)
+
+    // Should start in CONNECTING
+    expect(
+      args.onConnectionStateChange as ReturnType<typeof vi.fn>
+    ).toHaveBeenCalledWith(ConnectionState.CONNECTING, undefined)
+
+    // Allow background pings to fail and retry multiple times
+    await vi.advanceTimersByTimeAsync(0)
+
+    // Allow time for several retries
+    for (let i = 0; i < MAX_RETRIES_BEFORE_CLIENT_ERROR + 2; i++) {
+      await vi.advanceTimersByTimeAsync(PING_MINIMUM_RETRY_PERIOD_MS + 100)
+    }
+
+    // onRetry should have been called multiple times (background pings keep retrying)
+    expect(args.onRetry).toHaveBeenCalled()
+
+    // Should still be in CONNECTING (not disconnected)
+    // Background pings retry indefinitely, they don't cause FATAL_ERROR
+    const stateChangeCalls = (
+      args.onConnectionStateChange as ReturnType<typeof vi.fn>
+    ).mock.calls
+    const hasDisconnectedState = stateChangeCalls.some(
+      call => call[0] === ConnectionState.DISCONNECTED_FOREVER
+    )
+    expect(hasDisconnectedState).toBe(false)
+
+    ws.disconnect()
+  })
+
+  it("calls onRetry when background pings fail and retry", async () => {
+    // First call fails, subsequent calls succeed
+    globalThis.fetch = vi
+      .fn()
+      .mockRejectedValueOnce(new TypeError("Network error"))
+      .mockResolvedValueOnce(createSuccessResponse(MOCK_HEALTH_RESPONSE))
+      .mockResolvedValueOnce(createSuccessResponse(MOCK_HOST_CONFIG_RESPONSE))
+
+    const args = createMockArgs({ enableFastPath: true })
+    const ws = new WebsocketConnection(args)
+
+    // Allow initial failure and retry
+    await vi.advanceTimersByTimeAsync(0)
+    await vi.advanceTimersByTimeAsync(PING_MINIMUM_RETRY_PERIOD_MS + 100)
+
+    // onRetry should have been called
+    expect(args.onRetry).toHaveBeenCalled()
+
+    ws.disconnect()
+  })
+
+  it("successfully retrieves full config when background pings succeed", async () => {
+    // Both endpoints succeed
+    globalThis.fetch = vi
+      .fn()
+      .mockResolvedValueOnce(createSuccessResponse(MOCK_HEALTH_RESPONSE))
+      .mockResolvedValueOnce(createSuccessResponse(MOCK_HOST_CONFIG_RESPONSE))
+
+    const args = createMockArgs({ enableFastPath: true })
+    const ws = new WebsocketConnection(args)
+
+    // Allow background pings to complete
+    await vi.advanceTimersByTimeAsync(0)
+
+    // onHostConfigResp should be called with config from endpoint
+    expect(args.onHostConfigResp).toHaveBeenCalledWith(
+      expect.objectContaining({
+        allowedOrigins: expect.any(Array),
+      })
+    )
+
+    // Should stay connected since pings succeeded
+    const stateChangeCalls = (
+      args.onConnectionStateChange as ReturnType<typeof vi.fn>
+    ).mock.calls
+    const hasDisconnectedState = stateChangeCalls.some(
+      call => call[0] === ConnectionState.DISCONNECTED_FOREVER
+    )
+    expect(hasDisconnectedState).toBe(false)
+
+    ws.disconnect()
+  })
+
+  it("handles background ping cancellation gracefully on disconnect", async () => {
+    globalThis.fetch = vi
+      .fn()
+      .mockImplementation(
+        () =>
+          new Promise(resolve =>
+            setTimeout(
+              () => resolve(createSuccessResponse(MOCK_HEALTH_RESPONSE)),
+              1000
+            )
+          )
+      )
+
+    const args = createMockArgs({ enableFastPath: true })
+    const ws = new WebsocketConnection(args)
+
+    // Start background pings
+    await vi.advanceTimersByTimeAsync(0)
+
+    // Disconnect before pings complete
+    ws.disconnect()
+
+    // Should transition to DISCONNECTED_FOREVER
+    expect(
+      args.onConnectionStateChange as ReturnType<typeof vi.fn>
+    ).toHaveBeenCalledWith(ConnectionState.DISCONNECTED_FOREVER, undefined)
   })
 })

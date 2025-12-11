@@ -151,6 +151,7 @@ import { showDevelopmentOptions } from "./showDevelopmentOptions"
 // Used to import fonts + responsive reboot items
 import "@streamlit/app/src/assets/css/theme.scss"
 import { AppNavigation, MaybeStateUpdate } from "./util/AppNavigation"
+import { reconcileHostConfigValues } from "./util/hostConfigHelpers"
 import { ThemeManager } from "./util/useThemeManager"
 
 // vite config builds global variable PACKAGE_METADATA
@@ -220,13 +221,6 @@ interface State {
 const INITIAL_SCRIPT_RUN_ID = "<null>"
 
 export const LOG = getLogger("App")
-
-function preferWindowValue<T>(
-  windowValue: T | undefined,
-  endpointValue: T
-): T {
-  return windowValue !== undefined ? windowValue : endpointValue
-}
 
 declare global {
   interface Window {
@@ -463,21 +457,11 @@ export class App extends PureComponent<Props, State> {
     }
   }
 
-  private getInitialHostConfig():
-    | {
-        useExternalAuthToken?: boolean
-        allowedOrigins?: string[]
-        metricsUrl?: string
-      }
-    | undefined {
-    return StreamlitConfig.HOST_CONFIG
-  }
-
   private applyInitialHostConfig(): void {
     // Apply minimal host configuration from StreamlitConfig.HOST_CONFIG, if present.
     // This enables a fast-path for establishing the websocket connection and
     // host communication without waiting for the host-config endpoint.
-    const initialHostConfig = this.getInitialHostConfig()
+    const initialHostConfig = StreamlitConfig.HOST_CONFIG
     if (!initialHostConfig) {
       return
     }
@@ -530,39 +514,30 @@ export class App extends PureComponent<Props, State> {
         })
       },
       onHostConfigResp: (response: IHostConfigResponse) => {
-        const initialHostConfig = this.getInitialHostConfig()
+        // Reconcile window config values with endpoint response.
+        // Window values for allowedOrigins, useExternalAuthToken, and metricsUrl
+        // take precedence when present.
+        const reconciledConfig = reconcileHostConfigValues(
+          StreamlitConfig.HOST_CONFIG,
+          response
+        )
 
         const {
-          allowedOrigins: hostAllowedOrigins,
-          useExternalAuthToken: hostUseExternalAuthToken,
+          allowedOrigins,
+          useExternalAuthToken,
           disableFullscreenMode,
           enableCustomParentMessages,
           mapboxToken,
           enforceDownloadInNewTab,
-          metricsUrl: hostMetricsUrl,
+          metricsUrl,
           blockErrorDialogs,
           setAnonymousCrossOriginPropertyOnMediaElements,
           resourceCrossOriginMode,
-        } = response
-
-        // Values from the initial window config take precedence
-        // over the same properties returned by the host-config endpoint.
-        const effectiveAllowedOrigins = preferWindowValue(
-          initialHostConfig?.allowedOrigins,
-          hostAllowedOrigins
-        )
-        const effectiveUseExternalAuthToken = preferWindowValue(
-          initialHostConfig?.useExternalAuthToken,
-          hostUseExternalAuthToken
-        )
-        const effectiveMetricsUrl = preferWindowValue(
-          initialHostConfig?.metricsUrl,
-          hostMetricsUrl
-        )
+        } = reconciledConfig
 
         const appConfig: AppConfig = {
-          allowedOrigins: effectiveAllowedOrigins,
-          useExternalAuthToken: effectiveUseExternalAuthToken,
+          allowedOrigins,
+          useExternalAuthToken,
           enableCustomParentMessages,
           blockErrorDialogs,
         }
@@ -579,7 +554,7 @@ export class App extends PureComponent<Props, State> {
         }
 
         // Set the metrics configuration:
-        this.metricsMgr.setMetricsConfig(effectiveMetricsUrl)
+        this.metricsMgr.setMetricsConfig(metricsUrl)
         // Set the allowed origins configuration for the host communication:
         this.hostCommunicationMgr.setAllowedOrigins(appConfig)
         // Set the streamlit-app specific config settings in AppContext:

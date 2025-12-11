@@ -17,6 +17,33 @@
 import { ICustomThemeConfig } from "@streamlit/protobuf"
 
 /**
+ * Minimal subset of host configuration fields required for fast-path
+ * websocket connection establishment.
+ *
+ * This can be provided via window.__streamlit.HOST_CONFIG to enable
+ * websocket connection and host communication without waiting for the
+ * full host-config endpoint response.
+ *
+ * Note: The full host config (IHostConfigResponse) includes additional
+ * fields like mapboxToken, disableFullscreenMode, etc.
+ */
+export interface MinimalHostConfig {
+  /**
+   * Whether to wait for external auth token via postMessage before connecting.
+   */
+  useExternalAuthToken?: boolean
+  /**
+   * List of allowed origins for postMessage communication with the host.
+   */
+  allowedOrigins?: string[]
+  /**
+   * Where to send metrics data. Can be a URL, "postMessage", or "off".
+   */
+  // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
+  metricsUrl?: string | "postMessage" | "off"
+}
+
+/**
  * Configuration object that can be set on window.__streamlit by the host
  * before the Streamlit bundle loads. These values are captured and frozen
  * at module initialization time for security.
@@ -38,12 +65,7 @@ interface StreamlitWindowConfig {
   // Other options.
   ENABLE_RELOAD_BASED_ON_HARDCODED_STREAMLIT_VERSION?: boolean
   // Minimal host configuration for fast-path websocket connection.
-  HOST_CONFIG?: {
-    useExternalAuthToken?: boolean
-    allowedOrigins?: string[]
-    // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
-    metricsUrl?: string | "postMessage" | "off"
-  }
+  HOST_CONFIG?: MinimalHostConfig
 }
 
 // Extend Window interface for TypeScript
@@ -172,14 +194,7 @@ export const StreamlitConfig = {
     | undefined {
     return capturedConfig?.ENABLE_RELOAD_BASED_ON_HARDCODED_STREAMLIT_VERSION
   },
-  get HOST_CONFIG():
-    | {
-        useExternalAuthToken?: boolean
-        allowedOrigins?: string[]
-        // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
-        metricsUrl?: string | "postMessage" | "off"
-      }
-    | undefined {
+  get HOST_CONFIG(): MinimalHostConfig | undefined {
     return capturedConfig?.HOST_CONFIG
   },
 } as const

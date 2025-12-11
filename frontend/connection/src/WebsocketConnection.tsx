@@ -300,12 +300,12 @@ export class WebsocketConnection {
         if (event === "INITIALIZED") {
           if (this.args.enableFastPath) {
             // Fast-path: Start connecting to the websocket immediately while
-            // running health and host-config pings asynchronously in the
-            // background. The ping cycle is used for error handling and
-            // configuration only and does not gate the initial connection.
+            // running health and host-config pings in parallel (rather than
+            // sequentially). Both must succeed, but they don't gate each other.
+            // This reduces latency while maintaining full error handling and
+            // configuration retrieval.
             this.setFsmState(ConnectionState.CONNECTING)
-            // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
-            this.pingServerInBackground()
+            void this.pingServerInBackground()
           } else {
             this.setFsmState(ConnectionState.PINGING_SERVER)
           }
@@ -393,10 +393,18 @@ export class WebsocketConnection {
   }
 
   /**
-   * Run the ping cycle in the background without driving the FSM. This is
-   * used by certain environments for fast-path mode to keep health and host-config
-   * behavior (error handling, configuration, base-path discovery) while allowing
-   * the initial websocket connection to proceed immediately.
+   * Run the ping cycle in the background (parallel to WebSocket connection attempt).
+   * This is used in fast-path mode to maintain the same health check and configuration
+   * behavior as the default path, while allowing the WebSocket connection to start
+   * immediately rather than waiting for pings to complete first.
+   *
+   * Key behavioral difference from default path:
+   * - Default path: Pings GATE WebSocket creation (sequential: pings → then WebSocket)
+   * - Fast path: Pings run in parallel with WebSocket (both start simultaneously)
+   *
+   * Error handling remains consistent: doInitPings retries indefinitely on failures
+   * and only rejects when cancelled. This means both paths have the same retry behavior,
+   * just different timing of when the WebSocket connection attempt begins.
    */
   private async pingServerInBackground(): Promise<void> {
     this.pingRequest = doInitPings(
@@ -411,12 +419,16 @@ export class WebsocketConnection {
     try {
       const uriIndex = await this.pingRequest.promise
       this.uriIndex = uriIndex
+      LOG.info("Background pings completed successfully")
     } catch (e) {
-      if (e instanceof PingCancelledError) {
-        LOG.info("Ping cancelled (background)")
-      } else {
-        this.stepFsm("FATAL_ERROR", e instanceof Error ? e.message : String(e))
+      // doInitPings only rejects when cancelled, never on ping failures.
+      // Ping failures trigger indefinite retries in both default and fast-path modes.
+      if (!(e instanceof PingCancelledError)) {
+        LOG.error(
+          "Unexpected error from doInitPings (should only be PingCancelledError)"
+        )
       }
+      LOG.info("Background pings cancelled")
     } finally {
       this.pingRequest = undefined
     }
