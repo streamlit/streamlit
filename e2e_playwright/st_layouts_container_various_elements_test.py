@@ -17,6 +17,7 @@ from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
 from e2e_playwright.shared.app_utils import get_element_by_key
+from e2e_playwright.shared.react18_utils import wait_for_react_stability
 
 CONTAINER_KEYS = [
     "layout-dashboard-example",
@@ -50,6 +51,8 @@ def test_layouts_container_various_elements(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Snapshot test for each top-level container in st_layouts_container_various_elements.py."""
+
+    wait_for_react_stability(app, timeout_ms=5000)
 
     for key in CONTAINER_KEYS:
         locator = get_element_by_key(app, key)
