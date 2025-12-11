@@ -182,15 +182,13 @@ describe("BidiComponent", () => {
 
       // For shadow DOM, we need to check inside the shadow root
       await waitFor(() => {
-        const shadowRoot = container.shadowRoot
+        const shadowRoot = container.shadowRoot as ShadowRoot
         expect(shadowRoot).toBeTruthy()
-        if (shadowRoot) {
-          const testContent = shadowRoot.querySelector(
-            "[data-testid='test-isolated-html']"
-          )
-          expect(testContent).toBeTruthy()
-          expect(testContent?.textContent).toBe("Isolated HTML")
-        }
+        const testContent = shadowRoot.querySelector(
+          "[data-testid='test-isolated-html']"
+        )
+        expect(testContent).toBeTruthy()
+        expect(testContent?.textContent).toBe("Isolated HTML")
       })
     })
 
@@ -329,14 +327,12 @@ describe("BidiComponent", () => {
 
       const container = screen.getByTestId("stBidiComponentIsolated")
       await waitFor(() => {
-        const shadowRoot = container.shadowRoot
+        const shadowRoot = container.shadowRoot as ShadowRoot
         expect(shadowRoot).toBeTruthy()
-        if (shadowRoot) {
-          const styleElement = shadowRoot.querySelector("style")
-          expect(styleElement?.textContent).toContain(
-            ".isolated-style { background: blue; }"
-          )
-        }
+        const styleElement = shadowRoot.querySelector("style")
+        expect(styleElement?.textContent).toContain(
+          ".isolated-style { background: blue; }"
+        )
       })
     })
 

@@ -520,8 +520,29 @@ export const StyledButtonGroup = styled.div<{ containerWidth: boolean }>(
   })
 )
 
-export const StyledButtonLabel = styled.div(({ theme }) => ({
+export const StyledButtonLabel = styled.div(() => ({
   display: "flex",
   alignItems: "center",
+  justifyContent: "center",
+  width: "100%",
+}))
+
+export const StyledButtonMainLabel = styled.span(({ theme }) => ({
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
   gap: theme.spacing.sm,
+  minWidth: 0,
+}))
+
+export const StyledButtonShortcut = styled.kbd(({ theme }) => ({
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  whiteSpace: "nowrap",
+  fontSize: theme.fontSizes.sm,
+  opacity: 0.6,
+  fontFamily: "inherit",
+  lineHeight: theme.lineHeights.tight,
+  letterSpacing: "0.01em",
 }))

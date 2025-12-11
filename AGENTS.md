@@ -1,6 +1,6 @@
 # Streamlit Repo Overview
 
-Streamlit is an open-source (Apache 2.0) Python library for creating interactive web applications and dashboards with focus on data apps and internal tools.
+[Streamlit](https://github.com/streamlit/streamlit) is an open-source (Apache 2.0) Python library for creating interactive web applications and dashboards with focus on data apps and internal tools.
 
 ## Tech Stack
 
@@ -26,6 +26,7 @@ Streamlit is an open-source (Apache 2.0) Python library for creating interactive
 - `scripts/`: Utility scripts for development and CI/CD.
 - `component-lib/`: Library for building Streamlit custom components.
 - `.github/workflows/`: GitHub Actions workflows used for CI/CD.
+- `wiki/`: Documentation relevant for development of Streamlit.
 
 ### Shell & Build Policy (AI Agents)
 
@@ -69,6 +70,7 @@ Selection of `make` commands for development (run in the repo root):
 - You can use the `work-tmp` directory to store temporary files, specs, and scripts.
 - If you fail to run a `make` command, remember to run it from the root / top-level directory.
 - The hot-reload dev server for the frontend will be available at <http://localhost:3000>.
+- The main branch of this repository is `develop`.
 
 ## Testing Strategy
 

@@ -20,7 +20,7 @@
 export class CircularBuffer<T> {
   private _buffer: T[]
 
-  private _size: number
+  private readonly _size: number
 
   private _index: number
 

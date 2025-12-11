@@ -56,20 +56,16 @@ export const parseBidiComponentData = ({
       return bytes ?? null
     case "mixed": {
       if (mixedJson && arrowBlobs) {
-        if (mixedJson) {
-          const jsonData = JSON.parse(mixedJson)
+        const jsonData = JSON.parse(mixedJson)
 
-          const arrowBlobsMap: Record<string, Uint8Array> = {}
-          if (arrowBlobs) {
-            Object.entries(arrowBlobs).forEach(([key, arrowProto]) => {
-              if (arrowProto?.data) {
-                arrowBlobsMap[key] = arrowProto.data
-              }
-            })
+        const arrowBlobsMap: Record<string, Uint8Array> = {}
+        Object.entries(arrowBlobs).forEach(([key, arrowProto]) => {
+          if (arrowProto?.data) {
+            arrowBlobsMap[key] = arrowProto.data
           }
+        })
 
-          return reconstructMixedData(jsonData, arrowBlobsMap)
-        }
+        return reconstructMixedData(jsonData, arrowBlobsMap)
       }
       return null
     }

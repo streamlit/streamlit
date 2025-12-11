@@ -85,6 +85,13 @@ def Page(  # noqa: N802
             <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
             font library.
 
+        - ``"spinner"``: Displays a spinner as an icon. In this case, the
+          spinner only displays next to the page label in the navigation menu.
+          The spinner isn't used as the page favicon next to the title in the
+          browser tab. The favicon is the default Streamlit icon unless
+          otherwise specified with the ``page_icon`` parameter of
+          ``st.set_page_config``.
+
     url_path : str or None
         The page's URL pathname, which is the path relative to the app's root
         URL. If this is ``None`` (default), the URL pathname will be inferred

@@ -85,7 +85,7 @@ elif st.session_state.selected_chart == "callback":
             str(st.session_state.selection_callback),
         )
 
-    selection = get_pydeck_chart(
+    get_pydeck_chart(
         "selection_callback", selection_mode="single-object", on_select=on_selection
     )
 

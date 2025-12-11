@@ -24,7 +24,7 @@ from streamlit import dataframe_util
 from streamlit.elements.lib import pandas_styler_utils
 
 if TYPE_CHECKING:
-    from pandas import DataFrame, Index, Series
+    from pandas import DataFrame, Index
 
     from streamlit.proto.Components_pb2 import ArrowTable as ArrowTableProto
 
@@ -57,7 +57,7 @@ def marshall(
     _marshall_data(proto, df)
 
 
-def _marshall_index(proto: ArrowTableProto, index: Index) -> None:
+def _marshall_index(proto: ArrowTableProto, index: Index[Any]) -> None:
     """Marshall pandas.DataFrame index into an ArrowTable proto.
 
     Parameters
@@ -72,12 +72,12 @@ def _marshall_index(proto: ArrowTableProto, index: Index) -> None:
     """
     import pandas as pd
 
-    index_values = map(_maybe_tuple_to_list, index.values)
+    index_values = list(map(_maybe_tuple_to_list, index.values))
     index_df = pd.DataFrame(index_values)
     proto.index = dataframe_util.convert_pandas_df_to_arrow_bytes(index_df)
 
 
-def _marshall_columns(proto: ArrowTableProto, columns: Series) -> None:
+def _marshall_columns(proto: ArrowTableProto, columns: Index[Any]) -> None:
     """Marshall pandas.DataFrame columns into an ArrowTable proto.
 
     Parameters
@@ -85,15 +85,15 @@ def _marshall_columns(proto: ArrowTableProto, columns: Series) -> None:
     proto : proto.ArrowTable
         Output. The protobuf for a Streamlit ArrowTable proto.
 
-    columns : Series
+    columns : Index
         Column labels to use for resulting frame.
         Will default to RangeIndex (0, 1, 2, ..., n) if no column labels are provided.
 
     """
     import pandas as pd
 
-    values = map(_maybe_tuple_to_list, columns.values)
-    columns_df = pd.DataFrame(values)
+    column_values = list(map(_maybe_tuple_to_list, columns.values))
+    columns_df = pd.DataFrame(column_values)
     proto.columns = dataframe_util.convert_pandas_df_to_arrow_bytes(columns_df)
 
 

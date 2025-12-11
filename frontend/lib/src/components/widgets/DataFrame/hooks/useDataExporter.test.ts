@@ -118,6 +118,26 @@ describe("toCsvRow", () => {
   ])("converts %p to a valid CSV row: %p", (input, expected) => {
     expect(toCsvRow(input)).toEqual(expected)
   })
+
+  it("handles null and undefined values", () => {
+    expect(toCsvRow([null, undefined, "value"])).toEqual(",,value\n")
+  })
+
+  it("handles values with newlines", () => {
+    expect(toCsvRow(["line1\nline2", "normal"])).toEqual(
+      '"line1\nline2",normal\n'
+    )
+  })
+
+  it("handles empty array", () => {
+    expect(toCsvRow([])).toEqual("\n")
+  })
+
+  it("handles values with multiple special characters", () => {
+    expect(toCsvRow(['value with, comma and "quote"'])).toEqual(
+      '"value with, comma and ""quote"""\n'
+    )
+  })
 })
 
 describe("useDataExporter hook", () => {
@@ -169,5 +189,128 @@ describe("useDataExporter hook", () => {
       suggestedName: `${timestamp}_export.csv`,
       types: [{ accept: { "text/csv": [".csv"] } }],
     })
+  })
+
+  it("does nothing when user cancels file picker (AbortError)", async () => {
+    // Mock the file picker to throw an AbortError
+    vi.mocked(showSaveFilePicker).mockRejectedValueOnce(
+      Object.assign(new Error("User cancelled"), { name: "AbortError" })
+    )
+
+    const { result } = renderHook(() => {
+      return useDataExporter(getCellContentMock, MOCK_COLUMNS, NUM_ROWS, false)
+    })
+
+    // Should not throw
+    await expect(result.current.exportToCsv()).resolves.toBeUndefined()
+
+    // Should not trigger fallback method
+    expect(mockWrite).not.toHaveBeenCalled()
+  })
+
+  it("falls back to blob download when file picker fails", async () => {
+    // Create mock for URL methods and document manipulation
+    const mockCreateObjectURL = vi.fn().mockReturnValue("blob:mock-url")
+    const mockRevokeObjectURL = vi.fn()
+    const mockClick = vi.fn()
+    const mockAppendChild = vi.fn()
+    const mockRemoveChild = vi.fn()
+
+    // Save originals
+    const originalCreateObjectURL = URL.createObjectURL
+    const originalRevokeObjectURL = URL.revokeObjectURL
+    const originalAppendChild = document.body.appendChild
+    const originalRemoveChild = document.body.removeChild
+
+    // Mock URL methods
+    URL.createObjectURL = mockCreateObjectURL
+    URL.revokeObjectURL = mockRevokeObjectURL
+
+    // Mock document.body methods
+    document.body.appendChild = mockAppendChild.mockImplementation(node => {
+      // Mock the click method on the link element
+      ;(node as HTMLAnchorElement).click = mockClick
+      return node
+    })
+    document.body.removeChild = mockRemoveChild
+
+    // Mock the file picker to throw a generic error (not AbortError)
+    vi.mocked(showSaveFilePicker).mockRejectedValueOnce(
+      new Error("File system not available")
+    )
+
+    const { result } = renderHook(() => {
+      return useDataExporter(getCellContentMock, MOCK_COLUMNS, NUM_ROWS, false)
+    })
+
+    result.current.exportToCsv()
+
+    await waitFor(() => {
+      expect(mockCreateObjectURL).toHaveBeenCalled()
+    })
+
+    // Verify blob was created with correct type
+    expect(mockCreateObjectURL).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "text/csv;charset=utf-8;",
+      })
+    )
+
+    // Verify link was clicked and cleaned up
+    expect(mockClick).toHaveBeenCalled()
+    expect(mockRevokeObjectURL).toHaveBeenCalledWith("blob:mock-url")
+
+    // Restore originals
+    URL.createObjectURL = originalCreateObjectURL
+    URL.revokeObjectURL = originalRevokeObjectURL
+    document.body.appendChild = originalAppendChild
+    document.body.removeChild = originalRemoveChild
+  })
+
+  it("handles zero rows correctly", async () => {
+    const { result } = renderHook(() => {
+      return useDataExporter(getCellContentMock, MOCK_COLUMNS, 0, false)
+    })
+
+    result.current.exportToCsv()
+
+    const textEncoder = new TextEncoder()
+
+    await waitFor(() => {
+      // Should still write BOM and headers
+      expect(mockWrite).toHaveBeenCalledWith(textEncoder.encode("\ufeff"))
+    })
+
+    // Number of writes: 1 for BOM + 1 for header + 0 rows
+    expect(mockWrite).toBeCalledTimes(2)
+    expect(mockClose).toBeCalledTimes(1)
+  })
+
+  it("handles null cell values", async () => {
+    const getCellWithNullMock = vi
+      .fn()
+      .mockImplementation(([col]: readonly [number]) => {
+        const column = MOCK_COLUMNS[col]
+        // Return null for the first column
+        if (col === 0) {
+          return column.getCell(null)
+        }
+        return column.getCell("foo")
+      })
+
+    const { result } = renderHook(() => {
+      return useDataExporter(getCellWithNullMock, MOCK_COLUMNS, 1, false)
+    })
+
+    result.current.exportToCsv()
+
+    const textEncoder = new TextEncoder()
+
+    await waitFor(() => {
+      expect(getCellWithNullMock).toHaveBeenCalled()
+    })
+
+    // Should handle null values gracefully (empty string in CSV)
+    expect(mockWrite).toBeCalledWith(textEncoder.encode(",foo\n"))
   })
 })

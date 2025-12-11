@@ -22,7 +22,7 @@ import { convertRemToPx } from "~lib/theme/utils"
 import { assertNever } from "~lib/util/assertNever"
 
 import { FlexContext, IFlexContext } from "./FlexContext"
-import { Direction, MinFlexElementWidth } from "./utils"
+import { Direction, getTextAlignmentStyle, MinFlexElementWidth } from "./utils"
 
 type SubElement = {
   useContainerWidth?: boolean | null
@@ -34,7 +34,10 @@ type SubElement = {
 }
 
 type StyleOverrides = Partial<
-  Pick<UseLayoutStylesShape, "height" | "width" | "overflow" | "flex">
+  Pick<
+    UseLayoutStylesShape,
+    "height" | "width" | "overflow" | "flex" | "textAlign"
+  >
 >
 
 export type UseLayoutStylesArgs = {
@@ -244,6 +247,7 @@ export type UseLayoutStylesShape = {
   overflow: React.CSSProperties["overflow"]
   flex?: React.CSSProperties["flex"]
   minWidth?: React.CSSProperties["minWidth"]
+  textAlign?: React.CSSProperties["textAlign"]
 }
 
 /**
@@ -336,12 +340,19 @@ export const useLayoutStyles = ({
       minStretchBehavior
     )
 
+    const textAlign = getTextAlignmentStyle(
+      "textAlignmentConfig" in element
+        ? element.textAlignmentConfig
+        : undefined
+    )
+
     const calculatedStyles: UseLayoutStylesShape = {
       width,
       height,
       overflow,
       flex,
       minWidth,
+      textAlign,
     }
 
     return {

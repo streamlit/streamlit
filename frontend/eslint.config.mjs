@@ -48,6 +48,52 @@ const streamlitCustom = await jiti.import(
   { default: true }
 )
 
+/**
+ * Helper to create the no-restricted-imports rule config.
+ *
+ * @param {Object[]} additionalPatterns - Extra "patterns" to restrict (merged with the base rules).
+ * @param {boolean} isTestFile - Whether to apply the relaxed rules for test files.
+ */
+export const getNoRestrictedImports = (
+  additionalPatterns = [],
+  isTestFile = false
+) => {
+  const restrictedImportPaths = [
+    {
+      name: "timezone-mock",
+      message: "Please use the withTimezones test harness instead",
+    },
+    {
+      name: "@emotion/react",
+      message:
+        "Please use the useEmotionTheme hook instead of useTheme for type-safety",
+      importNames: ["useTheme"],
+    },
+    {
+      name: "axios",
+      importNames: ["CancelToken"],
+      message: "Please use the `AbortController` API instead of `CancelToken`",
+    },
+  ]
+
+  const basePaths = isTestFile
+    ? restrictedImportPaths
+    : [
+        ...restrictedImportPaths,
+        {
+          name: "@streamlit/lib/testing",
+          message: "Test utilities must stay in test files.",
+        },
+      ]
+  return [
+    "error",
+    {
+      paths: [...basePaths],
+      patterns: [...additionalPatterns],
+    },
+  ]
+}
+
 export default defineConfig([
   // Base recommended configs
   eslint.configs.recommended,
@@ -114,6 +160,8 @@ export default defineConfig([
       "@eslint-react/hooks-extra/no-direct-set-state-in-use-effect": "off",
       // We don't want to warn about empty fragments
       "@eslint-react/no-useless-fragment": "off",
+      // Prevent context values from being recreated on every render
+      "react/jsx-no-constructed-context-values": "error",
       // We want to enforce display names for context providers for better debugging
       "@eslint-react/no-missing-context-display-name": "error",
       // TypeScript rules with type-checking
@@ -167,6 +215,17 @@ export default defineConfig([
       "@typescript-eslint/no-non-null-assertion": "error",
       // Prefer optional chaining over && chains
       "@typescript-eslint/prefer-optional-chain": "error",
+      // Ensure switch statements cover all possible enum/union values
+      "@typescript-eslint/switch-exhaustiveness-check": [
+        "error",
+        {
+          considerDefaultExhaustiveForUnions: true, // Allow default case for unions
+        },
+      ],
+      // Flag class properties that are never modified and should be readonly
+      "@typescript-eslint/prefer-readonly": "warn",
+      // Ensure return await is used in try/catch for proper error stack traces
+      "@typescript-eslint/return-await": ["error", "in-try-catch"],
       // Permit for-of loops
       "no-restricted-syntax": [
         "error",
@@ -295,34 +354,14 @@ export default defineConfig([
       // We only turn this rule on for certain directories
       "streamlit-custom/enforce-memo": "off",
       "streamlit-custom/no-force-reflow-access": "error",
-      "no-restricted-imports": [
-        "error",
-        {
-          paths: [
-            {
-              name: "timezone-mock",
-              message: "Please use the withTimezones test harness instead",
-            },
-            {
-              name: "@emotion/react",
-              message:
-                "Please use the useEmotionTheme hook instead of useTheme for type-safety",
-              importNames: ["useTheme"],
-            },
-            {
-              name: "axios",
-              importNames: ["CancelToken"],
-              message:
-                "Please use the `AbortController` API instead of `CancelToken`",
-            },
-          ],
-        },
-      ],
+      "no-restricted-imports": getNoRestrictedImports(),
       // React configuration
       "react/jsx-uses-react": "off",
       "react/react-in-jsx-scope": "off",
       // React hooks rules
       ...reactHooks.configs.flat.recommended.rules,
+      // Enforce "You Might Not Need an Effect" pattern - don't derive state in effects
+      "react-hooks/no-deriving-state-in-effects": "error",
       // jsx-a11y rules
       ...jsxA11y.flatConfigs.recommended.rules,
       // prohibit autoFocus prop
@@ -360,6 +399,13 @@ export default defineConfig([
 
       // Testing library rules
       "testing-library/prefer-user-event": "error",
+      // Prefer screen.getBy* over destructured queries for consistency
+      "testing-library/prefer-screen-queries": "warn",
+      // Prefer findBy* over waitFor + getBy* patterns
+      "testing-library/prefer-find-by": "error",
+      // Enforce consistent use of it() over test()
+      "vitest/consistent-test-it": ["error", { fn: "it" }],
+      "no-restricted-imports": getNoRestrictedImports([], true),
     },
   },
   // Theme files specific configuration

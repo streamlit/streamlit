@@ -146,7 +146,7 @@ class SnowparkConnection(BaseConnection["Session"]):
         )
         def _query(sql: str) -> DataFrame:
             with self._lock:
-                return self._instance.sql(sql).to_pandas()
+                return self._instance.sql(sql).to_pandas()  # type: ignore
 
         # We modify our helper function's `__qualname__` here to work around default
         # `@st.cache_data` behavior. Otherwise, `.query()` being called with different

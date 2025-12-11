@@ -19,7 +19,6 @@ import {
   memo,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
   useRef,
   useState,
@@ -38,6 +37,7 @@ import {
   WidgetLabel,
 } from "~lib/components/widgets/BaseWidget"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
 import { useSelectCommon } from "~lib/hooks/useSelectCommon"
 import { LabelVisibilityOptions } from "~lib/util/utils"
 
@@ -75,11 +75,7 @@ const Selectbox: FC<Props> = ({
   // the value in case the user dismisses the changes by clicking away.
   const valueBeforeRemoval = useRef<string | null>(value)
 
-  // Update the value whenever the value provided by the props changes
-  // TODO: Find a better way to handle this to prevent unneeded re-renders
-  useEffect(() => {
-    setValue(propValue)
-  }, [propValue])
+  useExecuteWhenChanged(() => setValue(propValue), [propValue])
 
   const handleChange = useCallback(
     (params: OnChangeParams): void => {

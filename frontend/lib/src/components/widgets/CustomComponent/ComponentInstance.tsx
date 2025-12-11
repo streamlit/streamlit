@@ -32,6 +32,7 @@ import {
   ISpecialArg,
   Skeleton as SkeletonProto,
 } from "@streamlit/protobuf"
+import { StreamlitConfig } from "@streamlit/utils"
 
 import { withCalculatedWidth } from "~lib/components/core/Layout/withCalculatedWidth"
 import AlertElement from "~lib/components/elements/AlertElement"
@@ -97,8 +98,7 @@ function getSrc(
   }
 
   // Add streamlitUrl query parameter to src
-  const customComponentClientId =
-    window.__streamlit?.CUSTOM_COMPONENT_CLIENT_ID
+  const customComponentClientId = StreamlitConfig.CUSTOM_COMPONENT_CLIENT_ID
   const currentUrl = new URL(window.location.href)
   src = queryString.stringifyUrl({
     url: src,

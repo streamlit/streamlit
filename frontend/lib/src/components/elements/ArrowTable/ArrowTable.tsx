@@ -16,7 +16,7 @@
 
 import React, { memo, ReactElement } from "react"
 
-import range from "lodash/range"
+import { range } from "lodash-es"
 
 import { Arrow as ArrowProto } from "@streamlit/protobuf"
 
