@@ -15,8 +15,8 @@
 import pytest
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
-from e2e_playwright.shared.app_utils import get_element_by_key, get_selectbox
+from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.shared.app_utils import get_element_by_key, select_selectbox_option
 
 # Container keys that should be tested (excluding map cases which need special handling)
 CONTAINER_KEYS = [
@@ -52,22 +52,12 @@ MAP_CONTAINER_KEYS = [
 ]
 
 
-def _select_case(app: Page, case_name: str) -> None:
-    """Select a container case from the selectbox and wait for it to render."""
-    selectbox_input = get_selectbox(app, "Select container case").locator("input")
-    # Clear any existing text and type the option name
-    selectbox_input.clear()
-    selectbox_input.type(case_name)
-    selectbox_input.press("Enter")
-    wait_for_app_run(app, wait_delay=500)
-
-
 def test_layouts_container_various_elements(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Snapshot test for each top-level container in st_layouts_container_various_elements.py."""
     for key in CONTAINER_KEYS:
-        _select_case(app, key)
+        select_selectbox_option(app, "Select container case", key)
 
         locator = get_element_by_key(app, key)
         expect(locator).to_be_visible()
@@ -79,7 +69,7 @@ def test_layouts_container_various_elements(
 def test_layouts_container_with_map(app: Page, assert_snapshot: ImageCompareFunction):
     """Snapshot test for containers with maps in st_layouts_container_various_elements.py."""
     for key in MAP_CONTAINER_KEYS:
-        _select_case(app, key)
+        select_selectbox_option(app, "Select container case", key)
 
         # Wait for map elements to load
         map_element = app.get_by_test_id("stDeckGlJsonChart")
@@ -102,7 +92,7 @@ def test_layouts_container_with_map(app: Page, assert_snapshot: ImageCompareFunc
 def test_layouts_container_expanders(app: Page, assert_snapshot: ImageCompareFunction):
     """Test expander functionality in containers that contain expanders."""
     for key in CONTAINER_KEYS_WITH_EXPANDERS:
-        _select_case(app, key)
+        select_selectbox_option(app, "Select container case", key)
 
         container = get_element_by_key(app, key)
         expect(container).to_be_visible()
