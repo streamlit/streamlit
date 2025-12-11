@@ -105,3 +105,35 @@ st.markdown("""
 - Area chart y-axis should scale to show the data variation clearly
 - The green area should fill more of the vertical space, making the trend more visible
 """)
+
+# Test case: Data range containing 0 - y-axis minimum should default to 0
+st.markdown("---")
+st.markdown("### Test Case: Data Range Containing Zero")
+
+st.markdown("""
+This demonstrates that when the data range contains 0, the y-axis minimum (y2) defaults to 0.
+The chart data crosses zero (has both negative and positive values), so the y-axis should start at 0.
+""")
+
+# Create data that crosses zero - going from negative to positive
+zero_crossing_data = [-50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
+current_value = zero_crossing_data[-1]
+delta_value = zero_crossing_data[-1] - zero_crossing_data[0]  # 100 - (-50) = 150
+
+st.metric(
+    label="Zero-Crossing Data",
+    value=f"{current_value}",
+    delta=f"{delta_value:+d}",
+    delta_color="normal",
+    chart_data=zero_crossing_data,
+    chart_type="area",
+    border=True,
+    help="This area chart should have y-axis minimum at 0, even though data goes negative"
+)
+
+st.markdown("""
+**Expected Result:**
+- The y-axis minimum should be 0 (not -50, which is the minimum data value)
+- The area chart should show the full range from 0 to 100
+- This demonstrates that when data contains 0, y2 defaults to 0
+""")

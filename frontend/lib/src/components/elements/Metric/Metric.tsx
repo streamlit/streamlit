@@ -257,14 +257,15 @@ export function getMetricChartSpec(
         // Disable clipping for all charts so they can extend to the bottom
         clip: false,
       },
-      // We need negative padding here to allow the chart to go from
-      // left to right. For whatever reason, there is a ~3px padding
-      // otherwise.
-      // All charts extend to the bottom with no bottom padding:
-      padding: { left: -3, right: -3, top: 2, bottom: 0 },
+      // Padding on left, right, and top only (no bottom padding for AREA):
+      padding: { left: -3, right: -3, top: 8, bottom: 0 },
       ...(chartType === MetricProto.ChartType.BAR && {
-        // Bar chart doesn't need the negative left/right padding:
-        padding: { left: 0, right: 0, top: 2, bottom: 0 },
+        // Bar chart doesn't need the negative left/right padding, but needs bottom padding:
+        padding: { left: 0, right: 0, top: 8, bottom: 10 },
+      }),
+      ...(chartType === MetricProto.ChartType.LINE && {
+        // Line chart needs bottom padding:
+        padding: { left: -3, right: -3, top: 8, bottom: 10 },
       }),
       mark: {
         tooltip: { content: "encoding" },

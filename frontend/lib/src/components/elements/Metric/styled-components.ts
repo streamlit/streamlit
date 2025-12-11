@@ -41,7 +41,10 @@ export const StyledMetricContainer = styled.div<StyledMetricContainerProps>(
 export const StyledMetricContent = styled.div<{ showBorder: boolean }>(
   ({ theme, showBorder }) => ({
     ...(showBorder && {
-      padding: `calc(${theme.spacing.lg} - ${theme.sizes.borderWidth})`,
+      paddingLeft: `calc(${theme.spacing.lg} - ${theme.sizes.borderWidth})`,
+      paddingRight: `calc(${theme.spacing.lg} - ${theme.sizes.borderWidth})`,
+      paddingTop: `calc(${theme.spacing.lg} - ${theme.sizes.borderWidth})`,
+      paddingBottom: 0,
     }),
   })
 )
@@ -49,7 +52,6 @@ export const StyledMetricContent = styled.div<{ showBorder: boolean }>(
 export const StyledMetricChart = styled.div<{ showBorder: boolean }>(
   ({ theme, showBorder }) => ({
     marginTop: showBorder ? undefined : theme.spacing.lg,
-    marginBottom: showBorder ? theme.spacing.twoXL : undefined,
   })
 )
 
