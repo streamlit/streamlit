@@ -19,15 +19,12 @@ import re
 from playwright.sync_api import Locator, Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run, wait_until
+from e2e_playwright.shared.app_utils import select_selectbox_option
 
 
 def _select_pdf_scenario(app: Page, scenario: str):
     """Select a PDF test scenario from the dropdown."""
-    selectbox_input = app.get_by_test_id("stSelectbox").locator("input")
-    selectbox_input.clear()
-    selectbox_input.type(scenario)
-    selectbox_input.press("Enter")
-    wait_for_app_run(app)
+    select_selectbox_option(app, "PDF Test Scenarios", scenario)
 
 
 def _expect_pdf_container_attached(app: Page):
