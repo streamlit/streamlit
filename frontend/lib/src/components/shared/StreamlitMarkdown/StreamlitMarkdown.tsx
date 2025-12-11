@@ -81,6 +81,7 @@ import {
   loadRehypeRaw,
   loadRemarkEmoji,
   type RawPlugin,
+  type RemarkPluginFactory,
   useLazyPlugin,
   wrapRehypePlugin,
   wrapRemarkPlugin,
@@ -539,8 +540,7 @@ function createColorMapping(theme: EmotionTheme): Map<string, string> {
  * Factory function to create the help icon directive plugin
  */
 function createRemarkHelpIcon() {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  return () => (tree: any) => {
+  return () => (tree: MdastRoot) => {
     visit(tree, "textDirective", (node, _index, _parent) => {
       const nodeName = String(node.name)
 
@@ -636,10 +636,10 @@ function createRemarkColoringAndSmall(
  * This plugin should run last to convert any unsupported text directives
  * to plain text, ensuring they are rendered rather than ignored.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-function createRemarkUnsupportedDirectivesCleanup(): () => (tree: any) => any {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  return () => (tree: any) => {
+function createRemarkUnsupportedDirectivesCleanup(): () => (
+  tree: MdastRoot
+) => MdastRoot {
+  return () => (tree: MdastRoot) => {
     visit(tree, "textDirective", (node, _index, _parent) => {
       const nodeName = String(node.name)
 
@@ -648,8 +648,11 @@ function createRemarkUnsupportedDirectivesCleanup(): () => (tree: any) => any {
       // https://github.com/streamlit/streamlit/issues/5968
       // Don't convert if the directive was already handled by another plugin
       if (!node.data?.hName) {
-        node.type = "text"
-        node.value = `:${nodeName}`
+        // Mutate directive node into a text node - cast needed because we're
+        // changing the node type in place (standard unist transformer pattern)
+        const textNode = node as unknown as Text
+        textNode.type = "text"
+        textNode.value = `:${nodeName}`
         node.data = {}
       }
     })
@@ -850,8 +853,7 @@ const LABEL_DISALLOWED_ELEMENTS = [
 const LINKS_DISALLOWED_ELEMENTS = [...LABEL_DISALLOWED_ELEMENTS, "a"]
 
 interface LinkProps {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  node?: any
+  node?: Element
   children?: ReactNode
   href?: string
   title?: string
@@ -940,8 +942,8 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
   const wrappedEmojiPlugin = useMemo(
     () =>
       isLoadedPlugin(emojiPlugin)
-        ? // eslint-disable-next-line @typescript-eslint/no-explicit-any -- unified's Plugin type is more complex than our wrapper expects
-          wrapRemarkPlugin(emojiPlugin as any, "remark-emoji")
+        ? // Cast needed: unified's Plugin type is more complex than our RemarkPluginFactory wrapper
+          wrapRemarkPlugin(emojiPlugin as RemarkPluginFactory, "remark-emoji")
         : null,
     [emojiPlugin]
   )
