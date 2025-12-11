@@ -215,7 +215,7 @@ describe("Button widget", () => {
       expect(screen.getByText("Test Button")).toBeVisible()
     })
 
-    it("renders icon without label when label_visibility is collapsed", () => {
+    it("renders icon with visually hidden label when label_visibility is collapsed", () => {
       const props = getProps({
         label: "Test Button",
         icon: "⚡",
@@ -227,8 +227,18 @@ describe("Button widget", () => {
 
       // Icon should be visible
       expect(screen.getByText("⚡")).toBeVisible()
-      // Label should not be visible
-      expect(screen.queryByText("Test Button")).not.toBeInTheDocument()
+      // Label should still be in the DOM for accessibility (screen readers)
+      const label = screen.getByText("Test Button")
+      expect(label).toBeInTheDocument()
+      // The parent span should have screen-reader-only styles
+      const srOnlyWrapper = label.closest("span")
+      expect(srOnlyWrapper).toHaveStyle({
+        position: "absolute",
+        width: "1px",
+        height: "1px",
+        overflow: "hidden",
+        clip: "rect(0, 0, 0, 0)",
+      })
     })
   })
 })

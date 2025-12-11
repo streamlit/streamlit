@@ -89,4 +89,32 @@ describe("DynamicButtonLabel", () => {
     expect(screen.getByText("Ctrl + N")).toBeInTheDocument()
     spy.mockRestore()
   })
+
+  describe("isLabelCollapsed", () => {
+    it("renders label visibly by default", () => {
+      render(<DynamicButtonLabel {...getProps()} />)
+      expect(screen.getByText("Button Label")).toBeVisible()
+    })
+
+    it("renders label in the DOM but visually hidden when isLabelCollapsed is true", () => {
+      render(<DynamicButtonLabel {...getProps({ isLabelCollapsed: true })} />)
+      // Label should still be in the DOM for accessibility (screen readers)
+      const label = screen.getByText("Button Label")
+      expect(label).toBeInTheDocument()
+      // The parent span should have screen-reader-only styles
+      const srOnlyWrapper = label.closest("span")
+      expect(srOnlyWrapper).toHaveStyle({
+        position: "absolute",
+        width: "1px",
+        height: "1px",
+        overflow: "hidden",
+        clip: "rect(0, 0, 0, 0)",
+      })
+    })
+
+    it("still shows icon visibly when isLabelCollapsed is true", () => {
+      render(<DynamicButtonLabel {...getProps({ isLabelCollapsed: true })} />)
+      expect(screen.getByTestId("stIconEmoji")).toBeVisible()
+    })
+  })
 })

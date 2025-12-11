@@ -546,3 +546,19 @@ export const StyledButtonShortcut = styled.kbd(({ theme }) => ({
   lineHeight: theme.lineHeights.tight,
   letterSpacing: "0.01em",
 }))
+
+/**
+ * Visually hidden content that remains accessible to screen readers.
+ * This is used for collapsed button labels to maintain accessibility.
+ */
+export const StyledScreenReaderOnly = styled.span({
+  position: "absolute",
+  width: "1px",
+  height: "1px",
+  padding: 0,
+  margin: "-1px",
+  overflow: "hidden",
+  clip: "rect(0, 0, 0, 0)",
+  whiteSpace: "nowrap",
+  border: 0,
+})

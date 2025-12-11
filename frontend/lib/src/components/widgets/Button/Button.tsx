@@ -86,8 +86,9 @@ function Button(props: Props): ReactElement {
         >
           <DynamicButtonLabel
             icon={element.icon}
-            label={isLabelCollapsed ? "" : element.label}
+            label={element.label}
             shortcut={shortcut}
+            isLabelCollapsed={isLabelCollapsed}
           />
         </BaseButton>
       </BaseButtonTooltip>
