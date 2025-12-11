@@ -688,6 +688,15 @@ describe("StreamlitMarkdown", () => {
     expect(markdown).toBeInTheDocument()
   })
 
+  it("converts unsupported text directives to plain text", () => {
+    // Text directives use the syntax :name[content]
+    // Unsupported ones should render as :name (prefix only, content lost)
+    const source = `test :unknown[content] end`
+    render(<StreamlitMarkdown source={source} allowHTML={false} />)
+    const markdown = screen.getByText("test :unknown end")
+    expect(markdown).toBeVisible()
+  })
+
   it("properly adds background colors", () => {
     backgroundColorMapping.forEach(function (style, color) {
       const source = `:${color}-background[text]`

@@ -171,6 +171,21 @@ export interface Props {
 }
 
 /**
+ * Type for mdast text nodes that carry hast transformation data.
+ * Used by mdast-util-to-hast to convert these placeholder nodes into specific HTML elements.
+ * @see https://github.com/syntax-tree/mdast-util-to-hast#fields-on-nodes
+ */
+interface MdastTextWithHastData {
+  type: "text"
+  value: string
+  data: {
+    hName: string
+    hProperties: Record<string, string>
+    hChildren?: Array<{ type: string; value: string }>
+  }
+}
+
+/**
  * A rehype plugin to add an `inline` property to code blocks.
  * This is used to distinguish between inline code and code blocks.
  * It is needed for versions of react-markdown from v9 onwards.
@@ -640,20 +655,17 @@ function createRemarkUnsupportedDirectivesCleanup(): () => (
   tree: MdastRoot
 ) => MdastRoot {
   return () => (tree: MdastRoot) => {
-    visit(tree, "textDirective", (node, _index, _parent) => {
-      const nodeName = String(node.name)
-
+    visit(tree, "textDirective", (node, index, parent) => {
       // Convert unsupported text directives to plain text to avoid them being
       // ignored / not rendered. See https://github.com/streamlit/streamlit/issues/8726,
       // https://github.com/streamlit/streamlit/issues/5968
       // Don't convert if the directive was already handled by another plugin
-      if (!node.data?.hName) {
-        // Mutate directive node into a text node - cast needed because we're
-        // changing the node type in place (standard unist transformer pattern)
-        const textNode = node as unknown as Text
-        textNode.type = "text"
-        textNode.value = `:${nodeName}`
-        node.data = {}
+      if (!node.data?.hName && parent && index !== undefined) {
+        const textNode: Text = {
+          type: "text",
+          value: `:${node.name}`,
+        }
+        parent.children[index] = textNode
       }
     })
     return tree
@@ -665,26 +677,10 @@ function createRemarkUnsupportedDirectivesCleanup(): () => (
  */
 function createRemarkMaterialIcons(theme: EmotionTheme) {
   return () => (tree: MdastRoot) => {
-    // The replace function returns a custom mdast node with hast transformation data.
-    // Type assertion needed because we're using mdast-util-to-hast's data properties
-    // which aren't reflected in the standard PhrasingContent types.
     function replace(
       fullMatch: string,
       iconName: string
-    ): {
-      type: "text"
-      value: string
-      data: {
-        hName: string
-        hProperties: {
-          role: string
-          ariaLabel: string
-          translate: string
-          style: string
-        }
-        hChildren: Array<{ type: string; value: string }>
-      }
-    } {
+    ): MdastTextWithHastData {
       return {
         type: "text",
         value: fullMatch,
@@ -733,21 +729,7 @@ function createRemarkMaterialIcons(theme: EmotionTheme) {
  */
 function createRemarkStreamlitLogo() {
   return () => (tree: MdastRoot) => {
-    // The replace function returns a custom mdast node with hast transformation data.
-    // Type assertion needed because we're using mdast-util-to-hast's data properties
-    // which aren't reflected in the standard PhrasingContent types.
-    function replaceStreamlit(): {
-      type: "text"
-      value: string
-      data: {
-        hName: string
-        hProperties: {
-          src: string
-          alt: string
-          style: string
-        }
-      }
-    } {
+    function replaceStreamlit(): MdastTextWithHastData {
       return {
         type: "text",
         value: "",
