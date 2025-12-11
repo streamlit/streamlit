@@ -400,7 +400,7 @@ class ButtonMixin:
             The contents of the file to be downloaded or a callable that
             returns the contents of the file.
 
-            File contents can be a string (path , S3 URI or HTTP(S)) , bytes or file-like object.
+            File contents can be a string (path, S3 URI or HTTP(S)), bytes or file-like object.
             File-like objects include ``io.BytesIO``, ``io.StringIO``, or any
             class that implements the abstract base class ``io.RawIOBase``.
 

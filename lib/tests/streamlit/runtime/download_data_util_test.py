@@ -27,13 +27,137 @@ from streamlit.runtime.download_data_util import convert_data_to_bytes_and_infer
 
 
 class ConvertDataToBytesAndInferMimeTest(unittest.TestCase):
-    def test_str_is_converted_to_bytes_and_text_plain(self):
-        """Strings are encoded to bytes and inferred as text/plain."""
+    @unittest.mock.patch(
+        "streamlit.runtime.download_data_util.file_util.local_file_down"
+    )
+    def test_local_file_downloads_and_infers_mime_type(self, mock_local_file_down):
+        """Local file path is downloaded and MIME type is inferred from filename."""
+        mock_local_file_down.return_value = b"file content"
         data_as_bytes, mime = convert_data_to_bytes_and_infer_mime(
-            "hello", unsupported_error=RuntimeError("unsupported")
+            "/path/to/file.txt", unsupported_error=RuntimeError("unsupported")
         )
-        assert data_as_bytes == b"hello"
+        assert data_as_bytes == b"file content"
         assert mime == "text/plain"
+        mock_local_file_down.assert_called_once_with("/path/to/file.txt")
+
+    @unittest.mock.patch(
+        "streamlit.runtime.download_data_util.file_util.local_file_down"
+    )
+    def test_local_file_unknown_extension_defaults_to_octet_stream(
+        self, mock_local_file_down
+    ):
+        """Local file with unknown extension defaults to application/octet-stream."""
+        mock_local_file_down.return_value = b"data"
+        data_as_bytes, mime = convert_data_to_bytes_and_infer_mime(
+            "/path/to/file.unknown", unsupported_error=RuntimeError("unsupported")
+        )
+        assert data_as_bytes == b"data"
+        assert mime == "application/octet-stream"
+
+    @unittest.mock.patch("streamlit.runtime.download_data_util.file_util.s3_file_down")
+    def test_s3_file_downloads_and_infers_mime_type(self, mock_s3_file_down):
+        """S3 file URL is downloaded and MIME type is inferred from filename."""
+        mock_s3_file_down.return_value = b"s3 content"
+        data_as_bytes, mime = convert_data_to_bytes_and_infer_mime(
+            "s3://bucket/folder/document.pdf",
+            unsupported_error=RuntimeError("unsupported"),
+        )
+        assert data_as_bytes == b"s3 content"
+        assert mime == "application/pdf"
+        mock_s3_file_down.assert_called_once_with("s3://bucket/folder/document.pdf")
+
+    @unittest.mock.patch("streamlit.runtime.download_data_util.file_util.s3_file_down")
+    def test_s3a_file_downloads_and_infers_mime_type(self, mock_s3_file_down):
+        """S3a file URL is downloaded and MIME type is inferred from filename."""
+        mock_s3_file_down.return_value = b"s3a content"
+        data_as_bytes, mime = convert_data_to_bytes_and_infer_mime(
+            "s3a://bucket/file.csv", unsupported_error=RuntimeError("unsupported")
+        )
+        assert data_as_bytes == b"s3a content"
+        assert mime == "text/csv"
+        mock_s3_file_down.assert_called_once_with("s3a://bucket/file.csv")
+
+    @unittest.mock.patch("streamlit.runtime.download_data_util.file_util.s3_file_down")
+    def test_s3_url_with_query_params_strips_params_for_mime_inference(
+        self, mock_s3_file_down
+    ):
+        """S3 URL query parameters are stripped before MIME inference."""
+        mock_s3_file_down.return_value = b"data"
+        data_as_bytes, mime = convert_data_to_bytes_and_infer_mime(
+            "s3://bucket/image.png?versionId=abc123",
+            unsupported_error=RuntimeError("unsupported"),
+        )
+        assert data_as_bytes == b"data"
+        assert mime == "image/png"
+
+    @unittest.mock.patch("streamlit.runtime.download_data_util.file_util.http_down")
+    def test_http_file_downloads_and_infers_mime_type(self, mock_http_down):
+        """HTTP URL is downloaded and MIME type is inferred from filename."""
+        mock_http_down.return_value = b"http content"
+        data_as_bytes, mime = convert_data_to_bytes_and_infer_mime(
+            "http://example.com/file.json",
+            unsupported_error=RuntimeError("unsupported"),
+        )
+        assert data_as_bytes == b"http content"
+        assert mime == "application/json"
+        mock_http_down.assert_called_once_with("http://example.com/file.json")
+
+    @unittest.mock.patch("streamlit.runtime.download_data_util.file_util.http_down")
+    def test_https_file_downloads_and_infers_mime_type(self, mock_http_down):
+        """HTTPS URL is downloaded and MIME type is inferred from filename."""
+        mock_http_down.return_value = b"https content"
+        data_as_bytes, mime = convert_data_to_bytes_and_infer_mime(
+            "https://example.com/sheet.xlsx",
+            unsupported_error=RuntimeError("unsupported"),
+        )
+        assert data_as_bytes == b"https content"
+        assert (
+            mime == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        mock_http_down.assert_called_once_with("https://example.com/sheet.xlsx")
+
+    @unittest.mock.patch("streamlit.runtime.download_data_util.file_util.http_down")
+    def test_http_url_with_query_params_strips_params_for_mime_inference(
+        self, mock_http_down
+    ):
+        """HTTP URL query parameters are stripped before MIME inference."""
+        mock_http_down.return_value = b"data"
+        data_as_bytes, mime = convert_data_to_bytes_and_infer_mime(
+            "https://example.com/file.zip?token=xyz",
+            unsupported_error=RuntimeError("unsupported"),
+        )
+        assert data_as_bytes == b"data"
+        assert mime == "application/zip"
+
+    @unittest.mock.patch(
+        "streamlit.runtime.download_data_util.file_util.local_file_down"
+    )
+    def test_local_file_down_error_propagates(self, mock_local_file_down):
+        """Error from local_file_down is propagated."""
+        mock_local_file_down.side_effect = OSError("Download failed")
+        with pytest.raises(IOError, match="Download failed"):
+            convert_data_to_bytes_and_infer_mime(
+                "/path/to/file.txt", unsupported_error=RuntimeError("unsupported")
+            )
+
+    @unittest.mock.patch("streamlit.runtime.download_data_util.file_util.s3_file_down")
+    def test_s3_file_down_error_propagates(self, mock_s3_file_down):
+        """Error from s3_file_down is propagated."""
+        mock_s3_file_down.side_effect = RuntimeError("S3 access denied")
+        with pytest.raises(RuntimeError, match="S3 access denied"):
+            convert_data_to_bytes_and_infer_mime(
+                "s3://bucket/file.txt", unsupported_error=RuntimeError("unsupported")
+            )
+
+    @unittest.mock.patch("streamlit.runtime.download_data_util.file_util.http_down")
+    def test_http_down_error_propagates(self, mock_http_down):
+        """Error from http_down is propagated."""
+        mock_http_down.side_effect = ConnectionError("Network timeout")
+        with pytest.raises(ConnectionError, match="Network timeout"):
+            convert_data_to_bytes_and_infer_mime(
+                "https://example.com/file.txt",
+                unsupported_error=RuntimeError("unsupported"),
+            )
 
     def test_text_io_wrapper_is_converted_to_bytes_and_text_plain(self):
         """io.TextIOWrapper is read fully and inferred as text/plain."""
