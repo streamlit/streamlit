@@ -32,6 +32,6 @@ jobs:
             2. **Code review**: A core maintainer will start reviewing your PR once:
                - It has `status:product-approved` (or doesn't need it)
                - All CI checks pass
-               - All review comments are addressed
+               - All AI review comments are addressed
 
             We're receiving many contributions and have limited review bandwidth — please expect some delay. We appreciate your patience! 🙏
