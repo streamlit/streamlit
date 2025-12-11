@@ -79,7 +79,7 @@ exposed.
 
 ### Example
 
-This assumes `expose_tokens = "access"`, so that `st.user.tokens.access` exists. 
+This assumes `expose_tokens = "access"`, so that `st.user.tokens.access` exists.
 
 ```python
 import streamlit as st
