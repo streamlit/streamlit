@@ -536,7 +536,7 @@ describe("Metric element", () => {
           }),
         ]),
         config: expect.objectContaining({
-          padding: { left: 0, right: 0, top: 2, bottom: 2 },
+          padding: { left: 0, right: 0, top: 8, bottom: 10 },
         }),
       })
     })
@@ -572,7 +572,7 @@ describe("Metric element", () => {
           }),
         ]),
         config: expect.objectContaining({
-          padding: { left: -3, right: -3, top: 2, bottom: 0 },
+          padding: { left: -3, right: -3, top: 8, bottom: 0 },
         }),
       })
     })
