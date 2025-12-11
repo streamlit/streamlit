@@ -17,6 +17,7 @@ from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
 from e2e_playwright.shared.app_utils import get_element_by_key, select_selectbox_option
+from e2e_playwright.shared.react18_utils import wait_for_react_stability
 
 # Container keys that should be tested (excluding map cases which need special handling)
 CONTAINER_KEYS = [
@@ -58,6 +59,8 @@ def test_layouts_container_various_elements(
     """Snapshot test for each top-level container in st_layouts_container_various_elements.py."""
     for container_key in CONTAINER_KEYS:
         select_selectbox_option(app, "Select container case", container_key)
+        app.wait_for_timeout(500)
+        wait_for_react_stability(app)
 
         locator = get_element_by_key(app, container_key)
         expect(locator).to_be_visible()
