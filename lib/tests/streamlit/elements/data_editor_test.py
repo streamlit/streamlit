@@ -160,6 +160,11 @@ class DataEditorUtilTest(unittest.TestCase):
             ),
             # Scalar values with EMPTY data kind should remain scalars (fix for #13305, #13307)
             (
+                None,
+                ColumnDataKind.EMPTY,
+                None,
+            ),
+            (
                 42,
                 ColumnDataKind.EMPTY,
                 42,
