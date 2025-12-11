@@ -337,11 +337,11 @@ def test_editing_empty_column_returns_scalar_not_list(app: Page):
     click_on_cell(data_editor, 1, 0, double_click=True, column_width="medium")
     edit_cell_value(app, "42")
 
-    # Verify the complete dict output with scalar value 42.0 (not [42])
+    # Verify the complete dict output with scalar value 42 (not [42])
     expect_prefixed_markdown(
         app,
         "Empty column result:",
-        "{'number_col': {0: 42.0}, 'text_col': {0: None}}",
+        "{'number_col': {0: 42}, 'text_col': {0: None}}",
         exact_match=True,
     )
 
@@ -353,7 +353,7 @@ def test_editing_empty_column_returns_scalar_not_list(app: Page):
     expect_prefixed_markdown(
         app,
         "Empty column result:",
-        "{'number_col': {0: 42.0}, 'text_col': {0: 'hello'}}",
+        "{'number_col': {0: 42}, 'text_col': {0: 'hello'}}",
         exact_match=True,
     )
 
@@ -372,10 +372,10 @@ def test_editing_empty_column_returns_scalar_not_list(app: Page):
     click_on_cell(data_editor, 2, 0, double_click=True, column_width="medium")
     edit_cell_value(app, "99")
 
-    # Verify the complete dict output with new row scalar 99.0 (not [99])
+    # Verify the complete dict output with new row scalar 99 (not [99])
     expect_prefixed_markdown(
         app,
         "Empty column result:",
-        "{'number_col': {0: 42.0, 1: 99.0}, 'text_col': {0: 'hello', 1: None}}",
+        "{'number_col': {0: 42, 1: 99}, 'text_col': {0: 'hello', 1: None}}",
         exact_match=True,
     )
