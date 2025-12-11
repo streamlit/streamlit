@@ -195,7 +195,6 @@ def test_dynamic_select_slider_props(app: Page, assert_snapshot: ImageCompareFun
     expect_prefixed_markdown(app, "Updated select slider value:", "yellow")
 
     dynamic_select_slider.scroll_into_view_if_needed()
-
     assert_snapshot(dynamic_select_slider, name="st_select_slider-dynamic_updated")
 
     # Check that the help tooltip is correct:
