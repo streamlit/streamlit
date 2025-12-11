@@ -13,7 +13,8 @@
 # limitations under the License.
 
 """
-Test script to demonstrate area chart improvements:
+Test script to demonstrate area chart improvements.
+
 1. Removed bottom padding
 2. Better axis scaling for high values
 """
@@ -28,9 +29,38 @@ data_points = 30
 # Generate data with small variations around 8.4 MiB
 # Converting to KiB for more granular changes
 base_size_kib = base_size_mib * 1024  # ~8601.6 KiB
-changes_kib = [-947.9, -900, -850, -800, -750, -700, -650, -600, -550, -500,
-               -450, -400, -350, -300, -250, -200, -150, -100, -50, 0,
-               50, 100, 150, 200, 250, 300, 350, 400, 450, 500]
+changes_kib = [
+    -947.9,
+    -900,
+    -850,
+    -800,
+    -750,
+    -700,
+    -650,
+    -600,
+    -550,
+    -500,
+    -450,
+    -400,
+    -350,
+    -300,
+    -250,
+    -200,
+    -150,
+    -100,
+    -50,
+    0,
+    50,
+    100,
+    150,
+    200,
+    250,
+    300,
+    350,
+    400,
+    450,
+    500,
+]
 
 # Create chart data: current size minus the changes (showing progression)
 chart_data = [base_size_kib - change for change in changes_kib]
@@ -60,7 +90,7 @@ st.metric(
     chart_data=chart_data,
     chart_type="area",
     border=True,
-    help="This area chart should have no bottom padding and better axis scaling"
+    help="This area chart should have no bottom padding and better axis scaling",
 )
 
 # Comparison: Show all three chart types side by side
@@ -116,7 +146,24 @@ The chart data crosses zero (has both negative and positive values), so the y-ax
 """)
 
 # Create data that crosses zero - going from negative to positive
-zero_crossing_data = [-50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
+zero_crossing_data = [
+    -50,
+    -40,
+    -30,
+    -20,
+    -10,
+    0,
+    10,
+    20,
+    30,
+    40,
+    50,
+    60,
+    70,
+    80,
+    90,
+    100,
+]
 current_value = zero_crossing_data[-1]
 delta_value = zero_crossing_data[-1] - zero_crossing_data[0]  # 100 - (-50) = 150
 
@@ -128,7 +175,7 @@ st.metric(
     chart_data=zero_crossing_data,
     chart_type="area",
     border=True,
-    help="This area chart should have y-axis minimum at 0, even though data goes negative"
+    help="This area chart should have y-axis minimum at 0, even though data goes negative",
 )
 
 st.markdown("""
