@@ -14,6 +14,8 @@
 
 from playwright.sync_api import Page, expect
 
+from e2e_playwright.shared.app_utils import select_selectbox_option
+
 
 def test_st_map_has_no_stale_elements(
     themed_app: Page,
@@ -21,15 +23,10 @@ def test_st_map_has_no_stale_elements(
     maps = themed_app.get_by_test_id("stDeckGlJsonChart")
     expect(maps).to_have_count(3)
 
-    selectbox = themed_app.get_by_test_id("stSelectbox").first
-    selectbox.locator("input").first.click()
-    selection_dropdown = themed_app.locator('[data-baseweb="popover"]').first
-    selection_dropdown.locator("li").nth(1).click()
+    select_selectbox_option(themed_app, "which dataframe to use?", "2")
 
     expect(maps).to_have_count(3)
 
-    selectbox.locator("input").first.click()
-    selection_dropdown = themed_app.locator('[data-baseweb="popover"]').first
-    selection_dropdown.locator("li").nth(0).click()
+    select_selectbox_option(themed_app, "which dataframe to use?", "1")
 
     expect(maps).to_have_count(3)
