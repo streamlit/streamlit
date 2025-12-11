@@ -12,175 +12,51 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-Test script to demonstrate area chart improvements.
+from playwright.sync_api import Page, expect
 
-1. Removed bottom padding
-2. Better axis scaling for high values
-"""
+from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.shared.app_utils import get_metric
 
-import streamlit as st
 
-# High-value data similar to the image (MiB/KiB scale)
-# Simulating gzip size data that changes slightly but numbers are high
-base_size_mib = 8.4
-data_points = 30
+def test_area_chart_metric_renders(app: Page):
+    """Test that the area chart metric renders correctly."""
+    metric = get_metric(app, "Total Gzip Size")
+    expect(metric.get_by_test_id("stMetricLabel")).to_have_text("Total Gzip Size")
+    expect(metric.get_by_test_id("stMetricValue")).to_contain_text("8.4")
+    expect(metric.get_by_test_id("stMetricChart")).to_be_visible()
 
-# Generate data with small variations around 8.4 MiB
-# Converting to KiB for more granular changes
-base_size_kib = base_size_mib * 1024  # ~8601.6 KiB
-changes_kib = [
-    -947.9,
-    -900,
-    -850,
-    -800,
-    -750,
-    -700,
-    -650,
-    -600,
-    -550,
-    -500,
-    -450,
-    -400,
-    -350,
-    -300,
-    -250,
-    -200,
-    -150,
-    -100,
-    -50,
-    0,
-    50,
-    100,
-    150,
-    200,
-    250,
-    300,
-    350,
-    400,
-    450,
-    500,
-]
 
-# Create chart data: current size minus the changes (showing progression)
-chart_data = [base_size_kib - change for change in changes_kib]
+def test_line_area_bar_chart_comparison(app: Page):
+    """Test that line, area, and bar charts are displayed side by side."""
+    line_metric = get_metric(app, "Line Chart")
+    area_metric = get_metric(app, "Area Chart")
+    bar_metric = get_metric(app, "Bar Chart")
 
-# Current value and delta
-current_value_kib = chart_data[-1]
-delta_kib = chart_data[-1] - chart_data[0]  # -947.9 KiB
+    expect(line_metric.get_by_test_id("stMetricChart")).to_be_visible()
+    expect(area_metric.get_by_test_id("stMetricChart")).to_be_visible()
+    expect(bar_metric.get_by_test_id("stMetricChart")).to_be_visible()
 
-st.title("Area Chart Improvements Test")
 
-st.markdown("""
-### Test Case: High-Value Data with Small Changes
+def test_zero_crossing_data_chart(app: Page):
+    """Test that the zero-crossing data chart renders correctly."""
+    metric = get_metric(app, "Zero-Crossing Data")
+    expect(metric.get_by_test_id("stMetricLabel")).to_have_text("Zero-Crossing Data")
+    expect(metric.get_by_test_id("stMetricValue")).to_have_text("100")
+    expect(metric.get_by_test_id("stMetricDelta")).to_contain_text("150")
+    expect(metric.get_by_test_id("stMetricChart")).to_be_visible()
 
-This demonstrates the improvements to area charts:
-1. **Removed bottom padding** - Area chart should align with line/bar charts
-2. **Better axis scaling** - Y-axis should adjust to data range, making small changes visible
 
-The data represents file sizes around 8.4 MiB with small variations.
-""")
+def test_area_chart_snapshot(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test visual snapshot of area chart metric."""
+    metric = get_metric(themed_app, "Total Gzip Size")
+    assert_snapshot(metric, name="st_metric_area_chart-default")
 
-# Display the metric with area chart
-st.metric(
-    label="Total Gzip Size",
-    value=f"{base_size_mib:.1f} MiB",
-    delta=f"{delta_kib:.1f} KiB",
-    delta_color="normal",
-    chart_data=chart_data,
-    chart_type="area",
-    border=True,
-    help="This area chart should have no bottom padding and better axis scaling",
-)
 
-# Comparison: Show all three chart types side by side
-st.markdown("### Comparison: Line vs Area vs Bar")
-
-col1, col2, col3 = st.columns(3)
-
-with col1:
-    st.metric(
-        "Line Chart",
-        f"{base_size_mib:.1f} MiB",
-        f"{delta_kib:.1f} KiB",
-        chart_data=chart_data,
-        chart_type="line",
-        border=True,
-    )
-
-with col2:
-    st.metric(
-        "Area Chart",
-        f"{base_size_mib:.1f} MiB",
-        f"{delta_kib:.1f} KiB",
-        chart_data=chart_data,
-        chart_type="area",
-        border=True,
-    )
-
-with col3:
-    st.metric(
-        "Bar Chart",
-        f"{base_size_mib:.1f} MiB",
-        f"{delta_kib:.1f} KiB",
-        chart_data=chart_data,
-        chart_type="bar",
-        border=True,
-    )
-
-st.markdown("""
-**Expected Results:**
-- All three charts should have the same height
-- Area chart should align at the bottom with line/bar charts (no extra padding)
-- Area chart y-axis should scale to show the data variation clearly
-- The green area should fill more of the vertical space, making the trend more visible
-""")
-
-# Test case: Data range containing 0 - y-axis minimum should default to 0
-st.markdown("---")
-st.markdown("### Test Case: Data Range Containing Zero")
-
-st.markdown("""
-This demonstrates that when the data range contains 0, the y-axis minimum (y2) defaults to 0.
-The chart data crosses zero (has both negative and positive values), so the y-axis should start at 0.
-""")
-
-# Create data that crosses zero - going from negative to positive
-zero_crossing_data = [
-    -50,
-    -40,
-    -30,
-    -20,
-    -10,
-    0,
-    10,
-    20,
-    30,
-    40,
-    50,
-    60,
-    70,
-    80,
-    90,
-    100,
-]
-current_value = zero_crossing_data[-1]
-delta_value = zero_crossing_data[-1] - zero_crossing_data[0]  # 100 - (-50) = 150
-
-st.metric(
-    label="Zero-Crossing Data",
-    value=f"{current_value}",
-    delta=f"{delta_value:+d}",
-    delta_color="normal",
-    chart_data=zero_crossing_data,
-    chart_type="area",
-    border=True,
-    help="This area chart should have y-axis minimum at 0, even though data goes negative",
-)
-
-st.markdown("""
-**Expected Result:**
-- The y-axis minimum should be 0 (not -50, which is the minimum data value)
-- The area chart should show the full range from 0 to 100
-- This demonstrates that when data contains 0, y2 defaults to 0
-""")
+def test_zero_crossing_chart_snapshot(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test visual snapshot of zero-crossing data chart."""
+    metric = get_metric(themed_app, "Zero-Crossing Data")
+    assert_snapshot(metric, name="st_metric_area_chart-zero_crossing")
