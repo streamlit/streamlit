@@ -56,7 +56,7 @@ def _select_case(app: Page, case_name: str) -> None:
     """Select a container case from the selectbox and wait for it to render."""
     selectbox_input = get_selectbox(app, "Select container case").locator("input")
     # Clear any existing text and type the option name
-    selectbox_input.fill("")
+    selectbox_input.clear()
     selectbox_input.type(case_name)
     selectbox_input.press("Enter")
     wait_for_app_run(app, wait_delay=500)

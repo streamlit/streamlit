@@ -51,12 +51,7 @@ CONTAINER_CASES = [
     "narrow-fixed-width-container-with-dataframe",
 ]
 
-selected_case = st.selectbox(
-    "Select container case",
-    CONTAINER_CASES,
-    index=None,
-    key="case-selector",
-)
+selected_case = st.selectbox("Select container case", CONTAINER_CASES, index=None)
 
 if selected_case == "layout-dashboard-example":
     with st.container(
