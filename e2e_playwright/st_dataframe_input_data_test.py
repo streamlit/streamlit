@@ -44,6 +44,7 @@ def test_dataframe_input_format_rendering(
 
         dataframe_element = app.get_by_test_id("stDataFrame")
         expect(dataframe_element).to_be_visible()
+        expect_canvas_to_be_stable(dataframe_element)
         app.wait_for_selector("[data-testid='stDataFrame']", state="attached")
         assert_snapshot(dataframe_element, name=f"st_dataframe-input_data_{index}")
 
