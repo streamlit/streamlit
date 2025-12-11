@@ -587,3 +587,27 @@ st.data_editor(
     },
     key="dynamic-editor",
 )
+
+st.header("Test editing empty columns")
+# Regression test for issues #13305 and #13307:
+# Editing cells in columns with None values should return scalar values, not lists.
+
+empty_column_df = pd.DataFrame(
+    {
+        "number_col": [None],
+        "text_col": [None],
+    }
+)
+
+empty_col_result = st.data_editor(
+    empty_column_df,
+    hide_index=True,
+    column_config={
+        "number_col": st.column_config.NumberColumn(width="medium"),
+        "text_col": st.column_config.TextColumn(width="medium"),
+    },
+    width="content",
+    key="empty-column-editor",
+)
+
+st.write("Empty column result:", str(empty_col_result))

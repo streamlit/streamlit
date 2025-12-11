@@ -318,3 +318,34 @@ def test_data_editor_dynamic_mode(app: Page, assert_snapshot: ImageCompareFuncti
     )
 
     assert_snapshot(dynamic_editor, name="st_data_editor-dynamic_mode_after_delete")
+
+
+def test_editing_empty_column_returns_scalar_not_list(app: Page):
+    """Test that editing cells in empty (None-only) columns returns scalar values.
+
+    Regression test for GitHub issues #13305 and #13307 where editing cells in
+    columns that start with None values would incorrectly wrap the edited value
+    in a list (e.g., entering "42" would return [42] instead of 42).
+    """
+    data_editor = _get_editor(app, "empty-column-editor")
+    expect_canvas_to_be_visible(data_editor)
+
+    # Test editing the number column (first column)
+    click_on_cell(data_editor, 1, 0, double_click=True, column_width="medium")
+    cell_overlay = get_open_cell_overlay(app)
+    cell_overlay.locator(".gdg-input").fill("42")
+    app.keyboard.press("Enter")
+    wait_for_app_run(app)
+
+    # Verify the value is stored as a scalar (42), not a list ([42])
+    expect_prefixed_markdown(app, "Empty column result:", "42")
+
+    # Test editing the text column (second column)
+    click_on_cell(data_editor, 1, 1, double_click=True, column_width="medium")
+    cell_overlay = get_open_cell_overlay(app)
+    cell_overlay.locator(".gdg-input").fill("hello")
+    app.keyboard.press("Enter")
+    wait_for_app_run(app)
+
+    # Verify the text value is stored as a scalar string, not a list
+    expect_prefixed_markdown(app, "Empty column result:", "hello")
