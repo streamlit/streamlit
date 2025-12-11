@@ -3,15 +3,21 @@ Author(s): @velochy
 Status: Draft
 ---
 
-# OIDC Token Exposure in `st.login`
+# Expose ID and access tokens in `st.user`
 
 ## Summary
+
+Expose the ID and access tokens from the OIDC login in `st.user` if the new
+`expose_tokens` option is set.
+
+
+## Problem
 
 Streamlit’s `st.login()` authentication mechanism currently enables user identity verification but does not provide access to the user’s tokens returned from the Identity Provider (IdP). Many enterprise and API-integrated Streamlit applications need access to the **access token** (to call APIs on behalf of the user) and occasionally the **ID token**. This feature provides a **configurable, secure way to expose selected tokens** to the developer through a new dictionary interface: `st.user.tokens`.
 
 By default, **no tokens are exposed**, ensuring backward compatibility and secure defaults.
 
-## **Goals**
+### Goals
 
 | Goal                                                     | Outcome                                                                                                              |
 | -------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
@@ -20,9 +26,7 @@ By default, **no tokens are exposed**, ensuring backward compatibility and secur
 | Avoid major breaking changes to existing apps            | `st.login()` signature remains unchanged                                                                             |
 | Prepare foundation for future refresh-token support      | Architecture supports later extension                                                                                |
 
----
-
-## **Non-Goals**
+### Non-Goals
 
 | Out of Scope                              | Rationale                                  |
 | ----------------------------------------- | ------------------------------------------ |
@@ -30,9 +34,10 @@ By default, **no tokens are exposed**, ensuring backward compatibility and secur
 | Exposing `refresh` token                  | High security risk; deferred               |
 | UI-based user-consent for token retrieval | May be implemented later; design needed    |
 
----
 
-## **Configuration**
+## Proposal
+
+### Configuration
 
 Developers request token exposure using `secrets.toml`:
 
@@ -49,38 +54,32 @@ Accepted values in the list:
 | `"id"`     | Adds `id_token` to `st.user.tokens`     |
 | _none_     | `st.user.tokens` remains empty          |
 
-As a convenience, providing an individual string value for one token type is also supported. The other token types are not exposed.
+As a convenience, you can also provide an individual string instead of a list (e.g. `"access"` instead of `["access"]`):
 
 ```toml
 [auth]
 expose_tokens = "access"
 ```
 
-If `expose_tokens` is omitted → the feature is **disabled by default**.
+If `expose_tokens` is omitted → the feature is **disabled** and `st.user` will not
+contain the key `tokens`.
 
----
+### API
 
-## **API Changes**
-
-### **No changes to `st.login()` function signature.**
-
-### **New Runtime Object:**
-
-`st.user.tokens`
-
-### **Behavior**
+If `expose_tokens` is set, we'll add a new field `st.user.tokens`, which will contain
+the respective tokens:
 
 ```python
-user = st.user  # existing object
-tokens = user.tokens  # new dict-like mapping
-
-access_token = tokens.get("access")  # may be None
-access_token = tokens.access  # can handle dot notation
-id_token = tokens.get("id")  # may be None
-id_token = tokens.id  # can handle dot notation
+id_token = st.user.tokens.id
+access_token = st.user.tokens.access
 ```
 
-### **Example Usage**
+Note that the keys `id` and `access` might not exist depending on which tokens are
+exposed.
+
+### Example
+
+This assumes `expose_tokens = "access"`, so that `st.user.tokens.access` exists. 
 
 ```python
 import streamlit as st
@@ -96,7 +95,7 @@ if st.user:
   st.json(resp.json())
 ```
 
-## **Data Storage \+ Cookie Model**
+### Data storage and cookie model
 
 | Cookie             | Purpose                                  | Notes                           |
 | ------------------ | ---------------------------------------- | ------------------------------- |
@@ -109,9 +108,7 @@ if st.user:
 
 - When user logs out, `streamlit_tokens` is deleted
 
----
-
-## **Security Considerations**
+### Security Considerations
 
 - Default behavior exposes **no tokens**
 
@@ -123,9 +120,8 @@ if st.user:
 
 - No UI indication of token exposure; developers assume responsibility
 
----
 
-## **Acceptance Criteria**
+### Acceptance Criteria
 
 | Requirement                                                             | Must Have | Status |
 | ----------------------------------------------------------------------- | --------- | ------ |
@@ -139,7 +135,7 @@ if st.user:
 
 ---
 
-## **Documentation Updates**
+### Documentation Updates
 
 Add to **Authentication Guide**:
 
@@ -149,16 +145,18 @@ Add to **Authentication Guide**:
 
 3. Warning Box: _Exposing tokens grants app the ability to act on behalf of user_
 
+
 ## Checklist
 
 <!--
 Check the boxes or add a comment with the reason it cannot be checked.
 -->
 
-- [ ] Works on all deployment platforms (e.g. [Streamlit Community Cloud](https://streamlit.io/cloud), [Streamlit in Snowflake](https://www.snowflake.com/en/product/features/streamlit-in-snowflake/), [Hugging Face Spaces](https://huggingface.co/spaces))?
-- [ ] No breaking API changes?
-- [ ] No new dependencies?
-- [ ] Metrics collected?
-- [ ] Any security or legal implications?
-- [ ] Anything to keep in mind for docs?
-- [ ] Any other risks?
+| Item                         | ✅ or comment          |
+|------------------------------|------------------------|
+| Works on SiS, Cloud, etc?    | Disabled on SiS, need to test on Cloud, but since auth and `st.user` works there, it should be fine.                        |
+| No breaking API changes      | ✅                       |
+| No new dependencies          | ✅                       |
+| Metrics collected            | Would be great to add tracking how often `st.user.tokens` is accessed or how often `expose_tokens` is set.                       |
+| Any security/legal impact?   | Security discussions already handled.                        |
+| Any docs changes needed?     | Should probably add an example/tutorial.
