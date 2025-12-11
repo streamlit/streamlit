@@ -63,6 +63,7 @@ def test_dataframe_supports_various_configurations(
     assert_snapshot(dataframe_elements.nth(14), name="st_dataframe-date_column")
     assert_snapshot(dataframe_elements.nth(15), name="st_dataframe-time_column")
     assert_snapshot(dataframe_elements.nth(16), name="st_dataframe-progress_column")
+
     assert_snapshot(dataframe_elements.nth(17), name="st_dataframe-list_column")
     assert_snapshot(dataframe_elements.nth(18), name="st_dataframe-bar_chart_column")
     assert_snapshot(dataframe_elements.nth(19), name="st_dataframe-line_chart_column")
