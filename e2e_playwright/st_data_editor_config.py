@@ -609,4 +609,5 @@ empty_col_result = st.data_editor(
     key="empty-column-editor",
 )
 
-st.write("Empty column result:", str(empty_col_result))
+# Use to_dict() for deterministic output format that's easy to verify in tests
+st.write("Empty column result:", str(empty_col_result.to_dict()))
