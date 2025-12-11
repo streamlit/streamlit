@@ -3374,7 +3374,7 @@ __metadata:
     "@types/katex": "npm:~0.16.7"
     "@types/lodash-es": "npm:~4.17.12"
     "@types/mapbox-gl": "npm:~1.13.10"
-    "@types/moment-duration-format": "npm:~2.2.6"
+    "@types/moment-duration-format": "npm:~2.2.7"
     "@types/plotly.js": "npm:^3.0.8"
     "@types/react": "npm:^18.2.0"
     "@types/react-color": "npm:^3.0.13"
@@ -4685,12 +4685,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/moment-duration-format@npm:~2.2.6":
-  version: 2.2.6
-  resolution: "@types/moment-duration-format@npm:2.2.6"
+"@types/moment-duration-format@npm:~2.2.7":
+  version: 2.2.7
+  resolution: "@types/moment-duration-format@npm:2.2.7"
   dependencies:
     moment: "npm:>=2.14.0"
-  checksum: 10c0/5cb7a81104c5d7e714a6a370d0d3857991a83fd986e150fef2719f342eaabea4372b82825ef39a4a224ec66068dfe0cab4a4771b4eabbd8d8e1fc3cb88c51bf9
+  checksum: 10c0/ae0098a74aaadfdb397fa18142b1360c243b7abfa5000172526f2bf482a9402ca0b0430229ad657578799b23b4af7d345c39df6d8188214756a32859e8fb04e0
   languageName: node
   linkType: hard
 
