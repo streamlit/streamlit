@@ -172,6 +172,10 @@ class WStates(MutableMapping[str, Any]):
 
     def set_widget_from_proto(self, widget_state: WidgetStateProto) -> None:
         """Set a widget's serialized value, overwriting any existing value it has."""
+        if not widget_state.id:
+            # Skip widget states with empty IDs - this can happen due to
+            # frontend edge cases during widget destruction or rapid updates
+            return
         self[widget_state.id] = Serialized(widget_state)
 
     def set_from_value(self, k: str, v: Any) -> None:
@@ -413,6 +417,10 @@ class SessionState:
         # happens when the streamlit server restarted or the cache was cleared),
         # then we receive a widget's state from a browser.
         for k in self._keys():
+            # Skip empty string keys - these can occur due to widget state edge cases
+            # and would cause KeyError when accessed
+            if not k:
+                continue
             if not is_element_id(k) and not _is_internal_key(k):
                 state[k] = self[k]
             elif is_keyed_element_id(k) and not _is_internal_key(k):
@@ -448,6 +456,8 @@ class SessionState:
         """Reset a new session state value to a given value
         without triggering the "state value cannot be modified" error.
         """
+        if not user_key:
+            return  # Skip empty keys silently
         self._new_session_state[user_key] = value
 
     def __iter__(self) -> Iterator[Any]:
@@ -529,6 +539,11 @@ class SessionState:
         If the key corresponds to a widget or form that's been instantiated
         during the current script run, raise a StreamlitAPIException instead.
         """
+        if not user_key:
+            raise StreamlitAPIException(
+                "st.session_state keys cannot be empty strings."
+            )
+
         ctx = get_script_run_ctx()
 
         if ctx is not None:

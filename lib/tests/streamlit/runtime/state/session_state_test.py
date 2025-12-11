@@ -813,6 +813,26 @@ class SessionStateMethodTests(unittest.TestCase):
                 self.session_state["form_id"] = "blah"
             assert "`st.session_state.form_id` cannot be modified" in str(e.value)
 
+    def test_setitem_disallows_empty_string_key(self):
+        """Test that setting an empty string key raises an error."""
+        with pytest.raises(StreamlitAPIException) as e:
+            self.session_state[""] = "value"
+        assert "keys cannot be empty strings" in str(e.value)
+
+    def test_reset_state_value_ignores_empty_key(self):
+        """Test that reset_state_value silently ignores empty keys."""
+        # Should not raise an error, just silently skip
+        self.session_state.reset_state_value("", "value")
+        assert "" not in self.session_state._new_session_state
+
+    def test_filtered_state_skips_empty_keys(self):
+        """Test that filtered_state skips empty string keys without error."""
+        # Manually inject an empty key into old_state to simulate the edge case
+        self.session_state._old_state[""] = "stale_value"
+        # filtered_state should not raise KeyError
+        state = self.session_state.filtered_state
+        assert "" not in state
+
     def test_reset_state_value(self):
         """Test that reset_state_value correctly sets a new state value.
 
