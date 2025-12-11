@@ -1399,7 +1399,16 @@ export class App extends PureComponent<Props, State> {
         userPreference &&
         customThemes.some(theme => theme.name === userPreference.name)
 
-      if (
+      if (userPreferenceStillValid) {
+        // User has a valid cached preference - update to the full server theme config
+        // but preserve their light/dark selection
+        const matchingTheme = customThemes.find(
+          theme => theme.name === userPreference.name
+        )
+        if (matchingTheme) {
+          this.setAndSendTheme(matchingTheme)
+        }
+      } else if (
         userPreference === null ||
         (usingCustomTheme && !userPreferenceStillValid)
       ) {

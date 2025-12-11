@@ -817,9 +817,10 @@ describe("App", () => {
       sendForwardMessage("newSession", NEW_SESSION_JSON)
 
       expect(props.theme.addThemes).toHaveBeenCalled()
-      // setTheme should NOT be called because the cached preference (CUSTOM_THEME_NAME) is still valid
-      // Our fix now respects the user's cached theme when it's still valid
-      expect(props.theme.setTheme).not.toHaveBeenCalled()
+      // setTheme SHOULD be called to update with the full server config while preserving the selection
+      expect(props.theme.setTheme).toHaveBeenCalledWith(
+        expect.objectContaining({ name: CUSTOM_THEME_NAME })
+      )
     })
 
     it("removes the custom theme from theme options if one is not received from the server", () => {
@@ -2359,10 +2360,16 @@ describe("App", () => {
       // The theme should be added
       expect(props.theme.addThemes).toHaveBeenCalledTimes(1)
 
-      // setTheme should NOT be called because the user's cached preference is still valid
-      // This is the key assertion - the bug was that setTheme was being called
-      // and overriding the user's preference to "Custom Theme Auto"
-      expect(props.theme.setTheme).not.toHaveBeenCalled()
+      // setTheme SHOULD be called to apply the full server config,
+      // but it should preserve the user's Light selection (NOT override to Auto)
+      // This is the key fix - we call setTheme with "Custom Theme Light" (user's choice)
+      // rather than "Custom Theme Auto" (which would be overriding their preference)
+      expect(props.theme.setTheme).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: CUSTOM_THEME_LIGHT_NAME,
+          displayName: "Light",
+        })
+      )
 
       // Clean up
       window.localStorage.removeItem(LocalStore.ACTIVE_THEME)
@@ -2612,8 +2619,10 @@ describe("App", () => {
           })
 
           expect(props.theme.addThemes).toHaveBeenCalledTimes(1)
-          // Should NOT set theme because cached preference is still valid
-          expect(props.theme.setTheme).not.toHaveBeenCalled()
+          // Should set theme to update with full server config while preserving selection
+          expect(props.theme.setTheme).toHaveBeenCalledWith(
+            expect.objectContaining({ name: CUSTOM_THEME_NAME })
+          )
 
           window.localStorage.removeItem(LocalStore.ACTIVE_THEME)
         })
@@ -2786,8 +2795,13 @@ describe("App", () => {
           })
 
           expect(props.theme.addThemes).toHaveBeenCalledTimes(1)
-          // Should NOT set theme because cached preference is still valid (FIX FOR #13280)
-          expect(props.theme.setTheme).not.toHaveBeenCalled()
+          // Should set theme to update with full server config while preserving Light selection (FIX FOR #13280)
+          expect(props.theme.setTheme).toHaveBeenCalledWith(
+            expect.objectContaining({
+              name: CUSTOM_THEME_LIGHT_NAME,
+              displayName: "Light",
+            })
+          )
 
           window.localStorage.removeItem(LocalStore.ACTIVE_THEME)
         })
