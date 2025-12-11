@@ -336,14 +336,14 @@ def test_editing_empty_column_returns_scalar_not_list(app: Page):
     edit_cell_value(app, "42")
 
     # Verify the value is stored as a scalar (42), not a list ([42])
-    expect_prefixed_markdown(app, "Empty column result:", "42")
+    expect_prefixed_markdown(app, "Empty column result:", "42", exact_match=True)
 
     # Test editing the text column (second column)
     click_on_cell(data_editor, 1, 1, double_click=True, column_width="medium")
     edit_cell_value(app, "hello")
 
     # Verify the text value is stored as a scalar string, not a list
-    expect_prefixed_markdown(app, "Empty column result:", "hello")
+    expect_prefixed_markdown(app, "Empty column result:", "hello", exact_match=True)
 
     # Test adding a new row with values - should also return scalars
     toolbar = data_editor.get_by_test_id("stElementToolbar")
@@ -361,4 +361,4 @@ def test_editing_empty_column_returns_scalar_not_list(app: Page):
     edit_cell_value(app, "99")
 
     # Verify the new row value is also a scalar
-    expect_prefixed_markdown(app, "Empty column result:", "99")
+    expect_prefixed_markdown(app, "Empty column result:", "99", exact_match=True)
