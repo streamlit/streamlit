@@ -672,7 +672,7 @@ def test_multi_row_and_single_cell_select(app: Page):
 
 
 @pytest.mark.skip_browser(
-    "firefox"  # Firefox runs into sub-pixel flakiness, but functional everything is working fine with firefox.
+    "firefox"  # Firefox runs into sub-pixel flakiness, but functionally everything is working fine with Firefox.
 )
 def test_multi_row_column_and_cell_select(
     app: Page, assert_snapshot: ImageCompareFunction
