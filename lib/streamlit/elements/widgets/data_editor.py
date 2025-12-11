@@ -96,12 +96,16 @@ def _compute_schema_hash(
 
     This hash captures the structural identity of a dataframe:
     - Column names and order
-    - Column types (from Arrow schema)
-    - Index type
-    - Row count (positions in editing state must remain valid)
+    - Column types (from Arrow schema, including index columns if present)
 
-    The hash does NOT include actual data values, allowing the widget ID
-    to remain stable when only cell values change (not structure).
+    The hash does NOT include:
+    - Actual data values (allows widget ID to remain stable when only values change)
+    - Row count (handled by frontend reconciliation logic for user-initiated changes)
+
+    Note: Index type changes (e.g., RangeIndex → Index) WILL change the hash.
+    This is intentional - external index changes should trigger a state reset.
+    Data_editor's internal row deletions preserve RangeIndex via reset_index()
+    in _apply_row_deletions(), so user-initiated deletions won't cause resets.
 
     Parameters
     ----------
@@ -121,15 +125,13 @@ def _compute_schema_hash(
     # Include column names and order
     schema_components.extend(str(col) for col in data_df.columns)
 
-    # Include column types from Arrow schema
+    # Include column types from Arrow schema (including index columns if present)
     schema_components.extend(f"{field.name}:{field.type}" for field in arrow_schema)
 
-    # Include index type information
-    schema_components.append(f"index_type:{type(data_df.index).__name__}")
-
-    # Include row count - editing state uses positional indices,
-    # so row count changes would invalidate edit positions
-    schema_components.append(f"num_rows:{len(data_df)}")
+    # NOTE: Row count is NOT included here. Row count changes are handled by
+    # frontend reconciliation logic which can distinguish between user-initiated
+    # row changes (via the data_editor UI) and external changes.
+    # See Phase 2 of the 7749-plan.md for details.
 
     return calc_md5("|".join(schema_components))
 
@@ -178,11 +180,50 @@ class EditingState(TypedDict, total=False):
     deleted_rows : List[int]
         A list of deleted rows, where each row is the numerical position of
         the deleted row.
+
     """
 
     edited_rows: Required[dict[int, dict[str, str | int | float | bool | None]]]
     added_rows: Required[list[dict[str, str | int | float | bool | None]]]
     deleted_rows: Required[list[int]]
+
+
+def _clear_stale_row_operations(
+    editing_state: EditingState,
+    num_rows: int,
+) -> bool:
+    """Clear row operations if they appear stale (already applied to source data).
+
+    Returns True if row operations were cleared, False otherwise.
+
+    When users save the modified dataframe back to session_state, the source
+    data changes. Row operations (deletions/additions) that were previously
+    applied should not be re-applied to the already-modified data.
+
+    We detect stale operations by checking if:
+    1. Any deleted_rows index is >= current row count (out of bounds)
+    2. This indicates the deletions were already applied and indices are now invalid
+
+    Cell edits are idempotent and safe to re-apply, so we only clear row operations.
+    """
+    deleted_rows = editing_state.get("deleted_rows", [])
+    added_rows = editing_state.get("added_rows", [])
+
+    if not deleted_rows and not added_rows:
+        return False
+
+    # Check if any deletion index is out of bounds for the current data
+    # This indicates the source data has fewer rows than expected,
+    # which means previous deletions were likely "committed" to the data
+    if deleted_rows:
+        max_deleted_index = max(deleted_rows)
+        if max_deleted_index >= num_rows:
+            # Stale deletions detected - indices are invalid for current data
+            editing_state["deleted_rows"] = []
+            editing_state["added_rows"] = []
+            return True
+
+    return False
 
 
 @dataclass
@@ -470,8 +511,20 @@ def _apply_row_deletions(df: pd.DataFrame, deleted_rows: list[int]) -> None:
     deleted_rows : List[int]
         A list of row numbers to delete.
     """
+    import pandas as pd
+
+    # Check if original index is a RangeIndex before deletion
+    had_range_index = isinstance(df.index, pd.RangeIndex)
+
     # Drop rows based in numeric row positions
     df.drop(df.index[deleted_rows], inplace=True)  # noqa: PD002
+
+    # Reset index if it was originally a RangeIndex.
+    # This keeps the widget ID stable because:
+    # 1. The schema hash doesn't change when index type changes
+    # 2. The Arrow schema doesn't include __index_level_0__ for RangeIndex
+    if had_range_index:
+        df.reset_index(drop=True, inplace=True)  # noqa: PD002
 
 
 def _apply_dataframe_edits(
@@ -1209,6 +1262,10 @@ class DataEditorMixin:
             ctx=ctx,
             value_type="string_value",
         )
+
+        # Clear stale row operations if they appear to have been "committed"
+        # to the source data (e.g., user saved to session_state)
+        _clear_stale_row_operations(widget_state.value, len(data_df))
 
         _apply_dataframe_edits(data_df, widget_state.value, dataframe_schema)
         self.dg._enqueue("arrow_data_frame", proto, layout_config=layout_config)

@@ -461,12 +461,12 @@ class DataEditorUtilTest(unittest.TestCase):
 
         # Expected state after edits:
         # - Row 1 (value 2) deleted.
-        # - Index becomes integer index [0, 2, 3].
-        # - New row added with index max+1 = 4.
-        # - Final index: integer index [0, 2, 3, 4]
+        # - Index is reset to RangeIndex [0, 1, 2] to keep widget ID stable.
+        # - New row added with index stop value = 3.
+        # - Final index: RangeIndex [0, 1, 2, 3]
         # - Final values: [1, 3, 4, 10]
         expected_df = pd.DataFrame(
-            {"col1": [1, 3, 4, 10]}, index=pd.Index([0, 2, 3, 4], dtype="int64")
+            {"col1": [1, 3, 4, 10]}, index=pd.RangeIndex(0, 4, 1)
         )
 
         _apply_dataframe_edits(
@@ -563,6 +563,30 @@ class ComputeSchemaHashTest(unittest.TestCase):
 
         assert hash1 == hash2
 
+    def test_different_index_type_produces_different_hash(self) -> None:
+        """Test that different index types produce DIFFERENT hashes.
+
+        External index type changes (e.g., user provides DataFrame with custom index)
+        should trigger a widget ID change and state reset. This is intentional.
+
+        Note: Data_editor's internal row deletions preserve RangeIndex via
+        reset_index() in _apply_row_deletions(), so user-initiated deletions
+        through the UI won't cause index type changes.
+        """
+        # DataFrame with RangeIndex
+        df1 = pd.DataFrame({"A": [1, 2, 3]})
+        assert type(df1.index).__name__ == "RangeIndex"
+
+        # DataFrame with explicit Index (custom index from external source)
+        df2 = pd.DataFrame({"A": [1, 3]}, index=pd.Index([0, 2]))
+        assert type(df2.index).__name__ == "Index"
+
+        hash1 = _compute_schema_hash(df1, _get_arrow_schema(df1))
+        hash2 = _compute_schema_hash(df2, _get_arrow_schema(df2))
+
+        # External index type change SHOULD affect the hash (triggers reset)
+        assert hash1 != hash2
+
     def test_different_column_name_produces_different_hash(self) -> None:
         """Test that different column names produce different hashes."""
         df1 = pd.DataFrame({"A": [1, 2, 3], "B": ["x", "y", "z"]})
@@ -583,11 +607,13 @@ class ComputeSchemaHashTest(unittest.TestCase):
 
         assert hash1 != hash2
 
-    def test_different_row_count_produces_different_hash(self) -> None:
-        """Test that different row counts produce different hashes.
+    def test_different_row_count_produces_same_hash(self) -> None:
+        """Test that different row counts produce the SAME hash.
 
-        Row count is included in the hash because editing state uses positional
-        indices, so changes in row count would invalidate edit positions.
+        Row count is NOT included in the schema hash because row count changes
+        are handled by frontend reconciliation logic. This allows the widget ID
+        to remain stable when users add/delete rows via the UI, enabling proper
+        reconciliation of editing state.
         """
         df1 = pd.DataFrame({"A": [1, 2, 3], "B": ["x", "y", "z"]})
         df2 = pd.DataFrame({"A": [1, 2], "B": ["x", "y"]})
@@ -595,7 +621,8 @@ class ComputeSchemaHashTest(unittest.TestCase):
         hash1 = _compute_schema_hash(df1, _get_arrow_schema(df1))
         hash2 = _compute_schema_hash(df2, _get_arrow_schema(df2))
 
-        assert hash1 != hash2
+        # Same schema (columns/types), different row count → same hash
+        assert hash1 == hash2
 
     def test_different_column_type_produces_different_hash(self) -> None:
         """Test that different column types produce different hashes."""

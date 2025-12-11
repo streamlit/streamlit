@@ -385,4 +385,173 @@ describe("EditingState class", () => {
     // Should have an empty cell since it wasn't specified in the JSON:
     expect(editingState.getCell(2, 3)).toEqual(MOCK_COLUMNS[2].getCell(null))
   })
+
+  describe("Phase 2: Reconciliation methods", () => {
+    it("returns original num rows via getOriginalNumRows", () => {
+      const editingState = new EditingState(5)
+      expect(editingState.getOriginalNumRows()).toBe(5)
+
+      // Even after adding/deleting rows, original count stays the same
+      editingState.addRow(new Map())
+      editingState.deleteRow(0)
+      expect(editingState.getOriginalNumRows()).toBe(5)
+    })
+
+    it("returns deleted rows via getDeletedRows", () => {
+      const editingState = new EditingState(5)
+      expect(editingState.getDeletedRows()).toEqual([])
+
+      editingState.deleteRow(1)
+      editingState.deleteRow(3)
+      expect(editingState.getDeletedRows()).toEqual([1, 3])
+    })
+
+    it("returns added rows count via getAddedRowsCount", () => {
+      const editingState = new EditingState(5)
+      expect(editingState.getAddedRowsCount()).toBe(0)
+
+      editingState.addRow(new Map())
+      editingState.addRow(new Map())
+      expect(editingState.getAddedRowsCount()).toBe(2)
+    })
+
+    describe("canReconcileRowChanges", () => {
+      it("returns true when new row count matches expected from user edits", () => {
+        const editingState = new EditingState(5)
+
+        // Delete one row: expected = 5 - 1 + 0 = 4
+        editingState.deleteRow(2)
+        expect(editingState.canReconcileRowChanges(4)).toBe(true)
+        expect(editingState.canReconcileRowChanges(5)).toBe(false)
+        expect(editingState.canReconcileRowChanges(3)).toBe(false)
+      })
+
+      it("returns true when rows added match expected", () => {
+        const editingState = new EditingState(5)
+
+        // Add two rows: expected = 5 - 0 + 2 = 7
+        editingState.addRow(new Map())
+        editingState.addRow(new Map())
+        expect(editingState.canReconcileRowChanges(7)).toBe(true)
+        expect(editingState.canReconcileRowChanges(5)).toBe(false)
+      })
+
+      it("returns true when both additions and deletions match expected", () => {
+        const editingState = new EditingState(5)
+
+        // Delete 2, add 1: expected = 5 - 2 + 1 = 4
+        editingState.deleteRow(1)
+        editingState.deleteRow(3)
+        editingState.addRow(new Map())
+        expect(editingState.canReconcileRowChanges(4)).toBe(true)
+      })
+
+      it("returns false when external row change detected", () => {
+        const editingState = new EditingState(5)
+
+        // No user changes, but row count changed externally
+        expect(editingState.canReconcileRowChanges(6)).toBe(false) // External add
+        expect(editingState.canReconcileRowChanges(4)).toBe(false) // External delete
+      })
+    })
+
+    describe("reconcileAfterUserChanges", () => {
+      it("preserves cell edits for non-deleted rows", () => {
+        const editingState = new EditingState(5)
+
+        // Edit row 0 and row 4
+        editingState.setCell(0, 0, MOCK_TEXT_CELL_1)
+        editingState.setCell(0, 4, MOCK_TEXT_CELL_2)
+
+        // Delete rows 1, 2, 3 via user actions
+        editingState.deleteRow(1)
+        editingState.deleteRow(2)
+        editingState.deleteRow(3)
+
+        // New row count = 5 - 3 = 2
+        const newState = editingState.reconcileAfterUserChanges(2)
+
+        expect(newState.getNumRows()).toBe(2)
+        // Row 0 edit should be at index 0
+        expect(newState.getCell(0, 0)).toEqual(MOCK_TEXT_CELL_1)
+        // Row 4 edit should shift to index 1 (4 - 3 deletions below = 1)
+        expect(newState.getCell(0, 1)).toEqual(MOCK_TEXT_CELL_2)
+      })
+
+      it("removes edits for deleted rows", () => {
+        const editingState = new EditingState(5)
+
+        // Edit rows 1 and 3
+        editingState.setCell(0, 1, MOCK_TEXT_CELL_1)
+        editingState.setCell(0, 3, MOCK_TEXT_CELL_2)
+
+        // Delete row 1 (one of the edited rows)
+        editingState.deleteRow(1)
+
+        // New row count = 5 - 1 = 4
+        const newState = editingState.reconcileAfterUserChanges(4)
+
+        expect(newState.getNumRows()).toBe(4)
+        // Original row 0 is still at index 0 (no change)
+        // Original row 1 was deleted
+        // Original row 2 shifts to index 1
+        // Original row 3's edit shifts to index 2 (row 3 - 1 deleted row below = index 2)
+        expect(newState.getCell(0, 2)).toEqual(MOCK_TEXT_CELL_2)
+        // Original row 4 shifts to index 3
+        // Edit to row 1 is gone
+        expect(newState.getCell(0, 0)).toBeUndefined() // Row 0 had no edit
+        expect(newState.getCell(0, 1)).toBeUndefined() // Row 2 (shifted to 1) had no edit
+      })
+
+      it("shifts indices correctly for multiple deletions", () => {
+        const editingState = new EditingState(10)
+
+        // Edit row 5
+        editingState.setCell(0, 5, MOCK_TEXT_CELL_1)
+
+        // Delete rows 0, 2, 4 (3 rows below row 5)
+        editingState.deleteRow(0)
+        editingState.deleteRow(2)
+        editingState.deleteRow(4)
+
+        // New row count = 10 - 3 = 7
+        const newState = editingState.reconcileAfterUserChanges(7)
+
+        // Row 5's new index = 5 - 3 (deleted rows below) = 2
+        expect(newState.getCell(0, 2)).toEqual(MOCK_TEXT_CELL_1)
+      })
+
+      it("clears addedRows and deletedRows after reconciliation", () => {
+        const editingState = new EditingState(5)
+
+        editingState.addRow(new Map())
+        editingState.deleteRow(1)
+
+        // New row count = 5 - 1 + 1 = 5
+        const newState = editingState.reconcileAfterUserChanges(5)
+
+        // After reconciliation, addedRows and deletedRows should be cleared
+        expect(newState.getDeletedRows()).toEqual([])
+        expect(newState.getAddedRowsCount()).toBe(0)
+      })
+
+      it("handles row addition reconciliation", () => {
+        const editingState = new EditingState(3)
+
+        // Edit existing row
+        editingState.setCell(0, 1, MOCK_TEXT_CELL_1)
+
+        // Add a row via UI
+        editingState.addRow(new Map([[0, MOCK_TEXT_CELL_2]]))
+
+        // New row count = 3 + 1 = 4
+        const newState = editingState.reconcileAfterUserChanges(4)
+
+        // Original edit should be preserved at same index
+        expect(newState.getCell(0, 1)).toEqual(MOCK_TEXT_CELL_1)
+        // Added row is now part of source data, so addedRows should be empty
+        expect(newState.getAddedRowsCount()).toBe(0)
+      })
+    })
+  })
 })

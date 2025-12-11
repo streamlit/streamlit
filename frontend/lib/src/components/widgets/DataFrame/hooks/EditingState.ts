@@ -360,6 +360,88 @@ class EditingState {
   getNumRows(): number {
     return this.numRows + this.addedRows.length - this.deletedRows.length
   }
+
+  /**
+   * Returns the original number of rows (before any additions/deletions).
+   */
+  getOriginalNumRows(): number {
+    return this.numRows
+  }
+
+  /**
+   * Returns a copy of the deleted rows array.
+   */
+  getDeletedRows(): number[] {
+    return [...this.deletedRows]
+  }
+
+  /**
+   * Returns the number of rows added by the user.
+   */
+  getAddedRowsCount(): number {
+    return this.addedRows.length
+  }
+
+  /**
+   * Returns a copy of the edited cells map.
+   */
+  getEditedCells(): Map<number, Map<number, GridCell>> {
+    return new Map(this.editedCells)
+  }
+
+  /**
+   * Checks if a user-initiated row change can be reconciled.
+   *
+   * This compares the expected row count (based on user's add/delete operations)
+   * with the actual new row count from the source data.
+   *
+   * @param newRowCount - The new row count from the source data
+   * @returns true if the row change was user-initiated and can be reconciled
+   */
+  canReconcileRowChanges(newRowCount: number): boolean {
+    const expectedRowCount =
+      this.numRows - this.deletedRows.length + this.addedRows.length
+    return newRowCount === expectedRowCount
+  }
+
+  /**
+   * Creates a new EditingState with reconciled edits after user-initiated row changes.
+   *
+   * This method:
+   * 1. Clears deletedRows (they're now reflected in source data)
+   * 2. Clears addedRows (they're now regular rows in source data)
+   * 3. Adjusts editedCells indices for rows below deletions
+   * 4. Removes editedCells for deleted rows
+   *
+   * @param newRowCount - The new row count from the source data
+   * @returns A new EditingState with reconciled edits
+   */
+  reconcileAfterUserChanges(newRowCount: number): EditingState {
+    const newState = new EditingState(newRowCount)
+
+    // Copy over edited cells, adjusting indices for deleted rows
+    this.editedCells.forEach((cellEdits, rowIdx) => {
+      // Skip edits to deleted rows
+      if (this.deletedRows.includes(rowIdx)) {
+        return
+      }
+
+      // Calculate new index by counting deleted rows below this row
+      const deletedAbove = this.deletedRows.filter(d => d < rowIdx).length
+      const newRowIdx = rowIdx - deletedAbove
+
+      // Only include if the new index is within the new row count
+      if (newRowIdx >= 0 && newRowIdx < newRowCount) {
+        newState.editedCells.set(newRowIdx, new Map(cellEdits))
+      }
+    })
+
+    // Note: addedRows and deletedRows are NOT copied over because
+    // they've been "applied" to the source data and are now part of it.
+    // The new EditingState starts fresh for future user operations.
+
+    return newState
+  }
 }
 
 export default EditingState

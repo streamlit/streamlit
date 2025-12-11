@@ -189,6 +189,77 @@ describe("useWidgetState hook", () => {
 
       expect(result.current.numRows).toBe(11)
     })
+
+    it("reconciles editingState when user-initiated row deletion matches new row count", () => {
+      // Phase 2 test: When user deletes a row via UI, and the new source data
+      // has the expected row count (original - deleted), edits should be reconciled.
+      const { result, rerender } = renderHook(
+        ({ originalNumRows, dataHash }) =>
+          useWidgetState({
+            element: ArrowProto.create({
+              editingMode: ArrowProto.EditingMode.DYNAMIC,
+            }),
+            widgetMgr: undefined,
+            fragmentId: undefined,
+            originalNumRows,
+            originalColumns: [createMockColumn("col1", 0)],
+            dataHash,
+          }),
+        { initialProps: { originalNumRows: 5, dataHash: "hash1" } }
+      )
+
+      // User deletes row 1 via UI
+      act(() => {
+        result.current.editingState.current.deleteRow(1)
+        result.current.updateNumRows()
+      })
+
+      expect(result.current.numRows).toBe(4) // 5 - 1 deleted = 4
+
+      // Source data now has 4 rows (deletion was applied to backend)
+      // This simulates the rerun after the delete is saved to session state
+      rerender({ originalNumRows: 4, dataHash: "hash2" })
+
+      // State should be reconciled (not reset) because row count matches expected
+      expect(result.current.numRows).toBe(4)
+      // deletedRows should be cleared after reconciliation
+      expect(result.current.editingState.current.getDeletedRows()).toEqual([])
+    })
+
+    it("resets editingState when external row change detected", () => {
+      // Phase 2 test: When row count changes but doesn't match user edits,
+      // state should reset (external change detected).
+      const { result, rerender } = renderHook(
+        ({ originalNumRows, dataHash }) =>
+          useWidgetState({
+            element: ArrowProto.create({
+              editingMode: ArrowProto.EditingMode.DYNAMIC,
+            }),
+            widgetMgr: undefined,
+            fragmentId: undefined,
+            originalNumRows,
+            originalColumns: [createMockColumn("col1", 0)],
+            dataHash,
+          }),
+        { initialProps: { originalNumRows: 5, dataHash: "hash1" } }
+      )
+
+      // User deletes row 1 via UI (expected new count = 4)
+      act(() => {
+        result.current.editingState.current.deleteRow(1)
+        result.current.updateNumRows()
+      })
+
+      expect(result.current.numRows).toBe(4)
+
+      // External change: source data now has 3 rows (unexpected!)
+      // This doesn't match expected 4 rows, so it's an external change
+      rerender({ originalNumRows: 3, dataHash: "hash2" })
+
+      // State should be reset because external change detected
+      expect(result.current.numRows).toBe(3)
+      expect(result.current.editingState.current.getOriginalNumRows()).toBe(3)
+    })
   })
 
   describe("syncEditState", () => {
@@ -806,15 +877,55 @@ describe("useWidgetState hook", () => {
   })
 
   describe("initial editing state loading", () => {
-    it("loads initial editing state from widget manager for editing mode", () => {
+    it("loads cell edits but not row changes from widget manager", () => {
+      // Row additions/deletions are NOT restored on initial load to prevent
+      // double-application bugs (e.g., user saves to session_state, then
+      // on next rerun the deletion would be re-applied to wrong row).
+      // Only cell edits are safely restorable.
       const mockWidgetMgr = createMockWidgetMgr()
       const columns = [createMockColumn("col1", 0)]
 
-      // Return a state with an added row
+      // Return a state with cell edits and row changes
       mockWidgetMgr.getStringValue.mockReturnValue(
         JSON.stringify({
-          edited_rows: {},
+          edited_rows: { 0: { col1: "edited" } },
           added_rows: [{ col1: "test" }],
+          deleted_rows: [1],
+        })
+      )
+
+      const { result } = renderHook(() =>
+        useWidgetState({
+          element: ArrowProto.create({
+            id: "test-id",
+            formId: "",
+            editingMode: ArrowProto.EditingMode.DYNAMIC,
+          }),
+          widgetMgr: mockWidgetMgr as unknown as Parameters<
+            typeof useWidgetState
+          >[0]["widgetMgr"],
+          fragmentId: undefined,
+          originalNumRows: 5,
+          originalColumns: columns,
+          dataHash: "hash1",
+        })
+      )
+
+      // Row count should NOT change - added/deleted rows are not restored
+      expect(result.current.numRows).toBe(5)
+      // But cell edits should be restored (they're safe to re-apply)
+      expect(result.current.editingState.current.getCell(0, 0)).toBeDefined()
+    })
+
+    it("loads all state if no row changes are present", () => {
+      const mockWidgetMgr = createMockWidgetMgr()
+      const columns = [createMockColumn("col1", 0)]
+
+      // Return a state with only cell edits (no row changes)
+      mockWidgetMgr.getStringValue.mockReturnValue(
+        JSON.stringify({
+          edited_rows: { 0: { col1: "edited" } },
+          added_rows: [],
           deleted_rows: [],
         })
       )
@@ -836,8 +947,10 @@ describe("useWidgetState hook", () => {
         })
       )
 
-      // Should have loaded the added row from widget state
-      expect(result.current.numRows).toBe(6)
+      // Row count should stay the same (no row changes)
+      expect(result.current.numRows).toBe(5)
+      // Cell edits should be restored
+      expect(result.current.editingState.current.getCell(0, 0)).toBeDefined()
     })
 
     it("does not load editing state for read-only mode", () => {

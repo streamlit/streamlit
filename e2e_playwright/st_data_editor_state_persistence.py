@@ -65,3 +65,45 @@ st.session_state.df_simple = st.data_editor(
 
 simple_sum = st.session_state.df_simple["A"].sum()
 st.markdown(f"Sum of A column: `{simple_sum}`")
+
+
+# Test 3: Row deletion via UI - verify edits to other rows are preserved
+st.subheader("Row Deletion (User-Initiated)")
+
+if "df_delete" not in st.session_state:
+    st.session_state.df_delete = pd.DataFrame(
+        {"Name": ["Alice", "Bob", "Charlie", "Diana"], "Score": [100, 200, 300, 400]}
+    )
+
+st.session_state.df_delete = st.data_editor(
+    st.session_state.df_delete,
+    key="delete_editor",
+    num_rows="dynamic",
+    width="content",
+    hide_index=True,
+)
+
+delete_row_count = len(st.session_state.df_delete)
+delete_total = st.session_state.df_delete["Score"].sum()
+st.markdown(f"Delete test row count: `{delete_row_count}`")
+st.markdown(f"Delete test total: `{delete_total}`")
+
+
+# Test 4: Row addition via UI - verify existing edits are preserved
+st.subheader("Row Addition (User-Initiated)")
+
+if "df_add" not in st.session_state:
+    st.session_state.df_add = pd.DataFrame({"Item": ["A", "B"], "Value": [10, 20]})
+
+st.session_state.df_add = st.data_editor(
+    st.session_state.df_add,
+    key="add_editor",
+    num_rows="dynamic",
+    width="content",
+    hide_index=True,
+)
+
+add_row_count = len(st.session_state.df_add)
+add_total = st.session_state.df_add["Value"].sum()
+st.markdown(f"Add test row count: `{add_row_count}`")
+st.markdown(f"Add test total: `{add_total}`")
