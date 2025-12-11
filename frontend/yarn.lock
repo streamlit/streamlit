@@ -3284,7 +3284,7 @@ __metadata:
     util: "npm:^0.12.5"
     uuid: "npm:^13.0.0"
     vite: "npm:^7.2.4"
-    vite-bundle-analyzer: "npm:^1.2.3"
+    vite-bundle-analyzer: "npm:^1.2.4"
     vite-plugin-svgr: "npm:^4.5.0"
     vite-tsconfig-paths: "npm:^5.1.4"
     vitest: "npm:^4.0.14"
@@ -18672,12 +18672,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"vite-bundle-analyzer@npm:^1.2.3":
-  version: 1.2.3
-  resolution: "vite-bundle-analyzer@npm:1.2.3"
+"vite-bundle-analyzer@npm:^1.2.4":
+  version: 1.3.1
+  resolution: "vite-bundle-analyzer@npm:1.3.1"
   bin:
     analyze: dist/bin.js
-  checksum: 10c0/e99c49cde7ec57ca6f70f02faa4bd96f0ed43da7a98b86b9e129b99e65c29eba7fec9fefa2bb3d8fd24db5bd0988258ae213cd70978cf3894905118b9eedb495
+  checksum: 10c0/119d089dd9d7062e2d614ed9c40471995e8cf8fd50fbfcc3faf5a40532e6141c087cde4e03b547b815308955f8372b90bf5aaf28c4fbb4ae45c54c83a6d469ae
   languageName: node
   linkType: hard
 
