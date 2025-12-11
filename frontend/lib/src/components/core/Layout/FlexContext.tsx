@@ -22,6 +22,17 @@ export interface IFlexContext {
   direction: Direction | undefined
   isInHorizontalLayout: boolean
   isInRoot: boolean
+  /**
+   * The width of the parent container in pixels, if the container has a fixed
+   * pixel width set via widthConfig.pixelWidth. Undefined otherwise.
+   */
+  parentWidth?: number
+  /**
+   * Whether this element is inside a content-width container in its ancestry.
+   * Returns true if there's a content-width container ancestor.
+   * Returns false if there's a fixed-width container that is closer than any content-width container.
+   */
+  isInContentWidthContainer: boolean
 }
 
 export const FlexContext = createContext<IFlexContext | null>(null)
@@ -45,21 +56,64 @@ FlexContext.displayName = "FlexContext"
  * @returns direction: The direction of the nearest `st.container` ancestor.
  * @returns isInHorizontalLayout: Whether the nearest `st.container` ancestor is
  *   a horizontal layout.
+ * @returns parentWidth: The width of the parent container in pixels, if it has
+ *   a fixed pixel width.
+ * @returns isInContentWidthContainer: Whether this element is inside a content-width
+ *   container, unless a closer fixed-width container overrides it.
  *
  * Search the codebase for `<FlexContextProvider` to see where this is used.
  *
  */
 export const FlexContextProvider: FC<
-  PropsWithChildren<{ direction: Direction; isRoot?: boolean }>
-> = ({ children, direction, isRoot }) => {
+  PropsWithChildren<{
+    direction: Direction
+    isRoot?: boolean
+    parentWidth?: number
+    hasContentWidth?: boolean
+    hasFixedWidth?: boolean
+    parentContext?: IFlexContext | null
+  }>
+> = ({
+  children,
+  direction,
+  isRoot,
+  parentWidth,
+  hasContentWidth = false,
+  hasFixedWidth = false,
+  parentContext = null,
+}) => {
   const value = useMemo<IFlexContext>(() => {
     const isInHorizontalLayout = direction === Direction.HORIZONTAL
+
+    // Determine if we're in a content-width container:
+    // - If this container has content width -> true
+    // - If this container has fixed width -> false (overrides parent)
+    // - Otherwise -> inherit from parent
+    let isInContentWidthContainer: boolean
+    if (hasContentWidth) {
+      isInContentWidthContainer = true
+    } else if (hasFixedWidth) {
+      isInContentWidthContainer = false
+    } else {
+      isInContentWidthContainer =
+        parentContext?.isInContentWidthContainer ?? false
+    }
+
     return {
       direction,
       isInHorizontalLayout,
       isInRoot: isRoot ?? false,
+      parentWidth,
+      isInContentWidthContainer,
     }
-  }, [direction, isRoot])
+  }, [
+    direction,
+    isRoot,
+    parentWidth,
+    hasContentWidth,
+    hasFixedWidth,
+    parentContext,
+  ])
 
   return <FlexContext.Provider value={value}>{children}</FlexContext.Provider>
 }

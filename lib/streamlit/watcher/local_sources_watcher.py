@@ -47,6 +47,15 @@ PathWatcher: PathWatcherType | None = None
 
 
 class LocalSourcesWatcher:
+    """Watch local Python sources and pages to trigger app reruns.
+
+    Purpose
+    -------
+    This watcher powers Streamlit's core developer workflow: save a Python file
+    and the app reruns. It tracks Python modules, the main script directory, and
+    configured watch folders to notify the runtime when a relevant file changes.
+    """
+
     def __init__(self, pages_manager: PagesManager) -> None:
         self._pages_manager = pages_manager
         self._main_script_path = os.path.realpath(self._pages_manager.main_script_path)

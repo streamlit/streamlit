@@ -18,8 +18,10 @@ from e2e_playwright.conftest import ImageCompareFunction
 from e2e_playwright.shared.app_utils import check_top_level_class
 
 
-def test_alerts_rendering(themed_app: Page, assert_snapshot: ImageCompareFunction):
-    """Test that alerts render correctly using snapshot testing."""
+def test_alerts_rendering_themed(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that alerts render correctly with theme-dependent styling."""
     alert_elements = themed_app.get_by_test_id("stAlert")
     expect(alert_elements).to_have_count(32)
 
@@ -29,45 +31,55 @@ def test_alerts_rendering(themed_app: Page, assert_snapshot: ImageCompareFunctio
     expect(alert_elements.nth(2)).to_have_text("This is an info message")
     expect(alert_elements.nth(3)).to_have_text("This is a success message")
 
+    # Alert icons (colors differ by theme)
     assert_snapshot(alert_elements.nth(4), name="st_alert-error_icon")
     assert_snapshot(alert_elements.nth(5), name="st_alert-warning_icon")
     assert_snapshot(alert_elements.nth(6), name="st_alert-info_icon")
     assert_snapshot(alert_elements.nth(7), name="st_alert-success_icon")
 
-    assert_snapshot(alert_elements.nth(8), name="st_alert-error_line_wrapping_1")
-    assert_snapshot(alert_elements.nth(9), name="st_alert-error_line_wrapping_2")
-
+    # Markdown alerts (markdown colors differ by theme)
     assert_snapshot(alert_elements.nth(10), name="st_alert-error_markdown")
     assert_snapshot(alert_elements.nth(11), name="st_alert-warning_markdown")
     assert_snapshot(alert_elements.nth(12), name="st_alert-info_markdown")
     assert_snapshot(alert_elements.nth(13), name="st_alert-success_markdown")
 
-    assert_snapshot(alert_elements.nth(14), name="st_alert-error_long_code")
-    assert_snapshot(alert_elements.nth(15), name="st_alert-success_long_code")
-
+    # Custom icons (icon rendering may differ by theme)
     assert_snapshot(alert_elements.nth(16), name="st_alert-error_non_emoji_icon")
     assert_snapshot(alert_elements.nth(17), name="st_alert-warning_non_emoji_icon")
     assert_snapshot(alert_elements.nth(18), name="st_alert-info_non_emoji_icon")
     assert_snapshot(alert_elements.nth(19), name="st_alert-success_non_emoji_icon")
 
+    # Alert with heading (heading colors differ by theme)
     assert_snapshot(alert_elements.nth(20), name="st_alert-error_with_heading")
 
-    # Test width="stretch" alerts
+
+def test_alerts_rendering_layout(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that alerts layout variations render correctly (theme-independent)."""
+    alert_elements = app.get_by_test_id("stAlert")
+    expect(alert_elements).to_have_count(32)
+
+    # Line wrapping (layout behavior)
+    assert_snapshot(alert_elements.nth(8), name="st_alert-error_line_wrapping_1")
+    assert_snapshot(alert_elements.nth(9), name="st_alert-error_line_wrapping_2")
+
+    # Long code blocks (layout/overflow behavior)
+    assert_snapshot(alert_elements.nth(14), name="st_alert-error_long_code")
+    assert_snapshot(alert_elements.nth(15), name="st_alert-success_long_code")
+
+    # Width="stretch" alerts (layout property)
     assert_snapshot(alert_elements.nth(22), name="st_alert-error_width_stretch")
     assert_snapshot(alert_elements.nth(23), name="st_alert-warning_width_stretch")
     assert_snapshot(alert_elements.nth(24), name="st_alert-info_width_stretch")
     assert_snapshot(alert_elements.nth(25), name="st_alert-success_width_stretch")
 
-    # Test width=200 alerts
+    # Width=200 alerts (layout property)
     assert_snapshot(alert_elements.nth(26), name="st_alert-error_width_200")
     assert_snapshot(alert_elements.nth(27), name="st_alert-warning_width_200")
     assert_snapshot(alert_elements.nth(28), name="st_alert-info_width_200")
     assert_snapshot(alert_elements.nth(29), name="st_alert-success_width_200")
 
-    # Test width="stretch" with icon
+    # Width with icon (layout property)
     assert_snapshot(alert_elements.nth(30), name="st_alert-error_width_stretch_icon")
-
-    # Test width=200 with icon
     assert_snapshot(alert_elements.nth(31), name="st_alert-info_width_200_icon")
 
 

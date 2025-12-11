@@ -24,18 +24,21 @@ export interface FormsContextProps {
    * internal FormsData instance, and calls a callback (`formsDataChanged`)
    * when forms are updated. This FormsData instance should be updated
    * from that callback.
-   * Pulled from context in BlockNodeRenderer/FormSubmitButton
-   * @see BlockNodeRenderer
+   *
+   * Consumed by: Form, FormSubmitButton
+   * @see Form
    * @see FormSubmitButton
    */
   formsData: FormsData
 }
 
 /**
- * Initialize FormsContext with a default value of null so downstream usages
- * will trigger runtime errors if context expected to exist but does not.
+ * FormsContext provides access to form state data throughout the app.
+ *
+ * Initialize with a default value of null so downstream usages will trigger
+ * runtime errors if context expected to exist but does not.
  */
 export const FormsContext = createContext<FormsContextProps | null>(null)
 
-// Set the conetxt display name for useRequiredContext error message
+// Set the context display name for useRequiredContext error message
 FormsContext.displayName = "FormsContext"

@@ -219,6 +219,33 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
             == 'k: "disabled"\nt: "bool"\nm: "val:True"'
         )
 
+    def test_get_command_telemetry_custom_component_v2(self):
+        """Test getting command telemetry for Custom Components v2 via _get_command_telemetry."""
+
+        def fake_bidi_component(
+            self, component_name: str, **_kwargs: Any
+        ) -> None:  # pragma: no cover - never executed
+            del self, component_name, _kwargs
+
+        fake_bidi_component.__module__ = "streamlit.components.v2.bidi_component"
+
+        # Test with a Custom Components v2 call
+        command_metadata = metrics_util._get_command_telemetry(
+            fake_bidi_component,
+            "_bidi_component",
+            MagicMock(name="delta_generator_instance"),
+            "my_custom_component",
+            key="test",
+        )
+
+        assert command_metadata.name == "component_v2:my_custom_component"
+        assert len(command_metadata.args) == 2
+        assert (
+            str(command_metadata.args[0]).strip()
+            == 'k: "component_name"\nt: "str"\nm: "len:19"\np: 1'
+        )
+        assert str(command_metadata.args[1]).strip() == 'k: "key"\nt: "str"\nm: "len:4"'
+
     def test_create_page_profile_message(self):
         """Test creating the page profile message via create_page_profile_message."""
         forward_msg = metrics_util.create_page_profile_message(

@@ -26,6 +26,7 @@ message PageConfig {
   Layout layout = 3;
   SidebarState initial_sidebar_state = 4;
   MenuItems menu_items = 5;
+  optional SidebarWidthConfig initial_sidebar_width = 6;
 
   message MenuItems {
     string get_help_url = 1;
@@ -62,5 +63,13 @@ message PageConfig {
     // Unset distinguishes that config was not provided - on initial call, will
     // set to auto as default. Otherwise, inherit value from previous call
     SIDEBAR_UNSET = 3;
+  }
+
+  // Configuration for the initial sidebar width.
+  // Uses a oneof pattern to allow for future extensions (e.g., rem units).
+  message SidebarWidthConfig {
+    oneof width_spec {
+      uint32 pixel_width = 1;
+    }
   }
 }

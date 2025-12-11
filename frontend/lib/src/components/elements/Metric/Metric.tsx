@@ -36,9 +36,10 @@ import { Placement } from "~lib/components/shared/Tooltip"
 import TooltipIcon from "~lib/components/shared/TooltipIcon"
 import { StyledWidgetLabelHelpInline } from "~lib/components/widgets/BaseWidget"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
-import { getMetricBackgroundColor, getMetricColor } from "~lib/theme/getColors"
+import { formatNumber, isNumericString } from "~lib/util/formatNumber"
 import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 
+import { getMetricBackgroundColor, getMetricColor } from "./metricColors"
 import {
   StyledMetricChart,
   StyledMetricContainer,
@@ -48,6 +49,20 @@ import {
   StyledMetricValueText,
   StyledTruncateText,
 } from "./styled-components"
+
+const LARGE_DATASET_POINT_THRESHOLD = 1000
+
+/**
+ * Safely format a numeric string, returning the original value if formatting fails.
+ */
+function safeFormatNumber(value: string, format: string): string {
+  try {
+    return formatNumber(Number(value), format)
+  } catch {
+    // Fall back to original value if format is invalid
+    return value
+  }
+}
 
 /**
  * Returns a Vega-Lite spec for a metric chart.
@@ -168,8 +183,11 @@ export function getMetricChartSpec(
               type: "point",
               encodings: ["x"],
               nearest: true,
-              on: "mousemove",
-              clear: "mouseout",
+              on:
+                chartData.length > LARGE_DATASET_POINT_THRESHOLD
+                  ? "mousemove{16}" // Throttle hover events for large datasets to 16ms
+                  : "mousemove",
+              clear: "mouseleave",
             },
           },
         ],
@@ -183,17 +201,6 @@ export function getMetricChartSpec(
               param: `${baseName}_hover_selection`,
               empty: false,
             },
-          },
-          {
-            window: [
-              {
-                op: "row_number",
-                as: "hover_selection_rank",
-              },
-            ],
-          },
-          {
-            filter: "datum.hover_selection_rank === 1",
           },
         ],
         mark: {
@@ -257,7 +264,7 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
 
   const { MetricDirection } = MetricProto
   const {
-    body,
+    body: metricValue,
     label,
     delta,
     direction,
@@ -267,7 +274,19 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
     showBorder,
     chartData,
     chartType,
+    format,
   } = element
+
+  // Apply number formatting if a format is specified and the value is numeric
+  const formattedMetricValue =
+    format && isNumericString(metricValue)
+      ? safeFormatNumber(metricValue, format)
+      : metricValue
+
+  const formattedDelta =
+    format && delta && isNumericString(delta)
+      ? safeFormatNumber(delta, format)
+      : delta
 
   let metricDirection: EmotionIcon | null = null
 
@@ -277,6 +296,9 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
       break
     case MetricDirection.UP:
       metricDirection = ArrowUpward
+      break
+    case MetricDirection.NONE:
+      // No arrow icon for NONE direction
       break
   }
 
@@ -337,12 +359,20 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
           )}
         </StyledMetricLabelText>
         <StyledMetricValueText data-testid="stMetricValue">
-          <StyledTruncateText> {body} </StyledTruncateText>
+          <StyledTruncateText>
+            <StreamlitMarkdown
+              source={formattedMetricValue}
+              allowHTML={false}
+              isLabel // Treat the metric value with the label limitations.
+              inheritFont
+            />
+          </StyledTruncateText>
         </StyledMetricValueText>
         {deltaExists && (
           <StyledMetricDeltaText
             data-testid="stMetricDelta"
             metricColor={color}
+            showArrow={metricDirection !== null}
           >
             {metricDirection && (
               <Icon
@@ -356,7 +386,14 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
                 margin={arrowMargin}
               />
             )}
-            <StyledTruncateText> {delta} </StyledTruncateText>
+            <StyledTruncateText>
+              <StreamlitMarkdown
+                source={formattedDelta}
+                allowHTML={false}
+                isLabel // Treat the metric delta with the label limitations.
+                inheritFont
+              />
+            </StyledTruncateText>
           </StyledMetricDeltaText>
         )}
       </StyledMetricContent>

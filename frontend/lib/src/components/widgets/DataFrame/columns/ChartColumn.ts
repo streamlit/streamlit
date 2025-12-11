@@ -22,12 +22,12 @@ import {
 import { SparklineCellType } from "@glideapps/glide-data-grid-cells"
 
 import { EmotionTheme } from "~lib/theme"
+import { formatNumber } from "~lib/util/formatNumber"
 import { isNullOrUndefined } from "~lib/util/utils"
 
 import {
   BaseColumn,
   BaseColumnProps,
-  formatNumber,
   getEmptyCell,
   getErrorCell,
   mergeColumnParameters,

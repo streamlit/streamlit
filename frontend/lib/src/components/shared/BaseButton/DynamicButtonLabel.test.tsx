@@ -17,8 +17,10 @@
 import React from "react"
 
 import { screen } from "@testing-library/react"
+import { vi } from "vitest"
 
 import { render } from "~lib/test_util"
+import * as utils from "~lib/util/utils"
 
 import {
   DynamicButtonLabel,
@@ -70,9 +72,47 @@ describe("DynamicButtonLabel", () => {
     expect(icon).toHaveTextContent("thumb_up")
   })
 
-  it("renders icon with no margin, if there is no label", () => {
-    render(<DynamicButtonLabel {...getProps({ label: "" })} />)
+  it("positions the icon to the left by default", () => {
+    const { container } = render(<DynamicButtonLabel {...getProps()} />)
+    const wrapper = container.firstElementChild as HTMLElement
+    expect(wrapper).toBeDefined()
+    const mainLabel = wrapper.querySelector('[data-has-shortcut="false"]')
+    expect(mainLabel).toBeDefined()
+    expect(mainLabel?.firstElementChild).not.toHaveAttribute(
+      "data-testid",
+      "stMarkdownContainer"
+    )
+  })
 
-    expect(screen.getByTestId("stIconEmoji")).toHaveStyle("margin: 0")
+  it("renders the icon to the right when requested", () => {
+    const { container } = render(
+      <DynamicButtonLabel {...getProps({ iconPosition: "right" })} />
+    )
+    const wrapper = container.firstElementChild as HTMLElement
+    expect(wrapper).toBeDefined()
+    const mainLabel = wrapper.querySelector('[data-has-shortcut="false"]')
+    expect(mainLabel).toBeDefined()
+    expect(mainLabel?.firstElementChild).toHaveAttribute(
+      "data-testid",
+      "stMarkdownContainer"
+    )
+  })
+
+  it("renders shortcut text when provided", () => {
+    const shortcut = "ctrl+k"
+
+    render(<DynamicButtonLabel {...getProps({ shortcut })} />)
+
+    expect(screen.getByText("Ctrl + K")).toBeInTheDocument()
+  })
+
+  it("maps Cmd shortcut to Ctrl on non-mac platforms", () => {
+    const spy = vi.spyOn(utils, "isFromMac").mockReturnValue(false)
+    const shortcut = "cmd+n"
+
+    render(<DynamicButtonLabel {...getProps({ shortcut })} />)
+
+    expect(screen.getByText("Ctrl + N")).toBeInTheDocument()
+    spy.mockRestore()
   })
 })

@@ -20,6 +20,7 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
+from streamlit import config
 from streamlit.elements.widgets.chat import ChatInputValue
 from streamlit.errors import (
     StreamlitAPIException,
@@ -204,7 +205,7 @@ class ChatTest(DeltaGeneratorTestCase):
         st.cache_data(lambda: st.chat_input("the label"))()
 
         # The widget itself is still created, so we need to go back one element more:
-        el = self.get_delta_from_queue(-2).new_element.exception
+        el = self.get_delta_from_queue(-3).new_element.exception
         assert el.type == "CachedWidgetWarning"
         assert el.is_warning
 
@@ -250,7 +251,7 @@ class ChatTest(DeltaGeneratorTestCase):
         ]
 
         deserialize_patch.return_value = ChatInputValue(
-            text="placeholder", files=uploaded_files
+            text="placeholder", files=uploaded_files, _include_files=True
         )
 
         return_val = st.chat_input(accept_file="multiple")
@@ -281,7 +282,7 @@ class ChatTest(DeltaGeneratorTestCase):
         ]
 
         deserialize_patch.return_value = ChatInputValue(
-            text="placeholder", files=uploaded_files
+            text="placeholder", files=uploaded_files, _include_files=True
         )
 
         # These file_uploaders have different labels so that we don't cause
@@ -441,6 +442,11 @@ class ChatTest(DeltaGeneratorTestCase):
                 100,
                 200,
             ),
+            (
+                "max_upload_size",
+                100,
+                200,
+            ),
         ]
     )
     def test_whitelisted_stable_key_kwargs(
@@ -537,6 +543,36 @@ class ChatTest(DeltaGeneratorTestCase):
         assert c.placeholder == "the label"
         assert c.max_chars == 10
 
+    def test_max_upload_size_default(self):
+        """Test that chat_input uses the configuration value by default for max upload size."""
+        st.chat_input("the label")
+
+        c = self.get_delta_from_queue().new_element.chat_input
+        assert c.max_upload_size_mb == config.get_option("server.maxUploadSize")
+
+    def test_max_upload_size_override(self):
+        """Test that a per-widget max_upload_size overrides the configuration value for chat_input."""
+        st.chat_input("the label", max_upload_size=321, accept_file="multiple")
+
+        c = self.get_delta_from_queue().new_element.chat_input
+        assert c.max_upload_size_mb == 321
+
+    @parameterized.expand(
+        [
+            ("zero", 0),
+            ("negative", -1),
+            ("float", 1.5),
+            ("string", "10"),
+        ]
+    )
+    def test_max_upload_size_invalid(self, _: str, max_upload_size: object) -> None:
+        """Test that invalid max_upload_size values raise an exception for chat_input."""
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.chat_input("the label", max_upload_size=max_upload_size)
+        assert "The `max_upload_size` parameter must be a positive integer" in str(
+            exc.value
+        )
+
     def test_accept_file_single(self):
         """Test st.chat_input with accept_file=True."""
         st.chat_input("the label", accept_file=True, file_type=["txt", "csv"])
@@ -632,3 +668,177 @@ class ChatTest(DeltaGeneratorTestCase):
         )
         c2 = self.get_delta_from_queue().new_element.chat_input
         assert c2.file_type == [".py", ".md", ".txt"]
+
+    @patch("streamlit.elements.widgets.chat.ChatInputSerde.deserialize")
+    def test_audio_file(self, deserialize_patch):
+        """Test that audio file is properly handled by ChatInputValue."""
+        rec = UploadedFileRec("audio0", "recording.wav", "audio/wav", b"audio data")
+
+        audio_file = UploadedFile(
+            rec, FileURLsProto(file_id="audio0", delete_url="d0", upload_url="u0")
+        )
+
+        deserialize_patch.return_value = ChatInputValue(
+            text="",
+            files=[],
+            audio=audio_file,
+            _include_files=True,
+            _include_audio=True,
+        )
+
+        return_val = st.chat_input(accept_file="multiple", accept_audio=True)
+
+        assert return_val.audio == audio_file
+        assert return_val.audio.name == "recording.wav"
+        assert return_val.audio.type == "audio/wav"
+        assert return_val.audio.getvalue() == b"audio data"
+
+    @patch("streamlit.elements.widgets.chat.ChatInputSerde.deserialize")
+    def test_audio_file_none(self, deserialize_patch):
+        """Test that ChatInputValue handles None audio file correctly."""
+        deserialize_patch.return_value = ChatInputValue(
+            text="hello", files=[], audio=None, _include_files=True, _include_audio=True
+        )
+
+        return_val = st.chat_input(accept_file="multiple", accept_audio=True)
+
+        assert return_val.audio is None
+        assert return_val.text == "hello"
+
+    @patch("streamlit.elements.widgets.chat.ChatInputSerde.deserialize")
+    def test_chat_input_value_with_audio(self, deserialize_patch):
+        """Test ChatInputValue dict-like interface with audio field."""
+        rec = UploadedFileRec("audio0", "recording.wav", "audio/wav", b"audio data")
+        audio_file = UploadedFile(
+            rec, FileURLsProto(file_id="audio0", delete_url="d0", upload_url="u0")
+        )
+
+        deserialize_patch.return_value = ChatInputValue(
+            text="test",
+            files=[],
+            audio=audio_file,
+            _include_files=True,
+            _include_audio=True,
+        )
+
+        return_val = st.chat_input(accept_file="multiple", accept_audio=True)
+
+        # Test dict-like access
+        assert return_val["audio"] == audio_file
+        assert return_val["text"] == "test"
+        assert "audio" in return_val
+        assert len(return_val) == 3  # text, files, audio
+
+        # Test to_dict
+        as_dict = return_val.to_dict()
+        assert as_dict["audio"] == audio_file
+        assert as_dict["text"] == "test"
+        assert as_dict["files"] == []
+
+    def test_chat_input_accept_audio_false(self):
+        """Test that accept_audio=False correctly sets the proto field."""
+        st.chat_input(accept_audio=False)
+        c = self.get_delta_from_queue().new_element.chat_input
+        assert c.accept_audio is False
+
+    def test_chat_input_accept_audio_true(self):
+        """Test that accept_audio=True correctly sets the proto field."""
+        st.chat_input(accept_audio=True)
+        c = self.get_delta_from_queue().new_element.chat_input
+        assert c.accept_audio is True
+
+    def test_chat_input_audio_sample_rate_default(self):
+        """Test that audio_sample_rate defaults to 16000."""
+        st.chat_input(accept_audio=True)
+        c = self.get_delta_from_queue().new_element.chat_input
+        assert c.audio_sample_rate == 16000
+
+    @parameterized.expand(
+        [
+            (8000,),
+            (16000,),
+            (48000,),
+        ]
+    )
+    def test_chat_input_audio_sample_rate_valid(self, sample_rate: int):
+        """Test that valid audio_sample_rate values are set correctly."""
+        st.chat_input(accept_audio=True, audio_sample_rate=sample_rate)
+        c = self.get_delta_from_queue().new_element.chat_input
+        assert c.audio_sample_rate == sample_rate
+
+    def test_chat_input_audio_sample_rate_none(self):
+        """Test that audio_sample_rate=None is handled correctly."""
+        st.chat_input(accept_audio=True, audio_sample_rate=None)
+        c = self.get_delta_from_queue().new_element.chat_input
+        assert c.HasField("audio_sample_rate") is False
+
+    def test_chat_input_audio_sample_rate_invalid(self):
+        """Test that invalid audio_sample_rate raises an error."""
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.chat_input(accept_audio=True, audio_sample_rate=12345)
+        assert "Invalid audio_sample_rate" in str(exc.value)
+
+    @parameterized.expand(
+        [
+            (False, False, False, False, {"text"}),
+            ("multiple", False, True, False, {"text", "files"}),
+            (False, True, False, True, {"text", "audio"}),
+            ("multiple", True, True, True, {"text", "files", "audio"}),
+        ]
+    )
+    @patch("streamlit.elements.widgets.chat.ChatInputSerde.deserialize")
+    def test_chat_input_value_conditional_keys(
+        self,
+        accept_file,
+        accept_audio,
+        include_files,
+        include_audio,
+        expected_keys,
+        deserialize_patch,
+    ):
+        """Test that ChatInputValue only includes keys based on accept_file/accept_audio."""
+        deserialize_patch.return_value = ChatInputValue(
+            text="test",
+            files=[],
+            audio=None,
+            _include_files=include_files,
+            _include_audio=include_audio,
+        )
+
+        return_val = st.chat_input(accept_file=accept_file, accept_audio=accept_audio)
+
+        # Verify expected keys are present
+        assert set(return_val.keys()) == expected_keys
+
+        # Verify text is always accessible
+        assert "text" in return_val
+        assert return_val["text"] == "test"
+        assert return_val.text == "test"
+
+        # Verify files key behavior
+        if "files" in expected_keys:
+            assert "files" in return_val
+            assert return_val["files"] == []
+            assert return_val.files == []
+        else:
+            assert "files" not in return_val
+            with pytest.raises(KeyError):
+                _ = return_val["files"]
+            with pytest.raises(AttributeError):
+                _ = return_val.files
+
+        # Verify audio key behavior
+        if "audio" in expected_keys:
+            assert "audio" in return_val
+            assert return_val["audio"] is None
+            assert return_val.audio is None
+        else:
+            assert "audio" not in return_val
+            with pytest.raises(KeyError):
+                _ = return_val["audio"]
+            with pytest.raises(AttributeError):
+                _ = return_val.audio
+
+        # Verify to_dict matches expected keys
+        as_dict = return_val.to_dict()
+        assert set(as_dict.keys()) == expected_keys

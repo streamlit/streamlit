@@ -24,7 +24,7 @@ import {
   ModalFooter as UIModalFooter,
   ModalHeader as UIModalHeader,
 } from "baseui/modal"
-import merge from "lodash/merge"
+import { merge } from "lodash-es"
 
 import BaseButton, { BaseButtonProps } from "~lib/components/shared/BaseButton"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"

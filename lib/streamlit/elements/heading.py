@@ -25,7 +25,7 @@ from streamlit.string_util import clean_text
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
-    from streamlit.elements.lib.layout_utils import Width
+    from streamlit.elements.lib.layout_utils import TextAlignment, Width
     from streamlit.type_util import SupportsStr
 
 
@@ -49,6 +49,7 @@ class HeadingMixin:
         help: str | None = None,
         divider: Divider = False,
         width: Width = "stretch",
+        text_alignment: TextAlignment = "left",
     ) -> DeltaGenerator:
         """Display text in header formatting.
 
@@ -97,6 +98,22 @@ class HeadingMixin:
               the parent container, the width of the element matches the width
               of the parent container.
 
+        text_alignment : "left", "center", "right", or "justify"
+            The horizontal alignment of the text within the element. This can
+            be one of the following:
+
+            - ``"left"`` (default): Text is aligned to the left edge.
+            - ``"center"``: Text is centered.
+            - ``"right"``: Text is aligned to the right edge.
+            - ``"justify"``: Text is justified (stretched to fill the available
+              width with the last line left-aligned).
+
+            .. note::
+                For text alignment to have a visible effect, the element's
+                width must be wider than its content. If you use
+                ``width="content"`` with short text, the alignment may not be
+                noticeable.
+
         Examples
         --------
         >>> import streamlit as st
@@ -115,7 +132,7 @@ class HeadingMixin:
 
         """
         validate_width(width, allow_content=True)
-        layout_config = LayoutConfig(width=width)
+        layout_config = LayoutConfig(width=width, text_alignment=text_alignment)
 
         return self.dg._enqueue(
             "heading",
@@ -138,6 +155,7 @@ class HeadingMixin:
         help: str | None = None,
         divider: Divider = False,
         width: Width = "stretch",
+        text_alignment: TextAlignment = "left",
     ) -> DeltaGenerator:
         """Display text in subheader formatting.
 
@@ -186,6 +204,22 @@ class HeadingMixin:
               the parent container, the width of the element matches the width
               of the parent container.
 
+        text_alignment : "left", "center", "right", or "justify"
+            The horizontal alignment of the text within the element. This can
+            be one of the following:
+
+            - ``"left"`` (default): Text is aligned to the left edge.
+            - ``"center"``: Text is centered.
+            - ``"right"``: Text is aligned to the right edge.
+            - ``"justify"``: Text is justified (stretched to fill the available
+              width with the last line left-aligned).
+
+            .. note::
+                For text alignment to have a visible effect, the element's
+                width must be wider than its content. If you use
+                ``width="content"`` with short text, the alignment may not be
+                noticeable.
+
         Examples
         --------
         >>> import streamlit as st
@@ -204,7 +238,7 @@ class HeadingMixin:
 
         """
         validate_width(width, allow_content=True)
-        layout_config = LayoutConfig(width=width)
+        layout_config = LayoutConfig(width=width, text_alignment=text_alignment)
 
         return self.dg._enqueue(
             "heading",
@@ -226,6 +260,7 @@ class HeadingMixin:
         *,  # keyword-only arguments:
         help: str | None = None,
         width: Width = "stretch",
+        text_alignment: TextAlignment = "left",
     ) -> DeltaGenerator:
         """Display text in title formatting.
 
@@ -269,6 +304,22 @@ class HeadingMixin:
               the parent container, the width of the element matches the width
               of the parent container.
 
+        text_alignment : "left", "center", "right", or "justify"
+            The horizontal alignment of the text within the element. This can
+            be one of the following:
+
+            - ``"left"`` (default): Text is aligned to the left edge.
+            - ``"center"``: Text is centered.
+            - ``"right"``: Text is aligned to the right edge.
+            - ``"justify"``: Text is justified (stretched to fill the available
+              width with the last line left-aligned).
+
+            .. note::
+                For text alignment to have a visible effect, the element's
+                width must be wider than its content. If you use
+                ``width="content"`` with short text, the alignment may not be
+                noticeable.
+
         Examples
         --------
         >>> import streamlit as st
@@ -282,12 +333,15 @@ class HeadingMixin:
 
         """
         validate_width(width, allow_content=True)
-        layout_config = LayoutConfig(width=width)
+        layout_config = LayoutConfig(width=width, text_alignment=text_alignment)
 
         return self.dg._enqueue(
             "heading",
             HeadingMixin._create_heading_proto(
-                tag=HeadingProtoTag.TITLE_TAG, body=body, anchor=anchor, help=help
+                tag=HeadingProtoTag.TITLE_TAG,
+                body=body,
+                anchor=anchor,
+                help=help,
             ),
             layout_config=layout_config,
         )
@@ -349,4 +403,5 @@ class HeadingMixin:
 
         if help:
             proto.help = help
+
         return proto

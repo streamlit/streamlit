@@ -106,7 +106,7 @@ class DataframeUtilTest(unittest.TestCase):
         """Test that `convert_anything_to_pandas_df` creates a copy of the original
         dataframe if `ensure_copy` is True.
         """
-        orginal_df = pd.DataFrame(
+        original_df = pd.DataFrame(
             {
                 "integer": [1, 2, 3],
                 "float": [1.0, 2.1, 3.2],
@@ -116,20 +116,20 @@ class DataframeUtilTest(unittest.TestCase):
         )
 
         converted_df = dataframe_util.convert_anything_to_pandas_df(
-            orginal_df, ensure_copy=True
+            original_df, ensure_copy=True
         )
         # Apply a change
         converted_df["integer"] = [4, 5, 6]
         # Ensure that the original dataframe is not changed
-        assert orginal_df["integer"].to_list() == [1, 2, 3]
+        assert original_df["integer"].to_list() == [1, 2, 3]
 
         converted_df = dataframe_util.convert_anything_to_pandas_df(
-            orginal_df, ensure_copy=False
+            original_df, ensure_copy=False
         )
         # Apply a change
         converted_df["integer"] = [4, 5, 6]
         # The original dataframe should be changed here since ensure_copy is False
-        assert orginal_df["integer"].to_list() == [4, 5, 6]
+        assert original_df["integer"].to_list() == [4, 5, 6]
 
     @pytest.mark.usefixtures("benchmark")
     def test_convert_anything_to_pandas_df_ensure_copy_performance(self):

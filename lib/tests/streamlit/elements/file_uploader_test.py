@@ -14,7 +14,7 @@
 
 """file_uploader unit test."""
 
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from parameterized import parameterized
@@ -158,6 +158,30 @@ class FileUploaderTest(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.file_uploader
         assert c.max_upload_size_mb == config.get_option("server.maxUploadSize")
 
+    def test_max_upload_size_override(self):
+        """Test that a per-widget max_upload_size overrides the configuration value."""
+        st.file_uploader("the label", max_upload_size=123)
+
+        c = self.get_delta_from_queue().new_element.file_uploader
+        assert c.max_upload_size_mb == 123
+
+    @parameterized.expand(
+        [
+            ("zero", 0),
+            ("negative", -1),
+            ("float", 1.5),
+            ("string", "10"),
+        ]
+    )
+    def test_max_upload_size_invalid(self, _: str, max_upload_size: object):
+        """Test that invalid max_upload_size values raise an exception."""
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.file_uploader("the label", max_upload_size=max_upload_size)
+
+        assert "The `max_upload_size` parameter must be a positive integer" in str(
+            exc.value
+        )
+
     @patch("streamlit.elements.widgets.file_uploader._get_upload_files")
     def test_unique_uploaded_file_instance(self, get_upload_files_patch):
         """We should get a unique UploadedFile instance each time we access
@@ -245,7 +269,7 @@ class FileUploaderTest(DeltaGeneratorTestCase):
         st.cache_data(lambda: st.file_uploader("the label"))()
 
         # The widget itself is still created, so we need to go back one element more:
-        el = self.get_delta_from_queue(-2).new_element.exception
+        el = self.get_delta_from_queue(-3).new_element.exception
         assert el.type == "CachedWidgetWarning"
         assert el.is_warning
 
@@ -435,3 +459,79 @@ class FileUploaderWidthTest(DeltaGeneratorTestCase):
         """Test width config with various invalid values."""
         with pytest.raises(StreamlitInvalidWidthError):
             st.file_uploader("the label", width=invalid_width)
+
+
+class FileUploaderStableIdTest(DeltaGeneratorTestCase):
+    def test_stable_id_with_key(self):
+        """Test that the widget ID is stable when a stable key is provided, unless whitelisted kwargs change."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            st.file_uploader(
+                label="Label 1",
+                key="file_uploader_key",
+                help="help 1",
+                width="stretch",
+                on_change=lambda: None,
+                args=("arg1", "arg2"),
+                kwargs={"kwarg1": "kwarg1"},
+                label_visibility="visible",
+                disabled=False,
+                # Whitelisted kwargs
+                type=["txt", "csv"],
+                accept_multiple_files=False,
+            )
+            c1 = self.get_delta_from_queue().new_element.file_uploader
+            id1 = c1.id
+
+            st.file_uploader(
+                label="Label 2",
+                key="file_uploader_key",
+                help="help 2",
+                width=300,
+                on_change=lambda: None,
+                args=("arg_1", "arg_2"),
+                kwargs={"kwarg_1": "kwarg_1"},
+                label_visibility="hidden",
+                disabled=True,
+                # Whitelisted kwargs (same as before)
+                type=["txt", "csv"],
+                accept_multiple_files=False,
+            )
+            c2 = self.get_delta_from_queue().new_element.file_uploader
+            id2 = c2.id
+            assert id1 == id2
+
+    @parameterized.expand(
+        [
+            ("type", ["txt"], ["pdf", "doc"]),
+            ("type", None, ["csv"]),
+            ("accept_multiple_files", False, True),
+            ("accept_multiple_files", False, "directory"),
+        ]
+    )
+    def test_whitelisted_stable_key_kwargs(
+        self, kwarg_name: str, value1: object, value2: object
+    ):
+        """Changing whitelisted kwargs should change the ID even when a key is provided."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            base_kwargs = {
+                "label": "Label",
+                "key": "file_uploader_key2",
+                "type": ["txt"],
+                "accept_multiple_files": False,
+            }
+            base_kwargs[kwarg_name] = value1
+            st.file_uploader(**base_kwargs)
+            c1 = self.get_delta_from_queue().new_element.file_uploader
+            id1 = c1.id
+
+            base_kwargs[kwarg_name] = value2
+            st.file_uploader(**base_kwargs)
+            c2 = self.get_delta_from_queue().new_element.file_uploader
+            id2 = c2.id
+            assert id1 != id2

@@ -309,13 +309,17 @@ class StMapTest(DeltaGeneratorTestCase):
         [
             [
                 "lat",
-                "Map data must contain a latitude column named: 'LAT', 'LATITUDE', 'lat', 'latitude'. "
-                "Existing columns: 'lon'",
+                (
+                    "Map data must contain a latitude column named: 'LAT', 'LATITUDE', 'lat', 'latitude'. "
+                    "Existing columns: 'lon'"
+                ),
             ],
             [
                 "lon",
-                "Map data must contain a longitude column named: 'LON', 'LONGITUDE', 'lon', 'longitude'. "
-                "Existing columns: 'lat'",
+                (
+                    "Map data must contain a longitude column named: 'LON', 'LONGITUDE', 'lon', 'longitude'. "
+                    "Existing columns: 'lat'"
+                ),
             ],
         ]
     )

@@ -31,14 +31,23 @@ import { PlotlyChart as PlotlyChartProto } from "@streamlit/protobuf"
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
 import { withFullScreenWrapper } from "~lib/components/shared/FullScreenWrapper"
 import { FormClearHelper } from "~lib/components/widgets/Form/FormClearHelper"
+import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
+import { StyledPlotlyChartContainer } from "./styled-components"
 import { applyTheming, handleSelection, sendEmptySelection } from "./utils"
 
 // Minimum width for Plotly charts
 const MIN_WIDTH = 150
+
+/**
+ * The timeout duration (milliseconds) for resetting selection info within the plotly figure.
+ * This is required to ensure the reset executes after the onUpdate callback,
+ * preventing the selection state from being immediately overwritten due to plotly's update cycle.
+ */
+const RESET_SELECTION_TIMEOUT_MS = 50
 // Default height for Plotly charts when no height is specified
 const DEFAULT_PLOTLY_HEIGHT = 450
 
@@ -65,14 +74,8 @@ export interface PlotlyChartProps {
   disabled: boolean
   fragmentId?: string
   disableFullscreenMode?: boolean
-  // eslint-disable-next-line @eslint-react/no-unused-props
   width: number
 }
-
-/**
- * Note: we do not have any React-testing-library tests because Plotly doesn't support it
- * https://github.com/plotly/react-plotly.js/issues/176
- */
 
 export function PlotlyChart({
   element,
@@ -89,6 +92,10 @@ export function PlotlyChart({
     expand,
     collapse,
   } = useRequiredContext(ElementFullscreenContext)
+
+  const { height: chartContainerHeight, elementRef: containerRef } =
+    useCalculatedDimensions([], 0)
+
   const width = elWidth || 0
 
   // Load the initial figure spec from the element message
@@ -103,9 +110,7 @@ export function PlotlyChart({
 
     return JSON.parse(element.spec)
     // We want to reload the initialFigureSpec object whenever the element id changes
-    // TODO: Update to match React best practices
-    // eslint-disable-next-line react-hooks/react-compiler
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
   }, [element.id, element.spec])
 
   const [plotlyFigure, setPlotlyFigure] = useState<PlotlyFigureType>(() => {
@@ -187,9 +192,7 @@ export function PlotlyChart({
     }
     return config
     // We want to reload the plotlyConfig object whenever the element id changes
-    // TODO: Update to match React best practices
-    // eslint-disable-next-line react-hooks/react-compiler
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
   }, [
     element.id,
     element.config,
@@ -279,9 +282,7 @@ export function PlotlyChart({
     })
     // We want to reload these options whenever the element id changes
     // or the selection modes change.
-    // TODO: Update to match React best practices
-    // eslint-disable-next-line react-hooks/react-compiler
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
   }, [
     element.id,
     isSelectionActivated,
@@ -304,14 +305,14 @@ export function PlotlyChart({
           MIN_WIDTH
         )
 
-  // Get the initial height, using a default if not specified
-  let calculatedHeight = initialFigureSpec.layout.height
+  let calculatedHeight =
+    chartContainerHeight > 0
+      ? chartContainerHeight
+      : (plotlyFigure.layout?.height ?? DEFAULT_PLOTLY_HEIGHT)
 
   if (isFullScreen) {
     calculatedWidth = width
-    calculatedHeight = fullScreenHeight
-  } else if (calculatedHeight === undefined) {
-    calculatedHeight = DEFAULT_PLOTLY_HEIGHT
+    calculatedHeight = fullScreenHeight ?? DEFAULT_PLOTLY_HEIGHT
   }
 
   if (
@@ -340,9 +341,7 @@ export function PlotlyChart({
     },
     // We are using element.id here instead of element since we don't
     // shallow reference equality will not work correctly for element.
-    // TODO: Update to match React best practices
-    // eslint-disable-next-line react-hooks/react-compiler
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
     [element.id, widgetMgr, fragmentId]
   )
 
@@ -364,30 +363,27 @@ export function PlotlyChart({
           setPlotlyFigure((prevFigure: PlotlyFigureType) => {
             return {
               ...prevFigure,
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-              data: prevFigure.data.map((trace: any) => {
+              data: prevFigure.data.map((trace: Plotly.Data) => {
                 return {
                   ...trace,
                   // Set to null to clear the selection an empty
                   // array here would still show everything as opaque
                   selectedpoints: null,
-                }
+                } as Plotly.Data
               }),
               layout: {
                 ...prevFigure.layout,
                 // selections is not part of the plotly typing:
                 selections: [],
-              },
+              } as PlotlyFigureType["layout"],
             }
           })
-        }, 50)
+        }, RESET_SELECTION_TIMEOUT_MS)
       }
     },
     // We are using element.id here instead of element since we don't
     // shallow reference equality will not work correctly for element.
-    // TODO: Update to match React best practices
-    // eslint-disable-next-line react-hooks/react-compiler
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
     [element.id, widgetMgr, fragmentId]
   )
 
@@ -450,13 +446,15 @@ export function PlotlyChart({
       })
     }
     // We only want to trigger this effect if the dragmode changes.
-    // TODO: Update to match React best practices
-    // eslint-disable-next-line react-hooks/react-compiler
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
   }, [plotlyFigure.layout?.dragmode])
 
   return (
-    <div className="stPlotlyChart" data-testid="stPlotlyChart">
+    <StyledPlotlyChartContainer
+      ref={containerRef}
+      className="stPlotlyChart"
+      data-testid="stPlotlyChart"
+    >
       <Plot
         data={plotlyFigure.data}
         layout={plotlyFigure.layout}
@@ -498,7 +496,7 @@ export function PlotlyChart({
           setPlotlyFigure(figure)
         }}
       />
-    </div>
+    </StyledPlotlyChartContainer>
   )
 }
 

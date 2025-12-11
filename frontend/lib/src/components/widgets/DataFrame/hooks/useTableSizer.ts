@@ -15,9 +15,7 @@
  */
 
 // TODO: fix incorrect hook usage and delete this lint suppression
-// TODO: Update to match React best practices
-// eslint-disable-next-line react-hooks/react-compiler
-/* eslint-disable react-hooks/exhaustive-deps */
+/* eslint-disable react-hooks/exhaustive-deps -- TODO: Update to match React best practices */
 
 import React, { useLayoutEffect, useState } from "react"
 
@@ -30,6 +28,7 @@ import {
   getConfiguredHeight,
   getConfiguredWidth,
   shouldUseContainerWidth,
+  shouldUseContentHeight,
   shouldUseContentWidth,
   shouldUseStretchHeight,
 } from "~lib/components/widgets/DataFrame/dimensionUtils"
@@ -88,7 +87,10 @@ function useTableSizer(
   // Group row + column header row
   const numHeaderRows = usesGroupRow ? 2 : 1
   const numTrailingRows =
-    element.editingMode === ArrowProto.EditingMode.DYNAMIC ? 1 : 0
+    element.editingMode === ArrowProto.EditingMode.DYNAMIC ||
+    element.editingMode === ArrowProto.EditingMode.ADD_ONLY
+      ? 1
+      : 0
 
   // Calculate the height of the table based on the number of rows:
   const totalDataRows = numRows + numTrailingRows
@@ -114,6 +116,7 @@ function useTableSizer(
   // Stretch height styling does not work in the root container without an
   // enclosing fixed-height container.
   const useStretchHeight = shouldUseStretchHeight(heightConfig, isInRoot)
+  const useContentHeight = shouldUseContentHeight(heightConfig)
 
   // Determine the minimum number of rows to display
   const minRows = useStretchHeight
@@ -125,6 +128,9 @@ function useTableSizer(
     rowHeight,
     theme: gridTheme,
   })
+
+  // Maximum height cap for content mode (10,000 pixels)
+  const MAX_CONTENT_HEIGHT = 10000
 
   // Ensure maxHeight is at least minHeight
   // E.g., with 0 rows: calculatedHeight might be just header+borders,
@@ -147,6 +153,24 @@ function useTableSizer(
     // We still need to set a reasonable maxHeight for the resizable container.
     maxHeight = Math.max(measuredContainerHeight, maxHeight)
     // Don't override initialHeight - let it use the default behavior
+  } else if (useContentHeight) {
+    // height="content" - show all rows, but cap at MAX_CONTENT_HEIGHT (10,000px)
+    // Calculate the approximate number of rows that would result in a 10,000px table
+    const maxRowsForHeightCap = Math.ceil(MAX_CONTENT_HEIGHT / rowHeight)
+
+    const effectiveRows = Math.min(totalDataRows, maxRowsForHeightCap)
+    // Add 1px to account for GlideDataGrid's internal rendering/spacing
+    // Without this, scrollbars appear unnecessarily when all rows should fit
+    const contentHeight =
+      calculateTableHeight({
+        numRows: effectiveRows,
+        rowHeight,
+        theme: gridTheme,
+        numHeaderRows,
+      }) + 1
+
+    initialHeight = Math.max(contentHeight, minHeight)
+    maxHeight = Math.max(initialHeight, maxHeight)
   } else if (configuredHeight) {
     // User has explicitly configured a height (integer value)
     // Respect their choice, but enforce minimum (minHeight = 1 row when not stretch)

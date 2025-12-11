@@ -1,0 +1,4 @@
+# Local files and experiments - not tracked in git
+*.local.md
+local/
+references/features/

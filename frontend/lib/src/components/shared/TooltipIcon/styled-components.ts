@@ -39,11 +39,13 @@ export const StyledTooltipIconWrapper =
 export const StyledLabelHelpWrapper = styled.div<StyledLabelHelpWrapperProps>(
   ({ isLatex }) => ({
     display: "flex",
-    visibility: "visible",
-    verticalAlign: "middle",
     flexDirection: "row",
     alignItems: "center",
-    ...(isLatex ? { justifyContent: "center" } : {}),
+    visibility: "visible",
+    // For LaTeX, use fit-content to keep icon close, but constrain with maxWidth
+    // so long formulas can scroll. Center using margin-inline: auto
+    width: isLatex ? "fit-content" : "100%",
+    ...(isLatex ? { maxWidth: "100%", marginInline: "auto" } : {}),
   })
 )
 

@@ -20,6 +20,7 @@ import pytest
 from parameterized import parameterized
 
 from streamlit.elements.lib.layout_utils import (
+    SpaceSize,
     get_align,
     get_gap_size,
     get_height_config,
@@ -27,6 +28,7 @@ from streamlit.elements.lib.layout_utils import (
     get_width_config,
     validate_height,
     validate_horizontal_alignment,
+    validate_space_size,
     validate_vertical_alignment,
     validate_width,
 )
@@ -34,6 +36,7 @@ from streamlit.errors import (
     StreamlitInvalidColumnGapError,
     StreamlitInvalidHeightError,
     StreamlitInvalidHorizontalAlignmentError,
+    StreamlitInvalidSizeError,
     StreamlitInvalidVerticalAlignmentError,
     StreamlitInvalidWidthError,
 )
@@ -285,3 +288,66 @@ class LayoutUtilsTest(unittest.TestCase):
         """get_align maps alignments to the correct Align enum values (or UNDEFINED)."""
 
         assert get_align(align) == expected  # type: ignore[arg-type]
+
+    @parameterized.expand(
+        [
+            ("small",),
+            ("medium",),
+            ("large",),
+            ("stretch",),
+            (1,),
+            (100,),
+        ]
+    )
+    def test_validate_size_valid(self, size: SpaceSize):
+        """validate_size accepts valid size values."""
+
+        validate_space_size(size)
+
+    @parameterized.expand(
+        [
+            0,
+            -1,
+            50.5,  # Floats not supported
+            "invalid",
+            None,
+            "content",  # Not valid for st.space
+        ]
+    )
+    def test_validate_size_invalid(self, size: any):
+        """validate_size raises for invalid size values."""
+
+        with pytest.raises(StreamlitInvalidSizeError):
+            validate_space_size(size)  # type: ignore[arg-type]
+
+    @parameterized.expand(
+        [
+            ("small", 0.75),
+            ("medium", 2.5),
+            ("large", 4.25),
+        ]
+    )
+    def test_get_width_config_rem(self, size: str, expected_rem: float):
+        """get_width_config handles rem values correctly for size literals."""
+
+        config = get_width_config(size)
+        assert config.rem_width == expected_rem
+        assert not config.use_content
+        assert not config.use_stretch
+        assert config.pixel_width == 0
+
+    @parameterized.expand(
+        [
+            ("small", 0.75),
+            ("medium", 2.5),
+            ("large", 4.25),
+        ]
+    )
+    def test_get_height_config_rem(self, size: str, expected_rem: float):
+        """get_height_config handles rem values correctly for size literals."""
+
+        config = get_height_config(size)
+        assert config.rem_height == expected_rem
+        assert not config.use_content
+        assert not config.use_stretch
+        assert config.pixel_height == 0
