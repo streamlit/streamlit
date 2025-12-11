@@ -347,6 +347,16 @@ def create_media_routes(
 
         # Ensure support for range requests (e.g. for video files)
         headers["Accept-Ranges"] = "bytes"
+
+        # Prevent GZip middleware from compressing audio/video files.
+        # Audio/video elements in browsers can fail when binary content is gzip-compressed.
+        # This MUST be set for both range requests and full requests, as browsers
+        # (especially WebKit) use range requests for video/audio playback.
+        # Setting Content-Encoding tells GZipMiddleware to skip compression.
+        mimetype = media_file.mimetype or ""
+        if mimetype.startswith(("audio/", "video/")):
+            headers["Content-Encoding"] = "identity"
+
         content = media_file.content
         content_length = len(content)
         status_code = 200
@@ -370,13 +380,6 @@ def create_media_routes(
             headers["Content-Length"] = str(len(content))
         else:
             headers["Content-Length"] = str(content_length)
-
-            # Prevent GZip middleware from compressing audio/video files.
-            # Audio/video elements in browsers can fail when binary content is gzip-compressed.
-            # Setting Content-Encoding tells GZipMiddleware to skip compression.
-            mimetype = media_file.mimetype or ""
-            if mimetype.startswith(("audio/", "video/")):
-                headers["Content-Encoding"] = "identity"
 
         response = Response(
             content,
