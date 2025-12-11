@@ -602,6 +602,7 @@ empty_column_df = pd.DataFrame(
 empty_col_result = st.data_editor(
     empty_column_df,
     hide_index=True,
+    num_rows="dynamic",
     column_config={
         "number_col": st.column_config.NumberColumn(width="medium"),
         "text_col": st.column_config.TextColumn(width="medium"),

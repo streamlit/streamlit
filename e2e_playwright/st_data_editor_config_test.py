@@ -23,6 +23,7 @@ from e2e_playwright.shared.app_utils import (
 )
 from e2e_playwright.shared.dataframe_utils import (
     click_on_cell,
+    edit_cell_value,
     expect_canvas_to_be_stable,
     expect_canvas_to_be_visible,
     get_open_cell_overlay,
@@ -321,7 +322,7 @@ def test_data_editor_dynamic_mode(app: Page, assert_snapshot: ImageCompareFuncti
 
 
 def test_editing_empty_column_returns_scalar_not_list(app: Page):
-    """Test that editing cells in empty (None-only) columns returns scalar values.
+    """Test that editing and adding rows in empty (None-only) columns returns scalars.
 
     Regression test for GitHub issues #13305 and #13307 where editing cells in
     columns that start with None values would incorrectly wrap the edited value
@@ -332,20 +333,32 @@ def test_editing_empty_column_returns_scalar_not_list(app: Page):
 
     # Test editing the number column (first column)
     click_on_cell(data_editor, 1, 0, double_click=True, column_width="medium")
-    cell_overlay = get_open_cell_overlay(app)
-    cell_overlay.locator(".gdg-input").fill("42")
-    app.keyboard.press("Enter")
-    wait_for_app_run(app)
+    edit_cell_value(app, "42")
 
     # Verify the value is stored as a scalar (42), not a list ([42])
     expect_prefixed_markdown(app, "Empty column result:", "42")
 
     # Test editing the text column (second column)
     click_on_cell(data_editor, 1, 1, double_click=True, column_width="medium")
-    cell_overlay = get_open_cell_overlay(app)
-    cell_overlay.locator(".gdg-input").fill("hello")
-    app.keyboard.press("Enter")
-    wait_for_app_run(app)
+    edit_cell_value(app, "hello")
 
     # Verify the text value is stored as a scalar string, not a list
     expect_prefixed_markdown(app, "Empty column result:", "hello")
+
+    # Test adding a new row with values - should also return scalars
+    toolbar = data_editor.get_by_test_id("stElementToolbar")
+    data_editor.hover()
+    expect(toolbar).to_have_css("opacity", "1")
+
+    add_row_button = toolbar.get_by_test_id("stElementToolbarButton").get_by_label(
+        "Add row"
+    )
+    add_row_button.click()
+    wait_for_app_run(app)
+
+    # Edit the new row's number column (row index 2)
+    click_on_cell(data_editor, 2, 0, double_click=True, column_width="medium")
+    edit_cell_value(app, "99")
+
+    # Verify the new row value is also a scalar
+    expect_prefixed_markdown(app, "Empty column result:", "99")

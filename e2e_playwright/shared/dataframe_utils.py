@@ -24,6 +24,7 @@ from playwright.sync_api import (
     expect,
 )
 
+from e2e_playwright.conftest import wait_for_app_run
 from e2e_playwright.shared.react18_utils import wait_for_react_stability
 
 if TYPE_CHECKING:
@@ -344,6 +345,30 @@ def get_open_cell_overlay(page: Page | Locator) -> Locator:
     cell_overlay = page.get_by_test_id("portal").locator(".gdg-clip-region")
     expect(cell_overlay).to_be_visible()
     return cell_overlay
+
+
+def edit_cell_value(page: Page, value: str, *, wait_for_run: bool = True) -> None:
+    """Edit the currently open cell by filling a value and pressing Enter.
+
+    This helper function fills a value in the currently open cell editor
+    and submits it by pressing Enter. The cell must already be open for editing
+    (e.g., via click_on_cell with double_click=True).
+
+    Parameters
+    ----------
+    page : Page
+        The Playwright page.
+    value : str
+        The value to fill in the cell.
+    wait_for_run : bool
+        Whether to wait for the app to complete a run after submitting.
+        Defaults to True.
+    """
+    cell_overlay = get_open_cell_overlay(page)
+    cell_overlay.locator(".gdg-input").fill(value)
+    page.keyboard.press("Enter")
+    if wait_for_run:
+        wait_for_app_run(page)
 
 
 def expect_canvas_to_be_stable(
