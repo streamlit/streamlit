@@ -10,8 +10,8 @@ on:
 
 jobs:
   fork-pr-welcome-comment:
-    # Only run for PRs from forks
-    if: github.event.pull_request.head.repo.fork == true
+    # Only run for PRs from forks (external contributors)
+    if: github.event.pull_request.head.repo.full_name != github.repository
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write
