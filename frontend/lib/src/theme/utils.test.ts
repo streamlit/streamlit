@@ -557,6 +557,38 @@ describe("getDefaultTheme", () => {
     // Also verify that the theme is our lightTheme.
     expect(defaultTheme.emotion.colors).toEqual(lightTheme.emotion.colors)
   })
+
+  it("restores Custom Theme Light with displayName from cache", () => {
+    windowSpy = mockWindow()
+
+    // Create a custom light theme and cache it
+    const customLightTheme: ThemeConfig = {
+      ...createTheme(CUSTOM_THEME_LIGHT_NAME, { primaryColor: "blue" }),
+      displayName: "Light",
+    }
+    setCachedTheme(customLightTheme)
+
+    const defaultTheme = getDefaultTheme()
+
+    expect(defaultTheme.name).toBe(CUSTOM_THEME_LIGHT_NAME)
+    expect(defaultTheme.displayName).toBe("Light")
+  })
+
+  it("restores Custom Theme Dark with displayName from cache", () => {
+    windowSpy = mockWindow()
+
+    // Create a custom dark theme and cache it
+    const customDarkTheme: ThemeConfig = {
+      ...createTheme(CUSTOM_THEME_DARK_NAME, { primaryColor: "red" }),
+      displayName: "Dark",
+    }
+    setCachedTheme(customDarkTheme)
+
+    const defaultTheme = getDefaultTheme()
+
+    expect(defaultTheme.name).toBe(CUSTOM_THEME_DARK_NAME)
+    expect(defaultTheme.displayName).toBe("Dark")
+  })
 })
 
 describe("isColor", () => {

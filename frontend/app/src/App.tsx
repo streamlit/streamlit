@@ -1392,9 +1392,19 @@ export class App extends PureComponent<Props, State> {
       this.props.theme.addThemes(customThemes, { keepPresetThemes: false })
 
       const userPreference = getCachedTheme()
-      if (userPreference === null || usingCustomTheme) {
-        // If the user hasn't set a preference, or if a custom theme is currently active,
-        // update the theme to be a custom theme.
+      // Check if the user's cached Light/Dark theme preference is still valid
+      // with the newly received theme config. This ensures we preserve the user's
+      // explicit theme choice (e.g., "Custom Theme Light") across reruns.
+      const userPreferenceStillValid =
+        userPreference &&
+        customThemes.some(theme => theme.name === userPreference.name)
+
+      if (
+        userPreference === null ||
+        (usingCustomTheme && !userPreferenceStillValid)
+      ) {
+        // Only override theme if: no user preference exists OR the user is using
+        // a custom theme that's no longer valid (e.g., theme config changed)
         if (customThemes.length > 1) {
           // When Custom Theme Light & Custom Theme Dark present, we create an auto theme based
           // on the system preference and set this as the active theme

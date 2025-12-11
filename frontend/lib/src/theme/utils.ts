@@ -1128,6 +1128,18 @@ export const getCachedTheme = (): ThemeConfig | null => {
       return getMergedLightTheme()
     case darkTheme.name:
       return getMergedDarkTheme()
+    case CUSTOM_THEME_LIGHT_NAME:
+      // Restore custom light theme with displayName
+      return {
+        ...createTheme(themeName, themeInput as Partial<CustomThemeConfig>),
+        displayName: "Light",
+      }
+    case CUSTOM_THEME_DARK_NAME:
+      // Restore custom dark theme with displayName
+      return {
+        ...createTheme(themeName, themeInput as Partial<CustomThemeConfig>),
+        displayName: "Dark",
+      }
     default:
       // At this point we're guaranteed that themeInput is defined.
       return createTheme(themeName, themeInput as Partial<CustomThemeConfig>)
