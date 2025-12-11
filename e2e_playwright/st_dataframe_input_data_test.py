@@ -37,7 +37,7 @@ def test_dataframe_input_format_rendering(
         # Use more delay here to tackle some flakiness in webkit.
         # The flakiness seems to come from the app still showing the old
         # dataframe when the visibility check is done.
-        wait_for_app_run(app, wait_delay=200)
+        wait_for_app_run(app, wait_delay=500)
 
         # Expect the data format being shown in the app
         expect_markdown(app, str(test_case[1].expected_data_format))
