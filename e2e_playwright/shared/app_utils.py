@@ -196,6 +196,42 @@ def get_selectbox(locator: Locator | Page, label: str | re.Pattern[str]) -> Loca
     return element
 
 
+def select_selectbox_option(
+    locator: Locator | Page,
+    label: str | re.Pattern[str],
+    option: str,
+) -> None:
+    """Select an option from a selectbox dropdown by exact text match.
+
+    Parameters
+    ----------
+    locator : Locator or Page
+        The locator or page containing the selectbox.
+
+    label : str or Pattern[str]
+        The label of the selectbox.
+
+    option : str
+        The exact text of the option to select.
+    """
+    selectbox = get_selectbox(locator, label)
+
+    # Click to open the dropdown
+    selectbox.click()
+
+    # Get the page from the locator
+    page = locator.page if isinstance(locator, Locator) else locator
+
+    # Select the option by exact text from the virtual dropdown
+    dropdown = page.get_by_test_id("stSelectboxVirtualDropdown")
+    dropdown.get_by_text(option, exact=True).click()
+
+    wait_for_app_run(page)
+
+    # Verify the selection was applied
+    expect(selectbox).to_contain_text(option)
+
+
 def get_multiselect(locator: Locator | Page, label: str | re.Pattern[str]) -> Locator:
     """Get a multiselect with the given label.
 
