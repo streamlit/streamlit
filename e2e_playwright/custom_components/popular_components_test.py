@@ -17,11 +17,13 @@ import re
 import pytest
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.shared.app_utils import select_selectbox_option
+from e2e_playwright.shared.app_utils import reset_hovering, select_selectbox_option
 
 
 def _select_component(app: Page, component: str):
     select_selectbox_option(app, "ComponentSelections", component)
+    # reset hovering to avoid some flakiness:
+    reset_hovering(app)
 
 
 def _expect_no_exception(app: Page):
