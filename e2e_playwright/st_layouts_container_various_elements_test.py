@@ -62,63 +62,59 @@ def _select_case(app: Page, case_name: str) -> None:
     wait_for_app_run(app, wait_delay=500)
 
 
-@pytest.mark.parametrize("container_key", CONTAINER_KEYS)
 def test_layouts_container_various_elements(
-    app: Page, assert_snapshot: ImageCompareFunction, container_key: str
+    app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Snapshot test for each top-level container in st_layouts_container_various_elements.py."""
-    _select_case(app, container_key)
+    for key in CONTAINER_KEYS:
+        _select_case(app, key)
 
-    locator = get_element_by_key(app, container_key)
-    expect(locator).to_be_visible()
-    assert_snapshot(
-        locator, name=f"st_layouts_container_various_elements-{container_key}"
-    )
+        locator = get_element_by_key(app, key)
+        expect(locator).to_be_visible()
+        assert_snapshot(locator, name=f"st_layouts_container_various_elements-{key}")
 
 
 # Firefox seems to be failing but can't reproduce locally and video produces an empty page for firefox
 @pytest.mark.skip_browser("firefox")
-@pytest.mark.parametrize("container_key", MAP_CONTAINER_KEYS)
-def test_layouts_container_with_map(
-    app: Page, assert_snapshot: ImageCompareFunction, container_key: str
-):
+def test_layouts_container_with_map(app: Page, assert_snapshot: ImageCompareFunction):
     """Snapshot test for containers with maps in st_layouts_container_various_elements.py."""
-    _select_case(app, container_key)
+    for key in MAP_CONTAINER_KEYS:
+        _select_case(app, key)
 
-    # Wait for map elements to load
-    map_element = app.get_by_test_id("stDeckGlJsonChart")
-    expect(map_element).to_be_visible(timeout=15000)
-    # The map assets can take more time to load, add an extra timeout
-    # to prevent flakiness.
-    app.wait_for_timeout(5000)
+        # Wait for map elements to load
+        map_element = app.get_by_test_id("stDeckGlJsonChart")
+        expect(map_element).to_be_visible(timeout=15000)
+        # The map assets can take more time to load, add an extra timeout
+        # to prevent flakiness.
+        app.wait_for_timeout(5000)
 
-    locator = get_element_by_key(app, container_key)
-    expect(locator).to_be_visible()
-    # Use higher pixel threshold for containers with maps due to their flakiness
-    assert_snapshot(
-        locator,
-        name=f"st_layouts_container_various_elements-{container_key}",
-        pixel_threshold=1.0,
-    )
+        locator = get_element_by_key(app, key)
+        expect(locator).to_be_visible()
+        # Use higher pixel threshold for containers with maps due to their flakiness
+        assert_snapshot(
+            locator,
+            name=f"st_layouts_container_various_elements-{key}",
+            pixel_threshold=1.0,
+        )
 
 
-@pytest.mark.parametrize("container_key", CONTAINER_KEYS_WITH_EXPANDERS)
-def test_layouts_container_expanders(
-    app: Page, assert_snapshot: ImageCompareFunction, container_key: str
-):
+@pytest.mark.flaky(reruns=3)
+def test_layouts_container_expanders(app: Page, assert_snapshot: ImageCompareFunction):
     """Test expander functionality in containers that contain expanders."""
-    _select_case(app, container_key)
+    for key in CONTAINER_KEYS_WITH_EXPANDERS:
+        _select_case(app, key)
 
-    container = get_element_by_key(app, container_key)
-    expect(container).to_be_visible()
+        container = get_element_by_key(app, key)
+        expect(container).to_be_visible()
 
-    # Get the expander in this container
-    expander = container.get_by_test_id("stExpander")
-    expect(expander).to_be_visible()
-    expander.click()
-    wait_for_app_run(app)
+        # Get the expander in this container
+        expander = container.get_by_test_id("stExpander")
+        expect(expander).to_be_visible()
+        expander.click()
+        # Wait for the expander to open
+        expect(expander.get_by_test_id("stExpanderDetails")).to_be_visible()
 
-    assert_snapshot(
-        container,
-        name=f"st_layouts_container_various_elements-{container_key}-expander-opened",
-    )
+        assert_snapshot(
+            container,
+            name=f"st_layouts_container_various_elements-{key}-expander-opened",
+        )

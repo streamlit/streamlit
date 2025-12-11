@@ -54,6 +54,7 @@ CONTAINER_CASES = [
 selected_case = st.selectbox(
     "Select container case",
     CONTAINER_CASES,
+    index=None,
     key="case-selector",
 )
 
