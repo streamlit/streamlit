@@ -27,11 +27,11 @@ jobs:
 
             **The review process:**
 
-            1. A maintainer will do an initial triage on your PR, apply appropriate labels, approve our CI to run, and trigger some AI-review solutions. Your PR might get flagged with `status:needs-product-approval`. This means that to proceed, the proposed feature needs to be approved by our product team (→ `status:product-approved`).
+            1. **Initial triage**: A maintainer will apply labels, approve CI to run, and trigger AI-assisted reviews. Your PR may be flagged with `status:needs-product-approval` if the feature requires product team sign-off (→ `status:product-approved`).
 
-            2. A core maintainer will review your PR only once:
-               - It's `status:product-approved` (or doesn't need product approval)
-               - All CI workflows succeed
-               - All AI review comments have been resolved
+            2. **Code review**: A core maintainer will review your PR once:
+               - It has `status:product-approved` (or doesn't need it)
+               - All CI checks pass
+               - All review comments are addressed
 
-            We have been getting a lot of community contributions recently and we are limited on review time, so please expect some delay. We appreciate your patience! 🙏
+            We're receiving many contributions and have limited review bandwidth — please expect some delay. We appreciate your patience! 🙏
