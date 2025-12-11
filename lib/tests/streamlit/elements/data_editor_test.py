@@ -253,7 +253,9 @@ class DataEditorUtilTest(unittest.TestCase):
             }
         )
 
-        edited_rows: Mapping[int, Mapping[str, str | int | float | bool | None]] = {
+        edited_rows: Mapping[
+            int, Mapping[str, str | int | float | bool | list[str] | None]
+        ] = {
             0: {
                 "number_col": 42,
                 "text_col": "hello",
