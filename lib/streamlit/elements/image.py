@@ -21,9 +21,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal, Union, cast
-
-from typing_extensions import TypeAlias
+from typing import TYPE_CHECKING, Literal, TypeAlias, cast
 
 from streamlit.deprecation_util import (
     make_deprecated_name_warning,
@@ -43,7 +41,7 @@ from streamlit.runtime.metrics_util import gather_metrics
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
-UseColumnWith: TypeAlias = Union[Literal["auto", "always", "never"], bool, None]
+UseColumnWith: TypeAlias = Literal["auto", "always", "never"] | bool | None
 
 
 class ImageMixin:
@@ -173,7 +171,7 @@ class ImageMixin:
 
             show_deprecation_warning(
                 "The `use_column_width` parameter has been deprecated and will be removed "
-                "in a future release. Please utilize the `use_container_width` parameter instead."
+                "in a future release. Please utilize the `width` parameter instead."
             )
             if use_column_width in {"auto", "never"} or use_column_width is False:
                 width = "content"

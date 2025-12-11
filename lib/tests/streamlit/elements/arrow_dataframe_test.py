@@ -78,6 +78,7 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
         # Row height is marked optional should not be set if not specified
         assert not proto.HasField("row_height")
         assert proto.row_height == 0
+        assert not proto.HasField("placeholder")
 
     def test_dataframe_only_data(self):
         df = mock_data_frame()
@@ -149,6 +150,13 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
 
         proto = self.get_delta_from_queue().new_element.arrow_data_frame
         assert proto.row_height == 100
+
+    def test_placeholder_parameter(self):
+        """Test that it can be called with placeholder."""
+        st.dataframe(pd.DataFrame(), placeholder="-")
+
+        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        assert proto.placeholder == "-"
 
     def test_uuid(self):
         df = mock_data_frame()
@@ -290,7 +298,7 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
         st.cache_data(lambda: st.dataframe(df, on_select="rerun"))()
 
         # The widget itself is still created, so we need to go back one element more:
-        el = self.get_delta_from_queue(-2).new_element.exception
+        el = self.get_delta_from_queue(-3).new_element.exception
         assert el.type == "CachedWidgetWarning"
         assert el.is_warning
 

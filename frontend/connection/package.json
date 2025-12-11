@@ -1,6 +1,6 @@
 {
   "name": "@streamlit/connection",
-  "version": "1.50.0",
+  "version": "1.52.1",
   "license": "Apache-2.0",
   "private": true,
   "type": "module",
@@ -32,22 +32,22 @@
   "dependencies": {
     "@streamlit/protobuf": "workspace:^",
     "@streamlit/utils": "workspace:^",
-    "axios": "^1.12.1",
-    "lodash": "^4.17.21",
+    "axios": "^1.13.2",
+    "lodash-es": "^4.17.21",
     "loglevel": "^1.9.2"
   },
   "devDependencies": {
     "@types/eslint": "^9.6.1",
-    "@types/lodash": "~4.17.20",
+    "@types/lodash-es": "^4.17.12",
     "axios-mock-adapter": "^2.1.0",
-    "eslint": "^9.36.0",
+    "eslint": "^9.39.0",
     "prettier": "^3.6.2",
     "typesync": "^0.14.3",
-    "vite": "^7.1.6",
+    "vite": "^7.2.4",
     "vite-plugin-dts": "^4.5.4",
     "vite-plugin-svgr": "^4.5.0",
     "vite-tsconfig-paths": "^5.1.4",
-    "vitest": "^3.2.4",
+    "vitest": "^4.0.14",
     "vitest-websocket-mock": "^0.5.0"
   },
   "browserslist": [

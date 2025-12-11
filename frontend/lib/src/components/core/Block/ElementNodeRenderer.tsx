@@ -17,14 +17,13 @@
 import React, { lazy, ReactElement, Suspense, useContext } from "react"
 
 import classNames from "classnames"
-import debounceRender from "react-debounce-render"
 
 import {
   Alert as AlertProto,
   Arrow as ArrowProto,
   AudioInput as AudioInputProto,
   Audio as AudioProto,
-  BokehChart as BokehChartProto,
+  BidiComponent as BidiComponentProto,
   ButtonGroup as ButtonGroupProto,
   Button as ButtonProto,
   CameraInput as CameraInputProto,
@@ -34,6 +33,7 @@ import {
   ColorPicker as ColorPickerProto,
   ComponentInstance as ComponentInstanceProto,
   DateInput as DateInputProto,
+  DateTimeInput as DateTimeInputProto,
   DeckGlJsonChart as DeckGlJsonChartProto,
   DocString as DocStringProto,
   DownloadButton as DownloadButtonProto,
@@ -68,24 +68,19 @@ import {
 
 import { ElementNode } from "~lib/AppNode"
 // Load (non-lazy) elements.
-import { withCalculatedWidth } from "~lib/components/core/Layout/withCalculatedWidth"
-import { LibContext } from "~lib/components/core/LibContext"
 import Maybe from "~lib/components/core/Maybe"
+import { ScriptRunContext } from "~lib/components/core/ScriptRunContext"
+import { ViewStateContext } from "~lib/components/core/ViewStateContext"
 import AlertElement, {
   getAlertElementKind,
 } from "~lib/components/elements/AlertElement"
-import ArrowTable from "~lib/components/elements/ArrowTable"
 import DocString from "~lib/components/elements/DocString"
 import ExceptionElement from "~lib/components/elements/ExceptionElement"
-import Json from "~lib/components/elements/Json"
 import Markdown from "~lib/components/elements/Markdown"
-import Metric from "~lib/components/elements/Metric"
 import { Skeleton } from "~lib/components/elements/Skeleton"
 import TextElement from "~lib/components/elements/TextElement"
 import ErrorBoundary from "~lib/components/shared/ErrorBoundary"
 import Heading from "~lib/components/shared/StreamlitMarkdown/Heading"
-import { ComponentInstance } from "~lib/components/widgets/CustomComponent"
-import { FormSubmitContent } from "~lib/components/widgets/Form"
 import { getElementId } from "~lib/util/utils"
 
 import { StyledSpace } from "./styled-components"
@@ -99,67 +94,73 @@ import {
 } from "./utils"
 
 // Lazy-load elements.
-const Audio = lazy(() => import("~lib/components/elements/Audio"))
-const Balloons = lazy(() => import("~lib/components/elements/Balloons"))
-const Snow = lazy(() => import("~lib/components/elements/Snow"))
-const ArrowDataFrame = lazy(() => import("~lib/components/widgets/DataFrame"))
+const ArrowTable = lazy(() => import("~lib/components/elements/ArrowTable"))
 const ArrowVegaLiteChart = lazy(
   () => import("~lib/components/elements/ArrowVegaLiteChart")
 )
-const Toast = lazy(() => import("~lib/components/elements/Toast"))
-
-// BokehChart render function is sluggish. If the component is not debounced,
-// AutoSizer causes it to rerender multiple times for different widths
-// when the sidebar is toggled, which significantly slows down the app.
-const BokehChart = lazy(() => import("~lib/components/elements/BokehChart"))
-
-const DebouncedBokehChart = withCalculatedWidth(
-  debounceRender(BokehChart, 100)
-)
-
+const Audio = lazy(() => import("~lib/components/elements/Audio"))
+const Balloons = lazy(() => import("~lib/components/elements/Balloons"))
 const DeckGlJsonChart = lazy(
   () => import("~lib/components/elements/DeckGlJsonChart")
 )
 const GraphVizChart = lazy(
   () => import("~lib/components/elements/GraphVizChart")
 )
+const Html = lazy(() => import("~lib/components/elements/Html"))
 const IFrame = lazy(() => import("~lib/components/elements/IFrame"))
 const ImageList = lazy(() => import("~lib/components/elements/ImageList"))
-
+const Json = lazy(() => import("~lib/components/elements/Json"))
 const LinkButton = lazy(() => import("~lib/components/elements/LinkButton"))
-
+const Metric = lazy(() => import("~lib/components/elements/Metric"))
 const PageLink = lazy(() => import("~lib/components/elements/PageLink"))
-
 const PlotlyChart = lazy(() => import("~lib/components/elements/PlotlyChart"))
+const Progress = lazy(() => import("~lib/components/elements/Progress"))
+const Snow = lazy(() => import("~lib/components/elements/Snow"))
+const Spinner = lazy(() => import("~lib/components/elements/Spinner"))
+const StreamlitSyntaxHighlighter = lazy(
+  () => import("~lib/components/elements/CodeBlock/StreamlitSyntaxHighlighter")
+)
+const Toast = lazy(() => import("~lib/components/elements/Toast"))
 const Video = lazy(() => import("~lib/components/elements/Video"))
 
 // Lazy-load widgets.
 const AudioInput = lazy(() => import("~lib/components/widgets/AudioInput"))
-
+const ArrowDataFrame = lazy(() => import("~lib/components/widgets/DataFrame"))
 const Button = lazy(() => import("~lib/components/widgets/Button"))
 const ButtonGroup = lazy(() => import("~lib/components/widgets/ButtonGroup"))
-const DownloadButton = lazy(
-  () => import("~lib/components/widgets/DownloadButton")
+const ComponentInstance = lazy(() =>
+  import("~lib/components/widgets/CustomComponent").then(module => ({
+    default: module.ComponentInstance,
+  }))
 )
 const CameraInput = lazy(() => import("~lib/components/widgets/CameraInput"))
 const ChatInput = lazy(() => import("~lib/components/widgets/ChatInput"))
 const Checkbox = lazy(() => import("~lib/components/widgets/Checkbox"))
 const ColorPicker = lazy(() => import("~lib/components/widgets/ColorPicker"))
 const DateInput = lazy(() => import("~lib/components/widgets/DateInput"))
-const Html = lazy(() => import("~lib/components/elements/Html"))
+const DateTimeInput = lazy(
+  () => import("~lib/components/widgets/DateTimeInput")
+)
+const DownloadButton = lazy(
+  () => import("~lib/components/widgets/DownloadButton")
+)
+const FileUploader = lazy(() => import("~lib/components/widgets/FileUploader"))
+const FormSubmitContent = lazy(() =>
+  import("~lib/components/widgets/Form").then(module => ({
+    default: module.FormSubmitContent,
+  }))
+)
 const Multiselect = lazy(() => import("~lib/components/widgets/Multiselect"))
-const Progress = lazy(() => import("~lib/components/elements/Progress"))
-const Spinner = lazy(() => import("~lib/components/elements/Spinner"))
+const NumberInput = lazy(() => import("~lib/components/widgets/NumberInput"))
 const Radio = lazy(() => import("~lib/components/widgets/Radio"))
 const Selectbox = lazy(() => import("~lib/components/widgets/Selectbox"))
 const Slider = lazy(() => import("~lib/components/widgets/Slider"))
-const FileUploader = lazy(() => import("~lib/components/widgets/FileUploader"))
 const TextArea = lazy(() => import("~lib/components/widgets/TextArea"))
 const TextInput = lazy(() => import("~lib/components/widgets/TextInput"))
 const TimeInput = lazy(() => import("~lib/components/widgets/TimeInput"))
-const NumberInput = lazy(() => import("~lib/components/widgets/NumberInput"))
-const StreamlitSyntaxHighlighter = lazy(
-  () => import("~lib/components/elements/CodeBlock/StreamlitSyntaxHighlighter")
+
+const BidiComponent = lazy(
+  () => import("~lib/components/widgets/BidiComponent")
 )
 
 export interface ElementNodeRendererProps extends BaseBlockProps {
@@ -195,6 +196,7 @@ const RawElementNodeRenderer = (
     widgetMgr: props.widgetMgr,
     disabled: props.widgetsDisabled,
     fragmentId: node.fragmentId,
+    componentRegistry: props.componentRegistry,
   }
 
   switch (node.element.type) {
@@ -237,14 +239,6 @@ const RawElementNodeRenderer = (
       return hideIfStale(
         props.isStale,
         <Balloons scriptRunId={node.scriptRunId} />
-      )
-
-    case "bokehChart":
-      return (
-        <DebouncedBokehChart
-          element={node.element.bokehChart as BokehChartProto}
-          {...elementProps}
-        />
       )
 
     case "code": {
@@ -552,7 +546,6 @@ const RawElementNodeRenderer = (
         />
       )
     }
-
     case "componentInstance":
       return (
         <ComponentInstance
@@ -679,6 +672,20 @@ const RawElementNodeRenderer = (
       )
     }
 
+    case "dateTimeInput": {
+      const dateTimeInputProto = node.element
+        .dateTimeInput as DateTimeInputProto
+      widgetProps.disabled =
+        widgetProps.disabled || dateTimeInputProto.disabled
+      return (
+        <DateTimeInput
+          key={dateTimeInputProto.id}
+          element={dateTimeInputProto}
+          {...widgetProps}
+        />
+      )
+    }
+
     case "timeInput": {
       const timeInputProto = node.element.timeInput as TimeInputProto
       widgetProps.disabled = widgetProps.disabled || timeInputProto.disabled
@@ -691,6 +698,18 @@ const RawElementNodeRenderer = (
       )
     }
 
+    case "bidiComponent": {
+      const bidiComponentProto = node.element
+        .bidiComponent as BidiComponentProto
+
+      return (
+        <BidiComponent
+          key={bidiComponentProto.id}
+          element={bidiComponentProto}
+          {...widgetProps}
+        />
+      )
+    }
     default:
       throw new Error(`Unrecognized Element type ${node.element.type}`)
   }
@@ -701,8 +720,9 @@ const RawElementNodeRenderer = (
 const ElementNodeRenderer = (
   props: ElementNodeRendererProps
 ): ReactElement => {
-  const { isFullScreen, fragmentIdsThisRun, scriptRunState, scriptRunId } =
-    useContext(LibContext)
+  const { isFullScreen } = useContext(ViewStateContext)
+  const { scriptRunState, scriptRunId, fragmentIdsThisRun } =
+    useContext(ScriptRunContext)
   const { node } = props
 
   const elementType = node.element.type || ""

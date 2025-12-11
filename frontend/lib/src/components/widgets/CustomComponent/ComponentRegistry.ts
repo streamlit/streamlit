@@ -98,7 +98,15 @@ export class ComponentRegistry {
     return this.endpoints.buildComponentURL(componentName, path)
   }
 
-  private onMessageEvent = (event: MessageEvent): void => {
+  /** Return a URL for fetching a resource for the given bidirectional component. */
+  public getBidiComponentURL = (
+    componentName: string,
+    path: string
+  ): string => {
+    return this.endpoints.buildBidiComponentURL(componentName, path)
+  }
+
+  private readonly onMessageEvent = (event: MessageEvent): void => {
     if (
       isNullOrUndefined(event.data) ||
       !Object.hasOwn(event.data, "isStreamlitMessage")

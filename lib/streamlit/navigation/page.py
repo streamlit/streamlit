@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import types
 from pathlib import Path
-from typing import Callable
+from typing import TYPE_CHECKING
 
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.metrics_util import gather_metrics
@@ -24,6 +24,9 @@ from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_r
 from streamlit.source_util import page_icon_and_name
 from streamlit.string_util import validate_icon_or_emoji
 from streamlit.util import calc_md5
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 @gather_metrics("Page")
@@ -81,6 +84,13 @@ def Page(  # noqa: N802
             Thumb Up icon. Find additional icons in the `Material Symbols \
             <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
             font library.
+
+        - ``"spinner"``: Displays a spinner as an icon. In this case, the
+          spinner only displays next to the page label in the navigation menu.
+          The spinner isn't used as the page favicon next to the title in the
+          browser tab. The favicon is the default Streamlit icon unless
+          otherwise specified with the ``page_icon`` parameter of
+          ``st.set_page_config``.
 
     url_path : str or None
         The page's URL pathname, which is the path relative to the app's root

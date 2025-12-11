@@ -25,11 +25,11 @@ import React, {
 
 import { Minus, Plus } from "@emotion-icons/open-iconic"
 import { Input as UIInput } from "baseui/input"
-import uniqueId from "lodash/uniqueId"
+import { uniqueId } from "lodash-es"
 
 import { NumberInput as NumberInputProto } from "@streamlit/protobuf"
 
-import Icon, { DynamicIcon } from "~lib/components/shared/Icon"
+import Icon, { DynamicIcon, isMaterialIcon } from "~lib/components/shared/Icon"
 import InputInstructions from "~lib/components/shared/InputInstructions/InputInstructions"
 import { Placement } from "~lib/components/shared/Tooltip"
 import TooltipIcon from "~lib/components/shared/TooltipIcon"
@@ -144,8 +144,7 @@ const NumberInput: React.FC<Props> = ({
     }
     // We only want to reformat the value if any of the formatting
     // related parameters change.
-    // eslint-disable-next-line react-hooks/react-compiler
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
   }, [elementDataType, elementFormat, step])
 
   const commitValue = useCallback(
@@ -261,9 +260,7 @@ const NumberInput: React.FC<Props> = ({
     // I don't want to run this effect on every render, only on mount.
     // Additionally, it's okay if commitValue changes, because we only call
     // it once in the beginning anyways.
-    // TODO: Update to match React best practices
-    // eslint-disable-next-line react-hooks/react-compiler
-    /* eslint-disable react-hooks/exhaustive-deps */
+    /* eslint-disable react-hooks/exhaustive-deps -- TODO: Update to match React best practices */
   }, [])
 
   // update from protobuf whenever component updates if element.setValue is truthy
@@ -357,11 +354,6 @@ const NumberInput: React.FC<Props> = ({
     [dirty, value, commitValue, widgetMgr, elementFormId, fragmentId]
   )
 
-  // Material icons need to be larger to render similar size of emojis,
-  // and we change their text color
-  const isMaterialIcon = icon?.startsWith(":material")
-  const dynamicIconSize = isMaterialIcon ? "lg" : "base"
-
   // Adjust breakpoint for icon so the total width of the input element
   // is same when input controls hidden
   const iconAdjustment =
@@ -418,7 +410,7 @@ const NumberInput: React.FC<Props> = ({
               <DynamicIcon
                 data-testid="stNumberInputIcon"
                 iconValue={element.icon}
-                size={dynamicIconSize}
+                size="lg"
               />
             )
           }
@@ -500,7 +492,9 @@ const NumberInput: React.FC<Props> = ({
                 // Keeps emoji icons from being cut off on the right
                 minWidth: theme.iconSizes.lg,
                 // Material icons color changed as inactionable
-                color: isMaterialIcon ? theme.colors.fadedText60 : "inherit",
+                color: isMaterialIcon(icon)
+                  ? theme.colors.fadedText60
+                  : "inherit",
               },
             },
           }}

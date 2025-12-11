@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import { GridCellKind } from "@glideapps/glide-data-grid"
 import {
   Binary,
   Bool as BoolType,
@@ -31,7 +32,7 @@ import {
   Utf8,
 } from "apache-arrow"
 
-import { Arrow as ArrowProto, streamlit } from "@streamlit/protobuf"
+import { Arrow as ArrowProto } from "@streamlit/protobuf"
 
 import { ArrowType, DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
 import { getStyledCell, StyledCell } from "~lib/dataframes/pandasStylerUtils"
@@ -51,13 +52,10 @@ import {
   extractCssProperty,
   getCellFromArrow,
   getColumnTypeFromArrow,
-  getConfiguredHeight,
-  getConfiguredWidth,
   initAllColumnsFromArrow,
   initColumnFromArrow,
+  initEmptyIndexColumn,
   initIndexFromArrow,
-  shouldUseContainerWidth,
-  shouldUseContentWidth,
 } from "./arrowUtils"
 import {
   CheckboxColumn,
@@ -268,6 +266,93 @@ describe("applyPandasStylerCss", () => {
       bgCell: "yellow",
       textDark: "#31333F",
     })
+  })
+
+  it("should apply font-weight from css", () => {
+    const CSS_STYLES = `#T_f116e_row0_col0 { font-weight: bold }`
+    const styledCell = applyPandasStylerCss(
+      getTextCell(true, false),
+      "#T_f116e_row0_col0",
+      CSS_STYLES
+    )
+    // Font weight should be applied in baseFontStyle
+    expect(styledCell.themeOverride?.baseFontStyle).toContain("bold")
+  })
+
+  it("should apply numeric font-weight from css", () => {
+    const CSS_STYLES = `#T_f116e_row0_col0 { font-weight: 700 }`
+    const styledCell = applyPandasStylerCss(
+      getTextCell(true, false),
+      "#T_f116e_row0_col0",
+      CSS_STYLES
+    )
+    expect(styledCell.themeOverride?.baseFontStyle).toContain("700")
+  })
+
+  it("should apply text color to bubble cells", () => {
+    const CSS_STYLES = `#T_f116e_row0_col0 { color: blue }`
+    const bubbleCell = {
+      kind: GridCellKind.Bubble as const,
+      data: ["tag1", "tag2"],
+      allowOverlay: false,
+    }
+    const styledCell = applyPandasStylerCss(
+      bubbleCell,
+      "#T_f116e_row0_col0",
+      CSS_STYLES
+    )
+    expect(styledCell.themeOverride?.textBubble).toEqual("blue")
+  })
+
+  it("should apply text color to URI cells as link color", () => {
+    const CSS_STYLES = `#T_f116e_row0_col0 { color: green }`
+    const uriCell = {
+      kind: GridCellKind.Uri as const,
+      data: "https://example.com",
+      allowOverlay: false,
+      displayData: "https://example.com",
+    }
+    const styledCell = applyPandasStylerCss(
+      uriCell,
+      "#T_f116e_row0_col0",
+      CSS_STYLES
+    )
+    expect(styledCell.themeOverride?.linkColor).toEqual("green")
+  })
+
+  it("should return cell unchanged when css does not contain element id", () => {
+    const CSS_STYLES = `#T_other_row0_col0 { color: red }`
+    const MOCK_CELL = getTextCell(true, false)
+    const styledCell = applyPandasStylerCss(
+      MOCK_CELL,
+      "#T_f116e_row0_col0",
+      CSS_STYLES
+    )
+    expect(styledCell).toEqual(MOCK_CELL)
+  })
+})
+
+describe("initEmptyIndexColumn", () => {
+  it("creates an empty index column with correct properties", () => {
+    const emptyColumn = initEmptyIndexColumn()
+
+    expect(emptyColumn.id).toBe("_empty-index")
+    expect(emptyColumn.indexNumber).toBe(0)
+    expect(emptyColumn.title).toBe("")
+    expect(emptyColumn.name).toBe("")
+    expect(emptyColumn.isEditable).toBe(false)
+    expect(emptyColumn.isIndex).toBe(true)
+    expect(emptyColumn.isPinned).toBe(true)
+    expect(emptyColumn.isHidden).toBe(false)
+    expect(emptyColumn.isStretched).toBe(false)
+  })
+
+  it("has correct arrow type structure", () => {
+    const emptyColumn = initEmptyIndexColumn()
+
+    expect(emptyColumn.arrowType.type).toBe(DataFrameCellType.INDEX)
+    expect(emptyColumn.arrowType.arrowField).toBeDefined()
+    expect(emptyColumn.arrowType.pandasType).toBeUndefined()
   })
 })
 
@@ -1216,157 +1301,5 @@ it("uses arrowCell.contentType instead of column.arrowType for object types", ()
     kind: "text",
     readonly: true,
     style: "normal",
-  })
-})
-
-describe("width configuration utilities", () => {
-  describe("shouldUseContainerWidth", () => {
-    it("returns true when widthConfig.useStretch is true", () => {
-      const element = ArrowProto.create({ useContainerWidth: false })
-      const widthConfig = new streamlit.WidthConfig({ useStretch: true })
-
-      expect(shouldUseContainerWidth(element, widthConfig)).toBe(true)
-    })
-
-    it("returns false when widthConfig.useStretch is false", () => {
-      const element = ArrowProto.create({ useContainerWidth: true })
-      const widthConfig = new streamlit.WidthConfig({ useStretch: false })
-
-      expect(shouldUseContainerWidth(element, widthConfig)).toBe(false)
-    })
-
-    it("returns false when widthConfig.useContent is true", () => {
-      const element = ArrowProto.create({ useContainerWidth: true })
-      const widthConfig = new streamlit.WidthConfig({ useContent: true })
-
-      expect(shouldUseContainerWidth(element, widthConfig)).toBe(false)
-    })
-
-    it("returns false when widthConfig.pixelWidth is set", () => {
-      const element = ArrowProto.create({ useContainerWidth: true })
-      const widthConfig = new streamlit.WidthConfig({ pixelWidth: 400 })
-
-      expect(shouldUseContainerWidth(element, widthConfig)).toBe(false)
-    })
-
-    it("falls back to element.useContainerWidth when widthConfig is null", () => {
-      const element = ArrowProto.create({ useContainerWidth: true })
-
-      expect(shouldUseContainerWidth(element, null)).toBe(true)
-    })
-
-    it("falls back to element.useContainerWidth when widthConfig is undefined", () => {
-      const element = ArrowProto.create({ useContainerWidth: false })
-
-      expect(shouldUseContainerWidth(element, undefined)).toBe(false)
-    })
-
-    it("returns false when element.useContainerWidth is undefined", () => {
-      const element = ArrowProto.create({})
-
-      expect(shouldUseContainerWidth(element, null)).toBe(false)
-    })
-  })
-
-  describe("shouldUseContentWidth", () => {
-    it("returns true when widthConfig.useContent is true", () => {
-      const widthConfig = new streamlit.WidthConfig({ useContent: true })
-
-      expect(shouldUseContentWidth(widthConfig)).toBe(true)
-    })
-
-    it("returns false when widthConfig.useContent is false", () => {
-      const widthConfig = new streamlit.WidthConfig({ useContent: false })
-
-      expect(shouldUseContentWidth(widthConfig)).toBe(false)
-    })
-
-    it("returns false when widthConfig.useStretch is true", () => {
-      const widthConfig = new streamlit.WidthConfig({ useStretch: true })
-
-      expect(shouldUseContentWidth(widthConfig)).toBe(false)
-    })
-
-    it("returns false when widthConfig.pixelWidth is set", () => {
-      const widthConfig = new streamlit.WidthConfig({ pixelWidth: 400 })
-
-      expect(shouldUseContentWidth(widthConfig)).toBe(false)
-    })
-
-    it("returns false when widthConfig is null", () => {
-      expect(shouldUseContentWidth(null)).toBe(false)
-    })
-
-    it("returns false when widthConfig is undefined", () => {
-      expect(shouldUseContentWidth(undefined)).toBe(false)
-    })
-  })
-
-  describe("getConfiguredWidth", () => {
-    it("returns widthConfig.pixelWidth when set", () => {
-      const element = ArrowProto.create({ width: 300 })
-      const widthConfig = new streamlit.WidthConfig({ pixelWidth: 400 })
-
-      expect(getConfiguredWidth(element, widthConfig)).toBe(400)
-    })
-
-    it("falls back to element.width when widthConfig is null", () => {
-      const element = ArrowProto.create({ width: 300 })
-
-      expect(getConfiguredWidth(element, null)).toBe(300)
-    })
-
-    it("returns element.width when element.width is not set (default value)", () => {
-      const element = ArrowProto.create({})
-
-      expect(getConfiguredWidth(element, null)).toBe(undefined)
-    })
-
-    it("returns undefined when widthConfig.pixelWidth is 0", () => {
-      const element = ArrowProto.create({ width: 300 })
-      const widthConfig = new streamlit.WidthConfig({ pixelWidth: 0 })
-
-      expect(getConfiguredWidth(element, widthConfig)).toBe(undefined)
-    })
-
-    it("returns undefined when element.width is 0", () => {
-      const element = ArrowProto.create({ width: 0 })
-
-      expect(getConfiguredWidth(element, null)).toBe(undefined)
-    })
-  })
-
-  describe("getConfiguredHeight", () => {
-    it("returns heightConfig.pixelHeight when set", () => {
-      const element = ArrowProto.create({ height: 300 })
-      const heightConfig = new streamlit.HeightConfig({ pixelHeight: 400 })
-
-      expect(getConfiguredHeight(element, heightConfig)).toBe(400)
-    })
-
-    it("falls back to element.height when heightConfig is null", () => {
-      const element = ArrowProto.create({ height: 300 })
-
-      expect(getConfiguredHeight(element, null)).toBe(300)
-    })
-
-    it("returns undefined when element.height is not set (default value)", () => {
-      const element = ArrowProto.create({})
-
-      expect(getConfiguredHeight(element, null)).toBe(undefined)
-    })
-
-    it("returns undefined when heightConfig.pixelHeight is 0", () => {
-      const element = ArrowProto.create({ height: 300 })
-      const heightConfig = new streamlit.HeightConfig({ pixelHeight: 0 })
-
-      expect(getConfiguredHeight(element, heightConfig)).toBe(undefined)
-    })
-
-    it("returns undefined when element.height is 0", () => {
-      const element = ArrowProto.create({ height: 0 })
-
-      expect(getConfiguredHeight(element, null)).toBe(undefined)
-    })
   })
 })

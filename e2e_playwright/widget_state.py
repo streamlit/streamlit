@@ -60,3 +60,26 @@ def btn_callback():
 txt = st.text_area("Type something into the text area", key="key1")
 st.button("Submit text_area", on_click=btn_callback)
 st.write(f"Res: {txt}")
+
+st.divider()
+
+st.subheader("Test `showWidgetBorder` behavior")
+
+disabled = st.checkbox("Disable widgets", value=False)
+
+# Widgets with expected showWidgetBorder behavior:
+with st.container(key="widget_container"):
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.selectbox("st.selectbox", ["option 1", "option 2"], disabled=disabled)
+        st.multiselect("st.multiselect", ["option 1", "option 2"], disabled=disabled)
+        st.file_uploader("st.file_uploader", type=["png", "jpg"], disabled=disabled)
+    with col2:
+        st.number_input("st.number_input", disabled=disabled)
+        st.text_input("st.text_input", disabled=disabled)
+        st.text_area("st.text_area", disabled=disabled)
+    with col3:
+        st.time_input("st.time_input", disabled=disabled)
+        st.date_input("st.date_input", disabled=disabled)
+        st.chat_input("st.chat_input", disabled=disabled)
+        st.audio_input("st.audio_input", disabled=disabled)

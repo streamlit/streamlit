@@ -30,7 +30,7 @@ from e2e_playwright.shared.dataframe_utils import (
     open_column_menu,
 )
 
-NUM_DATAFRAME_ELEMENTS = 32
+NUM_DATAFRAME_ELEMENTS = 33
 
 
 def test_dataframe_supports_various_configurations(
@@ -86,6 +86,7 @@ def test_dataframe_supports_various_configurations(
     # 29th is the localized date/number formatting test - screenshot taken separately
     # below so that the set locale doesn't impact other tests/screenshots
     assert_snapshot(dataframe_elements.nth(31), name="st_dataframe-multiselect_column")
+    assert_snapshot(dataframe_elements.nth(32), name="st_dataframe-missing_placeholder")
 
 
 def test_check_top_level_class(app: Page):
@@ -157,6 +158,8 @@ def test_list_cell_overlay(themed_app: Page, assert_snapshot: ImageCompareFuncti
     click_on_cell(dataframe_element, 1, 1, double_click=True, column_width="medium")
 
     cell_overlay = get_open_cell_overlay(themed_app)
+    # Reset the hovering to ensure that there aren't unexpected UI elements visible
+    reset_hovering(themed_app)
     assert_snapshot(cell_overlay, name="st_dataframe-list_column_overlay")
 
 

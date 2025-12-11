@@ -16,9 +16,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import TYPE_CHECKING, Union, cast
-
-from typing_extensions import TypeAlias
+from typing import TYPE_CHECKING, TypeAlias, cast
 
 from streamlit.elements.lib.file_uploader_utils import enforce_filename_restriction
 from streamlit.elements.lib.form_utils import current_form_id
@@ -53,7 +51,7 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.elements.lib.layout_utils import WidthWithoutContent
 
-SomeUploadedAudioFile: TypeAlias = Union[UploadedFile, DeletedFile, None]
+SomeUploadedAudioFile: TypeAlias = UploadedFile | DeletedFile | None
 
 # Allowed sample rates for audio recording
 ALLOWED_SAMPLE_RATES = {8000, 11025, 16000, 22050, 24000, 32000, 44100, 48000}
@@ -131,13 +129,14 @@ class AudioInputMixin:
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
         sample_rate : int or None
-            The target sample rate for the audio recording in Hz.
-            This defaults to 16000 Hz, which is optimal for speech recognition.
+            The target sample rate for the audio recording in Hz. This
+            defaults to ``16000``, which is optimal for speech recognition.
 
-            The following sample rates are supported: 8000, 11025, 16000,
-            22050, 24000, 32000, 44100, or 48000. If this is ``None``, the
-            widget uses the browser's default sample rate (typically 44100 or
-            48000 Hz).
+            The following values are supported: ``8000`` (telephone quality),
+            ``11025``, ``16000`` (speech-recognition quality), ``22050``,
+            ``24000``, ``32000``, ``44100``, ``48000`` (high-quality), or
+            ``None``. If this is ``None``, the widget uses the browser's
+            default sample rate (typically 44100 or 48000 Hz).
 
         key : str or int
             An optional string or integer to use as the unique key for the widget.

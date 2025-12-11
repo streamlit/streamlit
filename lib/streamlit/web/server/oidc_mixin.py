@@ -16,7 +16,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from authlib.integrations.base_client import (
     BaseApp,
@@ -32,6 +32,8 @@ from authlib.integrations.requests_client import (
 from streamlit.web.server.authlib_tornado_integration import TornadoIntegration
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     import tornado.web
 
     from streamlit.auth_util import AuthCache

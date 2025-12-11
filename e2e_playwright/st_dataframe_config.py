@@ -28,7 +28,7 @@ st.set_page_config(layout="wide")
 # Generate a random dataframe
 df = pd.DataFrame(
     np.random.randn(5, 5),
-    columns=(f"col_{i}" for i in range(5)),
+    columns=[f"col_{i}" for i in range(5)],
 )
 
 
@@ -417,11 +417,9 @@ st.dataframe(
             help="This is a progress column",
         ),
         "col_1": st.column_config.ProgressColumn(
-            format="$%f", min_value=0, max_value=1000
+            format="$%f", min_value=0, max_value=1000, color="blue"
         ),
-        "col_2": st.column_config.ProgressColumn(
-            step=0.0001,
-        ),
+        "col_2": st.column_config.ProgressColumn(step=0.0001, color="auto"),
     },
     width="content",
     hide_index=True,
@@ -637,7 +635,7 @@ st.dataframe(
 
 df = pd.DataFrame(
     np.random.randn(15, 25),
-    columns=(f"col_{i}" for i in range(25)),
+    columns=[f"col_{i}" for i in range(25)],
 )
 
 st.header("Pinned columns:")
@@ -662,8 +660,10 @@ st.dataframe(
     pd.DataFrame(
         {
             "col_0": [
-                "this is a very long sentence that does not contain any reasonable content.this is a "
-                "very long sentence that does not contain any reasonable content.",
+                (
+                    "this is a very long sentence that does not contain any reasonable content.this is a "
+                    "very long sentence that does not contain any reasonable content."
+                ),
                 "Hello World",
             ],
             "col_1": [
@@ -864,6 +864,12 @@ st.dataframe(
         {
             "col_0": [["a", "b"], ["b", "c", "d"], [], None],
             "col_1": ["a,b", "b,c,d", "", None],
+            "col_2": [
+                ["orange", "banana", "apple"],
+                ["pineapple", "mango", "orange", "strawberry"],
+                [],
+                None,
+            ],
         }
     ),
     column_config={
@@ -889,7 +895,25 @@ st.dataframe(
             color="primary",
             format_func=lambda x: f"Option {x}",
         ),
+        "col_2": st.column_config.MultiselectColumn(
+            width="medium",
+            options=["orange", "banana", "apple", "pineapple", "mango", "strawberry"],
+            color="auto",
+        ),
     },
     width="content",
     hide_index=True,
+)
+
+st.header("Missing placeholder:")
+st.dataframe(
+    pd.DataFrame(
+        {
+            "with_none": [1, None, 3],
+            "all_missing": [None, None, None],
+            "nan": [None, np.nan, 3],
+        }
+    ),
+    placeholder="-",
+    width="content",
 )

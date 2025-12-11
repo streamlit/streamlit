@@ -20,7 +20,7 @@ import { ForwardMsgList } from "@streamlit/protobuf"
 import { localStorageAvailable } from "@streamlit/utils"
 
 import { ConnectionState } from "./ConnectionState"
-import { StreamlitEndpoints } from "./types"
+import { ErrorDetails, StreamlitEndpoints } from "./types"
 
 // TODO: Change this to a stable location and eventually make it configurable
 // Holds url for static asset location
@@ -31,7 +31,7 @@ export const LOG = getLogger("StaticConnection")
 type OnMessage = (ForwardMsg: any) => void
 type OnConnectionStateChange = (
   connectionState: ConnectionState,
-  errMsg?: string
+  errMsg?: ErrorDetails
 ) => void
 
 // Fetches the static asset url from the config file
@@ -103,15 +103,15 @@ export async function dispatchAppForwardMessages(
   staticAppId: string,
   staticConfigUrl: string,
   onMessage: OnMessage,
-  onConnectionError: (message: string) => void
+  onConnectionError: (message: ErrorDetails) => void
 ): Promise<void> {
   const arrayBuffer = await getProtoResponse(staticAppId, staticConfigUrl)
 
   if (!arrayBuffer) {
     LOG.error("Failed to retrieve static app protos")
-    onConnectionError(
-      `Failed to retrieve static app protos. Please confirm the id is correct and try again. Given static app id: ${staticAppId}`
-    )
+    onConnectionError({
+      message: `Failed to retrieve static app protos. Please confirm the id is correct and try again. Given static app id: ${staticAppId}`,
+    })
     return
   }
 
@@ -128,7 +128,7 @@ export async function establishStaticConnection(
   staticAppId: string,
   onConnectionStateChange: OnConnectionStateChange,
   onMessage: OnMessage,
-  onConnectionError: (message: string) => void,
+  onConnectionError: (message: ErrorDetails) => void,
   endpoints: StreamlitEndpoints
 ): Promise<void> {
   // Static notebooks are not connected to a server - put into connecting

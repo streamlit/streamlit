@@ -14,6 +14,7 @@
 
 import re
 
+import pytest
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
@@ -28,7 +29,7 @@ from e2e_playwright.shared.app_utils import (
     get_slider,
 )
 
-NUM_SELECT_SLIDERS = 15
+NUM_SELECT_SLIDERS = 16
 
 
 def test_select_slider_rendering(
@@ -66,6 +67,10 @@ def test_select_slider_rendering(
     assert_snapshot(
         get_slider(themed_app, "Label 14 - Width Stretch"),
         name="st_select_slider-width_stretch",
+    )
+    assert_snapshot(
+        get_slider(themed_app, "Label 15 - Markdown in options"),
+        name="st_select_slider-markdown_in_options",
     )
 
 
@@ -160,6 +165,7 @@ def test_select_slider_works_with_fragments(app: Page):
     expect_prefixed_markdown(app, "Runs:", "1")
 
 
+@pytest.mark.skip_browser("firefox")  # Firefox runs into sub-pixel flakiness
 def test_dynamic_select_slider_props(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that the select slider can be updated dynamically while keeping the state."""
     dynamic_select_slider = get_element_by_key(app, "dynamic_select_slider_with_key")

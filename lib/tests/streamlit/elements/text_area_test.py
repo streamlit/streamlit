@@ -64,7 +64,7 @@ class TextAreaTest(DeltaGeneratorTestCase):
         arg_values = ["some str", 123, {}, SomeObj()]
         proto_values = ["some str", "123", "{}", ".*SomeObj.*"]
 
-        for arg_value, proto_value in zip(arg_values, proto_values):
+        for arg_value, proto_value in zip(arg_values, proto_values, strict=False):
             st.text_area("the label", arg_value)
 
             c = self.get_delta_from_queue().new_element.text_area
@@ -273,7 +273,7 @@ class TextAreaTest(DeltaGeneratorTestCase):
         st.cache_data(lambda: st.text_area("the label"))()
 
         # The widget itself is still created, so we need to go back one element more:
-        el = self.get_delta_from_queue(-2).new_element.exception
+        el = self.get_delta_from_queue(-3).new_element.exception
         assert el.type == "CachedWidgetWarning"
         assert el.is_warning
 

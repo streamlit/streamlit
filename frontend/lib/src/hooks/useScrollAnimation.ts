@@ -104,13 +104,12 @@ export default function useScrollAnimation(
             nextValue = toNumber
           }
 
-          // TODO: Update to match React best practices
-          // eslint-disable-next-line react-hooks/react-compiler
           target.scrollTop = nextValue
 
           if (toNumber === nextValue) {
             onEnd()
           } else {
+            // eslint-disable-next-line react-hooks/immutability -- TODO: Update to match React best practices
             animate(from, index + 1, start)
           }
         }

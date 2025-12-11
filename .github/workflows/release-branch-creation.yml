@@ -31,7 +31,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
           persist-credentials: true
@@ -45,7 +45,7 @@ jobs:
           python-version: "${{ env.PYTHON_MAX_VERSION }}"
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v7
 
       - name: Install Python deps for release automation
         run: |
@@ -148,6 +148,6 @@ jobs:
           RELEASE_VERSION: ${{ inputs.release_version }}
           RELEASE_BRANCH: ${{ steps.vars.outputs.release_branch }}
           RUN_ID: ${{ github.run_id }}
-          NIGHTLY_TAG: ${{ inputs.nightly_tag }}
+          RELEASE_BASE_REF: ${{ inputs.nightly_tag }}
         run: |
           python scripts/slack_notifications.py release_automation branch_created

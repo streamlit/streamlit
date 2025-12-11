@@ -26,6 +26,17 @@ import { render, renderWithContexts } from "~lib/test_util"
 
 import ImageList, { ImageListProps, WidthBehavior } from "./ImageList"
 
+// Mock StreamlitConfig using global mock state (see vitest.setup.ts)
+vi.mock("@streamlit/utils", async () => {
+  const actual = await vi.importActual("@streamlit/utils")
+  return {
+    ...actual,
+    get StreamlitConfig() {
+      return globalThis.__mockStreamlitConfig
+    },
+  }
+})
+
 describe("ImageList Element", () => {
   const buildMediaURL = vi.fn().mockReturnValue("https://mock.media.url")
   const sendClientErrorToHost = vi.fn()
@@ -262,11 +273,13 @@ describe("ImageList Element", () => {
       { resourceCrossOriginMode: "use-credentials" },
       { resourceCrossOriginMode: undefined },
     ] as const)(
-      "don't set crossOrigin attribute when window.__streamlit?.BACKEND_BASE_URL is not set",
+      "don't set crossOrigin attribute when StreamlitConfig.BACKEND_BASE_URL is not set",
       ({ resourceCrossOriginMode }) => {
         const props = getProps()
         renderWithContexts(<ImageList {...props} />, {
-          libConfig: { resourceCrossOriginMode },
+          libConfigContext: {
+            resourceCrossOriginMode,
+          },
         })
         const images = screen.getAllByRole("img")
         expect(images).toHaveLength(2)
@@ -277,22 +290,19 @@ describe("ImageList Element", () => {
     )
 
     describe("with BACKEND_BASE_URL set", () => {
-      const originalStreamlit = window.__streamlit
-
       beforeEach(() => {
-        window.__streamlit = {
-          BACKEND_BASE_URL: "https://backend.example.com:8080/app",
-        }
+        globalThis.__mockStreamlitConfig.BACKEND_BASE_URL =
+          "https://backend.example.com:8080/app"
       })
 
       afterEach(() => {
-        window.__streamlit = originalStreamlit
+        globalThis.__mockStreamlitConfig = {}
       })
 
       it.each([
         {
           expected: "anonymous",
-          resourceCrossOriginMode: "anonymous",
+          resourceCrossOriginMode: "anonymous" as const,
           imgs: [
             { caption: "a", url: "/media/image1.png" },
             { caption: "b", url: "/media/image2.png" },
@@ -301,7 +311,7 @@ describe("ImageList Element", () => {
         },
         {
           expected: "use-credentials",
-          resourceCrossOriginMode: "use-credentials",
+          resourceCrossOriginMode: "use-credentials" as const,
           imgs: [
             { caption: "a", url: "/media/image1.png" },
             { caption: "b", url: "/media/image2.png" },
@@ -309,17 +319,8 @@ describe("ImageList Element", () => {
           scenario: "relative URLs with use-credentials mode",
         },
         {
-          expected: undefined,
-          resourceCrossOriginMode: undefined,
-          imgs: [
-            { caption: "a", url: "/media/image1.png" },
-            { caption: "b", url: "/media/image2.png" },
-          ],
-          scenario: "relative URLs with undefined mode",
-        },
-        {
           expected: "anonymous",
-          resourceCrossOriginMode: "anonymous",
+          resourceCrossOriginMode: "anonymous" as const,
           imgs: [
             {
               caption: "a",
@@ -334,7 +335,7 @@ describe("ImageList Element", () => {
         },
         {
           expected: "use-credentials",
-          resourceCrossOriginMode: "use-credentials",
+          resourceCrossOriginMode: "use-credentials" as const,
           imgs: [
             {
               caption: "a",
@@ -348,8 +349,34 @@ describe("ImageList Element", () => {
           scenario:
             "same origin as BACKEND_BASE_URL with use-credentials mode",
         },
+      ])(
+        "sets crossOrigin to $expected when $scenario",
+        ({ expected, resourceCrossOriginMode, imgs }) => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const props = getProps({ imgs: imgs as any })
+          renderWithContexts(<ImageList {...props} />, {
+            libConfigContext: {
+              resourceCrossOriginMode,
+            },
+          })
+          const images = screen.getAllByRole("img")
+          expect(images).toHaveLength(2)
+          images.forEach(image => {
+            expect(image).toHaveAttribute("crossOrigin", expected)
+          })
+        }
+      )
+
+      it.each([
         {
-          expected: undefined,
+          resourceCrossOriginMode: undefined,
+          imgs: [
+            { caption: "a", url: "/media/image1.png" },
+            { caption: "b", url: "/media/image2.png" },
+          ],
+          scenario: "relative URLs with undefined mode",
+        },
+        {
           resourceCrossOriginMode: undefined,
           imgs: [
             {
@@ -364,8 +391,7 @@ describe("ImageList Element", () => {
           scenario: "same origin as BACKEND_BASE_URL with undefined mode",
         },
         {
-          expected: undefined,
-          resourceCrossOriginMode: "anonymous",
+          resourceCrossOriginMode: "anonymous" as const,
           imgs: [
             {
               caption: "a",
@@ -379,8 +405,7 @@ describe("ImageList Element", () => {
           scenario: "different hostname than BACKEND_BASE_URL",
         },
         {
-          expected: undefined,
-          resourceCrossOriginMode: "anonymous",
+          resourceCrossOriginMode: "anonymous" as const,
           imgs: [
             {
               caption: "a",
@@ -394,8 +419,7 @@ describe("ImageList Element", () => {
           scenario: "different port than BACKEND_BASE_URL",
         },
         {
-          expected: undefined,
-          resourceCrossOriginMode: "anonymous",
+          resourceCrossOriginMode: "anonymous" as const,
           imgs: [
             {
               caption: "a",
@@ -408,22 +432,20 @@ describe("ImageList Element", () => {
           ],
           scenario: "different protocol than BACKEND_BASE_URL",
         },
-      ] as const)(
-        "sets crossOrigin to $expected when $scenario",
-        ({ expected, resourceCrossOriginMode, imgs }) => {
+      ])(
+        "does not set crossOrigin when $scenario",
+        ({ resourceCrossOriginMode, imgs }) => {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const props = getProps({ imgs: imgs as any })
           renderWithContexts(<ImageList {...props} />, {
-            libConfig: { resourceCrossOriginMode },
+            libConfigContext: {
+              resourceCrossOriginMode,
+            },
           })
           const images = screen.getAllByRole("img")
           expect(images).toHaveLength(2)
           images.forEach(image => {
-            if (expected) {
-              expect(image).toHaveAttribute("crossOrigin", expected)
-            } else {
-              expect(image).not.toHaveAttribute("crossOrigin")
-            }
+            expect(image).not.toHaveAttribute("crossOrigin")
           })
         }
       )

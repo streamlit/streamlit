@@ -21,7 +21,7 @@ import types
 from contextlib import contextmanager
 from enum import Enum
 from timeit import default_timer as timer
-from typing import TYPE_CHECKING, Any, Callable, Final, Literal, cast
+from typing import TYPE_CHECKING, Any, Final, Literal, cast
 
 from blinker import Signal
 
@@ -62,7 +62,7 @@ from streamlit.runtime.state import (
 from streamlit.source_util import page_sort_key
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
+    from collections.abc import Callable, Generator
 
     from streamlit.runtime.fragment import FragmentStorage
     from streamlit.runtime.scriptrunner.script_cache import ScriptCache
@@ -529,7 +529,9 @@ class ScriptRunner:
                     widget_ids = {w.id for w in rerun_data.widget_states.widgets}
                 self._session_state.on_script_finished(widget_ids)
 
-            fragment_ids_this_run = list(rerun_data.fragment_id_queue)
+            fragment_ids_this_run: list[str] | None = (
+                rerun_data.fragment_id_queue or None
+            )
 
             ctx.reset(
                 query_string=rerun_data.query_string,

@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import os
 import sys
-from typing import TYPE_CHECKING, Any, Callable, Final, NamedTuple
+from typing import TYPE_CHECKING, Any, Final, NamedTuple
 
 from streamlit import config, file_util
 from streamlit.logger import get_logger
@@ -28,6 +28,7 @@ from streamlit.watcher.path_watcher import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
     from types import ModuleType
 
     from streamlit.runtime.pages_manager import PagesManager
@@ -46,6 +47,15 @@ PathWatcher: PathWatcherType | None = None
 
 
 class LocalSourcesWatcher:
+    """Watch local Python sources and pages to trigger app reruns.
+
+    Purpose
+    -------
+    This watcher powers Streamlit's core developer workflow: save a Python file
+    and the app reruns. It tracks Python modules, the main script directory, and
+    configured watch folders to notify the runtime when a relevant file changes.
+    """
+
     def __init__(self, pages_manager: PagesManager) -> None:
         self._pages_manager = pages_manager
         self._main_script_path = os.path.realpath(self._pages_manager.main_script_path)

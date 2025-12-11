@@ -80,7 +80,40 @@ st.feedback("thumbs", width="content", key="thumbs_content_width")
 st.feedback("thumbs", width="stretch", key="thumbs_stretch_width")
 st.feedback("thumbs", width=300, key="thumbs_300px_width")
 
+st.subheader("Minimum width enforcement (gh-12068)")
+st.feedback("thumbs", width=10, key="thumbs_min_width")
+st.feedback("stars", width=10, key="stars_min_width")
+
 if "runs" not in st.session_state:
     st.session_state.runs = 0
 st.session_state.runs += 1
 st.write("Runs:", st.session_state.runs)
+
+if st.toggle("Update feedback props"):
+    dyn_val = st.feedback(
+        key="dynamic_feedback_widget",
+        width=300,
+        default=3,
+        on_change=lambda a, param: print(
+            f"Updated feedback - callback triggered: {a} {param}"
+        ),
+        args=("Updated feedback arg",),
+        kwargs={"param": "updated kwarg param"},
+        # Whitelisted args:
+        options="stars",
+    )
+    st.write("Updated feedback value:", dyn_val)
+else:
+    dyn_val = st.feedback(
+        key="dynamic_feedback_widget",
+        width="content",
+        default=2,
+        on_change=lambda a, param: print(
+            f"Initial feedback - callback triggered: {a} {param}"
+        ),
+        args=("Initial feedback arg",),
+        kwargs={"param": "initial kwarg param"},
+        # Whitelisted args:
+        options="stars",
+    )
+    st.write("Initial feedback value:", dyn_val)

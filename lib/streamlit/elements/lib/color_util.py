@@ -14,10 +14,8 @@
 
 from __future__ import annotations
 
-from collections.abc import Collection
-from typing import Any, Callable, Union, cast
-
-from typing_extensions import TypeAlias
+from collections.abc import Callable, Collection
+from typing import Any, TypeAlias, cast
 
 from streamlit.errors import StreamlitInvalidColorError
 
@@ -35,26 +33,18 @@ IntRGBAColorTuple: TypeAlias = tuple[int, int, int, int]
 # CSS uses these.
 MixedRGBAColorTuple: TypeAlias = tuple[int, int, int, float]
 
-Color4Tuple: TypeAlias = Union[
-    FloatRGBAColorTuple,
-    IntRGBAColorTuple,
-    MixedRGBAColorTuple,
-]
+Color4Tuple: TypeAlias = FloatRGBAColorTuple | IntRGBAColorTuple | MixedRGBAColorTuple
 
-Color3Tuple: TypeAlias = Union[
-    FloatRGBColorTuple,
-    IntRGBColorTuple,
-]
+Color3Tuple: TypeAlias = FloatRGBColorTuple | IntRGBColorTuple
 
-ColorTuple: TypeAlias = Union[Color4Tuple, Color3Tuple]
+ColorTuple: TypeAlias = Color4Tuple | Color3Tuple
 
-IntColorTuple = Union[IntRGBColorTuple, IntRGBAColorTuple]
-CSSColorStr = Union[IntRGBAColorTuple, MixedRGBAColorTuple]
+IntColorTuple: TypeAlias = IntRGBColorTuple | IntRGBAColorTuple
 
 ColorStr: TypeAlias = str
 
-Color: TypeAlias = Union[ColorTuple, ColorStr]
-MaybeColor: TypeAlias = Union[str, Collection[Any]]
+Color: TypeAlias = ColorTuple | ColorStr
+MaybeColor: TypeAlias = str | Collection[Any]
 
 
 def to_int_color_tuple(color: MaybeColor) -> IntColorTuple:
@@ -229,7 +219,7 @@ def _normalize_tuple(
         r = rgb_formatter(color_4tuple[0], color_4tuple)
         g = rgb_formatter(color_4tuple[1], color_4tuple)
         b = rgb_formatter(color_4tuple[2], color_4tuple)
-        alpha = alpha_formatter(color_4tuple[3], color_4tuple)
+        alpha = alpha_formatter(color_4tuple[3], color_4tuple)  # ty: ignore[index-out-of-bounds]
         return r, g, b, alpha
 
     raise StreamlitInvalidColorError(color)

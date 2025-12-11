@@ -268,3 +268,24 @@ if st.button("Open on_dismiss callback Dialog"):
 
 if st.session_state.get("callback_executed"):
     st.write("Callback executions:", st.session_state.get("dismiss_count", 0))
+
+
+# Test case for issue #10907:
+# Prevent dialogs from showing stale elements from previous dialog
+@st.dialog("Fast Dialog")
+def fast_dialog() -> None:
+    st.write("Fast dialog content")
+    st.text_input("Fast dialog input")
+
+
+@st.dialog("Slow Dialog")
+def slow_dialog() -> None:
+    time.sleep(1)
+    st.write("Slow dialog content")
+
+
+if st.button("Open Fast Dialog"):
+    fast_dialog()
+
+if st.button("Open Slow Dialog"):
+    slow_dialog()

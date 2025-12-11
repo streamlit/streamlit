@@ -28,13 +28,13 @@ from streamlit.runtime.media_file_storage import (
     MediaFileStorage,
     MediaFileStorageError,
 )
-from streamlit.runtime.stats import CacheStat, CacheStatsProvider, group_stats
+from streamlit.runtime.stats import CacheStat, StatsProvider, group_cache_stats
 
 _LOGGER: Final = get_logger(__name__)
 
 # Mimetype -> filename extension map for the `get_extension_for_mimetype`
 # function. We use Python's `mimetypes.guess_extension` for most mimetypes,
-# but (as of Python 3.9) `mimetypes.guess_extension("audio/wav")` returns None,
+# but (as of Python 3.12) `mimetypes.guess_extension("audio/wav")` returns None,
 # so we handle it ourselves.
 PREFERRED_MIMETYPE_EXTENSION_MAP: Final = {
     "audio/wav": ".wav",
@@ -88,7 +88,7 @@ class MemoryFile(NamedTuple):
         return len(self.content)
 
 
-class MemoryMediaFileStorage(MediaFileStorage, CacheStatsProvider):
+class MemoryMediaFileStorage(MediaFileStorage, StatsProvider):
     def __init__(self, media_endpoint: str) -> None:
         """Create a new MemoryMediaFileStorage instance.
 
@@ -179,4 +179,4 @@ class MemoryMediaFileStorage(MediaFileStorage, CacheStatsProvider):
             )
             for _, file in files_by_id.items()
         ]
-        return group_stats(stats)
+        return group_cache_stats(stats)

@@ -17,7 +17,7 @@
 import { useCallback, useState } from "react"
 
 import { CompactSelection, GridSelection } from "@glideapps/glide-data-grid"
-import isEqual from "lodash/isEqual"
+import { isEqual } from "lodash-es"
 
 import { Arrow as ArrowProto } from "@streamlit/protobuf"
 
@@ -114,6 +114,7 @@ function useSelectionHandler(
    * trigger a sync of the state with the widget state
    */
   const processSelectionChange = useCallback(
+    // eslint-disable-next-line react-hooks/preserve-manual-memoization -- TODO: Update to match React best practices
     (newSelection: GridSelection) => {
       const rowSelectionChanged = !isEqual(
         newSelection.rows.toArray(),

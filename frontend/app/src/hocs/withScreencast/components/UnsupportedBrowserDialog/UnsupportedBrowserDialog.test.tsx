@@ -19,7 +19,7 @@ import React from "react"
 import { screen } from "@testing-library/react"
 import { BaseProvider, LightTheme } from "baseui"
 
-import { render } from "@streamlit/lib"
+import { render } from "@streamlit/lib/testing"
 
 import UnsupportedBrowserDialog from "./UnsupportedBrowserDialog"
 

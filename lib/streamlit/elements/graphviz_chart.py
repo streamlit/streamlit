@@ -16,9 +16,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Union, cast
-
-from typing_extensions import TypeAlias
+from typing import TYPE_CHECKING, TypeAlias, Union, cast
 
 from streamlit import type_util
 from streamlit.deprecation_util import (
