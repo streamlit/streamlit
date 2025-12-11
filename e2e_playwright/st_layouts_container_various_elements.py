@@ -115,7 +115,7 @@ elif selected_case == "layout-horizontal-expander-dataframe-content-width":
             st.title("Hidden Chart")
             st.bar_chart(small_data.set_index("x"))
 
-        st.dataframe(small_data, use_container_width=False)
+        st.dataframe(small_data, width="content")
 
 elif selected_case == "layout-horizontal-expander-dataframe-content-width-large":
     df = pd.DataFrame(
@@ -143,7 +143,7 @@ elif selected_case == "layout-horizontal-expander-dataframe-content-width-large"
             st.title("Hidden Chart")
             st.bar_chart(df.set_index("x"))
 
-        st.dataframe(df, use_container_width=False)
+        st.dataframe(df, width="content")
 
 elif selected_case == "layout-horizontal-images-center":
     with st.container(
