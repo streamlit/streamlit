@@ -208,7 +208,7 @@ def _parse_value(
             # For empty columns, preserve the value type from the frontend.
             # If it's a list (e.g., from multiselect), return as list.
             # If it's a scalar (e.g., from number input), return as scalar.
-            return list(value) if is_list_like(value) else value
+            return list(value) if is_list_like(value) else value  # ty: ignore
 
         if column_data_kind == ColumnDataKind.STRING:
             return str(value)
