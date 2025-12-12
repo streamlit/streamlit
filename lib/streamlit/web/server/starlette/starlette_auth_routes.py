@@ -138,6 +138,13 @@ async def _redirect_to_base(base_url: str) -> RedirectResponse:
 
 
 async def _set_auth_cookie(response: Response, user_info: dict[str, Any]) -> None:
+    """Set the auth cookie with signed user info.
+
+    Note: This cookie uses itsdangerous signing which is NOT compatible with
+    Tornado's secure cookie format. Switching between backends will invalidate
+    existing auth cookies, requiring users to re-authenticate. This is expected.
+    This is expected behavior when switching between Tornado and Starlette backends.
+    """
     serialized_cookie_value = json.dumps(user_info)
     if len(serialized_cookie_value.encode()) > 4096:
         _LOGGER.error(

@@ -111,7 +111,13 @@ def _validate_xsrf_token(supplied_token: str | None, xsrf_cookie: str | None) ->
 
 
 def _parse_user_cookie_signed(cookie_value: str | bytes, origin: str) -> dict[str, Any]:
-    """Parse and validate a signed user cookie."""
+    """Parse and validate a signed user cookie.
+
+    Note: This only understands cookies signed with itsdangerous (Starlette).
+    Cookies signed by Tornado's set_secure_cookie will fail to decode and
+    return an empty dict, requiring users to re-authenticate after switching
+    backends. This is expected behavior when switching between Tornado and Starlette backends.
+    """
     secret = get_cookie_secret()
     signed_value = cookie_value
     if isinstance(signed_value, str):

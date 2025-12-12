@@ -177,6 +177,13 @@ def create_signed_value(
 ) -> bytes:
     """Create a signed cookie value using itsdangerous.
 
+    Note: This uses itsdangerous for signing, which is NOT compatible with
+    Tornado's secure cookie format. Cookies signed by this function cannot
+    be read by Tornado's get_signed_cookie/get_secure_cookie, and vice versa.
+    Switching between Tornado and Starlette backends will invalidate existing
+    auth cookies (_streamlit_user), requiring users to re-authenticate.
+    This is expected behavior when switching between Tornado and Starlette backends.
+
     Parameters
     ----------
     secret
