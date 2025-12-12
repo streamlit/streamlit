@@ -418,7 +418,18 @@ export class AppRoot {
       existingNode instanceof BlockNode &&
       existingNode.deltaBlock.type === block.type
     ) {
-      children = existingNode.children
+      // For dialog blocks, don't inherit children if the dialog identity is different.
+      // The identity is computed from the dialog's attributes.
+      // This prevents showing stale elements from a previous
+      // dialog when switching between different dialogs (see issue #10907).
+      const isDialogWithDifferentIdentity =
+        block.dialog &&
+        existingNode.deltaBlock.dialog &&
+        block.id !== existingNode.deltaBlock.id
+
+      if (!isDialogWithDifferentIdentity) {
+        children = existingNode.children
+      }
     }
 
     const blockNode = new BlockNode(

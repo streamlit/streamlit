@@ -27,7 +27,9 @@ import { render } from "~lib/test_util"
 import * as Utils from "~lib/util/utils"
 
 import {
+  ensureHotkeysFilterConfigured,
   formatShortcutForDisplay,
+  isKeyboardEventFromEditableTarget,
   useRegisterShortcut,
 } from "./useRegisterShortcut"
 
@@ -114,6 +116,68 @@ const createKeyboardEvent = (
     ...overrides,
   }) as unknown as KeyboardEvent
 
+describe("isKeyboardEventFromEditableTarget", () => {
+  it("returns false when no event is passed", () => {
+    expect(isKeyboardEventFromEditableTarget()).toBe(false)
+  })
+
+  it("returns false for events targeting non-editable elements", () => {
+    const div = document.createElement("div")
+    const event = createKeyboardEvent({ target: div })
+
+    expect(isKeyboardEventFromEditableTarget(event)).toBe(false)
+  })
+
+  it.each(["input", "textarea", "select"])(
+    "returns true for events targeting %s elements",
+    tagName => {
+      const element = document.createElement(tagName)
+      const event = createKeyboardEvent({ target: element })
+
+      expect(isKeyboardEventFromEditableTarget(event)).toBe(true)
+    }
+  )
+
+  it("returns true for events targeting contentEditable elements", () => {
+    const div = document.createElement("div")
+    div.setAttribute("contenteditable", "true")
+
+    const event = createKeyboardEvent({ target: div })
+
+    expect(isKeyboardEventFromEditableTarget(event)).toBe(true)
+  })
+
+  it("returns true when the editable element appears in the composed path (shadow DOM)", () => {
+    const hostDiv = document.createElement("div")
+    const input = document.createElement("input")
+
+    const event = createKeyboardEvent({
+      target: hostDiv,
+    }) as KeyboardEvent & { composedPath?: () => EventTarget[] }
+
+    event.composedPath = () => [input, hostDiv, document.body]
+
+    expect(isKeyboardEventFromEditableTarget(event)).toBe(true)
+  })
+
+  it("returns false when composedPath is empty or undefined and target is not editable", () => {
+    const hostDiv = document.createElement("div")
+
+    const eventWithEmptyPath = createKeyboardEvent({
+      target: hostDiv,
+    }) as KeyboardEvent & { composedPath?: () => EventTarget[] }
+    eventWithEmptyPath.composedPath = () => []
+
+    expect(isKeyboardEventFromEditableTarget(eventWithEmptyPath)).toBe(false)
+
+    const eventWithoutPath = createKeyboardEvent({
+      target: hostDiv,
+    })
+
+    expect(isKeyboardEventFromEditableTarget(eventWithoutPath)).toBe(false)
+  })
+})
+
 describe("useRegisterShortcut", () => {
   afterEach(() => {
     vi.clearAllMocks()
@@ -176,6 +240,67 @@ describe("useRegisterShortcut", () => {
 
     act(() => {
       handler?.(createKeyboardEvent({ target: input }), {})
+    })
+
+    expect(onActivate).not.toHaveBeenCalled()
+  })
+
+  it("configures hotkeys filter to ignore unmodified shortcuts in editable elements, including shadow DOM", () => {
+    ensureHotkeysFilterConfigured()
+
+    const hotkeys = hotkeysModule.default as typeof hotkeysModule.default & {
+      filter: (event: KeyboardEvent) => boolean
+    }
+
+    const hostDiv = document.createElement("div")
+    const input = document.createElement("input")
+
+    const baseEvent = createKeyboardEvent({
+      key: "c",
+      target: hostDiv,
+    }) as KeyboardEvent & { composedPath?: () => EventTarget[] }
+
+    baseEvent.composedPath = () => [input, hostDiv, document.body]
+
+    // Unmodified character key inside an input should be blocked.
+    expect(hotkeys.filter(baseEvent)).toBe(false)
+
+    // With a system modifier, the shortcut should be allowed.
+    const modifiedEvent = createKeyboardEvent({
+      key: "c",
+      target: hostDiv,
+      ctrlKey: true,
+    }) as KeyboardEvent & { composedPath?: () => EventTarget[] }
+    modifiedEvent.composedPath = () => [input, hostDiv, document.body]
+
+    expect(hotkeys.filter(modifiedEvent)).toBe(true)
+  })
+
+  it("prevents activation when typing inside shadow DOM inputs without modifiers", () => {
+    const shortcut = "n"
+    const onActivate = vi.fn()
+
+    render(
+      <TestComponent
+        shortcut={shortcut}
+        disabled={false}
+        onActivate={onActivate}
+      />
+    )
+
+    const hostDiv = document.createElement("div")
+    const input = document.createElement("input")
+    const handler = hotkeysWithHandlers.__handlers.get("n")
+    expect(handler).toBeDefined()
+
+    const event = createKeyboardEvent({
+      target: hostDiv,
+    }) as unknown as KeyboardEvent & { composedPath: () => EventTarget[] }
+
+    event.composedPath = () => [input, hostDiv, document.body]
+
+    act(() => {
+      handler?.(event, {})
     })
 
     expect(onActivate).not.toHaveBeenCalled()

@@ -159,15 +159,16 @@ class BidiComponentMixin:
         height: Height,
         proto: BidiComponentProto,
         data: BidiComponentData = None,
+        default: BidiComponentDefaults = None,
     ) -> dict[str, Any]:
         """Build deterministic identity kwargs for ID computation.
 
         Construct a stable mapping of identity-relevant properties for
         ``compute_and_register_element_id``. This includes structural
-        properties (name, style isolation, layout) and an explicit, typed
-        handling of the ``BidiComponent`` ``oneof data`` field to ensure
-        unkeyed components change identity when their serialized payload
-        changes.
+        properties (name, style isolation, layout), default state values, and
+        an explicit, typed handling of the ``BidiComponent`` ``oneof data``
+        field to ensure unkeyed components change identity when their
+        serialized payload or defaults change.
 
         Parameters
         ----------
@@ -183,9 +184,17 @@ class BidiComponentMixin:
             The populated component protobuf. Its ``data`` oneof determines
             which serialized payload (JSON, Arrow, bytes, or Mixed) contributes
             to identity.
-        data : BidiComponentData
+        data : BidiComponentData, optional
             The raw data passed to the component. Used to optimize identity
             calculation for JSON payloads by avoiding a parse/serialize cycle.
+            When omitted, the helper falls back to canonicalizing the JSON
+            content stored on the protobuf.
+        default : BidiComponentDefaults, optional
+            The default state mapping for the component instance. Defaults are
+            included in the identity for unkeyed components so that changing
+            default values produces a new backend identity. When a user key is
+            provided with ``key_as_main_identity=True``, these defaults are
+            ignored by :func:`compute_and_register_element_id`.
 
         Returns
         -------
@@ -204,6 +213,7 @@ class BidiComponentMixin:
             "isolate_styles": isolate_styles,
             "width": width,
             "height": height,
+            "default": default,
         }
 
         data_field = proto.WhichOneof("data")
@@ -434,6 +444,7 @@ class BidiComponentMixin:
             height=height,
             proto=bidi_component_proto,
             data=data,
+            default=default,
         )
         # Compute a unique ID for this component instance now that the proto is
         # populated.

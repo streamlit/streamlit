@@ -14,6 +14,17 @@
  * limitations under the License.
  */
 
+// Mock StreamlitConfig using global mock state (see vitest.setup.ts)
+vi.mock("@streamlit/utils", async () => {
+  const actual = await vi.importActual("@streamlit/utils")
+  return {
+    ...actual,
+    get StreamlitConfig() {
+      return globalThis.__mockStreamlitConfig
+    },
+  }
+})
+
 import { zip } from "lodash-es"
 import { default as WS } from "vitest-websocket-mock"
 
@@ -215,7 +226,7 @@ describe("doInitPings", () => {
     vi.clearAllTimers()
     vi.useRealTimers()
     globalThis.fetch = originalFetch
-    window.__streamlit = undefined
+    globalThis.__mockStreamlitConfig = {}
   })
 
   it("calls the /_stcore/health endpoint when pinging server", async () => {
@@ -239,8 +250,9 @@ describe("doInitPings", () => {
     )
   })
 
-  it("makes the host config call using window.__streamlit.HOST_CONFIG_BASE_URL if set", async () => {
-    window.__streamlit = { HOST_CONFIG_BASE_URL: "https://example.com:1234" }
+  it("makes the host config call using StreamlitConfig.HOST_CONFIG_BASE_URL if set", async () => {
+    globalThis.__mockStreamlitConfig.HOST_CONFIG_BASE_URL =
+      "https://example.com:1234"
     globalThis.fetch = vi
       .fn()
       .mockResolvedValueOnce(createSuccessResponse(MOCK_HEALTH_RESPONSE))

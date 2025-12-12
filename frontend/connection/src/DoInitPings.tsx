@@ -23,7 +23,11 @@
 import { getLogger } from "loglevel"
 
 // Note we expect the polyfill to load from this import
-import { buildHttpUri, notNullOrUndefined } from "@streamlit/utils"
+import {
+  buildHttpUri,
+  notNullOrUndefined,
+  StreamlitConfig,
+} from "@streamlit/utils"
 
 import {
   CORS_ERROR_MESSAGE_DOCUMENTATION_LINK,
@@ -152,11 +156,8 @@ If you are trying to access a Streamlit app running on another server, this coul
     const uriParts = uriPartsList[uriNumber]
     const healthzUri = buildHttpUri(uriParts, SERVER_PING_PATH)
 
-    // Guard against environments where window may be undefined
-    const hostConfigBaseUrl =
-      typeof window !== "undefined"
-        ? window.__streamlit?.HOST_CONFIG_BASE_URL
-        : undefined
+    // Use the securely captured config value
+    const hostConfigBaseUrl = StreamlitConfig.HOST_CONFIG_BASE_URL
     const hostConfigServerUriParts = hostConfigBaseUrl
       ? parseUriIntoBaseParts(hostConfigBaseUrl)
       : uriParts

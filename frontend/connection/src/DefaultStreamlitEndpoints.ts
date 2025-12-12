@@ -23,6 +23,7 @@ import {
   getCookie,
   makePath,
   notNullOrUndefined,
+  StreamlitConfig,
 } from "@streamlit/utils"
 
 import { FileUploadClientConfig, StreamlitEndpoints } from "./types"
@@ -193,7 +194,7 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
    * @param url a relative or absolute URL. If `url` is absolute, it will be
    * returned unchanged. Otherwise, the return value will be a URL for fetching
    * the media file from the connected Streamlit instance. The target server can
-   * be changed by setting window.__streamlit?.DOWNLOAD_ASSETS_BASE_URL.
+   * be changed by setting StreamlitConfig.DOWNLOAD_ASSETS_BASE_URL.
    */
   public buildDownloadUrl(url: string): string {
     if (!url.startsWith(MEDIA_ENDPOINT)) {
@@ -201,7 +202,7 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
     }
 
     // The url is relative, so we need to build the full URL.
-    const downloadAssetBaseUrl = window.__streamlit?.DOWNLOAD_ASSETS_BASE_URL
+    const downloadAssetBaseUrl = StreamlitConfig.DOWNLOAD_ASSETS_BASE_URL
     return downloadAssetBaseUrl
       ? buildHttpUri(parseUriIntoBaseParts(downloadAssetBaseUrl), url)
       : buildHttpUri(this.requireServerUri(), url)

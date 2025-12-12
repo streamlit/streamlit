@@ -14,11 +14,11 @@
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import wait_for_app_run
 from e2e_playwright.shared.app_utils import (
     click_button,
     expect_markdown,
     expect_prefixed_markdown,
+    select_selectbox_option,
 )
 
 
@@ -69,10 +69,7 @@ def test_state_retained_on_app_scoped_rerun(app: Page):
     expect_prefixed_markdown(app, "selectbox selection:", "None")
 
     # Click on the selectbox and select the first option.
-    app.get_by_test_id("stSelectbox").first.locator("input").click()
-    selection_dropdown = app.locator('[data-baseweb="popover"]').first
-    selection_dropdown.locator("li").first.click()
-    wait_for_app_run(app)
+    select_selectbox_option(app, "i should retain my state", "a")
 
     # Sanity check 2
     expect_markdown(app, "selectbox selection: a")

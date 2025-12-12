@@ -28,6 +28,17 @@ import {
 
 import { useCrossOriginAttribute } from "./useCrossOriginAttribute"
 
+// Mock StreamlitConfig using global mock state (see vitest.setup.ts)
+vi.mock("@streamlit/utils", async () => {
+  const actual = await vi.importActual("@streamlit/utils")
+  return {
+    ...actual,
+    get StreamlitConfig() {
+      return globalThis.__mockStreamlitConfig
+    },
+  }
+})
+
 // Returns wrapper component to provide context
 const getWrapper = (
   resourceCrossOriginMode: undefined | "anonymous" | "use-credentials"
@@ -56,7 +67,7 @@ const getWrapper = (
 
 describe("useCrossOriginAttribute", () => {
   afterEach(() => {
-    window.__streamlit = undefined
+    globalThis.__mockStreamlitConfig = {}
   })
 
   it("returns undefined when url parameter is undefined", () => {
@@ -68,9 +79,8 @@ describe("useCrossOriginAttribute", () => {
 
   describe("with BACKEND_BASE_URL set", () => {
     beforeEach(() => {
-      window.__streamlit = {
-        BACKEND_BASE_URL: "https://backend.example.com:8080/app",
-      }
+      globalThis.__mockStreamlitConfig.BACKEND_BASE_URL =
+        "https://backend.example.com:8080/app"
     })
 
     it.each([
@@ -237,9 +247,8 @@ describe("useCrossOriginAttribute", () => {
 
   describe("edge cases", () => {
     beforeEach(() => {
-      window.__streamlit = {
-        BACKEND_BASE_URL: "https://backend.example.com/app",
-      }
+      globalThis.__mockStreamlitConfig.BACKEND_BASE_URL =
+        "https://backend.example.com/app"
     })
 
     it("handles URLs with query parameters and fragments", () => {
@@ -254,9 +263,8 @@ describe("useCrossOriginAttribute", () => {
     })
 
     it("handles backend base URL with default HTTPS port", () => {
-      window.__streamlit = {
-        BACKEND_BASE_URL: "https://backend.example.com/app",
-      }
+      globalThis.__mockStreamlitConfig.BACKEND_BASE_URL =
+        "https://backend.example.com/app"
       const { result } = renderHook(
         () =>
           useCrossOriginAttribute("https://backend.example.com:443/image.png"),
@@ -266,9 +274,8 @@ describe("useCrossOriginAttribute", () => {
     })
 
     it("handles backend base URL with default HTTP port", () => {
-      window.__streamlit = {
-        BACKEND_BASE_URL: "http://backend.example.com/app",
-      }
+      globalThis.__mockStreamlitConfig.BACKEND_BASE_URL =
+        "http://backend.example.com/app"
       const { result } = renderHook(
         () =>
           useCrossOriginAttribute("http://backend.example.com:80/image.png"),
