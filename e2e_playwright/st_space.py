@@ -14,15 +14,23 @@
 
 import streamlit as st
 
+SPACES = [
+    "xxsmall",
+    "xsmall",
+    "small",
+    "medium",
+    "large",
+    "xlarge",
+    "xxlarge",
+]
+
 st.write("Tests Outside of Containers")
-st.space("small")
-st.write("After small space")
 
-st.space("medium")
-st.write("After medium space")
-
-st.space("large")
-st.write("After large space")
+for space in SPACES:
+    with st.expander(f"Space set to {space}", expanded=True):
+        st.button(f"Before {space} space")
+        st.space(space)
+        st.button(f"After {space} space")
 
 st.divider()
 

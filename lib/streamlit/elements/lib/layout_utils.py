@@ -35,7 +35,12 @@ WidthWithoutContent: TypeAlias = int | Literal["stretch"]
 Width: TypeAlias = int | Literal["stretch", "content"]
 HeightWithoutContent: TypeAlias = int | Literal["stretch"]
 Height: TypeAlias = int | Literal["stretch", "content"]
-SpaceSize: TypeAlias = int | Literal["stretch", "small", "medium", "large"]
+SpaceSize: TypeAlias = (
+    int
+    | Literal[
+        "stretch", "xxsmall", "xsmall", "small", "medium", "large", "xlarge", "xxlarge"
+    ]
+)
 Gap: TypeAlias = Literal[
     "xxsmall", "xsmall", "small", "medium", "large", "xlarge", "xxlarge"
 ]
@@ -47,9 +52,13 @@ TextAlignment: TypeAlias = Literal["left", "center", "right", "justify"]
 # If changing these, also check streamlit/frontend/lib/src/theme/primitives/sizes.ts
 # to ensure sizes are kept in sync.
 SIZE_TO_REM_MAPPING = {
+    "xxsmall": 0.25,  # Aligns with gap "xxsmall" (4px)
+    "xsmall": 0.5,  # Aligns with gap "xsmall" (8px)
     "small": 0.75,  # Height of widget label minus gap
     "medium": 2.5,  # Height of button/input field
     "large": 4.25,  # Height of large widget without label
+    "xlarge": 6,  # Aligns with gap "xlarge" (96px)
+    "xxlarge": 8,  # Aligns with gap "xxlarge" (128px)
 }
 
 
@@ -149,7 +158,16 @@ def validate_space_size(size: SpaceSize) -> None:
         raise StreamlitInvalidSizeError(size)
 
     if isinstance(size, str):
-        valid_strings = ["stretch", "small", "medium", "large"]
+        valid_strings = [
+            "stretch",
+            "xxsmall",
+            "xsmall",
+            "small",
+            "medium",
+            "large",
+            "xlarge",
+            "xxlarge",
+        ]
         if size not in valid_strings:
             raise StreamlitInvalidSizeError(size)
     elif isinstance(size, int) and size <= 0:
