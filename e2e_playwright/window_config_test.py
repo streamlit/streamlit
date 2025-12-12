@@ -250,6 +250,63 @@ def test_window_config_main_page_url(app: Page):
     )
 
 
+def test_window_config_direct_property_modification(app: Page):
+    """Test that direct property assignment to window.__streamlit is ignored.
+
+    This test verifies that direct property assignment to window.__streamlit
+    (not replacing the entire object) has no effect on the app because it reads
+    from the frozen capturedConfig, not from window.__streamlit.
+    """
+    # Set MAIN_PAGE_BASE_URL with a custom pathname before load
+    # Only the /my-app PATHNAME is used, not the full URL
+    app.add_init_script("""
+        window.__streamlit = {
+            MAIN_PAGE_BASE_URL: "https://example.com/my-app"
+        }
+    """)
+
+    # Reload to apply the injected script
+    app.reload()
+    wait_for_app_loaded(app)
+
+    # Verify config was captured
+    wait_until(
+        app,
+        lambda: app.evaluate("() => window.__streamlit?.MAIN_PAGE_BASE_URL")
+        == "https://example.com/my-app",
+    )
+
+    # Modify window.__streamlit AFTER load via direct property assignment
+    # This tests: window.__streamlit.PROPERTY = "value" (not replacing the whole object)
+    app.evaluate("""
+        () => {
+            window.__streamlit.MAIN_PAGE_BASE_URL = "https://example.com/hacked-path";
+        }
+    """)
+
+    # Verify window.__streamlit property was directly modified
+    wait_until(
+        app,
+        lambda: app.evaluate("() => window.__streamlit?.MAIN_PAGE_BASE_URL")
+        == "https://example.com/hacked-path",
+    )
+
+    # Navigate to Page 2 - this triggers maybeUpdatePageUrl() which should use
+    # StreamlitConfig.MAIN_PAGE_BASE_URL (the frozen config), NOT window.__streamlit
+    page2_link = app.get_by_role("link", name="Page 2")
+    expect(page2_link).to_be_visible()
+    page2_link.click()
+
+    # Wait for navigation
+    wait_for_app_loaded(app)
+
+    # CRITICAL ASSERTION: The pathname should be /my-app/page2 (using frozen config)
+    # If the modified config was used, pathname would be /hacked-path/page2
+    wait_until(
+        app, lambda: app.evaluate("() => window.location.pathname") == "/my-app/page2"
+    )
+
+
 def test_window_config_download_url(app: Page):
     """Test that frozen DOWNLOAD_ASSETS_BASE_URL is used in download URL construction.
 
