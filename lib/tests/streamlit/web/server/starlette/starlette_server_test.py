@@ -324,3 +324,172 @@ class TestStartStarletteServer:
         bind_socket.assert_called_once()
         call_args = bind_socket.call_args[0]
         assert call_args[0] == "192.168.1.100"
+
+
+class TestServerLifecycle:
+    """Tests for server lifecycle behavior required by bootstrap.
+
+    These tests verify that the Starlette server correctly implements
+    the lifecycle semantics that bootstrap.py depends on:
+    - start() returns after server is ready (doesn't block forever)
+    - stop() signals graceful shutdown
+    - stopped property completes after shutdown
+    """
+
+    def setUp(self) -> None:
+        """Set up test fixtures."""
+        Runtime._instance = None
+        self.original_port = config.get_option("server.port")
+        config.set_option("server.port", 8700)
+        self.loop = asyncio.new_event_loop()
+
+    def tearDown(self) -> None:
+        """Tear down test fixtures."""
+        Runtime._instance = None
+        config.set_option("server.port", self.original_port)
+        self.loop.close()
+
+    @pytest.fixture(autouse=True)
+    def setup_and_teardown(self) -> None:
+        """Pytest fixture for setup and teardown."""
+        self.setUp()
+        yield
+        self.tearDown()
+
+    def _create_server(self) -> Server:
+        """Create a Server instance for testing."""
+        server = Server("mock/script/path", is_hello=False)
+        server._runtime._eventloop = self.loop
+        return server
+
+    def _run_async(self, coro: asyncio.Future) -> None:
+        """Run an async coroutine in the test event loop."""
+        self.loop.run_until_complete(coro)
+
+    def test_start_returns_after_server_ready(self) -> None:
+        """Test that start() returns after server is ready, not after shutdown.
+
+        This is critical for bootstrap.py which expects to run _on_server_start()
+        and set up signal handlers after start() returns.
+        """
+        server = self._create_server()
+        mock_socket = mock.MagicMock(spec=socket.socket)
+        start_returned = False
+
+        async def verify_start_returns() -> None:
+            nonlocal start_returned
+            await server._start_starlette()
+            # If we get here, start() returned (didn't block forever)
+            start_returned = True
+
+        with (
+            patch(
+                "streamlit.web.server.starlette.starlette_server._bind_socket",
+                return_value=mock_socket,
+            ),
+            patch("uvicorn.Server") as uvicorn_server_cls,
+        ):
+            uvicorn_instance = mock.MagicMock()
+            uvicorn_instance.startup = AsyncMock()
+            uvicorn_instance.main_loop = AsyncMock()
+            uvicorn_instance.shutdown = AsyncMock()
+            uvicorn_instance.should_exit = False
+            uvicorn_server_cls.return_value = uvicorn_instance
+
+            self._run_async(verify_start_returns())
+
+        assert start_returned, "start() should return after server is ready"
+        uvicorn_instance.startup.assert_awaited_once()
+
+    def test_stop_signals_server_shutdown(self) -> None:
+        """Test that stop() signals the uvicorn server to exit."""
+        server = self._create_server()
+        mock_socket = mock.MagicMock(spec=socket.socket)
+
+        with (
+            patch(
+                "streamlit.web.server.starlette.starlette_server._bind_socket",
+                return_value=mock_socket,
+            ),
+            patch("uvicorn.Server") as uvicorn_server_cls,
+        ):
+            uvicorn_instance = mock.MagicMock()
+            uvicorn_instance.startup = AsyncMock()
+            uvicorn_instance.main_loop = AsyncMock()
+            uvicorn_instance.shutdown = AsyncMock()
+            uvicorn_instance.should_exit = False
+            uvicorn_server_cls.return_value = uvicorn_instance
+
+            self._run_async(server._start_starlette())
+
+            # Verify server is stored and can be stopped
+            assert server._starlette_server is not None
+            server.stop()
+
+            # Verify should_exit was set to True
+            assert uvicorn_instance.should_exit is True
+
+    def test_stopped_property_returns_awaitable(self) -> None:
+        """Test that stopped property returns an awaitable for Starlette mode."""
+        import inspect
+
+        server = self._create_server()
+        mock_socket = mock.MagicMock(spec=socket.socket)
+
+        with (
+            patch(
+                "streamlit.web.server.starlette.starlette_server._bind_socket",
+                return_value=mock_socket,
+            ),
+            patch("uvicorn.Server") as uvicorn_server_cls,
+        ):
+            uvicorn_instance = mock.MagicMock()
+            uvicorn_instance.startup = AsyncMock()
+            uvicorn_instance.main_loop = AsyncMock()
+            uvicorn_instance.shutdown = AsyncMock()
+            uvicorn_instance.should_exit = False
+            uvicorn_server_cls.return_value = uvicorn_instance
+
+            self._run_async(server._start_starlette())
+
+            # Verify stopped returns an awaitable
+            stopped = server.stopped
+            assert stopped is not None
+            # Should be a coroutine or awaitable
+            assert inspect.iscoroutine(stopped) or hasattr(stopped, "__await__")
+
+            # Close the coroutine to avoid warning
+            if inspect.iscoroutine(stopped):
+                stopped.close()
+
+    def test_starlette_server_stored_on_server_instance(self) -> None:
+        """Test that StarletteServer is stored on Server instance, not global."""
+        server1 = self._create_server()
+        mock_socket = mock.MagicMock(spec=socket.socket)
+
+        with (
+            patch(
+                "streamlit.web.server.starlette.starlette_server._bind_socket",
+                return_value=mock_socket,
+            ),
+            patch("uvicorn.Server") as uvicorn_server_cls,
+        ):
+            uvicorn_instance = mock.MagicMock()
+            uvicorn_instance.startup = AsyncMock()
+            uvicorn_instance.main_loop = AsyncMock()
+            uvicorn_instance.shutdown = AsyncMock()
+            uvicorn_instance.should_exit = False
+            uvicorn_server_cls.return_value = uvicorn_instance
+
+            # Before start, _starlette_server should be None
+            assert server1._starlette_server is None
+
+            self._run_async(server1._start_starlette())
+
+            # After start, _starlette_server should be set
+            assert server1._starlette_server is not None
+
+            # Verify it's instance-specific (not a module global)
+            from streamlit.web.server.starlette.starlette_server import StarletteServer
+
+            assert isinstance(server1._starlette_server, StarletteServer)
