@@ -16,11 +16,55 @@
 
 import React, { useCallback, useEffect, useRef, useState } from "react"
 
+import styled from "@emotion/styled"
 import { type ProvideEditorCallback } from "@glideapps/glide-data-grid"
 import { DatePickerType } from "@glideapps/glide-data-grid-cells"
 import moment from "moment"
 
-import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+interface StyledEditorContainerProps {
+  $hasError: boolean
+  $bgCell?: string
+  $borderColor?: string
+}
+
+const StyledEditorContainer = styled.div<StyledEditorContainerProps>(
+  ({ theme, $hasError, $bgCell, $borderColor }) => ({
+    padding: `${theme.spacing.twoXS}px ${theme.spacing.xs}px`,
+    backgroundColor: $bgCell ?? theme.colors.bgColor,
+    border: `1px solid ${
+      $hasError
+        ? theme.colors.redTextColor
+        : ($borderColor ?? theme.colors.fadedText10)
+    }`,
+    borderRadius: 0,
+  })
+)
+
+interface StyledInputProps {
+  $hasError: boolean
+  $textDark?: string
+}
+
+const StyledInput = styled.input<StyledInputProps>(
+  ({ theme, $hasError, $textDark }) => ({
+    width: "100%",
+    backgroundColor: "transparent",
+    border: "none",
+    outline: "none",
+    color: $hasError
+      ? theme.colors.redTextColor
+      : ($textDark ?? theme.colors.bodyText),
+    fontSize: theme.fontSizes.md,
+    fontFamily: "inherit",
+    padding: 0,
+  })
+)
+
+const StyledError = styled.div(({ theme }) => ({
+  fontSize: theme.fontSizes.sm,
+  color: theme.colors.redTextColor,
+  marginTop: theme.spacing.twoXS,
+}))
 
 /**
  * Custom editor for DatePickerCell that supports custom date formats.
@@ -32,10 +76,9 @@ import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
  */
 export const DateTextCellEditor: ReturnType<
   ProvideEditorCallback<DatePickerType>
-> = ({ value, onChange, onFinishedEditing, theme }) => {
+> = ({ value, onChange, onFinishedEditing, theme: providedTheme }) => {
   const inputRef = useRef<HTMLInputElement>(null)
   const [error, setError] = useState<string | null>(null)
-  const { colors, fontSizes, spacing } = useEmotionTheme()
 
   const cellData = value.data
   interface DatePickerCellDataWithFormat {
@@ -90,9 +133,9 @@ export const DateTextCellEditor: ReturnType<
       }
 
       try {
-        const parsed = moment(input.trim(), format, true)
+        const parsed = moment.utc(input.trim(), format, true)
         if (parsed.isValid()) {
-          return parsed.utc().toDate()
+          return parsed.toDate()
         }
       } catch {
         // Ignore parsing errors
@@ -217,22 +260,14 @@ export const DateTextCellEditor: ReturnType<
     [displayDate, handleBlur, onFinishedEditing]
   )
 
-  const bgColor = theme?.bgCell ?? colors.bgColor
-  const textColor = theme?.textDark ?? colors.bodyText
-  const borderColor = theme?.borderColor ?? colors.fadedText10
-  const errorColor = colors.redTextColor
-
   const errorId = "date-error"
   return (
-    <div
-      style={{
-        padding: `${spacing.twoXS}px ${spacing.xs}px`,
-        backgroundColor: bgColor,
-        border: `1px solid ${error ? errorColor : borderColor}`,
-        borderRadius: 0,
-      }}
+    <StyledEditorContainer
+      $hasError={!!error}
+      $bgCell={providedTheme?.bgCell}
+      $borderColor={providedTheme?.borderColor}
     >
-      <input
+      <StyledInput
         ref={inputRef}
         type="text"
         value={inputValue}
@@ -242,31 +277,15 @@ export const DateTextCellEditor: ReturnType<
         placeholder={userFormat || "YYYY-MM-DD"}
         aria-invalid={!!error}
         aria-describedby={error ? errorId : undefined}
-        style={{
-          width: "100%",
-          backgroundColor: "transparent",
-          border: "none",
-          outline: "none",
-          color: error ? errorColor : textColor,
-          fontSize: fontSizes.md,
-          fontFamily: "inherit",
-          padding: 0,
-        }}
+        $hasError={!!error}
+        $textDark={providedTheme?.textDark}
         data-testid="date-text-cell-editor"
       />
       {error && (
-        <div
-          id={errorId}
-          role="alert"
-          style={{
-            fontSize: fontSizes.sm,
-            color: errorColor,
-            marginTop: spacing.twoXS,
-          }}
-        >
+        <StyledError id={errorId} role="alert">
           {error}
-        </div>
+        </StyledError>
       )}
-    </div>
+    </StyledEditorContainer>
   )
 }
