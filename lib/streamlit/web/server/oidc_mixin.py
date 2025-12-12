@@ -83,8 +83,7 @@ class TornadoOAuth2App(OAuth2Mixin, OpenIDMixin, BaseApp):
             "state": request_handler.get_argument("state"),
         }
 
-        # Tornado doesn't have sessions like Flask/Django, so we use an empty dict.
-        # Authlib 1.6.6+ always writes state to session even when cache is available.
+        # Authlib 1.6.6+ always writes state to session even when cache is available. We also override state access to use the cache instead of session in `TornadoIntegration`.
         session: dict[str, Any] = {}
 
         claims_options = kwargs.pop("claims_options", None)
