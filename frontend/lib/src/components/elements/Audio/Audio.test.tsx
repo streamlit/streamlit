@@ -26,6 +26,17 @@ import { WidgetStateManager as ElementStateManager } from "~lib/WidgetStateManag
 
 import Audio, { AudioProps } from "./Audio"
 
+// Mock StreamlitConfig using global mock state (see vitest.setup.ts)
+vi.mock("@streamlit/utils", async () => {
+  const actual = await vi.importActual("@streamlit/utils")
+  return {
+    ...actual,
+    get StreamlitConfig() {
+      return globalThis.__mockStreamlitConfig
+    },
+  }
+})
+
 describe("Audio Element", () => {
   const buildMediaURL = vi.fn().mockReturnValue("https://mock.media.url")
   const sendClientErrorToHost = vi.fn()
@@ -152,7 +163,7 @@ describe("Audio Element", () => {
       { resourceCrossOriginMode: "use-credentials" },
       { resourceCrossOriginMode: undefined },
     ] as const)(
-      "don't set crossOrigin attribute when window.__streamlit?.BACKEND_BASE_URL is not set",
+      "don't set crossOrigin attribute when StreamlitConfig.BACKEND_BASE_URL is not set",
       ({ resourceCrossOriginMode }) => {
         const props = getProps()
         renderWithContexts(<Audio {...props} />, {
@@ -166,16 +177,13 @@ describe("Audio Element", () => {
     )
 
     describe("with BACKEND_BASE_URL set", () => {
-      const originalStreamlit = window.__streamlit
-
       beforeEach(() => {
-        window.__streamlit = {
-          BACKEND_BASE_URL: "https://backend.example.com:8080/app",
-        }
+        globalThis.__mockStreamlitConfig.BACKEND_BASE_URL =
+          "https://backend.example.com:8080/app"
       })
 
       afterEach(() => {
-        window.__streamlit = originalStreamlit
+        globalThis.__mockStreamlitConfig = {}
       })
 
       it.each([

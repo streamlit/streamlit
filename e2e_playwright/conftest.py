@@ -1143,6 +1143,8 @@ def start_app_server(
         "none",
         "--server.enableStaticServing",
         "true",
+        "--server.scriptHealthCheckEnabled",
+        "true",
     ]
 
     app_server_start_retries = 3

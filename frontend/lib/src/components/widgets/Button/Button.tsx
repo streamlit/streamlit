@@ -25,6 +25,7 @@ import BaseButton, {
   BaseButtonTooltip,
   DynamicButtonLabel,
 } from "~lib/components/shared/BaseButton"
+import { mapProtoIconPosition } from "~lib/components/shared/BaseButton/iconPosition"
 import { useRegisterShortcut } from "~lib/hooks/useRegisterShortcut"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -77,6 +78,7 @@ function Button(props: Props): ReactElement {
         >
           <DynamicButtonLabel
             icon={element.icon}
+            iconPosition={mapProtoIconPosition(element.iconPosition)}
             label={element.label}
             shortcut={shortcut}
           />

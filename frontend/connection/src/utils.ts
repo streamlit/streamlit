@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { makePath } from "@streamlit/utils"
+import { makePath, StreamlitConfig } from "@streamlit/utils"
 
 const FINAL_SLASH_RE = /\/+$/
 const INITIAL_SLASH_RE = /^\/+/
@@ -45,9 +45,7 @@ export function parseUriIntoBaseParts(url?: string): URL {
 // the best path forward may be tricky as I wasn't able to come up with an
 // easy solution covering every deployment scenario.
 export function getPossibleBaseUris(): Array<URL> {
-  const baseUriParts = parseUriIntoBaseParts(
-    window.__streamlit?.BACKEND_BASE_URL
-  )
+  const baseUriParts = parseUriIntoBaseParts(StreamlitConfig.BACKEND_BASE_URL)
   const { pathname } = baseUriParts
 
   if (pathname === "/") {

@@ -38,6 +38,17 @@ import StreamlitMarkdown, {
   LinkWithTargetBlank,
 } from "./StreamlitMarkdown"
 
+// Mock StreamlitConfig using global mock state (see vitest.setup.ts)
+vi.mock("@streamlit/utils", async () => {
+  const actual = await vi.importActual("@streamlit/utils")
+  return {
+    ...actual,
+    get StreamlitConfig() {
+      return globalThis.__mockStreamlitConfig
+    },
+  }
+})
+
 // Fixture Generator
 const getMarkdownElement = (body: string): ReactElement => {
   const components = {
@@ -825,7 +836,7 @@ describe("CustomMediaTag", () => {
     { resourceCrossOriginMode: "use-credentials" },
     { resourceCrossOriginMode: undefined },
   ] as const)(
-    "should render img element without crossOrigin attribute when window.__streamlit?.BACKEND_BASE_URL is not set",
+    "should render img element without crossOrigin attribute when StreamlitConfig.BACKEND_BASE_URL is not set",
     ({ resourceCrossOriginMode }) => {
       renderWithContexts(<CustomMediaTag node={mockNode} {...mockProps} />, {
         libConfigContext: {
@@ -842,16 +853,13 @@ describe("CustomMediaTag", () => {
   )
 
   describe("with BACKEND_BASE_URL set", () => {
-    const originalStreamlit = window.__streamlit
-
     beforeEach(() => {
-      window.__streamlit = {
-        BACKEND_BASE_URL: "https://backend.example.com:8080/app",
-      }
+      globalThis.__mockStreamlitConfig.BACKEND_BASE_URL =
+        "https://backend.example.com:8080/app"
     })
 
     afterEach(() => {
-      window.__streamlit = originalStreamlit
+      globalThis.__mockStreamlitConfig = {}
     })
 
     it.each([

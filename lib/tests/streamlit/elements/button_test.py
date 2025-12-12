@@ -31,6 +31,9 @@ import streamlit as st
 from streamlit.elements.widgets.button import marshall_file
 from streamlit.errors import StreamlitAPIException, StreamlitPageNotFoundError
 from streamlit.navigation.page import StreamlitPage
+from streamlit.proto.ButtonLikeIconPosition_pb2 import (
+    ButtonLikeIconPosition as ProtoButtonLikeIconPosition,
+)
 from streamlit.proto.DownloadButton_pb2 import (
     DownloadButton as DownloadButtonProto,
 )
@@ -139,6 +142,35 @@ class ButtonTest(DeltaGeneratorTestCase):
 
         c = getattr(self.get_delta_from_queue().new_element, name)
         assert c.icon == icon
+
+    @parameterized.expand(get_button_command_matrix())
+    def test_invalid_icon_position_raises(
+        self, name: str, command: Callable[..., Any]
+    ) -> None:
+        """Test that invalid icon_position values raise an error."""
+        with pytest.raises(StreamlitAPIException):
+            command(icon_position="center")  # type: ignore[arg-type]
+
+    @parameterized.expand(
+        [
+            (name, command, position)
+            for name, command in get_button_command_matrix()
+            for position in ["left", "right"]
+        ]
+    )
+    def test_icon_position(
+        self, name: str, command: Callable[..., Any], icon_position: str
+    ):
+        """Test that icon_position is serialized for button-like commands."""
+        command(icon_position=icon_position)
+
+        c = getattr(self.get_delta_from_queue().new_element, name)
+        expected = (
+            ProtoButtonLikeIconPosition.RIGHT
+            if icon_position == "right"
+            else ProtoButtonLikeIconPosition.LEFT
+        )
+        assert c.icon_position == expected
 
     @parameterized.expand(get_button_command_matrix())
     def test_just_disabled(self, name: str, command: Callable[..., Any]):
