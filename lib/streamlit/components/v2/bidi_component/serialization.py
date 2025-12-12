@@ -23,7 +23,7 @@ from streamlit.dataframe_util import convert_anything_to_arrow_bytes, is_datafra
 from streamlit.logger import get_logger
 from streamlit.proto.BidiComponent_pb2 import BidiComponent as BidiComponentProto
 from streamlit.proto.BidiComponent_pb2 import MixedData as MixedDataProto
-from streamlit.util import AttributeDictionary
+from streamlit.util import AttributeDictionary, calc_md5
 
 if TYPE_CHECKING:
     from streamlit.components.v2.bidi_component.state import BidiComponentState
@@ -56,8 +56,6 @@ def _extract_dataframes_from_dict(
     dict[str, Any]
         A new dictionary with dataframe-like objects replaced by placeholders.
     """
-    import uuid
-
     if arrow_blobs is None:
         arrow_blobs = {}
 
@@ -68,11 +66,20 @@ def _extract_dataframes_from_dict(
             # This is a dataframe-like object, serialize it to Arrow
             try:
                 arrow_bytes = convert_anything_to_arrow_bytes(value)
-                ref_id = str(uuid.uuid4())
+                # Use deterministic, content-addressed ref IDs so placeholders
+                # are stable for identical content on each run. This also provides
+                # natural deduplication - identical DataFrames share a single blob.
+                ref_id = calc_md5(arrow_bytes)
                 arrow_blobs[ref_id] = arrow_bytes
                 processed_data[key] = {ARROW_REF_KEY: ref_id}
-            except Exception:
-                # If Arrow serialization fails, keep the original value for JSON serialization
+            except Exception as e:
+                # If Arrow serialization fails, keep the original value for JSON
+                # serialization attempt downstream.
+                _LOGGER.debug(
+                    "Arrow serialization failed for key %r, keeping original value: %s",
+                    key,
+                    e,
+                )
                 processed_data[key] = value
         else:
             # Not dataframe-like, keep as-is

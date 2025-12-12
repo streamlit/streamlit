@@ -18,9 +18,11 @@ import React from "react"
 import { screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 import { enableMapSet, enablePatches } from "immer"
+import { vi } from "vitest"
 
 import { Button as ButtonProto } from "@streamlit/protobuf"
 
+import { useRegisterShortcut } from "~lib/hooks/useRegisterShortcut"
 import { renderWithContexts } from "~lib/test_util"
 import {
   createFormsData,
@@ -29,6 +31,14 @@ import {
 } from "~lib/WidgetStateManager"
 
 import { FormSubmitButton, Props } from "./FormSubmitButton"
+
+vi.mock("~lib/hooks/useRegisterShortcut", () => ({
+  useRegisterShortcut: vi.fn(),
+  formatShortcutForDisplay: vi.fn(
+    (shortcut: string | null | undefined) =>
+      shortcut?.replace(/\+/g, " + ") || undefined
+  ),
+}))
 
 // Required by ImmerJS
 enablePatches()
@@ -46,6 +56,7 @@ describe("FormSubmitButton", () => {
         formsData = newData
       }),
     })
+    vi.clearAllMocks()
   })
 
   function getProps(
@@ -205,5 +216,32 @@ describe("FormSubmitButton", () => {
     unmountView2()
 
     expect(formsData.submitButtons.get("mockFormId")?.length).toBe(0)
+  })
+
+  it("renders shortcut label when provided", () => {
+    renderWithContexts(
+      <FormSubmitButton {...getProps({}, { shortcut: "Ctrl+Enter" })} />
+    )
+
+    const shortcuts = screen.getAllByText("Ctrl + Enter")
+    expect(shortcuts.length).toBeGreaterThan(0)
+    expect(shortcuts[0]).toBeVisible()
+  })
+
+  it("submits the form when shortcut is activated", () => {
+    const props = getProps({}, { shortcut: "Ctrl+Enter" })
+    const submitSpy = vi.spyOn(props.widgetMgr, "submitForm")
+    const useRegisterShortcutMock = vi.mocked(useRegisterShortcut)
+
+    renderWithContexts(<FormSubmitButton {...props} />)
+
+    const { onActivate } = useRegisterShortcutMock.mock.calls[0][0]
+    onActivate()
+
+    expect(submitSpy).toHaveBeenCalledWith(
+      props.element.formId,
+      props.fragmentId,
+      props.element
+    )
   })
 })

@@ -15,7 +15,6 @@
  */
 
 import {
-  ComponentProps,
   StreamlitComponentBase,
   withStreamlitConnection,
 } from "./StreamlitReact";

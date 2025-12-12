@@ -7,10 +7,10 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
     paths-ignore:
-      # Don't run CI if changes are only in the specs folder:
+      # Don't run CI if changes are only in documentation/spec folders:
       - "specs/**"
-      # Don't run CI if changes are only in the agent-knowledge folder:
       - "agent-knowledge/**"
+      - "wiki/**"
 
   # Allows workflow to be called from other workflows
   workflow_call:
@@ -66,7 +66,7 @@ jobs:
           echo "Installing custom components"
           uv pip install -r ./custom_components/components-e2e-requirements.txt
           rm -rf ./test-results
-          pytest ./custom_components --browser webkit --browser chromium --browser firefox -n auto --reruns 1
+          pytest ./custom_components --browser webkit --browser chromium --browser firefox -n auto --reruns 1 --tracing retain-on-failure
       - name: Upload failed test results
         uses: actions/upload-artifact@v5
         if: always()

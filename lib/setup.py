@@ -23,7 +23,7 @@ from setuptools.command.install import install
 
 THIS_DIRECTORY = Path(__file__).parent
 
-VERSION = "1.51.0"  # PEP-440
+VERSION = "1.52.1"  # PEP-440
 
 # IMPORTANT: We should try very hard *not* to add dependencies to Streamlit.
 # And if you do add one, make the required version as general as possible:
@@ -105,9 +105,16 @@ EXTRA_REQUIRES = {
     "sql": [
         "SQLAlchemy>=2.0.0",
     ],
+    # Optional dependency for better performance:
+    "performance": [
+        # orjson speeds up large plotly figure processing by 5-10x:
+        "orjson>=3.5.0",
+        # uvloop speeds up the event loop:
+        "uvloop>=0.15.2; sys_platform != 'win32' and (sys_platform != 'cygwin' and platform_python_implementation != 'PyPy')",  # noqa: E501
+    ],
     # Install all optional dependencies:
     "all": [
-        "streamlit[auth,charts,snowflake,sql,pdf]",
+        "streamlit[auth,charts,snowflake,sql,pdf,performance]",
         # Improved exception traceback formatting:
         "rich>=11.0.0",
     ],

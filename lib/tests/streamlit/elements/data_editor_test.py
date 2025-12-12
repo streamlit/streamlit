@@ -158,6 +158,32 @@ class DataEditorUtilTest(unittest.TestCase):
                 ColumnDataKind.EMPTY,
                 ["foo"],
             ),
+            # Scalar values with EMPTY data kind should remain scalars (fix for #13305, #13307)
+            (
+                None,
+                ColumnDataKind.EMPTY,
+                None,
+            ),
+            (
+                42,
+                ColumnDataKind.EMPTY,
+                42,
+            ),
+            (
+                "text",
+                ColumnDataKind.EMPTY,
+                "text",
+            ),
+            (
+                3.14,
+                ColumnDataKind.EMPTY,
+                3.14,
+            ),
+            (
+                True,
+                ColumnDataKind.EMPTY,
+                True,
+            ),
         ]
     )
     def test_parse_value(
@@ -211,6 +237,46 @@ class DataEditorUtilTest(unittest.TestCase):
         assert not df.iat[0, 2]
         assert df.iat[0, 3] == pd.Timestamp("2020-03-20T14:28:23")
         assert df.iat[0, 4] == Decimal("2.3")
+
+    def test_apply_cell_edits_empty_columns(self):
+        """Test applying cell edits to empty (None-only) columns.
+
+        Regression test for issues #13305 and #13307 where scalar values
+        were incorrectly wrapped in lists when editing empty columns.
+        """
+        # Create DataFrame with None values in all columns
+        df = pd.DataFrame(
+            {
+                "number_col": [None],
+                "text_col": [None],
+                "list_col": [None],
+            }
+        )
+
+        edited_rows: Mapping[
+            int, Mapping[str, str | int | float | bool | list[str] | None]
+        ] = {
+            0: {
+                "number_col": 42,
+                "text_col": "hello",
+                "list_col": ["a", "b"],
+            },
+        }
+
+        _apply_cell_edits(
+            df, edited_rows, determine_dataframe_schema(df, _get_arrow_schema(df))
+        )
+
+        # Scalar values should remain scalars, not be wrapped in lists
+        assert df.iat[0, 0] == 42
+        assert not isinstance(df.iat[0, 0], list)
+
+        assert df.iat[0, 1] == "hello"
+        assert not isinstance(df.iat[0, 1], list)
+
+        # List values should remain lists
+        assert df.iat[0, 2] == ["a", "b"]
+        assert isinstance(df.iat[0, 2], list)
 
     def test_apply_row_additions(self):
         """Test applying row additions to a DataFrame."""
@@ -613,6 +679,20 @@ class DataEditorTest(DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.arrow_data_frame
         assert proto.editing_mode == ArrowProto.EditingMode.DYNAMIC
 
+    def test_num_rows_add(self):
+        """Test that it can be called with num_rows add."""
+        st.data_editor(pd.DataFrame(), num_rows="add")
+
+        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        assert proto.editing_mode == ArrowProto.EditingMode.ADD_ONLY
+
+    def test_num_rows_delete(self):
+        """Test that it can be called with num_rows delete."""
+        st.data_editor(pd.DataFrame(), num_rows="delete")
+
+        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        assert proto.editing_mode == ArrowProto.EditingMode.DELETE_ONLY
+
     def test_column_order_parameter(self):
         """Test that it can be called with column_order."""
         st.data_editor(pd.DataFrame(), column_order=["a", "b"])
@@ -750,7 +830,37 @@ class DataEditorTest(DeltaGeneratorTestCase):
         mock_logger.warning.assert_called_once()
         warning_message = mock_logger.warning.call_args[0][0]
         assert "hide_index=True" in warning_message
-        assert "num_rows='dynamic'" in warning_message
+        # The warning message includes the mode via a format placeholder
+        assert "num_rows" in warning_message
+
+    @patch("streamlit.elements.widgets.data_editor._LOGGER")
+    def test_hide_index_true_add_only_non_range_index_logs_warning(
+        self, mock_logger: MagicMock
+    ):
+        """Test that hide_index=True with add-only rows and non-range index logs a warning."""
+        df = pd.DataFrame({"a": [1, 2]}, index=["row_0", "row_1"])
+
+        st.data_editor(df, hide_index=True, num_rows="add")
+
+        mock_logger.warning.assert_called_once()
+        warning_message = mock_logger.warning.call_args[0][0]
+        assert "hide_index=True" in warning_message
+        assert "num_rows" in warning_message
+
+    @patch("streamlit.elements.widgets.data_editor._LOGGER")
+    def test_hide_index_true_delete_only_non_range_index_no_warning(
+        self, mock_logger: MagicMock
+    ):
+        """Test that hide_index=True with delete-only mode does not log a warning.
+
+        Unlike dynamic and add modes, delete-only mode doesn't need index values
+        for adding rows, so hiding the index should work without issues.
+        """
+        df = pd.DataFrame({"a": [1, 2]}, index=["row_0", "row_1"])
+
+        st.data_editor(df, hide_index=True, num_rows="delete")
+
+        mock_logger.warning.assert_not_called()
 
     @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
     def test_inside_form(self):
@@ -1055,7 +1165,7 @@ class DataEditorTest(DeltaGeneratorTestCase):
         st.cache_data(lambda: st.data_editor(pd.DataFrame()))()
 
         # The widget itself is still created, so we need to go back one element more:
-        el = self.get_delta_from_queue(-2).new_element.exception
+        el = self.get_delta_from_queue(-3).new_element.exception
         assert el.type == "CachedWidgetWarning"
         assert el.is_warning
 

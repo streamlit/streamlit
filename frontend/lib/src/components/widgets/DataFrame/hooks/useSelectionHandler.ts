@@ -17,7 +17,7 @@
 import { useCallback, useState } from "react"
 
 import { CompactSelection, GridSelection } from "@glideapps/glide-data-grid"
-import isEqual from "lodash/isEqual"
+import { isEqual } from "lodash-es"
 
 import { Arrow as ArrowProto } from "@streamlit/protobuf"
 

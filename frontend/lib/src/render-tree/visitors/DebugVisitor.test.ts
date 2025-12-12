@@ -16,8 +16,7 @@
 
 import { Element, ForwardMsgMetadata } from "@streamlit/protobuf"
 
-import { NO_SCRIPT_RUN_ID } from "~lib/render-tree/AppNode.interface"
-import { ElementNode } from "~lib/render-tree/ElementNode"
+import { ElementNode, NO_SCRIPT_RUN_ID, TransientNode } from "~lib/AppNode"
 import { block, FAKE_SCRIPT_HASH, text } from "~lib/render-tree/test-utils"
 
 import { DebugVisitor, MAX_HASH_LENGTH } from "./DebugVisitor"
@@ -128,5 +127,32 @@ describe("DebugVisitor.generateDebugString", () => {
 
     // Root should start with provided prefix and non-last connector
     expect(out.startsWith("X   ├── BlockNode")).toBe(true)
+  })
+})
+
+describe("DebugVisitor.visitTransientNode", () => {
+  it("prints anchor and transient nodes with proper structure and truncated run id", () => {
+    const anchor = text("anchor")
+    const t1 = text("one")
+    const t2 = text("two")
+    const runId = "abcdef012345"
+
+    const transient = new TransientNode(runId, anchor, [t1, t2], 1)
+
+    const out = transient.accept(new DebugVisitor())
+
+    // Root line with truncated run id
+    expect(out.split("\n")[0]).toBe(
+      `└── TransientNode [2 transient] (run: ${runId.substring(0, MAX_HASH_LENGTH)})`
+    )
+
+    // Contains anchor section and its rendered element
+    expect(out).toContain("anchor:")
+    expect(out).toContain('ElementNode [text] "anchor"')
+
+    // Contains transient nodes section and both elements
+    expect(out).toContain("transient nodes:")
+    expect(out).toContain('ElementNode [text] "one"')
+    expect(out).toContain('ElementNode [text] "two"')
   })
 })

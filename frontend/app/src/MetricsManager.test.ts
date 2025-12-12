@@ -127,7 +127,7 @@ afterEach(() => {
   setCookie("ajs_anonymous_id")
 })
 
-test("does not track while uninitialized", () => {
+it("does not track while uninitialized", () => {
   const mm = getMetricsManager()
 
   mm.enqueue("ev1", { data1: 11 })
@@ -138,7 +138,7 @@ test("does not track while uninitialized", () => {
 })
 
 describe("initialize", () => {
-  test("does not track when initialized with gatherUsageStats=false", async () => {
+  it("does not track when initialized with gatherUsageStats=false", async () => {
     const mm = getMetricsManager()
     await mm.initialize({ gatherUsageStats: false })
 
@@ -150,7 +150,7 @@ describe("initialize", () => {
     expect(mm.actuallySendMetrics).toBe(false)
   })
 
-  test("does not track when metrics config set to off", async () => {
+  it("does not track when metrics config set to off", async () => {
     const mm = getMetricsManager(undefined, "off")
     await mm.initialize({ gatherUsageStats: true })
 
@@ -162,21 +162,21 @@ describe("initialize", () => {
     expect(mm.actuallySendMetrics).toBe(false)
   })
 
-  test("does not call requestDefaultMetricsConfig when metrics config set", async () => {
+  it("does not call requestDefaultMetricsConfig when metrics config set", async () => {
     const mm = getMetricsManager()
     await mm.initialize({ gatherUsageStats: true })
 
     expect(mm.requestDefaultMetricsConfig.mock.calls.length).toBe(0)
   })
 
-  test("calls requestDefaultMetricsConfig when no metrics config received", async () => {
+  it("calls requestDefaultMetricsConfig when no metrics config received", async () => {
     const mm = getMetricsManager(undefined, "")
     await mm.initialize({ gatherUsageStats: true })
 
     expect(mm.requestDefaultMetricsConfig.mock.calls.length).toBe(1)
   })
 
-  test("attempts fetch when no metrics config received", async () => {
+  it("attempts fetch when no metrics config received", async () => {
     // eslint-disable-next-line no-proto
     const getItemSpy = vi.spyOn(window.localStorage.__proto__, "getItem")
     const mm = getMetricsManager(undefined, "", false)
@@ -215,7 +215,7 @@ describe("metrics helpers", () => {
     browserVersion: RESULT.browser.version || "Unknown",
     deviceType: RESULT.device.type || "Unknown",
   }
-  test("buildEventProto populates expected fields - viewReport", async () => {
+  it("buildEventProto populates expected fields - viewReport", async () => {
     const mm = getMetricsManager()
     await mm.initialize({ gatherUsageStats: true })
     const viewReportProto = mm.buildEventProto("viewReport")
@@ -224,7 +224,7 @@ describe("metrics helpers", () => {
     checkDefaultEventData(viewReportProto, false)
   })
 
-  test("buildEventProto populates expected fields - updateReport", async () => {
+  it("buildEventProto populates expected fields - updateReport", async () => {
     const mm = getMetricsManager()
     await mm.initialize({ gatherUsageStats: true })
     mm.setAppHash("mockAppHash")
@@ -234,7 +234,7 @@ describe("metrics helpers", () => {
     checkDefaultEventData(updateReportProto)
   })
 
-  test("buildEventProto populates expected fields - pageProfile", async () => {
+  it("buildEventProto populates expected fields - pageProfile", async () => {
     const mm = getMetricsManager()
     await mm.initialize({ gatherUsageStats: true })
     mm.setAppHash("mockAppHash")
@@ -282,7 +282,7 @@ describe("metrics helpers", () => {
     expect(pageProfileProto.deviceType).toEqual(PAGE_PROFILE_DATA.deviceType)
   })
 
-  test("buildEventProto populates expected fields - menuClick", async () => {
+  it("buildEventProto populates expected fields - menuClick", async () => {
     const mm = getMetricsManager()
     await mm.initialize({ gatherUsageStats: true })
     mm.setAppHash("mockAppHash")
@@ -295,14 +295,14 @@ describe("metrics helpers", () => {
     expect(menuClickProto.label).toEqual("mockLabel")
   })
 
-  test("getAnonymousId is called on initialization, saves uuid to this.anonymousId", async () => {
+  it("getAnonymousId is called on initialization, saves uuid to this.anonymousId", async () => {
     const mm = getMetricsManager()
     expect(mm.anonymousId).toBe("")
     await mm.initialize({ gatherUsageStats: true })
     expect(mm.anonymousId).toHaveLength(36)
   })
 
-  test("getAnonymousId checks for cached anonymousId in cookie and localStorage", async () => {
+  it("getAnonymousId checks for cached anonymousId in cookie and localStorage", async () => {
     expect(window.localStorage.getItem("ajs_anonymous_id")).toBeNull()
     expect(document.cookie).not.toContain("ajs_anonymous_id")
 
@@ -325,7 +325,7 @@ describe("metrics helpers", () => {
   })
 })
 
-test("sends events via postMessage when config set", async () => {
+it("sends events via postMessage when config set", async () => {
   const mm = getMetricsManager(undefined, "postMessage")
   await mm.initialize({ gatherUsageStats: true })
 
@@ -338,7 +338,7 @@ test("sends events via postMessage when config set", async () => {
   expect(mm.postMessageEvent.mock.calls.length).toBe(3)
 })
 
-test("enqueues events before initialization", async () => {
+it("enqueues events before initialization", async () => {
   const sessionInfo = mockSessionInfo()
   const mm = getMetricsManager(sessionInfo)
 
@@ -353,7 +353,7 @@ test("enqueues events before initialization", async () => {
   expect(mm.track.mock.calls.length).toBe(3)
 })
 
-test("enqueues events when disconnected, then sends them when connected again", async () => {
+it("enqueues events when disconnected, then sends them when connected again", async () => {
   const sessionInfo = mockSessionInfo()
   const mm = getMetricsManager(sessionInfo)
   await mm.initialize({ gatherUsageStats: true })
@@ -375,7 +375,7 @@ test("enqueues events when disconnected, then sends them when connected again", 
   expect(mm.track.mock.calls.length).toBe(4)
 })
 
-test("tracks events immediately after initialized", async () => {
+it("tracks events immediately after initialized", async () => {
   const mm = getMetricsManager()
   await mm.initialize({ gatherUsageStats: true })
 
@@ -388,7 +388,7 @@ test("tracks events immediately after initialized", async () => {
   expect(mm.track.mock.calls.length).toBe(3)
 })
 
-test("tracks host data when in an iFrame", async () => {
+it("tracks host data when in an iFrame", async () => {
   const mm = getMetricsManager()
   mm.setMetadata({
     hostedAt: "S4A",
@@ -406,7 +406,7 @@ test("tracks host data when in an iFrame", async () => {
   expect(trackCall.k).not.toBeDefined()
 })
 
-test("tracks installation data", async () => {
+it("tracks installation data", async () => {
   const sessionInfo = mockSessionInfo()
   const mm = getMetricsManager(sessionInfo)
   await mm.initialize({ gatherUsageStats: true })
@@ -417,7 +417,7 @@ test("tracks installation data", async () => {
   expect(trackCall.machineIdV4).toEqual(sessionInfo.current.installationIdV4)
 })
 
-test("tracks server/local debug data", async () => {
+it("tracks server/local debug data", async () => {
   const sessionInfo = mockSessionInfo()
   const mm = getMetricsManager(sessionInfo)
   await mm.initialize({ gatherUsageStats: true })
@@ -431,7 +431,7 @@ test("tracks server/local debug data", async () => {
   expect(trackCall.isWebdriver).toEqual(false)
 })
 
-test("tracks server/local debug data with mocked webdriver", async () => {
+it("tracks server/local debug data with mocked webdriver", async () => {
   window.navigator.webdriver = true
   const sessionInfo = mockSessionInfo()
   const mm = getMetricsManager(sessionInfo)

@@ -109,7 +109,7 @@ class CodeMixin:
         ...     print("Hello, Streamlit!")'''
         >>> st.code(code, language="python")
 
-        .. output ::
+        .. output::
             https://doc-code.streamlit.app/
             height: 220px
 
@@ -129,7 +129,7 @@ class CodeMixin:
         ... '''
         >>> st.code(code, language=None)
 
-        .. output ::
+        .. output::
             https://doc-code-ascii.streamlit.app/
             height: 380px
         """

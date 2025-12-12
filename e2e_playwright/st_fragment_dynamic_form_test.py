@@ -14,7 +14,7 @@
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import wait_for_app_run
+from e2e_playwright.shared.app_utils import select_selectbox_option
 
 
 def expect_correct_app_state(
@@ -34,10 +34,7 @@ def test_dynamic_form(app: Page):
     )
 
     # Select a country
-    app.get_by_test_id("stSelectbox").locator("input").first.click()
-    selection_dropdown = app.locator('[data-baseweb="popover"]').first
-    selection_dropdown.locator("li").nth(1).click()
-    wait_for_app_run(app)
+    select_selectbox_option(app, "Country", "USA")
 
     expect_correct_app_state(
         app,
@@ -47,10 +44,7 @@ def test_dynamic_form(app: Page):
     )
 
     # Select a state
-    app.get_by_test_id("stSelectbox").locator("input").last.click()
-    selection_dropdown = app.locator('[data-baseweb="popover"]').first
-    selection_dropdown.locator("li").nth(1).click()
-    wait_for_app_run(app)
+    select_selectbox_option(app, "State", "California")
 
     expect_correct_app_state(
         app,

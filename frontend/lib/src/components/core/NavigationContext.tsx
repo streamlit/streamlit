@@ -47,7 +47,7 @@ export interface NavigationContextProps {
    * @see SidebarNav
    * @see PageLink
    */
-  onPageChange: (pageScriptHash: string) => void
+  onPageChange: (pageScriptHash: string, queryString?: string) => void
 
   /**
    * The nav sections in a multi-page app. Used to group pages into

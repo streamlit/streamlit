@@ -28,7 +28,7 @@ from streamlit.runtime.media_file_storage import (
     MediaFileStorage,
     MediaFileStorageError,
 )
-from streamlit.runtime.stats import CacheStat, CacheStatsProvider, group_stats
+from streamlit.runtime.stats import CacheStat, StatsProvider, group_cache_stats
 
 _LOGGER: Final = get_logger(__name__)
 
@@ -88,7 +88,7 @@ class MemoryFile(NamedTuple):
         return len(self.content)
 
 
-class MemoryMediaFileStorage(MediaFileStorage, CacheStatsProvider):
+class MemoryMediaFileStorage(MediaFileStorage, StatsProvider):
     def __init__(self, media_endpoint: str) -> None:
         """Create a new MemoryMediaFileStorage instance.
 
@@ -179,4 +179,4 @@ class MemoryMediaFileStorage(MediaFileStorage, CacheStatsProvider):
             )
             for _, file in files_by_id.items()
         ]
-        return group_stats(stats)
+        return group_cache_stats(stats)

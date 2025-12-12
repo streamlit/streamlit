@@ -16,6 +16,7 @@
 
 import { BlockNode } from "~lib/render-tree/BlockNode"
 import { block, text } from "~lib/render-tree/test-utils"
+import { TransientNode } from "~lib/render-tree/TransientNode"
 
 import { GetNodeByDeltaPathVisitor } from "./GetNodeByDeltaPathVisitor"
 import { SetNodeByDeltaPathVisitor } from "./SetNodeByDeltaPathVisitor"
@@ -34,13 +35,6 @@ describe("SetNodeByDeltaPathVisitor", () => {
       )
       expect(visitor).toBeDefined()
     })
-
-    it("throws error when deltaPath is empty", () => {
-      const nodeToSet = text("new")
-      expect(
-        () => new SetNodeByDeltaPathVisitor([], nodeToSet, "test_run_id")
-      ).toThrow("deltaPath cannot be empty")
-    })
   })
 
   describe("visitElementNode", () => {
@@ -54,8 +48,41 @@ describe("SetNodeByDeltaPathVisitor", () => {
       )
 
       expect(() => visitor.visitElementNode(elementNode)).toThrow(
-        "'SetNodeByDeltaPathVisitor' cannot visit an ElementNode"
+        "'setIn' cannot be called on an ElementNode"
       )
+    })
+
+    it("replaces element when delta path is empty", () => {
+      const elementNode = text("element")
+      const nodeToSet = text("new")
+      const visitor = new SetNodeByDeltaPathVisitor(
+        [],
+        nodeToSet,
+        "test_run_id"
+      )
+
+      expect(visitor.visitElementNode(elementNode)).toBe(nodeToSet)
+    })
+
+    it("wraps element node as anchor when setting TransientNode without anchor", () => {
+      const elementNode = text("element")
+      const transientNode = new TransientNode(
+        "run_id",
+        undefined, // No anchor provided
+        [text("t1")],
+        123
+      )
+      const visitor = new SetNodeByDeltaPathVisitor(
+        [],
+        transientNode,
+        "run_id"
+      )
+
+      // Should wrap elementNode as the anchor
+      const result = visitor.visitElementNode(elementNode) as TransientNode
+      expect(result).toBeInstanceOf(TransientNode)
+      expect(result.anchor).toBe(elementNode)
+      expect(result.transientNodes).toEqual(transientNode.transientNodes)
     })
   })
 
@@ -192,6 +219,45 @@ describe("SetNodeByDeltaPathVisitor", () => {
         GetNodeByDeltaPathVisitor.getNodeAtPath(result, [1])
       ).toStrictEqual(GetNodeByDeltaPathVisitor.getNodeAtPath(BLOCK, [1]))
     })
+
+    it("replaces block node with nodeToSet when delta path is empty", () => {
+      const originalBlock = block([text("1")])
+      const nodeToSet = text("replacement")
+      const visitor = new SetNodeByDeltaPathVisitor([], nodeToSet, "run_id")
+
+      const result = visitor.visitBlockNode(originalBlock)
+      expect(result).toBe(nodeToSet)
+    })
+
+    it("inserts TransientNode before child when anchors do not match", () => {
+      const childA = text("A")
+      const childB = text("B")
+      const blockNode = block([childA, childB])
+
+      // TransientNode with a pre-set anchor that is DIFFERENT from childA
+      const otherAnchor = text("other")
+      const transientNode = new TransientNode(
+        "run_id",
+        otherAnchor,
+        [text("t1")],
+        123
+      )
+
+      const visitor = new SetNodeByDeltaPathVisitor(
+        [0],
+        transientNode,
+        "run_id"
+      )
+
+      const result = visitor.visitBlockNode(blockNode) as BlockNode
+
+      // Logic check: Since the returned TransientNode's anchor (otherAnchor)
+      // does not match the original child (childA), it should be inserted BEFORE childA.
+      expect(result.children).toHaveLength(3)
+      expect(result.children[0]).toBe(transientNode) // Inserted
+      expect(result.children[1]).toBe(childA) // Original preserved/shifted
+      expect(result.children[2]).toBe(childB)
+    })
   })
 
   describe("recursive behavior", () => {
@@ -310,7 +376,7 @@ describe("SetNodeByDeltaPathVisitor", () => {
           nodeToSet,
           "test_run_id"
         )
-      ).toThrow("'SetNodeByDeltaPathVisitor' cannot visit an ElementNode")
+      ).toThrow("'setIn' cannot be called on an ElementNode")
     })
 
     it("creates new visitor instance for each static call", () => {
@@ -427,13 +493,49 @@ describe("SetNodeByDeltaPathVisitor", () => {
       expect(result.deltaMsgReceivedAt).toBe(1234567890)
 
       // Check that nested block properties are preserved except scriptRunId
-      const nestedResult = GetNodeByDeltaPathVisitor.getNodeAtPath(result, [
-        1,
-      ]) as BlockNode
+      const nestedResult = GetNodeByDeltaPathVisitor.getNodeAtPath(
+        result,
+        [1]
+      ) as BlockNode
       expect(nestedResult.activeScriptHash).toBe("nested_script")
       expect(nestedResult.scriptRunId).toBe("update_run_id")
       expect(nestedResult.fragmentId).toBe("nested_fragment")
       expect(nestedResult.deltaMsgReceivedAt).toBe(9876543210)
+    })
+  })
+
+  describe("visitTransientNode", () => {
+    it("drills through anchor when remaining path exists", () => {
+      const inner = block([text("child")])
+      const t = new TransientNode("run", inner, [text("t1")], 1)
+      const nodeToSet = text("new_child")
+      const visitor = new SetNodeByDeltaPathVisitor([0, 0], nodeToSet, "run")
+
+      const result = visitor.visitTransientNode(t) as BlockNode
+      expect(
+        GetNodeByDeltaPathVisitor.getNodeAtPath(result, [0])
+      ).toBeTextNode("new_child")
+    })
+
+    it("throws when drilling required but no anchor exists", () => {
+      const t = new TransientNode("run", undefined, [text("t1")], 1)
+      const nodeToSet = text("x")
+      // Use a path with a remaining segment after the first index to force drill
+      const visitor = new SetNodeByDeltaPathVisitor([0, 1], nodeToSet, "run")
+      expect(() => visitor.visitTransientNode(t)).toThrow(
+        "TransientNode has no anchor to set node at"
+      )
+    })
+
+    it("delegates to nodeToSet.replaceTransientNodeWithSelf when path consumed", () => {
+      const t = new TransientNode("run", text("anchor"), [text("t1")], 5)
+      const nodeToSet = new BlockNode("hash", [])
+      const spy = vi.spyOn(nodeToSet, "replaceTransientNodeWithSelf")
+      const visitor = new SetNodeByDeltaPathVisitor([0], nodeToSet, "run")
+
+      // Path consumed after slicing in visitTransientNode; this should call replaceTransientNodeWithSelf
+      visitor.visitTransientNode(t)
+      expect(spy).toHaveBeenCalledWith(t)
     })
   })
 

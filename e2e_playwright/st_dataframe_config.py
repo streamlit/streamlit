@@ -28,7 +28,7 @@ st.set_page_config(layout="wide")
 # Generate a random dataframe
 df = pd.DataFrame(
     np.random.randn(5, 5),
-    columns=(f"col_{i}" for i in range(5)),
+    columns=[f"col_{i}" for i in range(5)],
 )
 
 
@@ -635,7 +635,7 @@ st.dataframe(
 
 df = pd.DataFrame(
     np.random.randn(15, 25),
-    columns=(f"col_{i}" for i in range(25)),
+    columns=[f"col_{i}" for i in range(25)],
 )
 
 st.header("Pinned columns:")
@@ -660,8 +660,10 @@ st.dataframe(
     pd.DataFrame(
         {
             "col_0": [
-                "this is a very long sentence that does not contain any reasonable content.this is a "
-                "very long sentence that does not contain any reasonable content.",
+                (
+                    "this is a very long sentence that does not contain any reasonable content.this is a "
+                    "very long sentence that does not contain any reasonable content."
+                ),
                 "Hello World",
             ],
             "col_1": [

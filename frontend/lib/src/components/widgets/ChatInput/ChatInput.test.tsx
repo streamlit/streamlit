@@ -232,11 +232,11 @@ describe("ChatInput widget", () => {
     render(<ChatInput {...props} />)
 
     const chatInput = screen.getByTestId("stChatInputTextArea")
-    const instructions = screen.getByTestId("InputInstructions")
-    expect(instructions).toHaveTextContent("")
+    const instructions = screen.queryByTestId("InputInstructions")
+    expect(instructions).not.toBeInTheDocument()
 
     await user.type(chatInput, "1234567890")
-    expect(instructions).toHaveTextContent("")
+    expect(screen.queryByTestId("InputInstructions")).not.toBeInTheDocument()
   })
 
   it("does not send/clear on shift + enter", async () => {

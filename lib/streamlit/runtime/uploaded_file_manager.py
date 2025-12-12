@@ -19,7 +19,7 @@ from abc import abstractmethod
 from typing import TYPE_CHECKING, NamedTuple, Protocol
 
 from streamlit import util
-from streamlit.runtime.stats import CacheStatsProvider
+from streamlit.runtime.stats import StatsProvider
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -89,7 +89,7 @@ class UploadedFile(io.BytesIO):
         return util.repr_(self)
 
 
-class UploadedFileManager(CacheStatsProvider, Protocol):
+class UploadedFileManager(StatsProvider, Protocol):
     """UploadedFileManager protocol, that should be implemented by the concrete
     uploaded file managers.
 

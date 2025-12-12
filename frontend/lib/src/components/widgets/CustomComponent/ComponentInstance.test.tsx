@@ -49,7 +49,7 @@ import { ComponentMessageType, StreamlitMessageType } from "./enums"
 // We have some timeouts that we want to use fake timers for.
 vi.useFakeTimers()
 
-// Mock uri utils.
+// Mock uri utils and StreamlitConfig
 vi.mock("@streamlit/utils", async () => {
   const actualModule = await vi.importActual("@streamlit/utils")
   const mockedBuildHttpUri = vi.fn().mockImplementation(() => "registry/url")
@@ -57,6 +57,9 @@ vi.mock("@streamlit/utils", async () => {
   return {
     ...actualModule,
     buildHttpUri: mockedBuildHttpUri,
+    get StreamlitConfig() {
+      return globalThis.__mockStreamlitConfig
+    },
   }
 })
 
@@ -69,7 +72,6 @@ const MOCK_COMPONENT_NAME = "mock_component_name"
 
 describe("ComponentInstance", () => {
   let logWarnSpy: MockInstance
-  let originalStreamlitWindowObj: typeof window.__streamlit
   const getComponentRegistry = (): ComponentRegistry => {
     return new ComponentRegistry(mockEndpoints())
   }
@@ -87,11 +89,10 @@ describe("ComponentInstance", () => {
       elementRef: { current: null },
       values: [250],
     })
-    originalStreamlitWindowObj = window.__streamlit
   })
 
   afterEach(() => {
-    window.__streamlit = originalStreamlitWindowObj
+    globalThis.__mockStreamlitConfig = {}
   })
 
   it("registers a message listener on render", () => {
@@ -188,8 +189,8 @@ describe("ComponentInstance", () => {
     )
   })
 
-  it("includes window.__streamlit?.CUSTOM_COMPONENT_CLIENT_ID in queryString if set", () => {
-    window.__streamlit = { CUSTOM_COMPONENT_CLIENT_ID: "foobar" }
+  it("includes StreamlitConfig.CUSTOM_COMPONENT_CLIENT_ID in queryString if set", () => {
+    globalThis.__mockStreamlitConfig.CUSTOM_COMPONENT_CLIENT_ID = "foobar"
     const componentRegistry = getComponentRegistry()
     renderWithContexts(
       <ComponentInstance
