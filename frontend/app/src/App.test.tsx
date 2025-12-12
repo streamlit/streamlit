@@ -783,7 +783,11 @@ describe("App", () => {
       sendForwardMessage("newSession", NEW_SESSION_JSON)
 
       expect(props.theme.addThemes).toHaveBeenCalled()
-      expect(props.theme.setTheme).not.toHaveBeenCalled()
+      // When custom theme is available, preset themes are removed
+      // so user should be switched to the custom theme
+      expect(props.theme.setTheme).toHaveBeenCalledWith(
+        expect.objectContaining({ name: CUSTOM_THEME_NAME })
+      )
     })
 
     it("sets the custom theme as the default if no user preference is set", () => {
@@ -2583,8 +2587,10 @@ describe("App", () => {
           })
 
           expect(props.theme.addThemes).toHaveBeenCalledTimes(1)
-          // Should NOT override preset theme preference
-          expect(props.theme.setTheme).not.toHaveBeenCalled()
+          // Should switch to the single custom theme (preset themes removed when custom exists)
+          expect(props.theme.setTheme).toHaveBeenCalledWith(
+            expect.objectContaining({ name: CUSTOM_THEME_NAME })
+          )
 
           window.localStorage.removeItem(LocalStore.ACTIVE_THEME)
         })
@@ -2715,8 +2721,13 @@ describe("App", () => {
           })
 
           expect(props.theme.addThemes).toHaveBeenCalledTimes(1)
-          // Should NOT override preset theme preference
-          expect(props.theme.setTheme).not.toHaveBeenCalled()
+          // Should map preset "Light" to "Custom Theme Light"
+          expect(props.theme.setTheme).toHaveBeenCalledWith(
+            expect.objectContaining({
+              name: CUSTOM_THEME_LIGHT_NAME,
+              displayName: "Light",
+            })
+          )
 
           window.localStorage.removeItem(LocalStore.ACTIVE_THEME)
         })

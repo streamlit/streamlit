@@ -1520,3 +1520,73 @@ export const createSidebarTheme = (activeTheme: ThemeConfig): ThemeConfig => {
     true // inSidebar
   )
 }
+
+/**
+ * Maps a user's cached theme preference to the best matching theme from available themes.
+ * Handles intelligent mapping between preset and custom themes:
+ * - "Light" preset → "Custom Theme Light" (when custom light/dark exist)
+ * - "Dark" preset → "Custom Theme Dark" (when custom light/dark exist)
+ * - "Custom Theme Light" → "Light" preset (when custom themes removed)
+ * - "Custom Theme Dark" → "Dark" preset (when custom themes removed)
+ *
+ * @param cachedTheme - The user's cached theme preference
+ * @param availableThemes - The list of currently available themes
+ * @returns The best matching theme, or null if no suitable match found
+ */
+export const mapCachedThemeToAvailableTheme = (
+  cachedTheme: ThemeConfig | null,
+  availableThemes: ThemeConfig[]
+): ThemeConfig | null => {
+  if (!cachedTheme) {
+    return null
+  }
+
+  // If the cached theme exactly matches an available theme, use it
+  const exactMatch = availableThemes.find(
+    theme => theme.name === cachedTheme.name
+  )
+  if (exactMatch) {
+    return exactMatch
+  }
+
+  // Check if custom light/dark themes are available
+  const hasCustomLightDark = availableThemes.some(
+    theme => theme.name === CUSTOM_THEME_LIGHT_NAME
+  )
+
+  // Map preset themes to custom theme equivalents
+  if (hasCustomLightDark) {
+    if (cachedTheme.name === lightTheme.name) {
+      return (
+        availableThemes.find(
+          theme => theme.name === CUSTOM_THEME_LIGHT_NAME
+        ) ?? null
+      )
+    }
+    if (cachedTheme.name === darkTheme.name) {
+      return (
+        availableThemes.find(theme => theme.name === CUSTOM_THEME_DARK_NAME) ??
+        null
+      )
+    }
+  }
+
+  // Map custom themes back to preset equivalents (when custom themes removed)
+  const hasPresetThemes = availableThemes.some(
+    theme => theme.name === lightTheme.name
+  )
+  if (hasPresetThemes) {
+    if (cachedTheme.name === CUSTOM_THEME_LIGHT_NAME) {
+      return (
+        availableThemes.find(theme => theme.name === lightTheme.name) ?? null
+      )
+    }
+    if (cachedTheme.name === CUSTOM_THEME_DARK_NAME) {
+      return (
+        availableThemes.find(theme => theme.name === darkTheme.name) ?? null
+      )
+    }
+  }
+
+  return null
+}

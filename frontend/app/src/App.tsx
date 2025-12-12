@@ -65,6 +65,7 @@ import {
   createFormsData,
   createPresetThemes,
   CUSTOM_THEME_AUTO_NAME,
+  darkTheme,
   DeployedAppMetadata,
   ensureError,
   ensureHotkeysFilterConfigured,
@@ -96,6 +97,8 @@ import {
   isScrollingHidden,
   isToolbarDisplayed,
   IToolbarItem,
+  lightTheme,
+  mapCachedThemeToAvailableTheme,
   mark,
   measure,
   notUndefined,
@@ -1392,28 +1395,23 @@ export class App extends PureComponent<Props, State> {
       this.props.theme.addThemes(customThemes, { keepPresetThemes: false })
 
       const userPreference = getCachedTheme()
-      // Check if the user's cached Light/Dark theme preference is still valid
-      // with the newly received theme config. This ensures we preserve the user's
-      // explicit theme choice (e.g., "Custom Theme Light") across reruns.
-      const userPreferenceStillValid =
-        userPreference &&
-        customThemes.some(theme => theme.name === userPreference.name)
+      // Map the user's cached preference to the best matching theme from the new custom themes
+      // - Applies full server config while preserving user's light/dark selection
+      const mappedTheme = mapCachedThemeToAvailableTheme(
+        userPreference,
+        customThemes
+      )
 
-      if (userPreferenceStillValid) {
-        // User has a valid cached preference - update to the full server theme config
-        // but preserve their light/dark selection
-        const matchingTheme = customThemes.find(
-          theme => theme.name === userPreference.name
-        )
-        if (matchingTheme) {
-          this.setAndSendTheme(matchingTheme)
-        }
-      } else if (
-        userPreference === null ||
-        (usingCustomTheme && !userPreferenceStillValid)
-      ) {
-        // Only override theme if: no user preference exists OR the user is using
-        // a custom theme that's no longer valid (e.g., theme config changed)
+      if (mappedTheme) {
+        // User has a mappable preference - apply the full server config
+        // while preserving their light/dark selection
+        this.setAndSendTheme(mappedTheme)
+      } else {
+        // No mappable preference - set to default custom theme
+        // This handles cases where:
+        // - No user preference exists (userPreference === null)
+        // - User has a preset theme cached but custom themes are now available
+        // - User has an old custom theme that no longer matches
         if (customThemes.length > 1) {
           // When Custom Theme Light & Custom Theme Dark present, we create an auto theme based
           // on the system preference and set this as the active theme
@@ -1431,9 +1429,23 @@ export class App extends PureComponent<Props, State> {
       this.props.theme.addThemes([])
 
       if (usingCustomTheme) {
-        // Reset to the auto theme taking into account any host preferences
-        // aka embed query params.
-        this.setAndSendTheme(getHostSpecifiedTheme())
+        const userPreference = getCachedTheme()
+        const presetThemes = [lightTheme, darkTheme]
+        // Try to map custom theme preference back to preset themes
+        // e.g., "Custom Theme Light" → "Light", "Custom Theme Dark" → "Dark"
+        const mappedTheme = mapCachedThemeToAvailableTheme(
+          userPreference,
+          presetThemes
+        )
+
+        if (mappedTheme) {
+          // User had a custom theme that maps to a preset - preserve their choice
+          this.setAndSendTheme(mappedTheme)
+        } else {
+          // Reset to the auto theme taking into account any host preferences
+          // aka embed query params.
+          this.setAndSendTheme(getHostSpecifiedTheme())
+        }
       }
     }
 
