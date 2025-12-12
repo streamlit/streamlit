@@ -44,7 +44,6 @@ export const StyledWidgetLabel = styled.label<StyledWidgetProps>(
 export const StyledWidgetLabelHelp = styled.div({
   display: "flex",
   flexDirection: "row",
-  justifyContent: "flex-end",
 })
 
 export const StyledWidgetInstructions = styled.div(({ theme }) => ({
