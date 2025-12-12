@@ -206,14 +206,16 @@ class TestStartStarletteServer:
             patch("uvicorn.Server") as uvicorn_server_cls,
         ):
             uvicorn_instance = mock.MagicMock()
-            uvicorn_instance.serve = AsyncMock()
+            uvicorn_instance.startup = AsyncMock()
+            uvicorn_instance.main_loop = AsyncMock()
+            uvicorn_instance.shutdown = AsyncMock()
+            uvicorn_instance.should_exit = False
             uvicorn_server_cls.return_value = uvicorn_instance
 
             self._run_async(server._start_starlette())
 
         assert bind_socket.call_count == 2
-        uvicorn_instance.serve.assert_awaited_once()
-        mock_socket.close.assert_called_once()
+        uvicorn_instance.startup.assert_awaited_once()
         assert config.get_option("server.port") == 8601
 
     def test_honors_manual_port_setting(self) -> None:
@@ -272,7 +274,7 @@ class TestStartStarletteServer:
             assert exc_info.value.errno == errno.EACCES
 
     def test_uses_default_address_when_not_configured(self) -> None:
-        """Test that 127.0.0.1 is used when address is not configured."""
+        """Test that 0.0.0.0 is used when address is not configured."""
         server = self._create_server()
         mock_socket = mock.MagicMock(spec=socket.socket)
 
@@ -285,31 +287,10 @@ class TestStartStarletteServer:
             patch("uvicorn.Server") as uvicorn_server_cls,
         ):
             uvicorn_instance = mock.MagicMock()
-            uvicorn_instance.serve = AsyncMock()
-            uvicorn_server_cls.return_value = uvicorn_instance
-
-            self._run_async(server._start_starlette())
-
-        # Check that bind_socket was called with 127.0.0.1
-        bind_socket.assert_called_once()
-        call_args = bind_socket.call_args[0]
-        assert call_args[0] == "127.0.0.1"
-
-    def test_uses_configured_address(self) -> None:
-        """Test that configured address is used."""
-        server = self._create_server()
-        mock_socket = mock.MagicMock(spec=socket.socket)
-
-        with (
-            patch_config_options({"server.address": "0.0.0.0"}),
-            patch(
-                "streamlit.web.server.starlette.starlette_server._bind_socket",
-                return_value=mock_socket,
-            ) as bind_socket,
-            patch("uvicorn.Server") as uvicorn_server_cls,
-        ):
-            uvicorn_instance = mock.MagicMock()
-            uvicorn_instance.serve = AsyncMock()
+            uvicorn_instance.startup = AsyncMock()
+            uvicorn_instance.main_loop = AsyncMock()
+            uvicorn_instance.shutdown = AsyncMock()
+            uvicorn_instance.should_exit = False
             uvicorn_server_cls.return_value = uvicorn_instance
 
             self._run_async(server._start_starlette())
@@ -317,3 +298,29 @@ class TestStartStarletteServer:
         bind_socket.assert_called_once()
         call_args = bind_socket.call_args[0]
         assert call_args[0] == "0.0.0.0"
+
+    def test_uses_configured_address(self) -> None:
+        """Test that configured address is used."""
+        server = self._create_server()
+        mock_socket = mock.MagicMock(spec=socket.socket)
+
+        with (
+            patch_config_options({"server.address": "192.168.1.100"}),
+            patch(
+                "streamlit.web.server.starlette.starlette_server._bind_socket",
+                return_value=mock_socket,
+            ) as bind_socket,
+            patch("uvicorn.Server") as uvicorn_server_cls,
+        ):
+            uvicorn_instance = mock.MagicMock()
+            uvicorn_instance.startup = AsyncMock()
+            uvicorn_instance.main_loop = AsyncMock()
+            uvicorn_instance.shutdown = AsyncMock()
+            uvicorn_instance.should_exit = False
+            uvicorn_server_cls.return_value = uvicorn_instance
+
+            self._run_async(server._start_starlette())
+
+        bind_socket.assert_called_once()
+        call_args = bind_socket.call_args[0]
+        assert call_args[0] == "192.168.1.100"

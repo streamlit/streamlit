@@ -13,6 +13,9 @@
 # limitations under the License.
 
 from streamlit.web.server.starlette.starlette_app import create_starlette_app
-from streamlit.web.server.starlette.starlette_server import start_starlette_server
+from streamlit.web.server.starlette.starlette_server import StarletteServer
 
-__all__ = ["create_starlette_app", "start_starlette_server"]
+__all__ = [
+    "StarletteServer",
+    "create_starlette_app",
+]

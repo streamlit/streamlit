@@ -65,6 +65,8 @@ if TYPE_CHECKING:
     from collections.abc import Awaitable
     from ssl import SSLContext
 
+    from streamlit.web.server.starlette import StarletteServer
+
 _LOGGER: Final = get_logger(__name__)
 
 
@@ -289,6 +291,8 @@ class Server:
         self.initialize_mimetypes()
 
         self._main_script_path = main_script_path
+        self._use_starlette = bool(config.get_option("server.useStarlette"))
+        self._starlette_server: StarletteServer | None = None
 
         # The task that runs the server if an event loop is already running.
         # We need to save a reference to it so that it doesn't get
@@ -343,7 +347,7 @@ class Server:
 
         _LOGGER.debug("Starting server...")
 
-        if config.get_option("server.useStarlette"):
+        if self._use_starlette:
             # Use starlette+uvicorn instead of tornado:
             await self._start_starlette()
             return
@@ -359,6 +363,13 @@ class Server:
     @property
     def stopped(self) -> Awaitable[None]:
         """A Future that completes when the Server's run loop has exited."""
+        if self._starlette_server is not None:
+
+            async def _wait_for_starlette_stop() -> None:
+                if self._starlette_server is not None:
+                    await self._starlette_server.stopped.wait()
+
+            return _wait_for_starlette_stop()
         return self._runtime.stopped
 
     def _create_app(self) -> tornado.web.Application:
@@ -523,12 +534,18 @@ class Server:
 
     def stop(self) -> None:
         cli_util.print_to_cli("  Stopping...", fg="blue")
-        self._runtime.stop()
+        if self._starlette_server is not None:
+            # Starlette's lifespan handler calls runtime.stop() during shutdown
+            self._starlette_server.stop()
+        else:
+            # Tornado mode: stop runtime directly
+            self._runtime.stop()
 
     async def _start_starlette(self) -> None:
-        from streamlit.web.server.starlette import start_starlette_server
+        from streamlit.web.server.starlette import StarletteServer
 
-        await start_starlette_server(self._runtime)
+        self._starlette_server = StarletteServer(self._runtime)
+        await self._starlette_server.start()
 
 
 def _set_tornado_log_levels() -> None:

@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import errno
 import socket
 import sys
@@ -28,6 +29,8 @@ from streamlit.runtime.runtime_util import get_max_message_size_bytes
 from streamlit.web.server.starlette.starlette_app import create_starlette_app
 
 if TYPE_CHECKING:
+    import uvicorn
+
     from streamlit.runtime import Runtime
 
 _LOGGER: Final = get_logger(__name__)
@@ -106,100 +109,163 @@ def _bind_socket(address: str, port: int, backlog: int) -> socket.socket:
     return sock
 
 
-async def start_starlette_server(runtime: Runtime) -> None:
-    """Start a Starlette server with uvicorn.
+class StarletteServer:
+    """Manages the uvicorn server lifecycle for Starlette-based Streamlit apps.
 
-    This function creates a Starlette application and runs it using uvicorn.
-    It handles port binding with automatic retry on port conflicts.
-
-    Parameters
-    ----------
-    runtime
-        The Streamlit runtime instance to use for the server.
-
-    Raises
-    ------
-    RuntimeError
-        If uvicorn is not installed or Unix sockets are requested.
-    RetriesExceededError
-        If no available port can be found after max retries.
+    This class wraps uvicorn to provide the same semantics as the Tornado server:
+    - start() returns after the server is ready to accept connections
+    - The server runs in a background task
+    - stop() gracefully shuts down the server
+    - stopped is a future that completes when the server exits
     """
-    try:
-        import uvicorn
-    except ModuleNotFoundError as exc:  # pragma: no cover
-        raise RuntimeError(
-            "uvicorn is required for server.useStarlette but is not installed. "
-            "Install it via `pip install streamlit[starlette]`."
-        ) from exc
 
-    if _server_address_is_unix_socket():
-        raise RuntimeError("Unix sockets are not supported with Starlette currently.")
+    def __init__(self, runtime: Runtime) -> None:
+        self._runtime = runtime
+        self._server: uvicorn.Server | None = None
+        self._server_task: asyncio.Task[None] | None = None
+        self._stopped_event = asyncio.Event()
+        self._socket: socket.socket | None = None
 
-    app = create_starlette_app(runtime)
-
-    configured_address = config.get_option("server.address")
-    configured_port = int(config.get_option("server.port"))
-
-    cert_file = config.get_option("server.sslCertFile")
-    key_file = config.get_option("server.sslKeyFile")
-    ws_ping_interval, ws_ping_timeout = _get_websocket_settings()
-    ws_max_size = get_max_message_size_bytes()
-    ws_per_message_deflate = config.get_option("server.enableWebsocketCompression")
-
-    last_exception: BaseException | None = None
-
-    for attempt in range(_MAX_PORT_SEARCH_RETRIES + 1):
-        port = configured_port + attempt
-        address = configured_address if configured_address else "127.0.0.1"
-
-        uvicorn_config = uvicorn.Config(
-            app,
-            host=address,
-            port=port,
-            ssl_certfile=cert_file,
-            ssl_keyfile=key_file,
-            ws="auto",
-            ws_ping_interval=ws_ping_interval,
-            ws_ping_timeout=ws_ping_timeout,
-            ws_max_size=ws_max_size,
-            ws_per_message_deflate=ws_per_message_deflate,
-            use_colors=False,
-            log_config=None,
-        )
-
+    async def start(self) -> None:
+        """Start the server and return when ready to accept connections."""
         try:
-            sock = _bind_socket(address, port, uvicorn_config.backlog)
-        except OSError as exc:
-            last_exception = exc
-            if exc.errno == errno.EADDRINUSE:
-                if _server_port_is_manually_set():
-                    _LOGGER.error("Port %s is already in use", port)  # noqa: TRY400
-                    sys.exit(1)
-                _LOGGER.debug(
-                    "Port %s already in use, trying to use the next one.", port
+            import uvicorn
+        except ModuleNotFoundError as exc:  # pragma: no cover
+            raise RuntimeError(
+                "uvicorn is required for server.useStarlette but is not installed. "
+                "Install it via `pip install streamlit[starlette]`."
+            ) from exc
+
+        if _server_address_is_unix_socket():
+            raise RuntimeError(
+                "Unix sockets are not supported with Starlette currently."
+            )
+
+        app = create_starlette_app(self._runtime)
+
+        configured_address = config.get_option("server.address")
+        configured_port = int(config.get_option("server.port"))
+
+        cert_file = config.get_option("server.sslCertFile")
+        key_file = config.get_option("server.sslKeyFile")
+        ws_ping_interval, ws_ping_timeout = _get_websocket_settings()
+        ws_max_size = get_max_message_size_bytes()
+        ws_per_message_deflate = config.get_option("server.enableWebsocketCompression")
+
+        last_exception: BaseException | None = None
+
+        for attempt in range(_MAX_PORT_SEARCH_RETRIES + 1):
+            port = configured_port + attempt
+            address = configured_address if configured_address else ""
+
+            uvicorn_config = uvicorn.Config(
+                app,
+                host=address,
+                port=port,
+                ssl_certfile=cert_file,
+                ssl_keyfile=key_file,
+                ws="auto",
+                ws_ping_interval=ws_ping_interval,
+                ws_ping_timeout=ws_ping_timeout,
+                ws_max_size=ws_max_size,
+                ws_per_message_deflate=ws_per_message_deflate,
+                use_colors=False,
+                log_config=None,
+            )
+
+            try:
+                self._socket = _bind_socket(
+                    address if address else "0.0.0.0",  # noqa: S104
+                    port,
+                    uvicorn_config.backlog,
                 )
-                if attempt == _MAX_PORT_SEARCH_RETRIES:
-                    raise RetriesExceededError(
-                        f"Cannot start Streamlit server. Port {port} is already in use, "
-                        f"and Streamlit was unable to find a free port after "
-                        f"{_MAX_PORT_SEARCH_RETRIES} attempts."
-                    ) from exc
-                continue
-            raise
+            except OSError as exc:
+                last_exception = exc
+                if exc.errno == errno.EADDRINUSE:
+                    if _server_port_is_manually_set():
+                        _LOGGER.error("Port %s is already in use", port)  # noqa: TRY400
+                        sys.exit(1)
+                    _LOGGER.debug(
+                        "Port %s already in use, trying to use the next one.", port
+                    )
+                    if attempt == _MAX_PORT_SEARCH_RETRIES:
+                        raise RetriesExceededError(
+                            f"Cannot start Streamlit server. Port {port} is already in use, "
+                            f"and Streamlit was unable to find a free port after "
+                            f"{_MAX_PORT_SEARCH_RETRIES} attempts."
+                        ) from exc
+                    continue
+                raise
 
-        server = uvicorn.Server(uvicorn_config)
-        _LOGGER.info("Starting Starlette server on %s:%s", address, port)
-
-        try:
+            self._server = uvicorn.Server(uvicorn_config)
             config.set_option("server.port", port, ConfigOption.STREAMLIT_DEFINITION)
-            await server.serve(sockets=[sock])
-            return
-        except Exception as e:  # pragma: no cover
-            last_exception = e
-            _LOGGER.exception("Error starting Starlette server")
-            raise
-        finally:
-            sock.close()
+            _LOGGER.debug(
+                "Starting Starlette server on %s:%s",
+                address or "0.0.0.0",  # noqa: S104
+                port,
+            )
 
-    if last_exception is not None:
-        raise last_exception
+            startup_complete = asyncio.Event()
+            startup_exception: BaseException | None = None
+
+            async def serve_with_signal() -> None:
+                nonlocal startup_exception
+                if self._server is None or self._socket is None:
+                    raise RuntimeError("Server or socket not initialized")
+
+                try:
+                    # Initialize config and lifespan (normally done in _serve)
+                    server_config = self._server.config
+                    if not server_config.loaded:
+                        server_config.load()
+                    self._server.lifespan = server_config.lifespan_class(server_config)
+
+                    await self._server.startup(sockets=[self._socket])
+                    if self._server.should_exit:
+                        startup_exception = RuntimeError("Server startup failed")
+                        startup_complete.set()  # noqa: B023
+                        return
+
+                    startup_complete.set()  # noqa: B023
+
+                    await self._server.main_loop()
+                except Exception as e:
+                    startup_exception = e
+                    startup_complete.set()  # noqa: B023
+                    raise
+                finally:
+                    if self._server is not None:
+                        await self._server.shutdown(sockets=[self._socket])
+                    if self._socket is not None:
+                        self._socket.close()
+                        self._socket = None
+                    self._stopped_event.set()
+
+            self._server_task = asyncio.create_task(
+                serve_with_signal(), name="starlette-server"
+            )
+
+            await startup_complete.wait()
+
+            if startup_exception is not None:
+                raise startup_exception
+
+            _LOGGER.info(
+                "Starlette server started on %s:%s",
+                address or "0.0.0.0",  # noqa: S104
+                port,
+            )
+            return
+
+        if last_exception is not None:
+            raise last_exception
+
+    def stop(self) -> None:
+        """Signal the server to stop."""
+        if self._server is not None:
+            self._server.should_exit = True
+
+    @property
+    def stopped(self) -> asyncio.Event:
+        """An event that is set when the server has fully stopped."""
+        return self._stopped_event
