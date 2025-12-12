@@ -162,16 +162,17 @@ def create_starlette_app(runtime: Runtime) -> Starlette:
     )
 
     # Add GZip compression middleware.
-    # TODO(lukasmasuch): Validate the performance gain of GZip compression by comparing
-    # response sizes and latency between Tornado (compress_response=True) and Starlette.
-    # Consider making this configurable or adjusting minimum_size threshold if needed.
-    # Note: Media routes set Content-Encoding: identity to prevent compression,
-    # as audio/video elements in browsers (especially Firefox) fail when binary
-    # media content is gzip-compressed.
-    from starlette.middleware.gzip import GZipMiddleware
+    # We use a custom MediaAwareGZipMiddleware that excludes audio/video content
+    # from compression. Compressing binary media content breaks playback in browsers,
+    # especially with range requests. Using a custom middleware instead of setting
+    # Content-Encoding: identity provides better browser compatibility, as some
+    # browsers (especially WebKit) have issues with explicit identity encoding.
+    from streamlit.web.server.starlette.starlette_app_utils import (
+        MediaAwareGZipMiddleware,
+    )
 
     app.add_middleware(
-        GZipMiddleware,  # ty: ignore[invalid-argument-type]
+        MediaAwareGZipMiddleware,  # ty: ignore[invalid-argument-type]
         minimum_size=500,
         compresslevel=6,
     )

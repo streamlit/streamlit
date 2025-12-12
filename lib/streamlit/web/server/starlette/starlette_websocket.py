@@ -145,6 +145,7 @@ class StarletteSessionClient(SessionClient):
 
     def __init__(self, websocket: WebSocket) -> None:
         self._websocket = websocket
+        # TODO: Consider adding a max size to prevent unbounded growth if sender is overwhelmed
         self._send_queue: asyncio.Queue[bytes] = asyncio.Queue()
         self._sender_task = asyncio.create_task(
             self._sender(), name="starlette-ws-send"
