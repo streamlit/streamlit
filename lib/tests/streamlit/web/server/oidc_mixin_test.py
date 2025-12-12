@@ -76,7 +76,7 @@ class TornadoOAuth2AppTest(unittest.TestCase):
         )
 
         app.framework.set_state_data.assert_called_once_with(
-            None, "some_state", {"redirect_uri": None, "url": "https://example.com"}
+            {}, "some_state", {"redirect_uri": None, "url": "https://example.com"}
         )
 
     def test_authorize_redirect_error_no_state(self):
