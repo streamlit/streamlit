@@ -33,9 +33,9 @@ import { AppNodeVisitor } from "./AppNodeVisitor.interface"
  * // filteredNode will be undefined if the node should be filtered out
  * ```
  */
-export class FilterMainScriptElementsVisitor
-  implements AppNodeVisitor<AppNode | undefined>
-{
+export class FilterMainScriptElementsVisitor implements AppNodeVisitor<
+  AppNode | undefined
+> {
   private readonly mainScriptHash: string
 
   constructor(mainScriptHash: string) {
