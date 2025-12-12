@@ -115,10 +115,10 @@ def test_custom_light_theme(app: Page, assert_snapshot: ImageCompareFunction):
 
 
 @pytest.mark.usefixtures("configure_custom_light_theme")
-def test_custom_dark_theme_with_no_dark_configs(
+def test_custom_dark_theme_with_dark_configs(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
-    """Test that the custom dark theme is rendered correctly with no dark configs."""
+    """Test that the custom dark theme is rendered correctly with expected dark configs."""
     # Make sure that all elements are rendered and no skeletons are shown:
     expect_no_skeletons(app, timeout=25000)
 
@@ -143,7 +143,7 @@ def test_custom_dark_theme_with_no_dark_configs(
     settings_dialog.get_by_role("button", name="Close").click()
 
     assert_snapshot(
-        app, name="custom_dark_theme_no_dark_configs", image_threshold=0.0003
+        app, name="custom_dark_theme_with_dark_configs", image_threshold=0.0003
     )
 
 
