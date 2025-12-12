@@ -83,7 +83,9 @@ class TornadoOAuth2App(OAuth2Mixin, OpenIDMixin, BaseApp):
             "state": request_handler.get_argument("state"),
         }
 
-        session = None
+        # Tornado doesn't have sessions like Flask/Django, so we use an empty dict.
+        # Authlib 1.6.6+ always writes state to session even when cache is available.
+        session: dict[str, Any] = {}
 
         claims_options = kwargs.pop("claims_options", None)
         state_data = self.framework.get_state_data(session, params.get("state"))
@@ -100,11 +102,12 @@ class TornadoOAuth2App(OAuth2Mixin, OpenIDMixin, BaseApp):
 
     def _save_authorize_data(self, **kwargs: Any) -> None:
         """Authlib underlying uses the concept of "session" to store state data.
-        In Tornado, we don't have a session, so we use the framework's cache option.
+        In Tornado, we don't have a session, so we use an empty dict as a placeholder.
+        Authlib 1.6.6+ always writes state to session even when cache is available.
         """
         state = kwargs.pop("state", None)
         if state:
-            session = None
+            session: dict[str, Any] = {}
             self.framework.set_state_data(session, state, kwargs)
         else:
             raise RuntimeError("Missing state value")
