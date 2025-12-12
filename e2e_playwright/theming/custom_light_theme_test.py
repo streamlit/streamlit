@@ -52,7 +52,7 @@ def configure_custom_light_theme():
     os.environ["STREAMLIT_THEME_LIGHT_CODE_FONT_SIZE"] = "13px"
     os.environ["STREAMLIT_THEME_LIGHT_CODE_TEXT_COLOR"] = "#FF69B4"  # hot pink
     os.environ["STREAMLIT_THEME_LIGHT_LINK_COLOR"] = "#89CFF0"  # baby blue
-    # [ theme.dark] config to test theme persistance on reload
+    # [ theme.dark] config to test theme persistence on reload
     os.environ["STREAMLIT_THEME_DARK_PRIMARY_COLOR"] = "#228B22"
     os.environ["STREAMLIT_THEME_DARK_BORDER_COLOR"] = "#ff6700"  # hazard orange
     os.environ["STREAMLIT_THEME_DARK_CODE_FONT_SIZE"] = "13px"
