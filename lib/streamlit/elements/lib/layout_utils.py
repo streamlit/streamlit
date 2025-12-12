@@ -36,7 +36,9 @@ Width: TypeAlias = int | Literal["stretch", "content"]
 HeightWithoutContent: TypeAlias = int | Literal["stretch"]
 Height: TypeAlias = int | Literal["stretch", "content"]
 SpaceSize: TypeAlias = int | Literal["stretch", "small", "medium", "large"]
-Gap: TypeAlias = Literal["small", "medium", "large"]
+Gap: TypeAlias = Literal[
+    "xxsmall", "xsmall", "small", "medium", "large", "xlarge", "xxlarge"
+]
 HorizontalAlignment: TypeAlias = Literal["left", "center", "right", "distribute"]
 VerticalAlignment: TypeAlias = Literal["top", "center", "bottom", "distribute"]
 TextAlignment: TypeAlias = Literal["left", "center", "right", "justify"]
@@ -183,9 +185,13 @@ def get_height_config(height: Height | SpaceSize) -> HeightConfig:
 def get_gap_size(gap: str | None, element_type: str) -> GapSize.ValueType:
     """Convert a gap string or None to a GapSize proto value."""
     gap_mapping = {
+        "xxsmall": GapSize.XXSMALL,
+        "xsmall": GapSize.XSMALL,
         "small": GapSize.SMALL,
         "medium": GapSize.MEDIUM,
         "large": GapSize.LARGE,
+        "xlarge": GapSize.XLARGE,
+        "xxlarge": GapSize.XXLARGE,
     }
 
     if isinstance(gap, str):

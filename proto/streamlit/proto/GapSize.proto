@@ -27,6 +27,10 @@ enum GapSize {
   MEDIUM = 2;
   LARGE = 3;
   NONE = 4;
+  XXSMALL = 5;
+  XSMALL = 6;
+  XLARGE = 7;
+  XXLARGE = 8;
 }
 
 message GapConfig {

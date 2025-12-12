@@ -28,15 +28,26 @@ function translateGapWidth(
   gap: streamlit.GapSize | undefined,
   theme: EmotionTheme
 ): string {
-  let gapWidth = theme.spacing.lg
-  if (gap === streamlit.GapSize.MEDIUM) {
-    gapWidth = theme.spacing.threeXL
-  } else if (gap === streamlit.GapSize.LARGE) {
-    gapWidth = theme.spacing.fourXL
-  } else if (gap === streamlit.GapSize.NONE) {
-    gapWidth = theme.spacing.none
+  switch (gap) {
+    case streamlit.GapSize.XXSMALL:
+      return theme.spacing.twoXS
+    case streamlit.GapSize.XSMALL:
+      return theme.spacing.sm
+    case streamlit.GapSize.SMALL:
+      return theme.spacing.lg
+    case streamlit.GapSize.MEDIUM:
+      return theme.spacing.threeXL
+    case streamlit.GapSize.LARGE:
+      return theme.spacing.fourXL
+    case streamlit.GapSize.XLARGE:
+      return theme.spacing.fiveXL
+    case streamlit.GapSize.XXLARGE:
+      return theme.spacing.sixXL
+    case streamlit.GapSize.NONE:
+      return theme.spacing.none
+    default:
+      return theme.spacing.lg
   }
-  return gapWidth
 }
 
 export interface StyledElementContainerProps {
