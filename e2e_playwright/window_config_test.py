@@ -19,9 +19,7 @@ These tests verify that:
 2. Modifications to window.__streamlit after load do NOT affect the app (security)
 """
 
-from typing import Any
-
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Page, Request, expect
 
 from e2e_playwright.conftest import (
     ImageCompareFunction,
@@ -356,7 +354,7 @@ def test_window_config_download_url(app: Page):
     # This will catch the media/download URL that gets accessed
     captured_urls = []
 
-    def capture_request(request: Any) -> None:
+    def capture_request(request: Request) -> None:
         url = request.url
         # Capture any requests to media endpoints or download URLs
         if (
