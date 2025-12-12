@@ -30,9 +30,9 @@ import { AppNodeVisitor } from "./AppNodeVisitor.interface"
  * const foundNode = rootNode.accept(visitor)
  * ```
  */
-export class GetNodeByDeltaPathVisitor
-  implements AppNodeVisitor<AppNode | undefined>
-{
+export class GetNodeByDeltaPathVisitor implements AppNodeVisitor<
+  AppNode | undefined
+> {
   private readonly deltaPath: number[]
 
   constructor(deltaPath: number[]) {
