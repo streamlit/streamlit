@@ -96,17 +96,21 @@ def _bind_socket(address: str, port: int, backlog: int) -> socket.socket:
         family = socket.AF_INET
 
     sock = socket.socket(family=family)
-    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    try:
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
-    if family == socket.AF_INET6:
-        # Allow both IPv4 and IPv6 clients when binding to "::".
-        sock.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 0)
+        if family == socket.AF_INET6:
+            # Allow both IPv4 and IPv6 clients when binding to "::".
+            sock.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 0)
 
-    sock.bind((address, port))
-    sock.listen(backlog)
-    sock.setblocking(False)
-    sock.set_inheritable(True)
-    return sock
+        sock.bind((address, port))
+        sock.listen(backlog)
+        sock.setblocking(False)
+        sock.set_inheritable(True)
+        return sock
+    except BaseException:
+        sock.close()
+        raise
 
 
 class StarletteServer:

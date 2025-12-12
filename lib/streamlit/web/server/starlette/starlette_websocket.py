@@ -19,7 +19,7 @@ from __future__ import annotations
 import asyncio
 import json
 from contextlib import suppress
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Final
 from urllib.parse import urlparse
 
 from streamlit import config
@@ -41,6 +41,13 @@ if TYPE_CHECKING:
     from streamlit.runtime import Runtime
 
 _LOGGER = get_logger(__name__)
+
+# Max pending messages per client in the send queue before disconnecting.
+# Each connected client has its own queue; under normal conditions the queue drains
+# continuously and rarely exceeds single digits. This limit protects against slow
+# clients (bad network, paused tabs) causing unbounded server memory growth.
+# With N concurrent users, worst case memory is N * _MAX_SEND_QUEUE_SIZE * msg_size.
+_MAX_SEND_QUEUE_SIZE: Final = 500
 
 
 def _parse_subprotocols(
@@ -145,8 +152,11 @@ class StarletteSessionClient(SessionClient):
 
     def __init__(self, websocket: WebSocket) -> None:
         self._websocket = websocket
-        # TODO: Consider adding a max size to prevent unbounded growth if sender is overwhelmed
-        self._send_queue: asyncio.Queue[bytes] = asyncio.Queue()
+        # The queue bridges sync write_forward_msg calls to async WebSocket sends.
+        # Overwhelmed clients get disconnected via SessionClientDisconnectedError.
+        self._send_queue: asyncio.Queue[bytes] = asyncio.Queue(
+            maxsize=_MAX_SEND_QUEUE_SIZE
+        )
         self._sender_task = asyncio.create_task(
             self._sender(), name="starlette-ws-send"
         )

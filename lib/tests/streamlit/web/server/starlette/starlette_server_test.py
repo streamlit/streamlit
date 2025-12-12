@@ -77,6 +77,26 @@ class TestBindSocket:
 
             mock_socket_cls.assert_called_once_with(family=socket.AF_INET6)
 
+    def test_closes_socket_on_bind_failure(self) -> None:
+        """Test that socket is closed when bind raises an exception."""
+        mock_sock = mock.MagicMock()
+        mock_sock.bind.side_effect = OSError(errno.EADDRINUSE, "Address already in use")
+        with patch("socket.socket", return_value=mock_sock):
+            with pytest.raises(OSError, match="Address already in use"):
+                _bind_socket("127.0.0.1", 8501, 100)
+
+            mock_sock.close.assert_called_once()
+
+    def test_closes_socket_on_listen_failure(self) -> None:
+        """Test that socket is closed when listen raises an exception."""
+        mock_sock = mock.MagicMock()
+        mock_sock.listen.side_effect = OSError("Listen failed")
+        with patch("socket.socket", return_value=mock_sock):
+            with pytest.raises(OSError, match="Listen failed"):
+                _bind_socket("127.0.0.1", 8501, 100)
+
+            mock_sock.close.assert_called_once()
+
 
 class TestGetWebsocketSettings:
     """Tests for _get_websocket_settings function."""
