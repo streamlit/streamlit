@@ -1340,7 +1340,7 @@ class ButtonMixin:
             )
 
         button_proto.label_visibility.value = get_label_visibility_proto_value(
-            label_visibility
+            cast("LabelVisibility", label_visibility)
         )
 
         serde = ButtonSerde()
