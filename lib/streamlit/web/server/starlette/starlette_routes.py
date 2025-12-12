@@ -177,11 +177,6 @@ def create_health_routes(runtime: Runtime, base_url: str | None) -> list[Any]:
         response.headers["Cache-Control"] = "no-cache"
         await _set_cors_headers(request, response)
         _ensure_xsrf_cookie(request, response)
-        if "_stcore/" not in request.url.path:
-            response.headers["Deprecation"] = "true"
-            response.headers["Link"] = (
-                f'<{_with_base(ROUTE_HEALTH, base_url)}>; rel="alternate"'
-            )
         return response
 
     async def _health_options(request: Request) -> Response:
@@ -216,11 +211,6 @@ def create_script_health_routes(runtime: Runtime, base_url: str | None) -> list[
         response.headers["Cache-Control"] = "no-cache"
         await _set_cors_headers(request, response)
         _ensure_xsrf_cookie(request, response)
-        if "_stcore/" not in request.url.path:
-            response.headers["Deprecation"] = "true"
-            response.headers["Link"] = (
-                f'<{_with_base(ROUTE_SCRIPT_HEALTH, base_url)}>; rel="alternate"'
-            )
         return response
 
     async def _health_options(request: Request) -> Response:
@@ -260,11 +250,6 @@ def create_metrics_routes(runtime: Runtime, base_url: str | None) -> list[Any]:
                 text, media_type="application/openmetrics-text"
             )
         await _set_cors_headers(request, response)
-        if "_stcore/" not in request.url.path:
-            response.headers["Deprecation"] = "true"
-            response.headers["Link"] = (
-                f'<{_with_base(ROUTE_METRICS, base_url)}>; rel="alternate"'
-            )
         return response
 
     return [
@@ -401,6 +386,27 @@ def create_media_routes(
     ]
 
 
+def _validate_xsrf_token(supplied_token: str | None, xsrf_cookie: str | None) -> bool:
+    """Validate the XSRF token from the request header against the cookie.
+
+    This mirrors Tornado's XSRF validation logic to ensure compatibility.
+    """
+    import hmac
+
+    if not supplied_token or not xsrf_cookie:
+        return False
+
+    supplied_token_bytes, _ = starlette_app_utils.decode_xsrf_token_string(
+        supplied_token
+    )
+    expected_token_bytes, _ = starlette_app_utils.decode_xsrf_token_string(xsrf_cookie)
+
+    if not supplied_token_bytes or not expected_token_bytes:
+        return False
+
+    return hmac.compare_digest(supplied_token_bytes, expected_token_bytes)
+
+
 def create_upload_routes(
     runtime: Runtime,
     upload_mgr: MemoryUploadedFileManager,
@@ -411,6 +417,21 @@ def create_upload_routes(
     from starlette.exceptions import HTTPException
     from starlette.responses import Response
     from starlette.routing import Route
+
+    def _check_xsrf(request: Request) -> None:
+        """Validate XSRF token for non-safe HTTP methods.
+
+        Raises HTTPException with 403 if XSRF is enabled and validation fails.
+        This mirrors Tornado's automatic XSRF protection for non-GET requests.
+        """
+        if not is_xsrf_enabled():
+            return
+
+        xsrf_header = request.headers.get("X-Xsrftoken")
+        xsrf_cookie = request.cookies.get("_streamlit_xsrf")
+
+        if not _validate_xsrf_token(xsrf_header, xsrf_cookie):
+            raise HTTPException(status_code=403, detail="XSRF token missing or invalid")
 
     async def _set_upload_headers(request: Request, response: Response) -> None:
         response.headers["Access-Control-Allow-Methods"] = "PUT, OPTIONS, DELETE"
@@ -433,6 +454,8 @@ def create_upload_routes(
         return response
 
     async def _upload_put(request: Request) -> Response:
+        _check_xsrf(request)
+
         session_id = request.path_params["session_id"]
         file_id = request.path_params["file_id"]
 
@@ -482,6 +505,8 @@ def create_upload_routes(
         return response
 
     async def _upload_delete(request: Request) -> Response:
+        _check_xsrf(request)
+
         session_id = request.path_params["session_id"]
         file_id = request.path_params["file_id"]
 
@@ -532,10 +557,9 @@ def create_component_routes(
         if component_root is None:
             raise HTTPException(status_code=404, detail="Component not found")
 
-        component_root = os.path.realpath(component_root)
-        abspath = os.path.normpath(os.path.join(component_root, filename))
-
-        if os.path.commonpath([component_root, abspath]) != component_root:
+        # Use build_safe_abspath to properly resolve symlinks and prevent traversal
+        abspath = build_safe_abspath(component_root, filename)
+        if abspath is None:
             raise HTTPException(status_code=403, detail="Forbidden")
 
         try:

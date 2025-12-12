@@ -147,7 +147,12 @@ def starlette_client(tmp_path: Path) -> Iterator[tuple[TestClient, _DummyRuntime
     (component_dir / "bundle.js").write_text("console.log('component');")
 
     with patch_config_options(
-        {"server.baseUrlPath": "", "global.developmentMode": False}
+        {
+            "server.baseUrlPath": "",
+            "global.developmentMode": False,
+            # Disable XSRF for basic tests (matches Tornado test behavior)
+            "server.enableXsrfProtection": False,
+        }
     ):
         monkeypatch = pytest.MonkeyPatch()
         monkeypatch.setattr(file_util, "get_static_dir", lambda: str(static_dir))
@@ -481,6 +486,75 @@ def test_upload_delete_removes_file(
     response = client.delete("/_stcore/upload_file/session123/fileid")
     assert response.status_code == 204
     assert "fileid" not in runtime.uploaded_file_mgr.file_storage["session123"]
+
+
+@patch_config_options(
+    {"server.enableXsrfProtection": True, "global.developmentMode": False}
+)
+def test_upload_rejects_without_xsrf_token(tmp_path: Path) -> None:
+    """Test that uploads are rejected without a valid XSRF token when protection is enabled."""
+    component_dir = tmp_path / "component"
+    component_dir.mkdir()
+    (component_dir / "index.html").write_text("component")
+
+    static_dir = tmp_path / "static"
+    static_dir.mkdir()
+    monkeypatch = pytest.MonkeyPatch()
+    monkeypatch.setattr(file_util, "get_static_dir", lambda: str(static_dir))
+
+    runtime = _DummyRuntime(component_dir)
+    app = create_starlette_app(runtime)
+    client = TestClient(app)
+
+    # PUT without XSRF token should fail
+    response = client.put(
+        "_stcore/upload_file/session123/fileid",
+        files={"file": ("foo.txt", b"payload", "text/plain")},
+    )
+    assert response.status_code == 403
+    assert "XSRF" in response.text
+
+    # DELETE without XSRF token should fail
+    response = client.delete("_stcore/upload_file/session123/fileid")
+    assert response.status_code == 403
+    assert "XSRF" in response.text
+
+    monkeypatch.undo()
+
+
+@patch_config_options(
+    {"server.enableXsrfProtection": True, "global.developmentMode": False}
+)
+def test_upload_accepts_with_valid_xsrf_token(tmp_path: Path) -> None:
+    """Test that uploads succeed with a valid XSRF token when protection is enabled."""
+    from streamlit.web.server.starlette import starlette_app_utils
+
+    component_dir = tmp_path / "component"
+    component_dir.mkdir()
+    (component_dir / "index.html").write_text("component")
+
+    static_dir = tmp_path / "static"
+    static_dir.mkdir()
+    monkeypatch = pytest.MonkeyPatch()
+    monkeypatch.setattr(file_util, "get_static_dir", lambda: str(static_dir))
+
+    runtime = _DummyRuntime(component_dir)
+    app = create_starlette_app(runtime)
+    client = TestClient(app)
+
+    # Generate a valid XSRF token
+    xsrf_token = starlette_app_utils.generate_xsrf_token_string()
+    client.cookies.set("_streamlit_xsrf", xsrf_token)
+
+    # PUT with valid XSRF token should succeed
+    response = client.put(
+        "_stcore/upload_file/session123/fileid",
+        files={"file": ("foo.txt", b"payload", "text/plain")},
+        headers={"X-Xsrftoken": xsrf_token},
+    )
+    assert response.status_code == 204
+
+    monkeypatch.undo()
 
 
 @patch_config_options({"global.developmentMode": False})

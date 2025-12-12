@@ -148,6 +148,15 @@ class StarletteServer:
 
         cert_file = config.get_option("server.sslCertFile")
         key_file = config.get_option("server.sslKeyFile")
+
+        # Validate SSL options: both must be set together or neither
+        if bool(cert_file) != bool(key_file):
+            _LOGGER.error(
+                "Options 'server.sslCertFile' and 'server.sslKeyFile' must "
+                "be set together. Set missing options or delete existing options."
+            )
+            sys.exit(1)
+
         ws_ping_interval, ws_ping_timeout = _get_websocket_settings()
         ws_max_size = get_max_message_size_bytes()
         ws_per_message_deflate = config.get_option("server.enableWebsocketCompression")
