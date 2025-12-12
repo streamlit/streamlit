@@ -53,7 +53,12 @@ class TornadoIntegrationStateDataTest(unittest.TestCase):
         assert result == {"redirect_uri": "http://example.com"}
 
     def test_get_state_data_returns_none_without_cache(self) -> None:
-        """Verify get_state_data returns None when no cache is configured."""
+        """Verify get_state_data returns None when no cache is configured.
+
+        This is a defensive programming test for the edge case where the
+        TornadoIntegration is instantiated without a cache. In normal Streamlit
+        operation, a cache is always provided.
+        """
         integration = TornadoIntegration("google", cache=None)
 
         session: dict[str, object] = {}
@@ -62,7 +67,13 @@ class TornadoIntegrationStateDataTest(unittest.TestCase):
         assert result is None
 
     def test_get_state_data_returns_none_for_missing_state(self) -> None:
-        """Verify get_state_data returns None when state doesn't exist in cache."""
+        """Verify get_state_data returns None when state doesn't exist in cache.
+
+        This covers scenarios like:
+        - OAuth state expired and was cleaned up
+        - User navigates back/forward in browser with a stale callback URL
+        - Replayed OAuth callback requests
+        """
         cache = AuthCache()
         integration = TornadoIntegration("google", cache=cache)
 
