@@ -83,7 +83,8 @@ class TornadoOAuth2App(OAuth2Mixin, OpenIDMixin, BaseApp):
             "state": request_handler.get_argument("state"),
         }
 
-        # Authlib 1.6.6+ always writes state to session even when cache is available. We also override state access to use the cache instead of session in `TornadoIntegration`.
+        # Authlib 1.6.6+ always writes state to session even when cache is available.
+        # We also override state access to use the cache instead of session in `TornadoIntegration`.
         session: dict[str, Any] = {}
 
         claims_options = kwargs.pop("claims_options", None)
@@ -108,7 +109,8 @@ class TornadoOAuth2App(OAuth2Mixin, OpenIDMixin, BaseApp):
 
     def _save_authorize_data(self, **kwargs: Any) -> None:
         """Authlib underlying uses the concept of "session" to store state data.
-        In Tornado, we don't have a session, so we use an empty dict as a placeholder. We also override state access to use the cache instead of session in `TornadoIntegration`.
+        In Tornado, we don't have a session, so we use an empty dict as a placeholder.
+        We also override state access to use the cache instead of session in `TornadoIntegration`.
         Authlib 1.6.6+ always writes state to session even when cache is available.
         """
         state = kwargs.pop("state", None)

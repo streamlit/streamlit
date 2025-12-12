@@ -32,9 +32,9 @@ if TYPE_CHECKING:
 class TornadoIntegration(FrameworkIntegration):
     """Authlib framework integration for Tornado.
 
-    Authlib always tracks state in sessions (post 1.6.6+), but Tornado doesn't have persistent sessions like Flask/Django, so we override
-    the state data methods to use only the cache. This is compatible with both
-    older authlib versions and authlib 1.6.6+.
+    Authlib always tracks state in sessions (post 1.6.6+), but Tornado doesn't have persistent
+    sessions like Flask/Django, so we override the state data methods to use only the cache.
+    This is compatible with both older authlib versions and authlib 1.6.6+.
     """
 
     def _get_cache_data_safe(self, key: str) -> dict[str, Any] | None:
