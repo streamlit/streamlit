@@ -31,7 +31,6 @@ def is_expected_error(
     msg: ConsoleMessage, browser_name: str, *, uses_csp: bool
 ) -> bool:
     # Mapbox error is expected and should be ignored:
-
     if (
         msg.text == "Failed to load resource: net::ERR_CONNECTION_REFUSED"
         and "events.mapbox.com" in msg.location["url"]
