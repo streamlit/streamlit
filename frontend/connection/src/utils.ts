@@ -20,25 +20,36 @@ const FINAL_SLASH_RE = /\/+$/
 const INITIAL_SLASH_RE = /^\/+/
 
 /**
- * Returns true when host-specific fast-path behavior for establishing the
- * initial websocket connection should be enabled.
+ * Returns true when host has provided sufficient config properties for establishing the
+ * initial websocket connection without waiting for the host-config endpoint response.
  *
- * Fast-path mode relies on minimal host configuration provided via
- * window.__streamlit (StreamlitConfig) instead of waiting for the host-config endpoint.
+ * This bypass relies on minimal host configuration provided via window.__streamlit (StreamlitConfig)
  *
- * Required fields in HOST_CONFIG:
- * - allowedOrigins: non-empty array of allowed origins
- * - useExternalAuthToken: boolean (true or false)
+ * Required fields:
+ * - BACKEND_BASE_URL: string
+ * - HOST_CONFIG.allowedOrigins: non-empty array of allowed origins
+ * - HOST_CONFIG.useExternalAuthToken: boolean (true or false)
  */
-export function isHostConfigFastPathEnabled(): boolean {
-  const initialConfig = StreamlitConfig.HOST_CONFIG
+export function isHostConfigBypassEnabled(): boolean {
+  const initialHostConfig = StreamlitConfig.HOST_CONFIG
 
-  return Boolean(
-    StreamlitConfig.BACKEND_BASE_URL &&
-      initialConfig &&
-      Array.isArray(initialConfig.allowedOrigins) &&
-      initialConfig.allowedOrigins.length > 0 &&
-      typeof initialConfig.useExternalAuthToken === "boolean"
+  if (!initialHostConfig) {
+    return false
+  }
+
+  const { allowedOrigins, useExternalAuthToken } = initialHostConfig
+
+  // Validate required fields
+  const hasValidBackendBaseUrl = Boolean(StreamlitConfig.BACKEND_BASE_URL)
+  const hasValidAllowedOrigins =
+    Array.isArray(allowedOrigins) && allowedOrigins.length > 0
+  const hasValidUseExternalAuthToken =
+    typeof useExternalAuthToken === "boolean"
+
+  return (
+    hasValidBackendBaseUrl &&
+    hasValidAllowedOrigins &&
+    hasValidUseExternalAuthToken
   )
 }
 

@@ -106,13 +106,13 @@ export interface Args {
   onHostConfigResp: (resp: IHostConfigResponse) => void
 
   /**
-   * Enables host-specific fast-path behavior for establishing the initial
-   * websocket connection. When true, the connection state machine will
-   * connect to the websocket immediately without waiting for the initial
-   * ping cycle to complete. Health and host-config pings continue to run
+   * Enables host to bypass waiting for health/host-config endpoint responses
+   * in establishing the initial websocket connection. When true, the connection
+   * state machine will connect to the websocket immediately without waiting for
+   * the initial ping cycle to complete. Health and host-config pings continue to run
    * asynchronously in the background for error handling and configuration.
    */
-  enableFastPath?: boolean
+  enableBypass?: boolean
 }
 
 interface MessageQueue {
@@ -298,8 +298,8 @@ export class WebsocketConnection {
     switch (this.state) {
       case ConnectionState.INITIAL:
         if (event === "INITIALIZED") {
-          if (this.args.enableFastPath) {
-            // Fast-path: Start connecting to the websocket immediately while
+          if (this.args.enableBypass) {
+            // Bypass: Start connecting to the websocket immediately while
             // running health and host-config pings in parallel (rather than
             // sequentially). Both must succeed, but they don't gate each other.
             // This reduces latency while maintaining full error handling and

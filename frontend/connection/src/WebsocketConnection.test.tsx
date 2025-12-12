@@ -230,14 +230,14 @@ describe("doInitPings", () => {
     globalThis.__mockStreamlitConfig = {}
   })
 
-  it("uses fast-path to connect immediately when enableFastPath is true", () => {
+  it("uses fast-path to connect immediately when enableBypass is true", () => {
     const fetchMock = createFetchMock()
     globalThis.fetch = fetchMock
 
-    const args = createMockArgs({ enableFastPath: true })
+    const args = createMockArgs({ enableBypass: true })
     const ws = new WebsocketConnection(args)
 
-    // Fast-path should transition directly to CONNECTING and attempt to
+    // Bypass should transition directly to CONNECTING and attempt to
     // create the websocket without waiting for SERVER_PING_SUCCEEDED.
     expect(
       args.onConnectionStateChange as ReturnType<typeof vi.fn>
@@ -1241,10 +1241,10 @@ describe("WebsocketConnection FSM fast-path behavior", () => {
     window.__streamlit = undefined
   })
 
-  it("uses default path (PINGING_SERVER) when enableFastPath is false", () => {
+  it("uses default path (PINGING_SERVER) when enableBypass is false", () => {
     globalThis.fetch = createFetchMock()
 
-    const args = createMockArgs({ enableFastPath: false })
+    const args = createMockArgs({ enableBypass: false })
     const ws = new WebsocketConnection(args)
 
     // Should transition to PINGING_SERVER, not CONNECTING
@@ -1255,10 +1255,10 @@ describe("WebsocketConnection FSM fast-path behavior", () => {
     ws.disconnect()
   })
 
-  it("uses default path when enableFastPath is undefined", () => {
+  it("uses default path when enableBypass is undefined", () => {
     globalThis.fetch = createFetchMock()
 
-    const args = createMockArgs({ enableFastPath: undefined })
+    const args = createMockArgs({ enableBypass: undefined })
     const ws = new WebsocketConnection(args)
 
     // Should transition to PINGING_SERVER (default behavior)
@@ -1275,10 +1275,10 @@ describe("WebsocketConnection FSM fast-path behavior", () => {
       .mockResolvedValueOnce(createSuccessResponse(MOCK_HEALTH_RESPONSE))
       .mockResolvedValueOnce(createSuccessResponse(MOCK_HOST_CONFIG_RESPONSE))
 
-    const args = createMockArgs({ enableFastPath: true })
+    const args = createMockArgs({ enableBypass: true })
     const ws = new WebsocketConnection(args)
 
-    // Fast-path: should be in CONNECTING immediately
+    // Bypass: should be in CONNECTING immediately
     expect(
       args.onConnectionStateChange as ReturnType<typeof vi.fn>
     ).toHaveBeenCalledWith(ConnectionState.CONNECTING, undefined)
@@ -1299,7 +1299,7 @@ describe("WebsocketConnection FSM fast-path behavior", () => {
   it("does not transition to PINGING_SERVER in fast-path mode", () => {
     globalThis.fetch = createFetchMock()
 
-    const args = createMockArgs({ enableFastPath: true })
+    const args = createMockArgs({ enableBypass: true })
     const ws = new WebsocketConnection(args)
 
     const stateChangeCalls = (
@@ -1321,7 +1321,7 @@ describe("WebsocketConnection FSM fast-path behavior", () => {
       .fn()
       .mockRejectedValue(new TypeError("Network error"))
 
-    const args = createMockArgs({ enableFastPath: true })
+    const args = createMockArgs({ enableBypass: true })
     const ws = new WebsocketConnection(args)
 
     // Should start in CONNECTING
@@ -1361,7 +1361,7 @@ describe("WebsocketConnection FSM fast-path behavior", () => {
       .mockResolvedValueOnce(createSuccessResponse(MOCK_HEALTH_RESPONSE))
       .mockResolvedValueOnce(createSuccessResponse(MOCK_HOST_CONFIG_RESPONSE))
 
-    const args = createMockArgs({ enableFastPath: true })
+    const args = createMockArgs({ enableBypass: true })
     const ws = new WebsocketConnection(args)
 
     // Allow initial failure and retry
@@ -1381,7 +1381,7 @@ describe("WebsocketConnection FSM fast-path behavior", () => {
       .mockResolvedValueOnce(createSuccessResponse(MOCK_HEALTH_RESPONSE))
       .mockResolvedValueOnce(createSuccessResponse(MOCK_HOST_CONFIG_RESPONSE))
 
-    const args = createMockArgs({ enableFastPath: true })
+    const args = createMockArgs({ enableBypass: true })
     const ws = new WebsocketConnection(args)
 
     // Allow background pings to complete
@@ -1419,7 +1419,7 @@ describe("WebsocketConnection FSM fast-path behavior", () => {
           )
       )
 
-    const args = createMockArgs({ enableFastPath: true })
+    const args = createMockArgs({ enableBypass: true })
     const ws = new WebsocketConnection(args)
 
     // Start background pings

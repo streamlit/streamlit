@@ -21,7 +21,7 @@ import {
   FetchError,
   fetchWithTimeout,
   getPossibleBaseUris,
-  isHostConfigFastPathEnabled,
+  isHostConfigBypassEnabled,
   parseUriIntoBaseParts,
   serializeForDisplay,
 } from "./utils"
@@ -576,14 +576,14 @@ describe("fetchWithTimeout", () => {
   })
 })
 
-describe("isHostConfigFastPathEnabled", () => {
+describe("isHostConfigBypassEnabled", () => {
   afterEach(() => {
     globalThis.__mockStreamlitConfig = {}
   })
 
   it("returns false when StreamlitConfig is empty", () => {
     globalThis.__mockStreamlitConfig = {}
-    expect(isHostConfigFastPathEnabled()).toBe(false)
+    expect(isHostConfigBypassEnabled()).toBe(false)
   })
 
   it("returns false when BACKEND_BASE_URL is missing", () => {
@@ -593,14 +593,14 @@ describe("isHostConfigFastPathEnabled", () => {
         useExternalAuthToken: true,
       },
     }
-    expect(isHostConfigFastPathEnabled()).toBe(false)
+    expect(isHostConfigBypassEnabled()).toBe(false)
   })
 
   it("returns false when HOST_CONFIG is missing", () => {
     globalThis.__mockStreamlitConfig = {
       BACKEND_BASE_URL: "https://backend.example.com",
     }
-    expect(isHostConfigFastPathEnabled()).toBe(false)
+    expect(isHostConfigBypassEnabled()).toBe(false)
   })
 
   it("returns false when allowedOrigins is missing", () => {
@@ -610,7 +610,7 @@ describe("isHostConfigFastPathEnabled", () => {
         useExternalAuthToken: true,
       },
     }
-    expect(isHostConfigFastPathEnabled()).toBe(false)
+    expect(isHostConfigBypassEnabled()).toBe(false)
   })
 
   it("returns false when allowedOrigins is empty array", () => {
@@ -621,7 +621,7 @@ describe("isHostConfigFastPathEnabled", () => {
         useExternalAuthToken: true,
       },
     }
-    expect(isHostConfigFastPathEnabled()).toBe(false)
+    expect(isHostConfigBypassEnabled()).toBe(false)
   })
 
   it("returns false when allowedOrigins is not an array", () => {
@@ -633,7 +633,7 @@ describe("isHostConfigFastPathEnabled", () => {
         useExternalAuthToken: true,
       },
     }
-    expect(isHostConfigFastPathEnabled()).toBe(false)
+    expect(isHostConfigBypassEnabled()).toBe(false)
   })
 
   it("returns false when useExternalAuthToken is missing", () => {
@@ -643,7 +643,7 @@ describe("isHostConfigFastPathEnabled", () => {
         allowedOrigins: ["https://example.com"],
       },
     }
-    expect(isHostConfigFastPathEnabled()).toBe(false)
+    expect(isHostConfigBypassEnabled()).toBe(false)
   })
 
   it("returns true when all required fields are present with useExternalAuthToken=true", () => {
@@ -654,7 +654,7 @@ describe("isHostConfigFastPathEnabled", () => {
         useExternalAuthToken: true,
       },
     }
-    expect(isHostConfigFastPathEnabled()).toBe(true)
+    expect(isHostConfigBypassEnabled()).toBe(true)
   })
 
   it("returns true when all required fields are present with useExternalAuthToken=false", () => {
@@ -665,7 +665,7 @@ describe("isHostConfigFastPathEnabled", () => {
         useExternalAuthToken: false,
       },
     }
-    expect(isHostConfigFastPathEnabled()).toBe(true)
+    expect(isHostConfigBypassEnabled()).toBe(true)
   })
 
   it("returns true with multiple allowed origins", () => {
@@ -676,7 +676,7 @@ describe("isHostConfigFastPathEnabled", () => {
         useExternalAuthToken: true,
       },
     }
-    expect(isHostConfigFastPathEnabled()).toBe(true)
+    expect(isHostConfigBypassEnabled()).toBe(true)
   })
 
   it("returns true when additional HOST_CONFIG fields are present", () => {
@@ -688,6 +688,6 @@ describe("isHostConfigFastPathEnabled", () => {
         metricsUrl: "postMessage",
       },
     }
-    expect(isHostConfigFastPathEnabled()).toBe(true)
+    expect(isHostConfigBypassEnabled()).toBe(true)
   })
 })

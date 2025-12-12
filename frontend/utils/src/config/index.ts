@@ -24,8 +24,7 @@ import { ICustomThemeConfig } from "@streamlit/protobuf"
  * websocket connection and host communication without waiting for the
  * full host-config endpoint response.
  *
- * Note: The full host config (IHostConfigResponse) includes additional
- * fields like mapboxToken, disableFullscreenMode, etc.
+ * Note: The full host config (IHostConfigResponse) includes additional fields
  */
 export interface MinimalHostConfig {
   /**
