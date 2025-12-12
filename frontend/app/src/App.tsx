@@ -2228,8 +2228,8 @@ export class App extends PureComponent<Props, State> {
     const { menuItems } = this.state
     return Boolean(
       menuItems?.aboutSectionMd ||
-        (menuItems?.getHelpUrl && !menuItems?.hideGetHelp) ||
-        (menuItems?.reportABugUrl && !menuItems?.hideReportABug)
+      (menuItems?.getHelpUrl && !menuItems?.hideGetHelp) ||
+      (menuItems?.reportABugUrl && !menuItems?.hideReportABug)
     )
   }
 

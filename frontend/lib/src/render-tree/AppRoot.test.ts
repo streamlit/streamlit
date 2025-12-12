@@ -73,9 +73,10 @@ describe("AppRoot", () => {
       const empty = AppRoot.empty(FAKE_SCRIPT_HASH)
 
       expect(empty.main.children.length).toBe(1)
-      const child = GetNodeByDeltaPathVisitor.getNodeAtPath(empty.main, [
-        0,
-      ]) as ElementNode
+      const child = GetNodeByDeltaPathVisitor.getNodeAtPath(
+        empty.main,
+        [0]
+      ) as ElementNode
       expect(child.element.skeleton).not.toBeNull()
 
       expect(empty.sidebar.isEmpty).toBe(true)
@@ -120,9 +121,10 @@ describe("AppRoot", () => {
       const empty = AppRoot.empty(FAKE_SCRIPT_HASH)
 
       expect(empty.main.children.length).toBe(1)
-      const child = GetNodeByDeltaPathVisitor.getNodeAtPath(empty.main, [
-        0,
-      ]) as ElementNode
+      const child = GetNodeByDeltaPathVisitor.getNodeAtPath(
+        empty.main,
+        [0]
+      ) as ElementNode
       expect(child.element.alert).toBeDefined()
 
       expect(empty.sidebar.isEmpty).toBe(true)
@@ -138,9 +140,10 @@ describe("AppRoot", () => {
       const empty = AppRoot.empty(FAKE_SCRIPT_HASH)
 
       expect(empty.main.children.length).toBe(1)
-      const child = GetNodeByDeltaPathVisitor.getNodeAtPath(empty.main, [
-        0,
-      ]) as ElementNode
+      const child = GetNodeByDeltaPathVisitor.getNodeAtPath(
+        empty.main,
+        [0]
+      ) as ElementNode
       expect(child.element.skeleton).not.toBeNull()
 
       expect(empty.sidebar.isEmpty).toBe(true)
@@ -795,9 +798,10 @@ describe("AppRoot", () => {
       ).toBeInstanceOf(BlockNode)
       expect(
         (
-          GetNodeByDeltaPathVisitor.getNodeAtPath(pruned.main, [
-            0,
-          ]) as BlockNode
+          GetNodeByDeltaPathVisitor.getNodeAtPath(
+            pruned.main,
+            [0]
+          ) as BlockNode
         ).children
       ).toHaveLength(3)
       expect(
@@ -815,9 +819,10 @@ describe("AppRoot", () => {
       ).toBeInstanceOf(BlockNode)
       expect(
         (
-          GetNodeByDeltaPathVisitor.getNodeAtPath(pruned.main, [
-            1,
-          ]) as BlockNode
+          GetNodeByDeltaPathVisitor.getNodeAtPath(
+            pruned.main,
+            [1]
+          ) as BlockNode
         ).children
       ).toHaveLength(1)
       expect(
@@ -829,9 +834,10 @@ describe("AppRoot", () => {
       ).toBeInstanceOf(BlockNode)
       expect(
         (
-          GetNodeByDeltaPathVisitor.getNodeAtPath(pruned.main, [
-            2,
-          ]) as BlockNode
+          GetNodeByDeltaPathVisitor.getNodeAtPath(
+            pruned.main,
+            [2]
+          ) as BlockNode
         ).children
       ).toHaveLength(1)
       expect(
@@ -893,9 +899,10 @@ describe("AppRoot", () => {
 
       expect(
         (
-          GetNodeByDeltaPathVisitor.getNodeAtPath(newRoot.main, [
-            1,
-          ]) as BlockNode
+          GetNodeByDeltaPathVisitor.getNodeAtPath(
+            newRoot.main,
+            [1]
+          ) as BlockNode
         ).children
       ).toHaveLength(4)
 
@@ -908,9 +915,10 @@ describe("AppRoot", () => {
       ).toBeInstanceOf(BlockNode)
       expect(
         (
-          GetNodeByDeltaPathVisitor.getNodeAtPath(pruned.main, [
-            0,
-          ]) as BlockNode
+          GetNodeByDeltaPathVisitor.getNodeAtPath(
+            pruned.main,
+            [0]
+          ) as BlockNode
         ).children
       ).toHaveLength(1)
       expect(
@@ -919,9 +927,10 @@ describe("AppRoot", () => {
       // the stale nested fragment child should have been pruned
       expect(
         (
-          GetNodeByDeltaPathVisitor.getNodeAtPath(pruned.main, [
-            1,
-          ]) as BlockNode
+          GetNodeByDeltaPathVisitor.getNodeAtPath(
+            pruned.main,
+            [1]
+          ) as BlockNode
         ).children
       ).toHaveLength(3)
     })
@@ -983,9 +992,10 @@ describe("AppRoot", () => {
       expect(ROOT.getElements()).toEqual(
         new Set([
           (
-            GetNodeByDeltaPathVisitor.getNodeAtPath(ROOT.main, [
-              0,
-            ]) as ElementNode
+            GetNodeByDeltaPathVisitor.getNodeAtPath(
+              ROOT.main,
+              [0]
+            ) as ElementNode
           ).element,
           (
             GetNodeByDeltaPathVisitor.getNodeAtPath(

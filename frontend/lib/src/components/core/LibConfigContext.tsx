@@ -52,8 +52,10 @@ import { LibConfig } from "@streamlit/connection"
  * Note: `disableFullscreenMode` is intentionally omitted from LibConfig and passed
  * as a prop instead for better performance (avoids unnecessary re-renders).
  */
-export interface LibConfigContextProps
-  extends Omit<LibConfig, "disableFullscreenMode"> {
+export interface LibConfigContextProps extends Omit<
+  LibConfig,
+  "disableFullscreenMode"
+> {
   /**
    * The current locale of the app. Defaults to the browser's locale.
    * Used for internationalization of date pickers and other locale-sensitive
