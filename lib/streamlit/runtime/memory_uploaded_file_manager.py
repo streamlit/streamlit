@@ -19,7 +19,7 @@ from collections import defaultdict
 from typing import TYPE_CHECKING
 
 from streamlit import util
-from streamlit.runtime.stats import CacheStat, group_cache_stats
+from streamlit.runtime.stats import CACHE_MEMORY_FAMILY, CacheStat, group_cache_stats
 from streamlit.runtime.uploaded_file_manager import (
     UploadedFileManager,
     UploadedFileRec,
@@ -113,11 +113,16 @@ class MemoryUploadedFileManager(UploadedFileManager):
             )
         return result
 
-    def get_stats(self) -> list[CacheStat]:
+    def get_stats(
+        self, family_names: Sequence[str] | None = None
+    ) -> dict[str, list[CacheStat]]:
         """Return the manager's CacheStats.
 
         Safe to call from any thread.
         """
+        if family_names is not None and CACHE_MEMORY_FAMILY not in family_names:
+            return {}
+
         # Flatten all files into a single list
         all_files: list[UploadedFileRec] = []
         # Make copy of self.file_storage for thread safety, to be sure
@@ -135,4 +140,6 @@ class MemoryUploadedFileManager(UploadedFileManager):
             )
             for file in all_files
         ]
-        return group_cache_stats(stats)
+        if not stats:
+            return {}
+        return {CACHE_MEMORY_FAMILY: group_cache_stats(stats)}

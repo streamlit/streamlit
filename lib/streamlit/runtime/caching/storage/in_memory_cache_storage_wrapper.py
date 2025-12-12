@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import math
 import threading
+from typing import TYPE_CHECKING
 
 from cachetools import TTLCache
 
@@ -25,7 +26,10 @@ from streamlit.runtime.caching.storage.cache_storage_protocol import (
     CacheStorageContext,
     CacheStorageKeyNotFoundError,
 )
-from streamlit.runtime.stats import CacheStat
+from streamlit.runtime.stats import CACHE_MEMORY_FAMILY, CacheStat
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 _LOGGER = get_logger(__name__)
 
@@ -108,10 +112,15 @@ class InMemoryCacheStorageWrapper(CacheStorage):
             self._mem_cache.clear()
         self._persist_storage.clear()
 
-    def get_stats(self) -> list[CacheStat]:
-        """Returns a list of stats in bytes for the cache memory storage per item."""
+    def get_stats(
+        self, family_names: Sequence[str] | None = None
+    ) -> dict[str, list[CacheStat]]:
+        """Returns stats in bytes for the cache memory storage per item."""
+        if family_names is not None and CACHE_MEMORY_FAMILY not in family_names:
+            return {}
+
         with self._mem_cache_lock:
-            return [
+            stats = [
                 CacheStat(
                     category_name="st_cache_data",
                     cache_name=self.function_display_name,
@@ -119,6 +128,9 @@ class InMemoryCacheStorageWrapper(CacheStorage):
                 )
                 for item in self._mem_cache.values()
             ]
+        if not stats:
+            return {}
+        return {CACHE_MEMORY_FAMILY: stats}
 
     def close(self) -> None:
         """Closes the cache storage."""

@@ -49,7 +49,13 @@ from streamlit.runtime.state import (
     SCRIPT_RUN_WITHOUT_ERRORS_KEY,
     SessionStateStatProvider,
 )
-from streamlit.runtime.stats import StatsManager
+from streamlit.runtime.stats import (
+    ACTIVE_SESSIONS_FAMILY,
+    CACHE_MEMORY_FAMILY,
+    SESSION_EVENTS_FAMILY,
+    StatsManager,
+    StatsProvider,
+)
 from streamlit.runtime.websocket_session_manager import WebsocketSessionManager
 
 if TYPE_CHECKING:
@@ -225,15 +231,23 @@ class Runtime:
 
         self._stats_mgr = StatsManager()
         self._stats_mgr.register_provider(
-            "cache_memory_bytes", get_data_cache_stats_provider()
+            get_data_cache_stats_provider(), [CACHE_MEMORY_FAMILY]
         )
         self._stats_mgr.register_provider(
-            "cache_memory_bytes", get_resource_cache_stats_provider()
+            get_resource_cache_stats_provider(), [CACHE_MEMORY_FAMILY]
         )
-        self._stats_mgr.register_provider("cache_memory_bytes", self._uploaded_file_mgr)
         self._stats_mgr.register_provider(
-            "cache_memory_bytes", SessionStateStatProvider(self._session_mgr)
+            self._uploaded_file_mgr, [CACHE_MEMORY_FAMILY]
         )
+        self._stats_mgr.register_provider(
+            SessionStateStatProvider(self._session_mgr), [CACHE_MEMORY_FAMILY]
+        )
+
+        # Register session manager for session event metrics if it implements StatsProvider
+        if isinstance(self._session_mgr, StatsProvider):
+            self._stats_mgr.register_provider(
+                self._session_mgr, [SESSION_EVENTS_FAMILY, ACTIVE_SESSIONS_FAMILY]
+            )
 
     @property
     def state(self) -> RuntimeState:
