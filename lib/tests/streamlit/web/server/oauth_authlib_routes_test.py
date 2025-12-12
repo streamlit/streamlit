@@ -67,16 +67,23 @@ class LoginHandlerTest(tornado.testing.AsyncHTTPTestCase):
             ]
         )
 
+    def setUp(self) -> None:
+        super().setUp()
+        self.old_value = oauth_authlib_routes.auth_cache
+        oauth_authlib_routes.auth_cache = AuthCache()
+
+    def tearDown(self) -> None:
+        oauth_authlib_routes.auth_cache = self.old_value
+
     @patch(
-        "streamlit.web.server.oidc_mixin.TornadoOAuth2App.client_cls.request",
+        "streamlit.web.server.oidc_mixin.OAuth2Mixin.load_server_metadata",
         MagicMock(
-            return_value=MagicMock(
-                json=MagicMock(
-                    return_value={
-                        "authorization_endpoint": "https://accounts.google.com/o/oauth2/v2/auth",
-                    }
-                )
-            )
+            return_value={
+                # Minimal OIDC discovery metadata required by authlib
+                "authorization_endpoint": "https://accounts.google.com/o/oauth2/v2/auth",
+                "token_endpoint": "https://oauth2.googleapis.com/token",
+                "issuer": "https://accounts.google.com",
+            }
         ),
     )
     def test_login_handler_success(self):
@@ -101,15 +108,11 @@ class LoginHandlerTest(tornado.testing.AsyncHTTPTestCase):
         )
 
     @patch(
-        "streamlit.web.server.oidc_mixin.TornadoOAuth2App.client_cls.request",
+        "streamlit.web.server.oidc_mixin.OAuth2Mixin.load_server_metadata",
         MagicMock(
-            return_value=MagicMock(
-                json=MagicMock(
-                    return_value={
-                        "invalid": "payload",
-                    }
-                )
-            )
+            return_value={
+                "invalid": "payload",
+            }
         ),
     )
     def test_login_handler_fail_on_malformed_wellknown(self):
@@ -123,12 +126,8 @@ class LoginHandlerTest(tornado.testing.AsyncHTTPTestCase):
         assert "Location" not in response.headers
 
     @patch(
-        "streamlit.web.server.oidc_mixin.TornadoOAuth2App.client_cls.request",
-        MagicMock(
-            return_value=MagicMock(
-                raise_for_status=MagicMock(side_effect=Exception("Bad status")),
-            )
-        ),
+        "streamlit.web.server.oidc_mixin.OAuth2Mixin.load_server_metadata",
+        MagicMock(side_effect=Exception("Bad status")),
     )
     def test_login_handler_fail_on_bad_status(self):
         """Test login handler fail, when .well-known request fails."""

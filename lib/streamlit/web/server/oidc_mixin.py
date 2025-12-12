@@ -83,7 +83,9 @@ class TornadoOAuth2App(OAuth2Mixin, OpenIDMixin, BaseApp):
             "state": request_handler.get_argument("state"),
         }
 
-        session = None
+        # Authlib 1.6.6+ requires session to be a dict, even when using cache.
+        # We provide an empty dict since we rely on cache for persistence.
+        session = {}
 
         claims_options = kwargs.pop("claims_options", None)
         state_data = self.framework.get_state_data(session, params.get("state"))
@@ -104,7 +106,9 @@ class TornadoOAuth2App(OAuth2Mixin, OpenIDMixin, BaseApp):
         """
         state = kwargs.pop("state", None)
         if state:
-            session = None
+            # Authlib 1.6.6+ requires session to be a dict, even when using cache.
+            # We provide an empty dict since we rely on cache for persistence.
+            session = {}
             self.framework.set_state_data(session, state, kwargs)
         else:
             raise RuntimeError("Missing state value")
