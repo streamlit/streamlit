@@ -783,7 +783,11 @@ describe("App", () => {
       sendForwardMessage("newSession", NEW_SESSION_JSON)
 
       expect(props.theme.addThemes).toHaveBeenCalled()
-      expect(props.theme.setTheme).not.toHaveBeenCalled()
+      // When custom theme is available, preset themes are removed
+      // so user should be switched to the custom theme
+      expect(props.theme.setTheme).toHaveBeenCalledWith(
+        expect.objectContaining({ name: CUSTOM_THEME_NAME })
+      )
     })
 
     it("sets the custom theme as the default if no user preference is set", () => {
@@ -817,12 +821,9 @@ describe("App", () => {
       sendForwardMessage("newSession", NEW_SESSION_JSON)
 
       expect(props.theme.addThemes).toHaveBeenCalled()
-      expect(props.theme.setTheme).toHaveBeenCalled()
-
+      // setTheme SHOULD be called to update with the full server config while preserving the selection
       expect(props.theme.setTheme).toHaveBeenCalledWith(
-        expect.objectContaining({
-          name: CUSTOM_THEME_NAME,
-        })
+        expect.objectContaining({ name: CUSTOM_THEME_NAME })
       )
     })
 
@@ -2313,6 +2314,393 @@ describe("App", () => {
           }),
         })
       )
+    })
+
+    describe("cached theme preference handling", () => {
+      // These tests verify the fix for issue #13280
+      // Testing a systematic 3x4 matrix of server configs vs cached preferences
+      // Server configs: 1) No custom theme, 2) Single custom theme, 3) Light/Dark custom themes
+      // Cache states: a) No cache, b) "Light" preset, c) "Custom Theme", d) "Custom Theme Light"
+
+      describe("1) No custom theme from server/config", () => {
+        it("a) with no cached preference - uses default theme", () => {
+          window.localStorage.removeItem(LocalStore.ACTIVE_THEME)
+
+          const props = getProps()
+          renderApp(props)
+
+          sendForwardMessage("newSession", {
+            ...NEW_SESSION_JSON,
+            customTheme: null,
+          })
+
+          expect(props.theme.addThemes).toHaveBeenCalledWith([])
+          // Should not call setTheme when no custom theme and no cached custom theme
+          expect(props.theme.setTheme).not.toHaveBeenCalled()
+        })
+
+        it("b) with 'Light' preset cached - preserves Light theme", () => {
+          window.localStorage.setItem(
+            LocalStore.ACTIVE_THEME,
+            JSON.stringify({ name: "Light" })
+          )
+
+          const props = getProps()
+          props.theme.activeTheme = lightTheme
+
+          renderApp(props)
+
+          sendForwardMessage("newSession", {
+            ...NEW_SESSION_JSON,
+            customTheme: null,
+          })
+
+          expect(props.theme.addThemes).toHaveBeenCalledWith([])
+          expect(props.theme.setTheme).not.toHaveBeenCalled()
+
+          window.localStorage.removeItem(LocalStore.ACTIVE_THEME)
+        })
+
+        it("c) with 'Custom Theme' cached - resets to default", () => {
+          window.localStorage.setItem(
+            LocalStore.ACTIVE_THEME,
+            JSON.stringify({
+              name: CUSTOM_THEME_NAME,
+              themeInput: { primaryColor: "blue" },
+            })
+          )
+
+          const props = getProps()
+          props.theme.activeTheme = {
+            name: CUSTOM_THEME_NAME,
+            emotion: { ...lightTheme.emotion },
+            basewebTheme: lightTheme.basewebTheme,
+            primitives: lightTheme.primitives,
+            themeInput: { primaryColor: "blue" },
+          }
+
+          renderApp(props)
+
+          sendForwardMessage("newSession", {
+            ...NEW_SESSION_JSON,
+            customTheme: null,
+          })
+
+          expect(props.theme.addThemes).toHaveBeenCalledWith([])
+          // Should reset because cached custom theme no longer valid
+          expect(props.theme.setTheme).toHaveBeenCalled()
+
+          window.localStorage.removeItem(LocalStore.ACTIVE_THEME)
+        })
+
+        it("d) with 'Custom Theme Light' cached - resets to default", () => {
+          window.localStorage.setItem(
+            LocalStore.ACTIVE_THEME,
+            JSON.stringify({
+              name: CUSTOM_THEME_LIGHT_NAME,
+              displayName: "Light",
+              themeInput: { primaryColor: "lightblue" },
+            })
+          )
+
+          const props = getProps()
+          props.theme.activeTheme = {
+            name: CUSTOM_THEME_LIGHT_NAME,
+            displayName: "Light",
+            emotion: { ...lightTheme.emotion },
+            basewebTheme: lightTheme.basewebTheme,
+            primitives: lightTheme.primitives,
+            themeInput: { primaryColor: "lightblue" },
+          }
+
+          renderApp(props)
+
+          sendForwardMessage("newSession", {
+            ...NEW_SESSION_JSON,
+            customTheme: null,
+          })
+
+          expect(props.theme.addThemes).toHaveBeenCalledWith([])
+          // Should reset because cached custom theme no longer valid
+          expect(props.theme.setTheme).toHaveBeenCalled()
+
+          window.localStorage.removeItem(LocalStore.ACTIVE_THEME)
+        })
+      })
+
+      describe("2) Single custom theme from server/config", () => {
+        it("a) with no cached preference - sets to Custom Theme", () => {
+          window.localStorage.removeItem(LocalStore.ACTIVE_THEME)
+
+          const props = getProps()
+          renderApp(props)
+
+          const themeInput = new CustomThemeConfig({
+            primaryColor: "blue",
+          })
+
+          sendForwardMessage("newSession", {
+            ...NEW_SESSION_JSON,
+            customTheme: themeInput,
+          })
+
+          expect(props.theme.addThemes).toHaveBeenCalledTimes(1)
+          expect(props.theme.setTheme).toHaveBeenCalledWith(
+            expect.objectContaining({ name: CUSTOM_THEME_NAME })
+          )
+        })
+
+        it("b) with 'Light' preset cached - preserves Light theme", () => {
+          window.localStorage.setItem(
+            LocalStore.ACTIVE_THEME,
+            JSON.stringify({ name: "Light" })
+          )
+
+          const props = getProps()
+          props.theme.activeTheme = lightTheme
+
+          renderApp(props)
+
+          const themeInput = new CustomThemeConfig({
+            primaryColor: "blue",
+          })
+
+          sendForwardMessage("newSession", {
+            ...NEW_SESSION_JSON,
+            customTheme: themeInput,
+          })
+
+          expect(props.theme.addThemes).toHaveBeenCalledTimes(1)
+          // Should switch to the single custom theme (preset themes removed when custom exists)
+          expect(props.theme.setTheme).toHaveBeenCalledWith(
+            expect.objectContaining({ name: CUSTOM_THEME_NAME })
+          )
+
+          window.localStorage.removeItem(LocalStore.ACTIVE_THEME)
+        })
+
+        it("c) with 'Custom Theme' cached - preserves Custom Theme", () => {
+          window.localStorage.setItem(
+            LocalStore.ACTIVE_THEME,
+            JSON.stringify({
+              name: CUSTOM_THEME_NAME,
+              themeInput: { primaryColor: "blue" },
+            })
+          )
+
+          const props = getProps()
+          props.theme.activeTheme = {
+            name: CUSTOM_THEME_NAME,
+            emotion: { ...lightTheme.emotion },
+            basewebTheme: lightTheme.basewebTheme,
+            primitives: lightTheme.primitives,
+            themeInput: { primaryColor: "blue" },
+          }
+
+          renderApp(props)
+
+          const themeInput = new CustomThemeConfig({
+            primaryColor: "blue",
+          })
+
+          sendForwardMessage("newSession", {
+            ...NEW_SESSION_JSON,
+            customTheme: themeInput,
+          })
+
+          expect(props.theme.addThemes).toHaveBeenCalledTimes(1)
+          // Should set theme to update with full server config while preserving selection
+          expect(props.theme.setTheme).toHaveBeenCalledWith(
+            expect.objectContaining({ name: CUSTOM_THEME_NAME })
+          )
+
+          window.localStorage.removeItem(LocalStore.ACTIVE_THEME)
+        })
+
+        it("d) with 'Custom Theme Light' cached - switches to Custom Theme", () => {
+          window.localStorage.setItem(
+            LocalStore.ACTIVE_THEME,
+            JSON.stringify({
+              name: CUSTOM_THEME_LIGHT_NAME,
+              displayName: "Light",
+              themeInput: { primaryColor: "lightblue" },
+            })
+          )
+
+          const props = getProps()
+          props.theme.activeTheme = {
+            name: CUSTOM_THEME_LIGHT_NAME,
+            displayName: "Light",
+            emotion: { ...lightTheme.emotion },
+            basewebTheme: lightTheme.basewebTheme,
+            primitives: lightTheme.primitives,
+            themeInput: { primaryColor: "lightblue" },
+          }
+
+          renderApp(props)
+
+          const themeInput = new CustomThemeConfig({
+            primaryColor: "blue",
+          })
+
+          sendForwardMessage("newSession", {
+            ...NEW_SESSION_JSON,
+            customTheme: themeInput,
+          })
+
+          expect(props.theme.addThemes).toHaveBeenCalledTimes(1)
+          // Should set to the new single custom theme because old preference is invalid
+          expect(props.theme.setTheme).toHaveBeenCalledWith(
+            expect.objectContaining({ name: CUSTOM_THEME_NAME })
+          )
+
+          window.localStorage.removeItem(LocalStore.ACTIVE_THEME)
+        })
+      })
+
+      describe("3) Light/Dark custom themes from server/config", () => {
+        it("a) with no cached preference - sets to Custom Theme Auto", () => {
+          window.localStorage.removeItem(LocalStore.ACTIVE_THEME)
+
+          const props = getProps()
+          renderApp(props)
+
+          const themeInput = new CustomThemeConfig({
+            primaryColor: "blue",
+            light: { primaryColor: "lightblue" },
+            dark: { primaryColor: "darkblue" },
+          })
+
+          sendForwardMessage("newSession", {
+            ...NEW_SESSION_JSON,
+            customTheme: themeInput,
+          })
+
+          expect(props.theme.addThemes).toHaveBeenCalledTimes(1)
+          expect(props.theme.setTheme).toHaveBeenCalledWith(
+            expect.objectContaining({ name: CUSTOM_THEME_AUTO_NAME })
+          )
+        })
+
+        it("b) with 'Light' preset cached - preserves Light theme", () => {
+          window.localStorage.setItem(
+            LocalStore.ACTIVE_THEME,
+            JSON.stringify({ name: "Light" })
+          )
+
+          const props = getProps()
+          props.theme.activeTheme = lightTheme
+
+          renderApp(props)
+
+          const themeInput = new CustomThemeConfig({
+            primaryColor: "blue",
+            light: { primaryColor: "lightblue" },
+            dark: { primaryColor: "darkblue" },
+          })
+
+          sendForwardMessage("newSession", {
+            ...NEW_SESSION_JSON,
+            customTheme: themeInput,
+          })
+
+          expect(props.theme.addThemes).toHaveBeenCalledTimes(1)
+          // Should map preset "Light" to "Custom Theme Light"
+          expect(props.theme.setTheme).toHaveBeenCalledWith(
+            expect.objectContaining({
+              name: CUSTOM_THEME_LIGHT_NAME,
+              displayName: "Light",
+            })
+          )
+
+          window.localStorage.removeItem(LocalStore.ACTIVE_THEME)
+        })
+
+        it("c) with 'Custom Theme' cached - switches to Custom Theme Auto", () => {
+          window.localStorage.setItem(
+            LocalStore.ACTIVE_THEME,
+            JSON.stringify({
+              name: CUSTOM_THEME_NAME,
+              themeInput: { primaryColor: "blue" },
+            })
+          )
+
+          const props = getProps()
+          props.theme.activeTheme = {
+            name: CUSTOM_THEME_NAME,
+            emotion: { ...lightTheme.emotion },
+            basewebTheme: lightTheme.basewebTheme,
+            primitives: lightTheme.primitives,
+            themeInput: { primaryColor: "blue" },
+          }
+
+          renderApp(props)
+
+          const themeInput = new CustomThemeConfig({
+            primaryColor: "blue",
+            light: { primaryColor: "lightblue" },
+            dark: { primaryColor: "darkblue" },
+          })
+
+          sendForwardMessage("newSession", {
+            ...NEW_SESSION_JSON,
+            customTheme: themeInput,
+          })
+
+          expect(props.theme.addThemes).toHaveBeenCalledTimes(1)
+          // Should set to auto theme because old single custom theme preference is invalid
+          expect(props.theme.setTheme).toHaveBeenCalledWith(
+            expect.objectContaining({ name: CUSTOM_THEME_AUTO_NAME })
+          )
+
+          window.localStorage.removeItem(LocalStore.ACTIVE_THEME)
+        })
+
+        it("d) with 'Custom Theme Light' cached - preserves Custom Theme Light", () => {
+          window.localStorage.setItem(
+            LocalStore.ACTIVE_THEME,
+            JSON.stringify({
+              name: CUSTOM_THEME_LIGHT_NAME,
+              displayName: "Light",
+              themeInput: { primaryColor: "lightblue" },
+            })
+          )
+
+          const props = getProps()
+          props.theme.activeTheme = {
+            name: CUSTOM_THEME_LIGHT_NAME,
+            displayName: "Light",
+            emotion: { ...lightTheme.emotion },
+            basewebTheme: lightTheme.basewebTheme,
+            primitives: lightTheme.primitives,
+            themeInput: { primaryColor: "lightblue" },
+          }
+
+          renderApp(props)
+
+          const themeInput = new CustomThemeConfig({
+            primaryColor: "blue",
+            light: { primaryColor: "lightblue" },
+            dark: { primaryColor: "darkblue" },
+          })
+
+          sendForwardMessage("newSession", {
+            ...NEW_SESSION_JSON,
+            customTheme: themeInput,
+          })
+
+          expect(props.theme.addThemes).toHaveBeenCalledTimes(1)
+          // Should set theme to update with full server config while preserving Light selection (FIX FOR #13280)
+          expect(props.theme.setTheme).toHaveBeenCalledWith(
+            expect.objectContaining({
+              name: CUSTOM_THEME_LIGHT_NAME,
+              displayName: "Light",
+            })
+          )
+
+          window.localStorage.removeItem(LocalStore.ACTIVE_THEME)
+        })
+      })
     })
   })
 

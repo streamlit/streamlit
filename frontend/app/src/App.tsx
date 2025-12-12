@@ -65,6 +65,7 @@ import {
   createFormsData,
   createPresetThemes,
   CUSTOM_THEME_AUTO_NAME,
+  darkTheme,
   DeployedAppMetadata,
   ensureError,
   ensureHotkeysFilterConfigured,
@@ -96,6 +97,8 @@ import {
   isScrollingHidden,
   isToolbarDisplayed,
   IToolbarItem,
+  lightTheme,
+  mapCachedThemeToAvailableTheme,
   mark,
   measure,
   notUndefined,
@@ -1392,9 +1395,23 @@ export class App extends PureComponent<Props, State> {
       this.props.theme.addThemes(customThemes, { keepPresetThemes: false })
 
       const userPreference = getCachedTheme()
-      if (userPreference === null || usingCustomTheme) {
-        // If the user hasn't set a preference, or if a custom theme is currently active,
-        // update the theme to be a custom theme.
+      // Map the user's cached preference to the best matching theme from the new custom themes
+      // - Applies full server config while preserving user's light/dark selection
+      const mappedTheme = mapCachedThemeToAvailableTheme(
+        userPreference,
+        customThemes
+      )
+
+      if (mappedTheme) {
+        // User has a mappable preference - apply the full server config
+        // while preserving their light/dark selection
+        this.setAndSendTheme(mappedTheme)
+      } else {
+        // No mappable preference - set to default custom theme
+        // This handles cases where:
+        // - No user preference exists (userPreference === null)
+        // - User has a preset theme cached but custom themes are now available
+        // - User has an old custom theme that no longer matches
         if (customThemes.length > 1) {
           // When Custom Theme Light & Custom Theme Dark present, we create an auto theme based
           // on the system preference and set this as the active theme
@@ -1412,9 +1429,23 @@ export class App extends PureComponent<Props, State> {
       this.props.theme.addThemes([])
 
       if (usingCustomTheme) {
-        // Reset to the auto theme taking into account any host preferences
-        // aka embed query params.
-        this.setAndSendTheme(getHostSpecifiedTheme())
+        const userPreference = getCachedTheme()
+        const presetThemes = [lightTheme, darkTheme]
+        // Try to map custom theme preference back to preset themes
+        // e.g., "Custom Theme Light" → "Light", "Custom Theme Dark" → "Dark"
+        const mappedTheme = mapCachedThemeToAvailableTheme(
+          userPreference,
+          presetThemes
+        )
+
+        if (mappedTheme) {
+          // User had a custom theme preference that maps to a preset - preserve their choice
+          this.setAndSendTheme(mappedTheme)
+        } else {
+          // Reset to the auto theme taking into account any host preferences
+          // aka embed query params.
+          this.setAndSendTheme(getHostSpecifiedTheme())
+        }
       }
     }
 
