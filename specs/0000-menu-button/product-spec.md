@@ -13,6 +13,8 @@ dropdown menu with multiple options. Selecting an option triggers a rerun and re
 selected option label. Unlike `st.selectbox`, this is a trigger (like `st.button`), not a
 persistent selection—the button label remains unchanged after selection.
 
+![Menu button widget in BaseWeb](./menu-button.png)
+
 ## Problem
 
 Users need a way to offer multiple actions from a single button without cluttering the UI
