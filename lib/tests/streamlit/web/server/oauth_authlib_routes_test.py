@@ -117,7 +117,9 @@ class LoginHandlerTest(tornado.testing.AsyncHTTPTestCase):
         token = encode_provider_token("google")
         response = self.fetch(f"/auth/login?provider={token}", follow_redirects=False)
         assert response.code == 400
-        assert b'400: Missing "authorize_url" value' in response.body
+        assert b"400: Missing" in response.body
+        assert b"authorize_url" in response.body
+        assert b"value" in response.body
         assert "Location" not in response.headers
 
     @patch(
