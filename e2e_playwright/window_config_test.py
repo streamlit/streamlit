@@ -316,10 +316,7 @@ def test_window_config_download_url(app: Page):
     expect(download_button).to_be_visible()
     download_button.click()
 
-    # Wait for the request to be made
-    app.wait_for_load_state("networkidle")
-
-    # Verify we captured a URL
+    # Wait until we've captured the download URL request
     wait_until(app, lambda: len(captured_urls) > 0)
 
     download_url = captured_urls[0]
