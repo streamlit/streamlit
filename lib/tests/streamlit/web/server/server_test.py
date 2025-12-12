@@ -575,11 +575,8 @@ class SslServerTest(unittest.TestCase):
 
 
 class UnixSocketTest(unittest.TestCase):
-    """
-    Tests unix socket binding and user path expansion for both Tornado and Starlette server
-    implementations. Verifies correct integration with configuration options and that the
-    servers can bind to unix sockets as specified by the config.
-    """
+    """Tests start_listening uses a unix socket when socket.address starts with
+    unix://"""
 
     def setUp(self) -> None:
         self.original_address = config.get_option("server.address")
