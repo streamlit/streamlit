@@ -49,6 +49,31 @@ vi.mock("@streamlit/utils", async () => {
   }
 })
 
+// Mock the lazy-loaded StreamlitSyntaxHighlighter to avoid flaky Suspense timing issues
+vi.mock(
+  "~lib/components/elements/CodeBlock/StreamlitSyntaxHighlighter",
+  () => ({
+    default: ({
+      children,
+      language,
+    }: {
+      children: string
+      language?: string
+    }): React.ReactElement => (
+      <div className="stCode" data-testid="stCode">
+        <pre>
+          <code className={language ? `language-${language}` : ""}>
+            {children}
+          </code>
+        </pre>
+        {children && children.trim().length > 0 && (
+          <button title="Copy to clipboard">Copy</button>
+        )}
+      </div>
+    ),
+  })
+)
+
 // Fixture Generator
 const getMarkdownElement = (body: string): ReactElement => {
   const components = {
