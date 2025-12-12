@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import json
 from typing import TYPE_CHECKING, Any
 
 from authlib.integrations.base_client import (
@@ -37,6 +38,31 @@ class TornadoIntegration(FrameworkIntegration):
     state in session.
     """
 
+    def _get_cache_data_safe(self, key: str) -> dict[str, Any] | None:
+        """Get and decode JSON data from cache with fallback for authlib compatibility.
+
+        This method provides a safe way to retrieve cached data that works across
+        different authlib versions. It first tries the parent class's _get_cache_data
+        method, and falls back to direct cache access if that method isn't available.
+        """
+        # Try using authlib's helper method if available (it's a private method,
+        # so we check for its existence to maintain compatibility across versions)
+        get_cache_data = getattr(self, "_get_cache_data", None)
+        if get_cache_data is not None:
+            result: dict[str, Any] | None = get_cache_data(key)
+            return result
+
+        # Fallback: direct cache access with JSON decoding
+        # This mirrors the implementation in FrameworkIntegration._get_cache_data
+        value = self.cache.get(key)
+        if not value:
+            return None
+        try:
+            parsed: dict[str, Any] = json.loads(value)
+            return parsed
+        except (TypeError, ValueError):
+            return None
+
     def get_state_data(
         self,
         session: dict[str, Any],  # noqa: ARG002
@@ -51,7 +77,7 @@ class TornadoIntegration(FrameworkIntegration):
         if not self.cache:
             return None
         key = f"_state_{self.name}_{state}"
-        cached_value: dict[str, Any] | None = self._get_cache_data(key)  # type: ignore[attr-defined]
+        cached_value = self._get_cache_data_safe(key)
         if cached_value:
             return cached_value.get("data")
         return None

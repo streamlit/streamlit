@@ -90,6 +90,13 @@ class TornadoOAuth2App(OAuth2Mixin, OpenIDMixin, BaseApp):
         claims_options = kwargs.pop("claims_options", None)
         state_data = self.framework.get_state_data(session, params.get("state"))
         self.framework.clear_state_data(session, params.get("state"))
+
+        if not state_data:
+            raise OAuthError(
+                error="invalid_state",
+                description="OAuth state not found or expired. Please try logging in again.",
+            )
+
         params = self._format_state_params(state_data, params)  # type: ignore[attr-defined]
         token = self.fetch_access_token(**params, **kwargs)
 
