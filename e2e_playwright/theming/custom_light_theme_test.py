@@ -72,6 +72,11 @@ def configure_custom_light_theme():
     del os.environ["STREAMLIT_THEME_LIGHT_CODE_FONT_SIZE"]
     del os.environ["STREAMLIT_THEME_LIGHT_CODE_TEXT_COLOR"]
     del os.environ["STREAMLIT_THEME_LIGHT_LINK_COLOR"]
+    del os.environ["STREAMLIT_THEME_DARK_PRIMARY_COLOR"]
+    del os.environ["STREAMLIT_THEME_DARK_BORDER_COLOR"]
+    del os.environ["STREAMLIT_THEME_DARK_CODE_FONT_SIZE"]
+    del os.environ["STREAMLIT_THEME_DARK_CODE_TEXT_COLOR"]
+    del os.environ["STREAMLIT_THEME_DARK_LINK_COLOR"]
 
 
 @pytest.mark.usefixtures("configure_custom_light_theme")

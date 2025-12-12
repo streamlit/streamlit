@@ -1521,6 +1521,14 @@ export const createSidebarTheme = (activeTheme: ThemeConfig): ThemeConfig => {
   )
 }
 
+// Bidirectional theme name mappings for preset ↔ custom theme equivalents
+const THEME_MAPPING: Record<string, string> = {
+  [lightTheme.name]: CUSTOM_THEME_LIGHT_NAME,
+  [darkTheme.name]: CUSTOM_THEME_DARK_NAME,
+  [CUSTOM_THEME_LIGHT_NAME]: lightTheme.name,
+  [CUSTOM_THEME_DARK_NAME]: darkTheme.name,
+}
+
 /**
  * Maps a user's cached theme preference to the best matching theme from available themes.
  * Handles intelligent mapping between preset and custom themes:
@@ -1549,43 +1557,10 @@ export const mapCachedThemeToAvailableTheme = (
     return exactMatch
   }
 
-  // Check if custom light/dark themes are available
-  const hasCustomLightDark = availableThemes.some(
-    theme => theme.name === CUSTOM_THEME_LIGHT_NAME
-  )
-
-  // Map preset themes to custom theme equivalents
-  if (hasCustomLightDark) {
-    if (cachedTheme.name === lightTheme.name) {
-      return (
-        availableThemes.find(
-          theme => theme.name === CUSTOM_THEME_LIGHT_NAME
-        ) ?? null
-      )
-    }
-    if (cachedTheme.name === darkTheme.name) {
-      return (
-        availableThemes.find(theme => theme.name === CUSTOM_THEME_DARK_NAME) ??
-        null
-      )
-    }
-  }
-
-  // Map custom themes back to preset equivalents (when custom themes removed)
-  const hasPresetThemes = availableThemes.some(
-    theme => theme.name === lightTheme.name
-  )
-  if (hasPresetThemes) {
-    if (cachedTheme.name === CUSTOM_THEME_LIGHT_NAME) {
-      return (
-        availableThemes.find(theme => theme.name === lightTheme.name) ?? null
-      )
-    }
-    if (cachedTheme.name === CUSTOM_THEME_DARK_NAME) {
-      return (
-        availableThemes.find(theme => theme.name === darkTheme.name) ?? null
-      )
-    }
+  // Try to map to equivalent theme (e.g., "Light" → "Custom Theme Light")
+  const mappedName = THEME_MAPPING[cachedTheme.name]
+  if (mappedName) {
+    return availableThemes.find(theme => theme.name === mappedName) ?? null
   }
 
   return null

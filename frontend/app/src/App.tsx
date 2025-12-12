@@ -1439,7 +1439,7 @@ export class App extends PureComponent<Props, State> {
         )
 
         if (mappedTheme) {
-          // User had a custom theme that maps to a preset - preserve their choice
+          // User had a custom theme preference that maps to a preset - preserve their choice
           this.setAndSendTheme(mappedTheme)
         } else {
           // Reset to the auto theme taking into account any host preferences
