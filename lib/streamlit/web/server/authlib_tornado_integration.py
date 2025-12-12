@@ -37,34 +37,21 @@ class TornadoIntegration(FrameworkIntegration):
     This is compatible with both older authlib versions and authlib 1.6.6+.
     """
 
-    def _get_cache_data_safe(self, key: str) -> dict[str, Any] | None:
-        """Get and decode JSON data from cache with fallback for authlib compatibility.
+    def _get_cache_data(self, key: str) -> dict[str, Any] | None:
+        """Get and decode JSON data from cache.
 
-        This method provides a safe way to retrieve cached data that works across
-        different authlib versions. It first tries the parent class's _get_cache_data
-        method, and falls back to direct cache access if that method isn't available
-        or if the method signature has changed.
+        This reimplements the cache data retrieval logic directly rather than
+        relying on authlib's private _get_cache_data method, ensuring stability
+        across authlib versions.
         """
-        # Try using authlib's helper method if available (it's a private method,
-        # so we check for its existence to maintain compatibility across versions)
-        get_cache_data = getattr(self, "_get_cache_data", None)
-        if get_cache_data is not None:
-            try:
-                result: dict[str, Any] | None = get_cache_data(key)
-                return result
-            except TypeError:
-                # Method signature may have changed in a newer authlib version,
-                # fall through to the direct cache access fallback below
-                pass
-
-        # Fallback: direct cache access with JSON decoding
-        # This mirrors the implementation in FrameworkIntegration._get_cache_data
         value = self.cache.get(key)
         if not value:
             return None
         try:
-            parsed: dict[str, Any] = json.loads(value)
-            return parsed
+            result = json.loads(value)
+            if isinstance(result, dict):
+                return result
+            return None
         except (TypeError, ValueError):
             return None
 
@@ -82,7 +69,7 @@ class TornadoIntegration(FrameworkIntegration):
         if not self.cache:
             return None
         key = f"_state_{self.name}_{state}"
-        cached_value = self._get_cache_data_safe(key)
+        cached_value = self._get_cache_data(key)
         if cached_value:
             return cached_value.get("data")
         return None
