@@ -72,11 +72,19 @@ def create_streamlit_static_files(directory: str, base_url: str | None) -> Any:
                 return
 
             # Handle trailing slash redirect: return
-            # 301 for paths with trailing slashes (except root "/"). We replicate this
-            # for consistent URL handling and to avoid duplicate content issues.
+            # 301 for paths with trailing slashes (except root "/" or mount root).
+            # We replicate this for consistent URL handling and to avoid duplicate
+            # content issues. When mounted (e.g., at "/app"), scope["path"] is the
+            # full path "/app/" and scope["root_path"] is "/app", so we must not
+            # redirect the mount root to avoid infinite redirect loops.
+            root_path = scope.get("root_path", "")
             if len(path) > 1 and path.endswith("/"):
-                # Build redirect URL without trailing slash
                 redirect_path = path.rstrip("/")
+                # Don't redirect if we're at the mount root (path without slash equals root_path)
+                if redirect_path == root_path:
+                    await super().__call__(scope, receive, send)
+                    return
+                # Build redirect URL without trailing slash
                 query_string = scope.get("query_string", b"")
                 if query_string:
                     redirect_path += "?" + query_string.decode("latin-1")

@@ -162,3 +162,61 @@ class TestWithBaseUrl:
 
             assert response.status_code == 200
             assert response.text == "<html>Base</html>"
+
+    def test_no_redirect_loop_when_mounted(self, tmp_path: Path) -> None:
+        """Test that mount root with trailing slash doesn't cause redirect loop.
+
+        When mounted at a path (e.g., /app), requests to /app/ should serve
+        index.html, not redirect to /app which would then redirect back to /app/.
+        """
+        from starlette.applications import Starlette
+        from starlette.routing import Mount
+
+        static_dir = tmp_path / "static"
+        static_dir.mkdir()
+        (static_dir / "index.html").write_text("<html>Mounted</html>")
+
+        static_files = create_streamlit_static_files(
+            directory=str(static_dir), base_url=""
+        )
+        app = Starlette(routes=[Mount("/app", app=static_files)])
+
+        with TestClient(app, follow_redirects=False) as client:
+            # /app should redirect to /app/ (Starlette's Mount behavior)
+            response = client.get("/app")
+            assert response.status_code == 307
+            assert response.headers["location"] == "http://testserver/app/"
+
+            # /app/ should serve content, NOT redirect to /app
+            response = client.get("/app/")
+            assert response.status_code == 200
+            assert response.text == "<html>Mounted</html>"
+
+    def test_nested_mount_no_redirect_loop(self, tmp_path: Path) -> None:
+        """Test that nested mounts (like FastAPI mounting Streamlit) work correctly."""
+        from starlette.applications import Starlette
+        from starlette.routing import Mount
+
+        static_dir = tmp_path / "static"
+        static_dir.mkdir()
+        (static_dir / "index.html").write_text("<html>Nested</html>")
+
+        static_files = create_streamlit_static_files(
+            directory=str(static_dir), base_url=""
+        )
+        # Inner app with static files at root (like Streamlit does)
+        inner_app = Starlette(routes=[Mount("/", app=static_files)])
+        # Outer app mounting inner at /app (like FastAPI does)
+        outer_app = Starlette(routes=[Mount("/app", app=inner_app)])
+
+        with TestClient(outer_app, follow_redirects=False) as client:
+            # /app/ should serve content without redirect loop
+            response = client.get("/app/")
+            assert response.status_code == 200
+            assert response.text == "<html>Nested</html>"
+
+        # Also verify it works with follow_redirects
+        with TestClient(outer_app, follow_redirects=True) as client:
+            response = client.get("/app")
+            assert response.status_code == 200
+            assert response.text == "<html>Nested</html>"
