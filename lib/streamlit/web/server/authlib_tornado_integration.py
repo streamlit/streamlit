@@ -29,6 +29,48 @@ if TYPE_CHECKING:
 
 
 class TornadoIntegration(FrameworkIntegration):
+    """Authlib framework integration for Tornado.
+
+    Tornado doesn't have persistent sessions like Flask/Django, so we override
+    the state data methods to use only the cache. This is compatible with both
+    older authlib versions and authlib 1.6.6+ which changed to always track
+    state in session.
+    """
+
+    def get_state_data(
+        self,
+        session: dict[str, Any],  # noqa: ARG002
+        state: str,
+    ) -> dict[str, Any] | None:
+        """Get OAuth state data from cache.
+
+        Overridden to use cache directly without requiring session persistence,
+        since Tornado doesn't have persistent sessions across requests.
+        The session parameter is unused but required by the parent class signature.
+        """
+        if not self.cache:
+            return None
+        key = f"_state_{self.name}_{state}"
+        cached_value: dict[str, Any] | None = self._get_cache_data(key)  # type: ignore[attr-defined]
+        if cached_value:
+            return cached_value.get("data")
+        return None
+
+    def clear_state_data(
+        self,
+        session: dict[str, Any],  # noqa: ARG002
+        state: str,
+    ) -> None:
+        """Clear OAuth state data from cache.
+
+        Overridden to use cache directly without requiring session persistence,
+        since Tornado doesn't have persistent sessions across requests.
+        The session parameter is unused but required by the parent class signature.
+        """
+        if self.cache:
+            key = f"_state_{self.name}_{state}"
+            self.cache.delete(key)
+
     def update_token(
         self,
         token: dict[str, Any],
