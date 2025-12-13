@@ -67,31 +67,33 @@ st.menu_button(
 
 ### Parameters
 
+A combination of `st.button` and `st.selectbox` parameters with the same semantics.
+
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `label` | `str` | required | Button label. Supports markdown. |
 | `options` | `Sequence[T]` | required | List of options to display in the dropdown menu. |
 | `key` | `str \| int \| None` | `None` | Unique key for the widget. |
 | `help` | `str \| None` | `None` | Tooltip text shown on hover. |
-| `on_click` | `Callable \| None` | `None` | Callback function executed when an option is selected. |
-| `args` | `tuple \| None` | `None` | Arguments to pass to the callback. |
+| `on_click` | `Callable \| None` | `None` | Callback function executed when an option is clicked. |
+| `args` | `list \| tuple \| None` | `None` | Arguments to pass to the callback. |
 | `kwargs` | `dict \| None` | `None` | Keyword arguments to pass to the callback. |
 | `type` | `Literal["primary", "secondary", "tertiary"]` | `"secondary"` | Button styling. |
 | `icon` | `str \| None` | `None` | Icon to display next to the button label (e.g., `:material/menu:`). |
 | `disabled` | `bool` | `False` | Whether the button is disabled. |
 | `width` | `Literal["content", "stretch"] \| int` | `"content"` | Button width. `"content"`: fit to content. `"stretch"`: expand to container width. `int`: fixed pixel width. |
-| `format_func` | `Callable[[T], str]` | `str` | Function to convert options to display strings. Supports markdown. |
+| `format_func` | `Callable[[T], str]` | `str` | Function to convert options to display strings. Supports markdown. Same behavior as in `st.selectbox`. |
 
 ### Return Value
 
 | Condition | Return Value |
 |-----------|--------------|
-| Option clicked | `T` — the clicked option value |
+| Option clicked | `T` — the clicked option value. Same behavior as in `st.selectbox`. |
 | No click | `None` |
 
 ### Behavior
 
-- The button displays a chevron icon (same as `st.popover`) to indicate it opens a menu
+- The button displays a chevron icon on the right side (same as `st.popover`) to indicate it opens a menu
 - Clicking the button opens a dropdown menu displaying all options
 - Selecting an option closes the menu, triggers a rerun, and returns the selected option value
 - The button label remains unchanged after selection (unlike selectbox)
