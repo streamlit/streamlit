@@ -775,7 +775,7 @@ class ButtonTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitAPIException) as exc_info:
             st.button("test", label_visibility="collapsed")
         assert "`label_visibility='collapsed'`" in str(exc_info.value)
-        assert "have an `icon` set" in str(exc_info.value)
+        assert "has an `icon` set" in str(exc_info.value)
 
     def test_button_label_visibility_default_visible(self) -> None:
         """Test button defaults to label_visibility='visible'."""

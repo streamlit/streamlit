@@ -693,4 +693,4 @@ class FormDimensionsTest(DeltaGeneratorTestCase):
             with st.form("test_form"):
                 st.form_submit_button("Submit", label_visibility="collapsed")
         assert "`label_visibility='collapsed'`" in str(exc_info.value)
-        assert "have an `icon` set" in str(exc_info.value)
+        assert "has an `icon` set" in str(exc_info.value)
