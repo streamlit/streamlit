@@ -553,9 +553,12 @@ export const StyledButtonShortcut = styled.kbd(({ theme }) => ({
  */
 export const StyledScreenReaderOnly = styled.span({
   position: "absolute",
+  // eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values
   width: "1px",
+  // eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values
   height: "1px",
   padding: 0,
+  // eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values
   margin: "-1px",
   overflow: "hidden",
   clip: "rect(0, 0, 0, 0)",
