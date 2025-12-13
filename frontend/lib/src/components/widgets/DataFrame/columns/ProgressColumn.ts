@@ -23,13 +23,13 @@ import { RangeCellType } from "@glideapps/glide-data-grid-cells"
 
 import { isIntegerType } from "~lib/dataframes/arrowTypeUtils"
 import { EmotionTheme } from "~lib/theme"
+import { formatNumber } from "~lib/util/formatNumber"
 import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
 
 import {
   BaseColumn,
   BaseColumnProps,
   countDecimals,
-  formatNumber,
   getEmptyCell,
   getErrorCell,
   mergeColumnParameters,

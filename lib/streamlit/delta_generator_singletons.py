@@ -159,6 +159,12 @@ class ContextVarWithLazyDefault(Generic[_T]):
     def reset(self, token: Token[_T]) -> None:
         self._ensure_context_var().reset(token)
 
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, ContextVarWithLazyDefault):
+            return NotImplemented
+        # Two wrappers are equal only if they're the same object
+        return self is other
+
     def __hash__(self) -> int:
         return self._ensure_context_var().__hash__()
 

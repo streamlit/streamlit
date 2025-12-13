@@ -201,7 +201,7 @@ class LayoutsMixin:
         >>>
         >>> st.write("This is outside the container")
 
-        .. output ::
+        .. output::
             https://doc-container1.streamlit.app/
             height: 520px
 
@@ -220,7 +220,7 @@ class LayoutsMixin:
         >>>
         >>> container.write("This is inside too")
 
-        .. output ::
+        .. output::
             https://doc-container2.streamlit.app/
             height: 300px
 
@@ -238,7 +238,7 @@ class LayoutsMixin:
         >>>     tile = col.container(height=120)
         >>>     tile.title(":balloon:")
 
-        .. output ::
+        .. output::
             https://doc-container3.streamlit.app/
             height: 350px
 
@@ -254,7 +254,7 @@ class LayoutsMixin:
         >>> with st.container(height=300):
         >>>     st.markdown(long_text)
 
-        .. output ::
+        .. output::
             https://doc-container4.streamlit.app/
             height: 400px
 
@@ -270,7 +270,7 @@ class LayoutsMixin:
         >>> for card in range(3):
         >>>     flex.button(f"Button {card + 1}")
 
-        .. output ::
+        .. output::
             https://doc-container5.streamlit.app/
             height: 250px
 
@@ -422,7 +422,7 @@ class LayoutsMixin:
         ...     st.header("An owl")
         ...     st.image("https://static.streamlit.io/examples/owl.jpg")
 
-        .. output ::
+        .. output::
             https://doc-columns1.streamlit.app/
             height: 620px
 
@@ -443,7 +443,7 @@ class LayoutsMixin:
         >>> col2.subheader("A narrow column with the data")
         >>> col2.write(df)
 
-        .. output ::
+        .. output::
             https://doc-columns2.streamlit.app/
             height: 550px
 
@@ -459,7 +459,7 @@ class LayoutsMixin:
         >>> middle.button("Click me", use_container_width=True)
         >>> right.checkbox("Check me")
 
-        .. output ::
+        .. output::
             https://doc-columns-bottom-widgets.streamlit.app/
             height: 200px
 
@@ -478,7 +478,7 @@ class LayoutsMixin:
         >>> middle.image("https://static.streamlit.io/examples/dog.jpg")
         >>> right.image("https://static.streamlit.io/examples/owl.jpg")
 
-        .. output ::
+        .. output::
             https://doc-columns-vertical-alignment.streamlit.app/
             height: 600px
 
@@ -495,7 +495,7 @@ class LayoutsMixin:
         >>> middle.markdown("Lorem ipsum " * 5)
         >>> right.markdown("Lorem ipsum ")
 
-        .. output ::
+        .. output::
             https://doc-columns-borders.streamlit.app/
             height: 250px
 
@@ -642,7 +642,7 @@ class LayoutsMixin:
         ...     st.header("An owl")
         ...     st.image("https://static.streamlit.io/examples/owl.jpg", width=200)
 
-        .. output ::
+        .. output::
             https://doc-tabs1.streamlit.app/
             height: 620px
 
@@ -663,7 +663,7 @@ class LayoutsMixin:
         >>> tab2.subheader("A tab with the data")
         >>> tab2.write(df)
 
-        .. output ::
+        .. output::
             https://doc-tabs2.streamlit.app/
             height: 700px
 
@@ -688,7 +688,7 @@ class LayoutsMixin:
         >>>     st.header("An owl")
         >>>     st.image("https://static.streamlit.io/examples/owl.jpg", width=200)
 
-        .. output ::
+        .. output::
             https://doc-tabs3.streamlit.app/
             height: 620px
 
@@ -821,7 +821,7 @@ class LayoutsMixin:
         ...     ''')
         ...     st.image("https://static.streamlit.io/examples/dice.jpg")
 
-        .. output ::
+        .. output::
             https://doc-expander.streamlit.app/
             height: 750px
 
@@ -839,7 +839,7 @@ class LayoutsMixin:
         ... ''')
         >>> expander.image("https://static.streamlit.io/examples/dice.jpg")
 
-        .. output ::
+        .. output::
             https://doc-expander.streamlit.app/
             height: 750px
 
@@ -999,7 +999,7 @@ class LayoutsMixin:
         >>>
         >>> st.write("Your name:", name)
 
-        .. output ::
+        .. output::
             https://doc-popover.streamlit.app/
             height: 400px
 
@@ -1016,7 +1016,7 @@ class LayoutsMixin:
         >>> if blue:
         ...     st.write(":blue[This is a blue item.]")
 
-        .. output ::
+        .. output::
             https://doc-popover2.streamlit.app/
             height: 400px
 
@@ -1148,7 +1148,7 @@ class LayoutsMixin:
         >>>
         >>> st.button("Rerun")
 
-        .. output ::
+        .. output::
             https://doc-status.streamlit.app/
             height: 300px
 
@@ -1171,7 +1171,7 @@ class LayoutsMixin:
         >>>
         >>> st.button("Rerun")
 
-        .. output ::
+        .. output::
             https://doc-status-update.streamlit.app/
             height: 300px
 

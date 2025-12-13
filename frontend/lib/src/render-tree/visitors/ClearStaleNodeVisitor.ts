@@ -36,12 +36,12 @@ import { AppNodeVisitor } from "~lib/render-tree/visitors/AppNodeVisitor.interfa
  * // newNode will be undefined if the node should be filtered out
  * ```
  */
-export class ClearStaleNodeVisitor
-  implements AppNodeVisitor<AppNode | undefined>
-{
+export class ClearStaleNodeVisitor implements AppNodeVisitor<
+  AppNode | undefined
+> {
   private readonly currentScriptRunId: string
   private readonly fragmentIdsThisRun: string[]
-  private fragmentIdOfBlock?: string
+  private readonly fragmentIdOfBlock?: string
 
   constructor(
     currentScriptRunId: string,

@@ -50,8 +50,14 @@ PYTEST_PATTERN = re.compile(
 def main():
     try:
         payload = json.load(sys.stdin)
-    except Exception:
-        sys.exit(0)
+    except Exception as e:
+        # Fail secure: block (exit 2) if we can't parse input to verify safety.
+        print(  # noqa: T201
+            f"Policy: Failed to parse hook input ({type(e).__name__}: {e}). "
+            f"Blocking tool call for safety.",
+            file=sys.stderr,
+        )
+        sys.exit(2)
 
     if payload.get("hook_event_name") != "PreToolUse":
         sys.exit(0)

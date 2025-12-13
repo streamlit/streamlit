@@ -34,6 +34,7 @@ export interface DynamicButtonLabelProps {
   label?: string
   iconSize?: IconSize
   useSmallerFont?: boolean
+  iconPosition?: "left" | "right"
   shortcut?: string | null
   /** When true, the label is visually hidden but remains in the DOM for accessibility */
   isLabelCollapsed?: boolean
@@ -44,6 +45,7 @@ export const DynamicButtonLabel = ({
   label,
   iconSize,
   useSmallerFont = false,
+  iconPosition = "left",
   shortcut,
   isLabelCollapsed = false,
 }: DynamicButtonLabelProps): React.ReactElement | null => {
@@ -64,11 +66,16 @@ export const DynamicButtonLabel = ({
   return (
     <StyledButtonLabel>
       <StyledButtonMainLabel data-has-shortcut={Boolean(displayShortcut)}>
-        {icon && <DynamicIcon size={iconSize ?? "lg"} iconValue={icon} />}
+        {icon && iconPosition === "left" && (
+          <DynamicIcon size={iconSize ?? "lg"} iconValue={icon} />
+        )}
         {isLabelCollapsed ? (
           <StyledScreenReaderOnly>{labelContent}</StyledScreenReaderOnly>
         ) : (
           labelContent
+        )}
+        {icon && iconPosition === "right" && (
+          <DynamicIcon size={iconSize ?? "lg"} iconValue={icon} />
         )}
         {displayShortcut && (
           <StyledButtonShortcut aria-label={`Shortcut ${displayShortcut}`}>

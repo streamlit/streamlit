@@ -77,4 +77,5 @@ export const PING_TIMEOUT_MS = 15 * 1000
  * True when in development mode. We disable if we are testing to ensure
  * production conditions.
  */
-export const IS_DEV_ENV = process.env.NODE_ENV === "development"
+export const IS_DEV_ENV =
+  import.meta.env.DEV && import.meta.env.MODE !== "test"

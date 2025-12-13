@@ -52,7 +52,23 @@ export interface StreamlitTheme {
   codeFontWeight: number
   codeFontSize: string
   headingFontSizes: string[]
+  // Individual heading font sizes and weights for levels 1–6. These provide
+  // direct access to specific heading levels and are derived from the same
+  // source as the headingFontSizes / headingFontWeights arrays. Both forms are
+  // maintained for backward compatibility and convenience.
+  headingFontSize1: string
+  headingFontSize2: string
+  headingFontSize3: string
+  headingFontSize4: string
+  headingFontSize5: string
+  headingFontSize6: string
   headingFontWeights: number[]
+  headingFontWeight1: number
+  headingFontWeight2: number
+  headingFontWeight3: number
+  headingFontWeight4: number
+  headingFontWeight5: number
+  headingFontWeight6: number
   borderColor: string
   dataframeBorderColor: string
   dataframeHeaderBackgroundColor: string

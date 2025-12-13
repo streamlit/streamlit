@@ -85,10 +85,10 @@ class DevcontainerSync:
                 return cast("dict[str, Any]", json.load(f))
         except FileNotFoundError:
             print(f"Error: File not found: {file_path}")
-            sys.exit(1)
+            raise SystemExit(1)
         except json.JSONDecodeError as e:
             print(f"Error: Invalid JSON in {file_path}: {e}")
-            sys.exit(1)
+            raise SystemExit(1)
 
     def _save_json_file(self, file_path: str, data: dict[str, Any]) -> None:
         """Save data to a JSON file with proper formatting.

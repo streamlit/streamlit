@@ -47,11 +47,9 @@ export type OptionalReactElements =
  * return <>{elements}</>
  * ```
  */
-export class RenderNodeVisitor
-  implements AppNodeVisitor<OptionalReactElements>
-{
+export class RenderNodeVisitor implements AppNodeVisitor<OptionalReactElements> {
   private readonly props: BlockPropsWithoutWidth
-  private elementKeyOverride?: string
+  private readonly elementKeyOverride?: string
   private readonly elementKeySet: Set<string>
   public readonly reactElements: ReactElement[]
   private index: number

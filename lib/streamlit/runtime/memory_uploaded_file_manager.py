@@ -19,7 +19,7 @@ from collections import defaultdict
 from typing import TYPE_CHECKING
 
 from streamlit import util
-from streamlit.runtime.stats import CacheStat, group_stats
+from streamlit.runtime.stats import CacheStat, group_cache_stats
 from streamlit.runtime.uploaded_file_manager import (
     UploadedFileManager,
     UploadedFileRec,
@@ -135,4 +135,4 @@ class MemoryUploadedFileManager(UploadedFileManager):
             )
             for file in all_files
         ]
-        return group_stats(stats)
+        return group_cache_stats(stats)

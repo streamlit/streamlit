@@ -288,118 +288,116 @@ function AppView(props: AppViewProps): ReactElement {
 
   // The tabindex is required to support scrolling by arrow keys.
   return (
-    <>
-      <StyledAppViewContainer
-        className="stAppViewContainer appview-container"
-        data-testid="stAppViewContainer"
-        data-layout={layout}
-      >
-        {showSidebar && (
-          <Profiler id="Sidebar">
-            <ThemedSidebar
-              endpoints={endpoints}
-              hasElements={hasSidebarElements}
-              isCollapsed={isSidebarCollapsed}
-              onToggleCollapse={setSidebarCollapsedWithOptionalPersistence}
-              widgetsDisabled={widgetsDisabled}
-            >
-              <StyledSidebarBlockContainer>
-                {renderBlock(elements.sidebar)}
-              </StyledSidebarBlockContainer>
-            </ThemedSidebar>
-          </Profiler>
-        )}
-        <StyledMainContent>
-          <Header
-            hasSidebar={showSidebar}
-            isSidebarOpen={showSidebar && !isSidebarCollapsed}
-            onToggleSidebar={toggleSidebar}
-            navigation={
-              navigationPosition === Navigation.Position.TOP &&
-              shouldShowNavigation(appPages, navSections) ? (
-                <TopNav
-                  endpoints={endpoints}
-                  widgetsDisabled={widgetsDisabled}
-                />
-              ) : null
-            }
-            rightContent={topRightContent}
-            logoComponent={logoElement}
-            showToolbar={showToolbar}
-          />
-          <Component
-            tabIndex={0}
-            isEmbedded={embedded}
-            disableScrolling={disableScrolling}
-            className="stMain"
-            data-testid="stMain"
+    <StyledAppViewContainer
+      className="stAppViewContainer appview-container"
+      data-testid="stAppViewContainer"
+      data-layout={layout}
+    >
+      {showSidebar && (
+        <Profiler id="Sidebar">
+          <ThemedSidebar
+            endpoints={endpoints}
+            hasElements={hasSidebarElements}
+            isCollapsed={isSidebarCollapsed}
+            onToggleCollapse={setSidebarCollapsedWithOptionalPersistence}
+            widgetsDisabled={widgetsDisabled}
           >
-            <Profiler id="Main">
-              <StyledAppViewBlockContainer
-                className="stMainBlockContainer block-container"
-                data-testid="stMainBlockContainer"
-                isWideMode={wideMode}
-                showPadding={showPadding}
-                hasBottom={hasBottomElements}
-                hasHeader={hasHeaderUserContent}
-                hasSidebar={showSidebar}
-                showToolbar={showToolbar}
-                hasTopNav={shouldShowTopNav}
-                embedded={embedded}
-              >
-                {renderBlock(elements.main)}
-              </StyledAppViewBlockContainer>
-            </Profiler>
-            {/* Anchor indicates to the iframe resizer that this is the lowest
+            <StyledSidebarBlockContainer>
+              {renderBlock(elements.sidebar)}
+            </StyledSidebarBlockContainer>
+          </ThemedSidebar>
+        </Profiler>
+      )}
+      <StyledMainContent>
+        <Header
+          hasSidebar={showSidebar}
+          isSidebarOpen={showSidebar && !isSidebarCollapsed}
+          onToggleSidebar={toggleSidebar}
+          navigation={
+            navigationPosition === Navigation.Position.TOP &&
+            shouldShowNavigation(appPages, navSections) ? (
+              <TopNav
+                endpoints={endpoints}
+                widgetsDisabled={widgetsDisabled}
+              />
+            ) : null
+          }
+          rightContent={topRightContent}
+          logoComponent={logoElement}
+          showToolbar={showToolbar}
+        />
+        <Component
+          tabIndex={0}
+          isEmbedded={embedded}
+          disableScrolling={disableScrolling}
+          className="stMain"
+          data-testid="stMain"
+        >
+          <Profiler id="Main">
+            <StyledAppViewBlockContainer
+              className="stMainBlockContainer block-container"
+              data-testid="stMainBlockContainer"
+              isWideMode={wideMode}
+              showPadding={showPadding}
+              hasBottom={hasBottomElements}
+              hasHeader={hasHeaderUserContent}
+              hasSidebar={showSidebar}
+              showToolbar={showToolbar}
+              hasTopNav={shouldShowTopNav}
+              embedded={embedded}
+            >
+              {renderBlock(elements.main)}
+            </StyledAppViewBlockContainer>
+          </Profiler>
+          {/* Anchor indicates to the iframe resizer that this is the lowest
         possible point to determine height. But we don't add an anchor if there is
         a bottom container in the app, since those two aspects don't work
         well together. */}
-            {!hasBottomElements && (
-              <StyledIFrameResizerAnchor
-                data-testid="stAppIframeResizerAnchor"
-                data-iframe-height
-              />
-            )}
-            {hasBottomElements && (
-              <Profiler id="Bottom">
-                {/* We add spacing here to make sure that the sticky bottom is
+          {!hasBottomElements && (
+            <StyledIFrameResizerAnchor
+              data-testid="stAppIframeResizerAnchor"
+              data-iframe-height
+            />
+          )}
+          {hasBottomElements && (
+            <Profiler id="Bottom">
+              {/* We add spacing here to make sure that the sticky bottom is
            always pinned the bottom. Using sticky layout here instead of
            absolute / fixed is a trick to automatically account for the bottom
            height in the scroll area. Thereby, the bottom container will never
            cover something if you scroll to the end.*/}
-                <StyledAppViewBlockSpacer />
-                <StyledStickyBottomContainer
-                  className="stBottom"
-                  data-testid="stBottom"
-                >
-                  <StyledInnerBottomContainer>
-                    <StyledBottomBlockContainer
-                      data-testid="stBottomBlockContainer"
-                      isWideMode={wideMode}
-                      showPadding={showPadding}
-                    >
-                      {renderBlock(elements.bottom)}
-                    </StyledBottomBlockContainer>
-                  </StyledInnerBottomContainer>
-                </StyledStickyBottomContainer>
-              </Profiler>
-            )}
-          </Component>
-        </StyledMainContent>
-        {hasEventElements && (
-          <Profiler id="Event">
-            <EventContainer>
-              <StyledEventBlockContainer
-                className="stEvent"
-                data-testid="stEvent"
+              <StyledAppViewBlockSpacer />
+              <StyledStickyBottomContainer
+                className="stBottom"
+                data-testid="stBottom"
               >
-                {renderBlock(elements.event)}
-              </StyledEventBlockContainer>
-            </EventContainer>
-          </Profiler>
-        )}
-      </StyledAppViewContainer>
-    </>
+                <StyledInnerBottomContainer>
+                  <StyledBottomBlockContainer
+                    data-testid="stBottomBlockContainer"
+                    isWideMode={wideMode}
+                    showPadding={showPadding}
+                  >
+                    {renderBlock(elements.bottom)}
+                  </StyledBottomBlockContainer>
+                </StyledInnerBottomContainer>
+              </StyledStickyBottomContainer>
+            </Profiler>
+          )}
+        </Component>
+      </StyledMainContent>
+      {hasEventElements && (
+        <Profiler id="Event">
+          <EventContainer>
+            <StyledEventBlockContainer
+              className="stEvent"
+              data-testid="stEvent"
+            >
+              {renderBlock(elements.event)}
+            </StyledEventBlockContainer>
+          </EventContainer>
+        </Profiler>
+      )}
+    </StyledAppViewContainer>
   )
 }
 

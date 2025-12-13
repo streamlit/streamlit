@@ -134,4 +134,12 @@ else:
     st.write("Clicked initial button:", clicked)
 
 st.button("Button with spinner icon", icon="spinner")
+
+st.button(
+    "Icon Right",
+    icon=":material/thumb_up:",
+    icon_position="right",
+    key="icon_right_material",
+)
+
 st.button("Dislike Button", icon=":material/thumb_down:", label_visibility="collapsed")

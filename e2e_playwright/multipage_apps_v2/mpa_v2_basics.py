@@ -24,7 +24,7 @@ SMALL_LOGO = Image.open(str(PARENT_DIR / "small-streamlit.png"))
 
 LOGO = Image.open(str(PARENT_DIR / "full-streamlit.png"))
 
-st.logo(LOGO, link="https://www.example.com", icon_image=SMALL_LOGO)
+st.logo(LOGO, icon_image=SMALL_LOGO)
 
 st.header("Main Page")
 x = st.slider("x")

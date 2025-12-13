@@ -43,6 +43,7 @@ from streamlit.errors import (
     StreamlitDuplicateElementKey,
 )
 from streamlit.logger import get_logger
+from streamlit.proto.Element_pb2 import Element as ElementProto
 from streamlit.proto.Empty_pb2 import Empty as EmptyProto
 from streamlit.proto.RootContainer_pb2 import RootContainer
 from streamlit.proto.Text_pb2 import Text as TextProto
@@ -1094,3 +1095,69 @@ class DeltaGeneratorImageTest(DeltaGeneratorTestCase):
             StreamlitAPIException, match=r"Cannot pair 2 captions with 5 images."
         ):
             st.image([url] * 5, caption=[caption] * 2)
+
+    def test_transient_creation(self):
+        """Test that _transient creates a transient element."""
+        dg = DeltaGenerator(root_container=RootContainer.MAIN)
+        element = ElementProto()
+        element.text.body = "transient text"
+
+        create_cb, _ = dg._transient(element)
+        msg = create_cb()
+
+        assert msg.delta.new_transient.elements[0].text.body == "transient text"
+        assert msg.metadata.delta_path == make_delta_path(RootContainer.MAIN, (), 0)
+
+    def test_transient_deletion(self):
+        """Test that _transient deletion works."""
+        dg = DeltaGenerator(root_container=RootContainer.MAIN)
+        element = ElementProto()
+        element.text.body = "transient text"
+
+        create_cb, clear_cb = dg._transient(element)
+        create_cb()
+        msg = clear_cb()
+
+        assert len(msg.delta.new_transient.elements) == 0
+        assert msg.metadata.delta_path == make_delta_path(RootContainer.MAIN, (), 0)
+
+    def test_multiple_transient_elements(self):
+        """Test multiple transient elements at the same cursor."""
+        dg = DeltaGenerator(root_container=RootContainer.MAIN)
+
+        element1 = ElementProto()
+        element1.text.body = "text1"
+        create_cb1, clear_cb1 = dg._transient(element1)
+
+        element2 = ElementProto()
+        element2.text.body = "text2"
+        create_cb2, _clear_cb2 = dg._transient(element2)
+
+        msg1 = create_cb1()
+        assert len(msg1.delta.new_transient.elements) == 1
+        assert msg1.delta.new_transient.elements[0].text.body == "text1"
+
+        msg2 = create_cb2()
+        assert len(msg2.delta.new_transient.elements) == 2
+        assert msg2.delta.new_transient.elements[0].text.body == "text1"
+        assert msg2.delta.new_transient.elements[1].text.body == "text2"
+
+        msg3 = clear_cb1()
+        assert len(msg3.delta.new_transient.elements) == 1
+        assert msg3.delta.new_transient.elements[0].text.body == "text2"
+
+    def test_transient_layout_config(self):
+        """Test that _transient handles layout config."""
+        from streamlit.elements.lib.layout_utils import LayoutConfig
+
+        dg = DeltaGenerator(root_container=RootContainer.MAIN)
+        element = ElementProto()
+        element.text.body = "transient text"
+        layout = LayoutConfig(width=100, height=200)
+
+        create_cb, _ = dg._transient(element, layout_config=layout)
+        msg = create_cb()
+
+        transient_element = msg.delta.new_transient.elements[0]
+        assert transient_element.width_config.pixel_width == 100
+        assert transient_element.height_config.pixel_height == 200

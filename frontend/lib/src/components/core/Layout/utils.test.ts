@@ -78,7 +78,7 @@ describe("getDirectionOfBlock", () => {
     },
   ]
 
-  test.each(testCases)("$description", ({ block, expected }) => {
+  it.each(testCases)("$description", ({ block, expected }) => {
     const blockProto = new BlockProto(block)
     expect(getDirectionOfBlock(blockProto)).toBe(expected)
   })

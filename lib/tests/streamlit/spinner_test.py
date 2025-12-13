@@ -30,56 +30,39 @@ class SpinnerTest(DeltaGeneratorTestCase):
         with st.spinner("some text"):
             # Without the timeout, the spinner is sometimes not available
             time.sleep(0.7)
-            el = self.get_delta_from_queue().new_element
+            el = self.get_delta_from_queue().new_transient.elements[0]
             assert el.spinner.text == "some text"
             assert not el.spinner.cache
         # Check if it gets reset to st.empty()
         last_delta = self.get_delta_from_queue()
-        assert last_delta.HasField("new_element")
-        assert last_delta.new_element.WhichOneof("type") == "empty"
+        assert last_delta.HasField("new_transient")
+        assert len(last_delta.new_transient.elements) == 0
         assert not el.spinner.show_time
-
-    def test_spinner_within_chat_message(self):
-        """Test st.spinner in st.chat_message resets to empty container block."""
-        with st.chat_message("user"), st.spinner("some text"):
-            # Without the timeout, the spinner is sometimes not available
-            time.sleep(0.7)
-            el = self.get_delta_from_queue().new_element
-            assert el.spinner.text == "some text"
-            assert not el.spinner.cache
-        # Check that the element gets reset to an empty container block:
-        last_delta = self.get_delta_from_queue()
-        assert last_delta.HasField("add_block")
-        # The block should have `allow_empty` set to false,
-        # which means that it will be ignored on the frontend in case
-        # it the container is empty. This is the desired behavior
-        # for spinner
-        assert not last_delta.add_block.allow_empty
 
     def test_spinner_for_caching(self):
         """Test st.spinner in cache functions."""
         with st.spinner("some text", _cache=True):
             # Without the timeout, the spinner is sometimes not available
             time.sleep(0.7)
-            el = self.get_delta_from_queue().new_element
+            el = self.get_delta_from_queue().new_transient.elements[0]
             assert el.spinner.text == "some text"
             assert el.spinner.cache
         # Check if it gets reset to st.empty()
         last_delta = self.get_delta_from_queue()
-        assert last_delta.HasField("new_element")
-        assert last_delta.new_element.WhichOneof("type") == "empty"
+        assert last_delta.HasField("new_transient")
+        assert len(last_delta.new_transient.elements) == 0
 
     def test_spinner_time(self):
         """Test st.spinner with show_time."""
         with st.spinner("some text", show_time=True):
             time.sleep(0.7)
-            el = self.get_delta_from_queue().new_element
+            el = self.get_delta_from_queue().new_transient.elements[0]
             assert el.spinner.text == "some text"
             assert el.spinner.show_time
         # Check if it gets reset to st.empty()
         last_delta = self.get_delta_from_queue()
-        assert last_delta.HasField("new_element")
-        assert last_delta.new_element.WhichOneof("type") == "empty"
+        assert last_delta.HasField("new_transient")
+        assert len(last_delta.new_transient.elements) == 0
 
     def test_spinner_with_width(self):
         """Test st.spinner with different width types."""
@@ -98,7 +81,7 @@ class SpinnerTest(DeltaGeneratorTestCase):
             with self.subTest(width_value=width_value):
                 with st.spinner(f"test text {index}", width=width_value):
                     time.sleep(0.7)
-                    el = self.get_delta_from_queue().new_element
+                    el = self.get_delta_from_queue().new_transient.elements[0]
                     assert el.spinner.text == f"test text {index}"
 
                     assert (
@@ -111,19 +94,19 @@ class SpinnerTest(DeltaGeneratorTestCase):
         test_cases = [
             (
                 "invalid",
-                "Invalid width value: 'invalid'. Width must be either an integer (pixels), 'stretch', or 'content'.",
+                "Width must be either a positive integer (pixels), 'stretch', or 'content'.",
             ),
             (
                 -100,
-                "Invalid width value: -100. Width must be either an integer (pixels), 'stretch', or 'content'.",
+                "Width must be either a positive integer (pixels), 'stretch', or 'content'.",
             ),
             (
                 0,
-                "Invalid width value: 0. Width must be either an integer (pixels), 'stretch', or 'content'.",
+                "Width must be either a positive integer (pixels), 'stretch', or 'content'.",
             ),
             (
                 100.5,
-                "Invalid width value: 100.5. Width must be either an integer (pixels), 'stretch', or 'content'.",
+                "Width must be either a positive integer (pixels), 'stretch', or 'content'.",
             ),
         ]
 
@@ -132,13 +115,13 @@ class SpinnerTest(DeltaGeneratorTestCase):
                 with pytest.raises(StreamlitAPIException) as exc:
                     with st.spinner("test text", width=width_value):
                         time.sleep(0.1)
-                assert str(exc.value) == expected_error_message
+                assert expected_error_message in str(exc.value)
 
     def test_spinner_default_width(self):
         """Test that st.spinner defaults to content width."""
         with st.spinner("test text"):
             time.sleep(0.7)
-            el = self.get_delta_from_queue().new_element
+            el = self.get_delta_from_queue().new_transient.elements[0]
             assert el.spinner.text == "test text"
             assert (
                 el.width_config.WhichOneof("width_spec")

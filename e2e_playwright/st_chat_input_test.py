@@ -42,6 +42,7 @@ from e2e_playwright.shared.app_utils import (
     get_element_by_key,
     goto_app,
     reset_hovering,
+    select_selectbox_option,
 )
 
 
@@ -593,7 +594,8 @@ def test_uploads_and_deletes_single_file(
 
     wait_for_app_run(themed_app)
 
-    expect(uploaded_files).not_to_have_text(file_name2, use_inner_text=True)
+    # After deletion, the uploaded files container should not be visible
+    expect(chat_input.get_by_test_id("stChatUploadedFiles")).not_to_be_visible()
 
 
 @use_chat_input("multiple_files")
@@ -1589,14 +1591,7 @@ def test_audio_sample_rate_validation(app: Page, option_text: str, expected_hz: 
     grant_microphone_permissions(app)
 
     # Select the specified sample rate from dropdown
-    selectbox = app.get_by_test_id("stSelectbox").first
-    selectbox.click()
-    # Click the option in the dropdown (not the selected value display)
-    app.get_by_test_id("stSelectboxVirtualDropdown").get_by_text(option_text).click()
-    wait_for_app_run(app)
-
-    # Verify the selection
-    expect(selectbox).to_contain_text(option_text)
+    select_selectbox_option(app, "Select audio sample rate", option_text)
 
     # Get the chat input for audio recording
     chat_input = get_element_by_key(app, "audio_sample_rate_test")
