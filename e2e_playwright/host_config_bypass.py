@@ -14,18 +14,47 @@
 
 """Test app for host config bypass feature."""
 
-import datetime
-
 import streamlit as st
+
+
+def page1():
+    pass
+
+
+def page2():
+    pass
+
+
+def page3():
+    pass
+
+
+pages = {
+    "General": [
+        st.Page(page1, title="Home", icon=":material/home:"),
+        st.Page(page2, title="Data visualizations", icon=":material/monitoring:"),
+    ],
+    "Admin": [st.Page(page3, title="Settings", icon=":material/settings:")],
+}
+
+
+st.navigation(pages)
 
 st.subheader("Connection status test", divider="gray")
 
-# Display some basic information to verify the app loaded
-st.write(f"Session state: {len(st.session_state)} keys")
+st.slider("Slider", value=50, min_value=0, max_value=100)
+
+st.multiselect(
+    "Multiselect",
+    default=["Option 1", "Option 2"],
+    options=["Option 1", "Option 2", "Option 3", "Option 4", "Option 5"],
+)
 
 # Add a button to verify interactivity
+st.write("Button:")
 if st.button("Click me"):
     st.write("Button clicked!")
 
-# Display current time to verify app runs
-st.write(f"Current time: {datetime.datetime.now()}")
+with st.sidebar:
+    st.metric("Temperature", "70 °F", "1.2 °F")
+    st.metric("Wind", "9 mph", "-8%")

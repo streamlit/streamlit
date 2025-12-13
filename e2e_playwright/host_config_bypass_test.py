@@ -22,6 +22,7 @@ without waiting for the host-config endpoint response (bypass mode).
 from __future__ import annotations
 
 import json
+from typing import Any
 
 from playwright.sync_api import Page, Route, WebSocket, expect
 
@@ -54,12 +55,12 @@ def _inject_bypass_config(page: Page, backend_url: str) -> None:
     )
 
 
-def _create_host_config_route_spy(page: Page) -> dict[str, list]:
+def _create_host_config_route_spy(page: Page) -> dict[str, list[dict[str, Any]]]:
     """Create a spy to track host-config endpoint calls.
 
     Returns a dict with 'calls' list that will be populated with timing info.
     """
-    spy_data: dict[str, list] = {"calls": []}
+    spy_data: dict[str, list[dict[str, Any]]] = {"calls": []}
 
     def handle_route(route: Route) -> None:
         """Track when host-config is called and allow it through."""
