@@ -20,12 +20,16 @@ def local_file_down(path: str) -> bytes:
 
     Parameters
     ----------
-    path: str
+    path : str
         Path to the local file
-    Returns:
+
+    Returns
+    -------
     bytes
         File content as bytes
-    Raises:
+
+    Raises
+    ------
     FileNotFoundError
         File does not exist
     IOError
