@@ -220,13 +220,13 @@ describe("FlexBoxContainer layout props", () => {
 
   it.each([
     [
-      "gap: small",
+      "gap: xxsmall",
       { gapConfig: { gapSize: streamlit.GapSize.XXSMALL } },
       "gap: 0.25rem;",
     ],
     [
-      "gap: small",
-      { gapConfig: { gapSize: streamlit.GapSize.XXSMALL } },
+      "gap: xsmall",
+      { gapConfig: { gapSize: streamlit.GapSize.XSMALL } },
       "gap: 0.5rem;",
     ],
     [
@@ -245,12 +245,12 @@ describe("FlexBoxContainer layout props", () => {
       "gap: 4rem;",
     ],
     [
-      "gap: large",
+      "gap: xlarge",
       { gapConfig: { gapSize: streamlit.GapSize.XLARGE } },
       "gap: 6rem;",
     ],
     [
-      "gap: large",
+      "gap: xxlarge",
       { gapConfig: { gapSize: streamlit.GapSize.XXLARGE } },
       "gap: 8rem;",
     ],
