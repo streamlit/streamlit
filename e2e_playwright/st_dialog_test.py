@@ -485,7 +485,12 @@ def test_dialog_with_chart(app: Page):
         "[role='graphics-document']"
     )
     expect(chart).to_be_visible()
-    chart.hover(position={"x": 80, "y": 200})
+    # Use chart bounds to hover deterministically (helps Firefox).
+    chart_box = chart.bounding_box()
+    assert chart_box is not None
+    target = {"x": chart_box["width"] * 0.5, "y": chart_box["height"] * 0.5}
+    app.mouse.move(chart_box["x"] + target["x"], chart_box["y"] + target["y"])
+    chart.hover(position=target)
     tooltip = app.locator("#vg-tooltip-element")
     expect(tooltip).to_be_visible()
 
