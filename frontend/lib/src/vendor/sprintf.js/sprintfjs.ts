@@ -31,6 +31,7 @@ const re = {
   not_type: /[^T]/,
   not_primitive: /[^v]/,
   number: /[diefg]/,
+  decimal_number: /[diefgu]/, // Types that support thousand separators
   numeric_arg: /[bcdiefguxX]/,
   json: /[j]/,
   not_json: /[^j]/,
@@ -169,7 +170,9 @@ function sprintfFormat(parseTree: ParseTree, argv: unknown[]): string {
         break
       case "g":
         argStr = ph.precision
-          ? String(Number((arg as number).toPrecision(parseInt(ph.precision, 10))))
+          ? String(
+              Number((arg as number).toPrecision(parseInt(ph.precision, 10)))
+            )
           : String(parseFloat(String(arg)))
         break
       case "o":
@@ -221,11 +224,11 @@ function sprintfFormat(parseTree: ParseTree, argv: unknown[]): string {
         argStr = argStr.replace(re.sign, "")
       }
 
-      // Apply thousand separators if `,` or `_` flag is set and it's a numeric type
+      // Apply thousand separators if `,` or `_` flag is set and it's a decimal numeric type
       // - `_` flag: use underscore as separator (e.g., %_d → 1_234_567)
       // - `,` flag with custom pad char: use pad char as separator (e.g., %'*,d → 1*234*567)
       // - `,` flag alone: use comma as separator (e.g., %,d → 1,234,567)
-      if (ph.thousand_sep && re.number.test(ph.type)) {
+      if (ph.thousand_sep && re.decimal_number.test(ph.type)) {
         let separator: string
         if (ph.thousand_sep === "_") {
           separator = "_"
