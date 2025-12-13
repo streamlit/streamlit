@@ -39,10 +39,12 @@ Add two new flags to printf-style format specifiers (placed after the `%` sign):
 | `,` | Comma | `%,d` | `1,234,567` |
 | `_` | Underscore | `%_d` | `1_234_567` |
 
-The flags work with numeric format types: `d`, `i`, `f` and with all other sprintf features.
-
-These flags are equivalent to Python's [format specifiers for thousand separators](https://www.w3schools.com/python/python_string_formatting.asp)
+These flags are equivalent to Python's [format specifiers for thousand separators](https://docs.python.org/3/library/string.html#format-specification-mini-language)
 `:,` and `:_` (e.g., `f"{x:,}"` or `f"{x:_}"`).
+
+The thousand separator flags work with all sprintf features (width, precision, sign, padding, etc.)
+and are applied after the base formatting. The separator is inserted every 3 digits in the integer
+portion of numeric output.
 
 ### Examples
 
@@ -69,24 +71,51 @@ st.dataframe(
 
 ### Behavior
 
-**Supported format types:**
+**Format specifier compatibility:**
 
-- `%,d` / `%_d` — Integer with separators
-- `%,i` / `%_i` — Integer with separators (alias)
-- `%,f` / `%_f` — Float with separators (e.g., `%,.2f`)
+The thousand separator flags (`,` and `_`) apply to numeric format specifiers `d`, `i`, `u`, `f`,
+`e`, and `g`. The separator is inserted every 3 digits in the **integer portion** of the formatted output.
+
+| Specifier | Description | Example | Output |
+|-----------|-------------|---------|--------|
+| `%,d` | Signed decimal integer | `%,d` with `1234567` | `1,234,567` |
+| `%,i` | Signed decimal integer (alias) | `%,i` with `1234567` | `1,234,567` |
+| `%,u` | Unsigned decimal integer | `%,u` with `1234567` | `1,234,567` |
+| `%,f` | Floating point | `%,.2f` with `1234567.89` | `1,234,567.89` |
+| `%,e` | Scientific notation | `%,e` with `1234567` | `1.234567e+6` (mantissa is < 1000) |
+| `%,g` | General format | `%,g` with `1234567` | `1.23457e+6` or `1,234,567` |
+| `%,o` | Octal | `%,o` with `1234567` | `4553207` (flag ignored) |
+| `%,x` | Hexadecimal | `%,x` with `1234567` | `12d687` (flag ignored) |
+| `%,s` | String | `%,s` with `"hello"` | `hello` (flag ignored) |
+
+> **Note:** For `%,e` (scientific notation), the mantissa is always between 1 and 10, so separators
+> have no visible effect. For `%,g`, the output format depends on the magnitude—large numbers may
+> use scientific notation (no visible separators) or decimal format (separators applied).
 
 **Flag combinations:**
 
-- Works with sign flag: `%+,d` → `+1,234,567`
-- Works with width: `%,15d` → `1,234,567`
-- Works with precision: `%,.2f` → `1,234.56`
-- Works with zero padding: `%0,10d` → `001,234,567`
-- Works with suffixes: `%,d%%` → `1,234,567%`
-- Works with prefixes: `USD %,d` → `USD 1,234,567`
+- Works with sign flag: `%+,d` with `1234567` → `+1,234,567`
+- Works with width: `%,15d` with `1234567` → `1,234,567` (right-aligned, space-padded)
+- Works with precision: `%,.2f` with `1234.56` → `1,234.56`
+- Works with zero padding: `%0,10d` with `1234` → `000001,234`
+- Works with alignment: `%-,15d` with `1234567` → `1,234,567` (left-aligned)
+- Works with prefixes/suffixes: `$%,d` with `1234567` → `$1,234,567`
 
-**Non-numeric types:**
+**Custom separators via pad character:**
 
-The `,` and `_` flags are silently ignored for non-numeric format types (`%s`, `%x`, etc.).
+When using the comma flag with a custom pad character (`%'X,`), the pad character becomes the
+thousand separator instead of a comma:
+
+- `%'_,d` with `1234567` → `1_234_567` (underscore separator)
+- `%'.,d` with `1234567` → `1.234.567` (period separator for European formatting)
+- `%' ,d` with `1234567` → `1 234 567` (space separator)
+
+> **Note:** The custom pad character is an already supported feature in sprintf-js.
+
+**Unsupported specifiers:**
+
+The `,` and `_` flags are silently ignored for non-decimal formats (`%o`, `%x`, `%X`, `%b`)
+and non-numeric format types (`%s`, `%c`, `%t`, `%T`). The flag is captured but has no effect.
 
 ### Affected Components
 
@@ -97,7 +126,8 @@ This feature affects the following elements that support the `format` parameter:
 - `st.metric` — `format` parameter
 - `st.slider` — `format` parameter
 
-The `format` for `st.number_input` is already very limited, so we might not be able to support this in the initial implementation.
+`st.number_input` is **out of scope** for the initial implementation. The underlying React component
+doesn't separate display formatting from input validation only supporting very limited format options already. This is tracked separately in [#4897](https://github.com/streamlit/streamlit/issues/4897).
 
 ### Implementation Notes
 
