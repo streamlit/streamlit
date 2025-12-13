@@ -1502,12 +1502,12 @@ class ButtonMixin:
 
         if label_visibility == "collapsed" and icon is None:
             raise StreamlitAPIException(
-                "Button can only have `label_visibility='collapsed'` if they "
-                "have an `icon` set."
+                "Button can only have `label_visibility='collapsed'` if it "
+                "has an `icon` set."
             )
 
         button_proto.label_visibility.value = get_label_visibility_proto_value(
-            label_visibility
+            cast("LabelVisibility", label_visibility)
         )
 
         serde = ButtonSerde()
