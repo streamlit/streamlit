@@ -50,27 +50,42 @@ vi.mock("@streamlit/utils", async () => {
 })
 
 // Mock the lazy-loaded StreamlitSyntaxHighlighter to avoid flaky Suspense timing issues
+const MockStreamlitSyntaxHighlighter = ({
+  children,
+  language,
+}: {
+  children?: string | string[] | null
+  language?: string
+  showLineNumbers?: boolean
+  wrapLines?: boolean
+  height?: number
+}): ReactElement => {
+  // Normalize children to a string for display
+  const codeString =
+    typeof children === "string"
+      ? children
+      : Array.isArray(children)
+        ? children.join("")
+        : ""
+
+  return (
+    <div className="stCode" data-testid="stCode">
+      <pre>
+        <code className={language ? `language-${language}` : ""}>
+          {codeString}
+        </code>
+      </pre>
+      {codeString && codeString.trim().length > 0 && (
+        <button title="Copy to clipboard">Copy</button>
+      )}
+    </div>
+  )
+}
+
 vi.mock(
   "~lib/components/elements/CodeBlock/StreamlitSyntaxHighlighter",
   () => ({
-    default: ({
-      children,
-      language,
-    }: {
-      children: string
-      language?: string
-    }): React.ReactElement => (
-      <div className="stCode" data-testid="stCode">
-        <pre>
-          <code className={language ? `language-${language}` : ""}>
-            {children}
-          </code>
-        </pre>
-        {children && children.trim().length > 0 && (
-          <button title="Copy to clipboard">Copy</button>
-        )}
-      </div>
-    ),
+    default: MockStreamlitSyntaxHighlighter,
   })
 )
 
