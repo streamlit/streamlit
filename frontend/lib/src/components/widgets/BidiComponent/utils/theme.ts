@@ -58,6 +58,24 @@ export const objectToCssCustomProperties = (
 export const extractComponentsV2Theme = (
   theme: EmotionTheme
 ): StreamlitTheme => {
+  const headingFontSizes = [
+    theme.fontSizes.h1FontSize,
+    theme.fontSizes.h2FontSize,
+    theme.fontSizes.h3FontSize,
+    theme.fontSizes.h4FontSize,
+    theme.fontSizes.h5FontSize,
+    theme.fontSizes.h6FontSize,
+  ]
+
+  const headingFontWeights = [
+    theme.fontWeights.h1FontWeight,
+    theme.fontWeights.h2FontWeight,
+    theme.fontWeights.h3FontWeight,
+    theme.fontWeights.h4FontWeight,
+    theme.fontWeights.h5FontWeight,
+    theme.fontWeights.h6FontWeight,
+  ]
+
   return {
     primaryColor: theme.colors.primary,
     backgroundColor: theme.colors.bgColor,
@@ -76,22 +94,20 @@ export const extractComponentsV2Theme = (
     baseFontWeight: theme.fontWeights.normal,
     codeFontWeight: theme.fontWeights.code,
     codeFontSize: theme.fontSizes.codeFontSize,
-    headingFontSizes: [
-      theme.fontSizes.h1FontSize,
-      theme.fontSizes.h2FontSize,
-      theme.fontSizes.h3FontSize,
-      theme.fontSizes.h4FontSize,
-      theme.fontSizes.h5FontSize,
-      theme.fontSizes.h6FontSize,
-    ],
-    headingFontWeights: [
-      theme.fontWeights.h1FontWeight,
-      theme.fontWeights.h2FontWeight,
-      theme.fontWeights.h3FontWeight,
-      theme.fontWeights.h4FontWeight,
-      theme.fontWeights.h5FontWeight,
-      theme.fontWeights.h6FontWeight,
-    ],
+    headingFontSizes,
+    headingFontSize1: headingFontSizes[0],
+    headingFontSize2: headingFontSizes[1],
+    headingFontSize3: headingFontSizes[2],
+    headingFontSize4: headingFontSizes[3],
+    headingFontSize5: headingFontSizes[4],
+    headingFontSize6: headingFontSizes[5],
+    headingFontWeights,
+    headingFontWeight1: headingFontWeights[0],
+    headingFontWeight2: headingFontWeights[1],
+    headingFontWeight3: headingFontWeights[2],
+    headingFontWeight4: headingFontWeights[3],
+    headingFontWeight5: headingFontWeights[4],
+    headingFontWeight6: headingFontWeights[5],
     borderColor: theme.colors.borderColor,
     dataframeBorderColor: theme.colors.dataframeBorderColor,
     dataframeHeaderBackgroundColor:
