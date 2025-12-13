@@ -1238,7 +1238,7 @@ describe("WebsocketConnection FSM fast-path behavior", () => {
     vi.clearAllTimers()
     vi.useRealTimers()
     globalThis.fetch = originalFetch
-    window.__streamlit = undefined
+    globalThis.__mockStreamlitConfig = {}
   })
 
   it("uses default path (PINGING_SERVER) when enableBypass is false", () => {
