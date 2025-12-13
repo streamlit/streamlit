@@ -16,20 +16,62 @@ from __future__ import annotations
 
 
 def local_file_down(path: str) -> bytes:
-    """Download file from local filesystem."""
+    """Download file from local filesystem.
+
+    Parameters
+    ----------
+    path: str
+        Path to the local file
+    Returns:
+    bytes
+        File content as bytes
+    Raises:
+    FileNotFoundError
+        File does not exist
+    IOError
+        File cannot be read
+    """
     with open(path, "rb") as f:
         return f.read()
 
 
 def s3_file_down(link: str) -> bytes:
-    """Download file from S3."""
+    """Download file from S3.
+
+    Parameters
+    ----------
+    link : str
+        S3 URI as string
+
+    Returns
+    -------
+    bytes
+        The S3 content as bytes
+
+    Raises
+    ------
+    ImportError
+        If boto3 not installed
+    ValueError
+        If S3 URI is missing
+    FileNotFound
+        If S3 object not exist
+    """
     try:
+        from urllib.parse import urlparse
+
         import boto3
         from botocore.exceptions import ClientError
     except ImportError as e:
-        raise ImportError("boto3 is required to download from s3") from e
-    parts = link.replace("s3://", "").replace("s3a://", "").split("/", 1)
-    bucket, key = parts[0], parts[1] if len(parts) > 1 else ""
+        raise ImportError("boto3 is missing") from e
+
+    parsed = urlparse(link)
+    bucket = parsed.netloc
+    key = parsed.path.lstrip("/")
+
+    if not key:
+        raise ValueError("Invalid S3 link or no key specified")
+
     try:
         s3 = boto3.client("s3")
         res = s3.get_object(Bucket=bucket, Key=key)
@@ -39,7 +81,25 @@ def s3_file_down(link: str) -> bytes:
 
 
 def http_down(link: str) -> bytes:
-    """Download file from HTTP/HTTPS URL."""
+    """Download file from HTTP/HTTPS URL.
+
+    Parameters
+    ----------
+    link : str
+    http link of the file
+
+    Returns
+    -------
+    bytes
+        content of file as bytes
+
+    Raises
+    ------
+    ValueError
+        If the url is not http or https
+    urllib.error.URLError
+    If the url fails or timeouts
+    """
     import urllib.request
     from urllib.parse import urlparse
 
