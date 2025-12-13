@@ -175,6 +175,7 @@ vi.mock("~lib/hostComm/HostCommunicationManager", async () => {
     const hostCommunicationMgr = new actualModule.default(...props)
     vi.spyOn(hostCommunicationMgr, "sendMessageToHost")
     vi.spyOn(hostCommunicationMgr, "sendMessageToSameOriginHost")
+    vi.spyOn(hostCommunicationMgr, "setAllowedOrigins")
     return hostCommunicationMgr
   })
 
@@ -218,6 +219,7 @@ vi.mock("@streamlit/app/src/MetricsManager", async () => {
   ) {
     const metricsMgr = new actualModule.MetricsManager(...props)
     vi.spyOn(metricsMgr, "enqueue")
+    vi.spyOn(metricsMgr, "setMetricsConfig")
     return metricsMgr
   })
 
@@ -6044,27 +6046,26 @@ describe("App.hasReceivedNewSession flag behavior", () => {
       // ConnectionManager should still be created (normal behavior)
       expect(ConnectionManager).toHaveBeenCalledTimes(1)
 
-      // HostCommunicationManager.setAllowedOrigins should not have been
-      // called during init (only later when onHostConfigResp fires)
+      // Verify that setAllowedOrigins and setMetricsConfig were NOT called
+      // during app initialization (since no HOST_CONFIG is present)
       const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
         HostCommunicationManager
       )
+      const metricsMgr = getStoredValue<MetricsManager>(MetricsManager)
 
-      // The number of calls to setAllowedOrigins should be 0 before
-      // onHostConfigResp is called (we haven't triggered it yet)
-      // Note: We can't easily verify this without inspecting call counts
-      // at specific points in the lifecycle
-      expect(hostCommunicationMgr).toBeDefined()
+      expect(hostCommunicationMgr.setAllowedOrigins).not.toHaveBeenCalled()
+      expect(metricsMgr.setMetricsConfig).not.toHaveBeenCalled()
     })
 
     it("applies HOST_CONFIG values before ConnectionManager init", () => {
       const allowedOrigins = ["https://example.com", "https://other.com"]
+      const metricsUrl = "postMessage"
       globalThis.__mockStreamlitConfig = {
         BACKEND_BASE_URL: "https://backend.example.com",
         HOST_CONFIG: {
           allowedOrigins,
           useExternalAuthToken: true,
-          metricsUrl: "postMessage",
+          metricsUrl,
         },
       }
 
@@ -6073,25 +6074,44 @@ describe("App.hasReceivedNewSession flag behavior", () => {
       // ConnectionManager should be created
       expect(ConnectionManager).toHaveBeenCalledTimes(1)
 
-      // HostCommunicationManager should have setAllowedOrigins called
+      // Verify that initial HOST_CONFIG values were applied
       const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
         HostCommunicationManager
       )
-      expect(hostCommunicationMgr).toBeDefined()
+      const metricsMgr = getStoredValue<MetricsManager>(MetricsManager)
+
+      expect(hostCommunicationMgr.setAllowedOrigins).toHaveBeenCalledWith({
+        allowedOrigins,
+        useExternalAuthToken: true,
+        enableCustomParentMessages: false,
+        blockErrorDialogs: false,
+      })
+
+      expect(metricsMgr.setMetricsConfig).toHaveBeenCalledWith(metricsUrl)
     })
 
     it("StreamlitConfig HOST_CONFIG values take precedence over endpoint response", () => {
       const windowOrigins = ["https://window-origin.com"]
+      const windowMetricsUrl = "postMessage"
       globalThis.__mockStreamlitConfig = {
         BACKEND_BASE_URL: "https://backend.example.com",
         HOST_CONFIG: {
           allowedOrigins: windowOrigins,
           useExternalAuthToken: true,
-          metricsUrl: "postMessage",
+          metricsUrl: windowMetricsUrl,
         },
       }
 
       renderApp(getProps())
+
+      const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
+        HostCommunicationManager
+      )
+      const metricsMgr = getStoredValue<MetricsManager>(MetricsManager)
+
+      // Clear initial calls from applyInitialHostConfig
+      vi.mocked(hostCommunicationMgr.setAllowedOrigins).mockClear()
+      vi.mocked(metricsMgr.setMetricsConfig).mockClear()
 
       // Simulate onHostConfigResp with conflicting values
       const onHostConfigResp = getMockConnectionManagerProp("onHostConfigResp")
@@ -6109,11 +6129,17 @@ describe("App.hasReceivedNewSession flag behavior", () => {
         })
       })
 
-      // The StreamlitConfig values should take precedence
-      // We verify this by checking that the MetricsManager was configured
-      // with the window value ("postMessage") rather than the endpoint value
-      const metricsMgr = getStoredValue<MetricsManager>(MetricsManager)
-      expect(metricsMgr).toBeDefined()
+      // Verify StreamlitConfig values took precedence
+      expect(hostCommunicationMgr.setAllowedOrigins).toHaveBeenCalledWith({
+        allowedOrigins: windowOrigins, // Window value, not endpoint
+        useExternalAuthToken: true, // Window value, not endpoint
+        enableCustomParentMessages: false,
+        blockErrorDialogs: false,
+      })
+
+      expect(metricsMgr.setMetricsConfig).toHaveBeenCalledWith(
+        windowMetricsUrl // Window value, not endpoint
+      )
     })
 
     it("uses endpoint values when StreamlitConfig HOST_CONFIG is not set", () => {
@@ -6123,6 +6149,12 @@ describe("App.hasReceivedNewSession flag behavior", () => {
       renderApp(getProps())
 
       const endpointOrigins = ["https://endpoint-origin.com"]
+      const endpointMetricsUrl = "https://metrics.endpoint.com"
+
+      const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
+        HostCommunicationManager
+      )
+      const metricsMgr = getStoredValue<MetricsManager>(MetricsManager)
 
       // Simulate onHostConfigResp
       const onHostConfigResp = getMockConnectionManagerProp("onHostConfigResp")
@@ -6131,7 +6163,7 @@ describe("App.hasReceivedNewSession flag behavior", () => {
         onHostConfigResp({
           allowedOrigins: endpointOrigins,
           useExternalAuthToken: false,
-          metricsUrl: "https://metrics.endpoint.com",
+          metricsUrl: endpointMetricsUrl,
           disableFullscreenMode: true,
           enableCustomParentMessages: true,
           mapboxToken: "test-token",
@@ -6140,18 +6172,25 @@ describe("App.hasReceivedNewSession flag behavior", () => {
         })
       })
 
-      // HostCommunicationManager should have been configured with endpoint values
-      const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
-        HostCommunicationManager
+      // Verify endpoint values were used (no window values to override)
+      expect(hostCommunicationMgr.setAllowedOrigins).toHaveBeenCalledWith({
+        allowedOrigins: endpointOrigins,
+        useExternalAuthToken: false,
+        enableCustomParentMessages: true,
+        blockErrorDialogs: false,
+      })
+
+      expect(metricsMgr.setMetricsConfig).toHaveBeenCalledWith(
+        endpointMetricsUrl
       )
-      expect(hostCommunicationMgr).toBeDefined()
     })
 
     it("applies partial HOST_CONFIG (metricsUrl optional)", () => {
+      const windowOrigins = ["https://example.com"]
       globalThis.__mockStreamlitConfig = {
         BACKEND_BASE_URL: "https://backend.example.com",
         HOST_CONFIG: {
-          allowedOrigins: ["https://example.com"],
+          allowedOrigins: windowOrigins,
           useExternalAuthToken: true,
           // metricsUrl not set - should fall back to endpoint value
         },
@@ -6159,15 +6198,25 @@ describe("App.hasReceivedNewSession flag behavior", () => {
 
       renderApp(getProps())
 
+      const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
+        HostCommunicationManager
+      )
+      const metricsMgr = getStoredValue<MetricsManager>(MetricsManager)
+
+      // Clear initial calls from applyInitialHostConfig
+      vi.mocked(hostCommunicationMgr.setAllowedOrigins).mockClear()
+      vi.mocked(metricsMgr.setMetricsConfig).mockClear()
+
       // Should still work - allowedOrigins and useExternalAuthToken from StreamlitConfig,
       // metricsUrl from endpoint
       const onHostConfigResp = getMockConnectionManagerProp("onHostConfigResp")
+      const endpointMetricsUrl = "https://metrics.endpoint.com"
 
       act(() => {
         onHostConfigResp({
           allowedOrigins: ["https://endpoint-origin.com"],
           useExternalAuthToken: false,
-          metricsUrl: "https://metrics.endpoint.com",
+          metricsUrl: endpointMetricsUrl,
           disableFullscreenMode: false,
           enableCustomParentMessages: false,
           mapboxToken: "",
@@ -6176,12 +6225,18 @@ describe("App.hasReceivedNewSession flag behavior", () => {
         })
       })
 
-      // StreamlitConfig allowedOrigins and useExternalAuthToken should be used,
-      // but endpoint metricsUrl since it wasn't in StreamlitConfig
-      const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
-        HostCommunicationManager
+      // Verify: allowedOrigins and useExternalAuthToken from window,
+      // metricsUrl from endpoint (since not set in window config)
+      expect(hostCommunicationMgr.setAllowedOrigins).toHaveBeenCalledWith({
+        allowedOrigins: windowOrigins, // Window value
+        useExternalAuthToken: true, // Window value
+        enableCustomParentMessages: false,
+        blockErrorDialogs: false,
+      })
+
+      expect(metricsMgr.setMetricsConfig).toHaveBeenCalledWith(
+        endpointMetricsUrl // Endpoint value (window had no metricsUrl)
       )
-      expect(hostCommunicationMgr).toBeDefined()
     })
   })
 })

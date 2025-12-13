@@ -394,17 +394,21 @@ export class WebsocketConnection {
 
   /**
    * Run the ping cycle in the background (parallel to WebSocket connection attempt).
-   * This is used in fast-path mode to maintain the same health check and configuration
+   * This is used in bypass mode to maintain the same health check and configuration
    * behavior as the default path, while allowing the WebSocket connection to start
    * immediately rather than waiting for pings to complete first.
    *
-   * Key behavioral difference from default path:
-   * - Default path: Pings GATE WebSocket creation (sequential: pings → then WebSocket)
-   * - Fast path: Pings run in parallel with WebSocket (both start simultaneously)
+   * Differences from pingServer() (default path):
    *
-   * Error handling remains consistent: doInitPings retries indefinitely on failures
-   * and only rejects when cancelled. This means both paths have the same retry behavior,
-   * just different timing of when the WebSocket connection attempt begins.
+   * Success case:
+   * - pingServer(): Calls stepFsm("SERVER_PING_SUCCEEDED") to advance FSM to CONNECTING
+   * - pingServerInBackground(): No FSM transition (already in CONNECTING state)
+   *
+   * Error handling (consistent between both):
+   * - Cancellation: Both log and exit gracefully, no FSM transition
+   * - Unexpected errors: Both call stepFsm("FATAL_ERROR") for consistent behavior
+   *   (Note: In practice, doInitPings retries indefinitely and never rejects on ping
+   *   failures, so this code path should never execute in either method)
    */
   private async pingServerInBackground(): Promise<void> {
     this.pingRequest = doInitPings(
@@ -421,14 +425,16 @@ export class WebsocketConnection {
       this.uriIndex = uriIndex
       LOG.info("Background pings completed successfully")
     } catch (e) {
-      // doInitPings only rejects when cancelled, never on ping failures.
-      // Ping failures trigger indefinite retries in both default and fast-path modes.
-      if (!(e instanceof PingCancelledError)) {
-        LOG.error(
-          "Unexpected error from doInitPings (should only be PingCancelledError)"
-        )
+      if (e instanceof PingCancelledError) {
+        // This is an expected error when the connection is cancelled.
+        // We don't need to do anything here.
+        LOG.info("Background pings cancelled")
+      } else {
+        // This is an unexpected error. In practice, doInitPings retries
+        // indefinitely and never rejects on ping failures, but we handle
+        // this case for consistency with pingServer() and robustness.
+        this.stepFsm("FATAL_ERROR", e instanceof Error ? e.message : String(e))
       }
-      LOG.info("Background pings cancelled")
     } finally {
       this.pingRequest = undefined
     }
