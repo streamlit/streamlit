@@ -145,8 +145,7 @@ export function useBasicWidgetClientState<
 }
 
 // Interface for a proto that has a setValue, and .formId
-interface ValueElementProtoInterfaceWithSetValue
-  extends ValueElementProtoInterface {
+interface ValueElementProtoInterfaceWithSetValue extends ValueElementProtoInterface {
   setValue: boolean
 }
 

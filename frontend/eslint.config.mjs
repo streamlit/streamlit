@@ -94,6 +94,43 @@ export const getNoRestrictedImports = (
   ]
 }
 
+/**
+ * Helper to create the no-restricted-properties rule config.
+ *
+ * @param {boolean} allowWindowStreamlit - Whether to allow window.__streamlit access.
+ *   Set to true for test files that need to mock the config module itself.
+ */
+export const getNoRestrictedProperties = (allowWindowStreamlit = false) => {
+  const restrictions = [
+    {
+      object: "window",
+      property: "innerWidth",
+      message: "Please use the `useWindowDimensionsContext` hook instead.",
+    },
+    {
+      object: "window",
+      property: "innerHeight",
+      message: "Please use the `useWindowDimensionsContext` hook instead.",
+    },
+    {
+      object: "navigator",
+      property: "clipboard",
+      message: "Please use the `useCopyToClipboard` hook instead.",
+    },
+  ]
+
+  if (!allowWindowStreamlit) {
+    restrictions.push({
+      object: "window",
+      property: "__streamlit",
+      message:
+        "Please access window.__streamlit properties via StreamlitConfig in '@streamlit/utils' instead.",
+    })
+  }
+
+  return ["error", ...restrictions]
+}
+
 export default defineConfig([
   // Base recommended configs
   eslint.configs.recommended,
@@ -256,24 +293,7 @@ export default defineConfig([
           message: "Please use the `useWindowDimensionsContext` hook instead.",
         },
       ],
-      "no-restricted-properties": [
-        "error",
-        {
-          object: "window",
-          property: "innerWidth",
-          message: "Please use the `useWindowDimensionsContext` hook instead.",
-        },
-        {
-          object: "window",
-          property: "innerHeight",
-          message: "Please use the `useWindowDimensionsContext` hook instead.",
-        },
-        {
-          object: "navigator",
-          property: "clipboard",
-          message: "Please use the `useCopyToClipboard` hook instead.",
-        },
-      ],
+      "no-restricted-properties": getNoRestrictedProperties(),
       // Imports should be `import "./FooModule"`, not `import "./FooModule.js"`
       // We need to configure this to check our .tsx files, see:
       // https://github.com/benmosher/eslint-plugin-import/issues/1615#issuecomment-577500405
@@ -406,6 +426,24 @@ export default defineConfig([
       // Enforce consistent use of it() over test()
       "vitest/consistent-test-it": ["error", { fn: "it" }],
       "no-restricted-imports": getNoRestrictedImports([], true),
+    },
+  },
+  // Specific test files that need to access window.__streamlit for testing the config module itself
+  {
+    files: ["utils/src/config/index.test.ts", "lib/src/theme/utils.test.ts"],
+    rules: {
+      // These test files need to set window.__streamlit to test the config capture behavior
+      "no-restricted-properties": getNoRestrictedProperties(true),
+    },
+  },
+  // Config module - allow direct window.__streamlit access for capturing values
+  {
+    files: ["utils/src/config/index.ts"],
+    rules: {
+      // This is the only place where direct window.__streamlit access is allowed
+      // as it captures values at module load time and exports frozen copies.
+      // Other restrictions (innerWidth, innerHeight, clipboard) still apply.
+      "no-restricted-properties": getNoRestrictedProperties(true),
     },
   },
   // Theme files specific configuration
