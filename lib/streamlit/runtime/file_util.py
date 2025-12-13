@@ -16,7 +16,7 @@ from __future__ import annotations
 
 
 def local_file_down(path: str) -> bytes:
-    """Download file from local filesystem.
+    """Read a file from the local filesystem.
 
     Parameters
     ----------
@@ -90,7 +90,7 @@ def http_down(link: str) -> bytes:
     Parameters
     ----------
     link : str
-    http link of the file
+        http link of the file
 
     Returns
     -------
