@@ -16,7 +16,11 @@ import pytest
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import wait_for_app_run
-from e2e_playwright.shared.app_utils import click_button, click_checkbox
+from e2e_playwright.shared.app_utils import (
+    click_button,
+    click_checkbox,
+    select_selectbox_option,
+)
 
 
 def get_uuids(app: Page) -> tuple[str, str]:
@@ -156,11 +160,7 @@ def test_radio_in_fragment(app: Page):
 def test_selectbox_in_fragment(app: Page):
     old_text_in_fragment, old_text_outside_fragment = get_uuids(app)
 
-    app.get_by_test_id("stSelectbox").locator("input").click()
-    selection_dropdown = app.locator('[data-baseweb="popover"]').first
-    selection_dropdown.locator("li").nth(1).click()
-    app.get_by_test_id("stSelectbox").locator("input").click()
-    wait_for_app_run(app)
+    select_selectbox_option(app, "a selectbox", "b")
 
     expect_only_fragment_uuid_changed(
         app, old_text_in_fragment, old_text_outside_fragment

@@ -73,9 +73,10 @@ describe("AppRoot", () => {
       const empty = AppRoot.empty(FAKE_SCRIPT_HASH)
 
       expect(empty.main.children.length).toBe(1)
-      const child = GetNodeByDeltaPathVisitor.getNodeAtPath(empty.main, [
-        0,
-      ]) as ElementNode
+      const child = GetNodeByDeltaPathVisitor.getNodeAtPath(
+        empty.main,
+        [0]
+      ) as ElementNode
       expect(child.element.skeleton).not.toBeNull()
 
       expect(empty.sidebar.isEmpty).toBe(true)
@@ -120,9 +121,10 @@ describe("AppRoot", () => {
       const empty = AppRoot.empty(FAKE_SCRIPT_HASH)
 
       expect(empty.main.children.length).toBe(1)
-      const child = GetNodeByDeltaPathVisitor.getNodeAtPath(empty.main, [
-        0,
-      ]) as ElementNode
+      const child = GetNodeByDeltaPathVisitor.getNodeAtPath(
+        empty.main,
+        [0]
+      ) as ElementNode
       expect(child.element.alert).toBeDefined()
 
       expect(empty.sidebar.isEmpty).toBe(true)
@@ -138,9 +140,10 @@ describe("AppRoot", () => {
       const empty = AppRoot.empty(FAKE_SCRIPT_HASH)
 
       expect(empty.main.children.length).toBe(1)
-      const child = GetNodeByDeltaPathVisitor.getNodeAtPath(empty.main, [
-        0,
-      ]) as ElementNode
+      const child = GetNodeByDeltaPathVisitor.getNodeAtPath(
+        empty.main,
+        [0]
+      ) as ElementNode
       expect(child.element.skeleton).not.toBeNull()
 
       expect(empty.sidebar.isEmpty).toBe(true)
@@ -425,6 +428,122 @@ describe("AppRoot", () => {
       expect(replacedBlock.children.length).toBe(1)
     })
 
+    it("removes a dialog block's children when replacing with a different dialog identity", () => {
+      // Create a dialog with some children. The id field represents the dialog's
+      // identity computed from its attributes.
+      const rootWithDialog1 = ROOT.applyDelta(
+        "script_run_id",
+        makeProto(DeltaProto, {
+          addBlock: {
+            id: "dialog-identity-1",
+            dialog: {
+              title: "Dialog 1",
+              dismissible: true,
+            },
+          },
+        }),
+        forwardMsgMetadata([0, 1, 1])
+      ).applyDelta(
+        "script_run_id",
+        makeProto(DeltaProto, {
+          newElement: { text: { body: "Dialog 1 content" } },
+        }),
+        forwardMsgMetadata([0, 1, 1, 0])
+      )
+
+      // Verify Dialog 1 has children
+      const dialog1Node = GetNodeByDeltaPathVisitor.getNodeAtPath(
+        rootWithDialog1.main,
+        [1, 1]
+      ) as BlockNode
+      expect(dialog1Node).toBeDefined()
+      expect(dialog1Node.deltaBlock.type).toBe("dialog")
+      expect(dialog1Node.deltaBlock.id).toBe("dialog-identity-1")
+      expect(dialog1Node.children.length).toBe(1)
+
+      // Replace with a dialog with a different identity
+      const rootWithDialog2 = rootWithDialog1.applyDelta(
+        "new_script_run_id",
+        makeProto(DeltaProto, {
+          addBlock: {
+            id: "dialog-identity-2",
+            dialog: {
+              title: "Dialog 2",
+              dismissible: true,
+            },
+          },
+        }),
+        forwardMsgMetadata([0, 1, 1])
+      )
+
+      // Verify Dialog 2 does NOT inherit Dialog 1's children (issue #10907)
+      const dialog2Node = GetNodeByDeltaPathVisitor.getNodeAtPath(
+        rootWithDialog2.main,
+        [1, 1]
+      ) as BlockNode
+      expect(dialog2Node).toBeDefined()
+      expect(dialog2Node.deltaBlock.type).toBe("dialog")
+      expect(dialog2Node.deltaBlock.id).toBe("dialog-identity-2")
+      expect(dialog2Node.children.length).toBe(0)
+    })
+
+    it("preserves a dialog block's children when replacing with the same dialog identity", () => {
+      // Create a dialog with some children
+      const rootWithDialog1 = ROOT.applyDelta(
+        "script_run_id",
+        makeProto(DeltaProto, {
+          addBlock: {
+            id: "same-dialog-identity",
+            dialog: {
+              title: "Same Dialog",
+              dismissible: true,
+            },
+          },
+        }),
+        forwardMsgMetadata([0, 1, 1])
+      ).applyDelta(
+        "script_run_id",
+        makeProto(DeltaProto, {
+          newElement: { text: { body: "Dialog content" } },
+        }),
+        forwardMsgMetadata([0, 1, 1, 0])
+      )
+
+      // Verify the dialog has children
+      const dialogNode = GetNodeByDeltaPathVisitor.getNodeAtPath(
+        rootWithDialog1.main,
+        [1, 1]
+      ) as BlockNode
+      expect(dialogNode).toBeDefined()
+      expect(dialogNode.deltaBlock.type).toBe("dialog")
+      expect(dialogNode.children.length).toBe(1)
+
+      // Replace with a dialog with the same identity
+      const rootWithSameDialog = rootWithDialog1.applyDelta(
+        "new_script_run_id",
+        makeProto(DeltaProto, {
+          addBlock: {
+            id: "same-dialog-identity",
+            dialog: {
+              title: "Same Dialog",
+              dismissible: true,
+            },
+          },
+        }),
+        forwardMsgMetadata([0, 1, 1])
+      )
+
+      // Verify the dialog preserves its children
+      const sameDialogNode = GetNodeByDeltaPathVisitor.getNodeAtPath(
+        rootWithSameDialog.main,
+        [1, 1]
+      ) as BlockNode
+      expect(sameDialogNode).toBeDefined()
+      expect(sameDialogNode.deltaBlock.type).toBe("dialog")
+      expect(sameDialogNode.deltaBlock.id).toBe("same-dialog-identity")
+      expect(sameDialogNode.children.length).toBe(1)
+    })
+
     it("specifies active script hash on 'newElement' deltas", () => {
       const delta = makeProto(DeltaProto, {
         newElement: { text: { body: "newElement!" } },
@@ -679,9 +798,10 @@ describe("AppRoot", () => {
       ).toBeInstanceOf(BlockNode)
       expect(
         (
-          GetNodeByDeltaPathVisitor.getNodeAtPath(pruned.main, [
-            0,
-          ]) as BlockNode
+          GetNodeByDeltaPathVisitor.getNodeAtPath(
+            pruned.main,
+            [0]
+          ) as BlockNode
         ).children
       ).toHaveLength(3)
       expect(
@@ -699,9 +819,10 @@ describe("AppRoot", () => {
       ).toBeInstanceOf(BlockNode)
       expect(
         (
-          GetNodeByDeltaPathVisitor.getNodeAtPath(pruned.main, [
-            1,
-          ]) as BlockNode
+          GetNodeByDeltaPathVisitor.getNodeAtPath(
+            pruned.main,
+            [1]
+          ) as BlockNode
         ).children
       ).toHaveLength(1)
       expect(
@@ -713,9 +834,10 @@ describe("AppRoot", () => {
       ).toBeInstanceOf(BlockNode)
       expect(
         (
-          GetNodeByDeltaPathVisitor.getNodeAtPath(pruned.main, [
-            2,
-          ]) as BlockNode
+          GetNodeByDeltaPathVisitor.getNodeAtPath(
+            pruned.main,
+            [2]
+          ) as BlockNode
         ).children
       ).toHaveLength(1)
       expect(
@@ -777,9 +899,10 @@ describe("AppRoot", () => {
 
       expect(
         (
-          GetNodeByDeltaPathVisitor.getNodeAtPath(newRoot.main, [
-            1,
-          ]) as BlockNode
+          GetNodeByDeltaPathVisitor.getNodeAtPath(
+            newRoot.main,
+            [1]
+          ) as BlockNode
         ).children
       ).toHaveLength(4)
 
@@ -792,9 +915,10 @@ describe("AppRoot", () => {
       ).toBeInstanceOf(BlockNode)
       expect(
         (
-          GetNodeByDeltaPathVisitor.getNodeAtPath(pruned.main, [
-            0,
-          ]) as BlockNode
+          GetNodeByDeltaPathVisitor.getNodeAtPath(
+            pruned.main,
+            [0]
+          ) as BlockNode
         ).children
       ).toHaveLength(1)
       expect(
@@ -803,9 +927,10 @@ describe("AppRoot", () => {
       // the stale nested fragment child should have been pruned
       expect(
         (
-          GetNodeByDeltaPathVisitor.getNodeAtPath(pruned.main, [
-            1,
-          ]) as BlockNode
+          GetNodeByDeltaPathVisitor.getNodeAtPath(
+            pruned.main,
+            [1]
+          ) as BlockNode
         ).children
       ).toHaveLength(3)
     })
@@ -867,9 +992,10 @@ describe("AppRoot", () => {
       expect(ROOT.getElements()).toEqual(
         new Set([
           (
-            GetNodeByDeltaPathVisitor.getNodeAtPath(ROOT.main, [
-              0,
-            ]) as ElementNode
+            GetNodeByDeltaPathVisitor.getNodeAtPath(
+              ROOT.main,
+              [0]
+            ) as ElementNode
           ).element,
           (
             GetNodeByDeltaPathVisitor.getNodeAtPath(

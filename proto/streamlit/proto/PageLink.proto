@@ -19,6 +19,8 @@ syntax = "proto3";
 option java_package = "com.snowflake.apps.streamlit";
 option java_outer_classname = "PageLinkProto";
 
+import "streamlit/proto/ButtonLikeIconPosition.proto";
+
 message PageLink {
   string page = 1;
   string label = 2;
@@ -29,4 +31,5 @@ message PageLink {
   bool disabled = 7;
   bool external = 8;
   string query_string = 9;
+  streamlit.ButtonLikeIconPosition icon_position = 10;
 }

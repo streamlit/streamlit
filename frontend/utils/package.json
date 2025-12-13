@@ -32,7 +32,7 @@
   "devDependencies": {
     "@types/eslint": "^9.6.1",
     "eslint": "^9.39.0",
-    "prettier": "^3.6.2",
+    "prettier": "^3.7.4",
     "typesync": "^0.14.3",
     "vite": "^7.2.4",
     "vite-plugin-dts": "^4.5.4",

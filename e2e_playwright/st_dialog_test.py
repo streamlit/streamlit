@@ -651,3 +651,40 @@ def test_dialog_on_dismiss_callback(app: Page):
     expect(dialog).not_to_be_attached()
     # Callback should have been executed
     expect_prefixed_markdown(app, "Callback executions:", "3")
+
+
+def test_switching_dialogs_does_not_show_stale_content(app: Page):
+    """Test that switching between different dialogs does not show stale content from previous dialog.
+
+    Reproduces issue #10907: When opening dialog 1, closing it, then opening dialog 2,
+    the second dialog should NOT show any content from the first dialog while loading.
+    """
+    # Open the fast dialog first
+    click_button(app, "Open Fast Dialog")
+    dialog = app.get_by_test_id(modal_test_id)
+    expect(dialog).to_be_visible()
+    expect(dialog).to_contain_text("Fast dialog content")
+    # Verify the text input from fast dialog is present
+    expect(dialog.get_by_test_id("stTextInput")).to_be_visible()
+
+    # Dismiss the fast dialog
+    app.keyboard.press("Escape")
+    expect(dialog).not_to_be_attached()
+
+    # Now open the slow dialog, without waiting for the app to run to complete:
+    get_button(app, "Open Slow Dialog").click()
+    dialog = app.get_by_test_id(modal_test_id)
+    expect(dialog).to_be_visible()
+
+    # The dialog should NOT contain any elements from the fast dialog
+    # Specifically: no "Fast dialog content" text, no text input
+    expect(dialog.get_by_text("Fast dialog content")).not_to_be_attached()
+    expect(dialog.get_by_test_id("stTextInput")).not_to_be_attached()
+
+    # Wait for the slow dialog to load its content
+    expect(dialog.get_by_text("Slow dialog content")).to_be_visible()
+
+    # Verify the slow dialog has its correct content and nothing from fast dialog
+    expect(dialog).to_contain_text("Slow dialog content")
+    expect(dialog.get_by_text("Fast dialog content")).not_to_be_attached()
+    expect(dialog.get_by_test_id("stTextInput")).not_to_be_attached()
