@@ -16,7 +16,8 @@ from __future__ import annotations
 
 
 def local_file_down(path: str) -> bytes:
-    """Read a file from the local filesystem.
+    """
+    Read a file from the local filesystem.
 
     Parameters
     ----------
@@ -40,7 +41,8 @@ def local_file_down(path: str) -> bytes:
 
 
 def s3_file_down(link: str) -> bytes:
-    """Download file from S3.
+    """
+    Download file from S3.
 
     Parameters
     ----------
@@ -85,7 +87,8 @@ def s3_file_down(link: str) -> bytes:
 
 
 def http_down(link: str) -> bytes:
-    """Download file from HTTP/HTTPS URL.
+    """
+    Download file from HTTP/HTTPS URL.
 
     Parameters
     ----------
