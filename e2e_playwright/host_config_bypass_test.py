@@ -136,7 +136,7 @@ def test_bypass_mode_app_becomes_interactive(page: Page, app_port: int) -> None:
 
     # Verify app content loaded
     expect(page.get_by_text("Connection status test")).to_be_visible()
-    expect(page.get_by_text("Current time:")).to_be_visible()
+    expect(page.get_by_text("Slider")).to_be_visible()
 
     # Verify app is interactive - button can be clicked
     button = page.get_by_test_id("stButton").locator("button")
@@ -182,7 +182,7 @@ def test_bypass_mode_host_config_values_take_precedence(
     # The main verification is that the app loads successfully with custom config
     # If precedence was not working correctly, the app would fail or behave incorrectly
     expect(page.get_by_text("Connection status test")).to_be_visible()
-    expect(page.get_by_text("Current time:")).to_be_visible()
+    expect(page.get_by_text("Slider")).to_be_visible()
 
     # Verify app is interactive (confirms config was applied correctly)
     button = page.get_by_test_id("stButton").locator("button")
@@ -237,7 +237,7 @@ def test_default_path_without_bypass_config(page: Page, app_port: int) -> None:
 
     # App should work normally
     expect(page.get_by_text("Connection status test")).to_be_visible()
-    expect(page.get_by_text("Current time:")).to_be_visible()
+    expect(page.get_by_text("Slider")).to_be_visible()
 
     # Verify interactivity
     button = page.get_by_test_id("stButton").locator("button")
