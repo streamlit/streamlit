@@ -15,7 +15,7 @@
 import re
 
 import pytest
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Page, Position, expect
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
@@ -488,7 +488,7 @@ def test_dialog_with_chart(app: Page):
     # Use chart bounds to hover deterministically (helps Firefox).
     chart_box = chart.bounding_box()
     assert chart_box is not None
-    target = {"x": chart_box["width"] * 0.5, "y": chart_box["height"] * 0.5}
+    target: Position = {"x": chart_box["width"] * 0.5, "y": chart_box["height"] * 0.5}
     app.mouse.move(chart_box["x"] + target["x"], chart_box["y"] + target["y"])
     chart.hover(position=target)
     tooltip = app.locator("#vg-tooltip-element")
