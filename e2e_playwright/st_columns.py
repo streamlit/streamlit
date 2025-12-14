@@ -14,10 +14,15 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import numpy as np
 import numpy.typing as npt
 
 import streamlit as st
+
+if TYPE_CHECKING:
+    from streamlit.elements.lib.layout_utils import Gap
 
 LOREM_IPSUM = (
     "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor "
@@ -54,7 +59,7 @@ with st.expander("Variable-width columns (absolute numbers)", expanded=True):
 
 # Various column gaps
 
-GAPS = [
+GAPS: list[Gap | None] = [
     None,
     "xxsmall",
     "xsmall",

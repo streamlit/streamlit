@@ -12,9 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import streamlit as st
 
-SPACES = [
+if TYPE_CHECKING:
+    from streamlit.elements.lib.layout_utils import SpaceSize
+
+SPACES: list[SpaceSize] = [
     "xxsmall",
     "xsmall",
     "small",
