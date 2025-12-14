@@ -43,6 +43,7 @@ import {
 } from "~lib/hooks/useBasicWidgetState"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useSelectCommon } from "~lib/hooks/useSelectCommon"
+import { hasLightBackgroundColor } from "~lib/theme"
 import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -93,6 +94,7 @@ const Multiselect: FC<Props> = props => {
 
   const theme = useEmotionTheme()
   const isInSidebar = useContext(IsSidebarContext)
+  const lightBackground = hasLightBackgroundColor(theme)
   const [value, setValueWithSource] = useBasicWidgetState<
     MultiselectValue,
     MultiSelectProto
@@ -258,6 +260,25 @@ const Multiselect: FC<Props> = props => {
                   Body: {
                     style: () => ({
                       marginTop: theme.spacing.px,
+                      // Add border in dark mode for better visibility since shadows don't work well
+                      ...(!lightBackground && {
+                        borderTopLeftRadius: theme.radii.xl,
+                        borderTopRightRadius: theme.radii.xl,
+                        borderBottomLeftRadius: theme.radii.xl,
+                        borderBottomRightRadius: theme.radii.xl,
+                        borderLeftWidth: theme.sizes.borderWidth,
+                        borderRightWidth: theme.sizes.borderWidth,
+                        borderTopWidth: theme.sizes.borderWidth,
+                        borderBottomWidth: theme.sizes.borderWidth,
+                        borderLeftStyle: "solid",
+                        borderRightStyle: "solid",
+                        borderTopStyle: "solid",
+                        borderBottomStyle: "solid",
+                        borderLeftColor: theme.colors.borderColor,
+                        borderRightColor: theme.colors.borderColor,
+                        borderTopColor: theme.colors.borderColor,
+                        borderBottomColor: theme.colors.borderColor,
+                      }),
                     }),
                   },
                 },

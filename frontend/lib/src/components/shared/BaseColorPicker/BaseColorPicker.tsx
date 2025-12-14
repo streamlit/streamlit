@@ -28,6 +28,7 @@ import {
 } from "~lib/components/widgets/BaseWidget"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
+import { hasLightBackgroundColor } from "~lib/theme"
 import { LabelVisibilityOptions } from "~lib/util/utils"
 
 import {
@@ -89,6 +90,7 @@ const BaseColorPicker = (props: BaseColorPickerProps): React.ReactElement => {
   } = props
   const [value, setValue] = useState(propValue)
   const theme = useEmotionTheme()
+  const lightBackground = hasLightBackgroundColor(theme)
 
   useExecuteWhenChanged(() => setValue(propValue), [propValue])
 
@@ -147,6 +149,31 @@ const BaseColorPicker = (props: BaseColorPickerProps): React.ReactElement => {
       <UIPopover
         onClose={onColorClose}
         placement="bottomLeft"
+        overrides={{
+          Body: {
+            style: {
+              // Add border in dark mode for better visibility since shadows don't work well
+              ...(!lightBackground && {
+                borderTopLeftRadius: theme.radii.xl,
+                borderTopRightRadius: theme.radii.xl,
+                borderBottomLeftRadius: theme.radii.xl,
+                borderBottomRightRadius: theme.radii.xl,
+                borderLeftWidth: theme.sizes.borderWidth,
+                borderRightWidth: theme.sizes.borderWidth,
+                borderTopWidth: theme.sizes.borderWidth,
+                borderBottomWidth: theme.sizes.borderWidth,
+                borderLeftStyle: "solid",
+                borderRightStyle: "solid",
+                borderTopStyle: "solid",
+                borderBottomStyle: "solid",
+                borderLeftColor: theme.colors.borderColor,
+                borderRightColor: theme.colors.borderColor,
+                borderTopColor: theme.colors.borderColor,
+                borderBottomColor: theme.colors.borderColor,
+              }),
+            },
+          },
+        }}
         content={() => (
           <StyledChromePicker data-testid="stColorPickerPopover">
             <ChromePicker
