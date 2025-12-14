@@ -122,12 +122,12 @@ class JsonMixin:
 
         if is_list_like(body):
             if is_sequence_of_pydantic_models(body):
-                first_item = next(iter(body))
+                first_item = next(iter(body))  # ty: ignore[no-matching-overload]
                 # Pydantic v2 uses model_dump(), v1 uses dict()
                 if hasattr(first_item, "model_dump"):
-                    body = [item.model_dump() for item in body]
+                    body = [item.model_dump() for item in body]  # ty: ignore[not-iterable]
                 else:
-                    body = [item.dict() for item in body]
+                    body = [item.dict() for item in body]  # ty: ignore[not-iterable]
             else:
                 body = list(body)  # ty: ignore[invalid-argument-type]
 
