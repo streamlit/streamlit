@@ -31,6 +31,7 @@ from streamlit.type_util import (
     is_list_like,
     is_namedtuple,
     is_pydantic_model,
+    is_sequence_of_pydantic_models,
 )
 
 if TYPE_CHECKING:
@@ -120,7 +121,15 @@ class JsonMixin:
             body = dict(body)  # type: ignore
 
         if is_list_like(body):
-            body = list(body)  # ty: ignore[invalid-argument-type]
+            if is_sequence_of_pydantic_models(body):
+                first_item = next(iter(body))
+                # Pydantic v2 uses model_dump(), v1 uses dict()
+                if hasattr(first_item, "model_dump"):
+                    body = [item.model_dump() for item in body]
+                else:
+                    body = [item.dict() for item in body]
+            else:
+                body = list(body)  # ty: ignore[invalid-argument-type]
 
         if not isinstance(body, str):
             try:

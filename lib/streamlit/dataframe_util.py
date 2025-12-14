@@ -47,6 +47,7 @@ from streamlit.type_util import (
     is_list_like,
     is_namedtuple,
     is_pydantic_model,
+    is_sequence_of_pydantic_models,
     is_type,
     is_version_less_than,
 )
@@ -369,14 +370,6 @@ def is_snowpark_row_list(obj: object) -> bool:
         and is_type(obj[0], _SNOWPARK_DF_ROW_TYPE_STR)
         and has_callable_attr(obj[0], "as_dict")
     )
-
-
-def _is_sequence_of_pydantic_models(obj: object) -> bool:
-    """True if obj is a non-empty list/tuple/set/frozenset of Pydantic model instances."""
-    if not isinstance(obj, (list, tuple, set, frozenset)) or len(obj) == 0:
-        return False
-    first_element = next(iter(obj))
-    return is_pydantic_model(first_element)
 
 
 def is_pyspark_data_object(obj: object) -> bool:
@@ -711,7 +704,7 @@ def convert_anything_to_pandas_df(
     if is_snowpark_row_list(data):
         return pd.DataFrame([row.as_dict() for row in data])
 
-    if _is_sequence_of_pydantic_models(data):
+    if is_sequence_of_pydantic_models(data):
         # Try to convert pydantic models to DataFrame. If some elements are not
         # pydantic models (mixed sequence), fall through to pandas' native handling.
         try:
