@@ -371,6 +371,11 @@ def is_snowpark_row_list(obj: object) -> bool:
     )
 
 
+def _is_list_of_pydantic_models(obj: object) -> bool:
+    """True if obj is a non-empty list of Pydantic model instances."""
+    return isinstance(obj, list) and len(obj) > 0 and is_pydantic_model(obj[0])
+
+
 def is_pyspark_data_object(obj: object) -> bool:
     """True if obj is a PySpark or PySpark Connect dataframe."""
     return (
@@ -702,6 +707,11 @@ def convert_anything_to_pandas_df(
 
     if is_snowpark_row_list(data):
         return pd.DataFrame([row.as_dict() for row in data])
+
+    if _is_list_of_pydantic_models(data):
+        if has_callable_attr(data[0], "model_dump"):
+            return pd.DataFrame([item.model_dump() for item in data])
+        return pd.DataFrame([item.dict() for item in data])
 
     if has_callable_attr(data, "to_pandas"):
         return pd.DataFrame(data.to_pandas())
@@ -1242,7 +1252,7 @@ def determine_data_format(input_data: Any) -> DataFormat:
         # This should always contain at least one element,
         # otherwise the values type from infer_dtype would have been empty
         first_element = next(iter(input_data))
-        if isinstance(first_element, dict):
+        if isinstance(first_element, dict) or is_pydantic_model(first_element):
             return DataFormat.LIST_OF_RECORDS
         if isinstance(first_element, (list, tuple, set, frozenset)):
             return DataFormat.LIST_OF_ROWS
