@@ -14,23 +14,26 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import streamlit as st
 
 if TYPE_CHECKING:
     from streamlit.elements.lib.layout_utils import Gap
 
-GAPS: list[Gap | None] = [
-    None,
-    "xxsmall",
-    "xsmall",
-    "small",
-    "medium",
-    "large",
-    "xlarge",
-    "xxlarge",
-]
+GAPS = cast(
+    "list[Gap | None]",
+    [
+        None,
+        "xxsmall",
+        "xsmall",
+        "small",
+        "medium",
+        "large",
+        "xlarge",
+        "xxlarge",
+    ],
+)
 
 for gap in GAPS:
     gap_str = str(gap).lower()

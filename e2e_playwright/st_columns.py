@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
 import numpy.typing as npt
@@ -59,16 +59,18 @@ with st.expander("Variable-width columns (absolute numbers)", expanded=True):
 
 # Various column gaps
 
-GAPS: list[Gap | None] = [
-    None,
-    "xxsmall",
-    "xsmall",
-    "small",
-    "medium",
-    "large",
-    "xlarge",
-    "xxlarge",
-]
+GAPS = cast(
+    "list[Gap]",
+    [
+        "xxsmall",
+        "xsmall",
+        "small",
+        "medium",
+        "large",
+        "xlarge",
+        "xxlarge",
+    ],
+)
 
 for gap in GAPS:
     gap_str = str(gap).lower()

@@ -14,22 +14,25 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import streamlit as st
 
 if TYPE_CHECKING:
-    from streamlit.elements.lib.layout_utils import SpaceSize
+    from streamlit.elements.lib.layout_utils import Gap
 
-SPACES: list[SpaceSize] = [
-    "xxsmall",
-    "xsmall",
-    "small",
-    "medium",
-    "large",
-    "xlarge",
-    "xxlarge",
-]
+SPACES = cast(
+    "list[Gap]",
+    [
+        "xxsmall",
+        "xsmall",
+        "small",
+        "medium",
+        "large",
+        "xlarge",
+        "xxlarge",
+    ],
+)
 
 st.write("Tests Outside of Containers")
 
