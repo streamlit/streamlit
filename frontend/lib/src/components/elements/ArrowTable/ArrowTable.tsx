@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { memo, ReactElement } from "react"
+import React, { memo, ReactElement, useMemo } from "react"
 
 import { range } from "lodash-es"
 
@@ -32,6 +32,7 @@ import {
 } from "~lib/dataframes/pandasStylerUtils"
 import { Quiver } from "~lib/dataframes/Quiver"
 
+import { getColumnConfig, shouldHideIndex } from "./columnConfigUtils"
 import {
   StyledEmptyTableCell,
   StyledTable,
@@ -50,9 +51,19 @@ export interface TableProps {
 export function ArrowTable(props: Readonly<TableProps>): ReactElement {
   const table = props.data
   const { cssId, cssStyles, caption } = table.styler ?? {}
-  const { numHeaderRows, numDataRows, numColumns } = table.dimensions
+  const { numHeaderRows, numDataRows, numColumns, numIndexColumns } =
+    table.dimensions
   const dataRowIndices = range(numDataRows)
   const borderMode = props.element.borderMode
+
+  const columnConfig = useMemo(
+    () => getColumnConfig(props.element.columns),
+    [props.element.columns]
+  )
+  const hideIndex = shouldHideIndex(columnConfig)
+
+  // Calculate the number of visible columns:
+  const visibleColumns = hideIndex ? numColumns - numIndexColumns : numColumns
 
   return (
     <StyledTableContainer className="stTable" data-testid="stTable">
@@ -61,21 +72,29 @@ export function ArrowTable(props: Readonly<TableProps>): ReactElement {
       the entire table when scrolling horizontally. See also `styled-components.ts`. */}
       <StyledTableBorder borderMode={borderMode}>
         <StyledTable id={cssId} data-testid="stTableStyledTable">
-          {numHeaderRows > 0 && generateTableHeader(table, borderMode)}
+          {numHeaderRows > 0 &&
+            generateTableHeader(table, borderMode, hideIndex, numIndexColumns)}
           <tbody>
             {dataRowIndices.length === 0 ? (
               <tr>
                 <StyledEmptyTableCell
                   data-testid="stTableStyledEmptyTableCell"
-                  colSpan={numColumns || 1}
+                  colSpan={visibleColumns || 1}
                   borderMode={borderMode}
                 >
                   empty
                 </StyledEmptyTableCell>
               </tr>
             ) : (
-              dataRowIndices.map(rowIndex =>
-                generateTableRow(table, rowIndex, numColumns, borderMode)
+              dataRowIndices.map((rowIndex: number) =>
+                generateTableRow(
+                  table,
+                  rowIndex,
+                  numColumns,
+                  borderMode,
+                  hideIndex,
+                  numIndexColumns
+                )
               )
             )}
           </tbody>
@@ -98,7 +117,9 @@ export function ArrowTable(props: Readonly<TableProps>): ReactElement {
  */
 function generateTableHeader(
   table: Quiver,
-  borderMode: ArrowProto.BorderMode
+  borderMode: ArrowProto.BorderMode,
+  hideIndex: boolean,
+  numIndexColumns: number
 ): ReactElement {
   // When there are no vertical borders, we want to align the header text with the data.
   const shouldAlignWithData =
@@ -111,31 +132,41 @@ function generateTableHeader(
         // TODO: Update to match React best practices
         // eslint-disable-next-line @eslint-react/no-array-index-key
         <tr key={rowIndex}>
-          {headerRow.map((header, colIndex) => {
-            // Determine alignment based on column data type when no vertical borders
-            let textAlign: React.CSSProperties["textAlign"] = "inherit"
-            if (shouldAlignWithData && table.dimensions.numDataRows > 0) {
-              const { contentType } = table.getCell(0, colIndex)
-              textAlign = isNumericType(contentType) ? "right" : "left"
-            }
+          {headerRow
+            .filter((_, colIndex) => {
+              if (hideIndex && colIndex < numIndexColumns) {
+                return false
+              }
+              return true
+            })
+            .map((header, displayIndex) => {
+              // Calculate the actual column index (accounting for filtered index columns):
+              const colIndex = hideIndex
+                ? displayIndex + numIndexColumns
+                : displayIndex
 
-            return (
-              <StyledTableCellHeader
-                // TODO: Update to match React best practices
-                // eslint-disable-next-line @eslint-react/no-array-index-key
-                key={colIndex}
-                className={header.cssClass}
-                scope="col"
-                borderMode={borderMode}
-                style={{ textAlign }}
-              >
-                <StreamlitMarkdown
-                  source={header.name || "\u00A0"}
-                  allowHTML={false}
-                />
-              </StyledTableCellHeader>
-            )
-          })}
+              // Determine alignment based on column data type when no vertical borders:
+              let textAlign: React.CSSProperties["textAlign"] = "inherit"
+              if (shouldAlignWithData && table.dimensions.numDataRows > 0) {
+                const { contentType } = table.getCell(0, colIndex)
+                textAlign = isNumericType(contentType) ? "right" : "left"
+              }
+
+              return (
+                <StyledTableCellHeader
+                  key={colIndex}
+                  className={header.cssClass}
+                  scope="col"
+                  borderMode={borderMode}
+                  style={{ textAlign }}
+                >
+                  <StreamlitMarkdown
+                    source={header.name || "\u00A0"}
+                    allowHTML={false}
+                  />
+                </StyledTableCellHeader>
+              )
+            })}
         </tr>
       ))}
     </thead>
@@ -149,13 +180,22 @@ function generateTableRow(
   table: Quiver,
   rowIndex: number,
   columns: number,
-  borderMode: ArrowProto.BorderMode
+  borderMode: ArrowProto.BorderMode,
+  hideIndex: boolean,
+  numIndexColumns: number
 ): ReactElement {
   return (
     <tr key={rowIndex}>
-      {range(columns).map(columnIndex =>
-        generateTableCell(table, rowIndex, columnIndex, borderMode)
-      )}
+      {range(columns)
+        .filter((columnIndex: number) => {
+          if (hideIndex && columnIndex < numIndexColumns) {
+            return false
+          }
+          return true
+        })
+        .map((columnIndex: number) =>
+          generateTableCell(table, rowIndex, columnIndex, borderMode)
+        )}
     </tr>
   )
 }

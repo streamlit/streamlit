@@ -34,6 +34,7 @@ from streamlit.deprecation_util import (
 )
 from streamlit.elements.lib.column_config_utils import (
     INDEX_IDENTIFIER,
+    ColumnConfigMapping,
     ColumnConfigMappingInput,
     apply_data_specific_configs,
     marshall_column_config,
@@ -800,7 +801,11 @@ class ArrowMixin:
 
     @gather_metrics("table")
     def table(
-        self, data: Data = None, *, border: bool | Literal["horizontal"] = True
+        self,
+        data: Data = None,
+        *,
+        border: bool | Literal["horizontal"] = True,
+        hide_index: bool = False,
     ) -> DeltaGenerator:
         """Display a static table.
 
@@ -832,6 +837,10 @@ class ArrowMixin:
             - ``True`` (default): Show borders around the table and between cells.
             - ``False``: Don't show any borders.
             - ``"horizontal"``: Show only horizontal borders between rows.
+
+        hide_index : bool
+            Determines whether to hide the index column(s). Defaults to ``False`` as the index
+            will always be shown unless explicitly hidden.
 
         Examples
         --------
@@ -902,9 +911,16 @@ class ArrowMixin:
             height="content",
         )
 
+        column_config_mapping: ColumnConfigMapping = {}
+        update_column_config(
+            column_config_mapping, INDEX_IDENTIFIER, {"hidden": hide_index}
+        )
+
         proto = ArrowProto()
         marshall(proto, data, default_uuid)
         proto.border_mode = border_mode
+        marshall_column_config(proto, column_config_mapping)
+
         return self.dg._enqueue("arrow_table", proto, layout_config=layout_config)
 
     @gather_metrics("add_rows")
