@@ -74,6 +74,7 @@ from streamlit.util import in_sidebar
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.elements.lib.utils import LabelVisibility
     from streamlit.runtime.state.query_params import QueryParamsInput
 
 FORM_DOCS_INFO: Final = """
