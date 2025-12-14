@@ -1277,6 +1277,34 @@ try:
                     list,
                 ),
             ),
+            (
+                "Tuple of Pydantic Models",
+                (
+                    ElementPydanticModel(
+                        name="st.number_input", is_widget=True, usage=0.32
+                    ),
+                    ElementPydanticModel(
+                        name="st.text_input", is_widget=True, usage=0.45
+                    ),
+                ),
+                CaseMetadata(
+                    2,
+                    3,
+                    DataFormat.LIST_OF_RECORDS,
+                    [
+                        ElementPydanticModel(
+                            name="st.number_input", is_widget=True, usage=0.32
+                        ),
+                        ElementPydanticModel(
+                            name="st.text_input", is_widget=True, usage=0.45
+                        ),
+                    ],
+                    "json",
+                    False,
+                    # LIST_OF_RECORDS always converts back to list, not tuple
+                    list,
+                ),
+            ),
         ]
     )
 except ModuleNotFoundError:
