@@ -710,7 +710,8 @@ def convert_anything_to_pandas_df(
         try:
             first_element = next(iter(data))
             if has_callable_attr(first_element, "model_dump"):
-                return pd.DataFrame([item.model_dump() for item in data])
+                # Use mode="json" to ensure proper serialization of types like Decimal
+                return pd.DataFrame([item.model_dump(mode="json") for item in data])
             return pd.DataFrame([item.dict() for item in data])
         except AttributeError:
             pass
