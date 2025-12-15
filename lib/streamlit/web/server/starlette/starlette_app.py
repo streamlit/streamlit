@@ -41,6 +41,7 @@ from streamlit.web.server.starlette.starlette_routes import (
 from streamlit.web.server.starlette.starlette_server_config import (
     GZIP_COMPRESSLEVEL,
     GZIP_MINIMUM_SIZE,
+    SESSION_COOKIE_NAME,
 )
 from streamlit.web.server.starlette.starlette_static import (
     create_streamlit_static_files,
@@ -113,16 +114,18 @@ def create_starlette_app(runtime: Runtime) -> Starlette:
     routes.extend(create_component_routes(component_registry, base_url))
     routes.extend(create_bidi_component_routes(bidi_component_manager, base_url))
 
-    # Add WebSocket route
-    websocket_handler = create_websocket_handler(runtime)
+    # Add WebSocket route:
     routes.append(
-        WebSocketRoute(_with_base(ROUTE_WEBSOCKET_STREAM, base_url), websocket_handler)
+        WebSocketRoute(
+            _with_base(ROUTE_WEBSOCKET_STREAM, base_url),
+            create_websocket_handler(runtime),
+        )
     )
 
     # Add auth routes:
     routes.extend(get_auth_routes(base_url))
 
-    # Add app static routes if enabled
+    # Add app static routes if enabled:
     if config.get_option("server.enableStaticServing"):
         # TODO(lukasmasuch): _main_script_path
         main_script_path = getattr(runtime, "_main_script_path", None)
@@ -136,7 +139,7 @@ def create_starlette_app(runtime: Runtime) -> Starlette:
     metrics_options_handler, metrics_path = create_metrics_options_handler(base_url)
     routes.append(Route(metrics_path, metrics_options_handler, methods=["OPTIONS"]))
 
-    # Add static files mount (only in production mode)
+    # Add static files mount (only in production mode):
     if not dev_mode:
         static_files = create_streamlit_static_files(
             directory=file_util.get_static_dir(), base_url=base_url
@@ -158,7 +161,7 @@ def create_starlette_app(runtime: Runtime) -> Starlette:
         secret_key=_session_secret(),
         same_site="lax",
         https_only=bool(config.get_option("server.sslCertFile")),
-        session_cookie="_streamlit_session",
+        session_cookie=SESSION_COOKIE_NAME,
     )
 
     # Add GZip compression middleware.
@@ -167,7 +170,7 @@ def create_starlette_app(runtime: Runtime) -> Starlette:
     # especially with range requests. Using a custom middleware instead of setting
     # Content-Encoding: identity provides better browser compatibility, as some
     # browsers (especially WebKit) have issues with explicit identity encoding.
-    from streamlit.web.server.starlette.starlette_app_utils import (
+    from streamlit.web.server.starlette.starlette_gzip_middleware import (
         MediaAwareGZipMiddleware,
     )
 
