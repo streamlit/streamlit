@@ -23,6 +23,7 @@ import pytest
 from starlette.testclient import TestClient
 
 from streamlit import file_util
+from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.runtime.media_file_manager import MediaFileManager, MediaFileMetadata
 from streamlit.runtime.media_file_storage import MediaFileKind
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
@@ -30,6 +31,7 @@ from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileMan
 from streamlit.runtime.stats import CacheStat
 from streamlit.runtime.uploaded_file_manager import UploadedFileRec
 from streamlit.web.server.routes import STATIC_ASSET_CACHE_MAX_AGE_SECONDS
+from streamlit.web.server.starlette import starlette_app_utils
 from streamlit.web.server.starlette.starlette_app import create_starlette_app
 from streamlit.web.server.stats_request_handler import StatsRequestHandler
 from tests.testutil import patch_config_options
@@ -630,8 +632,6 @@ def test_static_files_skipped_in_dev_mode(tmp_path: Path) -> None:
 )
 def test_websocket_auth_cookie_yields_user_info(tmp_path: Path) -> None:
     """Test that auth cookies are properly parsed when valid XSRF token is provided."""
-    from streamlit.web.server.starlette import starlette_app_utils
-
     component_dir = tmp_path / "component"
     component_dir.mkdir()
     (component_dir / "index.html").write_text("component")
@@ -822,7 +822,6 @@ def test_websocket_rejects_auth_cookie_without_valid_xsrf(tmp_path: Path) -> Non
 )
 def test_websocket_ignores_debug_disconnect_in_production(tmp_path: Path) -> None:
     """Test that debug_disconnect_websocket is ignored in production mode."""
-    from streamlit.proto.BackMsg_pb2 import BackMsg
 
     component_dir = tmp_path / "component"
     component_dir.mkdir()
@@ -868,8 +867,6 @@ def test_websocket_ignores_debug_disconnect_in_production(tmp_path: Path) -> Non
 )
 def test_websocket_ignores_debug_shutdown_in_production(tmp_path: Path) -> None:
     """Test that debug_shutdown_runtime is ignored in production mode."""
-    from streamlit.proto.BackMsg_pb2 import BackMsg
-
     component_dir = tmp_path / "component"
     component_dir.mkdir()
     (component_dir / "index.html").write_text("component")
@@ -912,7 +909,6 @@ def test_websocket_ignores_debug_shutdown_in_production(tmp_path: Path) -> None:
 )
 def test_websocket_allows_debug_shutdown_in_dev_mode(tmp_path: Path) -> None:
     """Test that debug_shutdown_runtime works in development mode."""
-    from streamlit.proto.BackMsg_pb2 import BackMsg
 
     component_dir = tmp_path / "component"
     component_dir.mkdir()

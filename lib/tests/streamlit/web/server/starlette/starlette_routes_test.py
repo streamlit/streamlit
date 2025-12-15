@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from unittest.mock import MagicMock
 
 from streamlit.web.server.starlette.starlette_routes import (
@@ -82,7 +83,6 @@ class TestSetCorsHeaders:
     @patch_config_options({"server.enableCORS": False})
     def test_allows_all_when_cors_disabled(self) -> None:
         """Test that all origins are allowed when CORS is disabled."""
-        import asyncio
 
         request = MagicMock()
         response = MagicMock()
@@ -95,8 +95,6 @@ class TestSetCorsHeaders:
     @patch_config_options({"global.developmentMode": True, "server.enableCORS": True})
     def test_allows_all_in_dev_mode(self) -> None:
         """Test that all origins are allowed in development mode."""
-        import asyncio
-
         request = MagicMock()
         response = MagicMock()
         response.headers = {}
@@ -113,8 +111,6 @@ class TestSetCorsHeaders:
     )
     def test_no_header_when_origin_not_allowed(self) -> None:
         """Test that no header is set when origin is not in allowed list."""
-        import asyncio
-
         request = MagicMock()
         request.headers = MagicMock()
         # This origin won't be in any allowed list by default
@@ -134,8 +130,6 @@ class TestSetCorsHeaders:
     )
     def test_no_header_when_no_origin(self) -> None:
         """Test that no header is set when request has no Origin header."""
-        import asyncio
-
         request = MagicMock()
         request.headers = MagicMock()
         request.headers.get.return_value = None

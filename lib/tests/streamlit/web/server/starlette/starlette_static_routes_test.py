@@ -19,6 +19,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pytest
+from starlette.applications import Starlette
+from starlette.routing import Mount
 from starlette.testclient import TestClient
 
 from streamlit.web.server.routes import STATIC_ASSET_CACHE_MAX_AGE_SECONDS
@@ -35,8 +37,6 @@ if TYPE_CHECKING:
 @pytest.fixture
 def static_app(tmp_path: Path) -> Iterator[TestClient]:
     """Create a test client with static files mounted."""
-    from starlette.applications import Starlette
-    from starlette.routing import Mount
 
     # Create static directory with test files
     static_dir = tmp_path / "static"
@@ -190,8 +190,6 @@ class TestWithBaseUrl:
 
     def test_serves_files_with_base_url(self, tmp_path: Path) -> None:
         """Test that files are served correctly with a base URL."""
-        from starlette.applications import Starlette
-        from starlette.routing import Mount
 
         static_dir = tmp_path / "static"
         static_dir.mkdir()
@@ -214,8 +212,6 @@ class TestWithBaseUrl:
         When mounted at a path (e.g., /app), requests to /app/ should serve
         index.html, not redirect to /app which would then redirect back to /app/.
         """
-        from starlette.applications import Starlette
-        from starlette.routing import Mount
 
         static_dir = tmp_path / "static"
         static_dir.mkdir()
@@ -239,8 +235,6 @@ class TestWithBaseUrl:
 
     def test_nested_mount_no_redirect_loop(self, tmp_path: Path) -> None:
         """Test that nested mounts (like FastAPI mounting Streamlit) work correctly."""
-        from starlette.applications import Starlette
-        from starlette.routing import Mount
 
         static_dir = tmp_path / "static"
         static_dir.mkdir()
