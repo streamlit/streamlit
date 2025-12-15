@@ -74,8 +74,8 @@ _ROUTE_MEDIA: Final = "media/{file_id:path}"
 _ROUTE_UPLOAD_FILE: Final = "_stcore/upload_file/{session_id}/{file_id}"
 
 # Component routes
-_ROUTE_COMPONENT: Final = "component/{path:path}"
-_ROUTE_BIDI_COMPONENT: Final = "_stcore/bidi-components/{path:path}"
+_ROUTE_COMPONENTS_V1: Final = "component/{path:path}"
+_ROUTE_COMPONENTS_V2: Final = "_stcore/bidi-components/{path:path}"
 
 # App static files
 _ROUTE_APP_STATIC: Final = "app/static/{path:path}"
@@ -594,12 +594,12 @@ def create_component_routes(
 
     return [
         Route(
-            _with_base(_ROUTE_COMPONENT, base_url),
+            _with_base(_ROUTE_COMPONENTS_V1, base_url),
             _component_endpoint,
             methods=["GET"],
         ),
         Route(
-            _with_base(_ROUTE_COMPONENT, base_url),
+            _with_base(_ROUTE_COMPONENTS_V1, base_url),
             _component_options,
             methods=["OPTIONS"],
         ),
@@ -671,12 +671,12 @@ def create_bidi_component_routes(
 
     return [
         Route(
-            _with_base(_ROUTE_BIDI_COMPONENT, base_url),
+            _with_base(_ROUTE_COMPONENTS_V2, base_url),
             _bidi_component_endpoint,
             methods=["GET"],
         ),
         Route(
-            _with_base(_ROUTE_BIDI_COMPONENT, base_url),
+            _with_base(_ROUTE_COMPONENTS_V2, base_url),
             _bidi_component_options,
             methods=["OPTIONS"],
         ),
