@@ -197,7 +197,7 @@ jobs:
       - name: Download review artifacts
         id: download
         if: needs.ai-pr-review.outputs.has_key == 'true'
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         continue-on-error: true
         with:
           name: review-output
