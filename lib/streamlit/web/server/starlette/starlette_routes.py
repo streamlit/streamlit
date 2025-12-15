@@ -60,28 +60,28 @@ _LOGGER: Final = get_logger(__name__)
 # These define the canonical paths for all Starlette server endpoints.
 
 # Health check routes
-ROUTE_HEALTH: Final = "_stcore/health"
-ROUTE_SCRIPT_HEALTH: Final = "_stcore/script-health-check"
+_ROUTE_HEALTH: Final = "_stcore/health"
+_ROUTE_SCRIPT_HEALTH: Final = "_stcore/script-health-check"
 
 # Metrics routes
-ROUTE_METRICS: Final = "_stcore/metrics"
+_ROUTE_METRICS: Final = "_stcore/metrics"
 
 # Host configuration
-ROUTE_HOST_CONFIG: Final = "_stcore/host-config"
+_ROUTE_HOST_CONFIG: Final = "_stcore/host-config"
 
 # Media and file routes
-ROUTE_MEDIA: Final = "media/{file_id:path}"
-ROUTE_UPLOAD_FILE: Final = "_stcore/upload_file/{session_id}/{file_id}"
+_ROUTE_MEDIA: Final = "media/{file_id:path}"
+_ROUTE_UPLOAD_FILE: Final = "_stcore/upload_file/{session_id}/{file_id}"
 
 # Component routes
-ROUTE_COMPONENT: Final = "component/{path:path}"
-ROUTE_BIDI_COMPONENT: Final = "_stcore/bidi-components/{path:path}"
+_ROUTE_COMPONENT: Final = "component/{path:path}"
+_ROUTE_BIDI_COMPONENT: Final = "_stcore/bidi-components/{path:path}"
 
 # App static files
-ROUTE_APP_STATIC: Final = "app/static/{path:path}"
+_ROUTE_APP_STATIC: Final = "app/static/{path:path}"
 
 # WebSocket stream
-ROUTE_WEBSOCKET_STREAM: Final = "_stcore/stream"
+_ROUTE_WEBSOCKET_STREAM: Final = "_stcore/stream"
 
 
 def _with_base(path: str, base_url: str | None = None) -> str:
@@ -188,12 +188,12 @@ def create_health_routes(runtime: Runtime, base_url: str | None) -> list[Any]:
 
     return [
         Route(
-            _with_base(ROUTE_HEALTH, base_url),
+            _with_base(_ROUTE_HEALTH, base_url),
             _health_endpoint,
             methods=["GET", "HEAD"],
         ),
         Route(
-            _with_base(ROUTE_HEALTH, base_url),
+            _with_base(_ROUTE_HEALTH, base_url),
             _health_options,
             methods=["OPTIONS"],
         ),
@@ -222,12 +222,12 @@ def create_script_health_routes(runtime: Runtime, base_url: str | None) -> list[
 
     return [
         Route(
-            _with_base(ROUTE_SCRIPT_HEALTH, base_url),
+            _with_base(_ROUTE_SCRIPT_HEALTH, base_url),
             _script_health_endpoint,
             methods=["GET", "HEAD"],
         ),
         Route(
-            _with_base(ROUTE_SCRIPT_HEALTH, base_url),
+            _with_base(_ROUTE_SCRIPT_HEALTH, base_url),
             _health_options,
             methods=["OPTIONS"],
         ),
@@ -255,7 +255,7 @@ def create_metrics_routes(runtime: Runtime, base_url: str | None) -> list[Any]:
 
     return [
         Route(
-            _with_base(ROUTE_METRICS, base_url),
+            _with_base(_ROUTE_METRICS, base_url),
             _metrics_endpoint,
             methods=["GET"],
         )
@@ -292,7 +292,7 @@ def create_host_config_routes(base_url: str | None) -> list[Any]:
 
     return [
         Route(
-            _with_base(ROUTE_HOST_CONFIG, base_url),
+            _with_base(_ROUTE_HOST_CONFIG, base_url),
             _host_config_endpoint,
             methods=["GET"],
         ),
@@ -374,13 +374,13 @@ def create_media_routes(
 
     return [
         Route(
-            _with_base(ROUTE_MEDIA, base_url),
+            _with_base(_ROUTE_MEDIA, base_url),
             _media_endpoint,
             # HEAD is needed for browsers (especially WebKit) to probe media files
             methods=["GET", "HEAD"],
         ),
         Route(
-            _with_base(ROUTE_MEDIA, base_url),
+            _with_base(_ROUTE_MEDIA, base_url),
             _media_options,
             methods=["OPTIONS"],
         ),
@@ -518,17 +518,17 @@ def create_upload_routes(
 
     return [
         Route(
-            _with_base(ROUTE_UPLOAD_FILE, base_url),
+            _with_base(_ROUTE_UPLOAD_FILE, base_url),
             _upload_put,
             methods=["PUT"],
         ),
         Route(
-            _with_base(ROUTE_UPLOAD_FILE, base_url),
+            _with_base(_ROUTE_UPLOAD_FILE, base_url),
             _upload_delete,
             methods=["DELETE"],
         ),
         Route(
-            _with_base(ROUTE_UPLOAD_FILE, base_url),
+            _with_base(_ROUTE_UPLOAD_FILE, base_url),
             _upload_options,
             methods=["OPTIONS"],
         ),
@@ -586,12 +586,12 @@ def create_component_routes(
 
     return [
         Route(
-            _with_base(ROUTE_COMPONENT, base_url),
+            _with_base(_ROUTE_COMPONENT, base_url),
             _component_endpoint,
             methods=["GET"],
         ),
         Route(
-            _with_base(ROUTE_COMPONENT, base_url),
+            _with_base(_ROUTE_COMPONENT, base_url),
             _component_options,
             methods=["OPTIONS"],
         ),
@@ -663,12 +663,12 @@ def create_bidi_component_routes(
 
     return [
         Route(
-            _with_base(ROUTE_BIDI_COMPONENT, base_url),
+            _with_base(_ROUTE_BIDI_COMPONENT, base_url),
             _bidi_component_endpoint,
             methods=["GET"],
         ),
         Route(
-            _with_base(ROUTE_BIDI_COMPONENT, base_url),
+            _with_base(_ROUTE_BIDI_COMPONENT, base_url),
             _bidi_component_options,
             methods=["OPTIONS"],
         ),
@@ -726,12 +726,12 @@ def create_app_static_routes(
 
     return [
         Route(
-            _with_base(ROUTE_APP_STATIC, base_url),
+            _with_base(_ROUTE_APP_STATIC, base_url),
             _app_static_endpoint,
             methods=["GET"],
         ),
         Route(
-            _with_base(ROUTE_APP_STATIC, base_url),
+            _with_base(_ROUTE_APP_STATIC, base_url),
             _app_static_options,
             methods=["OPTIONS"],
         ),
@@ -749,4 +749,4 @@ def create_metrics_options_handler(base_url: str | None) -> Any:
         await _set_cors_headers(request, response)
         return response
 
-    return _metrics_options, _with_base(ROUTE_METRICS, base_url)
+    return _metrics_options, _with_base(_ROUTE_METRICS, base_url)

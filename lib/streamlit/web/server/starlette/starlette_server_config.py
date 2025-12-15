@@ -18,8 +18,11 @@ from __future__ import annotations
 
 from typing import Final
 
+# Cookie name for storing signed user identity information.
 USER_COOKIE_NAME: Final = "_streamlit_user"
+# Cookie name for Cross-Site Request Forgery (XSRF) token validation.
 XSRF_COOKIE_NAME: Final = "_streamlit_xsrf"
+# Cookie name for server-side session management.
 SESSION_COOKIE_NAME: Final = "_streamlit_session"
 
 # Max pending messages per client in the send queue before disconnecting.

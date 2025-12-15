@@ -25,7 +25,7 @@ from streamlit import config, file_util
 from streamlit.web.server.server_util import get_cookie_secret
 from streamlit.web.server.starlette.starlette_auth_routes import get_auth_routes
 from streamlit.web.server.starlette.starlette_routes import (
-    ROUTE_WEBSOCKET_STREAM,
+    _ROUTE_WEBSOCKET_STREAM,
     _with_base,
     create_app_static_routes,
     create_bidi_component_routes,
@@ -117,7 +117,7 @@ def create_starlette_app(runtime: Runtime) -> Starlette:
     # Add WebSocket route:
     routes.append(
         WebSocketRoute(
-            _with_base(ROUTE_WEBSOCKET_STREAM, base_url),
+            _with_base(_ROUTE_WEBSOCKET_STREAM, base_url),
             create_websocket_handler(runtime),
         )
     )
