@@ -60,6 +60,45 @@ describe("Markdown element with help", () => {
     const helpText = await screen.findByText("help text")
     expect(helpText).toBeVisible()
   })
+
+  it("renders markdown help tooltip with newlines correctly", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ help: "Line 1\n\nLine 2\n\nLine 3" })
+    render(<Markdown {...props} />)
+
+    // Verify the help text is NOT leaked into the markdown body
+    const markdown = screen.getByTestId("stMarkdownContainer")
+    expect(markdown).not.toHaveTextContent("Line 2")
+    expect(markdown).not.toHaveTextContent("Line 3")
+
+    // Hover to show tooltip
+    const tooltip = screen.getByTestId("stTooltipHoverTarget")
+    await user.hover(tooltip)
+
+    // Verify tooltip contains all lines (rendered as separate paragraphs)
+    const helpContent = await screen.findByTestId("stTooltipContent")
+    expect(helpContent).toBeVisible()
+    expect(helpContent).toHaveTextContent("Line 1")
+    expect(helpContent).toHaveTextContent("Line 2")
+    expect(helpContent).toHaveTextContent("Line 3")
+  })
+
+  it("renders markdown help tooltip with literal backslash-n without converting to newline", async () => {
+    const user = userEvent.setup()
+    // User wants to display literal \n in tooltip (e.g., documentation about escape sequences)
+    const props = getProps({ help: "Use \\n for newlines" })
+    render(<Markdown {...props} />)
+
+    // Hover to show tooltip
+    const tooltip = screen.getByTestId("stTooltipHoverTarget")
+    await user.hover(tooltip)
+
+    // Verify tooltip shows literal \n text, not an actual newline
+    const helpContent = await screen.findByTestId("stTooltipContent")
+    expect(helpContent).toBeVisible()
+    // The text should contain the literal backslash-n, rendered as a single line
+    expect(helpContent).toHaveTextContent("Use \\n for newlines")
+  })
 })
 
 describe("Markdown badge with help", () => {

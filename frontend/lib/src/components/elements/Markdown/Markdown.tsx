@@ -76,9 +76,11 @@ function Markdown({ element }: Readonly<MarkdownProps>): ReactElement {
   } else {
     // For other markdown, render with inline help icon
     // Append help directive to markdown source so it renders inline.
-    // Escape newlines as a special placeholder since text directives don't support
-    // multiline content. The placeholder will be converted back to newlines in the tooltip.
-    const escapedHelp = help ? help.replace(/\n/g, "\\n") : ""
+    // Escape newlines with a sentinel since text directives don't support multiline content.
+    // Using a unique sentinel prevents collision with user text containing literal \n.
+    const escapedHelp = help
+      ? help.replace(/\n/g, "__STREAMLIT_NEWLINE__")
+      : ""
     const source = help ? `${body} :help[${escapedHelp}]` : body
 
     content = (
