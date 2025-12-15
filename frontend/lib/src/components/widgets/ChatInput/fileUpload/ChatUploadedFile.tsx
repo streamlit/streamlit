@@ -14,33 +14,33 @@
  * limitations under the License.
  */
 
-import React, { FC, memo } from "react"
+import React, { FC, memo, useCallback } from "react"
 
-import {
-  Clear,
-  ErrorOutline,
-  InsertDriveFile,
-} from "@emotion-icons/material-outlined"
+import { ErrorOutline } from "@emotion-icons/material-outlined"
+import { Cancel } from "@emotion-icons/material-rounded"
 
 import BaseButton, { BaseButtonKind } from "~lib/components/shared/BaseButton"
 import Icon, { DynamicIcon } from "~lib/components/shared/Icon"
 import { UploadFileInfo } from "~lib/components/widgets/FileUploader/UploadFileInfo"
-import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { assertNever } from "~lib/util/assertNever"
 import { FileSize, getSizeDisplay } from "~lib/util/FileHelper"
 
-import { ChatUploadedFileIconTooltip } from "./ChatUploadedFileIconTooltip"
+import { getFileTypeIcon } from "./getFileTypeIcon"
 import {
   StyledChatUploadedFile,
   StyledChatUploadedFileDeleteButton,
-  StyledChatUploadedFileIcon,
+  StyledChatUploadedFileError,
+  StyledChatUploadedFileIconContainer,
+  StyledChatUploadedFileInfo,
   StyledChatUploadedFileName,
   StyledChatUploadedFileSize,
 } from "./styled-components"
+import { truncateFilename } from "./truncateFilename"
 
 export interface Props {
   fileInfo: UploadFileInfo
   onDelete: (id: number) => void
+  onRetry?: (fileInfo: UploadFileInfo) => void
 }
 
 export interface ChatUploadedFileIconProps {
@@ -50,7 +50,6 @@ export interface ChatUploadedFileIconProps {
 export const ChatUploadedFileIcon: FC<ChatUploadedFileIconProps> = ({
   fileInfo,
 }) => {
-  const theme = useEmotionTheme()
   const { type } = fileInfo.status
 
   switch (type) {
@@ -64,16 +63,14 @@ export const ChatUploadedFileIcon: FC<ChatUploadedFileIconProps> = ({
       )
     case "error":
       return (
-        <ChatUploadedFileIconTooltip content={fileInfo.status.errorMessage}>
-          <Icon
-            color={theme.colors.redTextColor}
-            content={ErrorOutline}
-            size="lg"
-          />
-        </ChatUploadedFileIconTooltip>
+        <Icon
+          content={ErrorOutline}
+          size="lg"
+          testid="stChatInputFileIconError"
+        />
       )
     case "uploaded":
-      return <Icon content={InsertDriveFile} size="lg" />
+      return <Icon content={getFileTypeIcon(fileInfo.name)} size="lg" />
     default:
       assertNever(type)
       return null
@@ -83,34 +80,101 @@ export const ChatUploadedFileIcon: FC<ChatUploadedFileIconProps> = ({
 const ChatUploadedFile = ({
   fileInfo,
   onDelete,
-}: Props): React.ReactElement => (
-  <StyledChatUploadedFile
-    className="stChatInputFile"
-    data-testid="stChatInputFile"
-  >
-    <StyledChatUploadedFileIcon>
-      <ChatUploadedFileIcon fileInfo={fileInfo} />
-    </StyledChatUploadedFileIcon>
-    <StyledChatUploadedFileName
-      className="stChatInputFileName"
-      data-testid="stChatInputFileName"
-      title={fileInfo.name}
-      fileStatus={fileInfo.status}
+  onRetry,
+}: Props): React.ReactElement => {
+  const statusType = fileInfo.status.type
+  const isError = statusType === "error"
+  const isUploading = statusType === "uploading"
+  const canRetry =
+    isError && onRetry !== undefined && fileInfo.file !== undefined
+
+  // Extract error message once to avoid duplication
+  const errorMessage =
+    fileInfo.status.type === "error"
+      ? fileInfo.status.errorMessage
+      : "Upload failed"
+
+  const handleChipClick = useCallback(() => {
+    if (canRetry) {
+      onRetry(fileInfo)
+    }
+  }, [canRetry, onRetry, fileInfo])
+
+  const handleChipKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (canRetry && (e.key === "Enter" || e.key === " ")) {
+        e.preventDefault()
+        onRetry(fileInfo)
+      }
+    },
+    [canRetry, onRetry, fileInfo]
+  )
+
+  const handleDeleteClick = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation()
+      onDelete(fileInfo.id)
+    },
+    [onDelete, fileInfo.id]
+  )
+
+  // Determine aria-label for delete button based on state
+  const deleteButtonAriaLabel = isUploading
+    ? `Cancel upload of ${fileInfo.name}`
+    : `Remove ${fileInfo.name}`
+
+  // Determine aria-label for the file chip
+  const sizeDisplay = getSizeDisplay(fileInfo.size, FileSize.Byte)
+  const chipAriaLabel = isError
+    ? `${fileInfo.name}, ${errorMessage}`
+    : `${fileInfo.name}, ${sizeDisplay}`
+
+  return (
+    <StyledChatUploadedFile
+      className="stChatInputFile"
+      data-testid="stChatInputFile"
+      isError={isError}
+      isClickable={canRetry}
+      onClick={canRetry ? handleChipClick : undefined}
+      onKeyDown={canRetry ? handleChipKeyDown : undefined}
+      title={canRetry ? "Click to retry upload" : undefined}
+      role={canRetry ? "button" : undefined}
+      tabIndex={canRetry ? 0 : undefined}
+      aria-label={chipAriaLabel}
     >
-      {fileInfo.name}
-    </StyledChatUploadedFileName>
-    <StyledChatUploadedFileSize>
-      {getSizeDisplay(fileInfo.size, FileSize.Byte)}
-    </StyledChatUploadedFileSize>
-    <StyledChatUploadedFileDeleteButton data-testid="stChatInputDeleteBtn">
-      <BaseButton
-        onClick={() => onDelete(fileInfo.id)}
-        kind={BaseButtonKind.MINIMAL}
-      >
-        <Icon content={Clear} size="lg" />
-      </BaseButton>
-    </StyledChatUploadedFileDeleteButton>
-  </StyledChatUploadedFile>
-)
+      <StyledChatUploadedFileIconContainer fileStatus={statusType}>
+        <ChatUploadedFileIcon fileInfo={fileInfo} />
+      </StyledChatUploadedFileIconContainer>
+      <StyledChatUploadedFileInfo>
+        <StyledChatUploadedFileName
+          className="stChatInputFileName"
+          data-testid="stChatInputFileName"
+          title={fileInfo.name}
+          fileStatus={fileInfo.status}
+        >
+          {truncateFilename(fileInfo.name)}
+        </StyledChatUploadedFileName>
+        {isError ? (
+          <StyledChatUploadedFileError data-testid="stChatInputFileError">
+            {errorMessage}
+          </StyledChatUploadedFileError>
+        ) : (
+          <StyledChatUploadedFileSize>
+            {getSizeDisplay(fileInfo.size, FileSize.Byte)}
+          </StyledChatUploadedFileSize>
+        )}
+      </StyledChatUploadedFileInfo>
+      <StyledChatUploadedFileDeleteButton data-testid="stChatInputDeleteBtn">
+        <BaseButton
+          onClick={handleDeleteClick}
+          kind={BaseButtonKind.MINIMAL}
+          aria-label={deleteButtonAriaLabel}
+        >
+          <Icon content={Cancel} size="md" />
+        </BaseButton>
+      </StyledChatUploadedFileDeleteButton>
+    </StyledChatUploadedFile>
+  )
+}
 
 export default memo(ChatUploadedFile)

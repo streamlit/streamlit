@@ -54,9 +54,22 @@ jobs:
       - name: Setup virtual env
         uses: ./.github/actions/make_init
       - name: Check for orphaned snapshots
+        id: check-snapshots
         run: |
           source venv/bin/activate
-          python scripts/snapshot_cleanup.py --ci
+          set +e  # Don't exit immediately on error
+          python scripts/snapshot_cleanup.py --ci > snapshot_output.txt 2>&1
+          EXIT_CODE=$?
+          if [ -f snapshot_output.txt ]; then
+            cat snapshot_output.txt
+            echo "snapshot_list<<EOF" >> $GITHUB_OUTPUT
+            cat snapshot_output.txt >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          fi
+          if [ $EXIT_CODE -ne 0 ]; then
+            echo "orphaned=true" >> $GITHUB_OUTPUT
+            exit 1
+          fi
       - name: Delete comment on success
         if: success() && github.event_name == 'pull_request'
         uses: actions/github-script@v8
@@ -91,20 +104,56 @@ jobs:
       - name: Comment on PR if snapshots found
         if: failure() && github.event_name == 'pull_request'
         uses: actions/github-script@v8
+        env:
+          SNAPSHOT_OUTPUT: ${{ steps.check-snapshots.outputs.snapshot_list }}
         with:
           script: |
+            const snapshotOutput = process.env.SNAPSHOT_OUTPUT || '';
+
+            // Extract the orphaned snapshots summary
+            const lines = snapshotOutput.split('\n');
+            let summarySection = '';
+            let copyPasteSection = '';
+            let captureSummary = false;
+            let captureCopyPaste = false;
+
+            for (const line of lines) {
+              if (line.includes('Orphaned snapshots by test:')) {
+                captureSummary = true;
+                summarySection += '\n**Orphaned snapshots by test:**\n```\n';
+                continue;
+              }
+              if (line.includes('--- COPY_PASTE_START ---')) {
+                captureSummary = false;
+                captureCopyPaste = true;
+                summarySection += '```\n';
+                copyPasteSection += '\n**These are the snapshots I found that appear to be orphaned:**\n```python\n';
+                continue;
+              }
+              if (line.includes('--- COPY_PASTE_END ---')) {
+                captureCopyPaste = false;
+                copyPasteSection += '```\n';
+                break;
+              }
+              if (captureSummary && !line.includes('--- COPY_PASTE_START ---')) {
+                summarySection += line + '\n';
+              }
+              if (captureCopyPaste && !line.includes('--- COPY_PASTE_END ---')) {
+                copyPasteSection += line + '\n';
+              }
+            }
+
             const body = `❌ **Orphaned Snapshots Detected**
 
             This PR contains orphaned e2e snapshots that are no longer used by tests.
-
+            ${summarySection}${copyPasteSection}
             **To fix this:**
             1. Run \`python scripts/snapshot_cleanup.py\` locally to clean them up
             2. Or review the snapshots manually to ensure they're actually orphaned
-            3. Commit and push the changes
+            3. If they're incorrectly flagged, copy the filenames above and add them to \`DISALLOWED_SNAPSHOTS\` in \`scripts/snapshot_cleanup.py\`
+            4. Commit and push the changes
 
-            This helps keep our snapshot directory clean and our tests maintainable.
-
-            If you believe the script incorrectly flagged valid snapshots, add them to the \`DISALLOWED_SNAPSHOTS\` set in the cleanup script.`;
+            This helps keep our snapshot directory clean and our tests maintainable.`;
 
             // Find existing orphaned snapshots comment
             const comments = await github.rest.issues.listComments({

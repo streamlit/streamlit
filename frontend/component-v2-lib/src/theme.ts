@@ -81,7 +81,7 @@ export interface StreamlitTheme {
   headingColor: string
   borderColorLight: string
   codeTextColor: string
-  widgetBorderColor?: string
+  widgetBorderColor: string
 
   // Color palette
   redColor: string
