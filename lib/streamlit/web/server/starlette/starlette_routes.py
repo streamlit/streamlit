@@ -683,7 +683,7 @@ def create_bidi_component_routes(
     ]
 
 
-def create_app_static_routes(
+def create_app_static_serving_routes(
     main_script_path: str | None, base_url: str | None
 ) -> list[Any]:
     """Create app static file route handlers."""

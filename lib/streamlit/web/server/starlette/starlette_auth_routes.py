@@ -314,7 +314,7 @@ async def _auth_callback(request: Request, base_url: str) -> Response:
     return response
 
 
-def get_auth_routes(base_url: str) -> list[Route]:
+def create_auth_routes(base_url: str) -> list[Route]:
     from starlette.routing import Route
 
     async def login(request: Request) -> Response:

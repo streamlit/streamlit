@@ -23,7 +23,7 @@ from starlette.responses import PlainTextResponse, RedirectResponse
 from starlette.testclient import TestClient
 
 from streamlit.web.server.starlette import starlette_app_utils, starlette_auth_routes
-from streamlit.web.server.starlette.starlette_auth_routes import get_auth_routes
+from streamlit.web.server.starlette.starlette_auth_routes import create_auth_routes
 from tests.testutil import patch_config_options
 
 if TYPE_CHECKING:
@@ -31,7 +31,7 @@ if TYPE_CHECKING:
 
 
 def _build_app() -> Starlette:
-    app = Starlette(routes=get_auth_routes(""))
+    app = Starlette(routes=create_auth_routes(""))
 
     @app.route("/", methods=["GET"])  # type: ignore[arg-type]
     async def root(_: Any) -> PlainTextResponse:
@@ -74,7 +74,7 @@ def test_callback_handles_error_query(monkeypatch: pytest.MonkeyPatch) -> None:
         lambda state: "default",
     )
 
-    app = Starlette(routes=get_auth_routes(""))
+    app = Starlette(routes=create_auth_routes(""))
     with TestClient(app) as client:
         response = client.get(
             "/oauth2callback?state=abc&error=access_denied&error_description=nope",
@@ -97,7 +97,7 @@ def test_callback_missing_provider_redirects(monkeypatch: pytest.MonkeyPatch) ->
         lambda state: None,
     )
 
-    app = Starlette(routes=get_auth_routes(""))
+    app = Starlette(routes=create_auth_routes(""))
     with TestClient(app) as client:
         response = client.get("/oauth2callback?state=abc", follow_redirects=False)
         assert response.status_code == 302
@@ -131,7 +131,7 @@ def test_auth_callback_sets_signed_cookie(monkeypatch: pytest.MonkeyPatch) -> No
         lambda: "http://testserver",
     )
 
-    app = Starlette(routes=get_auth_routes(""))
+    app = Starlette(routes=create_auth_routes(""))
     with TestClient(app) as client:
         response = client.get("/oauth2callback?state=abc", follow_redirects=False)
         assert response.status_code == 302
@@ -193,7 +193,7 @@ def test_callback_missing_origin_redirects(monkeypatch: pytest.MonkeyPatch) -> N
         lambda state: "default",
     )
 
-    app = Starlette(routes=get_auth_routes(""))
+    app = Starlette(routes=create_auth_routes(""))
     with TestClient(app) as client:
         response = client.get("/oauth2callback?state=abc", follow_redirects=False)
         assert response.status_code == 302

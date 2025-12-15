@@ -24,10 +24,10 @@ from streamlit.web.server.server_util import get_cookie_secret
 from streamlit.web.server.starlette.starlette_app_utils import (
     generate_random_hex_string,
 )
-from streamlit.web.server.starlette.starlette_auth_routes import get_auth_routes
+from streamlit.web.server.starlette.starlette_auth_routes import create_auth_routes
 from streamlit.web.server.starlette.starlette_routes import (
     _with_base,
-    create_app_static_routes,
+    create_app_static_serving_routes,
     create_bidi_component_routes,
     create_component_routes,
     create_health_routes,
@@ -117,13 +117,13 @@ def create_starlette_app(runtime: Runtime) -> Starlette:
     routes.extend(create_websocket_routes(runtime, base_url))
 
     # Add auth routes:
-    routes.extend(get_auth_routes(base_url))
+    routes.extend(create_auth_routes(base_url))
 
     # Add app static routes if enabled:
     if config.get_option("server.enableStaticServing"):
         # TODO(lukasmasuch): _main_script_path
         main_script_path = getattr(runtime, "_main_script_path", None)
-        routes.extend(create_app_static_routes(main_script_path, base_url))
+        routes.extend(create_app_static_serving_routes(main_script_path, base_url))
 
     # Add script health check routes if enabled
     if config.get_option("server.scriptHealthCheckEnabled"):
