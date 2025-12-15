@@ -349,7 +349,10 @@ class Server:
 
         if self._use_starlette:
             # Use starlette+uvicorn instead of tornado:
-            await self._start_starlette()
+            from streamlit.web.server.starlette import StarletteServer
+
+            self._starlette_server = StarletteServer(self._runtime)
+            await self._starlette_server.start()
             return
 
         app = self._create_app()
@@ -540,12 +543,6 @@ class Server:
         else:
             # Tornado mode: stop runtime directly
             self._runtime.stop()
-
-    async def _start_starlette(self) -> None:
-        from streamlit.web.server.starlette import StarletteServer
-
-        self._starlette_server = StarletteServer(self._runtime)
-        await self._starlette_server.start()
 
 
 def _set_tornado_log_levels() -> None:
