@@ -113,7 +113,9 @@ def test_clicking_color_on_color_picker_works(
     default_picker = get_color_picker(app, "Default Color")
     default_picker.get_by_test_id("stColorPickerBlock").click()
 
-    app.get_by_test_id("stColorPickerPopover").click(position={"x": 0, "y": 0})
+    expect(app.get_by_test_id("stColorPickerPopover")).to_be_visible()
+
+    app.get_by_test_id("stColorPickerPopover").click(position={"x": 1, "y": 1})
 
     # click outside of color picker
     app.get_by_text("Default Color").click()
