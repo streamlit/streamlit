@@ -19,9 +19,12 @@ from __future__ import annotations
 import json
 from unittest.mock import MagicMock
 
+import pytest
+
 from streamlit.web.server.starlette import starlette_app_utils
 from streamlit.web.server.starlette.starlette_websocket import (
     _gather_user_info,
+    _is_origin_allowed,
     _parse_subprotocols,
     _parse_user_cookie_signed,
     _validate_xsrf_token,
@@ -339,3 +342,61 @@ class TestParseUserCookieSigned:
         )
 
         assert result["is_logged_in"] is True
+
+
+class TestIsOriginAllowed:
+    """Tests for _is_origin_allowed function (Origin validation for WebSocket)."""
+
+    @pytest.mark.parametrize(
+        ("origin", "host", "expected"),
+        [
+            # None origin allowed (non-browser clients)
+            (None, "localhost:8501", True),
+            # Same-origin requests allowed
+            ("http://localhost:8501", "localhost:8501", True),
+            # Localhost origins allowed by default
+            ("http://localhost:3000", "somehost:8501", True),
+            # 127.0.0.1 origins allowed by default
+            ("http://127.0.0.1:3000", "somehost:8501", True),
+            # Disallowed cross-origin requests rejected
+            ("http://evil.com", "localhost:8501", False),
+            # Different host origins rejected when not in allowlist
+            ("http://attacker.example.com", "myapp.com:8501", False),
+        ],
+        ids=[
+            "none_origin",
+            "same_origin",
+            "localhost",
+            "127.0.0.1",
+            "disallowed_origin",
+            "different_host",
+        ],
+    )
+    @patch_config_options({"server.enableCORS": True})
+    def test_origin_validation_with_cors_enabled(
+        self, origin: str | None, host: str, expected: bool
+    ) -> None:
+        """Test origin validation when CORS is enabled."""
+        assert _is_origin_allowed(origin, host) is expected
+
+    @patch_config_options({"server.enableCORS": False})
+    def test_allows_all_origins_when_cors_disabled(self) -> None:
+        """Test that all origins are allowed when CORS is disabled."""
+        assert _is_origin_allowed("http://evil.com", "localhost:8501") is True
+
+    @pytest.mark.parametrize(
+        ("origin", "expected"),
+        [
+            ("http://trusted.com", True),
+            ("http://untrusted.com", False),
+        ],
+        ids=["allowlisted", "not_in_allowlist"],
+    )
+    @patch_config_options(
+        {"server.enableCORS": True, "server.corsAllowedOrigins": ["http://trusted.com"]}
+    )
+    def test_origin_validation_with_allowlist(
+        self, origin: str, expected: bool
+    ) -> None:
+        """Test origin validation against explicit allowlist."""
+        assert _is_origin_allowed(origin, "localhost:8501") is expected

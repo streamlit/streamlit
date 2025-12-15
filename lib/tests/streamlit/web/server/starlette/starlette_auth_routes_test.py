@@ -23,7 +23,10 @@ from starlette.responses import PlainTextResponse, RedirectResponse
 from starlette.testclient import TestClient
 
 from streamlit.web.server.starlette import starlette_app_utils, starlette_auth_routes
-from streamlit.web.server.starlette.starlette_auth_routes import create_auth_routes
+from streamlit.web.server.starlette.starlette_auth_routes import (
+    _get_cookie_path,
+    create_auth_routes,
+)
 from tests.testutil import patch_config_options
 
 if TYPE_CHECKING:
@@ -198,3 +201,148 @@ def test_callback_missing_origin_redirects(monkeypatch: pytest.MonkeyPatch) -> N
         response = client.get("/oauth2callback?state=abc", follow_redirects=False)
         assert response.status_code == 302
         assert response.headers["location"].endswith("/")
+
+
+class TestCookiePath:
+    """Tests for _get_cookie_path function."""
+
+    @patch_config_options({"server.baseUrlPath": ""})
+    def test_returns_root_when_no_base_path(self) -> None:
+        """Test that root path is returned when no base URL is configured."""
+        assert _get_cookie_path() == "/"
+
+    @patch_config_options({"server.baseUrlPath": "myapp"})
+    def test_returns_base_path_with_leading_slash(self) -> None:
+        """Test that base path is returned with leading slash."""
+        assert _get_cookie_path() == "/myapp"
+
+    @patch_config_options({"server.baseUrlPath": "/myapp"})
+    def test_handles_leading_slash_in_config(self) -> None:
+        """Test that leading slash in config is handled correctly."""
+        assert _get_cookie_path() == "/myapp"
+
+    @patch_config_options({"server.baseUrlPath": "myapp/"})
+    def test_removes_trailing_slash(self) -> None:
+        """Test that trailing slash is removed from path."""
+        assert _get_cookie_path() == "/myapp"
+
+    @patch_config_options({"server.baseUrlPath": "/myapp/"})
+    def test_handles_both_leading_and_trailing_slashes(self) -> None:
+        """Test that both leading and trailing slashes are handled."""
+        assert _get_cookie_path() == "/myapp"
+
+
+class TestAuthCookieFlags:
+    """Tests for auth cookie flags (httponly, samesite, path)."""
+
+    @patch_config_options(
+        {"server.cookieSecret": "test-secret", "server.baseUrlPath": ""}
+    )
+    def test_auth_cookie_has_correct_flags(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test that auth cookie is set with correct security flags."""
+
+        async def _dummy_authorize_access_token(self, request: Any) -> dict[str, Any]:
+            return {"userinfo": {"email": "user@example.com"}}
+
+        class _DummyClient:
+            async def authorize_access_token(self, request: Any) -> dict[str, Any]:
+                return await _dummy_authorize_access_token(self, request)
+
+        monkeypatch.setattr(
+            starlette_auth_routes,
+            "_create_oauth_client",
+            lambda provider: (_DummyClient(), "/redirect"),
+        )
+        monkeypatch.setattr(
+            starlette_auth_routes,
+            "_get_provider_by_state",
+            lambda state: "default",
+        )
+        monkeypatch.setattr(
+            starlette_auth_routes,
+            "_get_origin_from_secrets",
+            lambda: "http://testserver",
+        )
+
+        app = Starlette(routes=create_auth_routes(""))
+        with TestClient(app) as client:
+            response = client.get("/oauth2callback?state=abc", follow_redirects=False)
+            assert response.status_code == 302
+
+            cookies = SimpleCookie()
+            cookies.load(response.headers["set-cookie"])
+            cookie = cookies["_streamlit_user"]
+
+            # Check httponly flag
+            assert cookie["httponly"] is True
+
+            # Check samesite flag
+            assert cookie["samesite"].lower() == "lax"
+
+            # Check path flag (should be "/" when no baseUrlPath)
+            assert cookie["path"] == "/"
+
+    @patch_config_options(
+        {"server.cookieSecret": "test-secret", "server.baseUrlPath": "myapp"}
+    )
+    def test_auth_cookie_path_matches_base_url(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test that auth cookie path matches the configured baseUrlPath."""
+
+        async def _dummy_authorize_access_token(self, request: Any) -> dict[str, Any]:
+            return {"userinfo": {"email": "user@example.com"}}
+
+        class _DummyClient:
+            async def authorize_access_token(self, request: Any) -> dict[str, Any]:
+                return await _dummy_authorize_access_token(self, request)
+
+        monkeypatch.setattr(
+            starlette_auth_routes,
+            "_create_oauth_client",
+            lambda provider: (_DummyClient(), "/redirect"),
+        )
+        monkeypatch.setattr(
+            starlette_auth_routes,
+            "_get_provider_by_state",
+            lambda state: "default",
+        )
+        monkeypatch.setattr(
+            starlette_auth_routes,
+            "_get_origin_from_secrets",
+            lambda: "http://testserver",
+        )
+
+        app = Starlette(routes=create_auth_routes("/myapp"))
+        with TestClient(app) as client:
+            response = client.get(
+                "/myapp/oauth2callback?state=abc", follow_redirects=False
+            )
+            assert response.status_code == 302
+
+            cookies = SimpleCookie()
+            cookies.load(response.headers["set-cookie"])
+            cookie = cookies["_streamlit_user"]
+
+            # Check path matches baseUrlPath
+            assert cookie["path"] == "/myapp"
+
+    @patch_config_options({"server.baseUrlPath": "myapp"})
+    def test_logout_clears_cookie_with_correct_path(self) -> None:
+        """Test that logout clears the cookie with the same path it was set with."""
+        app = Starlette(routes=create_auth_routes("/myapp"))
+
+        @app.route("/myapp/", methods=["GET"])  # type: ignore[arg-type]
+        async def root(_: Any) -> PlainTextResponse:
+            return PlainTextResponse("ok")
+
+        with TestClient(app) as client:
+            client.cookies.set("_streamlit_user", "value", path="/myapp")
+            response = client.get("/myapp/auth/logout", follow_redirects=False)
+            assert response.status_code == 302
+
+            # The Set-Cookie header should include the path
+            set_cookie_header = response.headers.get("set-cookie", "")
+            assert "Path=/myapp" in set_cookie_header

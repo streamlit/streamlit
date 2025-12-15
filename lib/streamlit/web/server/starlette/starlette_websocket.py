@@ -30,7 +30,11 @@ from streamlit.runtime.session_manager import (
     SessionClient,
     SessionClientDisconnectedError,
 )
-from streamlit.web.server.server_util import get_cookie_secret, is_xsrf_enabled
+from streamlit.web.server.server_util import (
+    get_cookie_secret,
+    is_url_from_allowed_origins,
+    is_xsrf_enabled,
+)
 from streamlit.web.server.starlette import starlette_app_utils
 from streamlit.web.server.starlette.starlette_server_config import (
     USER_COOKIE_NAME,
@@ -111,6 +115,47 @@ def _validate_xsrf_token(supplied_token: str | None, xsrf_cookie: str | None) ->
     import hmac
 
     return hmac.compare_digest(supplied_token_bytes, expected_token_bytes)
+
+
+def _is_origin_allowed(origin: str | None, host: str | None) -> bool:
+    """Check if the WebSocket Origin header is allowed.
+
+    This mirrors Tornado's WebSocketHandler.check_origin behavior, which allows
+    same-origin connections by default and delegates to is_url_from_allowed_origins
+    for cross-origin requests.
+
+    Parameters
+    ----------
+    origin: str | None
+        The origin of the WebSocket connection.
+
+    host: str | None
+        The host of the WebSocket connection.
+
+    Returns
+    -------
+    bool
+        True if:
+        - The origin is None (browser didn't send Origin header, allowed per spec)
+        - The origin matches the host (same-origin request)
+        - The origin is in the allowed origins list (is_url_from_allowed_origins)
+    """
+    # If no Origin header is present, allow the connection.
+    # Per the WebSocket spec, browsers should always send Origin, but non-browser
+    # clients may not. Tornado allows connections without Origin by default.
+    if origin is None:
+        return True
+
+    # Check same-origin: compare origin host with request host
+    parsed_origin = urlparse(origin)
+    origin_host = parsed_origin.netloc
+
+    # If origin host matches request host, it's same-origin
+    if origin_host == host:
+        return True
+
+    # Delegate to the standard allowed origins check
+    return is_url_from_allowed_origins(origin)
 
 
 def _parse_user_cookie_signed(cookie_value: str | bytes, origin: str) -> dict[str, Any]:
@@ -221,6 +266,17 @@ def create_websocket_handler(runtime: Runtime) -> Any:
     from starlette.websockets import WebSocketDisconnect
 
     async def _websocket_endpoint(websocket: WebSocket) -> None:
+        # Validate origin before accepting the connection to prevent
+        # cross-site WebSocket hijacking (mirrors Tornado's check_origin).
+        origin = websocket.headers.get("Origin")
+        host = websocket.headers.get("Host")
+        if not _is_origin_allowed(origin, host):
+            _LOGGER.warning(
+                "Rejecting WebSocket connection from disallowed origin: %s", origin
+            )
+            await websocket.close(code=1008)  # 1008 = Policy Violation
+            return
+
         subprotocol, xsrf_token, existing_session_id = _parse_subprotocols(
             websocket.headers
         )

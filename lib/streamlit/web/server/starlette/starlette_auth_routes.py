@@ -140,6 +140,18 @@ async def _redirect_to_base(base_url: str) -> RedirectResponse:
     return RedirectResponse(make_url_path(base_url, "/"), status_code=302)
 
 
+def _get_cookie_path() -> str:
+    """Get the cookie path based on server.baseUrlPath configuration."""
+    from streamlit import config
+
+    base_path = config.get_option("server.baseUrlPath")
+    if base_path:
+        # Ensure path starts with "/" and doesn't have trailing slash
+        path = "/" + base_path.strip("/")
+        return path
+    return "/"
+
+
 async def _set_auth_cookie(response: Response, user_info: dict[str, Any]) -> None:
     """Set the auth cookie with signed user info.
 
@@ -147,6 +159,13 @@ async def _set_auth_cookie(response: Response, user_info: dict[str, Any]) -> Non
     Tornado's secure cookie format. Switching between backends will invalidate
     existing auth cookies, requiring users to re-authenticate. This is expected.
     This is expected behavior when switching between Tornado and Starlette backends.
+
+    Cookie flags are set explicitly for clarity and parity with Tornado:
+    - httponly=True: Prevents JavaScript access (security)
+    - samesite="lax": Allows cookie on same-site requests and top-level navigations
+    - secure is NOT set: Tornado deliberately avoids this due to Safari cookie bugs;
+      the OIDC flow only works in secure contexts anyway (localhost or HTTPS)
+    - path: Matches server.baseUrlPath for proper scoping
     """
     serialized_cookie_value = json.dumps(user_info)
     if len(serialized_cookie_value.encode()) > 4096:
@@ -159,13 +178,22 @@ async def _set_auth_cookie(response: Response, user_info: dict[str, Any]) -> Non
         cookie_secret, AUTH_COOKIE_NAME, serialized_cookie_value
     )
     cookie_payload = signed_value.decode("utf-8")
-    response.set_cookie(AUTH_COOKIE_NAME, cookie_payload, httponly=True)
+    response.set_cookie(
+        AUTH_COOKIE_NAME,
+        cookie_payload,
+        httponly=True,
+        samesite="lax",
+        path=_get_cookie_path(),
+    )
 
 
 def _clear_auth_cookie(response: Response) -> None:
-    """Clear the auth cookie."""
+    """Clear the auth cookie.
 
-    response.delete_cookie(AUTH_COOKIE_NAME)
+    The path must match the path used when setting the cookie, otherwise
+    the browser won't delete it.
+    """
+    response.delete_cookie(AUTH_COOKIE_NAME, path=_get_cookie_path())
 
 
 def _create_oauth_client(provider: str) -> tuple[Any, str]:
