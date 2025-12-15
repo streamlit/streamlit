@@ -186,3 +186,11 @@ else:
         key="dynamic_download_button_with_key",
     )
     st.write("Clicked initial button:", clicked)
+
+st.download_button(
+    "Emoji Right",
+    data="Hello world!",
+    icon="⬇️",
+    icon_position="right",
+    key="download_emoji_right",
+)

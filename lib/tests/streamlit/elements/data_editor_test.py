@@ -158,6 +158,32 @@ class DataEditorUtilTest(unittest.TestCase):
                 ColumnDataKind.EMPTY,
                 ["foo"],
             ),
+            # Scalar values with EMPTY data kind should remain scalars (fix for #13305, #13307)
+            (
+                None,
+                ColumnDataKind.EMPTY,
+                None,
+            ),
+            (
+                42,
+                ColumnDataKind.EMPTY,
+                42,
+            ),
+            (
+                "text",
+                ColumnDataKind.EMPTY,
+                "text",
+            ),
+            (
+                3.14,
+                ColumnDataKind.EMPTY,
+                3.14,
+            ),
+            (
+                True,
+                ColumnDataKind.EMPTY,
+                True,
+            ),
         ]
     )
     def test_parse_value(
@@ -211,6 +237,46 @@ class DataEditorUtilTest(unittest.TestCase):
         assert not df.iat[0, 2]
         assert df.iat[0, 3] == pd.Timestamp("2020-03-20T14:28:23")
         assert df.iat[0, 4] == Decimal("2.3")
+
+    def test_apply_cell_edits_empty_columns(self):
+        """Test applying cell edits to empty (None-only) columns.
+
+        Regression test for issues #13305 and #13307 where scalar values
+        were incorrectly wrapped in lists when editing empty columns.
+        """
+        # Create DataFrame with None values in all columns
+        df = pd.DataFrame(
+            {
+                "number_col": [None],
+                "text_col": [None],
+                "list_col": [None],
+            }
+        )
+
+        edited_rows: Mapping[
+            int, Mapping[str, str | int | float | bool | list[str] | None]
+        ] = {
+            0: {
+                "number_col": 42,
+                "text_col": "hello",
+                "list_col": ["a", "b"],
+            },
+        }
+
+        _apply_cell_edits(
+            df, edited_rows, determine_dataframe_schema(df, _get_arrow_schema(df))
+        )
+
+        # Scalar values should remain scalars, not be wrapped in lists
+        assert df.iat[0, 0] == 42
+        assert not isinstance(df.iat[0, 0], list)
+
+        assert df.iat[0, 1] == "hello"
+        assert not isinstance(df.iat[0, 1], list)
+
+        # List values should remain lists
+        assert df.iat[0, 2] == ["a", "b"]
+        assert isinstance(df.iat[0, 2], list)
 
     def test_apply_row_additions(self):
         """Test applying row additions to a DataFrame."""

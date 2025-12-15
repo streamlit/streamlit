@@ -34,6 +34,7 @@ import BaseButton, {
   BaseButtonTooltip,
   DynamicButtonLabel,
 } from "~lib/components/shared/BaseButton"
+import { mapProtoIconPosition } from "~lib/components/shared/BaseButton/iconPosition"
 import { useRegisterShortcut } from "~lib/hooks/useRegisterShortcut"
 import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
 import { StyledErrorMessage } from "~lib/styled-components"
@@ -186,6 +187,7 @@ function DownloadButton(props: Props): ReactElement {
         >
           <DynamicButtonLabel
             icon={isLoading ? "spinner" : icon}
+            iconPosition={mapProtoIconPosition(element.iconPosition)}
             label={label}
             shortcut={shortcut}
           />

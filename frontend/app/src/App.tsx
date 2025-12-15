@@ -65,6 +65,7 @@ import {
   createFormsData,
   createPresetThemes,
   CUSTOM_THEME_AUTO_NAME,
+  darkTheme,
   DeployedAppMetadata,
   ensureError,
   ensureHotkeysFilterConfigured,
@@ -90,11 +91,14 @@ import {
   IMenuItem,
   isEmbed,
   isInChildFrame,
+  isKeyboardEventFromEditableTarget,
   isPaddingDisplayed,
   isPresetTheme,
   isScrollingHidden,
   isToolbarDisplayed,
   IToolbarItem,
+  lightTheme,
+  mapCachedThemeToAvailableTheme,
   mark,
   measure,
   notUndefined,
@@ -102,9 +106,9 @@ import {
   PresetThemeName,
   ScriptRunState,
   SessionInfo,
+  sortThemeInputKeys,
   ThemeConfig,
   toExportedTheme,
-  toThemeInput,
   WidgetStateManager,
 } from "@streamlit/lib"
 import {
@@ -140,6 +144,7 @@ import {
   isLocalhost,
   isNullOrUndefined,
   notNullOrUndefined,
+  StreamlitConfig,
 } from "@streamlit/utils"
 
 import { showDevelopmentOptions } from "./showDevelopmentOptions"
@@ -282,16 +287,6 @@ export class App extends PureComponent<Props, State> {
     enablePatches()
     enableMapSet()
 
-    // Theme hashes are only created for custom theme, and the custom theme
-    // may come from localStorage. We need to create the hash here to ensure
-    // that the theme is correctly represented.
-    let themeHash = this.createThemeHash()
-    if (!isPresetTheme(props.theme.activeTheme)) {
-      themeHash = this.createThemeHash(
-        toThemeInput(props.theme.activeTheme.emotion) as CustomThemeConfig
-      )
-    }
-
     this.state = {
       connectionState: ConnectionState.INITIAL,
       elements: AppRoot.empty("", true), // Blank Main Script Hash for initial render
@@ -311,7 +306,11 @@ export class App extends PureComponent<Props, State> {
       menuItems: undefined,
       allowRunOnSave: true,
       scriptFinishedHandlers: [],
-      themeHash,
+      // Initialize themeHash to empty string to ensure the first processThemeInput
+      // call always processes the theme (whether null or custom theme from server).
+      // This prevents the bug where a cached custom theme isn't cleared when the
+      // server sends null, because null and undefined both hash to the same value.
+      themeHash: "",
       gitInfo: null,
       formsData: createFormsData(),
       appPages: [],
@@ -701,8 +700,8 @@ export class App extends PureComponent<Props, State> {
     let currentStreamlitVersion: string | undefined = undefined
 
     if (
-      window.__streamlit
-        ?.ENABLE_RELOAD_BASED_ON_HARDCODED_STREAMLIT_VERSION === true
+      StreamlitConfig.ENABLE_RELOAD_BASED_ON_HARDCODED_STREAMLIT_VERSION ===
+      true
     ) {
       currentStreamlitVersion = PACKAGE_METADATA.version
     } else if (this.sessionInfo.isSet) {
@@ -1164,9 +1163,9 @@ export class App extends PureComponent<Props, State> {
 
     if (baseUriParts) {
       let pathname
-      if (window.__streamlit?.MAIN_PAGE_BASE_URL) {
+      if (StreamlitConfig.MAIN_PAGE_BASE_URL) {
         pathname = parseUriIntoBaseParts(
-          window.__streamlit.MAIN_PAGE_BASE_URL
+          StreamlitConfig.MAIN_PAGE_BASE_URL
         ).pathname
       } else {
         pathname = baseUriParts.pathname
@@ -1366,10 +1365,17 @@ export class App extends PureComponent<Props, State> {
       return "hash_for_undefined_custom_theme"
     }
 
-    // Hash the sorted representation of the theme input:
-    return hashString(
-      JSON.stringify(themeInput, Object.keys(themeInput).sort())
-    )
+    // Convert to JSON and back to get a plain JS object without protobuf methods/metadata.
+    // JSON.stringify automatically filters out functions and non-enumerable properties.
+    // This ensures we hash only the actual theme data, not the protobuf object structure.
+    const plainObject = JSON.parse(JSON.stringify(themeInput))
+
+    // Recursively sort all keys (including nested objects like sidebar, light, dark)
+    // to ensure consistent hashing regardless of key order
+    const sorted = sortThemeInputKeys(plainObject)
+
+    // Hash the sorted representation
+    return hashString(JSON.stringify(sorted))
   }
 
   processThemeInput(themeInput: CustomThemeConfig): void {
@@ -1389,9 +1395,23 @@ export class App extends PureComponent<Props, State> {
       this.props.theme.addThemes(customThemes, { keepPresetThemes: false })
 
       const userPreference = getCachedTheme()
-      if (userPreference === null || usingCustomTheme) {
-        // If the user hasn't set a preference, or if a custom theme is currently active,
-        // update the theme to be a custom theme.
+      // Map the user's cached preference to the best matching theme from the new custom themes
+      // - Applies full server config while preserving user's light/dark selection
+      const mappedTheme = mapCachedThemeToAvailableTheme(
+        userPreference,
+        customThemes
+      )
+
+      if (mappedTheme) {
+        // User has a mappable preference - apply the full server config
+        // while preserving their light/dark selection
+        this.setAndSendTheme(mappedTheme)
+      } else {
+        // No mappable preference - set to default custom theme
+        // This handles cases where:
+        // - No user preference exists (userPreference === null)
+        // - User has a preset theme cached but custom themes are now available
+        // - User has an old custom theme that no longer matches
         if (customThemes.length > 1) {
           // When Custom Theme Light & Custom Theme Dark present, we create an auto theme based
           // on the system preference and set this as the active theme
@@ -1409,9 +1429,23 @@ export class App extends PureComponent<Props, State> {
       this.props.theme.addThemes([])
 
       if (usingCustomTheme) {
-        // Reset to the auto theme taking into account any host preferences
-        // aka embed query params.
-        this.setAndSendTheme(getHostSpecifiedTheme())
+        const userPreference = getCachedTheme()
+        const presetThemes = [lightTheme, darkTheme]
+        // Try to map custom theme preference back to preset themes
+        // e.g., "Custom Theme Light" → "Light", "Custom Theme Dark" → "Dark"
+        const mappedTheme = mapCachedThemeToAvailableTheme(
+          userPreference,
+          presetThemes
+        )
+
+        if (mappedTheme) {
+          // User had a custom theme preference that maps to a preset - preserve their choice
+          this.setAndSendTheme(mappedTheme)
+        } else {
+          // Reset to the auto theme taking into account any host preferences
+          // aka embed query params.
+          this.setAndSendTheme(getHostSpecifiedTheme())
+        }
       }
     }
 
@@ -1798,9 +1832,9 @@ export class App extends PureComponent<Props, State> {
       pageScriptHash = currentPageScriptHash
     } else {
       let pathname
-      if (window.__streamlit?.MAIN_PAGE_BASE_URL) {
+      if (StreamlitConfig.MAIN_PAGE_BASE_URL) {
         pathname = parseUriIntoBaseParts(
-          window.__streamlit.MAIN_PAGE_BASE_URL
+          StreamlitConfig.MAIN_PAGE_BASE_URL
         ).pathname
       } else {
         pathname = baseUriParts.pathname
@@ -2186,7 +2220,16 @@ export class App extends PureComponent<Props, State> {
     this.deferredFileListeners.delete(response.fileId)
   }
 
-  handleKeyDown = (keyName: string): void => {
+  handleKeyDown = (keyName: string, keyboardEvent?: KeyboardEvent): void => {
+    // See `isKeyboardEventFromEditableTarget` for editable/shadow DOM behavior.
+    // We never fire global single-letter shortcuts while the user is typing.
+    if (
+      (keyName === "c" || keyName === "r") &&
+      isKeyboardEventFromEditableTarget(keyboardEvent)
+    ) {
+      return
+    }
+
     switch (keyName) {
       case "c":
         // CLEAR CACHE
@@ -2216,8 +2259,8 @@ export class App extends PureComponent<Props, State> {
     const { menuItems } = this.state
     return Boolean(
       menuItems?.aboutSectionMd ||
-        (menuItems?.getHelpUrl && !menuItems?.hideGetHelp) ||
-        (menuItems?.reportABugUrl && !menuItems?.hideReportABug)
+      (menuItems?.getHelpUrl && !menuItems?.hideGetHelp) ||
+      (menuItems?.reportABugUrl && !menuItems?.hideReportABug)
     )
   }
 

@@ -25,6 +25,17 @@ import { render, renderWithContexts } from "~lib/test_util"
 
 import ChatMessage, { ChatMessageProps } from "./ChatMessage"
 
+// Mock StreamlitConfig using global mock state (see vitest.setup.ts)
+vi.mock("@streamlit/utils", async () => {
+  const actual = await vi.importActual("@streamlit/utils")
+  return {
+    ...actual,
+    get StreamlitConfig() {
+      return globalThis.__mockStreamlitConfig
+    },
+  }
+})
+
 const getProps = (
   elementProps: Partial<BlockProto.ChatMessage> = {}
 ): ChatMessageProps => ({
@@ -82,15 +93,13 @@ describe("ChatMessage", () => {
 
     describe("crossOrigin attribute", () => {
       afterEach(() => {
-        // Clean up window.__streamlit after each test
-        if (window.__streamlit) {
-          delete window.__streamlit.BACKEND_BASE_URL
-        }
+        globalThis.__mockStreamlitConfig = {}
       })
 
       it("sets crossOrigin when BACKEND_BASE_URL is configured", () => {
-        window.__streamlit = window.__streamlit || {}
-        window.__streamlit.BACKEND_BASE_URL = "http://localhost:8501"
+        // Setup StreamlitConfig.BACKEND_BASE_URL
+        globalThis.__mockStreamlitConfig.BACKEND_BASE_URL =
+          "http://localhost:8501"
 
         const props = getProps({
           avatar: "avatar.jpg",
@@ -130,10 +139,9 @@ describe("ChatMessage", () => {
       ])(
         "does not set crossOrigin attribute when resourceCrossOriginMode is undefined ($description)",
         ({ backendBaseUrl }) => {
-          // Setup window.__streamlit.BACKEND_BASE_URL if specified
+          // Setup StreamlitConfig.BACKEND_BASE_URL if specified
           if (backendBaseUrl) {
-            window.__streamlit = window.__streamlit || {}
-            window.__streamlit.BACKEND_BASE_URL = backendBaseUrl
+            globalThis.__mockStreamlitConfig.BACKEND_BASE_URL = backendBaseUrl
           }
 
           const props = getProps({

@@ -23,6 +23,7 @@ from e2e_playwright.shared.app_utils import (
 )
 from e2e_playwright.shared.dataframe_utils import (
     click_on_cell,
+    edit_cell_value,
     expect_canvas_to_be_stable,
     expect_canvas_to_be_visible,
     get_open_cell_overlay,
@@ -318,3 +319,63 @@ def test_data_editor_dynamic_mode(app: Page, assert_snapshot: ImageCompareFuncti
     )
 
     assert_snapshot(dynamic_editor, name="st_data_editor-dynamic_mode_after_delete")
+
+
+def test_editing_empty_column_returns_scalar_not_list(app: Page):
+    """Test that editing and adding rows in empty (None-only) columns returns scalars.
+
+    Regression test for GitHub issues #13305 and #13307 where editing cells in
+    columns that start with None values would incorrectly wrap the edited value
+    in a list (e.g., entering "42" would return [42] instead of 42).
+
+    The app outputs the dataframe as str(.to_dict()) for deterministic verification.
+    """
+    data_editor = _get_editor(app, "empty-column-editor")
+    expect_canvas_to_be_visible(data_editor)
+
+    # Test editing the number column (first column)
+    click_on_cell(data_editor, 1, 0, double_click=True, column_width="medium")
+    edit_cell_value(app, "42")
+
+    # Verify the complete dict output with scalar value 42 (not [42])
+    expect_prefixed_markdown(
+        app,
+        "Empty column result:",
+        "{'number_col': {0: 42}, 'text_col': {0: None}}",
+        exact_match=True,
+    )
+
+    # Test editing the text column (second column)
+    click_on_cell(data_editor, 1, 1, double_click=True, column_width="medium")
+    edit_cell_value(app, "hello")
+
+    # Verify the complete dict output with scalar 'hello' (not ['hello'])
+    expect_prefixed_markdown(
+        app,
+        "Empty column result:",
+        "{'number_col': {0: 42}, 'text_col': {0: 'hello'}}",
+        exact_match=True,
+    )
+
+    # Test adding a new row with values - should also return scalars
+    toolbar = data_editor.get_by_test_id("stElementToolbar")
+    data_editor.hover()
+    expect(toolbar).to_have_css("opacity", "1")
+
+    add_row_button = toolbar.get_by_test_id("stElementToolbarButton").get_by_label(
+        "Add row"
+    )
+    add_row_button.click()
+    wait_for_app_run(app)
+
+    # Edit the new row's number column (row index 2)
+    click_on_cell(data_editor, 2, 0, double_click=True, column_width="medium")
+    edit_cell_value(app, "99")
+
+    # Verify the complete dict output with new row scalar 99 (not [99])
+    expect_prefixed_markdown(
+        app,
+        "Empty column result:",
+        "{'number_col': {0: 42, 1: 99}, 'text_col': {0: 'hello', 1: None}}",
+        exact_match=True,
+    )

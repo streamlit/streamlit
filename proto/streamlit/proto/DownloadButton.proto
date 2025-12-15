@@ -19,6 +19,8 @@ syntax = "proto3";
 option java_package = "com.snowflake.apps.streamlit";
 option java_outer_classname = "DownloadButtonProto";
 
+import "streamlit/proto/ButtonLikeIconPosition.proto";
+
 message DownloadButton {
   string id = 1;
   string label = 2;
@@ -33,4 +35,5 @@ message DownloadButton {
   bool ignore_rerun = 11;
   optional string deferred_file_id = 12;
   string shortcut = 13;
+  streamlit.ButtonLikeIconPosition icon_position = 14;
 }

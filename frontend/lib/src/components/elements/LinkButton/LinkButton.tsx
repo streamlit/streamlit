@@ -31,6 +31,7 @@ import {
   BaseButtonTooltip,
   DynamicButtonLabel,
 } from "~lib/components/shared/BaseButton"
+import { mapProtoIconPosition } from "~lib/components/shared/BaseButton/iconPosition"
 import { useRegisterShortcut } from "~lib/hooks/useRegisterShortcut"
 
 import BaseLinkButton from "./BaseLinkButton"
@@ -98,6 +99,7 @@ function LinkButton(props: Readonly<Props>): ReactElement {
         >
           <DynamicButtonLabel
             icon={element.icon}
+            iconPosition={mapProtoIconPosition(element.iconPosition)}
             label={element.label}
             shortcut={shortcut}
           />
