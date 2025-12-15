@@ -1,0 +1,752 @@
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""Route handlers for the Starlette server."""
+
+from __future__ import annotations
+
+import os
+from pathlib import Path
+from typing import TYPE_CHECKING, Final
+from urllib.parse import quote
+
+from streamlit import config, file_util
+from streamlit.logger import get_logger
+from streamlit.runtime.media_file_storage import MediaFileKind, MediaFileStorageError
+from streamlit.runtime.memory_media_file_storage import get_extension_for_mimetype
+from streamlit.runtime.uploaded_file_manager import UploadedFileRec
+from streamlit.web.server.app_static_file_handler import (
+    MAX_APP_STATIC_FILE_SIZE,
+    SAFE_APP_STATIC_FILE_EXTENSIONS,
+)
+from streamlit.web.server.component_file_utils import (
+    build_safe_abspath,
+    guess_content_type,
+)
+from streamlit.web.server.routes import (
+    _DEFAULT_ALLOWED_MESSAGE_ORIGINS,
+    allow_all_cross_origin_requests,
+    is_allowed_origin,
+)
+from streamlit.web.server.server_util import get_url, is_xsrf_enabled
+from streamlit.web.server.starlette import starlette_app_utils
+from streamlit.web.server.starlette.starlette_server_config import XSRF_COOKIE_NAME
+from streamlit.web.server.stats_request_handler import StatsRequestHandler
+
+if TYPE_CHECKING:
+    from starlette.requests import Request
+    from starlette.responses import Response
+    from starlette.routing import BaseRoute
+
+    from streamlit.components.types.base_component_registry import BaseComponentRegistry
+    from streamlit.components.v2.component_manager import BidiComponentManager
+    from streamlit.runtime import Runtime
+    from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
+    from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
+
+_LOGGER: Final = get_logger(__name__)
+
+# Route path constants (without base URL prefix)
+# These define the canonical paths for all Starlette server endpoints.
+
+# Health check routes
+_ROUTE_HEALTH: Final = "_stcore/health"
+_ROUTE_SCRIPT_HEALTH: Final = "_stcore/script-health-check"
+
+# Metrics routes
+_ROUTE_METRICS: Final = "_stcore/metrics"
+
+# Host configuration
+_ROUTE_HOST_CONFIG: Final = "_stcore/host-config"
+
+# Media and file routes
+_ROUTE_MEDIA: Final = "media/{file_id:path}"
+_ROUTE_UPLOAD_FILE: Final = "_stcore/upload_file/{session_id}/{file_id}"
+
+# Component routes
+_ROUTE_COMPONENTS_V1: Final = "component/{path:path}"
+_ROUTE_COMPONENTS_V2: Final = "_stcore/bidi-components/{path:path}"
+
+# App static files
+_ROUTE_APP_STATIC: Final = "app/static/{path:path}"
+
+
+def _with_base(path: str, base_url: str | None = None) -> str:
+    """Prepend the base URL path to a route path."""
+    from streamlit.url_util import make_url_path
+
+    base = (
+        base_url if base_url is not None else config.get_option("server.baseUrlPath")
+    ) or ""
+    return make_url_path(base, path)
+
+
+async def _set_cors_headers(request: Request, response: Response) -> None:
+    """Set CORS headers on a response based on configuration."""
+    if allow_all_cross_origin_requests():
+        response.headers["Access-Control-Allow-Origin"] = "*"
+        return
+
+    origin = request.headers.get("Origin")
+    if origin and is_allowed_origin(origin):
+        response.headers["Access-Control-Allow-Origin"] = origin
+
+
+def _ensure_xsrf_cookie(request: Request, response: Response) -> None:
+    """Ensure that the XSRF cookie is set.
+
+    We manually manage XSRF generation and validation here to strictly match
+    Tornado's implementation and cookie format.
+    """
+    if not is_xsrf_enabled():
+        return
+
+    cookie_name = XSRF_COOKIE_NAME
+    raw_cookie = request.cookies.get(cookie_name)
+    token_bytes: bytes | None = None
+    timestamp: int | None = None
+    if raw_cookie:
+        token_bytes, timestamp = starlette_app_utils.decode_xsrf_token_string(
+            raw_cookie
+        )
+
+    cookie_value = starlette_app_utils.generate_xsrf_token_string(
+        token_bytes, timestamp
+    )
+
+    _set_unquoted_cookie(
+        response,
+        cookie_name,
+        cookie_value,
+        secure=bool(config.get_option("server.sslCertFile")),
+    )
+
+
+def _validate_xsrf_token(supplied_token: str | None, xsrf_cookie: str | None) -> bool:
+    """Validate the XSRF token from the request header against the cookie.
+
+    This mirrors Tornado's XSRF validation logic to ensure compatibility.
+    """
+    import hmac
+
+    if not supplied_token or not xsrf_cookie:
+        return False
+
+    supplied_token_bytes, _ = starlette_app_utils.decode_xsrf_token_string(
+        supplied_token
+    )
+    expected_token_bytes, _ = starlette_app_utils.decode_xsrf_token_string(xsrf_cookie)
+
+    if not supplied_token_bytes or not expected_token_bytes:
+        return False
+
+    return hmac.compare_digest(supplied_token_bytes, expected_token_bytes)
+
+
+def _set_unquoted_cookie(
+    response: Response,
+    cookie_name: str,
+    cookie_value: str,
+    *,
+    secure: bool,
+) -> None:
+    """Set a cookie without quoting the value (for Tornado compatibility)."""
+    header_value = "; ".join(
+        [
+            f"{cookie_name}={cookie_value}",
+            "Path=/",
+            "SameSite=Lax",
+            *(["Secure"] if secure else []),
+        ]
+    )
+
+    key_prefix = f"{cookie_name}=".encode("latin-1")
+    filtered_headers: list[tuple[bytes, bytes]] = [
+        (name, value)
+        for name, value in response.raw_headers
+        if not (
+            name.lower() == b"set-cookie"
+            and value.lower().startswith(key_prefix.lower())
+        )
+    ]
+    filtered_headers.append((b"set-cookie", header_value.encode("latin-1")))
+    response.raw_headers = filtered_headers
+
+
+def create_health_routes(runtime: Runtime, base_url: str | None) -> list[BaseRoute]:
+    """Create health check route handlers."""
+    from starlette.responses import PlainTextResponse, Response
+    from starlette.routing import Route
+
+    async def _health_endpoint(request: Request) -> PlainTextResponse:
+        ok, message = await runtime.is_ready_for_browser_connection
+        status = 200 if ok else 503
+        response = PlainTextResponse(message, status_code=status)
+        response.headers["Cache-Control"] = "no-cache"
+        await _set_cors_headers(request, response)
+        _ensure_xsrf_cookie(request, response)
+        return response
+
+    async def _health_options(request: Request) -> Response:
+        response = Response(status_code=204)
+        response.headers["Cache-Control"] = "no-cache"
+        await _set_cors_headers(request, response)
+        return response
+
+    return [
+        Route(
+            _with_base(_ROUTE_HEALTH, base_url),
+            _health_endpoint,
+            methods=["GET", "HEAD"],
+        ),
+        Route(
+            _with_base(_ROUTE_HEALTH, base_url),
+            _health_options,
+            methods=["OPTIONS"],
+        ),
+    ]
+
+
+def create_script_health_routes(
+    runtime: Runtime, base_url: str | None
+) -> list[BaseRoute]:
+    """Create script health check route handlers."""
+    from starlette.responses import PlainTextResponse, Response
+    from starlette.routing import Route
+
+    async def _script_health_endpoint(request: Request) -> PlainTextResponse:
+        ok, message = await runtime.does_script_run_without_error()
+        status = 200 if ok else 503
+        response = PlainTextResponse(message, status_code=status)
+        response.headers["Cache-Control"] = "no-cache"
+        await _set_cors_headers(request, response)
+        _ensure_xsrf_cookie(request, response)
+        return response
+
+    async def _script_health_options(request: Request) -> Response:
+        response = Response(status_code=204)
+        response.headers["Cache-Control"] = "no-cache"
+        await _set_cors_headers(request, response)
+        return response
+
+    return [
+        Route(
+            _with_base(_ROUTE_SCRIPT_HEALTH, base_url),
+            _script_health_endpoint,
+            methods=["GET", "HEAD"],
+        ),
+        Route(
+            _with_base(_ROUTE_SCRIPT_HEALTH, base_url),
+            _script_health_options,
+            methods=["OPTIONS"],
+        ),
+    ]
+
+
+def create_metrics_routes(runtime: Runtime, base_url: str | None) -> list[BaseRoute]:
+    """Create metrics route handlers."""
+    from starlette.responses import PlainTextResponse, Response
+    from starlette.routing import Route
+
+    async def _metrics_endpoint(request: Request) -> Response:
+        stats = runtime.stats_mgr.get_stats()
+        accept = request.headers.get("Accept", "")
+        if "application/x-protobuf" in accept:
+            payload = StatsRequestHandler._stats_to_proto(stats).SerializeToString()
+            response = Response(payload, media_type="application/x-protobuf")
+        else:
+            text = StatsRequestHandler._stats_to_text(stats)
+            response = PlainTextResponse(
+                text, media_type="application/openmetrics-text"
+            )
+        await _set_cors_headers(request, response)
+        return response
+
+    async def _metrics_options(request: Request) -> Response:
+        response = Response(status_code=204)
+        response.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = "Accept"
+        await _set_cors_headers(request, response)
+        return response
+
+    return [
+        Route(
+            _with_base(_ROUTE_METRICS, base_url),
+            _metrics_endpoint,
+            methods=["GET"],
+        ),
+        Route(
+            _with_base(_ROUTE_METRICS, base_url),
+            _metrics_options,
+            methods=["OPTIONS"],
+        ),
+    ]
+
+
+def create_host_config_routes(base_url: str | None) -> list[BaseRoute]:
+    """Create host config route handlers."""
+    from starlette.responses import JSONResponse
+    from starlette.routing import Route
+
+    async def _host_config_endpoint(request: Request) -> JSONResponse:
+        allowed = list(_DEFAULT_ALLOWED_MESSAGE_ORIGINS)
+        if (
+            config.get_option("global.developmentMode")
+            and "http://localhost" not in allowed
+        ):
+            allowed.append("http://localhost")
+
+        response = JSONResponse(
+            {
+                "allowedOrigins": allowed,
+                "useExternalAuthToken": False,
+                "enableCustomParentMessages": False,
+                "enforceDownloadInNewTab": False,
+                "metricsUrl": "",
+                "blockErrorDialogs": False,
+                "resourceCrossOriginMode": None,
+            }
+        )
+        await _set_cors_headers(request, response)
+        response.headers["Cache-Control"] = "no-cache"
+        return response
+
+    return [
+        Route(
+            _with_base(_ROUTE_HOST_CONFIG, base_url),
+            _host_config_endpoint,
+            methods=["GET"],
+        ),
+    ]
+
+
+def create_media_routes(
+    media_storage: MemoryMediaFileStorage, base_url: str | None
+) -> list[BaseRoute]:
+    """Create media file route handlers."""
+    from starlette.exceptions import HTTPException
+    from starlette.responses import Response
+    from starlette.routing import Route
+
+    async def _media_endpoint(request: Request) -> Response:
+        file_id = request.path_params["file_id"]
+
+        try:
+            media_file = media_storage.get_file(file_id)
+        except MediaFileStorageError as exc:
+            raise HTTPException(status_code=404, detail="File not found") from exc
+
+        headers: dict[str, str] = {}
+
+        if media_file.kind == MediaFileKind.DOWNLOADABLE:
+            filename = media_file.filename
+            if not filename:
+                filename = (
+                    f"streamlit_download"
+                    f"{get_extension_for_mimetype(media_file.mimetype)}"
+                )
+            try:
+                filename.encode("latin1")
+                disposition = f'filename="{filename}"'
+            except UnicodeEncodeError:
+                disposition = f"filename*=utf-8''{quote(filename)}"
+            headers["Content-Disposition"] = f"attachment; {disposition}"
+
+        # Ensure support for range requests (e.g. for video files)
+        headers["Accept-Ranges"] = "bytes"
+
+        content = media_file.content
+        content_length = len(content)
+        status_code = 200
+        range_header = request.headers.get("range")
+        if range_header:
+            try:
+                range_start, range_end = starlette_app_utils.parse_range_header(
+                    range_header, content_length
+                )
+            except ValueError:
+                raise HTTPException(
+                    status_code=416,
+                    detail="Invalid range",
+                    headers={"Content-Range": f"bytes */{content_length}"},
+                )
+            status_code = 206
+            content = content[range_start : range_end + 1]
+            headers["Content-Range"] = (
+                f"bytes {range_start}-{range_end}/{content_length}"
+            )
+            headers["Content-Length"] = str(len(content))
+        else:
+            headers["Content-Length"] = str(content_length)
+
+        response = Response(
+            content,
+            status_code=status_code,
+            media_type=media_file.mimetype or "text/plain",
+            headers=headers,
+        )
+        await _set_cors_headers(request, response)
+        return response
+
+    async def _media_options(request: Request) -> Response:
+        response = Response(status_code=204)
+        await _set_cors_headers(request, response)
+        return response
+
+    return [
+        Route(
+            _with_base(_ROUTE_MEDIA, base_url),
+            _media_endpoint,
+            # HEAD is needed for browsers (especially WebKit) to probe media files
+            methods=["GET", "HEAD"],
+        ),
+        Route(
+            _with_base(_ROUTE_MEDIA, base_url),
+            _media_options,
+            methods=["OPTIONS"],
+        ),
+    ]
+
+
+def create_upload_routes(
+    runtime: Runtime,
+    upload_mgr: MemoryUploadedFileManager,
+    base_url: str | None,
+) -> list[BaseRoute]:
+    """Create file upload route handlers."""
+    from starlette.datastructures import UploadFile
+    from starlette.exceptions import HTTPException
+    from starlette.responses import Response
+    from starlette.routing import Route
+
+    def _check_xsrf(request: Request) -> None:
+        """Validate XSRF token for non-safe HTTP methods.
+
+        Raises HTTPException with 403 if XSRF is enabled and validation fails.
+        This mirrors Tornado's automatic XSRF protection for non-GET requests.
+        """
+        if not is_xsrf_enabled():
+            return
+
+        xsrf_header = request.headers.get("X-Xsrftoken")
+        xsrf_cookie = request.cookies.get(XSRF_COOKIE_NAME)
+
+        if not _validate_xsrf_token(xsrf_header, xsrf_cookie):
+            raise HTTPException(status_code=403, detail="XSRF token missing or invalid")
+
+    async def _set_upload_headers(request: Request, response: Response) -> None:
+        response.headers["Access-Control-Allow-Methods"] = "PUT, OPTIONS, DELETE"
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type"
+        if is_xsrf_enabled():
+            response.headers["Access-Control-Allow-Origin"] = get_url(
+                config.get_option("browser.serverAddress")
+            )
+            response.headers["Access-Control-Allow-Headers"] = (
+                "X-Xsrftoken, Content-Type"
+            )
+            response.headers["Vary"] = "Origin"
+            response.headers["Access-Control-Allow-Credentials"] = "true"
+        else:
+            await _set_cors_headers(request, response)
+
+    async def _upload_options(request: Request) -> Response:
+        response = Response(status_code=204)
+        await _set_upload_headers(request, response)
+        return response
+
+    async def _upload_put(request: Request) -> Response:
+        """Upload a file to the server."""
+
+        _check_xsrf(request)
+
+        session_id = request.path_params["session_id"]
+        file_id = request.path_params["file_id"]
+
+        if not runtime.is_active_session(session_id):
+            raise HTTPException(status_code=400, detail="Invalid session_id")
+
+        max_size_bytes = (  # maxUploadSize is in megabytes
+            config.get_option("server.maxUploadSize") * 1024 * 1024
+        )
+
+        # 1. Fast fail via header (if present) - check before reading the body
+        content_length = request.headers.get("content-length")
+        if content_length and int(content_length) > max_size_bytes:
+            raise HTTPException(status_code=413, detail="File too large")
+
+        form = await request.form()
+        uploads = [value for value in form.values() if isinstance(value, UploadFile)]
+
+        if len(uploads) != 1:
+            raise HTTPException(
+                status_code=400, detail=f"Expected 1 file, but got {len(uploads)}"
+            )
+
+        upload = uploads[0]
+
+        # 2. Check actual file size (Content-Length may be absent or inaccurate)
+        # TODO(lukasmasuch): Improve by using a streaming approach that rejects uploads as soon as
+        # they exceed max_size_bytes, rather than waiting for the full upload to complete.
+        data = await upload.read()
+        upload.file.close()
+        if len(data) > max_size_bytes:
+            raise HTTPException(status_code=413, detail="File too large")
+
+        upload_mgr.add_file(
+            session_id=session_id,
+            file=UploadedFileRec(
+                file_id=file_id,
+                name=upload.filename or "",
+                type=upload.content_type or "application/octet-stream",
+                data=data,
+            ),
+        )
+
+        response = Response(status_code=204)
+        await _set_upload_headers(request, response)
+        return response
+
+    async def _upload_delete(request: Request) -> Response:
+        """Delete a file from the server."""
+
+        _check_xsrf(request)
+
+        session_id = request.path_params["session_id"]
+        file_id = request.path_params["file_id"]
+
+        upload_mgr.remove_file(session_id=session_id, file_id=file_id)
+        response = Response(status_code=204)
+        await _set_upload_headers(request, response)
+        return response
+
+    return [
+        Route(
+            _with_base(_ROUTE_UPLOAD_FILE, base_url),
+            _upload_put,
+            methods=["PUT"],
+        ),
+        Route(
+            _with_base(_ROUTE_UPLOAD_FILE, base_url),
+            _upload_delete,
+            methods=["DELETE"],
+        ),
+        Route(
+            _with_base(_ROUTE_UPLOAD_FILE, base_url),
+            _upload_options,
+            methods=["OPTIONS"],
+        ),
+    ]
+
+
+def create_component_routes(
+    component_registry: BaseComponentRegistry, base_url: str | None
+) -> list[BaseRoute]:
+    """Create custom component route handlers."""
+    import anyio
+    from starlette.exceptions import HTTPException
+    from starlette.responses import Response
+    from starlette.routing import Route
+
+    async def _component_endpoint(request: Request) -> Response:
+        path = request.path_params["path"]
+        parts = path.split("/", maxsplit=1)
+
+        if len(parts) == 0 or not parts[0]:
+            raise HTTPException(status_code=404, detail="Component not found")
+
+        component_name = parts[0]
+        filename = parts[1] if len(parts) == 2 else ""
+
+        component_root = component_registry.get_component_path(component_name)
+        if component_root is None:
+            raise HTTPException(status_code=404, detail="Component not found")
+
+        # Use build_safe_abspath to properly resolve symlinks and prevent traversal
+        abspath = build_safe_abspath(component_root, filename)
+        if abspath is None:
+            raise HTTPException(status_code=403, detail="Forbidden")
+
+        try:
+            async with await anyio.open_file(abspath, "rb") as file:
+                data = await file.read()
+        except OSError as exc:
+            raise HTTPException(status_code=404, detail="read error") from exc
+
+        response = Response(content=data, media_type=guess_content_type(abspath))
+        await _set_cors_headers(request, response)
+
+        if not filename or filename.endswith(".html"):
+            response.headers["Cache-Control"] = "no-cache"
+        else:
+            response.headers["Cache-Control"] = "public"
+
+        return response
+
+    async def _component_options(request: Request) -> Response:
+        response = Response(status_code=204)
+        await _set_cors_headers(request, response)
+        return response
+
+    return [
+        Route(
+            _with_base(_ROUTE_COMPONENTS_V1, base_url),
+            _component_endpoint,
+            methods=["GET"],
+        ),
+        Route(
+            _with_base(_ROUTE_COMPONENTS_V1, base_url),
+            _component_options,
+            methods=["OPTIONS"],
+        ),
+    ]
+
+
+def create_bidi_component_routes(
+    bidi_component_manager: BidiComponentManager, base_url: str | None
+) -> list[BaseRoute]:
+    """Create bidirectional component route handlers."""
+    import anyio
+    from starlette.responses import PlainTextResponse, Response
+    from starlette.routing import Route
+
+    async def _bidi_component_endpoint(request: Request) -> Response:
+        async def _text_response(body: str, status_code: int) -> PlainTextResponse:
+            response = PlainTextResponse(body, status_code=status_code)
+            await _set_cors_headers(request, response)
+            return response
+
+        path = request.path_params["path"]
+        parts = path.split("/")
+        component_name = parts[0] if parts else ""
+        if not component_name:
+            return await _text_response("not found", 404)
+
+        if bidi_component_manager.get(component_name) is None:
+            return await _text_response("not found", 404)
+
+        component_root = bidi_component_manager.get_component_path(component_name)
+        if component_root is None:
+            return await _text_response("not found", 404)
+
+        filename = "/".join(parts[1:])
+        if not filename or filename.endswith("/"):
+            return await _text_response("not found", 404)
+
+        abspath = build_safe_abspath(component_root, filename)
+        if abspath is None:
+            return await _text_response("forbidden", 403)
+
+        if os.path.isdir(abspath):
+            return await _text_response("not found", 404)
+
+        try:
+            async with await anyio.open_file(abspath, "rb") as file:
+                data = await file.read()
+        except OSError:
+            sanitized_abspath = abspath.replace("\n", "").replace("\r", "")
+            _LOGGER.exception(
+                "Error reading bidi component asset: %s", sanitized_abspath
+            )
+            return await _text_response("read error", 404)
+
+        response = Response(content=data, media_type=guess_content_type(abspath))
+        await _set_cors_headers(request, response)
+
+        if filename.endswith(".html"):
+            response.headers["Cache-Control"] = "no-cache"
+        else:
+            response.headers["Cache-Control"] = "public"
+
+        return response
+
+    async def _bidi_component_options(request: Request) -> Response:
+        response = Response(status_code=204)
+        await _set_cors_headers(request, response)
+        return response
+
+    return [
+        Route(
+            _with_base(_ROUTE_COMPONENTS_V2, base_url),
+            _bidi_component_endpoint,
+            methods=["GET"],
+        ),
+        Route(
+            _with_base(_ROUTE_COMPONENTS_V2, base_url),
+            _bidi_component_options,
+            methods=["OPTIONS"],
+        ),
+    ]
+
+
+def create_app_static_serving_routes(
+    main_script_path: str | None, base_url: str | None
+) -> list[BaseRoute]:
+    """Create app static serving file route handlers."""
+    from starlette.exceptions import HTTPException
+    from starlette.responses import FileResponse, Response
+    from starlette.routing import Route
+
+    app_static_root = (
+        os.path.realpath(file_util.get_app_static_dir(main_script_path))
+        if main_script_path
+        else None
+    )
+
+    async def _app_static_endpoint(request: Request) -> Response:
+        if not app_static_root:
+            raise HTTPException(status_code=404, detail="File not found")
+
+        relative_path = request.path_params.get("path", "")
+        safe_path = build_safe_abspath(app_static_root, relative_path)
+        if safe_path is None:
+            raise HTTPException(status_code=404, detail="File not found")
+
+        if not os.path.exists(safe_path) or os.path.isdir(safe_path):
+            raise HTTPException(status_code=404, detail="File not found")
+
+        if os.path.getsize(safe_path) > MAX_APP_STATIC_FILE_SIZE:
+            raise HTTPException(
+                status_code=404,
+                detail="File is too large",
+            )
+
+        ext = Path(safe_path).suffix.lower()
+        media_type = None
+        if ext not in SAFE_APP_STATIC_FILE_EXTENSIONS:
+            media_type = "text/plain"
+
+        response = FileResponse(safe_path, media_type=media_type)
+        response.headers["Access-Control-Allow-Origin"] = "*"
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        return response
+
+    async def _app_static_options(_request: Request) -> Response:
+        response = Response(status_code=204)
+        response.headers["Access-Control-Allow-Origin"] = "*"
+        response.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type"
+        return response
+
+    return [
+        Route(
+            _with_base(_ROUTE_APP_STATIC, base_url),
+            _app_static_endpoint,
+            methods=["GET"],
+        ),
+        Route(
+            _with_base(_ROUTE_APP_STATIC, base_url),
+            _app_static_options,
+            methods=["OPTIONS"],
+        ),
+    ]
