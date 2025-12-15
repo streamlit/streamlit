@@ -288,11 +288,6 @@ class TestParseUserCookieSigned:
     @patch_config_options({"server.cookieSecret": "test-secret"})
     def test_parses_valid_cookie(self) -> None:
         """Test that valid cookie is parsed correctly."""
-        import json
-
-        from streamlit.web.server.starlette.starlette_app_utils import (
-            create_signed_value,
-        )
 
         cookie_payload = json.dumps(
             {
@@ -301,7 +296,7 @@ class TestParseUserCookieSigned:
                 "email": "test@test.com",
             }
         )
-        signed_cookie = create_signed_value(
+        signed_cookie = starlette_app_utils.create_signed_value(
             "test-secret", "_streamlit_user", cookie_payload
         )
 
@@ -314,16 +309,11 @@ class TestParseUserCookieSigned:
     @patch_config_options({"server.cookieSecret": "test-secret"})
     def test_handles_bytes_cookie(self) -> None:
         """Test that bytes cookie is handled correctly."""
-        import json
-
-        from streamlit.web.server.starlette.starlette_app_utils import (
-            create_signed_value,
-        )
 
         cookie_payload = json.dumps(
             {"origin": "http://localhost", "is_logged_in": True}
         )
-        signed_cookie = create_signed_value(
+        signed_cookie = starlette_app_utils.create_signed_value(
             "test-secret", "_streamlit_user", cookie_payload
         )
 
