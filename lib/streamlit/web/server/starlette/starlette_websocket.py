@@ -279,13 +279,14 @@ def create_websocket_handler(runtime: Runtime) -> Any:
 
                 msg_type = back_msg.WhichOneof("type")
 
+                is_dev_mode = config.get_option("global.developmentMode")
+                is_e2e_test = config.get_option("global.e2eTest")
+
                 # "debug_disconnect_websocket" and "debug_shutdown_runtime" are
                 # special developmentMode-only messages used in e2e tests to test
                 # reconnect handling and disabling widgets.
                 if msg_type == "debug_disconnect_websocket":
-                    if config.get_option("global.developmentMode") or config.get_option(
-                        "global.e2eTest"
-                    ):
+                    if is_dev_mode or is_e2e_test:
                         await websocket.close()
                         break
                     _LOGGER.warning(
@@ -294,9 +295,7 @@ def create_websocket_handler(runtime: Runtime) -> Any:
                     )
                     continue
                 if msg_type == "debug_shutdown_runtime":
-                    if config.get_option("global.developmentMode") or config.get_option(
-                        "global.e2eTest"
-                    ):
+                    if is_dev_mode or is_e2e_test:
                         runtime.stop()
                         break
                     _LOGGER.warning(
