@@ -19,7 +19,7 @@ from __future__ import annotations
 from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING, Any
 
-from streamlit import config, file_util
+from streamlit import config
 from streamlit.web.server.server_util import get_cookie_secret
 from streamlit.web.server.starlette.starlette_app_utils import (
     generate_random_hex_string,
@@ -129,11 +129,7 @@ def create_starlette_app(runtime: Runtime) -> Starlette:
 
     # Add static files mount (only in production mode):
     if not dev_mode:
-        routes.extend(
-            create_streamlit_static_files_routes(
-                directory=file_util.get_static_dir(), base_url=base_url
-            )
-        )
+        routes.extend(create_streamlit_static_files_routes(base_url=base_url))
 
     # Create the Starlette application with lifespan handler
     app = Starlette(routes=routes, lifespan=_lifespan)
