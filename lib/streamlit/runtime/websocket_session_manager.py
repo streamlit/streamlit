@@ -93,6 +93,7 @@ class WebsocketSessionManager(SessionManager, StatsProvider):
         user_info: UserInfoType,
         existing_session_id: str | None = None,
         session_id_override: str | None = None,
+        initial_query_string: str = "",
     ) -> str:
         if existing_session_id and session_id_override:
             raise RuntimeError(
@@ -134,6 +135,7 @@ class WebsocketSessionManager(SessionManager, StatsProvider):
             message_enqueued_callback=self._message_enqueued_callback,
             user_info=user_info,
             session_id_override=session_id_override,
+            initial_query_string=initial_query_string,
         )
 
         _LOGGER.debug(

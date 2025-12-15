@@ -173,6 +173,7 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
         user_info: dict[str, dict[str, str] | str | bool | None] = {}
 
         existing_session_id = None
+        initial_query_string = ""
         try:
             ws_protocols = [
                 p.strip()
@@ -203,7 +204,15 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
             if len(ws_protocols) >= 3:
                 # See the NOTE in the docstring of the `select_subprotocol` method above
                 # for a detailed explanation of why this is done.
-                existing_session_id = ws_protocols[2]
+                # Token at index 2 is the session ID (may be empty string if not reconnecting)
+                session_id_token = ws_protocols[2]
+                if session_id_token:
+                    existing_session_id = session_id_token
+
+            if len(ws_protocols) >= 4:
+                # Token at index 3 is the initial query string from the URL
+                # This is used to initialize widget values from URL query params
+                initial_query_string = ws_protocols[3]
         except KeyError:
             # Just let existing_session_id=None if we run into any error while trying to
             # extract it from the Sec-Websocket-Protocol header.
@@ -228,6 +237,7 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
             client=self,
             user_info=user_info,
             existing_session_id=existing_session_id,
+            initial_query_string=initial_query_string,
         )
         return None
 

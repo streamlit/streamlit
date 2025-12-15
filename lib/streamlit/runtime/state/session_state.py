@@ -344,7 +344,6 @@ class KeyIdMapper:
         del self._id_key_mapping[widget_id]
 
 
-@dataclass
 class SessionState:
     """SessionState allows users to store values that persist between app
     reruns.
@@ -362,25 +361,66 @@ class SessionState:
     >>> st.write(st.session_state.num_script_runs)  # writes 2
     """
 
-    # All the values from previous script runs, squished together to save memory
-    _old_state: dict[str, Any] = field(default_factory=dict)
+    def __init__(
+        self,
+        _old_state: dict[str, Any] | None = None,
+        _new_session_state: dict[str, Any] | None = None,
+        _new_widget_state: WStates | None = None,
+        _key_id_mapper: KeyIdMapper | None = None,
+        query_params: QueryParams | None = None,
+        *,
+        initial_query_string: str = "",
+    ) -> None:
+        """Initialize SessionState.
 
-    # Values set in session state during the current script run, possibly for
-    # setting a widget's value. Keyed by a user provided string.
-    _new_session_state: dict[str, Any] = field(default_factory=dict)
+        Parameters
+        ----------
+        initial_query_string : str
+            The initial URL query string from the client (without leading "?").
+            Used to initialize widget values from URL query parameters.
+        """
+        # All the values from previous script runs, squished together to save memory
+        self._old_state: dict[str, Any] = _old_state if _old_state is not None else {}
 
-    # Widget values from the frontend, usually one changing prompted the script rerun
-    _new_widget_state: WStates = field(default_factory=WStates)
+        # Values set in session state during the current script run, possibly for
+        # setting a widget's value. Keyed by a user provided string.
+        self._new_session_state: dict[str, Any] = (
+            _new_session_state if _new_session_state is not None else {}
+        )
 
-    # Keys used for widgets will be eagerly converted to the matching element id
-    _key_id_mapper: KeyIdMapper = field(default_factory=KeyIdMapper)
+        # Widget values from the frontend, usually one changing prompted the script rerun
+        self._new_widget_state: WStates = (
+            _new_widget_state if _new_widget_state is not None else WStates()
+        )
 
-    # query params are stored in session state because query params will be tied with
-    # widget state at one point.
-    query_params: QueryParams = field(default_factory=QueryParams)
+        # Keys used for widgets will be eagerly converted to the matching element id
+        self._key_id_mapper: KeyIdMapper = (
+            _key_id_mapper if _key_id_mapper is not None else KeyIdMapper()
+        )
+
+        # query params are stored in session state because query params will be tied with
+        # widget state at one point.
+        if query_params is not None:
+            self.query_params = query_params
+        else:
+            self.query_params = QueryParams.from_query_string(initial_query_string)
 
     def __repr__(self) -> str:
         return util.repr_(self)
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, SessionState):
+            return NotImplemented
+        return (
+            self._old_state == other._old_state
+            and self._new_session_state == other._new_session_state
+            and self._new_widget_state == other._new_widget_state
+            and self._key_id_mapper == other._key_id_mapper
+            and self.query_params == other.query_params
+        )
+
+    # SessionState is mutable, so it should not be hashable
+    __hash__ = None  # type: ignore[assignment]
 
     # is it possible for a value to get through this without being deserialized?
     def _compact_state(self) -> None:

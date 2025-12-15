@@ -42,6 +42,12 @@ if TYPE_CHECKING:
 GENERATED_ELEMENT_ID_PREFIX: Final = "$$ID"
 TESTING_KEY = "$$STREAMLIT_INTERNAL_KEY_TESTING"
 
+# Prefix for user keys that should be bound to URL query parameters.
+# When a widget key starts with this prefix, the widget value will be
+# synchronized with the URL query parameter of the same name (minus prefix).
+# Example: key="?enabled" binds to query param "enabled"
+QUERY_PARAM_KEY_PREFIX: Final = "?"
+
 
 T = TypeVar("T")
 T_co = TypeVar("T_co", covariant=True)
@@ -215,3 +221,32 @@ def require_valid_user_key(key: str) -> None:
         raise StreamlitAPIException(
             f"Keys beginning with {GENERATED_ELEMENT_ID_PREFIX} are reserved."
         )
+
+
+def is_query_param_key(user_key: str | None) -> bool:
+    """Return True if the user key indicates query param binding.
+
+    A user key starting with "?" indicates that the widget should be
+    bound to a URL query parameter of the same name (without the prefix).
+    """
+    if user_key is None:
+        return False
+    return user_key.startswith(QUERY_PARAM_KEY_PREFIX)
+
+
+def extract_query_param_name(user_key: str) -> str:
+    """Extract the query param name from a user key with the "?" prefix.
+
+    Assumes the key starts with "?" - use is_query_param_key() to check first.
+
+    Parameters
+    ----------
+    user_key : str
+        The user key with "?" prefix (e.g., "?enabled").
+
+    Returns
+    -------
+    str
+        The query param name (e.g., "enabled").
+    """
+    return user_key[len(QUERY_PARAM_KEY_PREFIX) :]

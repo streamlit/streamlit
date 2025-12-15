@@ -358,6 +358,11 @@ export class App extends PureComponent<Props, State> {
       formsDataChanged: formsData => this.setState({ formsData }),
     })
 
+    // Wire up query param change handler for widget-to-URL sync
+    this.widgetMgr.setQueryParamsChangeHandler(
+      this.handleQueryParamsFromWidget
+    )
+
     this.hostCommunicationMgr = new HostCommunicationManager({
       streamlitExecutionStartedAt: props.streamlitExecutionStartedAt,
       sendRerunBackMsg: this.sendRerunBackMsg,
@@ -1088,6 +1093,24 @@ export class App extends PureComponent<Props, State> {
     const targetUrl =
       document.location.pathname + (queryString ? `?${queryString}` : "")
     window.history.pushState({}, "", targetUrl)
+
+    this.setState({ queryParams: queryString })
+
+    this.hostCommunicationMgr.sendMessageToHost({
+      type: "SET_QUERY_PARAM",
+      queryParams: queryString ? `?${queryString}` : "",
+    })
+  }
+
+  /**
+   * Handle query parameter changes originating from widget value changes.
+   * This is called by WidgetStateManager when a widget bound to a query param
+   * updates its value.
+   */
+  handleQueryParamsFromWidget = (queryString: string): void => {
+    const targetUrl =
+      document.location.pathname + (queryString ? `?${queryString}` : "")
+    window.history.replaceState({}, "", targetUrl)
 
     this.setState({ queryParams: queryString })
 

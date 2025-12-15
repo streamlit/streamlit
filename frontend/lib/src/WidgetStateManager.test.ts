@@ -1438,3 +1438,265 @@ describe("Trigger JSON payloads (aggregated)", () => {
     )
   })
 })
+
+describe("Query Param Bindings", () => {
+  let sendBackMsg: Mock
+  let widgetMgr: WidgetStateManager
+  let onFormsDataChanged: Mock
+
+  // Mock window.location
+  const originalLocation = window.location
+
+  beforeEach(() => {
+    sendBackMsg = vi.fn()
+    onFormsDataChanged = vi.fn()
+    widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg: sendBackMsg,
+      formsDataChanged: onFormsDataChanged,
+    })
+
+    // Mock window.location with a simple search string
+    Object.defineProperty(window, "location", {
+      writable: true,
+      value: { ...originalLocation, search: "" },
+    })
+  })
+
+  afterEach(() => {
+    Object.defineProperty(window, "location", {
+      writable: true,
+      value: originalLocation,
+    })
+  })
+
+  describe("registerQueryParamBinding", () => {
+    it("registers a binding", () => {
+      const serializer = (v: boolean): string => (v ? "true" : "false")
+      const deserializer = (
+        v: string | string[] | null
+      ): boolean | undefined => v === "true"
+
+      widgetMgr.registerQueryParamBinding({
+        widgetId: "widget1",
+        paramKey: "enabled",
+        serializer,
+        deserializer,
+      })
+
+      expect(widgetMgr.isWidgetBoundToQueryParam("widget1")).toBe(true)
+
+      const binding = widgetMgr.getQueryParamBinding("widget1")
+      expect(binding).toBeDefined()
+      expect(binding?.paramKey).toBe("enabled")
+      expect(binding?.widgetId).toBe("widget1")
+    })
+
+    it("replaces existing binding for same widget", () => {
+      const serializer = (v: string): string => v
+      const deserializer = (v: string | string[] | null): string | undefined =>
+        v?.toString()
+
+      widgetMgr.registerQueryParamBinding({
+        widgetId: "widget1",
+        paramKey: "old_param",
+        serializer,
+        deserializer,
+      })
+      widgetMgr.registerQueryParamBinding({
+        widgetId: "widget1",
+        paramKey: "new_param",
+        serializer,
+        deserializer,
+      })
+
+      const binding = widgetMgr.getQueryParamBinding("widget1")
+      expect(binding?.paramKey).toBe("new_param")
+    })
+  })
+
+  describe("unregisterQueryParamBinding", () => {
+    it("removes a binding", () => {
+      const serializer = (v: string): string => v
+      const deserializer = (v: string | string[] | null): string | undefined =>
+        v?.toString()
+
+      widgetMgr.registerQueryParamBinding({
+        widgetId: "widget1",
+        paramKey: "param",
+        serializer,
+        deserializer,
+      })
+      expect(widgetMgr.isWidgetBoundToQueryParam("widget1")).toBe(true)
+
+      widgetMgr.unregisterQueryParamBinding("widget1")
+      expect(widgetMgr.isWidgetBoundToQueryParam("widget1")).toBe(false)
+    })
+
+    it("does nothing for non-existent binding", () => {
+      // Should not throw
+      widgetMgr.unregisterQueryParamBinding("nonexistent")
+      expect(widgetMgr.isWidgetBoundToQueryParam("nonexistent")).toBe(false)
+    })
+  })
+
+  describe("getValueFromQueryParams", () => {
+    it("returns deserialized value from URL", () => {
+      window.location.search = "?count=42"
+
+      const serializer = (v: number): string => String(v)
+      const deserializer = (
+        v: string | string[] | null
+      ): number | undefined => {
+        if (v === null) return undefined
+        const str = Array.isArray(v) ? v[0] : v
+        return parseInt(str, 10)
+      }
+
+      widgetMgr.registerQueryParamBinding({
+        widgetId: "widget1",
+        paramKey: "count",
+        serializer,
+        deserializer,
+      })
+
+      const value = widgetMgr.getValueFromQueryParams<number>("widget1")
+      expect(value).toBe(42)
+    })
+
+    it("returns undefined for unbound widget", () => {
+      const value = widgetMgr.getValueFromQueryParams<number>("unbound")
+      expect(value).toBeUndefined()
+    })
+
+    it("returns undefined when param not in URL", () => {
+      window.location.search = "?other=value"
+
+      const serializer = (v: string): string => v
+      const deserializer = (v: string | string[] | null): string | undefined =>
+        v?.toString()
+
+      widgetMgr.registerQueryParamBinding({
+        widgetId: "widget1",
+        paramKey: "missing",
+        serializer,
+        deserializer,
+      })
+
+      const value = widgetMgr.getValueFromQueryParams<string>("widget1")
+      expect(value).toBeUndefined()
+    })
+  })
+
+  describe("syncWidgetToQueryParams", () => {
+    it("calls onQueryParamsChange with serialized value", () => {
+      const handler = vi.fn()
+      widgetMgr.setQueryParamsChangeHandler(handler)
+
+      const serializer = (v: boolean): string => (v ? "true" : "false")
+      const deserializer = (
+        v: string | string[] | null
+      ): boolean | undefined => v === "true"
+
+      widgetMgr.registerQueryParamBinding({
+        widgetId: "widget1",
+        paramKey: "enabled",
+        serializer,
+        deserializer,
+      })
+
+      widgetMgr.syncWidgetToQueryParams("widget1", true)
+
+      expect(handler).toHaveBeenCalledWith("enabled=true")
+    })
+
+    it("does nothing for unbound widget", () => {
+      const handler = vi.fn()
+      widgetMgr.setQueryParamsChangeHandler(handler)
+
+      widgetMgr.syncWidgetToQueryParams("unbound", "value")
+
+      expect(handler).not.toHaveBeenCalled()
+    })
+
+    it("handles empty serialized values", () => {
+      const handler = vi.fn()
+      widgetMgr.setQueryParamsChangeHandler(handler)
+
+      const serializer = (v: string | null): string => v ?? ""
+      const deserializer = (v: string | string[] | null): string | undefined =>
+        v?.toString()
+
+      widgetMgr.registerQueryParamBinding({
+        widgetId: "widget1",
+        paramKey: "text",
+        serializer,
+        deserializer,
+      })
+
+      widgetMgr.syncWidgetToQueryParams("widget1", null)
+
+      // Empty values should result in empty query string (param removed)
+      expect(handler).toHaveBeenCalledWith("")
+    })
+  })
+
+  describe("removeInactiveQueryParamBindings", () => {
+    it("removes bindings for inactive widgets", () => {
+      const serializer = (v: string): string => v
+      const deserializer = (v: string | string[] | null): string | undefined =>
+        v?.toString()
+
+      widgetMgr.registerQueryParamBinding({
+        widgetId: "widget1",
+        paramKey: "p1",
+        serializer,
+        deserializer,
+      })
+      widgetMgr.registerQueryParamBinding({
+        widgetId: "widget2",
+        paramKey: "p2",
+        serializer,
+        deserializer,
+      })
+      widgetMgr.registerQueryParamBinding({
+        widgetId: "widget3",
+        paramKey: "p3",
+        serializer,
+        deserializer,
+      })
+
+      const activeIds = new Set(["widget1", "widget3"])
+      widgetMgr.removeInactiveQueryParamBindings(activeIds)
+
+      expect(widgetMgr.isWidgetBoundToQueryParam("widget1")).toBe(true)
+      expect(widgetMgr.isWidgetBoundToQueryParam("widget2")).toBe(false)
+      expect(widgetMgr.isWidgetBoundToQueryParam("widget3")).toBe(true)
+    })
+  })
+
+  describe("clearQueryParamBindings", () => {
+    it("clears all bindings", () => {
+      const serializer = (v: string): string => v
+      const deserializer = (v: string | string[] | null): string | undefined =>
+        v?.toString()
+
+      widgetMgr.registerQueryParamBinding({
+        widgetId: "widget1",
+        paramKey: "p1",
+        serializer,
+        deserializer,
+      })
+      widgetMgr.registerQueryParamBinding({
+        widgetId: "widget2",
+        paramKey: "p2",
+        serializer,
+        deserializer,
+      })
+
+      widgetMgr.clearQueryParamBindings()
+
+      expect(widgetMgr.isWidgetBoundToQueryParam("widget1")).toBe(false)
+      expect(widgetMgr.isWidgetBoundToQueryParam("widget2")).toBe(false)
+    })
+  })
+})

@@ -23,6 +23,8 @@ import {
   useBasicWidgetState,
   ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
+import { useQueryParamBinding } from "~lib/hooks/useQueryParamBinding"
+import { deserializeColor, serializeColor } from "~lib/queryParamSerializers"
 import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -78,6 +80,14 @@ const ColorPicker: FC<Props> = ({
   widgetMgr,
   fragmentId,
 }) => {
+  // Register query param binding if widget key starts with "?"
+  const { isBound, syncToUrl } = useQueryParamBinding<string>({
+    elementId: element.id,
+    widgetMgr,
+    serializer: serializeColor,
+    deserializer: deserializeColor,
+  })
+
   const [value, setValueWithSource] = useBasicWidgetState<
     ColorPickerValue,
     ColorPickerProto
@@ -94,8 +104,12 @@ const ColorPicker: FC<Props> = ({
   const handleColorClose = useCallback(
     (color: string): void => {
       setValueWithSource({ value: color, fromUi: true })
+      // Sync to URL if bound
+      if (isBound) {
+        syncToUrl(color)
+      }
     },
-    [setValueWithSource]
+    [setValueWithSource, isBound, syncToUrl]
   )
 
   return (

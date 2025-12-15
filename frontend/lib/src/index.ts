@@ -108,15 +108,29 @@ export {
   mockSessionInfoProps,
 } from "./mocks/mocks"
 export { mockTheme } from "./mocks/mockTheme"
+export {
+  deserializeBool,
+  deserializeColor,
+  deserializeNumber,
+  deserializeString,
+  extractQueryParamName,
+  getLastValue,
+  isQueryParamKey,
+  QUERY_PARAM_KEY_PREFIX,
+  serializeBool,
+  serializeColor,
+  serializeNumber,
+  serializeString,
+} from "./queryParamSerializers"
+export type {
+  QueryParamDeserializer,
+  QueryParamSerializer,
+} from "./queryParamSerializers"
 export { RootStyleProvider } from "./RootStyleProvider"
 export { ScriptRunState } from "./ScriptRunState"
 export { SessionInfo } from "./SessionInfo"
 export {
   AUTO_THEME_NAME,
-  CUSTOM_THEME_AUTO_NAME,
-  CUSTOM_THEME_DARK_NAME,
-  CUSTOM_THEME_LIGHT_NAME,
-  CUSTOM_THEME_NAME,
   baseTheme,
   convertRemToPx,
   createAutoTheme,
@@ -124,6 +138,10 @@ export {
   createPresetThemes,
   createSidebarTheme,
   createTheme,
+  CUSTOM_THEME_AUTO_NAME,
+  CUSTOM_THEME_DARK_NAME,
+  CUSTOM_THEME_LIGHT_NAME,
+  CUSTOM_THEME_NAME,
   customTheme,
   darkTheme,
   getCachedTheme,
@@ -181,5 +199,5 @@ export {
   preserveEmbedQueryParams,
   setCookie,
 } from "./util/utils"
-export { WidgetStateManager, createFormsData } from "./WidgetStateManager"
-export type { FormsData } from "./WidgetStateManager"
+export { createFormsData, WidgetStateManager } from "./WidgetStateManager"
+export type { FormsData, QueryParamBinding } from "./WidgetStateManager"
