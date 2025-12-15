@@ -11,11 +11,3 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-from streamlit.web.server.starlette.starlette_app import create_starlette_app
-from streamlit.web.server.starlette.starlette_server import StarletteServer
-
-__all__ = [
-    "StarletteServer",
-    "create_starlette_app",
-]
