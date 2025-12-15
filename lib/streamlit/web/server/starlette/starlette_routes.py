@@ -47,6 +47,7 @@ from streamlit.web.server.stats_request_handler import StatsRequestHandler
 if TYPE_CHECKING:
     from starlette.requests import Request
     from starlette.responses import Response
+    from starlette.routing import BaseRoute
 
     from streamlit.components.types.base_component_registry import BaseComponentRegistry
     from streamlit.components.v2.component_manager import BidiComponentManager
@@ -132,6 +133,27 @@ def _ensure_xsrf_cookie(request: Request, response: Response) -> None:
     )
 
 
+def _validate_xsrf_token(supplied_token: str | None, xsrf_cookie: str | None) -> bool:
+    """Validate the XSRF token from the request header against the cookie.
+
+    This mirrors Tornado's XSRF validation logic to ensure compatibility.
+    """
+    import hmac
+
+    if not supplied_token or not xsrf_cookie:
+        return False
+
+    supplied_token_bytes, _ = starlette_app_utils.decode_xsrf_token_string(
+        supplied_token
+    )
+    expected_token_bytes, _ = starlette_app_utils.decode_xsrf_token_string(xsrf_cookie)
+
+    if not supplied_token_bytes or not expected_token_bytes:
+        return False
+
+    return hmac.compare_digest(supplied_token_bytes, expected_token_bytes)
+
+
 def _set_unquoted_cookie(
     response: Response,
     cookie_name: str,
@@ -162,7 +184,7 @@ def _set_unquoted_cookie(
     response.raw_headers = filtered_headers
 
 
-def create_health_routes(runtime: Runtime, base_url: str | None) -> list[Any]:
+def create_health_routes(runtime: Runtime, base_url: str | None) -> list[BaseRoute]:
     """Create health check route handlers."""
     from starlette.responses import PlainTextResponse, Response
     from starlette.routing import Route
@@ -196,7 +218,9 @@ def create_health_routes(runtime: Runtime, base_url: str | None) -> list[Any]:
     ]
 
 
-def create_script_health_routes(runtime: Runtime, base_url: str | None) -> list[Any]:
+def create_script_health_routes(
+    runtime: Runtime, base_url: str | None
+) -> list[BaseRoute]:
     """Create script health check route handlers."""
     from starlette.responses import PlainTextResponse, Response
     from starlette.routing import Route
@@ -230,7 +254,7 @@ def create_script_health_routes(runtime: Runtime, base_url: str | None) -> list[
     ]
 
 
-def create_metrics_routes(runtime: Runtime, base_url: str | None) -> list[Any]:
+def create_metrics_routes(runtime: Runtime, base_url: str | None) -> list[BaseRoute]:
     """Create metrics route handlers."""
     from starlette.responses import PlainTextResponse, Response
     from starlette.routing import Route
@@ -270,7 +294,7 @@ def create_metrics_routes(runtime: Runtime, base_url: str | None) -> list[Any]:
     ]
 
 
-def create_host_config_routes(base_url: str | None) -> list[Any]:
+def create_host_config_routes(base_url: str | None) -> list[BaseRoute]:
     """Create host config route handlers."""
     from starlette.responses import JSONResponse
     from starlette.routing import Route
@@ -309,7 +333,7 @@ def create_host_config_routes(base_url: str | None) -> list[Any]:
 
 def create_media_routes(
     media_storage: MemoryMediaFileStorage, base_url: str | None
-) -> list[Any]:
+) -> list[BaseRoute]:
     """Create media file route handlers."""
     from starlette.exceptions import HTTPException
     from starlette.responses import Response
@@ -395,32 +419,11 @@ def create_media_routes(
     ]
 
 
-def _validate_xsrf_token(supplied_token: str | None, xsrf_cookie: str | None) -> bool:
-    """Validate the XSRF token from the request header against the cookie.
-
-    This mirrors Tornado's XSRF validation logic to ensure compatibility.
-    """
-    import hmac
-
-    if not supplied_token or not xsrf_cookie:
-        return False
-
-    supplied_token_bytes, _ = starlette_app_utils.decode_xsrf_token_string(
-        supplied_token
-    )
-    expected_token_bytes, _ = starlette_app_utils.decode_xsrf_token_string(xsrf_cookie)
-
-    if not supplied_token_bytes or not expected_token_bytes:
-        return False
-
-    return hmac.compare_digest(supplied_token_bytes, expected_token_bytes)
-
-
 def create_upload_routes(
     runtime: Runtime,
     upload_mgr: MemoryUploadedFileManager,
     base_url: str | None,
-) -> list[Any]:
+) -> list[BaseRoute]:
     """Create file upload route handlers."""
     from starlette.datastructures import UploadFile
     from starlette.exceptions import HTTPException
@@ -463,6 +466,8 @@ def create_upload_routes(
         return response
 
     async def _upload_put(request: Request) -> Response:
+        """Upload a file to the server."""
+
         _check_xsrf(request)
 
         session_id = request.path_params["session_id"]
@@ -471,8 +476,9 @@ def create_upload_routes(
         if not runtime.is_active_session(session_id):
             raise HTTPException(status_code=400, detail="Invalid session_id")
 
-        max_size_mb = config.get_option("server.maxUploadSize")
-        max_size_bytes = max_size_mb * 1024 * 1024
+        max_size_bytes = (  # maxUploadSize is in megabytes
+            config.get_option("server.maxUploadSize") * 1024 * 1024
+        )
 
         # 1. Fast fail via header (if present) - check before reading the body
         content_length = request.headers.get("content-length")
@@ -490,14 +496,12 @@ def create_upload_routes(
         upload = uploads[0]
 
         # 2. Check actual file size (Content-Length may be absent or inaccurate)
-        upload.file.seek(0, 2)  # Seek to end
-        size = upload.file.tell()
-        upload.file.seek(0)  # Reset
-        if size > max_size_bytes:
-            raise HTTPException(status_code=413, detail="File too large")
-
+        # TODO(lukasmasuch): Improve by using a streaming approach that rejects uploads as soon as
+        # they exceed max_size_bytes, rather than waiting for the full upload to complete.
         data = await upload.read()
         upload.file.close()
+        if len(data) > max_size_bytes:
+            raise HTTPException(status_code=413, detail="File too large")
 
         upload_mgr.add_file(
             session_id=session_id,
@@ -514,6 +518,8 @@ def create_upload_routes(
         return response
 
     async def _upload_delete(request: Request) -> Response:
+        """Delete a file from the server."""
+
         _check_xsrf(request)
 
         session_id = request.path_params["session_id"]
