@@ -119,10 +119,10 @@ Guide user through each command with prompts, letting them execute manually.
    ```bash
    # Parse frontmatter from the reviewed file
    title=$(grep '^title:' work-tmp/pr_description.md | sed 's/^title: //')
-   labels=$(grep '^labels:' work-tmp/pr_description.md | sed 's/^labels: //')
+   labels=$(grep '^labels:' work-tmp/pr_description.md | sed 's/^labels: //' | sed 's/, /,/g')
 
    # Extract body (everything after the closing --- of frontmatter)
-   sed '1,/^---$/d; /^---$/,$!d; /^---$/d' work-tmp/pr_description.md > work-tmp/pr_body.md
+   awk '/^---$/{if(++count==2) flag=1; next} flag' work-tmp/pr_description.md > work-tmp/pr_body.md
 
    # Create PR using parsed values
    gh pr create \
