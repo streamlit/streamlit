@@ -19,7 +19,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 from shlex import quote
-from typing import TYPE_CHECKING, Any, Final
+from typing import TYPE_CHECKING, Final
 
 from streamlit import config, file_util
 from streamlit.logger import get_logger
@@ -551,7 +551,7 @@ def create_upload_routes(
 
 def create_component_routes(
     component_registry: BaseComponentRegistry, base_url: str | None
-) -> list[Any]:
+) -> list[BaseRoute]:
     """Create custom component route handlers."""
     import anyio
     from starlette.exceptions import HTTPException
@@ -614,7 +614,7 @@ def create_component_routes(
 
 def create_bidi_component_routes(
     bidi_component_manager: BidiComponentManager, base_url: str | None
-) -> list[Any]:
+) -> list[BaseRoute]:
     """Create bidirectional component route handlers."""
     import anyio
     from starlette.responses import PlainTextResponse, Response
@@ -691,7 +691,7 @@ def create_bidi_component_routes(
 
 def create_app_static_serving_routes(
     main_script_path: str | None, base_url: str | None
-) -> list[Any]:
+) -> list[BaseRoute]:
     """Create app static file route handlers."""
     from starlette.exceptions import HTTPException
     from starlette.responses import FileResponse, Response
