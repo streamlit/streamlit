@@ -117,6 +117,7 @@ class Dialog(DeltaGenerator):
             title=title,
             dismissible=dismissible,
             width=width,
+            icon=icon,
             on_dismiss=str(on_dismiss) if not callable(on_dismiss) else "callback",
         )
         # The block.id is used to identify the dialog in the frontend to
@@ -133,17 +134,6 @@ class Dialog(DeltaGenerator):
             # The same element_id is used for widget registration.
             ctx = get_script_run_ctx()
 
-            element_id = compute_and_register_element_id(
-                "dialog",
-                user_key=None,
-                key_as_main_identity=False,
-                dg=parent,
-                title=title,
-                dismissible=dismissible,
-                width=width,
-                icon=icon,
-                on_dismiss=str(on_dismiss) if not callable(on_dismiss) else "callback",
-            )
             # Setting the dialog.id will activate the rerun on dismiss functionality
             # in the frontend (we might add a dedicated flag later)
             block_proto.dialog.id = element_id
