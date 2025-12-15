@@ -41,7 +41,7 @@ from typing import (
 from streamlit import config, errors, logger, string_util
 from streamlit.type_util import (
     CustomDict,
-    dump_pydantic_model,
+    dump_pydantic_sequence,
     has_callable_attr,
     is_custom_dict,
     is_dataclass_instance,
@@ -709,7 +709,7 @@ def convert_anything_to_pandas_df(
         # Try to convert pydantic models to DataFrame. If some elements are not
         # pydantic models (mixed sequence), fall through to pandas' native handling.
         try:
-            return pd.DataFrame(dump_pydantic_model(data))
+            return pd.DataFrame(dump_pydantic_sequence(data))
         except AttributeError:
             pass
 

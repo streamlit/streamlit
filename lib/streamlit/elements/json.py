@@ -27,7 +27,7 @@ from streamlit.elements.lib.layout_utils import (
 from streamlit.proto.Json_pb2 import Json as JsonProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.type_util import (
-    dump_pydantic_model,
+    dump_pydantic_sequence,
     is_custom_dict,
     is_list_like,
     is_namedtuple,
@@ -123,7 +123,7 @@ class JsonMixin:
 
         if is_list_like(body):
             if is_sequence_of_pydantic_models(body):
-                body = dump_pydantic_model(body)
+                body = dump_pydantic_sequence(body)
             else:
                 body = list(body)  # ty: ignore[invalid-argument-type]
 
