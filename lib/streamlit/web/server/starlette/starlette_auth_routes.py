@@ -21,7 +21,6 @@ from typing import TYPE_CHECKING, Any, Final, cast
 from urllib.parse import urlparse
 
 from streamlit.auth_util import (
-    AuthCache,
     decode_provider_token,
     generate_default_provider_section,
     get_secrets_auth_section,
@@ -29,9 +28,9 @@ from streamlit.auth_util import (
 from streamlit.errors import StreamlitAuthError
 from streamlit.logger import get_logger
 from streamlit.url_util import make_url_path
-from streamlit.web.server.oauth_authlib_routes import auth_cache
-from streamlit.web.server.server_util import AUTH_COOKIE_NAME, get_cookie_secret
+from streamlit.web.server.server_util import get_cookie_secret
 from streamlit.web.server.starlette.starlette_app_utils import create_signed_value
+from streamlit.web.server.starlette.starlette_server_config import USER_COOKIE_NAME
 
 if TYPE_CHECKING:
     from starlette.requests import Request
@@ -47,32 +46,31 @@ _ROUTE_OAUTH_CALLBACK: Final = "oauth2callback"
 
 
 class _AsyncAuthCache:
-    """Adapter that exposes AuthCache with awaitable methods for Authlib.
+    """Async cache for Authlib's Starlette integration.
 
-    Streamlit's internal AuthCache is synchronous, but Authlib's Starlette integration
-    expects an async cache interface. This adapter bridges the two.
+    Authlib's Starlette OAuth client expects an async cache interface.
+    This is a simple in-memory implementation.
     """
 
-    def __init__(self, cache: AuthCache) -> None:
-        self._cache = cache
+    def __init__(self) -> None:
+        self._cache: dict[str, Any] = {}
 
     async def get(self, key: str) -> Any:
         return self._cache.get(key)
 
-    async def set(self, key: str, value: Any, expires_in: int | None = None) -> None:
-        self._cache.set(key, value, expires_in)
+    async def set(self, key: str, value: Any, expires_in: int | None = None) -> None:  # noqa: ARG002
+        self._cache[key] = value
 
     async def delete(self, key: str) -> None:
-        self._cache.delete(key)
+        self._cache.pop(key, None)
 
     def get_dict(self) -> dict[str, Any]:
-        return self._cache.get_dict()
+        return self._cache
 
 
 # Note: For true multi-tenant support (multiple Streamlit apps in one process),
-# the underlying auth_cache in oauth_authlib_routes.py would need to be made
-# per-runtime rather than module-level.
-_STARLETTE_AUTH_CACHE: Final = _AsyncAuthCache(auth_cache)
+# this cache would need to be made per-runtime rather than module-level.
+_STARLETTE_AUTH_CACHE: Final = _AsyncAuthCache()
 
 
 def _normalize_nested_config(value: Any) -> Any:
@@ -174,11 +172,11 @@ async def _set_auth_cookie(response: Response, user_info: dict[str, Any]) -> Non
 
     cookie_secret = get_cookie_secret()
     signed_value = create_signed_value(
-        cookie_secret, AUTH_COOKIE_NAME, serialized_cookie_value
+        cookie_secret, USER_COOKIE_NAME, serialized_cookie_value
     )
     cookie_payload = signed_value.decode("utf-8")
     response.set_cookie(
-        AUTH_COOKIE_NAME,
+        USER_COOKIE_NAME,
         cookie_payload,
         httponly=True,
         samesite="lax",
@@ -192,7 +190,7 @@ def _clear_auth_cookie(response: Response) -> None:
     The path must match the path used when setting the cookie, otherwise
     the browser won't delete it.
     """
-    response.delete_cookie(AUTH_COOKIE_NAME, path=_get_cookie_path())
+    response.delete_cookie(USER_COOKIE_NAME, path=_get_cookie_path())
 
 
 def _create_oauth_client(provider: str) -> tuple[Any, str]:
@@ -251,7 +249,7 @@ def _get_provider_by_state(state_code_from_url: str | None) -> str | None:
 
     if state_code_from_url is None:
         return None
-    current_cache_keys = list(auth_cache.get_dict().keys())
+    current_cache_keys = list(_STARLETTE_AUTH_CACHE.get_dict().keys())
     state_provider_mapping = {}
     for key in current_cache_keys:
         try:
