@@ -65,4 +65,6 @@ export const sizes = {
   chatInputFileIconSize: "2.25rem",
   headerItemHeight: "1.75rem",
   headerRightContentMaxWidth: "12.5rem",
+  chatInputTextareaMinHeight: "1.5rem",
+  chatInputPrimaryButtonSize: "2rem",
 }

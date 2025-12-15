@@ -71,6 +71,15 @@ export const StyledActionRow = styled.div(({ theme }) => ({
   gap: theme.spacing.sm,
 }))
 
+// Single-row layout for simple mode (no file upload, no audio)
+export const StyledSimpleRow = styled.div(({ theme }) => ({
+  display: "flex",
+  flexDirection: "row",
+  alignItems: "center",
+  width: "100%",
+  gap: theme.spacing.lg,
+}))
+
 export const StyledLeftCluster = styled.div(({ theme }) => ({
   display: "flex",
   flexDirection: "row",
@@ -125,8 +134,8 @@ export const StyledSendIconButton = styled.button<StyledSendIconButtonProps>(
         lineHeight: theme.lineHeights.none,
         margin: theme.spacing.none,
         padding: theme.spacing.xs,
-        width: theme.sizes.minElementHeight,
-        height: theme.sizes.minElementHeight,
+        width: theme.sizes.chatInputPrimaryButtonSize,
+        height: theme.sizes.chatInputPrimaryButtonSize,
         color: disabled ? theme.colors.fadedText40 : theme.colors.white,
         cursor: disabled ? "not-allowed" : "pointer",
         transition: "background-color 200ms ease",
