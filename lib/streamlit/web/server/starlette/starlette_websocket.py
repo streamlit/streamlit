@@ -40,6 +40,7 @@ from streamlit.web.server.starlette.starlette_server_config import (
 
 if TYPE_CHECKING:
     from starlette.datastructures import Headers
+    from starlette.routing import BaseRoute
     from starlette.websockets import WebSocket
 
     from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
@@ -322,7 +323,7 @@ def create_websocket_handler(runtime: Runtime) -> Any:
     return _websocket_endpoint
 
 
-def create_websocket_routes(runtime: Runtime, base_url: str | None) -> list[Any]:
+def create_websocket_routes(runtime: Runtime, base_url: str | None) -> list[BaseRoute]:
     """Create the WebSocket route for client-server communication."""
     from starlette.routing import WebSocketRoute
 
