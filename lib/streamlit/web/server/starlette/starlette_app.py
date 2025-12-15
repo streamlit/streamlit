@@ -19,10 +19,11 @@ from __future__ import annotations
 import binascii
 import os
 from contextlib import asynccontextmanager
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Final
 
 from streamlit import config, file_util
 from streamlit.web.server.server_util import get_cookie_secret
+from streamlit.web.server.starlette.starlette_auth_routes import get_auth_routes
 from streamlit.web.server.starlette.starlette_routes import (
     ROUTE_WEBSOCKET_STREAM,
     _with_base,
@@ -52,12 +53,20 @@ if TYPE_CHECKING:
     from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
     from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
 
+# TODO(lukasmasuch): Make configurable?
+# Do not GZip responses that are smaller than this minimum size in bytes:
+_GZIP_MINIMUM_SIZE: Final = 500
+# Used during GZip compression. It is an integer ranging from 1 to 9.
+# Lower value results in faster compression but larger file sizes, while higher value
+# results in slower compression but smaller file sizes.
+_GZIP_COMPRESSLEVEL: Final = 6
+
 
 def create_starlette_app(runtime: Runtime) -> Starlette:
     """Create a Starlette application for serving Streamlit.
 
     This factory function creates a fully configured Starlette app that provides
-    the same functionality as the Tornado-based server, including:
+    the full web-server functionality required for Streamlit:
     - WebSocket endpoint for client-server communication
     - Health check endpoints
     - Media file serving with range request support
@@ -99,19 +108,6 @@ def create_starlette_app(runtime: Runtime) -> Starlette:
     # Build routes list
     routes: list[Any] = []
 
-    # Add auth routes if available
-    try:
-        from streamlit.web.server.starlette.starlette_auth_routes import get_auth_routes
-
-        routes.extend(get_auth_routes(base_url))
-    except ModuleNotFoundError:  # pragma: no cover - auth optional
-        pass
-
-    # Add app static routes if enabled
-    if config.get_option("server.enableStaticServing"):
-        main_script_path = getattr(runtime, "_main_script_path", None)
-        routes.extend(create_app_static_routes(main_script_path, base_url))
-
     # Add core routes
     routes.extend(create_health_routes(runtime, base_url))
     routes.extend(create_metrics_routes(runtime, base_url))
@@ -127,6 +123,15 @@ def create_starlette_app(runtime: Runtime) -> Starlette:
         WebSocketRoute(_with_base(ROUTE_WEBSOCKET_STREAM, base_url), websocket_handler)
     )
 
+    # Add auth routes:
+    routes.extend(get_auth_routes(base_url))
+
+    # Add app static routes if enabled
+    if config.get_option("server.enableStaticServing"):
+        # TODO(lukasmasuch): _main_script_path
+        main_script_path = getattr(runtime, "_main_script_path", None)
+        routes.extend(create_app_static_routes(main_script_path, base_url))
+
     # Add script health check routes if enabled
     if config.get_option("server.scriptHealthCheckEnabled"):
         routes.extend(create_script_health_routes(runtime, base_url))
@@ -137,9 +142,8 @@ def create_starlette_app(runtime: Runtime) -> Starlette:
 
     # Add static files mount (only in production mode)
     if not dev_mode:
-        static_dir = file_util.get_static_dir()
         static_files = create_streamlit_static_files(
-            directory=static_dir, base_url=base_url
+            directory=file_util.get_static_dir(), base_url=base_url
         )
         routes.append(Mount(_with_base("", base_url), app=static_files, name="static"))
 
@@ -173,8 +177,8 @@ def create_starlette_app(runtime: Runtime) -> Starlette:
 
     app.add_middleware(
         MediaAwareGZipMiddleware,  # ty: ignore[invalid-argument-type]
-        minimum_size=500,
-        compresslevel=6,
+        minimum_size=_GZIP_MINIMUM_SIZE,
+        compresslevel=_GZIP_COMPRESSLEVEL,
     )
 
     return app
