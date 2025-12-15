@@ -46,3 +46,8 @@ MAX_PORT_SEARCH_RETRIES: Final = 100
 
 # Default address to bind to when no address is configured:
 DEFAULT_SERVER_ADDRESS: Final = "0.0.0.0"  # noqa: S104
+
+# Default WebSocket ping interval in seconds, can be configured by the user
+DEFAULT_WEBSOCKET_PING_INTERVAL: Final = 30
+# Default WebSocket ping timeout in seconds, can be configured by the user
+DEFAULT_WEBSOCKET_PING_TIMEOUT: Final = 30

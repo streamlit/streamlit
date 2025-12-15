@@ -29,6 +29,8 @@ from streamlit.runtime.runtime_util import get_max_message_size_bytes
 from streamlit.web.server.starlette.starlette_app import create_starlette_app
 from streamlit.web.server.starlette.starlette_server_config import (
     DEFAULT_SERVER_ADDRESS,
+    DEFAULT_WEBSOCKET_PING_INTERVAL,
+    DEFAULT_WEBSOCKET_PING_TIMEOUT,
     MAX_PORT_SEARCH_RETRIES,
 )
 
@@ -69,8 +71,7 @@ def _get_websocket_settings() -> tuple[int, int]:
         # For uvicorn, we set timeout equal to interval for consistency
         return interval, interval
 
-    # Default: 30 second interval, 30 second timeout
-    return 30, 30
+    return DEFAULT_WEBSOCKET_PING_INTERVAL, DEFAULT_WEBSOCKET_PING_TIMEOUT
 
 
 def _bind_socket(address: str, port: int, backlog: int) -> socket.socket:
