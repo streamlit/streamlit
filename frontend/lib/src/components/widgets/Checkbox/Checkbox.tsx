@@ -32,6 +32,8 @@ import {
   ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { useQueryParamBinding } from "~lib/hooks/useQueryParamBinding"
+import { deserializeBool, serializeBool } from "~lib/queryParamSerializers"
 import { hasLightBackgroundColor } from "~lib/theme"
 import { getFocusBoxShadow } from "~lib/theme/utils"
 import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
@@ -52,6 +54,14 @@ function Checkbox({
   widgetMgr,
   fragmentId,
 }: Readonly<Props>): ReactElement {
+  // Register query param binding if widget key starts with "?"
+  const { isBound, syncToUrl } = useQueryParamBinding<boolean>({
+    elementId: element.id,
+    widgetMgr,
+    serializer: serializeBool,
+    deserializer: deserializeBool,
+  })
+
   const [value, setValueWithSource] = useBasicWidgetState<
     boolean,
     CheckboxProto
@@ -67,10 +77,14 @@ function Checkbox({
 
   const onChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>): void => {
-      setValueWithSource({ value: e.target.checked, fromUi: true })
+      const newValue = e.target.checked
+      setValueWithSource({ value: newValue, fromUi: true })
+      // Sync to URL if bound
+      if (isBound) {
+        syncToUrl(newValue)
+      }
     },
-    // ESLint complains if we remove this unnecessary dep.
-    [setValueWithSource]
+    [setValueWithSource, isBound, syncToUrl]
   )
 
   const theme = useEmotionTheme()

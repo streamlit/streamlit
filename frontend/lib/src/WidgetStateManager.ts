@@ -33,6 +33,10 @@ import {
 } from "@streamlit/protobuf"
 
 import {
+  QueryParamDeserializer,
+  QueryParamSerializer,
+} from "~lib/queryParamSerializers"
+import {
   isNullOrUndefined,
   isValidFormId,
   notNullOrUndefined,
@@ -45,6 +49,18 @@ export interface Source {
 export interface WidgetInfo {
   id: string
   formId?: string
+}
+
+/**
+ * Stores binding information for a widget bound to a query parameter.
+ * Includes serializer/deserializer functions for converting between
+ * widget values and URL-safe query parameter strings.
+ */
+export interface QueryParamBinding<T = unknown> {
+  widgetId: string
+  paramKey: string
+  serializer: QueryParamSerializer<T>
+  deserializer: QueryParamDeserializer<T>
 }
 
 /**
@@ -199,6 +215,15 @@ export class WidgetStateManager {
   // This state is not never sent to the server.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   private readonly elementStates = new Map<string, Map<string, any>>()
+
+  // Query param bindings: maps widgetId -> QueryParamBinding
+  private readonly queryParamBindings = new Map<string, QueryParamBinding>()
+
+  // Reverse lookup: maps paramKey -> widgetId
+  private readonly paramKeyToWidgetId = new Map<string, string>()
+
+  // Callback to update query params in the URL (set by App.tsx)
+  private onQueryParamsChange?: (queryString: string) => void
 
   /**
    * Debouncing helpers for trigger widgets.
@@ -938,6 +963,174 @@ export class WidgetStateManager {
     } else {
       this.elementStates.delete(elementId)
     }
+  }
+
+  // --- Query Parameter Binding Methods ---
+
+  /**
+   * Set the callback function for query param changes.
+   * This is called by App.tsx to wire up URL updates.
+   */
+  public setQueryParamsChangeHandler(
+    handler: (queryString: string) => void
+  ): void {
+    this.onQueryParamsChange = handler
+  }
+
+  /**
+   * Register a widget to be bound to a query parameter.
+   *
+   * When a widget is bound, its value will be synchronized with the
+   * query parameter of the given key.
+   */
+  public registerQueryParamBinding<T>(binding: {
+    widgetId: string
+    paramKey: string
+    serializer: QueryParamSerializer<T>
+    deserializer: QueryParamDeserializer<T>
+  }): void {
+    const { widgetId, paramKey, serializer, deserializer } = binding
+
+    // Remove any existing binding for this widget
+    this.unregisterQueryParamBinding(widgetId)
+
+    const newBinding: QueryParamBinding<unknown> = {
+      widgetId,
+      paramKey,
+      serializer: serializer as QueryParamSerializer<unknown>,
+      deserializer: deserializer as QueryParamDeserializer<unknown>,
+    }
+
+    this.queryParamBindings.set(widgetId, newBinding)
+    this.paramKeyToWidgetId.set(paramKey, widgetId)
+  }
+
+  /**
+   * Remove the query parameter binding for a widget.
+   */
+  public unregisterQueryParamBinding(widgetId: string): void {
+    const binding = this.queryParamBindings.get(widgetId)
+    if (binding) {
+      this.paramKeyToWidgetId.delete(binding.paramKey)
+      this.queryParamBindings.delete(widgetId)
+    }
+  }
+
+  /**
+   * Check if a widget is bound to a query parameter.
+   */
+  public isWidgetBoundToQueryParam(widgetId: string): boolean {
+    return this.queryParamBindings.has(widgetId)
+  }
+
+  /**
+   * Get the query parameter binding for a widget.
+   */
+  public getQueryParamBinding(
+    widgetId: string
+  ): QueryParamBinding | undefined {
+    return this.queryParamBindings.get(widgetId)
+  }
+
+  /**
+   * Get a deserialized value from the current URL query parameters for a bound widget.
+   * Returns undefined if the widget is not bound or no value exists in the URL.
+   */
+  public getValueFromQueryParams<T>(widgetId: string): T | undefined {
+    const binding = this.queryParamBindings.get(widgetId)
+    if (!binding) return undefined
+
+    const params = new URLSearchParams(window.location.search)
+    const rawValue = params.getAll(binding.paramKey)
+
+    if (rawValue.length === 0) return undefined
+
+    // For single values, pass the string directly; for multiple, pass the array
+    const valueToDeserialize = rawValue.length === 1 ? rawValue[0] : rawValue
+    return binding.deserializer(valueToDeserialize) as T
+  }
+
+  /**
+   * Sync a widget's value to the URL query parameters.
+   * This should be called when a widget's value changes and it has a query param binding.
+   */
+  public syncWidgetToQueryParams<T>(widgetId: string, value: T): void {
+    const binding = this.queryParamBindings.get(widgetId)
+    if (!binding) return
+
+    const serialized = (binding.serializer as QueryParamSerializer<T>)(value)
+    this.updateQueryParam(binding.paramKey, serialized)
+  }
+
+  /**
+   * Update a single query parameter in the URL.
+   */
+  private updateQueryParam(key: string, value: string | string[]): void {
+    const params = new URLSearchParams(window.location.search)
+
+    // Remove existing values for this key
+    params.delete(key)
+
+    // Add new value(s)
+    if (Array.isArray(value)) {
+      for (const v of value) {
+        if (v) params.append(key, v)
+      }
+    } else if (value) {
+      params.set(key, value)
+    }
+
+    // Notify the callback to update the URL
+    this.onQueryParamsChange?.(params.toString())
+  }
+
+  /**
+   * Remove stale query param bindings for widgets that are no longer active.
+   */
+  public removeInactiveQueryParamBindings(activeIds: Set<string>): void {
+    const staleWidgetIds: string[] = []
+    this.queryParamBindings.forEach((_, widgetId) => {
+      if (!activeIds.has(widgetId)) {
+        staleWidgetIds.push(widgetId)
+      }
+    })
+    for (const widgetId of staleWidgetIds) {
+      this.unregisterQueryParamBinding(widgetId)
+    }
+  }
+
+  /**
+   * Clear all query param bindings.
+   */
+  public clearQueryParamBindings(): void {
+    this.queryParamBindings.clear()
+    this.paramKeyToWidgetId.clear()
+  }
+
+  /**
+   * Get the current URL search params as a URLSearchParams object.
+   * Useful for initial hydration of widget values from the URL.
+   */
+  public getCurrentUrlParams(): URLSearchParams {
+    return new URLSearchParams(window.location.search)
+  }
+
+  /**
+   * Check if a specific query parameter exists in the current URL.
+   */
+  public hasQueryParam(paramKey: string): boolean {
+    const params = new URLSearchParams(window.location.search)
+    return params.has(paramKey)
+  }
+
+  /**
+   * Get a raw query parameter value from the current URL.
+   */
+  public getQueryParamValue(paramKey: string): string | string[] | null {
+    const params = new URLSearchParams(window.location.search)
+    const values = params.getAll(paramKey)
+    if (values.length === 0) return null
+    return values.length === 1 ? values[0] : values
   }
 
   /**

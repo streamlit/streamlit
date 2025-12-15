@@ -39,6 +39,8 @@ import {
 import { useBasicWidgetState } from "~lib/hooks/useBasicWidgetState"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { useQueryParamBinding } from "~lib/hooks/useQueryParamBinding"
+import { deserializeNumber, serializeNumber } from "~lib/queryParamSerializers"
 import { convertRemToPx } from "~lib/theme"
 import {
   isInForm,
@@ -90,6 +92,14 @@ const NumberInput: React.FC<Props> = ({
     min,
     max,
   } = element
+
+  // Register query param binding if widget key starts with "?"
+  const { isBound, syncToUrl } = useQueryParamBinding<number | null>({
+    elementId: element.id,
+    widgetMgr,
+    serializer: serializeNumber,
+    deserializer: deserializeNumber,
+  })
 
   const { width, elementRef } = useCalculatedDimensions()
 
@@ -193,10 +203,15 @@ const NumberInput: React.FC<Props> = ({
 
       setValueWithSource({ value: newValue, fromUi })
 
+      // Sync to URL if bound
+      if (fromUi && isBound) {
+        syncToUrl(newValue)
+      }
+
       setDirty(false)
       setFormattedValue(formatCurrentValue(newValue))
     },
-    [min, max, elementDefault, formatCurrentValue, setValueWithSource]
+    [min, max, elementDefault, formatCurrentValue, setValueWithSource, isBound, syncToUrl]
   )
 
   const handleFocus = useCallback((): void => {
