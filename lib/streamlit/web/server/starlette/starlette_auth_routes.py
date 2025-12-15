@@ -144,11 +144,10 @@ def _get_cookie_path() -> str:
     """Get the cookie path based on server.baseUrlPath configuration."""
     from streamlit import config
 
-    base_path = config.get_option("server.baseUrlPath")
+    base_path: str | None = config.get_option("server.baseUrlPath")
     if base_path:
         # Ensure path starts with "/" and doesn't have trailing slash
-        path = "/" + base_path.strip("/")
-        return path
+        return "/" + base_path.strip("/")
     return "/"
 
 
