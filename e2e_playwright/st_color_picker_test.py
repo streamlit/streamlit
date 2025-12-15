@@ -109,7 +109,7 @@ def test_help_tooltip_works(app: Page):
 @pytest.mark.skip_browser("firefox")
 def test_clicking_color_on_color_picker_works(app: Page):
     # Check that the color is #000000
-    expect(app.get_by_text("Color 1: #000000")).to_be_visible()
+    expect(app.get_by_text("Color 1 #000000")).to_be_visible()
 
     default_picker = get_color_picker(app, "Default Color")
     default_picker.get_by_test_id("stColorPickerBlock").click()
@@ -122,7 +122,7 @@ def test_clicking_color_on_color_picker_works(app: Page):
     app.get_by_text("Default Color").click()
     wait_for_app_run(app)
     # Make sure the color has changed:
-    expect(app.get_by_text("Color 1: #000000")).not_to_be_visible()
+    expect(app.get_by_text("Color 1 #000000")).not_to_be_visible()
 
 
 def test_typing_new_hex_color_on_color_picker_works_with_callback(
