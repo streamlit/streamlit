@@ -1,0 +1,59 @@
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""LRU cache supporting TTL and max entry count, as well as release hooks for cleanup."""
+
+from collections.abc import Callable
+from typing import override
+
+from cachetools import TTLCache
+
+from streamlit.runtime.caching.cache_utils import OnRelease
+
+
+class TTLCleanupCache(TTLCache):
+    """A TTLCache that supports hooks called when items are released."""
+
+    def __init__(
+        self,
+        maxsize: float,
+        ttl: float,
+        timer: Callable[[], float],
+        on_release: OnRelease,
+    ) -> None:
+        """Create a cache with the given size, TTL, and release hook.
+
+        maxsize : float
+            The maxiumum number of elements this cache should hold.
+        ttl : float
+            The amount of time a cache entry should remain valid, in seconds.
+        timer : Callable[[], float]
+            The timer function to use to fetch the current time.
+        on_release : OnRelease
+            The function to call with cache entries when they are removed from the
+            cache.
+        """
+        super().__init__(maxsize=maxsize, ttl=ttl, timer=timer)
+        self._on_release = on_release
+
+    @override
+    def popitem(self):
+        _, value = super().popitem()
+        self._on_release(value)
+
+    @override
+    def expire(self, time: float | None = None):
+        items = super().expire(time)
+        for _, value in items:
+            self._on_release(value)
