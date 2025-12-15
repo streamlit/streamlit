@@ -23,6 +23,7 @@ from __future__ import annotations
 import os
 from typing import TYPE_CHECKING, Any, Final
 
+from streamlit.url_util import make_url_path
 from streamlit.web.server.routes import (
     NO_CACHE_PATTERN,
     STATIC_ASSET_CACHE_MAX_AGE_SECONDS,
@@ -143,3 +144,13 @@ def create_streamlit_static_files(directory: str, base_url: str | None) -> Any:
             response.headers["Cache-Control"] = cache_value
 
     return _StreamlitStaticFiles(directory=directory, base_url=base_url)
+
+
+def create_streamlit_static_files_routes(
+    directory: str, base_url: str | None
+) -> list[Any]:
+    """Create the static files mount for serving Streamlit's core assets."""
+    from starlette.routing import Mount
+
+    static_files = create_streamlit_static_files(directory=directory, base_url=base_url)
+    return [Mount(make_url_path(base_url or "", ""), app=static_files, name="static")]

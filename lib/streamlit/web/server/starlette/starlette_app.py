@@ -26,7 +26,6 @@ from streamlit.web.server.starlette.starlette_app_utils import (
 )
 from streamlit.web.server.starlette.starlette_auth_routes import create_auth_routes
 from streamlit.web.server.starlette.starlette_routes import (
-    _with_base,
     create_app_static_serving_routes,
     create_bidi_component_routes,
     create_component_routes,
@@ -43,7 +42,7 @@ from streamlit.web.server.starlette.starlette_server_config import (
     SESSION_COOKIE_NAME,
 )
 from streamlit.web.server.starlette.starlette_static import (
-    create_streamlit_static_files,
+    create_streamlit_static_files_routes,
 )
 from streamlit.web.server.starlette.starlette_websocket import create_websocket_routes
 
@@ -76,7 +75,6 @@ def create_starlette_app(runtime: Runtime) -> Starlette:
     try:
         from starlette.applications import Starlette
         from starlette.middleware.sessions import SessionMiddleware
-        from starlette.routing import Mount
     except ModuleNotFoundError as exc:  # pragma: no cover - import guard
         raise RuntimeError(
             "Starlette is not installed. Run `pip install streamlit[starlette]` "
@@ -131,10 +129,11 @@ def create_starlette_app(runtime: Runtime) -> Starlette:
 
     # Add static files mount (only in production mode):
     if not dev_mode:
-        static_files = create_streamlit_static_files(
-            directory=file_util.get_static_dir(), base_url=base_url
+        routes.extend(
+            create_streamlit_static_files_routes(
+                directory=file_util.get_static_dir(), base_url=base_url
+            )
         )
-        routes.append(Mount(_with_base("", base_url), app=static_files, name="static"))
 
     # Create the Starlette application with lifespan handler
     app = Starlette(routes=routes, lifespan=_lifespan)
