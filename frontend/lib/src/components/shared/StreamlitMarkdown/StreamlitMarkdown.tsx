@@ -460,7 +460,10 @@ interface CustomHelpIconProps {
 export const CustomHelpIcon: FC<CustomHelpIconProps> = ({ children }) => {
   // Ensure we only pass strings to the tooltip. Text directives should always
   // pass plain strings, but we check defensively at runtime.
-  const tooltipContent = typeof children === "string" ? children : ""
+  // Unescape newlines that were escaped as \n in the markdown source to work
+  // around text directive limitations (text directives don't support multiline content).
+  const tooltipContent =
+    typeof children === "string" ? children.replace(/\\n/g, "\n") : ""
 
   return (
     <StyledHelpIconWrapper>

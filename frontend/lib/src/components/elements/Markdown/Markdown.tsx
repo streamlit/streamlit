@@ -75,8 +75,11 @@ function Markdown({ element }: Readonly<MarkdownProps>): ReactElement {
     )
   } else {
     // For other markdown, render with inline help icon
-    // Append help directive to markdown source so it renders inline
-    const source = help ? `${body} :help[${help}]` : body
+    // Append help directive to markdown source so it renders inline.
+    // Escape newlines as a special placeholder since text directives don't support
+    // multiline content. The placeholder will be converted back to newlines in the tooltip.
+    const escapedHelp = help ? help.replace(/\n/g, "\\n") : ""
+    const source = help ? `${body} :help[${escapedHelp}]` : body
 
     content = (
       <StyledLabelHelpWrapper isLatex={isLatex}>
