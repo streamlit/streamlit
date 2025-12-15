@@ -20,6 +20,7 @@ from typing import Final
 
 USER_COOKIE_NAME: Final = "_streamlit_user"
 XSRF_COOKIE_NAME: Final = "_streamlit_xsrf"
+SESSION_COOKIE_NAME: Final = "_streamlit_session"
 
 # Max pending messages per client in the send queue before disconnecting.
 # Each connected client has its own queue; under normal conditions the queue drains
