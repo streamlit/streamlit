@@ -23,7 +23,7 @@ from __future__ import annotations
 import os
 from typing import TYPE_CHECKING, Any, Final
 
-from streamlit.file_util import get_static_dir
+from streamlit import file_util
 from streamlit.url_util import make_url_path
 from streamlit.web.server.routes import (
     NO_CACHE_PATTERN,
@@ -156,7 +156,7 @@ def create_streamlit_static_assets_routes(base_url: str | None) -> list[BaseRout
     from starlette.routing import Mount
 
     static_assets = create_streamlit_static_handler(
-        directory=get_static_dir(), base_url=base_url
+        directory=file_util.get_static_dir(), base_url=base_url
     )
     return [
         Mount(
