@@ -118,7 +118,7 @@ Guide user through each command with prompts, letting them execute manually.
 
    ```bash
    # Parse frontmatter from the reviewed file
-   title=$(grep '^title:' work-tmp/pr_description.md | sed 's/^title: //')
+   title=$(grep '^title:' work-tmp/pr_description.md | sed 's/^title: //' | sed 's/^"\(.*\)"$/\1/')
    labels=$(grep '^labels:' work-tmp/pr_description.md | sed 's/^labels: //')
 
    # Extract body (everything after the closing --- of frontmatter)
