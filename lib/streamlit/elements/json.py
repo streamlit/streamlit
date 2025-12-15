@@ -123,7 +123,11 @@ class JsonMixin:
 
         if is_list_like(body):
             if is_sequence_of_pydantic_models(body):
-                body = dump_pydantic_sequence(body)
+                try:
+                    body = dump_pydantic_sequence(body)
+                except AttributeError:
+                    # Fallback to list(body) if it contains non-Pydantic models:
+                    body = list(body)  # ty: ignore[invalid-argument-type]
             else:
                 body = list(body)  # ty: ignore[invalid-argument-type]
 
