@@ -41,8 +41,8 @@ from streamlit.web.server.starlette.starlette_server_config import (
     GZIP_MINIMUM_SIZE,
     SESSION_COOKIE_NAME,
 )
-from streamlit.web.server.starlette.starlette_static import (
-    create_streamlit_static_files_routes,
+from streamlit.web.server.starlette.starlette_static_routes import (
+    create_streamlit_static_assets_routes,
 )
 from streamlit.web.server.starlette.starlette_websocket import create_websocket_routes
 
@@ -131,7 +131,7 @@ def create_starlette_app(runtime: Runtime) -> Starlette:
 
     # Add static files mount (only in production mode):
     if not dev_mode:
-        routes.extend(create_streamlit_static_files_routes(base_url=base_url))
+        routes.extend(create_streamlit_static_assets_routes(base_url=base_url))
 
     # Create the Starlette application with lifespan handler
     app = Starlette(routes=routes, lifespan=_lifespan)
