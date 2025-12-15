@@ -16,7 +16,6 @@
 
 from __future__ import annotations
 
-import importlib
 import json
 from typing import TYPE_CHECKING, Any, Final, cast
 from urllib.parse import urlparse
@@ -77,6 +76,7 @@ _STARLETTE_AUTH_CACHE: Final = _AsyncAuthCache(auth_cache)
 
 
 def _normalize_nested_config(value: Any) -> Any:
+    """Normalize nested configuration data for Authlib."""
     if isinstance(value, dict):
         return {k: _normalize_nested_config(v) for k, v in value.items()}
     if isinstance(value, list):
@@ -85,6 +85,7 @@ def _normalize_nested_config(value: Any) -> Any:
 
 
 def _looks_like_provider_section(value: dict[str, Any]) -> bool:
+    """Check if a dictionary looks like a provider section for Authlib."""
     provider_keys = {
         "client_id",
         "client_secret",
@@ -132,6 +133,8 @@ class _AuthlibConfig(dict[str, Any]):
 
 
 async def _redirect_to_base(base_url: str) -> RedirectResponse:
+    """Redirect to the base URL."""
+
     from starlette.responses import RedirectResponse
 
     return RedirectResponse(make_url_path(base_url, "/"), status_code=302)
@@ -147,7 +150,7 @@ async def _set_auth_cookie(response: Response, user_info: dict[str, Any]) -> Non
     """
     serialized_cookie_value = json.dumps(user_info)
     if len(serialized_cookie_value.encode()) > 4096:
-        _LOGGER.error(
+        _LOGGER.warning(
             "Authentication cookie size exceeds maximum browser limit of 4096 bytes. Authentication may fail."
         )
 
@@ -156,25 +159,25 @@ async def _set_auth_cookie(response: Response, user_info: dict[str, Any]) -> Non
         cookie_secret, AUTH_COOKIE_NAME, serialized_cookie_value
     )
     cookie_payload = signed_value.decode("utf-8")
-
     response.set_cookie(AUTH_COOKIE_NAME, cookie_payload, httponly=True)
 
 
 def _clear_auth_cookie(response: Response) -> None:
+    """Clear the auth cookie."""
+
     response.delete_cookie(AUTH_COOKIE_NAME)
 
 
 def _create_oauth_client(provider: str) -> tuple[Any, str]:
+    """Create an OAuth client for the given provider based on secrets.toml configuration."""
+
     try:
-        authlib_module = importlib.import_module(
-            "authlib.integrations.starlette_client"
-        )
+        from authlib.integrations import starlette_client
     except ModuleNotFoundError:  # pragma: no cover - optional dependency
         raise StreamlitAuthError(
             "Authentication requires Authlib>=1.3.2. "
             "Install it via `pip install streamlit[auth]`."
         )
-    oauth_cls = authlib_module.OAuth  # ty: ignore
 
     auth_section = get_secrets_auth_section()
     if auth_section:
@@ -196,12 +199,16 @@ def _create_oauth_client(provider: str) -> tuple[Any, str]:
     if "prompt" not in provider_client_kwargs:
         provider_client_kwargs["prompt"] = "select_account"
 
-    oauth = oauth_cls(config=_AuthlibConfig(config), cache=_STARLETTE_AUTH_CACHE)
+    oauth = starlette_client.OAuth(  # type: ignore[no-untyped-call]
+        config=_AuthlibConfig(config), cache=_STARLETTE_AUTH_CACHE
+    )
     oauth.register(provider)
-    return oauth.create_client(provider), redirect_uri
+    return oauth.create_client(provider), redirect_uri  # type: ignore[no-untyped-call]
 
 
 def _parse_provider_token(provider_token: str | None) -> str | None:
+    """Extract the provider from the provider token."""
+
     if provider_token is None:
         return None
     try:
@@ -213,6 +220,8 @@ def _parse_provider_token(provider_token: str | None) -> str | None:
 
 
 def _get_provider_by_state(state_code_from_url: str | None) -> str | None:
+    """Extract the provider from the state code from the URL."""
+
     if state_code_from_url is None:
         return None
     current_cache_keys = list(auth_cache.get_dict().keys())
@@ -230,6 +239,8 @@ def _get_provider_by_state(state_code_from_url: str | None) -> str | None:
 
 
 def _get_origin_from_secrets() -> str | None:
+    """Extract the origin from the redirect URI in the secrets."""
+
     redirect_uri = None
     auth_section = get_secrets_auth_section()
     if auth_section:
@@ -246,6 +257,8 @@ def _get_origin_from_secrets() -> str | None:
 
 
 async def _auth_login(request: Request, base_url: str) -> Response:
+    """Handle the login request from the authentication provider."""
+
     provider = _parse_provider_token(request.query_params.get("provider"))
     if provider is None:
         return await _redirect_to_base(base_url)
@@ -262,12 +275,16 @@ async def _auth_login(request: Request, base_url: str) -> Response:
 
 
 async def _auth_logout(_request: Request, base_url: str) -> Response:
+    """Logout the user by clearing the auth cookie and redirecting to the base URL."""
+
     response = await _redirect_to_base(base_url)
     _clear_auth_cookie(response)
     return response
 
 
 async def _auth_callback(request: Request, base_url: str) -> Response:
+    """Handle the OAuth callback from the authentication provider."""
+
     provider = _get_provider_by_state(request.query_params.get("state"))
     origin = _get_origin_from_secrets()
     if origin is None:
@@ -315,6 +332,8 @@ async def _auth_callback(request: Request, base_url: str) -> Response:
 
 
 def create_auth_routes(base_url: str) -> list[Route]:
+    """Create all authentication related routes for the Starlette app."""
+
     from starlette.routing import Route
 
     async def login(request: Request) -> Response:
