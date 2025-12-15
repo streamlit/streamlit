@@ -122,6 +122,9 @@ def _parse_user_cookie_signed(cookie_value: str | bytes, origin: str) -> dict[st
     secret = get_cookie_secret()
     signed_value = cookie_value
     if isinstance(signed_value, str):
+        # HTTP cookies use ISO-8859-1 (latin-1) encoding per the HTTP spec.
+        # To recover the original bytes from a decoded cookie string, we must
+        # encode back to latin-1 (not UTF-8).
         signed_value = signed_value.encode("latin-1")
 
     decoded = starlette_app_utils.decode_signed_value(
