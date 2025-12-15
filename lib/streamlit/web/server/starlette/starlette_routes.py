@@ -692,7 +692,7 @@ def create_bidi_component_routes(
 def create_app_static_serving_routes(
     main_script_path: str | None, base_url: str | None
 ) -> list[BaseRoute]:
-    """Create app static file route handlers."""
+    """Create app static serving file route handlers."""
     from starlette.exceptions import HTTPException
     from starlette.responses import FileResponse, Response
     from starlette.routing import Route
