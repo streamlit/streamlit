@@ -12,7 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Static file handling for the Starlette server."""
+"""Static file handling for the Starlette server.
+
+This is for serving the core Streamlit static assets (HTML/JS/CSS)
+not related to the app static file serving feature.
+"""
 
 from __future__ import annotations
 
@@ -34,9 +38,9 @@ _RESERVED_STATIC_PATH_SUFFIXES: Final = ("_stcore/health", "_stcore/host-config"
 
 
 def create_streamlit_static_files(directory: str, base_url: str | None) -> Any:
-    """Create a StaticFiles instance that mirrors Tornado's behavior.
+    """Create a static file handler used for serving the Streamlit's static assets.
 
-    This is critical for:
+    This also handles:
     - SPA fallback (serving index.html on 404s for client-side routing)
     - Long-term caching of hashed assets
     - No-cache for HTML/manifest files
