@@ -22,9 +22,9 @@ import pytest
 from starlette.testclient import TestClient
 
 from streamlit.web.server.routes import STATIC_ASSET_CACHE_MAX_AGE_SECONDS
-from streamlit.web.server.starlette.starlette_static import (
+from streamlit.web.server.starlette.starlette_static_routes import (
     _RESERVED_STATIC_PATH_SUFFIXES,
-    create_streamlit_static_files,
+    create_streamlit_static_handler,
 )
 
 if TYPE_CHECKING:
@@ -51,7 +51,7 @@ def static_app(tmp_path: Path) -> Iterator[TestClient]:
     subdir.mkdir()
     (subdir / "page.html").write_text("<html>Page</html>")
 
-    static_files = create_streamlit_static_files(
+    static_files = create_streamlit_static_handler(
         directory=str(static_dir), base_url=None
     )
     app = Starlette(routes=[Mount("/", app=static_files)])
@@ -152,7 +152,7 @@ class TestWithBaseUrl:
         static_dir.mkdir()
         (static_dir / "index.html").write_text("<html>Base</html>")
 
-        static_files = create_streamlit_static_files(
+        static_files = create_streamlit_static_handler(
             directory=str(static_dir), base_url="myapp"
         )
         app = Starlette(routes=[Mount("/myapp", app=static_files)])
@@ -176,7 +176,7 @@ class TestWithBaseUrl:
         static_dir.mkdir()
         (static_dir / "index.html").write_text("<html>Mounted</html>")
 
-        static_files = create_streamlit_static_files(
+        static_files = create_streamlit_static_handler(
             directory=str(static_dir), base_url=""
         )
         app = Starlette(routes=[Mount("/app", app=static_files)])
@@ -201,7 +201,7 @@ class TestWithBaseUrl:
         static_dir.mkdir()
         (static_dir / "index.html").write_text("<html>Nested</html>")
 
-        static_files = create_streamlit_static_files(
+        static_files = create_streamlit_static_handler(
             directory=str(static_dir), base_url=""
         )
         # Inner app with static files at root (like Streamlit does)

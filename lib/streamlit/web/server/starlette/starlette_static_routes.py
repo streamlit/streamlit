@@ -33,13 +33,17 @@ from streamlit.web.server.routes import (
 if TYPE_CHECKING:
     from collections.abc import MutableMapping
 
+    from starlette.routing import BaseRoute
+    from starlette.staticfiles import StaticFiles
     from starlette.types import Receive, Scope, Send
 
 # Reserved paths that should return 404 instead of index.html fallback.
 _RESERVED_STATIC_PATH_SUFFIXES: Final = ("_stcore/health", "_stcore/host-config")
 
 
-def create_streamlit_static_files(directory: str, base_url: str | None) -> Any:
+def create_streamlit_static_handler(
+    directory: str, base_url: str | None
+) -> StaticFiles:
     """Create a static file handler used for serving the Streamlit's static assets.
 
     This also handles:
@@ -147,11 +151,17 @@ def create_streamlit_static_files(directory: str, base_url: str | None) -> Any:
     return _StreamlitStaticFiles(directory=directory, base_url=base_url)
 
 
-def create_streamlit_static_files_routes(base_url: str | None) -> list[Any]:
-    """Create the static files mount for serving Streamlit's core assets."""
+def create_streamlit_static_assets_routes(base_url: str | None) -> list[BaseRoute]:
+    """Create the static assets mount for serving Streamlit's core assets."""
     from starlette.routing import Mount
 
-    static_files = create_streamlit_static_files(
+    static_assets = create_streamlit_static_handler(
         directory=get_static_dir(), base_url=base_url
     )
-    return [Mount(make_url_path(base_url or "", ""), app=static_files, name="static")]
+    return [
+        Mount(
+            make_url_path(base_url or "", ""),
+            app=static_assets,
+            name="static-assets",
+        )
+    ]
