@@ -339,7 +339,7 @@ def is_sequence_of_pydantic_models(obj: object) -> TypeGuard[Sequence[Any]]:
     return is_pydantic_model(first_element)
 
 
-def dump_pydantic_sequence(obj: Sequence[Any]) -> list[dict[str, Any]]:
+def dump_pydantic_sequence(obj: Sequence[object]) -> list[dict[str, Any]]:
     """Dump a sequence of Pydantic models to a list of dictionaries."""
     first_element = next(iter(obj))
     # Pydantic v2 uses model_dump(), v1 uses dict()
