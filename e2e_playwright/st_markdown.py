@@ -330,3 +330,167 @@ st.badge("Stretch badge", width="stretch")
 
 with st.container(border=True, width=150, key="long_word"):
     st.markdown("A_LONG_WORD_THAT_SHOULD_BREAK_WORDS_IN_THE_CONTAINER")
+
+# Text alignment tests
+st.header("Text Alignment Tests")
+
+# Test each alignment type with text, table, and nested list combined
+st.subheader("Left Alignment (Default)")
+st.markdown(
+    """
+Left aligned text is the default behavior. This demonstrates standard left alignment.
+This is a longer paragraph that demonstrates text justification properly. The text
+stretches to fill the available width.
+
+| Table 1 Col 1 | Column 2 | Column 3 |
+|---------------|----------|----------|
+| Data A        | Data B   | Data C   |
+
+| Table 2 Col 1 | Column 2 |
+|---------------|----------|
+| Data D        | Data E   |
+
+Here is a nested list:
+
+- Left item 1
+- Left item 2
+  - Nested A
+  - Nested B
+    - Deeply nested 1
+
+1. First
+2. Second
+3. Third
+
+Some text after the lists.
+""",
+    text_alignment="left",
+    help="This is a help tooltip!",
+)
+
+st.subheader("Center Alignment")
+st.markdown(
+    """
+Center aligned text with some content to demonstrate alignment properly. This is a
+longer paragraph that demonstrates text justification properly. The text stretches to
+fill the available width.
+
+| Table 1 Col 1 | Column 2 | Column 3 |
+|---------------|----------|----------|
+| Data A        | Data B   | Data C   |
+
+| Table 2 Col 1 | Column 2 |
+|---------------|----------|
+| Data D        | Data E   |
+
+Here is a nested list:
+
+- Center item 1
+- Center item 2
+  - Nested A
+  - Nested B
+    - Deeply nested 1
+
+1. First
+2. Second
+3. Third
+
+Some text after the lists.
+""",
+    text_alignment="center",
+    help="This is a help tooltip!",
+)
+
+st.subheader("Right Alignment")
+st.markdown(
+    """
+Right aligned text content demonstrates right-side alignment. This is a longer
+paragraph that demonstrates text justification properly. The text stretches to fill
+the available width.
+
+| Table 1 Col 1 | Column 2 | Column 3 |
+|---------------|----------|----------|
+| Data A        | Data B   | Data C   |
+
+| Table 2 Col 1 | Column 2 |
+|---------------|----------|
+| Data D        | Data E   |
+
+Here is a nested list:
+
+- Right item 1
+- Right item 2
+  - Nested A
+  - Nested B
+    - Deeply nested 1
+
+1. First
+2. Second
+3. Third
+
+Some text after the lists.
+""",
+    text_alignment="right",
+    help="This is a help tooltip!",
+)
+
+st.subheader("Justify Alignment")
+st.markdown(
+    """
+Justified text alignment. This is a longer paragraph that demonstrates text
+justification properly. The text stretches to fill the available width. This is a
+longer paragraph that demonstrates text justification properly.
+
+| Table 1 Col 1 | Column 2 | Column 3 |
+|---------------|----------|----------|
+| Data A        | Data B   | Data C   |
+
+| Table 2 Col 1 | Column 2 |
+|---------------|----------|
+| Data D        | Data E   |
+
+Here is a nested list:
+
+- Justify item 1
+- Justify item 2
+  - Nested A
+  - Nested B
+    - Deeply nested 1
+
+1. First
+2. Second
+3. Third
+""",
+    text_alignment="justify",
+    help="This is a help tooltip!",
+)
+
+st.markdown(
+    "Short text",
+    text_alignment="center",
+    width="stretch",
+    help="This is a help tooltip!",
+)
+
+st.caption(
+    """
+Centered caption text. This should be long to demonstrate justification properly.
+This is a longer paragraph that demonstrates text justification properly.
+The text stretches to fill the available width.""",
+    text_alignment="center",
+    help="This is a help tooltip!",
+)
+st.caption(
+    """Right aligned caption this should be long to
+demonstrate justification properly. This is a longer paragraph that demonstrates
+text justification properly. The text stretches to fill the available width.""",
+    text_alignment="right",
+    help="This is a help tooltip!",
+)
+st.caption(
+    """Justified caption text this should be long to
+demonstrate justification properly. This is a longer paragraph that demonstrates
+text justification properly. The text stretches to fill the available width.""",
+    text_alignment="justify",
+    help="This is a help tooltip!",
+)

@@ -18,7 +18,7 @@ import React, { PureComponent, ReactElement } from "react"
 
 import { screen } from "@testing-library/react"
 
-import { render } from "@streamlit/lib"
+import { render } from "@streamlit/lib/testing"
 
 import withScreencast, { ScreenCastHOC, Steps } from "./withScreencast"
 

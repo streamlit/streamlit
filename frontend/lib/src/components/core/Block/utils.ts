@@ -58,8 +58,8 @@ export function isElementStale(
       // If they have the same scriptRunId, they were just updated.
       return Boolean(
         node.fragmentId &&
-          fragmentIdsThisRun.includes(node.fragmentId) &&
-          node.scriptRunId !== scriptRunId
+        fragmentIdsThisRun.includes(node.fragmentId) &&
+        node.scriptRunId !== scriptRunId
       )
     }
     return node.scriptRunId !== scriptRunId

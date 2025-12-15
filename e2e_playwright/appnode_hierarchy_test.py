@@ -103,3 +103,71 @@ def test_placeholder_updates_do_not_leave_stale_elements(app: Page) -> None:
     expect(app.get_by_test_id("stMarkdown").nth(0)).to_have_text("placeholder-top")
     expect(app.get_by_test_id("stMarkdown").nth(1)).to_have_text("placeholder-filled")
     expect(app.get_by_test_id("stMarkdown").nth(2)).to_have_text("placeholder-bottom")
+
+
+def test_simple_transient_spinner_does_not_leave_stale_elements(app: Page) -> None:
+    _select_mode(app, "simple_transient_spinner")
+
+    # Initial state
+    expect(app.get_by_text("Hello world 1! (delta path 0 1)")).to_be_visible()
+
+    get_button(app, "Rerun").click()
+
+    # The app sleeps for 5s in the else block.
+    # We check for stale elements after 0.5s.
+    app.wait_for_timeout(500)
+
+    expect(app.get_by_text("Hello world 2! (delta path 0 0)")).to_be_visible()
+
+    # Verify no stale elements. We don't wait because the script run will eventually remove the stale elements.
+    expect(app.locator("[data-stale='true']")).to_have_count(0, timeout=1)
+    expect(app.get_by_text("Hello world 1! (delta path 0 1)")).not_to_be_visible()
+
+
+def test_complex_transient_spinner_interrupted_does_not_leave_stale_elements(
+    app: Page,
+) -> None:
+    _select_mode(app, "complex_transient_spinner")
+
+    # Run without spinners first
+    get_button(app, "Rerun without spinners").click()
+    wait_for_app_run(app)
+
+    # Run with spinners
+    get_button(app, "Rerun with spinners").click()
+    # Interrupt it (run without spinners)
+    # This button might be disabled if we don't act fast or if the app blocks.
+    # Assuming standard behavior where we can interrupt.
+    get_button(app, "Rerun without spinners").click()
+
+    wait_for_app_run(app)
+
+    # Verify no unexpected stale element out of order.
+    # Verify no stale elements. We don't wait because the script run will eventually remove the stale elements.
+    expect(app.locator("[data-stale='true']")).to_have_count(0, timeout=1)
+    expect(app.get_by_text("some text")).to_have_count(2)
+
+
+def test_chat_transient_spinner_does_not_leave_stale_elements(app: Page) -> None:
+    _select_mode(app, "chat_transient_spinner")
+
+    chat_input = app.get_by_test_id("stChatInput").locator("textarea")
+
+    # Type content and enter
+    chat_input.fill("Message 1")
+    chat_input.press("Enter")
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Echo: Message 1")).to_be_visible()
+
+    # Type more content and enter
+    chat_input.fill("Message 2")
+    chat_input.press("Enter")
+
+    # Wait 0.5s and verify no stale elements
+    app.wait_for_timeout(500)
+    # Verify no stale elements. We don't wait because the script run will eventually remove the stale elements.
+    expect(app.locator("[data-stale='true']")).to_have_count(0, timeout=1)
+
+    wait_for_app_run(app)
+    expect(app.get_by_text("Echo: Message 2")).to_be_visible()

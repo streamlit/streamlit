@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING
 from urllib.parse import parse_qs, urlencode, urlparse
 
 import pytest
-from playwright.sync_api import FilePayload, Locator, Page, expect
+from playwright.sync_api import Error, FilePayload, Locator, Page, expect
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -42,6 +42,7 @@ from e2e_playwright.shared.app_utils import (
     get_element_by_key,
     goto_app,
     reset_hovering,
+    select_selectbox_option,
 )
 
 
@@ -167,7 +168,8 @@ def file_upload_helper(app: Page, chat_input: Locator, files: list[FilePayload])
 
     # Ensure button is ready to be clicked (WebKit specific issue)
     expect(upload_button).to_be_enabled()
-    app.wait_for_timeout(100)  # Small delay to ensure button is fully ready
+    # Wait until the upload button is fully enabled, up to 2 seconds
+    expect(upload_button).to_be_enabled(timeout=2000)
 
     with app.expect_file_chooser() as fc_info:
         # Use force=True for WebKit to ensure the click triggers file chooser
@@ -208,8 +210,9 @@ def grant_microphone_permissions(page: Page) -> None:
     """Grant microphone permissions where supported."""
     try:
         page.context.grant_permissions(["microphone"])
-    except Exception:
-        pass
+    except Error as e:
+        # It's safe to ignore failure: contexts might not support permissions in all environments.
+        print(f"Could not grant microphone permissions: {e}")
 
 
 def record_audio_in_chat_input(
@@ -514,6 +517,7 @@ def test_grows_shrinks_input_text(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that input grows with long text and shrinks when text is deleted."""
+    num_backspaces = 20  # Number of backspaces to simulate shrinking the input
     themed_app.set_viewport_size({"width": 750, "height": 2000})
 
     chat_input = get_element_by_key(themed_app, "bottom_max_chars")
@@ -524,8 +528,9 @@ def test_grows_shrinks_input_text(
         "eu pellentesque metus pellentesque at. Ut et dui molestie, iaculis magna."
     )
     assert_snapshot(chat_input, name="st_chat_input-grows")
-    for _ in range(20):
-        chat_input_area.press("Backspace", delay=10)
+    backspace_press_delay_ms = 10
+    for _ in range(num_backspaces):
+        chat_input_area.press("Backspace", delay=backspace_press_delay_ms)
     assert_snapshot(chat_input, name="st_chat_input-shrinks")
 
 
@@ -589,7 +594,8 @@ def test_uploads_and_deletes_single_file(
 
     wait_for_app_run(themed_app)
 
-    expect(uploaded_files).not_to_have_text(file_name2, use_inner_text=True)
+    # After deletion, the uploaded files container should not be visible
+    expect(chat_input.get_by_test_id("stChatUploadedFiles")).not_to_be_visible()
 
 
 @use_chat_input("multiple_files")
@@ -1568,3 +1574,35 @@ def test_chat_input_recording_error(app: Page, assert_snapshot: ImageCompareFunc
     textarea.fill("Error cleared")
     # After typing, tooltip should not appear on hover anymore
     expect(tooltip).not_to_be_visible()
+
+
+@use_chat_input("audio_sample_rate")
+@pytest.mark.skip_browser("webkit")  # Webkit CI audio permission issue
+@pytest.mark.parametrize(
+    ("option_text", "expected_hz"),
+    [
+        ("16 kHz (Default)", 16000),
+        ("48 kHz (High quality)", 48000),
+        ("8 kHz (Low quality)", 8000),
+    ],
+)
+def test_audio_sample_rate_validation(app: Page, option_text: str, expected_hz: int):
+    """Test recording audio at various sample rates and validate the output."""
+    grant_microphone_permissions(app)
+
+    # Select the specified sample rate from dropdown
+    select_selectbox_option(app, "Select audio sample rate", option_text)
+
+    # Get the chat input for audio recording
+    chat_input = get_element_by_key(app, "audio_sample_rate_test")
+    chat_input.scroll_into_view_if_needed()
+
+    # Record audio
+    record_audio_in_chat_input(app, chat_input, duration_ms=2000)
+
+    # Verify the validation message appears
+    expect(
+        app.get_by_text("Sample rate validation PASSED", exact=False)
+    ).to_be_visible()
+    expect(app.get_by_text(f"Expected {expected_hz} Hz", exact=False)).to_be_visible()
+    expect(app.get_by_text(f"got {expected_hz} Hz", exact=False)).to_be_visible()

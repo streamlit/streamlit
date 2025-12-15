@@ -90,7 +90,7 @@ class UploadedFileManagerTest(unittest.TestCase):
         assert self.mgr.get_files("session2", [FILE_1.file_id]) == [FILE_1]
 
     def test_cache_stats_provider(self):
-        """Test CacheStatsProvider implementation."""
+        """Test StatsProvider implementation."""
 
         # Test empty manager
         assert self.mgr.get_stats() == []

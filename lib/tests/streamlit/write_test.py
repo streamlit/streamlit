@@ -32,7 +32,8 @@ from PIL import Image
 import streamlit as st
 from streamlit import type_util
 from streamlit.error_util import handle_uncaught_app_exception
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import NoSessionContext, StreamlitAPIException
+from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.state import QueryParamsProxy, SessionStateProxy
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.data_test_cases import (
@@ -412,12 +413,16 @@ class StreamlitWriteTest(unittest.TestCase):
 
     def test_spinner(self):
         """Test st.spinner."""
-        # TODO(armando): Test that the message is actually passed to
-        # message.warning
-        with patch("streamlit.delta_generator.DeltaGenerator.empty") as e:
-            with st.spinner("some message"):
-                time.sleep(0.15)
-            e.assert_called_once_with()
+        with patch("streamlit.delta_generator.DeltaGenerator._transient") as t:
+            t.return_value = (ForwardMsg, ForwardMsg)
+            try:
+                with st.spinner("some message"):
+                    time.sleep(0.15)
+            except NoSessionContext:
+                # This happens on the clear call, so we can safely ignore it.
+                pass
+            # Spinner now uses _transient instead of empty
+            t.assert_called()
 
     def test_sidebar(self):
         """Test st.write in the sidebar."""

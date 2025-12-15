@@ -23,8 +23,7 @@ import React, {
   useState,
 } from "react"
 
-import isEqual from "lodash/isEqual"
-import zip from "lodash/zip"
+import { isEqual, zip } from "lodash-es"
 import { flushSync } from "react-dom"
 import { FileRejection } from "react-dropzone"
 

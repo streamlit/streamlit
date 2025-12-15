@@ -641,8 +641,6 @@ class ContainerTest(DeltaGeneratorTestCase):
     )
     def test_container_invalid_horizontal_alignment(self, horizontal_alignment) -> None:
         """Test that st.container raises on invalid horizontal_alignment."""
-        import streamlit as st
-
         with pytest.raises(StreamlitInvalidHorizontalAlignmentError):
             st.container(horizontal=True, horizontal_alignment=horizontal_alignment)
 
@@ -654,8 +652,6 @@ class ContainerTest(DeltaGeneratorTestCase):
     )
     def test_container_invalid_vertical_alignment(self, vertical_alignment) -> None:
         """Test that st.container raises on invalid vertical_alignment."""
-        import streamlit as st
-
         with pytest.raises(StreamlitInvalidVerticalAlignmentError):
             st.container(horizontal=True, vertical_alignment=vertical_alignment)
 

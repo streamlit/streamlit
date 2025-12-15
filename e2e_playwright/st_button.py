@@ -62,6 +62,11 @@ with st.container(key="help_button_container"):
 
 st.button("Like Button", icon=":material/thumb_up:")
 st.button("Star Button", icon="⭐")
+shortcut_button_clicked = st.button(
+    "Shortcut Button", key="shortcut_button", shortcut="Ctrl+J"
+)
+if shortcut_button_clicked:
+    st.write("Shortcut button pressed!")
 
 st.button("Tertiary Button", type="tertiary")
 st.button("Disabled Tertiary Button", type="tertiary", disabled=True)
@@ -129,3 +134,10 @@ else:
     st.write("Clicked initial button:", clicked)
 
 st.button("Button with spinner icon", icon="spinner")
+
+st.button(
+    "Icon Right",
+    icon=":material/thumb_up:",
+    icon_position="right",
+    key="icon_right_material",
+)

@@ -47,7 +47,7 @@ def marshall_styler(proto: ArrowProto, styler: Styler, default_uuid: str) -> Non
     """
     import pandas as pd
 
-    styler_data_df: pd.DataFrame = styler.data
+    styler_data_df: pd.DataFrame = styler.data  # type: ignore[attr-defined]
     if styler_data_df.size > int(pd.options.styler.render.max_elements):
         raise StreamlitAPIException(
             f"The dataframe has `{styler_data_df.size}` cells, but the maximum number "
@@ -62,9 +62,9 @@ def marshall_styler(proto: ArrowProto, styler: Styler, default_uuid: str) -> Non
 
     # We're using protected members of pandas.Styler to get styles,
     # which is not ideal and could break if the interface changes.
-    styler._compute()
+    styler._compute()  # type: ignore
 
-    pandas_styles = styler._translate(False, False)
+    pandas_styles = styler._translate(False, False)  # type: ignore
 
     _marshall_caption(proto, styler)
     _marshall_styles(proto, styler, pandas_styles)
@@ -86,10 +86,10 @@ def _marshall_uuid(proto: ArrowProto, styler: Styler, default_uuid: str) -> None
         If pandas.Styler uuid is not provided, this value will be used.
 
     """
-    if styler.uuid is None:
+    if styler.uuid is None:  # type: ignore[attr-defined]
         styler.set_uuid(default_uuid)
 
-    proto.styler.uuid = str(styler.uuid)
+    proto.styler.uuid = str(styler.uuid)  # type: ignore[attr-defined]
 
 
 def _marshall_caption(proto: ArrowProto, styler: Styler) -> None:
@@ -104,8 +104,8 @@ def _marshall_caption(proto: ArrowProto, styler: Styler) -> None:
         Helps style a DataFrame or Series according to the data with HTML and CSS.
 
     """
-    if styler.caption is not None:
-        proto.styler.caption = styler.caption
+    if styler.caption is not None:  # type: ignore[attr-defined]
+        proto.styler.caption = styler.caption  # type: ignore[attr-defined]
 
 
 def _marshall_styles(
@@ -134,7 +134,10 @@ def _marshall_styles(
             # styles in "table_styles" have a space
             # between the uuid and selector.
             rule = _pandas_style_to_css(
-                "table_styles", style, styler.uuid, separator=" "
+                "table_styles",
+                style,
+                styler.uuid,  # type: ignore[attr-defined]
+                separator=" ",
             )
             css_rules.append(rule)
 
@@ -142,7 +145,12 @@ def _marshall_styles(
         cellstyle = styles["cellstyle"]
         cellstyle = _trim_pandas_styles(cellstyle)
         for style in cellstyle:
-            rule = _pandas_style_to_css("cell_style", style, styler.uuid, separator="_")
+            rule = _pandas_style_to_css(
+                "cell_style",
+                style,
+                styler.uuid,  # type: ignore[attr-defined]
+                separator="_",
+            )
             css_rules.append(rule)
 
     if len(css_rules) > 0:

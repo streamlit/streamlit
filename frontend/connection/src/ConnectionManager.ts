@@ -21,7 +21,7 @@ import { BackMsg, ForwardMsg } from "@streamlit/protobuf"
 import { ConnectionState } from "./ConnectionState"
 import { MAX_RETRIES_BEFORE_CLIENT_ERROR } from "./constants"
 import { establishStaticConnection } from "./StaticConnection"
-import { IHostConfigResponse, StreamlitEndpoints } from "./types"
+import { ErrorDetails, IHostConfigResponse, StreamlitEndpoints } from "./types"
 import { getPossibleBaseUris } from "./utils"
 import { WebsocketConnection } from "./WebsocketConnection"
 
@@ -42,7 +42,7 @@ interface Props {
   /**
    * Function to be called when the connection errors out.
    */
-  onConnectionError: (errNode: string) => void
+  onConnectionError: (errNode: ErrorDetails) => void
 
   /**
    * Called when our ConnectionState is changed.
@@ -195,10 +195,9 @@ export class ConnectionManager {
           err.message,
           "Connection Manager"
         )
-        this.setConnectionState(
-          ConnectionState.DISCONNECTED_FOREVER,
-          err.message
-        )
+        this.setConnectionState(ConnectionState.DISCONNECTED_FOREVER, {
+          message: err.message,
+        })
       }
     }
   }
@@ -207,9 +206,9 @@ export class ConnectionManager {
     this.websocketConnection?.disconnect()
   }
 
-  private setConnectionState = (
+  private readonly setConnectionState = (
     connectionState: ConnectionState,
-    errMsg?: string
+    errMsg?: ErrorDetails
   ): void => {
     if (this.connectionState !== connectionState) {
       this.connectionState = connectionState
@@ -221,9 +220,9 @@ export class ConnectionManager {
     }
   }
 
-  private showRetryError = (
+  private readonly showRetryError = (
     totalRetries: number,
-    latestError: string,
+    latestError: ErrorDetails,
     // The last argument of this function is unused and exists because the
     // WebsocketConnection.OnRetry type allows a third argument to be set to be
     // used in tests.

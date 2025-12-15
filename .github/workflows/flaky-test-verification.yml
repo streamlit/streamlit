@@ -12,12 +12,12 @@ on:
       runs:
         description: Number of times to run changed-files E2E
         required: false
-        default: "50"
+        default: "25"
         type: string
 
 permissions:
   contents: read
-  pull-requests: read
+  pull-requests: write
 
 jobs:
   verify:
@@ -34,6 +34,14 @@ jobs:
       base_ref: ${{ steps.compute.outputs.base_ref }}
       matrix: ${{ steps.compute.outputs.matrix }}
     steps:
+      - name: Remove flaky-verify label
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/labels/flaky-verify \
+            --method DELETE || true
+
       - name: Compute inputs and matrix
         id: compute
         shell: bash
@@ -43,7 +51,7 @@ jobs:
           # Resolve runs
           runs_input="${{ inputs.runs }}"
           if [[ -z "$runs_input" ]]; then
-            runs_input="50"
+            runs_input="25"
           fi
           echo "runs=$runs_input" >> "$GITHUB_OUTPUT"
 

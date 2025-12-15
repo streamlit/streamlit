@@ -20,7 +20,7 @@
  */
 
 import { Field, Struct, StructRow, TimeUnit, util } from "apache-arrow"
-import trimEnd from "lodash/trimEnd"
+import { trimEnd } from "lodash-es"
 import { getLogger } from "loglevel"
 import moment from "moment-timezone"
 import numbro from "numbro"

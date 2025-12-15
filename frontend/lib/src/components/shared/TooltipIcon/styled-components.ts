@@ -42,9 +42,10 @@ export const StyledLabelHelpWrapper = styled.div<StyledLabelHelpWrapperProps>(
     flexDirection: "row",
     alignItems: "center",
     visibility: "visible",
-    width: "100%",
-    // For LaTeX, center the content
-    ...(isLatex ? { justifyContent: "center" } : {}),
+    // For LaTeX, use fit-content to keep icon close, but constrain with maxWidth
+    // so long formulas can scroll. Center using margin-inline: auto
+    width: isLatex ? "fit-content" : "100%",
+    ...(isLatex ? { maxWidth: "100%", marginInline: "auto" } : {}),
   })
 )
 

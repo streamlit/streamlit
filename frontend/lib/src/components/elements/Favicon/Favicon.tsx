@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-import * as nodeEmoji from "node-emoji"
-
 import { IGuestToHostMessage } from "~lib/hostComm/types"
 import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
 
@@ -42,27 +40,68 @@ export function handleFavicon(
   sendMessageToHost: (message: IGuestToHostMessage) => void,
   endpoints: StreamlitEndpoints
 ): void {
-  const emoji = extractEmoji(favicon)
-  let imageUrl
-
-  if (emoji && !favicon.startsWith(":material")) {
-    // Create a favicon data URL as SVG with the emoji embedded.
-    imageUrl = `data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>${emoji}</text></svg>`
-  } else if (favicon.startsWith(":material")) {
-    imageUrl = iconToUrl(favicon)
-  } else {
-    imageUrl = endpoints.buildMediaURL(favicon)
+  const setFavicon = (imageUrl: string): void => {
+    overwriteFavicon(imageUrl)
+    sendMessageToHost({
+      type: "SET_PAGE_FAVICON",
+      favicon: imageUrl,
+    })
   }
 
-  overwriteFavicon(imageUrl)
+  // Check for material icon first (synchronous, no emoji extraction needed)
+  if (favicon.startsWith(":material")) {
+    setFavicon(iconToUrl(favicon))
+    return
+  }
 
-  sendMessageToHost({
-    type: "SET_PAGE_FAVICON",
-    favicon: imageUrl,
-  })
+  // Check for direct emoji (synchronous, no library loading needed)
+  const EMOJI_PREFIX = "emoji:"
+  if (favicon.startsWith(EMOJI_PREFIX)) {
+    const emoji = favicon.substring(EMOJI_PREFIX.length)
+    const imageUrl = createEmojiDataUrl(emoji)
+    setFavicon(imageUrl)
+    return
+  }
+
+  // Check if it looks like a shortcode pattern before attempting conversion
+  // This avoids unnecessarily lazy-loading node-emoji for regular URLs
+  const shortcodePattern = /^:[a-zA-Z0-9_+-]+:$/
+  if (shortcodePattern.test(favicon)) {
+    // Check for emoji shortcode (asynchronous, may need to lazy-load node-emoji)
+    void convertShortcodeToEmoji(favicon)
+      .then(emoji => {
+        if (emoji) {
+          setFavicon(createEmojiDataUrl(emoji))
+        } else {
+          // Not a valid shortcode, treat as URL
+          setFavicon(endpoints.buildMediaURL(favicon))
+        }
+      })
+      .catch(() => {
+        // Error loading node-emoji, treat as URL
+        setFavicon(endpoints.buildMediaURL(favicon))
+      })
+  } else {
+    // Not a shortcode pattern, treat as URL
+    setFavicon(endpoints.buildMediaURL(favicon))
+  }
 }
 
-// Update the favicon in the DOM with the specified image.
+/**
+ * Create a data URL for an emoji to use as a favicon.
+ *
+ * @param emoji - The emoji character(s) to embed in the SVG
+ * @returns A data URL containing an SVG with the emoji
+ */
+function createEmojiDataUrl(emoji: string): string {
+  return `data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>${emoji}</text></svg>`
+}
+
+/**
+ * Update the favicon in the DOM with the specified image URL.
+ *
+ * @param imageUrl - The URL to set as the favicon
+ */
 function overwriteFavicon(imageUrl: string): void {
   const faviconElement: HTMLLinkElement | null = document.querySelector(
     "link[rel='shortcut icon']"
@@ -73,20 +112,30 @@ function overwriteFavicon(imageUrl: string): void {
   }
 }
 
-// Return the emoji if it exists, or empty string otherwise
-export function extractEmoji(maybeEmoji: string): string {
-  const EMOJI_PREFIX = "emoji:"
-  if (maybeEmoji.startsWith(EMOJI_PREFIX)) {
-    // Remove the 'emoji:' prefix
-    return maybeEmoji.substring(EMOJI_PREFIX.length)
-  }
+/**
+ * Convert an emoji shortcode to the actual emoji character.
+ * Lazy-loads node-emoji library only when needed.
+ *
+ * @param shortcode - An emoji shortcode like ":pizza:" or "pizza"
+ * @returns Promise that resolves to the emoji string or empty string if not found
+ *
+ * @example
+ * await convertShortcodeToEmoji(":pizza:") // Returns "🍕"
+ * await convertShortcodeToEmoji(":crescent-moon:") // Returns "🌙" (handles dashes)
+ * await convertShortcodeToEmoji(":invalid:") // Returns ""
+ */
+async function convertShortcodeToEmoji(shortcode: string): Promise<string> {
+  // Lazy-load node-emoji only when we need shortcode conversion
+  const nodeEmoji = await import("node-emoji")
 
-  // At this point, it must be a shortcode, so we normalize and check if it exists
-  const shortcode = maybeEmoji.replace("-", "_")
-  const emoji = nodeEmoji.get(shortcode)
-  if (emoji !== undefined && nodeEmoji.has(emoji)) {
-    // Format: pizza or :pizza:
-    // Since has(':pizza:') == true, we must do this check first
+  // Normalize dashes to underscores (node-emoji uses underscores)
+  const normalizedShortcode = shortcode.replace(/-/g, "_")
+
+  // Get the emoji for this shortcode
+  const emoji = nodeEmoji.get(normalizedShortcode)
+
+  // Verify it's a valid emoji (not just the shortcode string returned)
+  if (emoji && emoji !== normalizedShortcode && nodeEmoji.has(emoji)) {
     return emoji
   }
 
