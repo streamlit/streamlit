@@ -19,7 +19,12 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Final
 
 from starlette.datastructures import Headers
-from starlette.middleware.gzip import GZipMiddleware, GZipResponder, IdentityResponder
+from starlette.middleware.gzip import (
+    DEFAULT_EXCLUDED_CONTENT_TYPES,
+    GZipMiddleware,
+    GZipResponder,
+    IdentityResponder,
+)
 
 if TYPE_CHECKING:
     from starlette.types import ASGIApp, Message, Receive, Scope, Send
@@ -27,7 +32,11 @@ if TYPE_CHECKING:
 # Extended exclusion list: Starlette's default + audio/video prefixes.
 # Compressing binary media content breaks playback in browsers,
 # especially with range requests.
-_EXCLUDED_CONTENT_TYPES: Final = ("text/event-stream", "audio/", "video/")
+_EXCLUDED_CONTENT_TYPES: Final = (
+    *DEFAULT_EXCLUDED_CONTENT_TYPES,
+    "audio/",
+    "video/",
+)
 
 
 class _MediaAwareIdentityResponder(IdentityResponder):
