@@ -99,7 +99,8 @@ export const StyledRightCluster = styled.div(({ theme }) => ({
 export const StyledInputInstructions = styled.div(({ theme }) => ({
   position: "absolute",
   top: theme.spacing.sm,
-  right: theme.spacing.lg,
+  // Position to the left of the send button: padding + button width + gap
+  right: `calc(${theme.spacing.lg} + ${theme.sizes.chatInputPrimaryButtonSize} + ${theme.spacing.sm})`,
   color: theme.colors.fadedText60,
   fontSize: theme.fontSizes.twoSm,
   textAlign: "right",
