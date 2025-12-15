@@ -35,9 +35,11 @@ from streamlit.runtime.state.common import (
 from streamlit.runtime.state.query_param_serializers import (
     deserialize_bool,
     deserialize_number,
+    deserialize_number_range,
     deserialize_string,
     serialize_bool,
     serialize_number,
+    serialize_number_range,
     serialize_string,
 )
 
@@ -59,10 +61,19 @@ _VALUE_TYPE_SERIALIZERS: dict[
     "string_value": (serialize_string, deserialize_string),
     "int_value": (serialize_number, lambda v: deserialize_number(v, as_int=True)),
     "double_value": (serialize_number, deserialize_number),
-    # Array and complex types don't have default serializers yet
-    "double_array_value": None,
-    "int_array_value": None,
-    "string_array_value": None,
+    # Array types use range serializers (comma-separated values)
+    # Note: string_array_value is not supported because it's used by multiple
+    # widgets (date_input, datetime_input) with different string formats
+    "double_array_value": (
+        serialize_number_range,
+        deserialize_number_range,
+    ),
+    "int_array_value": (
+        serialize_number_range,
+        lambda v: deserialize_number_range(v, as_int=True),
+    ),
+    "string_array_value": None,  # Widget-specific (date format varies)
+    # Complex types that should not be bound to URL params
     "arrow_value": None,
     "bytes_value": None,
     "file_uploader_state_value": None,
