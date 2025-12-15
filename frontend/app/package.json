@@ -115,7 +115,7 @@
     "typescript-eslint": "^8.48.0",
     "typesync": "^0.14.3",
     "util": "^0.12.5",
-    "vite": "^7.2.4",
+    "vite": "^7.2.7",
     "vite-bundle-analyzer": "^1.2.4",
     "vite-plugin-svgr": "^4.5.0",
     "vite-tsconfig-paths": "^5.1.4",
