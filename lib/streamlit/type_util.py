@@ -345,8 +345,8 @@ def dump_pydantic_sequence(obj: Sequence[object]) -> list[dict[str, Any]]:
     # Pydantic v2 uses model_dump(), v1 uses dict()
     if has_callable_attr(first_element, "model_dump"):
         # Use mode="json" to ensure proper serialization of types like Decimal
-        return [item.model_dump(mode="json") for item in obj]
-    return [item.dict() for item in obj]
+        return [item.model_dump(mode="json") for item in obj]  # type: ignore
+    return [item.dict() for item in obj]  # type: ignore
 
 
 def _is_from_streamlit(obj: object) -> bool:
