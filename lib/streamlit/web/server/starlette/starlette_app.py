@@ -25,7 +25,6 @@ from streamlit import config, file_util
 from streamlit.web.server.server_util import get_cookie_secret
 from streamlit.web.server.starlette.starlette_auth_routes import get_auth_routes
 from streamlit.web.server.starlette.starlette_routes import (
-    _ROUTE_WEBSOCKET_STREAM,
     _with_base,
     create_app_static_routes,
     create_bidi_component_routes,
@@ -46,7 +45,7 @@ from streamlit.web.server.starlette.starlette_server_config import (
 from streamlit.web.server.starlette.starlette_static import (
     create_streamlit_static_files,
 )
-from streamlit.web.server.starlette.starlette_websocket import create_websocket_handler
+from streamlit.web.server.starlette.starlette_websocket import create_websocket_routes
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -77,7 +76,7 @@ def create_starlette_app(runtime: Runtime) -> Starlette:
     try:
         from starlette.applications import Starlette
         from starlette.middleware.sessions import SessionMiddleware
-        from starlette.routing import Mount, Route, WebSocketRoute
+        from starlette.routing import Mount, Route
     except ModuleNotFoundError as exc:  # pragma: no cover - import guard
         raise RuntimeError(
             "Starlette is not installed. Run `pip install streamlit[starlette]` "
@@ -115,12 +114,7 @@ def create_starlette_app(runtime: Runtime) -> Starlette:
     routes.extend(create_bidi_component_routes(bidi_component_manager, base_url))
 
     # Add WebSocket route:
-    routes.append(
-        WebSocketRoute(
-            _with_base(_ROUTE_WEBSOCKET_STREAM, base_url),
-            create_websocket_handler(runtime),
-        )
-    )
+    routes.extend(create_websocket_routes(runtime, base_url))
 
     # Add auth routes:
     routes.extend(get_auth_routes(base_url))

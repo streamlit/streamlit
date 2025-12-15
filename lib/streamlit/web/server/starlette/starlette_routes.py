@@ -80,19 +80,15 @@ _ROUTE_BIDI_COMPONENT: Final = "_stcore/bidi-components/{path:path}"
 # App static files
 _ROUTE_APP_STATIC: Final = "app/static/{path:path}"
 
-# WebSocket stream
-_ROUTE_WEBSOCKET_STREAM: Final = "_stcore/stream"
-
 
 def _with_base(path: str, base_url: str | None = None) -> str:
     """Prepend the base URL path to a route path."""
+    from streamlit.url_util import make_url_path
+
     base = (
         base_url if base_url is not None else config.get_option("server.baseUrlPath")
     ) or ""
-    base = base.strip("/")
-    if base:
-        return f"/{base}/{path.lstrip('/')}"
-    return f"/{path.lstrip('/')}"
+    return make_url_path(base, path)
 
 
 async def _set_cors_headers(request: Request, response: Response) -> None:

@@ -47,6 +47,9 @@ if TYPE_CHECKING:
 
 _LOGGER: Final = get_logger(__name__)
 
+# WebSocket stream route path (without base URL prefix).
+_ROUTE_WEBSOCKET_STREAM: Final = "_stcore/stream"
+
 
 def _parse_subprotocols(
     headers: Headers,
@@ -317,3 +320,17 @@ def create_websocket_handler(runtime: Runtime) -> Any:
             await client.aclose()
 
     return _websocket_endpoint
+
+
+def create_websocket_routes(runtime: Runtime, base_url: str | None) -> list[Any]:
+    """Create the WebSocket route for client-server communication."""
+    from starlette.routing import WebSocketRoute
+
+    from streamlit.url_util import make_url_path
+
+    return [
+        WebSocketRoute(
+            make_url_path(base_url or "", _ROUTE_WEBSOCKET_STREAM),
+            create_websocket_handler(runtime),
+        )
+    ]
