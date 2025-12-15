@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import json
 from unittest.mock import MagicMock
 
 from streamlit.web.server.starlette import starlette_app_utils
@@ -247,9 +248,6 @@ class TestParseUserCookieSigned:
     @patch_config_options({"server.cookieSecret": "test-secret"})
     def test_returns_empty_dict_for_invalid_origin(self) -> None:
         """Test that empty dict is returned for invalid origin format."""
-        import json
-
-        from tornado.web import create_signed_value
 
         cookie_payload = json.dumps(
             {
@@ -258,7 +256,7 @@ class TestParseUserCookieSigned:
                 "email": "test@test.com",
             }
         )
-        signed_cookie = create_signed_value(
+        signed_cookie = starlette_app_utils.create_signed_value(
             "test-secret", "_streamlit_user", cookie_payload
         )
 
@@ -270,9 +268,6 @@ class TestParseUserCookieSigned:
     @patch_config_options({"server.cookieSecret": "test-secret"})
     def test_returns_empty_dict_for_origin_mismatch(self) -> None:
         """Test that empty dict is returned when origins don't match."""
-        import json
-
-        from tornado.web import create_signed_value
 
         cookie_payload = json.dumps(
             {
@@ -281,7 +276,7 @@ class TestParseUserCookieSigned:
                 "email": "test@test.com",
             }
         )
-        signed_cookie = create_signed_value(
+        signed_cookie = starlette_app_utils.create_signed_value(
             "test-secret", "_streamlit_user", cookie_payload
         )
 
@@ -340,16 +335,11 @@ class TestParseUserCookieSigned:
     @patch_config_options({"server.cookieSecret": "test-secret"})
     def test_handles_string_cookie(self) -> None:
         """Test that string cookie is handled correctly."""
-        import json
-
-        from streamlit.web.server.starlette.starlette_app_utils import (
-            create_signed_value,
-        )
 
         cookie_payload = json.dumps(
             {"origin": "http://localhost", "is_logged_in": True}
         )
-        signed_cookie = create_signed_value(
+        signed_cookie = starlette_app_utils.create_signed_value(
             "test-secret", "_streamlit_user", cookie_payload
         )
 

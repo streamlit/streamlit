@@ -139,6 +139,51 @@ class TestReservedPaths:
         assert "_stcore/health" in _RESERVED_STATIC_PATH_SUFFIXES
         assert "_stcore/host-config" in _RESERVED_STATIC_PATH_SUFFIXES
 
+    def test_reserved_path_returns_404(self, static_app: TestClient) -> None:
+        """Test that reserved paths return 404 instead of SPA fallback."""
+        response = static_app.get("/_stcore/health")
+
+        assert response.status_code == 404
+
+    def test_reserved_path_host_config_returns_404(
+        self, static_app: TestClient
+    ) -> None:
+        """Test that reserved host-config path returns 404."""
+        response = static_app.get("/_stcore/host-config")
+
+        assert response.status_code == 404
+
+    def test_user_path_ending_with_reserved_suffix_gets_spa_fallback(
+        self, static_app: TestClient
+    ) -> None:
+        """Test that user paths ending with reserved suffixes get SPA fallback.
+
+        Paths like /my_stcore/health should NOT be treated as reserved because
+        'my_stcore/health'.endswith('_stcore/health') is True but it's not
+        actually a reserved path - the check should be path-segment aware.
+        """
+        response = static_app.get("/my_stcore/health")
+
+        # Should get SPA fallback (index.html), not 404
+        assert response.status_code == 200
+        assert response.text == "<html>Home</html>"
+
+    def test_user_path_custom_stcore_gets_spa_fallback(
+        self, static_app: TestClient
+    ) -> None:
+        """Test that /custom_stcore/host-config gets SPA fallback, not 404."""
+        response = static_app.get("/custom_stcore/host-config")
+
+        # Should get SPA fallback (index.html), not 404
+        assert response.status_code == 200
+        assert response.text == "<html>Home</html>"
+
+    def test_nested_reserved_path_returns_404(self, static_app: TestClient) -> None:
+        """Test that nested reserved paths like /foo/_stcore/health return 404."""
+        response = static_app.get("/foo/_stcore/health")
+
+        assert response.status_code == 404
+
 
 class TestWithBaseUrl:
     """Tests for static files with base URL."""

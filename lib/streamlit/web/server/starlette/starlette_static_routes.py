@@ -130,7 +130,8 @@ def create_streamlit_static_handler(
             if self._base_url and normalized.startswith(self._base_url):
                 normalized = normalized[len(self._base_url) :].strip("/")
             return any(
-                normalized.endswith(suffix) for suffix in _RESERVED_STATIC_PATH_SUFFIXES
+                normalized == suffix or normalized.endswith("/" + suffix)
+                for suffix in _RESERVED_STATIC_PATH_SUFFIXES
             )
 
         def _apply_cache_headers(self, response: Response, served_path: str) -> None:
