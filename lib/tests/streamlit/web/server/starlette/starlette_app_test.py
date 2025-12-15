@@ -462,12 +462,12 @@ def test_websocket_rejects_text_frames(
 ) -> None:
     """Test that the WebSocket endpoint rejects text frames."""
     client, _ = starlette_client
-    with pytest.raises(Exception):  # noqa: B017, PT011
-        # Starlette/TestClient might raise on disconnect
+    # Starlette's receive_bytes() raises KeyError when text frame is received
+    # instead of binary, because the message dict contains "text" not "bytes".
+    with pytest.raises(KeyError):
         with client.websocket_connect("/_stcore/stream") as websocket:
-            # Sending a text frame should trigger the TypeError logic
+            # Sending a text frame should fail - endpoint expects binary protobufs
             websocket.send_text("Hello")
-            # Reading might fail if server closed connection
             websocket.receive_text()
 
 
@@ -778,7 +778,7 @@ def test_websocket_rejects_auth_cookie_without_valid_xsrf(tmp_path: Path) -> Non
     app = create_starlette_app(runtime)
     client = TestClient(app)
 
-    # Create a valid auth cookie
+    # Create a valid auth cookie using Starlette's signing (itsdangerous-based)
     cookie_payload = json.dumps(
         {
             "origin": "http://testserver",
@@ -786,9 +786,7 @@ def test_websocket_rejects_auth_cookie_without_valid_xsrf(tmp_path: Path) -> Non
             "email": "user@example.com",
         }
     )
-    from tornado.web import create_signed_value
-
-    cookie_value = create_signed_value(
+    cookie_value = starlette_app_utils.create_signed_value(
         "test-signing-secret",
         "_streamlit_user",
         cookie_payload,
