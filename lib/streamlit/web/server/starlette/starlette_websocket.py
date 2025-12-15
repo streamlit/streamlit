@@ -92,7 +92,6 @@ def _validate_xsrf_token(supplied_token: str | None, xsrf_cookie: str | None) ->
     This mirrors Tornado's XSRF validation logic to ensure the frontend can share
     XSRF logic between WebSocket handshake and HTTP uploads regardless of backend.
     """
-    import hmac
 
     if not supplied_token or not xsrf_cookie:
         return False
@@ -106,6 +105,8 @@ def _validate_xsrf_token(supplied_token: str | None, xsrf_cookie: str | None) ->
 
     if not supplied_token_bytes or not expected_token_bytes:
         return False
+
+    import hmac
 
     return hmac.compare_digest(supplied_token_bytes, expected_token_bytes)
 
