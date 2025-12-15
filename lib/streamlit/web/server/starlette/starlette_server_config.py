@@ -39,3 +39,10 @@ GZIP_MINIMUM_SIZE: Final = 500
 # Lower value results in faster compression but larger file sizes, while higher value
 # results in slower compression but smaller file sizes.
 GZIP_COMPRESSLEVEL: Final = 6
+
+# When server.port is not available it will look for the next available port
+# up to this number of retries.
+MAX_PORT_SEARCH_RETRIES: Final = 100
+
+# Default address to bind to when no address is configured:
+DEFAULT_SERVER_ADDRESS: Final = "0.0.0.0"  # noqa: S104

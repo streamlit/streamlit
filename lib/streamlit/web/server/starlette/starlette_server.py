@@ -27,6 +27,10 @@ from streamlit.config_option import ConfigOption
 from streamlit.logger import get_logger
 from streamlit.runtime.runtime_util import get_max_message_size_bytes
 from streamlit.web.server.starlette.starlette_app import create_starlette_app
+from streamlit.web.server.starlette.starlette_server_config import (
+    DEFAULT_SERVER_ADDRESS,
+    MAX_PORT_SEARCH_RETRIES,
+)
 
 if TYPE_CHECKING:
     import uvicorn
@@ -34,10 +38,6 @@ if TYPE_CHECKING:
     from streamlit.runtime import Runtime
 
 _LOGGER: Final = get_logger(__name__)
-
-# When server.port is not available it will look for the next available port
-# up to this number of retries.
-_MAX_PORT_SEARCH_RETRIES: Final = 100
 
 
 class RetriesExceededError(Exception):
@@ -116,7 +116,7 @@ def _bind_socket(address: str, port: int, backlog: int) -> socket.socket:
 class StarletteServer:
     """Manages the uvicorn server lifecycle for Starlette-based Streamlit apps.
 
-    This class wraps uvicorn to provide the same semantics as the Tornado server:
+    This class wraps uvicorn and provides the following functionality:
     - start() returns after the server is ready to accept connections
     - The server runs in a background task
     - stop() gracefully shuts down the server
@@ -147,7 +147,9 @@ class StarletteServer:
 
         app = create_starlette_app(self._runtime)
 
-        configured_address = config.get_option("server.address")
+        configured_address = (
+            config.get_option("server.address") or DEFAULT_SERVER_ADDRESS
+        )
         configured_port = int(config.get_option("server.port"))
 
         cert_file = config.get_option("server.sslCertFile")
@@ -167,13 +169,12 @@ class StarletteServer:
 
         last_exception: BaseException | None = None
 
-        for attempt in range(_MAX_PORT_SEARCH_RETRIES + 1):
+        for attempt in range(MAX_PORT_SEARCH_RETRIES + 1):
             port = configured_port + attempt
-            address = configured_address if configured_address else ""
 
             uvicorn_config = uvicorn.Config(
                 app,
-                host=address,
+                host=configured_address,
                 port=port,
                 ssl_certfile=cert_file,
                 ssl_keyfile=key_file,
@@ -188,7 +189,7 @@ class StarletteServer:
 
             try:
                 self._socket = _bind_socket(
-                    address if address else "0.0.0.0",  # noqa: S104
+                    configured_address,
                     port,
                     uvicorn_config.backlog,
                 )
@@ -201,11 +202,11 @@ class StarletteServer:
                     _LOGGER.debug(
                         "Port %s already in use, trying to use the next one.", port
                     )
-                    if attempt == _MAX_PORT_SEARCH_RETRIES:
+                    if attempt == MAX_PORT_SEARCH_RETRIES:
                         raise RetriesExceededError(
                             f"Cannot start Streamlit server. Port {port} is already in use, "
                             f"and Streamlit was unable to find a free port after "
-                            f"{_MAX_PORT_SEARCH_RETRIES} attempts."
+                            f"{MAX_PORT_SEARCH_RETRIES} attempts."
                         ) from exc
                     continue
                 raise
@@ -214,7 +215,7 @@ class StarletteServer:
             config.set_option("server.port", port, ConfigOption.STREAMLIT_DEFINITION)
             _LOGGER.debug(
                 "Starting Starlette server on %s:%s",
-                address or "0.0.0.0",  # noqa: S104
+                configured_address,
                 port,
             )
 
@@ -222,6 +223,11 @@ class StarletteServer:
             startup_exception: BaseException | None = None
 
             async def serve_with_signal() -> None:
+                """Serve the Starlette application with proper lifecycle management.
+
+                This ensures the server is shut down gracefully when the task is
+                cancelled or an exception occurs.
+                """
                 nonlocal startup_exception
                 if self._server is None or self._socket is None:
                     raise RuntimeError("Server or socket not initialized")
@@ -265,7 +271,7 @@ class StarletteServer:
 
             _LOGGER.info(
                 "Starlette server started on %s:%s",
-                address or "0.0.0.0",  # noqa: S104
+                configured_address,
                 port,
             )
             return
