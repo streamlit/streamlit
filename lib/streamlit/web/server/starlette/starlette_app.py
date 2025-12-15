@@ -119,7 +119,9 @@ def create_starlette_app(runtime: Runtime) -> Starlette:
 
     # Add app static routes if enabled:
     if config.get_option("server.enableStaticServing"):
-        # TODO(lukasmasuch): _main_script_path
+        # TODO(lukasmasuch): Expose main_script_path as property on runtime class
+        # or make the runtime config available so that we don't need to access the private
+        # attribute.
         main_script_path = getattr(runtime, "_main_script_path", None)
         routes.extend(create_app_static_serving_routes(main_script_path, base_url))
 
