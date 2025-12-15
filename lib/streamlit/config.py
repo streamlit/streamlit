@@ -1003,6 +1003,16 @@ _create_option(
     visibility="hidden",
 )
 
+_create_option(
+    "server.useStarlette",
+    description="""
+        Enable the experimental Starlette-based server implementation instead of
+        Tornado. This is an experimental feature and may be removed in the future.
+    """,
+    default_val=False,
+    type_=bool,
+)
+
 # Config Section: Browser #
 
 _create_section("browser", "Configuration of non-UI browser options.")

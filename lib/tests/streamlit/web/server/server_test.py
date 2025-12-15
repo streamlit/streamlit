@@ -30,9 +30,7 @@ from unittest import mock
 from unittest.mock import patch
 
 import pytest
-import tornado.httpserver
 import tornado.testing
-import tornado.web
 import tornado.websocket
 from parameterized import parameterized
 
@@ -597,7 +595,7 @@ class UnixSocketTest(unittest.TestCase):
         return httpserver
 
     @unittest.skipIf("win32" in sys.platform, "Windows does not have unit sockets")
-    def test_unix_socket(self):
+    def test_unix_socket_tornado(self):
         app = mock.MagicMock()
 
         config.set_option("server.address", "unix://~/fancy-test/testasd")
@@ -624,6 +622,7 @@ class ScriptCheckEndpointExistsTest(tornado.testing.AsyncHTTPTestCase):
         return True, "test_message"
 
     def setUp(self):
+        Runtime._instance = None
         self._old_config = config.get_option("server.scriptHealthCheckEnabled")
         config._set_option("server.scriptHealthCheckEnabled", True, "test")
         super().setUp()
@@ -662,6 +661,7 @@ class ScriptCheckEndpointDoesNotExistTest(tornado.testing.AsyncHTTPTestCase):
         self.fail("Should not be called")
 
     def setUp(self):
+        Runtime._instance = None
         self._old_config = config.get_option("server.scriptHealthCheckEnabled")
         config._set_option("server.scriptHealthCheckEnabled", False, "test")
         super().setUp()
