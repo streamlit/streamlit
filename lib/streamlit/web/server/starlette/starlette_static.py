@@ -111,6 +111,7 @@ def create_streamlit_static_files(directory: str, base_url: str | None) -> Any:
             except HTTPException as exc:
                 if exc.status_code != 404 or self._is_reserved(scope["path"]):
                     raise
+                # Serve index.html for 404s (existing behavior):
                 response = FileResponse(self._index_path)
                 served_path = "index.html"
 
