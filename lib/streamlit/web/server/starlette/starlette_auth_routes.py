@@ -42,9 +42,9 @@ if TYPE_CHECKING:
 _LOGGER: Final = get_logger(__name__)
 
 # Auth route path constants (without base URL prefix)
-ROUTE_AUTH_LOGIN: Final = "auth/login"
-ROUTE_AUTH_LOGOUT: Final = "auth/logout"
-ROUTE_OAUTH_CALLBACK: Final = "oauth2callback"
+_ROUTE_AUTH_LOGIN: Final = "auth/login"
+_ROUTE_AUTH_LOGOUT: Final = "auth/logout"
+_ROUTE_OAUTH_CALLBACK: Final = "oauth2callback"
 
 
 class _AsyncAuthCache:
@@ -327,7 +327,9 @@ def create_auth_routes(base_url: str) -> list[Route]:
         return await _auth_callback(request, base_url)
 
     return [
-        Route(make_url_path(base_url, ROUTE_AUTH_LOGIN), login, methods=["GET"]),
-        Route(make_url_path(base_url, ROUTE_AUTH_LOGOUT), logout, methods=["GET"]),
-        Route(make_url_path(base_url, ROUTE_OAUTH_CALLBACK), callback, methods=["GET"]),
+        Route(make_url_path(base_url, _ROUTE_AUTH_LOGIN), login, methods=["GET"]),
+        Route(make_url_path(base_url, _ROUTE_AUTH_LOGOUT), logout, methods=["GET"]),
+        Route(
+            make_url_path(base_url, _ROUTE_OAUTH_CALLBACK), callback, methods=["GET"]
+        ),
     ]
