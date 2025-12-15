@@ -16,13 +16,14 @@
 
 from __future__ import annotations
 
-import binascii
-import os
 from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING, Any
 
 from streamlit import config, file_util
 from streamlit.web.server.server_util import get_cookie_secret
+from streamlit.web.server.starlette.starlette_app_utils import (
+    generate_random_hex_string,
+)
 from streamlit.web.server.starlette.starlette_auth_routes import get_auth_routes
 from streamlit.web.server.starlette.starlette_routes import (
     _with_base,
@@ -32,7 +33,6 @@ from streamlit.web.server.starlette.starlette_routes import (
     create_health_routes,
     create_host_config_routes,
     create_media_routes,
-    create_metrics_options_handler,
     create_metrics_routes,
     create_script_health_routes,
     create_upload_routes,
@@ -76,7 +76,7 @@ def create_starlette_app(runtime: Runtime) -> Starlette:
     try:
         from starlette.applications import Starlette
         from starlette.middleware.sessions import SessionMiddleware
-        from starlette.routing import Mount, Route
+        from starlette.routing import Mount
     except ModuleNotFoundError as exc:  # pragma: no cover - import guard
         raise RuntimeError(
             "Starlette is not installed. Run `pip install streamlit[starlette]` "
@@ -129,10 +129,6 @@ def create_starlette_app(runtime: Runtime) -> Starlette:
     if config.get_option("server.scriptHealthCheckEnabled"):
         routes.extend(create_script_health_routes(runtime, base_url))
 
-    # Add metrics OPTIONS route (for CORS preflight)
-    metrics_options_handler, metrics_path = create_metrics_options_handler(base_url)
-    routes.append(Route(metrics_path, metrics_options_handler, methods=["OPTIONS"]))
-
     # Add static files mount (only in production mode):
     if not dev_mode:
         static_files = create_streamlit_static_files(
@@ -144,15 +140,9 @@ def create_starlette_app(runtime: Runtime) -> Starlette:
     app = Starlette(routes=routes, lifespan=_lifespan)
 
     # Add session middleware
-    def _session_secret() -> str:
-        secret = get_cookie_secret()
-        if not secret:
-            secret = binascii.b2a_hex(os.urandom(32)).decode("ascii")
-        return secret
-
     app.add_middleware(
         SessionMiddleware,  # ty: ignore[invalid-argument-type]
-        secret_key=_session_secret(),
+        secret_key=get_cookie_secret() or generate_random_hex_string(),
         same_site="lax",
         https_only=bool(config.get_option("server.sslCertFile")),
         session_cookie=SESSION_COOKIE_NAME,

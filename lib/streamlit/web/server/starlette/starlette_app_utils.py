@@ -221,3 +221,20 @@ def decode_xsrf_token_string(
         return token, int(time.time())
     except (binascii.Error, ValueError):
         return None, None
+
+
+def generate_random_hex_string(num_bytes: int = 32) -> str:
+    """Generate a cryptographically secure random hex string.
+
+    Parameters
+    ----------
+    num_bytes
+        Number of random bytes to generate (default: 32).
+        The resulting hex string will be twice this length.
+
+    Returns
+    -------
+    str
+        A hex-encoded random string.
+    """
+    return binascii.b2a_hex(os.urandom(num_bytes)).decode("ascii")

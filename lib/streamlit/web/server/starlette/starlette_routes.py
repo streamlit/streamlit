@@ -249,12 +249,24 @@ def create_metrics_routes(runtime: Runtime, base_url: str | None) -> list[Any]:
         await _set_cors_headers(request, response)
         return response
 
+    async def _metrics_options(request: Request) -> Response:
+        response = Response(status_code=204)
+        response.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = "Accept"
+        await _set_cors_headers(request, response)
+        return response
+
     return [
         Route(
             _with_base(_ROUTE_METRICS, base_url),
             _metrics_endpoint,
             methods=["GET"],
-        )
+        ),
+        Route(
+            _with_base(_ROUTE_METRICS, base_url),
+            _metrics_options,
+            methods=["OPTIONS"],
+        ),
     ]
 
 
@@ -732,17 +744,3 @@ def create_app_static_routes(
             methods=["OPTIONS"],
         ),
     ]
-
-
-def create_metrics_options_handler(base_url: str | None) -> Any:
-    """Create the metrics OPTIONS handler for CORS preflight."""
-    from starlette.responses import Response
-
-    async def _metrics_options(request: Request) -> Response:
-        response = Response(status_code=204)
-        response.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
-        response.headers["Access-Control-Allow-Headers"] = "Accept"
-        await _set_cors_headers(request, response)
-        return response
-
-    return _metrics_options, _with_base(_ROUTE_METRICS, base_url)
