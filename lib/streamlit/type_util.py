@@ -339,6 +339,16 @@ def is_sequence_of_pydantic_models(obj: object) -> TypeGuard[Sequence[Any]]:
     return is_pydantic_model(first_element)
 
 
+def dump_pydantic_model(obj: Sequence[Any]) -> list[dict[str, Any]]:
+    """Dump a Pydantic model to a dictionary."""
+    first_element = next(iter(obj))
+    # Pydantic v2 uses model_dump(), v1 uses dict()
+    if has_callable_attr(first_element, "model_dump"):
+        # Use mode="json" to ensure proper serialization of types like Decimal
+        return [item.model_dump(mode="json") for item in obj]
+    return [item.dict() for item in obj]
+
+
 def _is_from_streamlit(obj: object) -> bool:
     """True if the object is from the streamlit package."""
     return obj.__class__.__module__.startswith("streamlit")

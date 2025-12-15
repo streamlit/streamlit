@@ -41,6 +41,7 @@ from typing import (
 from streamlit import config, errors, logger, string_util
 from streamlit.type_util import (
     CustomDict,
+    dump_pydantic_model,
     has_callable_attr,
     is_custom_dict,
     is_dataclass_instance,
@@ -708,11 +709,7 @@ def convert_anything_to_pandas_df(
         # Try to convert pydantic models to DataFrame. If some elements are not
         # pydantic models (mixed sequence), fall through to pandas' native handling.
         try:
-            first_element = next(iter(data))
-            if has_callable_attr(first_element, "model_dump"):
-                # Use mode="json" to ensure proper serialization of types like Decimal
-                return pd.DataFrame([item.model_dump(mode="json") for item in data])
-            return pd.DataFrame([item.dict() for item in data])
+            return pd.DataFrame(dump_pydantic_model(data))
         except AttributeError:
             pass
 
