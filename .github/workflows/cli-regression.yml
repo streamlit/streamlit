@@ -35,6 +35,9 @@ jobs:
           python-version: "${{ env.PYTHON_MAX_VERSION }}"
       - name: Setup virtual env
         uses: ./.github/actions/make_init
+      - name: Fix apt mirrors
+        if: ${{ runner.os == 'Linux' }}
+        uses: ./.github/actions/apt_mirror_fix
       - name: Build Package - Fast
         timeout-minutes: 120
         run: |
