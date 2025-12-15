@@ -44,7 +44,7 @@ _RESERVED_STATIC_PATH_SUFFIXES: Final = ("_stcore/health", "_stcore/host-config"
 def create_streamlit_static_handler(
     directory: str, base_url: str | None
 ) -> StaticFiles:
-    """Create a static file handler used for serving the Streamlit's static assets.
+    """Create a static file handler used for serving Streamlit's static assets.
 
     This also handles:
     - SPA fallback (serving index.html on 404s for client-side routing)
@@ -81,8 +81,8 @@ def create_streamlit_static_handler(
                 await response(scope, receive, send)
                 return
 
-            # Handle trailing slash redirect: return
-            # 301 for paths with trailing slashes (except root "/" or mount root).
+            # Handle trailing slash redirect: Returns 301 for paths with trailing
+            # slashes (except root "/" or mount root).
             # We replicate this for consistent URL handling and to avoid duplicate
             # content issues. When mounted (e.g., at "/app"), scope["path"] is the
             # full path "/app/" and scope["root_path"] is "/app", so we must not
@@ -126,13 +126,11 @@ def create_streamlit_static_handler(
 
         def _is_reserved(self, request_path: str) -> bool:
             """Check if the request path is reserved and should not fallback."""
-            normalized = request_path.split("?", 1)[0].strip("/")
-            if self._base_url and normalized.startswith(self._base_url):
-                normalized = normalized[len(self._base_url) :].strip("/")
-            return any(
-                normalized == suffix or normalized.endswith("/" + suffix)
-                for suffix in _RESERVED_STATIC_PATH_SUFFIXES
-            )
+            # Match Tornado's behavior: simple endswith check on the URL path.
+            # TODO: Consider making this path-segment-aware in the future to avoid
+            # false positives like "/my_stcore/health" matching "_stcore/health".
+            url_path = request_path.split("?", 1)[0]
+            return any(url_path.endswith(x) for x in _RESERVED_STATIC_PATH_SUFFIXES)
 
         def _apply_cache_headers(self, response: Response, served_path: str) -> None:
             """Apply cache headers matching Tornado's behavior."""
@@ -159,9 +157,14 @@ def create_streamlit_static_assets_routes(base_url: str | None) -> list[BaseRout
     static_assets = create_streamlit_static_handler(
         directory=file_util.get_static_dir(), base_url=base_url
     )
+    # Strip trailing slash from the path because Starlette's Mount with a trailing
+    # slash (e.g., "/myapp/") won't match requests without it (e.g., "/myapp").
+    # Mount without trailing slash handles both cases by redirecting "/myapp" to
+    # "/myapp/". Use "/" as fallback for root path.
+    mount_path = make_url_path(base_url or "", "").rstrip("/") or "/"
     return [
         Mount(
-            make_url_path(base_url or "", ""),
+            mount_path,
             app=static_assets,
             name="static-assets",
         )

@@ -153,30 +153,29 @@ class TestReservedPaths:
 
         assert response.status_code == 404
 
-    def test_user_path_ending_with_reserved_suffix_gets_spa_fallback(
+    def test_user_path_ending_with_reserved_suffix_returns_404(
         self, static_app: TestClient
     ) -> None:
-        """Test that user paths ending with reserved suffixes get SPA fallback.
+        """Test that paths ending with reserved suffixes return 404.
 
-        Paths like /my_stcore/health should NOT be treated as reserved because
-        'my_stcore/health'.endswith('_stcore/health') is True but it's not
-        actually a reserved path - the check should be path-segment aware.
+        This matches Tornado's behavior where endswith() is used for reserved
+        path matching. Paths like /my_stcore/health return 404 because they
+        end with '_stcore/health'.
+
+        TODO: Consider making this path-segment-aware in the future to avoid
+        false positives.
         """
         response = static_app.get("/my_stcore/health")
 
-        # Should get SPA fallback (index.html), not 404
-        assert response.status_code == 200
-        assert response.text == "<html>Home</html>"
+        # Matches Tornado: endswith check treats this as reserved
+        assert response.status_code == 404
 
-    def test_user_path_custom_stcore_gets_spa_fallback(
-        self, static_app: TestClient
-    ) -> None:
-        """Test that /custom_stcore/host-config gets SPA fallback, not 404."""
+    def test_user_path_custom_stcore_returns_404(self, static_app: TestClient) -> None:
+        """Test that /custom_stcore/host-config returns 404 (matches Tornado)."""
         response = static_app.get("/custom_stcore/host-config")
 
-        # Should get SPA fallback (index.html), not 404
-        assert response.status_code == 200
-        assert response.text == "<html>Home</html>"
+        # Matches Tornado: endswith check treats this as reserved
+        assert response.status_code == 404
 
     def test_nested_reserved_path_returns_404(self, static_app: TestClient) -> None:
         """Test that nested reserved paths like /foo/_stcore/health return 404."""
