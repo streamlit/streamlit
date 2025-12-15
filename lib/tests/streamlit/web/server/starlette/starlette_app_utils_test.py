@@ -206,3 +206,25 @@ class StarletteServerUtilsTest(unittest.TestCase):
             None,
             None,
         )
+
+    def test_generate_random_hex_string_default(self):
+        """Test generate_random_hex_string with default length."""
+        result = starlette_app_utils.generate_random_hex_string()
+        # Default is 32 bytes = 64 hex characters
+        assert len(result) == 64
+        # Should be valid hex
+        int(result, 16)
+
+    def test_generate_random_hex_string_custom_length(self):
+        """Test generate_random_hex_string with custom byte count."""
+        result = starlette_app_utils.generate_random_hex_string(16)
+        # 16 bytes = 32 hex characters
+        assert len(result) == 32
+        # Should be valid hex
+        int(result, 16)
+
+    def test_generate_random_hex_string_uniqueness(self):
+        """Test that generate_random_hex_string produces unique values."""
+        results = {starlette_app_utils.generate_random_hex_string() for _ in range(100)}
+        # All 100 should be unique
+        assert len(results) == 100
