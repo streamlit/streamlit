@@ -89,19 +89,18 @@ EXTRA_REQUIRES = {
     "starlette": [
         # ASGI web-framework:
         "starlette>=0.40.0",
-        # Required for async support:
+        # ASGI server:
+        "uvicorn>=0.30.0",
+        # Required by starlette:
         "anyio>=4.0.0",
         # Required for file-upload support:
         "python-multipart>=0.0.10",
-        # Fast ASGI server:
-        "uvicorn>=0.30.0",
         # Required for websocket support:
         "websockets>=12.0.0",
+        # Required for cookie signing:
         "itsdangerous>=2.1.2",
-        # Faster http parsing:
-        "httptools>=0.6.3",
-        # Faster event loop:
-        "uvloop>=0.15.1; sys_platform != 'win32' and (sys_platform != 'cygwin' and platform_python_implementation != 'PyPy')",  # noqa: E501
+        # Faster event loop (optional):
+        "uvloop>=0.15.2; sys_platform != 'win32' and (sys_platform != 'cygwin' and platform_python_implementation != 'PyPy')",  # noqa: E501
     ],
     # Optional dependency required for PDF rendering:
     "pdf": [
@@ -129,6 +128,8 @@ EXTRA_REQUIRES = {
         "orjson>=3.5.0",
         # uvloop speeds up the event loop:
         "uvloop>=0.15.2; sys_platform != 'win32' and (sys_platform != 'cygwin' and platform_python_implementation != 'PyPy')",  # noqa: E501
+        # Faster http parsing for Starlette server:
+        "httptools>=0.6.3",
     ],
     # Install all optional dependencies:
     "all": [
