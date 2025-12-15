@@ -24,10 +24,13 @@ import time
 def parse_range_header(range_header: str, total_size: int) -> tuple[int, int]:
     """Parse the Range header and return the start and end byte positions.
 
+    This is used for serving media files with range requests.
+
     Parameters
     ----------
     range_header : str
         The value of the Range header (e.g. "bytes=0-1023").
+
     total_size : int
         The total size of the resource in bytes.
 
