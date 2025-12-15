@@ -41,6 +41,7 @@ from streamlit.web.server.routes import (
 )
 from streamlit.web.server.server_util import get_url, is_xsrf_enabled
 from streamlit.web.server.starlette import starlette_app_utils
+from streamlit.web.server.starlette.starlette_server_config import XSRF_COOKIE_NAME
 from streamlit.web.server.stats_request_handler import StatsRequestHandler
 
 if TYPE_CHECKING:
@@ -114,7 +115,7 @@ def _ensure_xsrf_cookie(request: Request, response: Response) -> None:
     if not is_xsrf_enabled():
         return
 
-    cookie_name = "_streamlit_xsrf"
+    cookie_name = XSRF_COOKIE_NAME
     raw_cookie = request.cookies.get(cookie_name)
     token_bytes: bytes | None = None
     timestamp: int | None = None
@@ -428,7 +429,7 @@ def create_upload_routes(
             return
 
         xsrf_header = request.headers.get("X-Xsrftoken")
-        xsrf_cookie = request.cookies.get("_streamlit_xsrf")
+        xsrf_cookie = request.cookies.get(XSRF_COOKIE_NAME)
 
         if not _validate_xsrf_token(xsrf_header, xsrf_cookie):
             raise HTTPException(status_code=403, detail="XSRF token missing or invalid")

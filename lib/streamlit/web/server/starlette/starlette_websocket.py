@@ -32,6 +32,11 @@ from streamlit.runtime.session_manager import (
 )
 from streamlit.web.server.server_util import get_cookie_secret, is_xsrf_enabled
 from streamlit.web.server.starlette import starlette_app_utils
+from streamlit.web.server.starlette.starlette_server_config import (
+    USER_COOKIE_NAME,
+    WEBSOCKET_MAX_SEND_QUEUE_SIZE,
+    XSRF_COOKIE_NAME,
+)
 
 if TYPE_CHECKING:
     from starlette.datastructures import Headers
@@ -41,13 +46,6 @@ if TYPE_CHECKING:
     from streamlit.runtime import Runtime
 
 _LOGGER: Final = get_logger(__name__)
-
-# Max pending messages per client in the send queue before disconnecting.
-# Each connected client has its own queue; under normal conditions the queue drains
-# continuously and rarely exceeds single digits. This limit protects against slow
-# clients (bad network, paused tabs) causing unbounded server memory growth.
-# With N concurrent users, worst case memory is N * _MAX_SEND_QUEUE_SIZE * msg_size.
-_MAX_SEND_QUEUE_SIZE: Final = 500
 
 
 def _parse_subprotocols(
@@ -128,7 +126,7 @@ def _parse_user_cookie_signed(cookie_value: str | bytes, origin: str) -> dict[st
         signed_value = signed_value.encode("latin-1")
 
     decoded = starlette_app_utils.decode_signed_value(
-        secret, "_streamlit_user", signed_value
+        secret, USER_COOKIE_NAME, signed_value
     )
     if decoded is None:
         return {}
@@ -165,7 +163,7 @@ class StarletteSessionClient(SessionClient):
         # The queue bridges sync write_forward_msg calls to async WebSocket sends.
         # Overwhelmed clients get disconnected via SessionClientDisconnectedError.
         self._send_queue: asyncio.Queue[bytes] = asyncio.Queue(
-            maxsize=_MAX_SEND_QUEUE_SIZE
+            maxsize=WEBSOCKET_MAX_SEND_QUEUE_SIZE
         )
         self._sender_task = asyncio.create_task(
             self._sender(), name="starlette-ws-send"
@@ -228,8 +226,8 @@ def create_websocket_handler(runtime: Runtime) -> Any:
         session_id: str | None = None
         user_info = _gather_user_info(websocket.headers)
         if is_xsrf_enabled():
-            auth_cookie = websocket.cookies.get("_streamlit_user")
-            xsrf_cookie = websocket.cookies.get("_streamlit_xsrf")
+            auth_cookie = websocket.cookies.get(USER_COOKIE_NAME)
+            xsrf_cookie = websocket.cookies.get(XSRF_COOKIE_NAME)
             origin_header = websocket.headers.get("Origin")
 
             # Validate XSRF token before parsing auth cookie (matches Tornado behavior)

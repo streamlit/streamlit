@@ -19,7 +19,7 @@ from __future__ import annotations
 import binascii
 import os
 from contextlib import asynccontextmanager
-from typing import TYPE_CHECKING, Any, Final
+from typing import TYPE_CHECKING, Any
 
 from streamlit import config, file_util
 from streamlit.web.server.server_util import get_cookie_secret
@@ -38,6 +38,10 @@ from streamlit.web.server.starlette.starlette_routes import (
     create_script_health_routes,
     create_upload_routes,
 )
+from streamlit.web.server.starlette.starlette_server_config import (
+    GZIP_COMPRESSLEVEL,
+    GZIP_MINIMUM_SIZE,
+)
 from streamlit.web.server.starlette.starlette_static import (
     create_streamlit_static_files,
 )
@@ -52,14 +56,6 @@ if TYPE_CHECKING:
     from streamlit.runtime.media_file_manager import MediaFileManager
     from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
     from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
-
-# TODO(lukasmasuch): Make configurable?
-# Do not GZip responses that are smaller than this minimum size in bytes:
-_GZIP_MINIMUM_SIZE: Final = 500
-# Used during GZip compression. It is an integer ranging from 1 to 9.
-# Lower value results in faster compression but larger file sizes, while higher value
-# results in slower compression but smaller file sizes.
-_GZIP_COMPRESSLEVEL: Final = 6
 
 
 def create_starlette_app(runtime: Runtime) -> Starlette:
@@ -177,8 +173,8 @@ def create_starlette_app(runtime: Runtime) -> Starlette:
 
     app.add_middleware(
         MediaAwareGZipMiddleware,  # ty: ignore[invalid-argument-type]
-        minimum_size=_GZIP_MINIMUM_SIZE,
-        compresslevel=_GZIP_COMPRESSLEVEL,
+        minimum_size=GZIP_MINIMUM_SIZE,
+        compresslevel=GZIP_COMPRESSLEVEL,
     )
 
     return app
