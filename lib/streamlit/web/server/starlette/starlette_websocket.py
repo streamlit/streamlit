@@ -40,7 +40,7 @@ if TYPE_CHECKING:
     from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
     from streamlit.runtime import Runtime
 
-_LOGGER = get_logger(__name__)
+_LOGGER: Final = get_logger(__name__)
 
 # Max pending messages per client in the send queue before disconnecting.
 # Each connected client has its own queue; under normal conditions the queue drains
