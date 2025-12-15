@@ -99,8 +99,6 @@ EXTRA_REQUIRES = {
         "websockets>=12.0.0",
         # Required for cookie signing:
         "itsdangerous>=2.1.2",
-        # Faster event loop (optional):
-        "uvloop>=0.15.2; sys_platform != 'win32' and (sys_platform != 'cygwin' and platform_python_implementation != 'PyPy')",  # noqa: E501
     ],
     # Optional dependency required for PDF rendering:
     "pdf": [
