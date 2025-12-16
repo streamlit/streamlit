@@ -188,8 +188,8 @@ export function groupAndAggregate(
 
   // Aggregate values
   const values: Record<string, Record<string, number>> = {}
-  const rowKeys = Array.from(rowKeysSet)
-  const columnKeys = Array.from(columnKeysSet)
+  const rowKeys = Array.from(rowKeysSet).sort()
+  const columnKeys = Array.from(columnKeysSet).sort()
 
   rowKeys.forEach(rowKey => {
     values[rowKey] = {}

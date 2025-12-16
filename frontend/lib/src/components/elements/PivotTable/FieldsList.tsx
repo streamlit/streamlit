@@ -17,6 +17,7 @@
 import React, { memo, ReactElement } from "react"
 
 import {
+  Add,
   ArrowDownward,
   ArrowForward,
   ChevronLeft,
@@ -27,12 +28,15 @@ import {
   TrendingUp,
 } from "@emotion-icons/material-outlined"
 
+import { useEmotionTheme } from "@streamlit/lib"
+
 import Icon from "~lib/components/shared/Icon"
 import { Quiver } from "~lib/dataframes/Quiver"
 
 import { AggregationType, PivotConfig } from "./pivotTransform"
 import {
   StyledActiveFields,
+  StyledAggregationMenu,
   StyledAvailableFields,
   StyledCheckboxLabel,
   StyledFieldItemWithIcon,
@@ -66,7 +70,7 @@ export interface FieldsListProps {
 function getAggregationIcon(aggregation: AggregationType): typeof Functions {
   switch (aggregation) {
     case "sum":
-      return Functions // Σ
+      return Add // +
     case "count":
       return Tag // # (using Tag as close to # symbol)
     case "mean":
@@ -94,6 +98,7 @@ function FieldsList({
   onAddToValues: _onAddToValues,
   onUpdateAggregation,
 }: FieldsListProps): ReactElement {
+  const theme = useEmotionTheme()
   const [draggedField, setDraggedField] = React.useState<string | null>(null)
   const [activeAggregation, setActiveAggregation] = React.useState<
     string | null
@@ -188,7 +193,7 @@ function FieldsList({
   return (
     <StyledSidebar $isVisible={isVisible} data-testid="stPivotTableFieldsList">
       <StyledSidebarHeader>
-        <StyledSidebarTitle>Configuration</StyledSidebarTitle>
+        <StyledSidebarTitle>Table Configuration</StyledSidebarTitle>
         <StyledToggleButton onClick={onToggleSidebar} title="Hide Config">
           <Icon content={ChevronLeft} size="md" />
         </StyledToggleButton>
@@ -225,7 +230,7 @@ function FieldsList({
                             background: "none",
                             border: "none",
                             cursor: "pointer",
-                            padding: "0 4px",
+                            padding: `0 ${theme.spacing.twoXS}`,
                             display: "flex",
                             alignItems: "center",
                             color: "inherit",
@@ -235,20 +240,7 @@ function FieldsList({
                           <Icon content={KeyboardArrowDown} size="md" />
                         </button>
                         {activeAggregation === field.name && (
-                          <div
-                            style={{
-                              position: "absolute",
-                              top: "100%",
-                              right: 0,
-                              marginTop: "4px",
-                              backgroundColor: "white",
-                              border: "1px solid #ccc",
-                              borderRadius: "4px",
-                              boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
-                              zIndex: 1000,
-                              minWidth: "120px",
-                            }}
-                          >
+                          <StyledAggregationMenu>
                             {AGGREGATION_OPTIONS.map(option => (
                               <button
                                 key={option.value}
@@ -256,39 +248,20 @@ function FieldsList({
                                   onUpdateAggregation(field.name, option.value)
                                   setActiveAggregation(null)
                                 }}
-                                style={{
-                                  display: "flex",
-                                  alignItems: "center",
-                                  gap: "8px",
-                                  width: "100%",
-                                  padding: "8px 12px",
-                                  background: "none",
-                                  border: "none",
-                                  textAlign: "left",
-                                  cursor: "pointer",
-                                  fontSize: "14px",
-                                  fontWeight:
-                                    option.value === field.aggregation
-                                      ? "bold"
-                                      : "normal",
-                                }}
-                                onMouseEnter={e => {
-                                  e.currentTarget.style.backgroundColor =
-                                    "#f5f5f5"
-                                }}
-                                onMouseLeave={e => {
-                                  e.currentTarget.style.backgroundColor =
-                                    "transparent"
-                                }}
+                                className={
+                                  option.value === field.aggregation
+                                    ? "selected"
+                                    : ""
+                                }
                               >
                                 <Icon
                                   content={getAggregationIcon(option.value)}
-                                  size="xs"
+                                  size="sm"
                                 />
                                 {option.label}
                               </button>
                             ))}
-                          </div>
+                          </StyledAggregationMenu>
                         )}
                       </>
                     )}
@@ -306,7 +279,11 @@ function FieldsList({
         <StyledAvailableFields>
           {availableFields.length === 0 ? (
             <div
-              style={{ fontSize: "0.875rem", color: "#888", padding: "8px" }}
+              style={{
+                fontSize: theme.fontSizes.sm,
+                color: theme.colors.fadedText60,
+                padding: theme.spacing.sm,
+              }}
             >
               All fields are in use
             </div>
@@ -353,9 +330,9 @@ function FieldsList({
           ) : (
             <div
               style={{
-                color: "#808495",
-                fontSize: "0.875rem",
-                padding: "8px 0",
+                color: theme.colors.fadedText60,
+                fontSize: theme.fontSizes.sm,
+                padding: `${theme.spacing.sm} 0`,
               }}
             >
               Configure rows, columns, or values to enable totals
