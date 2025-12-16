@@ -75,16 +75,10 @@ function Markdown({ element }: Readonly<MarkdownProps>): ReactElement {
     )
   } else {
     // For other markdown, render with inline help icon
-    // Append help directive to markdown source so it renders inline.
-    // Escape special characters that would break the :help[] directive syntax:
-    // - Newlines (\n) aren't supported in text directives
-    // - Closing brackets (]) would prematurely close the directive
-    const escapedHelp = help
-      ? help
-          .replace(/\n/g, "〔STREAMLIT_NL〕")
-          .replace(/\]/g, "〔STREAMLIT_BRACKET〕")
-      : ""
-    const source = help ? `${body} :help[${escapedHelp}]` : body
+    // Use :help[] as a marker where the help icon should appear.
+    // The actual help text is passed via helpText prop to avoid limitations
+    // with special characters in text directive labels.
+    const source = help ? `${body} :help[]` : body
 
     content = (
       <StyledLabelHelpWrapper isLatex={isLatex}>
@@ -92,6 +86,7 @@ function Markdown({ element }: Readonly<MarkdownProps>): ReactElement {
           isCaption={isCaption}
           source={source}
           allowHTML={allowHtml}
+          helpText={help}
         />
       </StyledLabelHelpWrapper>
     )

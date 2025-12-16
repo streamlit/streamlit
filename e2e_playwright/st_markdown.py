@@ -516,10 +516,22 @@ st.container(key="markdown_center_newlines_tooltip").markdown(
 
 st.container(key="markdown_spaces_around_newlines").markdown(
     "Markdown with spaces around newlines",
-    help="Tool tip with \n\n new lines",
+    help="Line 1 \n\n Line 2 \n\n Line 3",
 )
 
 st.container(key="markdown_bracket_in_tooltip").markdown(
     "Markdown with closing bracket in tooltip",
-    help="Help before ] help after",
+    help="Line 1 ] Line 2 ] Line 3",
+)
+
+# Complex markdown in tooltip - comprehensive test
+st.header("Complex Tooltip Case")
+
+st.container(key="markdown_complex_tooltip").markdown(
+    "Tooltip with complex markdown",
+    help="""**Bold**, *italic*, and `code` with brackets [x]
+
+Links: [Streamlit](https://streamlit.io) Colors: :red[red] :blue[blue]
+
+Emoji: 🎉 Array: array[index] Dict: dict[key]""",
 )

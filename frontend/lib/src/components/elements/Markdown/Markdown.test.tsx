@@ -144,6 +144,48 @@ describe("Markdown element with help", () => {
     expect(helpContent).toBeVisible()
     expect(helpContent).toHaveTextContent("Help before ] help after")
   })
+
+  it("renders markdown help tooltip with inline code correctly", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ help: "Use `st.markdown()` for text" })
+    render(<Markdown {...props} />)
+
+    const tooltip = screen.getByTestId("stTooltipHoverTarget")
+    await user.hover(tooltip)
+
+    const helpContent = await screen.findByTestId("stTooltipContent")
+    expect(helpContent).toBeVisible()
+    // Verify text content is present (markdown formatting may vary)
+    expect(helpContent).toHaveTextContent("Use")
+    expect(helpContent).toHaveTextContent("st.markdown()")
+    expect(helpContent).toHaveTextContent("for text")
+  })
+
+  it("renders markdown help tooltip with complex markdown features", async () => {
+    const user = userEvent.setup()
+    // Combination of special characters: code, brackets, newlines
+    const props = getProps({
+      help: "Use `code[i]` or array]\n\nNext line with **bold**",
+    })
+    render(<Markdown {...props} />)
+
+    // Verify nothing leaked
+    const markdown = screen.getByTestId("stMarkdownContainer")
+    expect(markdown).not.toHaveTextContent("code[i]")
+    expect(markdown).not.toHaveTextContent("bold")
+
+    const tooltip = screen.getByTestId("stTooltipHoverTarget")
+    await user.hover(tooltip)
+
+    const helpContent = await screen.findByTestId("stTooltipContent")
+    expect(helpContent).toBeVisible()
+    // Verify all parts of the content are present
+    expect(helpContent).toHaveTextContent("Use")
+    expect(helpContent).toHaveTextContent("code[i]")
+    expect(helpContent).toHaveTextContent("array]")
+    expect(helpContent).toHaveTextContent("Next line")
+    expect(helpContent).toHaveTextContent("bold")
+  })
 })
 
 describe("Markdown badge with help", () => {
