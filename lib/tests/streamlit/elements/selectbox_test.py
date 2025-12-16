@@ -546,9 +546,10 @@ def test_selectbox_enum_coercion():
     When enum classes are redefined between runs (common in Streamlit scripts),
     the widget should return a valid enum value from the current class.
 
-    - With coercion=nameOnly: maybe_coerce_enum converts old class to new class
-    - With coercion=off: validation detects the old class value is not in current
-      options (different class objects) and resets to default
+    Note: AppTest has a limitation - enum classes defined in the script function
+    are the same class object across runs, not redefined like in real Streamlit.
+    This means we can only verify that the returned value is from a valid class,
+    not the full coercion=off reset behavior.
     """
 
     def script():
@@ -568,29 +569,17 @@ def test_selectbox_enum_coercion():
 
     at = AppTest.from_function(script).run()
 
-    def test_enum_coercion_on():
-        """With coercion enabled, the selected value is coerced to the new class."""
+    def test_enum():
         selectbox = at.selectbox[0]
         original_class = selectbox.value.__class__
         selectbox.set_value(original_class.C).run()
-        assert at.text[0].value == at.text[1].value, "Enum Class ID not the same"
-        assert at.text[2].value == "True", "Not all enums found in class"
-
-    def test_enum_coercion_off():
-        """With coercion disabled, the old class value is reset to new class default."""
-        selectbox = at.selectbox[0]
-        original_class = selectbox.value.__class__
-        selectbox.set_value(original_class.C).run()
-        # With coercion off, the old class enum is not found in new class options,
-        # so it resets to default (EnumA.A). The returned value is from the
-        # current class, so class IDs match and value is in EnumA.
         assert at.text[0].value == at.text[1].value, "Enum Class ID not the same"
         assert at.text[2].value == "True", "Not all enums found in class"
 
     with patch_config_options({"runner.enumCoercion": "nameOnly"}):
-        test_enum_coercion_on()
+        test_enum()
     with patch_config_options({"runner.enumCoercion": "off"}):
-        test_enum_coercion_off()
+        test_enum()  # Same assertions - see docstring for limitation
 
 
 def test_None_session_state_value_retained():
