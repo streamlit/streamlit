@@ -57,10 +57,13 @@ export function formatJsonPath(namespace: Array<string | null>): string {
     if (isArrayIndex) {
       return `${path}[${key}]`
     }
-    // Check if key needs bracket notation (contains special chars or starts with number)
-    const needsBrackets = /[^a-zA-Z0-9_$]/.test(key) || /^\d/.test(key)
+    // Check if key needs bracket notation (empty, contains special chars, or starts with number)
+    const needsBrackets =
+      key === "" || /[^a-zA-Z0-9_$]/.test(key) || /^\d/.test(key)
     if (needsBrackets) {
-      return `${path}["${key}"]`
+      // Escape backslashes first, then double quotes
+      const escaped = key.replace(/\\/g, "\\\\").replace(/"/g, '\\"')
+      return `${path}["${escaped}"]`
     }
     // Use dot notation
     return index === 0 || path === "" ? key : `${path}.${key}`

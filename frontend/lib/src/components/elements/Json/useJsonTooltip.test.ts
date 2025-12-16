@@ -50,6 +50,18 @@ describe("formatJsonPath", () => {
     { namespace: ["foo", null, "bar"], expected: "foo.bar" },
     // Valid identifiers with underscore and dollar sign
     { namespace: ["_private", "$ref"], expected: "_private.$ref" },
+    // Empty string keys use bracket notation
+    { namespace: [""], expected: '[""]' },
+    { namespace: ["foo", ""], expected: 'foo[""]' },
+    { namespace: ["", "bar"], expected: '[""].bar' },
+    // Keys with double quotes are escaped
+    { namespace: ['foo"bar'], expected: '["foo\\"bar"]' },
+    { namespace: ['a"b"c'], expected: '["a\\"b\\"c"]' },
+    // Keys with backslashes are escaped
+    { namespace: ["foo\\bar"], expected: '["foo\\\\bar"]' },
+    { namespace: ["a\\b\\c"], expected: '["a\\\\b\\\\c"]' },
+    // Keys with both quotes and backslashes
+    { namespace: ['foo\\"bar'], expected: '["foo\\\\\\"bar"]' },
   ])("formats $namespace as $expected", ({ namespace, expected }) => {
     expect(formatJsonPath(namespace)).toBe(expected)
   })
