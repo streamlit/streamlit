@@ -29,7 +29,6 @@ from typing import (
     overload,
 )
 
-from cachetools import TTLCache
 from typing_extensions import ParamSpec
 
 import streamlit as st
@@ -41,6 +40,7 @@ from streamlit.runtime.caching.cache_utils import (
     Cache,
     CachedFunc,
     CachedFuncInfo,
+    OnRelease,
     make_cached_func_wrapper,
 )
 from streamlit.runtime.caching.cached_message_replay import (
@@ -48,6 +48,7 @@ from streamlit.runtime.caching.cached_message_replay import (
     CachedResult,
     MsgData,
 )
+from streamlit.runtime.caching.ttl_cleanup_cache import TTLCleanupCache
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.stats import (
     CACHE_MEMORY_FAMILY,
@@ -79,6 +80,10 @@ def _equal_validate_funcs(a: ValidateFunc | None, b: ValidateFunc | None) -> boo
     return (a is None and b is None) or (a is not None and b is not None)
 
 
+def _no_op_release(ignored: Any) -> None:
+    """No-op OnRelease function."""
+
+
 class ResourceCaches(StatsProvider):
     """Manages all ResourceCache instances."""
 
@@ -97,6 +102,7 @@ class ResourceCaches(StatsProvider):
         max_entries: int | float | None,
         ttl: float | timedelta | str | None,
         validate: ValidateFunc | None,
+        on_release: OnRelease,
     ) -> ResourceCache[Any]:
         """Return the mem cache for the given key.
 
@@ -127,6 +133,7 @@ class ResourceCaches(StatsProvider):
                 max_entries=max_entries,
                 ttl_seconds=ttl_seconds,
                 validate=validate,
+                on_release=on_release,
             )
             self._function_caches[key] = cache
             return cache
@@ -134,6 +141,8 @@ class ResourceCaches(StatsProvider):
     def clear_all(self) -> None:
         """Clear all resource caches."""
         with self._caches_lock:
+            for cache in self._function_caches.values():
+                cache.clear()
             self._function_caches = {}
 
     def get_stats(
@@ -182,6 +191,7 @@ class CachedResourceFuncInfo(CachedFuncInfo[P, R]):
         validate: ValidateFunc | None,
         hash_funcs: HashFuncsDict | None = None,
         show_time: bool = False,
+        on_release: OnRelease = _no_op_release,
     ) -> None:
         super().__init__(
             func,
@@ -192,6 +202,7 @@ class CachedResourceFuncInfo(CachedFuncInfo[P, R]):
         self.max_entries = max_entries
         self.ttl = ttl
         self.validate = validate
+        self.on_release = on_release
 
     @property
     def cache_type(self) -> CacheType:
@@ -213,6 +224,7 @@ class CachedResourceFuncInfo(CachedFuncInfo[P, R]):
             max_entries=self.max_entries,
             ttl=self.ttl,
             validate=self.validate,
+            on_release=self.on_release,
         )
 
 
@@ -264,6 +276,7 @@ class CacheResourceAPI:
         show_time: bool = False,
         validate: ValidateFunc | None = None,
         hash_funcs: HashFuncsDict | None = None,
+        on_release: OnRelease | None = None,
     ) -> CachedFunc[P, R] | Callable[[Callable[P, R]], CachedFunc[P, R]]:
         return self._decorator(  # ty: ignore[missing-argument]
             func,  # ty: ignore[invalid-argument-type]
@@ -273,6 +286,7 @@ class CacheResourceAPI:
             show_time=show_time,
             validate=validate,
             hash_funcs=hash_funcs,
+            on_release=on_release,
         )
 
     def _decorator(
@@ -285,6 +299,7 @@ class CacheResourceAPI:
         show_time: bool = False,
         validate: ValidateFunc | None,
         hash_funcs: HashFuncsDict | None = None,
+        on_release: OnRelease | None = None,
     ) -> CachedFunc[P, R] | Callable[[Callable[P, R]], CachedFunc[P, R]]:
         """Decorator to cache functions that return global resources (e.g. database connections, ML models).
 
@@ -362,12 +377,16 @@ class CacheResourceAPI:
             format is not configurable.
 
         validate : callable or None
-            An optional validation function for cached data. ``validate`` is called
+            An optional validation function for cached resources. ``validate`` is called
             each time the cached value is accessed. It receives the cached value as
             its only parameter and it must return a boolean. If ``validate`` returns
             False, the current cached value is discarded, and the decorated function
             is called to compute a new value. This is useful e.g. to check the
             health of database connections.
+
+            This is not used as a part of the cache key - meaning changes to this
+            function between script runs will not trigger a new resource being
+            generated.
 
         hash_funcs : dict or None
             Mapping of types or fully qualified names to hash functions.
@@ -376,6 +395,24 @@ class CacheResourceAPI:
             check to see if its type matches a key in this dict and, if so, will use
             the provided function to generate a hash for it. See below for an example
             of how this can be used.
+
+        on_release : OnRelease
+            If set, a function to call when a cache entry is removed from the cache.
+            The removed item will be provided to the function as an argument.
+
+            This is only useful for caches which will remove entries normally: Those
+            with ``max_entries`` or ``ttl`` settings. Note that TTL expiration does not
+            happen on all reads - so ``ttl`` should not be used to guarantee timely
+            cleanup, only cleanup when expired resources are accessed. Also note that
+            expiration can happen on any app render or load, so care should be taken
+            to ensure that ``on_release`` functions are thread-safe and do not rely on
+            session state.
+
+            This will NOT be called when an app is shut down.
+
+            This function is not used as a part of the cache key - meaning changes to
+            this function between script runs will not trigger a new resource being
+            generated.
 
         Example
         -------
@@ -472,6 +509,7 @@ class CacheResourceAPI:
                     ttl=ttl,
                     validate=validate,
                     hash_funcs=hash_funcs,
+                    on_release=on_release or _no_op_release,
                 )
             )
 
@@ -484,6 +522,7 @@ class CacheResourceAPI:
                 ttl=ttl,
                 validate=validate,
                 hash_funcs=hash_funcs,
+                on_release=on_release or _no_op_release,
             )
         )
 
@@ -503,12 +542,24 @@ class ResourceCache(Cache[R]):
         ttl_seconds: float,
         validate: ValidateFunc | None,
         display_name: str,
+        on_release: OnRelease,
     ) -> None:
         super().__init__()
+
+        def wrapped_on_release(result: CachedResult[R]) -> None:
+            # Note that exceptions raised here will bubble out to the calling scope,
+            # which will then treat them as user script errors.
+            # This is also how exceptions thrown when generating cache values are
+            # treated.
+            on_release(result.value)
+
         self.key = key
         self.display_name = display_name
-        self._mem_cache: TTLCache[str, CachedResult[R]] = TTLCache(
-            maxsize=max_entries, ttl=ttl_seconds, timer=cache_utils.TTLCACHE_TIMER
+        self._mem_cache: TTLCleanupCache[str, CachedResult[R]] = TTLCleanupCache(
+            maxsize=max_entries,
+            ttl=ttl_seconds,
+            timer=cache_utils.TTLCACHE_TIMER,
+            on_release=wrapped_on_release,
         )
         self._mem_cache_lock = threading.Lock()
         self.validate = validate

@@ -232,6 +232,27 @@ If you think this is actually a Streamlit bug, please
         # So the call to foo() should return the new value 2
         assert example_instance.foo(1) == 2
 
+    def test_on_release_fires(self):
+        """Tests that on_release functions are called appropriately."""
+        seen: list[int] = []
+
+        def release(element: int) -> None:
+            seen.append(element)
+
+        @st.cache_resource(max_entries=2, on_release=release)
+        def return_plus_one(value: int) -> int:
+            return value + 1
+
+        for i in range(5):
+            assert return_plus_one(i) == i + 1
+
+        # Validate that release was called for the first three elements.
+        assert seen == [1, 2, 3]
+
+        # Clear the cache, and validate that `release` was called.
+        st.cache_resource.clear()
+        assert seen == [1, 2, 3, 4, 5]
+
 
 class CacheResourceValidateTest(unittest.TestCase):
     def setUp(self) -> None:
