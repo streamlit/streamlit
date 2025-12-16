@@ -545,9 +545,7 @@ class SelectboxMixin:
             user_key=key,
             # Treat the provided key as the main identity. Only include
             # accept_new_options in the identity computation as it affects
-            # the widget's behavior. Options are NOT included - widget identity
-            # should remain stable when options change dynamically to allow
-            # preserving user selections when valid.
+            # the widget's behavior.
             key_as_main_identity={"accept_new_options"},
             dg=self.dg,
             label=label,
