@@ -166,6 +166,12 @@ export interface Props {
    * Inherit font family, size, and weight from parent
    */
   inheritFont?: boolean
+
+  /**
+   * Optional help text for inline help tooltips.
+   * When present, :help[] markers in the source will use this text.
+   */
+  helpText?: string
 }
 
 /**
@@ -379,6 +385,12 @@ export interface RenderedMarkdownProps {
    * Does not allow links
    */
   disableLinks?: boolean
+
+  /**
+   * Optional help text for inline help tooltips.
+   * When present, :help[] markers in the source will use this text.
+   */
+  helpText?: string
 }
 
 export type CustomCodeTagProps = JSX.IntrinsicElements["code"] &
@@ -449,6 +461,9 @@ export const CustomMediaTag: FC<
   return <Tag {...attributes} />
 }
 
+const HelpTextContext = React.createContext<string | undefined>(undefined)
+HelpTextContext.displayName = "HelpTextContext"
+
 interface CustomHelpIconProps {
   children?: string
 }
@@ -456,11 +471,22 @@ interface CustomHelpIconProps {
 /**
  * Custom component to render inline help icons in markdown.
  * Wraps InlineTooltipIcon in an inline-block span for proper inline flow.
+ *
+ * Gets the help text from HelpTextContext (used by the `help` parameter) if available,
+ * or falls back to `children` (for manual :help[content] directive usage).
+ *
+ * Note: When using the :help[content] directive manually in markdown, be aware of
+ * text directive limitations:
+ * - Newlines (\n) are not supported - use context via the help parameter instead
+ * - Brackets [, ] and other special markdown characters may cause parsing issues
+ * - For reliable multiline or complex markdown in tooltips, use the help parameter
+ *   which passes content via context and avoids directive label limitations.
  */
 export const CustomHelpIcon: FC<CustomHelpIconProps> = ({ children }) => {
-  // Ensure we only pass strings to the tooltip. Text directives should always
-  // pass plain strings, but we check defensively at runtime.
-  const tooltipContent = typeof children === "string" ? children : ""
+  // Prefer context (from help parameter) over children (from directive label)
+  const contextHelpText = useContext(HelpTextContext)
+  const tooltipContent =
+    contextHelpText || (typeof children === "string" ? children : "")
 
   return (
     <StyledHelpIconWrapper>
@@ -856,6 +882,7 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
   overrideComponents,
   isLabel,
   disableLinks,
+  helpText,
 }: Readonly<RenderedMarkdownProps>): ReactElement {
   const theme = useEmotionTheme()
 
@@ -988,19 +1015,21 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
   }
 
   return (
-    <ErrorBoundary>
-      <ReactMarkdown
-        remarkPlugins={remarkPlugins}
-        rehypePlugins={rehypePlugins}
-        components={renderers}
-        urlTransform={transformLinkUri}
-        disallowedElements={disallowed}
-        // unwrap and render children from invalid markdown
-        unwrapDisallowed={true}
-      >
-        {processedSource}
-      </ReactMarkdown>
-    </ErrorBoundary>
+    <HelpTextContext.Provider value={helpText}>
+      <ErrorBoundary>
+        <ReactMarkdown
+          remarkPlugins={remarkPlugins}
+          rehypePlugins={rehypePlugins}
+          components={renderers}
+          urlTransform={transformLinkUri}
+          disallowedElements={disallowed}
+          // unwrap and render children from invalid markdown
+          unwrapDisallowed={true}
+        >
+          {processedSource}
+        </ReactMarkdown>
+      </ErrorBoundary>
+    </HelpTextContext.Provider>
   )
 })
 
@@ -1019,6 +1048,7 @@ const StreamlitMarkdown: FC<Props> = ({
   disableLinks,
   isToast,
   inheritFont,
+  helpText,
 }) => {
   const isInDialog = useContext(IsDialogContext)
 
@@ -1039,6 +1069,7 @@ const StreamlitMarkdown: FC<Props> = ({
         allowHTML={allowHTML}
         isLabel={isLabel}
         disableLinks={disableLinks}
+        helpText={helpText}
       />
     </StyledStreamlitMarkdown>
   )
