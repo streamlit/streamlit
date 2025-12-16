@@ -23,7 +23,6 @@ import { Field, Struct, StructRow, TimeUnit, util } from "apache-arrow"
 import { trimEnd } from "lodash-es"
 import { getLogger } from "loglevel"
 import moment from "moment-timezone"
-import numbro from "numbro"
 
 import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
 
@@ -484,8 +483,18 @@ function formatFloat(num: number): string {
   // This preserves meaningful precision while avoiding issues like 1.2000000000000002
   const rounded = Math.round(num * 1000000) / 1000000
 
-  // Format with up to 6 optional decimal places (brackets = optional)
-  return numbro(rounded).format("0,0.[000000]")
+  // Format the number with proper thousands separators
+  // Use toFixed to ensure we have the right decimal places, then add commas
+  const decimalStr = rounded.toFixed(6)
+  const [intPart, decPart] = decimalStr.split(".")
+
+  // Trim trailing zeros but keep at least 2 decimal places
+  const trimmedDec = decPart.replace(/0+$/, "").padEnd(2, "0")
+
+  // Add thousands separators to integer part
+  const formattedInt = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+
+  return `${formattedInt}.${trimmedDec}`
 }
 
 /**

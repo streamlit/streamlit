@@ -16,7 +16,17 @@
 
 import React, { memo, ReactElement, useEffect, useRef, useState } from "react"
 
-import { Close, KeyboardArrowDown } from "@emotion-icons/material-outlined"
+import {
+  Add,
+  Close,
+  Functions,
+  KeyboardArrowDown,
+  Tag,
+  TrendingDown,
+  TrendingUp,
+} from "@emotion-icons/material-outlined"
+
+import { useEmotionTheme } from "@streamlit/lib"
 
 import Icon from "~lib/components/shared/Icon"
 
@@ -56,6 +66,23 @@ const AGGREGATION_OPTIONS: Array<{
   { label: "Max", value: "max" },
 ]
 
+function getAggregationIcon(aggregation: AggregationType): typeof Functions {
+  switch (aggregation) {
+    case "sum":
+      return Add
+    case "mean":
+      return Functions
+    case "count":
+      return Tag
+    case "min":
+      return TrendingDown
+    case "max":
+      return TrendingUp
+    default:
+      return Functions
+  }
+}
+
 function DropZone({
   label,
   fields = [],
@@ -65,6 +92,7 @@ function DropZone({
   onReorder,
   showAggregation = false,
 }: DropZoneProps): ReactElement {
+  const theme = useEmotionTheme()
   const [activeAggregation, setActiveAggregation] = useState<string | null>(
     null
   )
@@ -205,13 +233,16 @@ function DropZone({
                                   option.value
                                 )
                               }
-                              style={{
-                                fontWeight:
-                                  option.value === currentAggregation
-                                    ? "bold"
-                                    : "normal",
-                              }}
+                              className={
+                                option.value === currentAggregation
+                                  ? "selected"
+                                  : ""
+                              }
                             >
+                              <Icon
+                                content={getAggregationIcon(option.value)}
+                                size="sm"
+                              />
                               {option.label}
                             </button>
                           ))}

@@ -18,7 +18,6 @@ import React, {
   memo,
   ReactElement,
   useCallback,
-  useEffect,
   useMemo,
   useState,
 } from "react"
@@ -57,7 +56,7 @@ export interface PivotTableProps {
 }
 
 export function PivotTable(props: PivotTableProps): ReactElement {
-  const [sidebarVisible, setSidebarVisible] = useState(true)
+  const [sidebarVisible, setSidebarVisible] = useState(false)
   const [showRowTotals, setShowRowTotals] = useState(false)
   const [showColumnTotals, setShowColumnTotals] = useState(false)
   const [pivotConfig, setPivotConfig] = useState<PivotConfig>({
@@ -94,37 +93,6 @@ export function PivotTable(props: PivotTableProps): ReactElement {
   const handleToggleSidebar = useCallback(() => {
     setSidebarVisible(prev => !prev)
   }, [])
-
-  // Apply bold styling to totals after render
-  useEffect(() => {
-    if (!showRowTotals && !showColumnTotals) {
-      return
-    }
-
-    const table = document.querySelector(".stPivotTable table")
-    if (!table) {
-      return
-    }
-
-    // Bold last row if showing row totals
-    if (showRowTotals) {
-      const lastRow = table.querySelector("tbody tr:last-child")
-      if (lastRow) {
-        lastRow.querySelectorAll("td, th").forEach(cell => {
-          ;(cell as HTMLElement).style.fontWeight = "bold"
-        })
-      }
-    }
-
-    // Bold last column if showing column totals
-    if (showColumnTotals) {
-      table
-        .querySelectorAll("thead th:last-child, tbody td:last-child")
-        .forEach(cell => {
-          ;(cell as HTMLElement).style.fontWeight = "bold"
-        })
-    }
-  }, [showRowTotals, showColumnTotals, transformedData])
 
   // Handler functions for field management
   const handleAddToRows = useCallback((fieldName: string) => {

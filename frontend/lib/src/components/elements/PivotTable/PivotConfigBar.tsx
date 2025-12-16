@@ -17,6 +17,7 @@
 import React, { memo, ReactElement, useRef, useState } from "react"
 
 import {
+  Add,
   ArrowDownward,
   ArrowForward,
   Close,
@@ -73,7 +74,7 @@ const AGGREGATION_OPTIONS: Array<{
 function getAggregationIcon(aggregation: AggregationType): typeof Functions {
   switch (aggregation) {
     case "sum":
-      return Functions // Σ
+      return Add // +
     case "count":
       return Tag // # (using Tag as close to # symbol)
     case "mean":

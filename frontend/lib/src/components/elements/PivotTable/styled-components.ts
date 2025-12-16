@@ -232,8 +232,8 @@ export const StyledAggregationButton = styled.button(({ theme }) => ({
 export const StyledAggregationMenu = styled.div(({ theme }) => ({
   position: "absolute",
   top: theme.sizes.full,
-  left: 0,
-  minWidth: "120px",
+  right: 0,
+  minWidth: "160px",
   backgroundColor: theme.colors.bgColor,
   border: `1px solid ${theme.colors.borderColorLight}`,
   borderRadius: theme.radii.md,
@@ -242,18 +242,26 @@ export const StyledAggregationMenu = styled.div(({ theme }) => ({
   marginTop: theme.spacing.twoXS,
 
   button: {
-    display: "block",
+    display: "flex",
+    alignItems: "center",
+    gap: theme.spacing.md,
     width: theme.sizes.full,
     padding: theme.spacing.sm,
-    background: "none",
+    backgroundColor: "transparent",
     border: "none",
     textAlign: "left",
     cursor: "pointer",
     fontSize: theme.fontSizes.sm,
     color: theme.colors.bodyText,
+    transition: "background-color 0.2s ease",
 
     "&:hover": {
+      backgroundColor: `${theme.colors.darkenedBgMix15} !important`,
+    },
+
+    "&.selected": {
       backgroundColor: theme.colors.secondaryBg,
+      fontWeight: theme.fontWeights.bold,
     },
 
     "&:not(:last-child)": {
