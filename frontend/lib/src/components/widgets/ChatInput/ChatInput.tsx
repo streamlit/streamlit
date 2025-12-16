@@ -694,7 +694,9 @@ function ChatInput({
                     overflowY: "auto",
                     paddingLeft: theme.spacing.none,
                     paddingRight: theme.spacing.none,
-                    paddingBottom: theme.spacing.sm,
+                    // Reduced from 8px to 6px to align text center with button center
+                    // Text center = 6px + lineHeight/2 ≈ 16px = button center (32px/2)
+                    paddingBottom: theme.spacing.xs,
                     paddingTop: theme.spacing.sm,
                     width: "100%",
                   },
