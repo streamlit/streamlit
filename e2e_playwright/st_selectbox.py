@@ -160,11 +160,10 @@ if st.toggle("Update selectbox props"):
         args=("Updated select arg",),
         kwargs={"param": "updated kwarg param"},
         placeholder="updated placeholder",
-        # options, format_func & accept_new_options are not yet supported for
-        # dynamic changes keeping it at the same value for now:
-        options=["apple", "banana", "orange"],
+        # Dynamic options and format_func changes are now supported when key is provided
+        options=["grape", "mango", "papaya", "apple"],
         accept_new_options=True,
-        format_func=lambda x: x.capitalize(),
+        format_func=lambda x: x.upper(),
     )
     st.write("Updated selectbox value:", sel_value)
 else:
@@ -185,3 +184,26 @@ else:
         format_func=lambda x: x.capitalize(),
     )
     st.write("Initial selectbox value:", sel_value)
+
+# Test case for dynamic options with value reset behavior
+st.subheader("Dynamic Options Reset Test")
+
+if "remove_banana" not in st.session_state:
+    st.session_state.remove_banana = False
+
+if st.button("Toggle remove banana", key="toggle_remove_banana"):
+    st.session_state.remove_banana = not st.session_state.remove_banana
+
+if st.session_state.remove_banana:
+    dynamic_options = ["apple", "cherry", "date"]
+else:
+    dynamic_options = ["apple", "banana", "cherry", "date"]
+
+dynamic_value = st.selectbox(
+    "selectbox 20 (dynamic options reset test)",
+    options=dynamic_options,
+    key="dynamic_reset_selectbox",
+)
+st.write("dynamic selectbox value:", dynamic_value)
+st.write("banana removed:", st.session_state.remove_banana)
+st.write("current options:", dynamic_options)
