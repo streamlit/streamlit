@@ -75,7 +75,7 @@ export const StyledActionRow = styled.div(({ theme }) => ({
 export const StyledSimpleRow = styled.div(({ theme }) => ({
   display: "flex",
   flexDirection: "row",
-  alignItems: "center",
+  alignItems: "flex-end",
   width: "100%",
   gap: theme.spacing.lg,
 }))
