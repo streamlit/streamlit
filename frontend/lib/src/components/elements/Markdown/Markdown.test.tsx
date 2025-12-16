@@ -61,6 +61,16 @@ describe("Markdown element with help", () => {
     expect(helpText).toBeVisible()
   })
 
+  it("renders markdown without tooltip when help is empty string", () => {
+    const props = getProps({ help: "" })
+    render(<Markdown {...props} />)
+
+    // Empty help should not render a tooltip icon
+    expect(
+      screen.queryByTestId("stTooltipHoverTarget")
+    ).not.toBeInTheDocument()
+  })
+
   it("renders markdown help tooltip with newlines correctly", async () => {
     const user = userEvent.setup()
     const props = getProps({ help: "Line 1\n\nLine 2\n\nLine 3" })
