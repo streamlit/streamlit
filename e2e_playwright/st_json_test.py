@@ -71,7 +71,7 @@ def test_shows_json_path_tooltip_on_click(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that clicking on a JSON value shows a tooltip with the JSON path."""
-    # Use a JSON element with a nested values:
+    # Use a JSON element with nested values:
     json_element = themed_app.get_by_test_id("stJson").nth(6)
     expect(json_element).to_be_visible()
 
