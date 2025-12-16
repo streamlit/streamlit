@@ -476,3 +476,27 @@ def test_multiselect_empty_options_disabled_when_no_accept_new(app: Page):
 
     # Verify the widget value remains empty
     expect_text(app, "value 3: []")
+
+
+def test_multiselect_preserves_scroll_position_on_remove(app: Page):
+    """Should preserve scroll position when removing an item from the multiselect."""
+    multiselect_elem = get_multiselect(app, "multiselect 17 - show maxHeight")
+
+    # Get the value container (scrollable area)
+    value_container = multiselect_elem.locator(
+        '[data-baseweb="select"] > div > div:first-child'
+    )
+
+    # Scroll to bottom of the value container
+    value_container.evaluate("el => { el.scrollTop = el.scrollHeight; }")
+
+    # Get initial scroll position (should be > 0 since there are many items)
+    initial_scroll = value_container.evaluate("el => el.scrollTop")
+    assert initial_scroll > 0
+
+    # Remove an item by clicking its delete button
+    del_from_multiselect(app, "multiselect 17 - show maxHeight", "fifteen")
+
+    # Verify scroll position is preserved (within small tolerance for item removal)
+    final_scroll = value_container.evaluate("el => el.scrollTop")
+    assert final_scroll == initial_scroll

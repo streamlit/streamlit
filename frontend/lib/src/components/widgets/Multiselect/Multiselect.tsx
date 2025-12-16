@@ -14,12 +14,22 @@
  * limitations under the License.
  */
 
-import { FC, memo, useCallback, useContext, useMemo } from "react"
+import {
+  FC,
+  memo,
+  useCallback,
+  useContext,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+} from "react"
 
 import { ChevronDown } from "baseui/icon"
 import {
   type OnChangeParams,
   type Option,
+  type SharedStylePropsArg,
+  StyledValueContainer,
   TYPE,
   Select as UISelect,
 } from "baseui/select"
@@ -93,6 +103,8 @@ const Multiselect: FC<Props> = props => {
 
   const theme = useEmotionTheme()
   const isInSidebar = useContext(IsSidebarContext)
+  const valueContainerRef = useRef<HTMLDivElement>(null)
+  const scrollTopRef = useRef(0)
   const [value, setValueWithSource] = useBasicWidgetState<
     MultiselectValue,
     MultiSelectProto
@@ -214,6 +226,37 @@ const Multiselect: FC<Props> = props => {
     return `${pxMaxHeight}px`
   }, [theme.fontSizes.baseFontSize])
 
+  useLayoutEffect(() => {
+    if (valueContainerRef.current) {
+      valueContainerRef.current.scrollTop = scrollTopRef.current
+    }
+  })
+
+  const handleValueContainerScroll = useCallback(
+    (e: React.UIEvent<HTMLDivElement>) => {
+      // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Reading scroll position on scroll event
+      scrollTopRef.current = e.currentTarget.scrollTop
+    },
+    []
+  )
+
+  const ValueContainer = useMemo(
+    () =>
+      // eslint-disable-next-line @eslint-react/no-nested-component-definitions -- Required for baseweb component override with refs
+      function ValueContainer(
+        props: SharedStylePropsArg & { children: React.ReactNode }
+      ): React.ReactElement {
+        return (
+          <StyledValueContainer
+            {...props}
+            ref={valueContainerRef}
+            onScroll={handleValueContainerScroll}
+          />
+        )
+      },
+    [handleValueContainerScroll]
+  )
+
   return (
     <div className="stMultiSelect" data-testid="stMultiSelect">
       <WidgetLabel
@@ -313,6 +356,7 @@ const Multiselect: FC<Props> = props => {
               }),
             },
             ValueContainer: {
+              component: ValueContainer,
               style: () => ({
                 overflowY: "auto",
                 paddingLeft: theme.spacing.sm,
