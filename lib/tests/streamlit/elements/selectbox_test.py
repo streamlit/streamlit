@@ -533,6 +533,46 @@ def test_selectbox_resets_with_safe_index_when_options_shrink():
     assert at.text[0].value == "Selected: A"
 
 
+def test_selectbox_preserves_custom_value_with_accept_new_options():
+    """Test that accept_new_options=True preserves values not in the options list.
+
+    When accept_new_options=True, the validation is skipped and the value is
+    preserved even if it's not in the current options list.
+    """
+
+    def script():
+        import streamlit as st
+
+        if "shrunk" not in st.session_state:
+            st.session_state["shrunk"] = False
+
+        if st.session_state["shrunk"]:
+            options = ["A", "C"]  # "B" removed
+        else:
+            options = ["A", "B", "C"]
+
+        selected = st.selectbox(
+            "Pick one", options, key="picker", accept_new_options=True
+        )
+        st.text(f"Selected: {selected}")
+
+        if st.button("Shrink options"):
+            st.session_state["shrunk"] = True
+
+    at = AppTest.from_function(script).run()
+
+    # Select "B"
+    at = at.selectbox[0].set_value("B").run()
+    assert at.text[0].value == "Selected: B"
+
+    # Click button to shrink options (remove "B")
+    at = at.button[0].click().run()
+
+    # With accept_new_options=True, selection should be PRESERVED even though
+    # "B" is no longer in options (no reset, no extra run needed)
+    assert at.text[0].value == "Selected: B"
+
+
 def test_selectbox_enum_coercion():
     """Test E2E Enum Coercion on a selectbox.
 
