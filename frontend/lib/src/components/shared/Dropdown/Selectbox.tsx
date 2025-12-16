@@ -30,11 +30,9 @@ import { type OnChangeParams, Select as UISelect } from "baseui/select"
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import { getBorderColor } from "~lib/components/shared/Base/styled-components"
 import VirtualDropdown from "~lib/components/shared/Dropdown/VirtualDropdown"
-import { Placement } from "~lib/components/shared/Tooltip"
-import TooltipIcon from "~lib/components/shared/TooltipIcon"
 import {
-  StyledWidgetLabelHelp,
   WidgetLabel,
+  WidgetLabelHelpIcon,
 } from "~lib/components/widgets/BaseWidget"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
@@ -140,11 +138,7 @@ const Selectbox: FC<Props> = ({
         labelVisibility={labelVisibility}
         disabled={selectDisabled}
       >
-        {help && (
-          <StyledWidgetLabelHelp>
-            <TooltipIcon content={help} placement={Placement.TOP_RIGHT} />
-          </StyledWidgetLabelHelp>
-        )}
+        {help && <WidgetLabelHelpIcon content={help} label={label} />}
       </WidgetLabel>
       <UISelect
         creatable={acceptNewOptions}

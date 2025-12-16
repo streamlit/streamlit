@@ -40,10 +40,9 @@ import BaseButton, {
 } from "~lib/components/shared/BaseButton"
 import { StyledButtonGroup } from "~lib/components/shared/BaseButton/styled-components"
 import { Placement } from "~lib/components/shared/Tooltip"
-import TooltipIcon from "~lib/components/shared/TooltipIcon"
 import {
-  StyledWidgetLabelHelpInline,
   WidgetLabel,
+  WidgetLabelHelpIconInline,
 } from "~lib/components/widgets/BaseWidget"
 import {
   useBasicWidgetState,
@@ -381,9 +380,11 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
         )}
       >
         {help && (
-          <StyledWidgetLabelHelpInline>
-            <TooltipIcon content={help} placement={Placement.TOP} />
-          </StyledWidgetLabelHelpInline>
+          <WidgetLabelHelpIconInline
+            content={help}
+            placement={Placement.TOP}
+            label={label}
+          />
         )}
       </WidgetLabel>
       <BasewebButtonGroup

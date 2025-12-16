@@ -33,8 +33,7 @@ import {
 import Icon from "~lib/components/shared/Icon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
 import { Placement } from "~lib/components/shared/Tooltip"
-import TooltipIcon from "~lib/components/shared/TooltipIcon"
-import { StyledWidgetLabelHelpInline } from "~lib/components/widgets/BaseWidget"
+import { WidgetLabelHelpIconInline } from "~lib/components/widgets/BaseWidget"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { formatNumber, isNumericString } from "~lib/util/formatNumber"
 import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
@@ -353,9 +352,11 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
             <StreamlitMarkdown source={label} allowHTML={false} isLabel />
           </StyledTruncateText>
           {help && (
-            <StyledWidgetLabelHelpInline>
-              <TooltipIcon content={help} placement={Placement.TOP_RIGHT} />
-            </StyledWidgetLabelHelpInline>
+            <WidgetLabelHelpIconInline
+              content={help}
+              placement={Placement.TOP_RIGHT}
+              label={label}
+            />
           )}
         </StyledMetricLabelText>
         <StyledMetricValueText data-testid="stMetricValue">

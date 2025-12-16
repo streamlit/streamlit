@@ -48,16 +48,20 @@ export function WidgetLabel({
   }
 
   return (
-    // we use aria-hidden to disable ARIA for StyleWidgetLabel, because each
-    // widget should have its own aria-label and/or implement accessibility.
     <StyledWidgetLabel
       data-testid="stWidgetLabel"
-      aria-hidden="true"
       disabled={disabled}
       labelVisibility={labelVisibility}
       htmlFor={htmlFor}
     >
-      <StreamlitMarkdown source={label} allowHTML={false} isLabel />
+      {/* Accessibility contract:
+          Widget inputs must expose their own accessible name (e.g. via aria-label
+          and/or aria-labelledby). We hide the visual label text from assistive tech
+          to avoid duplicate announcements, while keeping any children (e.g. help
+          icons) accessible. */}
+      <span aria-hidden="true">
+        <StreamlitMarkdown source={label} allowHTML={false} isLabel />
+      </span>
       {children}
     </StyledWidgetLabel>
   )

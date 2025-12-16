@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { ReactElement, ReactNode } from "react"
+import { isValidElement, ReactElement } from "react"
 
 import { HelpCircle as HelpCircleIcon } from "react-feather"
 
@@ -28,28 +28,104 @@ import { convertRemToPx } from "~lib/theme"
 import {
   StyledLabelHelpInline,
   StyledTooltipIconWrapper,
+  StyledTooltipTriggerButton,
 } from "./styled-components"
 
-export interface TooltipIconProps {
+interface TooltipIconCommonProps {
   placement?: Placement
   isLatex?: boolean
   content: string
-  children?: ReactNode
   markdownProps?: Partial<StreamlitMarkdownProps>
   onMouseEnterDelay?: number
   containerWidth?: boolean
 }
 
-function TooltipIcon({
-  placement = Placement.AUTO,
-  isLatex = false,
-  content,
-  children,
-  markdownProps,
-  onMouseEnterDelay,
-  containerWidth = false,
-}: TooltipIconProps): ReactElement {
+/**
+ * TooltipIconProps is intentionally a union to prevent unlabeled, focusable
+ * tooltip triggers from being introduced.
+ *
+ * - If you pass `children`, `TooltipIcon` will *not* render its own button. In
+ *   that case the child should already be an interactive element with its own
+ *   accessible name, so requiring `ariaLabel` would be redundant/noisy.
+ * - If you do *not* pass `children`, `TooltipIcon` renders a `<button>`
+ *   trigger. That trigger must have an accessible name, so `ariaLabel` is
+ *   required.
+ *
+ * Usage examples:
+ *
+ * ```tsx
+ * // With children: children must already be interactive and labeled.
+ * <TooltipIcon content="More info">
+ *   <button aria-label="Show details">i</button>
+ * </TooltipIcon>
+ *
+ * // Without children: TooltipIcon renders its own button, so ariaLabel is required.
+ * <TooltipIcon content="More info" ariaLabel="Show help" />
+ * ```
+ */
+export type TooltipIconProps =
+  | (TooltipIconCommonProps & {
+      children: ReactElement
+      ariaLabel?: never
+    })
+  | (TooltipIconCommonProps & {
+      ariaLabel: string
+      children?: never
+    })
+
+function TooltipIcon(props: TooltipIconProps): ReactElement {
+  const {
+    placement = Placement.AUTO,
+    isLatex = false,
+    content,
+    markdownProps,
+    onMouseEnterDelay,
+    containerWidth = false,
+  } = props
   const theme = useEmotionTheme()
+
+  const renderDefaultTriggerButton = (ariaLabel: string): ReactElement => {
+    return (
+      <StyledTooltipTriggerButton type="button" aria-label={ariaLabel}>
+        <HelpCircleIcon
+          className="icon"
+          aria-hidden="true"
+          focusable="false"
+          /* Convert size to px because using rem works but logs a console error (at least on webkit) */
+          size={convertRemToPx(theme.iconSizes.base)}
+        />
+      </StyledTooltipTriggerButton>
+    )
+  }
+
+  /**
+   * Render a tooltip trigger.
+   *
+   * - If `children` are provided, we assume the child is already interactive and
+   *   properly labeled.
+   * - Otherwise we render a default button trigger that requires an accessible name.
+   */
+  const renderTrigger = (): ReactElement => {
+    if ("children" in props) {
+      if (isValidElement(props.children)) {
+        return props.children
+      }
+
+      return renderDefaultTriggerButton("Help")
+    }
+
+    const ariaLabel = props.ariaLabel.trim()
+
+    if (!ariaLabel.length) {
+      // `ariaLabel` is required by the type when no children are provided, but
+      // we still guard at runtime because: it may be derived from dynamic data
+      // (e.g. widget labels) and end up empty.
+      return renderDefaultTriggerButton("Help")
+    }
+
+    return renderDefaultTriggerButton(ariaLabel)
+  }
+
   return (
     <StyledTooltipIconWrapper
       className="stTooltipIcon"
@@ -70,25 +146,42 @@ function TooltipIcon({
         inline
         containerWidth={containerWidth}
       >
-        {children || (
-          <HelpCircleIcon
-            className="icon"
-            /* Convert size to px because using rem works but logs a console error (at least on webkit) */
-            size={convertRemToPx(theme.iconSizes.base)}
-          />
-        )}
+        {renderTrigger()}
       </Tooltip>
     </StyledTooltipIconWrapper>
   )
+}
+
+export function getHelpTooltipAriaLabel(label?: string | null): string {
+  // We try to generate a widget-specific accessible name when possible. In some
+  // cases `label` can be missing/empty (e.g. widgets created without a visible
+  // label), so we fall back to a generic "Help" label rather than returning an
+  // empty accessible name.
+  const trimmed = label?.trim()
+  const normalized = trimmed ? trimmed.replace(/\s+/g, " ") : null
+  return normalized ? `Help for ${normalized}` : "Help"
+}
+
+/**
+ * InlineTooltipIcon is a convenience wrapper used in places like markdown and
+ * headings, where we always want a standard "help" icon next to text.
+ *
+ * Unlike `TooltipIcon`, it always provides an accessible name by default to
+ * keep call sites terse while still meeting accessibility requirements.
+ */
+export interface InlineTooltipIconProps extends TooltipIconCommonProps {
+  ariaLabel?: string
 }
 
 export const InlineTooltipIcon = ({
   placement = Placement.TOP_RIGHT,
   isLatex = false,
   content,
-  children,
   markdownProps,
-}: TooltipIconProps): ReactElement => {
+  onMouseEnterDelay,
+  containerWidth,
+  ariaLabel = "Help",
+}: InlineTooltipIconProps): ReactElement => {
   return (
     <StyledLabelHelpInline>
       <TooltipIcon
@@ -96,9 +189,10 @@ export const InlineTooltipIcon = ({
         isLatex={isLatex}
         content={content}
         markdownProps={markdownProps}
-      >
-        {children}
-      </TooltipIcon>
+        onMouseEnterDelay={onMouseEnterDelay}
+        containerWidth={containerWidth}
+        ariaLabel={ariaLabel}
+      />
     </StyledLabelHelpInline>
   )
 }

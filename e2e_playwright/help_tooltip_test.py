@@ -48,7 +48,7 @@ def test_tooltip_does_not_overflow_on_the_right_side(app: Page):
     popover_button = (
         app.get_by_test_id("stPopover")
         .filter(has_text="Popover with toggle")
-        .locator("button")
+        .get_by_test_id("stPopoverButton")
     )
 
     # Ensure popover button is visible and stable before clicking

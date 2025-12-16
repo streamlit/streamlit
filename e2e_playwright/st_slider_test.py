@@ -32,6 +32,7 @@ from e2e_playwright.shared.app_utils import (
     get_slider,
     reset_focus,
     reset_hovering,
+    tab_until_focused,
 )
 
 NUM_SLIDER_WIDGETS = 25
@@ -93,6 +94,28 @@ def test_slider_rendering(themed_app: Page, assert_snapshot: ImageCompareFunctio
 def test_help_tooltip_works(app: Page):
     element_with_help = get_slider(app, "Label 1")
     expect_help_tooltip(app, element_with_help, "This is some help tooltip!")
+
+
+def test_help_tooltip_is_keyboard_accessible(app: Page):
+    """Test that slider help tooltips can be opened via keyboard focus."""
+    slider = get_slider(app, "Label 1")
+    slider.scroll_into_view_if_needed()
+
+    # Ensure no stale tooltip from hover/focus state:
+    reset_hovering(app)
+    reset_focus(app)
+
+    help_button = slider.get_by_role("button", name="Help for Label 1")
+    tab_until_focused(app, help_button)
+    expect(help_button).to_be_focused()
+
+    tooltip = app.get_by_test_id("stTooltipContent")
+    expect(tooltip).to_be_visible()
+    expect(tooltip).to_have_text("This is some help tooltip!")
+
+    # Blur to close:
+    reset_focus(app)
+    expect(tooltip).not_to_be_attached()
 
 
 def test_slider_in_expander(app: Page, assert_snapshot: ImageCompareFunction):

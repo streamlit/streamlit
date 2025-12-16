@@ -21,20 +21,19 @@ import {
   STYLE_TYPE,
   Checkbox as UICheckbox,
 } from "baseui/checkbox"
-import { transparentize } from "color2k"
 
 import { Checkbox as CheckboxProto } from "@streamlit/protobuf"
 
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
 import { Placement } from "~lib/components/shared/Tooltip"
-import TooltipIcon from "~lib/components/shared/TooltipIcon"
-import { StyledWidgetLabelHelpInline } from "~lib/components/widgets/BaseWidget"
+import { WidgetLabelHelpIconInline } from "~lib/components/widgets/BaseWidget"
 import {
   useBasicWidgetState,
   ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { hasLightBackgroundColor } from "~lib/theme"
+import { getFocusBoxShadow } from "~lib/theme/utils"
 import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -179,7 +178,7 @@ function Checkbox({
                 marginBottom: 0,
                 boxShadow:
                   $isFocusVisible && $checked
-                    ? `0 0 0 0.2rem ${transparentize(colors.primary, 0.5)}`
+                    ? getFocusBoxShadow(colors.primary)
                     : "",
                 // This is painfully verbose, but baseweb seems to internally
                 // use the long-hand version, which means we can't use the
@@ -219,12 +218,11 @@ function Checkbox({
             largerLabel
           />
           {element.help && (
-            <StyledWidgetLabelHelpInline color={color}>
-              <TooltipIcon
-                content={element.help}
-                placement={Placement.TOP_RIGHT}
-              />
-            </StyledWidgetLabelHelpInline>
+            <WidgetLabelHelpIconInline
+              content={element.help}
+              placement={Placement.TOP_RIGHT}
+              label={element.label}
+            />
           )}
         </StyledContent>
       </UICheckbox>
