@@ -126,6 +126,8 @@ const LOG = getLogger("WebsocketConnection")
  * Events of the WebsocketConnection state machine. Here's what the FSM looks
  * like:
  *
+ * DEFAULT PATH (enableBypass = false):
+ *
  *   INITIAL
  *     │
  *     │               on ping succeed
@@ -137,6 +139,27 @@ const LOG = getLogger("WebsocketConnection")
  *     │                                  │
  *     │:on error/closed                  │:on conn succeed
  *   CONNECTED<───────────────────────────┘
+ *
+ *
+ * BYPASS PATH (enableBypass = true):
+ *
+ *   INITIAL ─────────────────────> CONNECTING
+ *                                    │  │
+ *             ┌──────────────────────┘  │
+ *             │:on timeout/error/closed │
+ *             v                         │:on conn succeed
+ *   PINGING_SERVER                      │
+ *     ^  ^                              │
+ *     │  │:on timeout/error/closed      │
+ *     │  └──────────────────────────────┤
+ *     │                                 │
+ *     │:on error/closed                 │
+ *   CONNECTED<──────────────────────────┘
+ *
+ *   Note: In bypass mode, background pings run in parallel with the WebSocket
+ *   connection attempt. The first URI (index 0) is always tried first. If the
+ *   connection fails, the FSM falls back to PINGING_SERVER to discover the
+ *   correct URI via health checks.
  *
  *
  *                    on fatal error or call to .disconnect()
@@ -405,10 +428,11 @@ export class WebsocketConnection {
    * - pingServerInBackground(): No FSM transition (already in CONNECTING state)
    *
    * Error handling (consistent between both):
-   * - Cancellation: Both log and exit gracefully, no FSM transition
-   * - Unexpected errors: Both call stepFsm("FATAL_ERROR") for consistent behavior
-   *   (Note: In practice, doInitPings retries indefinitely and never rejects on ping
-   *   failures, so this code path should never execute in either method)
+   * - Cancellation (PingCancelledError): Both log and exit gracefully, no FSM transition
+   * - Unexpected errors: Both call stepFsm("FATAL_ERROR") as defensive programming.
+   *   In practice, doInitPings retries indefinitely and only rejects with
+   *   PingCancelledError, but we handle unexpected errors to guard against future
+   *   implementation changes or unforeseen edge cases.
    */
   private async pingServerInBackground(): Promise<void> {
     this.pingRequest = doInitPings(

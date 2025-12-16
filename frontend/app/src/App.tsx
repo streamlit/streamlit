@@ -53,6 +53,7 @@ import {
   DefaultStreamlitEndpoints,
   ErrorDetails,
   IHostConfigResponse,
+  isHostConfigBypassEnabled,
   LibConfig,
   parseUriIntoBaseParts,
   StreamlitEndpoints,
@@ -458,16 +459,18 @@ export class App extends PureComponent<Props, State> {
   }
 
   private applyInitialHostConfig(): void {
-    // Apply minimal host configuration from StreamlitConfig.HOST_CONFIG, if present.
-    // This enables a fast-path for establishing the websocket connection and
-    // host communication without waiting for the host-config endpoint.
-    const initialHostConfig = StreamlitConfig.HOST_CONFIG
-    if (!initialHostConfig) {
+    // Apply minimal host configuration from StreamlitConfig.HOST_CONFIG only when
+    // bypass mode is enabled. This ensures the initial config is valid and complete
+    // (has BACKEND_BASE_URL, allowedOrigins, and useExternalAuthToken).
+    // Partial or invalid HOST_CONFIG should be ignored to prevent inconsistent state.
+    if (!isHostConfigBypassEnabled()) {
       return
     }
 
+    // isHostConfigBypassEnabled() guarantees HOST_CONFIG exists and is valid
     const { allowedOrigins, useExternalAuthToken, metricsUrl } =
-      initialHostConfig
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      StreamlitConfig.HOST_CONFIG!
 
     const appConfig: AppConfig = {
       allowedOrigins,
@@ -478,6 +481,8 @@ export class App extends PureComponent<Props, State> {
 
     const libConfig: LibConfig = {}
 
+    // metricsUrl is optional (so not required for isHostConfigBypassEnabled)
+    // so we only set it if it exists
     if (metricsUrl !== undefined) {
       this.metricsMgr.setMetricsConfig(metricsUrl)
     }

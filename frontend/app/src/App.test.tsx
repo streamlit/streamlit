@@ -136,12 +136,30 @@ vi.mock("@streamlit/connection", async () => {
     return mockEndpoints()
   })
 
+  // isHostConfigBypassEnabled reads from globalThis.__mockStreamlitConfig
+  // to determine bypass eligibility (same criteria as real implementation)
+  const mockIsHostConfigBypassEnabled = (): boolean => {
+    const config = globalThis.__mockStreamlitConfig
+    const hostConfig = config?.HOST_CONFIG
+    if (!hostConfig) return false
+
+    const { allowedOrigins, useExternalAuthToken } = hostConfig
+    return (
+      Boolean(config?.BACKEND_BASE_URL) &&
+      Array.isArray(allowedOrigins) &&
+      allowedOrigins.length > 0 &&
+      typeof useExternalAuthToken === "boolean"
+    )
+  }
+
   return {
     ...actualModule,
     ConnectionManager: MockedClass,
     DefaultStreamlitEndpoints: MockedEndpoints,
+    isHostConfigBypassEnabled: mockIsHostConfigBypassEnabled,
   }
 })
+
 vi.mock("~lib/SessionInfo", async () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   const actualModule = await vi.importActual<any>("~lib/SessionInfo")
@@ -6037,17 +6055,18 @@ describe("App.hasReceivedNewSession flag behavior", () => {
       globalThis.__mockStreamlitConfig = {}
     })
 
-    it("does not apply config when HOST_CONFIG is absent", () => {
+    it("does not apply config when HOST_CONFIG is absent and proceeds with default behavior", () => {
       // Ensure StreamlitConfig is empty
       globalThis.__mockStreamlitConfig = {}
 
       renderApp(getProps())
 
-      // ConnectionManager should still be created (normal behavior)
+      // Verify the app initializes properly with default behavior
+      // ConnectionManager should be created (normal WebSocket connection flow)
       expect(ConnectionManager).toHaveBeenCalledTimes(1)
 
       // Verify that setAllowedOrigins and setMetricsConfig were NOT called
-      // during app initialization (since no HOST_CONFIG is present)
+      // during app initialization (config will come from endpoint instead)
       const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
         HostCommunicationManager
       )
@@ -6055,6 +6074,36 @@ describe("App.hasReceivedNewSession flag behavior", () => {
 
       expect(hostCommunicationMgr.setAllowedOrigins).not.toHaveBeenCalled()
       expect(metricsMgr.setMetricsConfig).not.toHaveBeenCalled()
+
+      // Verify the app is ready to receive config from the endpoint (default flow)
+      // by checking that onHostConfigResp callback was passed to ConnectionManager
+      const onHostConfigResp = getMockConnectionManagerProp("onHostConfigResp")
+      expect(onHostConfigResp).toBeDefined()
+
+      // Simulate receiving config from endpoint - this should work normally
+      act(() => {
+        onHostConfigResp({
+          allowedOrigins: ["https://endpoint.example.com"],
+          useExternalAuthToken: false,
+          metricsUrl: "https://metrics.example.com",
+          disableFullscreenMode: false,
+          enableCustomParentMessages: false,
+          mapboxToken: "",
+          enforceDownloadInNewTab: false,
+          blockErrorDialogs: false,
+        })
+      })
+
+      // Verify that endpoint config was applied successfully
+      expect(hostCommunicationMgr.setAllowedOrigins).toHaveBeenCalledWith({
+        allowedOrigins: ["https://endpoint.example.com"],
+        useExternalAuthToken: false,
+        enableCustomParentMessages: false,
+        blockErrorDialogs: false,
+      })
+      expect(metricsMgr.setMetricsConfig).toHaveBeenCalledWith(
+        "https://metrics.example.com"
+      )
     })
 
     it("applies HOST_CONFIG values before ConnectionManager init", () => {
@@ -6237,6 +6286,76 @@ describe("App.hasReceivedNewSession flag behavior", () => {
       expect(metricsMgr.setMetricsConfig).toHaveBeenCalledWith(
         endpointMetricsUrl // Endpoint value (window had no metricsUrl)
       )
+    })
+
+    it("does not apply HOST_CONFIG when bypass validation fails (empty allowedOrigins)", () => {
+      // HOST_CONFIG exists but with invalid/empty allowedOrigins
+      // This should NOT be applied since it fails isHostConfigBypassEnabled() validation
+      globalThis.__mockStreamlitConfig = {
+        BACKEND_BASE_URL: "https://backend.example.com",
+        HOST_CONFIG: {
+          allowedOrigins: [], // Empty - fails validation
+          useExternalAuthToken: true,
+        },
+      }
+
+      renderApp(getProps())
+
+      const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
+        HostCommunicationManager
+      )
+      const metricsMgr = getStoredValue<MetricsManager>(MetricsManager)
+
+      // Verify that setAllowedOrigins and setMetricsConfig were NOT called
+      // during app initialization (since HOST_CONFIG fails bypass validation)
+      expect(hostCommunicationMgr.setAllowedOrigins).not.toHaveBeenCalled()
+      expect(metricsMgr.setMetricsConfig).not.toHaveBeenCalled()
+    })
+
+    it("does not apply HOST_CONFIG when bypass validation fails (missing BACKEND_BASE_URL)", () => {
+      // HOST_CONFIG exists but BACKEND_BASE_URL is missing
+      // This should NOT be applied since it fails isHostConfigBypassEnabled() validation
+      globalThis.__mockStreamlitConfig = {
+        // BACKEND_BASE_URL intentionally omitted
+        HOST_CONFIG: {
+          allowedOrigins: ["https://example.com"],
+          useExternalAuthToken: true,
+        },
+      }
+
+      renderApp(getProps())
+
+      const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
+        HostCommunicationManager
+      )
+      const metricsMgr = getStoredValue<MetricsManager>(MetricsManager)
+
+      // Verify that setAllowedOrigins and setMetricsConfig were NOT called
+      expect(hostCommunicationMgr.setAllowedOrigins).not.toHaveBeenCalled()
+      expect(metricsMgr.setMetricsConfig).not.toHaveBeenCalled()
+    })
+
+    it("does not apply HOST_CONFIG when bypass validation fails (missing useExternalAuthToken)", () => {
+      // HOST_CONFIG exists but useExternalAuthToken is missing (not a boolean)
+      // This should NOT be applied since it fails isHostConfigBypassEnabled() validation
+      globalThis.__mockStreamlitConfig = {
+        BACKEND_BASE_URL: "https://backend.example.com",
+        HOST_CONFIG: {
+          allowedOrigins: ["https://example.com"],
+          // useExternalAuthToken intentionally omitted
+        },
+      }
+
+      renderApp(getProps())
+
+      const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
+        HostCommunicationManager
+      )
+      const metricsMgr = getStoredValue<MetricsManager>(MetricsManager)
+
+      // Verify that setAllowedOrigins and setMetricsConfig were NOT called
+      expect(hostCommunicationMgr.setAllowedOrigins).not.toHaveBeenCalled()
+      expect(metricsMgr.setMetricsConfig).not.toHaveBeenCalled()
     })
   })
 })
