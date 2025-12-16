@@ -271,8 +271,8 @@ def test_dynamic_selectbox_props(app: Page, assert_snapshot: ImageCompareFunctio
     3. Selection resets to default when selected value is removed from options
     4. Selection is preserved when the selected value exists in new options
 
-    Initial options: [apple, banana, orange] with format_func=capitalize
-    Updated options: [grape, mango, papaya, apple] with format_func=upper
+    Initial options: [apple, banana, mango, orange] with format_func=capitalize, index=0 (default: apple)
+    Updated options: [mango, papaya, grape, apple] with format_func=upper, index=1 (default: papaya)
     """
     dynamic_select = get_element_by_key(app, "dynamic_selectbox_with_key")
     expect(dynamic_select).to_be_visible()
@@ -290,15 +290,15 @@ def test_dynamic_selectbox_props(app: Page, assert_snapshot: ImageCompareFunctio
     select_selectbox_option(app, "Initial dynamic selectbox", "Banana")
     expect_prefixed_markdown(app, "Initial selectbox value:", "banana")
 
-    # Toggle to update props - options change from [apple, banana, orange]
-    # to [grape, mango, papaya, apple]. "banana" is NOT in updated options.
+    # Toggle to update props - options change from [apple, banana, mango, orange]
+    # to [mango, papaya, grape, apple]. "banana" is NOT in updated options.
     click_toggle(app, "Update selectbox props")
 
     # Updated selectbox is visible
     expect(dynamic_select).to_contain_text("Updated dynamic selectbox")
 
-    # Selection should RESET to "mango" (default at index=1) since "banana" is not in updated options
-    expect_prefixed_markdown(app, "Updated selectbox value:", "mango")
+    # Selection should RESET to "papaya" (default at index=1) since "banana" is not in updated options
+    expect_prefixed_markdown(app, "Updated selectbox value:", "papaya")
 
     dynamic_select.scroll_into_view_if_needed()
     assert_snapshot(dynamic_select, name="st_selectbox-dynamic_updated")
@@ -307,18 +307,19 @@ def test_dynamic_selectbox_props(app: Page, assert_snapshot: ImageCompareFunctio
     expect_help_tooltip(app, dynamic_select, "updated help")
 
     # --- Test 2: Selection PRESERVED when value exists in both option sets ---
-    # Select "apple" (exists in both initial and updated options)
-    select_selectbox_option(app, "Updated dynamic selectbox", "APPLE")
+    # Select "mango" - it exists in BOTH option sets at different indices:
+    # Initial: index 2 (displayed "Mango"), Updated: index 0 (displayed "MANGO")
+    # Neither is the default. This ensures we're testing true preservation.
+    select_selectbox_option(app, "Updated dynamic selectbox", "MANGO")
+    expect_prefixed_markdown(app, "Updated selectbox value:", "mango")
 
-    # Verify apple is now selected before toggling
-    expect_prefixed_markdown(app, "Updated selectbox value:", "apple")
-
-    # Toggle back to initial options - "apple" exists in initial too
+    # Toggle back to initial options - "mango" exists in initial too
     click_toggle(app, "Update selectbox props")
     expect(dynamic_select).to_contain_text("Initial dynamic selectbox")
 
-    # Selection should be preserved since "apple" is in both option sets
-    expect_prefixed_markdown(app, "Initial selectbox value:", "apple")
+    # Selection should be PRESERVED since "mango" is in both option sets
+    # If this was reset, it would show "apple" (initial default), not "mango"
+    expect_prefixed_markdown(app, "Initial selectbox value:", "mango")
 
 
 def test_dismiss_change_by_clicking_away(app: Page):

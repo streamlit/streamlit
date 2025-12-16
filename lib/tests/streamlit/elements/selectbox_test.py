@@ -455,12 +455,11 @@ def test_selectbox_resets_when_selection_removed():
     assert at.text[0].value == "Selected: A"
 
 
-def test_selectbox_resets_with_safe_index_when_options_shrink():
-    """Test that selection resets safely when options shrink and selected value is gone.
+def test_selectbox_resets_when_options_shrink_significantly():
+    """Test that selection resets when options shrink and selected value is gone.
 
     When a user selects a value that later gets removed from the options,
-    the selection should reset to the default. If the default index is also
-    out of bounds for the new options, it should use the last valid index.
+    the selection should reset to the default index.
     """
 
     def script():
@@ -470,15 +469,13 @@ def test_selectbox_resets_with_safe_index_when_options_shrink():
             st.session_state["shrunk"] = False
 
         if st.session_state["shrunk"]:
-            # Only 2 options now - "D" and "E" are gone
+            # Only 2 options now - "C", "D", "E" are gone
             options = ["A", "B"]
-            default_index = 0  # Must use valid index for current options
         else:
             # 5 options
             options = ["A", "B", "C", "D", "E"]
-            default_index = 0
 
-        selected = st.selectbox("Pick one", options, index=default_index, key="picker")
+        selected = st.selectbox("Pick one", options, index=0, key="picker")
         st.text(f"Selected: {selected}")
 
         if st.button("Shrink options"):

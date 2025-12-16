@@ -607,12 +607,10 @@ class SelectboxMixin:
             try:
                 index_(opt, current_value)
             except ValueError:
-                # Value not in options - reset to default
+                # Value not in options - reset to default.
                 value_needs_reset = True
                 if index is not None and len(opt) > 0:
-                    # Ensure index is within bounds (options may have shrunk)
-                    safe_index = min(index, len(opt) - 1)
-                    current_value = opt[safe_index]
+                    current_value = opt[index]
                 else:
                     current_value = None
 
