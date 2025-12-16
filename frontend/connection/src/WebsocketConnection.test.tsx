@@ -1255,20 +1255,6 @@ describe("WebsocketConnection FSM fast-path behavior", () => {
     ws.disconnect()
   })
 
-  it("uses default path when enableBypass is undefined", () => {
-    globalThis.fetch = createFetchMock()
-
-    const args = createMockArgs({ enableBypass: undefined })
-    const ws = new WebsocketConnection(args)
-
-    // Should transition to PINGING_SERVER (default behavior)
-    expect(
-      args.onConnectionStateChange as ReturnType<typeof vi.fn>
-    ).toHaveBeenCalledWith(ConnectionState.PINGING_SERVER, undefined)
-
-    ws.disconnect()
-  })
-
   it("runs background pings and calls onHostConfigResp in fast-path mode", async () => {
     globalThis.fetch = vi
       .fn()

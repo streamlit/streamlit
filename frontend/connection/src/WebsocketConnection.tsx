@@ -324,7 +324,7 @@ export class WebsocketConnection {
           if (this.args.enableBypass) {
             // Bypass: Start connecting to the websocket immediately while
             // running health and host-config pings in parallel (rather than
-            // sequentially). Both must succeed, but they don't gate each other.
+            // sequentially). Both must succeed, but they don't gate the WS connection.
             // This reduces latency while maintaining full error handling and
             // configuration retrieval.
             this.setFsmState(ConnectionState.CONNECTING)

@@ -17,14 +17,21 @@
 import { ICustomThemeConfig } from "@streamlit/protobuf"
 
 /**
- * Minimal subset of host configuration fields required for fast-path
- * websocket connection establishment.
+ * Minimal host configuration for websocket connection and host communication
+ * without waiting for the health and host-config endpoint responses.
  *
- * This can be provided via window.__streamlit.HOST_CONFIG to enable
- * websocket connection and host communication without waiting for the
- * full host-config endpoint response.
+ * All fields are optional in the type because host can provide incomplete or no config
+ * via window.__streamlit.HOST_CONFIG. Use isHostConfigBypassEnabled() to validate that
+ * required fields (useExternalAuthToken, allowedOrigins) are present.
  *
- * Note: The full host config (IHostConfigResponse) includes additional fields
+ * Required for bypass:
+ * - useExternalAuthToken (boolean)
+ * - allowedOrigins (non-empty array)
+ *
+ * Optional:
+ * - metricsUrl
+ *
+ *  Note: The full host config (IHostConfigResponse) includes additional fields
  */
 export interface MinimalHostConfig {
   /**
