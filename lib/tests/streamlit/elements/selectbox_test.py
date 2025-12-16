@@ -292,9 +292,9 @@ class SelectboxTest(DeltaGeneratorTestCase):
                 kwargs={"kwarg1": "kwarg1"},
                 label_visibility="visible",
                 placeholder="placeholder 1",
-                # Whitelisted kwargs:
                 format_func=lambda x: x.capitalize(),
                 options=["a", "b", "cd"],
+                # Whitelisted kwargs:
                 accept_new_options=True,
             )
             c1 = self.get_delta_from_queue().new_element.selectbox
@@ -313,60 +313,31 @@ class SelectboxTest(DeltaGeneratorTestCase):
                 kwargs={"kwarg_1": "kwarg_1"},
                 label_visibility="hidden",
                 placeholder="placeholder 2",
+                format_func=lambda x: x.upper(),
+                options=["apple", "banana", "cherry"],
                 # Whitelisted kwargs:
-                format_func=lambda x: x.capitalize(),
-                options=["a", "b", "cd"],
                 accept_new_options=True,
             )
             c2 = self.get_delta_from_queue().new_element.selectbox
             id2 = c2.id
             assert id1 == id2
 
-    def test_accept_new_options_changes_id(self):
-        """Test that the widget ID changes when accept_new_options changes even when the key is provided."""
-        with patch(
-            "streamlit.elements.lib.utils._register_element_id",
-            return_value=MagicMock(),
-        ):
-            st.selectbox(
-                label="Label",
-                key="selectbox_key_whitelist",
-                options=["a", "b"],
-                accept_new_options=True,
-            )
-            c1 = self.get_delta_from_queue().new_element.selectbox
-            id1 = c1.id
-
-            st.selectbox(
-                label="Label",
-                key="selectbox_key_whitelist",
-                options=["a", "b"],
-                accept_new_options=False,
-            )
-            c2 = self.get_delta_from_queue().new_element.selectbox
-            id2 = c2.id
-            assert id1 != id2
-
     @parameterized.expand(
         [
-            ("options", ["a", "b"], ["a", "b", "c"]),
-            ("format_func", lambda x: x.lower(), lambda x: x.upper()),
+            ("accept_new_options", True, False),
         ]
     )
-    def test_stable_id_when_options_or_format_func_change(
+    def test_whitelisted_stable_key_kwargs(
         self, kwarg_name: str, value1: object, value2: object
     ):
-        """Test that the widget ID remains stable when options or format_func changes with a key.
-
-        This enables dynamic option updates without losing widget state.
-        """
+        """Test that the widget ID changes when a whitelisted kwarg changes even when the key is provided."""
         with patch(
             "streamlit.elements.lib.utils._register_element_id",
             return_value=MagicMock(),
         ):
             base_kwargs = {
                 "label": "Label",
-                "key": "selectbox_key_stable",
+                "key": "selectbox_key_whitelist",
                 "options": ["a", "b"],
                 "accept_new_options": True,
                 "format_func": lambda x: x.lower(),
@@ -382,8 +353,7 @@ class SelectboxTest(DeltaGeneratorTestCase):
             st.selectbox(**base_kwargs)
             c2 = self.get_delta_from_queue().new_element.selectbox
             id2 = c2.id
-            # ID should remain stable when options/format_func change with key
-            assert id1 == id2
+            assert id1 != id2
 
 
 def test_selectbox_interaction():
