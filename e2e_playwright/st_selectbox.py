@@ -186,7 +186,6 @@ else:
     st.write("Initial selectbox value:", sel_value)
 
 # Test case for dynamic options with value reset behavior
-st.subheader("Dynamic Options Reset Test")
 
 if "remove_banana" not in st.session_state:
     st.session_state.remove_banana = False
