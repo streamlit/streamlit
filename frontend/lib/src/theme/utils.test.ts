@@ -44,7 +44,9 @@ import {
   CUSTOM_THEME_NAME,
   getCachedTheme,
   getDefaultTheme,
+  getFocusBoxShadow,
   getHostSpecifiedTheme,
+  getPrimaryFocusBoxShadow,
   getSystemTheme,
   handleSectionInheritance,
   hasThemeSectionConfigs,
@@ -108,6 +110,26 @@ describe("Styling utils", () => {
       )
       expect(computeSpacingStyle("xs  0  px  lg", lightTheme.emotion)).toEqual(
         "0.375rem 0 1px 1rem"
+      )
+    })
+  })
+
+  describe("Focus ring helpers", () => {
+    it("creates a canonical focus-ring box-shadow with default parameters", () => {
+      expect(getFocusBoxShadow("blue")).toBe(
+        "0 0 0 0.2rem rgba(0, 0, 255, 0.5)"
+      )
+    })
+
+    it("creates a canonical focus-ring box-shadow with custom parameters", () => {
+      expect(getFocusBoxShadow("#000", 0.8, "2px")).toBe(
+        "0 0 0 2px rgba(0, 0, 0, 0.2)"
+      )
+    })
+
+    it("creates a primary focus ring using the theme primary color", () => {
+      expect(getPrimaryFocusBoxShadow(lightTheme.emotion)).toBe(
+        "0 0 0 0.2rem rgba(255, 75, 75, 0.5)"
       )
     })
   })
