@@ -559,7 +559,8 @@ def test_tooltip_with_complex_markdown_gh_13339(
     # Verify the help text is NOT leaked into the markdown content
     expect(element).to_have_text("Tooltip with complex markdown")
     expect(element).not_to_contain_text("Bold")
-    expect(element).not_to_contain_text("st.markdown()")
+    expect(element).not_to_contain_text("italic")
+    expect(element).not_to_contain_text("array[index]")
     expect(element).not_to_contain_text("Streamlit")
 
     hover_target = element_container.get_by_test_id("stTooltipHoverTarget")
