@@ -109,6 +109,10 @@ class MemoryMediaFileStorage(MediaFileStorage, StatsProvider):
         self._files_by_id: dict[str, MemoryFile] = {}
         self._media_endpoint = media_endpoint
 
+    @property
+    def stats_families(self) -> Sequence[str]:
+        return (CACHE_MEMORY_FAMILY,)
+
     def load_and_get_id(
         self,
         path_or_data: str | bytes,
@@ -175,11 +179,8 @@ class MemoryMediaFileStorage(MediaFileStorage, StatsProvider):
             raise MediaFileStorageError(f"Error opening '{filename}'") from ex
 
     def get_stats(
-        self, family_names: Sequence[str] | None = None
+        self, _family_names: Sequence[str] | None = None
     ) -> dict[str, list[CacheStat]]:
-        if family_names is not None and CACHE_MEMORY_FAMILY not in family_names:
-            return {}
-
         # We operate on a copy of our dict, to avoid race conditions
         # with other threads that may be manipulating the cache.
         files_by_id = self._files_by_id.copy()
@@ -194,4 +195,7 @@ class MemoryMediaFileStorage(MediaFileStorage, StatsProvider):
         ]
         if not stats:
             return {}
+        # In general, get_stats methods need to be able to return only requested stat
+        # families, but this method only returns a single family, and we're guaranteed
+        # that it was one of those requested if we make it here.
         return {CACHE_MEMORY_FAMILY: group_cache_stats(stats)}

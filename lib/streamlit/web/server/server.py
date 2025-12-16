@@ -34,7 +34,6 @@ from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.memory_session_storage import MemorySessionStorage
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
 from streamlit.runtime.runtime_util import get_max_message_size_bytes
-from streamlit.runtime.stats import CACHE_MEMORY_FAMILY
 from streamlit.web.cache_storage_manager_config import (
     create_default_cache_storage_manager,
 )
@@ -316,9 +315,7 @@ class Server:
             ),
         )
 
-        self._runtime.stats_mgr.register_provider(
-            media_file_storage, [CACHE_MEMORY_FAMILY]
-        )
+        self._runtime.stats_mgr.register_provider(media_file_storage)
 
     @classmethod
     def initialize_mimetypes(cls) -> None:

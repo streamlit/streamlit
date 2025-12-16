@@ -84,6 +84,10 @@ class InMemoryCacheStorageWrapper(CacheStorage):
     def max_entries(self) -> float:
         return float(self._max_entries) if self._max_entries is not None else math.inf
 
+    @property
+    def stats_families(self) -> Sequence[str]:
+        return (CACHE_MEMORY_FAMILY,)
+
     def get(self, key: str) -> bytes:
         """
         Returns the stored value for the key or raise CacheStorageKeyNotFoundError if
@@ -113,12 +117,9 @@ class InMemoryCacheStorageWrapper(CacheStorage):
         self._persist_storage.clear()
 
     def get_stats(
-        self, family_names: Sequence[str] | None = None
+        self, _family_names: Sequence[str] | None = None
     ) -> dict[str, list[CacheStat]]:
         """Returns stats in bytes for the cache memory storage per item."""
-        if family_names is not None and CACHE_MEMORY_FAMILY not in family_names:
-            return {}
-
         with self._mem_cache_lock:
             stats = [
                 CacheStat(
@@ -130,6 +131,9 @@ class InMemoryCacheStorageWrapper(CacheStorage):
             ]
         if not stats:
             return {}
+        # In general, get_stats methods need to be able to return only requested stat
+        # families, but this method only returns a single family, and we're guaranteed
+        # that it was one of those requested if we make it here.
         return {CACHE_MEMORY_FAMILY: stats}
 
     def close(self) -> None:

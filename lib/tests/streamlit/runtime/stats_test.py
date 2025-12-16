@@ -48,14 +48,18 @@ class MockStatsProvider(StatsProvider):
     """A mock provider that can return stats for one or multiple families."""
 
     def __init__(self, supported_families: list[str]) -> None:
-        self.supported_families = supported_families
+        self._supported_families = supported_families
         self.stats_by_family: dict[str, list[CacheStat]] = {}
+
+    @property
+    def stats_families(self) -> Sequence[str]:
+        return self._supported_families
 
     def get_stats(
         self, family_names: Sequence[str] | None = None
     ) -> dict[str, list[CacheStat]]:
         result: dict[str, list[CacheStat]] = {}
-        for family in self.supported_families:
+        for family in self._supported_families:
             # Skip if this family isn't requested
             if family_names is not None and family not in family_names:
                 continue
@@ -70,8 +74,8 @@ class StatsManagerTest(unittest.TestCase):
         manager = StatsManager()
         provider1 = MockStatsProvider([CACHE_MEMORY_FAMILY])
         provider2 = MockStatsProvider([CACHE_MEMORY_FAMILY])
-        manager.register_provider(provider1, [CACHE_MEMORY_FAMILY])
-        manager.register_provider(provider2, [CACHE_MEMORY_FAMILY])
+        manager.register_provider(provider1)
+        manager.register_provider(provider2)
 
         # No stats
         assert manager.get_stats() == {}
@@ -100,8 +104,8 @@ class StatsManagerTest(unittest.TestCase):
         manager = StatsManager()
         provider1 = MockStatsProvider(["family_a"])
         provider2 = MockStatsProvider(["family_b"])
-        manager.register_provider(provider1, ["family_a"])
-        manager.register_provider(provider2, ["family_b"])
+        manager.register_provider(provider1)
+        manager.register_provider(provider2)
 
         provider1.stats_by_family["family_a"] = [CacheStat("family_a", "cache1", 100)]
         provider2.stats_by_family["family_b"] = [CacheStat("family_b", "cache2", 200)]
@@ -117,8 +121,8 @@ class StatsManagerTest(unittest.TestCase):
         manager = StatsManager()
         provider_a = MockStatsProvider(["family_a"])
         provider_b = MockStatsProvider(["family_b"])
-        manager.register_provider(provider_a, ["family_a"])
-        manager.register_provider(provider_b, ["family_b"])
+        manager.register_provider(provider_a)
+        manager.register_provider(provider_b)
 
         provider_a.stats_by_family["family_a"] = [CacheStat("family_a", "cache1", 100)]
         provider_b.stats_by_family["family_b"] = [CacheStat("family_b", "cache2", 200)]
@@ -132,7 +136,7 @@ class StatsManagerTest(unittest.TestCase):
         """A provider can be registered for multiple families."""
         manager = StatsManager()
         provider = MockStatsProvider(["family_a", "family_b"])
-        manager.register_provider(provider, ["family_a", "family_b"])
+        manager.register_provider(provider)
 
         provider.stats_by_family["family_a"] = [CacheStat("family_a", "cache1", 100)]
 
@@ -146,7 +150,7 @@ class StatsManagerTest(unittest.TestCase):
         """When requesting one family, stats for other families should be excluded."""
         manager = StatsManager()
         provider = MockStatsProvider(["family_a", "family_b"])
-        manager.register_provider(provider, ["family_a", "family_b"])
+        manager.register_provider(provider)
 
         provider.stats_by_family["family_a"] = [CacheStat("family_a", "cache1", 100)]
         provider.stats_by_family["family_b"] = [CacheStat("family_b", "cache2", 200)]
@@ -224,8 +228,8 @@ class StatsManagerFilterTest(unittest.TestCase):
         manager = StatsManager()
         provider1 = MockStatsProvider(["family_a"])
         provider2 = MockStatsProvider(["family_b"])
-        manager.register_provider(provider1, ["family_a"])
-        manager.register_provider(provider2, ["family_b"])
+        manager.register_provider(provider1)
+        manager.register_provider(provider2)
 
         provider1.stats_by_family["family_a"] = [CacheStat("family_a", "cache1", 100)]
         provider2.stats_by_family["family_b"] = [CacheStat("family_b", "cache2", 200)]
@@ -241,9 +245,9 @@ class StatsManagerFilterTest(unittest.TestCase):
         provider1 = MockStatsProvider(["family_a"])
         provider2 = MockStatsProvider(["family_b"])
         provider3 = MockStatsProvider(["family_c"])
-        manager.register_provider(provider1, ["family_a"])
-        manager.register_provider(provider2, ["family_b"])
-        manager.register_provider(provider3, ["family_c"])
+        manager.register_provider(provider1)
+        manager.register_provider(provider2)
+        manager.register_provider(provider3)
 
         provider1.stats_by_family["family_a"] = [CacheStat("family_a", "cache1", 100)]
         provider2.stats_by_family["family_b"] = [CacheStat("family_b", "cache2", 200)]
@@ -260,7 +264,7 @@ class StatsManagerFilterTest(unittest.TestCase):
         """StatsManager.get_stats should return empty result for unknown families."""
         manager = StatsManager()
         provider = MockStatsProvider(["family_a"])
-        manager.register_provider(provider, ["family_a"])
+        manager.register_provider(provider)
         provider.stats_by_family["family_a"] = [CacheStat("family_a", "cache1", 100)]
 
         result = manager.get_stats(family_names=["unknown_family"])
@@ -272,8 +276,8 @@ class StatsManagerFilterTest(unittest.TestCase):
         manager = StatsManager()
         provider1 = MockStatsProvider(["family_a"])
         provider2 = MockStatsProvider(["family_b"])
-        manager.register_provider(provider1, ["family_a"])
-        manager.register_provider(provider2, ["family_b"])
+        manager.register_provider(provider1)
+        manager.register_provider(provider2)
 
         provider1.stats_by_family["family_a"] = [CacheStat("family_a", "cache1", 100)]
         provider2.stats_by_family["family_b"] = [CacheStat("family_b", "cache2", 200)]

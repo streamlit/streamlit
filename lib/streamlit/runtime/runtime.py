@@ -50,9 +50,6 @@ from streamlit.runtime.state import (
     SessionStateStatProvider,
 )
 from streamlit.runtime.stats import (
-    ACTIVE_SESSIONS_FAMILY,
-    CACHE_MEMORY_FAMILY,
-    SESSION_EVENTS_FAMILY,
     StatsManager,
     StatsProvider,
 )
@@ -230,24 +227,15 @@ class Runtime:
         )
 
         self._stats_mgr = StatsManager()
-        self._stats_mgr.register_provider(
-            get_data_cache_stats_provider(), [CACHE_MEMORY_FAMILY]
-        )
-        self._stats_mgr.register_provider(
-            get_resource_cache_stats_provider(), [CACHE_MEMORY_FAMILY]
-        )
-        self._stats_mgr.register_provider(
-            self._uploaded_file_mgr, [CACHE_MEMORY_FAMILY]
-        )
-        self._stats_mgr.register_provider(
-            SessionStateStatProvider(self._session_mgr), [CACHE_MEMORY_FAMILY]
-        )
+        self._stats_mgr.register_provider(get_data_cache_stats_provider())
+        self._stats_mgr.register_provider(get_resource_cache_stats_provider())
+        if self._uploaded_file_mgr is not None:
+            self._stats_mgr.register_provider(self._uploaded_file_mgr)
+        self._stats_mgr.register_provider(SessionStateStatProvider(self._session_mgr))
 
         # Register session manager for session event metrics if it implements StatsProvider
         if isinstance(self._session_mgr, StatsProvider):
-            self._stats_mgr.register_provider(
-                self._session_mgr, [SESSION_EVENTS_FAMILY, ACTIVE_SESSIONS_FAMILY]
-            )
+            self._stats_mgr.register_provider(self._session_mgr)
 
     @property
     def state(self) -> RuntimeState:

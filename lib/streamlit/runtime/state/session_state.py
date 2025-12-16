@@ -940,15 +940,15 @@ class SessionState:
             return True
 
     def get_stats(
-        self, family_names: Sequence[str] | None = None
+        self, _family_names: Sequence[str] | None = None
     ) -> dict[str, list[CacheStat]]:
-        if family_names is not None and CACHE_MEMORY_FAMILY not in family_names:
-            return {}
-
         # Lazy-load vendored package to prevent import of numpy
         from streamlit.vendor.pympler.asizeof import asizeof
 
         stat = CacheStat("st_session_state", "", asizeof(self))
+        # In general, get_stats methods need to be able to return only requested stat
+        # families, but this method only returns a single family, and we're guaranteed
+        # that it was one of those requested if we make it here.
         return {CACHE_MEMORY_FAMILY: [stat]}
 
     def _check_serializable(self) -> None:
@@ -1005,18 +1005,22 @@ def _is_stale_widget(
 class SessionStateStatProvider(StatsProvider):
     _session_mgr: SessionManager
 
-    def get_stats(
-        self, family_names: Sequence[str] | None = None
-    ) -> dict[str, list[CacheStat]]:
-        if family_names is not None and CACHE_MEMORY_FAMILY not in family_names:
-            return {}
+    @property
+    def stats_families(self) -> Sequence[str]:
+        return (CACHE_MEMORY_FAMILY,)
 
+    def get_stats(
+        self, _family_names: Sequence[str] | None = None
+    ) -> dict[str, list[CacheStat]]:
         stats: list[CacheStat] = []
         for session_info in self._session_mgr.list_active_sessions():
             session_state = session_info.session.session_state
-            session_stats = session_state.get_stats(family_names)
+            session_stats = session_state.get_stats()
             for family_stats in session_stats.values():
                 stats.extend(family_stats)
         if not stats:
             return {}
+        # In general, get_stats methods need to be able to return only requested stat
+        # families, but this method only returns a single family, and we're guaranteed
+        # that it was one of those requested if we make it here.
         return {CACHE_MEMORY_FAMILY: group_cache_stats(stats)}

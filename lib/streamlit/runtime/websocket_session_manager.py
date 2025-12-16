@@ -60,6 +60,10 @@ class WebsocketSessionManager(SessionManager, StatsProvider):
     to the specific SessionStorage that a WebsocketSessionManager is instantiated with.
     """
 
+    @property
+    def stats_families(self) -> Sequence[str]:
+        return (SESSION_EVENTS_FAMILY, ACTIVE_SESSIONS_FAMILY)
+
     def __init__(
         self,
         session_storage: SessionStorage,

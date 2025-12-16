@@ -39,6 +39,10 @@ class MemoryUploadedFileManager(UploadedFileManager):
         self.file_storage: dict[str, dict[str, UploadedFileRec]] = defaultdict(dict)
         self.endpoint = upload_endpoint
 
+    @property
+    def stats_families(self) -> Sequence[str]:
+        return (CACHE_MEMORY_FAMILY,)
+
     def get_files(
         self, session_id: str, file_ids: Sequence[str]
     ) -> list[UploadedFileRec]:
@@ -114,15 +118,12 @@ class MemoryUploadedFileManager(UploadedFileManager):
         return result
 
     def get_stats(
-        self, family_names: Sequence[str] | None = None
+        self, _family_names: Sequence[str] | None = None
     ) -> dict[str, list[CacheStat]]:
         """Return the manager's CacheStats.
 
         Safe to call from any thread.
         """
-        if family_names is not None and CACHE_MEMORY_FAMILY not in family_names:
-            return {}
-
         # Flatten all files into a single list
         all_files: list[UploadedFileRec] = []
         # Make copy of self.file_storage for thread safety, to be sure
@@ -142,4 +143,7 @@ class MemoryUploadedFileManager(UploadedFileManager):
         ]
         if not stats:
             return {}
+        # In general, get_stats methods need to be able to return only requested stat
+        # families, but this method only returns a single family, and we're guaranteed
+        # that it was one of those requested if we make it here.
         return {CACHE_MEMORY_FAMILY: group_cache_stats(stats)}

@@ -266,6 +266,15 @@ def metric_type_string_to_proto(type_string: str) -> MetricType.ValueType:
 
 @runtime_checkable
 class StatsProvider(Protocol):
+    @property
+    def stats_families(self) -> Sequence[str]:
+        """The metric family names that this provider supports.
+
+        The StatsManager uses this property to determine which providers to call
+        when specific metric families are requested.
+        """
+        pass
+
     def get_stats(
         self, family_names: Sequence[str] | None = None
     ) -> Mapping[str, Sequence[Stat]]:
@@ -291,23 +300,18 @@ class StatsManager:
     def __init__(self) -> None:
         self._providers_by_family: dict[str, list[StatsProvider]] = {}
 
-    def register_provider(
-        self, provider: StatsProvider, family_names: Sequence[str]
-    ) -> None:
-        """Register a StatsProvider with the manager for specific metric families.
+    def register_provider(self, provider: StatsProvider) -> None:
+        """Register a StatsProvider with the manager.
 
         This function is not thread-safe. Call it immediately after creation.
 
         Parameters
         ----------
         provider : StatsProvider
-            The stats provider to register.
-        family_names : Sequence[str]
-            The metric family names that this provider supports. The manager
-            will only call this provider when stats for these families are
-            requested.
+            The stats provider to register. The provider's `stats_families`
+            property determines which metric families it will be called for.
         """
-        for family in family_names:
+        for family in provider.stats_families:
             if family not in self._providers_by_family:
                 self._providers_by_family[family] = []
             self._providers_by_family[family].append(provider)
