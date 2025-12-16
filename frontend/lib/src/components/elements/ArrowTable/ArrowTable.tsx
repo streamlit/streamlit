@@ -282,6 +282,10 @@ function generateTableFooter(
     <tfoot data-testid="stTableFooter">
       <tr>
         {range(numColumns).map(colIndex => {
+          // Check if this is an index column by examining the first row's cell type
+          const { type: cellType } = table.getCell(0, colIndex)
+          const isIndexColumn = cellType === DataFrameCellType.INDEX
+
           // Find the column name for this index
           const columnNames = table.columnNames
           const lastHeaderRow =
@@ -296,8 +300,8 @@ function generateTableFooter(
           // Check if this column has a summary configured
           const summaryConfigValue = summaryConfig[columnName]
 
-          // Render empty cell if no summary for this column
-          if (!summaryConfigValue) {
+          // Skip index columns entirely
+          if (isIndexColumn) {
             return (
               <StyledTableCellFooter
                 key={colIndex}
@@ -305,6 +309,27 @@ function generateTableFooter(
                 data-testid="stTableFooterCell"
               >
                 {"\u00A0"}
+              </StyledTableCellFooter>
+            )
+          }
+
+          // If no summary configured for this data column, render transparent min
+          // This keeps column widths balanced
+          if (!summaryConfigValue) {
+            const maxValue = computeSummary(table, colIndex, "min")
+            const maxLabel = getSummaryLabel("min")
+            return (
+              <StyledTableCellFooter
+                key={colIndex}
+                borderMode={borderMode}
+                data-testid="stTableFooterCell"
+              >
+                <StyledSummaryContent
+                  style={{ opacity: 0, pointerEvents: "none" }}
+                >
+                  <StyledSummaryLabel>{maxLabel}:</StyledSummaryLabel>
+                  <StyledSummaryValue>{maxValue}</StyledSummaryValue>
+                </StyledSummaryContent>
               </StyledTableCellFooter>
             )
           }
