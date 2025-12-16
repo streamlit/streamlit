@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Locator, Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 from e2e_playwright.shared.app_utils import (
@@ -28,52 +28,87 @@ from e2e_playwright.shared.dataframe_utils import (
     get_open_cell_overlay,
 )
 
-_NUM_DATAFRAME_ELEMENTS = 24
+
+def _get_editor(app: Page, key: str) -> Locator:
+    """Helper to get a data editor element by key."""
+    data_editor = get_element_by_key(app, key).get_by_test_id("stDataFrame").first
+    expect(data_editor).to_be_visible()
+    return data_editor
 
 
 def test_data_editor_supports_various_configurations(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Screenshot test that st.data_editor supports various configuration options."""
-    # The dataframe config test is already testing with themed apps, so using the
-    # default theme only is fine here.
-    elements = app.get_by_test_id("stDataFrame")
-    expect(elements).to_have_count(_NUM_DATAFRAME_ELEMENTS)
-
     # The dataframe component might require a bit more time for rendering the canvas
     app.wait_for_timeout(500)
 
-    assert_snapshot(elements.nth(0), name="st_data_editor-disabled_all_columns")
-    assert_snapshot(elements.nth(1), name="st_data_editor-disabled_two_columns")
-    assert_snapshot(elements.nth(2), name="st_data_editor-hide_index")
-    assert_snapshot(elements.nth(3), name="st_data_editor-show_index")
-    assert_snapshot(elements.nth(4), name="st_data_editor-custom_column_order")
-    assert_snapshot(elements.nth(5), name="st_data_editor-column_labels")
-    assert_snapshot(elements.nth(6), name="st_data_editor-hide_columns")
-    assert_snapshot(elements.nth(7), name="st_data_editor-set_column_width")
-    assert_snapshot(elements.nth(8), name="st_data_editor-help_tooltips")
-    assert_snapshot(elements.nth(9), name="st_data_editor-text_column")
-    assert_snapshot(elements.nth(10), name="st_data_editor-number_column")
-    assert_snapshot(elements.nth(11), name="st_data_editor-checkbox_column")
-    assert_snapshot(elements.nth(12), name="st_data_editor-selectbox_column")
-    assert_snapshot(elements.nth(13), name="st_data_editor-link_column")
-    assert_snapshot(elements.nth(14), name="st_data_editor-datetime_column")
-    assert_snapshot(elements.nth(15), name="st_data_editor-date_column")
-    assert_snapshot(elements.nth(16), name="st_data_editor-time_column")
-    assert_snapshot(elements.nth(17), name="st_data_editor-progress_column")
-    assert_snapshot(elements.nth(18), name="st_data_editor-list_column")
-    assert_snapshot(elements.nth(19), name="st_data_editor-bar_chart_column")
-    assert_snapshot(elements.nth(20), name="st_data_editor-line_chart_column")
-    assert_snapshot(elements.nth(21), name="st_data_editor-image_column")
-    assert_snapshot(elements.nth(22), name="st_data_editor-multiselect_column")
-    assert_snapshot(elements.nth(23), name="st_data_editor-missing_placeholder")
+    assert_snapshot(
+        _get_editor(app, "disabled-all"), name="st_data_editor-disabled_all_columns"
+    )
+    assert_snapshot(
+        _get_editor(app, "disabled-two"), name="st_data_editor-disabled_two_columns"
+    )
+    assert_snapshot(_get_editor(app, "hide-index"), name="st_data_editor-hide_index")
+    assert_snapshot(_get_editor(app, "show-index"), name="st_data_editor-show_index")
+    assert_snapshot(
+        _get_editor(app, "column-order"), name="st_data_editor-custom_column_order"
+    )
+    assert_snapshot(
+        _get_editor(app, "column-labels"), name="st_data_editor-column_labels"
+    )
+    assert_snapshot(
+        _get_editor(app, "hide-columns"), name="st_data_editor-hide_columns"
+    )
+    assert_snapshot(
+        _get_editor(app, "column-width"), name="st_data_editor-set_column_width"
+    )
+    assert_snapshot(
+        _get_editor(app, "help-tooltips"), name="st_data_editor-help_tooltips"
+    )
+    assert_snapshot(_get_editor(app, "text-column"), name="st_data_editor-text_column")
+    assert_snapshot(
+        _get_editor(app, "number-column"), name="st_data_editor-number_column"
+    )
+    assert_snapshot(
+        _get_editor(app, "checkbox-column"), name="st_data_editor-checkbox_column"
+    )
+    assert_snapshot(
+        _get_editor(app, "selectbox-column"), name="st_data_editor-selectbox_column"
+    )
+    assert_snapshot(_get_editor(app, "link-column"), name="st_data_editor-link_column")
+    assert_snapshot(
+        _get_editor(app, "datetime-column"), name="st_data_editor-datetime_column"
+    )
+    assert_snapshot(_get_editor(app, "date-column"), name="st_data_editor-date_column")
+    assert_snapshot(_get_editor(app, "time-column"), name="st_data_editor-time_column")
+    assert_snapshot(
+        _get_editor(app, "progress-column"), name="st_data_editor-progress_column"
+    )
+    assert_snapshot(_get_editor(app, "list-column"), name="st_data_editor-list_column")
+    assert_snapshot(
+        _get_editor(app, "bar-chart-column"), name="st_data_editor-bar_chart_column"
+    )
+    assert_snapshot(
+        _get_editor(app, "line-chart-column"), name="st_data_editor-line_chart_column"
+    )
+    assert_snapshot(
+        _get_editor(app, "image-column"), name="st_data_editor-image_column"
+    )
+    assert_snapshot(
+        _get_editor(app, "multiselect-column"), name="st_data_editor-multiselect_column"
+    )
+    assert_snapshot(
+        _get_editor(app, "missing-placeholder"),
+        name="st_data_editor-missing_placeholder",
+    )
 
 
 def test_multiselect_cell_editing(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that the multiselect cell can be edited."""
-    multiselect_column_df = themed_app.get_by_test_id("stDataFrame").nth(22)
+    multiselect_column_df = _get_editor(themed_app, "multiselect-column")
     expect_canvas_to_be_visible(multiselect_column_df)
 
     # Click on the first cell of the list column
@@ -104,7 +139,7 @@ def test_multiselect_cell_editing(
 
 def test_multiselect_cell_editing_with_new_options(app: Page):
     """Test that the multiselect allows adding new values when accept_new_options is True."""
-    multiselect_column_df = app.get_by_test_id("stDataFrame").nth(22)
+    multiselect_column_df = _get_editor(app, "multiselect-column")
     expect_canvas_to_be_visible(multiselect_column_df)
 
     # Click on the first cell of the second multiselect column

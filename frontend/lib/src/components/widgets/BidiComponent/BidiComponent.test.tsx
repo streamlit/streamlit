@@ -28,16 +28,6 @@ import { WidgetStateManager } from "~lib/WidgetStateManager"
 import BidiComponent from "./BidiComponent"
 import { blobUrlManager } from "./utils/blobUrl"
 
-vi.mock("@streamlit/utils", async () => {
-  const actual = await vi.importActual("@streamlit/utils")
-  return {
-    ...actual,
-    get StreamlitConfig() {
-      return globalThis.__mockStreamlitConfig
-    },
-  }
-})
-
 // Mock WidgetStateManager
 vi.mock("~lib/WidgetStateManager")
 
@@ -79,7 +69,6 @@ describe("BidiComponent", () => {
 
   afterEach(() => {
     vi.restoreAllMocks()
-    globalThis.__mockStreamlitConfig = {}
   })
 
   const createMockElement = (
@@ -384,8 +373,13 @@ describe("BidiComponent", () => {
 
     describe("linked CSS crossOrigin attribute", () => {
       beforeEach(() => {
-        globalThis.__mockStreamlitConfig.BACKEND_BASE_URL =
-          "https://backend.example.com:8080/app"
+        window.__streamlit = {
+          BACKEND_BASE_URL: "https://backend.example.com:8080/app",
+        } as typeof window.__streamlit
+      })
+
+      afterEach(() => {
+        window.__streamlit = undefined
       })
 
       it.each([
