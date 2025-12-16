@@ -471,12 +471,22 @@ interface CustomHelpIconProps {
 /**
  * Custom component to render inline help icons in markdown.
  * Wraps InlineTooltipIcon in an inline-block span for proper inline flow.
- * Gets the help text from context instead of from the directive label to avoid
- * limitations with special characters in text directive labels.
+ *
+ * Gets the help text from HelpTextContext (used by the `help` parameter) if available,
+ * or falls back to `children` (for manual :help[content] directive usage).
+ *
+ * Note: When using the :help[content] directive manually in markdown, be aware of
+ * text directive limitations:
+ * - Newlines (\n) are not supported - use context via the help parameter instead
+ * - Brackets [, ] and other special markdown characters may cause parsing issues
+ * - For reliable multiline or complex markdown in tooltips, use the help parameter
+ *   which passes content via context and avoids directive label limitations.
  */
-export const CustomHelpIcon: FC<CustomHelpIconProps> = () => {
-  const helpText = useContext(HelpTextContext)
-  const tooltipContent = helpText || ""
+export const CustomHelpIcon: FC<CustomHelpIconProps> = ({ children }) => {
+  // Prefer context (from help parameter) over children (from directive label)
+  const contextHelpText = useContext(HelpTextContext)
+  const tooltipContent =
+    contextHelpText || (typeof children === "string" ? children : "")
 
   return (
     <StyledHelpIconWrapper>
