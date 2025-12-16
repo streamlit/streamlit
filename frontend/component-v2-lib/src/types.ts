@@ -27,21 +27,32 @@ also allows us to keep our versions in sync. */
 export type { Table } from "apache-arrow"
 
 /**
- * Base type for component state. You can extend this type or define your own
- * interface to add type-safe state and trigger key-value pairs. Each key
- * corresponds to an `on_<key>_change` callback parameter in Python.
+ * The base interface for defining a Streamlit custom component's state shape.
+ *
+ * @import { ComponentState } from '@streamlit/component-v2-lib';
+ *
+ * Component state is a persistent key-value store of state and trigger values.
+ * You can extend this type or define your own interface to add type-safe state
+ * and trigger key-value pairs. Each key corresponds to an `on_<key>_change`
+ * callback parameter in Python.
  */
 export type ComponentState = Record<string, unknown>
 
 /**
- * Type for Arrow-serialized data from Python. Use this when defining
- * interfaces for data that will be serialized using Apache Arrow.
+ * Type for Arrow-serialized data from Python.
+ *
+ * @import { ArrowData } from '@streamlit/component-v2-lib';
+ *
+ * Use this when defining interfaces for data that will be serialized using
+ * Apache Arrow.
  */
 export type ArrowData = Uint8Array<ArrayBufferLike> | null
 
 /**
  * The arguments passed to a Streamlit custom component's top-level
  * `export default` function.
+ *
+ * @import { ComponentArgs } from '@streamlit/component-v2-lib';
  *
  * This type provides the interface between your TypeScript component and
  * Streamlit's runtime, including the data payload from Python, utilities for
@@ -188,18 +199,30 @@ export type ComponentArgs<
 }
 
 /**
- * A function that is called by Streamlit to clean up resources created by the
- * component (event listeners, timers, DOM nodes, etc.).
+ * The cleanup function returned by a Streamlit v2 Component.
+ *
+ * This type alias isn't exported. Use `OptionalComponentCleanupFunction`
+ * instead.
+ *
+ * This type represents the cleanup function that your component can return
+ * from its top-level `export default` function. If provided, Streamlit will
+ * call this function when your component is unmounted from the app, allowing
+ * you to perform any necessary cleanup tasks, such as removing event listeners
+ * or canceling network requests.
  */
 type ComponentCleanupFunction = () => void
 
 /**
- * The component's return type. This can be a cleanup function or `void`.
+ * The component's return type, which can be a cleanup function or `void`.
+ *
+ * @import { OptionalComponentCleanupFunction } from '@streamlit/component-v2-lib';
  */
 export type OptionalComponentCleanupFunction = ComponentCleanupFunction | void
 
 /**
  * The Streamlit v2 Component signature.
+ *
+ * @import { Component } from '@streamlit/component-v2-lib';
  *
  * This type represents the function signature for the default export from your
  * component's JavaScript or TypeScript code. This function gets called by

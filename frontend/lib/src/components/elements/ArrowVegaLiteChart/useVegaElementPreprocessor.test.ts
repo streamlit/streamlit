@@ -281,9 +281,7 @@ describe("useVegaElementPreprocessor", () => {
           }
         )
         const spec = result.current.spec as unknown as VegaLiteSpec
-        if (expectedText) {
-          expect((spec.title as { text: string }).text).toBe(expectedText)
-        }
+        expect((spec.title as { text: string }).text).toBe(expectedText)
         expect((spec.title as { limit: number }).limit).toBe(expectedLimit)
       }
     )

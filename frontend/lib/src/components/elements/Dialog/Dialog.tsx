@@ -25,13 +25,14 @@ import React, {
 import { Block as BlockProto } from "@streamlit/protobuf"
 
 import IsDialogContext from "~lib/components/core/IsDialogContext"
+import { DynamicIcon } from "~lib/components/shared/Icon"
 import Modal, { ModalBody, ModalHeader } from "~lib/components/shared/Modal"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
 import { assertNever } from "~lib/util/assertNever"
 import { notNullOrUndefined } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import { StyledDialogTitle } from "./styled-components"
+import { StyledDialogIcon, StyledDialogTitle } from "./styled-components"
 
 /**
  * Maps the dialog width to the modal size.
@@ -70,7 +71,14 @@ const Dialog: React.FC<React.PropsWithChildren<Props>> = ({
   widgetMgr,
   fragmentId,
 }): ReactElement => {
-  const { title, dismissible, width, isOpen: initialIsOpen, id } = element
+  const {
+    title,
+    dismissible,
+    width,
+    isOpen: initialIsOpen,
+    id,
+    icon,
+  } = element
   const [isOpen, setIsOpen] = useState<boolean>(false)
 
   useEffect(() => {
@@ -151,6 +159,11 @@ const Dialog: React.FC<React.PropsWithChildren<Props>> = ({
     >
       <ModalHeader>
         <StyledDialogTitle>
+          {icon && (
+            <StyledDialogIcon data-testid="stDialogIcon">
+              <DynamicIcon iconValue={icon} size="lg" />
+            </StyledDialogIcon>
+          )}
           <StreamlitMarkdown
             source={title}
             allowHTML={false}

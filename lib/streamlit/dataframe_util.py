@@ -1369,7 +1369,7 @@ def convert_pandas_df_to_data_format(
     if data_format == DataFormat.PANDAS_SERIES:
         return _pandas_df_to_series(df)
     if data_format in {DataFormat.POLARS_DATAFRAME, DataFormat.POLARS_LAZYFRAME}:
-        import polars as pl  # type: ignore[import-not-found]
+        import polars as pl
 
         return pl.from_pandas(df)
     if data_format == DataFormat.POLARS_SERIES:

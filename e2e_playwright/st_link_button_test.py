@@ -21,7 +21,7 @@ from playwright.sync_api import Page, expect
 from e2e_playwright.conftest import ImageCompareFunction
 from e2e_playwright.shared.app_utils import check_top_level_class, get_expander
 
-LINK_BUTTON_ELEMENTS = 16
+LINK_BUTTON_ELEMENTS = 17
 
 
 def test_link_button_display(themed_app: Page, assert_snapshot: ImageCompareFunction):
@@ -44,6 +44,10 @@ def test_link_button_display(themed_app: Page, assert_snapshot: ImageCompareFunc
     )
     assert_snapshot(link_elements.nth(11), name="st_link_button-help")
     assert_snapshot(link_elements.nth(12), name="st_link_button-shortcut")
+    assert_snapshot(
+        link_elements.filter(has_text="Icon Right").first,
+        name="st_link_button-icon_position_right_material",
+    )
 
 
 def test_link_button_hover(themed_app: Page, assert_snapshot: ImageCompareFunction):

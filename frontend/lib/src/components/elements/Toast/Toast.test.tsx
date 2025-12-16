@@ -91,7 +91,7 @@ describe("Toast Component", () => {
     vi.useRealTimers()
   })
 
-  test("renders default toast", () => {
+  it("renders default toast", () => {
     const props = getProps()
     renderComponent(props)
 
@@ -110,7 +110,7 @@ describe("Toast Component", () => {
     expect(toastElement).toHaveClass("stToast")
   })
 
-  test("renders long toast messages with expand option", () => {
+  it("renders long toast messages with expand option", () => {
     const props = getProps({
       icon: "",
       body: "Random toast message that is a really really really really really really really really really long message, going way past the 3 line limit",
@@ -128,7 +128,7 @@ describe("Toast Component", () => {
     expect(toast).toContainElement(expandButton)
   })
 
-  test("can expand to see the full toast message & collapse to truncate", async () => {
+  it("can expand to see the full toast message & collapse to truncate", async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     const props = getProps({
       icon: "",
@@ -168,7 +168,7 @@ describe("Toast Component", () => {
     expect(toast).toContainElement(expandButton)
   })
 
-  test("can close toast", async () => {
+  it("can close toast", async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     const props = getProps()
     renderComponent(props)
@@ -186,7 +186,7 @@ describe("Toast Component", () => {
     expect(screen.queryByRole("alert")).not.toBeInTheDocument()
   })
 
-  test("auto hides based on duration seconds", async () => {
+  it("auto hides based on duration seconds", async () => {
     const props = getProps({ duration: 1 })
     renderComponent(props)
 
@@ -207,7 +207,7 @@ describe("Toast Component", () => {
     await waitForElementToBeRemoved(toast)
   })
 
-  test("throws an error when called via st.sidebar.toast", () => {
+  it("throws an error when called via st.sidebar.toast", () => {
     const props = getProps({})
     render(
       <ThemeProvider
@@ -224,7 +224,7 @@ describe("Toast Component", () => {
     expect(toastError).toHaveTextContent("Streamlit API Error")
   })
 
-  test("shortenMessage does not truncate messages under the character limit", () => {
+  it("shortenMessage does not truncate messages under the character limit", () => {
     const shortMessage = "This message should not be truncated."
     const props = getProps({ body: shortMessage })
     renderComponent(props)
@@ -233,7 +233,7 @@ describe("Toast Component", () => {
     expect(toast).toHaveTextContent(shortMessage)
   })
 
-  test("shortenMessage truncates messages over the character limit without cutting words", () => {
+  it("shortenMessage truncates messages over the character limit without cutting words", () => {
     const longMessage =
       "This is a very long message meant to test the functionality of the shortenMessage function, ensuring it truncates properly without cutting words and respects the character limit."
     const expectedTruncatedMessage = shortenMessage(longMessage)
@@ -249,7 +249,7 @@ describe("Toast Component", () => {
     expect(toastText).toHaveLength(expectedTruncatedMessage.length)
   })
 
-  test("shortenMessage handles explicit line breaks correctly", () => {
+  it("shortenMessage handles explicit line breaks correctly", () => {
     const messageWithBreaks =
       "First line of the message.\nSecond line of the message, which is meant to test how explicit line breaks are handled.\nThird line, which should not be visible."
     const expectedTruncatedMessage = shortenMessage(messageWithBreaks)
@@ -263,7 +263,7 @@ describe("Toast Component", () => {
     expect(toastText).toHaveLength(expectedTruncatedMessage.length)
   })
 
-  test("expands and collapses long messages with explicit line breaks correctly", async () => {
+  it("expands and collapses long messages with explicit line breaks correctly", async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     const messageWithBreaks =
       "First line of the message.\nSecond line of the message, which is very long and meant to test the expand and collapse functionality.\nThird line, which should initially be hidden."

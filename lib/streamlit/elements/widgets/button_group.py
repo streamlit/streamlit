@@ -391,7 +391,7 @@ class ButtonGroupMixin:
         >>> if selected is not None:
         >>>     st.markdown(f"You selected {sentiment_mapping[selected]} star(s).")
 
-        .. output ::
+        .. output::
             https://doc-feedback-stars.streamlit.app/
             height: 200px
 
@@ -404,7 +404,7 @@ class ButtonGroupMixin:
         >>> if selected is not None:
         >>>     st.markdown(f"You selected: {sentiment_mapping[selected]}")
 
-        .. output ::
+        .. output::
             https://doc-feedback-thumbs.streamlit.app/
             height: 200px
 

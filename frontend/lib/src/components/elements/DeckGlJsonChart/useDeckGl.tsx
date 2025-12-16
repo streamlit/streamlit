@@ -23,7 +23,7 @@ import {
 } from "@deck.gl/core"
 import { parseToRgba } from "color2k"
 import JSON5 from "json5"
-import isEqual from "lodash/isEqual"
+import { isEqual } from "lodash-es"
 
 import { DeckGlJsonChart as DeckGlJsonChartProto } from "@streamlit/protobuf"
 

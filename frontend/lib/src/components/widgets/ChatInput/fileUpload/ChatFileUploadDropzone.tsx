@@ -33,23 +33,21 @@ export interface Props {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   getInputProps: any
   acceptFile: AcceptFileValue
-  inputHeight: string
 }
 
 const ChatFileUploadDropzone = ({
   getRootProps,
   getInputProps,
   acceptFile,
-  inputHeight,
 }: Props): React.ReactElement => {
   const inputProps = configureFileInputProps(getInputProps(), acceptFile)
 
   return (
     <>
-      <StyledChatFileUploadDropzone height={inputHeight} {...getRootProps()}>
+      <StyledChatFileUploadDropzone {...getRootProps()}>
         <input {...inputProps} />
       </StyledChatFileUploadDropzone>
-      <StyledChatFileUploadDropzoneLabel height={inputHeight}>
+      <StyledChatFileUploadDropzoneLabel>
         {`Drag and drop ${getUploadDescription(acceptFile)} here`}
       </StyledChatFileUploadDropzoneLabel>
     </>

@@ -15,10 +15,7 @@
  */
 import { Dispatch, SetStateAction, useEffect, useMemo, useState } from "react"
 
-import isArray from "lodash/isArray"
-import isEmpty from "lodash/isEmpty"
-import merge from "lodash/merge"
-import mergeWith from "lodash/mergeWith"
+import { isArray, isEmpty, merge, mergeWith } from "lodash-es"
 import { getLogger } from "loglevel"
 
 import { Arrow as ArrowProto, streamlit } from "@streamlit/protobuf"

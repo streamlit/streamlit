@@ -6,11 +6,6 @@ on:
       - "develop"
   pull_request:
     types: [opened, synchronize, reopened]
-    paths-ignore:
-      # Don't run CI if changes are only in the specs folder:
-      - "specs/**"
-      # Don't run CI if changes are only in the agent-knowledge folder:
-      - "agent-knowledge/**"
 
   # Allows workflow to be called from other workflows
   workflow_call:
@@ -48,7 +43,7 @@ jobs:
           python-version: "${{ env.PYTHON_MAX_VERSION }}"
       - name: Restore pre-commit cache
         id: cache-pre-commit
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.cache/pre-commit
           key: v1-pre-commit-${{ env.pythonLocation }}-${{ hashFiles('**/.pre-commit-config.yaml') }}

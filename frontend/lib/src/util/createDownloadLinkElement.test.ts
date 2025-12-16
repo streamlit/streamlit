@@ -14,6 +14,17 @@
  * limitations under the License.
  */
 
+// Mock StreamlitConfig using global mock state (see vitest.setup.ts)
+vi.mock("@streamlit/utils", async () => {
+  const actual = await vi.importActual("@streamlit/utils")
+  return {
+    ...actual,
+    get StreamlitConfig() {
+      return globalThis.__mockStreamlitConfig
+    },
+  }
+})
+
 import createDownloadLinkElement from "./createDownloadLinkElement"
 
 describe("download attribute", () => {
@@ -38,12 +49,9 @@ describe("download attribute", () => {
   })
 
   it("omits download attribute for service worker compatibility in Chromium browsers", () => {
-    // Mock the global streamlit object with DOWNLOAD_ASSETS_BASE_URL
-    const originalStreamlit = window.__streamlit
-    window.__streamlit = {
-      ...window.__streamlit,
-      DOWNLOAD_ASSETS_BASE_URL: "https://download.streamlit.app",
-    }
+    // Mock StreamlitConfig with DOWNLOAD_ASSETS_BASE_URL
+    globalThis.__mockStreamlitConfig.DOWNLOAD_ASSETS_BASE_URL =
+      "https://download.streamlit.app"
 
     // Mock user agent to be a Chromium-based browser (not Firefox)
     const originalUserAgent = Object.getOwnPropertyDescriptor(
@@ -64,7 +72,7 @@ describe("download attribute", () => {
       expect(link.getAttribute("download")).toBeNull()
     } finally {
       // Cleanup
-      window.__streamlit = originalStreamlit
+      globalThis.__mockStreamlitConfig = {}
       if (originalUserAgent) {
         Object.defineProperty(window.navigator, "userAgent", originalUserAgent)
       }
@@ -72,12 +80,9 @@ describe("download attribute", () => {
   })
 
   it("sets download attribute in Firefox even with DOWNLOAD_ASSETS_BASE_URL", () => {
-    // Mock the global streamlit object with DOWNLOAD_ASSETS_BASE_URL
-    const originalStreamlit = window.__streamlit
-    window.__streamlit = {
-      ...window.__streamlit,
-      DOWNLOAD_ASSETS_BASE_URL: "https://download.streamlit.app",
-    }
+    // Mock StreamlitConfig with DOWNLOAD_ASSETS_BASE_URL
+    globalThis.__mockStreamlitConfig.DOWNLOAD_ASSETS_BASE_URL =
+      "https://download.streamlit.app"
 
     // Mock user agent to be Firefox
     const originalUserAgent = Object.getOwnPropertyDescriptor(
@@ -99,7 +104,7 @@ describe("download attribute", () => {
       expect(link.getAttribute("download")).toBe("test.pdf")
     } finally {
       // Cleanup
-      window.__streamlit = originalStreamlit
+      globalThis.__mockStreamlitConfig = {}
       if (originalUserAgent) {
         Object.defineProperty(window.navigator, "userAgent", originalUserAgent)
       }
@@ -107,12 +112,9 @@ describe("download attribute", () => {
   })
 
   it("sets download attribute when URL does not match DOWNLOAD_ASSETS_BASE_URL", () => {
-    // Mock the global streamlit object with DOWNLOAD_ASSETS_BASE_URL
-    const originalStreamlit = window.__streamlit
-    window.__streamlit = {
-      ...window.__streamlit,
-      DOWNLOAD_ASSETS_BASE_URL: "https://download.streamlit.app",
-    }
+    // Mock StreamlitConfig with DOWNLOAD_ASSETS_BASE_URL
+    globalThis.__mockStreamlitConfig.DOWNLOAD_ASSETS_BASE_URL =
+      "https://download.streamlit.app"
 
     try {
       const link = createDownloadLinkElement({
@@ -123,7 +125,7 @@ describe("download attribute", () => {
       expect(link.getAttribute("download")).toBe("test.pdf")
     } finally {
       // Cleanup
-      window.__streamlit = originalStreamlit
+      globalThis.__mockStreamlitConfig = {}
     }
   })
 })

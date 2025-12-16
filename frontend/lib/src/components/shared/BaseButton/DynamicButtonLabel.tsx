@@ -33,6 +33,7 @@ export interface DynamicButtonLabelProps {
   label?: string
   iconSize?: IconSize
   useSmallerFont?: boolean
+  iconPosition?: "left" | "right"
   shortcut?: string | null
 }
 
@@ -41,6 +42,7 @@ export const DynamicButtonLabel = ({
   label,
   iconSize,
   useSmallerFont = false,
+  iconPosition = "left",
   shortcut,
 }: DynamicButtonLabelProps): React.ReactElement | null => {
   const displayShortcut = useMemo(() => {
@@ -50,7 +52,9 @@ export const DynamicButtonLabel = ({
   return (
     <StyledButtonLabel>
       <StyledButtonMainLabel data-has-shortcut={Boolean(displayShortcut)}>
-        {icon && <DynamicIcon size={iconSize ?? "lg"} iconValue={icon} />}
+        {icon && iconPosition === "left" && (
+          <DynamicIcon size={iconSize ?? "lg"} iconValue={icon} />
+        )}
         {label && (
           <StreamlitMarkdown
             source={label}
@@ -59,6 +63,9 @@ export const DynamicButtonLabel = ({
             largerLabel={!useSmallerFont}
             disableLinks
           />
+        )}
+        {icon && iconPosition === "right" && (
+          <DynamicIcon size={iconSize ?? "lg"} iconValue={icon} />
         )}
         {displayShortcut && (
           <StyledButtonShortcut aria-label={`Shortcut ${displayShortcut}`}>

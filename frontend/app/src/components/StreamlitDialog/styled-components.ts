@@ -111,3 +111,15 @@ export const StyledDeployErrorContent = styled.div(({ theme }) => ({
     paddingLeft: theme.spacing.twoXL,
   },
 }))
+
+interface StyledErrorTextProps {
+  hasCodeBelow: boolean
+}
+
+export const StyledErrorText = styled.div<StyledErrorTextProps>(
+  ({ theme, hasCodeBelow }) => ({
+    ...(hasCodeBelow && {
+      marginBottom: theme.spacing.lg,
+    }),
+  })
+)

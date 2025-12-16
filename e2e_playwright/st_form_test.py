@@ -22,6 +22,7 @@ from e2e_playwright.shared.app_utils import (
     click_toggle,
     expect_prefixed_markdown,
     get_element_by_key,
+    select_selectbox_option,
 )
 
 
@@ -60,8 +61,7 @@ def change_widget_values(app: Page):
     ).click(force=True)
 
     # Change the selectbox value.
-    form_1.get_by_test_id("stSelectbox").locator("input").click()
-    app.locator("[data-baseweb='popover']").locator("li").nth(1).click()
+    select_selectbox_option(app, "Selectbox", "bar")
 
     # Change the select slider value.
     form_1.get_by_test_id("stSlider").nth(0).get_by_role("slider").press("ArrowRight")

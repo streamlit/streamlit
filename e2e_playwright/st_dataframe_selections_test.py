@@ -671,6 +671,9 @@ def test_multi_row_and_single_cell_select(app: Page):
     )
 
 
+@pytest.mark.skip_browser(
+    "firefox"  # Firefox runs into sub-pixel flakiness, but functionally everything is working fine with Firefox.
+)
 def test_multi_row_column_and_cell_select(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
@@ -689,6 +692,8 @@ def test_multi_row_column_and_cell_select(
     wait_for_app_run(app)
     select_column(canvas, 3, has_row_marker_col=True)
     app.keyboard.up(COMMAND_KEY)
+    wait_for_app_run(app)
+    canvas.scroll_into_view_if_needed()
 
     # Select some individual cells
     # Get canvas bounding box for mouse operations

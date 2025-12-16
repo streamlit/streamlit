@@ -33,12 +33,7 @@ from streamlit.runtime.scriptrunner import (
 )
 
 if TYPE_CHECKING:
-    from streamlit.runtime.state.query_params import QueryParams
-
-QueryParamValue = str | Iterable[str]
-SwitchPageQueryParams = (
-    Mapping[str, QueryParamValue] | Iterable[tuple[str, QueryParamValue]]
-)
+    from streamlit.runtime.state.query_params import QueryParams, QueryParamsInput
 
 
 @gather_metrics("stop")
@@ -111,7 +106,7 @@ def _new_fragment_id_queue(
 
 def _set_query_params_for_switch(
     query_params_state: QueryParams,
-    new_query_params: SwitchPageQueryParams | None,
+    new_query_params: QueryParamsInput | None,
 ) -> None:
     """Set query params for a switch page."""
 
@@ -193,7 +188,7 @@ def rerun(  # type: ignore[misc]
 def switch_page(  # type: ignore[misc]
     page: str | Path | StreamlitPage,
     *,
-    query_params: SwitchPageQueryParams | None = None,
+    query_params: QueryParamsInput | None = None,
 ) -> NoReturn:  # ty: ignore[invalid-return-type]
     """Programmatically switch the current page in a multipage app.
 
@@ -208,20 +203,28 @@ def switch_page(  # type: ignore[misc]
     page : str, Path, or st.Page
         The file path (relative to the main script) or an st.Page indicating
         the page to switch to.
+
     query_params : dict, list of tuples, or None
-        Query parameters to apply when navigating to the target page. Values can
-        be strings or iterables of strings (for repeated keys). When omitted,
-        all non-embed query parameters are cleared during navigation.
+        Query parameters to apply when navigating to the target page.
+        This can be a dictionary or an iterable of key-value tuples. Values can
+        be strings or iterables of strings (for repeated keys). When this is
+        ``None`` (default), all non-embed query parameters are cleared during
+        navigation.
 
-    Example
-    -------
-    Consider the following example given this file structure:
+    Examples
+    --------
+    **Example 1: Basic usage**
 
-    >>> your-repository/
-    >>> ├── pages/
-    >>> │   ├── page_1.py
-    >>> │   └── page_2.py
-    >>> └── your_app.py
+    The following example shows how to switch to a different page in a
+    multipage app that uses the ``pages/`` directory:
+
+    .. code-block:: text
+
+        your-repository/
+        ├── pages/
+        │   ├── page_1.py
+        │   └── page_2.py
+        └── your_app.py
 
     >>> import streamlit as st
     >>>
@@ -230,10 +233,35 @@ def switch_page(  # type: ignore[misc]
     >>> if st.button("Page 1"):
     >>>     st.switch_page("pages/page_1.py")
     >>> if st.button("Page 2"):
-    >>>     st.switch_page("pages/page_2.py", query_params={"team": "streamlit"})
+    >>>     st.switch_page("pages/page_2.py")
 
-    .. output ::
+    .. output::
         https://doc-switch-page.streamlit.app/
+        height: 350px
+
+    **Example 2: Passing query parameters**
+
+    The following example shows how to pass query parameters when switching to a
+    different page. This example uses ``st.navigation`` to create a multipage app.
+
+    .. code-block:: text
+
+        your-repository/
+        ├── page_2.py
+        └── your_app.py
+
+    >>> import streamlit as st
+    >>>
+    >>> def page_1():
+    >>>     st.title("Page 1")
+    >>>     if st.button("Switch to Page 2"):
+    >>>         st.switch_page("page_2.py", query_params={"utm_source": "page_1"})
+    >>>
+    >>> pg = st.navigation([page_1, "page_2.py"])
+    >>> pg.run()
+
+    .. output::
+        https://doc-switch-page-query-params.streamlit.app/
         height: 350px
 
     """

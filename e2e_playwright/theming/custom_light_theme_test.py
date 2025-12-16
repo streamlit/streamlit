@@ -52,6 +52,12 @@ def configure_custom_light_theme():
     os.environ["STREAMLIT_THEME_LIGHT_CODE_FONT_SIZE"] = "13px"
     os.environ["STREAMLIT_THEME_LIGHT_CODE_TEXT_COLOR"] = "#FF69B4"  # hot pink
     os.environ["STREAMLIT_THEME_LIGHT_LINK_COLOR"] = "#89CFF0"  # baby blue
+    # [ theme.dark] config to test theme persistence on reload
+    os.environ["STREAMLIT_THEME_DARK_PRIMARY_COLOR"] = "#228B22"
+    os.environ["STREAMLIT_THEME_DARK_BORDER_COLOR"] = "#ff6700"  # hazard orange
+    os.environ["STREAMLIT_THEME_DARK_CODE_FONT_SIZE"] = "13px"
+    os.environ["STREAMLIT_THEME_DARK_CODE_TEXT_COLOR"] = "#FF69B4"  # hot pink
+    os.environ["STREAMLIT_THEME_DARK_LINK_COLOR"] = "#89CFF0"  # baby blue
     yield
     del os.environ["STREAMLIT_THEME_PRIMARY_COLOR"]
     del os.environ["STREAMLIT_THEME_BACKGROUND_COLOR"]
@@ -66,6 +72,11 @@ def configure_custom_light_theme():
     del os.environ["STREAMLIT_THEME_LIGHT_CODE_FONT_SIZE"]
     del os.environ["STREAMLIT_THEME_LIGHT_CODE_TEXT_COLOR"]
     del os.environ["STREAMLIT_THEME_LIGHT_LINK_COLOR"]
+    del os.environ["STREAMLIT_THEME_DARK_PRIMARY_COLOR"]
+    del os.environ["STREAMLIT_THEME_DARK_BORDER_COLOR"]
+    del os.environ["STREAMLIT_THEME_DARK_CODE_FONT_SIZE"]
+    del os.environ["STREAMLIT_THEME_DARK_CODE_TEXT_COLOR"]
+    del os.environ["STREAMLIT_THEME_DARK_LINK_COLOR"]
 
 
 @pytest.mark.usefixtures("configure_custom_light_theme")
@@ -109,10 +120,10 @@ def test_custom_light_theme(app: Page, assert_snapshot: ImageCompareFunction):
 
 
 @pytest.mark.usefixtures("configure_custom_light_theme")
-def test_custom_dark_theme_with_no_dark_configs(
+def test_custom_dark_theme_with_dark_configs(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
-    """Test that the custom dark theme is rendered correctly with no dark configs."""
+    """Test that the custom dark theme is rendered correctly with expected dark configs."""
     # Make sure that all elements are rendered and no skeletons are shown:
     expect_no_skeletons(app, timeout=25000)
 
@@ -137,7 +148,7 @@ def test_custom_dark_theme_with_no_dark_configs(
     settings_dialog.get_by_role("button", name="Close").click()
 
     assert_snapshot(
-        app, name="custom_dark_theme_no_dark_configs", image_threshold=0.0003
+        app, name="custom_dark_theme_with_dark_configs", image_threshold=0.0003
     )
 
 
@@ -183,3 +194,62 @@ def test_custom_light_theme_settings_dialog(
     expect(options_list.get_by_text("Light")).to_be_visible()
     expect(options_list.get_by_text("Dark")).to_be_visible()
     expect(options_list.get_by_text("Use system setting")).to_be_visible()
+
+
+@pytest.mark.usefixtures("configure_custom_light_theme")
+def test_theme_preference_persists_on_reload(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that custom theme selection persists across full page reload (issue #13280)."""
+    # Make sure that all elements are rendered and no skeletons are shown:
+    expect_no_skeletons(app, timeout=25000)
+
+    # Open the main menu
+    app.get_by_test_id("stMainMenu").click()
+
+    # Open the settings dialog
+    main_menu_list = app.get_by_test_id("stMainMenuList")
+    main_menu_list.get_by_text("Settings").click()
+
+    # Check that the auto theme is selected
+    settings_dialog = app.get_by_test_id("stDialog")
+    expect(settings_dialog).to_contain_text("Use system setting")
+
+    # Open the theme selector dropdown
+    settings_dialog.get_by_role("combobox").click()
+
+    # Select "Dark" theme explicitly
+    dark_theme_option = app.get_by_test_id("stSelectboxVirtualDropdown").get_by_text(
+        "Dark"
+    )
+    dark_theme_option.click()
+
+    # Close settings dialog
+    settings_dialog.get_by_role("button", name="Close").click()
+
+    assert_snapshot(app, name="persisted_on_reload_before", image_threshold=0.0003)
+
+    # Force a full page reload
+    app.reload()
+
+    # Wait for the app to load again
+    expect_no_skeletons(app, timeout=25000)
+
+    # Open settings again to verify theme selection persisted
+    app.get_by_test_id("stMainMenu").click()
+    main_menu_list = app.get_by_test_id("stMainMenuList")
+    main_menu_list.get_by_text("Settings").click()
+
+    # Verify "Dark" is still selected
+    settings_dialog = app.get_by_test_id("stDialog")
+    expect(settings_dialog).to_be_visible()
+    expect(settings_dialog).to_contain_text("Dark")
+
+    # Verify the dropdown shows "Dark" as selected by checking the aria-label
+    theme_selector = settings_dialog.get_by_role("combobox")
+    expect(theme_selector).to_have_attribute("aria-label", "Selected Dark. ")
+
+    # Close the dialog
+    settings_dialog.get_by_role("button", name="Close").click()
+
+    assert_snapshot(app, name="persisted_on_reload_after", image_threshold=0.0003)
