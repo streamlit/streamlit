@@ -513,3 +513,13 @@ st.container(key="markdown_center_newlines_tooltip").markdown(
     text_alignment="center",
     help="Line 1\n\nLine 2\n\nLine 3",
 )
+
+st.container(key="markdown_spaces_around_newlines").markdown(
+    "Markdown with spaces around newlines",
+    help="Tool tip with \n\n new lines",
+)
+
+st.container(key="markdown_bracket_in_tooltip").markdown(
+    "Markdown with closing bracket in tooltip",
+    help="Help before ] help after",
+)

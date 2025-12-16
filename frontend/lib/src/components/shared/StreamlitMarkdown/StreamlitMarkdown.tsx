@@ -460,12 +460,14 @@ interface CustomHelpIconProps {
 export const CustomHelpIcon: FC<CustomHelpIconProps> = ({ children }) => {
   // Ensure we only pass strings to the tooltip. Text directives should always
   // pass plain strings, but we check defensively at runtime.
-  // Unescape the sentinel that was used to escape newlines in the markdown source.
-  // Text directives don't support multiline content, so we use a unique sentinel
-  // to avoid corrupting user text that contains literal \n sequences.
+  // Unescape sentinels that were used to escape special characters.
+  // Text directives don't support multiline content and brackets close the directive,
+  // so we use unicode bracket sentinels that have no special meaning in markdown/HTML.
   const tooltipContent =
     typeof children === "string"
-      ? children.replace(/__STREAMLIT_NEWLINE__/g, "\n")
+      ? children
+          .replace(/〔STREAMLIT_NL〕/g, "\n")
+          .replace(/〔STREAMLIT_BRACKET〕/g, "]")
       : ""
 
   return (

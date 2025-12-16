@@ -99,6 +99,51 @@ describe("Markdown element with help", () => {
     // The text should contain the literal backslash-n, rendered as a single line
     expect(helpContent).toHaveTextContent("Use \\n for newlines")
   })
+
+  it("renders markdown help tooltip with spaces around newlines correctly", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ help: "Tool tip with \n\n new lines" })
+    render(<Markdown {...props} />)
+
+    // Verify the help text is NOT leaked into the markdown body
+    const markdown = screen.getByTestId("stMarkdownContainer")
+    expect(markdown).not.toHaveTextContent("new lines")
+
+    // Hover to show tooltip
+    const tooltip = screen.getByTestId("stTooltipHoverTarget")
+    await user.hover(tooltip)
+
+    // Verify tooltip contains the text with proper paragraph breaks
+    const helpContent = await screen.findByTestId("stTooltipContent")
+    expect(helpContent).toBeVisible()
+
+    // Markdown with leading/trailing spaces on paragraphs: "Tool tip with " and " new lines"
+    // Both parts should be present (markdown may normalize some whitespace)
+    const text = helpContent.textContent || ""
+    expect(text).toContain("Tool tip")
+    expect(text).toContain("new lines")
+  })
+
+  it("renders markdown help tooltip with closing bracket correctly", async () => {
+    const user = userEvent.setup()
+    // Closing bracket ] would prematurely close the :help[] directive
+    const props = getProps({ help: "Help before ] help after" })
+    render(<Markdown {...props} />)
+
+    // Verify the help text is NOT leaked into the markdown body
+    const markdown = screen.getByTestId("stMarkdownContainer")
+    expect(markdown).not.toHaveTextContent("Help before")
+    expect(markdown).not.toHaveTextContent("help after")
+
+    // Hover to show tooltip
+    const tooltip = screen.getByTestId("stTooltipHoverTarget")
+    await user.hover(tooltip)
+
+    // Verify tooltip contains the full text including the bracket
+    const helpContent = await screen.findByTestId("stTooltipContent")
+    expect(helpContent).toBeVisible()
+    expect(helpContent).toHaveTextContent("Help before ] help after")
+  })
 })
 
 describe("Markdown badge with help", () => {

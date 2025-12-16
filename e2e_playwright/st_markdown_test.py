@@ -481,6 +481,16 @@ def test_caption_text_alignment(app: Page, assert_snapshot: ImageCompareFunction
             "Center aligned with newlines in tooltip",
             "stMarkdownContainer",
         ),
+        (
+            "markdown_spaces_around_newlines",
+            "Markdown with spaces around newlines",
+            "stMarkdownContainer",
+        ),
+        (
+            "markdown_bracket_in_tooltip",
+            "Markdown with closing bracket in tooltip",
+            "stMarkdownContainer",
+        ),
     ],
 )
 def test_tooltip_with_newlines_gh_13339(
@@ -507,21 +517,32 @@ def test_tooltip_with_newlines_gh_13339(
     element = element_container.get_by_test_id(element_test_id)
 
     # CRITICAL: Verify the help text is NOT leaked into the element content
-    # In the bug condition, "Line 2" and "Line 3" would appear in the visible text
     expect(element).to_have_text(expected_text)
-    expect(element).not_to_contain_text("Line 2")
-    expect(element).not_to_contain_text("Line 3")
+
+    # For newline tests, verify specific text doesn't leak
+    if "bracket" not in element_key:
+        # In the bug condition, "Line 2" and "Line 3" would appear in the visible text
+        expect(element).not_to_contain_text("Line 2")
+        expect(element).not_to_contain_text("Line 3")
+    else:
+        # For bracket test, verify bracket text doesn't leak
+        expect(element).not_to_contain_text("Help before")
+        expect(element).not_to_contain_text("help after")
 
     # Hover to show tooltip
     hover_target = element_container.get_by_test_id("stTooltipHoverTarget")
     hover_target.hover()
 
-    # Verify tooltip is visible and contains the multiline content
+    # Verify tooltip is visible and contains the content
     tooltip_content = app.get_by_test_id("stTooltipContent")
     expect(tooltip_content).to_be_visible()
 
-    # Check that tooltip contains all three lines (rendered as separate paragraphs)
-    # This ensures the text is in the CORRECT place (tooltip) not leaked outside
-    expect(tooltip_content).to_contain_text("Line 1")
-    expect(tooltip_content).to_contain_text("Line 2")
-    expect(tooltip_content).to_contain_text("Line 3")
+    # Check tooltip contains the expected content
+    if "bracket" in element_key:
+        # Bracket test: verify full text including the ] bracket is in tooltip
+        expect(tooltip_content).to_contain_text("Help before ] help after")
+    else:
+        # Newline tests: verify all three lines are in tooltip
+        expect(tooltip_content).to_contain_text("Line 1")
+        expect(tooltip_content).to_contain_text("Line 2")
+        expect(tooltip_content).to_contain_text("Line 3")
