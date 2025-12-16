@@ -163,9 +163,6 @@ function ChatInput({
   }, [files, value])
 
   const acceptFile = chatInputAcceptFileProtoValueToEnum(element.acceptFile)
-  // Simple mode: single-row layout when no file upload and no audio features
-  const isSimpleMode =
-    acceptFile === AcceptFileValue.None && !acceptAudio && !isRecording
   const maxFileSize = sizeConverter(
     element.maxUploadSizeMb,
     FileSize.Megabyte,
@@ -620,6 +617,9 @@ function ChatInput({
 
   const showDropzone = acceptFile !== AcceptFileValue.None && fileDragged
   const isRecording = controller.state === "recording"
+  // Simple mode: single-row layout when no file upload and no audio features
+  const isSimpleMode =
+    acceptFile === AcceptFileValue.None && !acceptAudio && !isRecording
 
   const showInstructions =
     !isRecording && width > theme.breakpoints.hideWidgetDetails && maxChars > 0
