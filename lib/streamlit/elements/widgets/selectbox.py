@@ -13,7 +13,6 @@
 # limitations under the License.
 from __future__ import annotations
 
-from enum import Enum
 from textwrap import dedent
 from typing import (
     TYPE_CHECKING,
@@ -603,14 +602,7 @@ class SelectboxMixin:
         current_value = widget_state.value
         value_needs_reset = False
 
-        if (
-            current_value is not None
-            and not accept_new_options
-            # Note: Skip validation for Enum values - they are handled by
-            # maybe_coerce_enum() which has its own logic for handling enum
-            # class mismatches based on the runner.enumCoercion config setting.
-            and not isinstance(current_value, Enum)
-        ):
+        if current_value is not None and not accept_new_options:
             # Check if current value is still in the new options
             try:
                 index_(opt, current_value)
