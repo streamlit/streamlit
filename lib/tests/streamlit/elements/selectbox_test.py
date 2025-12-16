@@ -483,6 +483,46 @@ def test_selectbox_resets_when_selection_removed():
     assert at.text[0].value == "Selected: A"
 
 
+def test_selectbox_resets_with_safe_index_when_options_shrink():
+    """Test that selection resets safely when options shrink below original index.
+
+    When options change dynamically and the default index is now out of bounds,
+    the selection should reset to the last available option (safe index).
+    """
+
+    def script():
+        import streamlit as st
+
+        if "shrunk" not in st.session_state:
+            st.session_state["shrunk"] = False
+
+        if st.session_state["shrunk"]:
+            # Only 2 options now - index=3 would be out of bounds
+            options = ["X", "Y"]
+        else:
+            # 5 options with index=3 pointing to "D"
+            options = ["A", "B", "C", "D", "E"]
+
+        selected = st.selectbox("Pick one", options, index=3, key="picker")
+        st.text(f"Selected: {selected}")
+
+        if st.button("Shrink options"):
+            st.session_state["shrunk"] = True
+
+    at = AppTest.from_function(script).run()
+
+    # Initial selection should be "D" (index=3)
+    assert at.text[0].value == "Selected: D"
+
+    # Click button to shrink options to only 2 items, then rerun
+    at = at.button[0].click().run()
+    at = at.run()
+
+    # Selection should reset to "Y" (last available option, safe_index = min(3, 1) = 1)
+    # since "D" is no longer in options and index=3 is out of bounds
+    assert at.text[0].value == "Selected: Y"
+
+
 def test_selectbox_enum_coercion():
     """Test E2E Enum Coercion on a selectbox."""
 

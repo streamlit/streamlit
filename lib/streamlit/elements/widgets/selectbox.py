@@ -544,8 +544,8 @@ class SelectboxMixin:
             "selectbox",
             user_key=key,
             # Treat the provided key as the main identity. Only include
-            # accept_new_options in the identity computation as it affects
-            # the widget's behavior.
+            # accept_new_options in the identity computation as it
+            # can invalidate the current selection and complex to support.
             key_as_main_identity={"accept_new_options"},
             dg=self.dg,
             label=label,
@@ -600,16 +600,15 @@ class SelectboxMixin:
         # If the value is no longer valid (not in options), reset to default.
         # This handles the case where options change dynamically and the
         # previously selected value is no longer available.
-        #
-        # Note: Skip validation for Enum values - they are handled by
-        # maybe_coerce_enum() which has its own logic for handling enum
-        # class mismatches based on the runner.enumCoercion config setting.
         current_value = widget_state.value
         value_needs_reset = False
 
         if (
             current_value is not None
             and not accept_new_options
+            # Note: Skip validation for Enum values - they are handled by
+            # maybe_coerce_enum() which has its own logic for handling enum
+            # class mismatches based on the runner.enumCoercion config setting.
             and not isinstance(current_value, Enum)
         ):
             # Check if current value is still in the new options
@@ -619,7 +618,9 @@ class SelectboxMixin:
                 # Value not in options - reset to default
                 value_needs_reset = True
                 if index is not None and len(opt) > 0:
-                    current_value = opt[index]
+                    # Ensure index is within bounds (options may have shrunk)
+                    safe_index = min(index, len(opt) - 1)
+                    current_value = opt[safe_index]
                 else:
                     current_value = None
 
