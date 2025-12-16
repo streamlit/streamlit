@@ -322,24 +322,51 @@ class SelectboxTest(DeltaGeneratorTestCase):
             id2 = c2.id
             assert id1 == id2
 
+    def test_accept_new_options_changes_id(self):
+        """Test that the widget ID changes when accept_new_options changes even when the key is provided."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            st.selectbox(
+                label="Label",
+                key="selectbox_key_whitelist",
+                options=["a", "b"],
+                accept_new_options=True,
+            )
+            c1 = self.get_delta_from_queue().new_element.selectbox
+            id1 = c1.id
+
+            st.selectbox(
+                label="Label",
+                key="selectbox_key_whitelist",
+                options=["a", "b"],
+                accept_new_options=False,
+            )
+            c2 = self.get_delta_from_queue().new_element.selectbox
+            id2 = c2.id
+            assert id1 != id2
+
     @parameterized.expand(
         [
             ("options", ["a", "b"], ["a", "b", "c"]),
-            ("accept_new_options", True, False),
             ("format_func", lambda x: x.lower(), lambda x: x.upper()),
         ]
     )
-    def test_whitelisted_stable_key_kwargs(
+    def test_stable_id_when_options_or_format_func_change(
         self, kwarg_name: str, value1: object, value2: object
     ):
-        """Test that the widget ID changes when a whitelisted kwarg changes even when the key is provided."""
+        """Test that the widget ID remains stable when options or format_func changes with a key.
+
+        This enables dynamic option updates without losing widget state.
+        """
         with patch(
             "streamlit.elements.lib.utils._register_element_id",
             return_value=MagicMock(),
         ):
             base_kwargs = {
                 "label": "Label",
-                "key": "selectbox_key_whitelist",
+                "key": "selectbox_key_stable",
                 "options": ["a", "b"],
                 "accept_new_options": True,
                 "format_func": lambda x: x.lower(),
@@ -355,7 +382,8 @@ class SelectboxTest(DeltaGeneratorTestCase):
             st.selectbox(**base_kwargs)
             c2 = self.get_delta_from_queue().new_element.selectbox
             id2 = c2.id
-            assert id1 != id2
+            # ID should remain stable when options/format_func change with key
+            assert id1 == id2
 
 
 def test_selectbox_interaction():
@@ -379,6 +407,80 @@ def test_selectbox_interaction():
     at = selectbox.set_value(None).run()
     selectbox = at.selectbox[0]
     assert selectbox.value is None
+
+
+def test_selectbox_preserves_selection_when_options_expand():
+    """Test that selection is preserved when new options are added."""
+
+    def script():
+        import streamlit as st
+
+        # Use session state to track which options to show
+        if "expanded" not in st.session_state:
+            st.session_state["expanded"] = False
+
+        if st.session_state["expanded"]:
+            options = ["A", "B", "C", "D"]
+        else:
+            options = ["A", "B", "C"]
+
+        selected = st.selectbox("Pick one", options, key="picker")
+        # Output the actual returned value to verify
+        st.text(f"Selected: {selected}")
+
+        if st.button("Expand options"):
+            st.session_state["expanded"] = True
+
+    at = AppTest.from_function(script).run()
+
+    # Select "B"
+    at = at.selectbox[0].set_value("B").run()
+    assert at.text[0].value == "Selected: B"
+
+    # Click button to expand options (add "D"), then rerun
+    at = at.button[0].click().run()
+    at = at.run()
+
+    # Selection should be preserved since "B" is still in options
+    # Check the actual widget return value via st.text output
+    assert at.text[0].value == "Selected: B"
+
+
+def test_selectbox_resets_when_selection_removed():
+    """Test that selection resets to default when selected option is removed."""
+
+    def script():
+        import streamlit as st
+
+        # Use session state to track which options to show
+        if "shrunk" not in st.session_state:
+            st.session_state["shrunk"] = False
+
+        if st.session_state["shrunk"]:
+            options = ["A", "C"]  # "B" removed
+        else:
+            options = ["A", "B", "C"]
+
+        selected = st.selectbox("Pick one", options, key="picker")
+        # Output the actual returned value to verify
+        st.text(f"Selected: {selected}")
+
+        if st.button("Shrink options"):
+            st.session_state["shrunk"] = True
+
+    at = AppTest.from_function(script).run()
+
+    # Select "B"
+    at = at.selectbox[0].set_value("B").run()
+    assert at.text[0].value == "Selected: B"
+
+    # Click button to shrink options (remove "B"), then rerun
+    at = at.button[0].click().run()
+    at = at.run()
+
+    # Selection should reset to default ("A") since "B" is no longer in options
+    # Check the actual widget return value via st.text output
+    assert at.text[0].value == "Selected: A"
 
 
 def test_selectbox_enum_coercion():
