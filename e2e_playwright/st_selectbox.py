@@ -160,10 +160,10 @@ if st.toggle("Update selectbox props"):
         args=("Updated select arg",),
         kwargs={"param": "updated kwarg param"},
         placeholder="updated placeholder",
-        # Dynamic options and format_func changes are now supported when key is provided
         options=["grape", "mango", "papaya", "apple"],
-        accept_new_options=False,
         format_func=lambda x: x.upper(),
+        # Whitelisted kwargs (keep stable):
+        accept_new_options=False,
     )
     st.write("Updated selectbox value:", sel_value)
 else:
@@ -180,7 +180,8 @@ else:
         kwargs={"param": "initial kwarg param"},
         placeholder="initial placeholder",
         options=["apple", "banana", "orange"],
-        accept_new_options=False,
         format_func=lambda x: x.capitalize(),
+        # Whitelisted kwargs (keep stable):
+        accept_new_options=False,
     )
     st.write("Initial selectbox value:", sel_value)
