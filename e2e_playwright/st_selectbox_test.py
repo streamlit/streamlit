@@ -284,7 +284,7 @@ def test_dynamic_selectbox_props(app: Page, assert_snapshot: ImageCompareFunctio
     expect_help_tooltip(app, dynamic_select, "initial help")
 
     # Select "apple" (which exists in both initial and updated options)
-    select_selectbox_option(app, "selectbox 15 (accept new options)", "apple")
+    select_selectbox_option(app, "selectbox 15 (accept new options)", "Apple")
     expect_prefixed_markdown(app, "Initial selectbox value:", "apple")
 
     # Toggle to update props - options change from [apple, banana, orange]
@@ -304,7 +304,7 @@ def test_dynamic_selectbox_props(app: Page, assert_snapshot: ImageCompareFunctio
     expect_help_tooltip(app, dynamic_select, "updated help")
 
     # Select a new option from updated options
-    select_selectbox_option(app, "selectbox 15 (accept new options)", "mango")
+    select_selectbox_option(app, "selectbox 15 (accept new options)", "MANGO")
     expect_prefixed_markdown(app, "Updated selectbox value:", "mango")
 
 
