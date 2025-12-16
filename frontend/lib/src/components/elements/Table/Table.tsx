@@ -426,6 +426,9 @@ function generateTableFooter(
     <tfoot data-testid="stTableFooter">
       <tr>
         {range(numColumns).map(colIndex => {
+          const { type: cellType } = table.getCell(0, colIndex)
+          const isIndexColumn = cellType === DataFrameCellType.INDEX
+
           const columnNames = table.columnNames
           const lastHeaderRow =
             columnNames && columnNames.length > 0
@@ -438,7 +441,7 @@ function generateTableFooter(
 
           const summaryConfigValue = summaryConfig[columnName]
 
-          if (!summaryConfigValue) {
+          if (isIndexColumn) {
             return (
               <StyledTableCellFooter
                 key={colIndex}
@@ -446,6 +449,25 @@ function generateTableFooter(
                 data-testid="stTableFooterCell"
               >
                 {"\u00A0"}
+              </StyledTableCellFooter>
+            )
+          }
+
+          if (!summaryConfigValue) {
+            const maxValue = computeSummary(table, colIndex, "min")
+            const maxLabel = getSummaryLabel("min")
+            return (
+              <StyledTableCellFooter
+                key={colIndex}
+                borderMode={borderMode}
+                data-testid="stTableFooterCell"
+              >
+                <StyledSummaryContent
+                  style={{ opacity: 0, pointerEvents: "none" }}
+                >
+                  <StyledSummaryLabel>{maxLabel}:</StyledSummaryLabel>
+                  <StyledSummaryValue>{maxValue}</StyledSummaryValue>
+                </StyledSummaryContent>
               </StyledTableCellFooter>
             )
           }

@@ -480,7 +480,12 @@ function formatFloat(num: number): string {
     return String(num)
   }
 
-  return numbro(num).format("0,0.0000")
+  // Round to 6 decimal places to avoid floating point precision artifacts
+  // This preserves meaningful precision while avoiding issues like 1.2000000000000002
+  const rounded = Math.round(num * 1000000) / 1000000
+
+  // Format with up to 6 optional decimal places (brackets = optional)
+  return numbro(rounded).format("0,0.[000000]")
 }
 
 /**
