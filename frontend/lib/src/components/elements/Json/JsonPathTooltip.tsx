@@ -23,11 +23,7 @@ import { useCopyToClipboard } from "~lib/hooks/useCopyToClipboard"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { hasLightBackgroundColor } from "~lib/theme"
 
-import {
-  StyledCopyButton,
-  StyledPathText,
-  StyledPathTooltip,
-} from "./styled-components"
+import { StyledCopyButton, StyledPathTooltip } from "./styled-components"
 
 export interface JsonPathTooltipProps {
   top: number
@@ -68,7 +64,7 @@ function JsonPathTooltip({
     <Popover
       content={
         <StyledPathTooltip data-testid="stJsonPathTooltip">
-          <StyledPathText>{path}</StyledPathText>
+          <code>{path}</code>
           <StyledCopyButton
             onClick={handleCopyPath}
             title={label}

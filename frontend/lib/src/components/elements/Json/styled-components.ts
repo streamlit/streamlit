@@ -31,18 +31,13 @@ export const StyledPathTooltip = styled.div(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   gap: theme.spacing.sm,
-  padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
+  padding: theme.spacing.sm,
+  paddingLeft: theme.spacing.md,
   fontFamily: theme.genericFonts.codeFont,
-  fontSize: theme.fontSizes.sm,
+  fontSize: theme.fontSizes.twoSm,
   color: theme.colors.bodyText,
   maxWidth: "90vw",
   wordBreak: "break-all",
-}))
-
-export const StyledPathText = styled.code(({ theme }) => ({
-  padding: `${theme.spacing.threeXS} ${theme.spacing.xs}`,
-  fontFamily: theme.genericFonts.codeFont,
-  fontSize: theme.fontSizes.twoSm,
 }))
 
 export const StyledCopyButton = styled.button(({ theme }) => ({
