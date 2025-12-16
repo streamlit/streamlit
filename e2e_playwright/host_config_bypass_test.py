@@ -22,15 +22,11 @@ without waiting for the host-config endpoint response (bypass mode).
 from __future__ import annotations
 
 import json
-from typing import Any
 
 from playwright.sync_api import Page, Route, WebSocket, expect
 
-from e2e_playwright.conftest import wait_for_app_loaded
-from e2e_playwright.shared.app_utils import (
-    get_observed_connection_statuses,
-    register_connection_status_observer,
-)
+from e2e_playwright.conftest import wait_until
+from e2e_playwright.shared.app_utils import goto_app
 
 
 def _inject_bypass_config(page: Page, backend_url: str) -> None:
@@ -55,37 +51,20 @@ def _inject_bypass_config(page: Page, backend_url: str) -> None:
     )
 
 
-def _create_host_config_route_spy(page: Page) -> dict[str, list[dict[str, Any]]]:
-    """Create a spy to track host-config endpoint calls.
-
-    Returns a dict with 'calls' list that will be populated with timing info.
-    """
-    spy_data: dict[str, list[dict[str, Any]]] = {"calls": []}
-
-    def handle_route(route: Route) -> None:
-        """Track when host-config is called and allow it through."""
-        spy_data["calls"].append(
-            {
-                "url": route.request.url,
-                "method": route.request.method,
-                "timestamp": page.evaluate("Date.now()"),
-            }
-        )
-        route.continue_()
-
-    page.route("**/_stcore/host-config", handle_route)
-    return spy_data
-
-
-def test_bypass_mode_connects_immediately_before_host_config(
+def test_bypass_mode_executes_websocket_and_host_config_in_parallel(
     page: Page, app_port: int
 ) -> None:
-    """Test that bypass mode establishes WebSocket before host-config responds.
+    """Test that bypass mode executes both WebSocket and host-config requests.
 
-    This is the key behavior of bypass mode: the WebSocket connection should
-    not wait for the host-config endpoint.
+    In bypass mode:
+    - WebSocket connection is not blocked by host-config
+    - Host-config endpoint is still called (in background)
+    - Both should succeed
+
+    Note: We don't assert strict ordering because both happen in parallel,
+    but we verify both events occur, demonstrating bypass behavior.
     """
-    # Track connection events with timestamps
+    # Track connection events
     events = []
 
     # Set up WebSocket tracking BEFORE injecting config
@@ -98,7 +77,7 @@ def test_bypass_mode_connects_immediately_before_host_config(
     # Track host-config endpoint calls BEFORE injecting config
     def track_host_config(route: Route) -> None:
         """Track host-config call timing and allow through."""
-        events.append({"type": "host-config", "url": route.request.url})
+        events.append({"type": "host-config"})
         route.continue_()
 
     page.route("**/_stcore/host-config", track_host_config)
@@ -107,32 +86,23 @@ def test_bypass_mode_connects_immediately_before_host_config(
     _inject_bypass_config(page, f"http://localhost:{app_port}")
 
     # Navigate to app
-    page.goto(f"http://localhost:{app_port}/")
-    wait_for_app_loaded(page)
+    goto_app(page, f"http://localhost:{app_port}/")
 
     # Verify both WebSocket and host-config were used
     ws_events = [e for e in events if e["type"] == "websocket"]
     hc_events = [e for e in events if e["type"] == "host-config"]
 
-    assert len(ws_events) > 0, "WebSocket should have connected"
-    assert len(hc_events) > 0, "Host-config should still be called"
-
-    # Find indices to verify ordering
-    ws_index = events.index(ws_events[0])
-    hc_index = events.index(hc_events[0])
-
-    # In bypass mode, WebSocket and host-config should both occur
-    # The exact timing may vary, but both events should be tracked
-    assert ws_index >= 0
-    assert hc_index >= 0
+    assert len(ws_events) > 0, "WebSocket should have connected in bypass mode"
+    assert len(hc_events) > 0, (
+        "Host-config should still be called (in background) in bypass mode"
+    )
 
 
 def test_bypass_mode_app_becomes_interactive(page: Page, app_port: int) -> None:
     """Test that app becomes interactive in bypass mode."""
     _inject_bypass_config(page, f"http://localhost:{app_port}")
 
-    page.goto(f"http://localhost:{app_port}/")
-    wait_for_app_loaded(page)
+    goto_app(page, f"http://localhost:{app_port}/")
 
     # Verify app content loaded
     expect(page.get_by_text("Connection status test")).to_be_visible()
@@ -176,8 +146,7 @@ def test_bypass_mode_host_config_values_take_precedence(
     """
     )
 
-    page.goto(f"http://localhost:{app_port}/")
-    wait_for_app_loaded(page)
+    goto_app(page, f"http://localhost:{app_port}/")
 
     # The main verification is that the app loads successfully with custom config
     # If precedence was not working correctly, the app would fail or behave incorrectly
@@ -216,8 +185,7 @@ def test_default_path_without_bypass_config(page: Page, app_port: int) -> None:
     page.on("websocket", track_websocket)
 
     # Don't inject any window.__streamlit config - use default path
-    page.goto(f"http://localhost:{app_port}/")
-    wait_for_app_loaded(page)
+    goto_app(page, f"http://localhost:{app_port}/")
 
     # Verify both host-config and WebSocket were used
     hc_events = [e for e in events if e["type"] == "host-config-start"]
@@ -247,42 +215,52 @@ def test_default_path_without_bypass_config(page: Page, app_port: int) -> None:
 def test_bypass_mode_handles_connection_errors_gracefully(
     page: Page, app_port: int
 ) -> None:
-    """Test that bypass mode handles errors in background pings.
-
-    When background pings (health and host-config) fail, the connection
-    should eventually show error status.
+    """Test bypass mode functions by blocking host-config endpoint
+    The app should still load because we bypass the endpoints to establish
+    the initial websocket connection. Then the connection error dialog appears
+    because we are still handling connection errors the same way as the default path.
     """
-    # Inject bypass config BEFORE setting up routes
+    ws_connected = {"connected": False}
+    host_config_call_attempted = {"attempted": False}
+
+    # Track WebSocket connection
+    def track_websocket(_ws: WebSocket) -> None:
+        ws_connected["connected"] = True
+
+    page.on("websocket", track_websocket)
+
+    # Completely block host-config endpoint from the start
+    def block_host_config(route: Route) -> None:
+        host_config_call_attempted["attempted"] = True
+        route.abort("failed")
+
+    page.route("**/_stcore/host-config", block_host_config)
+
+    # Inject bypass config BEFORE navigation
     _inject_bypass_config(page, f"http://localhost:{app_port}")
 
-    # Register observer BEFORE navigation
-    register_connection_status_observer(page)
+    # Navigate to app
+    goto_app(page, f"http://localhost:{app_port}/")
 
-    # Block host-config endpoint to simulate failure
-    page.route("**/_stcore/host-config", lambda route: route.abort("failed"))
+    # Verify WebSocket connected despite host-config being blocked
+    assert ws_connected["connected"], (
+        "WebSocket should connect in bypass mode even when host-config fails"
+    )
 
-    # Try to navigate - this should eventually fail because pings will fail
-    try:
-        page.goto(f"http://localhost:{app_port}/", wait_until="domcontentloaded")
-    except Exception:
-        # Expected to potentially timeout or fail
-        pass
+    # Verify host-config was attempted (proves bypass doesn't skip it entirely)
+    assert host_config_call_attempted["attempted"], (
+        "Host-config should still be called (in background)"
+    )
 
-    # Wait for connection attempts and retries
-    page.wait_for_timeout(3000)
+    # Verify app loaded despite host-config being blocked
+    expect(page.get_by_text("Connection status test")).to_be_visible()
 
-    # Check connection status - should show connection issues
-    statuses = get_observed_connection_statuses(page)
-
-    # We should have seen some connection status changes
-    # (connecting, error states, retry attempts, etc.)
-    if statuses and len(statuses) > 0:
-        # If we got statuses, verify there were connection attempts
-        assert True, "Connection status changes observed"
-    else:
-        # If no statuses observed, the page may not have loaded enough
-        # Just verify the page didn't crash
-        assert True, "Test completed without crash"
+    # Verify Connection error dialog eventually appears
+    wait_until(
+        page,
+        lambda: page.get_by_test_id("stDialog").is_visible()
+        and "Connection error" in page.get_by_test_id("stDialog").inner_text(),
+    )
 
 
 def test_bypass_requires_all_minimal_fields(page: Page, app_port: int) -> None:
@@ -319,20 +297,22 @@ def test_bypass_requires_all_minimal_fields(page: Page, app_port: int) -> None:
     """
     )
 
-    page.goto(f"http://localhost:{app_port}/")
-    wait_for_app_loaded(page)
+    goto_app(page, f"http://localhost:{app_port}/")
 
     # Verify default path was used (host-config before WebSocket)
     hc_events = [e for e in events if e["type"] == "host-config-start"]
     ws_events = [e for e in events if e["type"] == "websocket"]
 
-    if len(hc_events) > 0 and len(ws_events) > 0:
-        hc_index = events.index(hc_events[0])
-        ws_index = events.index(ws_events[0])
-        assert hc_index < ws_index, (
-            "Incomplete config should use default path: "
-            f"host-config ({hc_index}) before WebSocket ({ws_index})"
-        )
+    # Explicit assertions before checking order
+    assert len(hc_events) > 0, "Host-config should be called"
+    assert len(ws_events) > 0, "WebSocket should connect"
+
+    hc_index = events.index(hc_events[0])
+    ws_index = events.index(ws_events[0])
+    assert hc_index < ws_index, (
+        "Incomplete config should use default path: "
+        f"host-config ({hc_index}) before WebSocket ({ws_index})"
+    )
 
     # App should still load (fallback to default path)
     expect(page.get_by_text("Connection status test")).to_be_visible()
@@ -366,20 +346,22 @@ def test_bypass_requires_non_empty_allowed_origins(page: Page, app_port: int) ->
     """
     )
 
-    page.goto(f"http://localhost:{app_port}/")
-    wait_for_app_loaded(page)
+    goto_app(page, f"http://localhost:{app_port}/")
 
     # Verify default path was used (host-config before WebSocket)
     hc_events = [e for e in events if e["type"] == "host-config-start"]
     ws_events = [e for e in events if e["type"] == "websocket"]
 
-    if len(hc_events) > 0 and len(ws_events) > 0:
-        hc_index = events.index(hc_events[0])
-        ws_index = events.index(ws_events[0])
-        assert hc_index < ws_index, (
-            "Empty allowedOrigins should use default path: "
-            f"host-config ({hc_index}) before WebSocket ({ws_index})"
-        )
+    # Explicit assertions before checking order
+    assert len(hc_events) > 0, "Host-config should be called"
+    assert len(ws_events) > 0, "WebSocket should connect"
+
+    hc_index = events.index(hc_events[0])
+    ws_index = events.index(ws_events[0])
+    assert hc_index < ws_index, (
+        "Empty allowedOrigins should use default path: "
+        f"host-config ({hc_index}) before WebSocket ({ws_index})"
+    )
 
     # App should still load (fallback to default path)
     expect(page.get_by_text("Connection status test")).to_be_visible()

@@ -38,7 +38,8 @@ pages = {
 }
 
 
-st.navigation(pages)
+pg = st.navigation(pages)
+pg.run()
 
 st.subheader("Connection status test", divider="gray")
 
