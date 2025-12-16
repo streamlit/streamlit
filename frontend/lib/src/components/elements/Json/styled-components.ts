@@ -27,32 +27,22 @@ export const StyledJsonWrapper = styled.div(({ theme }) => ({
   },
 }))
 
-export const StyledPathTooltip = styled.div<{ isVisible: boolean }>(
-  ({ theme, isVisible }) => ({
-    position: "fixed",
-    display: isVisible ? "flex" : "none",
-    alignItems: "center",
-    gap: theme.spacing.sm,
-    padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
-    backgroundColor: theme.colors.bgColor,
-    border: `1px solid ${theme.colors.borderColor}`,
-    borderRadius: theme.radii.default,
-    boxShadow: `0 2px 8px ${theme.colors.darkenedBgMix25}`,
-    fontFamily: theme.genericFonts.codeFont,
-    fontSize: theme.fontSizes.sm,
-    color: theme.colors.bodyText,
-    zIndex: theme.zIndices.popup,
-    maxWidth: "90vw",
-    wordBreak: "break-all",
-  })
-)
-
-export const StyledPathText = styled.code(({ theme }) => ({
-  backgroundColor: theme.colors.secondaryBg,
-  padding: `${theme.spacing.threeXS} ${theme.spacing.xs}`,
-  borderRadius: theme.radii.default,
+export const StyledPathTooltip = styled.div(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  gap: theme.spacing.sm,
+  padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
   fontFamily: theme.genericFonts.codeFont,
   fontSize: theme.fontSizes.sm,
+  color: theme.colors.bodyText,
+  maxWidth: "90vw",
+  wordBreak: "break-all",
+}))
+
+export const StyledPathText = styled.code(({ theme }) => ({
+  padding: `${theme.spacing.threeXS} ${theme.spacing.xs}`,
+  fontFamily: theme.genericFonts.codeFont,
+  fontSize: theme.fontSizes.twoSm,
 }))
 
 export const StyledCopyButton = styled.button(({ theme }) => ({
@@ -62,7 +52,7 @@ export const StyledCopyButton = styled.button(({ theme }) => ({
   padding: theme.spacing.threeXS,
   backgroundColor: "transparent",
   border: "none",
-  borderRadius: theme.radii.default,
+  borderRadius: theme.radii.md,
   cursor: "pointer",
   color: theme.colors.fadedText60,
   transition: "color 0.15s ease, background-color 0.15s ease",
