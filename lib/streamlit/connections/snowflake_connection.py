@@ -250,8 +250,8 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
 
         # Otherwise, attempt to create a new connection from whatever credentials we
         # have available.
+        st_secrets = self._secrets.to_dict()
         try:
-            st_secrets = self._secrets.to_dict()
             if len(st_secrets):
                 _LOGGER.info(
                     "Connect to Snowflake using the Streamlit secret defined under "

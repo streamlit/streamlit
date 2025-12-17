@@ -847,7 +847,7 @@ def _maybe_melt(
     sort_column: str | None,
 ) -> tuple[pd.DataFrame, str | None, str | None]:
     """If multiple columns are set for y, melt the dataframe into long format."""
-    y_column: str | None
+    y_column: str | None = None
 
     if len(y_column_list) == 0:
         y_column = None
