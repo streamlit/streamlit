@@ -60,7 +60,7 @@ class FragmentStorage(Protocol):
     def clear(
         self,
         new_fragment_ids: set[str] | None = None,  # ty: ignore[invalid-type-form]
-    ) -> None:  # [invalid-type-form]
+    ) -> None:
         """Remove all fragments saved in this FragmentStorage unless listed in
         new_fragment_ids.
         """
