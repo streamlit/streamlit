@@ -39,7 +39,6 @@ export const StyledChatInput = styled.div<StyledChatInputProps>(
     flexDirection: "column",
     alignItems: "stretch",
     padding: theme.spacing.lg,
-    gap: theme.spacing.lg,
     borderRadius: theme.radii.default,
     boxSizing: "border-box",
 
@@ -98,7 +97,7 @@ export const StyledRightCluster = styled.div(({ theme }) => ({
 
 export const StyledInputInstructions = styled.div(({ theme }) => ({
   position: "absolute",
-  top: theme.spacing.sm,
+  top: theme.spacing.twoXS,
   right: theme.spacing.lg,
   color: theme.colors.fadedText60,
   fontSize: theme.fontSizes.twoSm,

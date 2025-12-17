@@ -694,9 +694,7 @@ function ChatInput({
                     overflowY: "auto",
                     paddingLeft: theme.spacing.none,
                     paddingRight: theme.spacing.none,
-                    // Reduced from 8px to 6px to align text center with button center
-                    // Text center = 6px + lineHeight/2 ≈ 16px = button center (32px/2)
-                    paddingBottom: theme.spacing.xs,
+                    paddingBottom: theme.spacing.sm,
                     paddingTop: theme.spacing.sm,
                     width: "100%",
                   },
@@ -709,6 +707,9 @@ function ChatInput({
               data-testid="stChatInputSubmitButton"
               aria-label="Send message"
               primary
+              style={{
+                marginBottom: theme.sizes.chatInputButtonVerticalOffset,
+              }}
             >
               <Icon content={ArrowUpward} size="lg" color="inherit" />
             </StyledSendIconButton>
