@@ -20,8 +20,8 @@ import { Block as BlockProto } from "@streamlit/protobuf"
 
 import { DynamicIcon } from "~lib/components/shared/Icon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
 import { notNullOrUndefined } from "~lib/util/utils"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
   BORDER_SIZE,
