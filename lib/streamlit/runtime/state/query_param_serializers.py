@@ -258,6 +258,149 @@ def deserialize_date_range(value: str | list[str]) -> tuple[date, date] | None:
         return None
 
 
+def serialize_date_input_value(value: Any) -> str:
+    """Serialize a st.date_input value to a query param string.
+
+    Notes
+    -----
+    `st.date_input` can return either a single date (scalar) or a tuple of up to
+    two dates (range). For ranges, we serialize as comma-separated ISO dates.
+    """
+    if value is None:
+        return ""
+
+    # Range: tuple/list of dates
+    if isinstance(value, (tuple, list)):
+        if len(value) == 0:
+            return ""
+        if len(value) == 1:
+            return serialize_date(value[0])
+        if len(value) == 2:
+            return serialize_date_range((value[0], value[1]))
+        return ""
+
+    if isinstance(value, datetime):
+        return serialize_date(value.date())
+    if isinstance(value, date):
+        return serialize_date(value)
+
+    return ""
+
+
+def deserialize_date_input_value(value: str | list[str]) -> Any:
+    """Deserialize a query param string into a st.date_input value.
+
+    Returns either:
+    - `datetime.date` for scalar values
+    - `tuple[datetime.date, ...]` for comma-separated ranges (0-2 items)
+    - `None` for empty/invalid values
+    """
+    if isinstance(value, list):
+        value = value[-1] if value else ""
+
+    if not value:
+        return None
+
+    if "," in value:
+        parts = [p for p in value.split(",") if p]
+        if len(parts) == 0 or len(parts) > 2:
+            return None
+        try:
+            return tuple(date.fromisoformat(p) for p in parts)
+        except ValueError:
+            return None
+
+    # Scalar date
+    return deserialize_date(value)
+
+
+def serialize_slider_value(value: Any) -> str:
+    """Serialize a st.slider value to a query param string.
+
+    Notes
+    -----
+    Sliders can return scalars (int/float/date/time/datetime) or 2-tuples for ranges.
+    For ranges, we serialize as comma-separated values.
+    """
+    if value is None:
+        return ""
+
+    def serialize_scalar(v: Any) -> str:
+        if isinstance(v, datetime):
+            return serialize_datetime(v)
+        if isinstance(v, date) and not isinstance(v, datetime):
+            return serialize_date(v)
+        if isinstance(v, time):
+            return serialize_time(v)
+        if isinstance(v, (int, float)):
+            return serialize_number(v)
+        return ""
+
+    if isinstance(value, (tuple, list)):
+        if len(value) != 2:
+            return ""
+        left = serialize_scalar(value[0])
+        right = serialize_scalar(value[1])
+        if not left or not right:
+            return ""
+        return f"{left},{right}"
+
+    return serialize_scalar(value)
+
+
+def deserialize_slider_value(
+    value: str | list[str],
+    *,
+    data_type: str,
+) -> Any:
+    """Deserialize a query param string into a st.slider value.
+
+    Parameters
+    ----------
+    value : str or list[str]
+        Query param value (uses last item if a list).
+    data_type : str
+        One of: "int", "float", "date", "time", "datetime".
+
+    Returns
+    -------
+    Any
+        Scalar value for non-range sliders, or a tuple for range sliders. Returns
+        None if empty/invalid.
+    """
+    if isinstance(value, list):
+        value = value[-1] if value else ""
+
+    if not value:
+        return None
+
+    def parse_scalar(raw: str) -> Any:
+        if data_type == "int":
+            parsed = deserialize_number(raw, as_int=True)
+            return parsed if isinstance(parsed, int) else None
+        if data_type == "float":
+            return deserialize_number(raw, as_int=False)
+        if data_type == "date":
+            return deserialize_date(raw)
+        if data_type == "time":
+            return deserialize_time(raw)
+        if data_type == "datetime":
+            return deserialize_datetime(raw)
+        return None
+
+    if "," in value:
+        parts = value.split(",")
+        if len(parts) != 2:
+            return None
+        left = parse_scalar(parts[0])
+        right = parse_scalar(parts[1])
+        if left is None or right is None:
+            return None
+        return (left, right)
+
+    return parse_scalar(value)
+
+
 def serialize_time(value: time | None) -> str:
     """Serialize a time value to ISO 8601 format.
 

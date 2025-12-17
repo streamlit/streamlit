@@ -174,6 +174,7 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
 
         existing_session_id = None
         initial_query_string = ""
+
         try:
             ws_protocols = [
                 p.strip()
@@ -205,14 +206,41 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
                 # See the NOTE in the docstring of the `select_subprotocol` method above
                 # for a detailed explanation of why this is done.
                 # Token at index 2 is the session ID (may be empty string if not reconnecting)
-                session_id_token = ws_protocols[2]
-                if session_id_token:
-                    existing_session_id = session_id_token
+                # "NO_SESSION_ID" is a placeholder used by the frontend when there's no
+                # session ID but there is a query string token (WebSocket doesn't allow
+                # empty string subprotocols)
+                session_id_from_ws_protocol = ws_protocols[2]
+                if (
+                    session_id_from_ws_protocol
+                    and session_id_from_ws_protocol != "NO_SESSION_ID"
+                ):
+                    existing_session_id = session_id_from_ws_protocol
 
             if len(ws_protocols) >= 4:
                 # Token at index 3 is the initial query string from the URL
                 # This is used to initialize widget values from URL query params
-                initial_query_string = ws_protocols[3]
+                # The query string is base64url-encoded with a "qs." prefix since
+                # WebSocket subprotocols can't contain '=' and '&' characters
+                qs_token = ws_protocols[3]
+                if qs_token.startswith("qs."):
+                    import base64
+
+                    # Decode base64url: convert - to +, _ to /, add padding
+                    encoded = qs_token[3:]  # Remove "qs." prefix
+                    # Add padding if needed (base64 requires length % 4 == 0)
+                    padding = 4 - (len(encoded) % 4)
+                    if padding != 4:
+                        encoded += "=" * padding
+                    # Convert from base64url to standard base64
+                    encoded = encoded.replace("-", "+").replace("_", "/")
+                    try:
+                        initial_query_string = base64.b64decode(encoded).decode("utf-8")
+                    except Exception as e:
+                        _LOGGER.warning("Failed to decode query string: %s", e)
+                        initial_query_string = ""
+                else:
+                    # Fallback for non-encoded query strings (shouldn't happen)
+                    initial_query_string = qs_token
         except KeyError:
             # Just let existing_session_id=None if we run into any error while trying to
             # extract it from the Sec-Websocket-Protocol header.

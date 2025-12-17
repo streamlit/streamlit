@@ -511,15 +511,27 @@ export class WebsocketConnection {
       tokens.push(lastSessionId)
     }
 
-    // Only include query string token if non-empty to avoid duplicate empty
-    // string subprotocols (which WebSocket doesn't allow)
+    // Include query string if present, for initializing widget values from URL
     if (queryString) {
-      // If we need to add query string but didn't add lastSessionId, add empty
-      // placeholder first to maintain the expected token positions
+      // If we need to add query string but didn't add lastSessionId, add a
+      // non-empty placeholder first to maintain the expected token positions
+      // (WebSocket API doesn't allow empty string subprotocols)
       if (!lastSessionId) {
-        tokens.push("")
+        tokens.push("NO_SESSION_ID")
       }
-      tokens.push(queryString)
+
+      // Base64url-encode the query string since WebSocket subprotocols cannot
+      // contain characters like '=' and '&' that are common in query strings.
+      // We use base64url encoding (RFC 4648 §5) with:
+      // - '+' replaced by '-'
+      // - '/' replaced by '_'
+      // - padding '=' stripped
+      // Prefix with "qs." so backend knows this is an encoded query string
+      const encoded = btoa(queryString)
+        .replace(/\+/g, "-")
+        .replace(/\//g, "_")
+        .replace(/=+$/, "")
+      tokens.push(`qs.${encoded}`)
     }
 
     return tokens

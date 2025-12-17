@@ -19,6 +19,7 @@ import {
   SetStateAction,
   useCallback,
   useEffect,
+  useRef,
   useState,
 } from "react"
 
@@ -144,7 +145,7 @@ export function useBasicWidgetClientState<
   return [currentValue, setNextValueWithSource]
 }
 
-// Interface for a proto that has a setValue, and .formId
+// Interface for a proto that has a setValue and .formId
 interface ValueElementProtoInterfaceWithSetValue extends ValueElementProtoInterface {
   setValue: boolean
 }
@@ -185,15 +186,27 @@ export function useBasicWidgetState<
   T,
   Dispatch<SetStateAction<ValueWithSource<T> | null>>,
 ] {
+  // When the backend sends `setValue=true`, it means the proto's current value
+  // is authoritative and should override anything cached in WidgetStateManager
+  // (including stale values from a prior mount).
+  const getStateFromWidgetMgrUnlessBackendOverrides = useCallback(
+    (wm: WidgetStateManager, el: P) => {
+      return el.setValue ? undefined : getStateFromWidgetMgr(wm, el)
+    },
+    [getStateFromWidgetMgr]
+  )
+
   const getDefaultState = useCallback<(wm: WidgetStateManager, el: P) => T>(
     (_wm, el) => {
-      return getDefaultStateFromProto(el)
+      return el.setValue
+        ? getCurrStateFromProto(el)
+        : getDefaultStateFromProto(el)
     },
-    [getDefaultStateFromProto]
+    [getCurrStateFromProto, getDefaultStateFromProto]
   )
 
   const [currentValue, setNextValueWithSource] = useBasicWidgetClientState({
-    getStateFromWidgetMgr,
+    getStateFromWidgetMgr: getStateFromWidgetMgrUnlessBackendOverrides,
     getDefaultState,
     updateWidgetMgrState,
     element,
@@ -202,13 +215,23 @@ export function useBasicWidgetState<
     onFormCleared,
   })
 
+  // We treat element.setValue as an "event" sent from the server.
+  //
+  // Important: do NOT mutate `element.setValue` to clear the event.
+  // In React 18 StrictMode (dev), components can mount -> run effects -> unmount ->
+  // mount again. If we mutate the proto object (which may be reused by the parent),
+  // the second mount can miss the event and incorrectly initialize to the default.
+  //
+  // Instead, we track whether we've already processed this event for the current
+  // element object identity within this mount.
+  const lastProcessedSetValueElementRef = useRef<P | null>(null)
+
   // Respond to value changes via session_state. This is also set via an
   // "event", this time using the .setValue property of the proto.
   useEffect(() => {
     if (!element.setValue) return
-    // eslint-disable-next-line react-hooks/immutability -- TODO: Update to match React best practices
-    element.setValue = false // Clear "event".
-
+    if (lastProcessedSetValueElementRef.current === element) return
+    lastProcessedSetValueElementRef.current = element
     setNextValueWithSource({
       value: getCurrStateFromProto(element),
       fromUi: false,
