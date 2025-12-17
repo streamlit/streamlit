@@ -14,6 +14,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Synchronize ruff version between dev-requirements.txt and pre-commit config.
+
+This script ensures that the ruff version specified in lib/dev-requirements.txt
+matches the version in .pre-commit-config.yaml. It can either check if the
+versions are in sync or update the pre-commit config to match.
+
+Examples
+--------
+Check if versions are in sync:
+
+    $ python scripts/sync_ruff_version.py --check
+
+Synchronize versions (update pre-commit config to match dev-requirements.txt):
+
+    $ python scripts/sync_ruff_version.py
+"""
+
 from __future__ import annotations
 
 import argparse
@@ -46,9 +63,11 @@ def _get_ruff_version_from_pre_commit_config(repo_root: str) -> str | None:
     try:
         with open(pre_commit_config_path, encoding="utf-8") as f:
             content = f.read()
+            # Use re.DOTALL to handle variable number of lines between repo and rev
             match = re.search(
-                r"repo:\s*https://github\.com/astral-sh/ruff-pre-commit\s*\n\s*.*\n\s*rev:\s*v([0-9]+\.[0-9]+\.[0-9]+)",
+                r"repo:\s*https://github\.com/astral-sh/ruff-pre-commit.*?rev:\s*v([0-9]+\.[0-9]+\.[0-9]+)",
                 content,
+                re.DOTALL,
             )
             if match:
                 return match.group(1)
@@ -64,8 +83,9 @@ def _update_pre_commit_config(repo_root: str, new_version: str) -> bool:
         with open(pre_commit_config_path, encoding="utf-8") as f:
             content = f.read()
 
-        pattern = r"(repo:\s*https://github\.com/astral-sh/ruff-pre-commit\s*\n\s*.*\n\s*rev:\s*v)[0-9]+\.[0-9]+\.[0-9]+"
-        new_content = re.sub(pattern, rf"\g<1>{new_version}", content)
+        # Use re.DOTALL to handle variable number of lines between repo and rev
+        pattern = r"(repo:\s*https://github\.com/astral-sh/ruff-pre-commit.*?rev:\s*v)[0-9]+\.[0-9]+\.[0-9]+"
+        new_content = re.sub(pattern, rf"\g<1>{new_version}", content, flags=re.DOTALL)
 
         if new_content == content:
             print("Warning: No changes made to .pre-commit-config.yaml")
@@ -76,12 +96,24 @@ def _update_pre_commit_config(repo_root: str, new_version: str) -> bool:
 
         print(f"Updated .pre-commit-config.yaml to ruff version v{new_version}")
         return True
-    except Exception as e:
+    except OSError as e:
         print(f"Error updating .pre-commit-config.yaml: {e}")
         return False
 
 
 def check_sync_status(repo_root: str) -> bool:
+    """Check if ruff versions are in sync between config files.
+
+    Parameters
+    ----------
+    repo_root : str
+        Path to the repository root directory.
+
+    Returns
+    -------
+    bool
+        True if versions are in sync, False otherwise.
+    """
     dev_req_version = _get_ruff_version_from_dev_requirements(repo_root)
     pre_commit_version = _get_ruff_version_from_pre_commit_config(repo_root)
 
@@ -104,6 +136,18 @@ def check_sync_status(repo_root: str) -> bool:
 
 
 def sync_versions(repo_root: str) -> bool:
+    """Sync ruff version from dev-requirements.txt to pre-commit config.
+
+    Parameters
+    ----------
+    repo_root : str
+        Path to the repository root directory.
+
+    Returns
+    -------
+    bool
+        True if sync was successful or already in sync, False on error.
+    """
     dev_req_version = _get_ruff_version_from_dev_requirements(repo_root)
 
     if dev_req_version is None:
@@ -137,6 +181,11 @@ def _parse_arguments() -> argparse.Namespace:
 
 
 def main() -> None:
+    """Entry point for the ruff version sync script.
+
+    Parses command line arguments and executes the appropriate sync or check
+    operation. Exits with status 0 on success, 1 on failure.
+    """
     args = _parse_arguments()
     repo_root = _get_repo_root()
 
