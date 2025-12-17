@@ -146,7 +146,9 @@ def sync_versions(repo_root: str) -> bool:
     Returns
     -------
     bool
-        True if sync was successful or already in sync, False on error.
+        True if already in sync, False if modified or on error.
+        Returns False after modifications so pre-commit hooks fail and
+        prompt the user to stage the changes.
     """
     dev_req_version = _get_ruff_version_from_dev_requirements(repo_root)
 
@@ -165,7 +167,11 @@ def sync_versions(repo_root: str) -> bool:
         return True
 
     print(f"Syncing ruff version from {pre_commit_version} to {dev_req_version}...")
-    return _update_pre_commit_config(repo_root, dev_req_version)
+    if _update_pre_commit_config(repo_root, dev_req_version):
+        # Return False after modifying so pre-commit fails and user stages changes
+        print("Please stage the updated .pre-commit-config.yaml and commit again.")
+        return False
+    return False
 
 
 def _parse_arguments() -> argparse.Namespace:
