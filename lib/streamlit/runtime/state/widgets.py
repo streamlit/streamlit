@@ -34,13 +34,23 @@ from streamlit.runtime.state.common import (
 )
 from streamlit.runtime.state.query_param_serializers import (
     deserialize_bool,
+    deserialize_color,
+    deserialize_date_input_value,
+    deserialize_datetime,
     deserialize_number,
     deserialize_number_range,
+    deserialize_slider_value,
     deserialize_string,
+    deserialize_time,
     serialize_bool,
+    serialize_color,
+    serialize_date_input_value,
+    serialize_datetime,
     serialize_number,
     serialize_number_range,
+    serialize_slider_value,
     serialize_string,
+    serialize_time,
 )
 
 if TYPE_CHECKING:
@@ -207,32 +217,97 @@ def register_widget_from_metadata(
     # Auto-detect query param binding from user key prefix ("?")
     if user_key is not None and is_query_param_key(user_key):
         param_key = extract_query_param_name(user_key)
-
         # Get serializers for this value type
         effective_value_type = value_type or metadata.value_type
         serializers = _VALUE_TYPE_SERIALIZERS.get(effective_value_type)
+        serde_instance = getattr(metadata.deserializer, "__self__", None)
+        serde_name = serde_instance.__class__.__name__ if serde_instance else ""
+
+        # Widget-specific serializer overrides
+        if effective_value_type == "string_value":
+            if serde_name == "TimeInputSerde":
+                serializers = (serialize_time, deserialize_time)
+            elif serde_name == "ColorPickerSerde":
+                serializers = (serialize_color, deserialize_color)
+
+        if effective_value_type == "double_array_value" and serde_name == "SliderSerde":
+            # Sliders always use double_array_value in widget state, even for single-value
+            # sliders. Query param strings should be human-friendly, so deserialize to the
+            # slider's Python return type (int/float/date/time/datetime).
+            from streamlit.proto.Slider_pb2 import Slider as SliderProto
+
+            data_type = getattr(serde_instance, "data_type", SliderProto.FLOAT)
+            if data_type == SliderProto.INT:
+                slider_data_type = "int"
+            elif data_type == SliderProto.DATE:
+                slider_data_type = "date"
+            elif data_type == SliderProto.TIME:
+                slider_data_type = "time"
+            elif data_type == SliderProto.DATETIME:
+                slider_data_type = "datetime"
+            else:
+                slider_data_type = "float"
+
+            single_value = bool(getattr(serde_instance, "single_value", True))
+
+            def _deserialize_slider(v: str | list[str]) -> object | None:
+                parsed = deserialize_slider_value(v, data_type=slider_data_type)
+                if parsed is None:
+                    return None
+                if single_value:
+                    return None if isinstance(parsed, tuple) else parsed
+                return parsed if isinstance(parsed, tuple) else None
+
+            serializers = (serialize_slider_value, _deserialize_slider)
+
+        if serializers is None and effective_value_type == "string_array_value":
+            # string_array_value is used by multiple widgets with different formats.
+            # Select serializers based on the widget's serde type.
+            deserializer_name = getattr(metadata.deserializer, "__qualname__", "")
+            if "DateInputSerde" in deserializer_name:
+                serializers = (serialize_date_input_value, deserialize_date_input_value)
+            elif "DateTimeInputSerde" in deserializer_name:
+                serializers = (serialize_datetime, deserialize_datetime)
 
         if serializers is not None:
             query_param_serializer, query_param_deserializer = serializers
-            query_params = ctx.session_state.query_params
 
-            # Register the binding for two-way sync
-            query_params.bind_widget(
-                param_key=param_key,
-                widget_id=widget_id,
-                serializer=query_param_serializer,
-                deserializer=query_param_deserializer,
-            )
+            # Use context manager to access query_params from SafeSessionState
+            with ctx.session_state.query_params() as query_params:
+                # Register the binding for two-way sync
+                query_params.bind_widget(
+                    param_key=param_key,
+                    widget_id=widget_id,
+                    serializer=query_param_serializer,
+                    deserializer=query_param_deserializer,
+                )
 
-            # Check if there's an initial value from the URL to use
-            # This must be done BEFORE register_widget to override the default
-            initial_url_value = query_params.get_initial_value(param_key)
-            if initial_url_value is not None:
-                # Deserialize the URL string value to the widget's value type
-                deserialized_value = query_param_deserializer(initial_url_value)
-                if deserialized_value is not None:
-                    # Pre-set the widget value in session state
-                    # This will be used as the initial value instead of the default
-                    ctx.session_state[user_key] = deserialized_value
+                # Check if there's an initial value from the URL to use
+                # This must be done BEFORE register_widget to override the default
+                initial_url_value = query_params.get_initial_value(param_key)
+                if initial_url_value is not None:
+                    # Deserialize the URL string value to the widget's value type
+                    deserialized_value = query_param_deserializer(initial_url_value)
+                    if (
+                        deserialized_value is not None
+                        and user_key not in ctx.session_state
+                    ):
+                        # Seed the widget's initial value from the session's initial URL.
+                        #
+                        # Important: use reset_state_value() (instead of __setitem__)
+                        # because by this point the element ID has already been
+                        # registered in ctx.widget_ids_this_run, and on reruns the
+                        # user_key->widget_id mapping may already exist. That combination
+                        # would otherwise trigger the "cannot be modified after the
+                        # widget is instantiated" guard.
+                        #
+                        # Only seed once: if the user_key already exists in session
+                        # state, preserve the existing value (e.g. user interaction).
+                        ctx.session_state.reset_state_value(
+                            user_key, deserialized_value
+                        )
+        else:
+            # No serializers for this value type - skip query param binding.
+            pass
 
     return ctx.session_state.register_widget(metadata, user_key)

@@ -383,7 +383,6 @@ class CheckboxMixin:
         if checkbox_state.value_changed:
             checkbox_proto.value = checkbox_state.value
             checkbox_proto.set_value = True
-
         self.dg._enqueue("checkbox", checkbox_proto, layout_config=layout_config)
         return checkbox_state.value
 

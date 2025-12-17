@@ -326,7 +326,7 @@ describe("ButtonGroup widget", () => {
 
       expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledWith(
         props.element,
-        props.element.default,
+        props.element.value,
         {
           fromUi: false,
         },
