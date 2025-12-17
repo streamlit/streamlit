@@ -78,11 +78,8 @@ clean:
 	rm -rf lib/streamlit/static
 	rm -f lib/Pipfile.lock
 	rm -rf frontend/app/build
-	rm -rf frontend/node_modules
+	find . -name node_modules -type d -prune -exec rm -rf {} \; || true
 	rm -rf frontend/app/performance/lighthouse/reports
-	rm -rf frontend/app/node_modules
-	rm -rf frontend/lib/node_modules
-	rm -rf frontend/connection/node_modules
 	rm -rf frontend/test_results
 	rm -f frontend/protobuf/proto.js
 	rm -f frontend/protobuf/proto.d.ts
