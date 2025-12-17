@@ -118,6 +118,12 @@ repos:
         language: system
         pass_filenames: false
         files: ^frontend/yarn\.lock$
+      - id: sync-ruff-version
+        name: Sync ruff version
+        entry: ./scripts/sync_ruff_version.py
+        language: system
+        pass_filenames: false
+        files: ^(lib/dev-requirements\.txt|\.pre-commit-config\.yaml)$
   - repo: https://github.com/Lucas-C/pre-commit-hooks
     rev: v1.5.5
     hooks:
