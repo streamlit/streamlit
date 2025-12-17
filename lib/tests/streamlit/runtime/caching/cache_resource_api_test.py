@@ -32,7 +32,7 @@ from streamlit.runtime.caching import (
 )
 from streamlit.runtime.caching.hashing import UserHashError
 from streamlit.runtime.scriptrunner import add_script_run_ctx
-from streamlit.runtime.stats import CacheStat
+from streamlit.runtime.stats import CACHE_MEMORY_FAMILY, CacheStat
 from streamlit.vendor.pympler.asizeof import asizeof
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.element_mocks import (
@@ -302,14 +302,14 @@ class CacheResourceStatsProviderTest(unittest.TestCase):
         st.cache_resource.clear()
 
     def test_no_stats(self):
-        assert get_resource_cache_stats_provider().get_stats() == []
+        assert get_resource_cache_stats_provider().get_stats() == {}
 
     def test_multiple_stats(self):
-        @st.cache_resource
+        @st.cache_resource(show_spinner=False)
         def foo(count):
             return [3.14] * count
 
-        @st.cache_resource
+        @st.cache_resource(show_spinner=False)
         def bar():
             return threading.Lock()
 
@@ -339,7 +339,9 @@ class CacheResourceStatsProviderTest(unittest.TestCase):
 
         # The order of these is non-deterministic, so check Set equality
         # instead of List equality
-        assert set(expected) == set(get_resource_cache_stats_provider().get_stats())
+        stats_dict = get_resource_cache_stats_provider().get_stats()
+        assert CACHE_MEMORY_FAMILY in stats_dict
+        assert set(expected) == set(stats_dict[CACHE_MEMORY_FAMILY])
 
 
 class CacheResourceMessageReplayTest(DeltaGeneratorTestCase):
@@ -378,12 +380,15 @@ class CacheResourceMessageReplayTest(DeltaGeneratorTestCase):
     ):
         """Test that it works with element replay if used as non-widget element."""
 
-        if element_name == "toast":
-            # The toast element is not supported in the cache_data API
-            # since elements on the event dg are not supported.
+        if element_name in ("toast", "spinner", "logo", "echo"):
+            # These elements are not supported in the cache_resource API
+            #   - toast only corresponds to the event dg
+            #   - spinner is transient and not replayed
+            #   - logo is not replayed because it's not tied to a specific dg
+            #   - echo does not produce an element unless it's executed with code
             return
 
-        @st.cache_resource
+        @st.cache_resource(show_spinner=False)
         def cache_element():
             element_producer()
 
@@ -442,7 +447,7 @@ class CacheResourceMessageReplayTest(DeltaGeneratorTestCase):
         expected_width = 300
         expected_height = 150
 
-        @st.cache_resource
+        @st.cache_resource(show_spinner=False)
         def cache_resource_code_with_layout():
             # Use code element with both width and height since it supports both
             st.code(

@@ -18,7 +18,7 @@ from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_loaded
 from e2e_playwright.shared.app_utils import get_element_by_key, get_expander
 from e2e_playwright.shared.theme_utils import apply_theme_via_window
 
-PAGE_LINK_COUNT = 17
+PAGE_LINK_COUNT = 18
 
 
 def test_page_links(app: Page, assert_snapshot: ImageCompareFunction):
@@ -48,6 +48,10 @@ def test_page_links(app: Page, assert_snapshot: ImageCompareFunction):
     assert_snapshot(page_link_elements.nth(3), name="st_page_link-sidebar-disabled")
     assert_snapshot(
         page_link_elements.nth(4), name="st_page_link-sidebar-width_content"
+    )
+
+    assert_snapshot(
+        page_link_elements.nth(17), name="st_page_link-icon_position_right_emoji"
     )
 
 

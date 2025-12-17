@@ -125,12 +125,12 @@ jobs:
         run: |
           make frontend
       - name: Upload Bundle Stats JSON
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: bundle_analysis_json
           path: frontend/app/bundle-analysis.json
       - name: Upload Bundle Stats HTML
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: bundle_analysis_html
           path: frontend/app/bundle-analysis.html
@@ -166,6 +166,9 @@ jobs:
           python-version: "${{ env.PYTHON_MAX_VERSION }}"
       - name: Setup virtual env
         uses: ./.github/actions/make_init
+      - name: Fix apt mirrors
+        if: ${{ runner.os == 'Linux' }}
+        uses: ./.github/actions/apt_mirror_fix
       - name: Create Wheel File
         timeout-minutes: 120
         run: |
@@ -179,7 +182,7 @@ jobs:
             exit 1
           fi
       - name: Store Whl File
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: whl_file
           path: lib/dist/*.whl
@@ -431,7 +434,7 @@ jobs:
 
     steps:
       - name: Download current bundle analysis
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: bundle_analysis_json
           path: current_bundle
@@ -458,7 +461,7 @@ jobs:
             core.setOutput('run_id', runs.workflow_runs[0].id);
 
       - name: Download develop bundle analysis
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         continue-on-error: true
         with:
           repository: streamlit/streamlit
@@ -619,6 +622,7 @@ jobs:
 
   build-component-v2-lib:
     runs-on: ubuntu-latest
+    continue-on-error: true # Ensure failure doesn't block update-pr-comment job
 
     permissions:
       contents: read # This is required for actions/checkout
@@ -668,7 +672,7 @@ jobs:
           echo "package-built=true" >> $GITHUB_OUTPUT
 
       - name: Store npm package
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: component-v2-lib-package
           path: frontend/component-v2-lib/*.tgz

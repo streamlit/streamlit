@@ -28,6 +28,16 @@ import { WidgetStateManager } from "~lib/WidgetStateManager"
 import BidiComponent from "./BidiComponent"
 import { blobUrlManager } from "./utils/blobUrl"
 
+vi.mock("@streamlit/utils", async () => {
+  const actual = await vi.importActual("@streamlit/utils")
+  return {
+    ...actual,
+    get StreamlitConfig() {
+      return globalThis.__mockStreamlitConfig
+    },
+  }
+})
+
 // Mock WidgetStateManager
 vi.mock("~lib/WidgetStateManager")
 
@@ -69,6 +79,7 @@ describe("BidiComponent", () => {
 
   afterEach(() => {
     vi.restoreAllMocks()
+    globalThis.__mockStreamlitConfig = {}
   })
 
   const createMockElement = (
@@ -182,15 +193,13 @@ describe("BidiComponent", () => {
 
       // For shadow DOM, we need to check inside the shadow root
       await waitFor(() => {
-        const shadowRoot = container.shadowRoot
+        const shadowRoot = container.shadowRoot as ShadowRoot
         expect(shadowRoot).toBeTruthy()
-        if (shadowRoot) {
-          const testContent = shadowRoot.querySelector(
-            "[data-testid='test-isolated-html']"
-          )
-          expect(testContent).toBeTruthy()
-          expect(testContent?.textContent).toBe("Isolated HTML")
-        }
+        const testContent = shadowRoot.querySelector(
+          "[data-testid='test-isolated-html']"
+        )
+        expect(testContent).toBeTruthy()
+        expect(testContent?.textContent).toBe("Isolated HTML")
       })
     })
 
@@ -329,14 +338,12 @@ describe("BidiComponent", () => {
 
       const container = screen.getByTestId("stBidiComponentIsolated")
       await waitFor(() => {
-        const shadowRoot = container.shadowRoot
+        const shadowRoot = container.shadowRoot as ShadowRoot
         expect(shadowRoot).toBeTruthy()
-        if (shadowRoot) {
-          const styleElement = shadowRoot.querySelector("style")
-          expect(styleElement?.textContent).toContain(
-            ".isolated-style { background: blue; }"
-          )
-        }
+        const styleElement = shadowRoot.querySelector("style")
+        expect(styleElement?.textContent).toContain(
+          ".isolated-style { background: blue; }"
+        )
       })
     })
 
@@ -373,13 +380,8 @@ describe("BidiComponent", () => {
 
     describe("linked CSS crossOrigin attribute", () => {
       beforeEach(() => {
-        window.__streamlit = {
-          BACKEND_BASE_URL: "https://backend.example.com:8080/app",
-        } as typeof window.__streamlit
-      })
-
-      afterEach(() => {
-        window.__streamlit = undefined
+        globalThis.__mockStreamlitConfig.BACKEND_BASE_URL =
+          "https://backend.example.com:8080/app"
       })
 
       it.each([

@@ -230,6 +230,11 @@ def test_help_tooltip_works(app: Page):
 
 
 def test_latex_elements(themed_app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that LaTeX elements are rendered correctly.
+
+    Uses themed_app for formula rendering which may have theme-dependent colors.
+    Width tests are in test_latex_width_examples.
+    """
     latex_elements = get_element_by_key(themed_app, "latex_elements").get_by_test_id(
         "stMarkdown"
     )
@@ -248,6 +253,16 @@ def test_latex_elements(themed_app: Page, assert_snapshot: ImageCompareFunction)
 
     expect(latex_elements.nth(4)).to_contain_text("this is a very long formula")
     assert_snapshot(latex_elements.nth(4), name="st_latex-long-help")
+
+
+def test_latex_width_examples(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test LaTeX elements with different width configurations.
+
+    Uses single-theme (app) fixture since width/layout behavior is theme-independent.
+    """
+    latex_elements = get_element_by_key(app, "latex_elements").get_by_test_id(
+        "stMarkdown"
+    )
 
     assert_snapshot(latex_elements.nth(5), name="st_latex-width_pixels")
     assert_snapshot(latex_elements.nth(6), name="st_latex-width_stretch")
@@ -314,60 +329,65 @@ def test_markdown_rendering_performance(app: Page):
     expect(app.get_by_text("DONE")).to_be_attached()
 
 
-def test_markdown_width_examples(
-    themed_app: Page, assert_snapshot: ImageCompareFunction
-):
-    """Test that markdown elements with different width configurations are displayed correctly."""
+def test_markdown_width_examples(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that markdown elements with different width configurations are displayed correctly.
+
+    Uses single-theme (app) fixture since width/layout behavior is theme-independent.
+    """
     # Test content width
-    markdown_content = get_markdown(themed_app, r"Content width:")
+    markdown_content = get_markdown(app, r"Content width:")
     markdown_content.scroll_into_view_if_needed()
     assert_snapshot(markdown_content, name="st_markdown-width_content")
 
     # Test fixed width (200px)
-    markdown_200px = get_markdown(themed_app, r"Fixed width \(200px\):")
+    markdown_200px = get_markdown(app, r"Fixed width \(200px\):")
     markdown_200px.scroll_into_view_if_needed()
     assert_snapshot(markdown_200px, name="st_markdown-width_200px")
 
     # Test stretch width
-    markdown_stretch = get_markdown(themed_app, r"Stretch width:")
+    markdown_stretch = get_markdown(app, r"Stretch width:")
     markdown_stretch.scroll_into_view_if_needed()
     assert_snapshot(markdown_stretch, name="st_markdown-width_stretch")
 
 
-def test_caption_width_examples(
-    themed_app: Page, assert_snapshot: ImageCompareFunction
-):
-    """Test that caption elements with different width configurations are displayed correctly."""
+def test_caption_width_examples(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that caption elements with different width configurations are displayed correctly.
+
+    Uses single-theme (app) fixture since width/layout behavior is theme-independent.
+    """
     # Test content width
-    caption_content = get_caption(themed_app, r"caption with content-based width")
+    caption_content = get_caption(app, r"caption with content-based width")
     caption_content.scroll_into_view_if_needed()
     assert_snapshot(caption_content, name="st_caption-width_content")
 
     # Test fixed width (300px)
-    caption_300px = get_caption(themed_app, r"caption with a fixed width of 300 pixels")
+    caption_300px = get_caption(app, r"caption with a fixed width of 300 pixels")
     caption_300px.scroll_into_view_if_needed()
     assert_snapshot(caption_300px, name="st_caption-width_300px")
 
     # Test stretch width
-    caption_stretch = get_caption(themed_app, r"caption that stretches to fill")
+    caption_stretch = get_caption(app, r"caption that stretches to fill")
     caption_stretch.scroll_into_view_if_needed()
     assert_snapshot(caption_stretch, name="st_caption-width_stretch")
 
 
-def test_badge_width_examples(themed_app: Page, assert_snapshot: ImageCompareFunction):
-    """Test that badge elements with different width configurations are displayed correctly."""
+def test_badge_width_examples(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that badge elements with different width configurations are displayed correctly.
+
+    Uses single-theme (app) fixture since width/layout behavior is theme-independent.
+    """
     # Test content width (default)
-    badge_content = get_markdown(themed_app, r"Default badge")
+    badge_content = get_markdown(app, r"Default badge")
     badge_content.scroll_into_view_if_needed()
     assert_snapshot(badge_content, name="st_badge-width_content")
 
     # Test fixed width (100px)
-    badge_100px = get_markdown(themed_app, r"Fixed 100px badge")
+    badge_100px = get_markdown(app, r"Fixed 100px badge")
     badge_100px.scroll_into_view_if_needed()
     assert_snapshot(badge_100px, name="st_badge-width_100px")
 
     # Test stretch width
-    badge_stretch = get_markdown(themed_app, r"Stretch badge")
+    badge_stretch = get_markdown(app, r"Stretch badge")
     badge_stretch.scroll_into_view_if_needed()
     assert_snapshot(badge_stretch, name="st_badge-width_stretch")
 

@@ -19,7 +19,7 @@ import React from "react"
 import { screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
-import { PageLink as PageLinkProto } from "@streamlit/protobuf"
+import { PageLink as PageLinkProto, streamlit } from "@streamlit/protobuf"
 
 import { render, renderWithContexts } from "~lib/test_util"
 import { lightTheme } from "~lib/theme"
@@ -158,6 +158,27 @@ describe("PageLink", () => {
 
     const pageLinkIcon = screen.getByTestId("stIconEmoji")
     expect(pageLinkIcon).toHaveTextContent("🏠")
+  })
+
+  it("positions the icon before the label by default", () => {
+    const props = getProps({ icon: "🏠" })
+    render(<PageLink {...props} />)
+
+    const pageNavLink = screen.getByTestId("stPageLink-NavLink")
+    const iconWrapper = screen.getByTestId("stIconEmoji").parentElement
+    expect(pageNavLink.firstElementChild).toBe(iconWrapper)
+  })
+
+  it("renders the icon after the label when iconPosition is right", () => {
+    const props = getProps({
+      icon: "🏠",
+      iconPosition: streamlit.ButtonLikeIconPosition.RIGHT,
+    })
+    render(<PageLink {...props} />)
+
+    const pageNavLink = screen.getByTestId("stPageLink-NavLink")
+    const iconWrapper = screen.getByTestId("stIconEmoji").parentElement
+    expect(pageNavLink.lastElementChild).toBe(iconWrapper)
   })
 
   it("does not render an icon when empty string is provided", () => {

@@ -1,0 +1,258 @@
+# AI Review workflow uses Cursor CLI to review PRs
+name: AI PR Review
+
+on:
+  pull_request:
+    types: [labeled]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: "PR number to review"
+        required: true
+        type: number
+      model:
+        description: "Model to use for the review"
+        required: false
+        type: string
+        default: "opus-4.5-thinking"
+
+# Computed PR number and model for use in jobs
+env:
+  PR_NUMBER: ${{ github.event.inputs.pr_number || github.event.pull_request.number }}
+  MODEL: ${{ github.event.inputs.model || 'opus-4.5-thinking' }}
+
+jobs:
+  # Job 1: AI performs the review with READ-ONLY access
+  ai-pr-review:
+    if: github.event_name == 'workflow_dispatch' || github.event.label.name == 'ai-review'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pull-requests: read
+      issues: read
+    outputs:
+      has_key: ${{ steps.check-key.outputs.has_key }}
+
+    # Avoid duplicate workflows on same PR (use PR number for per-PR isolation)
+    concurrency:
+      group: ${{ github.workflow }}-pr-${{ github.event.inputs.pr_number || github.event.pull_request.number }}
+      cancel-in-progress: true
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Check for API key
+        id: check-key
+        env:
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+        run: |
+          if [ -z "$CURSOR_API_KEY" ]; then
+            echo "has_key=false" >> $GITHUB_OUTPUT
+            echo "::warning::CURSOR_API_KEY is not available. This typically happens for PRs from forks."
+          else
+            echo "has_key=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Get PR details
+        if: steps.check-key.outputs.has_key == 'true'
+        id: pr-info
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR_DATA=$(gh api repos/${{ github.repository }}/pulls/${{ env.PR_NUMBER }})
+          echo "head_sha=$(echo "$PR_DATA" | jq -r '.head.sha')" >> $GITHUB_OUTPUT
+          echo "head_ref=$(echo "$PR_DATA" | jq -r '.head.ref')" >> $GITHUB_OUTPUT
+          echo "base_ref=$(echo "$PR_DATA" | jq -r '.base.ref')" >> $GITHUB_OUTPUT
+          echo "html_url=$(echo "$PR_DATA" | jq -r '.html_url')" >> $GITHUB_OUTPUT
+
+      - name: Checkout Streamlit code
+        if: steps.check-key.outputs.has_key == 'true'
+        uses: actions/checkout@v6
+        with:
+          # Use SHA instead of branch name to support fork PRs
+          ref: ${{ steps.pr-info.outputs.head_sha }}
+          persist-credentials: false
+          submodules: "recursive"
+          # Give the agent full git history access:
+          fetch-depth: 0
+
+      - name: Install Cursor CLI
+        if: steps.check-key.outputs.has_key == 'true'
+        run: |
+          curl https://cursor.com/install -fsS | bash
+          echo "$HOME/.cursor/bin" >> $GITHUB_PATH
+
+      - name: Cursor AI PR Review
+        if: steps.check-key.outputs.has_key == 'true'
+        env:
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cursor-agent -p "You are operating in a GitHub Actions runner to perform a code review on a pull request.
+
+          The GitHub CLI (gh) is available for READ operations only. Use it to fetch PR details, diff, and file contents.
+          Git is also available for read operations.
+
+          # Context:
+          - Repo: ${{ github.repository }}
+          - PR Number: ${{ env.PR_NUMBER }}
+          - PR URL: ${{ steps.pr-info.outputs.html_url }}
+          - Base Ref: ${{ steps.pr-info.outputs.base_ref }}
+          - Head Ref: ${{ steps.pr-info.outputs.head_ref }}
+
+          # Goal:
+          Review this branch (PR: ${{ steps.pr-info.outputs.html_url }}) and ensure the changes are bug-free, backwards compatible, and ready for merge.
+
+          # Review Checklist:
+          - Unit and e2e tests are covering the changes well.
+          - The e2e tests follow the best practices documented in .cursor/rules/e2e_playwright.mdc
+          - The frontend changed and unit tests follow the best practices documented in .cursor/rules/typescript.mdc
+          - The python unit tests follow the best practices documented in .cursor/rules/python_tests.mdc
+          - The python library changes follow the best practices documented in .cursor/rules/python_lib.mdc and .cursor/rules/python.mdc
+          - If proto files have been changed, please check with .cursor/rules/protobuf.mdc if the changes look good.
+          - No risky aspects that could cause security issues or regressions.
+          - The code follows other best practices from the Streamlit code base.
+
+          # Instructions:
+          1. Use 'gh pr diff ${{ env.PR_NUMBER }}' to get the changes in the PR.
+          2. Read and analyze the changed files to understand the full context.
+          3. Read the best practices files (.cursor/rules/e2e_playwright.mdc, .cursor/rules/python_tests.mdc, .cursor/rules/typescript.mdc) to understand the testing standards.
+          4. Perform a thorough code review based on the checklist above.
+          5. Write a review that will later be posted as a comment on the PR into a file named 'review.md' in the current directory.
+          6. The review comment should be well-structured with clear sections and actionable feedback.
+          7. If there are issues, clearly describe them with specific file references and line numbers.
+          8. Write either 'APPROVED' or 'CHANGES_REQUESTED' (exactly one of these) to a file named 'verdict.txt'.
+
+          # Output Format for review.md:
+
+          <output-start>
+          ## Summary
+
+          [Brief overview of what the PR does and the main changes introduced.]
+
+          ## Code Quality
+
+          [Assessment of code structure, patterns, and maintainability. Note any issues with specific file references and line numbers.]
+
+          ## Test Coverage
+
+          [Evaluation of unit and e2e test coverage. Are the changes adequately tested?]
+
+          ## Backwards Compatibility
+
+          [Analysis of any breaking changes. Will this affect existing users?]
+
+          ## Security & Risk
+
+          [Any security concerns or regression risks identified.]
+
+          ## Recommendations
+
+          [Specific suggestions for improvement, if any. Use a numbered list for actionable items.]
+
+          ## Verdict
+
+          **[APPROVED / CHANGES REQUESTED]**: [One sentence summary of the overall assessment.]
+
+          ---
+          *This is an automated AI review. Please verify the feedback and use your judgment.*
+          <output-end>
+
+          Do NOT run linting, tests, or build commands, this will be done by the CI system (the dev environment is not setup). Focus only on code review.
+          Do NOT attempt to post comments, edit PRs, or perform any write operations - they will fail.
+          " --force --model "${{ env.MODEL }}" --output-format=text
+
+      - name: Upload review artifacts
+        if: steps.check-key.outputs.has_key == 'true'
+        uses: actions/upload-artifact@v6
+        with:
+          name: review-output
+          path: |
+            review.md
+            verdict.txt
+          retention-days: 1
+
+  # Job 2: Post the review with WRITE access (no agent)
+  ai-pr-post-review:
+    needs: ai-pr-review
+    # Run on success or failure, but NOT when skipped (i.e., label wasn't 'ai-review')
+    if: always() && needs.ai-pr-review.result != 'skipped'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # Required for posting comments, but this step is safe since it is not running the agent operation:
+      pull-requests: write
+
+    steps:
+      - name: Remove 'ai-review' label
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr edit ${{ env.PR_NUMBER }} --remove-label "ai-review" --repo ${{ github.repository }}
+
+      - name: Download review artifacts
+        id: download
+        if: needs.ai-pr-review.outputs.has_key == 'true'
+        uses: actions/download-artifact@v7
+        continue-on-error: true
+        with:
+          name: review-output
+
+      - name: Post missing key notice
+        if: needs.ai-pr-review.outputs.has_key == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr comment ${{ env.PR_NUMBER }} --body "ℹ️ **AI Review Not Available via Label**
+
+          The \`ai-review\` label cannot trigger AI reviews for this PR because the required API key is not available. This typically happens for PRs from forked repositories.
+
+          **To request an AI review, a maintainer can:**
+          1. Go to the [AI PR Review workflow](https://github.com/streamlit/streamlit/actions/workflows/ai-pr-review.yml)
+          2. Click **Run workflow**
+          3. Enter the PR number: \`${{ env.PR_NUMBER }}\`
+          4. Click **Run workflow**" --repo ${{ github.repository }}
+
+      - name: Post review comment
+        id: post_review
+        if: needs.ai-pr-review.outputs.has_key == 'true' && steps.download.outcome == 'success'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ ! -f review.md ]; then
+            echo "Error: review.md not found"
+            exit 1
+          fi
+          gh pr comment ${{ env.PR_NUMBER }} --body-file review.md --repo ${{ github.repository }}
+
+      - name: Post failure notice
+        if: needs.ai-pr-review.outputs.has_key == 'true' && (steps.download.outcome == 'failure' || steps.post_review.outcome == 'failure')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr comment ${{ env.PR_NUMBER }} --body "⚠️ **AI Review Failed**
+
+          The AI review job failed to complete. Please check the [workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) for details.
+
+          You can retry by adding the 'ai-review' label again or manually triggering the workflow." --repo ${{ github.repository }}
+
+      - name: Apply label based on verdict
+        if: needs.ai-pr-review.outputs.has_key == 'true' && steps.download.outcome == 'success' && steps.post_review.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ ! -f verdict.txt ]; then
+            echo "Warning: verdict.txt not found, skipping label"
+            exit 0
+          fi
+
+          VERDICT=$(cat verdict.txt | tr -d '[:space:]')
+          if [ "$VERDICT" = "CHANGES_REQUESTED" ]; then
+            echo "Adding 'do-not-merge' label"
+            gh pr edit ${{ env.PR_NUMBER }} --add-label "do-not-merge" --repo ${{ github.repository }}
+          fi

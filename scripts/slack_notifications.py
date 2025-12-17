@@ -140,7 +140,7 @@ def send_notification() -> None:
         commit_sha = os.getenv("CHERRY_PICK_SHA", "")
 
         if message_key == "branch_created":
-            nightly_tag = os.getenv("NIGHTLY_TAG", "")
+            base_ref = os.getenv("RELEASE_BASE_REF", "")
             lines = [
                 ":evergreen_tree: Release branch created",
                 f"- Version: {release_version}" if release_version else None,
@@ -149,7 +149,7 @@ def send_notification() -> None:
                     if repo and release_branch
                     else None
                 ),
-                f"- Based on nightly: {nightly_tag}" if nightly_tag else None,
+                f"- Base ref: {base_ref}" if base_ref else None,
                 (
                     f"- Run: https://github.com/{repo}/actions/runs/{run_id}"
                     if repo and run_id

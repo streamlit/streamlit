@@ -87,9 +87,14 @@ import {
 import { App, LOG, Props } from "./App"
 import { showDevelopmentOptions } from "./showDevelopmentOptions"
 
-vi.mock("~lib/baseconsts", async () => {
+// Mock StreamlitConfig using global mock state (see vitest.setup.ts)
+vi.mock("@streamlit/utils", async () => {
+  const actual = await vi.importActual("@streamlit/utils")
   return {
-    ...(await vi.importActual("~lib/baseconsts")),
+    ...actual,
+    get StreamlitConfig() {
+      return globalThis.__mockStreamlitConfig
+    },
   }
 })
 
@@ -105,7 +110,10 @@ vi.mock("@streamlit/lib", async () => {
 vi.mock("@streamlit/connection", async () => {
   const actualModule = await vi.importActual("@streamlit/connection")
 
-  const MockedClass = vi.fn().mockImplementation(props => {
+  const MockedClass = vi.fn().mockImplementation(function (
+    this: ConnectionManager,
+    props: never
+  ) {
     return {
       props,
       connect: vi.fn(),
@@ -123,7 +131,8 @@ vi.mock("@streamlit/connection", async () => {
       },
     }
   })
-  const MockedEndpoints = vi.fn().mockImplementation(() => {
+
+  const MockedEndpoints = vi.fn().mockImplementation(function (this: never) {
     return mockEndpoints()
   })
 
@@ -137,10 +146,11 @@ vi.mock("~lib/SessionInfo", async () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   const actualModule = await vi.importActual<any>("~lib/SessionInfo")
 
-  const MockedClass = vi.fn().mockImplementation(() => {
+  const MockedClass = vi.fn().mockImplementation(function (this: SessionInfo) {
     return new actualModule.SessionInfo()
   })
 
+  // Preserve the static helper while allowing it to be spied on in tests.
   // @ts-expect-error
   MockedClass.propsFromNewSessionMessage = vi
     .fn()
@@ -158,7 +168,10 @@ vi.mock("~lib/hostComm/HostCommunicationManager", async () => {
     "~lib/hostComm/HostCommunicationManager"
   )
 
-  const MockedClass = vi.fn().mockImplementation((...props) => {
+  const MockedClass = vi.fn().mockImplementation(function (
+    this: HostCommunicationManager,
+    ...props: never[]
+  ) {
     const hostCommunicationMgr = new actualModule.default(...props)
     vi.spyOn(hostCommunicationMgr, "sendMessageToHost")
     vi.spyOn(hostCommunicationMgr, "sendMessageToSameOriginHost")
@@ -176,7 +189,10 @@ vi.mock("~lib/WidgetStateManager", async () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   const actualModule = await vi.importActual<any>("~lib/WidgetStateManager")
 
-  const MockedClass = vi.fn().mockImplementation((...props) => {
+  const MockedClass = vi.fn().mockImplementation(function (
+    this: WidgetStateManager,
+    ...props: never[]
+  ) {
     const widgetStateManager = new actualModule.WidgetStateManager(...props)
 
     vi.spyOn(widgetStateManager, "sendUpdateWidgetsMessage")
@@ -196,7 +212,10 @@ vi.mock("@streamlit/app/src/MetricsManager", async () => {
     "@streamlit/app/src/MetricsManager"
   )
 
-  const MockedClass = vi.fn().mockImplementation((...props) => {
+  const MockedClass = vi.fn().mockImplementation(function (
+    this: MetricsManager,
+    ...props: never[]
+  ) {
     const metricsMgr = new actualModule.MetricsManager(...props)
     vi.spyOn(metricsMgr, "enqueue")
     return metricsMgr
@@ -212,7 +231,10 @@ vi.mock("~lib/FileUploadClient", async () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   const actualModule = await vi.importActual<any>("~lib/FileUploadClient")
 
-  const MockedClass = vi.fn().mockImplementation((...props) => {
+  const MockedClass = vi.fn().mockImplementation(function (
+    this: FileUploadClient,
+    ...props: never[]
+  ) {
     return new actualModule.FileUploadClient(...props)
   })
 
@@ -557,9 +579,7 @@ describe("App", () => {
     beforeEach(() => {
       prevWindowLocation = window.location
 
-      window.__streamlit = {
-        ENABLE_RELOAD_BASED_ON_HARDCODED_STREAMLIT_VERSION: true,
-      }
+      globalThis.__mockStreamlitConfig.ENABLE_RELOAD_BASED_ON_HARDCODED_STREAMLIT_VERSION = true
     })
 
     afterEach(() => {
@@ -569,7 +589,7 @@ describe("App", () => {
         configurable: true,
       })
 
-      window.__streamlit = undefined
+      globalThis.__mockStreamlitConfig = {}
 
       // @ts-expect-error
       PACKAGE_METADATA = {
@@ -1809,15 +1829,9 @@ describe("App", () => {
   })
 
   describe("App.sendRerunBackMsg", () => {
-    let originalStreamlitWindowObj: typeof window.__streamlit
-
-    beforeEach(() => {
-      originalStreamlitWindowObj = window.__streamlit
-    })
-
     afterEach(() => {
       window.history.pushState({}, "", "/")
-      window.__streamlit = originalStreamlitWindowObj
+      globalThis.__mockStreamlitConfig = {}
     })
 
     it("sends the currentPageScriptHash if no pageScriptHash is given", () => {
@@ -1957,13 +1971,14 @@ describe("App", () => {
       ).toBe("baz")
     })
 
-    it("extracts pageName if window.__streamlit.MAIN_PAGE_BASE_URL is set (main page)", () => {
+    it("extracts pageName if StreamlitConfig.MAIN_PAGE_BASE_URL is set (main page)", () => {
       renderApp(getProps())
       const widgetStateManager =
         getStoredValue<WidgetStateManager>(WidgetStateManager)
       const connectionManager = getMockConnectionManager()
 
-      window.__streamlit = { MAIN_PAGE_BASE_URL: "http://localhost/foo/bar" }
+      globalThis.__mockStreamlitConfig.MAIN_PAGE_BASE_URL =
+        "http://localhost/foo/bar"
       window.history.pushState({}, "", "/foo/bar/")
       widgetStateManager.sendUpdateWidgetsMessage(undefined)
 
@@ -1973,13 +1988,14 @@ describe("App", () => {
       ).toBe("")
     })
 
-    it("extracts pageName if window.__streamlit.MAIN_PAGE_BASE_URL is set (non-main page)", () => {
+    it("extracts pageName if StreamlitConfig.MAIN_PAGE_BASE_URL is set (non-main page)", () => {
       renderApp(getProps())
       const widgetStateManager =
         getStoredValue<WidgetStateManager>(WidgetStateManager)
       const connectionManager = getMockConnectionManager()
 
-      window.__streamlit = { MAIN_PAGE_BASE_URL: "http://localhost/foo/bar" }
+      globalThis.__mockStreamlitConfig.MAIN_PAGE_BASE_URL =
+        "http://localhost/foo/bar"
       window.history.pushState({}, "", "/foo/bar/baz")
       widgetStateManager.sendUpdateWidgetsMessage(undefined)
 
@@ -5010,19 +5026,17 @@ describe("App", () => {
   describe("page change URL handling", () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     let pushStateSpy: any
-    let originalStreamlitWindowObj: typeof window.__streamlit
 
     beforeEach(() => {
       window.history.pushState({}, "", "/")
       pushStateSpy = vi.spyOn(window.history, "pushState")
-      originalStreamlitWindowObj = window.__streamlit
     })
 
     afterEach(() => {
       pushStateSpy.mockRestore()
       window.history.pushState({}, "", "/")
       window.localStorage.clear()
-      window.__streamlit = originalStreamlitWindowObj
+      globalThis.__mockStreamlitConfig = {}
     })
 
     it("can switch to the main page from a different page", () => {
@@ -5209,10 +5223,11 @@ describe("App", () => {
       )
     })
 
-    it("works with window.__streamlit.MAIN_PAGE_BASE_URL", () => {
+    it("works with StreamlitConfig.MAIN_PAGE_BASE_URL", () => {
       renderApp(getProps())
 
-      window.__streamlit = { MAIN_PAGE_BASE_URL: "http://example.com/foo" }
+      globalThis.__mockStreamlitConfig.MAIN_PAGE_BASE_URL =
+        "http://example.com/foo"
 
       sendForwardMessage("newSession", {
         ...NEW_SESSION_JSON,

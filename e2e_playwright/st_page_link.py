@@ -75,3 +75,11 @@ with st.sidebar:
 with st.container(key="custom_theme"):
     st.page_link("http://www.example.com", label="Custom Theme Example")
     st.button("Button Example", type="primary")
+
+
+st.page_link(
+    "http://www.example.com",
+    label="Icon Right",
+    icon="🌎",
+    icon_position="right",
+)

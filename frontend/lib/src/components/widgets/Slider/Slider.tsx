@@ -21,6 +21,7 @@ import React, {
   ReactElement,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
 } from "react"
@@ -37,6 +38,7 @@ import { sprintf } from "sprintf-js"
 import { Slider as SliderProto } from "@streamlit/protobuf"
 
 import { withCalculatedWidth } from "~lib/components/core/Layout/withCalculatedWidth"
+import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
 import { Placement } from "~lib/components/shared/Tooltip"
 import TooltipIcon from "~lib/components/shared/TooltipIcon"
 import {
@@ -79,8 +81,18 @@ function SliderTickBar({
       isHovered={isHovered}
       isDisabled={isDisabled}
     >
-      <span>{minLabel}</span>
-      <span>{maxLabel}</span>
+      <StreamlitMarkdown
+        source={minLabel}
+        allowHTML={false}
+        inheritFont
+        isLabel
+      />
+      <StreamlitMarkdown
+        source={maxLabel}
+        allowHTML={false}
+        inheritFont
+        isLabel
+      />
     </StyledSliderTickBar>
   )
 }
@@ -133,11 +145,15 @@ function Slider({
 
   const theme = useEmotionTheme()
 
+  // Keep a ref to the latest element so stable callbacks (`renderThumb`) can
+  // always read the current format/options without depending on `element` in
+  // their dependency arrays (which would hurt referential stability).
+  const elementRef = useRef(element)
+  elementRef.current = element
+
   const formattedValueArr = uiValue.map(v => formatValue(v, element))
   const formattedMinValue = formatValue(element.min, element)
   const formattedMaxValue = formatValue(element.max, element)
-
-  const thumbAriaLabel = element.label
 
   // When resetting a form, `value` will change so we need to change `uiValue`
   // to match.
@@ -165,7 +181,7 @@ function Slider({
   const renderThumb = useCallback(
     forwardRef<HTMLDivElement, StyleProps>(
       function renderThumb(props, ref): ReactElement {
-        const { $thumbIndex } = props
+        const { $thumbIndex, $value } = props
         const thumbIndex = $thumbIndex || 0
         thumbRefs[thumbIndex] = ref as React.MutableRefObject<HTMLDivElement>
         // eslint-disable-next-line @eslint-react/no-create-ref
@@ -188,7 +204,17 @@ function Slider({
           "draggable",
         ])
 
-        const formattedValue = formattedValueArr[thumbIndex]
+        const currentElement = elementRef.current
+
+        // We intentionally re-compute the formatted value here from the latest
+        // thumb value and the latest element (via `elementRef`) instead of
+        // reading from `formattedValueArr` in the outer closure. This keeps
+        // `renderThumb` referentially stable across user interactions while
+        // still reflecting changes to formatting-related props like
+        // `element.format`.
+        const thumbValues = $value ?? [currentElement.min]
+        const thumbValue = thumbValues[thumbIndex] ?? currentElement.min
+        const formattedValue = formatValue(thumbValue, currentElement)
 
         return (
           <StyledThumb
@@ -197,14 +223,19 @@ function Slider({
             isDragged={props.$isDragged === true}
             ref={thumbRefs[thumbIndex]}
             aria-valuetext={formattedValue}
-            aria-label={thumbAriaLabel}
+            aria-label={currentElement.label}
           >
             <StyledThumbValue
               data-testid="stSliderThumbValue"
               disabled={props.$disabled === true}
               ref={thumbValueRefs[thumbIndex]}
             >
-              {formattedValue}
+              <StreamlitMarkdown
+                source={formattedValue}
+                allowHTML={false}
+                inheritFont
+                isLabel
+              />
             </StyledThumbValue>
           </StyledThumb>
         )
@@ -216,22 +247,15 @@ function Slider({
     []
   )
 
-  useEffect(() => {
-    // Update the numbers on the thumb via DOM manipulation to avoid a redraw,
-    // which drops the widget's focus state.
-    thumbValueRefs.map((ref, i) => {
-      if (ref.current) {
-        ref.current.innerText = formattedValueArr[i]
-      }
-    })
-
-    thumbRefs.map((ref, i) => {
+  useLayoutEffect(() => {
+    // Keep aria-valuetext in sync with the formatted values for accessibility.
+    thumbRefs.forEach((ref, i) => {
       if (ref.current) {
         ref.current.setAttribute("aria-valuetext", formattedValueArr[i])
       }
     })
 
-    // If, after rendering, the thumb value's is outside the container (too
+    // If, after rendering, the thumb value is outside the container (too
     // far left or too far right), bring it inside. Or if there are two
     // thumbs and their values overlap, fix that.
     const sliderDiv = sliderRef.current ?? null

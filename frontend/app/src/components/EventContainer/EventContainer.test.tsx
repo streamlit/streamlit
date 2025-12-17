@@ -23,7 +23,7 @@ import { render } from "@streamlit/lib/testing"
 import EventContainer from "./EventContainer"
 
 describe("EventContainer Component", () => {
-  test("renders Toast Container", () => {
+  it("renders Toast Container", () => {
     render(<EventContainer />)
 
     const toastContainer = screen.getByTestId("stToastContainer")

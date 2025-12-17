@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import math
 import threading
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -49,7 +49,12 @@ from streamlit.runtime.caching.cached_message_replay import (
     MsgData,
 )
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.runtime.stats import CacheStat, CacheStatsProvider, group_stats
+from streamlit.runtime.stats import (
+    CACHE_MEMORY_FAMILY,
+    CacheStat,
+    StatsProvider,
+    group_cache_stats,
+)
 from streamlit.time_util import time_to_seconds
 
 if TYPE_CHECKING:
@@ -74,12 +79,16 @@ def _equal_validate_funcs(a: ValidateFunc | None, b: ValidateFunc | None) -> boo
     return (a is None and b is None) or (a is not None and b is not None)
 
 
-class ResourceCaches(CacheStatsProvider):
+class ResourceCaches(StatsProvider):
     """Manages all ResourceCache instances."""
 
     def __init__(self) -> None:
         self._caches_lock = threading.Lock()
         self._function_caches: dict[str, ResourceCache[Any]] = {}
+
+    @property
+    def stats_families(self) -> Sequence[str]:
+        return (CACHE_MEMORY_FAMILY,)
 
     def get_cache(
         self,
@@ -127,7 +136,9 @@ class ResourceCaches(CacheStatsProvider):
         with self._caches_lock:
             self._function_caches = {}
 
-    def get_stats(self) -> list[CacheStat]:
+    def get_stats(
+        self, _family_names: Sequence[str] | None = None
+    ) -> dict[str, list[CacheStat]]:
         with self._caches_lock:
             # Shallow-clone our caches. We don't want to hold the global
             # lock during stats-gathering.
@@ -135,15 +146,22 @@ class ResourceCaches(CacheStatsProvider):
 
         stats: list[CacheStat] = []
         for cache in function_caches.values():
-            stats.extend(cache.get_stats())
-        return group_stats(stats)
+            cache_stats = cache.get_stats()
+            for family_stats in cache_stats.values():
+                stats.extend(family_stats)
+        if not stats:
+            return {}
+        # In general, get_stats methods need to be able to return only requested stat
+        # families, but this method only returns a single family, and we're guaranteed
+        # that it was one of those requested if we make it here.
+        return {CACHE_MEMORY_FAMILY: group_cache_stats(stats)}
 
 
 # Singleton ResourceCaches instance
 _resource_caches = ResourceCaches()
 
 
-def get_resource_cache_stats_provider() -> CacheStatsProvider:
+def get_resource_cache_stats_provider() -> StatsProvider:
     """Return the StatsProvider for all @st.cache_resource functions."""
     return _resource_caches
 
@@ -537,17 +555,22 @@ class ResourceCache(Cache[R]):
             elif key in self._mem_cache:
                 del self._mem_cache[key]
 
-    def get_stats(self) -> list[CacheStat]:
+    def get_stats(
+        self, _family_names: Sequence[str] | None = None
+    ) -> dict[str, list[CacheStat]]:
         # Shallow clone our cache. Computing item sizes is potentially
         # expensive, and we want to minimize the time we spend holding
         # the lock.
         with self._mem_cache_lock:
             cache_entries = list(self._mem_cache.values())
 
+        if not cache_entries:
+            return {}
+
         # Lazy-load vendored package to prevent import of numpy
         from streamlit.vendor.pympler.asizeof import asizeof
 
-        return [
+        stats = [
             CacheStat(
                 category_name="st_cache_resource",
                 cache_name=self.display_name,
@@ -555,3 +578,7 @@ class ResourceCache(Cache[R]):
             )
             for entry in cache_entries
         ]
+        # In general, get_stats methods need to be able to return only requested stat
+        # families, but this method only returns a single family, and we're guaranteed
+        # that it was one of those requested if we make it here.
+        return {CACHE_MEMORY_FAMILY: stats}

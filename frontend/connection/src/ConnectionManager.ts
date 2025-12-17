@@ -206,7 +206,7 @@ export class ConnectionManager {
     this.websocketConnection?.disconnect()
   }
 
-  private setConnectionState = (
+  private readonly setConnectionState = (
     connectionState: ConnectionState,
     errMsg?: ErrorDetails
   ): void => {
@@ -220,7 +220,7 @@ export class ConnectionManager {
     }
   }
 
-  private showRetryError = (
+  private readonly showRetryError = (
     totalRetries: number,
     latestError: ErrorDetails,
     // The last argument of this function is unused and exists because the

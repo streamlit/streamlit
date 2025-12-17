@@ -620,8 +620,6 @@ class ContainerTest(DeltaGeneratorTestCase):
     )
     def test_container_invalid_horizontal_alignment(self, horizontal_alignment) -> None:
         """Test that st.container raises on invalid horizontal_alignment."""
-        import streamlit as st
-
         with pytest.raises(StreamlitInvalidHorizontalAlignmentError):
             st.container(horizontal=True, horizontal_alignment=horizontal_alignment)
 
@@ -633,8 +631,6 @@ class ContainerTest(DeltaGeneratorTestCase):
     )
     def test_container_invalid_vertical_alignment(self, vertical_alignment) -> None:
         """Test that st.container raises on invalid vertical_alignment."""
-        import streamlit as st
-
         with pytest.raises(StreamlitInvalidVerticalAlignmentError):
             st.container(horizontal=True, vertical_alignment=vertical_alignment)
 
@@ -1037,6 +1033,31 @@ class DialogTest(DeltaGeneratorTestCase):
             pass
         dialog_block = self.get_delta_from_queue()
         assert dialog_block.add_block.dialog.width == expected_width
+
+    def test_dialog_sets_icon(self):
+        """Test that the dialog icon is propagated."""
+        dialog = st._main._dialog(DialogTest.title, icon="🎈")
+        with dialog:
+            # No content so that 'get_delta_from_queue' returns the dialog.
+            pass
+
+        dialog_block = self.get_delta_from_queue()
+        assert dialog_block.add_block.dialog.icon == "🎈"
+
+    def test_dialog_decorator_sets_icon(self):
+        """Test that the dialog decorator propagates the icon."""
+
+        @st.dialog("With icon", icon="✅")
+        def test_dialog():
+            st.write("content")
+
+        test_dialog()
+        deltas = self.get_all_deltas_from_queue()
+        assert any(
+            delta.add_block.dialog.icon == "✅"
+            for delta in deltas
+            if delta.HasField("add_block") and delta.add_block.HasField("dialog")
+        )
 
     def test_dialog_deltagenerator_opens_and_closes(self):
         """Test that dialog opens and closes"""

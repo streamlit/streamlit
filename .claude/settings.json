@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/pre_bash_redirect.py",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/pre_bash_redirect.py",
             "timeout": 10
           }
         ]

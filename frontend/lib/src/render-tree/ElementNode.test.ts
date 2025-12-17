@@ -25,6 +25,7 @@ import {
   arrowVegaLiteChart,
   text,
 } from "./test-utils"
+import { TransientNode } from "./TransientNode"
 
 describe("ElementNode", () => {
   describe("ElementNode.quiverElement", () => {
@@ -185,7 +186,7 @@ describe("ElementNode", () => {
     } as ArrowNamedDataSet
 
     describe("arrowTable", () => {
-      test("addRows can be called with an unnamed dataset", () => {
+      it("addRows can be called with an unnamed dataset", () => {
         const node = arrowTable()
         const newNode = node.arrowAddRows(
           MOCK_UNNAMED_DATASET,
@@ -201,7 +202,7 @@ describe("ElementNode", () => {
         expect(q.getCell(2, 1).content).toEqual("foo")
       })
 
-      test("addRows throws an error when called with a named dataset", () => {
+      it("addRows throws an error when called with a named dataset", () => {
         const node = arrowTable()
         expect(() =>
           node.arrowAddRows(MOCK_NAMED_DATASET, NO_SCRIPT_RUN_ID)
@@ -212,7 +213,7 @@ describe("ElementNode", () => {
     })
 
     describe("arrowDataFrame", () => {
-      test("addRows can be called with an unnamed dataset", () => {
+      it("addRows can be called with an unnamed dataset", () => {
         const node = arrowDataFrame()
         const newNode = node.arrowAddRows(
           MOCK_UNNAMED_DATASET,
@@ -228,7 +229,7 @@ describe("ElementNode", () => {
         expect(q.getCell(2, 1).content).toEqual("foo")
       })
 
-      test("addRows throws an error when called with a named dataset", () => {
+      it("addRows throws an error when called with a named dataset", () => {
         const node = arrowDataFrame()
         expect(() =>
           node.arrowAddRows(MOCK_NAMED_DATASET, NO_SCRIPT_RUN_ID)
@@ -258,7 +259,7 @@ describe("ElementNode", () => {
       })
 
       describe("addRows is called with a named dataset", () => {
-        test("element has one dataset -> append new rows to that dataset", () => {
+        it("element has one dataset -> append new rows to that dataset", () => {
           const node = arrowVegaLiteChart(
             getVegaLiteChart([MOCK_ANOTHER_NAMED_DATASET])
           )
@@ -278,7 +279,7 @@ describe("ElementNode", () => {
           expect(quiverData?.getCell(2, 1).content).toEqual("foo")
         })
 
-        test("element has a dataset with the given name -> append new rows to that dataset", () => {
+        it("element has a dataset with the given name -> append new rows to that dataset", () => {
           const node = arrowVegaLiteChart(
             getVegaLiteChart([MOCK_NAMED_DATASET, MOCK_ANOTHER_NAMED_DATASET])
           )
@@ -298,7 +299,7 @@ describe("ElementNode", () => {
           expect(quiverData?.getCell(2, 1).content).toEqual("foo")
         })
 
-        test("element doesn't have a matched dataset, but has data -> append new rows to data", () => {
+        it("element doesn't have a matched dataset, but has data -> append new rows to data", () => {
           const node = arrowVegaLiteChart(getVegaLiteChart(undefined, UNICODE))
           const newNode = node.arrowAddRows(
             MOCK_NAMED_DATASET,
@@ -316,7 +317,7 @@ describe("ElementNode", () => {
           expect(quiverData?.getCell(2, 1).content).toEqual("foo")
         })
 
-        test("element doesn't have a matched dataset or data -> use new rows as data", () => {
+        it("element doesn't have a matched dataset or data -> use new rows as data", () => {
           const node = arrowVegaLiteChart(
             getVegaLiteChart([
               MOCK_ANOTHER_NAMED_DATASET,
@@ -337,7 +338,7 @@ describe("ElementNode", () => {
           expect(quiverData?.getCell(0, 1).content).toEqual("foo")
         })
 
-        test("element doesn't have any datasets or data -> use new rows as data", () => {
+        it("element doesn't have any datasets or data -> use new rows as data", () => {
           const node = arrowVegaLiteChart(getVegaLiteChart())
           const newNode = node.arrowAddRows(
             MOCK_NAMED_DATASET,
@@ -355,7 +356,7 @@ describe("ElementNode", () => {
       })
 
       describe("addRows is called with an unnamed dataset", () => {
-        test("element has one dataset -> append new rows to that dataset", () => {
+        it("element has one dataset -> append new rows to that dataset", () => {
           const node = arrowVegaLiteChart(
             getVegaLiteChart([MOCK_NAMED_DATASET])
           )
@@ -375,7 +376,7 @@ describe("ElementNode", () => {
           expect(quiverData.getCell(2, 1).content).toEqual("foo")
         })
 
-        test("element has data -> append new rows to data", () => {
+        it("element has data -> append new rows to data", () => {
           const node = arrowVegaLiteChart(getVegaLiteChart(undefined, UNICODE))
           const newNode = node.arrowAddRows(
             MOCK_UNNAMED_DATASET,
@@ -393,7 +394,7 @@ describe("ElementNode", () => {
           expect(quiverData?.getCell(2, 1).content).toEqual("foo")
         })
 
-        test("element doesn't have any datasets or data -> use new rows as data", () => {
+        it("element doesn't have any datasets or data -> use new rows as data", () => {
           const node = arrowVegaLiteChart(getVegaLiteChart())
           const newNode = node.arrowAddRows(
             MOCK_UNNAMED_DATASET,
@@ -426,6 +427,7 @@ describe("ElementNode.accept", () => {
     const mockVisitor = {
       visitElementNode: vi.fn().mockReturnValue("element-result"),
       visitBlockNode: vi.fn().mockReturnValue("block-result"),
+      visitTransientNode: vi.fn().mockReturnValue("transient-result"),
     }
 
     const result = node.accept(mockVisitor)
@@ -440,6 +442,7 @@ describe("ElementNode.accept", () => {
     const identityVisitor = {
       visitElementNode: vi.fn().mockReturnValue(node),
       visitBlockNode: vi.fn(),
+      visitTransientNode: vi.fn(),
     }
 
     const result = node.accept(identityVisitor)
@@ -452,10 +455,47 @@ describe("ElementNode.accept", () => {
     const nullVisitor = {
       visitElementNode: vi.fn().mockReturnValue(undefined),
       visitBlockNode: vi.fn(),
+      visitTransientNode: vi.fn(),
     }
 
     const result = node.accept(nullVisitor)
 
     expect(result).toBeUndefined()
+  })
+})
+
+describe("ElementNode.replaceTransientNodeWithSelf", () => {
+  it("returns this when transient node scriptRunId differs", () => {
+    const el = text("a", "runA")
+    const t = new TransientNode("runB", text("anchor"), [text("t")], 1)
+    const result = el.replaceTransientNodeWithSelf(t)
+    expect(result).toBe(el)
+  })
+
+  it("returns this when transient node has no transients", () => {
+    const el = text("a", "runA")
+    const t = new TransientNode("runA", text("anchor"), [], 1)
+    const result = el.replaceTransientNodeWithSelf(t)
+    expect(result).toBe(el)
+  })
+
+  it("returns TransientNode anchored to this element with filtered transients", () => {
+    const runId = "cur"
+    const el = text("a", runId)
+    const keep = text("keep", runId)
+    const drop = text("drop", "old")
+    const t = new TransientNode(
+      runId,
+      text("old-anchor", "old"),
+      [keep, drop],
+      42
+    )
+
+    const result = el.replaceTransientNodeWithSelf(t) as TransientNode
+    expect(result).toBeInstanceOf(TransientNode)
+    expect(result.anchor).toBe(el)
+    expect(result.transientNodes).toEqual([keep])
+    expect(result.scriptRunId).toBe(runId)
+    expect(result.deltaMsgReceivedAt).toBe(42)
   })
 })

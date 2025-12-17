@@ -46,6 +46,7 @@ from streamlit.runtime.state.session_state import (
     WStates,
     _is_stale_widget,
 )
+from streamlit.runtime.stats import CACHE_MEMORY_FAMILY
 from streamlit.runtime.uploaded_file_manager import UploadedFile, UploadedFileRec
 from streamlit.testing.v1.app_test import AppTest
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -75,8 +76,8 @@ class WStateTests(unittest.TestCase):
         wstates.set_widget_metadata(
             WidgetMetadata(
                 id="widget_id_1",
-                deserializer=lambda x: str(x),
-                serializer=lambda x: int(x),
+                deserializer=str,
+                serializer=int,
                 value_type="int_value",
             )
         )
@@ -236,8 +237,8 @@ class WStateTests(unittest.TestCase):
     def test_call_callback(self):
         metadata = WidgetMetadata(
             id="widget_id_1",
-            deserializer=lambda x: str(x),
-            serializer=lambda x: int(x),
+            deserializer=str,
+            serializer=int,
             value_type="int_value",
             callback=MagicMock(),
             callback_args=(1,),
@@ -872,16 +873,16 @@ class SessionStateMethodTests(unittest.TestCase):
         wstates.set_widget_metadata(
             WidgetMetadata(
                 id=existing_widget_key,
-                deserializer=lambda x: str(x),
-                serializer=lambda x: bool(x),
+                deserializer=str,
+                serializer=bool,
                 value_type="bool_value",
             )
         )
         wstates.set_widget_metadata(
             WidgetMetadata(
                 id=generated_widget_key,
-                deserializer=lambda x: str(x),
-                serializer=lambda x: bool(x),
+                deserializer=str,
+                serializer=bool,
                 value_type="bool_value",
             )
         )
@@ -1008,8 +1009,8 @@ class IsStaleWidgetTests(unittest.TestCase):
     def test_is_stale_widget_active_id(self):
         metadata = WidgetMetadata(
             id="widget_id_1",
-            deserializer=lambda x: str(x),
-            serializer=lambda x: int(x),
+            deserializer=str,
+            serializer=int,
             value_type="int_value",
         )
         assert not _is_stale_widget(metadata, {"widget_id_1"}, {})
@@ -1017,8 +1018,8 @@ class IsStaleWidgetTests(unittest.TestCase):
     def test_is_stale_widget_unrelated_fragment(self):
         metadata = WidgetMetadata(
             id="widget_id_1",
-            deserializer=lambda x: str(x),
-            serializer=lambda x: int(x),
+            deserializer=str,
+            serializer=int,
             value_type="int_value",
             fragment_id="my_fragment",
         )
@@ -1027,8 +1028,8 @@ class IsStaleWidgetTests(unittest.TestCase):
     def test_is_stale_widget_actually_stale_fragment(self):
         metadata = WidgetMetadata(
             id="widget_id_1",
-            deserializer=lambda x: str(x),
-            serializer=lambda x: int(x),
+            deserializer=str,
+            serializer=int,
             value_type="int_value",
             fragment_id="my_fragment",
         )
@@ -1037,8 +1038,8 @@ class IsStaleWidgetTests(unittest.TestCase):
     def test_is_stale_widget_actually_stale_no_fragment(self):
         metadata = WidgetMetadata(
             id="widget_id_1",
-            deserializer=lambda x: str(x),
-            serializer=lambda x: int(x),
+            deserializer=str,
+            serializer=int,
             value_type="int_value",
             fragment_id="my_fragment",
         )
@@ -1051,7 +1052,7 @@ class SessionStateStatProviderTests(DeltaGeneratorTestCase):
         #  we don't care about actual byte values, but rather that our
         #  SessionState isn't getting unexpectedly massive.
         state = _raw_session_state()
-        stat = state.get_stats()[0]
+        stat = state.get_stats()[CACHE_MEMORY_FAMILY][0]
         assert stat.category_name == "st_session_state"
 
         # The expected size of the session state in bytes.
@@ -1062,21 +1063,21 @@ class SessionStateStatProviderTests(DeltaGeneratorTestCase):
         assert init_size < expected_session_state_size_bytes
 
         state["foo"] = 2
-        new_size = state.get_stats()[0].byte_length
+        new_size = state.get_stats()[CACHE_MEMORY_FAMILY][0].byte_length
         assert new_size > init_size
         assert new_size < expected_session_state_size_bytes
 
         state["foo"] = 1
-        new_size_2 = state.get_stats()[0].byte_length
+        new_size_2 = state.get_stats()[CACHE_MEMORY_FAMILY][0].byte_length
         assert new_size_2 == new_size
 
         st.checkbox("checkbox", key="checkbox")
-        new_size_3 = state.get_stats()[0].byte_length
+        new_size_3 = state.get_stats()[CACHE_MEMORY_FAMILY][0].byte_length
         assert new_size_3 > new_size_2
         assert new_size_3 - new_size_2 < expected_session_state_size_bytes
 
         state._compact_state()
-        new_size_4 = state.get_stats()[0].byte_length
+        new_size_4 = state.get_stats()[CACHE_MEMORY_FAMILY][0].byte_length
         assert new_size_4 <= new_size_3
 
 

@@ -106,7 +106,7 @@ export class ComponentRegistry {
     return this.endpoints.buildBidiComponentURL(componentName, path)
   }
 
-  private onMessageEvent = (event: MessageEvent): void => {
+  private readonly onMessageEvent = (event: MessageEvent): void => {
     if (
       isNullOrUndefined(event.data) ||
       !Object.hasOwn(event.data, "isStreamlitMessage")

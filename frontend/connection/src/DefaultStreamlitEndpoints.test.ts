@@ -14,6 +14,17 @@
  * limitations under the License.
  */
 
+// Mock StreamlitConfig using global mock state (see vitest.setup.ts)
+vi.mock("@streamlit/utils", async () => {
+  const actual = await vi.importActual("@streamlit/utils")
+  return {
+    ...actual,
+    get StreamlitConfig() {
+      return globalThis.__mockStreamlitConfig
+    },
+  }
+})
+
 import axios, { AxiosHeaders } from "axios"
 import MockAdapter from "axios-mock-adapter"
 
@@ -136,8 +147,7 @@ describe("DefaultStreamlitEndpoints", () => {
     })
 
     beforeEach(() => {
-      // Reset window.__streamlit before each test
-      window.__streamlit = undefined
+      globalThis.__mockStreamlitConfig = {}
     })
 
     it("builds URL correctly for streamlit-served media when DOWNLOAD_ASSETS_BASE_URL is not set", () => {
@@ -148,9 +158,8 @@ describe("DefaultStreamlitEndpoints", () => {
     })
 
     it("builds URL correctly when DOWNLOAD_ASSETS_BASE_URL is set", () => {
-      window.__streamlit = {
-        DOWNLOAD_ASSETS_BASE_URL: "https://downloads.example.com/assets",
-      }
+      globalThis.__mockStreamlitConfig.DOWNLOAD_ASSETS_BASE_URL =
+        "https://downloads.example.com/assets"
       const url = endpoints.buildDownloadUrl("/media/1234567890.pdf")
       expect(url).toBe(
         "https://downloads.example.com/assets/media/1234567890.pdf"
@@ -513,13 +522,15 @@ describe("DefaultStreamlitEndpoints", () => {
   // the "X-Xsrftoken" header.
   describe("csrfRequest()", () => {
     let prevDocumentCookie: string
-    let mockRequest: ReturnType<typeof vi.fn>
+    let mockRequest: ReturnType<typeof vi.fn<typeof axios.request>>
 
     beforeEach(() => {
       prevDocumentCookie = document.cookie
       document.cookie = "_streamlit_xsrf=mockXsrfCookie;"
       // Create a mock for axios.request that will be used by the dynamic import
-      mockRequest = vi.fn().mockResolvedValue({ data: {} })
+      mockRequest = vi
+        .fn<typeof axios.request>()
+        .mockResolvedValue({ data: {} } as never)
       vi.spyOn(axios, "request").mockImplementation(mockRequest)
     })
 
@@ -566,7 +577,7 @@ describe("DefaultStreamlitEndpoints", () => {
   describe("checkSourceUrlResponse", () => {
     it("sends error to host if error on response", async () => {
       // Mock fetch for checkSourceUrlResponse - response is not ok
-      global.fetch = vi.fn(() =>
+      globalThis.fetch = vi.fn(() =>
         Promise.resolve({
           ok: false,
           status: 404,
@@ -609,7 +620,7 @@ describe("DefaultStreamlitEndpoints", () => {
       })
 
       // Mock fetch for checkSourceUrlResponse - fetch fails
-      global.fetch = vi.fn(() => Promise.reject(new Error("mockError")))
+      globalThis.fetch = vi.fn(() => Promise.reject(new Error("mockError")))
 
       const sendClientErrorToHostSpy = vi.spyOn(
         endpoints,

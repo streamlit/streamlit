@@ -538,6 +538,56 @@ st.data_editor(
     key="missing-placeholder",
 )
 
+st.header("Test num_rows modes")
+
+# Data editor with num_rows="add" - can only add rows, cannot delete rows
+st.subheader("Add-only mode")
+st.data_editor(
+    pd.DataFrame(
+        {"name": ["Alice", "Bob"], "age": [25, 30]},
+    ),
+    num_rows="add",
+    hide_index=True,
+    width="content",
+    column_config={
+        "name": st.column_config.Column(width="small"),
+        "age": st.column_config.Column(width="small"),
+    },
+    key="add-only-editor",
+)
+
+# Data editor with num_rows="delete" - can only delete rows, cannot add rows
+st.subheader("Delete-only mode")
+st.data_editor(
+    pd.DataFrame(
+        {"name": ["Alice", "Bob", "Charlie"], "age": [25, 30, 35]},
+    ),
+    num_rows="delete",
+    hide_index=True,
+    width="content",
+    column_config={
+        "name": st.column_config.Column(width="small"),
+        "age": st.column_config.Column(width="small"),
+    },
+    key="delete-only-editor",
+)
+
+# Data editor with num_rows="dynamic" - can add and delete rows
+st.subheader("Dynamic mode")
+st.data_editor(
+    pd.DataFrame(
+        {"name": ["Alice", "Bob"], "age": [25, 30]},
+    ),
+    num_rows="dynamic",
+    hide_index=True,
+    width="content",
+    column_config={
+        "name": st.column_config.Column(width="small"),
+        "age": st.column_config.Column(width="small"),
+    },
+    key="dynamic-editor",
+)
+
 st.header("Test editing empty columns")
 
 empty_column_df = pd.DataFrame(

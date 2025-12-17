@@ -21,6 +21,7 @@ import {
   Element,
   ForwardMsgMetadata,
   Logo,
+  Transient as TransientProto,
 } from "@streamlit/protobuf"
 
 import { ensureError } from "~lib/util/ErrorHandling"
@@ -36,6 +37,7 @@ import {
 import { AppNode, NO_SCRIPT_RUN_ID } from "./AppNode.interface"
 import { BlockNode } from "./BlockNode"
 import { ElementNode } from "./ElementNode"
+import { TransientNode } from "./TransientNode"
 import { ClearStaleNodeVisitor } from "./visitors/ClearStaleNodeVisitor"
 import { DebugVisitor } from "./visitors/DebugVisitor"
 import { ElementsSetVisitor } from "./visitors/ElementsSetVisitor"
@@ -64,7 +66,7 @@ export class AppRoot {
   readonly mainScriptHash: string
 
   /* The app logo, if it exists. */
-  private appLogo: AppLogo | null
+  private readonly appLogo: AppLogo | null
 
   /**
    * Create an empty AppRoot with a placeholder "skeleton" element.
@@ -100,6 +102,7 @@ export class AppRoot {
 
       default:
         waitElement = makeAppSkeletonElement()
+        break
     }
 
     if (waitElement) {
@@ -243,6 +246,18 @@ export class AppRoot {
           activeScriptHash,
           delta.fragmentId,
           deltaMsgReceivedAt
+        )
+      }
+
+      case "newTransient": {
+        const transient = delta.newTransient as TransientProto
+        return this.addTransient(
+          deltaPath,
+          scriptRunId,
+          transient,
+          metadata,
+          activeScriptHash,
+          delta.fragmentId
         )
       }
 
@@ -403,7 +418,18 @@ export class AppRoot {
       existingNode instanceof BlockNode &&
       existingNode.deltaBlock.type === block.type
     ) {
-      children = existingNode.children
+      // For dialog blocks, don't inherit children if the dialog identity is different.
+      // The identity is computed from the dialog's attributes.
+      // This prevents showing stale elements from a previous
+      // dialog when switching between different dialogs (see issue #10907).
+      const isDialogWithDifferentIdentity =
+        block.dialog &&
+        existingNode.deltaBlock.dialog &&
+        block.id !== existingNode.deltaBlock.id
+
+      if (!isDialogWithDifferentIdentity) {
+        children = existingNode.children
+      }
     }
 
     const blockNode = new BlockNode(
@@ -420,6 +446,43 @@ export class AppRoot {
         this.root,
         deltaPath,
         blockNode,
+        scriptRunId
+      ) as BlockNode,
+      this.appLogo
+    )
+  }
+
+  addTransient(
+    deltaPath: number[],
+    scriptRunId: string,
+    transient: TransientProto,
+    metadata: ForwardMsgMetadata,
+    activeScriptHash: string,
+    fragmentId?: string,
+    deltaMsgReceivedAt?: number
+  ): AppRoot {
+    const transientNode = new TransientNode(
+      scriptRunId,
+      undefined, // We do not have an anchor yet
+      transient.elements.map(
+        element =>
+          new ElementNode(
+            element as Element,
+            metadata,
+            scriptRunId,
+            activeScriptHash,
+            fragmentId
+          )
+      ),
+      deltaMsgReceivedAt
+    )
+
+    return new AppRoot(
+      this.mainScriptHash,
+      SetNodeByDeltaPathVisitor.setNodeAtPath(
+        this.root,
+        deltaPath,
+        transientNode,
         scriptRunId
       ) as BlockNode,
       this.appLogo
