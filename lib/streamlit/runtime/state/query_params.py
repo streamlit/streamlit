@@ -94,7 +94,7 @@ class QueryParams(MutableMapping[str, str]):
         except KeyError:
             raise KeyError(missing_key_error_message(key))
 
-    def update(
+    def update(  # ty: ignore[invalid-method-override]
         self,
         other: Iterable[tuple[str, str | Iterable[str]]]
         | SupportsKeysAndGetItem[str, str | Iterable[str]] = (),

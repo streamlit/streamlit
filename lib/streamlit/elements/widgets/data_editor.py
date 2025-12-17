@@ -167,8 +167,7 @@ class DataEditorSerde:
         # Convert the keys (numerical row positions) to integers.
         # The keys are strings because they are serialized to JSON.
         data_editor_state["edited_rows"] = {
-            int(k): v
-            for k, v in data_editor_state["edited_rows"].items()  # ty: ignore[possibly-missing-attribute]
+            int(k): v for k, v in data_editor_state["edited_rows"].items()
         }
         return data_editor_state
 
@@ -244,7 +243,7 @@ def _parse_value(
             ColumnDataKind.DATE,
             ColumnDataKind.TIME,
         ]:
-            datetime_value = pd.Timestamp(value)  # ty: ignore
+            datetime_value = pd.Timestamp(value)
 
             if pd.isna(datetime_value):
                 return None  # type: ignore[unreachable]
@@ -1132,7 +1131,7 @@ class DataEditorMixin:
             # Even on collisions, there should not be a big issue with the
             # rendering in the data editor.
             styler_uuid = calc_md5(key or self.dg._get_delta_path_str())[:10]
-            data.set_uuid(styler_uuid)
+            data.set_uuid(styler_uuid)  # ty: ignore[call-non-callable, possibly-missing-attribute]
             marshall_styler(proto, data, styler_uuid)
 
         proto.data = arrow_bytes
