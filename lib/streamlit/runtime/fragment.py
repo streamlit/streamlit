@@ -57,7 +57,9 @@ class FragmentStorage(Protocol):
     # Weirdly, we have to define this above the `set` method, or mypy gets it confused
     # with the `set` type of `new_fragments_ids`.
     @abstractmethod
-    def clear(self, new_fragment_ids: set[str] | None = None) -> None:  # ty:ignore[invalid-type-form]
+    def clear(
+        self, new_fragment_ids: set[str] | None = None
+    ) -> None:  # [invalid-type-form]
         """Remove all fragments saved in this FragmentStorage unless listed in
         new_fragment_ids.
         """
@@ -101,7 +103,7 @@ class MemoryFragmentStorage(FragmentStorage):
 
     # Weirdly, we have to define this above the `set` method, or mypy gets it confused
     # with the `set` type of `new_fragments_ids`.
-    def clear(self, new_fragment_ids: set[str] | None = None) -> None:  # ty:ignore[invalid-type-form]
+    def clear(self, new_fragment_ids: set[str] | None = None) -> None:  # ty: ignore[invalid-type-form]
         if new_fragment_ids is None:
             new_fragment_ids = set()
 

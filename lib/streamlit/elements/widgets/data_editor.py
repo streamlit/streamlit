@@ -201,13 +201,13 @@ def _parse_value(
 
     try:
         if column_data_kind == ColumnDataKind.LIST:
-            return list(value) if is_list_like(value) else [value]  # ty:ignore[invalid-argument-type]
+            return list(value) if is_list_like(value) else [value]  # ty: ignore[invalid-argument-type]
 
         if column_data_kind == ColumnDataKind.EMPTY:
             # For empty columns, preserve the value type from the frontend.
             # If it's a list (e.g., from multiselect), return as list.
             # If it's a scalar (e.g., from number input), return as scalar.
-            return list(value) if is_list_like(value) else value  # ty:ignore[invalid-argument-type]
+            return list(value) if is_list_like(value) else value  # ty: ignore[invalid-argument-type]
 
         if column_data_kind == ColumnDataKind.STRING:
             return str(value)

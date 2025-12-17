@@ -410,7 +410,7 @@ def marshall_images(
         images = cast("Sequence[AtomicImage]", [image])
 
     if isinstance(caption, list):
-        captions: Sequence[str | None] = caption  # ty:ignore[invalid-assignment]
+        captions: Sequence[str | None] = caption  # ty: ignore[invalid-assignment]
     elif isinstance(caption, str):
         captions = [caption]
     elif isinstance(caption, np.ndarray) and len(caption.shape) == 1:
