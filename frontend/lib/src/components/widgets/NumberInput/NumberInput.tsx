@@ -19,6 +19,7 @@ import {
   ReactElement,
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react"
@@ -35,7 +36,10 @@ import {
   WidgetLabel,
   WidgetLabelHelpIcon,
 } from "~lib/components/widgets/BaseWidget"
-import { useFormClearHelper } from "~lib/components/widgets/Form"
+import {
+  useBasicWidgetState,
+  ValueWithSource,
+} from "~lib/hooks/useBasicWidgetState"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { convertRemToPx } from "~lib/theme"
@@ -45,7 +49,7 @@ import {
   labelVisibilityProtoValueToEnum,
   notNullOrUndefined,
 } from "~lib/util/utils"
-import { Source, WidgetStateManager } from "~lib/WidgetStateManager"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
   StyledInputContainer,
@@ -53,19 +57,62 @@ import {
   StyledInputControls,
   StyledInstructionsContainer,
 } from "./styled-components"
-import {
-  canDecrement,
-  canIncrement,
-  formatValue,
-  getInitialValue,
-  getStep,
-} from "./utils"
+import { canDecrement, canIncrement, formatValue, getStep } from "./utils"
 
 export interface Props {
   disabled: boolean
   element: NumberInputProto
   widgetMgr: WidgetStateManager
   fragmentId?: string
+}
+
+// Module-level callbacks for useBasicWidgetState (stable references)
+function getStateFromWidgetMgr(
+  widgetMgr: WidgetStateManager,
+  element: NumberInputProto
+): number | null | undefined {
+  const isIntData = element.dataType === NumberInputProto.DataType.INT
+  return isIntData
+    ? widgetMgr.getIntValue(element)
+    : widgetMgr.getDoubleValue(element)
+}
+
+function getDefaultStateFromProto(element: NumberInputProto): number | null {
+  return element.default ?? null
+}
+
+function getCurrStateFromProto(element: NumberInputProto): number | null {
+  // When the backend sends a value via setValue, if it's null, fall back to default
+  // This matches the commit behavior where null values become defaults
+  return element.value ?? element.default ?? null
+}
+
+function updateWidgetMgrState(
+  element: NumberInputProto,
+  widgetMgr: WidgetStateManager,
+  vws: ValueWithSource<number | null>,
+  fragmentId?: string
+): void {
+  switch (element.dataType) {
+    case NumberInputProto.DataType.INT:
+      widgetMgr.setIntValue(
+        element,
+        vws.value,
+        { fromUi: vws.fromUi },
+        fragmentId
+      )
+      break
+    case NumberInputProto.DataType.FLOAT:
+      widgetMgr.setDoubleValue(
+        element,
+        vws.value,
+        { fromUi: vws.fromUi },
+        fragmentId
+      )
+      break
+    default:
+      throw new Error("Invalid data type")
+  }
 }
 
 const NumberInput: React.FC<Props> = ({
@@ -78,7 +125,6 @@ const NumberInput: React.FC<Props> = ({
 
   const {
     dataType: elementDataType,
-    id: elementId,
     formId: elementFormId,
     default: elementDefault,
     format: elementFormat,
@@ -89,22 +135,51 @@ const NumberInput: React.FC<Props> = ({
 
   const { width, elementRef } = useCalculatedDimensions()
 
-  const [step, setStep] = useState<number>(() => getStep(element))
-  const initialValue = getInitialValue({ element, widgetMgr })
+  // Step is derived from element props
+  const step = useMemo(
+    () => getStep({ step: element.step, dataType: element.dataType }),
+    [element.step, element.dataType]
+  )
+
+  // Local ephemeral state - dirty and formattedValue need refs for onFormCleared
   const [dirty, setDirty] = useState(false)
-  const [value, setValue] = useState<number | null>(initialValue)
+
+  // Formatted value is derived from the core value, but we track it as state
+  // because the user can type intermediate values (like "1." for float)
+  const [formattedValue, setFormattedValue] = useState<string | null>(null)
+
+  // Use useBasicWidgetState for core value management
+  const [value, setValueWithSource] = useBasicWidgetState<
+    number | null,
+    NumberInputProto
+  >({
+    getStateFromWidgetMgr,
+    getDefaultStateFromProto,
+    getCurrStateFromProto,
+    updateWidgetMgrState,
+    element,
+    widgetMgr,
+    fragmentId,
+    onFormCleared: useCallback(() => {
+      // Reset dirty state and formatted value when form is cleared
+      const newValue = element.default ?? null
+      setDirty(false)
+      setFormattedValue(
+        formatValue({
+          value: newValue,
+          dataType: element.dataType,
+          format: element.format,
+          step: getStep(element),
+        })
+      )
+    }, [element]),
+  })
+
+  // Local ephemeral state (step, dirty, formattedValue defined above for onFormCleared)
   const [isFocused, setIsFocused] = useState(false)
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null)
-  const id = useRef(uniqueId("number_input_"))
-
-  const [formattedValue, setFormattedValue] = useState<string | null>(() =>
-    formatValue({
-      value: initialValue,
-      dataType: elementDataType,
-      format: elementFormat,
-      step,
-    })
-  )
+  // Use useMemo for stable ID that can be safely accessed during render
+  const id = useMemo(() => uniqueId("number_input_"), [])
 
   const canDec = canDecrement(value, step, min)
   const canInc = canIncrement(value, step, max)
@@ -118,15 +193,12 @@ const NumberInput: React.FC<Props> = ({
   const shouldShowInstructions =
     isFocused && width > theme.breakpoints.hideWidgetDetails
 
-  // Update the step if the props change
+  // Sync formatted value when the core value changes from the server.
+  // This is a legitimate sync with an external system (proto value from backend).
+  // Only update if the user isn't currently editing (dirty).
   useEffect(() => {
-    setStep(getStep({ step: element.step, dataType: element.dataType }))
-  }, [element.dataType, element.step])
-
-  // Update the formatted value if format related props changes
-  useEffect(() => {
-    // Only update if the user isn't currently actively editing:
     if (!dirty) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Syncing with server-provided value
       setFormattedValue(
         formatValue({
           value,
@@ -136,47 +208,25 @@ const NumberInput: React.FC<Props> = ({
         })
       )
     }
-    // We only want to reformat the value if any of the formatting
-    // related parameters change.
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
-  }, [elementDataType, elementFormat, step])
+  }, [value, elementDataType, elementFormat, step, dirty])
 
+  // Commit a value: validate, update widget manager, and sync to URL
   const commitValue = useCallback(
     ({
       value: valueArg,
-      source,
+      fromUi,
     }: {
       value: number | null
-      source: Source
+      fromUi: boolean
     }) => {
       if (notNullOrUndefined(valueArg) && (min > valueArg || valueArg > max)) {
         inputRef.current?.reportValidity()
       } else {
         const newValue = valueArg ?? elementDefault ?? null
 
-        switch (elementDataType) {
-          case NumberInputProto.DataType.INT:
-            widgetMgr.setIntValue(
-              { id: elementId, formId: elementFormId },
-              newValue,
-              source,
-              fragmentId
-            )
-            break
-          case NumberInputProto.DataType.FLOAT:
-            widgetMgr.setDoubleValue(
-              { id: elementId, formId: elementFormId },
-              newValue,
-              source,
-              fragmentId
-            )
-            break
-          default:
-            throw new Error("Invalid data type")
-        }
+        setValueWithSource({ value: newValue, fromUi })
 
         setDirty(false)
-        setValue(newValue)
         setFormattedValue(
           formatValue({
             value: newValue,
@@ -190,52 +240,27 @@ const NumberInput: React.FC<Props> = ({
     [
       min,
       max,
-      inputRef,
-      widgetMgr,
-      fragmentId,
-      step,
-      elementDataType,
-      elementId,
-      elementFormId,
       elementDefault,
+      elementDataType,
       elementFormat,
+      step,
+      setValueWithSource,
     ]
   )
 
-  const onBlur = useCallback((): void => {
+  const handleBlur = useCallback((): void => {
     if (dirty) {
-      commitValue({ value, source: { fromUi: true } })
+      commitValue({ value, fromUi: true })
     }
     setIsFocused(false)
   }, [dirty, value, commitValue])
 
-  const onFocus = useCallback((): void => {
+  const handleFocus = useCallback((): void => {
     setIsFocused(true)
   }, [])
 
-  const updateFromProtobuf = useCallback((): void => {
-    const { value: elementValue } = element
-    element.setValue = false
-    setValue(elementValue ?? null)
-    setFormattedValue(
-      formatValue({
-        value: elementValue ?? null,
-        dataType: elementDataType,
-        format: elementFormat,
-        step,
-      })
-    )
-    commitValue({ value: elementValue ?? null, source: { fromUi: false } })
-  }, [element, step, commitValue, elementDataType, elementFormat])
-
-  // on component mount, we want to update the value from protobuf if setValue is true, otherwise commit current value
+  // Prevent scroll wheel from changing the value
   useEffect(() => {
-    if (element.setValue) {
-      updateFromProtobuf()
-    } else {
-      commitValue({ value, source: { fromUi: false } })
-    }
-
     const numberInput = inputRef.current
     if (numberInput) {
       const preventScroll: EventListener = (e): void => {
@@ -250,71 +275,59 @@ const NumberInput: React.FC<Props> = ({
         numberInput.removeEventListener("wheel", preventScroll)
       }
     }
-
-    // I don't want to run this effect on every render, only on mount.
-    // Additionally, it's okay if commitValue changes, because we only call
-    // it once in the beginning anyways.
-    /* eslint-disable react-hooks/exhaustive-deps -- TODO: Update to match React best practices */
   }, [])
-
-  // update from protobuf whenever component updates if element.setValue is truthy
-  if (element.setValue) {
-    updateFromProtobuf()
-  }
 
   const clearable = isNullOrUndefined(element.default) && !disabled
 
-  const onFormCleared = useCallback(() => {
-    const newValue = element.default ?? null
-    setValue(newValue)
-    commitValue({ value: newValue, source: { fromUi: true } })
-  }, [element])
+  const handleChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>): void => {
+      const { value: targetValue } = e.target
 
-  useFormClearHelper({
-    element,
-    widgetMgr,
-    onFormCleared,
-  })
-
-  const onChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ): void => {
-    const { value: targetValue } = e.target
-
-    if (targetValue === "") {
-      setDirty(true)
-      setValue(null)
-      setFormattedValue(null)
-    } else {
-      let numValue: number
-
-      if (element.dataType === NumberInputProto.DataType.INT) {
-        numValue = parseInt(targetValue, 10)
+      if (targetValue === "") {
+        setDirty(true)
+        setFormattedValue(null)
       } else {
-        numValue = parseFloat(targetValue)
-      }
+        setDirty(true)
+        setFormattedValue(targetValue)
 
-      setDirty(true)
-      setValue(numValue)
-      setFormattedValue(targetValue)
+        // We don't call setValueWithSource here because we want to allow
+        // intermediate values (like "1." for floats). The value is committed
+        // on blur or enter.
+      }
+    },
+    []
+  )
+
+  // Parse the current formatted value to get the numeric value for increment/decrement
+  const currentNumericValue = useMemo(() => {
+    if (formattedValue === null || formattedValue === "") {
+      return null
     }
-  }
+    if (element.dataType === NumberInputProto.DataType.INT) {
+      const parsed = parseInt(formattedValue, 10)
+      return isNaN(parsed) ? null : parsed
+    }
+    const parsed = parseFloat(formattedValue)
+    return isNaN(parsed) ? null : parsed
+  }, [formattedValue, element.dataType])
 
   const increment = useCallback(() => {
     if (canInc) {
       setDirty(true)
-      commitValue({ value: (value ?? min) + step, source: { fromUi: true } })
+      const newValue = (currentNumericValue ?? min) + step
+      commitValue({ value: newValue, fromUi: true })
     }
-  }, [value, min, step, canInc])
+  }, [currentNumericValue, min, step, canInc, commitValue])
 
   const decrement = useCallback(() => {
     if (canDec) {
       setDirty(true)
-      commitValue({ value: (value ?? max) - step, source: { fromUi: true } })
+      const newValue = (currentNumericValue ?? max) - step
+      commitValue({ value: newValue, fromUi: true })
     }
-  }, [value, max, step, canDec])
+  }, [currentNumericValue, max, step, canDec, commitValue])
 
-  const onKeyDown = useCallback(
+  const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>): void => {
       const { key } = e
 
@@ -333,18 +346,27 @@ const NumberInput: React.FC<Props> = ({
     [increment, decrement]
   )
 
-  const onKeyPress = useCallback(
+  const handleKeyPress = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>): void => {
       if (e.key === "Enter") {
         if (dirty) {
-          commitValue({ value, source: { fromUi: true } })
+          // When committing, if currentNumericValue is null (empty input),
+          // commitValue will fall back to elementDefault
+          commitValue({ value: currentNumericValue, fromUi: true })
         }
         if (widgetMgr.allowFormEnterToSubmit(elementFormId)) {
           widgetMgr.submitForm(elementFormId, fragmentId)
         }
       }
     },
-    [dirty, value, commitValue, widgetMgr, elementFormId, fragmentId]
+    [
+      dirty,
+      currentNumericValue,
+      commitValue,
+      widgetMgr,
+      elementFormId,
+      fragmentId,
+    ]
   )
 
   // Adjust breakpoint for icon so the total width of the input element
@@ -369,7 +391,7 @@ const NumberInput: React.FC<Props> = ({
         labelVisibility={labelVisibilityProtoValueToEnum(
           element.labelVisibility?.value
         )}
-        htmlFor={id.current}
+        htmlFor={id}
       >
         {element.help && (
           <WidgetLabelHelpIcon content={element.help} label={element.label} />
@@ -384,11 +406,11 @@ const NumberInput: React.FC<Props> = ({
           inputRef={inputRef}
           value={formattedValue ?? ""}
           placeholder={element.placeholder}
-          onBlur={onBlur}
-          onFocus={onFocus}
-          onChange={onChange}
-          onKeyPress={onKeyPress}
-          onKeyDown={onKeyDown}
+          onBlur={handleBlur}
+          onFocus={handleFocus}
+          onChange={handleChange}
+          onKeyPress={handleKeyPress}
+          onKeyDown={handleKeyDown}
           clearable={clearable}
           clearOnEscape={clearable}
           disabled={disabled}
@@ -402,7 +424,7 @@ const NumberInput: React.FC<Props> = ({
               />
             )
           }
-          id={id.current}
+          id={id}
           overrides={{
             ClearIconContainer: {
               style: {

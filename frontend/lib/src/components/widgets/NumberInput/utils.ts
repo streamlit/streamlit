@@ -20,8 +20,6 @@ import { NumberInput as NumberInputProto } from "@streamlit/protobuf"
 
 import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
 
-import { Props } from "./NumberInput"
-
 const LOG = getLogger("NumberInput")
 
 /**
@@ -100,20 +98,6 @@ export const canIncrement = (
     return false
   }
   return value + step <= max
-}
-
-/**
- * This function returns the initial value for the NumberInput widget
- * via the widget manager.
- */
-export const getInitialValue = (
-  props: Pick<Props, "element" | "widgetMgr">
-): number | null => {
-  const isIntData = props.element.dataType === NumberInputProto.DataType.INT
-  const storedValue = isIntData
-    ? props.widgetMgr.getIntValue(props.element)
-    : props.widgetMgr.getDoubleValue(props.element)
-  return storedValue ?? props.element.default ?? null
 }
 
 export const getStep = ({

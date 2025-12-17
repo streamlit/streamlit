@@ -200,7 +200,7 @@ describe("NumberInput widget", () => {
     // Our widget should be reset, and the widgetMgr should be updated
     expect(numberInput).toHaveValue(props.element.default)
     expect(props.widgetMgr.setIntValue).toHaveBeenLastCalledWith(
-      { id: props.element.id, formId: props.element.formId },
+      props.element,
       props.element.default,
       {
         fromUi: true,
@@ -291,6 +291,17 @@ describe("NumberInput widget", () => {
     expect(materialIcon).toHaveTextContent("attach_money")
   })
 
+  it("handles setValue correctly without mutating element", () => {
+    const props = getIntProps({ setValue: true, value: 42 })
+    render(<NumberInput {...props} />)
+
+    // Verify the element was not mutated
+    expect(props.element.setValue).toBe(true)
+
+    // Verify the value was applied
+    expect(screen.getByTestId("stNumberInputField")).toHaveValue(42)
+  })
+
   describe("FloatData", () => {
     it("changes state on ArrowDown", async () => {
       const user = userEvent.setup()
@@ -315,7 +326,7 @@ describe("NumberInput widget", () => {
       render(<NumberInput {...props} />)
 
       expect(props.widgetMgr.setDoubleValue).toHaveBeenCalledWith(
-        { id: props.element.id, formId: props.element.formId },
+        props.element,
         props.element.default,
         {
           fromUi: false,
@@ -455,7 +466,7 @@ describe("NumberInput widget", () => {
       render(<NumberInput {...props} />)
 
       expect(props.widgetMgr.setIntValue).toHaveBeenCalledWith(
-        { id: props.element.id, formId: props.element.formId },
+        props.element,
         props.element.default,
         {
           fromUi: false,
