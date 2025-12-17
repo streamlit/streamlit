@@ -35,7 +35,7 @@ The proposed API changes are:
 * Add session-scoped connections. This would be a natural extension to the current connection API, and would support any
     user-scoped connection, like an HTTP client that’s using per-user OAuth credentials to make requests.
 * Add connection close hooks. Connections should be able to be closed when they are removed from a cache.
-* Add a session-scoped `st.cache_resource` with a dedicated store outside of `st.session_state`. This falls out of the
+* Add a session-scoped `st.cache_resource` and `st.cache_data` with a dedicated store outside of `st.session_state`. This falls out of the
     first two items: If we want session-scoped connections, we need a way to cache them in the session. Keeping this
     out of `session_state` makes it much cleaner to implement close hooks, since we won’t be sharing a namespace
     with widget or arbitrary user data.
@@ -77,10 +77,10 @@ for detailed examples and explanation from the Snowpark Container Services side.
 
 ### API Changes
 
-`st.cache_resource` and `st.cache_data` will have two new parameters:
+`st.cache_resource` will have two new parameters. `st.cache_data` will have one of these two parameters, `scope`:
 
 ```python
-OnExpire: TypeAlias = Callable[[Any], None]
+OnEvict: TypeAlias = Callable[[Any], None]
 
 # This is showing the cache_resource example, but cache_data will be identical.
 
@@ -89,7 +89,7 @@ def cache_resource(
     self,
     # Existing args omitted for clarity.
     scope: Literal["global", "session"] = "global",
-    on_expire: OnExpire | None = None
+    on_evict: OnEvict | None = None
 ) -> CachedFunc[P, R] | Callable[[Callable[P, R]], CachedFunc[P, R]]:
     """
     scope : Literal["global", "session"]
@@ -97,11 +97,14 @@ def cache_resource(
         the session.
 
         Session-scoped cache entries will be expired when a user's session ends.
-    on_expire : OnExpire
+    on_evict : OnEvict
         If set, a function to call when a cache entry is removed from the cache. The
-        expired item will be provided to the function as an argument.
+        removed item will be provided to the function as an argument.
 
-        This is only useful for caches which will expire entries normally: Those with
+        This will be called whenever an item is removed from the cache, including via
+        `clear` calls.
+
+        This is mostly useful for caches which will expire entries normally: Those with
         ``max_entries`` or ``ttl`` settings, or those using ``scope="session"``.
         Note that expiration does not happen on all reads - so ``ttl`` should not be
         used to guarantee timely cleanup, only cleanup when expired resources are
@@ -135,9 +138,9 @@ These two new methods will be passed to the `cache_resource` call in `st.connect
 
 ### Cache expiration implementation
 
-We will add the expiration hook to the entry stored in [ResourceCache._mem_cache](https://github.com/streamlit/streamlit/blob/fb4a389a7338c9d22e4ea514ca2b20c10e086149/lib/streamlit/runtime/caching/cache_resource_api.py#L492-L494). Instead of storing `CachedResult[R]`, it will store `tuple[CachedResult[R], OnExpire]`. We will also replace the `TTLCache` with an extension of `TTLCache` that handles expiration, following [the examples in the cachetools library](https://cachetools.readthedocs.io/en/latest/#extending-cache-classes).
+We will add the expiration hook to the entry stored in [ResourceCache._mem_cache](https://github.com/streamlit/streamlit/blob/fb4a389a7338c9d22e4ea514ca2b20c10e086149/lib/streamlit/runtime/caching/cache_resource_api.py#L492-L494). Instead of storing `CachedResult[R]`, it will store `tuple[CachedResult[R], OnEvict]`. We will also replace the `TTLCache` with an extension of `TTLCache` that handles expiration, following [the examples in the cachetools library](https://cachetools.readthedocs.io/en/latest/#extending-cache-classes).
 
-To handle session-scoped items, we will add a new cache to [ResourceCaches](https://github.com/streamlit/streamlit/blob/fb4a389a7338c9d22e4ea514ca2b20c10e086149/lib/streamlit/runtime/caching/cache_resource_api.py#L82) that will have an extra session ID key. When looking up a resource cache, we will provide the current session ID for session-scoped resources, and use that to look up an item in the cache.
+To handle session-scoped items, we will add a new cache to [ResourceCaches](https://github.com/streamlit/streamlit/blob/fb4a389a7338c9d22e4ea514ca2b20c10e086149/lib/streamlit/runtime/caching/cache_resource_api.py#L82) that will have an extra session ID key. When looking up a resource cache, we will provide the current session ID for session-scoped resources, and use that to look up an item in the cache. Similar changes will be made in `DataCaches`.
 
 When sessions are torn down, we will call a new helper in `ResourceCaches` which will handle clearing the cache for a session ID.
 
