@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { Fragment } from "react"
+import { Fragment } from "react"
 
 import { screen } from "@testing-library/react"
 

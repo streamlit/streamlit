@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { Fragment, memo, ReactElement, ReactNode } from "react"
+import { Fragment, memo, ReactElement, ReactNode } from "react"
 
 import { StreamlitErrorCodeBlock } from "@streamlit/lib"
 

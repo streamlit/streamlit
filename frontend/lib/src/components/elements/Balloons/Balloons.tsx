@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { FC, memo } from "react"
+import { FC, memo } from "react"
 
 /*
  * IMPORTANT: If you change the asset imports below, make sure they still work if Streamlit is

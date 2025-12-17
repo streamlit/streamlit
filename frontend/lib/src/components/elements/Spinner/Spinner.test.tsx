@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-import React from "react"
-
 import { act, screen, waitFor } from "@testing-library/react"
 import { BaseProvider, LightTheme } from "baseui"
 

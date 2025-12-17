@@ -14,7 +14,8 @@
  * limitations under the License.
  */
 
-import React, {
+import {
+  createContext,
   CSSProperties,
   type FC,
   type HTMLProps,
@@ -461,7 +462,7 @@ export const CustomMediaTag: FC<
   return <Tag {...attributes} />
 }
 
-const HelpTextContext = React.createContext<string | undefined>(undefined)
+const HelpTextContext = createContext<string | undefined>(undefined)
 HelpTextContext.displayName = "HelpTextContext"
 
 interface CustomHelpIconProps {

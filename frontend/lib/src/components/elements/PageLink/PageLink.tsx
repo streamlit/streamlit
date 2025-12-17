@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { memo, ReactElement, useContext } from "react"
+import { memo, ReactElement, useContext } from "react"
 
 import { PageLink as PageLinkProto } from "@streamlit/protobuf"
 

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement } from "react"
+import { ReactElement } from "react"
 
 import { cleanup, screen } from "@testing-library/react"
 import { transparentize } from "color2k"

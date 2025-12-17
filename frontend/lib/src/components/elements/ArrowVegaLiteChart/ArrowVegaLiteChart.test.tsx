@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React from "react"
+import { useMemo } from "react"
 
 import { screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
@@ -23,7 +23,7 @@ import userEvent from "@testing-library/user-event"
 vi.mock("./useVegaEmbed", () => ({
   useVegaEmbed: () => {
     // Satisfy hooks rule by calling a React hook in this mock
-    React.useMemo(() => null, [])
+    useMemo(() => null, [])
     return {
       createView: () => Promise.resolve(null),
       updateView: () => Promise.resolve(null),

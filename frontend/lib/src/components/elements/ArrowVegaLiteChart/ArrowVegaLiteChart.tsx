@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { FC, memo, useEffect, useLayoutEffect, useState } from "react"
+import { FC, memo, useEffect, useLayoutEffect, useState } from "react"
 
 import { Global } from "@emotion/react"
 import { InsertChart, TableChart } from "@emotion-icons/material-outlined"
