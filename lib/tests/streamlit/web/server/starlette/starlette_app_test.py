@@ -28,7 +28,7 @@ from streamlit.runtime.media_file_manager import MediaFileManager, MediaFileMeta
 from streamlit.runtime.media_file_storage import MediaFileKind
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
-from streamlit.runtime.stats import CacheStat
+from streamlit.runtime.stats import CacheStat, CounterStat, GaugeStat
 from streamlit.runtime.uploaded_file_manager import UploadedFileRec
 from streamlit.web.server.routes import STATIC_ASSET_CACHE_MAX_AGE_SECONDS
 from streamlit.web.server.starlette import starlette_app_utils
@@ -43,12 +43,31 @@ if TYPE_CHECKING:
 
 class _DummyStatsManager:
     def __init__(self) -> None:
-        self._stats: dict[str, list[CacheStat]] = {
-            "cache_memory_bytes": [CacheStat("cache_memory_bytes", "", 1)]
+        self._stats: dict[str, list[CacheStat | CounterStat | GaugeStat]] = {
+            "cache_memory_bytes": [CacheStat("test_cache", "", 1)],
+            "session_events_total": [
+                CounterStat(
+                    family_name="session_events_total",
+                    value=5,
+                    labels={"type": "connect"},
+                    help="Total count of session events by type.",
+                )
+            ],
+            "active_sessions": [
+                GaugeStat(
+                    family_name="active_sessions",
+                    value=3,
+                    help="Current number of active sessions.",
+                )
+            ],
         }
 
-    def get_stats(self) -> dict[str, list[CacheStat]]:
-        return self._stats
+    def get_stats(
+        self, family_names: list[str] | None = None
+    ) -> dict[str, list[CacheStat | CounterStat | GaugeStat]]:
+        if family_names is None:
+            return self._stats
+        return {k: self._stats.get(k, []) for k in family_names}
 
 
 class _DummyComponentRegistry:
@@ -181,6 +200,44 @@ def test_metrics_endpoint(starlette_client: tuple[TestClient, _DummyRuntime]) ->
     response = client.get("/_stcore/metrics")
     assert response.status_code == 200
     assert "cache_memory_bytes" in response.text
+    assert "session_events_total" in response.text
+    assert "active_sessions" in response.text
+
+
+def test_metrics_endpoint_filters_single_family(
+    starlette_client: tuple[TestClient, _DummyRuntime],
+) -> None:
+    """Test that the metrics endpoint filters by a single family."""
+    client, _ = starlette_client
+    response = client.get("/_stcore/metrics?families=session_events_total")
+    assert response.status_code == 200
+    assert "session_events_total" in response.text
+    assert "cache_memory_bytes" not in response.text
+    assert "# TYPE active_sessions" not in response.text
+
+
+def test_metrics_endpoint_filters_multiple_families(
+    starlette_client: tuple[TestClient, _DummyRuntime],
+) -> None:
+    """Test that the metrics endpoint filters by multiple families."""
+    client, _ = starlette_client
+    response = client.get(
+        "/_stcore/metrics?families=session_events_total&families=active_sessions"
+    )
+    assert response.status_code == 200
+    assert "session_events_total" in response.text
+    assert "active_sessions" in response.text
+    assert "cache_memory_bytes" not in response.text
+
+
+def test_metrics_endpoint_unknown_family_returns_eof(
+    starlette_client: tuple[TestClient, _DummyRuntime],
+) -> None:
+    """Test that unknown family returns only EOF marker."""
+    client, _ = starlette_client
+    response = client.get("/_stcore/metrics?families=unknown_family")
+    assert response.status_code == 200
+    assert response.text.strip() == "# EOF"
 
 
 def test_metrics_endpoint_protobuf(
