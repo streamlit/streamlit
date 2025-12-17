@@ -32,10 +32,7 @@ import numbro from "numbro"
 
 import { ArrowType } from "~lib/dataframes/arrowTypeUtils"
 import { EmotionTheme } from "~lib/theme"
-import { formatMoment } from "~lib/util/formatMoment"
 import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
-
-export { formatMoment }
 
 /**
  * Interface used for defining the properties (configuration options) of a column.
