@@ -260,7 +260,10 @@ def create_metrics_routes(runtime: Runtime, base_url: str | None) -> list[BaseRo
     from starlette.routing import Route
 
     async def _metrics_endpoint(request: Request) -> Response:
-        stats = runtime.stats_mgr.get_stats()
+        requested_families = request.query_params.getlist("families")
+        stats = runtime.stats_mgr.get_stats(
+            family_names=requested_families if requested_families else None
+        )
         accept = request.headers.get("Accept", "")
         if "application/x-protobuf" in accept:
             payload = StatsRequestHandler._stats_to_proto(stats).SerializeToString()
