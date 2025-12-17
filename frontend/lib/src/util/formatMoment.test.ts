@@ -109,5 +109,35 @@ withTimezones(() => {
         expect(result).toBe("2023-04-27T10:20:30.123Z")
       })
     })
+
+    describe("localized with momentKind", () => {
+      it("formats date in localized format (date only)", () => {
+        const momentDate = moment.utc("2023-04-27T10:20:30Z")
+        const result = formatMoment(momentDate, "localized", "date")
+        // The exact format depends on the browser's locale, but it should
+        // contain the date components and not the time components
+        expect(result).toContain("2023")
+        expect(result).not.toContain("10:20")
+      })
+
+      it("formats time in localized format (time only)", () => {
+        const momentDate = moment.utc("2023-04-27T10:20:30Z")
+        const result = formatMoment(momentDate, "localized", "time")
+        // The exact format depends on the browser's locale, but it should
+        // contain time components and not date components
+        expect(result).toContain("10")
+        expect(result).toContain("20")
+        expect(result).not.toContain("2023")
+      })
+
+      it("formats datetime in localized format (date and time)", () => {
+        const momentDate = moment.utc("2023-04-27T10:20:30Z")
+        const result = formatMoment(momentDate, "localized", "datetime")
+        // The exact format depends on the browser's locale, but it should
+        // contain both date and time components
+        expect(result).toContain("2023")
+        expect(result).toContain("10")
+      })
+    })
   })
 })

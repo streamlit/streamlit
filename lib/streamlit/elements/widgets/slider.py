@@ -549,6 +549,9 @@ class SliderMixin:
             - ``"localized"``: Show in the user's locale format.
             - ``"distance"``: Show as relative time (e.g. ``"2 hours ago"``).
             - ``"calendar"``: Show as calendar time (e.g. ``"Tomorrow 12:00"``).
+              Works best with datetime values. For date-only values, displays
+              relative day names (e.g. ``"Yesterday"``). For time-only values,
+              this format may produce unexpected results.
             - ``"iso8601"``: Show in ISO 8601 format.
 
             For information about momentJS format strings, see

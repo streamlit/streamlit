@@ -428,7 +428,7 @@ function formatValue(value: number, element: SliderProto): string {
 
   if (options.length > 0) {
     // select slider does not support format strings, so we just return the option string.
-    return options[value]
+    return options[value] ?? ""
   }
 
   if (isDateTimeType(element)) {
