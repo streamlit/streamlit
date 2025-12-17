@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from datetime import date, time
+from datetime import date, datetime, time
 
 import streamlit as st
 from streamlit import runtime
@@ -194,6 +194,24 @@ st.slider(
 
 st.slider("Label 19 - Width 300px", min_value=0, max_value=100, width=300)
 st.slider("Label 20 - Width Stretch", min_value=0, max_value=100, width="stretch")
+
+# Slider with predefined number format
+st.slider(
+    "Slider with compact format",
+    min_value=0,
+    max_value=1000000,
+    value=500000,
+    format="compact",
+)
+
+# Slider with predefined datetime format
+st.slider(
+    "Slider with localized date format",
+    min_value=datetime(2020, 1, 1),
+    max_value=datetime(2025, 12, 31),
+    value=datetime(2023, 6, 15),
+    format="localized",
+)
 
 if st.toggle("Update slider props"):
     dyn_value = st.slider(
