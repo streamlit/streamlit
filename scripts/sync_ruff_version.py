@@ -181,7 +181,7 @@ def _parse_arguments() -> argparse.Namespace:
     parser.add_argument(
         "--check",
         action="store_true",
-        help="Check if versions are in sync without modifying files (useful for pre-commit hooks)",
+        help="Check if versions are in sync without modifying files.",
     )
     return parser.parse_args()
 
