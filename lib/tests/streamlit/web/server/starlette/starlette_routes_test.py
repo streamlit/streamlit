@@ -19,8 +19,15 @@ from __future__ import annotations
 import asyncio
 from unittest.mock import MagicMock
 
+from starlette.responses import Response
+
+from streamlit.web.server.starlette.starlette_app_utils import (
+    generate_xsrf_token_string,
+)
 from streamlit.web.server.starlette.starlette_routes import (
     _set_cors_headers,
+    _set_unquoted_cookie,
+    _validate_xsrf_token,
     _with_base,
 )
 from tests.testutil import patch_config_options
@@ -141,3 +148,111 @@ class TestSetCorsHeaders:
         asyncio.run(_set_cors_headers(request, response))
 
         assert "Access-Control-Allow-Origin" not in response.headers
+
+
+class TestValidateXsrfToken:
+    """Tests for _validate_xsrf_token function."""
+
+    def test_returns_false_when_supplied_token_is_none(self) -> None:
+        """Test that validation fails when supplied token is None."""
+
+        result = _validate_xsrf_token(None, "2|abcd|1234|12345")
+
+        assert result is False
+
+    def test_returns_false_when_cookie_is_none(self) -> None:
+        """Test that validation fails when cookie is None."""
+
+        result = _validate_xsrf_token("2|abcd|1234|12345", None)
+
+        assert result is False
+
+    def test_returns_false_when_both_are_none(self) -> None:
+        """Test that validation fails when both values are None."""
+
+        result = _validate_xsrf_token(None, None)
+
+        assert result is False
+
+    def test_returns_false_for_invalid_token_format(self) -> None:
+        """Test that validation fails for malformed tokens."""
+
+        result = _validate_xsrf_token("invalid", "also_invalid")
+
+        assert result is False
+
+    def test_returns_true_for_matching_tokens(self) -> None:
+        """Test that validation succeeds when tokens match."""
+
+        token_bytes = b"0123456789abcdef"
+        token1 = generate_xsrf_token_string(token_bytes, timestamp=12345)
+        token2 = generate_xsrf_token_string(token_bytes, timestamp=67890)
+
+        result = _validate_xsrf_token(token1, token2)
+
+        assert result is True
+
+    def test_returns_false_for_different_tokens(self) -> None:
+        """Test that validation fails when tokens don't match."""
+
+        token1 = generate_xsrf_token_string(b"0123456789abcdef", timestamp=12345)
+        token2 = generate_xsrf_token_string(b"different_token!", timestamp=12345)
+
+        result = _validate_xsrf_token(token1, token2)
+
+        assert result is False
+
+
+class TestSetUnquotedCookie:
+    """Tests for _set_unquoted_cookie function."""
+
+    def test_sets_cookie_without_quoting(self) -> None:
+        """Test that cookie value is set without URL encoding or quoting."""
+
+        response = Response()
+        cookie_value = "2|abcd1234|efgh5678|1234567890"
+
+        _set_unquoted_cookie(response, "test_cookie", cookie_value, secure=False)
+
+        cookie_headers = [
+            value.decode("latin-1")
+            for name, value in response.raw_headers
+            if name.lower() == b"set-cookie"
+        ]
+        assert len(cookie_headers) == 1
+        assert cookie_headers[0].startswith(f"test_cookie={cookie_value};")
+        assert "Path=/" in cookie_headers[0]
+        assert "SameSite=Lax" in cookie_headers[0]
+        assert "Secure" not in cookie_headers[0]
+
+    def test_sets_secure_flag_when_requested(self) -> None:
+        """Test that Secure flag is added when secure=True."""
+
+        response = Response()
+
+        _set_unquoted_cookie(response, "test_cookie", "value", secure=True)
+
+        cookie_headers = [
+            value.decode("latin-1")
+            for name, value in response.raw_headers
+            if name.lower() == b"set-cookie"
+        ]
+        assert len(cookie_headers) == 1
+        assert "Secure" in cookie_headers[0]
+
+    def test_replaces_existing_cookie_with_same_name(self) -> None:
+        """Test that setting a cookie replaces any existing cookie with the same name."""
+
+        response = Response()
+        response.set_cookie("test_cookie", "old_value")
+
+        _set_unquoted_cookie(response, "test_cookie", "new_value", secure=False)
+
+        cookie_headers = [
+            value.decode("latin-1")
+            for name, value in response.raw_headers
+            if name.lower() == b"set-cookie"
+        ]
+        assert len(cookie_headers) == 1
+        assert "new_value" in cookie_headers[0]
+        assert "old_value" not in cookie_headers[0]
