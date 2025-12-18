@@ -1,4 +1,4 @@
-name: Flaky Test Verification
+name: Flaky JS Unit Test Verification
 
 on:
   pull_request:
@@ -10,7 +10,7 @@ on:
         required: false
         type: string
       runs:
-        description: Number of times to run changed-files E2E
+        description: Number of times to run Vitest
         required: false
         default: "25"
         type: string
@@ -23,30 +23,26 @@ jobs:
   verify:
     if: |
       github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'pull_request' && github.event.action == 'labeled' && github.event.label.name == 'flaky-verify')
-    # ubuntu-latest (4 cores) is sufficient for this lightweight coordination job.
-    # The actual E2E test execution happens in the called workflow (playwright-changed-files.yml)
-    # which uses ubuntu-latest-8-cores.
+      (github.event_name == 'pull_request' && github.event.action == 'labeled' && github.event.label.name == 'flaky-verify-js')
+    # ubuntu-latest is sufficient for this lightweight coordination job.
+    # The actual JS unit tests execute in the called workflow (js-unit-tests.yml) below.
     runs-on: ubuntu-latest
     outputs:
       runs: ${{ steps.compute.outputs.runs }}
       pr-number: ${{ steps.compute.outputs.pr_number }}
-      base_ref: ${{ steps.compute.outputs.base_ref }}
       matrix: ${{ steps.compute.outputs.matrix }}
     steps:
-      - name: Remove flaky-verify label
+      - name: Remove flaky-verify-js label
         if: github.event_name == 'pull_request'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh api repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/labels/flaky-verify \
+          gh api repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/labels/flaky-verify-js \
             --method DELETE || true
 
       - name: Compute inputs and matrix
         id: compute
         shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
         run: |
           # Resolve runs
           runs_input="${{ inputs.runs }}"
@@ -81,15 +77,6 @@ jobs:
           fi
           echo "pr_number=$pr_number" >> "$GITHUB_OUTPUT"
 
-          # Get base ref/SHA for the PR
-          # Use base SHA for comparison since Graphite uses special base refs like "graphite-base/12922"
-          base_sha=$(gh api repos/streamlit/streamlit/pulls/$pr_number --jq '.base.sha')
-          if [[ -z "$base_sha" ]]; then
-            echo "::error::Failed to retrieve base SHA for PR #$pr_number"
-            exit 1
-          fi
-          echo "base_ref=$base_sha" >> "$GITHUB_OUTPUT"
-
           # Build JSON array for matrix
           json="["
           for i in $(seq 1 "$runs_input"); do
@@ -99,16 +86,14 @@ jobs:
           json+="]"
           echo "matrix=$json" >> "$GITHUB_OUTPUT"
 
-  e2e-changed-files-matrix:
+  vitest-matrix:
     needs: verify
     if: needs.verify.outputs.pr-number != ''
     strategy:
       fail-fast: false
       matrix:
         iteration: ${{ fromJson(needs.verify.outputs.matrix) }}
-    uses: ./.github/workflows/playwright-changed-files.yml
+    uses: ./.github/workflows/js-unit-tests.yml
     with:
       ref: refs/pull/${{ needs.verify.outputs.pr-number }}/head
-      base_ref: ${{ needs.verify.outputs.base_ref }}
-      iteration: ${{ matrix.iteration }}
     secrets: inherit
