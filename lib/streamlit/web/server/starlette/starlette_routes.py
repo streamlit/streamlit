@@ -112,8 +112,7 @@ def _ensure_xsrf_cookie(request: Request, response: Response) -> None:
     if not is_xsrf_enabled():
         return
 
-    cookie_name = XSRF_COOKIE_NAME
-    raw_cookie = request.cookies.get(cookie_name)
+    raw_cookie = request.cookies.get(XSRF_COOKIE_NAME)
     token_bytes: bytes | None = None
     timestamp: int | None = None
     if raw_cookie:
@@ -127,7 +126,7 @@ def _ensure_xsrf_cookie(request: Request, response: Response) -> None:
 
     _set_unquoted_cookie(
         response,
-        cookie_name,
+        XSRF_COOKIE_NAME,
         cookie_value,
         secure=bool(config.get_option("server.sslCertFile")),
     )
@@ -485,8 +484,14 @@ def create_upload_routes(
 
         # 1. Fast fail via header (if present) - check before reading the body
         content_length = request.headers.get("content-length")
-        if content_length and int(content_length) > max_size_bytes:
-            raise HTTPException(status_code=413, detail="File too large")
+        if content_length:
+            try:
+                if int(content_length) > max_size_bytes:
+                    raise HTTPException(status_code=413, detail="File too large")
+            except ValueError:
+                raise HTTPException(
+                    status_code=400, detail="Invalid Content-Length header"
+                )
 
         form = await request.form()
         uploads = [value for value in form.values() if isinstance(value, UploadFile)]

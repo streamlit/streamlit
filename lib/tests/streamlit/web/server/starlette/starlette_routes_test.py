@@ -57,22 +57,24 @@ class TestWithBase:
 
         assert result == "/myapp/_stcore/health"
 
+    @patch_config_options({"server.baseUrlPath": "shouldbeignored"})
     def test_explicit_base_url_overrides_config(self) -> None:
         """Test that explicit base_url parameter overrides config."""
         result = _with_base("_stcore/health", base_url="custom")
 
         assert result == "/custom/_stcore/health"
 
+    @patch_config_options({"server.baseUrlPath": "shouldbeignored"})
     def test_explicit_empty_base_url(self) -> None:
         """Test that explicit empty base_url works."""
         result = _with_base("_stcore/health", base_url="")
 
         assert result == "/_stcore/health"
 
+    @patch_config_options({"server.baseUrlPath": "fromconfig"})
     def test_explicit_none_base_url_uses_config(self) -> None:
         """Test that explicit None uses config."""
-        with patch_config_options({"server.baseUrlPath": "fromconfig"}):
-            result = _with_base("_stcore/health", base_url=None)
+        result = _with_base("_stcore/health", base_url=None)
 
         assert result == "/fromconfig/_stcore/health"
 
