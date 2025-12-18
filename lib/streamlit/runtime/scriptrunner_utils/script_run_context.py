@@ -170,6 +170,11 @@ class ScriptRunContext:
 
         parsed_query_params = parse.parse_qs(query_string, keep_blank_values=True)
         with self.session_state.query_params() as qp:
+            # Update the initial query params so widgets with ?key bindings
+            # can be initialized from the new query string (important for
+            # host communication path in embedded scenarios)
+            qp.update_initial_query_params(query_string)
+
             qp.clear_with_no_forward_msg()
             for key, val in parsed_query_params.items():
                 if len(val) == 0:

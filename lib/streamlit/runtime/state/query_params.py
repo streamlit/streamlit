@@ -128,6 +128,26 @@ class QueryParams(MutableMapping[str, str]):
             return values[0]
         return values
 
+    def update_initial_query_params(self, query_string: str) -> None:
+        """Update the initial query params from a new query string.
+
+        This is used when the host communication path sends updated query params
+        (e.g., in embedded scenarios where the host controls the URL). This allows
+        widgets with `?key` bindings to be initialized with host-provided values
+        on subsequent script reruns.
+
+        Parameters
+        ----------
+        query_string : str
+            The new query string without leading "?" (e.g., "foo=bar&baz=123").
+        """
+        if query_string:
+            self._initial_query_params = parse.parse_qs(
+                query_string, keep_blank_values=True
+            )
+        else:
+            self._initial_query_params = {}
+
     def __iter__(self) -> Iterator[str]:
         self._ensure_single_query_api_used()
 
