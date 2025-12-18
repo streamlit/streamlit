@@ -3424,7 +3424,7 @@ __metadata:
     node-emoji: "npm:^2.2.0"
     node-fetch: "npm:3.3.2"
     numbro: "npm:^2.5.0"
-    plotly.js: "npm:^3.3.0"
+    plotly.js: "npm:^3.3.1"
     postinstall-postinstall: "npm:^2.1.0"
     prettier: "npm:^3.7.4"
     protobufjs: "npm:^7.5.4"
@@ -14435,9 +14435,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"plotly.js@npm:^3.3.0":
-  version: 3.3.0
-  resolution: "plotly.js@npm:3.3.0"
+"plotly.js@npm:^3.3.1":
+  version: 3.3.1
+  resolution: "plotly.js@npm:3.3.1"
   dependencies:
     "@plotly/d3": "npm:3.8.2"
     "@plotly/d3-sankey": "npm:0.7.2"
@@ -14489,7 +14489,7 @@ __metadata:
     topojson-client: "npm:^3.1.0"
     webgl-context: "npm:^2.2.0"
     world-calendars: "npm:^1.0.4"
-  checksum: 10c0/e9c6966348480d8dded5fc1102fbe245a20578e6a5f2de1356217a0a6cb2c96376cb99c57fe639826e4f91581016fbc50771e1e6fad13f824fb2a4f8c5816fe7
+  checksum: 10c0/5ba3f49d61b78a5797bf59e28178614905d31a6155fc2391532ee92d5348b9738a23bb8f406c8ca240c9bb88a4f5a10474e94f3f5f2a08a5f0be2f5e1d2eb60e
   languageName: node
   linkType: hard
 
