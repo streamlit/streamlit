@@ -80,7 +80,7 @@ for detailed examples and explanation from the Snowpark Container Services side.
 `st.cache_resource` will have two new parameters. `st.cache_data` will have one of these two parameters, `scope`:
 
 ```python
-OnEvict: TypeAlias = Callable[[Any], None]
+OnRelease: TypeAlias = Callable[[Any], None]
 
 # This is showing the cache_resource example, but cache_data will be identical.
 
@@ -89,7 +89,7 @@ def cache_resource(
     self,
     # Existing args omitted for clarity.
     scope: Literal["global", "session"] = "global",
-    on_evict: OnEvict | None = None
+    on_release: OnRelease | None = None
 ) -> CachedFunc[P, R] | Callable[[Callable[P, R]], CachedFunc[P, R]]:
     """
     scope : Literal["global", "session"]
@@ -97,7 +97,7 @@ def cache_resource(
         the session.
 
         Session-scoped cache entries will be expired when a user's session ends.
-    on_evict : OnEvict
+    on_release : OnRelease
         If set, a function to call when a cache entry is removed from the cache. The
         removed item will be provided to the function as an argument.
 
@@ -138,7 +138,7 @@ These two new methods will be passed to the `cache_resource` call in `st.connect
 
 ### Cache expiration implementation
 
-We will add the expiration hook to the entry stored in [ResourceCache._mem_cache](https://github.com/streamlit/streamlit/blob/fb4a389a7338c9d22e4ea514ca2b20c10e086149/lib/streamlit/runtime/caching/cache_resource_api.py#L492-L494). Instead of storing `CachedResult[R]`, it will store `tuple[CachedResult[R], OnEvict]`. We will also replace the `TTLCache` with an extension of `TTLCache` that handles expiration, following [the examples in the cachetools library](https://cachetools.readthedocs.io/en/latest/#extending-cache-classes).
+We will add the expiration hook to the entry stored in [ResourceCache._mem_cache](https://github.com/streamlit/streamlit/blob/fb4a389a7338c9d22e4ea514ca2b20c10e086149/lib/streamlit/runtime/caching/cache_resource_api.py#L492-L494). Instead of storing `CachedResult[R]`, it will store `tuple[CachedResult[R], OnRelease]`. We will also replace the `TTLCache` with an extension of `TTLCache` that handles expiration, following [the examples in the cachetools library](https://cachetools.readthedocs.io/en/latest/#extending-cache-classes).
 
 To handle session-scoped items, we will add a new cache to [ResourceCaches](https://github.com/streamlit/streamlit/blob/fb4a389a7338c9d22e4ea514ca2b20c10e086149/lib/streamlit/runtime/caching/cache_resource_api.py#L82) that will have an extra session ID key. When looking up a resource cache, we will provide the current session ID for session-scoped resources, and use that to look up an item in the cache. Similar changes will be made in `DataCaches`.
 
