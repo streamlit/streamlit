@@ -29,6 +29,8 @@ const INITIAL_SLASH_RE = /^\/+/
  * - BACKEND_BASE_URL: string
  * - HOST_CONFIG.allowedOrigins: non-empty array of strings
  * - HOST_CONFIG.useExternalAuthToken: boolean (true or false)
+ *
+ * NOTE: changes to this function must be reflected in the mock in App.test.tsx
  */
 export function isHostConfigBypassEnabled(): boolean {
   const initialHostConfig = StreamlitConfig.HOST_CONFIG
@@ -41,8 +43,15 @@ export function isHostConfigBypassEnabled(): boolean {
 
   // Validate required fields
   const hasValidBackendBaseUrl = Boolean(StreamlitConfig.BACKEND_BASE_URL)
+
+  // Validate allowedOrigins is a non-empty array of non-empty strings
   const hasValidAllowedOrigins =
-    Array.isArray(allowedOrigins) && allowedOrigins.length > 0
+    Array.isArray(allowedOrigins) &&
+    allowedOrigins.length > 0 &&
+    allowedOrigins.every(
+      origin => typeof origin === "string" && origin.length > 0
+    )
+
   const hasValidUseExternalAuthToken =
     typeof useExternalAuthToken === "boolean"
 

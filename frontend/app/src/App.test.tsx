@@ -90,12 +90,19 @@ import { showDevelopmentOptions } from "./showDevelopmentOptions"
 // Mock StreamlitConfig using global mock state (see vitest.setup.ts)
 vi.mock("@streamlit/utils", async () => {
   const actual = await vi.importActual("@streamlit/utils")
-  return {
-    ...actual,
-    get StreamlitConfig() {
+
+  // Create a new object with the getter defined properly
+  // We must use Object.defineProperty to ensure the getter works correctly
+  const mocked = { ...actual }
+  Object.defineProperty(mocked, "StreamlitConfig", {
+    get() {
       return globalThis.__mockStreamlitConfig
     },
-  }
+    configurable: true,
+    enumerable: true,
+  })
+
+  return mocked
 })
 
 vi.mock("@streamlit/lib", async () => {
@@ -136,21 +143,30 @@ vi.mock("@streamlit/connection", async () => {
     return mockEndpoints()
   })
 
-  // isHostConfigBypassEnabled reads from globalThis.__mockStreamlitConfig
-  // to determine bypass eligibility (same criteria as real implementation)
-  const mockIsHostConfigBypassEnabled = (): boolean => {
+  // Mock isHostConfigBypassEnabled with validation logic that matches the real implementation.
+  // This is necessary to read from globalThis.__mockStreamlitConfig
+  // NOTE: Keep this in sync with the actual implementation in connection/src/utils.ts
+  // to avoid test drift. The validation must check:
+  // 1. BACKEND_BASE_URL exists
+  // 2. allowedOrigins is a non-empty array of non-empty strings
+  // 3. useExternalAuthToken is a boolean
+  const mockIsHostConfigBypassEnabled = vi.fn((): boolean => {
     const config = globalThis.__mockStreamlitConfig
     const hostConfig = config?.HOST_CONFIG
     if (!hostConfig) return false
 
     const { allowedOrigins, useExternalAuthToken } = hostConfig
+
     return (
       Boolean(config?.BACKEND_BASE_URL) &&
       Array.isArray(allowedOrigins) &&
       allowedOrigins.length > 0 &&
+      allowedOrigins.every(
+        origin => typeof origin === "string" && origin.length > 0
+      ) &&
       typeof useExternalAuthToken === "boolean"
     )
-  }
+  })
 
   return {
     ...actualModule,

@@ -636,6 +636,40 @@ describe("isHostConfigBypassEnabled", () => {
     expect(isHostConfigBypassEnabled()).toBe(false)
   })
 
+  it("returns false when allowedOrigins contains non-string values", () => {
+    globalThis.__mockStreamlitConfig = {
+      BACKEND_BASE_URL: "https://backend.example.com",
+      HOST_CONFIG: {
+        // @ts-expect-error - Testing invalid type
+        allowedOrigins: ["https://valid.com", 123, null],
+        useExternalAuthToken: true,
+      },
+    }
+    expect(isHostConfigBypassEnabled()).toBe(false)
+  })
+
+  it("returns false when allowedOrigins contains empty strings", () => {
+    globalThis.__mockStreamlitConfig = {
+      BACKEND_BASE_URL: "https://backend.example.com",
+      HOST_CONFIG: {
+        allowedOrigins: ["https://valid.com", ""],
+        useExternalAuthToken: true,
+      },
+    }
+    expect(isHostConfigBypassEnabled()).toBe(false)
+  })
+
+  it("returns false when allowedOrigins contains only empty strings", () => {
+    globalThis.__mockStreamlitConfig = {
+      BACKEND_BASE_URL: "https://backend.example.com",
+      HOST_CONFIG: {
+        allowedOrigins: ["", ""],
+        useExternalAuthToken: true,
+      },
+    }
+    expect(isHostConfigBypassEnabled()).toBe(false)
+  })
+
   it("returns false when useExternalAuthToken is missing", () => {
     globalThis.__mockStreamlitConfig = {
       BACKEND_BASE_URL: "https://backend.example.com",
