@@ -483,3 +483,63 @@ class TestSetItemInDict:
         target: dict[str, list[str] | str] = {}
         with pytest.raises(StreamlitAPIException, match=match):
             _set_item_in_dict(target, key, value)  # type: ignore[arg-type]
+
+
+class QueryParamsInitialValueTests(DeltaGeneratorTestCase):
+    """Tests for QueryParams methods related to initial URL values."""
+
+    def test_from_query_string_sets_initial_query_params(self):
+        """Test from_query_string sets both current and initial query params."""
+        qp = QueryParams.from_query_string("foo=bar&baz=123")
+        assert qp.get_initial_value("foo") == "bar"
+        assert qp.get_initial_value("baz") == "123"
+        assert qp["foo"] == "bar"
+        assert qp["baz"] == "123"
+
+    def test_from_query_string_handles_empty_string(self):
+        """Test from_query_string with empty string."""
+        qp = QueryParams.from_query_string("")
+        assert qp.get_initial_value("foo") is None
+
+    def test_from_query_string_handles_repeated_params(self):
+        """Test from_query_string with repeated parameters."""
+        qp = QueryParams.from_query_string("tag=a&tag=b&tag=c")
+        assert qp.get_initial_value("tag") == ["a", "b", "c"]
+        assert qp["tag"] == "c"  # getitem returns last value
+
+    def test_get_initial_value_returns_none_for_missing_key(self):
+        """Test get_initial_value returns None for non-existent keys."""
+        qp = QueryParams.from_query_string("foo=bar")
+        assert qp.get_initial_value("missing") is None
+
+    def test_update_initial_query_params_replaces_values(self):
+        """Test update_initial_query_params replaces all initial values."""
+        qp = QueryParams.from_query_string("old=value")
+        assert qp.get_initial_value("old") == "value"
+
+        qp.update_initial_query_params("new=updated")
+        assert qp.get_initial_value("old") is None
+        assert qp.get_initial_value("new") == "updated"
+
+    def test_update_initial_query_params_with_empty_string(self):
+        """Test update_initial_query_params clears values with empty string."""
+        qp = QueryParams.from_query_string("foo=bar")
+        assert qp.get_initial_value("foo") == "bar"
+
+        qp.update_initial_query_params("")
+        assert qp.get_initial_value("foo") is None
+
+    def test_update_initial_query_params_preserves_current_params(self):
+        """Test update_initial_query_params only changes initial values."""
+        qp = QueryParams.from_query_string("initial=old")
+        qp._query_params["current"] = "value"  # Modify current params
+
+        qp.update_initial_query_params("new=updated")
+        assert qp._query_params["current"] == "value"  # Current preserved
+        assert qp.get_initial_value("new") == "updated"
+
+    def test_update_initial_query_params_with_repeated_values(self):
+        """Test update_initial_query_params handles repeated params."""
+        qp = QueryParams()
+        qp.update_initial_query_params("tag=a&tag=b&tag=c")
+        assert qp.get_initial_value("tag") == ["a", "b", "c"]
