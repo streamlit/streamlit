@@ -248,13 +248,6 @@ const NumberInput: React.FC<Props> = ({
     ]
   )
 
-  const handleBlur = useCallback((): void => {
-    if (dirty) {
-      commitValue({ value, fromUi: true })
-    }
-    setIsFocused(false)
-  }, [dirty, value, commitValue])
-
   const handleFocus = useCallback((): void => {
     setIsFocused(true)
   }, [])
@@ -310,6 +303,15 @@ const NumberInput: React.FC<Props> = ({
     const parsed = parseFloat(formattedValue)
     return isNaN(parsed) ? null : parsed
   }, [formattedValue, element.dataType])
+
+  const handleBlur = useCallback((): void => {
+    if (dirty) {
+      // Use currentNumericValue (parsed from formattedValue) not value (from useBasicWidgetState)
+      // because value isn't updated until commit, but the user has typed a new value
+      commitValue({ value: currentNumericValue, fromUi: true })
+    }
+    setIsFocused(false)
+  }, [dirty, currentNumericValue, commitValue])
 
   const increment = useCallback(() => {
     if (canInc) {

@@ -104,6 +104,70 @@ describe("NumberInput widget", () => {
     )
   })
 
+  it("commits typed value when input loses focus (blur)", async () => {
+    // This tests when user types and blurs, the TYPED value
+    // should be committed to widgetMgr
+    const user = userEvent.setup()
+    const props = getFloatProps({ default: 10.0 })
+    vi.spyOn(props.widgetMgr, "setDoubleValue")
+
+    render(<NumberInput {...props} />)
+    const numberInput = screen.getByTestId("stNumberInputField")
+
+    // Clear and type a new value
+    await user.clear(numberInput)
+    await user.type(numberInput, "42.5")
+
+    // Blur to commit
+    await user.tab()
+
+    // Verify the TYPED value (42.5) was committed, not the old value (10.0)
+    expect(props.widgetMgr.setDoubleValue).toHaveBeenLastCalledWith(
+      props.element,
+      42.5,
+      { fromUi: true },
+      undefined
+    )
+    expect(numberInput).toHaveValue(42.5)
+  })
+
+  it("commits typed INT value when input loses focus (blur)", async () => {
+    const user = userEvent.setup()
+    const props = getIntProps({ default: 10 })
+    vi.spyOn(props.widgetMgr, "setIntValue")
+
+    render(<NumberInput {...props} />)
+    const numberInput = screen.getByTestId("stNumberInputField")
+
+    await user.clear(numberInput)
+    await user.type(numberInput, "42")
+    await user.tab()
+
+    expect(props.widgetMgr.setIntValue).toHaveBeenLastCalledWith(
+      props.element,
+      42,
+      { fromUi: true },
+      undefined
+    )
+    expect(numberInput).toHaveValue(42)
+  })
+
+  it("applies value from setValue correctly", () => {
+    // Verify that when backend sends setValue=true with a value,
+    // the widget displays that value
+    const props = getIntProps({ setValue: true, value: 42, default: 10 })
+    render(<NumberInput {...props} />)
+
+    expect(screen.getByTestId("stNumberInputField")).toHaveValue(42)
+  })
+
+  it("applies FLOAT value from setValue correctly", () => {
+    const props = getFloatProps({ setValue: true, value: 3.14, default: 1.0 })
+    render(<NumberInput {...props} />)
+
+    expect(screen.getByTestId("stNumberInputField")).toHaveValue(3.14)
+  })
+
   it("handles malformed format strings without crashing", () => {
     // This format string is malformed (it should be %0.2f)
     const props = getFloatProps({
@@ -289,17 +353,6 @@ describe("NumberInput widget", () => {
     // Element rendering material icon
     const materialIcon = screen.getByTestId("stIconMaterial")
     expect(materialIcon).toHaveTextContent("attach_money")
-  })
-
-  it("handles setValue correctly without mutating element", () => {
-    const props = getIntProps({ setValue: true, value: 42 })
-    render(<NumberInput {...props} />)
-
-    // Verify the element was not mutated
-    expect(props.element.setValue).toBe(true)
-
-    // Verify the value was applied
-    expect(screen.getByTestId("stNumberInputField")).toHaveValue(42)
   })
 
   describe("FloatData", () => {
