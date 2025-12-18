@@ -73,6 +73,7 @@ const ScreencastDialog: React.FC<Props> = ({
             <input
               type="checkbox"
               name="recordAudio"
+              aria-label="Also record audio"
               checked={recordAudio}
               onChange={handleRecordAudioCheckbox}
             />{" "}

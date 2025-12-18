@@ -15,6 +15,7 @@
  */
 
 import enforceMemo from "./enforce-memo"
+import noAriaHiddenWithFocusableChildren from "./no-aria-hidden-with-focusable-children"
 import noForceReflowAccess from "./no-force-reflow-access"
 import noHardcodedThemeValues from "./no-hardcoded-theme-values"
 import useStrictNullEqualityChecks from "./use-strict-null-equality-checks"
@@ -23,6 +24,8 @@ export default {
   rules: {
     "enforce-memo": enforceMemo,
     "no-force-reflow-access": noForceReflowAccess,
+    "no-aria-hidden-with-focusable-children":
+      noAriaHiddenWithFocusableChildren,
     "no-hardcoded-theme-values": noHardcodedThemeValues,
     "use-strict-null-equality-checks": useStrictNullEqualityChecks,
   },

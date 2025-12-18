@@ -380,6 +380,7 @@ export default defineConfig([
       // We only turn this rule on for certain directories
       "streamlit-custom/enforce-memo": "off",
       "streamlit-custom/no-force-reflow-access": "error",
+      "streamlit-custom/no-aria-hidden-with-focusable-children": "error",
       "no-restricted-imports": getNoRestrictedImports(),
       // React configuration
       "react/jsx-uses-react": "off",
@@ -393,6 +394,13 @@ export default defineConfig([
       // prohibit autoFocus prop
       // https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/blob/main/docs/rules/no-autofocus.md
       "jsx-a11y/no-autofocus": ["error", { ignoreNonDOM: true }],
+      // Stricter a11y enforcement beyond the recommended ruleset:
+      // - Require accessible names for icon-only controls
+      "jsx-a11y/control-has-associated-label": "error",
+      // - Do not hide focusable controls from assistive technology
+      "jsx-a11y/no-aria-hidden-on-focusable": "error",
+      // - Avoid making non-interactive elements keyboard-focusable via tabIndex>=0
+      "jsx-a11y/no-noninteractive-tabindex": "error",
     },
     settings: {
       react: {
