@@ -39,6 +39,7 @@ from streamlit.runtime.state.query_param_serializers import (
     deserialize_datetime,
     deserialize_number,
     deserialize_number_range,
+    deserialize_option,
     deserialize_slider_value,
     deserialize_string,
     deserialize_time,
@@ -48,6 +49,7 @@ from streamlit.runtime.state.query_param_serializers import (
     serialize_datetime,
     serialize_number,
     serialize_number_range,
+    serialize_option,
     serialize_slider_value,
     serialize_string,
     serialize_time,
@@ -229,6 +231,107 @@ def register_widget_from_metadata(
                 serializers = (serialize_time, deserialize_time)
             elif serde_name == "ColorPickerSerde":
                 serializers = (serialize_color, deserialize_color)
+
+        # Category C: Selection widgets with value-based serialization
+        # st.radio uses int_value (index), convert to value-based for human-friendly URLs
+        if effective_value_type == "int_value" and serde_name == "RadioSerde":
+            options = getattr(serde_instance, "options", [])
+            default_index = getattr(serde_instance, "index", 0)
+
+            def _serialize_radio(value: object) -> str:
+                return serialize_option(value, options)
+
+            def _deserialize_radio(v: str | list[str]) -> object | None:
+                default_val = (
+                    options[default_index] if default_index is not None else None
+                )
+                return deserialize_option(v, options, default=default_val)
+
+            serializers = (_serialize_radio, _deserialize_radio)
+
+        # st.multiselect uses string_array_value (formatted strings)
+        # Serialize as repeated query params: ?tags=a&tags=b
+        # Use formatted_options (from format_func) for human-readable URLs
+        if (
+            effective_value_type == "string_array_value"
+            and serde_name == "MultiSelectSerde"
+        ):
+            options = getattr(serde_instance, "options", [])
+            formatted_options = getattr(serde_instance, "formatted_options", [])
+            formatted_to_index = getattr(
+                serde_instance, "formatted_option_to_option_index", {}
+            )
+
+            # Build a lookup from option value to formatted string
+            option_to_formatted = {
+                opt: formatted_options[i] for i, opt in enumerate(options)
+            }
+
+            def _serialize_multiselect(values: object) -> list[str]:
+                if values is None:
+                    return []
+                if not isinstance(values, (list, tuple)):
+                    values = [values]
+                return [option_to_formatted.get(v, str(v)) for v in values]
+
+            def _deserialize_multiselect(v: str | list[str]) -> list[object]:
+                if isinstance(v, str):
+                    v = [v] if v else []
+                result = []
+                for val in v:
+                    # Look up via formatted_option_to_option_index (uses format_func)
+                    idx = formatted_to_index.get(val)
+                    if idx is not None:
+                        result.append(options[idx])
+                    else:
+                        # Fallback: try matching str(option)
+                        for opt in options:
+                            if str(opt) == val:
+                                result.append(opt)
+                                break
+                return result
+
+            serializers = (_serialize_multiselect, _deserialize_multiselect)
+
+        # st.select_slider uses double_array_value (indices as floats)
+        # Convert to value-based for human-friendly URLs
+        if (
+            effective_value_type == "double_array_value"
+            and serde_name == "SelectSliderSerde"
+        ):
+            options = getattr(serde_instance, "options", [])
+            is_range = bool(getattr(serde_instance, "is_range_value", False))
+
+            def _serialize_select_slider(value: object) -> str:
+                return serialize_option(value, options)
+
+            def _deserialize_select_slider(v: str | list[str]) -> object | None:
+                result = deserialize_option(v, options)
+                if result is None:
+                    return None
+                # Select slider returns single value or tuple based on is_range
+                if is_range:
+                    # For range sliders, expect comma-separated values like "A,C"
+                    if isinstance(v, list):
+                        v = v[-1] if v else ""
+                    if isinstance(v, str) and "," in v:
+                        parts = v.split(",", 1)
+                        start = deserialize_option(parts[0], options)
+                        end = deserialize_option(parts[1], options)
+                        if start is not None and end is not None:
+                            return (start, end)
+                    return None
+                return result
+
+            def _serialize_select_slider_full(value: object) -> str:
+                # Handle range values (tuple/list)
+                if isinstance(value, (tuple, list)) and len(value) == 2:
+                    s1 = serialize_option(value[0], options)
+                    s2 = serialize_option(value[1], options)
+                    return f"{s1},{s2}"
+                return serialize_option(value, options)
+
+            serializers = (_serialize_select_slider_full, _deserialize_select_slider)
 
         if effective_value_type == "double_array_value" and serde_name == "SliderSerde":
             # Sliders always use double_array_value in widget state, even for single-value
