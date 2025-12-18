@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import io
 import mimetypes
+import os
 from pathlib import Path
 
 from streamlit.runtime import file_util
@@ -44,6 +45,11 @@ def convert_data_to_bytes_and_infer_mime(
             filename = data.split("/")[-1].split("?")[0]
             inferred_mime_type = (
                 mimetypes.guess_type(filename)[0] or "application/octet-stream"
+            )
+        elif os.path.isfile(data):  # ← YOU'RE MISSING THIS CHECK!
+            data_as_bytes = file_util.local_file_down(data)
+            inferred_mime_type = (
+                mimetypes.guess_type(data)[0] or "application/octet-stream"
             )
         else:
             data_as_bytes = data.encode()

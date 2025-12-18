@@ -27,11 +27,15 @@ from streamlit.runtime.download_data_util import convert_data_to_bytes_and_infer
 
 
 class ConvertDataToBytesAndInferMimeTest(unittest.TestCase):
+    @unittest.mock.patch("streamlit.runtime.download_data_util.os.path.isfile")
     @unittest.mock.patch(
         "streamlit.runtime.download_data_util.file_util.local_file_down"
     )
-    def test_local_file_downloads_and_infers_mime_type(self, mock_local_file_down):
+    def test_local_file_downloads_and_infers_mime_type(
+        self, mock_local_file_down, mock_isfile
+    ):
         """Local file path is downloaded and MIME type is inferred from filename."""
+        mock_isfile.return_value = True  # Pretend the file exists
         mock_local_file_down.return_value = b"file content"
         data_as_bytes, mime = convert_data_to_bytes_and_infer_mime(
             "/path/to/file.txt", unsupported_error=RuntimeError("unsupported")
