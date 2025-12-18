@@ -506,8 +506,10 @@ def create_upload_routes(
         # 2. Check actual file size (Content-Length may be absent or inaccurate)
         # TODO(lukasmasuch): Improve by using a streaming approach that rejects uploads as soon as
         # they exceed max_size_bytes, rather than waiting for the full upload to complete.
-        data = await upload.read()
-        upload.file.close()
+        try:
+            data = await upload.read()
+        finally:
+            upload.file.close()
         if len(data) > max_size_bytes:
             raise HTTPException(status_code=413, detail="File too large")
 
