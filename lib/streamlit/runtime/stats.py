@@ -15,10 +15,14 @@
 from __future__ import annotations
 
 import itertools
-from typing import TYPE_CHECKING, NamedTuple, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Final, NamedTuple, Protocol, runtime_checkable
+
+CACHE_MEMORY_FAMILY: Final = "cache_memory_bytes"
+SESSION_EVENTS_FAMILY: Final = "session_events_total"
+ACTIVE_SESSIONS_FAMILY: Final = "active_sessions"
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Mapping, Sequence
 
     from streamlit.proto.openmetrics_data_model_pb2 import (
         Metric as MetricProto,
@@ -65,6 +69,9 @@ class Stat(Protocol):
         pass
 
 
+# TODO(vdonato): Could we use GaugeStat below and get rid of this class?
+# We'd have to make some minor changes to use the other class, but overall the
+# changes should be relatively minor.
 class CacheStat(NamedTuple):
     """Describes a single cache entry.
 
@@ -89,7 +96,7 @@ class CacheStat(NamedTuple):
     # Stat Protocol fields with default values for cache metrics
     @property
     def family_name(self) -> str:
-        return "cache_memory_bytes"
+        return CACHE_MEMORY_FAMILY
 
     @property
     def type(self) -> str:
@@ -142,6 +149,96 @@ def group_cache_stats(stats: list[CacheStat]) -> list[CacheStat]:
     return result
 
 
+class CounterStat(NamedTuple):
+    """A counter stat.
+
+    Properties
+    ----------
+    family_name : str
+        The name of the metric family (e.g. 'session_events_total').
+    value : int
+        The current count value.
+    labels : dict[str, str] | None
+        Labels to identify this specific counter (e.g. {"type": "connection"}).
+    unit : str
+        The unit of the metric (e.g. '' for unitless).
+    help : str
+        A description of the metric.
+    """
+
+    family_name: str
+    value: int
+    labels: dict[str, str] | None = None
+    unit: str = ""
+    help: str = ""
+
+    @property
+    def type(self) -> str:
+        return "counter"
+
+    def to_metric_str(self) -> str:
+        if self.labels:
+            labels_str = ",".join(f'{k}="{v}"' for k, v in sorted(self.labels.items()))
+            return f"{self.family_name}{{{labels_str}}} {self.value}"
+        return f"{self.family_name} {self.value}"
+
+    def marshall_metric_proto(self, metric: MetricProto) -> None:
+        """Fill an OpenMetrics `Metric` protobuf object."""
+        if self.labels:
+            for name, value in sorted(self.labels.items()):
+                label = metric.labels.add()
+                label.name = name
+                label.value = value
+
+        metric_point = metric.metric_points.add()
+        metric_point.counter_value.int_value = self.value
+
+
+class GaugeStat(NamedTuple):
+    """A gauge stat.
+
+    Properties
+    ----------
+    family_name : str
+        The name of the metric family (e.g. 'active_sessions').
+    value : int
+        The current gauge value.
+    labels : dict[str, str] | None
+        Optional labels to identify this specific gauge.
+    unit : str
+        The unit of the metric (e.g. '' for unitless).
+    help : str
+        A description of the metric.
+    """
+
+    family_name: str
+    value: int
+    labels: dict[str, str] | None = None
+    unit: str = ""
+    help: str = ""
+
+    @property
+    def type(self) -> str:
+        return "gauge"
+
+    def to_metric_str(self) -> str:
+        if self.labels:
+            labels_str = ",".join(f'{k}="{v}"' for k, v in sorted(self.labels.items()))
+            return f"{self.family_name}{{{labels_str}}} {self.value}"
+        return f"{self.family_name} {self.value}"
+
+    def marshall_metric_proto(self, metric: MetricProto) -> None:
+        """Fill an OpenMetrics `Metric` protobuf object."""
+        if self.labels:
+            for name, value in sorted(self.labels.items()):
+                label = metric.labels.add()
+                label.name = name
+                label.value = value
+
+        metric_point = metric.metric_points.add()
+        metric_point.gauge_value.int_value = self.value
+
+
 def metric_type_string_to_proto(type_string: str) -> MetricType.ValueType:
     """Convert a metric type string to its corresponding proto enum value."""
     from streamlit.proto.openmetrics_data_model_pb2 import (
@@ -169,48 +266,99 @@ def metric_type_string_to_proto(type_string: str) -> MetricType.ValueType:
 
 @runtime_checkable
 class StatsProvider(Protocol):
-    def get_stats(self) -> Sequence[Stat]:
+    @property
+    def stats_families(self) -> Sequence[str]:
+        """The metric family names that this provider supports.
+
+        The StatsManager uses this property to determine which providers to call
+        when specific metric families are requested.
+        """
+        pass
+
+    def get_stats(
+        self, family_names: Sequence[str] | None = None
+    ) -> Mapping[str, Sequence[Stat]]:
+        """Return stats for the specified metric families.
+
+        Parameters
+        ----------
+        family_names : Sequence[str] | None
+            If provided, only stats for these metric families should be computed
+            and returned. If None, stats for all families this provider supports
+            should be returned. Providers should check this parameter and skip
+            computing expensive stats for families that aren't requested.
+
+        Returns
+        -------
+        Mapping[str, Sequence[Stat]]
+            A mapping from metric family names to sequences of Stat objects.
+        """
         raise NotImplementedError
 
 
 class StatsManager:
     def __init__(self) -> None:
-        self._stats_providers: dict[str, list[StatsProvider]] = {}
+        self._providers_by_family: dict[str, list[StatsProvider]] = {}
 
-    def register_provider(self, family_name: str, provider: StatsProvider) -> None:
-        """Register a StatsProvider with the manager for a given metric family.
+    def register_provider(self, provider: StatsProvider) -> None:
+        """Register a StatsProvider with the manager.
 
-        Multiple providers can be registered for the same family name, and their
-        stats will be combined when get_stats() is called.
-
-        This function is not thread-safe. Call it immediately after
-        creation.
+        This function is not thread-safe. Call it immediately after creation.
 
         Parameters
         ----------
-        family_name : str
-            The name of the metric family that this provider produces stats for.
         provider : StatsProvider
-            The stats provider to register.
+            The stats provider to register. The provider's `stats_families`
+            property determines which metric families it will be called for.
         """
-        if family_name not in self._stats_providers:
-            self._stats_providers[family_name] = []
-        self._stats_providers[family_name].append(provider)
+        for family in provider.stats_families:
+            if family not in self._providers_by_family:
+                self._providers_by_family[family] = []
+            self._providers_by_family[family].append(provider)
 
-    def get_stats(self) -> dict[str, Sequence[Stat]]:
-        """Return all registered stats grouped by metric family name.
+    def get_stats(
+        self, family_names: Sequence[str] | None = None
+    ) -> Mapping[str, Sequence[Stat]]:
+        """Return registered stats grouped by metric family name.
+
+        Parameters
+        ----------
+        family_names : Sequence[str] | None
+            If provided, only stats for these metric families will be returned.
+            If None, stats for all registered families are returned.
 
         Returns
         -------
-        dict[str, Sequence[Stat]]
-            A dictionary mapping metric family names (as registered with
-            register_provider) to sequences of Stat objects from all providers
-            registered under that family name.
+        Mapping[str, Sequence[Stat]]
+            A mapping from metric family names to sequences of Stat objects
+            from all providers.
         """
         result: dict[str, Sequence[Stat]] = {}
-        for family_name, providers in self._stats_providers.items():
-            all_stats: list[Stat] = []
-            for provider in providers:
-                all_stats.extend(provider.get_stats())
-            result[family_name] = all_stats
+
+        families_to_query = (
+            family_names if family_names else list(self._providers_by_family.keys())
+        )
+
+        # Track which providers we've already queried to avoid duplicates.
+        # The same provider may be registered for multiple families, and we call
+        # `provider.get_stats(family_names)` below to fetch all stat families for
+        # a given stats provider at once.
+        queried_providers: set[int] = set()
+
+        for family in families_to_query:
+            for provider in self._providers_by_family.get(family, []):
+                provider_id = id(provider)
+                if provider_id in queried_providers:
+                    continue
+                queried_providers.add(provider_id)
+
+                provider_stats = provider.get_stats(family_names)
+                for fname, stats in provider_stats.items():
+                    if fname not in result:
+                        result[fname] = []
+                    # Use list() to convert Sequence to list for concatenation.
+                    # This is needed for type covariance: providers return
+                    # Mapping[str, Sequence[Stat]] but we build a dict of lists.
+                    result[fname] = list(result[fname]) + list(stats)
+
         return result

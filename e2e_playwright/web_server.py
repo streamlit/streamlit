@@ -48,7 +48,9 @@ st.download_button(
     key="test_download",
 )
 
-# Display session info
+# Display session info.
+# Setting session state here also ensures cache_memory_bytes metrics are available
+# for the metrics endpoint tests to verify filtering works correctly.
 st.subheader("Session Info")
 if "counter" not in st.session_state:
     st.session_state.counter = 0
