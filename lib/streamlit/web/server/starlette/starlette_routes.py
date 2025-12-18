@@ -41,6 +41,7 @@ from streamlit.web.server.routes import (
 )
 from streamlit.web.server.server_util import get_url, is_xsrf_enabled
 from streamlit.web.server.starlette import starlette_app_utils
+from streamlit.web.server.starlette.starlette_app_utils import validate_xsrf_token
 from streamlit.web.server.starlette.starlette_server_config import XSRF_COOKIE_NAME
 from streamlit.web.server.stats_request_handler import StatsRequestHandler
 
@@ -130,27 +131,6 @@ def _ensure_xsrf_cookie(request: Request, response: Response) -> None:
         cookie_value,
         secure=bool(config.get_option("server.sslCertFile")),
     )
-
-
-def _validate_xsrf_token(supplied_token: str | None, xsrf_cookie: str | None) -> bool:
-    """Validate the XSRF token from the request header against the cookie.
-
-    This mirrors Tornado's XSRF validation logic to ensure compatibility.
-    """
-    import hmac
-
-    if not supplied_token or not xsrf_cookie:
-        return False
-
-    supplied_token_bytes, _ = starlette_app_utils.decode_xsrf_token_string(
-        supplied_token
-    )
-    expected_token_bytes, _ = starlette_app_utils.decode_xsrf_token_string(xsrf_cookie)
-
-    if not supplied_token_bytes or not expected_token_bytes:
-        return False
-
-    return hmac.compare_digest(supplied_token_bytes, expected_token_bytes)
 
 
 def _set_unquoted_cookie(
@@ -444,7 +424,7 @@ def create_upload_routes(
         xsrf_header = request.headers.get("X-Xsrftoken")
         xsrf_cookie = request.cookies.get(XSRF_COOKIE_NAME)
 
-        if not _validate_xsrf_token(xsrf_header, xsrf_cookie):
+        if not validate_xsrf_token(xsrf_header, xsrf_cookie):
             raise HTTPException(status_code=403, detail="XSRF token missing or invalid")
 
     async def _set_upload_headers(request: Request, response: Response) -> None:

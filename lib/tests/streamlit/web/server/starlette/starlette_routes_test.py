@@ -21,13 +21,9 @@ from unittest.mock import MagicMock
 
 from starlette.responses import Response
 
-from streamlit.web.server.starlette.starlette_app_utils import (
-    generate_xsrf_token_string,
-)
 from streamlit.web.server.starlette.starlette_routes import (
     _set_cors_headers,
     _set_unquoted_cookie,
-    _validate_xsrf_token,
     _with_base,
 )
 from tests.testutil import patch_config_options
@@ -148,59 +144,6 @@ class TestSetCorsHeaders:
         asyncio.run(_set_cors_headers(request, response))
 
         assert "Access-Control-Allow-Origin" not in response.headers
-
-
-class TestValidateXsrfToken:
-    """Tests for _validate_xsrf_token function."""
-
-    def test_returns_false_when_supplied_token_is_none(self) -> None:
-        """Test that validation fails when supplied token is None."""
-
-        result = _validate_xsrf_token(None, "2|abcd|1234|12345")
-
-        assert result is False
-
-    def test_returns_false_when_cookie_is_none(self) -> None:
-        """Test that validation fails when cookie is None."""
-
-        result = _validate_xsrf_token("2|abcd|1234|12345", None)
-
-        assert result is False
-
-    def test_returns_false_when_both_are_none(self) -> None:
-        """Test that validation fails when both values are None."""
-
-        result = _validate_xsrf_token(None, None)
-
-        assert result is False
-
-    def test_returns_false_for_invalid_token_format(self) -> None:
-        """Test that validation fails for malformed tokens."""
-
-        result = _validate_xsrf_token("invalid", "also_invalid")
-
-        assert result is False
-
-    def test_returns_true_for_matching_tokens(self) -> None:
-        """Test that validation succeeds when tokens match."""
-
-        token_bytes = b"0123456789abcdef"
-        token1 = generate_xsrf_token_string(token_bytes, timestamp=12345)
-        token2 = generate_xsrf_token_string(token_bytes, timestamp=67890)
-
-        result = _validate_xsrf_token(token1, token2)
-
-        assert result is True
-
-    def test_returns_false_for_different_tokens(self) -> None:
-        """Test that validation fails when tokens don't match."""
-
-        token1 = generate_xsrf_token_string(b"0123456789abcdef", timestamp=12345)
-        token2 = generate_xsrf_token_string(b"different_token!", timestamp=12345)
-
-        result = _validate_xsrf_token(token1, token2)
-
-        assert result is False
 
 
 class TestSetUnquotedCookie:
