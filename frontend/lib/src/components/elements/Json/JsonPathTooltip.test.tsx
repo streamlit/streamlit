@@ -16,11 +16,19 @@
 
 import React from "react"
 
-import { screen } from "@testing-library/react"
+import { screen, waitFor } from "@testing-library/react"
+import { userEvent } from "@testing-library/user-event"
 
 import { render } from "~lib/test_util"
 
 import JsonPathTooltip, { JsonPathTooltipProps } from "./JsonPathTooltip"
+
+const mockWriteText = vi.fn()
+Object.assign(navigator, {
+  clipboard: {
+    writeText: mockWriteText,
+  },
+})
 
 const getProps = (
   props: Partial<JsonPathTooltipProps> = {}
@@ -33,6 +41,11 @@ const getProps = (
 })
 
 describe("JsonPathTooltip", () => {
+  beforeEach(() => {
+    mockWriteText.mockReset()
+    mockWriteText.mockResolvedValue(undefined)
+  })
+
   it("renders the path text", () => {
     render(<JsonPathTooltip {...getProps()} />)
     expect(screen.getByText("data.items[0].name")).toBeVisible()
@@ -46,5 +59,17 @@ describe("JsonPathTooltip", () => {
   it("renders a copy button", () => {
     render(<JsonPathTooltip {...getProps()} />)
     expect(screen.getByRole("button", { name: /copy/i })).toBeVisible()
+  })
+
+  it("copies the path to clipboard when copy button is clicked", async () => {
+    const user = userEvent.setup()
+    render(<JsonPathTooltip {...getProps()} />)
+
+    const copyButton = screen.getByRole("button", { name: /copy/i })
+    await user.click(copyButton)
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /copied/i })).toBeVisible()
+    })
   })
 })

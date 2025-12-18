@@ -69,6 +69,7 @@ function JsonPathTooltip({
             onClick={handleCopyPath}
             title={label}
             aria-label={label}
+            autoFocus
           >
             <DynamicIcon
               size="sm"
