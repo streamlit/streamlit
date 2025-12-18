@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { MouseEvent, ReactElement } from "react"
+import { MouseEvent, ReactElement } from "react"
 
 import { DynamicIcon, isMaterialIcon, useEmotionTheme } from "@streamlit/lib"
 

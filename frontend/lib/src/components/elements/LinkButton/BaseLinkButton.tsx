@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { forwardRef, memo, ReactElement } from "react"
+import { forwardRef, memo, ReactElement } from "react"
 
 import {
   BaseButtonKind,

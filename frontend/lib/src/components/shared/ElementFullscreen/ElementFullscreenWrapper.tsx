@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { FC, PropsWithChildren, useMemo } from "react"
+import { FC, PropsWithChildren, useMemo } from "react"
 
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
 import { StyledFullScreenFrame } from "~lib/components/shared/FullScreenWrapper/styled-components"

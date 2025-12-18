@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { Children, forwardRef, ReactElement } from "react"
+import { Children, forwardRef, ReactElement } from "react"
 
 import {
   type OptionListProps,

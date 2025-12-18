@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-import React from "react"
-
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
 import { isNullOrUndefined, LabelVisibilityOptions } from "~lib/util/utils"
 

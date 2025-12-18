@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { memo, ReactElement, useEffect } from "react"
+import { memo, ReactElement, useEffect } from "react"
 
 import { Engine, graphviz } from "d3-graphviz"
 import { getLogger } from "loglevel"

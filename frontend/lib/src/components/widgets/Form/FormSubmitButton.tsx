@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useCallback, useEffect } from "react"
+import { ReactElement, useCallback, useEffect } from "react"
 
 import { Button as ButtonProto } from "@streamlit/protobuf"
 

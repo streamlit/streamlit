@@ -29,6 +29,7 @@ declare module "native-file-system-adapter"
 // some of it to fix a bug in the color picker that triggers a security error when
 // the color picker is closed in a cross-origin iframe, see `BaseColorPicker.tsx`.
 declare module "react-color/es/components/common/Saturation" {
+  // eslint-disable-next-line no-restricted-imports -- In a .d.ts file.
   import React from "react"
   export default class Saturation extends React.Component<any, any> {
     container: HTMLElement

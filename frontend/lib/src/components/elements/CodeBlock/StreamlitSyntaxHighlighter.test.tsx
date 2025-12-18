@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-import React from "react"
-
 import { render } from "~lib/test_util"
 
 import StreamlitSyntaxHighlighter, {

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { useEffect, useMemo, useRef } from "react"
+import { useEffect, useMemo, useRef } from "react"
 
 import { BidiComponentContext } from "~lib/components/widgets/BidiComponent/BidiComponentContext"
 import { handleError } from "~lib/components/widgets/BidiComponent/utils/error"

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { lazy, ReactElement, Suspense, useContext } from "react"
+import { lazy, ReactElement, Suspense, useContext } from "react"
 
 import classNames from "classnames"
 

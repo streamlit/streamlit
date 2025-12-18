@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { FC, memo, useEffect, useState } from "react"
+import { FC, memo, useEffect, useState } from "react"
 
 import {
   ParagraphSkeleton,
