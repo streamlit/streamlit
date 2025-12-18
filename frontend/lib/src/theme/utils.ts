@@ -1269,6 +1269,28 @@ export function blend(color: string, background: string | undefined): string {
 }
 
 /**
+ * Canonical focus ring used across Streamlit components for keyboard focus
+ * (usually applied via `:focus-visible`).
+ */
+export const getFocusBoxShadow = (
+  color: string,
+  /**
+   * The alpha value to use for the focus ring.
+   * Matches color2k.transparentize: 0 = unchanged, 1 = fully transparent.
+   */
+  alpha: number = 0.5,
+  width: string = "0.2rem"
+): string => {
+  return `0 0 0 ${width} ${transparentize(color, alpha)}`
+}
+
+export const getPrimaryFocusBoxShadow = (
+  theme: Pick<EmotionTheme, "colors">
+): string => {
+  return getFocusBoxShadow(theme.colors.primary)
+}
+
+/**
  * Convert a SCSS rem value to pixels.
  * @param scssValue: a string containing a value in rem units with or without the "rem" unit suffix
  * @returns pixel value of the given rem value

@@ -22,11 +22,11 @@ import {
   Checkbox as UICheckbox,
 } from "baseui/checkbox"
 import { PLACEMENT, TRIGGER_TYPE, Popover as UIPopover } from "baseui/popover"
-import { transparentize } from "color2k"
 
 import { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { hasLightBackgroundColor } from "~lib/theme"
+import { getPrimaryFocusBoxShadow } from "~lib/theme/utils"
 
 import { StyledMenuDivider } from "./styled-components"
 
@@ -117,7 +117,7 @@ const CheckboxItem: React.FC<CheckboxItemProps> = ({
               marginBottom: 0,
               boxShadow:
                 $isFocusVisible && ($checked || $isIndeterminate)
-                  ? `0 0 0 0.2rem ${transparentize(theme.colors.primary, 0.5)}`
+                  ? getPrimaryFocusBoxShadow(theme)
                   : "",
               borderLeftWidth: theme.sizes.borderWidth,
               borderRightWidth: theme.sizes.borderWidth,
