@@ -387,7 +387,7 @@ export class WebsocketConnection {
   }
 
   private async pingServer(): Promise<void> {
-    this.pingRequest = doInitPings(
+    const currentRequest = doInitPings(
       this.args.baseUriPartsList,
       PING_MINIMUM_RETRY_PERIOD_MS,
       PING_MAXIMUM_RETRY_PERIOD_MS,
@@ -395,10 +395,14 @@ export class WebsocketConnection {
       this.args.sendClientError,
       this.args.onHostConfigResp
     )
+    this.pingRequest = currentRequest
 
     try {
-      this.uriIndex = await this.pingRequest.promise
-      this.pingRequest = undefined
+      this.uriIndex = await currentRequest.promise
+      // Only clear if we're still the active request
+      if (this.pingRequest === currentRequest) {
+        this.pingRequest = undefined
+      }
       this.stepFsm("SERVER_PING_SUCCEEDED")
     } catch (e) {
       if (e instanceof PingCancelledError) {
@@ -410,8 +414,11 @@ export class WebsocketConnection {
         this.stepFsm("FATAL_ERROR", e instanceof Error ? e.message : String(e))
       }
     } finally {
-      // Reset the ping request to avoid memory leaks
-      this.pingRequest = undefined
+      // Only clear if we're still the active request
+      // This prevents a race where a new ping starts before this finally block runs
+      if (this.pingRequest === currentRequest) {
+        this.pingRequest = undefined
+      }
     }
   }
 
@@ -435,7 +442,7 @@ export class WebsocketConnection {
    *   implementation changes or unforeseen edge cases.
    */
   private async pingServerInBackground(): Promise<void> {
-    this.pingRequest = doInitPings(
+    const currentRequest = doInitPings(
       this.args.baseUriPartsList,
       PING_MINIMUM_RETRY_PERIOD_MS,
       PING_MAXIMUM_RETRY_PERIOD_MS,
@@ -443,9 +450,10 @@ export class WebsocketConnection {
       this.args.sendClientError,
       this.args.onHostConfigResp
     )
+    this.pingRequest = currentRequest
 
     try {
-      const uriIndex = await this.pingRequest.promise
+      const uriIndex = await currentRequest.promise
       this.uriIndex = uriIndex
       LOG.info("Background pings completed successfully")
     } catch (e) {
@@ -460,7 +468,12 @@ export class WebsocketConnection {
         this.stepFsm("FATAL_ERROR", e instanceof Error ? e.message : String(e))
       }
     } finally {
-      this.pingRequest = undefined
+      // Only clear if we're still the active request
+      // This prevents a race where bypass mode fails and transitions to PINGING_SERVER,
+      // starting a new ping before this finally block runs
+      if (this.pingRequest === currentRequest) {
+        this.pingRequest = undefined
+      }
     }
   }
 

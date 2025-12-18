@@ -27,7 +27,7 @@ const INITIAL_SLASH_RE = /^\/+/
  *
  * Required fields:
  * - BACKEND_BASE_URL: string
- * - HOST_CONFIG.allowedOrigins: non-empty array of allowed origins
+ * - HOST_CONFIG.allowedOrigins: non-empty array of strings
  * - HOST_CONFIG.useExternalAuthToken: boolean (true or false)
  */
 export function isHostConfigBypassEnabled(): boolean {

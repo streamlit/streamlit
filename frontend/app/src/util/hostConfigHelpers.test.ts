@@ -14,10 +14,19 @@
  * limitations under the License.
  */
 
+import { beforeEach, describe, expect, it, vi } from "vitest"
+
+import { isHostConfigBypassEnabled } from "@streamlit/connection"
+
 import {
   preferWindowValue,
   reconcileHostConfigValues,
 } from "./hostConfigHelpers"
+
+// Mock the isHostConfigBypassEnabled function
+vi.mock("@streamlit/connection", () => ({
+  isHostConfigBypassEnabled: vi.fn(),
+}))
 
 describe("preferWindowValue", () => {
   it("returns window value when it is defined", () => {
@@ -70,6 +79,11 @@ describe("reconcileHostConfigValues", () => {
     enforceDownloadInNewTab: false,
     blockErrorDialogs: false,
   }
+
+  beforeEach(() => {
+    // By default, assume bypass is enabled (valid config provided)
+    vi.mocked(isHostConfigBypassEnabled).mockReturnValue(true)
+  })
 
   it("returns endpoint config unchanged when initialHostConfig is undefined", () => {
     const result = reconcileHostConfigValues(undefined, mockEndpointConfig)
@@ -173,9 +187,12 @@ describe("reconcileHostConfigValues", () => {
     expect(result).toEqual(mockEndpointConfig)
   })
 
-  it("handles empty allowedOrigins array from window", () => {
+  it("returns endpoint config when bypass is not enabled", () => {
+    // Simulate invalid config that fails bypass eligibility check
+    vi.mocked(isHostConfigBypassEnabled).mockReturnValue(false)
+
     const initialHostConfig = {
-      allowedOrigins: [] as string[],
+      allowedOrigins: [] as string[], // Empty array - invalid for bypass
       useExternalAuthToken: false,
     }
 
@@ -184,9 +201,29 @@ describe("reconcileHostConfigValues", () => {
       mockEndpointConfig
     )
 
-    // Empty array from window should be used (it's defined)
-    expect(result.allowedOrigins).toEqual([])
-    expect(result.useExternalAuthToken).toBe(false)
+    // Should use endpoint values because bypass is not eligible
+    expect(result.allowedOrigins).toEqual(["https://endpoint.com"])
+    expect(result.useExternalAuthToken).toBe(false) // From endpoint
+    expect(result).toEqual(mockEndpointConfig)
+  })
+
+  it("returns endpoint config when bypass eligibility check fails", () => {
+    // Even if initialHostConfig is provided, if bypass check fails, use endpoint
+    vi.mocked(isHostConfigBypassEnabled).mockReturnValue(false)
+
+    const initialHostConfig = {
+      allowedOrigins: ["https://window.com"],
+      useExternalAuthToken: true,
+      metricsUrl: "postMessage" as const,
+    }
+
+    const result = reconcileHostConfigValues(
+      initialHostConfig,
+      mockEndpointConfig
+    )
+
+    // Should use endpoint config unchanged when bypass is not enabled
+    expect(result).toEqual(mockEndpointConfig)
   })
 
   it("handles metricsUrl: 'off' from window", () => {

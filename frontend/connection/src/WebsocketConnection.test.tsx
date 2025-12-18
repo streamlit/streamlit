@@ -1419,4 +1419,71 @@ describe("WebsocketConnection FSM fast-path behavior", () => {
       args.onConnectionStateChange as ReturnType<typeof vi.fn>
     ).toHaveBeenCalledWith(ConnectionState.DISCONNECTED_FOREVER, undefined)
   })
+
+  it("does not orphan ping request when bypass transitions to PINGING_SERVER", async () => {
+    // This test verifies the race condition fix where:
+    // 1. Bypass mode starts background pings (stores ping request)
+    // 2. We manually transition to PINGING_SERVER (simulating WS failure)
+    // 3. New pingServer() is called (starts new ping request)
+    // 4. Background ping's finally block runs but should NOT clear new ping request
+    // 5. disconnect() should successfully cancel the active request
+
+    // Mock fetch to return pending promises (never resolve)
+    // This simulates slow pings that get cancelled
+    const backgroundPingPromise = new Promise(() => {
+      /* never resolves */
+    })
+    const foregroundPingPromise = new Promise(() => {
+      /* never resolves */
+    })
+
+    globalThis.fetch = vi
+      .fn()
+      // First two calls are for background ping (health + host-config)
+      .mockReturnValueOnce(backgroundPingPromise as Promise<Response>)
+      .mockReturnValueOnce(backgroundPingPromise as Promise<Response>)
+      // Next two calls are for foreground ping after transition
+      .mockReturnValueOnce(foregroundPingPromise as Promise<Response>)
+      .mockReturnValueOnce(foregroundPingPromise as Promise<Response>)
+
+    const args = createMockArgs({ enableBypass: true })
+    const ws = new WebsocketConnection(args)
+
+    // Should start in CONNECTING (bypass mode)
+    expect(
+      args.onConnectionStateChange as ReturnType<typeof vi.fn>
+    ).toHaveBeenCalledWith(ConnectionState.CONNECTING, undefined)
+
+    // Allow background pings to start
+    await vi.advanceTimersByTimeAsync(0)
+
+    // Manually trigger transition to PINGING_SERVER (simulating WS connection failure)
+    // This will start a new ping request via pingServer()
+    // @ts-expect-error - Accessing private method for testing
+    ws.stepFsm("CONNECTION_ERROR", "Simulated connection failure")
+
+    // Allow new ping to start
+    await vi.advanceTimersByTimeAsync(0)
+
+    // Should have transitioned to PINGING_SERVER
+    const stateChangeCalls = (
+      args.onConnectionStateChange as ReturnType<typeof vi.fn>
+    ).mock.calls
+    const hasPingingState = stateChangeCalls.some(
+      call => call[0] === ConnectionState.PINGING_SERVER
+    )
+    expect(hasPingingState).toBe(true)
+
+    // Now disconnect - this should successfully cancel the active ping request
+    // If the race condition existed, the background ping's finally would have
+    // cleared this.pingRequest, making it undefined and unable to cancel
+    ws.disconnect()
+
+    // Verify we transitioned to DISCONNECTED_FOREVER (no errors thrown)
+    expect(
+      args.onConnectionStateChange as ReturnType<typeof vi.fn>
+    ).toHaveBeenCalledWith(ConnectionState.DISCONNECTED_FOREVER, undefined)
+
+    // The test passing without errors verifies the fix works correctly
+  })
 })

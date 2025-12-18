@@ -15,6 +15,7 @@
  */
 
 import type { IHostConfigResponse } from "@streamlit/connection"
+import { isHostConfigBypassEnabled } from "@streamlit/connection"
 import type { MinimalHostConfig } from "@streamlit/utils"
 
 /**
@@ -38,18 +39,25 @@ export function preferWindowValue<T>(
  * the full host config response from the endpoint.
  *
  * For the three minimal config fields (allowedOrigins, useExternalAuthToken,
- * metricsUrl), window values take precedence over endpoint values when present.
+ * metricsUrl), window values take precedence over endpoint values when bypass mode
+ * is enabled .
  * All other fields from the endpoint response are preserved as-is.
  *
  * @param initialHostConfig - Minimal config from window.__streamlit.HOST_CONFIG
  * @param endpointConfig - Full config from the host-config endpoint
  * @returns Merged config with window values taking precedence for minimal fields
+ *          only when bypass mode is eligible, otherwise returns endpoint config
  */
 export function reconcileHostConfigValues(
   initialHostConfig: MinimalHostConfig | undefined,
   endpointConfig: IHostConfigResponse
 ): IHostConfigResponse {
-  if (!initialHostConfig) {
+  // Only apply window config precedence when bypass mode is eligible.
+  // isHostConfigBypassEnabled() validates that HOST_CONFIG exists and is valid,
+  // preventing invalid configs (e.g., empty allowedOrigins) from overriding
+  // valid endpoint values. We also check initialHostConfig (redundant) to avoid
+  // typescript errors below.
+  if (!isHostConfigBypassEnabled() || !initialHostConfig) {
     return endpointConfig
   }
 
