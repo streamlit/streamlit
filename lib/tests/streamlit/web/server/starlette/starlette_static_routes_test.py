@@ -258,3 +258,273 @@ class TestWithBaseUrl:
             response = client.get("/app")
             assert response.status_code == 200
             assert response.text == "<html>Nested</html>"
+
+
+class TestDoubleSlashProtection:
+    """Tests for double-slash (protocol-relative URL) security protection.
+
+    Note: We need to test these with raw ASGI scope because HTTP clients
+    interpret //evil.com as a protocol-relative URL, not a path.
+    """
+
+    @pytest.mark.anyio
+    async def test_double_slash_returns_403(self, tmp_path: Path) -> None:
+        """Test that paths starting with // return 403 Forbidden.
+
+        Double-slash paths like //example.com could be misinterpreted as
+        protocol-relative URLs if redirected, which is a security risk.
+        """
+        static_dir = tmp_path / "static"
+        static_dir.mkdir()
+        (static_dir / "index.html").write_text("<html>Home</html>")
+
+        static_files = create_streamlit_static_handler(
+            directory=str(static_dir), base_url=None
+        )
+
+        # Create raw ASGI scope with // path
+        scope = {
+            "type": "http",
+            "method": "GET",
+            "path": "//evil.com",
+            "query_string": b"",
+            "root_path": "",
+            "headers": [],
+        }
+
+        response_started = False
+        response_status = 0
+        response_body = b""
+
+        async def receive() -> dict[str, object]:
+            return {"type": "http.request", "body": b""}
+
+        async def send(message: dict[str, object]) -> None:
+            nonlocal response_started, response_status, response_body
+            if message["type"] == "http.response.start":
+                response_started = True
+                response_status = message["status"]
+            elif message["type"] == "http.response.body":
+                response_body += message.get("body", b"")
+
+        await static_files(scope, receive, send)
+
+        assert response_status == 403
+        assert response_body == b"Forbidden"
+
+    @pytest.mark.anyio
+    async def test_double_slash_with_path_returns_403(self, tmp_path: Path) -> None:
+        """Test that paths like //evil.com/path return 403."""
+        static_dir = tmp_path / "static"
+        static_dir.mkdir()
+        (static_dir / "index.html").write_text("<html>Home</html>")
+
+        static_files = create_streamlit_static_handler(
+            directory=str(static_dir), base_url=None
+        )
+
+        scope = {
+            "type": "http",
+            "method": "GET",
+            "path": "//evil.com/some/path",
+            "query_string": b"",
+            "root_path": "",
+            "headers": [],
+        }
+
+        response_status = 0
+        response_body = b""
+
+        async def receive() -> dict[str, object]:
+            return {"type": "http.request", "body": b""}
+
+        async def send(message: dict[str, object]) -> None:
+            nonlocal response_status, response_body
+            if message["type"] == "http.response.start":
+                response_status = message["status"]
+            elif message["type"] == "http.response.body":
+                response_body += message.get("body", b"")
+
+        await static_files(scope, receive, send)
+
+        assert response_status == 403
+        assert response_body == b"Forbidden"
+
+    @pytest.mark.anyio
+    async def test_double_slash_at_root_returns_403(self, tmp_path: Path) -> None:
+        """Test that just // returns 403."""
+        static_dir = tmp_path / "static"
+        static_dir.mkdir()
+        (static_dir / "index.html").write_text("<html>Home</html>")
+
+        static_files = create_streamlit_static_handler(
+            directory=str(static_dir), base_url=None
+        )
+
+        scope = {
+            "type": "http",
+            "method": "GET",
+            "path": "//",
+            "query_string": b"",
+            "root_path": "",
+            "headers": [],
+        }
+
+        response_status = 0
+        response_body = b""
+
+        async def receive() -> dict[str, object]:
+            return {"type": "http.request", "body": b""}
+
+        async def send(message: dict[str, object]) -> None:
+            nonlocal response_status, response_body
+            if message["type"] == "http.response.start":
+                response_status = message["status"]
+            elif message["type"] == "http.response.body":
+                response_body += message.get("body", b"")
+
+        await static_files(scope, receive, send)
+
+        assert response_status == 403
+        assert response_body == b"Forbidden"
+
+    def test_single_slash_path_works(self, static_app: TestClient) -> None:
+        """Test that normal single-slash paths still work correctly."""
+        response = static_app.get("/index.html")
+
+        assert response.status_code == 200
+        assert response.text == "<html>Home</html>"
+
+    def test_path_with_double_slash_in_middle_works(
+        self, static_app: TestClient
+    ) -> None:
+        """Test that double slash not at start doesn't trigger protection.
+
+        Only paths starting with // are blocked. Paths like /foo//bar
+        are handled normally by the SPA fallback.
+        """
+        response = static_app.get("/foo//bar")
+
+        # This falls through to SPA fallback, not blocked
+        assert response.status_code == 200
+        assert response.text == "<html>Home</html>"
+
+
+class TestTrailingSlashRedirect:
+    """Tests for trailing slash redirect behavior (301 redirects)."""
+
+    def test_trailing_slash_redirects_to_without(self, tmp_path: Path) -> None:
+        """Test that paths with trailing slash redirect to path without."""
+        static_dir = tmp_path / "static"
+        static_dir.mkdir()
+        (static_dir / "index.html").write_text("<html>Home</html>")
+
+        static_files = create_streamlit_static_handler(
+            directory=str(static_dir), base_url=None
+        )
+        app = Starlette(routes=[Mount("/", app=static_files)])
+
+        with TestClient(app, follow_redirects=False) as client:
+            response = client.get("/somepath/")
+
+            assert response.status_code == 301
+            assert response.headers["location"] == "/somepath"
+            assert response.headers["Cache-Control"] == "no-cache"
+
+    def test_nested_trailing_slash_redirects(self, tmp_path: Path) -> None:
+        """Test that nested paths with trailing slash redirect correctly."""
+        static_dir = tmp_path / "static"
+        static_dir.mkdir()
+        (static_dir / "index.html").write_text("<html>Home</html>")
+
+        static_files = create_streamlit_static_handler(
+            directory=str(static_dir), base_url=None
+        )
+        app = Starlette(routes=[Mount("/", app=static_files)])
+
+        with TestClient(app, follow_redirects=False) as client:
+            response = client.get("/deep/nested/path/")
+
+            assert response.status_code == 301
+            assert response.headers["location"] == "/deep/nested/path"
+
+    def test_trailing_slash_redirect_preserves_query_string(
+        self, tmp_path: Path
+    ) -> None:
+        """Test that query string is preserved in trailing slash redirect."""
+        static_dir = tmp_path / "static"
+        static_dir.mkdir()
+        (static_dir / "index.html").write_text("<html>Home</html>")
+
+        static_files = create_streamlit_static_handler(
+            directory=str(static_dir), base_url=None
+        )
+        app = Starlette(routes=[Mount("/", app=static_files)])
+
+        with TestClient(app, follow_redirects=False) as client:
+            response = client.get("/somepath/?foo=bar&baz=qux")
+
+            assert response.status_code == 301
+            assert response.headers["location"] == "/somepath?foo=bar&baz=qux"
+
+    def test_root_slash_does_not_redirect(self, tmp_path: Path) -> None:
+        """Test that root path '/' does not redirect."""
+        static_dir = tmp_path / "static"
+        static_dir.mkdir()
+        (static_dir / "index.html").write_text("<html>Home</html>")
+
+        static_files = create_streamlit_static_handler(
+            directory=str(static_dir), base_url=None
+        )
+        app = Starlette(routes=[Mount("/", app=static_files)])
+
+        with TestClient(app, follow_redirects=False) as client:
+            response = client.get("/")
+
+            # Should serve content, not redirect
+            assert response.status_code == 200
+            assert response.text == "<html>Home</html>"
+
+
+class TestCacheHeadersOnRedirects:
+    """Tests for cache headers behavior on redirect responses."""
+
+    def test_redirect_responses_keep_their_cache_headers(self, tmp_path: Path) -> None:
+        """Test that redirect responses don't get cache headers overwritten.
+
+        The _apply_cache_headers method should skip adding cache headers
+        to redirect responses (301, 302, etc.) to avoid overwriting
+        the redirect-specific Cache-Control header.
+        """
+        static_dir = tmp_path / "static"
+        static_dir.mkdir()
+        (static_dir / "index.html").write_text("<html>Home</html>")
+
+        static_files = create_streamlit_static_handler(
+            directory=str(static_dir), base_url=None
+        )
+        app = Starlette(routes=[Mount("/", app=static_files)])
+
+        with TestClient(app, follow_redirects=False) as client:
+            response = client.get("/somepath/")
+
+            # Should have the redirect-specific no-cache header, not the
+            # static asset caching header
+            assert response.status_code == 301
+            assert response.headers["Cache-Control"] == "no-cache"
+            assert "immutable" not in response.headers["Cache-Control"]
+
+    def test_regular_html_has_no_cache(self, static_app: TestClient) -> None:
+        """Test that regular HTML files have no-cache header (not redirect)."""
+        response = static_app.get("/index.html")
+
+        assert response.status_code == 200
+        assert response.headers["Cache-Control"] == "no-cache"
+
+    def test_hashed_js_has_long_cache(self, static_app: TestClient) -> None:
+        """Test that hashed JS files have long cache headers (not redirect)."""
+        response = static_app.get("/app.abc123.js")
+
+        assert response.status_code == 200
+        expected = f"public, immutable, max-age={STATIC_ASSET_CACHE_MAX_AGE_SECONDS}"
+        assert response.headers["Cache-Control"] == expected
