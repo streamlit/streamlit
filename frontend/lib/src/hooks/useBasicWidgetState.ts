@@ -161,6 +161,14 @@ export interface UseBasicWidgetStateArgs<
 
 /**
  * A React hook that makes the simplest kinds of widgets very easy to implement.
+ *
+ * This hook handles the standard widget state management pattern, including:
+ * - Initializing from WidgetStateManager or default values
+ * - Responding to setValue updates from session_state
+ * - Handling form clearing for clear_on_submit forms
+ *
+ * Used by: ButtonGroup, Checkbox, ColorPicker, DateInput, DateTimeInput,
+ * Multiselect, NumberInput, Radio, Selectbox, Slider, TextArea, TextInput, TimeInput
  */
 export function useBasicWidgetState<
   T, // Type of the value stored in WidgetStateManager.

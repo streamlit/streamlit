@@ -162,24 +162,23 @@ const NumberInput: React.FC<Props> = ({
     fragmentId,
     onFormCleared: useCallback(() => {
       // Reset dirty state and formatted value when form is cleared
-      const newValue = element.default ?? null
+      const newValue = elementDefault ?? null
       setDirty(false)
       setFormattedValue(
         formatValue({
           value: newValue,
-          dataType: element.dataType,
-          format: element.format,
-          step: getStep(element),
+          dataType: elementDataType,
+          format: elementFormat,
+          step,
         })
       )
-    }, [element]),
+    }, [elementDefault, elementDataType, elementFormat, step]),
   })
 
   // Local ephemeral state (step, dirty, formattedValue defined above for onFormCleared)
   const [isFocused, setIsFocused] = useState(false)
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null)
-  // Use useMemo for stable ID that can be safely accessed during render
-  const id = useMemo(() => uniqueId("number_input_"), [])
+  const [id] = useState(() => uniqueId("number_input_"))
 
   const canDec = canDecrement(value, step, min)
   const canInc = canIncrement(value, step, max)

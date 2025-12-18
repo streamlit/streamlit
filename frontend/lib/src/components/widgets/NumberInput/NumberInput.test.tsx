@@ -502,6 +502,69 @@ describe("NumberInput widget", () => {
       // The displayed value should reset to the default value.
       expect(numberInput).toHaveDisplayValue("5.5")
     })
+
+    it("resets dirty state and formatted value via onFormCleared callback", async () => {
+      const user = userEvent.setup()
+      const props = getFloatProps({
+        formId: "form",
+        default: 10.0,
+        format: "%0.2f",
+      })
+      props.widgetMgr.setFormSubmitBehaviors("form", true)
+      vi.spyOn(props.widgetMgr, "setDoubleValue")
+
+      render(<NumberInput {...props} />)
+      const numberInput = screen.getByTestId("stNumberInputField")
+
+      // Initial state: formatted value should be "10.00"
+      expect(numberInput).toHaveDisplayValue("10.00")
+
+      // Make the widget dirty by typing a new value
+      await user.clear(numberInput)
+      await user.type(numberInput, "25.75")
+      await user.tab() // Blur to commit
+
+      // Verify the new value was committed
+      expect(numberInput).toHaveDisplayValue("25.75")
+      expect(props.widgetMgr.setDoubleValue).toHaveBeenLastCalledWith(
+        props.element,
+        25.75,
+        { fromUi: true },
+        undefined
+      )
+
+      // Submit the form – this should trigger onFormCleared
+      act(() => {
+        props.widgetMgr.submitForm("form", undefined)
+      })
+
+      // After form clear:
+      // 1. Formatted value should reset to default
+      // Note: The formatting is applied on the next render cycle, not immediately in onFormCleared
+      expect(numberInput).toHaveDisplayValue("10")
+
+      // 2. Verify that the default value was set in widgetMgr (dirty state was reset)
+      expect(props.widgetMgr.setDoubleValue).toHaveBeenLastCalledWith(
+        props.element,
+        10.0,
+        { fromUi: true },
+        undefined
+      )
+
+      // 3. Verify we can interact with the widget again after form clear
+      await user.clear(numberInput)
+      await user.type(numberInput, "15.5")
+      await user.tab()
+
+      // New value should be committed successfully
+      expect(numberInput).toHaveDisplayValue("15.5")
+      expect(props.widgetMgr.setDoubleValue).toHaveBeenLastCalledWith(
+        props.element,
+        15.5,
+        { fromUi: true },
+        undefined
+      )
+    })
   })
 
   describe("IntData", () => {
