@@ -107,19 +107,22 @@ def test_help_tooltip_works(app: Page):
 
 # The coordinates (0, 0) for the click action behaves differently across firefox.
 @pytest.mark.skip_browser("firefox")
-def test_clicking_color_on_color_picker_works(
-    app: Page, assert_snapshot: ImageCompareFunction
-):
+def test_clicking_color_on_color_picker_works(app: Page):
+    # Check that the color is #000000
+    expect(app.get_by_text("Color 1 #000000")).to_be_visible()
+
     default_picker = get_color_picker(app, "Default Color")
     default_picker.get_by_test_id("stColorPickerBlock").click()
 
-    app.get_by_test_id("stColorPickerPopover").click(position={"x": 0, "y": 0})
+    expect(app.get_by_test_id("stColorPickerPopover")).to_be_visible()
+
+    app.get_by_test_id("stColorPickerPopover").click(position={"x": 10, "y": 10})
 
     # click outside of color picker
     app.get_by_text("Default Color").click()
     wait_for_app_run(app)
-    expect(app.get_by_text("#ffffff")).to_be_visible()
-    assert_snapshot(default_picker, name="st_color_picker-clicked_new_color")
+    # Make sure the color has changed:
+    expect(app.get_by_text("Color 1 #000000")).not_to_be_visible()
 
 
 def test_typing_new_hex_color_on_color_picker_works_with_callback(

@@ -22,7 +22,7 @@ from google.protobuf.json_format import MessageToDict
 from tornado.httputil import HTTPHeaders
 
 from streamlit.proto.openmetrics_data_model_pb2 import MetricSet as MetricSetProto
-from streamlit.runtime.stats import CacheStat
+from streamlit.runtime.stats import CacheStat, CounterStat, GaugeStat
 from streamlit.web.server.server import METRIC_ENDPOINT
 from streamlit.web.server.stats_request_handler import StatsRequestHandler
 
@@ -31,7 +31,9 @@ class StatsHandlerTest(tornado.testing.AsyncHTTPTestCase):
     def get_app(self):
         self.mock_stats: dict[str, list[CacheStat]] = {"cache_memory_bytes": []}
         mock_stats_manager = MagicMock()
-        mock_stats_manager.get_stats = MagicMock(side_effect=lambda: self.mock_stats)
+        mock_stats_manager.get_stats = MagicMock(
+            side_effect=lambda family_names=None: self.mock_stats
+        )
         return tornado.web.Application(
             [
                 (
@@ -158,3 +160,101 @@ class StatsHandlerTest(tornado.testing.AsyncHTTPTestCase):
         }
 
         assert expected == MessageToDict(metric_set)
+
+
+class StatsHandlerFilterTest(tornado.testing.AsyncHTTPTestCase):
+    """Tests for filtering metrics by family name."""
+
+    def get_app(self):
+        self.mock_stats: dict[str, list] = {
+            "cache_memory_bytes": [
+                CacheStat(
+                    category_name="st.memo",
+                    cache_name="foo",
+                    byte_length=128,
+                )
+            ],
+            "session_events_total": [
+                CounterStat(
+                    family_name="session_events_total",
+                    value=5,
+                    labels={"type": "connect"},
+                    help="Total count of session events by type.",
+                ),
+            ],
+            "active_sessions": [
+                GaugeStat(
+                    family_name="active_sessions",
+                    value=3,
+                    help="Current number of active sessions.",
+                ),
+            ],
+        }
+
+        def get_stats_side_effect(family_names=None):
+            if family_names is None:
+                return self.mock_stats
+            return {k: self.mock_stats.get(k, []) for k in family_names}
+
+        mock_stats_manager = MagicMock()
+        mock_stats_manager.get_stats = MagicMock(side_effect=get_stats_side_effect)
+        return tornado.web.Application(
+            [
+                (
+                    rf"/{METRIC_ENDPOINT}",
+                    StatsRequestHandler,
+                    dict(stats_manager=mock_stats_manager),
+                )
+            ]
+        )
+
+    def test_no_filter_returns_all(self):
+        """Without filter, all metric families should be returned."""
+        response = self.fetch("/_stcore/metrics")
+        assert response.code == 200
+
+        body = response.body.decode()
+        assert "cache_memory_bytes" in body
+        assert "session_events_total" in body
+        assert "active_sessions" in body
+
+    def test_filter_single_family(self):
+        """Filter should return only the requested family."""
+        response = self.fetch("/_stcore/metrics?families=session_events_total")
+        assert response.code == 200
+
+        body = response.body.decode()
+        assert "session_events_total" in body
+        assert "cache_memory_bytes" not in body
+        # Use TYPE declaration to avoid false matches in help text
+        assert "# TYPE active_sessions" not in body
+
+    def test_filter_multiple_families(self):
+        """Filter should support multiple family names."""
+        response = self.fetch(
+            "/_stcore/metrics?families=session_events_total&families=active_sessions"
+        )
+        assert response.code == 200
+
+        body = response.body.decode()
+        assert "session_events_total" in body
+        assert "active_sessions" in body
+        assert "cache_memory_bytes" not in body
+
+    def test_counter_stat_format(self):
+        """CounterStat should be formatted correctly in text output."""
+        response = self.fetch("/_stcore/metrics?families=session_events_total")
+        assert response.code == 200
+
+        body = response.body.decode()
+        assert "# TYPE session_events_total counter" in body
+        assert 'session_events_total{type="connect"} 5' in body
+
+    def test_gauge_stat_format(self):
+        """GaugeStat without labels should be formatted correctly."""
+        response = self.fetch("/_stcore/metrics?families=active_sessions")
+        assert response.code == 200
+
+        body = response.body.decode()
+        assert "# TYPE active_sessions gauge" in body
+        assert "active_sessions 3" in body

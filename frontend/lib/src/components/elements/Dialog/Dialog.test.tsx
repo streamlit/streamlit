@@ -81,6 +81,30 @@ describe("Dialog container", () => {
     expect(() => screen.getByText("test")).toThrow()
   })
 
+  it("renders an icon when provided", () => {
+    const props = getProps({ icon: "🎉" })
+    render(
+      <Dialog {...props}>
+        <div>test</div>
+      </Dialog>
+    )
+
+    const icon = screen.getByTestId("stDialogIcon")
+    expect(icon).toBeVisible()
+    expect(icon).toHaveTextContent("🎉")
+  })
+
+  it("does not render an icon when not provided", () => {
+    const props = getProps()
+    render(
+      <Dialog {...props}>
+        <div>test</div>
+      </Dialog>
+    )
+
+    expect(screen.queryByTestId("stDialogIcon")).not.toBeInTheDocument()
+  })
+
   it("should close when dismissible", async () => {
     const user = userEvent.setup()
     const props = getProps()

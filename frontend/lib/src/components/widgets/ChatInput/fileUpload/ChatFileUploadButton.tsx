@@ -18,21 +18,16 @@ import React, { memo } from "react"
 
 import { Add } from "@emotion-icons/material-rounded"
 
-import BaseButton, { BaseButtonKind } from "~lib/components/shared/BaseButton"
 import Icon from "~lib/components/shared/Icon"
-import { Placement } from "~lib/components/shared/Tooltip"
-import TooltipIcon from "~lib/components/shared/TooltipIcon"
-import { EmotionTheme } from "~lib/theme"
+import Tooltip, { Placement } from "~lib/components/shared/Tooltip"
+import { StyledSendIconButton } from "~lib/components/widgets/ChatInput/styled-components"
 import { AcceptFileValue } from "~lib/util/utils"
 
 import {
   configureFileInputProps,
   getUploadDescription,
 } from "./fileUploadUtils"
-import {
-  StyledFileUploadButton,
-  StyledFileUploadButtonContainer,
-} from "./styled-components"
+import { StyledFileUploadButton } from "./styled-components"
 
 export interface Props {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
@@ -41,7 +36,6 @@ export interface Props {
   getInputProps: any
   acceptFile: AcceptFileValue
   disabled: boolean
-  theme: EmotionTheme
 }
 
 const ChatFileUploadButton = ({
@@ -49,35 +43,29 @@ const ChatFileUploadButton = ({
   getInputProps,
   acceptFile,
   disabled,
-  theme,
 }: Props): React.ReactElement => {
   const inputProps = configureFileInputProps(getInputProps(), acceptFile)
 
   return (
-    <StyledFileUploadButtonContainer disabled={disabled}>
-      <StyledFileUploadButton
-        data-testid="stChatInputFileUploadButton"
-        disabled={disabled}
-        {...getRootProps()}
+    <StyledFileUploadButton
+      data-testid="stChatInputFileUploadButton"
+      disabled={disabled}
+      {...getRootProps()}
+    >
+      <input {...inputProps} />
+      <Tooltip
+        content={`Upload or drag and drop ${getUploadDescription(acceptFile)}`}
+        placement={Placement.TOP}
+        onMouseEnterDelay={500}
       >
-        <input {...inputProps} />
-        <TooltipIcon
-          content={`Upload or drag and drop ${getUploadDescription(acceptFile)}`}
-          placement={Placement.TOP}
-          onMouseEnterDelay={500}
+        <StyledSendIconButton
+          disabled={disabled}
+          aria-label={`Upload ${getUploadDescription(acceptFile)}`}
         >
-          <BaseButton kind={BaseButtonKind.MINIMAL} disabled={disabled}>
-            <Icon
-              content={Add}
-              size="lg"
-              color={
-                disabled ? theme.colors.fadedText40 : theme.colors.fadedText60
-              }
-            />
-          </BaseButton>
-        </TooltipIcon>
-      </StyledFileUploadButton>
-    </StyledFileUploadButtonContainer>
+          <Icon content={Add} size="xl" color="inherit" />
+        </StyledSendIconButton>
+      </Tooltip>
+    </StyledFileUploadButton>
   )
 }
 

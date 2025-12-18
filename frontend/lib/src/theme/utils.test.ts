@@ -44,12 +44,15 @@ import {
   CUSTOM_THEME_NAME,
   getCachedTheme,
   getDefaultTheme,
+  getFocusBoxShadow,
   getHostSpecifiedTheme,
+  getPrimaryFocusBoxShadow,
   getSystemTheme,
   handleSectionInheritance,
   hasThemeSectionConfigs,
   isColor,
   isPresetTheme,
+  mapCachedThemeToAvailableTheme,
   parseFont,
   removeCachedTheme,
   setCachedTheme,
@@ -107,6 +110,26 @@ describe("Styling utils", () => {
       )
       expect(computeSpacingStyle("xs  0  px  lg", lightTheme.emotion)).toEqual(
         "0.375rem 0 1px 1rem"
+      )
+    })
+  })
+
+  describe("Focus ring helpers", () => {
+    it("creates a canonical focus-ring box-shadow with default parameters", () => {
+      expect(getFocusBoxShadow("blue")).toBe(
+        "0 0 0 0.2rem rgba(0, 0, 255, 0.5)"
+      )
+    })
+
+    it("creates a canonical focus-ring box-shadow with custom parameters", () => {
+      expect(getFocusBoxShadow("#000", 0.8, "2px")).toBe(
+        "0 0 0 2px rgba(0, 0, 0, 0.2)"
+      )
+    })
+
+    it("creates a primary focus ring using the theme primary color", () => {
+      expect(getPrimaryFocusBoxShadow(lightTheme.emotion)).toBe(
+        "0 0 0 0.2rem rgba(255, 75, 75, 0.5)"
       )
     })
   })
@@ -290,6 +313,116 @@ describe("Cached theme helpers", () => {
           bodyFont: 'Roboto, "Source Sans", sans-serif',
         },
       })
+    })
+  })
+
+  describe("mapCachedThemeToAvailableTheme", () => {
+    it("returns null when no cached theme provided", () => {
+      const result = mapCachedThemeToAvailableTheme(null, [lightTheme])
+      expect(result).toBe(null)
+    })
+
+    it("returns exact match when cached theme exists in available themes", () => {
+      const customTheme = createTheme(CUSTOM_THEME_NAME, {
+        primaryColor: "blue",
+      })
+      const result = mapCachedThemeToAvailableTheme(customTheme, [
+        lightTheme,
+        customTheme,
+      ])
+      expect(result).toBe(customTheme)
+    })
+
+    it("maps preset Light to Custom Theme Light when custom light/dark themes available", () => {
+      const customLight = createTheme(CUSTOM_THEME_LIGHT_NAME, {
+        primaryColor: "lightblue",
+      })
+      const customDark = createTheme(CUSTOM_THEME_DARK_NAME, {
+        primaryColor: "darkblue",
+      })
+      const customAuto = createAutoTheme()
+
+      const result = mapCachedThemeToAvailableTheme(lightTheme, [
+        customLight,
+        customDark,
+        customAuto,
+      ])
+
+      expect(result).toBe(customLight)
+      expect(result?.name).toBe(CUSTOM_THEME_LIGHT_NAME)
+    })
+
+    it("maps preset Dark to Custom Theme Dark when custom light/dark themes available", () => {
+      const customLight = createTheme(CUSTOM_THEME_LIGHT_NAME, {
+        primaryColor: "lightblue",
+      })
+      const customDark = createTheme(CUSTOM_THEME_DARK_NAME, {
+        primaryColor: "darkblue",
+      })
+      const customAuto = createAutoTheme()
+
+      const result = mapCachedThemeToAvailableTheme(darkTheme, [
+        customLight,
+        customDark,
+        customAuto,
+      ])
+
+      expect(result).toBe(customDark)
+      expect(result?.name).toBe(CUSTOM_THEME_DARK_NAME)
+    })
+
+    it("maps Custom Theme Light to preset Light when custom themes removed", () => {
+      const customLight = createTheme(CUSTOM_THEME_LIGHT_NAME, {
+        primaryColor: "lightblue",
+      })
+
+      const result = mapCachedThemeToAvailableTheme(customLight, [
+        lightTheme,
+        darkTheme,
+      ])
+
+      expect(result).toBe(lightTheme)
+      expect(result?.name).toBe("Light")
+    })
+
+    it("maps Custom Theme Dark to preset Dark when custom themes removed", () => {
+      const customDark = createTheme(CUSTOM_THEME_DARK_NAME, {
+        primaryColor: "darkblue",
+      })
+
+      const result = mapCachedThemeToAvailableTheme(customDark, [
+        lightTheme,
+        darkTheme,
+      ])
+
+      expect(result).toBe(darkTheme)
+      expect(result?.name).toBe("Dark")
+    })
+
+    it("returns null when cached preset theme with single custom theme", () => {
+      const customTheme = createTheme(CUSTOM_THEME_NAME, {
+        primaryColor: "blue",
+      })
+
+      const result = mapCachedThemeToAvailableTheme(lightTheme, [customTheme])
+
+      // Don't map preset to single custom theme - let default logic handle it
+      expect(result).toBe(null)
+    })
+
+    it("returns null when no suitable match found", () => {
+      const customLight = createTheme(CUSTOM_THEME_LIGHT_NAME, {
+        primaryColor: "lightblue",
+      })
+      const customSingle = createTheme(CUSTOM_THEME_NAME, {
+        primaryColor: "blue",
+      })
+
+      const result = mapCachedThemeToAvailableTheme(customLight, [
+        customSingle,
+      ])
+
+      expect(result).toBe(null)
     })
   })
 })
@@ -556,6 +689,38 @@ describe("getDefaultTheme", () => {
     expect(defaultTheme.name).toBe("Light")
     // Also verify that the theme is our lightTheme.
     expect(defaultTheme.emotion.colors).toEqual(lightTheme.emotion.colors)
+  })
+
+  it("restores Custom Theme Light with displayName from cache", () => {
+    windowSpy = mockWindow()
+
+    // Create a custom light theme and cache it
+    const customLightTheme: ThemeConfig = {
+      ...createTheme(CUSTOM_THEME_LIGHT_NAME, { primaryColor: "blue" }),
+      displayName: "Light",
+    }
+    setCachedTheme(customLightTheme)
+
+    const defaultTheme = getDefaultTheme()
+
+    expect(defaultTheme.name).toBe(CUSTOM_THEME_LIGHT_NAME)
+    expect(defaultTheme.displayName).toBe("Light")
+  })
+
+  it("restores Custom Theme Dark with displayName from cache", () => {
+    windowSpy = mockWindow()
+
+    // Create a custom dark theme and cache it
+    const customDarkTheme: ThemeConfig = {
+      ...createTheme(CUSTOM_THEME_DARK_NAME, { primaryColor: "red" }),
+      displayName: "Dark",
+    }
+    setCachedTheme(customDarkTheme)
+
+    const defaultTheme = getDefaultTheme()
+
+    expect(defaultTheme.name).toBe(CUSTOM_THEME_DARK_NAME)
+    expect(defaultTheme.displayName).toBe("Dark")
   })
 })
 

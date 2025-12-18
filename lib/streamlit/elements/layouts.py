@@ -1186,6 +1186,7 @@ class LayoutsMixin:
         *,
         dismissible: bool = True,
         width: Literal["small", "large", "medium"] = "small",
+        icon: str | None = None,
         on_dismiss: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
     ) -> Dialog:
         """Inserts the dialog container.
@@ -1194,7 +1195,12 @@ class LayoutsMixin:
         The dialog_decorator also has a more descriptive docstring since it is user-facing.
         """
         return get_dg_singleton_instance().dialog_container_cls._create(
-            self.dg, title, dismissible=dismissible, width=width, on_dismiss=on_dismiss
+            self.dg,
+            title,
+            dismissible=dismissible,
+            width=width,
+            icon=icon,
+            on_dismiss=on_dismiss,
         )
 
     @property

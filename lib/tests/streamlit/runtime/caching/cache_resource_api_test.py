@@ -32,7 +32,7 @@ from streamlit.runtime.caching import (
 )
 from streamlit.runtime.caching.hashing import UserHashError
 from streamlit.runtime.scriptrunner import add_script_run_ctx
-from streamlit.runtime.stats import CacheStat
+from streamlit.runtime.stats import CACHE_MEMORY_FAMILY, CacheStat
 from streamlit.vendor.pympler.asizeof import asizeof
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.element_mocks import (
@@ -302,7 +302,7 @@ class CacheResourceStatsProviderTest(unittest.TestCase):
         st.cache_resource.clear()
 
     def test_no_stats(self):
-        assert get_resource_cache_stats_provider().get_stats() == []
+        assert get_resource_cache_stats_provider().get_stats() == {}
 
     def test_multiple_stats(self):
         @st.cache_resource(show_spinner=False)
@@ -339,7 +339,9 @@ class CacheResourceStatsProviderTest(unittest.TestCase):
 
         # The order of these is non-deterministic, so check Set equality
         # instead of List equality
-        assert set(expected) == set(get_resource_cache_stats_provider().get_stats())
+        stats_dict = get_resource_cache_stats_provider().get_stats()
+        assert CACHE_MEMORY_FAMILY in stats_dict
+        assert set(expected) == set(stats_dict[CACHE_MEMORY_FAMILY])
 
 
 class CacheResourceMessageReplayTest(DeltaGeneratorTestCase):

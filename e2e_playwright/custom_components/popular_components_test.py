@@ -17,16 +17,13 @@ import re
 import pytest
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import wait_for_app_run
+from e2e_playwright.shared.app_utils import reset_hovering, select_selectbox_option
 
 
 def _select_component(app: Page, component: str):
-    selectbox_input = app.get_by_test_id("stSelectbox").locator("input")
-
-    # Type an option (defined in the test app):
-    selectbox_input.type(component)
-    selectbox_input.press("Enter")
-    wait_for_app_run(app)
+    select_selectbox_option(app, "ComponentSelections", component)
+    # reset hovering to avoid some flakiness:
+    reset_hovering(app)
 
 
 def _expect_no_exception(app: Page):

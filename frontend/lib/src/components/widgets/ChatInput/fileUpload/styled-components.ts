@@ -42,18 +42,6 @@ export const StyledChatFileUploadDropzoneLabel = styled.div(({ theme }) => ({
   zIndex: theme.zIndices.priority, // Ensure it's visible
 }))
 
-export interface StyledFileUploadButtonContainerProps {
-  disabled: boolean
-}
-
-export const StyledFileUploadButtonContainer =
-  styled.div<StyledFileUploadButtonContainerProps>(({ disabled }) => ({
-    display: "flex",
-    alignItems: "center",
-    height: "100%",
-    cursor: disabled ? "not-allowed" : "auto",
-  }))
-
 export interface StyledFileUploadButtonProps {
   disabled: boolean
 }
@@ -76,20 +64,68 @@ export const StyledUploadedChatFileList = styled.div(({ theme }) => ({
 
 export const StyledUploadedChatFileListItem = styled.div({
   flex: "0 0 auto",
+  maxWidth: "100%",
 })
 
-export const StyledChatUploadedFile = styled.div(({ theme }) => ({
-  display: "flex",
-  alignItems: "center",
-  backgroundColor: theme.colors.bgColor,
-  padding: theme.spacing.sm,
-  borderRadius: theme.radii.default,
-  gap: theme.spacing.sm,
-}))
+export interface StyledChatUploadedFileProps {
+  isError?: boolean
+  isClickable?: boolean
+}
 
-export const StyledChatUploadedFileIcon = styled.div(({ theme }) => ({
-  color: theme.colors.fadedText60,
-}))
+export const StyledChatUploadedFile = styled.div<StyledChatUploadedFileProps>(
+  ({ theme, isError, isClickable }) => ({
+    position: "relative",
+    display: "inline-flex",
+    alignItems: "center",
+    width: "fit-content",
+    minWidth: "9rem",
+    maxWidth: "100%",
+    backgroundColor: isError
+      ? theme.colors.redBackgroundColor
+      : theme.colors.bgColor,
+    padding: theme.spacing.twoXS,
+    paddingRight: theme.spacing.twoXL, // Extra padding for absolute positioned X button
+    borderRadius: theme.radii.default,
+    gap: theme.spacing.sm,
+    cursor: isClickable ? "pointer" : "default",
+  })
+)
+
+// Container for filename and size stacked vertically
+export const StyledChatUploadedFileInfo = styled.div({
+  display: "flex",
+  flexDirection: "column",
+  minWidth: 0, // Allow text truncation
+})
+
+export interface StyledChatUploadedFileIconContainerProps {
+  fileStatus: "uploading" | "uploaded" | "error"
+}
+
+export const StyledChatUploadedFileIconContainer =
+  styled.div<StyledChatUploadedFileIconContainerProps>(
+    ({ theme, fileStatus }) => ({
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      borderRadius: theme.radii.md,
+      width: theme.sizes.chatInputFileIconSize,
+      height: theme.sizes.chatInputFileIconSize,
+      flexShrink: 0,
+      ...(fileStatus === "uploaded" && {
+        backgroundColor: theme.colors.bodyText,
+        color: theme.colors.bgColor,
+      }),
+      ...(fileStatus === "uploading" && {
+        backgroundColor: theme.colors.fadedText10,
+        color: theme.colors.fadedText60,
+      }),
+      ...(fileStatus === "error" && {
+        backgroundColor: theme.colors.redBackgroundColor,
+        color: theme.colors.redTextColor,
+      }),
+    })
+  )
 
 export interface StyledChatUploadedFileStatusProps {
   fileStatus: FileStatus
@@ -107,18 +143,46 @@ export const StyledChatUploadedFileName =
   }))
 
 export const StyledChatUploadedFileSize = styled.div(({ theme }) => ({
-  marginRight: theme.spacing.md,
   color: theme.colors.fadedText60,
+  fontSize: theme.fontSizes.sm,
+}))
+
+export const StyledChatUploadedFileError = styled.div(({ theme }) => ({
+  color: theme.colors.redTextColor,
+  fontSize: theme.fontSizes.sm,
 }))
 
 export const StyledChatUploadedFileDeleteButton = styled.small(
   ({ theme }) => ({
+    position: "absolute",
+    top: theme.spacing.twoXS,
+    right: theme.spacing.twoXS,
     display: "flex",
     alignItems: "center",
-    maxHeight: theme.sizes.smallElementHeight,
-    color: theme.colors.fadedText60,
-    "& :hover": {
-      color: theme.colors.bodyText,
+    justifyContent: "center",
+    lineHeight: 0,
+    // Circular background for the X button
+    "& button": {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      width: "fit-content",
+      height: "fit-content",
+      minHeight: "unset",
+      minWidth: "unset",
+      maxHeight: "unset",
+      maxWidth: "unset",
+      borderRadius: "50%",
+      backgroundColor: "transparent",
+      color: theme.colors.fadedText20,
+      padding: 0,
+      overflow: "hidden",
+      boxSizing: "border-box",
+      lineHeight: 0,
+      "&:hover": {
+        backgroundColor: "transparent",
+        color: theme.colors.fadedText40,
+      },
     },
   })
 )

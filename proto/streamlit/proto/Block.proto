@@ -123,6 +123,9 @@ message Block {
 
     // If id is set, dismissal of the dialog will trigger a rerun.
     string id = 5;
+
+    // Optional icon shown next to the dialog title.
+    string icon = 6;
   }
 
   message Form {
