@@ -652,6 +652,7 @@ class UserInfoProxy(Mapping[str, str | bool | TokensProxy | None]):
         return _get_user_info()
 
     @property
+    @gather_metrics("user.tokens")
     def tokens(self) -> TokensProxy:
         """Access exposed tokens via a dict-like object."""
         user_info = _get_user_info()
