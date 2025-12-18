@@ -580,7 +580,7 @@ class WebsocketSessionManagerMetricsTests(unittest.TestCase):
     @patch("streamlit.runtime.app_session.AppSession.shutdown", new=MagicMock())
     @patch("streamlit.runtime.websocket_session_manager.time.monotonic")
     def test_session_duration_with_reconnect(self, mock_monotonic: MagicMock) -> None:
-        """Duration accumulated on disconnect should not be double-counted on close."""
+        """Session duration should accumulate across disconnect and reconnect cycles."""
         # Connect at 0, disconnect at 5, reconnect at 6, close at 16
         mock_monotonic.side_effect = [0.0, 5.0, 6.0, 16.0]
 
@@ -591,5 +591,5 @@ class WebsocketSessionManagerMetricsTests(unittest.TestCase):
 
         stats = self.session_mgr.get_stats()
         # Duration from connect (0) to disconnect (5) = 5 seconds
-        # Duration from reconnect (6) to close (16) = 15 seconds
+        # Duration from reconnect (6) to close (16) = 10 seconds
         assert self._get_stat_value(stats, "session_duration_seconds_total") == 15
