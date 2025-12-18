@@ -1,4 +1,4 @@
-import React, { ReactNode } from "react"
+import { ReactNode } from "react"
 /**
  * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
@@ -1068,6 +1068,84 @@ describe("#useLayoutStyles", () => {
           width: "100px",
           height: "auto",
           overflow: "visible",
+        })
+      })
+    })
+
+    describe("with text alignment configuration", () => {
+      it.each([
+        [streamlit.TextAlignmentConfig.Alignment.LEFT, "left"],
+        [streamlit.TextAlignmentConfig.Alignment.CENTER, "center"],
+        [streamlit.TextAlignmentConfig.Alignment.RIGHT, "right"],
+        [streamlit.TextAlignmentConfig.Alignment.JUSTIFY, "justify"],
+      ])(
+        "applies text-align: %s for alignment %s",
+        (alignment, expectedTextAlign) => {
+          const element = Element.create({
+            textAlignmentConfig: { alignment },
+          })
+
+          const { result } = renderHook(() => useLayoutStyles({ element }))
+
+          expect(result.current).toEqual({
+            width: "auto",
+            height: "auto",
+            overflow: "visible",
+            textAlign: expectedTextAlign,
+          })
+        }
+      )
+
+      it("does not apply text-align when textAlignmentConfig is not set", () => {
+        const element = Element.create({})
+
+        const { result } = renderHook(() => useLayoutStyles({ element }))
+
+        expect(result.current).toEqual({
+          width: "auto",
+          height: "auto",
+          overflow: "visible",
+          textAlign: undefined,
+        })
+      })
+
+      it("applies text-align with other layout properties", () => {
+        const element = Element.create({
+          widthConfig: { useStretch: true },
+          heightConfig: { pixelHeight: 200 },
+          textAlignmentConfig: {
+            alignment: streamlit.TextAlignmentConfig.Alignment.CENTER,
+          },
+        })
+
+        const { result } = renderHook(() => useLayoutStyles({ element }))
+
+        expect(result.current).toEqual({
+          width: "100%",
+          height: "200px",
+          overflow: "auto",
+          textAlign: "center",
+        })
+      })
+
+      it("allows styleOverrides to override text-align", () => {
+        const element = Element.create({
+          textAlignmentConfig: {
+            alignment: streamlit.TextAlignmentConfig.Alignment.CENTER,
+          },
+        })
+
+        const styleOverrides = { textAlign: "right" as const }
+
+        const { result } = renderHook(() =>
+          useLayoutStyles({ element, styleOverrides })
+        )
+
+        expect(result.current).toEqual({
+          width: "auto",
+          height: "auto",
+          overflow: "visible",
+          textAlign: "right", // Override value
         })
       })
     })

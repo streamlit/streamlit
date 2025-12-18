@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { FC } from "react"
+import { FC } from "react"
 import "mapbox-gl/dist/mapbox-gl.css"
 
 /**

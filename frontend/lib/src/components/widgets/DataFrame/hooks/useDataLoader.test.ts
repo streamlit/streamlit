@@ -27,11 +27,11 @@ import {
   isErrorCell,
   TextColumn,
 } from "~lib/components/widgets/DataFrame/columns"
-import EditingState from "~lib/components/widgets/DataFrame/EditingState"
 import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
 import { Quiver } from "~lib/dataframes/Quiver"
 import { MULTI, UNICODE } from "~lib/mocks/arrow"
 
+import EditingState from "./EditingState"
 import useDataLoader from "./useDataLoader"
 
 // These columns are based on the UNICODE mock arrow table:

@@ -14,13 +14,7 @@
  * limitations under the License.
  */
 
-import React, {
-  memo,
-  ReactElement,
-  ReactNode,
-  useCallback,
-  useState,
-} from "react"
+import { memo, ReactElement, ReactNode, useCallback, useState } from "react"
 
 import {
   ACCESSIBILITY_TYPE,

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import zip from "lodash/zip"
+import { zip } from "lodash-es"
 import { ErrorCode as FileErrorCode, FileRejection } from "react-dropzone"
 
 import {
@@ -132,10 +132,16 @@ export const createDropHandler =
       .catch((errorMessage: string) => {
         addFiles(
           acceptedFiles.map(f => {
-            return new UploadFileInfo(f.name, f.size, getNextLocalFileId(), {
-              type: "error",
-              errorMessage,
-            })
+            return new UploadFileInfo(
+              f.name,
+              f.size,
+              getNextLocalFileId(),
+              {
+                type: "error",
+                errorMessage,
+              },
+              f
+            )
           })
         )
       })

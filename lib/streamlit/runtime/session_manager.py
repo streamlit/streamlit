@@ -155,7 +155,7 @@ class SessionStorage(Protocol):
         raise NotImplementedError
 
     @abstractmethod
-    def list(self) -> list[SessionInfo]:
+    def list(self) -> list[SessionInfo]:  # ty: ignore[invalid-type-form]
         """List all sessions tracked by this SessionStorage.
 
         Returns

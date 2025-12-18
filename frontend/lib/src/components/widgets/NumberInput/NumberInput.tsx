@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, {
+import {
   memo,
   ReactElement,
   useCallback,
@@ -25,7 +25,7 @@ import React, {
 
 import { Minus, Plus } from "@emotion-icons/open-iconic"
 import { Input as UIInput } from "baseui/input"
-import uniqueId from "lodash/uniqueId"
+import { uniqueId } from "lodash-es"
 
 import { NumberInput as NumberInputProto } from "@streamlit/protobuf"
 

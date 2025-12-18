@@ -220,12 +220,12 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
             return {}
         return None
 
-    def on_message(self, payload: str | bytes) -> None:
+    def on_message(self, message: str | bytes) -> None:
         if not self._session_id:
             return
 
         try:
-            if isinstance(payload, str):
+            if isinstance(message, str):
                 # Sanity check. (The frontend should only be sending us bytes;
                 # Protobuf.ParseFromString does not accept str input.)
                 raise TypeError(  # noqa: TRY301
@@ -234,7 +234,7 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
                 )
 
             msg = BackMsg()
-            msg.ParseFromString(payload)
+            msg.ParseFromString(message)
             _LOGGER.debug("Received the following back message:\n%s", msg)
 
         except Exception as ex:
@@ -266,3 +266,4 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
         else:
             # AppSession handles all other BackMsg types.
             self._runtime.handle_backmsg(self._session_id, msg)
+        return

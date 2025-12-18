@@ -17,6 +17,7 @@
 import { AppNode } from "~lib/render-tree/AppNode.interface"
 import { BlockNode } from "~lib/render-tree/BlockNode"
 import { ElementNode } from "~lib/render-tree/ElementNode"
+import { TransientNode } from "~lib/render-tree/TransientNode"
 
 import { AppNodeVisitor } from "./AppNodeVisitor.interface"
 
@@ -29,9 +30,9 @@ import { AppNodeVisitor } from "./AppNodeVisitor.interface"
  * const foundNode = rootNode.accept(visitor)
  * ```
  */
-export class GetNodeByDeltaPathVisitor
-  implements AppNodeVisitor<AppNode | undefined>
-{
+export class GetNodeByDeltaPathVisitor implements AppNodeVisitor<
+  AppNode | undefined
+> {
   private readonly deltaPath: number[]
 
   constructor(deltaPath: number[]) {
@@ -63,6 +64,16 @@ export class GetNodeByDeltaPathVisitor
     // Recursive case: create a new visitor and continue traversal
     const childVisitor = new GetNodeByDeltaPathVisitor(remainingPath)
     return node.children[currentIndex].accept(childVisitor)
+  }
+
+  visitTransientNode(node: TransientNode): AppNode | undefined {
+    if (this.deltaPath.length === 0) {
+      return node.anchor
+    }
+
+    // The anchor node represents the delta path target, so we
+    // traverse through it to find the target node.
+    return node.anchor?.accept(this)
   }
 
   /**

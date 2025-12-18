@@ -1,6 +1,6 @@
 {
   "name": "streamlit",
-  "version": "1.51.0",
+  "version": "1.52.1",
   "private": true,
   "workspaces": [
     "app",
@@ -23,7 +23,8 @@
     "d3-color": "^3.1.0",
     "dompurify": "^3.2.4",
     "prismjs": "^1.30.0",
-    "@protobufjs/inquire@npm:^1.1.0": "patch:@protobufjs/inquire@npm%3A1.1.0#~/.yarn/patches/@protobufjs-inquire-npm-1.1.0-3c7759e9ce.patch"
+    "@protobufjs/inquire@npm:^1.1.0": "patch:@protobufjs/inquire@npm%3A1.1.0#~/.yarn/patches/@protobufjs-inquire-npm-1.1.0-3c7759e9ce.patch",
+    "@swc/core": "^1.15.3"
   },
   "browserslist": [
     ">0.2%",
@@ -33,9 +34,9 @@
   ],
   "packageManager": "yarn@4.5.3",
   "devDependencies": {
-    "@vitest/coverage-v8": "^3.2.4",
+    "@vitest/coverage-v8": "^4.0.14",
     "concurrently": "^9.2.1",
-    "jiti": "^2.5.1",
-    "vitest": "^3.2.4"
+    "jiti": "^2.6.1",
+    "vitest": "^4.0.14"
   }
 }

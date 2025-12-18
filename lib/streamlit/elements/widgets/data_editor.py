@@ -30,6 +30,8 @@ from typing import (
     overload,
 )
 
+from typing_extensions import Required
+
 from streamlit import dataframe_util
 from streamlit import logger as _logger
 from streamlit.deprecation_util import (
@@ -100,8 +102,8 @@ EditableData = TypeVar(
 # All data types supported by the data editor.
 DataTypes: TypeAlias = Union[
     "pd.DataFrame",
-    "pd.Series",
-    "pd.Index",
+    "pd.Series[Any]",
+    "pd.Index[Any]",
     "Styler",
     "pa.Table",
     "np.ndarray[Any, np.dtype[np.float64]]",
@@ -131,9 +133,9 @@ class EditingState(TypedDict, total=False):
         the deleted row.
     """
 
-    edited_rows: dict[int, dict[str, str | int | float | bool | None]]
-    added_rows: list[dict[str, str | int | float | bool | None]]
-    deleted_rows: list[int]
+    edited_rows: Required[dict[int, dict[str, str | int | float | bool | None]]]
+    added_rows: Required[list[dict[str, str | int | float | bool | None]]]
+    deleted_rows: Required[list[int]]
 
 
 @dataclass
@@ -141,31 +143,31 @@ class DataEditorSerde:
     """DataEditorSerde is used to serialize and deserialize the data editor state."""
 
     def deserialize(self, ui_value: str | None) -> EditingState:
-        data_editor_state: EditingState = (
+        data_editor_state: EditingState = cast(
+            "EditingState",
             {
                 "edited_rows": {},
                 "added_rows": [],
                 "deleted_rows": [],
             }
             if ui_value is None
-            else json.loads(ui_value)
+            else json.loads(ui_value),
         )
 
         # Make sure that all editing state keys are present:
         if "edited_rows" not in data_editor_state:
-            data_editor_state["edited_rows"] = {}
+            data_editor_state["edited_rows"] = {}  # type: ignore[unreachable]
 
         if "deleted_rows" not in data_editor_state:
-            data_editor_state["deleted_rows"] = []
+            data_editor_state["deleted_rows"] = []  # type: ignore[unreachable]
 
         if "added_rows" not in data_editor_state:
-            data_editor_state["added_rows"] = []
+            data_editor_state["added_rows"] = []  # type: ignore[unreachable]
 
         # Convert the keys (numerical row positions) to integers.
         # The keys are strings because they are serialized to JSON.
         data_editor_state["edited_rows"] = {
-            int(k): v
-            for k, v in data_editor_state["edited_rows"].items()  # ty: ignore[possibly-missing-attribute]
+            int(k): v for k, v in data_editor_state["edited_rows"].items()
         }
         return data_editor_state
 
@@ -198,8 +200,14 @@ def _parse_value(
     import pandas as pd
 
     try:
-        if column_data_kind in (ColumnDataKind.LIST, ColumnDataKind.EMPTY):
-            return list(value) if is_list_like(value) else [value]  # ty: ignore
+        if column_data_kind == ColumnDataKind.LIST:
+            return list(value) if is_list_like(value) else [value]  # ty: ignore[invalid-argument-type]
+
+        if column_data_kind == ColumnDataKind.EMPTY:
+            # For empty columns, preserve the value type from the frontend.
+            # If it's a list (e.g., from multiselect), return as list.
+            # If it's a scalar (e.g., from number input), return as scalar.
+            return list(value) if is_list_like(value) else value  # ty: ignore[invalid-argument-type]
 
         if column_data_kind == ColumnDataKind.STRING:
             return str(value)
@@ -235,10 +243,10 @@ def _parse_value(
             ColumnDataKind.DATE,
             ColumnDataKind.TIME,
         ]:
-            datetime_value = pd.Timestamp(value)  # ty: ignore
+            datetime_value = pd.Timestamp(value)
 
-            if datetime_value is pd.NaT:
-                return None
+            if pd.isna(datetime_value):
+                return None  # type: ignore[unreachable]
 
             if column_data_kind == ColumnDataKind.DATETIME:
                 return datetime_value
@@ -295,7 +303,7 @@ def _apply_cell_edits(
                 )
             else:
                 col_pos = df.columns.get_loc(col_name)
-                df.iat[row_pos, col_pos] = _parse_value(
+                df.iat[row_pos, col_pos] = _parse_value(  # type: ignore
                     value, dataframe_schema[col_name]
                 )
 
@@ -456,7 +464,7 @@ def _apply_dataframe_edits(
         _apply_row_additions(df, data_editor_state["added_rows"], dataframe_schema)
 
 
-def _is_supported_index(df_index: pd.Index) -> bool:
+def _is_supported_index(df_index: pd.Index[Any]) -> bool:
     """Check if the index is supported by the data editor component.
 
     Parameters
@@ -572,7 +580,7 @@ def _check_type_compatibilities(
     indices = [(INDEX_IDENTIFIER, data_df.index)]
 
     for column in indices + list(data_df.items()):
-        column_name, _ = column
+        column_name = str(column[0])
         column_data_kind = dataframe_schema[column_name]
 
         # TODO(lukasmasuch): support column config via numerical index here?
@@ -591,7 +599,8 @@ def _check_type_compatibilities(
             configured_column_type = type_config.get("type")
 
             if configured_column_type is None:
-                continue
+                # Just a safeguard, is not expected to happen.
+                continue  # type: ignore[unreachable]
 
             if is_type_compatible(configured_column_type, column_data_kind) is False:
                 raise StreamlitAPIException(
@@ -615,7 +624,7 @@ class DataEditorMixin:
         hide_index: bool | None = None,
         column_order: Iterable[str] | None = None,
         column_config: ColumnConfigMappingInput | None = None,
-        num_rows: Literal["fixed", "dynamic"] = "fixed",
+        num_rows: Literal["fixed", "dynamic", "add", "delete"] = "fixed",
         disabled: bool | Iterable[str | int] = False,
         key: Key | None = None,
         on_change: WidgetCallback | None = None,
@@ -637,7 +646,7 @@ class DataEditorMixin:
         hide_index: bool | None = None,
         column_order: Iterable[str] | None = None,
         column_config: ColumnConfigMappingInput | None = None,
-        num_rows: Literal["fixed", "dynamic"] = "fixed",
+        num_rows: Literal["fixed", "dynamic", "add", "delete"] = "fixed",
         disabled: bool | Iterable[str | int] = False,
         key: Key | None = None,
         on_change: WidgetCallback | None = None,
@@ -659,7 +668,7 @@ class DataEditorMixin:
         hide_index: bool | None = None,
         column_order: Iterable[str] | None = None,
         column_config: ColumnConfigMappingInput | None = None,
-        num_rows: Literal["fixed", "dynamic"] = "fixed",
+        num_rows: Literal["fixed", "dynamic", "add", "delete"] = "fixed",
         disabled: bool | Iterable[str | int] = False,
         key: Key | None = None,
         on_change: WidgetCallback | None = None,
@@ -707,11 +716,14 @@ class DataEditorMixin:
               the parent container, the width of the editor matches the width
               of the parent container.
 
-        height : int, "auto", "content", or "stretch"
+        height : "auto", "content", "stretch", or int
             The height of the data editor. This can be one of the following:
 
             - ``"auto"`` (default): Streamlit sets the height to show at most
               ten rows.
+            - ``"content"``: The height of the editor matches the height of
+              its content. The height is capped at 10,000 pixels to prevent
+              performance issues with very large dataframes.
             - ``"stretch"``: The height of the editor expands to fill the
               available vertical space in its parent container. When multiple
               elements with stretch height are in the same container, they
@@ -721,9 +733,6 @@ class DataEditorMixin:
               container.
             - An integer specifying the height in pixels: The editor has a
               fixed height.
-            - ``"content"``: The height of the editor matches the height of
-              its content. The height is capped at 10,000 pixels to prevent
-              performance issues with very large dataframes.
 
             Vertical scrolling within the editor is enabled when the height
             does not accommodate all rows.
@@ -782,11 +791,16 @@ class DataEditorMixin:
             name, or use a positional column index where ``0`` refers to the
             first index column.
 
-        num_rows : "fixed" or "dynamic"
+        num_rows : "fixed", "dynamic", "add", or "delete"
             Specifies if the user can add and delete rows in the data editor.
-            If "fixed", the user cannot add or delete rows. If "dynamic", the user can
-            add and delete rows in the data editor, but column sorting is disabled.
-            Defaults to "fixed".
+
+            - ``"fixed"`` (default): The user cannot add or delete rows.
+            - ``"dynamic"``: The user can add and delete rows, but column
+              sorting is disabled.
+            - ``"add"``: The user can only add rows (no deleting), and column
+              sorting is disabled.
+            - ``"delete"``: The user can only delete rows (no adding), and
+              column sorting remains enabled.
 
         disabled : bool or Iterable[str | int]
             Controls the editing of columns. This can be one of the following:
@@ -823,9 +837,10 @@ class DataEditorMixin:
             which fits one line of text.
 
         placeholder : str or None
-            The text that should be shown for missing values (such as ``"None"``,
-            ``"NaN"``, ``"-"``, or ``""``). If this is ``None`` (default),
-            missing values are displayed as ``"None"``.
+            The text that should be shown for missing values. If this is
+            ``None`` (default), missing values are displayed as "None". To
+            leave a cell empty, use an empty string (``""``). Other common
+            values are ``"null"``, ``"NaN"`` and ``"-"``.
 
         Returns
         -------
@@ -996,10 +1011,10 @@ class DataEditorMixin:
         for column_name, column_data in data_df.items():
             if dataframe_util.is_colum_type_arrow_incompatible(column_data):
                 update_column_config(
-                    column_config_mapping, column_name, {"disabled": True}
+                    column_config_mapping, str(column_name), {"disabled": True}
                 )
                 # Convert incompatible type to string
-                data_df[column_name] = column_data.astype("string")
+                data_df[cast("Any", column_name)] = column_data.astype("string")
 
         apply_data_specific_configs(column_config_mapping, data_format)
 
@@ -1014,17 +1029,18 @@ class DataEditorMixin:
             update_column_config(
                 column_config_mapping, INDEX_IDENTIFIER, {"required": True}
             )
-            if num_rows == "dynamic" and hide_index is True:
+            if num_rows in ("dynamic", "add") and hide_index is True:
                 _LOGGER.warning(
                     "Setting `hide_index=True` in data editor with a non-range index will not have any effect "
-                    "when `num_rows='dynamic'`. It is required for the user to fill in index values for "
+                    "when `num_rows` is '%s'. It is required for the user to fill in index values for "
                     "adding new rows. To hide the index, make sure to set the DataFrame "
-                    "index to a range index."
+                    "index to a range index.",
+                    num_rows,
                 )
 
-        if hide_index is None and has_range_index and num_rows == "dynamic":
+        if hide_index is None and has_range_index and num_rows in ("dynamic", "add"):
             # Temporary workaround:
-            # We hide range indices if num_rows is dynamic.
+            # We hide range indices if num_rows allows adding rows.
             # since the current way of handling this index during editing is a
             # bit confusing. The user can still decide to show the index by
             # setting hide_index explicitly to False.
@@ -1093,11 +1109,14 @@ class DataEditorMixin:
         # It can also be a list of columns, which should result in false here.
         proto.disabled = disabled is True
 
-        proto.editing_mode = (
-            ArrowProto.EditingMode.DYNAMIC
-            if num_rows == "dynamic"
-            else ArrowProto.EditingMode.FIXED
-        )
+        if num_rows == "dynamic":
+            proto.editing_mode = ArrowProto.EditingMode.DYNAMIC
+        elif num_rows == "add":
+            proto.editing_mode = ArrowProto.EditingMode.ADD_ONLY
+        elif num_rows == "delete":
+            proto.editing_mode = ArrowProto.EditingMode.DELETE_ONLY
+        else:
+            proto.editing_mode = ArrowProto.EditingMode.FIXED
 
         proto.form_id = current_form_id(self.dg)
 
@@ -1112,7 +1131,7 @@ class DataEditorMixin:
             # Even on collisions, there should not be a big issue with the
             # rendering in the data editor.
             styler_uuid = calc_md5(key or self.dg._get_delta_path_str())[:10]
-            data.set_uuid(styler_uuid)
+            data.set_uuid(styler_uuid)  # ty: ignore[call-non-callable, possibly-missing-attribute]
             marshall_styler(proto, data, styler_uuid)
 
         proto.data = arrow_bytes

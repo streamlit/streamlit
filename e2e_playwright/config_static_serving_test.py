@@ -30,6 +30,18 @@ def test_should_serve_existing_asset(app: Page, app_port: int):
     assert response.status == 200
 
 
+def test_static_endpoint_has_nosniff_header(app: Page, app_port: int):
+    """Test that static endpoint sets X-Content-Type-Options: nosniff header."""
+    response = app.request.get(
+        f"http://localhost:{app_port}/app/static/streamlit-logo.png"
+    )
+    expect(response).to_be_ok()
+    nosniff_header = response.headers.get("x-content-type-options")
+    assert nosniff_header == "nosniff", (
+        f"Expected 'nosniff' header, got: {nosniff_header}"
+    )
+
+
 def test_should_return_error_on_non_existing_asset(app: Page, app_port: int):
     """Test that the static serving feature returns error code for non-existing asset."""
     response = app.request.get(

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement } from "react"
+import { ReactElement } from "react"
 
 import {
   fireEvent,
@@ -27,9 +27,9 @@ import userEvent from "@testing-library/user-event"
 import {
   mockEndpoints,
   NavigationContextProps,
-  renderWithContexts,
   SidebarConfigContextProps,
 } from "@streamlit/lib"
+import { renderWithContexts } from "@streamlit/lib/testing"
 import { Logo, PageConfig } from "@streamlit/protobuf"
 
 import Sidebar, { SidebarProps } from "./Sidebar"
@@ -396,30 +396,37 @@ describe("Sidebar Component", () => {
     })
 
     describe("Logo properties", () => {
+      it("renders logo without link when no link provided", () => {
+        renderSidebar(
+          {},
+          { sidebarConfigContext: { appLogo: testLogos.imageOnly } }
+        )
+
+        const sidebar = screen.getByTestId("stSidebar")
+        const sidebarLogo = within(sidebar).getByTestId("stSidebarLogo")
+
+        expect(sidebarLogo).toHaveStyle({ height: "1.5rem" })
+        expect(
+          within(sidebar).queryByTestId("stLogoLink")
+        ).not.toBeInTheDocument()
+      })
+
       it.each([
         {
-          description: "default image has no link & medium size",
-          logo: testLogos.imageOnly,
-          expectLink: false,
-          expectedHeight: "1.5rem",
-        },
-        {
-          description: "image has link if provided",
+          description: "medium size",
           logo: testLogos.imageWithLink,
-          expectLink: true,
           expectedHeight: "1.5rem",
           expectedHref: EXAMPLE_LINK,
         },
         {
           description: "small size when specified",
           logo: testLogos.logoWithSize,
-          expectLink: true,
           expectedHeight: "1.25rem",
           expectedHref: EXAMPLE_LINK,
         },
       ])(
-        "renders logo - $description",
-        ({ logo, expectLink, expectedHeight, expectedHref }) => {
+        "renders logo with link and $description",
+        ({ logo, expectedHeight, expectedHref }) => {
           renderSidebar({}, { sidebarConfigContext: { appLogo: logo } })
 
           const sidebar = screen.getByTestId("stSidebar")
@@ -427,13 +434,8 @@ describe("Sidebar Component", () => {
 
           expect(sidebarLogo).toHaveStyle({ height: expectedHeight })
 
-          if (expectLink) {
-            const sidebarLogoLink = within(sidebar).getByTestId("stLogoLink")
-            expect(sidebarLogoLink).toHaveAttribute("href", expectedHref)
-          } else {
-            const sidebarLogoLink = within(sidebar).queryByTestId("stLogoLink")
-            expect(sidebarLogoLink).not.toBeInTheDocument()
-          }
+          const sidebarLogoLink = within(sidebar).getByTestId("stLogoLink")
+          expect(sidebarLogoLink).toHaveAttribute("href", expectedHref)
         }
       )
     })
@@ -470,7 +472,7 @@ describe("Sidebar Component", () => {
       renderSidebar()
 
       const sidebar = screen.getByTestId("stSidebar")
-      expect(sidebar).toHaveStyle("width: 256px")
+      expect(sidebar).toHaveStyle("width: 300px")
     })
 
     it("should initialize with saved width when localStorage value exists", () => {
@@ -480,6 +482,119 @@ describe("Sidebar Component", () => {
 
       const sidebar = screen.getByTestId("stSidebar")
       expect(sidebar).toHaveStyle("width: 320px")
+    })
+  })
+
+  describe("Width Initialization Logic", () => {
+    beforeEach(() => {
+      window.localStorage.clear()
+    })
+
+    describe("Priority: Cached > Initial > Default", () => {
+      it.each([
+        {
+          description: "uses default when no cached and no initial",
+          cached: null,
+          initial: undefined,
+          expected: "300px",
+        },
+        {
+          description: "uses cached when cached exists",
+          cached: "450",
+          initial: undefined,
+          expected: "450px",
+        },
+        {
+          description: "uses initial when no cached",
+          cached: null,
+          initial: 400,
+          expected: "400px",
+        },
+        {
+          description: "uses cached over initial when both exist",
+          cached: "500",
+          initial: 350,
+          expected: "500px",
+        },
+      ])("$description", ({ cached, initial, expected }) => {
+        if (cached) {
+          window.localStorage.setItem("sidebarWidth", cached)
+        }
+
+        renderSidebar(
+          {},
+          {
+            sidebarConfigContext: {
+              ...(initial !== undefined && { initialSidebarWidth: initial }),
+            },
+          }
+        )
+
+        expect(screen.getByTestId("stSidebar")).toHaveStyle(
+          `width: ${expected}`
+        )
+      })
+    })
+
+    describe("Width Clamping", () => {
+      it.each([
+        { initial: 150, expected: "200px", description: "clamps to minimum" },
+        { initial: 800, expected: "600px", description: "clamps to maximum" },
+        { initial: 400, expected: "400px", description: "uses value as-is" },
+        { initial: NaN, expected: "300px", description: "handles NaN" },
+      ])("$description", ({ initial, expected }) => {
+        renderSidebar(
+          {},
+          { sidebarConfigContext: { initialSidebarWidth: initial } }
+        )
+
+        expect(screen.getByTestId("stSidebar")).toHaveStyle(
+          `width: ${expected}`
+        )
+      })
+    })
+
+    describe("Cached Width Clamping", () => {
+      it.each([
+        {
+          cached: "1000",
+          expected: "600px",
+          description: "clamps cached value exceeding maximum",
+        },
+        {
+          cached: "100",
+          expected: "200px",
+          description: "clamps cached value below minimum",
+        },
+        {
+          cached: "450",
+          expected: "450px",
+          description: "uses cached value within valid range",
+        },
+        {
+          cached: "200",
+          expected: "200px",
+          description: "uses cached value at minimum boundary",
+        },
+        {
+          cached: "600",
+          expected: "600px",
+          description: "uses cached value at maximum boundary",
+        },
+        {
+          cached: "invalid",
+          expected: "300px",
+          description: "falls back to default when cached value is invalid",
+        },
+      ])("$description", ({ cached, expected }) => {
+        window.localStorage.setItem("sidebarWidth", cached)
+
+        renderSidebar()
+
+        expect(screen.getByTestId("stSidebar")).toHaveStyle(
+          `width: ${expected}`
+        )
+      })
     })
   })
 })

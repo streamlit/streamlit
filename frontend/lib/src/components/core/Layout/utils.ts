@@ -52,3 +52,30 @@ export function shouldHeightStretch(
 ): boolean {
   return !!(heightConfig?.useStretch || heightConfig?.pixelHeight)
 }
+
+const alignmentMap: Record<
+  streamlit.TextAlignmentConfig.Alignment,
+  React.CSSProperties["textAlign"]
+> = {
+  [streamlit.TextAlignmentConfig.Alignment.LEFT]: "left",
+  [streamlit.TextAlignmentConfig.Alignment.CENTER]: "center",
+  [streamlit.TextAlignmentConfig.Alignment.RIGHT]: "right",
+  [streamlit.TextAlignmentConfig.Alignment.JUSTIFY]: "justify",
+  [streamlit.TextAlignmentConfig.Alignment.UNSPECIFIED]: "left",
+}
+
+/**
+ * Convert TextAlignmentConfig proto to CSS text-align value.
+ *
+ * @param config - The text alignment configuration from proto
+ * @returns CSS text-align value or undefined if not set
+ */
+export function getTextAlignmentStyle(
+  config?: streamlit.ITextAlignmentConfig | null
+): React.CSSProperties["textAlign"] {
+  if (!config?.alignment) {
+    return undefined
+  }
+
+  return alignmentMap[config.alignment] || "left"
+}

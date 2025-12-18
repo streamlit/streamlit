@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { memo, ReactElement, useCallback, useContext } from "react"
+import { memo, ReactElement, useCallback, useContext } from "react"
 
 import { ChevronDown } from "baseui/icon"
 import { StyledClearIcon } from "baseui/input/styled-components"

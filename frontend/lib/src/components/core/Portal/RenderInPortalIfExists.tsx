@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { FC, PropsWithChildren, useContext } from "react"
+import { FC, PropsWithChildren, useContext } from "react"
 
 import { createPortal } from "react-dom"
 

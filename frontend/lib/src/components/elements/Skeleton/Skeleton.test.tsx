@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-import React from "react"
-
 import { screen } from "@testing-library/react"
 
 import { Skeleton as SkeletonProto } from "@streamlit/protobuf"

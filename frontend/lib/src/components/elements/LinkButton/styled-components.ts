@@ -17,13 +17,14 @@
 import { MouseEvent, ReactNode } from "react"
 
 import styled, { CSSObject } from "@emotion/styled"
-import { darken, transparentize } from "color2k"
+import { darken } from "color2k"
 
 import {
   BaseButtonKind,
   BaseButtonSize,
 } from "~lib/components/shared/BaseButton/styled-components"
 import { EmotionTheme } from "~lib/theme"
+import { getPrimaryFocusBoxShadow } from "~lib/theme/utils"
 
 export { BaseButtonKind, BaseButtonSize }
 
@@ -95,7 +96,7 @@ export const StyledBaseLinkButton = styled.a<RequiredBaseLinkButtonProps>(
         // When focus-visible (e.g. if the button was focused via keyboard navigation)
         // we use the hover style of the respective button type (see below) and
         // additionally show a colored focus ring
-        boxShadow: `0 0 0 0.2rem ${transparentize(theme.colors.primary, 0.5)}`,
+        boxShadow: getPrimaryFocusBoxShadow(theme),
       },
       "&:hover": {
         textDecoration: "none",

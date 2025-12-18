@@ -379,7 +379,7 @@ def _convert_altair_to_vega_lite_spec(
 
     # alt.themes was deprecated in Altair 5.5.0 in favor of alt.theme
     if type_util.is_altair_version_less_than("5.5.0"):
-        alt_theme = alt.themes  # ty: ignore[unresolved-attribute]
+        alt_theme = alt.themes
     else:
         alt_theme = alt.theme
 
@@ -519,7 +519,10 @@ def _reset_counter_pattern(prefix: str, vega_spec: str) -> str:
     We need to reset these counters on a spec-level to make the
     spec stable across reruns and avoid changes to the element ID.
     """
-    pattern = re.compile(rf'"{prefix}\d+"')
+
+    # Altair 6.0.0 introduced a new way to handle parameters,
+    # by using hashes instead of pure counters:
+    pattern = re.compile(rf'"{prefix}[0-9a-z]+"')
     # Get all matches without duplicates in order of appearance.
     # Using a set here would not guarantee the order of appearance,
     # which might lead to different replacements on each run.
@@ -2090,6 +2093,11 @@ class VegaChartsMixin:
             The Vega-Lite spec for the chart as keywords. This is an alternative
             to ``spec``.
 
+            .. deprecated::
+               ``**kwargs`` are deprecated and will be removed in a future
+               release. To specify Vega-Lite configuration options, use the
+               ``spec`` argument instead.
+
         Returns
         -------
         element or dict
@@ -2130,6 +2138,14 @@ class VegaChartsMixin:
         translated to the syntax shown above.
 
         """
+        if kwargs:
+            show_deprecation_warning(
+                "Variable keyword arguments for `st.vega_lite_chart` have been "
+                "deprecated and will be removed in a future release. Use the "
+                "`spec` argument instead to specify Vega-Lite configuration "
+                "options."
+            )
+
         return self._vega_lite_chart(
             data=data,
             spec=spec,

@@ -418,7 +418,7 @@ class _CacheFuncHasher:
         if type_util.is_type(obj, "pandas.core.series.Series"):
             from pandas.util import hash_pandas_object
 
-            series_obj: pd.Series = cast("pd.Series", obj)
+            series_obj = cast("pd.Series[Any]", obj)
             self.update(h, series_obj.size)
             self.update(h, series_obj.dtype.name)
 
@@ -465,7 +465,7 @@ class _CacheFuncHasher:
                 return b"%s" % pickle.dumps(df_obj, pickle.HIGHEST_PROTOCOL)
 
         elif type_util.is_type(obj, "polars.series.series.Series"):
-            import polars as pl  # type: ignore[import-not-found]
+            import polars as pl
 
             obj = cast("pl.Series", obj)
             self.update(h, str(obj.dtype).encode())

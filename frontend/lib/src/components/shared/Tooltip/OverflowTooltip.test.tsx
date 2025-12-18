@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-import React from "react"
-
 import { render, screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
@@ -24,22 +22,35 @@ import { TestAppWrapper } from "~lib/test_util"
 import OverflowTooltip from "./OverflowTooltip"
 import { Placement } from "./Tooltip"
 
+const { useRefMock, useEffectMock } = vi.hoisted(() => ({
+  useRefMock: vi.fn(),
+  useEffectMock: vi.fn((f: () => void) => f()),
+}))
+
+vi.mock("react", async () => {
+  const actual = await vi.importActual<typeof import("react")>("react")
+
+  return {
+    ...actual,
+    useRef: useRefMock,
+    useEffect: useEffectMock,
+  }
+})
+
 describe("Tooltip component", () => {
   afterEach(() => {
-    vi.restoreAllMocks()
+    vi.clearAllMocks()
   })
 
   it("should render when it fits onscreen", async () => {
     const user = userEvent.setup()
-    const useRefSpy = vi.spyOn(React, "useRef").mockReturnValue({
+    useRefMock.mockReturnValue({
       current: {
         // Pretend the body is greater than its onscreen area.
         offsetWidth: 200,
         scrollWidth: 100,
       },
     })
-
-    vi.spyOn(React, "useEffect").mockImplementation(f => f())
 
     render(
       <OverflowTooltip
@@ -59,20 +70,18 @@ describe("Tooltip component", () => {
 
     expect(screen.queryByText("the content")).not.toBeInTheDocument()
 
-    expect(useRefSpy).toHaveBeenCalledWith(null)
+    expect(useRefMock).toHaveBeenCalledWith(null)
   })
 
   it("should render when ellipsized", async () => {
     const user = userEvent.setup()
-    const useRefSpy = vi.spyOn(React, "useRef").mockReturnValue({
+    useRefMock.mockReturnValue({
       current: {
         // Pretend the body is smaller than its onscreen area.
         offsetWidth: 100,
         scrollWidth: 200,
       },
     })
-
-    vi.spyOn(React, "useEffect").mockImplementation(f => f())
 
     render(
       <OverflowTooltip
@@ -93,6 +102,6 @@ describe("Tooltip component", () => {
     const tooltipContent = await screen.findByText("the content")
     expect(tooltipContent).toBeInTheDocument()
 
-    expect(useRefSpy).toHaveBeenCalledWith(null)
+    expect(useRefMock).toHaveBeenCalledWith(null)
   })
 })

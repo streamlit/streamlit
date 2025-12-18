@@ -144,9 +144,8 @@ function useDataExporter(
       // in all of the common browser, but might cause some trouble in
       // less common browsers. To not crash the whole app, we just lazy import
       // this here.
-      const nativeFileSystemAdapter = await import(
-        "native-file-system-adapter"
-      )
+      const nativeFileSystemAdapter =
+        await import("native-file-system-adapter")
       const fileHandle = await nativeFileSystemAdapter.showSaveFilePicker({
         suggestedName,
         types: [{ accept: { "text/csv": [".csv"] } }],

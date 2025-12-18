@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import React from "react"
 
 import { act, screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
@@ -911,14 +910,14 @@ describe("NumberInput widget", () => {
           description: "formats value after increment",
           step: 5,
           action: async (user: ReturnType<typeof userEvent.setup>) =>
-            await user.click(screen.getByTestId("stNumberInputStepUp")),
+            user.click(screen.getByTestId("stNumberInputStepUp")),
           expected: "15",
         },
         {
           description: "formats value after decrement",
           step: 3,
           action: async (user: ReturnType<typeof userEvent.setup>) =>
-            await user.click(screen.getByTestId("stNumberInputStepDown")),
+            user.click(screen.getByTestId("stNumberInputStepDown")),
           expected: "7",
         },
       ])("$description", async ({ step, action, expected }) => {

@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-import React from "react"
-
 import { screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
@@ -30,11 +28,11 @@ import {
   darkTheme,
   lightTheme,
   mockSessionInfo,
-  renderWithContexts,
   SessionInfo,
   ThemeConfig,
   ThemeContextProps,
 } from "@streamlit/lib"
+import { renderWithContexts } from "@streamlit/lib/testing"
 
 import { Props, SettingsDialog } from "./SettingsDialog"
 

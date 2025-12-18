@@ -58,7 +58,7 @@ from streamlit.runtime.caching.storage.local_disk_cache_storage import (
     get_cache_folder_path,
 )
 from streamlit.runtime.scriptrunner import add_script_run_ctx
-from streamlit.runtime.stats import CacheStat
+from streamlit.runtime.stats import CACHE_MEMORY_FAMILY, CacheStat
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.element_mocks import (
     ELEMENT_PRODUCER,
@@ -573,7 +573,7 @@ class CacheDataStatsProviderTest(unittest.TestCase):
         st.cache_data.clear()
 
     def test_no_stats(self):
-        assert get_data_cache_stats_provider().get_stats() == []
+        assert get_data_cache_stats_provider().get_stats() == {}
 
     def test_multiple_stats(self):
         @st.cache_data
@@ -610,7 +610,9 @@ class CacheDataStatsProviderTest(unittest.TestCase):
 
         # The order of these is non-deterministic, so check Set equality
         # instead of List equality
-        assert set(expected) == set(get_data_cache_stats_provider().get_stats())
+        stats_dict = get_data_cache_stats_provider().get_stats()
+        assert CACHE_MEMORY_FAMILY in stats_dict
+        assert set(expected) == set(stats_dict[CACHE_MEMORY_FAMILY])
 
 
 class CacheDataValidateParamsTest(DeltaGeneratorTestCase):
@@ -742,12 +744,16 @@ class CacheDataMessageReplayTest(DeltaGeneratorTestCase):
     ):
         """Test that it works with element replay if used as non-widget element."""
 
-        if element_name == "toast":
-            # The toast element is not supported in the cache_data API
-            # since elements on the event dg are not supported.
+        if element_name in ("toast", "spinner", "logo", "echo"):
+            # These elements are not supported in the cache_data API
+            #   - toast only corresponds to the event dg
+            #   - spinner is transient and not replayed
+            #   - logo is not replayed because it's not tied to a specific dg
+            #   - echo does not produce an element unless it's executed with code
+
             return
 
-        @st.cache_data
+        @st.cache_data(show_spinner=False)
         def cache_element():
             element_producer()
 
@@ -804,7 +810,7 @@ class CacheDataMessageReplayTest(DeltaGeneratorTestCase):
         expected_width = 400
         expected_height = 200
 
-        @st.cache_data
+        @st.cache_data(show_spinner=False)
         def cache_code_with_layout():
             st.code(
                 "print('Hello, World!')", width=expected_width, height=expected_height

@@ -7,8 +7,10 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
     paths-ignore:
-      # Don't run CI if changes are only in the specs folder:
+      # Don't run CI if changes are only in documentation/spec folders:
       - "specs/**"
+      - "agent-knowledge/**"
+      - "wiki/**"
 
 # Avoid duplicate workflows on same branch
 concurrency:
@@ -25,7 +27,7 @@ jobs:
 
     steps:
       - name: Checkout Streamlit code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           persist-credentials: false
           submodules: "recursive"
@@ -45,6 +47,9 @@ jobs:
           curl -sO "https://repo.anaconda.com/miniconda/${MINICONDA_RELEASE}.sh"
           bash "${MINICONDA_RELEASE}.sh" -b
           conda install conda-build
+      - name: Fix apt mirrors
+        if: ${{ runner.os == 'Linux' }}
+        uses: ./.github/actions/apt_mirror_fix
       - name: Build Snowpark Conda Package - Fast
         timeout-minutes: 120
         run: |

@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import React, {
+import {
   ReactElement,
   ReactNode,
   useCallback,
@@ -31,6 +31,7 @@ import {
   BaseButtonKind,
   DynamicIcon,
   Icon,
+  isKeyboardEventFromEditableTarget,
   Placement,
   ScriptRunState,
   Timer,
@@ -127,9 +128,14 @@ const StatusWidget: React.FC<StatusWidgetProps> = ({
     }
   }
 
-  const handleKeyDown = (keyName: string): void => {
-    // NOTE: 'r' is handled at the App Level
-    if (keyName === "a") {
+  const handleKeyDown = (
+    keyName: string,
+    keyboardEvent?: KeyboardEvent
+  ): void => {
+    // NOTE: 'r' and 'c' are handled at the App level.
+    // See `isKeyboardEventFromEditableTarget` for editable/shadow DOM behavior;
+    // we suppress the "Always rerun" hotkey while the user is typing.
+    if (keyName === "a" && !isKeyboardEventFromEditableTarget(keyboardEvent)) {
       handleAlwaysRerunClick()
     }
   }

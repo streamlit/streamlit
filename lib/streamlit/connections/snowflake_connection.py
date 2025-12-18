@@ -186,7 +186,7 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
     If you don't have a ``[connections.snowflake]`` dictionary in your
     ``secrets.toml`` file and use ``st.connection("snowflake")``, Streamlit
     will use the default connection for the `Snowflake Python Connector
-    <https://docs.snowflake.cn/en/developer-guide/python-connector/python-connector-connect#setting-a-default-connection>`_.
+    <https://docs.snowflake.com/en/developer-guide/python-connector/python-connector-connect#setting-a-default-connection>`_.
 
     If you have a Snowflake configuration file with a connection named
     ``my_connection`` as in Example 3, you can set an environment variable to
@@ -250,8 +250,8 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
 
         # Otherwise, attempt to create a new connection from whatever credentials we
         # have available.
+        st_secrets = self._secrets.to_dict()
         try:
-            st_secrets = self._secrets.to_dict()
             if len(st_secrets):
                 _LOGGER.info(
                     "Connect to Snowflake using the Streamlit secret defined under "
@@ -260,11 +260,11 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
                 conn_kwargs = {**st_secrets, **kwargs}
                 return snowflake.connector.connect(**conn_kwargs)
 
-            # Use the default configuration as defined in https://docs.snowflake.cn/en/developer-guide/python-connector/python-connector-connect#setting-a-default-connection
+            # Use the default configuration as defined in https://docs.snowflake.com/en/developer-guide/python-connector/python-connector-connect#setting-a-default-connection
             if self._connection_name == "snowflake":
                 _LOGGER.info(
                     "Connect to Snowflake using the default configuration as defined "
-                    "in https://docs.snowflake.cn/en/developer-guide/python-connector/python-connector-connect#setting-a-default-connection"
+                    "in https://docs.snowflake.com/en/developer-guide/python-connector/python-connector-connect#setting-a-default-connection"
                 )
                 return snowflake.connector.connect()
 
@@ -357,7 +357,7 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
         def _query(sql: str) -> DataFrame:
             cur = self._instance.cursor()
             cur.execute(sql, params=params, **kwargs)
-            return cur.fetch_pandas_all()
+            return cur.fetch_pandas_all()  # type: ignore
 
         # We modify our helper function's `__qualname__` here to work around default
         # `@st.cache_data` behavior. Otherwise, `.query()` being called with different

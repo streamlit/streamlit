@@ -14,17 +14,15 @@
  * limitations under the License.
  */
 
-import React from "react"
-
 import { screen } from "@testing-library/react"
 
 import {
   createSidebarTheme,
   emotionLightTheme,
   mockEndpoints,
-  renderWithContexts,
   ThemeConfig,
 } from "@streamlit/lib"
+import { renderWithContexts } from "@streamlit/lib/testing"
 import { CustomThemeConfig } from "@streamlit/protobuf"
 
 import { SidebarProps } from "./Sidebar"

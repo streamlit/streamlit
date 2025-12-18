@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { memo, ReactElement, useCallback } from "react"
+import { memo, ReactElement, useCallback } from "react"
 
 import {
   LABEL_PLACEMENT,

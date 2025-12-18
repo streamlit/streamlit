@@ -158,6 +158,17 @@ export const StyledLogoLink = styled.a({
   },
 })
 
+export const StyledLogoButton = styled.button({
+  // Reset button styles
+  background: "none",
+  border: "none",
+  padding: 0,
+  cursor: "pointer",
+  "&:hover": {
+    opacity: "0.7",
+  },
+})
+
 export interface StyledLogoProps {
   size: string
   sidebarWidth?: string

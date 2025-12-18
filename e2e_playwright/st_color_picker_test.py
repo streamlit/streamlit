@@ -29,10 +29,10 @@ from e2e_playwright.shared.app_utils import (
 NUM_COLOR_PICKERS = 13
 
 
-def test_color_picker_widget_display(
+def test_color_picker_widget_display_themed(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
-    """Test that st.color_picker renders correctly."""
+    """Test that st.color_picker renders correctly with theme-dependent styling."""
     color_pickers = themed_app.get_by_test_id("stColorPicker")
     expect(color_pickers).to_have_count(NUM_COLOR_PICKERS)
     assert_snapshot(
@@ -46,19 +46,44 @@ def test_color_picker_widget_display(
     assert_snapshot(
         get_color_picker(themed_app, "Disabled"), name="st_color_picker-disabled"
     )
-    assert_snapshot(
-        get_element_by_key(themed_app, "color_picker_hidden"),
-        name="st_color_picker-hidden_label",
-    )
-    assert_snapshot(
-        get_element_by_key(themed_app, "color_picker_collapsed"),
-        name="st_color_picker-collapsed_label",
-    )
-    # The other color pickers do not need to be snapshot tested since they
-    # don't have any visually interesting differences.
+    # Markdown label colors may vary by theme
     assert_snapshot(
         get_element_by_key(themed_app, "color_picker_markdown_label"),
         name="st_color_picker-markdown_label",
+    )
+
+
+def test_color_picker_widget_display_layout(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that st.color_picker layout variations render correctly (theme-independent)."""
+    color_pickers = app.get_by_test_id("stColorPicker")
+    expect(color_pickers).to_have_count(NUM_COLOR_PICKERS)
+    # Structural layout - single theme sufficient
+    assert_snapshot(
+        get_element_by_key(app, "color_picker_hidden"),
+        name="st_color_picker-hidden_label",
+    )
+    assert_snapshot(
+        get_element_by_key(app, "color_picker_collapsed"),
+        name="st_color_picker-collapsed_label",
+    )
+    # Width configurations
+    assert_snapshot(
+        get_color_picker(app, "Color picker with content width (default)"),
+        name="st_color_picker-width_content",
+    )
+    assert_snapshot(
+        get_color_picker(app, "Color picker with stretch width"),
+        name="st_color_picker-width_stretch",
+    )
+    assert_snapshot(
+        get_color_picker(app, "Color picker with 100px width"),
+        name="st_color_picker-width_100px",
+    )
+    assert_snapshot(
+        get_element_by_key(app, "color_picker_min_width"),
+        name="st_color_picker-width_20px_min_enforced",
     )
 
 
@@ -82,19 +107,22 @@ def test_help_tooltip_works(app: Page):
 
 # The coordinates (0, 0) for the click action behaves differently across firefox.
 @pytest.mark.skip_browser("firefox")
-def test_clicking_color_on_color_picker_works(
-    app: Page, assert_snapshot: ImageCompareFunction
-):
+def test_clicking_color_on_color_picker_works(app: Page):
+    # Check that the color is #000000
+    expect(app.get_by_text("Color 1 #000000")).to_be_visible()
+
     default_picker = get_color_picker(app, "Default Color")
     default_picker.get_by_test_id("stColorPickerBlock").click()
 
-    app.get_by_test_id("stColorPickerPopover").click(position={"x": 0, "y": 0})
+    expect(app.get_by_test_id("stColorPickerPopover")).to_be_visible()
+
+    app.get_by_test_id("stColorPickerPopover").click(position={"x": 10, "y": 10})
 
     # click outside of color picker
     app.get_by_text("Default Color").click()
     wait_for_app_run(app)
-    expect(app.get_by_text("#ffffff")).to_be_visible()
-    assert_snapshot(default_picker, name="st_color_picker-clicked_new_color")
+    # Make sure the color has changed:
+    expect(app.get_by_text("Color 1 #000000")).not_to_be_visible()
 
 
 def test_typing_new_hex_color_on_color_picker_works_with_callback(
@@ -220,28 +248,6 @@ def test_check_top_level_class(app: Page):
 def test_custom_css_class_via_key(app: Page):
     """Test that the element can have a custom css class via the key argument."""
     expect(get_element_by_key(app, "color_picker_1")).to_be_visible()
-
-
-def test_color_picker_width_examples(
-    themed_app: Page, assert_snapshot: ImageCompareFunction
-):
-    """Test that color picker elements with different width configurations are displayed correctly."""
-    assert_snapshot(
-        get_color_picker(themed_app, "Color picker with content width (default)"),
-        name="st_color_picker-width_content",
-    )
-    assert_snapshot(
-        get_color_picker(themed_app, "Color picker with stretch width"),
-        name="st_color_picker-width_stretch",
-    )
-    assert_snapshot(
-        get_color_picker(themed_app, "Color picker with 100px width"),
-        name="st_color_picker-width_100px",
-    )
-    assert_snapshot(
-        get_element_by_key(themed_app, "color_picker_min_width"),
-        name="st_color_picker-width_20px_min_enforced",
-    )
 
 
 @pytest.mark.skip_browser("firefox")

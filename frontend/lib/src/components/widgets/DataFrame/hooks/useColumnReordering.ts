@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { useCallback } from "react"
+import { useCallback } from "react"
 
 import { DataEditorProps } from "@glideapps/glide-data-grid"
 

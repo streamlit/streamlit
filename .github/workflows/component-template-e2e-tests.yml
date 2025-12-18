@@ -7,15 +7,17 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
     paths-ignore:
-      # Don't run CI if changes are only in the specs folder:
+      # Don't run CI if changes are only in documentation/spec folders:
       - "specs/**"
+      - "agent-knowledge/**"
+      - "wiki/**"
 
 jobs:
   component-template-e2e-tests:
     runs-on: ubuntu-latest-8-cores
     steps:
       - name: Checkout Streamlit code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           persist-credentials: false
           submodules: "recursive"
@@ -74,7 +76,7 @@ jobs:
           echo "output_file=${component_lib_tar_gz}" >> $GITHUB_OUTPUT
 
       - name: Checkout streamlit/component-template
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           persist-credentials: false
           repository: streamlit/component-template

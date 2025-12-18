@@ -33,7 +33,6 @@ if TYPE_CHECKING:
 
     from google.protobuf.message import Message
 
-    from streamlit.delta_generator import DeltaGenerator
     from streamlit.elements.lib.layout_utils import LayoutConfig
     from streamlit.proto.Block_pb2 import Block
     from streamlit.runtime.caching.cache_type import CacheType

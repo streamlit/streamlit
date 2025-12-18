@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, ReactNode, useCallback } from "react"
+import { ReactElement, ReactNode, useCallback } from "react"
 
 import { StyledAction, StyledBody } from "baseui/card"
 

@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+/// <reference types="vitest/config" />
 import { defineConfig } from "vite"
 import dts from "vite-plugin-dts"
 import viteTsconfigPaths from "vite-tsconfig-paths"

@@ -48,33 +48,48 @@ function Markdown({ element }: Readonly<MarkdownProps>): ReactElement {
     elementType === MarkdownProto.Type.NATIVE &&
     SINGLE_BADGE_REGEX.test(body.trim())
 
-  const markdown = (
-    <StreamlitMarkdown
-      isCaption={isCaption}
-      source={body}
-      allowHTML={allowHtml}
-    />
-  )
-
   let content: ReactElement
   if (help && isSingleBadgeOnly) {
     // For single badge markdown with help, show the BaseButtonTooltip
     content = (
       <BaseButtonTooltip help={help} containerWidth={false}>
-        {markdown}
+        <StreamlitMarkdown
+          isCaption={isCaption}
+          source={body}
+          allowHTML={allowHtml}
+        />
       </BaseButtonTooltip>
     )
-  } else if (help) {
-    // For other markdown with help, show the inline tooltip
+  } else if (help && isLatex) {
+    // For LaTeX with help, use the inline tooltip icon. Adding a directive
+    // breaks the LaTeX rendering, and we don't support text alignment for LaTeX.
     content = (
       <StyledLabelHelpWrapper isLatex={isLatex}>
-        {markdown}
+        <StreamlitMarkdown
+          isCaption={isCaption}
+          source={body}
+          allowHTML={allowHtml}
+        />
         <InlineTooltipIcon content={help} isLatex={isLatex} />
       </StyledLabelHelpWrapper>
     )
   } else {
-    // No help provided, render markdown normally
-    content = markdown
+    // For other markdown, render with inline help icon
+    // Use :help[] as a marker where the help icon should appear.
+    // The actual help text is passed via helpText prop to avoid limitations
+    // with special characters in text directive labels.
+    const source = help ? `${body} :help[]` : body
+
+    content = (
+      <StyledLabelHelpWrapper isLatex={isLatex}>
+        <StreamlitMarkdown
+          isCaption={isCaption}
+          source={source}
+          allowHTML={allowHtml}
+          helpText={help}
+        />
+      </StyledLabelHelpWrapper>
+    )
   }
 
   return (
