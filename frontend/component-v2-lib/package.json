@@ -36,7 +36,7 @@
     "typesync:ci": "typesync --dry=fail"
   },
   "devDependencies": {
-    "eslint": "^9.39.0",
+    "eslint": "^9.39.2",
     "prettier": "^3.7.4",
     "typescript": "^5.9.3",
     "typesync": "^0.14.3",

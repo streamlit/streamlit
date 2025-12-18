@@ -31,7 +31,7 @@
   },
   "devDependencies": {
     "@types/eslint": "^9.6.1",
-    "eslint": "^9.39.0",
+    "eslint": "^9.39.2",
     "prettier": "^3.7.4",
     "typesync": "^0.14.3",
     "vite": "^7.2.7",
