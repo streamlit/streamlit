@@ -30,7 +30,7 @@ jobs:
             1. **Initial triage**: A maintainer will apply labels, approve CI to run, and trigger AI-assisted reviews. Your PR may be flagged with `status:needs-product-approval` if the feature requires product team sign-off.
 
             2. **Code review**: A core maintainer will start reviewing your PR once:
-               - It is marked as "ready for review" not draft
+               - It is marked as 'ready for review', not 'draft'
                - It has `status:product-approved` (or doesn't need it)
                - All CI checks pass
                - All AI review comments are addressed
