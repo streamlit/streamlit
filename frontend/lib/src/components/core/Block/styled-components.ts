@@ -26,15 +26,9 @@ import { EmotionTheme, STALE_STYLES } from "~lib/theme"
 import { assertNever } from "~lib/util/assertNever"
 
 function translateGapWidth(
-  gapConfig: streamlit.IGapConfig | undefined | null,
+  gapSizeValue: streamlit.GapSize | undefined | null,
   theme: EmotionTheme
 ): string {
-  const pixelGap = gapConfig?.pixelGap
-  if (pixelGap !== undefined && pixelGap !== null) {
-    return `${pixelGap}px`
-  }
-  const gapSizeValue = gapConfig?.gapSize
-
   const gapSize =
     isNullOrUndefined(gapSizeValue) ||
     gapSizeValue === streamlit.GapSize.GAP_UNDEFINED
@@ -48,9 +42,23 @@ function translateGapWidth(
       return theme.spacing.fourXL
     case streamlit.GapSize.NONE:
       return theme.spacing.none
+    case streamlit.GapSize.SMALL:
+      return theme.spacing.lg
     default:
       return theme.spacing.lg
   }
+}
+
+function resolveGapWidth(
+  gapConfig: streamlit.IGapConfig | undefined | null,
+  theme: EmotionTheme
+): string {
+  const pixelGap = gapConfig?.pixelGap
+  if (pixelGap !== undefined && pixelGap !== null) {
+    return `${pixelGap}px`
+  }
+
+  return translateGapWidth(gapConfig?.gapSize, theme)
 }
 
 export interface StyledElementContainerProps {
@@ -151,7 +159,7 @@ export const StyledColumn = styled.div<StyledColumnProps>(
   ({ theme, weight, gapConfig, showBorder, verticalAlignment }) => {
     const { VerticalAlignment } = BlockProto.Column
     const percentage = weight * 100
-    const gapWidth = translateGapWidth(gapConfig, theme)
+    const gapWidth = resolveGapWidth(gapConfig, theme)
     const width =
       gapWidth === theme.spacing.none
         ? `${percentage}%`
@@ -265,7 +273,7 @@ export const StyledFlexContainerBlock =
       justify,
       overflow,
     }) => {
-      const gapWidth = translateGapWidth(gapConfig, theme)
+      const gapWidth = resolveGapWidth(gapConfig, theme)
 
       return {
         display: "flex",

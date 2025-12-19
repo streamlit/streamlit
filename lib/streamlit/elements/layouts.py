@@ -173,12 +173,11 @@ class LayoutsMixin:
             - ``"small"`` (default): 1rem gap between the elements.
             - ``"medium"``: 2rem gap between the elements.
             - ``"large"``: 4rem gap between the elements.
-            - An integer specifying the gap between the elements in pixels.
+            - An integer between 0 and 1000 (the ``MAX_PIXEL_GAP`` limit) specifying the gap in pixels.
             - ``None``: No gap between the elements.
 
-            The integer value must be positive. Use ``None`` to remove the gap
-            entirely. The rem unit is relative to the ``theme.baseFontSize``
-            configuration option.
+            Use ``0`` or ``None`` to remove the gap entirely. Named sizes use
+            rem units relative to the ``theme.baseFontSize`` configuration option.
 
             The minimum gap applies to both the vertical and horizontal gaps
             between the elements. Elements may have larger gaps in one
@@ -372,12 +371,11 @@ class LayoutsMixin:
             - ``"small"`` (default): 1rem gap between the columns.
             - ``"medium"``: 2rem gap between the columns.
             - ``"large"``: 4rem gap between the columns.
-            - An integer specifying the gap between the columns in pixels.
+            - An integer between 0 and 1000 (the ``MAX_PIXEL_GAP`` limit) specifying the gap in pixels.
             - ``None``: No gap between the columns.
 
-            The integer value must be positive. Use ``None`` to remove the gap
-            entirely. The rem unit is relative to the ``theme.baseFontSize``
-            configuration option.
+            Use ``0`` or ``None`` to remove the gap entirely.
+            Named sizes use rem units relative to the ``theme.baseFontSize`` configuration option.
 
         vertical_alignment : "top", "center", or "bottom"
             The vertical alignment of the content inside the columns. The

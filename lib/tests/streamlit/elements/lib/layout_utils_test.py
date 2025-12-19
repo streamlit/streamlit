@@ -20,6 +20,7 @@ import pytest
 from parameterized import parameterized
 
 from streamlit.elements.lib.layout_utils import (
+    MAX_PIXEL_GAP,
     SpaceSize,
     get_align,
     get_gap_config,
@@ -223,6 +224,13 @@ class LayoutUtilsTest(unittest.TestCase):
         assert config.WhichOneof("gap_spec") == "gap_size"
         assert config.gap_size == GapSize.NONE
 
+    def test_get_gap_config_zero(self):
+        """get_gap_config treats 0px the same as None."""
+
+        config = get_gap_config(0, "st.columns")
+        assert config.WhichOneof("gap_spec") == "gap_size"
+        assert config.gap_size == GapSize.NONE
+
     def test_get_gap_config_pixel(self):
         """get_gap_config stores integer gaps as pixel values."""
 
@@ -234,7 +242,7 @@ class LayoutUtilsTest(unittest.TestCase):
         [
             ("tiny",),
             (-5,),
-            (0,),
+            (MAX_PIXEL_GAP + 1,),
             (5.5,),
             (True,),
         ]

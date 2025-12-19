@@ -216,6 +216,26 @@ export function backwardsCompatibleColumnGapConfig(
   return { gapSize: streamlit.GapSize.SMALL }
 }
 
+export function resolveGapConfigWithDefault(
+  gapConfig?: streamlit.IGapConfig | null,
+  fallbackSize: streamlit.GapSize = streamlit.GapSize.SMALL
+): streamlit.IGapConfig {
+  if (gapConfig?.pixelGap !== undefined && gapConfig?.pixelGap !== null) {
+    return { pixelGap: gapConfig.pixelGap }
+  }
+
+  const gapSize = gapConfig?.gapSize
+  if (
+    gapSize !== undefined &&
+    gapSize !== null &&
+    gapSize !== streamlit.GapSize.GAP_UNDEFINED
+  ) {
+    return { gapSize }
+  }
+
+  return { gapSize: fallbackSize }
+}
+
 export function checkFlexContainerBackwardsCompatibile(
   blockProto: BlockProto
 ): boolean {

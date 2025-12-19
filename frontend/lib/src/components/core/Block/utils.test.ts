@@ -27,6 +27,7 @@ import {
   getBorderBackwardsCompatible,
   getKeyFromId,
   isElementStale,
+  resolveGapConfigWithDefault,
 } from "./utils"
 
 describe("isElementStale", () => {
@@ -247,6 +248,35 @@ describe("backwardsCompatibleColumnGapConfig", () => {
     expect(backwardsCompatibleColumnGapConfig(columnProto)).toEqual({
       gapSize: streamlit.GapSize.LARGE,
     })
+  })
+})
+
+describe("resolveGapConfigWithDefault", () => {
+  it("uses the pixel gap when provided", () => {
+    expect(
+      resolveGapConfigWithDefault({
+        pixelGap: 10,
+        gapSize: streamlit.GapSize.MEDIUM,
+      })
+    ).toEqual({ pixelGap: 10 })
+  })
+
+  it("falls back to provided gap size when defined", () => {
+    expect(
+      resolveGapConfigWithDefault({ gapSize: streamlit.GapSize.LARGE })
+    ).toEqual({ gapSize: streamlit.GapSize.LARGE })
+  })
+
+  it("returns fallback when gap size undefined", () => {
+    expect(resolveGapConfigWithDefault()).toEqual({
+      gapSize: streamlit.GapSize.SMALL,
+    })
+    expect(
+      resolveGapConfigWithDefault(
+        { gapSize: streamlit.GapSize.GAP_UNDEFINED },
+        streamlit.GapSize.MEDIUM
+      )
+    ).toEqual({ gapSize: streamlit.GapSize.MEDIUM })
   })
 })
 

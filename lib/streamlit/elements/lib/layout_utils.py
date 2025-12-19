@@ -47,6 +47,9 @@ SIZE_TO_REM_MAPPING = {
     "large": 4.25,  # Height of large widget without label
 }
 
+# Integer gap values are clamped to this maximum
+MAX_PIXEL_GAP = 1000
+
 
 @dataclass
 class LayoutConfig:
@@ -177,7 +180,29 @@ def get_height_config(height: Height | SpaceSize) -> HeightConfig:
 
 
 def get_gap_config(gap: Gap | None, element_type: str) -> GapConfig:
-    """Convert a gap spec into a GapConfig proto."""
+    """
+    Convert a gap specification into a GapConfig proto message.
+
+    Parameters
+    ----------
+    gap : {"small", "medium", "large", int} or None
+        Named gaps map to the matching :class:`GapSize` enum value.
+        Integer inputs specify the gap in pixels and must be between 0 and
+        ``MAX_PIXEL_GAP`` (inclusive). ``0`` or ``None`` remove the gap entirely.
+    element_type : str
+        The element requesting the gap. Used for contextualizing error messages.
+
+    Returns
+    -------
+    GapConfig
+        A proto with either ``gap_size`` or ``pixel_gap`` populated.
+
+    Raises
+    ------
+    StreamlitInvalidColumnGapError
+        If ``gap`` is not a supported string, is a boolean, or falls outside the
+        allowed integer range.
+    """
     gap_mapping = {
         "small": GapSize.SMALL,
         "medium": GapSize.MEDIUM,
@@ -197,12 +222,20 @@ def get_gap_config(gap: Gap | None, element_type: str) -> GapConfig:
         gap_config.gap_size = GapSize.NONE
         return gap_config
     elif isinstance(gap, int) and not isinstance(gap, bool):
-        if gap <= 0:
-            raise StreamlitInvalidColumnGapError(gap=gap, element_type=element_type)
-        gap_config.pixel_gap = gap
+        if gap < 0 or gap > MAX_PIXEL_GAP:
+            raise StreamlitInvalidColumnGapError(
+                gap=gap, element_type=element_type, max_pixel_gap=MAX_PIXEL_GAP
+            )
+
+        if gap == 0:
+            gap_config.gap_size = GapSize.NONE
+        else:
+            gap_config.pixel_gap = int(gap)
         return gap_config
 
-    raise StreamlitInvalidColumnGapError(gap=gap, element_type=element_type)
+    raise StreamlitInvalidColumnGapError(
+        gap=gap, element_type=element_type, max_pixel_gap=MAX_PIXEL_GAP
+    )
 
 
 def validate_horizontal_alignment(horizontal_alignment: HorizontalAlignment) -> None:

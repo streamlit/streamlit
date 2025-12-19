@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useContext } from "react"
+import React, { ReactElement, useContext, useMemo } from "react"
 
 import classNames from "classnames"
 
@@ -62,6 +62,7 @@ import {
   getClassnamePrefix,
   getKeyFromId,
   isComponentStale,
+  resolveGapConfigWithDefault,
   shouldComponentBeEnabled,
 } from "./utils"
 
@@ -174,16 +175,10 @@ export const FlexBoxContainer = (
   })
 
   const flexGapConfig = props.node.deltaBlock.flexContainer?.gapConfig
-  const hasPixelGap =
-    flexGapConfig?.pixelGap !== undefined && flexGapConfig?.pixelGap !== null
-  const hasGapSize =
-    flexGapConfig?.gapSize !== undefined &&
-    flexGapConfig?.gapSize !== null &&
-    flexGapConfig?.gapSize !== streamlit.GapSize.GAP_UNDEFINED
-  const resolvedGapConfig: streamlit.IGapConfig =
-    hasPixelGap || hasGapSize
-      ? flexGapConfig
-      : { gapSize: streamlit.GapSize.SMALL }
+  const resolvedGapConfig = useMemo(
+    () => resolveGapConfigWithDefault(flexGapConfig),
+    [flexGapConfig]
+  )
 
   const styles = {
     gapConfig: resolvedGapConfig,

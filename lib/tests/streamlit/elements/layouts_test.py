@@ -20,6 +20,7 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit.elements.dialog_decorator import dialog_decorator
+from streamlit.elements.lib.layout_utils import MAX_PIXEL_GAP
 from streamlit.errors import (
     FragmentHandledException,
     StreamlitAPIException,
@@ -287,6 +288,23 @@ class ColumnsTest(DeltaGeneratorTestCase):
             )
             assert col_block.add_block.column.gap_config.pixel_gap == 12
 
+    def test_columns_with_zero_gap(self):
+        """Test that passing 0 removes the gap."""
+
+        st.columns(3, gap=0)
+
+        all_deltas = self.get_all_deltas_from_queue()
+
+        horizontal_container = all_deltas[0]
+        columns_blocks = all_deltas[1:4]
+
+        assert (
+            horizontal_container.add_block.flex_container.gap_config.gap_size
+            == GapSize.NONE
+        )
+        for col_block in columns_blocks:
+            assert col_block.add_block.column.gap_config.gap_size == GapSize.NONE
+
     @parameterized.expand(
         [
             "invalid",
@@ -294,7 +312,7 @@ class ColumnsTest(DeltaGeneratorTestCase):
             "5rem",
             "10px",
             -3,
-            0,
+            MAX_PIXEL_GAP + 1,
             True,
         ]
     )
@@ -651,10 +669,19 @@ class ContainerTest(DeltaGeneratorTestCase):
         )
         assert container_block.add_block.flex_container.gap_config.pixel_gap == 8
 
+    def test_container_zero_gap(self) -> None:
+        """Test that st.container treats a 0px gap as no gap."""
+
+        st.container(gap=0)
+        container_block = self.get_delta_from_queue()
+        assert (
+            container_block.add_block.flex_container.gap_config.gap_size == GapSize.NONE
+        )
+
     @parameterized.expand(
         [
             (-1,),
-            (0,),
+            (MAX_PIXEL_GAP + 1,),
             (True,),
         ],
     )
