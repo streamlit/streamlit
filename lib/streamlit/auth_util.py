@@ -35,7 +35,12 @@ if TYPE_CHECKING:
 
 
 MAX_COOKIE_BYTES: Final = 4096
-APPROX_COOKIE_ATTR_SIZE: Final = 31
+# Cookie attributes added by Tornado: "; Path=/; HttpOnly"
+COOKIE_ATTRIBUTES: Final = "; Path=/; HttpOnly"
+COOKIE_ATTR_SIZE: Final = len(COOKIE_ATTRIBUTES)
+# Safety buffer for signing overhead to account for edge cases, rounding, and potential
+# variations in signing implementations (e.g., longer timestamps after year 2286)
+SIGNING_OVERHEAD_SAFETY_BUFFER: Final = 50
 
 
 class AuthCache:
@@ -175,6 +180,8 @@ def generate_default_provider_section(auth_section: AttrDict) -> dict[str, Any]:
         default_provider_section["client_kwargs"] = cast(
             "AttrDict", auth_section.get("client_kwargs", AttrDict({}))
         ).to_dict()
+    if auth_section.get("expose_tokens"):
+        default_provider_section["expose_tokens"] = auth_section.get("expose_tokens")
     return default_provider_section
 
 
@@ -197,8 +204,8 @@ def set_cookie_with_chunks(
     # Calculate actual cookie size using the provided signing function
     signed_value = create_signed_value_fn(cookie_name, serialized_cookie_value)
 
-    # Cookie format: "name=value; HttpOnly; Path=/"
-    actual_cookie_size = len(cookie_name) + len(signed_value) + APPROX_COOKIE_ATTR_SIZE
+    # Cookie format: "name=value" + COOKIE_ATTRIBUTES
+    actual_cookie_size = len(cookie_name) + len(signed_value) + COOKIE_ATTR_SIZE
 
     # Check if cookie needs to be split
     if actual_cookie_size > MAX_COOKIE_BYTES:
@@ -206,35 +213,73 @@ def set_cookie_with_chunks(
             "Cookie size (%d bytes) exceeds browser limit. Splitting into multiple cookies.",
             actual_cookie_size,
         )
-        _set_split_cookie(set_single_cookie_fn, cookie_name, serialized_cookie_value)
+        _set_split_cookie(
+            set_single_cookie_fn,
+            create_signed_value_fn,
+            cookie_name,
+            serialized_cookie_value,
+        )
     else:
         set_single_cookie_fn(cookie_name, serialized_cookie_value)
 
 
+def _calculate_signing_overhead(
+    create_signed_value_fn: Callable[[str, str], bytes],
+    cookie_name: str,
+) -> int:
+    """Calculate the server's signing overhead by measuring the size difference.
+
+    This empirically measures the overhead added by the signing function (e.g., Tornado's
+    create_signed_value) by signing a minimal test value and computing the difference.
+
+    Args:
+        create_signed_value_fn: Function to create a signed cookie value
+        cookie_name: Name of the cookie (affects overhead due to length prefix)
+
+    Returns
+    -------
+        The number of bytes added by signing (excluding the base64-encoded value)
+    """
+    test_value = "x"  # Minimal test value (1 byte)
+    signed = create_signed_value_fn(cookie_name, test_value)
+    # base64 encoding of 1 byte = 4 bytes, so overhead = total - 4
+    return len(signed) - 4
+
+
 def _set_split_cookie(
     set_single_cookie_fn: Callable[[str, str], None],
+    create_signed_value_fn: Callable[[str, str], bytes],
     cookie_name: str,
     value: str,
 ) -> None:
     """Split a large cookie value into multiple smaller cookies.
 
-    The main cookie always exists and contains the first chunk.
+    The main cookie always exists and either contains the whole value or the chunk count.
     Additional chunks are stored as cookie_name_1, cookie_name_2, etc.
 
     Args:
         set_single_cookie_fn: Function to set a single cookie (cookie_name, value)
+        create_signed_value_fn: Function to create a signed cookie value
         cookie_name: Name of the cookie
         value: Serialized string value to split and store
     """
+    # Calculate overhead empirically from the actual signing function, plus safety buffer
+    signing_overhead = (
+        _calculate_signing_overhead(create_signed_value_fn, cookie_name)
+        + SIGNING_OVERHEAD_SAFETY_BUFFER
+    )
 
-    # Maximum size for a single cookie chunk (conservatively set to allow for overhead)
-    # Overhead seems to be around 110 bytes, but depends on Tornado internals, so having a safe 3x margin
-    cookie_space = 3800 - len(
-        cookie_name
-    )  # Account for cookie name + fix-length overhead (timestamp etc)
-    chunk_size = (
-        cookie_space * 3
-    ) // 4  # Account for base64 encoding overhead of 4/3 ratio
+    # Available space for the signed value:
+    # MAX_COOKIE_BYTES - cookie_name - "=" (1 byte) - cookie attributes
+    available_for_signed_value = (
+        MAX_COOKIE_BYTES - len(cookie_name) - 1 - COOKIE_ATTR_SIZE
+    )
+
+    # Space available for the base64-encoded value (after subtracting signing overhead)
+    available_for_base64_value = available_for_signed_value - signing_overhead
+
+    # Convert from base64 space to raw value space (base64 has 4/3 expansion ratio)
+    chunk_size = (available_for_base64_value * 3) // 4
     chunks = []
     for i in range(0, len(value), chunk_size):
         chunk = value[i : i + chunk_size]

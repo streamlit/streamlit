@@ -441,32 +441,6 @@ class TokensProxy(Mapping[str, str]):
     >>>         st.success("ID token retrieved successfully")
     >>>     except KeyError:
     >>>         st.warning("ID token not available")
-
-    **Example 2: Expose multiple tokens with a named provider**
-
-    To expose both ID and access tokens, provide a list to ``expose_tokens``.
-    This example uses a named provider configuration.
-
-    ``.streamlit/secrets.toml``:
-
-    >>> [auth]
-    >>> redirect_uri = "http://localhost:8501/oauth2callback"
-    >>> cookie_secret = "xxx"
-    >>>
-    >>> [auth.google]
-    >>> client_id = "xxx"
-    >>> client_secret = "xxx"
-    >>> server_metadata_url = "https://accounts.google.com/.well-known/openid-configuration"  # fmt: skip
-    >>> expose_tokens = ["id", "access"]
-
-    Your app code:
-
-    >>> import streamlit as st
-    >>>
-    >>> if st.user.is_logged_in:
-    >>>     st.write("Available tokens:")
-    >>>     for token_name in st.user.tokens:
-    >>>         st.write(f"- {token_name}")
     """
 
     def __init__(self, tokens: dict[str, str]) -> None:

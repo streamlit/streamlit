@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import base64
 import json
 import unittest
 from typing import Any
@@ -23,6 +24,7 @@ import pytest
 
 from streamlit.auth_util import (
     AuthCache,
+    _calculate_signing_overhead,
     clear_cookie_and_chunks,
     get_cookie_with_chunks,
     get_expose_tokens_config,
@@ -30,6 +32,21 @@ from streamlit.auth_util import (
     set_cookie_with_chunks,
 )
 from streamlit.errors import StreamlitAuthError
+
+# Simulates realistic Tornado cookie signing overhead (~100 bytes for signature, timestamp, etc.)
+MOCK_SIGNING_OVERHEAD = 100
+
+
+def create_realistic_signed_value(name: str, value: str) -> bytes:
+    """Mock that simulates realistic Tornado cookie signing behavior.
+
+    Returns base64-encoded value plus a fixed overhead to simulate signing.
+    """
+    base64_value = base64.b64encode(value.encode()).decode()
+    # Simulate: "2|1:0|10:timestamp|{name_len}:{name}|{val_len}:{base64_value}||{signature}" noqa: ERA001
+    overhead = "x" * MOCK_SIGNING_OVERHEAD
+    return f"{overhead}{base64_value}".encode()
+
 
 CONFIG_MOCK: dict[str, Any] = {}
 
@@ -184,6 +201,15 @@ class ExposeTokensConfigTest(unittest.TestCase):
 class CookieChunkingTest(unittest.TestCase):
     """Test cookie chunking functionality."""
 
+    def test_calculate_signing_overhead(self):
+        """Test that signing overhead is calculated correctly from the signing function."""
+        # The overhead should be the signed size minus base64 size of the test value
+        # base64("x") = "eA==" which is 4 bytes
+        overhead = _calculate_signing_overhead(
+            create_realistic_signed_value, "test_cookie"
+        )
+        assert overhead == MOCK_SIGNING_OVERHEAD
+
     def test_set_cookie_with_chunks_small_cookie(self):
         """Test that small cookies are set without chunking."""
         cookies: dict[str, str] = {}
@@ -191,14 +217,10 @@ class CookieChunkingTest(unittest.TestCase):
         def mock_set_cookie(name: str, value: str) -> None:
             cookies[name] = value
 
-        def mock_create_signed_value(name: str, value: str) -> bytes:
-            # Simulate a signed value that's similar in size
-            return f"signed_{value}".encode()
-
         small_data = {"key": "value"}
         set_cookie_with_chunks(
             mock_set_cookie,
-            mock_create_signed_value,
+            create_realistic_signed_value,
             "test_cookie",
             small_data,
         )
@@ -216,25 +238,23 @@ class CookieChunkingTest(unittest.TestCase):
         def mock_set_cookie(name: str, value: str) -> None:
             cookies[name] = value
 
-        def mock_create_signed_value(name: str, value: str) -> bytes:
-            # Simulate a very large signed value that exceeds the limit
-            return ("x" * 5000).encode()
-
-        large_data = {"key": "x" * 10000}
+        # Create data large enough to exceed the 4096 byte cookie limit after signing
+        # With ~100 byte overhead and base64 expansion (4/3), we need ~3000+ raw bytes
+        large_data = {"key": "x" * 5000}
         set_cookie_with_chunks(
             mock_set_cookie,
-            mock_create_signed_value,
+            create_realistic_signed_value,
             "test_cookie",
             large_data,
         )
 
-        # Main cookie should exist (contains first chunk)
+        # Main cookie should exist (contains chunk count marker)
         assert "test_cookie" in cookies
         chunk_count = int(cookies["test_cookie"].split("-")[1])
         assert chunk_count > 1  # Should have multiple chunks
 
-        # Verify additional chunks exist (1, 2, 3, etc.)
-        for i in range(1, chunk_count):
+        # Verify all chunks exist (1, 2, ..., chunk_count)
+        for i in range(1, chunk_count + 1):
             assert f"test_cookie_{i}" in cookies
 
     def test_get_cookie_with_chunks_single_cookie(self):
@@ -378,15 +398,12 @@ class CookieChunkingTest(unittest.TestCase):
         def mock_get_cookie(name: str) -> bytes | None:
             return cookies.get(name)
 
-        def mock_create_signed_value(name: str, value: str) -> bytes:
-            return f"signed_{value}".encode()
-
         data = {"user": "john", "email": "john@example.com"}
 
         # Set the cookie
         set_cookie_with_chunks(
             mock_set_cookie,
-            mock_create_signed_value,
+            create_realistic_signed_value,
             "auth_cookie",
             data,
         )
@@ -406,17 +423,13 @@ class CookieChunkingTest(unittest.TestCase):
         def mock_get_cookie(name: str) -> bytes | None:
             return cookies.get(name)
 
-        def mock_create_signed_value(name: str, value: str) -> bytes:
-            # Simulate a large signed value
-            return ("x" * 5000).encode()
-
-        # Create large data
-        data = {"token": "x" * 10000}
+        # Create large data that will require chunking
+        data = {"token": "x" * 5000}
 
         # Set the cookie (should chunk it)
         set_cookie_with_chunks(
             mock_set_cookie,
-            mock_create_signed_value,
+            create_realistic_signed_value,
             "auth_cookie",
             data,
         )
