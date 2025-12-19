@@ -265,7 +265,7 @@ class CacheResourceAPI:
         validate: ValidateFunc | None = None,
         hash_funcs: HashFuncsDict | None = None,
     ) -> CachedFunc[P, R] | Callable[[Callable[P, R]], CachedFunc[P, R]]:
-        return self._decorator(  # ty: ignore
+        return self._decorator(  # ty: ignore[missing-argument]
             func,  # ty: ignore[invalid-argument-type]
             ttl=ttl,
             max_entries=max_entries,

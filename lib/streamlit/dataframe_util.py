@@ -939,12 +939,12 @@ def convert_anything_to_list(obj: OptionSequence[V_co]) -> list[V_co]:
         return [member.value if isinstance(member, str) else member for member in obj]  # type: ignore
 
     if isinstance(obj, Mapping):
-        return list(obj.keys())
+        return cast("list[V_co]", list(obj.keys()))
 
     if is_list_like(obj) and not is_snowpark_row_list(obj):
         # This also ensures that the sequence is copied to prevent
         # potential mutations to the original object.
-        return list(obj)
+        return list(cast("Iterable[V_co]", obj))
 
     # Fallback to our DataFrame conversion logic:
     try:
@@ -1084,7 +1084,7 @@ def is_colum_type_arrow_incompatible(column: Series[Any] | Index[Any]) -> bool:
                 return True
 
             # Get the first value to check if it is a supported list-like type.
-            first_value = cast("DataFrameGenericAlias[Any]", column).iloc[0]
+            first_value = cast("DataFrameGenericAlias[Any]", column).iloc[0]  # type: ignore[index]
 
             if (  # noqa: SIM103
                 not is_list_like(first_value)

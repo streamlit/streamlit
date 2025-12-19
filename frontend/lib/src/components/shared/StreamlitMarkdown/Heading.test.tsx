@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-import React from "react"
-
 import { screen, waitFor } from "@testing-library/react"
 
 import { Heading as HeadingProto } from "@streamlit/protobuf"
@@ -33,7 +31,7 @@ const getHeadingProps = (
     anchor: "some-anchor",
     tag: "h1",
     body: `hello world
-this is a new line`,
+             this is a new line`,
     ...elementProps,
   }),
 })
@@ -168,9 +166,9 @@ describe("Heading", () => {
   it("does not render tables", async () => {
     const props = getHeadingProps({
       body: `| Syntax | Description |
-| ----------- | ----------- |
-| Header      | Title       |
-| Paragraph   | Text        |`,
+           | ----------- | ----------- |
+           | Header      | Title       |
+           | Paragraph   | Text        |`,
     })
     render(<Heading {...props} />)
 
@@ -181,7 +179,7 @@ describe("Heading", () => {
     // Wait for lazy-loaded content to render
     await waitFor(() => {
       expect(screen.getByTestId("stMarkdownContainer")).toHaveTextContent(
-        "| Syntax | Description || ----------- | ----------- | | Header | Title | | Paragraph | Text |"
+        "| Syntax | Description | | ----------- | ----------- | | Header | Title | | Paragraph | Text |"
       )
     })
 

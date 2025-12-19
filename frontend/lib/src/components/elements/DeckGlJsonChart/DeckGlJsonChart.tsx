@@ -14,14 +14,7 @@
  * limitations under the License.
  */
 
-import React, {
-  FC,
-  memo,
-  useCallback,
-  useContext,
-  useEffect,
-  useState,
-} from "react"
+import { FC, memo, useCallback, useContext, useEffect, useState } from "react"
 
 import { LayersList, PickingInfo } from "@deck.gl/core"
 import { DeckGL } from "@deck.gl/react"

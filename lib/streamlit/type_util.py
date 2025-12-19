@@ -234,7 +234,7 @@ def is_plotly_chart(obj: object) -> TypeGuard[Figure | list[Any] | dict[str, Any
 
 def is_graphviz_chart(
     obj: object,
-) -> TypeGuard[graphviz.Graph | graphviz.Digraph]:
+) -> TypeGuard[graphviz.Graph | graphviz.Digraph | graphviz.Source]:
     """True if input looks like a GraphViz chart."""
     return (
         # In GraphViz < 0.18

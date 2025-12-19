@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, ReactNode, useState } from "react"
+import { ReactElement, ReactNode, useEffect, useRef, useState } from "react"
 
 import { StyledEllipsizedDiv, StyledWrapper } from "./styled-components"
 import Tooltip, { Placement } from "./Tooltip"
@@ -38,15 +38,16 @@ function OverflowTooltip({
   inline,
   style,
 }: OverflowTooltipProps): ReactElement {
-  const childRef = React.useRef<HTMLDivElement>(null)
+  const childRef = useRef<HTMLDivElement>(null)
   const [allowTooltip, setAllowTooltip] = useState(false)
 
-  React.useEffect(() => {
+  useEffect(() => {
     const newAllowTooltip = childRef?.current
       ? // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
         childRef.current.offsetWidth < childRef.current.scrollWidth
       : false
     if (newAllowTooltip !== allowTooltip) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Existing usage
       setAllowTooltip(newAllowTooltip)
     }
   }, [children, allowTooltip])

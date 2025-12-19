@@ -14,13 +14,7 @@
  * limitations under the License.
  */
 
-import React, {
-  memo,
-  MouseEvent,
-  ReactElement,
-  useCallback,
-  useRef,
-} from "react"
+import { memo, MouseEvent, ReactElement, useCallback, useRef } from "react"
 
 import { LinkButton as LinkButtonProto } from "@streamlit/protobuf"
 

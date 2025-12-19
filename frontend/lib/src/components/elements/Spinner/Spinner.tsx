@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { memo, ReactElement, useEffect, useRef, useState } from "react"
+import { memo, ReactElement, useEffect, useRef, useState } from "react"
 
 import classNames from "classnames"
 

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { Fragment, ReactElement, useContext } from "react"
+import { Fragment, ReactElement, useContext } from "react"
 
 import { Components } from "react-markdown"
 

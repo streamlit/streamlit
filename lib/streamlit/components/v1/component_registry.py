@@ -120,7 +120,7 @@ def declare_component(
     if not url and (
         component_base_path := config.get_option("server.customComponentBaseUrlPath")
     ):
-        url = f"{component_base_path}/{component_name}/"
+        url = f"{component_base_path}/{component_name}/"  # ty: ignore[possibly-unresolved-reference]
 
     # Create our component object, and register it.
     component = CustomComponent(

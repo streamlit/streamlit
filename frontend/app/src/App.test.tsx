@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-import React, { act } from "react"
+import { act } from "react"
 
 import {
   fireEvent,
