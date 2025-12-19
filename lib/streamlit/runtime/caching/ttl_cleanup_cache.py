@@ -14,8 +14,8 @@
 
 """LRU cache supporting TTL and max entry count, as well as release hooks for cleanup."""
 
-from collections.abc import Callable
-from typing import override
+from collections.abc import Callable, Iterable
+from typing import Any, override
 
 from cachetools import TTLCache
 
@@ -34,8 +34,10 @@ class TTLCleanupCache(TTLCache):
     ) -> None:
         """Create a cache with the given size, TTL, and release hook.
 
+        Parameters
+        ----------
         maxsize : float
-            The maxiumum number of elements this cache should hold.
+            The maximum number of elements this cache should hold.
         ttl : float
             The amount of time a cache entry should remain valid, in seconds.
         timer : Callable[[], float]
@@ -48,12 +50,15 @@ class TTLCleanupCache(TTLCache):
         self._on_release = on_release
 
     @override
-    def popitem(self):
-        _, value = super().popitem()
+    def popitem(self) -> tuple[Any, Any]:
+        key, value = super().popitem()
         self._on_release(value)
+        return key, value
 
     @override
-    def expire(self, time: float | None = None):
+    def expire(self, time: float | None = None) -> Iterable[tuple[Any, Any]]:
         items = super().expire(time)
         for _, value in items:
             self._on_release(value)
+
+        return items

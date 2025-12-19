@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from unittest import TestCase
 
 from streamlit.runtime.caching.ttl_cleanup_cache import TTLCleanupCache
 
@@ -21,8 +20,13 @@ def fake_timer() -> float:
     return 1234
 
 
-class TTLCleanupCacheTest(TestCase):
+class TestTTLCleanupCache:
     def test_releases_when_hits_size(self):
+        """Unit test for on_release.
+
+        Tests that on_release is called when entries are removed from the cache due to
+        hitting the size limit.
+        """
         released_items = []
 
         def on_release(item: int) -> None:
@@ -55,6 +59,11 @@ class TTLCleanupCacheTest(TestCase):
         assert test_cache[12] == 22
 
     def test_releases_when_hits_ttl(self):
+        """Unit test for on_release.
+
+        Tests that on_release is called when entries are removed from the cache due to
+        hitting the TTL.
+        """
         released_items = []
 
         def on_release(item: int) -> None:
