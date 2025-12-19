@@ -500,6 +500,9 @@ describe("NumberInput widget", () => {
       })
 
       // The displayed value should reset to the default value.
+      // Note: The formatValue function correctly applies "%0.3f" to produce "5.500",
+      // but HTML <input type="number"> automatically normalizes values by removing
+      // trailing zeros, so "5.500" is displayed as "5.5". This is standard browser behavior.
       expect(numberInput).toHaveDisplayValue("5.5")
     })
 
@@ -539,8 +542,9 @@ describe("NumberInput widget", () => {
       })
 
       // After form clear:
-      // 1. Formatted value should reset to default
-      // Note: The formatting is applied on the next render cycle, not immediately in onFormCleared
+      // 1. Formatted value should reset to default.
+      // Note: formatValue correctly applies "%0.2f" format, but HTML <input type="number">
+      // normalizes "10.00" to "10" by removing trailing zeros. This is standard browser behavior.
       expect(numberInput).toHaveDisplayValue("10")
 
       // 2. Verify that the default value was set in widgetMgr (dirty state was reset)
@@ -556,7 +560,7 @@ describe("NumberInput widget", () => {
       await user.type(numberInput, "15.5")
       await user.tab()
 
-      // New value should be committed successfully
+      // New value should be committed successfully. The browser normalizes "15.50" to "15.5".
       expect(numberInput).toHaveDisplayValue("15.5")
       expect(props.widgetMgr.setDoubleValue).toHaveBeenLastCalledWith(
         props.element,

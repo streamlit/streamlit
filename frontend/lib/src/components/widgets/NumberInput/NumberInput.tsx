@@ -141,12 +141,33 @@ const NumberInput: React.FC<Props> = ({
     [element.step, element.dataType]
   )
 
+  // Helper to format a numeric value with the current format settings
+  const formatCurrentValue = useCallback(
+    (val: number | null) =>
+      formatValue({
+        value: val,
+        dataType: elementDataType,
+        format: elementFormat,
+        step,
+      }),
+    [elementDataType, elementFormat, step]
+  )
+
   // Local ephemeral state - dirty and formattedValue need refs for onFormCleared
   const [dirty, setDirty] = useState(false)
 
-  // Formatted value is derived from the core value, but we track it as state
-  // because the user can type intermediate values (like "1." for float)
-  const [formattedValue, setFormattedValue] = useState<string | null>(null)
+  // Formatted value is state because the user can type intermediate values (like "1." for float)
+  // Initialize with the correctly formatted initial value to avoid double render
+  const [formattedValue, setFormattedValue] = useState<string | null>(() => {
+    const initialValue =
+      getStateFromWidgetMgr(widgetMgr, element) ?? elementDefault ?? null
+    return formatValue({
+      value: initialValue,
+      dataType: elementDataType,
+      format: elementFormat,
+      step,
+    })
+  })
 
   // Use useBasicWidgetState for core value management
   const [value, setValueWithSource] = useBasicWidgetState<
@@ -164,18 +185,11 @@ const NumberInput: React.FC<Props> = ({
       // Reset dirty state and formatted value when form is cleared
       const newValue = elementDefault ?? null
       setDirty(false)
-      setFormattedValue(
-        formatValue({
-          value: newValue,
-          dataType: elementDataType,
-          format: elementFormat,
-          step,
-        })
-      )
-    }, [elementDefault, elementDataType, elementFormat, step]),
+      setFormattedValue(formatCurrentValue(newValue))
+    }, [elementDefault, formatCurrentValue]),
   })
 
-  // Local ephemeral state (step, dirty, formattedValue defined above for onFormCleared)
+  // Additional local state for UI interactions
   const [isFocused, setIsFocused] = useState(false)
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null)
   const [id] = useState(() => uniqueId("number_input_"))
@@ -192,22 +206,19 @@ const NumberInput: React.FC<Props> = ({
   const shouldShowInstructions =
     isFocused && width > theme.breakpoints.hideWidgetDetails
 
-  // Sync formatted value when the core value changes from the server.
-  // This is a legitimate sync with an external system (proto value from backend).
-  // Only update if the user isn't currently editing (dirty).
+  // Sync formatted value when the core value changes from the backend.
+  // This Effect is justified because it synchronizes with an external system:
+  // the backend value changes via useBasicWidgetState (from st.session_state updates,
+  // form resets, or setValue calls). We can't compute this during render because:
+  // 1. When dirty=true, formattedValue comes from user input (e.g., typing "1.")
+  // 2. When dirty=false, formattedValue comes from the backend value
+  // This is the recommended pattern for syncing with external systems per React docs.
   useEffect(() => {
     if (!dirty) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- Syncing with server-provided value
-      setFormattedValue(
-        formatValue({
-          value,
-          dataType: elementDataType,
-          format: elementFormat,
-          step,
-        })
-      )
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Syncing with external backend value
+      setFormattedValue(formatCurrentValue(value))
     }
-  }, [value, elementDataType, elementFormat, step, dirty])
+  }, [value, dirty, formatCurrentValue])
 
   // Commit a value: validate, update widget manager, and sync to URL
   const commitValue = useCallback(
@@ -218,33 +229,20 @@ const NumberInput: React.FC<Props> = ({
       value: number | null
       fromUi: boolean
     }) => {
+      // Validate range and show browser validation message if out of range
       if (notNullOrUndefined(valueArg) && (min > valueArg || valueArg > max)) {
         inputRef.current?.reportValidity()
-      } else {
-        const newValue = valueArg ?? elementDefault ?? null
-
-        setValueWithSource({ value: newValue, fromUi })
-
-        setDirty(false)
-        setFormattedValue(
-          formatValue({
-            value: newValue,
-            dataType: elementDataType,
-            format: elementFormat,
-            step,
-          })
-        )
+        return
       }
+
+      const newValue = valueArg ?? elementDefault ?? null
+
+      setValueWithSource({ value: newValue, fromUi })
+
+      setDirty(false)
+      setFormattedValue(formatCurrentValue(newValue))
     },
-    [
-      min,
-      max,
-      elementDefault,
-      elementDataType,
-      elementFormat,
-      step,
-      setValueWithSource,
-    ]
+    [min, max, elementDefault, formatCurrentValue, setValueWithSource]
   )
 
   const handleFocus = useCallback((): void => {
@@ -314,7 +312,6 @@ const NumberInput: React.FC<Props> = ({
 
   const increment = useCallback(() => {
     if (canInc) {
-      setDirty(true)
       const newValue = (currentNumericValue ?? min) + step
       commitValue({ value: newValue, fromUi: true })
     }
@@ -322,7 +319,6 @@ const NumberInput: React.FC<Props> = ({
 
   const decrement = useCallback(() => {
     if (canDec) {
-      setDirty(true)
       const newValue = (currentNumericValue ?? max) - step
       commitValue({ value: newValue, fromUi: true })
     }
