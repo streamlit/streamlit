@@ -41,6 +41,8 @@ COOKIE_ATTR_SIZE: Final = len(COOKIE_ATTRIBUTES)
 # Safety buffer for signing overhead to account for edge cases, rounding, and potential
 # variations in signing implementations (e.g., longer timestamps after year 2286)
 SIGNING_OVERHEAD_SAFETY_BUFFER: Final = 50
+# Base64 encoding of 1 byte = 4 bytes, so overhead = total - 4
+SINGLE_BYTE_BASE64_SIZE: Final = 4
 
 
 class AuthCache:
@@ -242,8 +244,7 @@ def _calculate_signing_overhead(
     """
     test_value = "x"  # Minimal test value (1 byte)
     signed = create_signed_value_fn(cookie_name, test_value)
-    # base64 encoding of 1 byte = 4 bytes, so overhead = total - 4
-    return len(signed) - 4
+    return len(signed) - SINGLE_BYTE_BASE64_SIZE
 
 
 def _set_split_cookie(
@@ -277,6 +278,11 @@ def _set_split_cookie(
 
     # Space available for the base64-encoded value (after subtracting signing overhead)
     available_for_base64_value = available_for_signed_value - signing_overhead
+
+    # If there is not enough space for the base64-encoded value, raise an error.
+    # We need at least 4 bytes for a minimal base64-encoded value.
+    if available_for_base64_value < SINGLE_BYTE_BASE64_SIZE:
+        raise StreamlitAuthError("Not enough space available for the signed value.")
 
     # Convert from base64 space to raw value space (base64 has 4/3 expansion ratio)
     chunk_size = (available_for_base64_value * 3) // 4
