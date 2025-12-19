@@ -407,6 +407,7 @@ export const BlockNodeRenderer = (
       renderTabContent,
       width: styles.width,
       flex: styles.flex,
+      fragmentId: node.fragmentId,
     }
     return <Tabs {...tabsProps} />
   }

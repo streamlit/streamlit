@@ -307,6 +307,10 @@ class DeltaGenerator(
 
         self._open = open
 
+        # For dynamic tabs: tab label and widget ID for state tracking
+        self._tab_widget_id: str | None = None
+        self._tab_label: str | None = None
+
         # Change the module of all mixin'ed functions to be st.delta_generator,
         # instead of the original module (e.g. st.elements.markdown)
         for mixin in self.__class__.__bases__:
@@ -447,13 +451,32 @@ class DeltaGenerator(
 
     @property
     def open(self) -> bool | None:
-        """Return the open state of the block if applicable (e.g., for expanders).
+        """Return the open state of the block if applicable (e.g., for expanders or tabs).
+
+        For expanders: Returns True if expanded, False if collapsed, None if not tracked.
+        For tabs: Returns True if this tab is active, False if not active, None if not tracked.
 
         Returns
         -------
         bool or None
-            True if the block is open, False if closed, None if not applicable.
+            True if the block is open/active, False if closed/inactive, None if not applicable.
         """
+        # Check if this is a dynamic tab
+        if (
+            hasattr(self, "_tab_widget_id")
+            and self._tab_widget_id is not None
+            and hasattr(self, "_tab_label")
+            and self._tab_label is not None
+        ):
+            from streamlit.runtime.scriptrunner import get_script_run_ctx
+
+            ctx = get_script_run_ctx()
+            if ctx is not None and self._tab_widget_id in ctx.session_state:
+                active_tab_label = ctx.session_state[self._tab_widget_id]
+                return str(active_tab_label) == self._tab_label
+            return None
+
+        # Otherwise use the expander open state
         return self._open
 
     def _get_delta_path_str(self) -> str:

@@ -72,6 +72,19 @@ class ExpanderSerde:
         return ui_value if ui_value is not None else self.expanded
 
 
+@dataclass
+class TabsSerde:
+    """Serializer/deserializer for tabs widget state."""
+
+    default_label: str
+
+    def serialize(self, v: str) -> str:
+        return str(v)
+
+    def deserialize(self, ui_value: str | None) -> str:
+        return ui_value if ui_value is not None else self.default_label
+
+
 class LayoutsMixin:
     @gather_metrics("container")
     def container(
@@ -587,6 +600,8 @@ class LayoutsMixin:
         *,
         width: WidthWithoutContent = "stretch",
         default: str | None = None,
+        key: Key | None = None,
+        on_change: Literal["ignore", "rerun"] | None = None,
     ) -> Sequence[DeltaGenerator]:
         r"""Insert containers separated into tabs.
 
@@ -641,6 +656,24 @@ class LayoutsMixin:
             tab is selected. If this is a string, it must be one of the tab
             labels. If two tabs have the same label as ``default``, the first
             one is selected.
+
+        key : str or None
+            An optional string to use for the tabs container. If ``key`` is provided
+            and ``on_change`` is set, the active tab index will be accessible via
+            ``st.session_state[key]``.
+
+        on_change : "ignore", "rerun", or None
+            How the tabs should respond to user tab changes. This controls whether
+            tabs track state and trigger reruns when switched. ``on_change`` can be
+            one of the following:
+
+            - ``None`` (default): Current behavior - always execute all tabs, no state
+              tracking. The ``.open`` attribute will return ``None`` for all tabs.
+            - ``"ignore"``: Equivalent to ``None`` - no state tracking, provided for
+              API consistency.
+            - ``"rerun"``: Streamlit will rerun the app when the user switches tabs.
+              The ``.open`` attribute will return ``True`` for the active tab and
+              ``False`` for inactive tabs. Allows lazy execution of tab content.
 
         Returns
         -------
@@ -723,15 +756,78 @@ class LayoutsMixin:
                 "The input argument to st.tabs must contain at least one tab label."
             )
 
+        if any(not isinstance(tab, str) for tab in tabs):
+            raise StreamlitAPIException(
+                "The tabs input list to st.tabs is only allowed to contain strings."
+            )
+
+        # Validate and normalize on_change parameter
+        if on_change is not None and on_change not in ["ignore", "rerun"]:
+            raise StreamlitAPIException(
+                f"You have passed {on_change} to `on_change`. But only 'ignore', "
+                "'rerun', or None is supported."
+            )
+
+        key = to_key(key)
+
+        # Determine initial tab index from default parameter
         if default and default not in tabs:
             raise StreamlitAPIException(
                 f"The default tab '{default}' is not in the list of tabs."
             )
 
-        if any(not isinstance(tab, str) for tab in tabs):
-            raise StreamlitAPIException(
-                "The tabs input list to st.tabs is only allowed to contain strings."
+        default_index = tabs.index(default) if default else 0
+
+        # Determine if state tracking is enabled (widget mode)
+        is_stateful = on_change is not None and on_change != "ignore"
+
+        element_id: str | None = None
+        current_tab_label = tabs[default_index]
+
+        if is_stateful:
+            # Widget path: check policies, register widget, track state
+            check_widget_policies(
+                self.dg,
+                key,
+                on_change=None,
+                default_value=None,
+                writes_allowed=False,
+                enable_check_callback_rules=False,
             )
+
+            ctx = get_script_run_ctx()
+
+            # Register element ID for widget
+            element_id = compute_and_register_element_id(
+                "tabs",
+                user_key=key,
+                key_as_main_identity=True,
+                dg=self.dg,
+                tabs=tuple(tabs),
+                width=width,
+                default=default,
+                on_change=on_change,
+            )
+
+            # Create serde for state management
+            default_label = tabs[default_index]
+            serde = TabsSerde(default_label=default_label)
+
+            # Register the widget and get current state
+            tabs_state = register_widget(
+                element_id,
+                deserializer=serde.deserialize,
+                serializer=serde.serialize,
+                ctx=ctx,
+                value_type="string_value",
+            )
+
+            # Use widget state value (tab label)
+            current_tab_label = tabs_state.value
+            # Validate that the label exists in the tab list
+            if current_tab_label not in tabs:
+                # If label not found, fall back to default
+                current_tab_label = tabs[default_index]
 
         def tab_proto(label: str) -> BlockProto:
             tab_proto = BlockProto()
@@ -744,13 +840,30 @@ class LayoutsMixin:
         validate_width(width)
         block_proto.width_config.CopyFrom(get_width_config(width))
 
-        default_index = tabs.index(default) if default else 0
+        # Compute the current tab index from the label
+        try:
+            current_tab_index = tabs.index(current_tab_label)
+        except ValueError:
+            current_tab_index = default_index
 
-        block_proto.tab_container.default_tab_index = default_index
+        block_proto.tab_container.default_tab_index = current_tab_index
+
+        if is_stateful and element_id:
+            block_proto.tab_container.id = element_id
 
         tab_container = self.dg._block(block_proto)
 
-        return tuple(tab_container._block(tab_proto(tab)) for tab in tabs)
+        # Create tab DeltaGenerators with .open property support
+        tab_dgs: list[DeltaGenerator] = []
+        for tab_label in tabs:
+            tab_dg = tab_container._block(tab_proto(tab_label))
+            # Set tab label and widget ID for .open property
+            if is_stateful:
+                tab_dg._tab_widget_id = element_id
+                tab_dg._tab_label = tab_label
+            tab_dgs.append(tab_dg)
+
+        return tuple(tab_dgs)
 
     @gather_metrics("expander")
     def expander(

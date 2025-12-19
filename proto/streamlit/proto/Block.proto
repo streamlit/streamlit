@@ -137,6 +137,8 @@ message Block {
 
   message TabContainer {
     int32 default_tab_index = 1;
+    // Widget ID for dynamic tabs (set when on_change is used)
+    optional string id = 2;
   }
 
   message Tab {

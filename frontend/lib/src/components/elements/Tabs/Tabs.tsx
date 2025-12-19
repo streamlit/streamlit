@@ -43,13 +43,24 @@ export interface TabProps extends BlockPropsWithoutWidth {
   renderTabContent: (childProps: any) => ReactElement
   width: React.CSSProperties["width"]
   flex: React.CSSProperties["flex"]
+  fragmentId?: string
 }
 
 function Tabs(props: Readonly<TabProps>): ReactElement {
-  const { widgetsDisabled, node, isStale, width, flex } = props
+  const {
+    widgetsDisabled,
+    node,
+    isStale,
+    width,
+    flex,
+    widgetMgr,
+    fragmentId,
+  } = props
   const { scriptRunState, scriptRunId, fragmentIdsThisRun } =
     useContext(ScriptRunContext)
   const defaultTabIndex = node.deltaBlock?.tabContainer?.defaultTabIndex ?? 0
+  const widgetId = node.deltaBlock?.tabContainer?.id
+  const isDynamic = Boolean(widgetId)
 
   let allTabLabels: string[] = []
   const [activeTabKey, setActiveTabKey] = useState<React.Key>(defaultTabIndex)
@@ -111,6 +122,16 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
         onChange={({ activeKey }) => {
           setActiveTabKey(activeKey)
           setActiveTabName(allTabLabels[activeKey as number])
+
+          // Update widget state for dynamic tabs
+          if (isDynamic && widgetId && widgetMgr) {
+            widgetMgr.setStringValue(
+              { id: widgetId, formId: "" },
+              allTabLabels[activeKey as number],
+              { fromUi: true },
+              fragmentId
+            )
+          }
         }}
         /* renderAll on UITabs should always be set to true to avoid scrolling issue
            https://github.com/streamlit/streamlit/issues/5069
