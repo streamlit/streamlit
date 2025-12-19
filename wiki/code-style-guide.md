@@ -3,7 +3,7 @@
 Streamlit uses code auto-formatters and linters on pre-commit. Most of the style-related work is automatically done for you. For everything else, there's this page.
 
 > [!NOTE]
-> We have added [development guides](README.md#development-guides) for different parts of the Streamlit codebase, useful for both AI agents and human developers.
+> We have added [development guides](README.md#development-guides) for different parts of the Streamlit codebase. While written primarily for AI agents, these guides are also helpful for human developers.
 
 ## Every language
 

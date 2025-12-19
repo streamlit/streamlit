@@ -10,7 +10,7 @@ This wiki contains documentation for the Streamlit development process.
 
 ## Development Guides
 
-Development guides for different parts of the Streamlit codebase, useful for both AI agents and human developers.
+Development guides for different parts of the Streamlit codebase. While written primarily for AI agents, these guides are also helpful for human developers.
 
 - [Repo Overview](../AGENTS.md)
 - [TypeScript](../frontend/AGENTS.md)
