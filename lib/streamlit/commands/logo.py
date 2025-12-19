@@ -79,11 +79,11 @@ def _process_logo_image(
 
 @gather_metrics("logo")
 def logo(
-    image: AtomicImage,
+    image: AtomicImage | str,
     *,  # keyword-only args:
     size: Literal["small", "medium", "large"] = "medium",
     link: str | None = None,
-    icon_image: AtomicImage | None = None,
+    icon_image: AtomicImage | str | None = None,
 ) -> None:
     r"""
     Renders a logo in the upper-left corner of your app and its sidebar.

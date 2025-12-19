@@ -32,8 +32,16 @@ import {
   NavigationContext,
 } from "@streamlit/lib"
 import { Logo } from "@streamlit/protobuf"
+import { IconSize } from "@streamlit/lib"
 
 const LOG = getLogger("LogoComponent")
+
+// Map logo size to DynamicIcon size for consistent scaling
+const LOGO_SIZE_TO_ICON_SIZE: Record<string, IconSize> = {
+  small: "lg", // 1.25rem
+  medium: "xl", // 1.5rem
+  large: "twoXL", // 1.8rem
+}
 
 export interface LogoComponentProps {
   appLogo: Logo | null
@@ -105,13 +113,15 @@ const LogoComponent = ({
     displayImageType === Logo.ImageType.ICON ||
     displayImageType === Logo.ImageType.EMOJI
 
+  const iconSize = LOGO_SIZE_TO_ICON_SIZE[appLogo.size] || "xl"
+
   const logo = isIconOrEmoji ? (
     <StyledIconLogo
       size={appLogo.size}
       className="stLogo"
       data-testid={dataTestId}
     >
-      <DynamicIcon iconValue={displayImage} size="xl" />
+      <DynamicIcon iconValue={displayImage} size={iconSize} />
     </StyledIconLogo>
   ) : (
     <StyledLogo
