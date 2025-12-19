@@ -18,6 +18,7 @@ import unittest
 import pytest
 
 from streamlit.elements.lib.column_types import (
+    AudioColumn,
     BarChartColumn,
     CheckboxColumn,
     Column,
@@ -451,6 +452,23 @@ class ColumnTypesTest(unittest.TestCase):
             "required": True,
             "default": ["a", "b", "c"],
             "type_config": {"type": "list"},
+        }, "Should have all the properties defined."
+
+    def test_audio_column(self):
+        """Test AudioColumn creation."""
+
+        assert remove_none_values(AudioColumn()) == {
+            "type_config": {"type": "audio"}
+        }, "Should only have the type defined and nothing else."
+
+        assert remove_none_values(
+            AudioColumn("Col1", width="small", help="Help text", pinned=True)
+        ) == {
+            "label": "Col1",
+            "width": "small",
+            "help": "Help text",
+            "pinned": True,
+            "type_config": {"type": "audio"},
         }, "Should have all the properties defined."
 
     def test_image_column(self):

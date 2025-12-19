@@ -70,6 +70,7 @@ ColumnType: TypeAlias = Literal[
     "line_chart",
     "bar_chart",
     "area_chart",
+    "audio",
     "image",
     "progress",
     "multiselect",
@@ -181,6 +182,10 @@ class AreaChartColumnConfig(TypedDict):
 
 class ImageColumnConfig(TypedDict):
     type: Literal["image"]
+
+
+class AudioColumnConfig(TypedDict):
+    type: Literal["audio"]
 
 
 class ListColumnConfig(TypedDict):
@@ -322,6 +327,7 @@ class ColumnConfig(TypedDict, total=False):
         | LineChartColumnConfig
         | BarChartColumnConfig
         | AreaChartColumnConfig
+        | AudioColumnConfig
         | ImageColumnConfig
         | MultiselectColumnConfig
         | JsonColumnConfig
@@ -1606,6 +1612,61 @@ def ImageColumn(
         help=help,
         pinned=pinned,
         type_config=ImageColumnConfig(type="image"),
+    )
+
+
+@gather_metrics("column_config.AudioColumn")
+def AudioColumn(
+    label: str | None = None,
+    *,
+    width: ColumnWidth | None = None,
+    help: str | None = None,
+    pinned: bool | None = None,
+) -> ColumnConfig:
+    """Configure an audio column in ``st.dataframe`` or ``st.data_editor``.
+
+    Cell values must be one of:
+
+    * A URL to fetch the audio file from. This can also be a relative URL served
+      via static file serving.
+    * A data URL that contains Base64 encoded audio, e.g.
+      ``data:audio/mpeg;base64,...``.
+
+    Audio columns are currently read-only. Use this in the ``column_config``
+    parameter of ``st.dataframe`` or ``st.data_editor``.
+
+    Parameters
+    ----------
+    label : str or None
+        Label shown at the top of the column. If ``None`` (default), the column
+        name is used.
+
+    width : "small", "medium", "large", int, or None
+        Display width of the column. If ``None`` (default), the width is sized
+        to fit the contents. Otherwise:
+
+        - ``"small"``: 75px
+        - ``"medium"``: 200px
+        - ``"large"``: 400px
+        - An integer pixel width
+
+        If the total width of all columns is less than the dataframe width, the
+        remaining space is distributed evenly.
+
+    help : str or None
+        Tooltip shown when hovering over the column label. Supports GitHub
+        flavored Markdown. If ``None`` (default), no tooltip is shown.
+
+    pinned : bool or None
+        Whether the column is pinned on the left. If ``None`` (default), index
+        columns are pinned and data columns are not.
+    """
+    return ColumnConfig(
+        label=label,
+        width=width,
+        help=help,
+        pinned=pinned,
+        type_config=AudioColumnConfig(type="audio"),
     )
 
 
