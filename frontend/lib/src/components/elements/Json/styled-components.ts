@@ -67,3 +67,20 @@ export const StyledCopyButton = styled.button(({ theme }) => ({
     boxShadow: getPrimaryFocusBoxShadow(theme),
   },
 }))
+
+interface StyledTooltipTargetProps {
+  top: number
+  left: number
+}
+
+/**
+ * Invisible anchor element for positioning the tooltip.
+ * BaseWeb's Popover requires a target element for positioning.
+ */
+export const StyledTooltipTarget = styled.div<StyledTooltipTargetProps>(
+  ({ top, left }) => ({
+    position: "fixed",
+    top,
+    left,
+  })
+)

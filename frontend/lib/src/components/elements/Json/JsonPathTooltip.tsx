@@ -23,7 +23,11 @@ import { useCopyToClipboard } from "~lib/hooks/useCopyToClipboard"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { hasLightBackgroundColor } from "~lib/theme"
 
-import { StyledCopyButton, StyledPathTooltip } from "./styled-components"
+import {
+  StyledCopyButton,
+  StyledPathTooltip,
+  StyledTooltipTarget,
+} from "./styled-components"
 
 export interface JsonPathTooltipProps {
   top: number
@@ -119,15 +123,10 @@ function JsonPathTooltip({
       }}
       isOpen={isOpen}
     >
-      <div
+      <StyledTooltipTarget
         data-testid="stJsonPathTooltipTarget"
-        style={{
-          // Invisible anchor element for positioning the tooltip.
-          // BaseWeb's Popover requires a target element for positioning.
-          position: "fixed",
-          top,
-          left,
-        }}
+        top={top}
+        left={left}
       />
     </Popover>
   )
