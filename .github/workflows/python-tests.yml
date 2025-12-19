@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - "develop"
+      - "jkinkead-*"
   pull_request:
     types: [opened, synchronize, reopened]
 
