@@ -152,7 +152,10 @@ import { showDevelopmentOptions } from "./showDevelopmentOptions"
 // Used to import fonts + responsive reboot items
 import "@streamlit/app/src/assets/css/theme.scss"
 import { AppNavigation, MaybeStateUpdate } from "./util/AppNavigation"
-import { reconcileHostConfigValues } from "./util/hostConfigHelpers"
+import {
+  includeIfDefined,
+  reconcileHostConfigValues,
+} from "./util/hostConfigHelpers"
 import { ThemeManager } from "./util/useThemeManager"
 
 // vite config builds global variable PACKAGE_METADATA
@@ -459,37 +462,61 @@ export class App extends PureComponent<Props, State> {
   }
 
   private applyInitialHostConfig(): void {
-    // Apply minimal host configuration from StreamlitConfig.HOST_CONFIG only when
-    // bypass mode is enabled. This ensures the initial config is valid and complete
-    // (has BACKEND_BASE_URL, allowedOrigins, and useExternalAuthToken).
-    // Partial or invalid HOST_CONFIG should be ignored to prevent inconsistent state.
+    // Apply window host configuration early when bypass mode is enabled.
+    //
+    // When bypass is enabled: WebSocket connects immediately (before host-config endpoint),
+    // so we need to apply window config early to enable host communication & apply app/lib configs
+    // for the first render.
+    //
+    // When bypass is disabled: WebSocket waits for host-config endpoint anyway,
+    // so window config will be applied during reconciliation in onHostConfigResp.
+    //
+    // This ensures we only set state when necessary and keeps the logic clear:
+    // - Bypass path: Apply ONLY provided window config early, reconcile when endpoint responds
+    // - Default path: Wait for endpoint, apply reconciled config once
+    //
+    // Note: We only set values that are explicitly provided. Components
+    // are designed to handle undefined config values gracefully.
+    // The endpoint response will fill in any missing values during reconciliation.
     if (!isHostConfigBypassEnabled()) {
       return
     }
 
-    // isHostConfigBypassEnabled() guarantees HOST_CONFIG exists and is valid
-    const { allowedOrigins, useExternalAuthToken, metricsUrl } =
+    // isHostConfigBypassEnabled() guarantees HOST_CONFIG exists and has valid
+    // allowedOrigins (non-empty array) and useExternalAuthToken (boolean)
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    const hostConfig = StreamlitConfig.HOST_CONFIG!
+
+    // Build AppConfig with only provided fields - don't set defaults
+    // Required fields are guaranteed by isHostConfigBypassEnabled()
+    const appConfig: AppConfig = includeIfDefined<AppConfig>({
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      StreamlitConfig.HOST_CONFIG!
-
-    const appConfig: AppConfig = {
-      allowedOrigins,
-      useExternalAuthToken,
-      enableCustomParentMessages: false,
-      blockErrorDialogs: false,
-    }
-
-    const libConfig: LibConfig = {}
-
-    // metricsUrl is optional (so not required for isHostConfigBypassEnabled)
-    // so we only set it if it exists
-    if (metricsUrl !== undefined) {
-      this.metricsMgr.setMetricsConfig(metricsUrl)
-    }
+      allowedOrigins: hostConfig.allowedOrigins!,
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      useExternalAuthToken: hostConfig.useExternalAuthToken!,
+      enableCustomParentMessages: hostConfig.enableCustomParentMessages,
+      blockErrorDialogs: hostConfig.blockErrorDialogs,
+    })
 
     this.hostCommunicationMgr.setAllowedOrigins(appConfig)
     this.setAppConfig(appConfig)
-    this.setLibConfig(libConfig)
+
+    // Build LibConfig with only provided fields
+    const libConfig: LibConfig = includeIfDefined<LibConfig>({
+      mapboxToken: hostConfig.mapboxToken,
+      disableFullscreenMode: hostConfig.disableFullscreenMode,
+      enforceDownloadInNewTab: hostConfig.enforceDownloadInNewTab,
+      resourceCrossOriginMode: hostConfig.resourceCrossOriginMode,
+    })
+
+    if (Object.keys(libConfig).length > 0) {
+      this.setLibConfig(libConfig)
+    }
+
+    // Apply metrics config if provided
+    if (hostConfig.metricsUrl !== undefined) {
+      this.metricsMgr.setMetricsConfig(hostConfig.metricsUrl)
+    }
   }
 
   initializeConnectionManager(): void {
@@ -520,8 +547,10 @@ export class App extends PureComponent<Props, State> {
       },
       onHostConfigResp: (response: IHostConfigResponse) => {
         // Reconcile window config values with endpoint response.
-        // Window values for allowedOrigins, useExternalAuthToken, and metricsUrl
-        // take precedence when present.
+        // All provided window config values take precedence over endpoint values:
+        // AppConfig: allowedOrigins, useExternalAuthToken, enableCustomParentMessages, blockErrorDialogs
+        // LibConfig: mapboxToken, disableFullscreenMode, enforceDownloadInNewTab, resourceCrossOriginMode
+        // MetricsConfig: metricsUrl
         const reconciledConfig = reconcileHostConfigValues(
           StreamlitConfig.HOST_CONFIG,
           response

@@ -6145,11 +6145,11 @@ describe("App.hasReceivedNewSession flag behavior", () => {
       )
       const metricsMgr = getStoredValue<MetricsManager>(MetricsManager)
 
+      // Only provided fields are set (no defaults for unprovided fields)
       expect(hostCommunicationMgr.setAllowedOrigins).toHaveBeenCalledWith({
         allowedOrigins,
         useExternalAuthToken: true,
-        enableCustomParentMessages: false,
-        blockErrorDialogs: false,
+        // enableCustomParentMessages and blockErrorDialogs omitted (undefined)
       })
 
       expect(metricsMgr.setMetricsConfig).toHaveBeenCalledWith(metricsUrl)
@@ -6328,11 +6328,12 @@ describe("App.hasReceivedNewSession flag behavior", () => {
       expect(metricsMgr.setMetricsConfig).not.toHaveBeenCalled()
     })
 
-    it("does not apply HOST_CONFIG when bypass validation fails (missing BACKEND_BASE_URL)", () => {
-      // HOST_CONFIG exists but BACKEND_BASE_URL is missing
-      // This should NOT be applied since it fails isHostConfigBypassEnabled() validation
+    it("does not apply HOST_CONFIG when BACKEND_BASE_URL is missing (bypass disabled)", () => {
+      // HOST_CONFIG exists with valid AppConfig fields but BACKEND_BASE_URL is missing
+      // Config should NOT be applied early since bypass mode is disabled
+      // Config will be applied later through onHostConfigResp reconciliation instead
       globalThis.__mockStreamlitConfig = {
-        // BACKEND_BASE_URL intentionally omitted
+        // BACKEND_BASE_URL intentionally omitted - disables bypass
         HOST_CONFIG: {
           allowedOrigins: ["https://example.com"],
           useExternalAuthToken: true,
@@ -6346,7 +6347,8 @@ describe("App.hasReceivedNewSession flag behavior", () => {
       )
       const metricsMgr = getStoredValue<MetricsManager>(MetricsManager)
 
-      // Verify that setAllowedOrigins and setMetricsConfig were NOT called
+      // Verify that NO config was applied early (bypass mode is disabled)
+      // Config will be applied through onHostConfigResp reconciliation
       expect(hostCommunicationMgr.setAllowedOrigins).not.toHaveBeenCalled()
       expect(metricsMgr.setMetricsConfig).not.toHaveBeenCalled()
     })
@@ -6370,6 +6372,199 @@ describe("App.hasReceivedNewSession flag behavior", () => {
       const metricsMgr = getStoredValue<MetricsManager>(MetricsManager)
 
       // Verify that setAllowedOrigins and setMetricsConfig were NOT called
+      expect(hostCommunicationMgr.setAllowedOrigins).not.toHaveBeenCalled()
+      expect(metricsMgr.setMetricsConfig).not.toHaveBeenCalled()
+    })
+
+    // Tests for expanded HOST_CONFIG fields (all 9 fields)
+    it("applies all AppConfig fields from HOST_CONFIG", () => {
+      globalThis.__mockStreamlitConfig = {
+        BACKEND_BASE_URL: "https://backend.example.com",
+        HOST_CONFIG: {
+          allowedOrigins: ["https://example.com"],
+          useExternalAuthToken: true,
+          enableCustomParentMessages: true,
+          blockErrorDialogs: true,
+        },
+      }
+
+      renderApp(getProps())
+
+      const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
+        HostCommunicationManager
+      )
+
+      // Verify setAllowedOrigins was called with all AppConfig fields
+      expect(hostCommunicationMgr.setAllowedOrigins).toHaveBeenCalledWith(
+        expect.objectContaining({
+          allowedOrigins: ["https://example.com"],
+          useExternalAuthToken: true,
+          enableCustomParentMessages: true,
+          blockErrorDialogs: true,
+        })
+      )
+    })
+
+    it("applies all provided fields from HOST_CONFIG including LibConfig", () => {
+      globalThis.__mockStreamlitConfig = {
+        BACKEND_BASE_URL: "https://backend.example.com",
+        HOST_CONFIG: {
+          // AppConfig
+          allowedOrigins: ["https://example.com"],
+          useExternalAuthToken: true,
+          enableCustomParentMessages: true,
+          // LibConfig fields (stored in state, tested via onHostConfigResp reconciliation)
+          mapboxToken: "test-mapbox-token",
+          disableFullscreenMode: true,
+          enforceDownloadInNewTab: true,
+          resourceCrossOriginMode: "use-credentials",
+        },
+      }
+
+      renderApp(getProps())
+
+      const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
+        HostCommunicationManager
+      )
+
+      // Verify AppConfig fields were applied (observable through manager calls)
+      expect(hostCommunicationMgr.setAllowedOrigins).toHaveBeenCalledWith(
+        expect.objectContaining({
+          allowedOrigins: ["https://example.com"],
+          useExternalAuthToken: true,
+          enableCustomParentMessages: true,
+        })
+      )
+      // Note: LibConfig fields are stored in state and will be reconciled when
+      // onHostConfigResp is called. Their precedence is tested in the reconciliation tests.
+    })
+
+    it("applies complete HOST_CONFIG with all 9 fields", () => {
+      globalThis.__mockStreamlitConfig = {
+        BACKEND_BASE_URL: "https://backend.example.com",
+        HOST_CONFIG: {
+          // AppConfig
+          allowedOrigins: ["https://example1.com", "https://example2.com"],
+          useExternalAuthToken: true,
+          enableCustomParentMessages: true,
+          blockErrorDialogs: true,
+          // LibConfig
+          mapboxToken: "complete-mapbox-token",
+          disableFullscreenMode: false,
+          enforceDownloadInNewTab: true,
+          resourceCrossOriginMode: "anonymous",
+          // MetricsConfig
+          metricsUrl: "postMessage",
+        },
+      }
+
+      renderApp(getProps())
+
+      const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
+        HostCommunicationManager
+      )
+      const metricsMgr = getStoredValue<MetricsManager>(MetricsManager)
+
+      // Verify AppConfig fields (observable through manager calls)
+      expect(hostCommunicationMgr.setAllowedOrigins).toHaveBeenCalledWith(
+        expect.objectContaining({
+          allowedOrigins: ["https://example1.com", "https://example2.com"],
+          useExternalAuthToken: true,
+          enableCustomParentMessages: true,
+          blockErrorDialogs: true,
+        })
+      )
+
+      // Verify MetricsConfig field (observable through manager call)
+      expect(metricsMgr.setMetricsConfig).toHaveBeenCalledWith("postMessage")
+
+      // Note: LibConfig fields are stored in state and tested via reconciliation when
+      // onHostConfigResp is called.
+    })
+
+    it("handles partial HOST_CONFIG with only some expanded fields", () => {
+      globalThis.__mockStreamlitConfig = {
+        BACKEND_BASE_URL: "https://backend.example.com",
+        HOST_CONFIG: {
+          allowedOrigins: ["https://example.com"],
+          useExternalAuthToken: true,
+          // Only provide some expanded fields
+          mapboxToken: "partial-token",
+          enableCustomParentMessages: true,
+          // Other fields omitted (will remain undefined until reconciliation)
+        },
+      }
+
+      renderApp(getProps())
+
+      const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
+        HostCommunicationManager
+      )
+
+      // Verify ONLY provided AppConfig fields are set (no defaults)
+      // blockErrorDialogs is not provided, so it won't be in the object
+      expect(hostCommunicationMgr.setAllowedOrigins).toHaveBeenCalledWith({
+        allowedOrigins: ["https://example.com"],
+        useExternalAuthToken: true,
+        enableCustomParentMessages: true,
+        // blockErrorDialogs is omitted (undefined) - will be set during reconciliation
+      })
+      // Note: Partial LibConfig fields (mapboxToken) are stored in state and tested
+      // via reconciliation when onHostConfigResp is called.
+    })
+
+    it("applies boolean false values correctly (not treated as undefined)", () => {
+      globalThis.__mockStreamlitConfig = {
+        BACKEND_BASE_URL: "https://backend.example.com",
+        HOST_CONFIG: {
+          allowedOrigins: ["https://example.com"],
+          useExternalAuthToken: false, // Explicitly false
+          enableCustomParentMessages: false, // Explicitly false
+          blockErrorDialogs: false, // Explicitly false
+          disableFullscreenMode: false, // Explicitly false (in LibConfig)
+          enforceDownloadInNewTab: false, // Explicitly false (in LibConfig)
+        },
+      }
+
+      renderApp(getProps())
+
+      const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
+        HostCommunicationManager
+      )
+
+      // Verify false values are preserved in AppConfig (observable through manager calls)
+      expect(hostCommunicationMgr.setAllowedOrigins).toHaveBeenCalledWith(
+        expect.objectContaining({
+          useExternalAuthToken: false,
+          enableCustomParentMessages: false,
+          blockErrorDialogs: false,
+        })
+      )
+      // Note: LibConfig false values (disableFullscreenMode, enforceDownloadInNewTab)
+      // are stored in state and tested via reconciliation when onHostConfigResp is called.
+    })
+
+    it("does not apply any fields when bypass validation fails (empty allowedOrigins)", () => {
+      globalThis.__mockStreamlitConfig = {
+        BACKEND_BASE_URL: "https://backend.example.com",
+        HOST_CONFIG: {
+          allowedOrigins: [], // Empty - fails bypass validation
+          useExternalAuthToken: true,
+          // Try to provide expanded fields
+          enableCustomParentMessages: true,
+          mapboxToken: "should-not-be-applied",
+        },
+      }
+
+      renderApp(getProps())
+
+      const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
+        HostCommunicationManager
+      )
+      const metricsMgr = getStoredValue<MetricsManager>(MetricsManager)
+
+      // Verify that NO config was applied (bypass validation failed)
+      // Neither AppConfig nor LibConfig nor MetricsConfig should be applied
       expect(hostCommunicationMgr.setAllowedOrigins).not.toHaveBeenCalled()
       expect(metricsMgr.setMetricsConfig).not.toHaveBeenCalled()
     })

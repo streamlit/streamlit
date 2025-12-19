@@ -14,19 +14,106 @@
  * limitations under the License.
  */
 
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { describe, expect, it } from "vitest"
 
-import { isHostConfigBypassEnabled } from "@streamlit/connection"
+import { isValidAllowedOrigins } from "@streamlit/utils"
 
 import {
+  includeIfDefined,
   preferWindowValue,
   reconcileHostConfigValues,
 } from "./hostConfigHelpers"
 
-// Mock the isHostConfigBypassEnabled function
-vi.mock("@streamlit/connection", () => ({
-  isHostConfigBypassEnabled: vi.fn(),
-}))
+describe("includeIfDefined", () => {
+  it("filters out undefined values", () => {
+    const input = {
+      defined: "value",
+      alsoUndefined: undefined,
+      number: 42,
+    }
+    const result = includeIfDefined(input)
+    expect(result).toEqual({ defined: "value", number: 42 })
+    expect(result).not.toHaveProperty("alsoUndefined")
+  })
+
+  it("keeps false values", () => {
+    const input = { flag: false, other: undefined }
+    const result = includeIfDefined(input)
+    expect(result).toEqual({ flag: false })
+  })
+
+  it("keeps null values", () => {
+    const input = { value: null, other: undefined }
+    const result = includeIfDefined(input)
+    expect(result).toEqual({ value: null })
+  })
+
+  it("keeps 0 values", () => {
+    const input = { count: 0, other: undefined }
+    const result = includeIfDefined(input)
+    expect(result).toEqual({ count: 0 })
+  })
+
+  it("keeps empty string values", () => {
+    const input = { text: "", other: undefined }
+    const result = includeIfDefined(input)
+    expect(result).toEqual({ text: "" })
+  })
+
+  it("keeps empty array values", () => {
+    const input = { items: [], other: undefined }
+    const result = includeIfDefined(input)
+    expect(result).toEqual({ items: [] })
+  })
+
+  it("returns empty object when all values are undefined", () => {
+    const input = { a: undefined, b: undefined }
+    const result = includeIfDefined(input)
+    expect(result).toEqual({})
+  })
+
+  it("handles empty input object", () => {
+    const result = includeIfDefined({})
+    expect(result).toEqual({})
+  })
+})
+
+describe("isValidAllowedOrigins", () => {
+  it("returns true for valid allowedOrigins", () => {
+    expect(isValidAllowedOrigins(["https://example.com"])).toBe(true)
+    expect(
+      isValidAllowedOrigins(["https://example1.com", "https://example2.com"])
+    ).toBe(true)
+  })
+
+  it("returns false for empty array", () => {
+    expect(isValidAllowedOrigins([])).toBe(false)
+  })
+
+  it("returns false for non-array values", () => {
+    expect(isValidAllowedOrigins(undefined)).toBe(false)
+    expect(isValidAllowedOrigins(null)).toBe(false)
+    expect(isValidAllowedOrigins("https://example.com")).toBe(false)
+    expect(isValidAllowedOrigins({ 0: "https://example.com" })).toBe(false)
+  })
+
+  it("returns false when array contains non-string values", () => {
+    expect(isValidAllowedOrigins([123])).toBe(false)
+    expect(isValidAllowedOrigins([null])).toBe(false)
+    expect(isValidAllowedOrigins([undefined])).toBe(false)
+    expect(isValidAllowedOrigins(["https://example.com", 123])).toBe(false)
+  })
+
+  it("returns false when array contains empty strings", () => {
+    expect(isValidAllowedOrigins([""])).toBe(false)
+    expect(isValidAllowedOrigins(["https://example.com", ""])).toBe(false)
+    expect(isValidAllowedOrigins(["", "https://example.com"])).toBe(false)
+  })
+
+  it("returns false when array contains only empty strings", () => {
+    expect(isValidAllowedOrigins(["", ""])).toBe(false)
+  })
+})
 
 describe("preferWindowValue", () => {
   it("returns window value when it is defined", () => {
@@ -66,184 +153,261 @@ describe("preferWindowValue", () => {
     const endpointArr = ["c", "d"]
     expect(preferWindowValue(windowArr, endpointArr)).toEqual(["a", "b"])
   })
+
+  it("treats null as not provided (uses endpoint value)", () => {
+    expect(preferWindowValue(null, "endpoint")).toBe("endpoint")
+  })
+
+  it("treats undefined as not provided (uses endpoint value)", () => {
+    expect(preferWindowValue(undefined, "endpoint")).toBe("endpoint")
+  })
+
+  it("prefers window value even when endpoint is null", () => {
+    expect(preferWindowValue("window", null as unknown as string)).toBe(
+      "window"
+    )
+  })
 })
 
 describe("reconcileHostConfigValues", () => {
   const mockEndpointConfig = {
+    // AppConfig fields
     allowedOrigins: ["https://endpoint.com"],
     useExternalAuthToken: false,
-    metricsUrl: "https://metrics.endpoint.com",
-    disableFullscreenMode: true,
     enableCustomParentMessages: false,
-    mapboxToken: "endpoint-token",
-    enforceDownloadInNewTab: false,
     blockErrorDialogs: false,
+    // LibConfig fields
+    mapboxToken: "endpoint-token",
+    disableFullscreenMode: true,
+    enforceDownloadInNewTab: false,
+    resourceCrossOriginMode: "anonymous" as const,
+    // MetricsConfig fields
+    metricsUrl: "https://metrics.endpoint.com",
   }
 
-  beforeEach(() => {
-    // By default, assume bypass is enabled (valid config provided)
-    vi.mocked(isHostConfigBypassEnabled).mockReturnValue(true)
-  })
-
-  it("returns endpoint config unchanged when initialHostConfig is undefined", () => {
+  it("returns endpoint config unchanged when windowConfig is undefined", () => {
     const result = reconcileHostConfigValues(undefined, mockEndpointConfig)
     expect(result).toEqual(mockEndpointConfig)
   })
 
+  // Test AppConfig fields
   it("overrides allowedOrigins with window value", () => {
-    const initialHostConfig = {
+    const windowConfig = {
       allowedOrigins: ["https://window.com"],
       useExternalAuthToken: true,
     }
 
-    const result = reconcileHostConfigValues(
-      initialHostConfig,
-      mockEndpointConfig
-    )
+    const result = reconcileHostConfigValues(windowConfig, mockEndpointConfig)
 
     expect(result.allowedOrigins).toEqual(["https://window.com"])
     expect(result.useExternalAuthToken).toBe(true)
   })
 
   it("overrides useExternalAuthToken with window value", () => {
-    const initialHostConfig = {
-      allowedOrigins: ["https://window.com"],
+    const windowConfig = {
       useExternalAuthToken: true,
     }
 
-    const result = reconcileHostConfigValues(
-      initialHostConfig,
-      mockEndpointConfig
-    )
+    const result = reconcileHostConfigValues(windowConfig, mockEndpointConfig)
 
     expect(result.useExternalAuthToken).toBe(true)
+    // Other fields should use endpoint values
+    expect(result.allowedOrigins).toEqual(["https://endpoint.com"])
   })
 
+  it("overrides enableCustomParentMessages with window value", () => {
+    const windowConfig = {
+      enableCustomParentMessages: true,
+    }
+
+    const result = reconcileHostConfigValues(windowConfig, mockEndpointConfig)
+
+    expect(result.enableCustomParentMessages).toBe(true)
+    // Other fields should use endpoint values
+    expect(result.useExternalAuthToken).toBe(false)
+  })
+
+  it("overrides blockErrorDialogs with window value", () => {
+    const windowConfig = {
+      blockErrorDialogs: true,
+    }
+
+    const result = reconcileHostConfigValues(windowConfig, mockEndpointConfig)
+
+    expect(result.blockErrorDialogs).toBe(true)
+    // Other fields should use endpoint values
+    expect(result.enableCustomParentMessages).toBe(false)
+  })
+
+  // Test LibConfig fields
+  it("overrides mapboxToken with window value", () => {
+    const windowConfig = {
+      mapboxToken: "window-token",
+    }
+
+    const result = reconcileHostConfigValues(windowConfig, mockEndpointConfig)
+
+    expect(result.mapboxToken).toBe("window-token")
+    // Other fields should use endpoint values
+    expect(result.disableFullscreenMode).toBe(true)
+  })
+
+  it("overrides disableFullscreenMode with window value", () => {
+    const windowConfig = {
+      disableFullscreenMode: false,
+    }
+
+    const result = reconcileHostConfigValues(windowConfig, mockEndpointConfig)
+
+    expect(result.disableFullscreenMode).toBe(false)
+    // Other fields should use endpoint values
+    expect(result.mapboxToken).toBe("endpoint-token")
+  })
+
+  it("overrides enforceDownloadInNewTab with window value", () => {
+    const windowConfig = {
+      enforceDownloadInNewTab: true,
+    }
+
+    const result = reconcileHostConfigValues(windowConfig, mockEndpointConfig)
+
+    expect(result.enforceDownloadInNewTab).toBe(true)
+    // Other fields should use endpoint values
+    expect(result.disableFullscreenMode).toBe(true)
+  })
+
+  it("overrides resourceCrossOriginMode with window value", () => {
+    const windowConfig = {
+      resourceCrossOriginMode: "use-credentials" as const,
+    }
+
+    const result = reconcileHostConfigValues(windowConfig, mockEndpointConfig)
+
+    expect(result.resourceCrossOriginMode).toBe("use-credentials")
+    // Other fields should use endpoint values
+    expect(result.mapboxToken).toBe("endpoint-token")
+  })
+
+  // Test MetricsConfig fields
   it("overrides metricsUrl with window value", () => {
-    const initialHostConfig = {
-      allowedOrigins: ["https://window.com"],
-      useExternalAuthToken: true,
+    const windowConfig = {
       metricsUrl: "postMessage" as const,
     }
 
-    const result = reconcileHostConfigValues(
-      initialHostConfig,
-      mockEndpointConfig
-    )
+    const result = reconcileHostConfigValues(windowConfig, mockEndpointConfig)
 
     expect(result.metricsUrl).toBe("postMessage")
   })
 
-  it("preserves non-minimal config fields from endpoint", () => {
-    const initialHostConfig = {
+  // Test partial window config
+  it("handles partial window config (only some fields provided)", () => {
+    const windowConfig = {
       allowedOrigins: ["https://window.com"],
-      useExternalAuthToken: true,
-      metricsUrl: "postMessage" as const,
+      mapboxToken: "window-token",
+      // Other fields undefined
     }
 
-    const result = reconcileHostConfigValues(
-      initialHostConfig,
-      mockEndpointConfig
-    )
-
-    // These should NOT be overridden
-    expect(result.disableFullscreenMode).toBe(true)
-    expect(result.enableCustomParentMessages).toBe(false)
-    expect(result.mapboxToken).toBe("endpoint-token")
-    expect(result.enforceDownloadInNewTab).toBe(false)
-    expect(result.blockErrorDialogs).toBe(false)
-  })
-
-  it("uses endpoint values for minimal fields when window values are undefined", () => {
-    const initialHostConfig = {
-      allowedOrigins: ["https://window.com"],
-      useExternalAuthToken: true,
-      // metricsUrl is undefined
-    }
-
-    const result = reconcileHostConfigValues(
-      initialHostConfig,
-      mockEndpointConfig
-    )
+    const result = reconcileHostConfigValues(windowConfig, mockEndpointConfig)
 
     // Window values should be used
     expect(result.allowedOrigins).toEqual(["https://window.com"])
-    expect(result.useExternalAuthToken).toBe(true)
-    // Endpoint value should be used for metricsUrl
+    expect(result.mapboxToken).toBe("window-token")
+    // Endpoint values should be used for unprovided fields
+    expect(result.useExternalAuthToken).toBe(false)
+    expect(result.enableCustomParentMessages).toBe(false)
+    expect(result.blockErrorDialogs).toBe(false)
+    expect(result.disableFullscreenMode).toBe(true)
+    expect(result.enforceDownloadInNewTab).toBe(false)
+    expect(result.resourceCrossOriginMode).toBe("anonymous")
     expect(result.metricsUrl).toBe("https://metrics.endpoint.com")
   })
 
+  // Test complete window config
+  it("handles complete window config (all 9 fields provided)", () => {
+    const windowConfig = {
+      // AppConfig
+      allowedOrigins: ["https://window1.com", "https://window2.com"],
+      useExternalAuthToken: true,
+      enableCustomParentMessages: true,
+      blockErrorDialogs: true,
+      // LibConfig
+      mapboxToken: "window-mapbox-token",
+      disableFullscreenMode: false,
+      enforceDownloadInNewTab: true,
+      resourceCrossOriginMode: "use-credentials" as const,
+      // MetricsConfig
+      metricsUrl: "postMessage" as const,
+    }
+
+    const result = reconcileHostConfigValues(windowConfig, mockEndpointConfig)
+
+    // All window values should be used
+    expect(result.allowedOrigins).toEqual([
+      "https://window1.com",
+      "https://window2.com",
+    ])
+    expect(result.useExternalAuthToken).toBe(true)
+    expect(result.enableCustomParentMessages).toBe(true)
+    expect(result.blockErrorDialogs).toBe(true)
+    expect(result.mapboxToken).toBe("window-mapbox-token")
+    expect(result.disableFullscreenMode).toBe(false)
+    expect(result.enforceDownloadInNewTab).toBe(true)
+    expect(result.resourceCrossOriginMode).toBe("use-credentials")
+    expect(result.metricsUrl).toBe("postMessage")
+  })
+
   it("handles all window values being undefined", () => {
-    const initialHostConfig = {
+    const windowConfig = {
       // All optional fields undefined
     }
 
-    const result = reconcileHostConfigValues(
-      initialHostConfig,
-      mockEndpointConfig
-    )
+    const result = reconcileHostConfigValues(windowConfig, mockEndpointConfig)
 
     // Should use all endpoint values
     expect(result).toEqual(mockEndpointConfig)
   })
 
-  it("returns endpoint config when bypass is not enabled", () => {
-    // Simulate invalid config that fails bypass eligibility check
-    vi.mocked(isHostConfigBypassEnabled).mockReturnValue(false)
-
-    const initialHostConfig = {
-      allowedOrigins: [] as string[], // Empty array - invalid for bypass
-      useExternalAuthToken: false,
+  // Test allowedOrigins validation
+  it("validates allowedOrigins and rejects empty array", () => {
+    const windowConfig = {
+      allowedOrigins: [] as string[], // Empty array - invalid
+      useExternalAuthToken: true,
     }
 
-    const result = reconcileHostConfigValues(
-      initialHostConfig,
-      mockEndpointConfig
-    )
+    const result = reconcileHostConfigValues(windowConfig, mockEndpointConfig)
 
-    // Should use endpoint values because bypass is not eligible
+    // Empty array should be rejected, endpoint value should be used
     expect(result.allowedOrigins).toEqual(["https://endpoint.com"])
-    expect(result.useExternalAuthToken).toBe(false) // From endpoint
-    expect(result).toEqual(mockEndpointConfig)
+    // But other window values should still be applied
+    expect(result.useExternalAuthToken).toBe(true)
   })
 
-  it("returns endpoint config when bypass eligibility check fails", () => {
-    // Even if initialHostConfig is provided, if bypass check fails, use endpoint
-    vi.mocked(isHostConfigBypassEnabled).mockReturnValue(false)
-
-    const initialHostConfig = {
-      allowedOrigins: ["https://window.com"],
-      useExternalAuthToken: true,
-      metricsUrl: "postMessage" as const,
-    }
-
-    const result = reconcileHostConfigValues(
-      initialHostConfig,
-      mockEndpointConfig
-    )
-
-    // Should use endpoint config unchanged when bypass is not enabled
-    expect(result).toEqual(mockEndpointConfig)
-  })
-
+  // Test special values
   it("handles metricsUrl: 'off' from window", () => {
-    const initialHostConfig = {
-      allowedOrigins: ["https://window.com"],
-      useExternalAuthToken: true,
+    const windowConfig = {
       metricsUrl: "off" as const,
     }
 
-    const result = reconcileHostConfigValues(
-      initialHostConfig,
-      mockEndpointConfig
-    )
+    const result = reconcileHostConfigValues(windowConfig, mockEndpointConfig)
 
     expect(result.metricsUrl).toBe("off")
   })
 
+  it("handles resourceCrossOriginMode: undefined from window (treated as not provided)", () => {
+    const windowConfig = {
+      resourceCrossOriginMode: undefined,
+    }
+
+    const result = reconcileHostConfigValues(windowConfig, mockEndpointConfig)
+
+    // Undefined is treated as "not provided", so endpoint value is used
+    // (JavaScript undefined is the same as not setting the property)
+    expect(result.resourceCrossOriginMode).toBe("anonymous")
+  })
+
+  // Test boolean edge cases
   it("handles useExternalAuthToken: false from window (not undefined)", () => {
-    const initialHostConfig = {
-      allowedOrigins: ["https://window.com"],
+    const windowConfig = {
       useExternalAuthToken: false, // Explicitly false
     }
 
@@ -252,24 +416,196 @@ describe("reconcileHostConfigValues", () => {
       useExternalAuthToken: true, // Different from window
     }
 
-    const result = reconcileHostConfigValues(initialHostConfig, endpointConfig)
+    const result = reconcileHostConfigValues(windowConfig, endpointConfig)
 
     // Window value (false) should be used, not endpoint (true)
     expect(result.useExternalAuthToken).toBe(false)
   })
 
-  it("preserves endpoint config object reference for non-overridden fields", () => {
-    const initialHostConfig = {
+  it("handles boolean false values correctly for all boolean fields", () => {
+    const windowConfig = {
+      useExternalAuthToken: false,
+      enableCustomParentMessages: false,
+      blockErrorDialogs: false,
+      disableFullscreenMode: false,
+      enforceDownloadInNewTab: false,
+    }
+
+    const result = reconcileHostConfigValues(windowConfig, mockEndpointConfig)
+
+    // All false values should be preserved (not treated as undefined)
+    expect(result.useExternalAuthToken).toBe(false)
+    expect(result.enableCustomParentMessages).toBe(false)
+    expect(result.blockErrorDialogs).toBe(false)
+    expect(result.disableFullscreenMode).toBe(false)
+    expect(result.enforceDownloadInNewTab).toBe(false)
+  })
+
+  // Test object reference
+  it("returns a new object (does not modify endpoint config)", () => {
+    const windowConfig = {
       allowedOrigins: ["https://window.com"],
       useExternalAuthToken: true,
     }
 
-    const result = reconcileHostConfigValues(
-      initialHostConfig,
-      mockEndpointConfig
-    )
+    const result = reconcileHostConfigValues(windowConfig, mockEndpointConfig)
 
     // The result should be a new object
     expect(result).not.toBe(mockEndpointConfig)
+    // Original endpoint config should be unchanged
+    expect(mockEndpointConfig.allowedOrigins).toEqual(["https://endpoint.com"])
+  })
+
+  // Test field precedence with different values
+  it("applies all provided window fields even when they differ from endpoint", () => {
+    const windowConfig = {
+      allowedOrigins: ["https://window.com"],
+      useExternalAuthToken: true,
+      enableCustomParentMessages: true,
+      blockErrorDialogs: true,
+      mapboxToken: "window-token",
+      disableFullscreenMode: false,
+      enforceDownloadInNewTab: true,
+      resourceCrossOriginMode: "use-credentials" as const,
+      metricsUrl: "postMessage" as const,
+    }
+
+    const endpointConfig = {
+      ...mockEndpointConfig,
+      // All values different from window
+      allowedOrigins: ["https://endpoint1.com", "https://endpoint2.com"],
+      useExternalAuthToken: false,
+      enableCustomParentMessages: false,
+      blockErrorDialogs: false,
+      mapboxToken: "endpoint-token",
+      disableFullscreenMode: true,
+      enforceDownloadInNewTab: false,
+      resourceCrossOriginMode: "anonymous" as const,
+      metricsUrl: "https://endpoint-metrics.com",
+    }
+
+    const result = reconcileHostConfigValues(windowConfig, endpointConfig)
+
+    // All window values should take precedence
+    expect(result.allowedOrigins).toEqual(["https://window.com"])
+    expect(result.useExternalAuthToken).toBe(true)
+    expect(result.enableCustomParentMessages).toBe(true)
+    expect(result.blockErrorDialogs).toBe(true)
+    expect(result.mapboxToken).toBe("window-token")
+    expect(result.disableFullscreenMode).toBe(false)
+    expect(result.enforceDownloadInNewTab).toBe(true)
+    expect(result.resourceCrossOriginMode).toBe("use-credentials")
+    expect(result.metricsUrl).toBe("postMessage")
+  })
+
+  it("preserves deprecated setAnonymousCrossOriginPropertyOnMediaElements from endpoint", () => {
+    const endpointConfig = {
+      ...mockEndpointConfig,
+      setAnonymousCrossOriginPropertyOnMediaElements: true,
+    }
+
+    const result = reconcileHostConfigValues(undefined, endpointConfig)
+
+    expect(result.setAnonymousCrossOriginPropertyOnMediaElements).toBe(true)
+  })
+
+  it("preserves deprecated field even when window config is provided", () => {
+    const windowConfig = {
+      allowedOrigins: ["https://window.com"],
+      useExternalAuthToken: true,
+    }
+    const endpointConfig = {
+      ...mockEndpointConfig,
+      setAnonymousCrossOriginPropertyOnMediaElements: true,
+    }
+
+    const result = reconcileHostConfigValues(windowConfig, endpointConfig)
+
+    // Window values override
+    expect(result.allowedOrigins).toEqual(["https://window.com"])
+    // Deprecated field preserved from endpoint
+    expect(result.setAnonymousCrossOriginPropertyOnMediaElements).toBe(true)
+  })
+
+  it("rejects allowedOrigins with empty strings", () => {
+    const windowConfig = {
+      allowedOrigins: ["https://valid.com", ""],
+      useExternalAuthToken: true,
+    }
+
+    const result = reconcileHostConfigValues(windowConfig, mockEndpointConfig)
+
+    // Should use endpoint value, not window value with empty string
+    expect(result.allowedOrigins).toEqual(mockEndpointConfig.allowedOrigins)
+  })
+
+  it("rejects allowedOrigins with only empty strings", () => {
+    const windowConfig = {
+      allowedOrigins: ["", ""],
+      useExternalAuthToken: true,
+    }
+
+    const result = reconcileHostConfigValues(windowConfig, mockEndpointConfig)
+
+    // Should use endpoint value
+    expect(result.allowedOrigins).toEqual(mockEndpointConfig.allowedOrigins)
+  })
+
+  it("rejects allowedOrigins with non-string values", () => {
+    const windowConfig = {
+      allowedOrigins: ["https://valid.com", 123] as unknown as string[],
+      useExternalAuthToken: true,
+    }
+
+    const result = reconcileHostConfigValues(windowConfig, mockEndpointConfig)
+
+    // Should use endpoint value due to invalid window config
+    expect(result.allowedOrigins).toEqual(mockEndpointConfig.allowedOrigins)
+  })
+
+  it("correctly overrides all boolean fields when set to false", () => {
+    const windowConfig = {
+      allowedOrigins: ["https://window.com"],
+      useExternalAuthToken: false, // false, not undefined
+      enableCustomParentMessages: false,
+      blockErrorDialogs: false,
+      disableFullscreenMode: false,
+      enforceDownloadInNewTab: false,
+    }
+    const endpointConfig = {
+      ...mockEndpointConfig,
+      // All endpoint values are true
+      useExternalAuthToken: true,
+      enableCustomParentMessages: true,
+      blockErrorDialogs: true,
+      disableFullscreenMode: true,
+      enforceDownloadInNewTab: true,
+    }
+
+    const result = reconcileHostConfigValues(windowConfig, endpointConfig)
+
+    // Window false values should override endpoint true values
+    expect(result.useExternalAuthToken).toBe(false)
+    expect(result.enableCustomParentMessages).toBe(false)
+    expect(result.blockErrorDialogs).toBe(false)
+    expect(result.disableFullscreenMode).toBe(false)
+    expect(result.enforceDownloadInNewTab).toBe(false)
+  })
+
+  it("treats null window values as not provided", () => {
+    const windowConfig = {
+      allowedOrigins: ["https://window.com"],
+      useExternalAuthToken: true,
+      mapboxToken: null,
+      metricsUrl: null,
+    } as unknown as typeof mockEndpointConfig
+
+    const result = reconcileHostConfigValues(windowConfig, mockEndpointConfig)
+
+    // Null values should not override endpoint
+    expect(result.mapboxToken).toBe(mockEndpointConfig.mapboxToken)
+    expect(result.metricsUrl).toBe(mockEndpointConfig.metricsUrl)
+    // Valid values should still override
+    expect(result.allowedOrigins).toEqual(["https://window.com"])
   })
 })

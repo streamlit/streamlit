@@ -14,7 +14,11 @@
  * limitations under the License.
  */
 
-import { makePath, StreamlitConfig } from "@streamlit/utils"
+import {
+  isValidAllowedOrigins,
+  makePath,
+  StreamlitConfig,
+} from "@streamlit/utils"
 
 const FINAL_SLASH_RE = /\/+$/
 const INITIAL_SLASH_RE = /^\/+/
@@ -27,7 +31,7 @@ const INITIAL_SLASH_RE = /^\/+/
  *
  * Required fields:
  * - BACKEND_BASE_URL: string
- * - HOST_CONFIG.allowedOrigins: non-empty array of strings
+ * - HOST_CONFIG.allowedOrigins: non-empty array of non-empty strings
  * - HOST_CONFIG.useExternalAuthToken: boolean (true or false)
  *
  * NOTE: changes to this function must be reflected in the mock in App.test.tsx
@@ -41,17 +45,9 @@ export function isHostConfigBypassEnabled(): boolean {
 
   const { allowedOrigins, useExternalAuthToken } = initialHostConfig
 
-  // Validate required fields
+  // Validate required fields using shared validation logic
   const hasValidBackendBaseUrl = Boolean(StreamlitConfig.BACKEND_BASE_URL)
-
-  // Validate allowedOrigins is a non-empty array of non-empty strings
-  const hasValidAllowedOrigins =
-    Array.isArray(allowedOrigins) &&
-    allowedOrigins.length > 0 &&
-    allowedOrigins.every(
-      origin => typeof origin === "string" && origin.length > 0
-    )
-
+  const hasValidAllowedOrigins = isValidAllowedOrigins(allowedOrigins)
   const hasValidUseExternalAuthToken =
     typeof useExternalAuthToken === "boolean"
 

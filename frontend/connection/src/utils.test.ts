@@ -724,4 +724,114 @@ describe("isHostConfigBypassEnabled", () => {
     }
     expect(isHostConfigBypassEnabled()).toBe(true)
   })
+
+  // Tests confirming bypass eligibility unchanged with expanded fields
+  it("returns true with minimal fields plus all expanded AppConfig fields", () => {
+    globalThis.__mockStreamlitConfig = {
+      BACKEND_BASE_URL: "https://backend.example.com",
+      HOST_CONFIG: {
+        allowedOrigins: ["https://example.com"],
+        useExternalAuthToken: true,
+        // Additional AppConfig fields
+        enableCustomParentMessages: true,
+        blockErrorDialogs: true,
+      },
+    }
+    expect(isHostConfigBypassEnabled()).toBe(true)
+  })
+
+  it("returns true with minimal fields plus all expanded LibConfig fields", () => {
+    globalThis.__mockStreamlitConfig = {
+      BACKEND_BASE_URL: "https://backend.example.com",
+      HOST_CONFIG: {
+        allowedOrigins: ["https://example.com"],
+        useExternalAuthToken: true,
+        // Additional LibConfig fields
+        mapboxToken: "test-token",
+        disableFullscreenMode: true,
+        enforceDownloadInNewTab: true,
+        resourceCrossOriginMode: "anonymous",
+      },
+    }
+    expect(isHostConfigBypassEnabled()).toBe(true)
+  })
+
+  it("returns true with minimal fields plus all 9 HOST_CONFIG fields", () => {
+    globalThis.__mockStreamlitConfig = {
+      BACKEND_BASE_URL: "https://backend.example.com",
+      HOST_CONFIG: {
+        // Minimal required
+        allowedOrigins: ["https://example.com"],
+        useExternalAuthToken: true,
+        // All additional fields
+        metricsUrl: "postMessage",
+        enableCustomParentMessages: true,
+        blockErrorDialogs: true,
+        mapboxToken: "test-token",
+        disableFullscreenMode: false,
+        enforceDownloadInNewTab: true,
+        resourceCrossOriginMode: "use-credentials",
+      },
+    }
+    expect(isHostConfigBypassEnabled()).toBe(true)
+  })
+
+  it("returns false with only expanded fields but missing minimal required fields", () => {
+    globalThis.__mockStreamlitConfig = {
+      BACKEND_BASE_URL: "https://backend.example.com",
+      HOST_CONFIG: {
+        // Missing allowedOrigins and useExternalAuthToken
+        // Only provide expanded fields
+        metricsUrl: "postMessage",
+        enableCustomParentMessages: true,
+        mapboxToken: "test-token",
+        disableFullscreenMode: true,
+      },
+    }
+    expect(isHostConfigBypassEnabled()).toBe(false)
+  })
+
+  it("returns false with only LibConfig fields (no minimal required fields)", () => {
+    globalThis.__mockStreamlitConfig = {
+      BACKEND_BASE_URL: "https://backend.example.com",
+      HOST_CONFIG: {
+        // Only LibConfig fields, missing minimal required
+        mapboxToken: "test-token",
+        disableFullscreenMode: true,
+        enforceDownloadInNewTab: true,
+        resourceCrossOriginMode: "anonymous",
+      },
+    }
+    expect(isHostConfigBypassEnabled()).toBe(false)
+  })
+
+  it("returns false with allowedOrigins but missing useExternalAuthToken even if other fields present", () => {
+    globalThis.__mockStreamlitConfig = {
+      BACKEND_BASE_URL: "https://backend.example.com",
+      HOST_CONFIG: {
+        allowedOrigins: ["https://example.com"],
+        // useExternalAuthToken missing
+        // Other fields present
+        metricsUrl: "postMessage",
+        enableCustomParentMessages: true,
+        mapboxToken: "test-token",
+      },
+    }
+    expect(isHostConfigBypassEnabled()).toBe(false)
+  })
+
+  it("returns false with useExternalAuthToken but missing allowedOrigins even if other fields present", () => {
+    globalThis.__mockStreamlitConfig = {
+      BACKEND_BASE_URL: "https://backend.example.com",
+      HOST_CONFIG: {
+        // allowedOrigins missing
+        useExternalAuthToken: true,
+        // Other fields present
+        metricsUrl: "postMessage",
+        mapboxToken: "test-token",
+        disableFullscreenMode: true,
+      },
+    }
+    expect(isHostConfigBypassEnabled()).toBe(false)
+  })
 })
