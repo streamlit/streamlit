@@ -29,6 +29,7 @@ from streamlit.elements import deck_gl_json_chart
 from streamlit.elements.lib.color_util import (
     Color,
     IntColorTuple,
+    MaybeColor,
     is_color_like,
     to_int_color_tuple,
 )
@@ -447,7 +448,9 @@ def _convert_color_arg_or_column(
 
     if color_col_name is not None:
         # Convert color column to the right format.
-        if len(data[color_col_name]) > 0 and is_color_like(data[color_col_name].iat[0]):
+        if len(data[color_col_name]) > 0 and is_color_like(
+            cast("MaybeColor", data[color_col_name].iat[0])
+        ):
             # Use .loc[] to avoid a SettingWithCopyWarning in some cases.
             data.loc[:, color_col_name] = data.loc[:, color_col_name].map(
                 to_int_color_tuple

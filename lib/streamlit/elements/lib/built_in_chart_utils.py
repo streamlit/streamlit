@@ -24,6 +24,7 @@ from typing import TYPE_CHECKING, Any, Final, Literal, TypeAlias, TypedDict, cas
 from streamlit import dataframe_util, type_util
 from streamlit.elements.lib.color_util import (
     Color,
+    MaybeColor,
     is_color_like,
     is_color_tuple_like,
     is_hex_color_like,
@@ -677,7 +678,7 @@ def _maybe_convert_color_column_in_place(
     if color_column is None or len(df[color_column]) == 0:
         return
 
-    first_color_datum = df[color_column].iat[0]
+    first_color_datum: MaybeColor = df[color_column].iat[0]  # type: ignore[assignment]
 
     if is_hex_color_like(first_color_datum):
         # Hex is already CSS-valid.
@@ -1119,7 +1120,9 @@ def _get_color_encoding(
 
         # If the 0th element in the color column looks like a color, we'll use the color
         # column's values as the colors in our chart.
-        elif len(df[color_column]) and is_color_like(df[color_column].iat[0]):
+        elif len(df[color_column]) and is_color_like(
+            cast("MaybeColor", df[color_column].iat[0])
+        ):
             color_range = [to_css_color(c) for c in df[color_column].unique()]
             color_enc["scale"] = alt.Scale(range=color_range)
             # Don't show the color legend, because it will just show text with the
