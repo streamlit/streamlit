@@ -205,7 +205,7 @@ def set_cookie_with_chunks(
     signed_value = create_signed_value_fn(cookie_name, serialized_cookie_value)
 
     # Cookie format: "name=value" + COOKIE_ATTRIBUTES
-    actual_cookie_size = len(cookie_name) + len(signed_value) + COOKIE_ATTR_SIZE
+    actual_cookie_size = len(cookie_name) + 1 + len(signed_value) + COOKIE_ATTR_SIZE
 
     # Check if cookie needs to be split
     if actual_cookie_size > MAX_COOKIE_BYTES:
@@ -347,7 +347,7 @@ def get_cookie_with_chunks(
         chunk_name = f"{cookie_name}_{i + 1}"
         chunk_value = get_single_cookie_fn(chunk_name)
         if chunk_value is None:
-            _LOGGER.exception("Missing chunk %d for cookie '%s'", i, cookie_name)
+            _LOGGER.exception("Missing chunk %d for cookie '%s'", i + 1, cookie_name)
             return None
         chunks.append(chunk_value)
 

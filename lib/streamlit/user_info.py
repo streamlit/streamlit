@@ -68,8 +68,7 @@ def login(provider: str | None = None) -> None:
     is an extension of OAuth 2.0, you can't use generic OAuth providers.
     Streamlit parses the user's identity token and surfaces its attributes in
     ``st.user``. If the provider returns an access token, that
-    token is ignored. Therefore, this command will not allow your app to act on
-    behalf of a user in a secure system.
+    token is ignored unless you explicitly expose it.
 
     For all providers, there are two shared settings, ``redirect_uri`` and
     ``cookie_secret``, which you must specify in an ``[auth]`` dictionary
