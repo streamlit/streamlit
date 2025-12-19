@@ -14,7 +14,7 @@
 
 """LRU cache supporting TTL and max entry count, as well as release hooks for cleanup."""
 
-from collections.abc import Callable, Iterable
+from collections.abc import Callable
 from typing import Any
 
 from cachetools import TTLCache
@@ -60,7 +60,7 @@ class TTLCleanupCache(TTLCache):
         return key, value
 
     @override
-    def expire(self, time: float | None = None) -> Iterable[tuple[Any, Any]]:
+    def expire(self, time: float | None = None) -> list[tuple[Any, Any]]:
         items = super().expire(time)
         for _, value in items:
             self._on_release(value)
