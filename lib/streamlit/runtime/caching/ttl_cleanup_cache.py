@@ -15,7 +15,7 @@
 """LRU cache supporting TTL and max entry count, as well as release hooks for cleanup."""
 
 from collections.abc import Callable
-from typing import Any
+from typing import TypeVar
 
 from cachetools import TTLCache
 
@@ -25,8 +25,11 @@ from typing_extensions import override
 
 from streamlit.runtime.caching.cache_utils import OnRelease
 
+K = TypeVar("K")
+V = TypeVar("V")
 
-class TTLCleanupCache(TTLCache):
+
+class TTLCleanupCache(TTLCache[K, V]):
     """A TTLCache that supports hooks called when items are released."""
 
     def __init__(
@@ -54,13 +57,13 @@ class TTLCleanupCache(TTLCache):
         self._on_release = on_release
 
     @override
-    def popitem(self) -> tuple[Any, Any]:
+    def popitem(self) -> tuple[K, V]:
         key, value = super().popitem()
         self._on_release(value)
         return key, value
 
     @override
-    def expire(self, time: float | None = None) -> list[tuple[Any, Any]]:
+    def expire(self, time: float | None = None) -> list[tuple[K, V]]:
         items = super().expire(time)
         for _, value in items:
             self._on_release(value)
