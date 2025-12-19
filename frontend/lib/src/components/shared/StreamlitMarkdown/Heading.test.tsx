@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-import React from "react"
-
 import { screen, waitFor } from "@testing-library/react"
 
 import { Heading as HeadingProto } from "@streamlit/protobuf"

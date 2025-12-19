@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement } from "react"
+import { ReactElement } from "react"
 
 import { cleanup, screen } from "@testing-library/react"
 import { transparentize } from "color2k"
@@ -686,6 +686,15 @@ describe("StreamlitMarkdown", () => {
     render(<StreamlitMarkdown source={source} allowHTML={false} />)
     const markdown = screen.getByText("test :foo test:test :")
     expect(markdown).toBeInTheDocument()
+  })
+
+  it("converts unsupported text directives to plain text", () => {
+    // Text directives use the syntax :name[content]
+    // Unsupported ones should render as :name (prefix only, content lost)
+    const source = `test :unknown[content] end`
+    render(<StreamlitMarkdown source={source} allowHTML={false} />)
+    const markdown = screen.getByText("test :unknown end")
+    expect(markdown).toBeVisible()
   })
 
   it("properly adds background colors", () => {

@@ -647,7 +647,7 @@ def test_uploads_and_deletes_multiple_files(
 def test_file_upload_error_message_disallowed_files(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
-    """Test that shows error message for disallowed files."""
+    """Test that shows error message for disallowed files and retry attributes."""
     themed_app.set_viewport_size({"width": 750, "height": 2000})
 
     file_name1 = "file1.json"
@@ -673,11 +673,16 @@ def test_file_upload_error_message_disallowed_files(
 
     assert_snapshot(uploaded_files, name="st_chat_input-file_uploaded_error")
 
-    # Reset hovering again before hovering on error tooltip to ensure upload tooltip is dismissed
-    reset_hovering(themed_app)
+    # Verify error message is displayed inline
+    error_message = uploaded_files.get_by_test_id("stChatInputFileError").first
+    expect(error_message).to_be_visible()
+    expect(error_message).to_have_text("application/json files are not allowed.")
 
-    uploaded_files.get_by_test_id("stTooltipHoverTarget").first.hover()
-    expect(themed_app.get_by_text("json files are not allowed.")).to_be_visible()
+    # Verify file chip has retry attributes (all errors are retryable)
+    file_chip = uploaded_files.get_by_test_id("stChatInputFile").first
+    expect(file_chip).to_have_attribute("role", "button")
+    expect(file_chip).to_have_attribute("tabindex", "0")
+    expect(file_chip).to_have_attribute("title", "Click to retry upload")
 
 
 @use_chat_input("single_file")
@@ -708,18 +713,13 @@ def test_file_upload_error_message_file_too_large(app: Page):
 
     uploaded_files.scroll_into_view_if_needed()
 
-    # Reset hovering to not cause issues with the upload tooltip being
-    # shown over the uploaded file tooltip hover target:
+    # Reset hovering to dismiss any upload tooltips
     reset_hovering(app)
 
-    # Ensure the upload button tooltip has disappeared before checking the error tooltip
-    expect(app.get_by_text("Upload or drag and drop a file")).not_to_be_attached()
-
-    # Ensure the tooltip hover target is in viewport before hovering (WebKit requirement)
-    hover_target = uploaded_files.get_by_test_id("stTooltipHoverTarget")
-    hover_target.scroll_into_view_if_needed()
-
-    expect_help_tooltip(app, uploaded_files, "File must be 1.0MB or smaller.")
+    # Verify error message is displayed inline
+    error_message = uploaded_files.get_by_test_id("stChatInputFileError").first
+    expect(error_message).to_be_visible()
+    expect(error_message).to_have_text("File must be 1.0MB or smaller.")
 
 
 @use_chat_input("single_file")
@@ -1606,3 +1606,153 @@ def test_audio_sample_rate_validation(app: Page, option_text: str, expected_hz: 
     ).to_be_visible()
     expect(app.get_by_text(f"Expected {expected_hz} Hz", exact=False)).to_be_visible()
     expect(app.get_by_text(f"got {expected_hz} Hz", exact=False)).to_be_visible()
+
+
+def upload_single_file_and_snapshot(
+    app: Page,
+    chat_input: Locator,
+    file: FilePayload,
+    snapshot_name: str,
+    assert_snapshot: ImageCompareFunction,
+) -> None:
+    """Helper to upload a single file and take a snapshot of just that file chip."""
+    file_upload_helper(app, chat_input, [file])
+
+    uploaded_files = chat_input.get_by_test_id("stChatUploadedFiles").first
+    file_chip = uploaded_files.get_by_test_id("stChatInputFile").first
+    expect(file_chip).to_be_visible()
+
+    # Verify title attribute contains full filename (for native tooltip on hover)
+    filename_element = uploaded_files.get_by_test_id("stChatInputFileName").first
+    expect(filename_element).to_have_attribute("title", file["name"])
+
+    reset_hovering(app)
+
+    assert_snapshot(file_chip, name=snapshot_name)
+
+    # Delete the file to reset for next test
+    uploaded_files.get_by_test_id("stChatInputDeleteBtn").first.click()
+    wait_for_app_run(app, 500)
+
+
+@use_chat_input("multiple_files")
+def test_file_chip_theming(
+    themed_app: Page,
+    assert_snapshot: ImageCompareFunction,
+):
+    """Test file chip theming with one representative file type (light and dark)."""
+    # Use image file type as representative - theme styling is shared across all file types
+    chat_input = get_element_by_key(themed_app, "multiple_files")
+    file = FilePayload(name="photo.png", mimeType="image/png", buffer=b"fake image")
+    upload_single_file_and_snapshot(
+        themed_app,
+        chat_input,
+        file,
+        "st_chat_input-file_chip_themed",
+        assert_snapshot,
+    )
+
+
+# File types to test (excluding image which is tested in test_file_chip_theming)
+FILE_CHIP_VARIATIONS = [
+    ("pdf", "document.pdf", "application/pdf", b"fake pdf"),
+    ("spreadsheet", "data.csv", "text/csv", b"a,b,c"),
+    ("text", "readme.txt", "text/plain", b"Hello world"),
+    ("code", "script.py", "text/x-python", b"print('hi')"),
+    ("audio", "song.mp3", "audio/mpeg", b"fake audio"),
+    ("video", "movie.mp4", "video/mp4", b"fake video"),
+    ("archive", "archive.zip", "application/zip", b"fake zip"),
+    ("unknown", "data.unknown", "application/octet-stream", b"mystery"),
+    (
+        "truncated",
+        "this-is-a-very-long-filename-that-should-be-truncated.pdf",
+        "application/pdf",
+        b"content",
+    ),
+]
+
+
+@use_chat_input("multiple_files")
+@pytest.mark.parametrize(
+    ("test_id", "filename", "mimetype", "content"),
+    FILE_CHIP_VARIATIONS,
+    ids=[case[0] for case in FILE_CHIP_VARIATIONS],
+)
+def test_file_chip_variations(
+    app: Page,
+    assert_snapshot: ImageCompareFunction,
+    test_id: str,
+    filename: str,
+    mimetype: str,
+    content: bytes,
+):
+    """Test file chip rendering for various file types (icon and truncation variations)."""
+    chat_input = get_element_by_key(app, "multiple_files")
+    file = FilePayload(name=filename, mimeType=mimetype, buffer=content)
+    upload_single_file_and_snapshot(
+        app,
+        chat_input,
+        file,
+        f"st_chat_input-file_chip_{test_id}",
+        assert_snapshot,
+    )
+
+
+@use_chat_input("multiple_files")
+@pytest.mark.skip_browser("webkit")
+def test_file_upload_retry_click_success(app: Page):
+    """Test that clicking retry on error chip successfully re-uploads the file."""
+    from playwright.sync_api import Route
+
+    app.set_viewport_size({"width": 750, "height": 2000})
+
+    chat_input = get_element_by_key(app, "multiple_files")
+    expect(chat_input).to_be_visible()
+
+    # Track upload request count to fail first request, succeed on retry
+    request_count = {"value": 0}
+
+    def handle_route(route: Route):
+        request_count["value"] += 1
+        if request_count["value"] == 1:
+            # First request fails
+            route.abort("failed")
+        else:
+            # Subsequent requests succeed
+            route.continue_()
+
+    # Set up route interception BEFORE uploading
+    app.route("**/_stcore/upload_file/**", handle_route)
+
+    file_name = "test_retry.txt"
+    file = FilePayload(name=file_name, mimeType="text/plain", buffer=b"test content")
+
+    try:
+        file_upload_helper(app, chat_input, [file])
+
+        # Wait for error state to appear
+        uploaded_files = chat_input.get_by_test_id("stChatUploadedFiles").first
+        file_chip = uploaded_files.get_by_test_id("stChatInputFile").first
+        expect(file_chip).to_be_visible()
+
+        # Verify file is in error state with retry attributes
+        expect(file_chip).to_have_attribute("role", "button")
+        expect(file_chip).to_have_attribute("title", "Click to retry upload")
+
+        error_message = uploaded_files.get_by_test_id("stChatInputFileError").first
+        expect(error_message).to_be_visible()
+
+        # Click to retry - this should succeed since we now allow requests through
+        file_chip.click()
+
+        # Wait for successful upload - error should disappear, file size should appear
+        # After successful upload, there should be no error message
+        expect(error_message).not_to_be_visible(timeout=5000)
+
+        # Verify file is now in uploaded state (shows size instead of error)
+        file_size = uploaded_files.get_by_test_id("stChatInputFileName").first
+        expect(file_size).to_be_visible()
+
+    finally:
+        # Clean up route interception
+        app.unroute("**/_stcore/upload_file/**")

@@ -73,7 +73,7 @@ def _unflatten_single_dict(flat_dict: dict[Any, Any]) -> dict[Any, Any]:
             curr_dict = curr_dict[k]
 
         if prev_dict is not None:
-            prev_dict[k] = v
+            prev_dict[path[-1]] = v
 
     return out
 

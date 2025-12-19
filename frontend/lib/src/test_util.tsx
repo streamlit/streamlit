@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { FC, PropsWithChildren, ReactElement } from "react"
+import { FC, PropsWithChildren, ReactElement } from "react"
 
 import {
   render as reactTestingLibraryRender,

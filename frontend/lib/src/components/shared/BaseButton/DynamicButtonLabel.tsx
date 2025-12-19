@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { useMemo } from "react"
+import { useMemo } from "react"
 
 import { DynamicIcon } from "~lib/components/shared/Icon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"

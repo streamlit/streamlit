@@ -14,7 +14,8 @@
  * limitations under the License.
  */
 
-import React, {
+import {
+  createContext,
   CSSProperties,
   type FC,
   type HTMLProps,
@@ -30,8 +31,9 @@ import React, {
 } from "react"
 
 import slugify from "@sindresorhus/slugify"
-import { type Element, type Root } from "hast"
+import { type Element, type Root as HastRoot } from "hast"
 import { omit, once } from "lodash-es"
+import type { Root as MdastRoot, Text } from "mdast"
 import { findAndReplace } from "mdast-util-find-and-replace"
 import { Link2 as LinkIcon } from "react-feather"
 import ReactMarkdown, {
@@ -80,6 +82,7 @@ import {
   loadRehypeRaw,
   loadRemarkEmoji,
   type RawPlugin,
+  type RemarkPluginFactory,
   useLazyPlugin,
   wrapRehypePlugin,
   wrapRemarkPlugin,
@@ -166,6 +169,27 @@ export interface Props {
    * Inherit font family, size, and weight from parent
    */
   inheritFont?: boolean
+
+  /**
+   * Optional help text for inline help tooltips.
+   * When present, :help[] markers in the source will use this text.
+   */
+  helpText?: string
+}
+
+/**
+ * Type for mdast text nodes that carry hast transformation data.
+ * Used by mdast-util-to-hast to convert these placeholder nodes into specific HTML elements.
+ * @see https://github.com/syntax-tree/mdast-util-to-hast#fields-on-nodes
+ */
+interface MdastTextWithHastData {
+  type: "text"
+  value: string
+  data: {
+    hName: string
+    hProperties: Record<string, string>
+    hChildren?: Array<{ type: string; value: string }>
+  }
 }
 
 /**
@@ -174,7 +198,7 @@ export interface Props {
  * It is needed for versions of react-markdown from v9 onwards.
  */
 function rehypeSetCodeInlineProperty() {
-  return (tree: Root) => {
+  return (tree: HastRoot) => {
     visit(tree, "element", (node: Element, _index, parent) => {
       if (node.tagName !== "code") {
         return
@@ -379,6 +403,12 @@ export interface RenderedMarkdownProps {
    * Does not allow links
    */
   disableLinks?: boolean
+
+  /**
+   * Optional help text for inline help tooltips.
+   * When present, :help[] markers in the source will use this text.
+   */
+  helpText?: string
 }
 
 export type CustomCodeTagProps = JSX.IntrinsicElements["code"] &
@@ -449,6 +479,9 @@ export const CustomMediaTag: FC<
   return <Tag {...attributes} />
 }
 
+const HelpTextContext = createContext<string | undefined>(undefined)
+HelpTextContext.displayName = "HelpTextContext"
+
 interface CustomHelpIconProps {
   children?: string
 }
@@ -456,11 +489,22 @@ interface CustomHelpIconProps {
 /**
  * Custom component to render inline help icons in markdown.
  * Wraps InlineTooltipIcon in an inline-block span for proper inline flow.
+ *
+ * Gets the help text from HelpTextContext (used by the `help` parameter) if available,
+ * or falls back to `children` (for manual :help[content] directive usage).
+ *
+ * Note: When using the :help[content] directive manually in markdown, be aware of
+ * text directive limitations:
+ * - Newlines (\n) are not supported - use context via the help parameter instead
+ * - Brackets [, ] and other special markdown characters may cause parsing issues
+ * - For reliable multiline or complex markdown in tooltips, use the help parameter
+ *   which passes content via context and avoids directive label limitations.
  */
 export const CustomHelpIcon: FC<CustomHelpIconProps> = ({ children }) => {
-  // Ensure we only pass strings to the tooltip. Text directives should always
-  // pass plain strings, but we check defensively at runtime.
-  const tooltipContent = typeof children === "string" ? children : ""
+  // Prefer context (from help parameter) over children (from directive label)
+  const contextHelpText = useContext(HelpTextContext)
+  const tooltipContent =
+    contextHelpText || (typeof children === "string" ? children : "")
 
   return (
     <StyledHelpIconWrapper>
@@ -538,8 +582,7 @@ function createColorMapping(theme: EmotionTheme): Map<string, string> {
  * Factory function to create the help icon directive plugin
  */
 function createRemarkHelpIcon() {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  return () => (tree: any) => {
+  return () => (tree: MdastRoot) => {
     visit(tree, "textDirective", (node, _index, _parent) => {
       const nodeName = String(node.name)
 
@@ -564,8 +607,7 @@ function createRemarkColoringAndSmall(
   theme: EmotionTheme,
   colorMapping: Map<string, string>
 ) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  return () => (tree: any) => {
+  return () => (tree: MdastRoot) => {
     visit(tree, "textDirective", (node, _index, _parent) => {
       const nodeName = String(node.name)
 
@@ -636,21 +678,21 @@ function createRemarkColoringAndSmall(
  * This plugin should run last to convert any unsupported text directives
  * to plain text, ensuring they are rendered rather than ignored.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-function createRemarkUnsupportedDirectivesCleanup(): () => (tree: any) => any {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  return () => (tree: any) => {
-    visit(tree, "textDirective", (node, _index, _parent) => {
-      const nodeName = String(node.name)
-
+function createRemarkUnsupportedDirectivesCleanup(): () => (
+  tree: MdastRoot
+) => MdastRoot {
+  return () => (tree: MdastRoot) => {
+    visit(tree, "textDirective", (node, index, parent) => {
       // Convert unsupported text directives to plain text to avoid them being
       // ignored / not rendered. See https://github.com/streamlit/streamlit/issues/8726,
       // https://github.com/streamlit/streamlit/issues/5968
       // Don't convert if the directive was already handled by another plugin
-      if (!node.data?.hName) {
-        node.type = "text"
-        node.value = `:${nodeName}`
-        node.data = {}
+      if (!node.data?.hName && parent && index !== undefined) {
+        const textNode: Text = {
+          type: "text",
+          value: `:${node.name}`,
+        }
+        parent.children[index] = textNode
       }
     })
     return tree
@@ -661,10 +703,11 @@ function createRemarkUnsupportedDirectivesCleanup(): () => (tree: any) => any {
  * Factory function to create the material icons directive plugin
  */
 function createRemarkMaterialIcons(theme: EmotionTheme) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  return () => (tree: any) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    function replace(fullMatch: string, iconName: string): any {
+  return () => (tree: MdastRoot) => {
+    function replace(
+      fullMatch: string,
+      iconName: string
+    ): MdastTextWithHastData {
       return {
         type: "text",
         value: fullMatch,
@@ -698,7 +741,12 @@ function createRemarkMaterialIcons(theme: EmotionTheme) {
     // Since all `:material/` already got replaced with `:material_`
     // within the markdown text (see below), we need to use `:material_`
     // within the regex.
-    findAndReplace(tree, [[/:material_(\w+):/g, replace]])
+    findAndReplace(tree, [
+      [
+        /:material_(\w+):/g,
+        replace as (fullMatch: string, iconName: string) => Text,
+      ],
+    ])
     return tree
   }
 }
@@ -707,10 +755,8 @@ function createRemarkMaterialIcons(theme: EmotionTheme) {
  * Factory function to create the streamlit logo plugin
  */
 function createRemarkStreamlitLogo() {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  return () => (tree: any) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    function replaceStreamlit(): any {
+  return () => (tree: MdastRoot) => {
+    function replaceStreamlit(): MdastTextWithHastData {
       return {
         type: "text",
         value: "",
@@ -728,7 +774,7 @@ function createRemarkStreamlitLogo() {
         },
       }
     }
-    findAndReplace(tree, [[/:streamlit:/g, replaceStreamlit]])
+    findAndReplace(tree, [[/:streamlit:/g, replaceStreamlit as () => Text]])
     return tree
   }
 }
@@ -737,8 +783,7 @@ function createRemarkStreamlitLogo() {
  * Factory function to create typographical symbols plugin
  */
 function createRemarkTypographicalSymbols() {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  return () => (tree: any) => {
+  return () => (tree: MdastRoot) => {
     visit(tree, (node, _index, parent) => {
       if (
         parent &&
@@ -817,8 +862,7 @@ const LABEL_DISALLOWED_ELEMENTS = [
 const LINKS_DISALLOWED_ELEMENTS = [...LABEL_DISALLOWED_ELEMENTS, "a"]
 
 interface LinkProps {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  node?: any
+  node?: Element
   children?: ReactNode
   href?: string
   title?: string
@@ -856,6 +900,7 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
   overrideComponents,
   isLabel,
   disableLinks,
+  helpText,
 }: Readonly<RenderedMarkdownProps>): ReactElement {
   const theme = useEmotionTheme()
 
@@ -907,8 +952,8 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
   const wrappedEmojiPlugin = useMemo(
     () =>
       isLoadedPlugin(emojiPlugin)
-        ? // eslint-disable-next-line @typescript-eslint/no-explicit-any -- unified's Plugin type is more complex than our wrapper expects
-          wrapRemarkPlugin(emojiPlugin as any, "remark-emoji")
+        ? // Cast needed: unified's Plugin type is more complex than our RemarkPluginFactory wrapper
+          wrapRemarkPlugin(emojiPlugin as RemarkPluginFactory, "remark-emoji")
         : null,
     [emojiPlugin]
   )
@@ -988,19 +1033,21 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
   }
 
   return (
-    <ErrorBoundary>
-      <ReactMarkdown
-        remarkPlugins={remarkPlugins}
-        rehypePlugins={rehypePlugins}
-        components={renderers}
-        urlTransform={transformLinkUri}
-        disallowedElements={disallowed}
-        // unwrap and render children from invalid markdown
-        unwrapDisallowed={true}
-      >
-        {processedSource}
-      </ReactMarkdown>
-    </ErrorBoundary>
+    <HelpTextContext.Provider value={helpText}>
+      <ErrorBoundary>
+        <ReactMarkdown
+          remarkPlugins={remarkPlugins}
+          rehypePlugins={rehypePlugins}
+          components={renderers}
+          urlTransform={transformLinkUri}
+          disallowedElements={disallowed}
+          // unwrap and render children from invalid markdown
+          unwrapDisallowed={true}
+        >
+          {processedSource}
+        </ReactMarkdown>
+      </ErrorBoundary>
+    </HelpTextContext.Provider>
   )
 })
 
@@ -1019,6 +1066,7 @@ const StreamlitMarkdown: FC<Props> = ({
   disableLinks,
   isToast,
   inheritFont,
+  helpText,
 }) => {
   const isInDialog = useContext(IsDialogContext)
 
@@ -1039,6 +1087,7 @@ const StreamlitMarkdown: FC<Props> = ({
         allowHTML={allowHTML}
         isLabel={isLabel}
         disableLinks={disableLinks}
+        helpText={helpText}
       />
     </StyledStreamlitMarkdown>
   )

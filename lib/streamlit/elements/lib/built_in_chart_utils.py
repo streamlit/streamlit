@@ -667,7 +667,7 @@ def _drop_unused_columns(df: pd.DataFrame, *column_names: str | None) -> pd.Data
         seen.add(x)
         keep.append(x)
 
-    return df[keep]  # ty: ignore[invalid-return-type]
+    return df[keep]
 
 
 def _maybe_convert_color_column_in_place(
@@ -847,7 +847,7 @@ def _maybe_melt(
     sort_column: str | None,
 ) -> tuple[pd.DataFrame, str | None, str | None]:
     """If multiple columns are set for y, melt the dataframe into long format."""
-    y_column: str | None
+    y_column: str | None = None
 
     if len(y_column_list) == 0:
         y_column = None

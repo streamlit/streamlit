@@ -74,6 +74,12 @@ export const getNoRestrictedImports = (
       importNames: ["CancelToken"],
       message: "Please use the `AbortController` API instead of `CancelToken`",
     },
+    {
+      name: "react",
+      importNames: ["default"],
+      message:
+        "Please use named imports for React (e.g., import { useState } from 'react';)",
+    },
   ]
 
   const basePaths = isTestFile

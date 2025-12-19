@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-import React from "react"
-
 import * as glideDataGridModule from "@glideapps/glide-data-grid"
 import { screen } from "@testing-library/react"
 

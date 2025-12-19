@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { memo, useCallback, useState } from "react"
+import { memo, useCallback, useState } from "react"
 
 import { StatefulPopover as UIPopover } from "baseui/popover"
 import { ChromePicker, ColorResult } from "react-color"

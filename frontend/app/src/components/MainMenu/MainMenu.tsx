@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { forwardRef, memo, MouseEvent, ReactElement } from "react"
+import { forwardRef, memo, MouseEvent, ReactElement } from "react"
 
 import { MoreVert } from "@emotion-icons/material-rounded"
 import { StatefulMenu } from "baseui/menu"

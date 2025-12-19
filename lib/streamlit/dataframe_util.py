@@ -939,12 +939,12 @@ def convert_anything_to_list(obj: OptionSequence[V_co]) -> list[V_co]:
         return [member.value if isinstance(member, str) else member for member in obj]  # type: ignore
 
     if isinstance(obj, Mapping):
-        return list(obj.keys())
+        return cast("list[V_co]", list(obj.keys()))
 
     if is_list_like(obj) and not is_snowpark_row_list(obj):
         # This also ensures that the sequence is copied to prevent
         # potential mutations to the original object.
-        return list(obj)
+        return list(cast("Iterable[V_co]", obj))
 
     # Fallback to our DataFrame conversion logic:
     try:
@@ -1369,7 +1369,7 @@ def convert_pandas_df_to_data_format(
     if data_format == DataFormat.PANDAS_SERIES:
         return _pandas_df_to_series(df)
     if data_format in {DataFormat.POLARS_DATAFRAME, DataFormat.POLARS_LAZYFRAME}:
-        import polars as pl  # type: ignore[import-not-found]
+        import polars as pl
 
         return pl.from_pandas(df)
     if data_format == DataFormat.POLARS_SERIES:

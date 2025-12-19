@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useCallback, useContext, useMemo } from "react"
+import { ReactElement, useCallback, useContext, useMemo } from "react"
 
 import { getLogger } from "loglevel"
 

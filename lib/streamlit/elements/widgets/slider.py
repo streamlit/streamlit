@@ -89,7 +89,7 @@ SliderValueT = TypeVar("SliderValueT", int, float, date, time, datetime)
 SliderValueGeneric: TypeAlias = SliderValueT | Sequence[SliderValueT]
 SliderValue: TypeAlias = (
     SliderValueGeneric[int]
-    | SliderValueGeneric[float]  # ty: ignore
+    | SliderValueGeneric[float]
     | SliderValueGeneric[date]
     | SliderValueGeneric[time]
     | SliderValueGeneric[datetime]
@@ -99,7 +99,7 @@ SliderReturnGeneric: TypeAlias = (
 )
 SliderReturn: TypeAlias = (
     SliderReturnGeneric[int]
-    | SliderReturnGeneric[float]  # ty: ignore
+    | SliderReturnGeneric[float]
     | SliderReturnGeneric[date]
     | SliderReturnGeneric[time]
     | SliderReturnGeneric[datetime]
@@ -798,7 +798,7 @@ class SliderMixin:
             if data_type in (
                 SliderProto.DATETIME,
                 SliderProto.DATE,
-            ) and max_value - min_value < timedelta(days=1):  # ty: ignore[unsupported-operator]
+            ) and max_value - min_value < timedelta(days=1):
                 step = timedelta(minutes=15)
         if format is None:
             format = cast("str", defaults[data_type]["format"])  # noqa: A001

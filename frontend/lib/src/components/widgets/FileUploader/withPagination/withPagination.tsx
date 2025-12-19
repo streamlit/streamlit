@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { ComponentType, ReactElement, useEffect, useState } from "react"
+import { ComponentType, ReactElement, useEffect, useState } from "react"
 
 import hoistNonReactStatics from "hoist-non-react-statics"
 

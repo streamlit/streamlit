@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { FC, memo, useCallback } from "react"
+import { FC, memo, useCallback } from "react"
 
 import { Selectbox as SelectboxProto } from "@streamlit/protobuf"
 

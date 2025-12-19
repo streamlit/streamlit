@@ -20,7 +20,7 @@ import contextlib
 import hashlib
 import mimetypes
 import os.path
-from typing import Final, NamedTuple
+from typing import TYPE_CHECKING, Final, NamedTuple
 
 from streamlit.logger import get_logger
 from streamlit.runtime.media_file_storage import (
@@ -28,7 +28,15 @@ from streamlit.runtime.media_file_storage import (
     MediaFileStorage,
     MediaFileStorageError,
 )
-from streamlit.runtime.stats import CacheStat, StatsProvider, group_cache_stats
+from streamlit.runtime.stats import (
+    CACHE_MEMORY_FAMILY,
+    CacheStat,
+    StatsProvider,
+    group_cache_stats,
+)
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 _LOGGER: Final = get_logger(__name__)
 
@@ -101,6 +109,10 @@ class MemoryMediaFileStorage(MediaFileStorage, StatsProvider):
         self._files_by_id: dict[str, MemoryFile] = {}
         self._media_endpoint = media_endpoint
 
+    @property
+    def stats_families(self) -> Sequence[str]:
+        return (CACHE_MEMORY_FAMILY,)
+
     def load_and_get_id(
         self,
         path_or_data: str | bytes,
@@ -166,7 +178,9 @@ class MemoryMediaFileStorage(MediaFileStorage, StatsProvider):
         except Exception as ex:
             raise MediaFileStorageError(f"Error opening '{filename}'") from ex
 
-    def get_stats(self) -> list[CacheStat]:
+    def get_stats(
+        self, _family_names: Sequence[str] | None = None
+    ) -> dict[str, list[CacheStat]]:
         # We operate on a copy of our dict, to avoid race conditions
         # with other threads that may be manipulating the cache.
         files_by_id = self._files_by_id.copy()
@@ -179,4 +193,9 @@ class MemoryMediaFileStorage(MediaFileStorage, StatsProvider):
             )
             for _, file in files_by_id.items()
         ]
-        return group_cache_stats(stats)
+        if not stats:
+            return {}
+        # In general, get_stats methods need to be able to return only requested stat
+        # families, but this method only returns a single family, and we're guaranteed
+        # that it was one of those requested if we make it here.
+        return {CACHE_MEMORY_FAMILY: group_cache_stats(stats)}

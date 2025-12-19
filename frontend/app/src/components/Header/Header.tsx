@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, ReactNode, useContext } from "react"
+import { ReactElement, ReactNode, useContext } from "react"
 
 import {
   BaseButton,
