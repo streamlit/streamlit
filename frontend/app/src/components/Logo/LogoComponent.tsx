@@ -19,12 +19,14 @@ import { ReactElement, useCallback, useContext, useMemo } from "react"
 import { getLogger } from "loglevel"
 
 import {
+  StyledIconLogo,
   StyledLogo,
   StyledLogoButton,
   StyledLogoLink,
 } from "@streamlit/app/src/components/Sidebar/styled-components"
 import { StreamlitEndpoints } from "@streamlit/connection"
 import {
+  DynamicIcon,
   getCrossOriginAttribute,
   LibConfigContext,
   NavigationContext,
@@ -88,6 +90,8 @@ const LogoComponent = ({
   // Use icon image when collapsed in sidebar mode, otherwise use the main image
   const displayImage =
     collapsed && appLogo.iconImage ? appLogo.iconImage : appLogo.image
+  const displayImageType =
+    collapsed && appLogo.iconImage ? appLogo.iconImageType : appLogo.imageType
 
   const source = endpoints.buildMediaURL(displayImage)
 
@@ -96,7 +100,20 @@ const LogoComponent = ({
     displayImage
   )
 
-  const logo = (
+  // Render icon or emoji using DynamicIcon
+  const isIconOrEmoji =
+    displayImageType === Logo.ImageType.ICON ||
+    displayImageType === Logo.ImageType.EMOJI
+
+  const logo = isIconOrEmoji ? (
+    <StyledIconLogo
+      size={appLogo.size}
+      className="stLogo"
+      data-testid={dataTestId}
+    >
+      <DynamicIcon iconValue={displayImage} size="xl" />
+    </StyledIconLogo>
+  ) : (
     <StyledLogo
       src={source}
       size={appLogo.size}

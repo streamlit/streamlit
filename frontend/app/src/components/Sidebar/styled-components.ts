@@ -198,6 +198,22 @@ export const StyledLogo = styled.img<StyledLogoProps>(({ theme, size }) => ({
   maxWidth: `100%`,
 }))
 
+export const StyledIconLogo = styled.div<StyledLogoProps>(
+  ({ theme, size }) => ({
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "flex-start",
+    height: translateLogoHeight(theme, size),
+    marginTop: size == "small" ? theme.spacing.xs : theme.spacing.twoXS,
+    marginBottom: size == "small" ? theme.spacing.xs : theme.spacing.twoXS,
+    marginLeft: theme.spacing.none,
+    zIndex: theme.zIndices.header,
+    fontSize: translateLogoHeight(theme, size),
+    lineHeight: theme.lineHeights.none,
+    color: theme.colors.bodyText,
+  })
+)
+
 export const StyledNoLogoSpacer = styled.div(({ theme }) => ({
   height: theme.sizes.largeLogoHeight,
 }))

@@ -21,8 +21,17 @@ option java_outer_classname = "LogoProto";
 
 // Handle the logo for an app
 message Logo {
+  // Type of the logo image (image file, emoji, or material icon)
+  enum ImageType {
+    IMAGE = 0;
+    EMOJI = 1;
+    ICON = 2;
+  }
+
   string image = 1;
   string link = 2;
   string icon_image = 3;
   string size = 4;
+  ImageType image_type = 5;
+  ImageType icon_image_type = 6;
 }
