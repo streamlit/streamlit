@@ -15,9 +15,13 @@
 """LRU cache supporting TTL and max entry count, as well as release hooks for cleanup."""
 
 from collections.abc import Callable, Iterable
-from typing import Any, override
+from typing import Any
 
 from cachetools import TTLCache
+
+# override is in typing after Python 3.12 and can be imported from there after 3.11
+# support is retired.
+from typing_extensions import override
 
 from streamlit.runtime.caching.cache_utils import OnRelease
 
