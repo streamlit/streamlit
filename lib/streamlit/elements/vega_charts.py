@@ -279,6 +279,34 @@ def _patch_null_legend_titles(spec: VegaLiteSpec) -> None:
         legend["title"] = " "
 
 
+def _has_nested_composition(spec: VegaLiteSpec) -> bool:
+    """Check if a vconcat spec contains nested composition operators.
+
+    This function checks if a vconcat chart contains nested hconcat, vconcat,
+    concat, or layer operators. Such nested compositions don't work well with
+    the fit-x autosize type and can cause infinite extent errors.
+
+    Parameters
+    ----------
+    spec : VegaLiteSpec
+        The Vega-Lite spec to check.
+
+    Returns
+    -------
+    bool
+        True if the spec contains nested composition operators, False otherwise.
+    """
+    # Check if vconcat contains nested compositions
+    if "vconcat" in spec and isinstance(spec["vconcat"], list):
+        for item in spec["vconcat"]:
+            # Check if this item is a dict containing any composition operator
+            if isinstance(item, dict) and any(
+                k in item for k in ["hconcat", "vconcat", "concat", "layer"]
+            ):
+                return True
+    return False
+
+
 def _prepare_vega_lite_spec(
     spec: VegaLiteSpec,
     use_container_width: bool,
@@ -306,10 +334,28 @@ def _prepare_vega_lite_spec(
             "encoding" in spec
             and (any(x in spec["encoding"] for x in ["row", "column", "facet"]))
         )
-        if "vconcat" in spec and use_container_width:
-            spec["autosize"] = {"type": "fit-x", "contains": "padding"}
+        has_nested_comp = _has_nested_composition(spec)
 
-        elif is_facet_chart:
+        if "vconcat" in spec and use_container_width:
+            # For vconcat charts with container width stretching:
+            # - Simple vconcat: use fit-x (fits width only, better control)
+            # - Nested compositions (vconcat+hconcat): use pad (no automatic fitting)
+            #   fit-x causes "Infinite extent" errors with nested hconcat (issue #13410)
+            #
+            # Known limitation: Nested compositions may overflow the container because
+            # Vega-Lite's width property only controls the plotting area (data marks),
+            # not the total SVG width which includes axes, labels, legends, and padding.
+            # The frontend sets spec.width to containerWidth, but with autosize: pad,
+            # Vega adds decorations on top, causing total SVG to exceed container bounds.
+            # This is a Vega-Lite architectural limitation.
+            if has_nested_comp:
+                spec["autosize"] = {"type": "pad", "contains": "padding"}
+            else:
+                spec["autosize"] = {"type": "fit-x", "contains": "padding"}
+
+        elif is_facet_chart or (has_nested_comp and not use_container_width):
+            # Facet charts and nested compositions without stretching use pad
+            # (no automatic sizing, uses natural/content size)
             spec["autosize"] = {"type": "pad", "contains": "padding"}
 
         else:
@@ -2263,13 +2309,21 @@ class VegaChartsMixin:
             # those charts (see https://github.com/streamlit/streamlit/issues/9091).
             # All other charts (including vertical concatenation) default to
             # `width=stretch` unless width is provided.
+            # Nested vconcat+hconcat charts (issue #13410) also don't work well
+            # with width=stretch, so we treat them like hconcat charts.
             is_facet_chart = "facet" in spec or (
                 "encoding" in spec
                 and (any(x in spec["encoding"] for x in ["row", "column", "facet"]))
             )
+            has_nested_comp = _has_nested_composition(spec)
             width = (
                 "stretch"
-                if not (is_facet_chart or "hconcat" in spec or "repeat" in spec)
+                if not (
+                    is_facet_chart
+                    or "hconcat" in spec
+                    or "repeat" in spec
+                    or has_nested_comp
+                )
                 else "content"
             )
 
