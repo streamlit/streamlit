@@ -3319,3 +3319,82 @@ class VegaLiteAutosizeTest(DeltaGeneratorTestCase):
         # Should use pad autosize for natural sizing
         parsed_spec = json.loads(el.arrow_vega_lite_chart.spec)
         assert parsed_spec["autosize"]["type"] == "pad"
+
+    def test_explicit_autosize_not_overridden(self):
+        """Test that explicit autosize in spec is preserved and not overridden."""
+        df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
+        spec = {
+            "mark": "bar",
+            "encoding": {
+                "x": {"field": "a", "type": "ordinal"},
+                "y": {"field": "b", "type": "quantitative"},
+            },
+            "autosize": {"type": "none"},  # Explicit autosize should be preserved
+        }
+
+        st.vega_lite_chart(df, spec, use_container_width=True)
+
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        parsed_spec = json.loads(proto.spec)
+        # Explicit autosize should not be overridden
+        assert parsed_spec["autosize"]["type"] == "none"
+
+    def test_simple_hconcat_with_use_container_width_gets_fit(self):
+        """Test that simple hconcat (non-nested) with use_container_width=True gets fit autosize."""
+        df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
+        spec = {
+            "hconcat": [
+                {
+                    "mark": "bar",
+                    "encoding": {
+                        "x": {"field": "a", "type": "ordinal"},
+                        "y": {"field": "b", "type": "quantitative"},
+                    },
+                },
+                {
+                    "mark": "point",
+                    "encoding": {
+                        "x": {"field": "a", "type": "ordinal"},
+                        "y": {"field": "b", "type": "quantitative"},
+                    },
+                },
+            ]
+        }
+
+        st.vega_lite_chart(df, spec, use_container_width=True)
+
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        parsed_spec = json.loads(proto.spec)
+        # Simple hconcat (not nested inside vconcat) should use fit
+        assert parsed_spec["autosize"]["type"] == "fit"
+        assert parsed_spec["autosize"]["contains"] == "padding"
+
+    def test_layer_chart_with_use_container_width_gets_fit(self):
+        """Test that layer chart (non-nested) with use_container_width=True gets fit autosize."""
+        df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
+        spec = {
+            "layer": [
+                {
+                    "mark": "bar",
+                    "encoding": {
+                        "x": {"field": "a", "type": "ordinal"},
+                        "y": {"field": "b", "type": "quantitative"},
+                    },
+                },
+                {
+                    "mark": "line",
+                    "encoding": {
+                        "x": {"field": "a", "type": "ordinal"},
+                        "y": {"field": "b", "type": "quantitative"},
+                    },
+                },
+            ]
+        }
+
+        st.vega_lite_chart(df, spec, use_container_width=True)
+
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        parsed_spec = json.loads(proto.spec)
+        # Layer charts (not nested inside vconcat) should use fit
+        assert parsed_spec["autosize"]["type"] == "fit"
+        assert parsed_spec["autosize"]["contains"] == "padding"

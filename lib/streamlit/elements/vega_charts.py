@@ -1831,6 +1831,10 @@ class VegaChartsMixin:
                 - Horizontal concatenation charts: the spec contains
                   ``"hconcat"``.
                 - Repeat charts: the spec contains ``"repeat"``.
+                - Nested composition charts: the spec contains ``"vconcat"``
+                  with nested ``"hconcat"``, ``"vconcat"``, ``"concat"``, or
+                  ``"layer"`` operators (e.g., scatter plots with marginal
+                  histograms).
 
         height : "content", "stretch", or int
             The height of the chart element. This can be one of the following:
@@ -2050,6 +2054,10 @@ class VegaChartsMixin:
                 - Horizontal concatenation charts: the spec contains
                   ``"hconcat"``.
                 - Repeat charts: the spec contains ``"repeat"``.
+                - Nested composition charts: the spec contains ``"vconcat"``
+                  with nested ``"hconcat"``, ``"vconcat"``, ``"concat"``, or
+                  ``"layer"`` operators (e.g., scatter plots with marginal
+                  histograms).
 
         height : "content", "stretch", or int
             The height of the chart element. This can be one of the following:
