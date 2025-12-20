@@ -216,10 +216,9 @@ export function backwardsCompatibleColumnGapConfig(
   return { gapSize: streamlit.GapSize.SMALL }
 }
 
-export function resolveGapConfigWithDefault(
-  gapConfig?: streamlit.IGapConfig | null,
-  fallbackSize: streamlit.GapSize = streamlit.GapSize.SMALL
-): streamlit.IGapConfig {
+export function resolveGapConfig(
+  gapConfig?: streamlit.IGapConfig | null
+): streamlit.IGapConfig | undefined {
   if (gapConfig?.pixelGap !== undefined && gapConfig?.pixelGap !== null) {
     return { pixelGap: gapConfig.pixelGap }
   }
@@ -233,7 +232,7 @@ export function resolveGapConfigWithDefault(
     return { gapSize }
   }
 
-  return { gapSize: fallbackSize }
+  return undefined
 }
 
 export function checkFlexContainerBackwardsCompatibile(

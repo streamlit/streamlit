@@ -27,7 +27,7 @@ import {
   getBorderBackwardsCompatible,
   getKeyFromId,
   isElementStale,
-  resolveGapConfigWithDefault,
+  resolveGapConfig,
 } from "./utils"
 
 describe("isElementStale", () => {
@@ -251,10 +251,10 @@ describe("backwardsCompatibleColumnGapConfig", () => {
   })
 })
 
-describe("resolveGapConfigWithDefault", () => {
+describe("resolveGapConfig", () => {
   it("uses the pixel gap when provided", () => {
     expect(
-      resolveGapConfigWithDefault({
+      resolveGapConfig({
         pixelGap: 10,
         gapSize: streamlit.GapSize.MEDIUM,
       })
@@ -262,21 +262,16 @@ describe("resolveGapConfigWithDefault", () => {
   })
 
   it("falls back to provided gap size when defined", () => {
-    expect(
-      resolveGapConfigWithDefault({ gapSize: streamlit.GapSize.LARGE })
-    ).toEqual({ gapSize: streamlit.GapSize.LARGE })
+    expect(resolveGapConfig({ gapSize: streamlit.GapSize.LARGE })).toEqual({
+      gapSize: streamlit.GapSize.LARGE,
+    })
   })
 
-  it("returns fallback when gap size undefined", () => {
-    expect(resolveGapConfigWithDefault()).toEqual({
-      gapSize: streamlit.GapSize.SMALL,
-    })
+  it("returns undefined when gap config not set", () => {
+    expect(resolveGapConfig()).toBeUndefined()
     expect(
-      resolveGapConfigWithDefault(
-        { gapSize: streamlit.GapSize.GAP_UNDEFINED },
-        streamlit.GapSize.MEDIUM
-      )
-    ).toEqual({ gapSize: streamlit.GapSize.MEDIUM })
+      resolveGapConfig({ gapSize: streamlit.GapSize.GAP_UNDEFINED })
+    ).toBeUndefined()
   })
 })
 

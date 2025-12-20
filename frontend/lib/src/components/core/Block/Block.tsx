@@ -62,7 +62,7 @@ import {
   getClassnamePrefix,
   getKeyFromId,
   isComponentStale,
-  resolveGapConfigWithDefault,
+  resolveGapConfig,
   shouldComponentBeEnabled,
 } from "./utils"
 
@@ -175,10 +175,11 @@ export const FlexBoxContainer = (
   })
 
   const flexGapConfig = props.node.deltaBlock.flexContainer?.gapConfig
-  const resolvedGapConfig = useMemo(
-    () => resolveGapConfigWithDefault(flexGapConfig),
-    [flexGapConfig]
-  )
+  const resolvedGapConfig = useMemo(() => {
+    return (
+      resolveGapConfig(flexGapConfig) ?? { gapSize: streamlit.GapSize.SMALL }
+    )
+  }, [flexGapConfig])
 
   const styles = {
     gapConfig: resolvedGapConfig,

@@ -222,16 +222,12 @@ def get_gap_config(gap: Gap | None, element_type: str) -> GapConfig:
         gap_config.gap_size = GapSize.NONE
         return gap_config
     elif isinstance(gap, int) and not isinstance(gap, bool):
-        if gap < 0 or gap > MAX_PIXEL_GAP:
-            raise StreamlitInvalidColumnGapError(
-                gap=gap, element_type=element_type, max_pixel_gap=MAX_PIXEL_GAP
-            )
-
-        if gap == 0:
-            gap_config.gap_size = GapSize.NONE
-        else:
-            gap_config.pixel_gap = int(gap)
-        return gap_config
+        if 0 <= gap <= MAX_PIXEL_GAP:
+            if gap == 0:
+                gap_config.gap_size = GapSize.NONE
+            else:
+                gap_config.pixel_gap = int(gap)
+            return gap_config
 
     raise StreamlitInvalidColumnGapError(
         gap=gap, element_type=element_type, max_pixel_gap=MAX_PIXEL_GAP

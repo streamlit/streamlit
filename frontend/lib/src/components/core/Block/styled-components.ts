@@ -50,15 +50,15 @@ function translateGapWidth(
 }
 
 function resolveGapWidth(
-  gapConfig: streamlit.IGapConfig | undefined | null,
+  gapSizeValue: streamlit.GapSize | undefined | null,
+  pixelGap: number | undefined | null,
   theme: EmotionTheme
 ): string {
-  const pixelGap = gapConfig?.pixelGap
   if (pixelGap !== undefined && pixelGap !== null) {
     return `${pixelGap}px`
   }
 
-  return translateGapWidth(gapConfig?.gapSize, theme)
+  return translateGapWidth(gapSizeValue, theme)
 }
 
 export interface StyledElementContainerProps {
@@ -159,7 +159,11 @@ export const StyledColumn = styled.div<StyledColumnProps>(
   ({ theme, weight, gapConfig, showBorder, verticalAlignment }) => {
     const { VerticalAlignment } = BlockProto.Column
     const percentage = weight * 100
-    const gapWidth = resolveGapWidth(gapConfig, theme)
+    const gapWidth = resolveGapWidth(
+      gapConfig?.gapSize,
+      gapConfig?.pixelGap,
+      theme
+    )
     const width =
       gapWidth === theme.spacing.none
         ? `${percentage}%`
@@ -273,7 +277,11 @@ export const StyledFlexContainerBlock =
       justify,
       overflow,
     }) => {
-      const gapWidth = resolveGapWidth(gapConfig, theme)
+      const gapWidth = resolveGapWidth(
+        gapConfig?.gapSize,
+        gapConfig?.pixelGap,
+        theme
+      )
 
       return {
         display: "flex",
