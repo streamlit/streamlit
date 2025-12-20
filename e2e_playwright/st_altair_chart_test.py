@@ -52,10 +52,10 @@ def test_altair_chart_displays_correctly(
         charts.nth(5), name="st_altair_chart-grouped_layered_line_chart_streamlit_theme"
     )
     assert_snapshot(charts.nth(6), name="st_altair_chart-vconcat_width")
-    assert_snapshot(charts.nth(7), name="st_altair_chart-marginal_histogram")
     assert_snapshot(
-        charts.nth(8), name="st_altair_chart-altair_chart_cut_off_legend_title_none"
+        charts.nth(7), name="st_altair_chart-altair_chart_cut_off_legend_title_none"
     )
+    assert_snapshot(charts.nth(8), name="st_altair_chart-marginal_histogram")
 
 
 def test_check_top_level_class(app: Page):
