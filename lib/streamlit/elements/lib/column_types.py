@@ -1660,6 +1660,32 @@ def AudioColumn(
     pinned : bool or None
         Whether the column is pinned on the left. If ``None`` (default), index
         columns are pinned and data columns are not.
+
+    Examples
+    --------
+    Configure an audio preview column using URLs and data URLs:
+
+    >>> import pandas as pd
+    >>> import streamlit as st
+    >>> df = pd.DataFrame(
+    ...     {
+    ...         "track": ["Track 1", "Track 2"],
+        ...         "preview": [
+        ...             "https://example.com/audio/track1.mp3",
+        ...             "data:audio/mpeg;base64,//... base64 data ...",
+        ...         ],
+        ...     }
+        ... )
+    >>> st.dataframe(
+    ...     df,
+    ...     column_config={
+    ...         "preview": st.column_config.AudioColumn(
+    ...             label="Preview",
+    ...             width="medium",
+    ...             help="Click to play the audio preview.",
+    ...         )
+    ...     },
+    ... )
     """
     return ColumnConfig(
         label=label,
