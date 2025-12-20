@@ -347,8 +347,13 @@ def _prepare_vega_lite_spec(
             # not the total SVG width which includes axes, labels, legends, and padding.
             # The frontend sets spec.width to containerWidth, but with autosize: pad,
             # Vega adds decorations on top, causing total SVG to exceed container bounds.
-            # This is a Vega-Lite architectural limitation.
+            # This is a Vega-Lite architectural limitation similar to facet charts
+            # (see https://github.com/vega/vega-lite/issues/5219).
+            # Trade-off: Accept overflow to ensure charts render correctly rather than
+            # appear as empty elements with "Infinite extent" errors.
             if has_nested_comp:
+                # use pad = "no automatic fitting" - accurate description of what's happening
+                # produces same overflow behavior as fit
                 spec["autosize"] = {"type": "pad", "contains": "padding"}
             else:
                 spec["autosize"] = {"type": "fit-x", "contains": "padding"}
