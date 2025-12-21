@@ -24,7 +24,7 @@ import {
     PresetThemeName,
     WidgetStates,
 } from "@streamlit/lib"
-import { useCallback, useRef, useState } from "react"
+import { useCallback, useMemo, useRef, useState } from "react"
 
 export interface HostCommunicationState {
   isOwner: boolean
@@ -140,11 +140,17 @@ export function useHostCommunication(
     return new HostCommunicationManager(proxyActions)
   })
 
-  return {
-    currentState,
-    hostCommunicationMgr,
-    registerActions,
-    setQueryParams: (queryParams: string) =>
-      setCurrentState(s => ({ ...s, queryParams })),
-  }
+  const setQueryParams = useCallback((queryParams: string) => {
+    setCurrentState(s => ({ ...s, queryParams }))
+  }, [])
+
+  return useMemo(
+    () => ({
+      currentState,
+      hostCommunicationMgr,
+      registerActions,
+      setQueryParams,
+    }),
+    [currentState, hostCommunicationMgr, registerActions, setQueryParams]
+  )
 }

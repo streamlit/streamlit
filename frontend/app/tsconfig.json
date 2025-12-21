@@ -1,6 +1,6 @@
 {
   "root": true,
-  "extends": "@streamlit/typescript-config/react.tsconfig.json",
+  "extends": "../typescript-config/react.tsconfig.json",
   "compilerOptions": {
     "paths": {
       "~lib/*": ["../lib/src/*"],
