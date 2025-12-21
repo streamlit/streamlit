@@ -26,6 +26,7 @@ import {
 } from "@streamlit/lib"
 
 import AppWithScreencast from "./App"
+import { useHostCommunication } from "./hooks/useHostCommunication"
 import { useThemeManager } from "./util/useThemeManager"
 
 export interface ThemedAppProps {
@@ -41,6 +42,7 @@ const ThemedApp = ({
 }: ThemedAppProps): JSX.Element => {
   const [themeManager, fontFaces, fontSources] = useThemeManager()
   const { activeTheme } = themeManager
+  const hostComm = useHostCommunication(streamlitExecutionStartedAt)
 
   return (
     <RootStyleProvider theme={activeTheme}>
@@ -56,6 +58,7 @@ const ThemedApp = ({
             streamlitExecutionStartedAt={streamlitExecutionStartedAt}
             sessionInfo={sessionInfo}
             endpoints={endpoints}
+            hostComm={hostComm}
           />
         </PortalProvider>
       </WindowDimensionsProvider>

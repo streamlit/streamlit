@@ -42,6 +42,7 @@ import withScreencast, {
   ScreenCastHOC,
 } from "@streamlit/app/src/hocs/withScreencast/withScreencast"
 import { useViewportSize } from "@streamlit/app/src/hooks/useViewportSize"
+import { UseHostCommunicationResult } from "@streamlit/app/src/hooks/useHostCommunication"
 import { MetricsManager } from "@streamlit/app/src/MetricsManager"
 import { SessionEventDispatcher } from "@streamlit/app/src/SessionEventDispatcher"
 import { StyledApp } from "@streamlit/app/src/styled-components"
@@ -165,6 +166,7 @@ export interface Props {
   isMobileViewport: boolean
   sessionInfo: SessionInfo
   endpoints: StreamlitEndpoints
+  hostComm: UseHostCommunicationResult
 }
 
 interface State {
@@ -203,19 +205,10 @@ interface State {
   mainScriptHash: string
   latestRunTime: number
   fragmentIdsThisRun: Array<string>
-  // host communication info
-  isOwner: boolean
-  hostMenuItems: IMenuItem[]
-  hostToolbarItems: IToolbarItem[]
-  hostHideSidebarNav: boolean
-  sidebarChevronDownshift: number
-  pageLinkBaseUrl: string
-  queryParams: string
-  deployedAppMetadata: DeployedAppMetadata
+  fragmentIdsThisRun: Array<string>
   libConfig: LibConfig
   appConfig: AppConfig
   autoReruns: NodeJS.Timeout[]
-  inputsDisabled: boolean
   scriptChangedOnDisk: boolean
 }
 
@@ -255,7 +248,7 @@ export class App extends PureComponent<Props, State> {
 
   private readonly widgetMgr: WidgetStateManager
 
-  private readonly hostCommunicationMgr: HostCommunicationManager
+  private readonly widgetMgr: WidgetStateManager
 
   private readonly uploadClient: FileUploadClient
 
@@ -336,20 +329,9 @@ export class App extends PureComponent<Props, State> {
       toolbarMode: Config.ToolbarMode.MINIMAL,
       latestRunTime: performance.now(),
       fragmentIdsThisRun: [],
-      // Information sent from the host
-      isOwner: false,
-      hostMenuItems: [],
-      hostToolbarItems: [],
-      hostHideSidebarNav: false,
-      sidebarChevronDownshift: 0,
-      pageLinkBaseUrl: "",
-      queryParams: "",
-      deployedAppMetadata: {},
       libConfig: {},
       appConfig: {},
       autoReruns: [],
-      inputsDisabled: false,
-      navigationPosition: Navigation.Position.SIDEBAR,
       scriptChangedOnDisk: false,
     }
 
@@ -360,45 +342,19 @@ export class App extends PureComponent<Props, State> {
       formsDataChanged: formsData => this.setState({ formsData }),
     })
 
-    this.hostCommunicationMgr = new HostCommunicationManager({
-      streamlitExecutionStartedAt: props.streamlitExecutionStartedAt,
+    this.props.hostComm.registerActions({
       sendRerunBackMsg: this.sendRerunBackMsg,
       closeModal: this.closeDialog,
       stopScript: this.stopScript,
       rerunScript: this.rerunScript,
       clearCache: this.clearCache,
       sendAppHeartbeat: this.sendAppHeartbeat,
-      setInputsDisabled: inputsDisabled => {
-        this.setState({ inputsDisabled })
-      },
       themeChanged: this.handleThemeMessage,
       pageChanged: pageScriptHash => this.onPageChange(pageScriptHash),
-      isOwnerChanged: isOwner => this.setState({ isOwner }),
       fileUploadClientConfigChanged: config => {
         if (this.endpoints.setFileUploadClientConfig !== undefined) {
           this.endpoints.setFileUploadClientConfig(config)
         }
-      },
-      hostMenuItemsChanged: hostMenuItems => {
-        this.setState({ hostMenuItems })
-      },
-      hostToolbarItemsChanged: hostToolbarItems => {
-        this.setState({ hostToolbarItems })
-      },
-      hostHideSidebarNavChanged: hostHideSidebarNav => {
-        this.setState({ hostHideSidebarNav })
-      },
-      sidebarChevronDownshiftChanged: sidebarChevronDownshift => {
-        this.setState({ sidebarChevronDownshift })
-      },
-      pageLinkBaseUrlChanged: pageLinkBaseUrl => {
-        this.setState({ pageLinkBaseUrl })
-      },
-      queryParamsChanged: queryParams => {
-        this.setState({ queryParams })
-      },
-      deployedAppMetadataChanged: deployedAppMetadata => {
-        this.setState({ deployedAppMetadata })
       },
       restartWebsocketConnection: () => {
         if (!this.connectionManager) {
@@ -424,7 +380,7 @@ export class App extends PureComponent<Props, State> {
         source: string,
         customComponentName?: string
       ) => {
-        this.hostCommunicationMgr.sendMessageToHost({
+        this.props.hostComm.hostCommunicationMgr.sendMessageToHost({
           type: "CLIENT_ERROR",
           component,
           error,
@@ -450,7 +406,7 @@ export class App extends PureComponent<Props, State> {
     this.componentRegistry = new ComponentRegistry(this.endpoints)
 
     this.appNavigation = new AppNavigation(
-      this.hostCommunicationMgr,
+      this.props.hostComm.hostCommunicationMgr,
       this.maybeUpdatePageUrl,
       this.onPageNotFound,
       this.onPageIconChanged
@@ -472,14 +428,14 @@ export class App extends PureComponent<Props, State> {
       onMessage: this.handleMessage,
       onConnectionError: this.handleConnectionError,
       connectionStateChanged: this.handleConnectionStateChanged,
-      claimHostAuthToken: this.hostCommunicationMgr.claimAuthToken,
-      resetHostAuthToken: this.hostCommunicationMgr.resetAuthToken,
+      claimHostAuthToken: this.props.hostComm.hostCommunicationMgr.claimAuthToken,
+      resetHostAuthToken: this.props.hostComm.hostCommunicationMgr.resetAuthToken,
       sendClientError: (
         error: string | number,
         message: string,
         source: string
       ) => {
-        this.hostCommunicationMgr.sendMessageToHost({
+        this.props.hostComm.hostCommunicationMgr.sendMessageToHost({
           type: "CLIENT_ERROR",
           component: "Websocket Connection",
           error,
@@ -522,7 +478,7 @@ export class App extends PureComponent<Props, State> {
         // Set the metrics configuration:
         this.metricsMgr.setMetricsConfig(metricsUrl)
         // Set the allowed origins configuration for the host communication:
-        this.hostCommunicationMgr.setAllowedOrigins(appConfig)
+        this.props.hostComm.hostCommunicationMgr.setAllowedOrigins(appConfig)
         // Set the streamlit-app specific config settings in AppContext:
         this.setAppConfig(appConfig)
         // Set the streamlit-lib specific config settings in LibConfigContext:
@@ -539,7 +495,7 @@ export class App extends PureComponent<Props, State> {
     this.initializeConnectionManager()
 
     mark(this.state.scriptRunState)
-    this.hostCommunicationMgr.sendMessageToHost({
+    this.props.hostComm.hostCommunicationMgr.sendMessageToHost({
       type: "SCRIPT_RUN_STATE_CHANGED",
       scriptRunState: this.state.scriptRunState,
     })
@@ -571,7 +527,7 @@ export class App extends PureComponent<Props, State> {
       void import("iframe-resizer/js/iframeResizer.contentWindow")
     }
 
-    this.hostCommunicationMgr.sendMessageToHost({
+    this.props.hostComm.hostCommunicationMgr.sendMessageToHost({
       type: "SET_THEME_CONFIG",
       themeInfo: toExportedTheme(this.props.theme.activeTheme.emotion),
     })
@@ -606,7 +562,7 @@ export class App extends PureComponent<Props, State> {
         }
       }
 
-      this.hostCommunicationMgr.sendMessageToHost({
+      this.props.hostComm.hostCommunicationMgr.sendMessageToHost({
         type: "SCRIPT_RUN_STATE_CHANGED",
         scriptRunState: this.state.scriptRunState,
       })
@@ -629,7 +585,7 @@ export class App extends PureComponent<Props, State> {
     // but at this point it should always be set.
     this.connectionManager?.disconnect()
 
-    this.hostCommunicationMgr.closeHostCommunication()
+    this.props.hostComm.hostCommunicationMgr.closeHostCommunication()
 
     window.removeEventListener("popstate", this.onHistoryChange, false)
   }
@@ -654,7 +610,7 @@ export class App extends PureComponent<Props, State> {
     const error = isScriptCompileError ? newDialog.type : newDialog.title
 
     // Send error info to host via postMessage
-    this.hostCommunicationMgr.sendMessageToHost({
+    this.props.hostComm.hostCommunicationMgr.sendMessageToHost({
       type: "CLIENT_ERROR_DIALOG",
       error,
       message: errorMsg,
@@ -793,14 +749,14 @@ export class App extends PureComponent<Props, State> {
         this.setState({ dialog: null })
       }
 
-      this.hostCommunicationMgr.sendMessageToHost({
+      this.props.hostComm.hostCommunicationMgr.sendMessageToHost({
         type: "WEBSOCKET_CONNECTED",
       })
     } else {
       // If we're starting from the CONNECTED state and going to any other
       // state, we must be disconnecting.
       if (this.state.connectionState === ConnectionState.CONNECTED) {
-        this.hostCommunicationMgr.sendMessageToHost({
+        this.props.hostComm.hostCommunicationMgr.sendMessageToHost({
           type: "WEBSOCKET_DISCONNECTED",
           attemptingToReconnect:
             newState !== ConnectionState.DISCONNECTED_FOREVER,
@@ -839,7 +795,7 @@ export class App extends PureComponent<Props, State> {
 
   handleCustomParentMessage = (parentMessage: ParentMessage): void => {
     if (this.state.appConfig.enableCustomParentMessages) {
-      this.hostCommunicationMgr.sendMessageToHost({
+      this.props.hostComm.hostCommunicationMgr.sendMessageToHost({
         type: "CUSTOM_PARENT_MESSAGE",
         message: parentMessage.message,
       })
@@ -904,7 +860,7 @@ export class App extends PureComponent<Props, State> {
           this.handleNavigation(navigation),
         authRedirect: (authRedirect: AuthRedirect) => {
           if (isInChildFrame()) {
-            this.hostCommunicationMgr.sendMessageToSameOriginHost({
+            this.props.hostComm.hostCommunicationMgr.sendMessageToSameOriginHost({
               type: "REDIRECT_TO_URL",
               url: authRedirect.url,
             })
@@ -945,7 +901,7 @@ export class App extends PureComponent<Props, State> {
     this.appNavigation.handlePageConfigChanged(pageConfig)
 
     if (title) {
-      this.hostCommunicationMgr.sendMessageToHost({
+      this.props.hostComm.hostCommunicationMgr.sendMessageToHost({
         type: "SET_PAGE_TITLE",
         title,
       })
@@ -1017,9 +973,9 @@ export class App extends PureComponent<Props, State> {
       document.location.pathname + (queryString ? `?${queryString}` : "")
     window.history.pushState({}, "", targetUrl)
 
-    this.setState({ queryParams: queryString })
+    this.props.hostComm.setQueryParams(queryString || "")
 
-    this.hostCommunicationMgr.sendMessageToHost({
+    this.props.hostComm.hostCommunicationMgr.sendMessageToHost({
       type: "SET_QUERY_PARAM",
       queryParams: queryString ? `?${queryString}` : "",
     })
@@ -1042,7 +998,7 @@ export class App extends PureComponent<Props, State> {
   onPageIconChanged = (iconUrl: string): void => {
     handleFavicon(
       iconUrl,
-      this.hostCommunicationMgr.sendMessageToHost,
+      this.props.hostComm.hostCommunicationMgr.sendMessageToHost,
       this.endpoints
     )
   }
@@ -1285,7 +1241,7 @@ export class App extends PureComponent<Props, State> {
       this.sessionInfo.current.installationId + mainScriptPath
     )
 
-    this.metricsMgr.setMetadata(this.state.deployedAppMetadata)
+    this.metricsMgr.setMetadata(this.props.hostComm.currentState.deployedAppMetadata)
     this.metricsMgr.setAppHash(newSessionHash)
 
     this.metricsMgr.enqueue("updateReport")
@@ -1322,7 +1278,7 @@ export class App extends PureComponent<Props, State> {
     // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
     this.metricsMgr.initialize({
       gatherUsageStats: config.gatherUsageStats,
-      sendMessageToHost: this.hostCommunicationMgr.sendMessageToHost,
+      sendMessageToHost: this.props.hostComm.hostCommunicationMgr.sendMessageToHost,
     })
 
     // Protobuf typing cannot handle complex types, so we need to cast to what
@@ -1358,7 +1314,7 @@ export class App extends PureComponent<Props, State> {
    */
   setAndSendTheme = (themeConfig: ThemeConfig): void => {
     this.props.theme.setTheme(themeConfig)
-    this.hostCommunicationMgr.sendMessageToHost({
+    this.props.hostComm.hostCommunicationMgr.sendMessageToHost({
       type: "SET_THEME_CONFIG",
       themeInfo: toExportedTheme(themeConfig.emotion),
     })
@@ -1826,8 +1782,8 @@ export class App extends PureComponent<Props, State> {
 
         queryString = getQueryString(queryStringOverride, preservedQueryParams)
 
-        this.setState({ queryParams: queryString })
-        this.hostCommunicationMgr.sendMessageToHost({
+        this.props.hostComm.setQueryParams(queryString || "")
+        this.props.hostComm.hostCommunicationMgr.sendMessageToHost({
           type: "SET_QUERY_PARAM",
           queryParams: queryString,
         })
@@ -2103,7 +2059,7 @@ export class App extends PureComponent<Props, State> {
       : undefined
 
   getQueryString = (): string => {
-    const { queryParams } = this.state
+    const { queryParams } = this.props.hostComm.currentState
 
     const queryString =
       queryParams && queryParams.length > 0
@@ -2123,13 +2079,13 @@ export class App extends PureComponent<Props, State> {
   }
 
   isInCloudEnvironment = (): boolean => {
-    const { hostMenuItems } = this.state
+    const { hostMenuItems } = this.props.hostComm.currentState
     return hostMenuItems && hostMenuItems?.length > 0
   }
 
   showDeployButton = (): boolean => {
     return (
-      showDevelopmentOptions(this.state.isOwner, this.state.toolbarMode) &&
+      showDevelopmentOptions(this.props.hostComm.currentState.isOwner, this.state.toolbarMode) &&
       !this.isInCloudEnvironment() &&
       this.sessionInfo.isSet &&
       !this.sessionInfo.isHello
@@ -2241,7 +2197,7 @@ export class App extends PureComponent<Props, State> {
       case "c":
         // CLEAR CACHE
         if (
-          showDevelopmentOptions(this.state.isOwner, this.state.toolbarMode)
+          showDevelopmentOptions(this.props.hostComm.currentState.isOwner, this.state.toolbarMode)
         ) {
           this.openClearCacheDialog()
         }
@@ -2313,19 +2269,21 @@ export class App extends PureComponent<Props, State> {
       hideTopBar,
       hideSidebarNav,
       expandSidebarNav,
-      currentPageScriptHash,
-      hostHideSidebarNav,
-      pageLinkBaseUrl,
-      sidebarChevronDownshift,
-      hostMenuItems,
-      hostToolbarItems,
       libConfig,
-      inputsDisabled,
       appPages,
       navSections,
       navigationPosition,
       scriptChangedOnDisk,
     } = this.state
+
+    const {
+      hostHideSidebarNav,
+      pageLinkBaseUrl,
+      sidebarChevronDownshift,
+      hostMenuItems,
+      hostToolbarItems,
+      inputsDisabled,
+    } = this.props.hostComm.currentState
 
     // Always use sidebar navigation on mobile, regardless of the server setting
     const effectiveNavigationPosition = this.props.isMobileViewport
@@ -2333,7 +2291,7 @@ export class App extends PureComponent<Props, State> {
       : navigationPosition
 
     const developmentMode = showDevelopmentOptions(
-      this.state.isOwner,
+      this.props.hostComm.currentState.isOwner,
       this.state.toolbarMode
     )
 
@@ -2406,7 +2364,7 @@ export class App extends PureComponent<Props, State> {
           >
             <AppView
               endpoints={this.endpoints}
-              sendMessageToHost={this.hostCommunicationMgr.sendMessageToHost}
+              sendMessageToHost={this.props.hostComm.hostCommunicationMgr.sendMessageToHost}
               elements={elements}
               widgetMgr={this.widgetMgr}
               uploadClient={this.uploadClient}
@@ -2439,7 +2397,7 @@ export class App extends PureComponent<Props, State> {
                     <ToolbarActions
                       hostToolbarItems={hostToolbarItems}
                       sendMessageToHost={
-                        this.hostCommunicationMgr.sendMessageToHost
+                        this.props.hostComm.hostCommunicationMgr.sendMessageToHost
                       }
                       metricsMgr={this.metricsMgr}
                     />
@@ -2460,7 +2418,7 @@ export class App extends PureComponent<Props, State> {
                       hostMenuItems={hostMenuItems}
                       developmentMode={developmentMode}
                       sendMessageToHost={
-                        this.hostCommunicationMgr.sendMessageToHost
+                        this.props.hostComm.hostCommunicationMgr.sendMessageToHost
                       }
                       menuItems={menuItems}
                       metricsMgr={this.metricsMgr}

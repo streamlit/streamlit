@@ -18,6 +18,7 @@ import asyncio
 import json
 import os
 import sys
+import time
 import uuid
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Final
@@ -175,6 +176,7 @@ class AppSession:
         self._fragment_storage: FragmentStorage = MemoryFragmentStorage()
 
         _LOGGER.debug("AppSession initialized (id=%s)", self.id)
+        self._last_activity = time.time()
 
     def __del__(self) -> None:
         """Ensure that we call shutdown() when an AppSession is garbage collected."""
@@ -285,8 +287,20 @@ class AppSession:
 
     def handle_backmsg(self, msg: BackMsg) -> None:
         """Process a BackMsg."""
+        # Check for idle session expiration
+        max_lifetime = config.get_option("server.maxSessionLifetime")
+        if max_lifetime > 0:
+            if time.time() - self._last_activity > max_lifetime:
+                _LOGGER.debug("Session expired due to inactivity (id=%s)", self.id)
+                self.shutdown()
+                return
+
         try:
             msg_type = msg.WhichOneof("type")
+            if msg_type != "app_heartbeat":
+                # Only update activity on non-heartbeat messages
+                self._last_activity = time.time()
+
             if msg_type == "rerun_script":
                 if msg.debug_last_backmsg_id:
                     self._debug_last_backmsg_id = msg.debug_last_backmsg_id

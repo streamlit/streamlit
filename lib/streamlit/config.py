@@ -903,6 +903,18 @@ _create_option(
     type_=int,
 )
 
+
+_create_option(
+    "server.maxSessionLifetime",
+    description="""
+        Max lifetime, in seconds, for an inactive session. If a session is
+        inactive (no user interaction, no script reruns) for this amount of time,
+        it will be shut down. Set to -1 (default) for no limit.
+    """,
+    default_val=-1,
+    type_=int,
+)
+
 _create_option(
     "server.maxMessageSize",
     description="""
