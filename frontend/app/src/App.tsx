@@ -163,6 +163,8 @@ export interface Props {
   theme: ThemeManager
   streamlitExecutionStartedAt: number
   isMobileViewport: boolean
+  sessionInfo: SessionInfo
+  endpoints: StreamlitEndpoints
 }
 
 interface State {
@@ -243,9 +245,9 @@ declare global {
 export class App extends PureComponent<Props, State> {
   private readonly endpoints: StreamlitEndpoints
 
-  private readonly sessionInfo = new SessionInfo()
+  private readonly sessionInfo: SessionInfo
 
-  private readonly metricsMgr = new MetricsManager(this.sessionInfo)
+  private readonly metricsMgr: MetricsManager
 
   private readonly sessionEventDispatcher = new SessionEventDispatcher()
 
@@ -279,6 +281,11 @@ export class App extends PureComponent<Props, State> {
 
   public constructor(props: Props) {
     super(props)
+
+    this.sessionInfo = props.sessionInfo
+    this.endpoints = props.endpoints
+    this.metricsMgr = new MetricsManager(this.sessionInfo)
+
 
     // Register hotkey filter:
     ensureHotkeysFilterConfigured()

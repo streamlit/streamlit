@@ -25,6 +25,12 @@ import { HelmetProvider } from "react-helmet-async"
 import { Client as Styletron } from "styletron-engine-atomic"
 import { Provider as StyletronProvider } from "styletron-react"
 
+import {
+  DefaultStreamlitEndpoints,
+  parseUriIntoBaseParts,
+  SessionInfo,
+} from "@streamlit/lib"
+
 import ThemedApp from "./ThemedApp"
 
 const engine = new Styletron({ prefix: "st-" })
@@ -39,13 +45,24 @@ if (!rootDomNode) {
   throw new Error("#root DOM element not found")
 }
 
+const sessionInfo = new SessionInfo()
+const baseUriParts = parseUriIntoBaseParts(window.location.href)
+const endpoints = new DefaultStreamlitEndpoints({
+  getServerUri: () => baseUriParts,
+  csrfEnabled: true,
+})
+
 const reactRoot = createRoot(rootDomNode)
 
 reactRoot.render(
   <StrictMode>
     <HelmetProvider>
       <StyletronProvider value={engine}>
-        <ThemedApp streamlitExecutionStartedAt={streamlitExecutionStartedAt} />
+        <ThemedApp
+          streamlitExecutionStartedAt={streamlitExecutionStartedAt}
+          sessionInfo={sessionInfo}
+          endpoints={endpoints}
+        />
       </StyletronProvider>
     </HelmetProvider>
   </StrictMode>

@@ -17,8 +17,11 @@
 import FontFaceDeclaration from "@streamlit/app/src/components/FontFaceDeclaration"
 import FontSources from "@streamlit/app/src/components/FontSources"
 import {
+import {
   PortalProvider,
   RootStyleProvider,
+  SessionInfo,
+  StreamlitEndpoints,
   WindowDimensionsProvider,
 } from "@streamlit/lib"
 
@@ -27,10 +30,14 @@ import { useThemeManager } from "./util/useThemeManager"
 
 export interface ThemedAppProps {
   streamlitExecutionStartedAt: number
+  sessionInfo: SessionInfo
+  endpoints: StreamlitEndpoints
 }
 
 const ThemedApp = ({
   streamlitExecutionStartedAt,
+  sessionInfo,
+  endpoints,
 }: ThemedAppProps): JSX.Element => {
   const [themeManager, fontFaces, fontSources] = useThemeManager()
   const { activeTheme } = themeManager
@@ -47,6 +54,8 @@ const ThemedApp = ({
           <AppWithScreencast
             theme={themeManager}
             streamlitExecutionStartedAt={streamlitExecutionStartedAt}
+            sessionInfo={sessionInfo}
+            endpoints={endpoints}
           />
         </PortalProvider>
       </WindowDimensionsProvider>

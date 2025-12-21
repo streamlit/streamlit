@@ -447,7 +447,13 @@ class AppSession:
 
     def _create_scriptrunner(self, initial_rerun_data: RerunData) -> None:
         """Create and run a new ScriptRunner with the given RerunData."""
-        self._scriptrunner = ScriptRunner(
+        runner_cls = ScriptRunner
+        if os.getenv("STREAMLIT_ASYNC_RUNNER"):
+            from streamlit.runtime.async_script_runner import AsyncScriptRunner
+            runner_cls = AsyncScriptRunner
+            _LOGGER.warning("Using Experimental AsyncScriptRunner")
+
+        self._scriptrunner = runner_cls(
             session_id=self.id,
             main_script_path=self._script_data.main_script_path,
             session_state=self._session_state,
