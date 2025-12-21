@@ -64,6 +64,10 @@ jobs:
           pytest --browser chromium -n 1 --reruns 1 -m "performance" --count=10
       - name: Run make python-performance-tests
         run: make python-performance-tests
+      - name: Run Accessibility (Axe) tests
+        run: |
+          source venv/bin/activate
+          pytest e2e_playwright/accessibility_test.py --browser chromium --headless
       - name: Run make lighthouse-tests
         run: make lighthouse-tests
       - name: Get short SHA
