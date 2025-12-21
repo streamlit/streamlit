@@ -679,10 +679,10 @@ def _maybe_convert_color_column_in_place(
 
     first_color_datum = df[color_column].iat[0]
 
-    if is_hex_color_like(first_color_datum):
+    if is_hex_color_like(first_color_datum):  # type: ignore[arg-type]
         # Hex is already CSS-valid.
         pass
-    elif is_color_tuple_like(first_color_datum):
+    elif is_color_tuple_like(first_color_datum):  # type: ignore[arg-type]
         # Tuples need to be converted to CSS-valid.
         df.loc[:, color_column] = df[color_column].apply(to_css_color)
     else:
@@ -1119,7 +1119,7 @@ def _get_color_encoding(
 
         # If the 0th element in the color column looks like a color, we'll use the color
         # column's values as the colors in our chart.
-        elif len(df[color_column]) and is_color_like(df[color_column].iat[0]):
+        elif len(df[color_column]) and is_color_like(df[color_column].iat[0]):  # type: ignore[arg-type]
             color_range = [to_css_color(c) for c in df[color_column].unique()]
             color_enc["scale"] = alt.Scale(range=color_range)
             # Don't show the color legend, because it will just show text with the

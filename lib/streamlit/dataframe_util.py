@@ -1084,7 +1084,7 @@ def is_colum_type_arrow_incompatible(column: Series[Any] | Index[Any]) -> bool:
                 return True
 
             # Get the first value to check if it is a supported list-like type.
-            first_value = cast("DataFrameGenericAlias[Any]", column).iloc[0]
+            first_value = cast("DataFrameGenericAlias[Any]", column).iloc[0]  # type: ignore[index]
 
             if (  # noqa: SIM103
                 not is_list_like(first_value)

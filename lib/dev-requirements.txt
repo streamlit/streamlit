@@ -23,4 +23,4 @@ types-setuptools
 types-toml
 types-cachetools
 types-Authlib
-pandas-stubs
+pandas-stubs>=2.3.3.251219
