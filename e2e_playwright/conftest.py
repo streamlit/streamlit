@@ -56,6 +56,7 @@ from e2e_playwright.shared.performance import (
     measure_performance,
     start_capture_traces,
 )
+from e2e_playwright.shared.accessibility import check_accessibility
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator
@@ -798,6 +799,17 @@ def assert_snapshot(
         nonlocal snapshot_default_file_name
         nonlocal module_snapshot_updates_dir
         nonlocal module_snapshot_failures_dir
+
+    def assert_accessibility(self) -> None:
+        """Run accessibility checks on the current page."""
+        pass  # Placeholder if we want to add specific options later
+
+@pytest.fixture
+def assert_accessibility(page: Page) -> Callable[[], None]:
+    """Fixture to assert accessibility compliance."""
+    def _assert():
+        check_accessibility(page)
+    return _assert
         nonlocal snapshot_file_suffix
 
         if show_app_header is False or (
