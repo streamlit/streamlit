@@ -43,7 +43,7 @@
     "vite": "^7.2.7",
     "vite-plugin-dts": "^4.5.4",
     "vite-tsconfig-paths": "^5.1.4",
-    "vitest": "^4.0.14"
+    "vitest": "^4.0.16"
   },
   "repository": {
     "type": "git",
