@@ -14,7 +14,8 @@
  * limitations under the License.
  */
 
-import { render, screen, waitFor } from "@testing-library/react"
+import { screen, waitFor } from "@testing-library/react"
+import { render } from "~lib/test_util"
 import { describe, expect, it, vi } from "vitest"
 
 import { Html as HtmlProto } from "@streamlit/protobuf"
@@ -60,6 +61,30 @@ describe("Html element", () => {
       const root = screen.getByTestId("stHtml")
       expect(root).not.toBeNull()
       expect(root.classList.contains("stHtml")).toBe(true)
+    })
+
+    it("renders nested lists correctly", () => {
+      const element = makeProto({
+        body: `<ul>
+          <li>Pets
+            <ul>
+              <li>Dog</li>
+              <li>Cat</li>
+            </ul>
+          </li>
+        </ul>`,
+        unsafeAllowJavascript,
+      })
+
+      render(<Html element={element} />)
+
+      const root = screen.getByTestId("stHtml")
+      const outerList = root.querySelector("ul")
+      const nestedList = root.querySelector("ul ul")
+
+      expect(outerList).not.toBeNull()
+      expect(nestedList).not.toBeNull()
+      expect(root.querySelectorAll("li")).toHaveLength(3)
     })
 
     it("preserves target=_blank links and applies rel attributes", () => {
