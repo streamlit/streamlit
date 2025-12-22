@@ -29,6 +29,10 @@ jobs:
     runs-on: ubuntu-latest-8-cores
     timeout-minutes: 25
 
+    env:
+      PYTHON_MAX_VERSION: "3.9" # Fallback, overwritten by build_info
+      MY_DATE_TIME: "" # Overwritten by usage step
+
     defaults:
       run:
         shell: bash
