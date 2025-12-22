@@ -396,7 +396,7 @@ class CacheResourceAPI:
             the provided function to generate a hash for it. See below for an example
             of how this can be used.
 
-        on_release : OnRelease
+        on_release : callable or None
             If set, a function to call when a cache entry is removed from the cache.
             The removed item will be provided to the function as an argument.
 
