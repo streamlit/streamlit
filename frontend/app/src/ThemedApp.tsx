@@ -16,11 +16,11 @@
 
 import FontFaceDeclaration from "@streamlit/app/src/components/FontFaceDeclaration"
 import FontSources from "@streamlit/app/src/components/FontSources"
+import { StreamlitEndpoints } from "@streamlit/connection"
 import {
   PortalProvider,
   RootStyleProvider,
   SessionInfo,
-  StreamlitEndpoints,
   WindowDimensionsProvider,
 } from "@streamlit/lib"
 
