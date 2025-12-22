@@ -39,7 +39,7 @@ import { ForwardMsgCache } from "./ForwardMessageCache"
 import {
   ErrorDetails,
   Event,
-  IHostConfigResponse,
+  IHostConfigProperties,
   OnConnectionStateChange,
   OnMessage,
   OnRetry,
@@ -103,7 +103,7 @@ export interface Args {
    * Function to set the host config and allowed-message-origins for this app (if in a relevant deployment
    * scenario).
    */
-  onHostConfigResp: (resp: IHostConfigResponse) => void
+  onHostConfigResp: (resp: IHostConfigProperties) => void
 
   /**
    * Enables host to bypass waiting for health/host-config endpoint responses

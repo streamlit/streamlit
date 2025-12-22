@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import type { IHostConfigResponse } from "@streamlit/connection"
+import type { IHostConfigProperties } from "@streamlit/connection"
 import { type HostWindowConfig, isValidAllowedOrigins } from "@streamlit/utils"
 
 /**
@@ -73,8 +73,8 @@ export function preferWindowValue<T>(
  */
 export function reconcileHostConfigValues(
   windowConfig: HostWindowConfig | undefined,
-  endpointConfig: IHostConfigResponse
-): IHostConfigResponse {
+  endpointConfig: IHostConfigProperties
+): IHostConfigProperties {
   if (!windowConfig) {
     return endpointConfig
   }

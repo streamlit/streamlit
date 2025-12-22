@@ -184,12 +184,3 @@ export type {
   LibConfig,
   MetricsConfig,
 } from "@streamlit/utils"
-
-/**
- * The response structure of the `_stcore/host-config` endpoint.
- * This combines streamlit-lib specific configuration options with
- * streamlit-app specific options (e.g. allowed message origins).
- *
- * Note: This is structurally equivalent to IHostConfigProperties from @streamlit/utils.
- */
-export type { IHostConfigProperties as IHostConfigResponse } from "@streamlit/utils"

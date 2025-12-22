@@ -6568,5 +6568,27 @@ describe("App.hasReceivedNewSession flag behavior", () => {
       expect(hostCommunicationMgr.setAllowedOrigins).not.toHaveBeenCalled()
       expect(metricsMgr.setMetricsConfig).not.toHaveBeenCalled()
     })
+
+    // Test resourceCrossOriginMode in bypass mode
+    // Note: Window config does not support deprecated setAnonymousCrossOriginPropertyOnMediaElements.
+    // The deprecated field is only supported via endpoint response (non-bypass path).
+    it("applies resourceCrossOriginMode from HOST_CONFIG in bypass mode", () => {
+      globalThis.__mockStreamlitConfig = {
+        BACKEND_BASE_URL: "https://backend.example.com",
+        HOST_CONFIG: {
+          allowedOrigins: ["https://example.com"],
+          useExternalAuthToken: true,
+          resourceCrossOriginMode: "use-credentials",
+        },
+      }
+
+      renderApp(getProps())
+
+      // Bypass enabled - resourceCrossOriginMode is applied
+      const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
+        HostCommunicationManager
+      )
+      expect(hostCommunicationMgr.setAllowedOrigins).toHaveBeenCalled()
+    })
   })
 })

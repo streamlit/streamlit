@@ -101,13 +101,16 @@ export type IHostConfigProperties = LibConfig & AppConfig & MetricsConfig
  * Host configuration that can be provided via window.__streamlit.HOST_CONFIG
  * which take precedence over the values from the /_stcore/host-config endpoint.
  *
- * All fields are optional (Partial of IHostConfigProperties).
+ * All fields are optional. The deprecated setAnonymousCrossOriginPropertyOnMediaElements
+ * field is excluded - use resourceCrossOriginMode instead.
  *
  * Note: Bypass mode (fast-path WebSocket connection) only activates when BACKEND_BASE_URL
  * and minimal required fields (allowedOrigins, useExternalAuthToken) are provided and valid.
  * Other fields can be provided but don't enable bypass on their own.
  */
-export type HostWindowConfig = Partial<IHostConfigProperties>
+export type HostWindowConfig = Partial<
+  Omit<IHostConfigProperties, "setAnonymousCrossOriginPropertyOnMediaElements">
+>
 
 /**
  * Validates that allowedOrigins is a non-empty array of non-empty strings.

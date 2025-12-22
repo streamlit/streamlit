@@ -52,7 +52,7 @@ import {
   ConnectionState,
   DefaultStreamlitEndpoints,
   ErrorDetails,
-  IHostConfigResponse,
+  IHostConfigProperties,
   isHostConfigBypassEnabled,
   LibConfig,
   parseUriIntoBaseParts,
@@ -502,6 +502,8 @@ export class App extends PureComponent<Props, State> {
     this.setAppConfig(appConfig)
 
     // Build LibConfig with only provided fields
+    // Note: Window config does not support deprecated setAnonymousCrossOriginPropertyOnMediaElements.
+    // Use resourceCrossOriginMode instead. The deprecated field is only supported via endpoint.
     const libConfig: LibConfig = includeIfDefined<LibConfig>({
       mapboxToken: hostConfig.mapboxToken,
       disableFullscreenMode: hostConfig.disableFullscreenMode,
@@ -545,7 +547,7 @@ export class App extends PureComponent<Props, State> {
           source,
         })
       },
-      onHostConfigResp: (response: IHostConfigResponse) => {
+      onHostConfigResp: (response: IHostConfigProperties) => {
         // Reconcile window config values with endpoint response.
         // All provided window config values take precedence over endpoint values:
         // AppConfig: allowedOrigins, useExternalAuthToken, enableCustomParentMessages, blockErrorDialogs
@@ -580,11 +582,13 @@ export class App extends PureComponent<Props, State> {
           mapboxToken,
           disableFullscreenMode,
           enforceDownloadInNewTab,
+          // Use resourceCrossOriginMode if provided, otherwise fall back to
+          // deprecated setAnonymousCrossOriginPropertyOnMediaElements (if true, use "anonymous")
           resourceCrossOriginMode:
-            (resourceCrossOriginMode ??
-            setAnonymousCrossOriginPropertyOnMediaElements)
+            resourceCrossOriginMode ??
+            (setAnonymousCrossOriginPropertyOnMediaElements
               ? "anonymous"
-              : undefined,
+              : undefined),
         }
 
         // Set the metrics configuration:
