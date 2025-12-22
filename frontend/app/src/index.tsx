@@ -28,8 +28,8 @@ import { Provider as StyletronProvider } from "styletron-react"
 import {
   DefaultStreamlitEndpoints,
   parseUriIntoBaseParts,
-  SessionInfo,
-} from "@streamlit/lib"
+} from "@streamlit/connection"
+import { SessionInfo } from "@streamlit/lib"
 
 import ThemedApp from "./ThemedApp"
 
@@ -50,6 +50,9 @@ const baseUriParts = parseUriIntoBaseParts(window.location.href)
 const endpoints = new DefaultStreamlitEndpoints({
   getServerUri: () => baseUriParts,
   csrfEnabled: true,
+  sendClientError: (component, error, message, source) => {
+    log.error(`[${component}] ${message} (${error}) from ${source}`)
+  },
 })
 
 const reactRoot = createRoot(rootDomNode)
