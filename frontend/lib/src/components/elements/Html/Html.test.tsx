@@ -64,7 +64,7 @@ describe("Html element", () => {
       expect(root.classList.contains("stHtml")).toBe(true)
     })
 
-    it("renders nested lists correctly", () => {
+    it("renders nested lists with proper indentation", () => {
       const element = makeProto({
         body: `<ul>
           <li>Pets
@@ -86,6 +86,11 @@ describe("Html element", () => {
       expect(outerList).not.toBeNull()
       expect(nestedList).not.toBeNull()
       expect(root.querySelectorAll("li")).toHaveLength(3)
+
+      // Verify paddingLeft is applied to restore list indentation
+      // theme.spacing.threeXL = "2rem"
+      const outerListStyles = window.getComputedStyle(outerList as Element)
+      expect(outerListStyles.paddingLeft).toBe("2rem")
     })
 
     it("preserves target=_blank links and applies rel attributes", () => {
