@@ -17,7 +17,6 @@
 import FontFaceDeclaration from "@streamlit/app/src/components/FontFaceDeclaration"
 import FontSources from "@streamlit/app/src/components/FontSources"
 import {
-import {
   PortalProvider,
   RootStyleProvider,
   SessionInfo,
