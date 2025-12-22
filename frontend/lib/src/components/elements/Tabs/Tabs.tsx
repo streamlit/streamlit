@@ -75,6 +75,18 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
 
   const [isOverflowing, setIsOverflowing] = useState(false)
 
+  // Sync tab selection when defaultTabIndex changes programmatically
+  // (only for dynamic tabs with programmatic control)
+  useEffect(() => {
+    if (isDynamic && allTabLabels.length > 0) {
+      const newLabel = allTabLabels[defaultTabIndex]
+      if (newLabel && newLabel !== activeTabName) {
+        setActiveTabKey(defaultTabIndex)
+        setActiveTabName(newLabel)
+      }
+    }
+  }, [defaultTabIndex, isDynamic, allTabLabels, activeTabName])
+
   // Reconciles active key & tab name
   useEffect(() => {
     const newTabKey = allTabLabels.indexOf(activeTabName)
