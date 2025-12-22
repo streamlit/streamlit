@@ -147,6 +147,21 @@ st.write("value 17:", v17)
 st.selectbox("selectbox 18 (width=200px)", options, index=0, width=200)
 st.selectbox("selectbox 19 (width='stretch')", options, index=0, width="stretch")
 
+# Regression test for https://github.com/streamlit/streamlit/issues/13435
+# Test that selectbox UI stays in sync when value is set via session_state
+# and user opens/closes dropdown without selecting
+with st.container(horizontal=True):
+    for value in ("male", "female"):
+        if st.button(f"Set {value}", key=f"set_{value}_btn"):
+            st.session_state["selectbox20"] = value
+v20 = st.selectbox(
+    "selectbox 20 - session_state sync test",
+    options,
+    index=0,
+    key="selectbox20",
+)
+st.write("value 20:", v20)
+
 if st.toggle("Update selectbox props"):
     sel_value = st.selectbox(
         "Updated dynamic selectbox",
