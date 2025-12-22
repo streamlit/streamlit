@@ -57,6 +57,7 @@ import {
   LibConfig,
   parseUriIntoBaseParts,
   StreamlitEndpoints,
+  FileUploadClientConfig,
 } from "@streamlit/connection"
 import {
   AppRoot,
@@ -205,7 +206,6 @@ interface State {
   mainScriptHash: string
   latestRunTime: number
   fragmentIdsThisRun: Array<string>
-  fragmentIdsThisRun: Array<string>
   libConfig: LibConfig
   appConfig: AppConfig
   autoReruns: NodeJS.Timeout[]
@@ -245,8 +245,6 @@ export class App extends PureComponent<Props, State> {
   private readonly sessionEventDispatcher = new SessionEventDispatcher()
 
   private connectionManager: ConnectionManager | null
-
-  private readonly widgetMgr: WidgetStateManager
 
   private readonly widgetMgr: WidgetStateManager
 
@@ -333,6 +331,7 @@ export class App extends PureComponent<Props, State> {
       appConfig: {},
       autoReruns: [],
       scriptChangedOnDisk: false,
+      navigationPosition: Navigation.Position.SIDEBAR,
     }
 
     this.connectionManager = null
@@ -350,8 +349,8 @@ export class App extends PureComponent<Props, State> {
       clearCache: this.clearCache,
       sendAppHeartbeat: this.sendAppHeartbeat,
       themeChanged: this.handleThemeMessage,
-      pageChanged: pageScriptHash => this.onPageChange(pageScriptHash),
-      fileUploadClientConfigChanged: config => {
+      pageChanged: (pageScriptHash: string) => this.onPageChange(pageScriptHash),
+      fileUploadClientConfigChanged: (config: FileUploadClientConfig) => {
         if (this.endpoints.setFileUploadClientConfig !== undefined) {
           this.endpoints.setFileUploadClientConfig(config)
         }
@@ -1147,7 +1146,7 @@ export class App extends PureComponent<Props, State> {
       if (prevPageName !== newPageName) {
         const pagePath = isViewingMainPage ? "" : newPageName
         const queryString =
-          this.state.queryParams || preserveEmbedQueryParams()
+          this.props.hostComm.currentState.queryParams || preserveEmbedQueryParams()
         const qs = queryString ? `?${queryString}` : ""
 
         const basePathPrefix = pathname === "/" ? "" : pathname
@@ -2274,6 +2273,7 @@ export class App extends PureComponent<Props, State> {
       navSections,
       navigationPosition,
       scriptChangedOnDisk,
+      currentPageScriptHash,
     } = this.state
 
     const {
