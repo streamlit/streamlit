@@ -15,10 +15,11 @@
  */
 
 import { screen, waitFor } from "@testing-library/react"
-import { render } from "~lib/test_util"
 import { describe, expect, it, vi } from "vitest"
 
 import { Html as HtmlProto } from "@streamlit/protobuf"
+
+import { render } from "~lib/test_util"
 
 import Html from "./Html"
 
