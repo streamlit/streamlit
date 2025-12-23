@@ -587,13 +587,8 @@ def test_mapbox_token_via_window_config_bypass(page: Page, app_port: int) -> Non
     map_element = page.get_by_test_id("stDeckGlJsonChart")
     expect(map_element).to_be_visible(timeout=15000)
 
-    # Give time for map to attempt to load tiles from Mapbox
-    page.wait_for_timeout(3000)
-
-    # Verify that Mapbox API requests were made with our token
-    assert len(mapbox_requests) > 0, (
-        "Expected Mapbox API requests to be made for pydeck chart with Mapbox style"
-    )
+    # Wait for Mapbox API requests to be made (map loading tiles)
+    wait_until(page, lambda: len(mapbox_requests) > 0, timeout=15000)
     token_used = any(test_token in url for url in mapbox_requests)
     assert token_used, (
         f"Expected mapboxToken '{test_token}' to be used in Mapbox API requests. "
