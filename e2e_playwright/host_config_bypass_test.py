@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import json
 
+import pytest
 from playwright.sync_api import Page, Route, WebSocket, expect
 
 from e2e_playwright.conftest import wait_until
@@ -546,6 +547,8 @@ def test_block_error_dialogs_via_window_config_bypass(
     expect(page.get_by_role("dialog")).not_to_be_attached()
 
 
+# Firefox doesn't render pydeck charts properly in CI, so no Mapbox API requests are made
+@pytest.mark.skip_browser("firefox")
 def test_mapbox_token_via_window_config_bypass(page: Page, app_port: int) -> None:
     """Test that mapboxToken from window config is used in Mapbox API requests.
 
