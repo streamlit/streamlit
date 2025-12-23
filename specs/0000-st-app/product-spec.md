@@ -388,8 +388,8 @@ app = st.App(
 |------|---------------|
 | Works on SiS, Cloud, etc? | ⚠️ Likely, but will need testing. |
 | No breaking API changes | ✅ |
-| No new dependencies | ✅ Uses Starlette (already added in migration) |
+| No new dependencies | ✅ will already added in Starlette migration |
 | Metrics collected | We need to track the st.App usage via a flag in the metrics. |
-| Any security/legal impact? | ✅ we will need to ensure that the server code follows the same logic as the tornado server. |
+| Any security/legal impact? | ✅ no new implicatations besides whats relevant for Starlette migration |
 | Any docs changes needed? | New section: "Advanced Deployment with st.App" |
 | Any other risks? | ✅ |
