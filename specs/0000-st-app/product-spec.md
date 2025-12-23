@@ -12,7 +12,7 @@ Add a new `st.App` class that provides an ASGI-compatible entry point for Stream
 apps. This enables custom HTTP routes, middleware configuration, lifecycle hooks, integration with popular Python web frameworks, and aligns Streamlit with the broader async web ecosystem.
 
 > [!NOTE]
-> This proposal is a follow-up to the [Starlette support](https://github.com/streamlit/streamlit/pull/13375) that is currently under implementation.
+> This proposal is a follow-up to the [Starlette support](https://github.com/streamlit/streamlit/pull/13375) that is currently being implemented.
 
 ## Problem
 
