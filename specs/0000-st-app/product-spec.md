@@ -142,7 +142,7 @@ Streamlit reserves certain route prefixes. User routes cannot override:
 |--------------|---------|
 | `/_stcore/*` | Core Streamlit API (WebSocket, health, upload) |
 | `/media/*` | Media file serving |
-| `/component/*` | Custom component serving |
+| `/component/*` | Custom component serving (v1) |
 
 Conflicting routes raise `ValueError` at startup.
 
