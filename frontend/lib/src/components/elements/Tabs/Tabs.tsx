@@ -19,6 +19,7 @@ import {
   ReactElement,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react"
@@ -62,7 +63,16 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
   const widgetId = node.deltaBlock?.tabContainer?.id
   const isDynamic = Boolean(widgetId)
 
-  let allTabLabels: string[] = []
+  // Memoize tab labels to prevent unnecessary effect reruns
+  const allTabLabels = useMemo(
+    () =>
+      node.children.map((child, index) => {
+        const tabNode = child as BlockNode
+        return tabNode?.deltaBlock?.tab?.label ?? index.toString()
+      }),
+    [node.children]
+  )
+
   const [activeTabKey, setActiveTabKey] = useState<React.Key>(defaultTabIndex)
   const [activeTabName, setActiveTabName] = useState<string>(() => {
     const tab = node.children[defaultTabIndex] as BlockNode
@@ -181,11 +191,6 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
         }}
       >
         {node.children.map((appNode: AppNode, index: number): ReactElement => {
-          // Reset available tab labels when rerendering
-          if (index === 0) {
-            allTabLabels = []
-          }
-
           // If the tab is stale, disable it
           const isStaleTab = isElementStale(
             appNode,
@@ -201,11 +206,7 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
             widgetsDisabled,
             node: appNode as BlockNode,
           }
-          let nodeLabel = index.toString()
-          if (childProps.node.deltaBlock?.tab?.label) {
-            nodeLabel = childProps.node.deltaBlock.tab.label
-          }
-          allTabLabels[index] = nodeLabel
+          const nodeLabel = allTabLabels[index]
 
           const isSelected = activeTabKey.toString() === index.toString()
           const isLast = index === node.children.length - 1
