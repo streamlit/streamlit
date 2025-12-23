@@ -161,7 +161,9 @@ User middleware wraps Streamlit's internal middleware, enabling:
 
 ### How `st.App` Addresses Feature Requests
 
-#### Custom HTTP Routes (#439, #9673, #6195, #9090)
+#### Custom HTTP Routes
+
+Enables: [#439](https://github.com/streamlit/streamlit/issues/439), [#9673](https://github.com/streamlit/streamlit/issues/9673), [#6195](https://github.com/streamlit/streamlit/issues/6195), [#9090](https://github.com/streamlit/streamlit/issues/9090)
 
 ```python
 import streamlit as st
@@ -192,7 +194,9 @@ app = st.App(
 
 #### Security Headers & Middleware
 
-##### Add security headers via middleware (#6417, #9160)
+##### Add security headers via middleware
+
+> Enables: [#6417](https://github.com/streamlit/streamlit/issues/6417), [#9160](https://github.com/streamlit/streamlit/issues/9160)
 
 ```python
 import streamlit as st
@@ -225,7 +229,9 @@ app = st.App(
 )
 ```
 
-##### Set cookies via middleware (#861)
+##### Set cookies via middleware
+
+> Enables: [#861](https://github.com/streamlit/streamlit/issues/861)
 
 ```python
 import streamlit as st
@@ -253,7 +259,9 @@ app = st.App(
 
 #### Framework Integration
 
-##### Run Streamlit as ASGI app (#4311)
+##### Run Streamlit as ASGI app
+
+> Enables: [#4311](https://github.com/streamlit/streamlit/issues/4311)
 
 ```python
 import streamlit as st
@@ -266,7 +274,9 @@ app = st.App("dashboard.py")
 # - hypercorn streamlit_app:app
 ```
 
-##### Mount Streamlit in Django (#927, #4311)
+##### Mount Streamlit in Django
+
+> Enables: [#927](https://github.com/streamlit/streamlit/issues/927), [#4311](https://github.com/streamlit/streamlit/issues/4311)
 
 ```python
 from django.core.asgi import get_asgi_application
@@ -284,7 +294,9 @@ app = Starlette(routes=[
 ])
 ```
 
-##### Mount Streamlit in FastAPI (#4567)
+##### Mount Streamlit in FastAPI
+
+> Enables: [#4567](https://github.com/streamlit/streamlit/issues/4567)
 
 ```python
 from fastapi import FastAPI
@@ -302,7 +314,9 @@ streamlit_app = st.App("dashboard.py")
 app.mount("/dashboard", streamlit_app)
 ```
 
-##### Mount FastAPI in Streamlit (#4567)
+##### Mount FastAPI in Streamlit
+
+> Enables: [#4567](https://github.com/streamlit/streamlit/issues/4567)
 
 ```python
 from fastapi import FastAPI
@@ -332,7 +346,9 @@ app = st.App(
 )
 ```
 
-#### Lifecycle Hooks (#7688, #8991)
+#### Lifecycle Hooks
+
+> Enables: [#7688](https://github.com/streamlit/streamlit/issues/7688), [#8991](https://github.com/streamlit/streamlit/issues/8991)
 
 ```python
 import streamlit as st
@@ -356,7 +372,9 @@ async def lifespan(app):
 app = st.App("main.py", lifespan=lifespan)
 ```
 
-#### SEO & Metadata (#5673, #8999)
+#### SEO & Metadata
+
+> Enables: [#5673](https://github.com/streamlit/streamlit/issues/5673), [#8999](https://github.com/streamlit/streamlit/issues/8999)
 
 ```python
 import streamlit as st
