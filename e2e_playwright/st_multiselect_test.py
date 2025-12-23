@@ -290,7 +290,17 @@ def test_custom_css_class_via_key(app: Page):
 
 
 def test_dynamic_multiselect_props(app: Page, assert_snapshot: ImageCompareFunction):
-    """Test that the multiselect can be updated dynamically while keeping the state."""
+    """Test that the multiselect can be updated dynamically while keeping the state.
+
+    This tests that:
+    1. Options can be changed dynamically when a key is provided
+    2. Format function can be changed dynamically
+    3. Selection resets (filters invalid) when selected values are removed from options
+    4. Selection is preserved when the selected values exist in new options
+
+    Initial options: [apple, banana, mango, orange] with format_func=capitalize, default=['apple']
+    Updated options: [mango, papaya, grape, apple] with format_func=upper, default=[]
+    """
     dynamic_ms = get_element_by_key(app, "dynamic_multiselect_with_key")
     expect(dynamic_ms).to_be_visible()
 
@@ -302,24 +312,20 @@ def test_dynamic_multiselect_props(app: Page, assert_snapshot: ImageCompareFunct
     # Check that the help tooltip is correct:
     expect_help_tooltip(app, dynamic_ms, "initial help")
 
-    # Add an item to ensure state exists
-    input_el = dynamic_ms.locator("input").first
-    input_el.type("banana")
-    app.keyboard.press("Enter")
-    wait_for_app_run(app)
-
+    # --- Test 1: Selection RESETS when value is removed from options ---
+    # Select "banana" (only exists in initial options, NOT in updated)
+    select_for_multiselect(app, "Initial dynamic multiselect", "Banana", True)
     expect_prefixed_markdown(app, "Initial multiselect value:", "['apple', 'banana']")
 
-    # Click the toggle to update the multiselect props
+    # Toggle to update props - options change from [apple, banana, mango, orange]
+    # to [mango, papaya, grape, apple]. "banana" is NOT in updated options.
     click_toggle(app, "Update multiselect props")
 
-    # new multiselect is visible:
+    # Updated multiselect is visible
     expect(dynamic_ms).to_contain_text("Updated dynamic multiselect")
 
-    # Ensure updated widget shows and state is preserved
-    expect(dynamic_ms).to_contain_text("Updated dynamic multiselect")
-    # Ensure the previously entered value remains visible
-    expect_prefixed_markdown(app, "Updated multiselect value:", "['apple', 'banana']")
+    # Selection should filter out "banana" (not in updated options), keeping only "apple"
+    expect_prefixed_markdown(app, "Updated multiselect value:", "['apple']")
 
     dynamic_ms.scroll_into_view_if_needed()
     assert_snapshot(dynamic_ms, name="st_multiselect-dynamic_updated")
@@ -327,13 +333,18 @@ def test_dynamic_multiselect_props(app: Page, assert_snapshot: ImageCompareFunct
     # Check that the help tooltip is correct:
     expect_help_tooltip(app, dynamic_ms, "updated help")
 
-    # Type something different and submit
-    input_el.type("orange")
-    input_el.press("Enter")
-    wait_for_app_run(app)
-    expect_prefixed_markdown(
-        app, "Updated multiselect value:", "['apple', 'banana', 'orange']"
-    )
+    # --- Test 2: Selection PRESERVED when value exists in both option sets ---
+    # Select "mango" - it exists in BOTH option sets at different indices:
+    # Initial: index 2 (displayed "Mango"), Updated: index 0 (displayed "MANGO")
+    select_for_multiselect(app, "Updated dynamic multiselect", "MANGO", True)
+    expect_prefixed_markdown(app, "Updated multiselect value:", "['apple', 'mango']")
+
+    # Toggle back to initial options - "mango" and "apple" exist in initial too
+    click_toggle(app, "Update multiselect props")
+    expect(dynamic_ms).to_contain_text("Initial dynamic multiselect")
+
+    # Selection should be PRESERVED since both "apple" and "mango" are in both option sets
+    expect_prefixed_markdown(app, "Initial multiselect value:", "['apple', 'mango']")
 
 
 def test_multiselect_accept_new_options(app: Page):

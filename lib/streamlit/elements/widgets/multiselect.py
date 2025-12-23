@@ -38,6 +38,7 @@ from streamlit.elements.lib.options_selector_utils import (
     create_mappings,
     get_default_indices,
     maybe_coerce_enum_sequence,
+    validate_multiselect_value_against_options,
 )
 from streamlit.elements.lib.policies import (
     check_widget_policies,
@@ -493,15 +494,9 @@ class MultiSelectMixin:
         element_id = compute_and_register_element_id(
             widget_name,
             user_key=key,
-            # Treat the provided key as the main identity. Only include
-            # changes to the options, accept_new_options, and max_selections
-            # in the identity computation as those can invalidate the
-            # current selection.
             key_as_main_identity={
-                "options",
                 "max_selections",
                 "accept_new_options",
-                "format_func",
             },
             dg=self.dg,
             label=label,
@@ -554,8 +549,21 @@ class MultiSelectMixin:
             widget_state, options, indexable_options
         )
 
-        if widget_state.value_changed:
-            proto.raw_values[:] = serde.serialize(widget_state.value)
+        if accept_new_options:
+            current_values = widget_state.value
+            value_needs_reset = False
+        elif key is not None:
+            current_values, value_needs_reset = (
+                validate_multiselect_value_against_options(
+                    widget_state.value, indexable_options, key
+                )
+            )
+        else:
+            current_values = widget_state.value
+            value_needs_reset = False
+
+        if value_needs_reset or widget_state.value_changed:
+            proto.raw_values[:] = serde.serialize(current_values)
             proto.set_value = True
 
         validate_width(width)
@@ -566,7 +574,7 @@ class MultiSelectMixin:
 
         self.dg._enqueue(widget_name, proto, layout_config=layout_config)
 
-        return widget_state.value
+        return current_values
 
     @property
     def dg(self) -> DeltaGenerator:
