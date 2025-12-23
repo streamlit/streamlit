@@ -19,61 +19,66 @@ apps. This enables custom HTTP routes, middleware configuration, lifecycle hooks
 Streamlit's current architecture limits advanced deployment customizability and integration scenarios.
 Users have requested numerous features that require lower-level control over the HTTP server:
 
-- **Custom HTTP Endpoints:**
-  - [#439](https://github.com/streamlit/streamlit/issues/439) — Support custom HTTP
-    requests (REST endpoints alongside Streamlit) — **270+ upvotes**
-  - [#9673](https://github.com/streamlit/streamlit/issues/9673) — Serve robots.txt at root
-    level (currently only `/app/static/` is supported)
-  - [#6195](https://github.com/streamlit/streamlit/issues/6195) — Widget to host folder as
-    website for previewing generated sites
-  - [#9090](https://github.com/streamlit/streamlit/issues/9090) — Enhanced JavaScript file
-    serving with correct MIME types
-  - [#11333](https://github.com/streamlit/streamlit/issues/11333) — MCP server for
-    Streamlit (requires custom endpoint support)
-  - [#8713](https://github.com/streamlit/streamlit/issues/8713) — Custom 404/Error/Maintenance
-    pages
+**Custom HTTP Endpoints:**
 
-- **Security Headers & Middleware:**
-  - [#6417](https://github.com/streamlit/streamlit/issues/6417) — Handling security headers
-    (CSP, HSTS, X-Frame-Options) — **34+ upvotes**
-  - [#9160](https://github.com/streamlit/streamlit/issues/9160) — Allow configuring HTTP
-    security headers
-  - [#861](https://github.com/streamlit/streamlit/issues/861) — Ability to write cookies for
-    auth persistence
-  - [#8823](https://github.com/streamlit/streamlit/issues/8823) — IP whitelist for access
-    control
+- [#439](https://github.com/streamlit/streamlit/issues/439) — Support custom HTTP
+  requests (REST endpoints alongside Streamlit) — **270+ upvotes**
+- [#9673](https://github.com/streamlit/streamlit/issues/9673) — Serve robots.txt at root
+  level (currently only `/app/static/` is supported)
+- [#6195](https://github.com/streamlit/streamlit/issues/6195) — Widget to host folder as
+  website for previewing generated sites
+- [#9090](https://github.com/streamlit/streamlit/issues/9090) — Enhanced JavaScript file
+  serving with correct MIME types
+- [#11333](https://github.com/streamlit/streamlit/issues/11333) — MCP server for
+  Streamlit (requires custom endpoint support)
+- [#8713](https://github.com/streamlit/streamlit/issues/8713) — Custom 404/Error/Maintenance
+  pages
 
-- **Framework Integration & ASGI Support:**
-  - [#4311](https://github.com/streamlit/streamlit/issues/4311) — Run with WSGI/ASGI
-    protocols (deploy alongside Django in same container) — **67+ upvotes**
-  - [#4567](https://github.com/streamlit/streamlit/issues/4567) — Integration with
-    Flask/FastAPI — **83+ upvotes**
-  - [#927](https://github.com/streamlit/streamlit/issues/927) — Run on Django via Django
-    Channels
-  - [#8661](https://github.com/streamlit/streamlit/issues/8661) — Expose Tornado instance
-    for low-level access
-  - [#7546](https://github.com/streamlit/streamlit/issues/7546) — Multiple Runtime instances
-    in single process
+**Security Headers & Middleware:**
 
-- **Server Configuration & Lifecycle:**
-  - [#7688](https://github.com/streamlit/streamlit/issues/7688) — On session start/shutdown
-    hooks for global resources
-  - [#9916](https://github.com/streamlit/streamlit/issues/9916) — Tornado HTTPServer extra
-    arguments (max_header_size, max_body_size)
-  - [#8991](https://github.com/streamlit/streamlit/issues/8991) — Server startup hooks for
-    cache pre-warming
-  - [#6108](https://github.com/streamlit/streamlit/issues/6108) — Pre-cache on start-up
-    (populate cache before first user connects)
-  - [#8545](https://github.com/streamlit/streamlit/issues/8545) — Detect browser tab close
-    for session cleanup
-  - [#7667](https://github.com/streamlit/streamlit/issues/7667) — Setup script entry point
-    for initialization outside script runner
+- [#6417](https://github.com/streamlit/streamlit/issues/6417) — Handling security headers
+  (CSP, HSTS, X-Frame-Options) — **34+ upvotes**
+- [#9160](https://github.com/streamlit/streamlit/issues/9160) — Allow configuring HTTP
+  security headers
+- [#861](https://github.com/streamlit/streamlit/issues/861) — Ability to write cookies for
+  auth persistence
+- [#8823](https://github.com/streamlit/streamlit/issues/8823) — IP whitelist for access
+  control
 
-- **SEO & Metadata:**
-  - [#5673](https://github.com/streamlit/streamlit/issues/5673) — Custom website metadata
-    (manifest, icons, description)
-  - [#8999](https://github.com/streamlit/streamlit/issues/8999) — Embed metadata for SEO
-    indexing (Google Analytics, Search Console)
+**Framework Integration & ASGI Support:**
+
+- [#4311](https://github.com/streamlit/streamlit/issues/4311) — Run with WSGI/ASGI
+  protocols (deploy alongside Django in same container) — **67+ upvotes**
+- [#4567](https://github.com/streamlit/streamlit/issues/4567) — Integration with
+  Flask/FastAPI — **83+ upvotes**
+- [#927](https://github.com/streamlit/streamlit/issues/927) — Run on Django via Django
+  Channels
+- [#8661](https://github.com/streamlit/streamlit/issues/8661) — Expose Tornado instance
+  for low-level access
+- [#7546](https://github.com/streamlit/streamlit/issues/7546) — Multiple Runtime instances
+  in single process
+
+**Server Configuration & Lifecycle:**
+
+- [#7688](https://github.com/streamlit/streamlit/issues/7688) — On session start/shutdown
+  hooks for global resources
+- [#9916](https://github.com/streamlit/streamlit/issues/9916) — Tornado HTTPServer extra
+  arguments (max_header_size, max_body_size)
+- [#8991](https://github.com/streamlit/streamlit/issues/8991) — Server startup hooks for
+  cache pre-warming
+- [#6108](https://github.com/streamlit/streamlit/issues/6108) — Pre-cache on start-up
+  (populate cache before first user connects)
+- [#8545](https://github.com/streamlit/streamlit/issues/8545) — Detect browser tab close
+  for session cleanup
+- [#7667](https://github.com/streamlit/streamlit/issues/7667) — Setup script entry point
+  for initialization outside script runner
+
+**SEO & Metadata:**
+
+- [#5673](https://github.com/streamlit/streamlit/issues/5673) — Custom website metadata
+  (manifest, icons, description)
+- [#8999](https://github.com/streamlit/streamlit/issues/8999) — Embed metadata for SEO
+  indexing (Google Analytics, Search Console)
 
 ## Proposal
 
