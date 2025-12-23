@@ -103,4 +103,89 @@ with st.echo():
 
 st.divider()
 
+# ============================================================================
+# Programmatic Control Tests
+# ============================================================================
+
+st.header("Programmatic Tab Control")
+
+with st.echo():
+    # Simple callbacks to set tab state
+    def goto_step_1():
+        st.session_state.wizard_tabs = "Step 1"
+
+    def goto_step_2():
+        st.session_state.wizard_tabs = "Step 2"
+
+    def goto_step_3():
+        st.session_state.wizard_tabs = "Step 3"
+
+    # Buttons BEFORE tabs - callbacks run before tabs are registered
+    st.write("Navigate programmatically:")
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.button("Go to Step 1", on_click=goto_step_1)
+    with col2:
+        st.button("Go to Step 2", on_click=goto_step_2)
+    with col3:
+        st.button("Go to Step 3", on_click=goto_step_3)
+
+    # Create tabs AFTER buttons
+    tabs_prog = st.tabs(
+        ["Step 1", "Step 2", "Step 3"], key="wizard_tabs", on_change="rerun"
+    )
+
+    # Render content for active tab
+    if tabs_prog[0].open:
+        with tabs_prog[0]:
+            st.write("Step 1 content")
+
+    if tabs_prog[1].open:
+        with tabs_prog[1]:
+            st.write("Step 2 content")
+
+    if tabs_prog[2].open:
+        with tabs_prog[2]:
+            st.write("Step 3 content")
+
+    # Show current tab
+    st.write(f"Current tab: {st.session_state.get('wizard_tabs', 'Step 1')}")
+
+st.divider()
+
+st.header("Programmatic Expander Control")
+
+with st.echo():
+    # Simple callbacks to set expander state
+    def open_expander():
+        st.session_state.my_expander = True
+
+    def close_expander():
+        st.session_state.my_expander = False
+
+    # Buttons BEFORE expander - callbacks run before expander is registered
+    st.write("Control expander programmatically:")
+    col1, col2 = st.columns(2)
+    with col1:
+        st.button("Open Expander", on_click=open_expander)
+    with col2:
+        st.button("Close Expander", on_click=close_expander)
+
+    # Create expander AFTER buttons
+    exp_prog = st.expander(
+        "Programmatic expander", key="my_expander", on_change="rerun"
+    )
+
+    # Render content only if open
+    if exp_prog.open:
+        with exp_prog:
+            st.write("Programmatically controlled content")
+            st.info("This expander can be opened/closed via buttons above")
+
+    # Show current state
+    st.write(f"exp_prog.open = {exp_prog.open}")
+    st.write(f"Session state value: {st.session_state.get('my_expander', False)}")
+
+st.divider()
+
 st.write(f"Script has run {st.session_state.counter} times")
