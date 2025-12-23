@@ -18,7 +18,7 @@ import { ICustomThemeConfig } from "@streamlit/protobuf"
 
 /**
  * The lib config contains various configurations that the host platform can
- * use to configure streamlit-lib frontend behavior. This should to be treated as part of the public
+ * use to configure streamlit-lib frontend behavior. This should be treated as part of the public
  * API, and changes need to be backwards-compatible meaning that an old host configuration
  * should still work with a new frontend versions.
  */
@@ -29,10 +29,13 @@ export type LibConfig = {
   mapboxToken?: string
 
   /**
-   * Whether to disable the full screen mode all elements / widgets.
+   * Whether to disable the full screen mode for all elements / widgets.
    */
   disableFullscreenMode?: boolean
 
+  /**
+   * Whether to force file downloads initiated by the app to open in a new browser tab.
+   */
   enforceDownloadInNewTab?: boolean
 
   /**
