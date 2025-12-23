@@ -35,7 +35,7 @@ from e2e_playwright.shared.app_utils import (
     tab_until_focused,
 )
 
-NUM_SLIDER_WIDGETS = 25
+NUM_SLIDER_WIDGETS = 27
 
 
 def test_slider_rendering(themed_app: Page, assert_snapshot: ImageCompareFunction):
@@ -88,6 +88,14 @@ def test_slider_rendering(themed_app: Page, assert_snapshot: ImageCompareFunctio
     assert_snapshot(
         get_slider(themed_app, "Label 20 - Width Stretch"),
         name="st_slider-width_stretch",
+    )
+    assert_snapshot(
+        get_slider(themed_app, "Slider with compact format"),
+        name="st_slider-compact_format",
+    )
+    assert_snapshot(
+        get_slider(themed_app, "Slider with localized date format"),
+        name="st_slider-localized_date_format",
     )
 
 

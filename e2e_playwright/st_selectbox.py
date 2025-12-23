@@ -189,3 +189,18 @@ else:
         accept_new_options=False,
     )
     st.write("Initial selectbox value:", sel_value)
+
+# Regression test for https://github.com/streamlit/streamlit/issues/13435
+# Test that selectbox UI stays in sync when value is set via session_state
+# and user opens/closes dropdown without selecting
+with st.container(horizontal=True):
+    for value in ("male", "female"):
+        if st.button(f"Set {value}", key=f"set_{value}_btn"):
+            st.session_state["selectbox20"] = value
+v20 = st.selectbox(
+    "selectbox 20 - session_state sync test",
+    options,
+    index=0,
+    key="selectbox20",
+)
+st.write("value 20:", v20)

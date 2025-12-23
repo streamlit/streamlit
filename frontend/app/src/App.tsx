@@ -53,6 +53,7 @@ import {
   DefaultStreamlitEndpoints,
   ErrorDetails,
   IHostConfigResponse,
+  isHostConfigBypassEnabled,
   LibConfig,
   parseUriIntoBaseParts,
   StreamlitEndpoints,
@@ -151,6 +152,7 @@ import { showDevelopmentOptions } from "./showDevelopmentOptions"
 // Used to import fonts + responsive reboot items
 import "@streamlit/app/src/assets/css/theme.scss"
 import { AppNavigation, MaybeStateUpdate } from "./util/AppNavigation"
+import { reconcileHostConfigValues } from "./util/hostConfigHelpers"
 import { ThemeManager } from "./util/useThemeManager"
 
 // vite config builds global variable PACKAGE_METADATA
@@ -456,8 +458,44 @@ export class App extends PureComponent<Props, State> {
     }
   }
 
+  private applyInitialHostConfig(): void {
+    // Apply minimal host configuration from StreamlitConfig.HOST_CONFIG only when
+    // bypass mode is enabled. This ensures the initial config is valid and complete
+    // (has BACKEND_BASE_URL, allowedOrigins, and useExternalAuthToken).
+    // Partial or invalid HOST_CONFIG should be ignored to prevent inconsistent state.
+    if (!isHostConfigBypassEnabled()) {
+      return
+    }
+
+    // isHostConfigBypassEnabled() guarantees HOST_CONFIG exists and is valid
+    const { allowedOrigins, useExternalAuthToken, metricsUrl } =
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      StreamlitConfig.HOST_CONFIG!
+
+    const appConfig: AppConfig = {
+      allowedOrigins,
+      useExternalAuthToken,
+      enableCustomParentMessages: false,
+      blockErrorDialogs: false,
+    }
+
+    const libConfig: LibConfig = {}
+
+    // metricsUrl is optional (so not required for isHostConfigBypassEnabled)
+    // so we only set it if it exists
+    if (metricsUrl !== undefined) {
+      this.metricsMgr.setMetricsConfig(metricsUrl)
+    }
+
+    this.hostCommunicationMgr.setAllowedOrigins(appConfig)
+    this.setAppConfig(appConfig)
+    this.setLibConfig(libConfig)
+  }
+
   initializeConnectionManager(): void {
     this.isInitializingConnectionManager = true
+
+    this.applyInitialHostConfig()
 
     this.connectionManager = new ConnectionManager({
       getLastSessionId: () => this.sessionInfo.last?.sessionId,
@@ -481,6 +519,14 @@ export class App extends PureComponent<Props, State> {
         })
       },
       onHostConfigResp: (response: IHostConfigResponse) => {
+        // Reconcile window config values with endpoint response.
+        // Window values for allowedOrigins, useExternalAuthToken, and metricsUrl
+        // take precedence when present.
+        const reconciledConfig = reconcileHostConfigValues(
+          StreamlitConfig.HOST_CONFIG,
+          response
+        )
+
         const {
           allowedOrigins,
           useExternalAuthToken,
@@ -492,7 +538,7 @@ export class App extends PureComponent<Props, State> {
           blockErrorDialogs,
           setAnonymousCrossOriginPropertyOnMediaElements,
           resourceCrossOriginMode,
-        } = response
+        } = reconciledConfig
 
         const appConfig: AppConfig = {
           allowedOrigins,

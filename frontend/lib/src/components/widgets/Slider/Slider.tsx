@@ -33,7 +33,6 @@ import {
 } from "baseui/slider"
 import { pick } from "lodash-es"
 import moment from "moment"
-import { sprintf } from "sprintf-js"
 
 import { Slider as SliderProto } from "@streamlit/protobuf"
 
@@ -48,6 +47,8 @@ import {
   ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { formatMoment, MomentKind } from "~lib/util/formatMoment"
+import { formatNumber } from "~lib/util/formatNumber"
 import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -404,22 +405,35 @@ function isDateTimeType(element: SliderProto): boolean {
   )
 }
 
+function getMomentKind(element: SliderProto): MomentKind {
+  const { dataType } = element
+  if (dataType === SliderProto.DataType.DATE) {
+    return "date"
+  }
+  if (dataType === SliderProto.DataType.TIME) {
+    return "time"
+  }
+  return "datetime"
+}
+
 function formatValue(value: number, element: SliderProto): string {
   const { format, options } = element
+
+  if (options.length > 0) {
+    // select slider does not support format strings, so we just return the option string.
+    return options[value] ?? ""
+  }
+
   if (isDateTimeType(element)) {
     // Python datetime uses microseconds, but JS & Moment uses milliseconds
     // The timestamp is always set to the UTC timezone, even so, the actual timezone
     // for this timestamp in the backend could be different.
     // However, the frontend component does not need to know about the actual timezone.
-
-    return moment.utc(value / 1000).format(format)
+    const momentDate = moment.utc(value / 1000)
+    return formatMoment(momentDate, format, getMomentKind(element))
   }
 
-  if (options.length > 0) {
-    return sprintf(format, options[value])
-  }
-
-  return sprintf(format, value)
+  return formatNumber(value, format)
 }
 
 /**

@@ -17,6 +17,39 @@
 import { ICustomThemeConfig } from "@streamlit/protobuf"
 
 /**
+ * Minimal host configuration for websocket connection and host communication
+ * without waiting for the health and host-config endpoint responses.
+ *
+ * All fields are optional in the type because host can provide incomplete or no config
+ * via window.__streamlit.HOST_CONFIG. Use isHostConfigBypassEnabled() to validate that
+ * required fields (useExternalAuthToken, allowedOrigins) are present.
+ *
+ * Required for bypass:
+ * - useExternalAuthToken (boolean)
+ * - allowedOrigins (non-empty array)
+ *
+ * Optional:
+ * - metricsUrl
+ *
+ *  Note: The full host config (IHostConfigResponse) includes additional fields
+ */
+export interface MinimalHostConfig {
+  /**
+   * Whether to wait for external auth token via postMessage before connecting.
+   */
+  useExternalAuthToken?: boolean
+  /**
+   * List of allowed origins for postMessage communication with the host.
+   */
+  allowedOrigins?: string[]
+  /**
+   * Where to send metrics data. Can be a URL, "postMessage", or "off".
+   */
+  // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
+  metricsUrl?: string | "postMessage" | "off"
+}
+
+/**
  * Configuration object that can be set on window.__streamlit by the host
  * before the Streamlit bundle loads. These values are captured and frozen
  * at module initialization time for security.
@@ -37,6 +70,8 @@ interface StreamlitWindowConfig {
   DARK_THEME?: ICustomThemeConfig
   // Other options.
   ENABLE_RELOAD_BASED_ON_HARDCODED_STREAMLIT_VERSION?: boolean
+  // Minimal host configuration for fast-path websocket connection.
+  HOST_CONFIG?: MinimalHostConfig
 }
 
 // Extend Window interface for TypeScript
@@ -164,5 +199,8 @@ export const StreamlitConfig = {
     | boolean
     | undefined {
     return capturedConfig?.ENABLE_RELOAD_BASED_ON_HARDCODED_STREAMLIT_VERSION
+  },
+  get HOST_CONFIG(): MinimalHostConfig | undefined {
+    return capturedConfig?.HOST_CONFIG
   },
 } as const

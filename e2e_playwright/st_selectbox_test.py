@@ -33,7 +33,7 @@ if TYPE_CHECKING:
     from e2e_playwright.conftest import ImageCompareFunction
 
 
-NUM_SELECTBOXES = 20
+NUM_SELECTBOXES = 21
 
 
 def get_selectbox_input(
@@ -436,3 +436,34 @@ def test_selectbox_empty_options_with_accept_new_options(app: Page):
 def test_help_tooltip_works(app: Page):
     element_with_help = get_selectbox(app, "selectbox 8 (with callback, help)")
     expect_help_tooltip(app, element_with_help, "Help text")
+
+
+def test_selectbox_session_state_sync_after_open_close(app: Page):
+    """Regression test for https://github.com/streamlit/streamlit/issues/13435.
+
+    When value is set via session_state and user opens/closes dropdown without
+    selecting, the UI should remain in sync with the actual value.
+    """
+    # Initial state should show "male" (default at index 0)
+    selectbox = get_selectbox(app, "selectbox 20 - session_state sync test")
+    expect(selectbox.get_by_text("male", exact=True)).to_be_visible()
+    expect_markdown(app, "value 20: male")
+
+    # Click button to set value to "female" via session_state
+    app.get_by_role("button", name="Set female").click()
+    expect_markdown(app, "value 20: female")
+    expect(selectbox.get_by_text("female", exact=True)).to_be_visible()
+
+    # Open the dropdown
+    selectbox_input = get_selectbox_input(app, "selectbox 20 - session_state sync test")
+    selectbox_input.click()
+
+    # Verify dropdown is open
+    expect(app.locator('[data-baseweb="popover"]').first).to_be_visible()
+
+    # Close by pressing Escape without making a selection
+    app.keyboard.press("Escape")
+
+    # The selectbox should still display "female" (not revert to initial "male")
+    expect(selectbox.get_by_text("female", exact=True)).to_be_visible()
+    expect_markdown(app, "value 20: female")

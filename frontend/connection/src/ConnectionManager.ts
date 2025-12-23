@@ -22,7 +22,7 @@ import { ConnectionState } from "./ConnectionState"
 import { MAX_RETRIES_BEFORE_CLIENT_ERROR } from "./constants"
 import { establishStaticConnection } from "./StaticConnection"
 import { ErrorDetails, IHostConfigResponse, StreamlitEndpoints } from "./types"
-import { getPossibleBaseUris } from "./utils"
+import { getPossibleBaseUris, isHostConfigBypassEnabled } from "./utils"
 import { WebsocketConnection } from "./WebsocketConnection"
 
 const LOG = getLogger("ConnectionManager")
@@ -235,6 +235,7 @@ export class ConnectionManager {
 
   private connectToRunningServer(): WebsocketConnection {
     const baseUriPartsList = getPossibleBaseUris()
+    const enableBypass = isHostConfigBypassEnabled()
     return new WebsocketConnection({
       getLastSessionId: this.props.getLastSessionId,
       endpoints: this.props.endpoints,
@@ -246,6 +247,7 @@ export class ConnectionManager {
       resetHostAuthToken: this.props.resetHostAuthToken,
       sendClientError: this.props.sendClientError,
       onHostConfigResp: this.props.onHostConfigResp,
+      enableBypass,
     })
   }
 }

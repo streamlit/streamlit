@@ -73,7 +73,12 @@ const Selectbox: FC<Props> = ({
   // the value in case the user dismisses the changes by clicking away.
   const valueBeforeRemoval = useRef<string | null>(value)
 
-  useExecuteWhenChanged(() => setValue(propValue), [propValue])
+  useExecuteWhenChanged(() => {
+    setValue(propValue)
+    // Reset the ref when propValue changes externally (e.g., via session state)
+    // to prevent handleBlur from restoring a stale value.
+    valueBeforeRemoval.current = null
+  }, [propValue])
 
   const handleChange = useCallback(
     (params: OnChangeParams): void => {

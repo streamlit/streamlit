@@ -21,6 +21,7 @@ import {
   FetchError,
   fetchWithTimeout,
   getPossibleBaseUris,
+  isHostConfigBypassEnabled,
   parseUriIntoBaseParts,
   serializeForDisplay,
 } from "./utils"
@@ -572,5 +573,155 @@ describe("fetchWithTimeout", () => {
 
     await expect(fetchWithTimeout(mockUrl, 5000)).rejects.toThrow()
     expect(clearTimeoutSpy).toHaveBeenCalled()
+  })
+})
+
+describe("isHostConfigBypassEnabled", () => {
+  afterEach(() => {
+    globalThis.__mockStreamlitConfig = {}
+  })
+
+  it("returns false when StreamlitConfig is empty", () => {
+    globalThis.__mockStreamlitConfig = {}
+    expect(isHostConfigBypassEnabled()).toBe(false)
+  })
+
+  it("returns false when BACKEND_BASE_URL is missing", () => {
+    globalThis.__mockStreamlitConfig = {
+      HOST_CONFIG: {
+        allowedOrigins: ["https://example.com"],
+        useExternalAuthToken: true,
+      },
+    }
+    expect(isHostConfigBypassEnabled()).toBe(false)
+  })
+
+  it("returns false when HOST_CONFIG is missing", () => {
+    globalThis.__mockStreamlitConfig = {
+      BACKEND_BASE_URL: "https://backend.example.com",
+    }
+    expect(isHostConfigBypassEnabled()).toBe(false)
+  })
+
+  it("returns false when allowedOrigins is missing", () => {
+    globalThis.__mockStreamlitConfig = {
+      BACKEND_BASE_URL: "https://backend.example.com",
+      HOST_CONFIG: {
+        useExternalAuthToken: true,
+      },
+    }
+    expect(isHostConfigBypassEnabled()).toBe(false)
+  })
+
+  it("returns false when allowedOrigins is empty array", () => {
+    globalThis.__mockStreamlitConfig = {
+      BACKEND_BASE_URL: "https://backend.example.com",
+      HOST_CONFIG: {
+        allowedOrigins: [],
+        useExternalAuthToken: true,
+      },
+    }
+    expect(isHostConfigBypassEnabled()).toBe(false)
+  })
+
+  it("returns false when allowedOrigins is not an array", () => {
+    globalThis.__mockStreamlitConfig = {
+      BACKEND_BASE_URL: "https://backend.example.com",
+      HOST_CONFIG: {
+        // @ts-expect-error - Testing invalid type
+        allowedOrigins: "https://example.com",
+        useExternalAuthToken: true,
+      },
+    }
+    expect(isHostConfigBypassEnabled()).toBe(false)
+  })
+
+  it("returns false when allowedOrigins contains non-string values", () => {
+    globalThis.__mockStreamlitConfig = {
+      BACKEND_BASE_URL: "https://backend.example.com",
+      HOST_CONFIG: {
+        // @ts-expect-error - Testing invalid type
+        allowedOrigins: ["https://valid.com", 123, null],
+        useExternalAuthToken: true,
+      },
+    }
+    expect(isHostConfigBypassEnabled()).toBe(false)
+  })
+
+  it("returns false when allowedOrigins contains empty strings", () => {
+    globalThis.__mockStreamlitConfig = {
+      BACKEND_BASE_URL: "https://backend.example.com",
+      HOST_CONFIG: {
+        allowedOrigins: ["https://valid.com", ""],
+        useExternalAuthToken: true,
+      },
+    }
+    expect(isHostConfigBypassEnabled()).toBe(false)
+  })
+
+  it("returns false when allowedOrigins contains only empty strings", () => {
+    globalThis.__mockStreamlitConfig = {
+      BACKEND_BASE_URL: "https://backend.example.com",
+      HOST_CONFIG: {
+        allowedOrigins: ["", ""],
+        useExternalAuthToken: true,
+      },
+    }
+    expect(isHostConfigBypassEnabled()).toBe(false)
+  })
+
+  it("returns false when useExternalAuthToken is missing", () => {
+    globalThis.__mockStreamlitConfig = {
+      BACKEND_BASE_URL: "https://backend.example.com",
+      HOST_CONFIG: {
+        allowedOrigins: ["https://example.com"],
+      },
+    }
+    expect(isHostConfigBypassEnabled()).toBe(false)
+  })
+
+  it("returns true when all required fields are present with useExternalAuthToken=true", () => {
+    globalThis.__mockStreamlitConfig = {
+      BACKEND_BASE_URL: "https://backend.example.com",
+      HOST_CONFIG: {
+        allowedOrigins: ["https://example.com"],
+        useExternalAuthToken: true,
+      },
+    }
+    expect(isHostConfigBypassEnabled()).toBe(true)
+  })
+
+  it("returns true when all required fields are present with useExternalAuthToken=false", () => {
+    globalThis.__mockStreamlitConfig = {
+      BACKEND_BASE_URL: "https://backend.example.com",
+      HOST_CONFIG: {
+        allowedOrigins: ["https://example.com"],
+        useExternalAuthToken: false,
+      },
+    }
+    expect(isHostConfigBypassEnabled()).toBe(true)
+  })
+
+  it("returns true with multiple allowed origins", () => {
+    globalThis.__mockStreamlitConfig = {
+      BACKEND_BASE_URL: "https://backend.example.com",
+      HOST_CONFIG: {
+        allowedOrigins: ["https://example.com", "https://other.example.com"],
+        useExternalAuthToken: true,
+      },
+    }
+    expect(isHostConfigBypassEnabled()).toBe(true)
+  })
+
+  it("returns true when additional HOST_CONFIG fields are present", () => {
+    globalThis.__mockStreamlitConfig = {
+      BACKEND_BASE_URL: "https://backend.example.com",
+      HOST_CONFIG: {
+        allowedOrigins: ["https://example.com"],
+        useExternalAuthToken: true,
+        metricsUrl: "postMessage",
+      },
+    }
+    expect(isHostConfigBypassEnabled()).toBe(true)
   })
 })

@@ -104,6 +104,15 @@ export interface Args {
    * scenario).
    */
   onHostConfigResp: (resp: IHostConfigResponse) => void
+
+  /**
+   * Enables host to bypass waiting for health/host-config endpoint responses
+   * in establishing the initial websocket connection. When true, the connection
+   * state machine will connect to the websocket immediately without waiting for
+   * the initial ping cycle to complete. Health and host-config pings continue to run
+   * asynchronously in the background for error handling and configuration.
+   */
+  enableBypass?: boolean
 }
 
 interface MessageQueue {
@@ -117,6 +126,8 @@ const LOG = getLogger("WebsocketConnection")
  * Events of the WebsocketConnection state machine. Here's what the FSM looks
  * like:
  *
+ * DEFAULT PATH (enableBypass = false):
+ *
  *   INITIAL
  *     │
  *     │               on ping succeed
@@ -128,6 +139,27 @@ const LOG = getLogger("WebsocketConnection")
  *     │                                  │
  *     │:on error/closed                  │:on conn succeed
  *   CONNECTED<───────────────────────────┘
+ *
+ *
+ * BYPASS PATH (enableBypass = true):
+ *
+ *   INITIAL ─────────────────────> CONNECTING
+ *                                    │  │
+ *             ┌──────────────────────┘  │
+ *             │:on timeout/error/closed │
+ *             v                         │:on conn succeed
+ *   PINGING_SERVER                      │
+ *     ^  ^                              │
+ *     │  │:on timeout/error/closed      │
+ *     │  └──────────────────────────────┤
+ *     │                                 │
+ *     │:on error/closed                 │
+ *   CONNECTED<──────────────────────────┘
+ *
+ *   Note: In bypass mode, background pings run in parallel with the WebSocket
+ *   connection attempt. The first URI (index 0) is always tried first. If the
+ *   connection fails, the FSM falls back to PINGING_SERVER to discover the
+ *   correct URI via health checks.
  *
  *
  *                    on fatal error or call to .disconnect()
@@ -289,7 +321,17 @@ export class WebsocketConnection {
     switch (this.state) {
       case ConnectionState.INITIAL:
         if (event === "INITIALIZED") {
-          this.setFsmState(ConnectionState.PINGING_SERVER)
+          if (this.args.enableBypass) {
+            // Bypass: Start connecting to the websocket immediately while
+            // running health and host-config pings in parallel (rather than
+            // sequentially). Both must succeed, but they don't gate the WS connection.
+            // This reduces latency while maintaining full error handling and
+            // configuration retrieval.
+            this.setFsmState(ConnectionState.CONNECTING)
+            void this.pingServerInBackground()
+          } else {
+            this.setFsmState(ConnectionState.PINGING_SERVER)
+          }
           return
         }
         break
@@ -345,7 +387,7 @@ export class WebsocketConnection {
   }
 
   private async pingServer(): Promise<void> {
-    this.pingRequest = doInitPings(
+    const currentRequest = doInitPings(
       this.args.baseUriPartsList,
       PING_MINIMUM_RETRY_PERIOD_MS,
       PING_MAXIMUM_RETRY_PERIOD_MS,
@@ -353,10 +395,14 @@ export class WebsocketConnection {
       this.args.sendClientError,
       this.args.onHostConfigResp
     )
+    this.pingRequest = currentRequest
 
     try {
-      this.uriIndex = await this.pingRequest.promise
-      this.pingRequest = undefined
+      this.uriIndex = await currentRequest.promise
+      // Only clear if we're still the active request
+      if (this.pingRequest === currentRequest) {
+        this.pingRequest = undefined
+      }
       this.stepFsm("SERVER_PING_SUCCEEDED")
     } catch (e) {
       if (e instanceof PingCancelledError) {
@@ -368,8 +414,66 @@ export class WebsocketConnection {
         this.stepFsm("FATAL_ERROR", e instanceof Error ? e.message : String(e))
       }
     } finally {
-      // Reset the ping request to avoid memory leaks
-      this.pingRequest = undefined
+      // Only clear if we're still the active request
+      // This prevents a race where a new ping starts before this finally block runs
+      if (this.pingRequest === currentRequest) {
+        this.pingRequest = undefined
+      }
+    }
+  }
+
+  /**
+   * Run the ping cycle in the background (parallel to WebSocket connection attempt).
+   * This is used in bypass mode to maintain the same health check and configuration
+   * behavior as the default path, while allowing the WebSocket connection to start
+   * immediately rather than waiting for pings to complete first.
+   *
+   * Differences from pingServer() (default path):
+   *
+   * Success case:
+   * - pingServer(): Calls stepFsm("SERVER_PING_SUCCEEDED") to advance FSM to CONNECTING
+   * - pingServerInBackground(): No FSM transition (already in CONNECTING state)
+   *
+   * Error handling (consistent between both):
+   * - Cancellation (PingCancelledError): Both log and exit gracefully, no FSM transition
+   * - Unexpected errors: Both call stepFsm("FATAL_ERROR") as defensive programming.
+   *   In practice, doInitPings retries indefinitely and only rejects with
+   *   PingCancelledError, but we handle unexpected errors to guard against future
+   *   implementation changes or unforeseen edge cases.
+   */
+  private async pingServerInBackground(): Promise<void> {
+    const currentRequest = doInitPings(
+      this.args.baseUriPartsList,
+      PING_MINIMUM_RETRY_PERIOD_MS,
+      PING_MAXIMUM_RETRY_PERIOD_MS,
+      this.args.onRetry,
+      this.args.sendClientError,
+      this.args.onHostConfigResp
+    )
+    this.pingRequest = currentRequest
+
+    try {
+      const uriIndex = await currentRequest.promise
+      this.uriIndex = uriIndex
+      LOG.info("Background pings completed successfully")
+    } catch (e) {
+      if (e instanceof PingCancelledError) {
+        // This is an expected error when the connection is cancelled.
+        // We don't need to do anything here.
+        LOG.info("Background pings cancelled")
+      } else {
+        // This is an unexpected error. In practice, doInitPings retries
+        // indefinitely and never rejects on ping failures, but we handle
+        // this case for consistency with pingServer() and robustness.
+        this.stepFsm("FATAL_ERROR", e instanceof Error ? e.message : String(e))
+      }
+    } finally {
+      // Only clear if we're still the active request
+      // This prevents a race where bypass mode fails and transitions to PINGING_SERVER,
+      // starting a new ping before this finally block runs
+      if (this.pingRequest === currentRequest) {
+        this.pingRequest = undefined
+      }
     }
   }
 

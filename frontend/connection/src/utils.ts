@@ -20,6 +20,49 @@ const FINAL_SLASH_RE = /\/+$/
 const INITIAL_SLASH_RE = /^\/+/
 
 /**
+ * Returns true when host has provided sufficient config properties for establishing the
+ * initial websocket connection without waiting for the host-config endpoint response.
+ *
+ * This bypass relies on minimal host configuration provided via window.__streamlit (StreamlitConfig)
+ *
+ * Required fields:
+ * - BACKEND_BASE_URL: string
+ * - HOST_CONFIG.allowedOrigins: non-empty array of strings
+ * - HOST_CONFIG.useExternalAuthToken: boolean (true or false)
+ *
+ * NOTE: changes to this function must be reflected in the mock in App.test.tsx
+ */
+export function isHostConfigBypassEnabled(): boolean {
+  const initialHostConfig = StreamlitConfig.HOST_CONFIG
+
+  if (!initialHostConfig) {
+    return false
+  }
+
+  const { allowedOrigins, useExternalAuthToken } = initialHostConfig
+
+  // Validate required fields
+  const hasValidBackendBaseUrl = Boolean(StreamlitConfig.BACKEND_BASE_URL)
+
+  // Validate allowedOrigins is a non-empty array of non-empty strings
+  const hasValidAllowedOrigins =
+    Array.isArray(allowedOrigins) &&
+    allowedOrigins.length > 0 &&
+    allowedOrigins.every(
+      origin => typeof origin === "string" && origin.length > 0
+    )
+
+  const hasValidUseExternalAuthToken =
+    typeof useExternalAuthToken === "boolean"
+
+  return (
+    hasValidBackendBaseUrl &&
+    hasValidAllowedOrigins &&
+    hasValidUseExternalAuthToken
+  )
+}
+
+/**
  * Return the BaseUriParts for either the given url or the global window
  */
 export function parseUriIntoBaseParts(url?: string): URL {

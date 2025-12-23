@@ -20,6 +20,7 @@ from typing import (
     Any,
     Final,
     NoReturn,
+    cast,
 )
 
 from streamlit import config, logger, runtime
@@ -42,7 +43,7 @@ from streamlit.runtime.scriptrunner_utils.script_run_context import (
 from streamlit.url_util import make_url_path
 
 if TYPE_CHECKING:
-    from streamlit.runtime.scriptrunner_utils.script_run_context import UserInfo
+    from streamlit.runtime.scriptrunner_utils.script_run_context import UserInfoType
 
 
 _LOGGER: Final = logger.get_logger(__name__)
@@ -67,8 +68,7 @@ def login(provider: str | None = None) -> None:
     is an extension of OAuth 2.0, you can't use generic OAuth providers.
     Streamlit parses the user's identity token and surfaces its attributes in
     ``st.user``. If the provider returns an access token, that
-    token is ignored. Therefore, this command will not allow your app to act on
-    behalf of a user in a secure system.
+    token is ignored unless you explicitly expose it.
 
     For all providers, there are two shared settings, ``redirect_uri`` and
     ``cookie_secret``, which you must specify in an ``[auth]`` dictionary
@@ -361,7 +361,7 @@ def generate_login_redirect_url(provider: str) -> str:
     return f"{login_path}?provider={provider_token}"
 
 
-def _get_user_info() -> UserInfo:
+def _get_user_info() -> UserInfoType:
     ctx = _get_script_run_ctx()
     if ctx is None:
         _LOGGER.warning(
@@ -378,7 +378,99 @@ def _get_user_info() -> UserInfo:
     return context_user_info
 
 
-class UserInfoProxy(Mapping[str, str | bool | None]):
+class TokensProxy(Mapping[str, str]):
+    """
+    A read-only, dict-like object for accessing exposed tokens from the
+    identity provider.
+
+    This class provides access to tokens that have been explicitly exposed via
+    the ``expose_tokens`` setting in your authentication configuration. Tokens
+    are accessed through ``st.user.tokens`` and contain sensitive credentials
+    that your app can use to authenticate with external services on behalf of
+    the logged-in user.
+
+    To expose tokens, add the ``expose_tokens`` parameter to your authentication
+    configuration in ``.streamlit/secrets.toml``. You can specify a single token
+    type as a string or multiple token types as a list. Streamlit supports
+    exposing ``"id"`` tokens (identity tokens) and ``"access"`` tokens (access
+    tokens). If ``expose_tokens`` is not configured, ``st.user.tokens`` will be
+    empty.
+
+    .. Warning::
+        Tokens are sensitive credentials that should be handled securely. Never
+        expose tokens in your app's UI, logs, or error messages. Only use tokens
+        for server-side API calls, and be mindful of token expiration times.
+        Only expose tokens if your app needs them for specific API integrations.
+
+    You can access token values using either key notation (``st.user.tokens["id"]``)
+    or attribute notation (``st.user.tokens.id``). The object is read-only to
+    prevent accidental modification of sensitive credentials.
+
+    .. Note::
+        If no tokens are exposed or if the user is not logged in,
+        ``st.user.tokens`` will be an empty dict-like object. Attempting to
+        access a non-existent token will raise a ``KeyError`` (for key notation)
+        or ``AttributeError`` (for attribute notation).
+
+    Examples
+    --------
+    **Example 1: Expose the ID token**
+
+    To expose only the identity token, add ``expose_tokens`` to your
+    authentication configuration. This example uses an unnamed default provider.
+
+    ``.streamlit/secrets.toml``:
+
+    >>> [auth]
+    >>> redirect_uri = "http://localhost:8501/oauth2callback"
+    >>> cookie_secret = "xxx"
+    >>> client_id = "xxx"
+    >>> client_secret = "xxx"
+    >>> server_metadata_url = "https://accounts.google.com/.well-known/openid-configuration"  # fmt: skip
+    >>> expose_tokens = "id"
+
+    Your app code:
+
+    >>> import streamlit as st
+    >>>
+    >>> if st.user.is_logged_in:
+    >>>     try:
+    >>>         id_token = st.user.tokens["id"]
+    >>> # Use the token for API verification (never display it!)
+    >>>         st.success("ID token retrieved successfully")
+    >>>     except KeyError:
+    >>>         st.warning("ID token not available")
+    """
+
+    def __init__(self, tokens: dict[str, str]) -> None:
+        self._tokens = tokens
+
+    def __getitem__(self, key: str) -> str:
+        return self._tokens[key]
+
+    def __getattr__(self, key: str) -> str:
+        try:
+            return self._tokens[key]
+        except KeyError:
+            raise AttributeError(f'Token "{key}" is not exposed or does not exist.')
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        if name.startswith("_"):
+            super().__setattr__(name, value)
+        else:
+            raise StreamlitAPIException("st.user.tokens cannot be modified")
+
+    def __setitem__(self, name: str, value: Any) -> None:
+        raise StreamlitAPIException("st.user.tokens cannot be modified")
+
+    def __iter__(self) -> Iterator[str]:
+        return iter(self._tokens)
+
+    def __len__(self) -> int:
+        return len(self._tokens)
+
+
+class UserInfoProxy(Mapping[str, str | bool | TokensProxy | None]):
     """
     A read-only, dict-like object for accessing information about the current\
     user.
@@ -489,15 +581,19 @@ class UserInfoProxy(Mapping[str, str | bool | None]):
     >>> }
     """
 
-    def __getitem__(self, key: str) -> str | bool | None:
+    def __getitem__(self, key: str) -> str | bool | None | TokensProxy:
+        if key == "tokens":
+            return self.tokens
         try:
-            return _get_user_info()[key]
+            return cast("str | bool | None", _get_user_info()[key])
         except KeyError:
             raise KeyError(f'st.user has no key "{key}".')
 
-    def __getattr__(self, key: str) -> str | bool | None:
+    def __getattr__(self, key: str) -> str | bool | None | TokensProxy:
+        if key == "tokens":
+            return self.tokens
         try:
-            return _get_user_info()[key]
+            return cast("str | bool | None", _get_user_info()[key])
         except KeyError:
             raise AttributeError(f'st.user has no attribute "{key}".')
 
@@ -513,7 +609,7 @@ class UserInfoProxy(Mapping[str, str | bool | None]):
     def __len__(self) -> int:
         return len(_get_user_info())
 
-    def to_dict(self) -> UserInfo:
+    def to_dict(self) -> UserInfoType:
         """
         Get user info as a dictionary.
 
@@ -527,6 +623,13 @@ class UserInfoProxy(Mapping[str, str | bool | None]):
             A dictionary of the current user's information.
         """
         return _get_user_info()
+
+    @property
+    @gather_metrics("user.tokens")
+    def tokens(self) -> TokensProxy:
+        """Access exposed tokens via a dict-like object."""
+        user_info = _get_user_info()
+        return TokensProxy(cast("dict[str, str]", user_info.get("tokens", {})))
 
 
 has_shown_experimental_user_warning = False
