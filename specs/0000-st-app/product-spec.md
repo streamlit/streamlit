@@ -363,12 +363,13 @@ from contextlib import asynccontextmanager
 async def lifespan(app):
     # Startup: runs before accepting connections (#7688, #8991)
     print("Initializing global resources...")
+    # load_ml_model uses cache_data and init_db_pool uses cache_resource, so they will be pre-warmed and initialized before the first user connects.
     from myapp.cache import load_ml_model, init_db_pool
 
     model = load_ml_model()   # Pre-warm cache
     db = init_db_pool()       # Initialize connection pool
 
-    yield {"model": model, "db": db}
+    yield
 
     # Shutdown: cleanup global resources (#7688)
     print("Cleaning up...")
