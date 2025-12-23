@@ -78,69 +78,69 @@ T = TypeVar("T")
 
 
 class MultiSelectSerde(Generic[T]):
+    """Serializer/Deserializer for multiselect widget values.
+
+    Handles conversion between Python values and string representations
+    that are sent to/from the frontend. The frontend now stores raw option
+    values (as strings) instead of formatted labels, which allows dynamic
+    format_func changes without losing selections.
+    """
+
     options: Sequence[T]
-    formatted_options: list[str]
-    formatted_option_to_option_index: dict[str, int]
+    raw_options_as_strings: list[str]
     default_options_indices: list[int]
 
     def __init__(
         self,
         options: Sequence[T],
         *,
-        formatted_options: list[str],
-        formatted_option_to_option_index: dict[str, int],
+        raw_options_as_strings: list[str],
         default_options_indices: list[int] | None = None,
     ) -> None:
         """Initialize the MultiSelectSerde.
 
-        We do not store an option_to_formatted_option mapping because the generic
-        options might not be hashable, which would raise a RuntimeError. So we do
-        two lookups: option -> index -> formatted_option[index].
-
-
         Parameters
         ----------
         options : Sequence[T]
-            The sequence of selectable options.
-        formatted_options : list[str]
-            The string representations of each option. The formatted_options correspond
-            to the options sequence by index.
-        formatted_option_to_option_index : dict[str, int]
-            A mapping from formatted option strings to their corresponding indices in
-            the options sequence.
-        default_option_index : int or None, optional
-            The index of the default option to use when no selection is made.
-            If None, no default option is selected.
+            The sequence of selectable options (raw Python values).
+        raw_options_as_strings : list[str]
+            The raw options converted to strings. These correspond to the
+            options sequence by index and are used for frontend storage.
+        default_options_indices : list[int] or None, optional
+            The indices of the default options to use when no selection is made.
+            If None, no default options are selected.
         """
-
         self.options = options
-        self.formatted_options = formatted_options
-        self.formatted_option_to_option_index = formatted_option_to_option_index
+        self.raw_options_as_strings = raw_options_as_strings
         self.default_options_indices = default_options_indices or []
 
     def serialize(self, value: list[T | str] | list[T]) -> list[str]:
+        """Convert Python values to raw strings for frontend storage."""
         converted_value = convert_anything_to_list(value)
         values: list[str] = []
         for v in converted_value:
             try:
                 option_index = self.options.index(v)
-                values.append(self.formatted_options[option_index])
+                values.append(self.raw_options_as_strings[option_index])
             except ValueError:  # noqa: PERF203
-                # at this point we know that v is a string, otherwise
-                # it would have been found in the options
-                values.append(cast("str", v))
+                # Value not in options - it's a custom value (accept_new_options)
+                # Just convert to string
+                values.append(str(v))
         return values
 
     def deserialize(self, ui_value: list[str] | None) -> list[T | str] | list[T]:
+        """Convert raw strings from frontend back to Python values."""
         if ui_value is None:
             return [self.options[i] for i in self.default_options_indices]
 
         values: list[T | str] = []
         for v in ui_value:
+            # Try to find the raw string in our raw_options_as_strings
             try:
-                option_index = self.formatted_options.index(v)
+                option_index = self.raw_options_as_strings.index(v)
                 values.append(self.options[option_index])
             except ValueError:  # noqa: PERF203
+                # Not found - treat as custom value (accept_new_options)
                 values.append(v)
         return values
 
@@ -477,9 +477,9 @@ class MultiSelectMixin:
         maybe_raise_label_warnings(label, label_visibility)
 
         indexable_options = convert_to_sequence_and_check_comparable(options)
-        formatted_options, formatted_option_to_option_index = create_mappings(
-            indexable_options, format_func
-        )
+        formatted_options, _ = create_mappings(indexable_options, format_func)
+        # Convert raw options to strings for proto transmission
+        raw_options_as_strings = [str(opt) for opt in indexable_options]
 
         default_values = get_default_indices(indexable_options, default)
 
@@ -520,15 +520,16 @@ class MultiSelectMixin:
         proto.label_visibility.value = get_label_visibility_proto_value(
             label_visibility
         )
-        proto.options[:] = formatted_options
+        # Send raw option values (as strings) and formatted labels separately
+        proto.options[:] = raw_options_as_strings
+        proto.option_labels[:] = formatted_options
         if help is not None:
             proto.help = dedent(help)
         proto.accept_new_options = accept_new_options
 
         serde = MultiSelectSerde(
             indexable_options,
-            formatted_options=formatted_options,
-            formatted_option_to_option_index=formatted_option_to_option_index,
+            raw_options_as_strings=raw_options_as_strings,
             default_options_indices=default_values,
         )
 

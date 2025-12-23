@@ -23,7 +23,6 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.elements.lib.options_selector_utils import create_mappings
 from streamlit.elements.widgets.multiselect import (
     MultiSelectSerde,
     _get_default_count,
@@ -109,14 +108,16 @@ class Multiselectbox(DeltaGeneratorTestCase):
     def test_format_function(self):
         """Test that it formats options."""
         arg_options = [{"name": "john", "height": 180}, {"name": "lisa", "height": 200}]
-        proto_options = ["john", "lisa"]
+        raw_options = [str(opt) for opt in arg_options]
+        formatted_labels = ["john", "lisa"]
 
         st.multiselect("the label", arg_options, format_func=lambda x: x["name"])
 
         c = self.get_delta_from_queue().new_element.multiselect
         assert c.label == "the label"
         assert c.default[:] == []
-        assert c.options == proto_options
+        assert list(c.options) == raw_options
+        assert list(c.option_labels) == formatted_labels
 
     @parameterized.expand(
         [
@@ -593,23 +594,32 @@ def test_multiselect_enum_coercion():
 class TestMultiSelectSerde:
     def test_serialize(self):
         options = ["Option A", "Option B", "Option C"]
-        formatted_options, formatted_option_to_option_index = create_mappings(options)
+        raw_options_as_strings = [str(opt) for opt in options]
         serde = MultiSelectSerde(
             options,
-            formatted_options=formatted_options,
-            formatted_option_to_option_index=formatted_option_to_option_index,
+            raw_options_as_strings=raw_options_as_strings,
         )
 
-        res = serde.serialize(["A", "C"])
-        assert res == ["A", "C"]
+        res = serde.serialize(["Option A", "Option C"])
+        assert res == ["Option A", "Option C"]
+
+    def test_serialize_custom_value(self):
+        options = ["Option A", "Option B", "Option C"]
+        raw_options_as_strings = [str(opt) for opt in options]
+        serde = MultiSelectSerde(
+            options,
+            raw_options_as_strings=raw_options_as_strings,
+        )
+
+        res = serde.serialize(["Custom", "Option C"])
+        assert res == ["Custom", "Option C"]
 
     def test_serialize_empty_list(self):
         options = ["Option A", "Option B", "Option C"]
-        formatted_options, formatted_option_to_option_index = create_mappings(options)
+        raw_options_as_strings = [str(opt) for opt in options]
         serde = MultiSelectSerde(
             options,
-            formatted_options=formatted_options,
-            formatted_option_to_option_index=formatted_option_to_option_index,
+            raw_options_as_strings=raw_options_as_strings,
         )
 
         res = serde.serialize([])
@@ -617,41 +627,32 @@ class TestMultiSelectSerde:
 
     def test_serialize_with_format_func(self):
         options = ["Option A", "Option B", "Option C"]
-
-        def format_func(x):
-            return f"Format: {x}"
-
-        formatted_options, formatted_option_to_option_index = create_mappings(
-            options, format_func
-        )
+        raw_options_as_strings = [str(opt) for opt in options]
         serde = MultiSelectSerde(
             options,
-            formatted_options=formatted_options,
-            formatted_option_to_option_index=formatted_option_to_option_index,
+            raw_options_as_strings=raw_options_as_strings,
         )
 
-        res = serde.serialize(["A", "Option C"])
-        assert res == ["A", "Format: Option C"]
+        res = serde.serialize(["Option C"])
+        assert res == ["Option C"]
 
     def test_deserialize(self):
         options = ["Option A", "Option B", "Option C"]
-        formatted_options, formatted_option_to_option_index = create_mappings(options)
+        raw_options_as_strings = [str(opt) for opt in options]
         serde = MultiSelectSerde(
             options,
-            formatted_options=formatted_options,
-            formatted_option_to_option_index=formatted_option_to_option_index,
+            raw_options_as_strings=raw_options_as_strings,
         )
 
-        res = serde.deserialize(["Option A", "Option C", "B"])
-        assert res == ["Option A", "Option C", "B"]
+        res = serde.deserialize(["Option A", "Option C", "Custom"])
+        assert res == ["Option A", "Option C", "Custom"]
 
     def test_deserialize_empty_list(self):
         options = ["Option A", "Option B", "Option C"]
-        formatted_options, formatted_option_to_option_index = create_mappings(options)
+        raw_options_as_strings = [str(opt) for opt in options]
         serde = MultiSelectSerde(
             options,
-            formatted_options=formatted_options,
-            formatted_option_to_option_index=formatted_option_to_option_index,
+            raw_options_as_strings=raw_options_as_strings,
         )
 
         res = serde.deserialize([])
@@ -660,11 +661,10 @@ class TestMultiSelectSerde:
     def test_deserialize_with_default_indices(self):
         options = ["Option A", "Option B", "Option C"]
         default_indices = [0, 2]
-        formatted_options, formatted_option_to_option_index = create_mappings(options)
+        raw_options_as_strings = [str(opt) for opt in options]
         serde = MultiSelectSerde(
             options,
-            formatted_options=formatted_options,
-            formatted_option_to_option_index=formatted_option_to_option_index,
+            raw_options_as_strings=raw_options_as_strings,
             default_options_indices=default_indices,
         )
 
@@ -672,26 +672,19 @@ class TestMultiSelectSerde:
         assert res == ["Option A", "Option C"]
 
     def test_deserialize_complex_options(self):
-        # Test with more complex option types
         complex_options = [
             {"id": 1, "name": "First"},
             {"id": 2, "name": "Second"},
             {"id": 3, "name": "Third"},
         ]
+        raw_options_as_strings = [str(opt) for opt in complex_options]
 
-        def format_func(x):
-            return x["name"]
-
-        formatted_options, formatted_option_to_option_index = create_mappings(
-            complex_options, format_func
-        )
         serde = MultiSelectSerde(
             complex_options,
-            formatted_options=formatted_options,
-            formatted_option_to_option_index=formatted_option_to_option_index,
+            raw_options_as_strings=raw_options_as_strings,
         )
 
-        res = serde.deserialize(["First", "Third"])
+        res = serde.deserialize([raw_options_as_strings[0], raw_options_as_strings[2]])
         assert res == [complex_options[0], complex_options[2]]
 
 

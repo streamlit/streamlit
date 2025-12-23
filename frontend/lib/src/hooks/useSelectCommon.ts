@@ -30,6 +30,7 @@ export interface SelectOption {
 
 export interface UseSelectCommonArgs {
   options: string[]
+  optionLabels?: string[]
   isMulti: boolean
   acceptNewOptions: boolean
   placeholderInput: string
@@ -66,18 +67,24 @@ export interface UseSelectCommonResult {
 export function useSelectCommon(
   args: UseSelectCommonArgs
 ): UseSelectCommonResult {
-  const { options, isMulti, acceptNewOptions, placeholderInput } = args
+  const {
+    options,
+    optionLabels,
+    isMulti,
+    acceptNewOptions,
+    placeholderInput,
+  } = args
+
+  const labels = optionLabels ?? options
 
   const selectOptions: SelectOption[] = useMemo(
     () =>
       options.map((option: string, index: number) => ({
-        label: option,
+        label: labels[index] ?? option,
         value: option,
-        // We are using an id because if multiple options are equal,
-        // we have observed weird UI glitches
         id: `${option}_${index}`,
       })),
-    [options]
+    [options, labels]
   )
 
   // Get placeholder and disabled state using utility function

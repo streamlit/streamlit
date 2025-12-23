@@ -63,13 +63,13 @@ const getStateFromWidgetMgr = (
 const getDefaultStateFromProto = (
   element: MultiSelectProto
 ): MultiselectValue => {
-  return element.default.map(i => element.options[i]) ?? null
+  return element.default.map(i => element.options[i])
 }
 
 const getCurrStateFromProto = (
   element: MultiSelectProto
 ): MultiselectValue => {
-  return element.rawValues ?? null
+  return element.rawValues
 }
 
 const updateWidgetMgrState = (
@@ -168,17 +168,19 @@ const Multiselect: FC<Props> = props => {
     [element.maxSelections, generateNewState, setValueWithSource, value.length]
   )
 
-  const { options } = element
+  const { options, optionLabels } = element
+
+  const displayLabels = optionLabels.length > 0 ? optionLabels : options
 
   const {
     placeholder,
     disabled: shouldDisable,
     selectOptions,
     inputReadOnly,
-    valuesToUiMulti,
     createFilterOptions,
   } = useSelectCommon({
     options,
+    optionLabels: displayLabels,
     isMulti: true,
     acceptNewOptions: element.acceptNewOptions ?? false,
     placeholderInput: element.placeholder,
@@ -195,10 +197,13 @@ const Multiselect: FC<Props> = props => {
   )
 
   const disabled = props.disabled || shouldDisable
-  const valueFromState = useMemo(
-    () => valuesToUiMulti(value),
-    [valuesToUiMulti, value]
-  )
+  const valueFromState = useMemo((): Option[] => {
+    return value.map(v => {
+      const index = options.indexOf(v)
+      const label = index >= 0 ? displayLabels[index] : v
+      return { label, value: v }
+    })
+  }, [value, options, displayLabels])
 
   // Calculate the max height of the selectbox based on the baseFontSize
   // to better support advanced theming

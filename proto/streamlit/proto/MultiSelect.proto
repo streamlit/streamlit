@@ -25,6 +25,7 @@ message MultiSelect {
   string id = 1;
   string label = 2;
   repeated int32 default = 3;
+  // Raw option values (the actual Python values converted to strings)
   repeated string options = 4;
   string help = 5;
   string form_id = 6;
@@ -40,6 +41,8 @@ message MultiSelect {
   int32 max_selections = 11;
   string placeholder = 12;
   optional bool accept_new_options = 13;
+  // Formatted option labels for display (result of format_func applied to options)
+  repeated string option_labels = 15;
 
-  // Next: 15
+  // Next: 16
 }
