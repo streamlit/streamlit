@@ -115,6 +115,50 @@ An ASGI-compatible application object that can be:
 - Auto-detected and run via `streamlit run app.py`
 - Run directly with any ASGI server (e.g., `uvicorn app:app`)
 
+### Behavior
+
+**App discovery:**
+
+When `streamlit run app.py` is invoked, Streamlit checks if the script contains an
+`st.App` instance (similar to [FastAPI CLI discovery](https://github.com/fastapi/fastapi-cli/blob/main/src/fastapi_cli/discover.py)) by checking for a `st.App` instance named `app`. If no `st.App` instance is found, Streamlit will run the script in traditional mode.
+
+**Lifespan execution order:**
+
+1. Streamlit Runtime starts (enables full `@st.cache_resource` support)
+2. User's lifespan runs (startup code)
+3. Server starts accepting connections
+4. ... application runs ...
+5. Server stops accepting connections
+6. User's lifespan runs (shutdown code)
+7. Streamlit Runtime stops
+
+If an error occurs during the lifespan, Streamlit will log the error and abort the startup.
+
+**Route protection:**
+
+Streamlit reserves certain route prefixes. User routes cannot override:
+
+| Route Prefix | Purpose |
+|--------------|---------|
+| `/_stcore/*` | Core Streamlit API (WebSocket, health, upload) |
+| `/media/*` | Media file serving |
+| `/component/*` | Custom component serving |
+
+Conflicting routes raise `ValueError` at startup.
+
+**Middleware ordering:**
+
+```
+Request → [User Middleware] → [Streamlit Middleware] → [Route Handler]
+Response ← [User Middleware] ← [Streamlit Middleware] ← [Route Handler]
+```
+
+User middleware wraps Streamlit's internal middleware, enabling:
+
+- Auth middleware to reject requests before reaching Streamlit
+- Logging middleware to see all requests/responses
+- Security headers to be added to all responses
+
 ### How `st.App` Addresses Feature Requests
 
 #### Custom HTTP Routes (#439, #9673, #6195, #9090)
@@ -337,56 +381,6 @@ app = st.App(
     ],
 )
 ```
-
-### Behavior
-
-**App discovery:**
-
-When `streamlit run app.py` is invoked, Streamlit checks if the script contains an
-`st.App` instance (similar to [FastAPI CLI discovery](https://github.com/fastapi/fastapi-cli/blob/main/src/fastapi_cli/discover.py)) by checking for a `st.App` instance named `app`. If no `st.App` instance is found, Streamlit will run the script in traditional mode.
-
-**Lifespan execution order:**
-
-1. Streamlit Runtime starts (enables full `@st.cache_resource` support)
-2. User's lifespan runs (startup code)
-3. Server starts accepting connections
-4. ... application runs ...
-5. Server stops accepting connections
-6. User's lifespan runs (shutdown code)
-7. Streamlit Runtime stops
-
-If an error occurs during the lifespan, Streamlit will log the error and abort the startup.
-
-**Route protection:**
-
-Streamlit reserves certain route prefixes. User routes cannot override:
-
-| Route Prefix | Purpose |
-|--------------|---------|
-| `/_stcore/*` | Core Streamlit API (WebSocket, health, upload) |
-| `/media/*` | Media file serving |
-| `/component/*` | Custom component serving |
-
-Conflicting routes raise `ValueError` at startup.
-
-**Middleware ordering:**
-
-```
-Request → [User Middleware] → [Streamlit Middleware] → [Route Handler]
-Response ← [User Middleware] ← [Streamlit Middleware] ← [Route Handler]
-```
-
-User middleware wraps Streamlit's internal middleware, enabling:
-
-- Auth middleware to reject requests before reaching Streamlit
-- Logging middleware to see all requests/responses
-- Security headers to be added to all responses
-
-### Dependencies
-
-- Requires Starlette migration to be complete ([#13375](https://github.com/streamlit/streamlit/pull/13375))
-- Starlette 0.27.0+ for full lifespan support
-- Optional: uvicorn for running as standalone ASGI server
 
 ## Checklist
 
