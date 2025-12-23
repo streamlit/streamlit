@@ -359,15 +359,20 @@ class CacheResourceAPI:
             - A number specifying the time in seconds.
             - A string specifying the time in a format supported by `Pandas's
               Timedelta constructor <https://pandas.pydata.org/docs/reference/api/pandas.Timedelta.html>`_,
-              e.g. ``"1d"``, ``"1.5 days"``, or ``"1h23s"``.
+              e.g. ``"1d"``, ``"1.5 days"``, or ``"1h23s"``. Note that number strings
+              without units are treated by Pandas as nanoseconds.
             - A ``timedelta`` object from `Python's built-in datetime library
               <https://docs.python.org/3/library/datetime.html#timedelta-objects>`_,
               e.g. ``timedelta(days=1)``.
+
+            Changes to this value will trigger a new cache to be created.
 
         max_entries : int or None
             The maximum number of entries to keep in the cache, or None
             for an unbounded cache. When a new entry is added to a full cache,
             the oldest cached entry will be removed. Defaults to None.
+
+            Changes to this value will trigger a new cache to be created.
 
         show_spinner : bool or str
             Enable the spinner. Default is True to show a spinner when there is
@@ -387,10 +392,6 @@ class CacheResourceAPI:
             False, the current cached value is discarded, and the decorated function
             is called to compute a new value. This is useful e.g. to check the
             health of database connections.
-
-            This is not used as a part of the cache key - meaning changes to this
-            function between script runs will not trigger a new resource being
-            generated.
 
         hash_funcs : dict or None
             Mapping of types or fully qualified names to hash functions.
@@ -413,10 +414,6 @@ class CacheResourceAPI:
             session state.
 
             This will NOT be called when an app is shut down.
-
-            This function is not used as a part of the cache key - meaning changes to
-            this function between script runs will not trigger a new resource being
-            generated.
 
         Example
         -------
