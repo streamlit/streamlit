@@ -30,7 +30,12 @@ V = TypeVar("V")
 
 
 class TTLCleanupCache(TTLCache[K, V]):
-    """A TTLCache that supports hooks called when items are released."""
+    """A TTLCache that supports hooks called when items are released.
+
+    Note that item release only happens reliably when done automatically due to TTL
+    or maxsize expiration - and specifically does not happen when using ``del``. To
+    remove an item and have on_release be called, use safe_del.
+    """
 
     def __init__(
         self,
@@ -69,3 +74,12 @@ class TTLCleanupCache(TTLCache[K, V]):
             self._on_release(value)
 
         return items
+
+    def safe_del(self, key: K) -> None:
+        """Delete that calls _on_release."""
+        has_value = key in self
+        old_value = self.get(key)
+        del self[key]
+        # Check has_value, not None, to allow for None values.
+        if has_value:
+            self._on_release(old_value)

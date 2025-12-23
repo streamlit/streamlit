@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import math
 
 from streamlit.runtime.caching.ttl_cleanup_cache import TTLCleanupCache
 
@@ -90,3 +91,47 @@ class TestTTLCleanupCache:
         # Manually expire, and validate the last item will be removed.
         test_cache.expire()
         assert released_items == [10, 11, 12, 13, 14]
+
+    def test_clear_calls_on_release(self):
+        """Tests that clear() will call release() on all elements."""
+        released_items = []
+
+        def on_release(item: int) -> None:
+            released_items.append(item)
+
+        test_cache = TTLCleanupCache(
+            maxsize=math.inf, ttl=math.inf, timer=fake_timer, on_release=on_release
+        )
+
+        # Add a few elements to the cache.
+        for i in range(5):
+            test_cache[i] = i + 10
+
+        # No items released yet.
+        assert released_items == []
+        test_cache.clear()
+
+        assert released_items == [i + 10 for i in range(5)]
+
+    def test_safe_del_calls_release(self):
+        """Tests that safe_del() will call release() on elements."""
+        released_items = []
+
+        def on_release(item: int) -> None:
+            released_items.append(item)
+
+        test_cache = TTLCleanupCache(
+            maxsize=math.inf, ttl=math.inf, timer=fake_timer, on_release=on_release
+        )
+
+        # Add a few elements to the cache.
+        for i in range(5):
+            test_cache[i] = i + 10
+
+        # No items released yet.
+        assert released_items == []
+
+        test_cache.safe_del(1)
+        test_cache.safe_del(3)
+        assert released_items == [11, 13]
+        assert list(test_cache.keys()) == [0, 2, 4]

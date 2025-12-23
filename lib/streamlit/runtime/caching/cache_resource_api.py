@@ -140,10 +140,14 @@ class ResourceCaches(StatsProvider):
 
     def clear_all(self) -> None:
         """Clear all resource caches."""
+        # Hold the lock long enough to copy the caches.
         with self._caches_lock:
-            for cache in self._function_caches.values():
-                cache.clear()
+            caches = list(self._function_caches.values())
             self._function_caches = {}
+
+        # Clear each cache to ensure any on_release functions are called.
+        for cache in caches:
+            cache.clear()
 
     def get_stats(
         self, _family_names: Sequence[str] | None = None
@@ -191,7 +195,7 @@ class CachedResourceFuncInfo(CachedFuncInfo[P, R]):
         validate: ValidateFunc | None,
         hash_funcs: HashFuncsDict | None = None,
         show_time: bool = False,
-        on_release: OnRelease = _no_op_release,
+        on_release: OnRelease | None = None,
     ) -> None:
         super().__init__(
             func,
@@ -202,7 +206,7 @@ class CachedResourceFuncInfo(CachedFuncInfo[P, R]):
         self.max_entries = max_entries
         self.ttl = ttl
         self.validate = validate
-        self.on_release = on_release
+        self.on_release = on_release or _no_op_release
 
     @property
     def cache_type(self) -> CacheType:
@@ -509,7 +513,7 @@ class CacheResourceAPI:
                     ttl=ttl,
                     validate=validate,
                     hash_funcs=hash_funcs,
-                    on_release=on_release or _no_op_release,
+                    on_release=on_release,
                 )
             )
 
@@ -522,7 +526,7 @@ class CacheResourceAPI:
                 ttl=ttl,
                 validate=validate,
                 hash_funcs=hash_funcs,
-                on_release=on_release or _no_op_release,
+                on_release=on_release,
             )
         )
 
@@ -602,9 +606,28 @@ class ResourceCache(Cache[R]):
     def _clear(self, key: str | None = None) -> None:
         with self._mem_cache_lock:
             if key is None:
-                self._mem_cache.clear()
+                # Clear the whole cache.
+                # TTLCleanupCache will stop a clear() excetion when an exception is
+                # thrown by an on_release. To ensure that our clear() actually flushes
+                # the cache and calls all cleanup functions, we clear each item
+                # individually. We also collect exceptions for logging.
+                errors: list[Exception] = []
+                while len(self._mem_cache) > 0:
+                    try:
+                        # TTLCleanupCache only reliably calls on_release for popitem -
+                        # so just use that.
+                        self._mem_cache.popitem()
+                    except Exception as e:  # noqa: PERF203 (we require a tight scope)
+                        errors.append(e)
+
+                # Log all errors encountered at warning. This could potentially result in a
+                # lot of log spam in the worst case - but for resources, a huge cache is very
+                # unlikely.
+                for error in errors:
+                    _LOGGER.warning("Error clearing resource cache: %s", error)
             elif key in self._mem_cache:
-                del self._mem_cache[key]
+                # Note: This code path does not seem to be reachable through public APIs.
+                self._mem_cache.safe_del(key)
 
     def get_stats(
         self, _family_names: Sequence[str] | None = None
