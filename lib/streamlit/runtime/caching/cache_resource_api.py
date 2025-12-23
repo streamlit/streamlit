@@ -607,7 +607,7 @@ class ResourceCache(Cache[R]):
         with self._mem_cache_lock:
             if key is None:
                 # Clear the whole cache.
-                # TTLCleanupCache will stop a clear() excetion when an exception is
+                # TTLCleanupCache will stop a clear() exception when an exception is
                 # thrown by an on_release. To ensure that our clear() actually flushes
                 # the cache and calls all cleanup functions, we clear each item
                 # individually. We also collect exceptions for logging.
