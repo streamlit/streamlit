@@ -23,6 +23,7 @@ from typing import TYPE_CHECKING, Any, Final
 from urllib.parse import urlparse
 
 from streamlit import config
+from streamlit.auth_util import get_cookie_with_chunks, get_expose_tokens_config
 from streamlit.logger import get_logger
 from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.runtime.runtime_util import serialize_forward_msg
@@ -37,6 +38,7 @@ from streamlit.web.server.server_util import (
 )
 from streamlit.web.server.starlette import starlette_app_utils
 from streamlit.web.server.starlette.starlette_server_config import (
+    TOKENS_COOKIE_NAME,
     USER_COOKIE_NAME,
     WEBSOCKET_MAX_SEND_QUEUE_SIZE,
     XSRF_COOKIE_NAME,
@@ -159,8 +161,17 @@ def _parse_user_cookie_signed(cookie_value: str | bytes, origin: str) -> dict[st
     if decoded is None:
         return {}
 
+    return _parse_decoded_user_cookie(decoded, origin)
+
+
+def _parse_decoded_user_cookie(decoded_cookie: bytes, origin: str) -> dict[str, Any]:
+    """Parse an already-decoded user cookie and validate the origin.
+
+    This is used when the cookie has already been decoded (e.g., from chunked cookie
+    retrieval). Validates the origin against the request origin for security.
+    """
     try:
-        payload = json.loads(decoded.decode("utf-8"))
+        payload = json.loads(decoded_cookie.decode("utf-8"))
     except (UnicodeDecodeError, json.JSONDecodeError):
         _LOGGER.exception("Error decoding auth cookie payload")
         return {}
@@ -176,11 +187,30 @@ def _parse_user_cookie_signed(cookie_value: str | bytes, origin: str) -> dict[st
             "same origin of redirect_uri in secrets.toml",
         )
         return {}
-    user_info = {"is_logged_in": payload.get("is_logged_in", False)}
+    user_info: dict[str, Any] = {"is_logged_in": payload.get("is_logged_in", False)}
     payload.pop("origin", None)
     payload.pop("is_logged_in", None)
     user_info.update(payload)
     return user_info
+
+
+def _get_signed_cookie_with_chunks(
+    cookies: dict[str, str], cookie_name: str
+) -> bytes | None:
+    """Get a signed cookie, reconstructing from chunks if necessary.
+
+    Uses itsdangerous signing which is NOT compatible with Tornado's format.
+    """
+    secret = get_cookie_secret()
+
+    def get_single_cookie(name: str) -> bytes | None:
+        raw_value = cookies.get(name)
+        if raw_value is None:
+            return None
+        signed_value = raw_value.encode("latin-1")
+        return starlette_app_utils.decode_signed_value(secret, name, signed_value)
+
+    return get_cookie_with_chunks(get_single_cookie, cookie_name)
 
 
 class StarletteSessionClient(SessionClient):
@@ -244,6 +274,8 @@ def create_websocket_handler(runtime: Runtime) -> Any:
     """
     from starlette.websockets import WebSocketDisconnect
 
+    expose_tokens = get_expose_tokens_config()
+
     async def _websocket_endpoint(websocket: WebSocket) -> None:
         # Validate origin before accepting the connection to prevent
         # cross-site WebSocket hijacking (mirrors Tornado's check_origin).
@@ -265,22 +297,41 @@ def create_websocket_handler(runtime: Runtime) -> Any:
         session_id: str | None = None
 
         try:
-            user_info: dict[str, str | bool | None] = {}
+            user_info: dict[str, Any] = {}
             if is_xsrf_enabled():
-                auth_cookie = websocket.cookies.get(USER_COOKIE_NAME)
                 xsrf_cookie = websocket.cookies.get(XSRF_COOKIE_NAME)
                 origin_header = websocket.headers.get("Origin")
 
                 # Validate XSRF token before parsing auth cookie:
-                if (
-                    auth_cookie
-                    and origin_header
-                    and starlette_app_utils.validate_xsrf_token(xsrf_token, xsrf_cookie)
+                if origin_header and starlette_app_utils.validate_xsrf_token(
+                    xsrf_token, xsrf_cookie
                 ):
                     try:
-                        user_info.update(
-                            _parse_user_cookie_signed(auth_cookie, origin_header)
+                        raw_auth_cookie = _get_signed_cookie_with_chunks(
+                            websocket.cookies, USER_COOKIE_NAME
                         )
+                        if raw_auth_cookie:
+                            user_info.update(
+                                _parse_decoded_user_cookie(
+                                    raw_auth_cookie, origin_header
+                                )
+                            )
+
+                            raw_token_cookie = _get_signed_cookie_with_chunks(
+                                websocket.cookies, TOKENS_COOKIE_NAME
+                            )
+                            if raw_token_cookie:
+                                all_tokens = json.loads(raw_token_cookie)
+
+                                filtered_tokens: dict[str, str] = {}
+                                for token_type in expose_tokens:
+                                    token_key = f"{token_type}_token"
+                                    if token_key in all_tokens:
+                                        filtered_tokens[token_type] = all_tokens[
+                                            token_key
+                                        ]
+
+                                user_info["tokens"] = filtered_tokens
                     except Exception:  # pragma: no cover - defensive
                         _LOGGER.exception("Error parsing auth cookie for websocket")
 

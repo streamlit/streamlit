@@ -393,11 +393,10 @@ class TestWebsocketHandlerUserInfoPrecedence:
             "sec-websocket-protocol": f"streamlit, {xsrf_token}",
         }.get(key)
         mock_websocket.headers.getlist.return_value = ["header@example.com"]
-        mock_websocket.cookies = MagicMock()
-        mock_websocket.cookies.get.side_effect = lambda key: {
+        mock_websocket.cookies = {
             "_streamlit_user": signed_cookie.decode("utf-8"),
-            "_xsrf": xsrf_token,
-        }.get(key)
+            "_streamlit_xsrf": xsrf_token,
+        }
         mock_websocket.accept = AsyncMock()
         mock_websocket.close = AsyncMock()
         # Simulate immediate disconnect after connect_session
