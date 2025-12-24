@@ -84,11 +84,13 @@ export function hasNestedComposition(spec: string | object): boolean {
 
     // Check if any child in vconcat contains a composition operator
     return parsedSpec.vconcat.some(
-      (child: Record<string, unknown>) =>
-        "hconcat" in child ||
-        "vconcat" in child ||
-        "concat" in child ||
-        "layer" in child
+      (child: unknown) =>
+        child !== null &&
+        typeof child === "object" &&
+        ("hconcat" in child ||
+          "vconcat" in child ||
+          "concat" in child ||
+          "layer" in child)
     )
   } catch {
     return false

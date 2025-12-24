@@ -286,4 +286,19 @@ describe("hasNestedComposition", () => {
   it("returns false for invalid JSON string", () => {
     expect(hasNestedComposition("invalid json")).toBe(false)
   })
+
+  it("handles non-object children in vconcat gracefully", () => {
+    // Edge case: vconcat with null/primitive children mixed with valid ones
+    const specWithNull = { vconcat: [null, { hconcat: [{ mark: "bar" }] }] }
+    expect(hasNestedComposition(specWithNull)).toBe(true)
+
+    const specWithPrimitives = {
+      vconcat: ["invalid", 123, { layer: [{ mark: "line" }] }],
+    }
+    expect(hasNestedComposition(specWithPrimitives)).toBe(true)
+
+    // Should still return false if no valid nested compositions
+    const specOnlyPrimitives = { vconcat: [null, "string", 123] }
+    expect(hasNestedComposition(specOnlyPrimitives)).toBe(false)
+  })
 })
