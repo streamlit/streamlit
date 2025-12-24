@@ -3239,7 +3239,7 @@ __metadata:
     "@types/uuid": "npm:^11.0.0"
     "@typescript-eslint/eslint-plugin": "npm:^8.50.0"
     "@vitejs/plugin-react-swc": "npm:^4.2.2"
-    "@vitest/eslint-plugin": "npm:^1.5.2"
+    "@vitest/eslint-plugin": "npm:^1.5.4"
     axios-mock-adapter: "npm:^2.1.0"
     baseui: "npm:12.2.0"
     buffer: "npm:^6.0.3"
@@ -5357,9 +5357,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@vitest/eslint-plugin@npm:^1.5.2":
-  version: 1.5.2
-  resolution: "@vitest/eslint-plugin@npm:1.5.2"
+"@vitest/eslint-plugin@npm:^1.5.4":
+  version: 1.6.4
+  resolution: "@vitest/eslint-plugin@npm:1.6.4"
   dependencies:
     "@typescript-eslint/scope-manager": "npm:^8.46.1"
     "@typescript-eslint/utils": "npm:^8.46.1"
@@ -5372,7 +5372,7 @@ __metadata:
       optional: true
     vitest:
       optional: true
-  checksum: 10c0/921ad59d42108c570799ffb4d76f37214a854b464c9470cc51922d1fffabbbbffd5c2299507210f922f2152b56b1d40861d371e989577262ca5a7eaf73583cf4
+  checksum: 10c0/2f450083588c7e296a8ad6c116fb4d24a205377b2bbc414dfe476a655064505f487e641608c03db29a7b66b7d51d9f8f26ae2da21a017d614b7c3964f3343c95
   languageName: node
   linkType: hard
 
