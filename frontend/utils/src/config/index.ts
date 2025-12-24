@@ -17,6 +17,124 @@
 import { ICustomThemeConfig } from "@streamlit/protobuf"
 
 /**
+ * The lib config contains various configurations that the host platform can
+ * use to configure streamlit-lib frontend behavior. This should be treated as part of the public
+ * API, and changes need to be backwards-compatible meaning that an old host configuration
+ * should still work with a new frontend versions.
+ */
+export type LibConfig = {
+  /**
+   * The mapbox token that can be configured by a platform.
+   */
+  mapboxToken?: string
+
+  /**
+   * Whether to disable the full screen mode for all elements / widgets.
+   */
+  disableFullscreenMode?: boolean
+
+  /**
+   * Whether to force file downloads initiated by the app to open in a new browser tab.
+   */
+  enforceDownloadInNewTab?: boolean
+
+  /**
+   * Whether and which value to set the `crossOrigin` property on media elements (img, video, audio).
+   * If it is set to undefined, the `crossOrigin` property will not be set on media elements at all.
+   * For img elements, see https://developer.mozilla.org/en-US/docs/Web/API/HTMLImageElement/crossOrigin
+   */
+  resourceCrossOriginMode?: undefined | "anonymous" | "use-credentials"
+
+  /** Deprecated. Use resourceCrossOriginMode instead. If set to true, the value of resourceCrossOriginMode will be "anonymous". */
+  setAnonymousCrossOriginPropertyOnMediaElements?: boolean
+}
+
+/**
+ * App-specific configuration options that can be set by the host platform.
+ * These control app behavior and host communication.
+ * This should be treated as part of the public API, and changes need to be
+ * backwards-compatible meaning that an old host configuration should still
+ * work with new frontend versions.
+ */
+export type AppConfig = {
+  /**
+   * A list of origins that we're allowed to receive cross-iframe messages
+   * from via the browser's window.postMessage API.
+   */
+  allowedOrigins?: string[]
+  /**
+   * Whether to wait until we've received a SET_AUTH_TOKEN message before
+   * resolving deferredAuthToken.promise. The WebsocketConnection class waits
+   * for this promise to resolve before attempting to establish a connection
+   * with the Streamlit server.
+   */
+  useExternalAuthToken?: boolean
+  /**
+   * Enables custom string messages to be sent to the host
+   */
+  enableCustomParentMessages?: boolean
+  /**
+   * Whether host wants to block error dialogs. If true, blocks error dialogs
+   * from being shown to the user, sends error info to host via postMessage
+   */
+  blockErrorDialogs?: boolean
+}
+
+/**
+ * Metrics configuration options that control where and how metrics are sent.
+ */
+export type MetricsConfig = {
+  /**
+   * URL to send metrics data to via POST request.
+   * Setting to "postMessage" sends metrics events via postMessage to host.
+   * Setting to "off" disables metrics collection.
+   * If undefined, metricsUrl requested from centralized config file.
+   */
+  // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
+  metricsUrl?: string | "postMessage" | "off"
+}
+
+/**
+ * Combined host configuration properties from all config categories.
+ * This represents the complete set of host-configurable options.
+ */
+export type IHostConfigProperties = LibConfig & AppConfig & MetricsConfig
+
+/**
+ * Host configuration that can be provided via window.__streamlit.HOST_CONFIG
+ * which take precedence over the values from the /_stcore/host-config endpoint.
+ *
+ * All fields are optional. The deprecated setAnonymousCrossOriginPropertyOnMediaElements
+ * field is excluded - use resourceCrossOriginMode instead.
+ *
+ * Note: Bypass mode (fast-path WebSocket connection) only activates when BACKEND_BASE_URL
+ * and minimal required fields (allowedOrigins, useExternalAuthToken) are provided and valid.
+ * Other fields can be provided but don't enable bypass on their own.
+ */
+export type HostWindowConfig = Partial<
+  Omit<IHostConfigProperties, "setAnonymousCrossOriginPropertyOnMediaElements">
+>
+
+/**
+ * Validates that allowedOrigins is a non-empty array of non-empty strings.
+ * This ensures consistency between bypass validation and config reconciliation.
+ *
+ * @param allowedOrigins - The allowedOrigins value to validate
+ * @returns true if valid, false otherwise
+ */
+export function isValidAllowedOrigins(
+  allowedOrigins: unknown
+): allowedOrigins is string[] {
+  return (
+    Array.isArray(allowedOrigins) &&
+    allowedOrigins.length > 0 &&
+    allowedOrigins.every(
+      origin => typeof origin === "string" && origin.trim().length > 0
+    )
+  )
+}
+
+/**
  * Configuration object that can be set on window.__streamlit by the host
  * before the Streamlit bundle loads. These values are captured and frozen
  * at module initialization time for security.
@@ -37,6 +155,8 @@ interface StreamlitWindowConfig {
   DARK_THEME?: ICustomThemeConfig
   // Other options.
   ENABLE_RELOAD_BASED_ON_HARDCODED_STREAMLIT_VERSION?: boolean
+  // Host configuration (including enabling bypass mode for fast-path websocket connection).
+  HOST_CONFIG?: HostWindowConfig
 }
 
 // Extend Window interface for TypeScript
@@ -164,5 +284,8 @@ export const StreamlitConfig = {
     | boolean
     | undefined {
     return capturedConfig?.ENABLE_RELOAD_BASED_ON_HARDCODED_STREAMLIT_VERSION
+  },
+  get HOST_CONFIG(): HostWindowConfig | undefined {
+    return capturedConfig?.HOST_CONFIG
   },
 } as const

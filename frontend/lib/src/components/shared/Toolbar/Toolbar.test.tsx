@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-import React from "react"
-
 import { Info } from "@emotion-icons/material-outlined"
 import { screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"

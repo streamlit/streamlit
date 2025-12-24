@@ -32,7 +32,7 @@ from streamlit.runtime.caching import (
 )
 from streamlit.runtime.caching.hashing import UserHashError
 from streamlit.runtime.scriptrunner import add_script_run_ctx
-from streamlit.runtime.stats import CacheStat
+from streamlit.runtime.stats import CACHE_MEMORY_FAMILY, CacheStat
 from streamlit.vendor.pympler.asizeof import asizeof
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.element_mocks import (
@@ -232,6 +232,50 @@ If you think this is actually a Streamlit bug, please
         # So the call to foo() should return the new value 2
         assert example_instance.foo(1) == 2
 
+    def test_on_release_fires(self):
+        """Tests that on_release functions are called appropriately."""
+        seen: list[int] = []
+
+        def release(element: int) -> None:
+            seen.append(element)
+
+        @st.cache_resource(max_entries=2, on_release=release)
+        def return_plus_one(value: int) -> int:
+            return value + 1
+
+        for i in range(5):
+            assert return_plus_one(i) == i + 1
+
+        # Validate that release was called for the first three elements.
+        assert seen == [1, 2, 3]
+
+        # Clear the cache, and validate that `release` was called.
+        st.cache_resource.clear()
+        assert seen == [1, 2, 3, 4, 5]
+
+    def test_on_release_fires_when_cleared_with_exceptions(self):
+        """Tests that on_release functions are called.
+
+        Tests that on_release is called for all elements when clear() is called even if
+        some invocations throw exceptions."""
+        seen: list[int] = []
+
+        def release(element: int) -> None:
+            seen.append(element)
+            if element % 3 == 0:
+                raise Exception("third time is the charm")
+
+        @st.cache_resource(on_release=release)
+        def return_plus_one(value: int) -> int:
+            return value + 1
+
+        for i in range(10):
+            assert return_plus_one(i) == i + 1
+
+        # Clear the cache, and validate that `release` was called for each element.
+        st.cache_resource.clear()
+        assert seen == [i + 1 for i in range(10)]
+
 
 class CacheResourceValidateTest(unittest.TestCase):
     def setUp(self) -> None:
@@ -302,7 +346,7 @@ class CacheResourceStatsProviderTest(unittest.TestCase):
         st.cache_resource.clear()
 
     def test_no_stats(self):
-        assert get_resource_cache_stats_provider().get_stats() == []
+        assert get_resource_cache_stats_provider().get_stats() == {}
 
     def test_multiple_stats(self):
         @st.cache_resource(show_spinner=False)
@@ -339,7 +383,9 @@ class CacheResourceStatsProviderTest(unittest.TestCase):
 
         # The order of these is non-deterministic, so check Set equality
         # instead of List equality
-        assert set(expected) == set(get_resource_cache_stats_provider().get_stats())
+        stats_dict = get_resource_cache_stats_provider().get_stats()
+        assert CACHE_MEMORY_FAMILY in stats_dict
+        assert set(expected) == set(stats_dict[CACHE_MEMORY_FAMILY])
 
 
 class CacheResourceMessageReplayTest(DeltaGeneratorTestCase):

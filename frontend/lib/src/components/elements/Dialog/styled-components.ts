@@ -17,6 +17,16 @@
 import styled from "@emotion/styled"
 
 export const StyledDialogTitle = styled.div(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  gap: theme.spacing.sm,
   // Add right margin to prevent overlap with close button
   marginRight: theme.spacing.threeXL,
+}))
+
+export const StyledDialogIcon = styled.div(() => ({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  flexShrink: 0,
 }))

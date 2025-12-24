@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { memo, MouseEvent, ReactElement, ReactNode } from "react"
+import { memo, MouseEvent, ReactElement, ReactNode } from "react"
 
 import ProgressBar, {
   Size as ProgressBarSize,

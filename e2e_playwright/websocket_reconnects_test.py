@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
+import re
 from typing import Final
 
 import pytest
@@ -30,6 +33,30 @@ INCREMENTS_PER_DISCONNECT: Final[int] = 3
 NUM_DISCONNECTS: Final[int] = 15
 
 DISCONNECT_WEBSOCKET_ACTION: Final = "window.streamlitDebug.disconnectWebsocket();"
+
+
+def _get_session_event_counts(app: Page, app_port: int) -> dict[str, int]:
+    """Fetch session event metrics from the metrics endpoint.
+
+    Returns a dict with keys 'connect', 'reconnect', 'disconnect' and their counts.
+    """
+    response = app.request.get(
+        f"http://localhost:{app_port}/_stcore/metrics?families=session_events_total"
+    )
+    text = response.text()
+
+    counts: dict[str, int] = {}
+    for event_type in ("connect", "reconnect", "disconnect"):
+        # Match lines like: session_events_total{type="connect"} 2.0
+        match = re.search(
+            rf'session_events_total{{type="{event_type}"}} (\d+(?:\.\d+)?)', text
+        )
+        if match:
+            counts[event_type] = int(float(match.group(1)))
+        else:
+            counts[event_type] = 0
+
+    return counts
 
 
 def test_dont_observe_invalid_status(
@@ -134,3 +161,69 @@ def test_retain_captured_pictures_when_websocket_connection_drops_and_reconnects
 
     # Confirm that our picture is still there.
     expect(app.get_by_test_id("stImage")).to_have_count(1)
+
+
+def test_session_event_metrics_increase_on_disconnect_and_reconnect(
+    app: Page, app_port: int
+):
+    """Test that session_events_total metrics increase on disconnect/reconnect.
+
+    Due to React strict mode, components may mount multiple times, so we only
+    verify that metrics increase rather than checking exact values.
+    """
+    wait_for_app_run(app)
+
+    initial_counts = _get_session_event_counts(app, app_port)
+
+    assert initial_counts["connect"] > 0, (
+        f"Expected connect count to be nonzero, got {initial_counts['connect']}"
+    )
+
+    # Disconnect and wait for reconnection.
+    expect_connection_status(app, "CONNECTING", DISCONNECT_WEBSOCKET_ACTION)
+    expect(app.get_by_test_id("stStatusWidget")).not_to_be_attached()
+
+    updated_counts = _get_session_event_counts(app, app_port)
+
+    assert updated_counts["disconnect"] > initial_counts["disconnect"], (
+        f"Expected disconnect count to increase from {initial_counts['disconnect']}, "
+        f"got {updated_counts['disconnect']}"
+    )
+
+    assert updated_counts["reconnect"] > initial_counts["reconnect"], (
+        f"Expected reconnect count to increase from {initial_counts['reconnect']}, "
+        f"got {updated_counts['reconnect']}"
+    )
+
+
+def test_session_event_metrics_increase_after_multiple_disconnects(
+    app: Page, app_port: int
+):
+    """Test that session_events_total metrics accumulate over multiple disconnects.
+
+    Due to React strict mode, components may mount multiple times, so we only
+    verify that metrics increase rather than checking exact values.
+    """
+    wait_for_app_run(app)
+
+    initial_counts = _get_session_event_counts(app, app_port)
+
+    num_disconnects = 3
+    for _ in range(num_disconnects):
+        # Disconnect and wait for reconnection.
+        expect_connection_status(app, "CONNECTING", DISCONNECT_WEBSOCKET_ACTION)
+        expect(app.get_by_test_id("stStatusWidget")).not_to_be_attached()
+
+    final_counts = _get_session_event_counts(app, app_port)
+
+    disconnect_increase = final_counts["disconnect"] - initial_counts["disconnect"]
+    assert disconnect_increase >= num_disconnects, (
+        f"Expected disconnect count to increase by at least {num_disconnects}, "
+        f"increased by {disconnect_increase}"
+    )
+
+    reconnect_increase = final_counts["reconnect"] - initial_counts["reconnect"]
+    assert reconnect_increase >= num_disconnects, (
+        f"Expected reconnect count to increase by at least {num_disconnects}, "
+        f"increased by {reconnect_increase}"
+    )

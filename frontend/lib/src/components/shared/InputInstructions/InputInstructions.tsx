@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement } from "react"
+import { ReactElement } from "react"
 
 import { StyledWidgetInstructions } from "~lib/components/widgets/BaseWidget"
 import { isFromMac } from "~lib/util/utils"

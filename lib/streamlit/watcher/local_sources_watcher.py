@@ -180,7 +180,7 @@ class LocalSourcesWatcher:
             glob_pattern = "**/*" if is_directory else None
 
             wm = WatchedModule(
-                watcher=PathWatcher(  # ty: ignore
+                watcher=PathWatcher(
                     filepath,
                     self.on_path_changed,
                     glob_pattern=glob_pattern,  # Pass as named parameter

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { FC, useContext } from "react"
+import { FC, useContext } from "react"
 
 import { render, screen } from "@testing-library/react"
 import { describe, expect, it } from "vitest"

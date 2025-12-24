@@ -19,12 +19,12 @@ import { DatePickerType } from "@glideapps/glide-data-grid-cells"
 import moment, { Moment } from "moment-timezone"
 
 import { getTimezone } from "~lib/dataframes/arrowTypeUtils"
+import { formatMoment } from "~lib/util/formatMoment"
 import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
 
 import {
   BaseColumn,
   BaseColumnProps,
-  formatMoment,
   getErrorCell,
   mergeColumnParameters,
   toSafeDate,

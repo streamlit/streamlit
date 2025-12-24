@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-import React from "react"
-
 import { fireEvent, screen } from "@testing-library/react"
 
 import { Video as VideoProto } from "@streamlit/protobuf"

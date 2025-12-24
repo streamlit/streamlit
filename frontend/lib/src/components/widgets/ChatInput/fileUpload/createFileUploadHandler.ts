@@ -55,7 +55,8 @@ export const createUploadFileHandler =
         type: "uploading",
         abortController,
         progress: 1,
-      }
+      },
+      file
     )
     addFiles([uploadingFileInfo])
 

@@ -10,8 +10,8 @@
   ],
   "scripts": {
     "format": "prettier --write --config ../.prettierrc --ignore-path ../.prettierignore './src/**/*.{js,ts,jsx,tsx}'",
-    "formatCheck": "prettier --check --config ../.prettierrc --ignore-path ../.prettierignore './src/**/*.{js,ts,jsx,tsx}'",
-    "lint": "eslint --max-warnings 0 src",
+    "formatCheck": "prettier --check --cache --config ../.prettierrc --ignore-path ../.prettierignore './src/**/*.{js,ts,jsx,tsx}'",
+    "lint": "eslint --cache --max-warnings 0 src",
     "test": "vitest run",
     "testWatch": "vitest",
     "typecheck": "tsc --noEmit",
@@ -19,18 +19,18 @@
     "typesync": "typesync"
   },
   "devDependencies": {
-    "@typescript-eslint/rule-tester": "^8.48.0",
-    "@typescript-eslint/types": "^8.48.0",
-    "@typescript-eslint/utils": "^8.48.0",
-    "@vitest/coverage-v8": "^4.0.14",
-    "eslint": "^9.39.0",
+    "@typescript-eslint/rule-tester": "^8.50.0",
+    "@typescript-eslint/types": "^8.50.0",
+    "@typescript-eslint/utils": "^8.50.0",
+    "@vitest/coverage-v8": "^4.0.16",
+    "eslint": "^9.39.2",
     "prettier": "^3.7.4",
     "typescript": "^5.9.3",
     "typesync": "^0.14.3",
-    "vitest": "^4.0.14"
+    "vitest": "^4.0.16"
   },
   "peerDependencies": {
-    "@typescript-eslint/utils": "^8.48.0",
+    "@typescript-eslint/utils": "^8.50.0",
     "eslint": "^9.0.0"
   }
 }

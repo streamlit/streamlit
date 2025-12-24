@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { CSSProperties, memo, ReactElement } from "react"
+import { CSSProperties, memo, ReactElement } from "react"
 
 import { getLogger } from "loglevel"
 

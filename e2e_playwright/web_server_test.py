@@ -122,6 +122,131 @@ def test_metrics_endpoint_accepts_protobuf(app: Page, app_port: int):
     assert "protobuf" in content_type
 
 
+def test_metrics_endpoint_filters_by_family_cache_memory(app: Page, app_port: int):
+    """Test that metrics endpoint filters results by families query parameter.
+
+    When requesting families=cache_memory_bytes, only cache memory metrics
+    should be returned. The web_server.py app initializes session state to
+    ensure these metrics are always present.
+    """
+    wait_for_app_loaded(app)
+
+    response = app.request.get(
+        f"http://localhost:{app_port}/_stcore/metrics?families=cache_memory_bytes"
+    )
+
+    expect(response).to_be_ok()
+    assert response.status == 200
+
+    text = response.text()
+    # Should contain cache_memory_bytes metrics (guaranteed by session state in web_server.py)
+    assert "cache_memory_bytes" in text
+    # Should NOT contain session_events_total or active_sessions metrics
+    assert "session_events_total" not in text
+    assert "active_sessions" not in text
+
+
+def test_metrics_endpoint_filters_by_family_session_events(app: Page, app_port: int):
+    """Test that metrics endpoint returns session_events_total when requested.
+
+    Session events metrics track connections, reconnections, and disconnections.
+    """
+    response = app.request.get(
+        f"http://localhost:{app_port}/_stcore/metrics?families=session_events_total"
+    )
+
+    expect(response).to_be_ok()
+    assert response.status == 200
+
+    text = response.text()
+    # Should contain session_events_total metrics
+    assert "session_events_total" in text
+    # Should NOT contain cache_memory_bytes or active_sessions metrics
+    assert "cache_memory_bytes" not in text
+    assert "active_sessions" not in text
+
+
+def test_metrics_endpoint_filters_by_family_active_sessions(app: Page, app_port: int):
+    """Test that metrics endpoint returns active_sessions when requested.
+
+    Active sessions metrics track the current number of connected sessions.
+    """
+    response = app.request.get(
+        f"http://localhost:{app_port}/_stcore/metrics?families=active_sessions"
+    )
+
+    expect(response).to_be_ok()
+    assert response.status == 200
+
+    text = response.text()
+    # Should contain active_sessions metrics
+    assert "active_sessions" in text
+    # Should NOT contain cache_memory_bytes or session_events_total metrics
+    assert "cache_memory_bytes" not in text
+    assert "session_events_total" not in text
+
+
+def test_metrics_endpoint_filters_by_multiple_families(app: Page, app_port: int):
+    """Test that metrics endpoint supports filtering by multiple families.
+
+    Multiple families query params should return metrics for all requested families.
+    """
+    response = app.request.get(
+        f"http://localhost:{app_port}/_stcore/metrics"
+        "?families=session_events_total&families=active_sessions"
+    )
+
+    expect(response).to_be_ok()
+    assert response.status == 200
+
+    text = response.text()
+    # Should contain both session_events_total and active_sessions metrics
+    assert "session_events_total" in text
+    assert "active_sessions" in text
+    # Should NOT contain cache_memory_bytes metrics
+    assert "cache_memory_bytes" not in text
+
+
+def test_metrics_endpoint_unknown_family_returns_empty(app: Page, app_port: int):
+    """Test that metrics endpoint returns empty response for unknown families.
+
+    When requesting a family that doesn't exist, the response should contain
+    only the EOF marker.
+    """
+    response = app.request.get(
+        f"http://localhost:{app_port}/_stcore/metrics?families=unknown_family"
+    )
+
+    expect(response).to_be_ok()
+    assert response.status == 200
+
+    text = response.text()
+    # Should only contain the EOF marker
+    assert text.strip() == "# EOF"
+
+
+def test_metrics_endpoint_no_filter_returns_all_families(app: Page, app_port: int):
+    """Test that metrics endpoint without filter returns all metric families.
+
+    When no families query param is provided, all available metrics should be returned.
+    The web_server.py app initializes session state to ensure cache_memory_bytes
+    metrics are always present.
+    """
+    wait_for_app_loaded(app)
+
+    response = app.request.get(f"http://localhost:{app_port}/_stcore/metrics")
+
+    expect(response).to_be_ok()
+    assert response.status == 200
+
+    text = response.text()
+    # Should contain metrics from all families
+    # cache_memory_bytes is guaranteed by session state initialization in web_server.py
+    assert "cache_memory_bytes" in text
+    assert "session_events_total" in text
+    assert "active_sessions" in text
+
+
 # =============================================================================
 # Host Config Endpoint Tests
 # =============================================================================

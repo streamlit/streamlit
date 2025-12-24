@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { memo, ReactElement } from "react"
+import { memo, ReactElement } from "react"
 
 import { UploadFileInfo } from "~lib/components/widgets/FileUploader/UploadFileInfo"
 
@@ -28,14 +28,23 @@ import {
 export interface Props {
   items: UploadFileInfo[]
   onDelete: (id: number) => void
+  onRetry?: (fileInfo: UploadFileInfo) => void
 }
 
-const ChatUploadedFiles = ({ items, onDelete }: Props): ReactElement => (
+const ChatUploadedFiles = ({
+  items,
+  onDelete,
+  onRetry,
+}: Props): ReactElement => (
   <StyledChatUploadedFiles data-testid="stChatUploadedFiles">
     <StyledUploadedChatFileList>
       {items.map(file => (
         <StyledUploadedChatFileListItem key={file.id}>
-          <ChatUploadedFile fileInfo={file} onDelete={onDelete} />
+          <ChatUploadedFile
+            fileInfo={file}
+            onDelete={onDelete}
+            onRetry={onRetry}
+          />
         </StyledUploadedChatFileListItem>
       ))}
     </StyledUploadedChatFileList>

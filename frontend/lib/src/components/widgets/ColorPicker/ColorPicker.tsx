@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { FC, memo, useCallback } from "react"
+import { FC, memo, useCallback } from "react"
 
 import { ColorPicker as ColorPickerProto } from "@streamlit/protobuf"
 

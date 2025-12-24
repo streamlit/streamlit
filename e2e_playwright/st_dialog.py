@@ -61,6 +61,36 @@ if st.button("Open Dialog without Images"):
     simple_dialog()
 
 
+@st.dialog("Dialog with Icon", icon="🌟")
+def dialog_with_icon() -> None:
+    st.write("This dialog title renders a star icon.")
+    st.text_input("Icon dialog input", key="icon-dialog-input")
+
+
+if st.button("Open Dialog with Icon"):
+    dialog_with_icon()
+
+
+@st.dialog("Dialog with Spinner Icon", icon="spinner")
+def dialog_with_spinner_icon() -> None:
+    st.write("This dialog renders the spinner icon in its title.")
+    st.checkbox("Toggle spinner dialog value", key="spinner-dialog-checkbox")
+
+
+if st.button("Open Dialog with Spinner Icon"):
+    dialog_with_spinner_icon()
+
+
+@st.dialog("Dialog with Material Icon", icon=":material/info:")
+def dialog_with_material_icon() -> None:
+    st.write("This dialog renders a material icon in its title.")
+    st.checkbox("Material icon dialog value", key="material-dialog-checkbox")
+
+
+if st.button("Open Dialog with Material Icon"):
+    dialog_with_material_icon()
+
+
 @st.dialog("Medium-width Dialog", width="medium")
 def medium_width_dialog() -> None:
     st.write("This dialog has a medium width.")

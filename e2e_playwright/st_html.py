@@ -113,3 +113,23 @@ st.html(
     """,
     unsafe_allow_javascript=True,
 )
+
+# Test that nested lists display proper indentation (issue #13426)
+st.html(
+    """
+    <ul id="nested-list-test">
+        <li>Pets
+            <ul>
+                <li>Dog</li>
+                <li>Cat</li>
+            </ul>
+        </li>
+        <li>Fruits
+            <ul>
+                <li>Apple</li>
+                <li>Orange</li>
+            </ul>
+        </li>
+    </ul>
+    """
+)

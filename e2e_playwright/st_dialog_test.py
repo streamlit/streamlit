@@ -15,7 +15,7 @@
 import re
 
 import pytest
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Page, Position, expect
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
@@ -44,6 +44,18 @@ def open_dialog_with_images(app: Page):
 
 def open_dialog_without_images(app: Page):
     click_button(app, "Open Dialog without Images")
+
+
+def open_dialog_with_icon(app: Page):
+    click_button(app, "Open Dialog with Icon")
+
+
+def open_dialog_with_spinner_icon(app: Page):
+    click_button(app, "Open Dialog with Spinner Icon")
+
+
+def open_dialog_with_material_icon(app: Page):
+    click_button(app, "Open Dialog with Material Icon")
 
 
 def open_large_width_dialog(app: Page):
@@ -284,6 +296,56 @@ def test_dialog_displays_correctly(app: Page, assert_snapshot: ImageCompareFunct
     assert_snapshot(dialog, name="st_dialog-default")
 
 
+def test_dialog_icon_is_displayed(app: Page):
+    """Test that a dialog displays the optional icon next to the title."""
+    open_dialog_with_icon(app)
+    dialog = app.get_by_role("dialog")
+    icon = dialog.get_by_test_id("stDialogIcon")
+    expect(icon).to_be_visible()
+    expect(icon).to_have_text("🌟")
+
+
+def test_dialog_spinner_icon_is_displayed(app: Page):
+    """Test that a dialog displays the spinner icon next to the title."""
+    open_dialog_with_spinner_icon(app)
+    dialog = app.get_by_role("dialog")
+    spinner_icon = dialog.get_by_test_id("stSpinnerIcon")
+    expect(spinner_icon).to_be_visible()
+
+
+def test_dialog_material_icon_is_displayed(app: Page):
+    """Test that a dialog displays material icons next to the title."""
+    open_dialog_with_material_icon(app)
+    dialog = app.get_by_role("dialog")
+    material_icon = dialog.get_by_test_id("stIconMaterial")
+    expect(material_icon).to_be_visible()
+    expect(material_icon).to_have_text("info")
+
+
+def test_dialog_icon_displays_correctly(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that a dialog with a icon displays correctly."""
+    open_dialog_with_icon(app)
+    dialog = app.get_by_role("dialog")
+    dialog.get_by_test_id("stMarkdownContainer").filter(
+        has_text="Dialog with Icon"
+    ).click()
+    assert_snapshot(dialog, name="st_dialog-with_icon")
+
+
+def test_dialog_material_icon_displays_correctly(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that a dialog with a material icon displays correctly."""
+    open_dialog_with_material_icon(app)
+    dialog = app.get_by_role("dialog")
+    dialog.get_by_test_id("stMarkdownContainer").filter(
+        has_text="Dialog with Material Icon"
+    ).click()
+    assert_snapshot(dialog, name="st_dialog-with_material_icon")
+
+
 def test_large_width_dialog_displays_correctly(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
@@ -423,7 +485,12 @@ def test_dialog_with_chart(app: Page):
         "[role='graphics-document']"
     )
     expect(chart).to_be_visible()
-    chart.hover(position={"x": 80, "y": 200})
+    # Use chart bounds to hover deterministically (helps Firefox).
+    chart_box = chart.bounding_box()
+    assert chart_box is not None
+    target: Position = {"x": chart_box["width"] * 0.5, "y": chart_box["height"] * 0.5}
+    app.mouse.move(chart_box["x"] + target["x"], chart_box["y"] + target["y"])
+    chart.hover(position=target)
     tooltip = app.locator("#vg-tooltip-element")
     expect(tooltip).to_be_visible()
 

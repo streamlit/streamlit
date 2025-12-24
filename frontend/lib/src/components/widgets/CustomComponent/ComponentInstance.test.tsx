@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-import React from "react"
-
 import { act, fireEvent, screen } from "@testing-library/react"
 import { Mock, MockInstance } from "vitest"
 

@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-import React from "react"
-
 import { STREAMLIT_COMMUNITY_CLOUD_DOCS_URL } from "@streamlit/app/src/urls"
 
 import { StyledParagraph } from "./styled-components"

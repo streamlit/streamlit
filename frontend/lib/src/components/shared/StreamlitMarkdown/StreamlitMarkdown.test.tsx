@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import React, { ReactElement } from "react"
+import { ReactElement } from "react"
 
-import { cleanup, screen } from "@testing-library/react"
+import { cleanup, screen, within } from "@testing-library/react"
 import { transparentize } from "color2k"
 import ReactMarkdown from "react-markdown"
 
@@ -35,6 +35,7 @@ import StreamlitMarkdown, {
   CustomCodeTagProps,
   CustomMediaTag,
   CustomPreTag,
+  HeadingWithActionElements,
   LinkWithTargetBlank,
 } from "./StreamlitMarkdown"
 
@@ -422,6 +423,62 @@ describe("StreamlitMarkdown", () => {
     ).not.toBeInTheDocument()
   })
 
+  it("uses aria-labelledby when help is present in the sidebar (no anchor id)", () => {
+    render(
+      <IsSidebarContext.Provider value={true}>
+        <IsDialogContext.Provider value={false}>
+          <HeadingWithActionElements tag="h2" help="Help text">
+            Hello
+          </HeadingWithActionElements>
+        </IsDialogContext.Provider>
+      </IsSidebarContext.Provider>
+    )
+
+    const heading = screen.getByRole("heading", { name: "Hello" })
+    expect(heading).toHaveAttribute("aria-labelledby")
+    expect(heading).not.toHaveAttribute("id")
+
+    const labelId = heading.getAttribute("aria-labelledby")
+    expect(labelId).toBeTruthy()
+    expect(within(heading).getByText("Hello")).toHaveAttribute("id", labelId)
+  })
+
+  it("uses aria-labelledby when the anchor icon is present (non-sidebar)", () => {
+    render(
+      <IsSidebarContext.Provider value={false}>
+        <IsDialogContext.Provider value={false}>
+          <HeadingWithActionElements tag="h2" anchor="my-anchor">
+            Hello
+          </HeadingWithActionElements>
+        </IsDialogContext.Provider>
+      </IsSidebarContext.Provider>
+    )
+
+    const heading = screen.getByRole("heading", { name: "Hello" })
+    expect(heading).toHaveAttribute("id", "my-anchor")
+    expect(heading).toHaveAttribute("aria-labelledby")
+
+    const labelId = heading.getAttribute("aria-labelledby")
+    expect(labelId).toBeTruthy()
+    expect(within(heading).getByText("Hello")).toHaveAttribute("id", labelId)
+  })
+
+  it("does not use aria-labelledby when no action elements are present", () => {
+    render(
+      <IsSidebarContext.Provider value={false}>
+        <IsDialogContext.Provider value={false}>
+          <HeadingWithActionElements tag="h2" anchor="my-anchor" hideAnchor>
+            Hello
+          </HeadingWithActionElements>
+        </IsDialogContext.Provider>
+      </IsSidebarContext.Provider>
+    )
+
+    const heading = screen.getByRole("heading", { name: "Hello" })
+    expect(heading).toHaveAttribute("id", "my-anchor")
+    expect(heading).not.toHaveAttribute("aria-labelledby")
+  })
+
   it("propagates header attributes to custom header", async () => {
     const source = '<h1 data-test="lol">alsdkjhflaf</h1>'
     render(<StreamlitMarkdown source={source} allowHTML />)
@@ -686,6 +743,15 @@ describe("StreamlitMarkdown", () => {
     render(<StreamlitMarkdown source={source} allowHTML={false} />)
     const markdown = screen.getByText("test :foo test:test :")
     expect(markdown).toBeInTheDocument()
+  })
+
+  it("converts unsupported text directives to plain text", () => {
+    // Text directives use the syntax :name[content]
+    // Unsupported ones should render as :name (prefix only, content lost)
+    const source = `test :unknown[content] end`
+    render(<StreamlitMarkdown source={source} allowHTML={false} />)
+    const markdown = screen.getByText("test :unknown end")
+    expect(markdown).toBeVisible()
   })
 
   it("properly adds background colors", () => {

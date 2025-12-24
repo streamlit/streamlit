@@ -1,0 +1,12 @@
+name: Fix Ubuntu apt mirrors (avoid slow Azure mirror)
+description: Adjust Ubuntu apt mirror priorities to avoid slow azure.archive.ubuntu.com
+
+runs:
+  using: composite
+  steps:
+    - name: Adjust apt mirror priorities (Linux only)
+      if: ${{ runner.os == 'Linux' }}
+      shell: bash
+      run: |
+        set -e
+        "${GITHUB_ACTION_PATH}/apt_mirror_fix.sh"

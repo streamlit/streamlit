@@ -101,7 +101,7 @@ class TornadoIntegration(FrameworkIntegration):
         """
 
     @staticmethod
-    def load_config(  # type: ignore[override]
+    def load_config(
         oauth: TornadoOAuth, name: str, params: Sequence[str]
     ) -> dict[str, Any]:
         """Configure Authlib integration with provider parameters

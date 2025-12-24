@@ -32,6 +32,7 @@ if TYPE_CHECKING:
 DEVELOPMENT_PORT: Final = 3000
 
 AUTH_COOKIE_NAME: Final = "_streamlit_user"
+TOKENS_COOKIE_NAME: Final = "_streamlit_user_tokens"
 
 
 def allowlisted_origins() -> set[str]:

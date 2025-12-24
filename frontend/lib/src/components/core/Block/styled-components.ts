@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { CSSProperties } from "react"
+import { CSSProperties } from "react"
 
 import styled from "@emotion/styled"
 

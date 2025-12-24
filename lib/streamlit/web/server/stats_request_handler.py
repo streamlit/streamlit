@@ -23,7 +23,7 @@ from streamlit.web.server import allow_all_cross_origin_requests, is_allowed_ori
 from streamlit.web.server.server_util import emit_endpoint_deprecation_notice
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Mapping, Sequence
 
     from streamlit.proto.openmetrics_data_model_pb2 import MetricSet as MetricSetProto
     from streamlit.runtime.stats import Stat, StatsManager
@@ -44,15 +44,17 @@ class StatsRequestHandler(tornado.web.RequestHandler):
         self.set_status(204)
         self.finish()
 
-    # TODO(vdonato): Allow a caller to request specific metric families since we
-    # know cache stats are slow to compute so would like to avoid paying the
-    # cost of doing so frequently.
     def get(self) -> None:
         if self.request.uri and "_stcore/" not in self.request.uri:
             emit_endpoint_deprecation_notice(self, new_path="/_stcore/metrics")
 
-        stats = self._manager.get_stats()
-
+        # Allow caller to request specific metric families via query parameter.
+        # If no families are specified, all metrics are returned.
+        # Example: /_stcore/metrics?families=session_events_total&families=active_sessions
+        requested_families = self.get_arguments("families")
+        stats = self._manager.get_stats(
+            family_names=requested_families if requested_families else None
+        )
         # If the request asked for protobuf output, we return a serialized
         # protobuf. Else we return text.
         if "application/x-protobuf" in self.request.headers.get_list("Accept"):
@@ -65,7 +67,7 @@ class StatsRequestHandler(tornado.web.RequestHandler):
             self.set_status(200)
 
     @staticmethod
-    def _stats_to_text(stats_by_family: dict[str, Sequence[Stat]]) -> str:
+    def _stats_to_text(stats_by_family: Mapping[str, Sequence[Stat]]) -> str:
         result: list[str] = []
 
         for stats in stats_by_family.values():
@@ -85,7 +87,9 @@ class StatsRequestHandler(tornado.web.RequestHandler):
         return "\n".join(result)
 
     @staticmethod
-    def _stats_to_proto(stats_by_family: dict[str, Sequence[Stat]]) -> MetricSetProto:
+    def _stats_to_proto(
+        stats_by_family: Mapping[str, Sequence[Stat]],
+    ) -> MetricSetProto:
         # Lazy load the import of this proto message for better performance:
         from streamlit.proto.openmetrics_data_model_pb2 import (
             MetricSet as MetricSetProto,
