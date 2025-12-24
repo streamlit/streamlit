@@ -3010,7 +3010,13 @@ class VegaUtilitiesTest(unittest.TestCase):
 
 
 class NestedCompositionTest(unittest.TestCase):
-    """Test nested composition detection and autosize behavior."""
+    """Test nested composition detection and autosize behavior.
+
+    In valid Vega-Lite specs, composition operators (hconcat, vconcat, concat, layer)
+    are always top-level keys of a view specification. They cannot be buried inside
+    encoding, mark, or other nested properties. This allows the detection function
+    to check only immediate children for nested composition operators.
+    """
 
     def test_has_nested_composition_simple_vconcat(self):
         """Test that simple vconcat without nested compositions returns False."""
@@ -3111,9 +3117,12 @@ class NestedCompositionTest(unittest.TestCase):
 class VegaLiteAutosizeTest(DeltaGeneratorTestCase):
     """Test autosize configuration for various chart types."""
 
+    # Shared test dataframe for multiple tests in this class.
+    TEST_DF = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
+
     def test_simple_vconcat_with_use_container_width_gets_fit_x(self):
         """Test that simple vconcat with use_container_width=True gets fit-x autosize."""
-        df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
+        df = self.TEST_DF
         spec = {
             "vconcat": [
                 {
@@ -3142,7 +3151,7 @@ class VegaLiteAutosizeTest(DeltaGeneratorTestCase):
 
     def test_nested_vconcat_hconcat_with_use_container_width_true_gets_pad(self):
         """Test that nested vconcat+hconcat with use_container_width=True gets pad autosize."""
-        df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
+        df = self.TEST_DF
         spec = {
             "vconcat": [
                 {
@@ -3182,7 +3191,7 @@ class VegaLiteAutosizeTest(DeltaGeneratorTestCase):
 
     def test_nested_vconcat_hconcat_with_use_container_width_false_gets_pad(self):
         """Test that nested vconcat+hconcat with use_container_width=False gets pad autosize."""
-        df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
+        df = self.TEST_DF
         spec = {
             "vconcat": [
                 {
@@ -3277,7 +3286,7 @@ class VegaLiteAutosizeTest(DeltaGeneratorTestCase):
 
     def test_altair_nested_vconcat_hconcat_with_width_stretch(self):
         """Test Altair chart with nested vconcat+hconcat using width='stretch'."""
-        df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
+        df = self.TEST_DF
 
         # Using Altair to create nested chart
         chart = alt.vconcat(
@@ -3299,7 +3308,7 @@ class VegaLiteAutosizeTest(DeltaGeneratorTestCase):
 
     def test_nested_vconcat_hconcat_defaults_to_content_width(self):
         """Test that nested vconcat+hconcat defaults to width='content', not 'stretch'."""
-        df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
+        df = self.TEST_DF
         chart = alt.vconcat(
             alt.Chart(df).mark_bar().encode(x="a:O", y="b:Q"),
             alt.hconcat(
@@ -3322,7 +3331,7 @@ class VegaLiteAutosizeTest(DeltaGeneratorTestCase):
 
     def test_explicit_autosize_not_overridden(self):
         """Test that explicit autosize in spec is preserved and not overridden."""
-        df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
+        df = self.TEST_DF
         spec = {
             "mark": "bar",
             "encoding": {

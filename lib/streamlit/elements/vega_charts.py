@@ -286,6 +286,11 @@ def _has_nested_composition(spec: VegaLiteSpec) -> bool:
     concat, or layer operators. Such nested compositions don't work well with
     the fit-x autosize type and can cause infinite extent errors.
 
+    In valid Vega-Lite specs, composition operators (hconcat, vconcat, concat, layer)
+    are always top-level keys of a view specification. They cannot be buried inside
+    encoding, mark, or other nested properties. This allows us to check only the
+    immediate children of vconcat for nested composition operators.
+
     Parameters
     ----------
     spec : VegaLiteSpec
@@ -296,7 +301,9 @@ def _has_nested_composition(spec: VegaLiteSpec) -> bool:
     bool
         True if the spec contains nested composition operators, False otherwise.
     """
-    # Check if vconcat contains nested compositions
+    # Check if vconcat contains nested compositions.
+    # We only need to check top-level keys of each child spec since composition
+    # operators are always top-level in valid Vega-Lite specs.
     if "vconcat" in spec and isinstance(spec["vconcat"], list):
         for item in spec["vconcat"]:
             # Check if this item is a dict containing any composition operator
