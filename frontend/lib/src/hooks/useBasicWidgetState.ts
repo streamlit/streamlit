@@ -167,8 +167,7 @@ export interface UseBasicWidgetStateArgs<
  * - Responding to setValue updates from session_state
  * - Handling form clearing for clear_on_submit forms
  *
- * Used by: ButtonGroup, Checkbox, ColorPicker, DateInput, DateTimeInput,
- * Multiselect, NumberInput, Radio, Selectbox, Slider, TextArea, TextInput, TimeInput
+ * Examples: TextInput, NumberInput, Checkbox, Slider, etc.
  */
 export function useBasicWidgetState<
   T, // Type of the value stored in WidgetStateManager.

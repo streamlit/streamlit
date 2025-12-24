@@ -18,7 +18,9 @@ import { sprintf } from "sprintf-js"
 
 import { NumberInput as NumberInputProto } from "@streamlit/protobuf"
 
+import { ValueWithSource } from "~lib/hooks/useBasicWidgetState"
 import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 const LOG = getLogger("NumberInput")
 
@@ -111,4 +113,55 @@ export const getStep = ({
     return 1
   }
   return 0.01
+}
+
+// State management callbacks for useBasicWidgetState
+export function getStateFromWidgetMgr(
+  widgetMgr: WidgetStateManager,
+  element: NumberInputProto
+): number | null | undefined {
+  const isIntData = element.dataType === NumberInputProto.DataType.INT
+  return isIntData
+    ? widgetMgr.getIntValue(element)
+    : widgetMgr.getDoubleValue(element)
+}
+
+export function getDefaultStateFromProto(
+  element: NumberInputProto
+): number | null {
+  return element.default ?? null
+}
+
+export function getCurrStateFromProto(
+  element: NumberInputProto
+): number | null {
+  return element.value ?? element.default ?? null
+}
+
+export function updateWidgetMgrState(
+  element: NumberInputProto,
+  widgetMgr: WidgetStateManager,
+  vws: ValueWithSource<number | null>,
+  fragmentId?: string
+): void {
+  switch (element.dataType) {
+    case NumberInputProto.DataType.INT:
+      widgetMgr.setIntValue(
+        element,
+        vws.value,
+        { fromUi: vws.fromUi },
+        fragmentId
+      )
+      break
+    case NumberInputProto.DataType.FLOAT:
+      widgetMgr.setDoubleValue(
+        element,
+        vws.value,
+        { fromUi: vws.fromUi },
+        fragmentId
+      )
+      break
+    default:
+      throw new Error("Invalid data type")
+  }
 }

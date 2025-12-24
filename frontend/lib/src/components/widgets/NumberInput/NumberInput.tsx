@@ -36,10 +36,7 @@ import {
   WidgetLabel,
   WidgetLabelHelpIcon,
 } from "~lib/components/widgets/BaseWidget"
-import {
-  useBasicWidgetState,
-  ValueWithSource,
-} from "~lib/hooks/useBasicWidgetState"
+import { useBasicWidgetState } from "~lib/hooks/useBasicWidgetState"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { convertRemToPx } from "~lib/theme"
@@ -57,62 +54,22 @@ import {
   StyledInputControls,
   StyledInstructionsContainer,
 } from "./styled-components"
-import { canDecrement, canIncrement, formatValue, getStep } from "./utils"
+import {
+  canDecrement,
+  canIncrement,
+  formatValue,
+  getCurrStateFromProto,
+  getDefaultStateFromProto,
+  getStateFromWidgetMgr,
+  getStep,
+  updateWidgetMgrState,
+} from "./utils"
 
 export interface Props {
   disabled: boolean
   element: NumberInputProto
   widgetMgr: WidgetStateManager
   fragmentId?: string
-}
-
-// Module-level callbacks for useBasicWidgetState (stable references)
-function getStateFromWidgetMgr(
-  widgetMgr: WidgetStateManager,
-  element: NumberInputProto
-): number | null | undefined {
-  const isIntData = element.dataType === NumberInputProto.DataType.INT
-  return isIntData
-    ? widgetMgr.getIntValue(element)
-    : widgetMgr.getDoubleValue(element)
-}
-
-function getDefaultStateFromProto(element: NumberInputProto): number | null {
-  return element.default ?? null
-}
-
-function getCurrStateFromProto(element: NumberInputProto): number | null {
-  // When the backend sends a value via setValue, if it's null, fall back to default
-  // This matches the commit behavior where null values become defaults
-  return element.value ?? element.default ?? null
-}
-
-function updateWidgetMgrState(
-  element: NumberInputProto,
-  widgetMgr: WidgetStateManager,
-  vws: ValueWithSource<number | null>,
-  fragmentId?: string
-): void {
-  switch (element.dataType) {
-    case NumberInputProto.DataType.INT:
-      widgetMgr.setIntValue(
-        element,
-        vws.value,
-        { fromUi: vws.fromUi },
-        fragmentId
-      )
-      break
-    case NumberInputProto.DataType.FLOAT:
-      widgetMgr.setDoubleValue(
-        element,
-        vws.value,
-        { fromUi: vws.fromUi },
-        fragmentId
-      )
-      break
-    default:
-      throw new Error("Invalid data type")
-  }
 }
 
 const NumberInput: React.FC<Props> = ({
@@ -135,7 +92,6 @@ const NumberInput: React.FC<Props> = ({
 
   const { width, elementRef } = useCalculatedDimensions()
 
-  // Step is derived from element props
   const step = useMemo(
     () => getStep({ step: element.step, dataType: element.dataType }),
     [element.step, element.dataType]
