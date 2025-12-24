@@ -21,18 +21,21 @@ import { type HostWindowConfig, isValidAllowedOrigins } from "@streamlit/utils"
  * Helper to conditionally include object properties only if they are defined.
  * This prevents polluting config objects with explicit undefined values.
  *
+ * Note: This intentionally keeps null values, as null represents an explicit
+ * value (e.g., "no token configured") whereas undefined means "not provided".
+ *
  * @param obj - Partial object with potentially undefined values
- * @returns Object with only the defined properties
+ * @returns Object with only the defined properties (null values are kept)
  */
 export function includeIfDefined<T extends Record<string, unknown>>(
   obj: Partial<T>
 ): Partial<T> {
-  return Object.entries(obj).reduce((acc, [key, value]) => {
+  return Object.entries(obj).reduce<Partial<T>>((acc, [key, value]) => {
     if (value !== undefined) {
       acc[key as keyof T] = value
     }
     return acc
-  }, {} as Partial<T>)
+  }, {})
 }
 
 /**

@@ -36,34 +36,15 @@ describe("includeIfDefined", () => {
     expect(result).not.toHaveProperty("alsoUndefined")
   })
 
-  it("keeps false values", () => {
-    const input = { flag: false, other: undefined }
+  it.each([
+    ["false", { flag: false, other: undefined }, { flag: false }],
+    ["null", { value: null, other: undefined }, { value: null }],
+    ["0", { count: 0, other: undefined }, { count: 0 }],
+    ["empty string", { text: "", other: undefined }, { text: "" }],
+    ["empty array", { items: [], other: undefined }, { items: [] }],
+  ] as const)("keeps %s values", (_description, input, expected) => {
     const result = includeIfDefined(input)
-    expect(result).toEqual({ flag: false })
-  })
-
-  it("keeps null values", () => {
-    const input = { value: null, other: undefined }
-    const result = includeIfDefined(input)
-    expect(result).toEqual({ value: null })
-  })
-
-  it("keeps 0 values", () => {
-    const input = { count: 0, other: undefined }
-    const result = includeIfDefined(input)
-    expect(result).toEqual({ count: 0 })
-  })
-
-  it("keeps empty string values", () => {
-    const input = { text: "", other: undefined }
-    const result = includeIfDefined(input)
-    expect(result).toEqual({ text: "" })
-  })
-
-  it("keeps empty array values", () => {
-    const input = { items: [], other: undefined }
-    const result = includeIfDefined(input)
-    expect(result).toEqual({ items: [] })
+    expect(result).toEqual(expected)
   })
 
   it("returns empty object when all values are undefined", () => {
@@ -79,39 +60,34 @@ describe("includeIfDefined", () => {
 })
 
 describe("isValidAllowedOrigins", () => {
-  it("returns true for valid allowedOrigins", () => {
-    expect(isValidAllowedOrigins(["https://example.com"])).toBe(true)
-    expect(
-      isValidAllowedOrigins(["https://example1.com", "https://example2.com"])
-    ).toBe(true)
+  it.each([
+    [["https://example.com"], "single valid origin"],
+    [
+      ["https://example1.com", "https://example2.com"],
+      "multiple valid origins",
+    ],
+  ])("returns true for %s (%s)", (input, _description) => {
+    expect(isValidAllowedOrigins(input)).toBe(true)
   })
 
-  it("returns false for empty array", () => {
-    expect(isValidAllowedOrigins([])).toBe(false)
-  })
-
-  it("returns false for non-array values", () => {
-    expect(isValidAllowedOrigins(undefined)).toBe(false)
-    expect(isValidAllowedOrigins(null)).toBe(false)
-    expect(isValidAllowedOrigins("https://example.com")).toBe(false)
-    expect(isValidAllowedOrigins({ 0: "https://example.com" })).toBe(false)
-  })
-
-  it("returns false when array contains non-string values", () => {
-    expect(isValidAllowedOrigins([123])).toBe(false)
-    expect(isValidAllowedOrigins([null])).toBe(false)
-    expect(isValidAllowedOrigins([undefined])).toBe(false)
-    expect(isValidAllowedOrigins(["https://example.com", 123])).toBe(false)
-  })
-
-  it("returns false when array contains empty strings", () => {
-    expect(isValidAllowedOrigins([""])).toBe(false)
-    expect(isValidAllowedOrigins(["https://example.com", ""])).toBe(false)
-    expect(isValidAllowedOrigins(["", "https://example.com"])).toBe(false)
-  })
-
-  it("returns false when array contains only empty strings", () => {
-    expect(isValidAllowedOrigins(["", ""])).toBe(false)
+  it.each([
+    [[], "empty array"],
+    [undefined, "undefined"],
+    [null, "null"],
+    ["https://example.com", "string instead of array"],
+    [{ 0: "https://example.com" }, "object instead of array"],
+    [[123], "array with number"],
+    [[null], "array with null"],
+    [[undefined], "array with undefined"],
+    [["https://example.com", 123], "array with mixed types"],
+    [[""], "array with empty string"],
+    [["https://example.com", ""], "array with valid and empty string"],
+    [["", "https://example.com"], "array starting with empty string"],
+    [["", ""], "array with only empty strings"],
+    [["  "], "array with whitespace-only string"],
+    [["https://example.com", "  "], "array with valid and whitespace-only"],
+  ])("returns false for %s (%s)", (input, _description) => {
+    expect(isValidAllowedOrigins(input)).toBe(false)
   })
 })
 
@@ -120,21 +96,16 @@ describe("preferWindowValue", () => {
     expect(preferWindowValue("window", "endpoint")).toBe("window")
   })
 
-  it("returns endpoint value when window value is undefined", () => {
-    expect(preferWindowValue(undefined, "endpoint")).toBe("endpoint")
-  })
-
-  it("handles boolean false as defined window value", () => {
-    expect(preferWindowValue(false, true)).toBe(false)
-  })
-
-  it("handles number 0 as defined window value", () => {
-    expect(preferWindowValue(0, 100)).toBe(0)
-  })
-
-  it("handles empty string as defined window value", () => {
-    expect(preferWindowValue("", "endpoint")).toBe("")
-  })
+  it.each([
+    ["boolean false", false, true, false],
+    ["number 0", 0, 100, 0],
+    ["empty string", "", "endpoint", ""],
+  ] as const)(
+    "handles %s as defined window value",
+    (_description, windowValue, endpointValue, expected) => {
+      expect(preferWindowValue(windowValue, endpointValue)).toBe(expected)
+    }
+  )
 
   it("handles empty array as defined window value", () => {
     const emptyArray: string[] = []
@@ -154,13 +125,15 @@ describe("preferWindowValue", () => {
     expect(preferWindowValue(windowArr, endpointArr)).toEqual(["a", "b"])
   })
 
-  it("treats null as not provided (uses endpoint value)", () => {
-    expect(preferWindowValue(null, "endpoint")).toBe("endpoint")
-  })
-
-  it("treats undefined as not provided (uses endpoint value)", () => {
-    expect(preferWindowValue(undefined, "endpoint")).toBe("endpoint")
-  })
+  it.each([
+    ["null", null],
+    ["undefined", undefined],
+  ] as const)(
+    "treats %s as not provided (uses endpoint value)",
+    (_, value) => {
+      expect(preferWindowValue(value, "endpoint")).toBe("endpoint")
+    }
+  )
 
   it("prefers window value even when endpoint is null", () => {
     expect(preferWindowValue("window", null as unknown as string)).toBe(

@@ -129,7 +129,7 @@ export function isValidAllowedOrigins(
     Array.isArray(allowedOrigins) &&
     allowedOrigins.length > 0 &&
     allowedOrigins.every(
-      origin => typeof origin === "string" && origin.length > 0
+      origin => typeof origin === "string" && origin.trim().length > 0
     )
   )
 }
