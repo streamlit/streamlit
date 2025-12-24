@@ -41,6 +41,17 @@ class LogoTest(DeltaGeneratorTestCase):
         assert c.icon_image == ""
         assert c.size == "medium"
 
+    def test_material_icon_logo(self):
+        """Test that it can be called with a Material icon shortcode."""
+        st.logo(":material/thumb_up:")
+
+        c = self.get_message_from_queue().logo
+        assert c.image == ""
+        assert c.icon == ":material/thumb_up:"
+        assert c.link == ""
+        assert c.icon_image == ""
+        assert c.size == "medium"
+
     def test_image_and_link(self):
         """Test that it can be called with image & link."""
         streamlit = Image.open(

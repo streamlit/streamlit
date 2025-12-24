@@ -25,6 +25,7 @@ import {
 } from "@streamlit/app/src/components/Sidebar/styled-components"
 import { StreamlitEndpoints } from "@streamlit/connection"
 import {
+  DynamicIcon,
   getCrossOriginAttribute,
   LibConfigContext,
   NavigationContext,
@@ -85,28 +86,42 @@ const LogoComponent = ({
     )
   }
 
-  // Use icon image when collapsed in sidebar mode, otherwise use the main image
+  const hasIconLogo = !!appLogo.icon
+
+  // Use icon image when collapsed in sidebar mode, otherwise use the main image.
+  // If an explicit icon is provided, we always render it via DynamicIcon.
   const displayImage =
-    collapsed && appLogo.iconImage ? appLogo.iconImage : appLogo.image
+    collapsed && appLogo.iconImage && !hasIconLogo
+      ? appLogo.iconImage
+      : appLogo.image
 
-  const source = endpoints.buildMediaURL(displayImage)
-
-  const crossOrigin = getCrossOriginAttribute(
-    resourceCrossOriginMode,
-    displayImage
-  )
-
-  const logo = (
-    <StyledLogo
-      src={source}
-      size={appLogo.size}
-      alt="Logo"
-      className="stLogo"
-      data-testid={dataTestId}
-      // Save to logo's src to send on load error
-      onError={_ => handleLogoError(source)}
-      crossOrigin={crossOrigin}
+  const logo = hasIconLogo ? (
+    <DynamicIcon
+      iconValue={appLogo.icon}
+      size="lg"
+      testid={dataTestId}
     />
+  ) : (
+    (() => {
+      const source = endpoints.buildMediaURL(displayImage)
+      const crossOrigin = getCrossOriginAttribute(
+        resourceCrossOriginMode,
+        displayImage
+      )
+
+      return (
+        <StyledLogo
+          src={source}
+          size={appLogo.size}
+          alt="Logo"
+          className="stLogo"
+          data-testid={dataTestId}
+          // Save to logo's src to send on load error
+          onError={_ => handleLogoError(source)}
+          crossOrigin={crossOrigin}
+        />
+      )
+    })()
   )
 
   // If an explicit link is provided, use it (opens in new tab)

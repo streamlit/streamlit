@@ -25,6 +25,7 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
+from streamlit.string_util import validate_icon_or_emoji
 
 
 def _invalid_logo_text(field_name: str) -> str:
@@ -37,7 +38,7 @@ def _invalid_logo_text(field_name: str) -> str:
 
 @gather_metrics("logo")
 def logo(
-    image: AtomicImage,
+    image: AtomicImage | str,
     *,  # keyword-only args:
     size: Literal["small", "medium", "large"] = "medium",
     link: str | None = None,
@@ -140,18 +141,27 @@ def logo(
 
     fwd_msg = ForwardMsg()
 
-    try:
-        image_url = image_to_url(
-            image,
-            layout_config=LayoutConfig(width="content"),
-            clamp=False,
-            channels="RGB",
-            output_format="auto",
-            image_id="logo",
-        )
-        fwd_msg.logo.image = image_url
-    except Exception as ex:
-        raise StreamlitAPIException(_invalid_logo_text("image")) from ex
+    # Support passing a Material icon or emoji directly as the logo source.
+    # In this case we bypass media storage and send the validated icon string
+    # to the frontend, which is responsible for rendering it.
+    if isinstance(image, str) and image.startswith(":material/"):
+        try:
+            fwd_msg.logo.icon = validate_icon_or_emoji(image)
+        except StreamlitAPIException as ex:
+            raise StreamlitAPIException(_invalid_logo_text("image")) from ex
+    else:
+        try:
+            image_url = image_to_url(
+                image,
+                layout_config=LayoutConfig(width="content"),
+                clamp=False,
+                channels="RGB",
+                output_format="auto",
+                image_id="logo",
+            )
+            fwd_msg.logo.image = image_url
+        except Exception as ex:
+            raise StreamlitAPIException(_invalid_logo_text("image")) from ex
 
     if link:
         # Handle external links:

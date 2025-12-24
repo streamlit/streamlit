@@ -25,4 +25,7 @@ message Logo {
   string link = 2;
   string icon_image = 3;
   string size = 4;
+  // Optional icon (emoji or Material icon shortcode) used instead of an image.
+  // When this field is set, the frontend renders an icon-based logo.
+  string icon = 5;
 }
