@@ -39,7 +39,11 @@ import { render } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { VegaLiteChartElement } from "./arrowUtils"
-import ArrowVegaLiteChart, { Props } from "./ArrowVegaLiteChart"
+import ArrowVegaLiteChart, {
+  hasNestedComposition,
+  isFacetChart,
+  Props,
+} from "./ArrowVegaLiteChart"
 
 const getProps = (
   elementProps: Partial<VegaLiteChartElement> = {},
@@ -161,5 +165,140 @@ describe("ArrowVegaLiteChart", () => {
     render(<ArrowVegaLiteChart {...getProps({ data: null, datasets: [] })} />)
 
     expect(screen.queryByRole("button", { name: "Show data" })).toBeNull()
+  })
+})
+
+describe("isFacetChart", () => {
+  it.each([
+    {
+      name: "spec with facet property",
+      spec: { facet: { field: "category" }, spec: { mark: "bar" } },
+      expected: true,
+    },
+    {
+      name: "spec with encoding.row",
+      spec: { mark: "bar", encoding: { row: { field: "category" } } },
+      expected: true,
+    },
+    {
+      name: "spec with encoding.column",
+      spec: { mark: "bar", encoding: { column: { field: "category" } } },
+      expected: true,
+    },
+    {
+      name: "spec with encoding.facet",
+      spec: { mark: "bar", encoding: { facet: { field: "category" } } },
+      expected: true,
+    },
+    {
+      name: "simple chart without facet",
+      spec: {
+        mark: "bar",
+        encoding: { x: { field: "a" }, y: { field: "b" } },
+      },
+      expected: false,
+    },
+  ])("returns $expected for $name", ({ spec, expected }) => {
+    expect(isFacetChart(spec)).toBe(expected)
+    expect(isFacetChart(JSON.stringify(spec))).toBe(expected)
+  })
+
+  it("returns false for invalid JSON string", () => {
+    expect(isFacetChart("invalid json")).toBe(false)
+  })
+})
+
+describe("hasNestedComposition", () => {
+  it.each([
+    {
+      name: "vconcat containing hconcat",
+      spec: {
+        vconcat: [
+          { mark: "bar", encoding: { x: { field: "a" } } },
+          { hconcat: [{ mark: "point" }, { mark: "line" }] },
+        ],
+      },
+      expected: true,
+    },
+    {
+      name: "vconcat containing nested vconcat",
+      spec: {
+        vconcat: [
+          { vconcat: [{ mark: "bar" }, { mark: "point" }] },
+          { mark: "line" },
+        ],
+      },
+      expected: true,
+    },
+    {
+      name: "vconcat containing concat",
+      spec: {
+        vconcat: [
+          { concat: [{ mark: "bar" }, { mark: "point" }] },
+          { mark: "line" },
+        ],
+      },
+      expected: true,
+    },
+    {
+      name: "vconcat containing layer",
+      spec: {
+        vconcat: [
+          { layer: [{ mark: "line" }, { mark: "point" }] },
+          { mark: "bar" },
+        ],
+      },
+      expected: true,
+    },
+    {
+      name: "simple vconcat without nested compositions",
+      spec: {
+        vconcat: [
+          { mark: "bar", encoding: { x: { field: "a" }, y: { field: "b" } } },
+          {
+            mark: "point",
+            encoding: { x: { field: "a" }, y: { field: "b" } },
+          },
+        ],
+      },
+      expected: false,
+    },
+    {
+      name: "spec without vconcat",
+      spec: { mark: "bar", encoding: { x: { field: "a" } } },
+      expected: false,
+    },
+    {
+      name: "hconcat at top level (not nested)",
+      spec: { hconcat: [{ mark: "bar" }, { mark: "point" }] },
+      expected: false,
+    },
+    {
+      name: "vconcat that is not an array",
+      spec: { vconcat: "not an array" },
+      expected: false,
+    },
+  ])("returns $expected for $name", ({ spec, expected }) => {
+    expect(hasNestedComposition(spec)).toBe(expected)
+    expect(hasNestedComposition(JSON.stringify(spec))).toBe(expected)
+  })
+
+  it("returns false for invalid JSON string", () => {
+    expect(hasNestedComposition("invalid json")).toBe(false)
+  })
+
+  it("handles non-object children in vconcat gracefully", () => {
+    // Edge case: vconcat with null/primitive children mixed with valid ones
+    const specWithNull = { vconcat: [null, { hconcat: [{ mark: "bar" }] }] }
+    expect(hasNestedComposition(specWithNull)).toBe(true)
+
+    const specWithPrimitives = {
+      vconcat: ["invalid", 123, { layer: [{ mark: "line" }] }],
+    }
+    expect(hasNestedComposition(specWithPrimitives)).toBe(true)
+
+    // Should still return false if no valid nested compositions
+    const specOnlyPrimitives = { vconcat: [null, "string", 123] }
+    expect(hasNestedComposition(specOnlyPrimitives)).toBe(false)
   })
 })

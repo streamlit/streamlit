@@ -21,10 +21,9 @@ import { ChromePicker, ColorResult } from "react-color"
 import SaturationComponent from "react-color/es/components/common/Saturation"
 
 import { Placement } from "~lib/components/shared/Tooltip"
-import TooltipIcon from "~lib/components/shared/TooltipIcon"
 import {
-  StyledWidgetLabelHelpInline,
   WidgetLabel,
+  WidgetLabelHelpIconInline,
 } from "~lib/components/widgets/BaseWidget"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
@@ -139,9 +138,11 @@ const BaseColorPicker = (props: BaseColorPickerProps): React.ReactElement => {
         labelVisibility={labelVisibility}
       >
         {help && (
-          <StyledWidgetLabelHelpInline>
-            <TooltipIcon content={help} placement={Placement.TOP_RIGHT} />
-          </StyledWidgetLabelHelpInline>
+          <WidgetLabelHelpIconInline
+            content={help}
+            placement={Placement.TOP_RIGHT}
+            label={label}
+          />
         )}
       </WidgetLabel>
       <UIPopover

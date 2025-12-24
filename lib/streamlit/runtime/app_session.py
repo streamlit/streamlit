@@ -56,6 +56,7 @@ if TYPE_CHECKING:
     from streamlit.proto.BackMsg_pb2 import BackMsg, DeferredFileRequest
     from streamlit.runtime.script_data import ScriptData
     from streamlit.runtime.scriptrunner.script_cache import ScriptCache
+    from streamlit.runtime.scriptrunner_utils.script_run_context import UserInfoType
     from streamlit.runtime.state import SessionState
     from streamlit.runtime.uploaded_file_manager import UploadedFileManager
     from streamlit.source_util import PageHash, PageInfo
@@ -92,7 +93,7 @@ class AppSession:
         uploaded_file_manager: UploadedFileManager,
         script_cache: ScriptCache,
         message_enqueued_callback: Callable[[], None] | None,
-        user_info: dict[str, str | bool | None],
+        user_info: UserInfoType,
         session_id_override: str | None = None,
     ) -> None:
         """Initialize the AppSession.

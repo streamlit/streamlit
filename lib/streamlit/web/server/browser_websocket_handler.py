@@ -28,12 +28,14 @@ from tornado.escape import utf8
 from tornado.websocket import WebSocketHandler
 
 from streamlit import config
+from streamlit.auth_util import get_cookie_with_chunks, get_expose_tokens_config
 from streamlit.logger import get_logger
 from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.runtime import Runtime, SessionClient, SessionClientDisconnectedError
 from streamlit.runtime.runtime_util import serialize_forward_msg
 from streamlit.web.server.server_util import (
     AUTH_COOKIE_NAME,
+    TOKENS_COOKIE_NAME,
     is_url_from_allowed_origins,
     is_xsrf_enabled,
 )
@@ -60,6 +62,9 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
         if is_xsrf_enabled():
             _ = self.xsrf_token
 
+        # Do this once instead of on every open
+        self.expose_tokens = get_expose_tokens_config()
+
     def get_signed_cookie(
         self,
         name: str,
@@ -67,15 +72,25 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
         max_age_days: float = 31,
         min_version: int | None = None,
     ) -> bytes | None:
-        """Get a signed cookie from the request. Added for compatibility with
-        Tornado < 6.3.0.
+        """Get a signed cookie from the request, reconstructing from chunks if needed.
+
+        Added for compatibility with Tornado < 6.3.0. Also handles chunked cookies
+        automatically.
 
         See release notes: https://www.tornadoweb.org/en/stable/releases/v6.3.0.html#deprecation-notices
         """
-        try:
-            return super().get_signed_cookie(name, value, max_age_days, min_version)
-        except AttributeError:
-            return super().get_secure_cookie(name, value, max_age_days, min_version)
+
+        def get_single_cookie(cookie_name: str) -> bytes | None:
+            try:
+                return super(BrowserWebSocketHandler, self).get_signed_cookie(
+                    cookie_name, value, max_age_days, min_version
+                )
+            except AttributeError:
+                return super(BrowserWebSocketHandler, self).get_secure_cookie(
+                    cookie_name, value, max_age_days, min_version
+                )
+
+        return get_cookie_with_chunks(get_single_cookie, name)
 
     def check_origin(self, origin: str) -> bool:
         """Set up CORS."""
@@ -155,7 +170,7 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
         return None
 
     def open(self, *args: Any, **kwargs: Any) -> Awaitable[None] | None:
-        user_info: dict[str, str | bool | None] = {}
+        user_info: dict[str, dict[str, str] | str | bool | None] = {}
 
         existing_session_id = None
         try:
@@ -170,6 +185,20 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
 
                 if self._validate_xsrf_token(csrf_protocol_value):
                     user_info.update(self._parse_user_cookie(raw_cookie_value))
+
+                    # Also read in tokens if token cookie exists
+                    raw_token_cookie_value = self.get_signed_cookie(TOKENS_COOKIE_NAME)
+                    if raw_token_cookie_value:
+                        all_tokens = json.loads(raw_token_cookie_value)
+
+                        # Filter tokens based on expose_tokens configuration
+                        filtered_tokens: dict[str, str] = {}
+                        for token_type in self.expose_tokens:
+                            token_key = f"{token_type}_token"
+                            if token_key in all_tokens:
+                                filtered_tokens[token_type] = all_tokens[token_key]
+
+                        user_info["tokens"] = filtered_tokens
 
             if len(ws_protocols) >= 3:
                 # See the NOTE in the docstring of the `select_subprotocol` method above

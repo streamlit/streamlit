@@ -26,6 +26,7 @@ import {
   Suspense,
   useCallback,
   useContext,
+  useId,
   useMemo,
   useState,
 } from "react"
@@ -278,9 +279,13 @@ const HeaderActionElements: FC<HeadingActionElements> = ({
     <StyledHeadingActionElements data-testid="stHeaderActionElements">
       {help && <InlineTooltipIcon content={help} />}
       {elementId && !hideAnchor && (
-        <StyledLinkIcon href={`#${elementId}`}>
-          {/* Convert size to px because using rem works but logs a console error (at least on webkit) */}
-          <LinkIcon size={convertRemToPx(theme.iconSizes.base)} />
+        <StyledLinkIcon href={`#${elementId}`} aria-label="Link to heading">
+          <LinkIcon
+            // Convert size to px because using rem works but logs a console
+            // error (at least on webkit)
+            size={convertRemToPx(theme.iconSizes.base)}
+            aria-hidden="true"
+          />
         </StyledLinkIcon>
       )}
     </StyledHeadingActionElements>
@@ -333,14 +338,42 @@ export const HeadingWithActionElements: FC<HeadingWithActionElementsProps> = ({
     />
   )
 
-  const attributes = isInSidebarOrDialog ? {} : { ref, id: elementId }
+  // Accessibility:
+  // Headings can contain action elements (help tooltip icon, anchor link icon).
+  // Those elements are rendered inside the <h*> for layout reasons, but they
+  // can accidentally become part of the heading's computed accessible name.
+  //
+  // To keep the heading name stable (visible heading text only), we use
+  // aria-labelledby to point at a span that wraps only the text content.
+  //
+  // We generate the label span id with useId() to ensure uniqueness even if
+  // multiple headings end up sharing the same anchor slug.
+  //
+  // Only set aria-labelledby when action elements are present:
+  // - help: tooltip icon can be present even in sidebar/dialog (where we don't
+  //   set a heading id/anchor)
+  // - anchor icon: only present when we have an elementId and it's not hidden
+  const rawHeadingTextId = useId()
+  const headingTextId =
+    help || (elementId && !hideAnchor && !isInSidebarOrDialog)
+      ? rawHeadingTextId
+      : undefined
+
+  const idAttribute = elementId ? { id: elementId } : {}
+  const ariaLabelledbyAttribute = headingTextId
+    ? { "aria-labelledby": headingTextId }
+    : {}
+  const mergedAttributes = {
+    ...(isInSidebarOrDialog ? {} : { ref, ...idAttribute }),
+    ...ariaLabelledbyAttribute,
+  }
   const Tag = tag
   // We nest the action-elements (tooltip, link-icon) into the header element (e.g. h1),
   // so that it appears inline. For context: we also tried setting the h's display attribute to 'inline', but
   // then we would need to add padding to the outer container and fiddle with the vertical alignment.
   const headerElementWithActions = (
-    <Tag {...tagProps} {...attributes}>
-      {children}
+    <Tag {...tagProps} {...mergedAttributes}>
+      {headingTextId ? <span id={headingTextId}>{children}</span> : children}
       {actionElements}
     </Tag>
   )

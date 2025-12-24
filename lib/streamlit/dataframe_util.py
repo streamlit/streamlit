@@ -41,12 +41,14 @@ from typing import (
 from streamlit import config, errors, logger, string_util
 from streamlit.type_util import (
     CustomDict,
+    dump_pydantic_sequence,
     has_callable_attr,
     is_custom_dict,
     is_dataclass_instance,
     is_list_like,
     is_namedtuple,
     is_pydantic_model,
+    is_sequence_of_pydantic_models,
     is_type,
     is_version_less_than,
 )
@@ -703,6 +705,14 @@ def convert_anything_to_pandas_df(
     if is_snowpark_row_list(data):
         return pd.DataFrame([row.as_dict() for row in data])
 
+    if is_sequence_of_pydantic_models(data):
+        # Try to convert pydantic models to DataFrame. If some elements are not
+        # pydantic models (mixed sequence), fall through to pandas' native handling.
+        try:
+            return pd.DataFrame(dump_pydantic_sequence(data))
+        except AttributeError:
+            pass
+
     if has_callable_attr(data, "to_pandas"):
         return pd.DataFrame(data.to_pandas())
 
@@ -1242,7 +1252,7 @@ def determine_data_format(input_data: Any) -> DataFormat:
         # This should always contain at least one element,
         # otherwise the values type from infer_dtype would have been empty
         first_element = next(iter(input_data))
-        if isinstance(first_element, dict):
+        if isinstance(first_element, dict) or is_pydantic_model(first_element):
             return DataFormat.LIST_OF_RECORDS
         if isinstance(first_element, (list, tuple, set, frozenset)):
             return DataFormat.LIST_OF_ROWS

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { screen } from "@testing-library/react"
+import { screen, waitFor } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 import { BaseProvider, LightTheme } from "baseui"
 
@@ -91,5 +91,25 @@ describe("Tooltip element", () => {
 
     const tooltipContent = await screen.findByTestId("stTooltipErrorContent")
     expect(tooltipContent).toHaveTextContent("Error Text")
+  })
+
+  it("closes on Escape when focus-triggered without blurring the trigger", async () => {
+    const user = userEvent.setup()
+    renderTooltip({ children: <button type="button">Trigger</button> })
+
+    const trigger = screen.getByRole("button", { name: "Trigger" })
+    expect(screen.queryByTestId("stTooltipContent")).not.toBeInTheDocument()
+
+    await user.tab()
+    expect(trigger).toHaveFocus()
+
+    await screen.findByTestId("stTooltipContent")
+
+    await user.keyboard("{Escape}")
+
+    expect(trigger).toHaveFocus()
+    await waitFor(() =>
+      expect(screen.queryByTestId("stTooltipContent")).not.toBeInTheDocument()
+    )
   })
 })

@@ -38,7 +38,7 @@ INSTALL_REQUIRES = [
     # See: https://github.com/streamlit/streamlit/issues/12064
     "altair>=4.0, <7, !=5.4.0, !=5.4.1",
     "blinker>=1.5.0, <2",
-    "cachetools>=4.0, <7",
+    "cachetools>=5.5, <7",
     "click>=7.0, <9",
     "numpy>=1.23, <3",
     # The "packaging" package isn't version-capped because they use calendar-based
