@@ -774,6 +774,45 @@ describe("NumberInput widget", () => {
       expect(stepUpButton).toBeDisabled()
     })
 
+    it("updates button enabled state based on typed value, not committed value", async () => {
+      const user = userEvent.setup()
+      const props = getIntProps({
+        default: 5,
+        step: 1,
+        min: 0,
+        max: 10,
+        hasMin: true,
+        hasMax: true,
+      })
+      render(<NumberInput {...props} />)
+
+      const numberInput = screen.getByTestId("stNumberInputField")
+      const stepUpButton = screen.getByTestId("stNumberInputStepUp")
+      const stepDownButton = screen.getByTestId("stNumberInputStepDown")
+
+      // Initially at 5, both buttons should be enabled
+      expect(stepUpButton).not.toBeDisabled()
+      expect(stepDownButton).not.toBeDisabled()
+
+      // Type "10" (at max) - stepUp should become disabled immediately
+      await user.clear(numberInput)
+      await user.type(numberInput, "10")
+      expect(stepUpButton).toBeDisabled()
+      expect(stepDownButton).not.toBeDisabled()
+
+      // Type "0" (at min) - stepDown should become disabled immediately
+      await user.clear(numberInput)
+      await user.type(numberInput, "0")
+      expect(stepUpButton).not.toBeDisabled()
+      expect(stepDownButton).toBeDisabled()
+
+      // Type "5" (in range) - both should be enabled
+      await user.clear(numberInput)
+      await user.type(numberInput, "5")
+      expect(stepUpButton).not.toBeDisabled()
+      expect(stepDownButton).not.toBeDisabled()
+    })
+
     it("hides stepUp and stepDown buttons when width is smaller than 120px", () => {
       vi.spyOn(UseResizeObserver, "useResizeObserver").mockReturnValue({
         elementRef: { current: null },

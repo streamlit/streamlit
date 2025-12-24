@@ -194,9 +194,6 @@ const NumberInput: React.FC<Props> = ({
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null)
   const [id] = useState(() => uniqueId("number_input_"))
 
-  const canDec = canDecrement(value, step, min)
-  const canInc = canIncrement(value, step, max)
-
   const inForm = isInForm({ formId: elementFormId })
   // Allows form submission on Enter & displays Enter instructions, or if not in form and state is dirty
   const allowEnterToSubmit = inForm
@@ -300,6 +297,10 @@ const NumberInput: React.FC<Props> = ({
     const parsed = parseFloat(formattedValue)
     return isNaN(parsed) ? null : parsed
   }, [formattedValue, element.dataType])
+
+  // Calculate button enabled states based on the currently displayed value, not the committed value
+  const canDec = canDecrement(currentNumericValue, step, min)
+  const canInc = canIncrement(currentNumericValue, step, max)
 
   const handleBlur = useCallback((): void => {
     if (dirty) {
