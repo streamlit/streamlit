@@ -20,10 +20,9 @@ import { ALIGN, RadioGroup, Radio as UIRadio } from "baseui/radio"
 
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import { Placement } from "~lib/components/shared/Tooltip"
-import TooltipIcon from "~lib/components/shared/TooltipIcon"
 import {
-  StyledWidgetLabelHelpInline,
   WidgetLabel,
+  WidgetLabelHelpIconInline,
 } from "~lib/components/widgets/BaseWidget"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { addCssUnit, convertRemToPx, EmotionTheme } from "~lib/theme"
@@ -126,9 +125,11 @@ function Radio({
         labelVisibility={labelVisibility}
       >
         {help && (
-          <StyledWidgetLabelHelpInline>
-            <TooltipIcon content={help} placement={Placement.TOP_RIGHT} />
-          </StyledWidgetLabelHelpInline>
+          <WidgetLabelHelpIconInline
+            content={help}
+            placement={Placement.TOP_RIGHT}
+            label={label}
+          />
         )}
       </WidgetLabel>
       <RadioGroup

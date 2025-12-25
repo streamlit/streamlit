@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import re
+
 import pytest
 from playwright.sync_api import Locator, Page, expect
 
@@ -23,6 +25,7 @@ from e2e_playwright.shared.app_utils import (
     get_caption,
     get_element_by_key,
     get_markdown,
+    tab_until_focused,
     wait_for_all_images_to_be_loaded,
 )
 
@@ -313,6 +316,34 @@ def test_anchor_scrolling(app: Page):
     # The app fixture navigates to http://localhost:{app_port}/#bold-header1
     # which should scroll to the header.
     expect(app.get_by_text("Bold header1")).to_be_in_viewport()
+
+
+def test_markdown_heading_anchor_icon_is_keyboard_focusable_and_visible(app: Page):
+    """Test that st.markdown headings expose a keyboard-focusable anchor icon.
+
+    The anchor icon is hidden by default to reduce visual noise, but it must be
+    reachable by tabbing. When focused, it should become visible and be
+    activatable using the keyboard.
+    """
+    heading = app.locator("h1#bold-header1")
+    heading.scroll_into_view_if_needed()
+
+    link = heading.get_by_role("link", name="Link to heading")
+    expect(link).to_have_attribute("href", "#bold-header1")
+    expect(link).to_have_css("opacity", "0")
+
+    # Start tabbing from a deterministic, nearby focusable element that appears before
+    # this heading in the document.
+    app.get_by_test_id("stMainBlockContainer").get_by_role(
+        "textbox", name="This is a label"
+    ).click()
+    tab_until_focused(app, link)
+
+    expect(link).to_be_focused()
+    expect(link).to_have_css("opacity", "1")
+
+    app.keyboard.press("Enter")
+    expect(app).to_have_url(re.compile(".*#bold-header1"))
 
 
 @pytest.mark.performance

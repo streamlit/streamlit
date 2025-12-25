@@ -14,7 +14,15 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, ReactNode, useCallback, useState } from "react"
+import {
+  memo,
+  ReactElement,
+  ReactNode,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react"
 
 import {
   ACCESSIBILITY_TYPE,
@@ -124,33 +132,74 @@ function Tooltip({
     null
   )
   const [isOpen, setIsOpen] = useState(false)
+  const closeRef = useRef<(() => void) | null>(null)
 
   const handleOpen = useCallback(() => {
     setIsOpen(true)
   }, [])
   const handleClose = useCallback(() => {
     setIsOpen(false)
+    closeRef.current = null
   }, [])
+
+  useEffect(() => {
+    return () => {
+      closeRef.current = null
+    }
+  }, [])
+
+  const handleKeyDownCapture = useCallback(
+    (event: React.KeyboardEvent<HTMLDivElement>) => {
+      if (event.key !== "Escape" || !isOpen) {
+        return
+      }
+
+      // BaseWeb tooltips don't consistently dismiss on Escape across trigger
+      // types. Close the tooltip without blurring the trigger to avoid
+      // disrupting keyboard navigation.
+      //
+      // Only close if the active element is inside this tooltip's wrapper to
+      // avoid unintended dismissal for unrelated controls.
+      const wrapper = event.currentTarget
+      const activeElement = wrapper.ownerDocument?.activeElement
+
+      if (
+        activeElement instanceof HTMLElement &&
+        wrapper.contains(activeElement)
+      ) {
+        closeRef.current?.()
+        event.preventDefault()
+        event.stopPropagation()
+      }
+    },
+    [isOpen]
+  )
 
   useTooltipMeasurementSideEffect(tooltipElement, isOpen)
 
   const tooltipOverrides = generateDefaultTooltipOverrides(theme, overrides)
 
+  const renderContent = useCallback(
+    ({ close }: { close: () => void }) => {
+      closeRef.current = close
+      return (
+        <StyledTooltipContentWrapper
+          className={error ? "stTooltipErrorContent" : "stTooltipContent"}
+          data-testid={error ? "stTooltipErrorContent" : "stTooltipContent"}
+          ref={setTooltipElement}
+        >
+          {content}
+        </StyledTooltipContentWrapper>
+      )
+    },
+    [content, error, setTooltipElement]
+  )
+
   return (
     <StatefulTooltip
       onOpen={handleOpen}
       onClose={handleClose}
-      content={
-        content ? (
-          <StyledTooltipContentWrapper
-            className={error ? "stTooltipErrorContent" : "stTooltipContent"}
-            data-testid={error ? "stTooltipErrorContent" : "stTooltipContent"}
-            ref={setTooltipElement}
-          >
-            {content}
-          </StyledTooltipContentWrapper>
-        ) : null
-      }
+      content={content ? renderContent : null}
       placement={PLACEMENT[placement]}
       accessibilityType={ACCESSIBILITY_TYPE.tooltip}
       showArrow={false}
@@ -167,6 +216,7 @@ function Tooltip({
           width: containerWidth ? "100%" : "auto",
           ...style,
         }}
+        onKeyDownCapture={handleKeyDownCapture}
         data-testid={
           error ? "stTooltipErrorHoverTarget" : "stTooltipHoverTarget"
         }

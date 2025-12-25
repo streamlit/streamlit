@@ -17,6 +17,7 @@ from __future__ import annotations
 import base64
 import json
 import threading
+from contextlib import contextmanager
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -33,6 +34,7 @@ from streamlit.runtime.scriptrunner import (
     get_script_run_ctx,
 )
 from streamlit.runtime.state import SafeSessionState, SessionState
+from streamlit.user_info import TokensProxy
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 SECRETS_MOCK = {
@@ -282,3 +284,111 @@ class UserInfoAuthTest(DeltaGeneratorTestCase):
         c = self.get_message_from_queue().auth_redirect
 
         assert c.url.startswith("/auth/logout")
+
+
+class TestTokensProxy:
+    """Test TokensProxy class functionality."""
+
+    def test_tokens_proxy_access(self):
+        """Test token access via key and attribute notation."""
+        proxy = TokensProxy({"id": "token1", "access": "token2"})
+
+        assert proxy["id"] == "token1"
+        assert proxy.id == "token1"
+        assert proxy["access"] == "token2"
+        assert proxy.access == "token2"
+
+    def test_tokens_proxy_empty(self):
+        """Test TokensProxy with no tokens."""
+        proxy = TokensProxy({})
+
+        assert len(proxy) == 0
+        with pytest.raises(KeyError):
+            assert proxy["id"]
+        with pytest.raises(AttributeError):
+            assert proxy.id
+
+    def test_tokens_proxy_readonly(self):
+        """Test that tokens cannot be modified."""
+        proxy = TokensProxy({"id": "test"})
+
+        with pytest.raises(StreamlitAPIException):
+            proxy.id = "modified"
+        with pytest.raises(StreamlitAPIException):
+            proxy["id"] = "modified"
+
+
+class UserInfoTokensTest(DeltaGeneratorTestCase):
+    """Test st.user.tokens functionality."""
+
+    @contextmanager
+    def _with_user_context(self, user_info):
+        """Helper to set up user context for testing."""
+        orig_report_ctx = get_script_run_ctx()
+        forward_msg_queue = ForwardMsgQueue()
+
+        try:
+            add_script_run_ctx(
+                threading.current_thread(),
+                ScriptRunContext(
+                    session_id="test session id",
+                    _enqueue=forward_msg_queue.enqueue,
+                    query_string="",
+                    session_state=SafeSessionState(SessionState(), lambda: None),
+                    uploaded_file_mgr=None,
+                    main_script_path="",
+                    user_info=user_info,
+                    fragment_storage=MemoryFragmentStorage(),
+                    pages_manager=PagesManager(""),
+                ),
+            )
+            yield
+        finally:
+            add_script_run_ctx(threading.current_thread(), orig_report_ctx)
+
+    def test_user_tokens_property_access(self):
+        """Test that st.user.tokens returns a TokensProxy."""
+        user_info = {
+            "email": "test@example.com",
+            "tokens": {"id": "token1", "access": "token2"},
+        }
+
+        with self._with_user_context(user_info):
+            tokens = st.user.tokens
+            assert isinstance(tokens, TokensProxy)
+            assert tokens.id == "token1"
+            assert tokens.access == "token2"
+
+    def test_user_tokens_key_access(self):
+        """Test that st.user['tokens'] returns a TokensProxy."""
+        user_info = {
+            "email": "test@example.com",
+            "tokens": {"id": "token1", "access": "token2"},
+        }
+
+        with self._with_user_context(user_info):
+            tokens = st.user["tokens"]
+            assert isinstance(tokens, TokensProxy)
+            assert tokens.id == "token1"
+            assert tokens.access == "token2"
+
+    def test_user_tokens_empty(self):
+        """Test st.user.tokens when no tokens are present."""
+        user_info = {"email": "test@example.com"}
+
+        with self._with_user_context(user_info):
+            tokens = st.user.tokens
+            assert isinstance(tokens, TokensProxy)
+            assert len(tokens) == 0
+
+    def test_user_tokens_consistency(self):
+        """Test that st.user.tokens and st.user['tokens'] return the same type."""
+        user_info = {"email": "test@example.com", "tokens": {"id": "test_token"}}
+
+        with self._with_user_context(user_info):
+            tokens_prop = st.user.tokens
+            tokens_key = st.user["tokens"]
+
+            assert isinstance(tokens_prop, TokensProxy)
+            assert isinstance(tokens_key, TokensProxy)
+            assert tokens_prop.id == tokens_key.id

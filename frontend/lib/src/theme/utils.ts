@@ -26,11 +26,7 @@ import { cloneDeep, isObject, merge, mergeWith, once } from "lodash-es"
 import { getLogger } from "loglevel"
 
 import { CustomThemeConfig, ICustomThemeConfig } from "@streamlit/protobuf"
-import {
-  localStorageAvailable,
-  StreamlitConfig,
-  type StreamlitWindowObject,
-} from "@streamlit/utils"
+import { localStorageAvailable, StreamlitConfig } from "@streamlit/utils"
 
 import { CircularBuffer } from "~lib/components/shared/Profiler/CircularBuffer"
 import {
@@ -62,7 +58,6 @@ export const CUSTOM_THEME_AUTO_NAME = "Custom Theme Auto"
 
 declare global {
   interface Window {
-    __streamlit?: StreamlitWindowObject
     __streamlit_profiles__?: Record<
       string,
       CircularBuffer<{

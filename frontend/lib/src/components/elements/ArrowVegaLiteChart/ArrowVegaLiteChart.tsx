@@ -44,7 +44,8 @@ import {
 import { useVegaElementPreprocessor } from "./useVegaElementPreprocessor"
 import { useVegaEmbed } from "./useVegaEmbed"
 
-function isFacetChart(spec: string | object): boolean {
+// Exported for testing
+export function isFacetChart(spec: string | object): boolean {
   try {
     const parsedSpec = typeof spec === "string" ? JSON.parse(spec) : spec
 
@@ -56,6 +57,40 @@ function isFacetChart(spec: string | object): boolean {
       parsedSpec.encoding?.row ||
       parsedSpec.encoding?.column ||
       parsedSpec.encoding?.facet
+    )
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Check if a vconcat spec contains nested composition operators.
+ *
+ * In valid Vega-Lite specs, composition operators (hconcat, vconcat, concat, layer)
+ * are always top-level keys of a view specification. They cannot be buried inside
+ * encoding, mark, or other nested properties.
+ *
+ * Nested compositions don't work well with fit-x autosize type and forced width
+ * settings, as they can cause "infinite extent" errors (issue #13410).
+ */
+// Exported for testing
+export function hasNestedComposition(spec: string | object): boolean {
+  try {
+    const parsedSpec = typeof spec === "string" ? JSON.parse(spec) : spec
+
+    if (!("vconcat" in parsedSpec) || !Array.isArray(parsedSpec.vconcat)) {
+      return false
+    }
+
+    // Check if any child in vconcat contains a composition operator
+    return parsedSpec.vconcat.some(
+      (child: unknown) =>
+        child !== null &&
+        typeof child === "object" &&
+        ("hconcat" in child ||
+          "vconcat" in child ||
+          "concat" in child ||
+          "layer" in child)
     )
   } catch {
     return false
@@ -116,6 +151,10 @@ const ArrowVegaLiteChart: FC<Props> = ({
   // so they cannot use the width from the StyledVegaLiteChartContainer.
   const isFacet = isFacetChart(inputElement.spec)
 
+  // Nested compositions (vconcat containing hconcat/layer/etc.) also don't work
+  // well with forced stretch width, as it can cause "infinite extent" errors.
+  const hasNestedComp = hasNestedComposition(inputElement.spec)
+
   // We preprocess the input vega element to do a two things:
   // 1. Update the spec to handle Streamlit specific configurations such as
   //    theming, container width, and full screen mode
@@ -127,7 +166,8 @@ const ArrowVegaLiteChart: FC<Props> = ({
     // Facet charts enter a loop when using the width/height from the StyledVegaLiteChartContainer.
     isFacet ? (fullScreenWidth ?? 0) : chartContainerWidth,
     (isFullScreen ? fullScreenHeight : chartContainerHeight) ?? 0,
-    isFullScreen ? true : useStretchWidth,
+    // Don't force stretch width for nested compositions - they need natural sizing
+    isFullScreen && !hasNestedComp ? true : useStretchWidth,
     isFullScreen ? true : useStretchHeight
   )
 

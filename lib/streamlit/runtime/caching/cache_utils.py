@@ -24,7 +24,17 @@ import threading
 import time
 from abc import abstractmethod
 from collections import defaultdict
-from typing import TYPE_CHECKING, Any, Final, Generic, TypeVar, cast, overload
+from collections.abc import Callable
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Final,
+    Generic,
+    TypeAlias,
+    TypeVar,
+    cast,
+    overload,
+)
 
 from typing_extensions import ParamSpec
 
@@ -53,7 +63,6 @@ from streamlit.runtime.scriptrunner_utils.script_run_context import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
     from types import FunctionType
 
     from streamlit.runtime.caching.cache_type import CacheType
@@ -67,6 +76,9 @@ TTLCACHE_TIMER = time.monotonic
 # Type-annotate the cached function.
 P = ParamSpec("P")
 R = TypeVar("R")
+
+# A function called with a cache entry as the argument when cache entries are removed.
+OnRelease: TypeAlias = Callable[[Any], None]
 
 
 class Cache(Generic[R]):

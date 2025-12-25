@@ -787,14 +787,16 @@ def test_directory_upload_disabled_state(app: Page):
 def test_directory_upload_button_interaction(app: Page):
     """Test directory upload button can be clicked when enabled."""
     chat_input = get_element_by_key(app, "directory")
-    upload_button = chat_input.get_by_test_id("stChatInputFileUploadButton")
+    upload_button = chat_input.get_by_role("button", name="Upload a directory")
 
     expect(upload_button).to_be_visible()
+    expect(upload_button).to_have_accessible_name("Upload a directory")
     expect(upload_button).to_be_enabled()
 
-    # Just verify that the button is clickable without interacting with file chooser
-    # Directory uploads require actual directory paths which we can't simulate
-    expect(upload_button).to_have_attribute("tabindex", "0")
+    # Verify that the button is focusable without interacting with file chooser.
+    # Directory uploads require actual directory paths which we can't simulate.
+    upload_button.focus()
+    expect(upload_button).to_be_focused()
 
 
 @use_chat_input("bottom_max_chars")

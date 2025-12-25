@@ -46,11 +46,16 @@ const ChatFileUploadButton = ({
 }: Props): React.ReactElement => {
   const inputProps = configureFileInputProps(getInputProps(), acceptFile)
 
+  // React-dropzone's root props include `tabIndex=0` by default, which makes the
+  // wrapper a keyboard focus target. Since we render an actual <button> inside
+  // the wrapper, we don't want two tab stops for the same control.
+  const rootProps = getRootProps({ tabIndex: -1 })
+
   return (
     <StyledFileUploadButton
       data-testid="stChatInputFileUploadButton"
       disabled={disabled}
-      {...getRootProps()}
+      {...rootProps}
     >
       <input {...inputProps} />
       <Tooltip

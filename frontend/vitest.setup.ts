@@ -15,8 +15,13 @@
  */
 
 import "@testing-library/jest-dom/vitest"
+import { configure } from "@testing-library/react"
 import { vi } from "vitest"
 import "vitest-canvas-mock"
+
+// Bump the default timeout for async utilities to 5 seconds (default is 1000ms)
+// due to the slower machine speeds in our CI environment.
+configure({ asyncUtilTimeout: 5_000 })
 
 // In the event a sub-library uses the jest global, we need to make sure it's
 // aliased to the vi global. An example is timers using dom testing library
