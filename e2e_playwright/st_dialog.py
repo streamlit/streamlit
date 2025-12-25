@@ -319,3 +319,18 @@ if st.button("Open Fast Dialog"):
 
 if st.button("Open Slow Dialog"):
     slow_dialog()
+
+
+# Test case for issue #12716: Long dialog should start at top
+@st.dialog("Long Dialog")
+def long_dialog() -> None:
+    st.write("This is the TOP of the dialog - you should see this first!")
+    for i in range(50):
+        st.write(f"Content line {i + 1}")
+    st.write("This is the BOTTOM of the dialog")
+    if st.button("Close Long Dialog"):
+        st.rerun()
+
+
+if st.button("Open Long Dialog"):
+    long_dialog()

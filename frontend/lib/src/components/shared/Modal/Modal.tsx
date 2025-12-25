@@ -14,7 +14,13 @@
  * limitations under the License.
  */
 
-import { FunctionComponent, ReactElement, ReactNode } from "react"
+import {
+  FunctionComponent,
+  ReactElement,
+  ReactNode,
+  useEffect,
+  useRef,
+} from "react"
 
 import {
   type ModalProps,
@@ -170,6 +176,14 @@ export function calculateModalSize(
 
 function Modal(props: StreamlitModalProps): ReactElement {
   const { spacing, radii, colors, sizes } = useEmotionTheme()
+  const dialogContainerRef = useRef<HTMLDivElement>(null)
+
+  // Reset scroll position to top when modal opens (fixes #12716)
+  useEffect(() => {
+    if (props.isOpen && dialogContainerRef.current) {
+      dialogContainerRef.current.scrollTop = 0
+    }
+  }, [props.isOpen])
 
   const defaultOverrides = {
     Root: {
@@ -185,6 +199,9 @@ function Modal(props: StreamlitModalProps): ReactElement {
       style: {
         alignItems: "start",
         paddingTop: spacing.threeXL,
+      },
+      props: {
+        ref: dialogContainerRef,
       },
     },
     Dialog: {

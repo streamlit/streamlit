@@ -755,3 +755,23 @@ def test_switching_dialogs_does_not_show_stale_content(app: Page):
     expect(dialog).to_contain_text("Slow dialog content")
     expect(dialog.get_by_text("Fast dialog content")).not_to_be_attached()
     expect(dialog.get_by_test_id("stTextInput")).not_to_be_attached()
+
+
+def test_long_dialog_starts_at_top(app: Page):
+    """Test that long dialogs with scrollable content start scrolled to the top.
+
+    This verifies the fix for issue #12716 where long dialogs would start
+    scrolled to the bottom instead of the top.
+    """
+    click_button(app, "Open Long Dialog")
+    dialog = app.get_by_role("dialog")
+    expect(dialog).to_be_visible()
+
+    # The top content should be visible when the dialog opens
+    top_text = dialog.get_by_text("This is the TOP of the dialog")
+    expect(top_text).to_be_visible()
+    expect(top_text).to_be_in_viewport()
+
+    # The bottom content should NOT be visible initially (dialog should be scrolled to top)
+    bottom_text = dialog.get_by_text("This is the BOTTOM of the dialog")
+    expect(bottom_text).not_to_be_in_viewport()
