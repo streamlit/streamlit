@@ -82,6 +82,20 @@ class StErrorAPITest(DeltaGeneratorTestCase):
         )
         assert el.alert.width_config.use_stretch
 
+    def test_st_error_with_title(self):
+        """Test st.error with title."""
+        st.error("some error", title="Error Title")
+
+        el = self.get_delta_from_queue().new_element
+        assert el.alert.body == "some error"
+        assert el.alert.title == "Error Title"
+        assert el.alert.format == Alert.ERROR
+        assert (
+            el.alert.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.USE_STRETCH.value
+        )
+        assert el.alert.width_config.use_stretch
+
     def test_st_error_with_width_pixels(self):
         """Test st.error with width in pixels."""
         st.error("some error", width=500)
@@ -132,6 +146,20 @@ class StInfoAPITest(DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element
         assert el.alert.body == "some info"
         assert el.alert.icon == "❓"
+        assert el.alert.format == Alert.INFO
+        assert (
+            el.alert.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.USE_STRETCH.value
+        )
+        assert el.alert.width_config.use_stretch
+
+    def test_st_info_with_title(self):
+        """Test st.info with title."""
+        st.info("some info", title="Info Title")
+
+        el = self.get_delta_from_queue().new_element
+        assert el.alert.body == "some info"
+        assert el.alert.title == "Info Title"
         assert el.alert.format == Alert.INFO
         assert (
             el.alert.width_config.WhichOneof("width_spec")
@@ -196,6 +224,20 @@ class StSuccessAPITest(DeltaGeneratorTestCase):
         )
         assert el.alert.width_config.use_stretch
 
+    def test_st_success_with_title(self):
+        """Test st.success with title."""
+        st.success("some success", title="Success Title")
+
+        el = self.get_delta_from_queue().new_element
+        assert el.alert.body == "some success"
+        assert el.alert.title == "Success Title"
+        assert el.alert.format == Alert.SUCCESS
+        assert (
+            el.alert.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.USE_STRETCH.value
+        )
+        assert el.alert.width_config.use_stretch
+
     def test_st_success_with_width_pixels(self):
         """Test st.success with width in pixels."""
         st.success("some success", width=500)
@@ -246,6 +288,20 @@ class StWarningAPITest(DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element
         assert el.alert.body == "some warning"
         assert el.alert.icon == "⚠️"
+        assert el.alert.format == Alert.WARNING
+        assert (
+            el.alert.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.USE_STRETCH.value
+        )
+        assert el.alert.width_config.use_stretch
+
+    def test_st_warning_with_title(self):
+        """Test st.warning with title."""
+        st.warning("some warning", title="Warning Title")
+
+        el = self.get_delta_from_queue().new_element
+        assert el.alert.body == "some warning"
+        assert el.alert.title == "Warning Title"
         assert el.alert.format == Alert.WARNING
         assert (
             el.alert.width_config.WhichOneof("width_spec")

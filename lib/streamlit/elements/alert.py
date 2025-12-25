@@ -35,6 +35,7 @@ class AlertMixin:
         body: SupportsStr,
         *,  # keyword-only args:
         icon: str | None = None,
+        title: str | None = None,
         width: WidthWithoutContent = "stretch",
     ) -> DeltaGenerator:
         """Display error message.
@@ -70,6 +71,11 @@ class AlertMixin:
 
             - ``"spinner"``: Displays a spinner as an icon.
 
+        title : str, None
+            An optional title to display above the body. If ``title`` is
+            ``None`` (default), no title is displayed. The title is displayed
+            in bold text above the body content.
+
         width : "stretch" or int
             The width of the alert element. This can be one of the following:
 
@@ -92,6 +98,8 @@ class AlertMixin:
         alert_proto.icon = validate_icon_or_emoji(icon)
         alert_proto.body = clean_text(body)
         alert_proto.format = AlertProto.ERROR
+        if title is not None:
+            alert_proto.title = clean_text(title)
 
         validate_width(width)
 
@@ -112,6 +120,7 @@ class AlertMixin:
         body: SupportsStr,
         *,  # keyword-only args:
         icon: str | None = None,
+        title: str | None = None,
         width: WidthWithoutContent = "stretch",
     ) -> DeltaGenerator:
         """Display warning message.
@@ -147,6 +156,11 @@ class AlertMixin:
 
             - ``"spinner"``: Displays a spinner as an icon.
 
+        title : str, None
+            An optional title to display above the body. If ``title`` is
+            ``None`` (default), no title is displayed. The title is displayed
+            in bold text above the body content.
+
         width : "stretch" or int
             The width of the warning element. This can be one of the following:
 
@@ -168,6 +182,8 @@ class AlertMixin:
         alert_proto.body = clean_text(body)
         alert_proto.icon = validate_icon_or_emoji(icon)
         alert_proto.format = AlertProto.WARNING
+        if title is not None:
+            alert_proto.title = clean_text(title)
 
         validate_width(width)
 
@@ -188,6 +204,7 @@ class AlertMixin:
         body: SupportsStr,
         *,  # keyword-only args:
         icon: str | None = None,
+        title: str | None = None,
         width: WidthWithoutContent = "stretch",
     ) -> DeltaGenerator:
         """Display an informational message.
@@ -223,6 +240,11 @@ class AlertMixin:
 
             - ``"spinner"``: Displays a spinner as an icon.
 
+        title : str, None
+            An optional title to display above the body. If ``title`` is
+            ``None`` (default), no title is displayed. The title is displayed
+            in bold text above the body content.
+
         width : "stretch" or int
             The width of the info element. This can be one of the following:
 
@@ -245,6 +267,8 @@ class AlertMixin:
         alert_proto.body = clean_text(body)
         alert_proto.icon = validate_icon_or_emoji(icon)
         alert_proto.format = AlertProto.INFO
+        if title is not None:
+            alert_proto.title = clean_text(title)
 
         validate_width(width)
 
@@ -265,6 +289,7 @@ class AlertMixin:
         body: SupportsStr,
         *,  # keyword-only args:
         icon: str | None = None,
+        title: str | None = None,
         width: WidthWithoutContent = "stretch",
     ) -> DeltaGenerator:
         """Display a success message.
@@ -300,6 +325,11 @@ class AlertMixin:
 
             - ``"spinner"``: Displays a spinner as an icon.
 
+        title : str, None
+            An optional title to display above the body. If ``title`` is
+            ``None`` (default), no title is displayed. The title is displayed
+            in bold text above the body content.
+
         width : "stretch" or int
             The width of the success element. This can be one of the following:
 
@@ -321,6 +351,8 @@ class AlertMixin:
         alert_proto.body = clean_text(body)
         alert_proto.icon = validate_icon_or_emoji(icon)
         alert_proto.format = AlertProto.SUCCESS
+        if title is not None:
+            alert_proto.title = clean_text(title)
 
         validate_width(width)
 

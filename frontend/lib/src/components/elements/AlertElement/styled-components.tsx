@@ -32,3 +32,8 @@ export const StyledAlertIcon = styled.div(({ theme }) => ({
   position: "relative",
   top: theme.spacing.threeXS,
 }))
+
+export const StyledAlertTitle = styled.div(({ theme }) => ({
+  fontWeight: theme.fontWeights.bold,
+  marginBottom: theme.spacing.sm,
+}))
