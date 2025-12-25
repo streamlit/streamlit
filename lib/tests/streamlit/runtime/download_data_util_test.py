@@ -44,13 +44,15 @@ class ConvertDataToBytesAndInferMimeTest(unittest.TestCase):
         assert mime == "text/plain"
         mock_local_file_down.assert_called_once_with("/path/to/file.txt")
 
+    @unittest.mock.patch("streamlit.runtime.download_data_util.os.path.isfile")
     @unittest.mock.patch(
         "streamlit.runtime.download_data_util.file_util.local_file_down"
     )
     def test_local_file_unknown_extension_defaults_to_octet_stream(
-        self, mock_local_file_down
+        self, mock_local_file_down, mock_isfile
     ):
         """Local file with unknown extension defaults to application/octet-stream."""
+        mock_isfile.return_value = True  # Pretend the file exists
         mock_local_file_down.return_value = b"data"
         data_as_bytes, mime = convert_data_to_bytes_and_infer_mime(
             "/path/to/file.unknown", unsupported_error=RuntimeError("unsupported")
@@ -133,11 +135,13 @@ class ConvertDataToBytesAndInferMimeTest(unittest.TestCase):
         assert data_as_bytes == b"data"
         assert mime == "application/zip"
 
+    @unittest.mock.patch("streamlit.runtime.download_data_util.os.path.isfile")
     @unittest.mock.patch(
         "streamlit.runtime.download_data_util.file_util.local_file_down"
     )
-    def test_local_file_down_error_propagates(self, mock_local_file_down):
+    def test_local_file_down_error_propagates(self, mock_local_file_down, mock_isfile):
         """Error from local_file_down is propagated."""
+        mock_isfile.return_value = True  # Pretend the file exists
         mock_local_file_down.side_effect = OSError("Download failed")
         with pytest.raises(IOError, match="Download failed"):
             convert_data_to_bytes_and_infer_mime(

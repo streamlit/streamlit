@@ -66,10 +66,12 @@ def s3_file_down(link: str) -> bytes:
     try:
         from urllib.parse import urlparse
 
-        import boto3
-        from botocore.exceptions import ClientError
+        import boto3  # type: ignore[import-not-found]
+        from botocore.exceptions import ClientError  # type: ignore[import-not-found]
     except ImportError as e:
-        raise ImportError("boto3 is missing") from e
+        raise ImportError(
+            "boto3 is required to download from S3. Install it with: pip install boto3"
+        ) from e
 
     parsed = urlparse(link)
     bucket = parsed.netloc
@@ -81,7 +83,7 @@ def s3_file_down(link: str) -> bytes:
     try:
         s3 = boto3.client("s3")
         res = s3.get_object(Bucket=bucket, Key=key)
-        return res["Body"].read()
+        return res["Body"].read()  # type: ignore[no-any-return]
     except ClientError as e:
         raise FileNotFoundError(f"S3 file not found: {link}") from e
 
@@ -115,4 +117,4 @@ def http_down(link: str) -> bytes:
         raise ValueError(f"Invalid url scheme: {parsed.scheme}")
 
     with urllib.request.urlopen(link, timeout=30) as res:  # noqa: S310
-        return res.read()
+        return res.read()  # type: ignore[no-any-return]
