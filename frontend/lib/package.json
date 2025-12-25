@@ -76,7 +76,7 @@
     "immer": "^11.0.1",
     "json5": "^2.2.3",
     "katex": "^0.16.25",
-    "lodash-es": "^4.17.21",
+    "lodash-es": "^4.17.22",
     "loglevel": "^1.9.2",
     "mapbox-gl": "^1.13.2",
     "mdast-util-find-and-replace": "^3.0.2",
