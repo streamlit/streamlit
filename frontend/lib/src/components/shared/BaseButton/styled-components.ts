@@ -331,9 +331,19 @@ export const StyledSegmentedControlButton = styled(
       borderBottomRightRadius: theme.radii.button,
       marginRight: theme.spacing.none, // Reset margin for the last child
     },
-    "&:focus-visible": {
-      // Make sure the focus ring isn't below the previous/next button.
+    "&:hover, &:focus-visible": {
+      // Elevate the hovered button above adjacent buttons so its borders render on top.
       zIndex: theme.zIndices.priority,
+    },
+    // When this button is hovered, hide the next button's left border to prevent
+    // double-layering of semi-transparent borders on the right edge.
+    "&:hover + button, &:focus-visible + button": {
+      borderLeftColor: theme.colors.transparent,
+    },
+    // When the next button is hovered, hide this button's right border to prevent
+    // double-layering of semi-transparent borders on the left edge.
+    "&:has(+ button:hover), &:has(+ button:focus-visible)": {
+      borderRightColor: theme.colors.transparent,
     },
   }
 })

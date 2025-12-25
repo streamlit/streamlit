@@ -278,3 +278,26 @@ def test_dynamic_segmented_control_props(
     get_segment_button(dynamic_segmented, "orange").click()
     wait_for_app_run(app)
     expect_prefixed_markdown(app, "Updated segmented control value:", "orange")
+
+
+def test_segmented_control_hover_border_consistency(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that all borders have consistent color when hovering over a segmented control button.
+
+    This test verifies the fix for issue #12802 where the left border of the hovered
+    segment became darker/lighter than other borders due to border overlap with
+    semi-transparent colors.
+    """
+    segmented_control = get_button_group(
+        themed_app, "segmented_control_single_selection"
+    )
+
+    # Get the middle button to hover over (to test both left and right border behavior)
+    middle_button = get_segment_button(segmented_control, "Foobar")
+
+    # Hover over the middle button
+    middle_button.hover()
+
+    # Take a snapshot with the button in hover state to verify border consistency
+    assert_snapshot(segmented_control, name="st_segmented_control-hover_state")
