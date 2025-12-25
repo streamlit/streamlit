@@ -1,0 +1,109 @@
+from pickletools import read_int4
+
+print("Welcome to the Budget Analyser")
+
+# enter the month
+import difflib
+
+years_months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
+month = ""
+while True:
+    user_input = input("What is the month ? ")
+
+    matches = difflib.get_close_matches(user_input, years_months, n=1, cutoff=0.6)
+
+    if matches:
+        month = matches[0]  # Take the closest match
+        break
+    else:
+        print("Error: please enter a valid month (close to the correct spelling)")
+
+print("Month:", month)
+
+
+# enter the income
+while True:
+    try:
+        income = int(input("Enter your income: "))
+        break
+    except ValueError:
+        print("Error: please enter a number")
+
+print("Your income is:", income)
+
+
+# enter the fixed expenses
+def calculate_fixed_expenses():
+    print("Enter your fixed expenses:")
+
+    electricity = float(input("Electricity: "))
+    rent = float(input("Rent: "))
+    food_groceries = float(input("Food/Groceries: "))
+    wifi = float(input("WiFi: "))
+
+    total_fixed_expenses = electricity + rent + food_groceries + wifi
+    return total_fixed_expenses
+
+total_fixed_expenses = calculate_fixed_expenses()
+
+print("Total Fixed Expenses: ", total_fixed_expenses)
+
+
+# Remaining budget after fixed expenses
+def calculate_budget_after_expenses():
+
+    budget_after_expenses = income - total_fixed_expenses
+    return budget_after_expenses
+
+budget_after_expenses = calculate_budget_after_expenses()
+
+print("Budget After Fixed Expenses: ", budget_after_expenses)
+
+
+# enter the variable expenses
+def calculate_variable_expenses():
+    print("Enter your variable expenses:")
+
+    Shopping = float(input("Shopping: "))
+    Entertainment = float(input("Entertainment: "))
+    Transport = float(input("Transport: "))
+
+    total_variable_expenses = Shopping + Entertainment + Transport
+    return total_variable_expenses
+
+total_variable_expenses = calculate_variable_expenses()
+
+print("Total variable Expenses: ", total_variable_expenses)
+
+# Remaining budget after fixed and variable expenses
+def calculate_budget_after_expenses_b():
+
+    budget_after_expenses_b = budget_after_expenses - total_variable_expenses
+    return budget_after_expenses_b
+
+budget_after_expenses_b = calculate_budget_after_expenses_b()
+
+print("Budget After Expenses b: ", budget_after_expenses_b)
+
+
+# Alert if expenses is more than 80%
+
+total_expenses = total_fixed_expenses + total_variable_expenses
+
+limit = income * 0.8
+
+if total_expenses > limit:
+    print("⚠️ ALERT: You have exceeded 80% of your income!")
+else:
+    print("✅ Good job! Your spending is under control.")
+
+
+# Add the savings
+remaining_budget = income - (total_fixed_expenses + total_variable_expenses)
+
+savings = remaining_budget * 0.5
+
+free_money = remaining_budget - savings
+
+print("Savings (50%):", savings)
+print("Money left after savings:", free_money)
