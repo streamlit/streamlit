@@ -28,7 +28,7 @@ from e2e_playwright.shared.app_utils import (
     get_expander,
 )
 
-CHECKBOX_ELEMENTS = 17
+CHECKBOX_ELEMENTS = 20
 
 
 def test_checkbox_widget_display(
@@ -206,3 +206,36 @@ def test_dynamic_checkbox_props(app: Page, assert_snapshot: ImageCompareFunction
     # Click the checkbox
     click_checkbox(app, "Updated dynamic checkbox")
     expect_prefixed_markdown(app, "Updated checkbox state:", "False")
+
+
+def test_checkboxes_in_horizontal_container_consistent_margin(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that all checkboxes in horizontal container have consistent margins.
+
+    This verifies the fix for issue #13162 where only the first checkbox had
+    a margin-top when inside a horizontal container within a column.
+    """
+    horizontal_container = get_element_by_key(app, "horizontal_checkbox_container")
+    expect(horizontal_container).to_be_visible()
+
+    # Get all checkboxes within the horizontal container
+    checkboxes = horizontal_container.get_by_test_id("stCheckbox").all()
+    expect(horizontal_container.get_by_test_id("stCheckbox")).to_have_count(3)
+
+    # Verify all checkboxes have consistent margin-top (should all be 0 or all same value)
+    first_checkbox_margin = checkboxes[0].evaluate(
+        "el => window.getComputedStyle(el).marginTop"
+    )
+    for checkbox in checkboxes[1:]:
+        checkbox_margin = checkbox.evaluate(
+            "el => window.getComputedStyle(el).marginTop"
+        )
+        assert (
+            first_checkbox_margin == checkbox_margin
+        ), f"Inconsistent margin-top: first={first_checkbox_margin}, current={checkbox_margin}"
+
+    # Take snapshot of the container to verify visual consistency
+    assert_snapshot(
+        horizontal_container, name="st_checkbox-horizontal_container_consistent_margin"
+    )

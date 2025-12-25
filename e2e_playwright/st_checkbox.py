@@ -105,3 +105,15 @@ else:
         kwargs={"param": "initial kwarg param"},
     )
     st.write("Initial checkbox state:", state)
+
+# Test for issue #13162: Consistent margin in horizontal container inside column
+st.markdown("Checkboxes in horizontal container inside column:")
+cols = st.columns(2)
+with cols[0]:
+    st.button("Button 1", width="stretch", key="btn_col1")
+    st.button("Button 2", width="stretch", key="btn_col2")
+with cols[1]:
+    with st.container(horizontal=True, key="horizontal_checkbox_container"):
+        st.checkbox("Checkbox 1", key="hc_checkbox_1")
+        st.checkbox("Checkbox 2", key="hc_checkbox_2")
+        st.checkbox("Checkbox 3", key="hc_checkbox_3")

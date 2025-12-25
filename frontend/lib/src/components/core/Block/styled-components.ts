@@ -20,7 +20,6 @@ import styled from "@emotion/styled"
 
 import { Block as BlockProto, streamlit } from "@streamlit/protobuf"
 
-import { StyledCheckbox } from "~lib/components/widgets/Checkbox/styled-components"
 import { EmotionTheme, STALE_STYLES } from "~lib/theme"
 import { assertNever } from "~lib/util/assertNever"
 
@@ -157,18 +156,6 @@ export const StyledColumn = styled.div<StyledColumnProps>(
       },
       ...(verticalAlignment === VerticalAlignment.BOTTOM && {
         marginTop: "auto",
-        // Add margin to the first checkbox/toggle within the column to align it
-        // better with other input widgets.
-        [`& ${StyledElementContainer}:last-of-type > ${StyledCheckbox}`]: {
-          marginBottom: theme.spacing.sm,
-        },
-      }),
-      ...(verticalAlignment === VerticalAlignment.TOP && {
-        // Add margin to the first checkbox/toggle within the column to align it
-        // better with other input widgets.
-        [`& ${StyledElementContainer}:first-of-type > ${StyledCheckbox}`]: {
-          marginTop: theme.spacing.sm,
-        },
       }),
       ...(verticalAlignment === VerticalAlignment.CENTER && {
         marginTop: "auto",
