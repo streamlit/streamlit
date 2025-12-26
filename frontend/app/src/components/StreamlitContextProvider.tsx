@@ -55,6 +55,7 @@ type LibConfigContextValues = {
   mapboxToken?: string
   enforceDownloadInNewTab?: boolean
   resourceCrossOriginMode?: undefined | "anonymous" | "use-credentials"
+  showExceptionLinks?: boolean
 }
 
 type NavigationContextValues = {
@@ -118,6 +119,7 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
   mapboxToken,
   enforceDownloadInNewTab,
   resourceCrossOriginMode,
+  showExceptionLinks,
   // NavigationContext
   pageLinkBaseUrl,
   currentPageScriptHash,
@@ -153,8 +155,9 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
       mapboxToken,
       enforceDownloadInNewTab,
       resourceCrossOriginMode,
+      showExceptionLinks,
     }),
-    [locale, mapboxToken, enforceDownloadInNewTab, resourceCrossOriginMode]
+    [locale, mapboxToken, enforceDownloadInNewTab, resourceCrossOriginMode, showExceptionLinks]
   )
 
   // Memoized object for SidebarConfigContext values

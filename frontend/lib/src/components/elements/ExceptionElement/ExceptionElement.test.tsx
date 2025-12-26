@@ -108,5 +108,16 @@ describe("ExceptionElement Element", () => {
       expect(screen.queryByText("Ask Google")).not.toBeInTheDocument()
       expect(screen.queryByText("Ask ChatGPT")).not.toBeInTheDocument()
     })
+
+    it("should not render exception links when showExceptionLinks is false", () => {
+      windowSpy.mockReturnValue({ ...originalLocation, hostname: "localhost" })
+      render(<ExceptionElement {...getProps()} />, {
+        libConfigContext: { showExceptionLinks: false },
+      })
+
+      expect(screen.queryByText("Copy")).not.toBeInTheDocument()
+      expect(screen.queryByText("Ask Google")).not.toBeInTheDocument()
+      expect(screen.queryByText("Ask ChatGPT")).not.toBeInTheDocument()
+    })
   })
 })

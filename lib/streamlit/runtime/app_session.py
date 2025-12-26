@@ -1001,6 +1001,7 @@ def _populate_config_msg(msg: Config) -> None:
     if config.get_option("client.showSidebarNavigation") is False:
         msg.hide_sidebar_nav = True
     msg.toolbar_mode = _get_toolbar_mode()
+    msg.show_exception_links = config.get_option("client.showExceptionLinks")
 
 
 def _populate_theme_msg(msg: CustomThemeConfig, section: str = "theme") -> None:

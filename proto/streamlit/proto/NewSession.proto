@@ -125,6 +125,9 @@ message Config {
   }
   ToolbarMode toolbar_mode = 8;
 
+  // See config option "client.showExceptionLinks".
+  bool show_exception_links = 9;
+
   reserved 1;
 }
 

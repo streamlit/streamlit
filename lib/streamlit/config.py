@@ -603,6 +603,16 @@ _create_option(
     scriptable=True,
 )
 
+_create_option(
+    "client.showExceptionLinks",
+    description="""
+        Controls whether to show external help links (Google, ChatGPT) in
+        exception displays when running on localhost.
+    """,
+    default_val=True,
+    type_=bool,
+)
+
 # Config Section: Runner #
 
 _create_section("runner", "Settings for how Streamlit executes your script")

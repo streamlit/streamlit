@@ -737,6 +737,7 @@ class ConfigTest(unittest.TestCase):
                 "browser.serverAddress",
                 "browser.serverPort",
                 "client.showErrorDetails",
+                "client.showExceptionLinks",
                 "client.showSidebarNavigation",
                 "client.toolbarMode",
                 # Theme section options

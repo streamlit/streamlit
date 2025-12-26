@@ -188,6 +188,7 @@ interface State {
   allowRunOnSave: boolean
   scriptFinishedHandlers: (() => void)[]
   toolbarMode: Config.ToolbarMode
+  showExceptionLinks: boolean
   themeHash: string
   gitInfo: IGitInfo | null
   formsData: FormsData
@@ -311,6 +312,7 @@ export class App extends PureComponent<Props, State> {
       menuItems: undefined,
       allowRunOnSave: true,
       scriptFinishedHandlers: [],
+      showExceptionLinks: true,
       // Initialize themeHash to empty string to ensure the first processThemeInput
       // call always processes the theme (whether null or custom theme from server).
       // This prevents the bug where a cached custom theme isn't cleared when the
@@ -1330,6 +1332,7 @@ export class App extends PureComponent<Props, State> {
         allowRunOnSave: config.allowRunOnSave,
         hideTopBar: config.hideTopBar,
         toolbarMode: config.toolbarMode,
+        showExceptionLinks: config.showExceptionLinks,
         latestRunTime: performance.now(),
         mainScriptHash,
         // If we're here, the fragmentIdsThisRun variable is always the
@@ -2461,6 +2464,7 @@ export class App extends PureComponent<Props, State> {
         mapboxToken={libConfig.mapboxToken}
         enforceDownloadInNewTab={libConfig.enforceDownloadInNewTab}
         resourceCrossOriginMode={libConfig.resourceCrossOriginMode}
+        showExceptionLinks={this.state.showExceptionLinks}
         requestDeferredFile={this.requestDeferredFile}
       >
         <Hotkeys

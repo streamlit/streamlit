@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useCallback } from "react"
+import { memo, ReactElement, useCallback, useContext } from "react"
 
 import { getLogger } from "loglevel"
 
@@ -23,6 +23,7 @@ import { isLocalhost } from "@streamlit/utils"
 
 import { StyledCode } from "~lib/components/elements/CodeBlock/styled-components"
 import AlertContainer, { Kind } from "~lib/components/shared/AlertContainer"
+import { LibConfigContext } from "~lib/components/core/LibConfigContext"
 import { StyledStackTrace } from "~lib/components/shared/ErrorElement/styled-components"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
 import { useCopyToClipboard } from "~lib/hooks/useCopyToClipboard"
@@ -119,6 +120,8 @@ function StackTrace({ stackTrace }: Readonly<StackTraceProps>): ReactElement {
 function ExceptionElement({
   element,
 }: Readonly<ExceptionElementProps>): ReactElement {
+  const { showExceptionLinks = true } = useContext(LibConfigContext)
+
   const formattedExceptionShort = `${element.type}: ${element.message}`
   const formattedExceptionFull = `${formattedExceptionShort}\n\n${element.stackTrace?.join(
     "\n"
@@ -151,7 +154,7 @@ function ExceptionElement({
           {element.stackTrace && element.stackTrace.length > 0 ? (
             <StackTrace stackTrace={element.stackTrace} />
           ) : null}
-          {isLocalhost() && (
+          {isLocalhost() && showExceptionLinks && (
             <StyledExceptionLinks>
               <StyledExceptionCopyButton onClick={handleCopy}>
                 Copy

@@ -66,6 +66,15 @@ export interface LibConfigContextProps extends Omit<
    * @see DateInput
    */
   locale: typeof window.navigator.language
+
+  /**
+   * Whether to show external help links (Google, ChatGPT) in exception displays
+   * when running on localhost. Defaults to true.
+   *
+   * Consumed by:
+   * @see ExceptionElement
+   */
+  showExceptionLinks?: boolean
 }
 
 /**
@@ -86,6 +95,7 @@ export const LibConfigContext = createContext<LibConfigContextProps>({
   mapboxToken: undefined,
   enforceDownloadInNewTab: undefined,
   resourceCrossOriginMode: undefined,
+  showExceptionLinks: true,
 })
 
 // Set the context display name for React DevTools

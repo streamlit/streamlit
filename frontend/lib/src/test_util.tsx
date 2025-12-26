@@ -77,6 +77,7 @@ const defaultLibConfigContextValue = {
   mapboxToken: undefined,
   enforceDownloadInNewTab: undefined,
   resourceCrossOriginMode: undefined,
+  showExceptionLinks: true,
 }
 
 const defaultSidebarConfigContextValue = {
