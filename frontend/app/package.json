@@ -41,7 +41,7 @@
     "hoist-non-react-statics": "^3.3.2",
     "humanize-string": "^3.1.0",
     "iframe-resizer": "4.3.11",
-    "immer": "^11.0.1",
+    "immer": "^11.1.0",
     "lodash-es": "^4.17.22",
     "loglevel": "^1.9.2",
     "moment": "^2.29.4",
