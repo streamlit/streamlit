@@ -265,6 +265,7 @@ def test_alert_proto_stable():
         ("format", FD.LABEL_OPTIONAL, FD.TYPE_ENUM),
         ("icon", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
         ("width_config", FD.LABEL_OPTIONAL, FD.TYPE_MESSAGE),
+        ("title", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
     }
 
 
