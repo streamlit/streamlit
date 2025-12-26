@@ -533,6 +533,10 @@ class SessionState:
 
         If the key corresponds to a widget or form that's been instantiated
         during the current script run, raise a StreamlitAPIException instead.
+
+        If enforceFragmentStateIsolation is enabled and we're in a fragment
+        rerun, also raise an exception if attempting to modify a widget that
+        belongs to a different fragment.
         """
         ctx = get_script_run_ctx()
 
@@ -547,13 +551,57 @@ class SessionState:
                     f" with key `{user_key}` is instantiated."
                 )
 
+            # Check for cross-fragment state modification (opt-in validation)
+            if (
+                config.get_option("runner.enforceFragmentStateIsolation")
+                and ctx.fragment_ids_this_run
+                and widget_id is not None
+            ):
+                metadata = self._new_widget_state.widget_metadata.get(widget_id)
+                if metadata is not None and metadata.fragment_id is not None:
+                    if metadata.fragment_id not in ctx.fragment_ids_this_run:
+                        raise StreamlitAPIException(
+                            f"`st.session_state.{user_key}` belongs to a widget in a "
+                            f"different fragment and cannot be modified from this "
+                            f"fragment rerun. This can cause frontend/backend state "
+                            f"desynchronization. To allow cross-fragment state "
+                            f"modification, set `runner.enforceFragmentStateIsolation "
+                            f"= false` in your config."
+                        )
+
         self._new_session_state[user_key] = value
 
     def __delitem__(self, key: str) -> None:
+        """Delete a session state entry.
+
+        If enforceFragmentStateIsolation is enabled and we're in a fragment
+        rerun, raise an exception if attempting to delete a widget that
+        belongs to a different fragment.
+        """
         widget_id = self._get_widget_id(key)
 
         if not (key in self or widget_id in self):
             raise KeyError(_missing_key_error_message(key))
+
+        # Check for cross-fragment state modification (opt-in validation)
+        ctx = get_script_run_ctx()
+        if (
+            ctx is not None
+            and config.get_option("runner.enforceFragmentStateIsolation")
+            and ctx.fragment_ids_this_run
+            and widget_id is not None
+        ):
+            metadata = self._new_widget_state.widget_metadata.get(widget_id)
+            if metadata is not None and metadata.fragment_id is not None:
+                if metadata.fragment_id not in ctx.fragment_ids_this_run:
+                    raise StreamlitAPIException(
+                        f"`st.session_state.{key}` belongs to a widget in a "
+                        f"different fragment and cannot be deleted from this "
+                        f"fragment rerun. This can cause frontend/backend state "
+                        f"desynchronization. To allow cross-fragment state "
+                        f"modification, set `runner.enforceFragmentStateIsolation "
+                        f"= false` in your config."
+                    )
 
         if key in self._new_session_state:
             del self._new_session_state[key]

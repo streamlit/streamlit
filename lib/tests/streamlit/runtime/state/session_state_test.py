@@ -1427,3 +1427,282 @@ def test_session_state_iteration_excludes_trigger_widgets() -> None:
     assert (
         len([k for k in visible_keys if k.startswith("$$STREAMLIT_INTERNAL_KEY")]) == 0
     )
+
+
+# region Cross-Fragment State Isolation Tests
+
+
+def test_setitem_disallows_cross_fragment_modification_when_enforced() -> None:
+    """Test that setitem raises error for cross-fragment modification when enforced.
+
+    When runner.enforceFragmentStateIsolation is True, modifying a widget's
+    session state from a different fragment should raise StreamlitAPIException.
+    """
+    with patch_config_options({"runner.enforceFragmentStateIsolation": True}):
+        session_state = SessionState()
+        widget_id = "widget_in_fragment_a"
+        user_key = "my_widget"
+
+        # Set up key mapping
+        session_state._key_id_mapper[user_key] = widget_id
+
+        # Add widget metadata with fragment_id="fragment_a"
+        metadata = WidgetMetadata(
+            id=widget_id,
+            deserializer=lambda x: x,
+            serializer=lambda x: x,
+            value_type="int_value",
+            fragment_id="fragment_a",
+        )
+        session_state._new_widget_state.widget_metadata[widget_id] = metadata
+
+        # Mock context: currently running in fragment_b (different from fragment_a)
+        mock_ctx = MagicMock()
+        mock_ctx.widget_ids_this_run = set()
+        mock_ctx.form_ids_this_run = set()
+        mock_ctx.fragment_ids_this_run = ["fragment_b"]
+
+        with patch(
+            "streamlit.runtime.state.session_state.get_script_run_ctx",
+            return_value=mock_ctx,
+        ):
+            with pytest.raises(StreamlitAPIException) as e:
+                session_state[user_key] = 42
+            assert "different fragment" in str(e.value)
+            assert user_key in str(e.value)
+
+
+def test_setitem_allows_cross_fragment_modification_when_not_enforced() -> None:
+    """Test that setitem allows cross-fragment modification when not enforced.
+
+    When runner.enforceFragmentStateIsolation is False (default), modifying
+    a widget's session state from a different fragment should succeed.
+    """
+    with patch_config_options({"runner.enforceFragmentStateIsolation": False}):
+        session_state = SessionState()
+        widget_id = "widget_in_fragment_a"
+        user_key = "my_widget"
+
+        # Set up key mapping
+        session_state._key_id_mapper[user_key] = widget_id
+
+        # Add widget metadata with fragment_id="fragment_a"
+        metadata = WidgetMetadata(
+            id=widget_id,
+            deserializer=lambda x: x,
+            serializer=lambda x: x,
+            value_type="int_value",
+            fragment_id="fragment_a",
+        )
+        session_state._new_widget_state.widget_metadata[widget_id] = metadata
+
+        # Mock context: currently running in fragment_b (different from fragment_a)
+        mock_ctx = MagicMock()
+        mock_ctx.widget_ids_this_run = set()
+        mock_ctx.form_ids_this_run = set()
+        mock_ctx.fragment_ids_this_run = ["fragment_b"]
+
+        with patch(
+            "streamlit.runtime.state.session_state.get_script_run_ctx",
+            return_value=mock_ctx,
+        ):
+            # Should not raise, modification is allowed
+            session_state[user_key] = 42
+            assert session_state[user_key] == 42
+
+
+def test_setitem_allows_same_fragment_modification() -> None:
+    """Test that setitem allows modification within the same fragment.
+
+    When runner.enforceFragmentStateIsolation is True, modifying a widget's
+    session state from the same fragment should succeed.
+    """
+    with patch_config_options({"runner.enforceFragmentStateIsolation": True}):
+        session_state = SessionState()
+        widget_id = "widget_in_fragment_a"
+        user_key = "my_widget"
+
+        # Set up key mapping
+        session_state._key_id_mapper[user_key] = widget_id
+
+        # Add widget metadata with fragment_id="fragment_a"
+        metadata = WidgetMetadata(
+            id=widget_id,
+            deserializer=lambda x: x,
+            serializer=lambda x: x,
+            value_type="int_value",
+            fragment_id="fragment_a",
+        )
+        session_state._new_widget_state.widget_metadata[widget_id] = metadata
+
+        # Mock context: currently running in fragment_a (same as widget)
+        mock_ctx = MagicMock()
+        mock_ctx.widget_ids_this_run = set()
+        mock_ctx.form_ids_this_run = set()
+        mock_ctx.fragment_ids_this_run = ["fragment_a"]
+
+        with patch(
+            "streamlit.runtime.state.session_state.get_script_run_ctx",
+            return_value=mock_ctx,
+        ):
+            # Should not raise, modification is within the same fragment
+            session_state[user_key] = 42
+            assert session_state[user_key] == 42
+
+
+def test_setitem_allows_modification_of_pre_fragment_widget() -> None:
+    """Test that setitem allows modification of widgets without a fragment_id.
+
+    Widgets created before fragments (fragment_id=None) should be modifiable
+    from any fragment to maintain backward compatibility.
+    """
+    with patch_config_options({"runner.enforceFragmentStateIsolation": True}):
+        session_state = SessionState()
+        widget_id = "pre_fragment_widget"
+        user_key = "my_widget"
+
+        # Set up key mapping
+        session_state._key_id_mapper[user_key] = widget_id
+
+        # Add widget metadata without fragment_id (pre-fragment widget)
+        metadata = WidgetMetadata(
+            id=widget_id,
+            deserializer=lambda x: x,
+            serializer=lambda x: x,
+            value_type="int_value",
+            fragment_id=None,  # No fragment association
+        )
+        session_state._new_widget_state.widget_metadata[widget_id] = metadata
+
+        # Mock context: currently running in some fragment
+        mock_ctx = MagicMock()
+        mock_ctx.widget_ids_this_run = set()
+        mock_ctx.form_ids_this_run = set()
+        mock_ctx.fragment_ids_this_run = ["some_fragment"]
+
+        with patch(
+            "streamlit.runtime.state.session_state.get_script_run_ctx",
+            return_value=mock_ctx,
+        ):
+            # Should not raise, pre-fragment widgets are always modifiable
+            session_state[user_key] = 42
+            assert session_state[user_key] == 42
+
+
+def test_setitem_allows_modification_during_full_app_run() -> None:
+    """Test that setitem allows modification during a full app run.
+
+    When fragment_ids_this_run is None (full app run, not a fragment rerun),
+    all modifications should be allowed.
+    """
+    with patch_config_options({"runner.enforceFragmentStateIsolation": True}):
+        session_state = SessionState()
+        widget_id = "widget_in_fragment_a"
+        user_key = "my_widget"
+
+        # Set up key mapping
+        session_state._key_id_mapper[user_key] = widget_id
+
+        # Add widget metadata with fragment_id
+        metadata = WidgetMetadata(
+            id=widget_id,
+            deserializer=lambda x: x,
+            serializer=lambda x: x,
+            value_type="int_value",
+            fragment_id="fragment_a",
+        )
+        session_state._new_widget_state.widget_metadata[widget_id] = metadata
+
+        # Mock context: full app run (fragment_ids_this_run is None)
+        mock_ctx = MagicMock()
+        mock_ctx.widget_ids_this_run = set()
+        mock_ctx.form_ids_this_run = set()
+        mock_ctx.fragment_ids_this_run = None
+
+        with patch(
+            "streamlit.runtime.state.session_state.get_script_run_ctx",
+            return_value=mock_ctx,
+        ):
+            # Should not raise, full app run allows all modifications
+            session_state[user_key] = 42
+            assert session_state[user_key] == 42
+
+
+def test_delitem_disallows_cross_fragment_deletion_when_enforced() -> None:
+    """Test that delitem raises error for cross-fragment deletion when enforced.
+
+    When runner.enforceFragmentStateIsolation is True, deleting a widget's
+    session state from a different fragment should raise StreamlitAPIException.
+    """
+    with patch_config_options({"runner.enforceFragmentStateIsolation": True}):
+        session_state = SessionState()
+        widget_id = "widget_in_fragment_a"
+        user_key = "my_widget"
+
+        # Set up key mapping and initial value
+        session_state._key_id_mapper[user_key] = widget_id
+        session_state._new_session_state[user_key] = 100
+
+        # Add widget metadata with fragment_id="fragment_a"
+        metadata = WidgetMetadata(
+            id=widget_id,
+            deserializer=lambda x: x,
+            serializer=lambda x: x,
+            value_type="int_value",
+            fragment_id="fragment_a",
+        )
+        session_state._new_widget_state.widget_metadata[widget_id] = metadata
+
+        # Mock context: currently running in fragment_b (different from fragment_a)
+        mock_ctx = MagicMock()
+        mock_ctx.fragment_ids_this_run = ["fragment_b"]
+
+        with patch(
+            "streamlit.runtime.state.session_state.get_script_run_ctx",
+            return_value=mock_ctx,
+        ):
+            with pytest.raises(StreamlitAPIException) as e:
+                del session_state[user_key]
+            assert "different fragment" in str(e.value)
+            assert user_key in str(e.value)
+
+
+def test_delitem_allows_cross_fragment_deletion_when_not_enforced() -> None:
+    """Test that delitem allows cross-fragment deletion when not enforced.
+
+    When runner.enforceFragmentStateIsolation is False (default), deleting
+    a widget's session state from a different fragment should succeed.
+    """
+    with patch_config_options({"runner.enforceFragmentStateIsolation": False}):
+        session_state = SessionState()
+        widget_id = "widget_in_fragment_a"
+        user_key = "my_widget"
+
+        # Set up key mapping and initial value
+        session_state._key_id_mapper[user_key] = widget_id
+        session_state._new_session_state[user_key] = 100
+
+        # Add widget metadata with fragment_id="fragment_a"
+        metadata = WidgetMetadata(
+            id=widget_id,
+            deserializer=lambda x: x,
+            serializer=lambda x: x,
+            value_type="int_value",
+            fragment_id="fragment_a",
+        )
+        session_state._new_widget_state.widget_metadata[widget_id] = metadata
+
+        # Mock context: currently running in fragment_b (different from fragment_a)
+        mock_ctx = MagicMock()
+        mock_ctx.fragment_ids_this_run = ["fragment_b"]
+
+        with patch(
+            "streamlit.runtime.state.session_state.get_script_run_ctx",
+            return_value=mock_ctx,
+        ):
+            # Should not raise, deletion is allowed
+            del session_state[user_key]
+            assert user_key not in session_state
+
+
+# endregion Cross-Fragment State Isolation Tests

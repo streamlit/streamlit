@@ -659,6 +659,21 @@ _create_option(
 )
 
 _create_option(
+    "runner.enforceFragmentStateIsolation",
+    description="""
+        Raise an exception when a fragment attempts to modify session state
+        for widgets that belong to a different fragment.
+
+        When enabled, this helps catch potential frontend/backend state
+        desynchronization issues caused by cross-fragment state modifications.
+        This is opt-in to maintain backward compatibility with existing apps
+        that intentionally share state between fragments.
+    """,
+    default_val=False,
+    type_=bool,
+)
+
+_create_option(
     "runner.enumCoercion",
     description="""
         Adjust how certain 'options' widgets like radio, selectbox, and
