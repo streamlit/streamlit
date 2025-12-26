@@ -231,9 +231,9 @@ def test_checkboxes_in_horizontal_container_consistent_margin(
         checkbox_margin = checkbox.evaluate(
             "el => window.getComputedStyle(el).marginTop"
         )
-        assert (
-            first_checkbox_margin == checkbox_margin
-        ), f"Inconsistent margin-top: first={first_checkbox_margin}, current={checkbox_margin}"
+        assert first_checkbox_margin == checkbox_margin, (
+            f"Inconsistent margin-top: first={first_checkbox_margin}, current={checkbox_margin}"
+        )
 
     # Take snapshot of the container to verify visual consistency
     assert_snapshot(
