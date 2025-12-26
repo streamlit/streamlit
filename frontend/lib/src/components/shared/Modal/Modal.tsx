@@ -18,8 +18,9 @@ import {
   FunctionComponent,
   ReactElement,
   ReactNode,
+  useCallback,
   useEffect,
-  useRef,
+  useState,
 } from "react"
 
 import {
@@ -176,14 +177,21 @@ export function calculateModalSize(
 
 function Modal(props: StreamlitModalProps): ReactElement {
   const { spacing, radii, colors, sizes } = useEmotionTheme()
-  const dialogContainerRef = useRef<HTMLDivElement>(null)
+  const [dialogContainer, setDialogContainer] = useState<HTMLDivElement | null>(
+    null
+  )
+
+  // Callback ref to capture the dialog container element
+  const dialogContainerRef = useCallback((node: HTMLDivElement | null) => {
+    setDialogContainer(node)
+  }, [])
 
   // Reset scroll position to top when modal opens (fixes #12716)
   useEffect(() => {
-    if (props.isOpen && dialogContainerRef.current) {
-      dialogContainerRef.current.scrollTop = 0
+    if (props.isOpen && dialogContainer) {
+      dialogContainer.scrollTop = 0
     }
-  }, [props.isOpen])
+  }, [props.isOpen, dialogContainer])
 
   const defaultOverrides = {
     Root: {
