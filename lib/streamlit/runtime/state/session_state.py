@@ -598,8 +598,11 @@ class SessionState:
                         f"`st.session_state.{key}` belongs to a widget in a "
                         f"different fragment and cannot be deleted from this "
                         f"fragment rerun. This can cause frontend/backend state "
-                        f"desynchronization. To allow cross-fragment state "
-                        f"modification, set `runner.enforceFragmentStateIsolation "
+                        f"desynchronization. To fix this, either move the widget "
+                        f"into the same fragment, trigger a full app rerun using "
+                        f"`st.rerun()`, or use a non-widget `st.session_state` key "
+                        f"for cross-fragment communication. If you want to disable "
+                        f"this safety check, set `runner.enforceFragmentStateIsolation "
                         f"= false` in your config."
                     )
 
