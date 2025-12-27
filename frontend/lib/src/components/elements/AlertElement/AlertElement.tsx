@@ -67,7 +67,11 @@ function AlertElement({
 
           <div style={markdownWidth}>
             {title && (
-              <StyledAlertTitle data-testid="stAlertTitle">
+              <StyledAlertTitle
+                role="heading"
+                aria-level={2}
+                data-testid="stAlertTitle"
+              >
                 {title}
               </StyledAlertTitle>
             )}
