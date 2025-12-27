@@ -44,6 +44,10 @@ if runtime.exists():
     def on_change():
         st.session_state.number_input_changed = True
 
+    # Initialize session state variables to prevent AttributeError
+    if "number_input_9" not in st.session_state:
+        st.session_state.number_input_9 = 0.0
+
     st.number_input(
         "number input 9 (on_change)", key="number_input_9", on_change=on_change
     )
