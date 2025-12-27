@@ -19,7 +19,7 @@ import { MockInstance } from "vitest"
 
 import { Exception as ExceptionProto } from "@streamlit/protobuf"
 
-import { render } from "~lib/test_util"
+import { render, renderWithContexts } from "~lib/test_util"
 
 import ExceptionElement, { ExceptionElementProps } from "./ExceptionElement"
 
@@ -111,7 +111,7 @@ describe("ExceptionElement Element", () => {
 
     it("should not render exception links when showExceptionLinks is false", () => {
       windowSpy.mockReturnValue({ ...originalLocation, hostname: "localhost" })
-      render(<ExceptionElement {...getProps()} />, {
+      renderWithContexts(<ExceptionElement {...getProps()} />, {
         libConfigContext: { showExceptionLinks: false },
       })
 

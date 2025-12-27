@@ -238,6 +238,7 @@ export const renderWithContexts = (
     mapboxToken: undefined,
     enforceDownloadInNewTab: undefined,
     resourceCrossOriginMode: undefined,
+    showExceptionLinks: true,
     ...options.libConfigContext,
   }
 
