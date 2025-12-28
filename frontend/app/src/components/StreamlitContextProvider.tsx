@@ -157,7 +157,13 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
       resourceCrossOriginMode,
       showExceptionLinks,
     }),
-    [locale, mapboxToken, enforceDownloadInNewTab, resourceCrossOriginMode, showExceptionLinks]
+    [
+      locale,
+      mapboxToken,
+      enforceDownloadInNewTab,
+      resourceCrossOriginMode,
+      showExceptionLinks,
+    ]
   )
 
   // Memoized object for SidebarConfigContext values
