@@ -133,7 +133,9 @@ describe("Alert element", () => {
     })
     render(<AlertElement {...props} />)
     expect(screen.getByTestId("stAlert")).toBeInTheDocument()
-    expect(screen.getByTestId("stAlertTitle")).toHaveTextContent("Warning Title")
+    expect(screen.getByTestId("stAlertTitle")).toHaveTextContent(
+      "Warning Title"
+    )
     expect(screen.getByTestId("stAlertDynamicIcon")).toHaveTextContent("⚠️")
     expect(screen.getByText("Warning message body.")).toBeInTheDocument()
   })
