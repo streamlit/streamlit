@@ -469,6 +469,16 @@ class TokensProxy(Mapping[str, str]):
     def __len__(self) -> int:
         return len(self._tokens)
 
+    def to_dict(self) -> dict[str, str]:
+        """Return the token mapping as a standard dictionary.
+
+        Returns
+        -------
+        dict[str, str]
+            A dictionary mapping token names to token values.
+        """
+        return dict(self._tokens)
+
 
 class UserInfoProxy(Mapping[str, str | bool | TokensProxy | None]):
     """
