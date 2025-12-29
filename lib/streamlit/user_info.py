@@ -469,6 +469,9 @@ class TokensProxy(Mapping[str, str]):
     def __len__(self) -> int:
         return len(self._tokens)
 
+    def to_dict(self) -> dict[str, str]:
+        return self._tokens
+
 
 class UserInfoProxy(Mapping[str, str | bool | TokensProxy | None]):
     """
