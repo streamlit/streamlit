@@ -187,7 +187,8 @@ class DataCaches(StatsProvider):
         Raises
         ------
         StreamlitAPIException
-            Raised if there is no thread-local run context.
+            Raised when ``scope`` is ``"session"`` and there is no thread-local run
+            context.
         """
 
         ttl_seconds = time_to_seconds(ttl, coerce_none_to_inf=False)
@@ -542,7 +543,7 @@ class CacheDataAPI:
 
             Session-scoped cache entries will be expired when a user's session is
             disconnected. Note that disconnected sessions can reconnect - so it is
-            possible for the cache to popluate multiple times in a single session for
+            possible for the cache to populate multiple times in a single session for
             the same key.
 
         Example

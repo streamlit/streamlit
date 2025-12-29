@@ -704,13 +704,13 @@ class AppSessionTest(unittest.TestCase):
     def test_clear_session_caches(self) -> None:
         """Tests clear_session_caches."""
 
-        test_sesssion = _create_test_session()
+        test_session = _create_test_session()
 
         with patch.object(app_session, "caching") as mock_caching:
-            test_sesssion.clear_session_caches()
+            test_session.clear_session_caches()
 
-        mock_caching.cache_data.clear_session.assert_called_with(test_sesssion.id)
-        mock_caching.cache_resource.clear_session.assert_called_with(test_sesssion.id)
+        mock_caching.cache_data.clear_session.assert_called_with(test_session.id)
+        mock_caching.cache_resource.clear_session.assert_called_with(test_session.id)
 
 
 def _mock_get_options_for_section(

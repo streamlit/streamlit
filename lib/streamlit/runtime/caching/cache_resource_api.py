@@ -116,7 +116,8 @@ class ResourceCaches(StatsProvider):
         Raises
         ------
         StreamlitAPIException
-            Raised if there is no thread-local run context.
+            Raised when ``scope`` is ``"session"`` and there is no thread-local run
+            context.
         """
         if max_entries is None:
             max_entries = math.inf
@@ -472,7 +473,7 @@ class CacheResourceAPI:
 
             Session-scoped cache entries will be expired when a user's session is
             disconnected. Note that disconnected sessions can reconnect - so it is
-            possible for the cache to popluate multiple times in a single session for
+            possible for the cache to populate multiple times in a single session for
             the same key.
 
         Example
