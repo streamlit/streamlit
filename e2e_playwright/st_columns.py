@@ -62,6 +62,7 @@ with st.expander("Variable-width columns (absolute numbers)", expanded=True):
 GAPS = cast(
     "list[Gap]",
     [
+        None,
         "xxsmall",
         "xsmall",
         "small",
@@ -73,9 +74,9 @@ GAPS = cast(
 )
 
 for gap in GAPS:
-    gap_str = str(gap).lower()
+    gap_name = str(gap).lower()
 
-    with st.expander(f"Column gap {gap_str}", expanded=True):
+    with st.expander(f"Column gap {gap_name}", expanded=True):
         cols = st.columns(3, gap=gap)
         for col in cols:
             col.image(BLACK_IMG)

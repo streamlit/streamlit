@@ -36,11 +36,11 @@ SPACES = cast(
 
 st.write("Tests Outside of Containers")
 
-for space in SPACES:
-    with st.expander(f"Space set to {space}", expanded=True):
-        st.button(f"Before {space} space")
-        st.space(space)
-        st.button(f"After {space} space")
+for space_names in SPACES:
+    with st.expander(f"Space set to {space_names}", expanded=True):
+        st.button(f"Before {space_names} space")
+        st.space(space_names)
+        st.button(f"After {space_names} space")
 
 st.divider()
 

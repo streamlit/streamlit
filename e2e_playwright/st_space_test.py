@@ -35,17 +35,17 @@ def test_space_elements_exist(app: Page):
     # Check the first space elements (in vertical layout, so height should
     # be set)
 
-    def wait_for(space: Locator, height_px: int) -> Callable[[], None]:
+    def wait_condition(space: Locator, height_px: int) -> Callable[[], bool]:
         return (
             lambda: (bbox := space.bounding_box()) is not None
             and int(bbox["height"]) == height_px
         )
 
-    for height_em in heights_em:
+    for i, height_em in enumerate(heights_em):
         height_px = round(height_em * 16)
-        space = space_elements.nth(0)
+        space = space_elements.nth(i)
 
-        wait_until(app, wait_for(space, height_px))
+        wait_until(app, wait_condition(space, height_px))
 
 
 def test_horizontal_container_spacing(app: Page, assert_snapshot: ImageCompareFunction):

@@ -36,13 +36,13 @@ GAPS = cast(
 )
 
 for gap in GAPS:
-    gap_str = str(gap).lower()
+    gap_name = str(gap).lower()
 
     with st.container(
         border=True,
         gap=gap,
         horizontal=True,
-        key=f"container-horizontal-gap-{gap_str}",
+        key=f"container-horizontal-gap-{gap_name}",
     ):
         st.html(
             '<div style="background:lightblue">One</div>',
@@ -62,13 +62,13 @@ for gap in GAPS:
         )
 
 for gap in GAPS:
-    gap_str = str(gap).lower()
+    gap_name = str(gap).lower()
 
     with st.container(
         border=True,
         gap=gap,
         horizontal=False,
-        key=f"container-vertical-gap-{gap_str}",
+        key=f"container-vertical-gap-{gap_name}",
     ):
         st.html(
             '<div style="background:lightblue">One</div>',
