@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterator, MutableMapping
+from collections.abc import Callable, Iterator, MutableMapping
 from typing import Any, Final
 
 from streamlit import logger as _logger
@@ -144,6 +144,25 @@ class SessionStateProxy(MutableMapping[Key, Any]):
     def to_dict(self) -> dict[str, Any]:
         """Return a dict containing all session_state and keyed widget values."""
         return get_session_state().filtered_state
+
+
+def make_session_state_init(
+    session_state_proxy: SessionStateProxy,
+) -> Callable[..., None]:
+    """Returns a function that ensures values are present the given session state.
+
+    Any missing keys will be populated with the provided values; any existing keys will
+    be left alone.
+    """
+
+    # NOTE: This is not a method on SessionStateProxy in order to avoid namespace
+    # conflicts.
+    def make_session_state(**entries: Any) -> None:
+        for key, value in entries.items():
+            if key not in session_state_proxy:
+                session_state_proxy[key] = value
+
+    return make_session_state
 
 
 def _missing_attr_error_message(attr_name: str) -> str:

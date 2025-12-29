@@ -109,6 +109,7 @@ from streamlit.runtime.context import ContextProxy as _ContextProxy
 from streamlit.runtime.state import (
     SessionStateProxy as _SessionStateProxy,
     QueryParamsProxy as _QueryParamsProxy,
+    make_session_state_init as _make_session_state_init,
 )
 from streamlit.user_info import (
     UserInfoProxy as _UserInfoProxy,
@@ -251,6 +252,7 @@ set_option = _gather_metrics("set_option", _config.set_user_option)
 
 # Session State
 session_state = _SessionStateProxy()
+session_state_init = _make_session_state_init(session_state)
 
 query_params = _QueryParamsProxy()
 
