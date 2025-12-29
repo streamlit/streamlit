@@ -317,6 +317,13 @@ class TestTokensProxy:
         with pytest.raises(StreamlitAPIException):
             proxy["id"] = "modified"
 
+    def test_tokens_proxy_to_dict(self):
+        """Test that tokens can be converted to a dictionary."""
+        proxy = TokensProxy({"id": "test", "access": "test"})
+        assert proxy.to_dict() == {"id": "test", "access": "test"}
+        proxy.to_dict()["id"] = "modified"
+        assert proxy.to_dict() == {"id": "test", "access": "test"}
+
 
 class UserInfoTokensTest(DeltaGeneratorTestCase):
     """Test st.user.tokens functionality."""
