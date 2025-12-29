@@ -15,7 +15,7 @@
 """E2E tests for host config bypass feature.
 
 These tests verify that when a host provides minimal configuration via
-win.__streamlit, the WebSocket connection can be established immediately
+window.__streamlit, the WebSocket connection can be established immediately
 without waiting for the host-config endpoint response (bypass mode).
 """
 
