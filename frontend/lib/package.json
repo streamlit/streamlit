@@ -73,10 +73,10 @@
     "deck.gl": "^9.1.14",
     "dompurify": "^3.3.0",
     "hoist-non-react-statics": "^3.3.2",
-    "immer": "^11.0.1",
+    "immer": "^11.1.0",
     "json5": "^2.2.3",
     "katex": "^0.16.25",
-    "lodash-es": "^4.17.21",
+    "lodash-es": "^4.17.22",
     "loglevel": "^1.9.2",
     "mapbox-gl": "^1.13.2",
     "mdast-util-find-and-replace": "^3.0.2",
@@ -133,7 +133,7 @@
     "not op_mini all"
   ],
   "devDependencies": {
-    "@swc/plugin-emotion": "^14.0.1",
+    "@swc/plugin-emotion": "^14.1.0",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.1",
