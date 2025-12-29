@@ -33,12 +33,14 @@ def function_for_testing(
 
 class GetSessionIdOrThrowTest(TestCase):
     def test_returns_session_when_ctx_set(self):
+        """A session ID should be returned when there is a context."""
         fake_session_id = "abcd"
         with patch.object(script_run_context, "get_script_run_ctx") as mock_get_ctx:
             mock_get_ctx.return_value.session_id = fake_session_id
             assert get_session_id_or_throw() == fake_session_id
 
     def test_raises_exception_when_ctx_unset(self):
+        """An exception should be thrown when there is no context."""
         with patch.object(script_run_context, "get_script_run_ctx") as mock_get_ctx:
             mock_get_ctx.return_value = None
             with pytest.raises(StreamlitAPIException):
