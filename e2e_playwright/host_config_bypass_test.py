@@ -15,7 +15,7 @@
 """E2E tests for host config bypass feature.
 
 These tests verify that when a host provides minimal configuration via
-window.__streamlit, the WebSocket connection can be established immediately
+win.__streamlit, the WebSocket connection can be established immediately
 without waiting for the host-config endpoint response (bypass mode).
 """
 
@@ -28,6 +28,31 @@ from playwright.sync_api import Page, Route, WebSocket, expect
 
 from e2e_playwright.conftest import wait_until
 from e2e_playwright.shared.app_utils import goto_app
+
+
+def _verify_fullscreen_button(page: Page, *, should_be_visible: bool) -> None:
+    """Verify fullscreen button visibility after hovering over the dataframe.
+
+    Parameters
+    ----------
+    page : Page
+        The Playwright page object.
+    should_be_visible : bool
+        If True, expects fullscreen button to be visible.
+        If False, expects toolbar visible but fullscreen button not attached.
+    """
+    expect(page.get_by_text("Fullscreen mode test")).to_be_visible()
+
+    dataframe_element = page.get_by_test_id("stDataFrame")
+    dataframe_element.hover()
+
+    if should_be_visible:
+        fullscreen_button = dataframe_element.get_by_role("button", name="Fullscreen")
+        expect(fullscreen_button).to_be_visible()
+    else:
+        dataframe_toolbar = dataframe_element.get_by_test_id("stElementToolbar")
+        expect(dataframe_toolbar).to_have_css("opacity", "1")
+        expect(page.get_by_role("button", name="Fullscreen")).not_to_be_attached()
 
 
 def _inject_bypass_config(page: Page, backend_url: str) -> None:
@@ -391,17 +416,7 @@ def test_disable_fullscreen_mode_via_window_in_bypass(
 
     goto_app(page, f"http://localhost:{app_port}/")
 
-    # Wait for app to load
-    expect(page.get_by_text("Fullscreen mode test")).to_be_visible()
-
-    # Hover over the dataframe to show the toolbar
-    dataframe_element = page.get_by_test_id("stDataFrame")
-    dataframe_element.hover()
-
-    # Toolbar should be visible but fullscreen button should NOT be attached
-    dataframe_toolbar = dataframe_element.get_by_test_id("stElementToolbar")
-    expect(dataframe_toolbar).to_have_css("opacity", "1")
-    expect(page.get_by_role("button", name="Fullscreen")).not_to_be_attached()
+    _verify_fullscreen_button(page, should_be_visible=False)
 
 
 def test_disable_fullscreen_mode_window_takes_precedence_over_endpoint_in_bypass(
@@ -439,16 +454,7 @@ def test_disable_fullscreen_mode_window_takes_precedence_over_endpoint_in_bypass
 
     goto_app(page, f"http://localhost:{app_port}/")
 
-    # Wait for app to load
-    expect(page.get_by_text("Fullscreen mode test")).to_be_visible()
-
-    # Hover over the dataframe to show the toolbar
-    dataframe_element = page.get_by_test_id("stDataFrame")
-    dataframe_element.hover()
-
-    # Fullscreen button SHOULD be visible on dataframe (window config overrides endpoint)
-    fullscreen_button = dataframe_element.get_by_role("button", name="Fullscreen")
-    expect(fullscreen_button).to_be_visible()
+    _verify_fullscreen_button(page, should_be_visible=True)
 
 
 def test_disable_fullscreen_mode_window_takes_precedence_over_endpoint_without_bypass(
@@ -488,16 +494,7 @@ def test_disable_fullscreen_mode_window_takes_precedence_over_endpoint_without_b
 
     goto_app(page, f"http://localhost:{app_port}/")
 
-    # Wait for app to load
-    expect(page.get_by_text("Fullscreen mode test")).to_be_visible()
-
-    # Hover over the dataframe to show the toolbar
-    dataframe_element = page.get_by_test_id("stDataFrame")
-    dataframe_element.hover()
-
-    # Fullscreen button SHOULD be visible on dataframe (window config overrides endpoint after reconciliation)
-    fullscreen_button = dataframe_element.get_by_role("button", name="Fullscreen")
-    expect(fullscreen_button).to_be_visible()
+    _verify_fullscreen_button(page, should_be_visible=True)
 
 
 def test_block_error_dialogs_via_window_config_bypass(
@@ -528,8 +525,8 @@ def test_block_error_dialogs_via_window_config_bypass(
     expect(page.get_by_text("Connection status test")).to_be_visible()
 
     # Capture console messages to verify error is logged (not shown in dialog)
-    messages = []
-    page.on("console", lambda msg: messages.append(msg))
+    messages: list[str] = []
+    page.on("console", lambda msg: messages.append(msg.text))
 
     # Navigate to a non-existent page to trigger page not found error
     page.goto(f"http://localhost:{app_port}/nonexistent_page")
@@ -538,7 +535,7 @@ def test_block_error_dialogs_via_window_config_bypass(
     wait_until(
         page,
         lambda: any(
-            "The page that you have requested does not seem to exist" in message.text
+            "The page that you have requested does not seem to exist" in message
             for message in messages
         ),
     )

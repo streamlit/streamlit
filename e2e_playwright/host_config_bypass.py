@@ -73,15 +73,6 @@ st.dataframe(
     key="test_dataframe",
 )
 
-# Elements for testing enforceDownloadInNewTab
-st.subheader("Download test", divider="gray")
-st.download_button(
-    "Download test file",
-    data="Hello from download test!",
-    file_name="test_download.txt",
-    key="test_download_button",
-)
-
 # Elements for testing mapboxToken - uses pydeck with explicit Mapbox style
 # This ensures the mapboxToken from host config is actually used in API requests
 st.subheader("Mapbox token test", divider="gray")
