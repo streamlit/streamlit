@@ -35,7 +35,7 @@ def test_space_elements_exist(app: Page):
     # Check the first space elements (in vertical layout, so height should
     # be set)
 
-    def wait_for(space: Locator, height_px: int) -> Callable[[]]:
+    def wait_for(space: Locator, height_px: int) -> Callable[[], None]:
         return (
             lambda: (bbox := space.bounding_box()) is not None
             and int(bbox["height"]) == height_px
