@@ -19,9 +19,9 @@
     "typesync": "typesync"
   },
   "devDependencies": {
-    "@typescript-eslint/rule-tester": "^8.50.0",
-    "@typescript-eslint/types": "^8.50.0",
-    "@typescript-eslint/utils": "^8.50.0",
+    "@typescript-eslint/rule-tester": "^8.50.1",
+    "@typescript-eslint/types": "^8.50.1",
+    "@typescript-eslint/utils": "^8.50.1",
     "@vitest/coverage-v8": "^4.0.16",
     "eslint": "^9.39.2",
     "prettier": "^3.7.4",
@@ -30,7 +30,7 @@
     "vitest": "^4.0.16"
   },
   "peerDependencies": {
-    "@typescript-eslint/utils": "^8.50.0",
+    "@typescript-eslint/utils": "^8.50.1",
     "eslint": "^9.0.0"
   }
 }
