@@ -143,7 +143,7 @@ class ConvertDataToBytesAndInferMimeTest(unittest.TestCase):
         """Error from local_file_down is propagated."""
         mock_isfile.return_value = True  # Pretend the file exists
         mock_local_file_down.side_effect = OSError("Download failed")
-        with pytest.raises(IOError, match="Download failed"):
+        with pytest.raises(OSError, match="Download failed"):
             convert_data_to_bytes_and_infer_mime(
                 "/path/to/file.txt", unsupported_error=RuntimeError("unsupported")
             )
