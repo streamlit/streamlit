@@ -604,13 +604,14 @@ _create_option(
 )
 
 _create_option(
-    "client.showExceptionLinks",
+    "client.showErrorLinks",
     description="""
         Controls whether to show external help links (Google, ChatGPT) in
-        exception displays when running on localhost.
+        error displays. Can be "auto" (shows on localhost only), true (always
+        show), or false (never show).
     """,
-    default_val=True,
-    type_=bool,
+    default_val="auto",
+    type_=str,
 )
 
 # Config Section: Runner #

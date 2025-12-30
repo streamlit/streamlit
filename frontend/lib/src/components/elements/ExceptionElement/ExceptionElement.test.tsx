@@ -17,7 +17,7 @@
 import { screen } from "@testing-library/react"
 import { MockInstance } from "vitest"
 
-import { Exception as ExceptionProto } from "@streamlit/protobuf"
+import { Config, Exception as ExceptionProto } from "@streamlit/protobuf"
 
 import { render, renderWithContexts } from "~lib/test_util"
 
@@ -109,15 +109,30 @@ describe("ExceptionElement Element", () => {
       expect(screen.queryByText("Ask ChatGPT")).not.toBeInTheDocument()
     })
 
-    it("should not render exception links when showExceptionLinks is false", () => {
+    it("should not render exception links when showErrorLinks is false", () => {
       windowSpy.mockReturnValue({ ...originalLocation, hostname: "localhost" })
       renderWithContexts(<ExceptionElement {...getProps()} />, {
-        libConfigContext: { showExceptionLinks: false },
+        libConfigContext: {
+          showErrorLinks: Config.ShowErrorLinks.SHOW_ERROR_LINKS_FALSE,
+        },
       })
 
       expect(screen.queryByText("Copy")).not.toBeInTheDocument()
       expect(screen.queryByText("Ask Google")).not.toBeInTheDocument()
       expect(screen.queryByText("Ask ChatGPT")).not.toBeInTheDocument()
+    })
+
+    it("should render exception links when showErrorLinks is true on non-localhost", () => {
+      windowSpy.mockReturnValue({ ...originalLocation, hostname: "foo.com" })
+      renderWithContexts(<ExceptionElement {...getProps()} />, {
+        libConfigContext: {
+          showErrorLinks: Config.ShowErrorLinks.SHOW_ERROR_LINKS_TRUE,
+        },
+      })
+
+      expect(screen.getByText("Copy")).toBeInTheDocument()
+      expect(screen.getByText("Ask Google")).toBeInTheDocument()
+      expect(screen.getByText("Ask ChatGPT")).toBeInTheDocument()
     })
   })
 })

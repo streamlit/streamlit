@@ -23,7 +23,7 @@ import {
 } from "@testing-library/react"
 import { Vector } from "apache-arrow"
 
-import { PageConfig } from "@streamlit/protobuf"
+import { Config, PageConfig } from "@streamlit/protobuf"
 
 import {
   DownloadContext,
@@ -77,7 +77,7 @@ const defaultLibConfigContextValue = {
   mapboxToken: undefined,
   enforceDownloadInNewTab: undefined,
   resourceCrossOriginMode: undefined,
-  showExceptionLinks: true,
+  showErrorLinks: Config.ShowErrorLinks.SHOW_ERROR_LINKS_AUTO,
 }
 
 const defaultSidebarConfigContextValue = {
@@ -238,7 +238,7 @@ export const renderWithContexts = (
     mapboxToken: undefined,
     enforceDownloadInNewTab: undefined,
     resourceCrossOriginMode: undefined,
-    showExceptionLinks: true,
+    showErrorLinks: Config.ShowErrorLinks.SHOW_ERROR_LINKS_AUTO,
     ...options.libConfigContext,
   }
 

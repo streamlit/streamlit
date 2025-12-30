@@ -993,6 +993,23 @@ def _get_toolbar_mode() -> Config.ToolbarMode.ValueType:
     return enum_value
 
 
+def _get_show_error_links() -> Config.ShowErrorLinks.ValueType:
+    config_key = "client.showErrorLinks"
+    config_value = config.get_option(config_key)
+    enum_name = f"SHOW_ERROR_LINKS_{config_value.upper()}"
+    enum_value: Config.ShowErrorLinks.ValueType | None = getattr(
+        Config.ShowErrorLinks, enum_name, None
+    )
+    if enum_value is None:
+        allowed_values = "auto, true, false"
+        raise ValueError(
+            f"Config {config_key!r} expects to have one of "
+            f"the following values: {allowed_values}. "
+            f"Current value: {config_value}"
+        )
+    return enum_value
+
+
 def _populate_config_msg(msg: Config) -> None:
     msg.gather_usage_stats = config.get_option("browser.gatherUsageStats")
     msg.max_cached_message_age = config.get_option("global.maxCachedMessageAge")
@@ -1001,7 +1018,7 @@ def _populate_config_msg(msg: Config) -> None:
     if config.get_option("client.showSidebarNavigation") is False:
         msg.hide_sidebar_nav = True
     msg.toolbar_mode = _get_toolbar_mode()
-    msg.show_exception_links = config.get_option("client.showExceptionLinks")
+    msg.show_error_links = _get_show_error_links()
 
 
 def _populate_theme_msg(msg: CustomThemeConfig, section: str = "theme") -> None:

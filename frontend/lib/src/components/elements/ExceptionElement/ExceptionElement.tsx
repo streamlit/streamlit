@@ -18,7 +18,7 @@ import { memo, ReactElement, useCallback, useContext } from "react"
 
 import { getLogger } from "loglevel"
 
-import { Exception as ExceptionProto } from "@streamlit/protobuf"
+import { Config, Exception as ExceptionProto } from "@streamlit/protobuf"
 import { isLocalhost } from "@streamlit/utils"
 
 import { LibConfigContext } from "~lib/components/core/LibConfigContext"
@@ -120,7 +120,13 @@ function StackTrace({ stackTrace }: Readonly<StackTraceProps>): ReactElement {
 function ExceptionElement({
   element,
 }: Readonly<ExceptionElementProps>): ReactElement {
-  const { showExceptionLinks = true } = useContext(LibConfigContext)
+  const { showErrorLinks = Config.ShowErrorLinks.SHOW_ERROR_LINKS_AUTO } =
+    useContext(LibConfigContext)
+
+  const shouldShowLinks =
+    showErrorLinks === Config.ShowErrorLinks.SHOW_ERROR_LINKS_TRUE ||
+    (showErrorLinks === Config.ShowErrorLinks.SHOW_ERROR_LINKS_AUTO &&
+      isLocalhost())
 
   const formattedExceptionShort = `${element.type}: ${element.message}`
   const formattedExceptionFull = `${formattedExceptionShort}\n\n${element.stackTrace?.join(
@@ -154,7 +160,7 @@ function ExceptionElement({
           {element.stackTrace && element.stackTrace.length > 0 ? (
             <StackTrace stackTrace={element.stackTrace} />
           ) : null}
-          {isLocalhost() && showExceptionLinks && (
+          {shouldShowLinks && (
             <StyledExceptionLinks>
               <StyledExceptionCopyButton onClick={handleCopy}>
                 Copy

@@ -17,6 +17,7 @@
 import { createContext } from "react"
 
 import { LibConfig } from "@streamlit/connection"
+import { Config } from "@streamlit/protobuf"
 
 /**
  * LibConfigContext provides static configuration values from LibConfig
@@ -74,7 +75,7 @@ export interface LibConfigContextProps extends Omit<
    * Consumed by:
    * @see ExceptionElement
    */
-  showExceptionLinks?: boolean
+  showErrorLinks?: Config.ShowErrorLinks
 }
 
 /**
@@ -95,7 +96,7 @@ export const LibConfigContext = createContext<LibConfigContextProps>({
   mapboxToken: undefined,
   enforceDownloadInNewTab: undefined,
   resourceCrossOriginMode: undefined,
-  showExceptionLinks: true,
+  showErrorLinks: Config.ShowErrorLinks.SHOW_ERROR_LINKS_AUTO,
 })
 
 // Set the context display name for React DevTools

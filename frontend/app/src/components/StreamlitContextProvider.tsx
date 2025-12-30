@@ -38,6 +38,7 @@ import {
   ViewStateContextProps,
 } from "@streamlit/lib"
 import {
+  Config,
   DeferredFileResponse,
   IAppPage,
   Logo,
@@ -55,7 +56,7 @@ type LibConfigContextValues = {
   mapboxToken?: string
   enforceDownloadInNewTab?: boolean
   resourceCrossOriginMode?: undefined | "anonymous" | "use-credentials"
-  showExceptionLinks?: boolean
+  showErrorLinks?: Config.ShowErrorLinks
 }
 
 type NavigationContextValues = {
@@ -119,7 +120,7 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
   mapboxToken,
   enforceDownloadInNewTab,
   resourceCrossOriginMode,
-  showExceptionLinks,
+  showErrorLinks,
   // NavigationContext
   pageLinkBaseUrl,
   currentPageScriptHash,
@@ -155,14 +156,14 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
       mapboxToken,
       enforceDownloadInNewTab,
       resourceCrossOriginMode,
-      showExceptionLinks,
+      showErrorLinks,
     }),
     [
       locale,
       mapboxToken,
       enforceDownloadInNewTab,
       resourceCrossOriginMode,
-      showExceptionLinks,
+      showErrorLinks,
     ]
   )
 
