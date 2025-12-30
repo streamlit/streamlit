@@ -352,27 +352,6 @@ def register_widget_from_metadata(
             options = getattr(serde_instance, "options", [])
             is_range = bool(getattr(serde_instance, "is_range_value", False))
 
-            def _serialize_select_slider(value: object) -> str:
-                return serialize_option(value, options)
-
-            def _deserialize_select_slider(v: str | list[str]) -> object | None:
-                result = deserialize_option(v, options)
-                if result is None:
-                    return None
-                # Select slider returns single value or tuple based on is_range
-                if is_range:
-                    # For range sliders, expect comma-separated values like "A,C"
-                    if isinstance(v, list):
-                        v = v[-1] if v else ""
-                    if isinstance(v, str) and "," in v:
-                        parts = v.split(",", 1)
-                        start = deserialize_option(parts[0], options)
-                        end = deserialize_option(parts[1], options)
-                        if start is not None and end is not None:
-                            return (start, end)
-                    return None
-                return result
-
             def _serialize_select_slider_full(value: object) -> str:
                 # Handle range values (tuple/list)
                 if isinstance(value, (tuple, list)) and len(value) == 2:
@@ -380,6 +359,36 @@ def register_widget_from_metadata(
                     s2 = serialize_option(value[1], options)
                     return f"{s1},{s2}"
                 return serialize_option(value, options)
+
+            def _deserialize_select_slider(v: str | list[str]) -> object | None:
+                # Normalize to string
+                if isinstance(v, list):
+                    v = v[-1] if v else ""
+                if not isinstance(v, str) or not v:
+                    return None
+
+                # Check for range format first (comma-separated values like "A,C")
+                if "," in v:
+                    parts = v.split(",", 1)
+                    start = deserialize_option(parts[0].strip(), options)
+                    end = deserialize_option(parts[1].strip(), options)
+                    if start is not None and end is not None:
+                        # Only return tuple for range sliders
+                        if is_range:
+                            return (start, end)
+                        # For single-value sliders, comma-separated is invalid
+                        return None
+                    return None
+
+                # Single value - deserialize directly
+                result = deserialize_option(v, options)
+                if result is None:
+                    return None
+
+                # For range sliders, single value is invalid
+                if is_range:
+                    return None
+                return result
 
             serializers = (_serialize_select_slider_full, _deserialize_select_slider)
 

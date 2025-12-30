@@ -22,6 +22,7 @@ import {
   useCallback,
   useEffect,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
 } from "react"
@@ -50,7 +51,9 @@ import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useQueryParamBinding } from "~lib/hooks/useQueryParamBinding"
 import {
   deserializeNumberRange,
+  deserializeSelectSlider,
   serializeNumberRange,
+  serializeSelectSlider,
 } from "~lib/queryParamSerializers"
 import { formatMoment, MomentKind } from "~lib/util/formatMoment"
 import { formatNumber } from "~lib/util/formatNumber"
@@ -128,14 +131,43 @@ function Slider({
     fragmentId,
   })
 
+  const { options } = element
+  const isSelectSlider = options.length > 0
+
+  // Create serializers based on slider type (regular vs select)
+  // For select sliders, we serialize indices to option values
+  // For regular sliders, we serialize number(s) directly
+  const serializer = useMemo(
+    () =>
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Union type requires flexible typing
+      (value: any): string => {
+        if (isSelectSlider) {
+          return serializeSelectSlider(value as number[] | null, options)
+        }
+        return serializeNumberRange(value as [number, number] | number | null)
+      },
+    [isSelectSlider, options]
+  )
+
+  const deserializer = useMemo(
+    () =>
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Union type requires flexible typing
+      (value: string | string[] | null): any => {
+        if (isSelectSlider) {
+          return deserializeSelectSlider(value, options)
+        }
+        return deserializeNumberRange(value)
+      },
+    [isSelectSlider, options]
+  )
+
   // Register query param binding if widget key starts with "?"
-  const { isBound, syncToUrl } = useQueryParamBinding<
-    [number, number] | number | null
-  >({
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Union type requires flexible typing
+  const { isBound, syncToUrl } = useQueryParamBinding<any>({
     elementId: element.id,
     widgetMgr,
-    serializer: serializeNumberRange,
-    deserializer: deserializeNumberRange,
+    serializer,
+    deserializer,
   })
 
   // We tie the UI to `uiValue` rather than `value` because `value` only
@@ -182,15 +214,20 @@ function Slider({
 
       // Sync to URL if bound
       if (isBound) {
-        // Convert array to range tuple or single value for serialization
-        const urlValue =
-          valueArg.length === 2
-            ? ([valueArg[0], valueArg[1]] as [number, number])
-            : valueArg[0]
-        syncToUrl(urlValue)
+        if (isSelectSlider) {
+          // For select sliders, pass the indices array directly
+          syncToUrl(valueArg)
+        } else {
+          // For regular sliders, convert array to range tuple or single value
+          const urlValue =
+            valueArg.length === 2
+              ? ([valueArg[0], valueArg[1]] as [number, number])
+              : valueArg[0]
+          syncToUrl(urlValue)
+        }
       }
     },
-    [setValueWithSource, isBound, syncToUrl]
+    [setValueWithSource, isBound, syncToUrl, isSelectSlider]
   )
 
   const handleChange = useCallback(
