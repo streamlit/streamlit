@@ -69,6 +69,7 @@ NON_ELEMENT_COMMANDS: set[str] = {
     "rerun",
     "secrets",
     "session_state",
+    "session_state_init",
     "set_option",
     "set_page_config",
     "sidebar",
