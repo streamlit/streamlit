@@ -103,16 +103,41 @@ export const canIncrement = (
 }
 
 /**
+ * Extracts the number of decimal places from a step value.
+ * Handles both standard notation (0.01) and scientific notation (1e-7).
+ *
+ * @example
+ * getDecimalPlaces(0.01)      // 2
+ * getDecimalPlaces(0.0000001) // 7 (represented as "1e-7")
+ * getDecimalPlaces(1)         // 0
+ */
+export const getDecimalPlaces = (step: number): number => {
+  const stepStr = step.toString()
+
+  // Handle scientific notation (e.g., "1e-7", "5e-10")
+  // JavaScript uses this for very small numbers (typically < 1e-6)
+  if (stepStr.includes("e-")) {
+    const match = stepStr.match(/e-(\d+)/)
+    return match ? parseInt(match[1], 10) : 0
+  }
+
+  // Handle standard decimal notation (e.g., "0.01")
+  return (stepStr.split(".")[1] || "").length
+}
+
+/**
  * Performs precise step arithmetic to avoid floating point errors.
  * Uses scale-based integer arithmetic (e.g., 0.1 + 0.01 = 0.11, not 0.11000000000000001).
+ *
+ * This function handles both standard decimal steps (0.01) and very small steps
+ * that JavaScript represents in scientific notation (1e-7).
  */
 export const preciseStepArithmetic = (
   currentValue: number,
   step: number,
   operation: "add" | "subtract"
 ): number => {
-  const stepStr = step.toString()
-  const decimalPlaces = (stepStr.split(".")[1] || "").length
+  const decimalPlaces = getDecimalPlaces(step)
   const scale = Math.pow(10, decimalPlaces)
 
   return operation === "add"

@@ -29,7 +29,7 @@ from e2e_playwright.shared.app_utils import (
     get_number_input,
 )
 
-NUMBER_INPUT_COUNT = 18
+NUMBER_INPUT_COUNT = 20
 
 
 def test_number_input_widget_display(
@@ -349,7 +349,7 @@ def test_number_input_tab_focus_behavior(
     assert_snapshot(seventh_number_input, name="st_number_input-tab_focus")
 
 
-def test_number_input_maintains_floating_point_precision(app: Page):
+def test_number_input_maintains_floating_point_precision_increment(app: Page):
     """Test that repeated increment clicks maintain proper floating point precision.
 
     Regression test: Values like 0.06 should never display as 0.060000000000000005
@@ -368,6 +368,94 @@ def test_number_input_maintains_floating_point_precision(app: Page):
         # artifacts like 0.060000000000000005). Pattern matches: 0.01, 0.1, 0.2, etc.
         expect(
             app.get_by_text(
-                re.compile(r"number input 1 \(default\) - value:\s*\d+\.\d{1,2}$")
+                re.compile(r"number input 1 \(default\) - value:\s*\d+\.\d{1,2}\s*$")
             )
         ).to_be_visible()
+
+    # Verify final value is correct (0.0 + 20 * 0.01 = 0.20)
+    expect_prefixed_markdown(app, "number input 1 (default) - value:", "0.2")
+
+
+def test_number_input_maintains_floating_point_precision_decrement(app: Page):
+    """Test that repeated decrement clicks maintain proper floating point precision."""
+    number_input = get_number_input(app, "number input 1 (default)")
+    step_down_btn = number_input.get_by_test_id("stNumberInputStepDown")
+
+    # Starting value is 0.0, step is 0.01 (default for float)
+    # Click decrement 20 times and verify each displayed value has correct precision
+    for _ in range(20):
+        step_down_btn.click()
+        wait_for_app_run(app)
+
+        # Verify the displayed value has at most 2 decimal places (no floating point
+        # artifacts like -0.060000000000000005). Pattern matches: -0.01, -0.1, -0.2, etc.
+        expect(
+            app.get_by_text(
+                re.compile(r"number input 1 \(default\) - value:\s*-\d+\.\d{1,2}\s*$")
+            )
+        ).to_be_visible()
+
+    # Verify final value is correct (0.0 - 20 * 0.01 = -0.20)
+    expect_prefixed_markdown(app, "number input 1 (default) - value:", "-0.2")
+
+
+def test_number_input_scientific_notation_step_increment(app: Page):
+    """Test that increment with very small step values (scientific notation) works.
+
+    JavaScript represents very small numbers in scientific notation (e.g., 0.0000001
+    becomes "1e-7"). This test verifies that increment operations maintain precision.
+    """
+    number_input = get_element_by_key(app, "number_input_18")
+    step_up_btn = number_input.get_by_test_id("stNumberInputStepUp")
+
+    # Starting value is 0.0, step is 0.0000001 (1e-7)
+    # Click increment 5 times and verify the value is correct
+    for _ in range(5):
+        step_up_btn.click()
+        wait_for_app_run(app)
+
+        # Verify the displayed value has at most 7 decimal places (no floating point
+        # artifacts). Pattern matches values like: 0.0000001, 0.0000002, etc.
+        expect(
+            app.get_by_text(
+                re.compile(
+                    r"number input 18 \(small step increment\) - value:\s*\d+\.\d{1,7}\s*$"
+                )
+            )
+        ).to_be_visible()
+
+    # Verify final value is correct (0.0 + 5 * 0.0000001 = 0.0000005)
+    expect_prefixed_markdown(
+        app, "number input 18 (small step increment) - value:", "0.0000005"
+    )
+
+
+def test_number_input_scientific_notation_step_decrement(app: Page):
+    """Test that decrement with very small step values (scientific notation) works.
+
+    JavaScript represents very small numbers in scientific notation (e.g., 0.0000001
+    becomes "1e-7"). This test verifies that decrement operations maintain precision.
+    """
+    number_input = get_element_by_key(app, "number_input_19")
+    step_down_btn = number_input.get_by_test_id("stNumberInputStepDown")
+
+    # Starting value is 0.0000005, step is 0.0000001 (1e-7)
+    # Click decrement 5 times and verify the value is correct
+    for _ in range(5):
+        step_down_btn.click()
+        wait_for_app_run(app)
+
+        # Verify the displayed value has at most 7 decimal places (no floating point
+        # artifacts). Pattern matches values like: 0.0000004, 0.0000003, etc.
+        expect(
+            app.get_by_text(
+                re.compile(
+                    r"number input 19 \(small step decrement\) - value:\s*\d+\.\d{1,7}\s*$"
+                )
+            )
+        ).to_be_visible()
+
+    # Verify final value is correct (0.0000005 - 5 * 0.0000001 = 0.0)
+    expect_prefixed_markdown(
+        app, "number input 19 (small step decrement) - value:", "0.0000000"
+    )
