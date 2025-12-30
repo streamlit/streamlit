@@ -440,4 +440,96 @@ describe("useVegaElementPreprocessor", () => {
       })
     })
   })
+
+  describe("vconcat width handling", () => {
+    it("sets width on simple vconcat children when useContainerWidth=true", () => {
+      const vconcatSpec = {
+        vconcat: [
+          { mark: "bar", encoding: { x: { field: "a" }, y: { field: "b" } } },
+          {
+            mark: "point",
+            encoding: { x: { field: "a" }, y: { field: "b" } },
+          },
+        ],
+      }
+
+      const { result } = renderHook(
+        (element: VegaLiteChartElement) =>
+          useVegaElementPreprocessor(element, 400, 300, true, false),
+        {
+          initialProps: getElement({
+            spec: JSON.stringify(vconcatSpec),
+          }),
+        }
+      )
+
+      const spec = result.current.spec as unknown as {
+        vconcat: { width?: number }[]
+      }
+      expect(spec.vconcat[0].width).toBe(400)
+      expect(spec.vconcat[1].width).toBe(400)
+    })
+
+    it.each([
+      {
+        name: "hconcat",
+        spec: {
+          vconcat: [
+            { mark: "bar", encoding: { x: { field: "a" } } },
+            { hconcat: [{ mark: "point" }, { mark: "line" }] },
+          ],
+        },
+        expectedWidths: [400, undefined],
+      },
+      {
+        name: "nested vconcat",
+        spec: {
+          vconcat: [
+            { vconcat: [{ mark: "bar" }, { mark: "point" }] },
+            { mark: "line" },
+          ],
+        },
+        expectedWidths: [undefined, 400],
+      },
+      {
+        name: "layer",
+        spec: {
+          vconcat: [
+            { layer: [{ mark: "line" }, { mark: "point" }] },
+            { mark: "bar" },
+          ],
+        },
+        expectedWidths: [undefined, 400],
+      },
+      {
+        name: "concat",
+        spec: {
+          vconcat: [
+            { concat: [{ mark: "bar" }, { mark: "point" }] },
+            { mark: "line" },
+          ],
+        },
+        expectedWidths: [undefined, 400],
+      },
+    ])(
+      "skips width on vconcat children that contain $name",
+      ({ spec: inputSpec, expectedWidths }) => {
+        const { result } = renderHook(
+          (element: VegaLiteChartElement) =>
+            useVegaElementPreprocessor(element, 400, 300, true, false),
+          {
+            initialProps: getElement({
+              spec: JSON.stringify(inputSpec),
+            }),
+          }
+        )
+
+        const spec = result.current.spec as unknown as {
+          vconcat: { width?: number }[]
+        }
+        expect(spec.vconcat[0].width).toBe(expectedWidths[0])
+        expect(spec.vconcat[1].width).toBe(expectedWidths[1])
+      }
+    )
+  })
 })

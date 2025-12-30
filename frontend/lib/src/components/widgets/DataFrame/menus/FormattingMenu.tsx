@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { memo, ReactElement } from "react"
+import { memo, ReactElement } from "react"
 
 import { PLACEMENT, Popover, TRIGGER_TYPE } from "baseui/popover"
 

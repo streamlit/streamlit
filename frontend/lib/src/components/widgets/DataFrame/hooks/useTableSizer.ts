@@ -17,7 +17,7 @@
 // TODO: fix incorrect hook usage and delete this lint suppression
 /* eslint-disable react-hooks/exhaustive-deps -- TODO: Update to match React best practices */
 
-import React, { useLayoutEffect, useState } from "react"
+import { useLayoutEffect, useState } from "react"
 
 import { Size as ResizableSize } from "re-resizable"
 

@@ -17,7 +17,10 @@
 import { Theme } from "@emotion/react"
 import styled from "@emotion/styled"
 
-import { roundFontSizeToNearestEighth } from "~lib/theme/utils"
+import {
+  getPrimaryFocusBoxShadow,
+  roundFontSizeToNearestEighth,
+} from "~lib/theme/utils"
 
 export interface StyledStreamlitMarkdownProps {
   isCaption: boolean
@@ -39,6 +42,21 @@ function sharedMarkdownStyle(theme: Theme): any {
     a: {
       color: theme.colors.link,
       textDecoration: theme.linkUnderline ? "underline" : "none",
+      "&:focus": {
+        outline: "none",
+        // Fallback for environments without :focus-visible support:
+        boxShadow: getPrimaryFocusBoxShadow(theme),
+        borderRadius: theme.radii.default,
+      },
+      // In browsers that support :focus-visible, avoid showing the focus ring on
+      // mouse focus (while still keeping the fallback behavior in others).
+      "&:focus:not(:focus-visible)": {
+        boxShadow: "none",
+      },
+      "&:focus-visible": {
+        boxShadow: getPrimaryFocusBoxShadow(theme),
+        borderRadius: theme.radii.default,
+      },
     },
   }
 }
@@ -347,6 +365,9 @@ export const StyledLinkIcon = styled.a(({ theme }) => ({
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
+  opacity: 0,
+  pointerEvents: "none",
+  transition: "opacity 150ms ease-in-out",
 
   svg: {
     // same color as the tooltip-icon
@@ -356,6 +377,11 @@ export const StyledLinkIcon = styled.a(({ theme }) => ({
 
   "&:hover svg": {
     stroke: theme.colors.bodyText,
+  },
+
+  "&:focus-visible": {
+    opacity: 1,
+    pointerEvents: "auto",
   },
 }))
 
@@ -370,17 +396,13 @@ export const StyledHeadingWithActionElements = styled.div(({ theme }) => ({
   wordBreak: "break-word",
   textWrap: "pretty",
 
-  // show link-icon when hovering somewhere over the heading
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  [StyledLinkIcon as any]: {
-    visibility: "hidden",
-  },
-
-  // we have to set the hover here so that the link icon becomes visible when hovering anywhere over the heading
-  "&:hover": {
+  // Show link icon when hovering or when focus is within the heading container.
+  // We use opacity instead of visibility so the link remains in the tab order.
+  "&:hover, &:focus-within": {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     [StyledLinkIcon as any]: {
-      visibility: "visible",
+      opacity: 1,
+      pointerEvents: "auto",
     },
   },
 }))

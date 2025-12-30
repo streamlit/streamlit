@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { FC } from "react"
+import { FC } from "react"
 
 import { render, screen } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"

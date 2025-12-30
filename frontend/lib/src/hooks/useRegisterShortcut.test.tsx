@@ -18,7 +18,7 @@
  * Tests for the useRegisterShortcut hook.
  */
 
-import React, { act, ReactElement } from "react"
+import { act, ReactElement } from "react"
 
 import * as hotkeysModule from "hotkeys-js"
 import { Mock, vi } from "vitest"

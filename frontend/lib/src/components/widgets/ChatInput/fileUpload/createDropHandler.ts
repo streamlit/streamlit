@@ -132,10 +132,16 @@ export const createDropHandler =
       .catch((errorMessage: string) => {
         addFiles(
           acceptedFiles.map(f => {
-            return new UploadFileInfo(f.name, f.size, getNextLocalFileId(), {
-              type: "error",
-              errorMessage,
-            })
+            return new UploadFileInfo(
+              f.name,
+              f.size,
+              getNextLocalFileId(),
+              {
+                type: "error",
+                errorMessage,
+              },
+              f
+            )
           })
         )
       })

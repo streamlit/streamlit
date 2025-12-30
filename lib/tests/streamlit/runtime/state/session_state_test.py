@@ -46,6 +46,7 @@ from streamlit.runtime.state.session_state import (
     WStates,
     _is_stale_widget,
 )
+from streamlit.runtime.stats import CACHE_MEMORY_FAMILY
 from streamlit.runtime.uploaded_file_manager import UploadedFile, UploadedFileRec
 from streamlit.testing.v1.app_test import AppTest
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -1051,7 +1052,7 @@ class SessionStateStatProviderTests(DeltaGeneratorTestCase):
         #  we don't care about actual byte values, but rather that our
         #  SessionState isn't getting unexpectedly massive.
         state = _raw_session_state()
-        stat = state.get_stats()[0]
+        stat = state.get_stats()[CACHE_MEMORY_FAMILY][0]
         assert stat.category_name == "st_session_state"
 
         # The expected size of the session state in bytes.
@@ -1062,21 +1063,21 @@ class SessionStateStatProviderTests(DeltaGeneratorTestCase):
         assert init_size < expected_session_state_size_bytes
 
         state["foo"] = 2
-        new_size = state.get_stats()[0].byte_length
+        new_size = state.get_stats()[CACHE_MEMORY_FAMILY][0].byte_length
         assert new_size > init_size
         assert new_size < expected_session_state_size_bytes
 
         state["foo"] = 1
-        new_size_2 = state.get_stats()[0].byte_length
+        new_size_2 = state.get_stats()[CACHE_MEMORY_FAMILY][0].byte_length
         assert new_size_2 == new_size
 
         st.checkbox("checkbox", key="checkbox")
-        new_size_3 = state.get_stats()[0].byte_length
+        new_size_3 = state.get_stats()[CACHE_MEMORY_FAMILY][0].byte_length
         assert new_size_3 > new_size_2
         assert new_size_3 - new_size_2 < expected_session_state_size_bytes
 
         state._compact_state()
-        new_size_4 = state.get_stats()[0].byte_length
+        new_size_4 = state.get_stats()[CACHE_MEMORY_FAMILY][0].byte_length
         assert new_size_4 <= new_size_3
 
 

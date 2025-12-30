@@ -543,11 +543,9 @@ class SelectboxMixin:
             "selectbox",
             user_key=key,
             # Treat the provided key as the main identity. Only include
-            # the options and accept_new_options in the identity computation
-            # as those can invalidate the current selection.
-            # Changes to format_func also invalidate the current selection,
-            # but this is already handled via the `options` parameter below:
-            key_as_main_identity={"options", "accept_new_options"},
+            # accept_new_options in the identity computation as it
+            # can invalidate the current selection and complex to support.
+            key_as_main_identity={"accept_new_options"},
             dg=self.dg,
             label=label,
             options=formatted_options,
@@ -597,8 +595,33 @@ class SelectboxMixin:
         )
         widget_state = maybe_coerce_enum(widget_state, options, opt)
 
-        if widget_state.value_changed:
-            serialized_value = serde.serialize(widget_state.value)
+        # Validate the current value against the new options.
+        # If the value is no longer valid (not in options), reset to default.
+        # This handles the case where options change dynamically and the
+        # previously selected value is no longer available.
+        current_value = widget_state.value
+        value_needs_reset = False
+
+        if current_value is not None and not accept_new_options:
+            # Check if current value is still in the new options
+            try:
+                index_(opt, current_value)
+            except ValueError:
+                # Value not in options - reset to default.
+                value_needs_reset = True
+                if index is not None and len(opt) > 0:
+                    current_value = opt[index]
+                else:
+                    current_value = None
+
+                # Update session_state so subsequent accesses in this run
+                # return the corrected value. Use reset_state_value to avoid
+                # the "cannot be modified after widget instantiated" error.
+                if key is not None:
+                    get_session_state().reset_state_value(key, current_value)
+
+        if value_needs_reset or widget_state.value_changed:
+            serialized_value = serde.serialize(current_value)
             if serialized_value is not None:
                 selectbox_proto.raw_value = serialized_value
             selectbox_proto.set_value = True
@@ -609,7 +632,7 @@ class SelectboxMixin:
         if ctx:
             save_for_app_testing(ctx, element_id, format_func)
         self.dg._enqueue("selectbox", selectbox_proto, layout_config=layout_config)
-        return widget_state.value
+        return current_value
 
     @property
     def dg(self) -> DeltaGenerator:

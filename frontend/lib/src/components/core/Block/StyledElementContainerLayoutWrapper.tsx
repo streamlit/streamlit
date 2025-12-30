@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { FC, useMemo } from "react"
+import { FC, useMemo } from "react"
 
 import { ButtonGroup } from "@streamlit/protobuf"
 

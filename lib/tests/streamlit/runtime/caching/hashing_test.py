@@ -434,7 +434,7 @@ class HashTest(unittest.TestCase):
 
     @pytest.mark.require_integration
     def test_polars_series(self):
-        import polars as pl  # type: ignore[import-not-found]
+        import polars as pl
 
         series1 = pl.Series([1, 2])
         series2 = pl.Series([1, 3])

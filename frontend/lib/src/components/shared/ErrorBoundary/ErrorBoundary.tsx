@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { PureComponent } from "react"
+import { PureComponent } from "react"
 
 import { getLogger } from "loglevel"
 

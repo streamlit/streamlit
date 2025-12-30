@@ -308,7 +308,8 @@ class Installation:
             with cls._instance_lock:
                 if cls._instance is None:
                     cls._instance = Installation()
-        return cls._instance
+
+        return cls._instance  # ty: ignore[invalid-return-type]
 
     def __init__(self) -> None:
         self.installation_id_v3 = str(

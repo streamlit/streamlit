@@ -25,6 +25,4 @@ exclude = [
 
 [rules]
 unresolved-import = "ignore"
-# This rule has problems with the ParamSpec support:
-# https://github.com/astral-sh/ty/issues/157
-invalid-type-form = "ignore"
+possibly-unresolved-reference = "error"

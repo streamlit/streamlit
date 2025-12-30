@@ -218,7 +218,7 @@ class SQLConnection(BaseConnection["Engine"]):
 
         if autocommit:
             return cast("Engine", eng.execution_options(isolation_level="AUTOCOMMIT"))
-        return cast("Engine", eng)  # ty: ignore[redundant-cast]
+        return cast("Engine", eng)
 
     def query(
         self,

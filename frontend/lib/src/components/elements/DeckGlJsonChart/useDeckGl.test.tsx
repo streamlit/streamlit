@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { FC } from "react"
+import { FC } from "react"
 
 import { PickingInfo, ViewStateChangeParameters } from "@deck.gl/core"
 import { act, screen } from "@testing-library/react"

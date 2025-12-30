@@ -64,7 +64,7 @@ type RemarkTransformer = (
 ) => MdastRoot | undefined | void
 
 /** A remark plugin factory that returns a transformer when called with options */
-type RemarkPluginFactory<Options = unknown> = (
+export type RemarkPluginFactory<Options = unknown> = (
   options?: Options
 ) => RemarkTransformer
 
