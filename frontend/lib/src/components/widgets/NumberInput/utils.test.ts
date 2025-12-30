@@ -20,8 +20,10 @@ import {
   canIncrement,
   formatValue,
   getDecimalPlaces,
+  getFormatPrecision,
   getStep,
   preciseStepArithmetic,
+  roundToFormatPrecision,
 } from "./utils"
 
 describe("canDecrement function", () => {
@@ -292,5 +294,93 @@ describe("preciseStepArithmetic function", () => {
       // Should be exactly 0.000001, not 0.0000009999999999...
       expect(value).toBe(0.000001)
     })
+  })
+})
+
+describe("getFormatPrecision function", () => {
+  it("extracts precision from %.6f format", () => {
+    expect(getFormatPrecision("%.6f")).toBe(6)
+  })
+
+  it("extracts precision from %0.2f format", () => {
+    expect(getFormatPrecision("%0.2f")).toBe(2)
+  })
+
+  it("extracts precision from %.0f format", () => {
+    expect(getFormatPrecision("%.0f")).toBe(0)
+  })
+
+  it("returns null for %d format (integer)", () => {
+    expect(getFormatPrecision("%d")).toBe(null)
+  })
+
+  it("returns null for null format", () => {
+    expect(getFormatPrecision(null)).toBe(null)
+  })
+
+  it("returns null for undefined format", () => {
+    expect(getFormatPrecision(undefined)).toBe(null)
+  })
+})
+
+describe("roundToFormatPrecision function", () => {
+  it("rounds float to 6 decimal places with %.6f format", () => {
+    expect(
+      roundToFormatPrecision({
+        value: 0.0025677777777,
+        format: "%.6f",
+        dataType: NumberInputProto.DataType.FLOAT,
+      })
+    ).toBe(0.002568)
+  })
+
+  it("rounds float to 2 decimal places with %.2f format", () => {
+    expect(
+      roundToFormatPrecision({
+        value: 3.14159,
+        format: "%.2f",
+        dataType: NumberInputProto.DataType.FLOAT,
+      })
+    ).toBe(3.14)
+  })
+
+  it("rounds to integer with %.0f format", () => {
+    expect(
+      roundToFormatPrecision({
+        value: 7.77,
+        format: "%.0f",
+        dataType: NumberInputProto.DataType.FLOAT,
+      })
+    ).toBe(8)
+  })
+
+  it("returns integer as-is for INT dataType", () => {
+    expect(
+      roundToFormatPrecision({
+        value: 7.77,
+        format: "%.2f",
+        dataType: NumberInputProto.DataType.INT,
+      })
+    ).toBe(8)
+  })
+
+  it("returns null for null value", () => {
+    expect(
+      roundToFormatPrecision({
+        value: null,
+        format: "%.2f",
+        dataType: NumberInputProto.DataType.FLOAT,
+      })
+    ).toBe(null)
+  })
+
+  it("returns value as-is when no format precision", () => {
+    expect(
+      roundToFormatPrecision({
+        value: 7.77777,
+        format: "%d",
+        dataType: NumberInputProto.DataType.FLOAT,
+      })
+    ).toBe(7.77777)
   })
 })

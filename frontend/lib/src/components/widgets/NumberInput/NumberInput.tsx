@@ -65,6 +65,7 @@ import {
   getStateFromWidgetMgr,
   getStep,
   preciseStepArithmetic,
+  roundToFormatPrecision,
   updateWidgetMgrState,
 } from "./utils"
 
@@ -193,13 +194,23 @@ const NumberInput: React.FC<Props> = ({
       value: number | null
       fromUi: boolean
     }) => {
+      // Round value to format precision so stored value matches displayed value
+      const roundedValue = roundToFormatPrecision({
+        value: valueArg,
+        format: elementFormat,
+        dataType: elementDataType,
+      })
+
       // Validate range and show browser validation message if out of range
-      if (notNullOrUndefined(valueArg) && (min > valueArg || valueArg > max)) {
+      if (
+        notNullOrUndefined(roundedValue) &&
+        (min > roundedValue || roundedValue > max)
+      ) {
         inputRef.current?.reportValidity()
         return
       }
 
-      const newValue = valueArg ?? elementDefault ?? null
+      const newValue = roundedValue ?? elementDefault ?? null
 
       setValueWithSource({ value: newValue, fromUi })
 
@@ -211,7 +222,17 @@ const NumberInput: React.FC<Props> = ({
       setDirty(false)
       setFormattedValue(formatCurrentValue(newValue))
     },
-    [min, max, elementDefault, formatCurrentValue, setValueWithSource, isBound, syncToUrl]
+    [
+      min,
+      max,
+      elementDefault,
+      elementFormat,
+      elementDataType,
+      formatCurrentValue,
+      setValueWithSource,
+      isBound,
+      syncToUrl,
+    ]
   )
 
   const handleFocus = useCallback((): void => {
