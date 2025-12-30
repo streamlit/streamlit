@@ -50,7 +50,12 @@ import {
   ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { useQueryParamBinding } from "~lib/hooks/useQueryParamBinding"
 import { useSelectCommon } from "~lib/hooks/useSelectCommon"
+import {
+  deserializeMultiselect,
+  serializeMultiselect,
+} from "~lib/queryParamSerializers"
 import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -98,11 +103,28 @@ const updateWidgetMgrState = (
 
 const Multiselect: FC<Props> = props => {
   const { element, widgetMgr, fragmentId } = props
+  const { options } = element
 
   const theme = useEmotionTheme()
   const isInSidebar = useContext(IsSidebarContext)
   const valueContainerRef = useRef<HTMLDivElement>(null)
   const scrollTopRef = useRef(0)
+
+  // Create a deserializer that uses the element's options for validation
+  const deserializer = useMemo(
+    () => (value: string | string[] | null) =>
+      deserializeMultiselect(value, options),
+    [options]
+  )
+
+  // Register query param binding if widget key starts with "?"
+  const { isBound, syncToUrl } = useQueryParamBinding<MultiselectValue>({
+    elementId: element.id,
+    widgetMgr,
+    serializer: serializeMultiselect,
+    deserializer,
+  })
+
   const [value, setValueWithSource] = useBasicWidgetState<
     MultiselectValue,
     MultiSelectProto
@@ -172,15 +194,25 @@ const Multiselect: FC<Props> = props => {
       ) {
         return
       }
+      const newValue = generateNewState(params)
       setValueWithSource({
-        value: generateNewState(params),
+        value: newValue,
         fromUi: true,
       })
+      // Sync to URL if bound
+      if (isBound) {
+        syncToUrl(newValue)
+      }
     },
-    [element.maxSelections, generateNewState, setValueWithSource, value.length]
+    [
+      element.maxSelections,
+      generateNewState,
+      setValueWithSource,
+      value.length,
+      isBound,
+      syncToUrl,
+    ]
   )
-
-  const { options } = element
 
   const {
     placeholder,

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useCallback } from "react"
+import { memo, ReactElement, useCallback, useMemo } from "react"
 
 import { Radio as RadioProto } from "@streamlit/protobuf"
 
@@ -23,6 +23,11 @@ import {
   useBasicWidgetState,
   ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
+import { useQueryParamBinding } from "~lib/hooks/useQueryParamBinding"
+import {
+  deserializeSelectionIndex,
+  serializeSelectionIndex,
+} from "~lib/queryParamSerializers"
 import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -41,6 +46,28 @@ function Radio({
   widgetMgr,
   fragmentId,
 }: Readonly<Props>): ReactElement {
+  const { options } = element
+
+  // Create serializers that use the element's options array
+  const serializer = useMemo(
+    () => (index: RadioValue) =>
+      serializeSelectionIndex(index ?? null, options),
+    [options]
+  )
+  const deserializer = useMemo(
+    () => (value: string | string[] | null) =>
+      deserializeSelectionIndex(value, options),
+    [options]
+  )
+
+  // Register query param binding if widget key starts with "?"
+  const { isBound, syncToUrl } = useQueryParamBinding<RadioValue>({
+    elementId: element.id,
+    widgetMgr,
+    serializer,
+    deserializer,
+  })
+
   const [value, setValueWithSource] = useBasicWidgetState<
     RadioValue,
     RadioProto
@@ -57,12 +84,15 @@ function Radio({
   const onChange = useCallback(
     (selectedIndex: number): void => {
       setValueWithSource({ value: selectedIndex, fromUi: true })
+      // Sync to URL if bound
+      if (isBound) {
+        syncToUrl(selectedIndex)
+      }
     },
-    [setValueWithSource]
+    [setValueWithSource, isBound, syncToUrl]
   )
 
-  const { horizontal, options, captions, label, labelVisibility, help } =
-    element
+  const { horizontal, captions, label, labelVisibility, help } = element
 
   return (
     <UIRadio

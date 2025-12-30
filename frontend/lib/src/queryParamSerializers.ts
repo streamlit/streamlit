@@ -393,6 +393,139 @@ export function deserializeDateStringArray(
   return parts.map(d => d.replace(/-/g, "/"))
 }
 
+// --- Selection Widget Serializers (Radio, Selectbox, Multiselect, SelectSlider) ---
+
+/**
+ * Serialize a Radio/Selectbox selection by converting the selected index to its option value.
+ * @param index - The selected index (0-based)
+ * @param options - The options array from the widget proto
+ * @returns The string representation of the selected option, or "" if invalid
+ */
+export function serializeSelectionIndex(
+  index: number | null | undefined,
+  options: readonly string[]
+): string {
+  if (
+    index === null ||
+    index === undefined ||
+    index < 0 ||
+    index >= options.length
+  ) {
+    return ""
+  }
+  return options[index]
+}
+
+/**
+ * Deserialize a query param value to a Radio/Selectbox selection index.
+ * @param value - The query param value
+ * @param options - The options array from the widget proto
+ * @returns The index of the matching option, or undefined if not found
+ */
+export function deserializeSelectionIndex(
+  value: string | string[] | null,
+  options: readonly string[]
+): number | undefined {
+  if (value === null) return undefined
+
+  const str = Array.isArray(value) ? (value[value.length - 1] ?? "") : value
+  if (!str) return undefined
+
+  const index = options.indexOf(str)
+  return index >= 0 ? index : undefined
+}
+
+/**
+ * Serialize a Multiselect selection (array of option values).
+ * @param values - Array of selected values (strings)
+ * @returns Array of selected option strings
+ */
+export function serializeMultiselect(values: string[] | null): string[] {
+  if (!values || values.length === 0) return []
+  return values
+}
+
+/**
+ * Deserialize query param values to Multiselect selections.
+ * @param value - Single string or array of strings from query params
+ * @param options - The options array from the widget proto
+ * @returns Array of matching option values
+ */
+export function deserializeMultiselect(
+  value: string | string[] | null,
+  options: readonly string[]
+): string[] | undefined {
+  if (value === null) return undefined
+
+  // Handle both single value and array
+  const values = Array.isArray(value) ? value : [value]
+  if (values.length === 0 || (values.length === 1 && !values[0])) {
+    return undefined
+  }
+
+  // Only include values that are valid options
+  const result = values.filter(v => options.includes(v))
+  return result.length > 0 ? result : undefined
+}
+
+/**
+ * Serialize a SelectSlider selection (single value or range).
+ * @param indices - The selected index/indices as numbers
+ * @param options - The options array from the widget proto
+ * @returns Comma-separated string of option values for ranges, or single value
+ */
+export function serializeSelectSlider(
+  indices: number[] | null,
+  options: readonly string[]
+): string {
+  if (!indices || indices.length === 0) return ""
+
+  const values = indices.map(idx => {
+    if (idx < 0 || idx >= options.length) return ""
+    return options[idx]
+  })
+
+  // Filter out invalid values
+  const validValues = values.filter(v => v !== "")
+  if (validValues.length === 0) return ""
+
+  if (validValues.length === 1) {
+    return validValues[0]
+  }
+
+  // Range: comma-separated
+  return validValues.join(",")
+}
+
+/**
+ * Deserialize query param value to SelectSlider indices.
+ * @param value - Single string (possibly comma-separated for range) from query params
+ * @param options - The options array from the widget proto
+ * @returns Array of indices, or undefined if not found
+ */
+export function deserializeSelectSlider(
+  value: string | string[] | null,
+  options: readonly string[]
+): number[] | undefined {
+  if (value === null) return undefined
+
+  const str = Array.isArray(value) ? (value[value.length - 1] ?? "") : value
+  if (!str) return undefined
+
+  // Check for comma-separated range
+  if (str.includes(",")) {
+    const parts = str.split(",")
+    const indices = parts.map(p => options.indexOf(p.trim()))
+    // All parts must be valid
+    if (indices.some(idx => idx < 0)) return undefined
+    return indices
+  }
+
+  // Single value
+  const index = options.indexOf(str)
+  return index >= 0 ? [index] : undefined
+}
+
 // --- Query Param Key Detection ---
 
 /** Prefix for user keys that should be bound to URL query parameters. */

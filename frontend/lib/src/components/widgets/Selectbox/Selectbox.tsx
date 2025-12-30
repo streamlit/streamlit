@@ -23,6 +23,8 @@ import {
   useBasicWidgetState,
   ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
+import { useQueryParamBinding } from "~lib/hooks/useQueryParamBinding"
+import { deserializeString, serializeString } from "~lib/queryParamSerializers"
 import {
   isNullOrUndefined,
   labelVisibilityProtoValueToEnum,
@@ -88,6 +90,16 @@ const Selectbox: FC<Props> = ({
     placeholder,
     acceptNewOptions,
   } = element
+
+  // Register query param binding if widget key starts with "?"
+  // Selectbox uses string values directly, so we use simple string serializers
+  const { isBound, syncToUrl } = useQueryParamBinding<SelectboxValue>({
+    elementId: element.id,
+    widgetMgr,
+    serializer: serializeString,
+    deserializer: deserializeString,
+  })
+
   const [value, setValueWithSource] = useBasicWidgetState<
     SelectboxValue,
     SelectboxProto
@@ -104,8 +116,12 @@ const Selectbox: FC<Props> = ({
   const onChange = useCallback(
     (valueArg: SelectboxValue) => {
       setValueWithSource({ value: valueArg, fromUi: true })
+      // Sync to URL if bound
+      if (isBound) {
+        syncToUrl(valueArg)
+      }
     },
-    [setValueWithSource]
+    [setValueWithSource, isBound, syncToUrl]
   )
 
   const clearable = isNullOrUndefined(element.default) && !disabled
