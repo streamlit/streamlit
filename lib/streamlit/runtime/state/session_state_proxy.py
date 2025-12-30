@@ -157,6 +157,7 @@ def make_session_state_init(
 
     # NOTE: This is not a method on SessionStateProxy in order to avoid namespace
     # conflicts.
+    @gather_metrics("session_state_init")
     def session_state_init(**entries: Any) -> None:
         """Adds the given entries to ``st.session_state``, if they don't exist already.
 
