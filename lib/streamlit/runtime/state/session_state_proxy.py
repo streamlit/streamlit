@@ -149,7 +149,7 @@ class SessionStateProxy(MutableMapping[Key, Any]):
 def make_session_state_init(
     session_state_proxy: SessionStateProxy,
 ) -> Callable[..., None]:
-    """Returns a function that ensures values are present the given session state.
+    """Returns a function that ensures values are present in the given session state.
 
     Any missing keys will be populated with the provided values; any existing keys will
     be left alone.
@@ -157,12 +157,24 @@ def make_session_state_init(
 
     # NOTE: This is not a method on SessionStateProxy in order to avoid namespace
     # conflicts.
-    def make_session_state(**entries: Any) -> None:
+    def session_state_init(**entries: Any) -> None:
+        """Adds the given entries to ``st.session_state``, if they don't exist already.
+
+        Any missing keys will be populated with the provided values; any existing keys
+        will be left alone.
+
+        Parameters
+        ----------
+        entries : Any
+            The entries to populate ``st.session_state`` with. Any keys passed in as
+            arguments will be set to the given value if they are not already set in
+            ``st.session_state``.
+        """
         for key, value in entries.items():
             if key not in session_state_proxy:
                 session_state_proxy[key] = value
 
-    return make_session_state
+    return session_state_init
 
 
 def _missing_attr_error_message(attr_name: str) -> str:

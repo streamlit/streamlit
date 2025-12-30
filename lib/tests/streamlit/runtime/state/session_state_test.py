@@ -393,23 +393,6 @@ class SessionStateTest(DeltaGeneratorTestCase):
         assert ctx.session_state["color"] is not color
 
 
-class TestSessionStateInit:
-    def test_session_state_init(self):
-        """session_state_init should set given values if missing."""
-        state = st.session_state
-
-        state.foo = "all set"
-        st.session_state_init(one="test one", foo="it foo", two="twoey", three=None)
-
-        assert state.foo == "all set"
-        assert "one" in state
-        assert state.one == "test one"
-        assert "two" in state
-        assert state.two == "twoey"
-        assert "three" in state
-        assert state.three is None
-
-
 def test_callbacks_with_rerun():
     """Calling 'rerun' from within a widget callback
     is disallowed and results in a warning.

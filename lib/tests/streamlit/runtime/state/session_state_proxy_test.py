@@ -23,7 +23,12 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from streamlit.errors import StreamlitAPIException
-from streamlit.runtime.state import SafeSessionState, SessionState, SessionStateProxy
+from streamlit.runtime.state import (
+    SafeSessionState,
+    SessionState,
+    SessionStateProxy,
+    make_session_state_init,
+)
 from streamlit.runtime.state.common import (
     GENERATED_ELEMENT_ID_PREFIX,
     require_valid_user_key,
@@ -136,3 +141,60 @@ class SessionStateProxyAttributeTests(unittest.TestCase):
     def test_setattr(self):
         self.session_state_proxy.corge = "grault2"
         assert self.session_state_proxy.corge == "grault2"
+
+
+class TestSessionStateInit:
+    def setup_method(self):
+        self.session_state_proxy = SessionStateProxy()
+
+    @patch(
+        "streamlit.runtime.state.session_state_proxy.get_session_state",
+        MagicMock(return_value=SessionState(_new_session_state={})),
+    )
+    def test_session_state_init_sets_values(self):
+        """session_state_init should set given values if missing."""
+
+        assert "foo" not in self.session_state_proxy
+
+        self.session_state_proxy.foo = "all set"
+        session_state_init = make_session_state_init(self.session_state_proxy)
+        session_state_init(one="test one", foo="it foo", two="twoey", three=None)
+
+        assert self.session_state_proxy.foo == "all set"
+        assert "one" in self.session_state_proxy
+        assert self.session_state_proxy.one == "test one"
+        assert "two" in self.session_state_proxy
+        assert self.session_state_proxy.two == "twoey"
+        assert "three" in self.session_state_proxy
+        assert self.session_state_proxy.three is None
+
+    @patch(
+        "streamlit.runtime.state.session_state_proxy.get_session_state",
+        MagicMock(return_value=SessionState(_new_session_state={})),
+    )
+    def test_session_state_init_no_args(self):
+        """session_state_init should no-op if given no args."""
+
+        assert "foo" not in self.session_state_proxy
+
+        self.session_state_proxy.foo = "all set"
+        session_state_init = make_session_state_init(self.session_state_proxy)
+        session_state_init()
+
+        assert self.session_state_proxy.foo == "all set"
+
+    @patch(
+        "streamlit.runtime.state.session_state_proxy.get_session_state",
+        MagicMock(return_value=SessionState(_new_session_state={})),
+    )
+    def test_session_state_init_called_again(self):
+        """session_state_init should no-op if called a second time."""
+
+        assert "foo" not in self.session_state_proxy
+
+        session_state_init = make_session_state_init(self.session_state_proxy)
+        session_state_init(foo="all set")
+        assert self.session_state_proxy.foo == "all set"
+
+        session_state_init(foo="bar")
+        assert self.session_state_proxy.foo == "all set"
