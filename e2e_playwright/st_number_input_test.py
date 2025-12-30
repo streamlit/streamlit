@@ -347,3 +347,27 @@ def test_number_input_tab_focus_behavior(
 
     seventh_number_input = get_number_input(app, "number input 7 (label=hidden)")
     assert_snapshot(seventh_number_input, name="st_number_input-tab_focus")
+
+
+def test_number_input_maintains_floating_point_precision(app: Page):
+    """Test that repeated increment clicks maintain proper floating point precision.
+
+    Regression test: Values like 0.06 should never display as 0.060000000000000005
+    due to JavaScript floating point arithmetic errors.
+    """
+    number_input = get_number_input(app, "number input 1 (default)")
+    step_up_btn = number_input.get_by_test_id("stNumberInputStepUp")
+
+    # Starting value is 0.0, step is 0.01 (default for float)
+    # Click increment 20 times and verify each displayed value has correct precision
+    for _ in range(20):
+        step_up_btn.click()
+        wait_for_app_run(app)
+
+        # Verify the displayed value has at most 2 decimal places (no floating point
+        # artifacts like 0.060000000000000005). Pattern matches: 0.01, 0.1, 0.2, etc.
+        expect(
+            app.get_by_text(
+                re.compile(r"number input 1 \(default\) - value:\s*\d+\.\d{1,2}$")
+            )
+        ).to_be_visible()

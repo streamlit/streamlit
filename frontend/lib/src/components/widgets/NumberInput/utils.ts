@@ -102,6 +102,24 @@ export const canIncrement = (
   return value + step <= max
 }
 
+/**
+ * Performs precise step arithmetic to avoid floating point errors.
+ * Uses scale-based integer arithmetic (e.g., 0.1 + 0.01 = 0.11, not 0.11000000000000001).
+ */
+export const preciseStepArithmetic = (
+  currentValue: number,
+  step: number,
+  operation: "add" | "subtract"
+): number => {
+  const stepStr = step.toString()
+  const decimalPlaces = (stepStr.split(".")[1] || "").length
+  const scale = Math.pow(10, decimalPlaces)
+
+  return operation === "add"
+    ? (Math.round(currentValue * scale) + Math.round(step * scale)) / scale
+    : (Math.round(currentValue * scale) - Math.round(step * scale)) / scale
+}
+
 export const getStep = ({
   step,
   dataType,

@@ -1384,4 +1384,70 @@ describe("NumberInput widget", () => {
       })
     })
   })
+
+  describe("Floating point precision", () => {
+    // Note: Arithmetic correctness is tested in utils.test.ts.
+    // These integration tests verify the component uses precise arithmetic
+    // through different UI interaction paths.
+
+    it("uses precise arithmetic via step buttons", async () => {
+      const user = userEvent.setup()
+      const props = getFloatProps({
+        default: 0.1,
+        step: 0.01,
+        min: 0,
+        max: 1,
+      })
+      render(<NumberInput {...props} />)
+
+      const input = screen.getByTestId("stNumberInputField")
+      const stepUpButton = screen.getByTestId("stNumberInputStepUp")
+
+      // One click is enough to verify integration - arithmetic tested in utils
+      await user.click(stepUpButton)
+
+      // Should be 0.11, not 0.11000000000000001
+      expect(input).toHaveValue(0.11)
+    })
+
+    it("uses precise arithmetic via arrow keys", async () => {
+      const user = userEvent.setup()
+      const props = getFloatProps({
+        default: 0.3,
+        step: 0.1,
+        min: 0,
+        max: 1,
+      })
+      render(<NumberInput {...props} />)
+
+      const input = screen.getByTestId("stNumberInputField")
+      await user.type(input, "{arrowdown}")
+
+      // Should be 0.2, not 0.19999999999999998
+      expect(input).toHaveValue(0.2)
+    })
+
+    it("maintains precision across mixed increment/decrement sequence", async () => {
+      // This tests that precision is maintained when alternating operations,
+      // which exercises the full component state cycle
+      const user = userEvent.setup()
+      const props = getFloatProps({
+        default: 0.5,
+        step: 0.01,
+        min: 0,
+        max: 1,
+      })
+      render(<NumberInput {...props} />)
+
+      const input = screen.getByTestId("stNumberInputField")
+      const stepUpButton = screen.getByTestId("stNumberInputStepUp")
+      const stepDownButton = screen.getByTestId("stNumberInputStepDown")
+
+      await user.click(stepUpButton) // 0.51
+      await user.click(stepUpButton) // 0.52
+      await user.click(stepDownButton) // 0.51
+
+      expect(input).toHaveValue(0.51)
+    })
+  })
 })
