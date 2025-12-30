@@ -19,7 +19,16 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Final, Literal, Protocol, TypeAlias, TypedDict, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Final,
+    Literal,
+    Protocol,
+    TypeAlias,
+    TypedDict,
+    cast,
+)
 
 from streamlit import dataframe_util, type_util
 from streamlit.elements.lib.color_util import (
