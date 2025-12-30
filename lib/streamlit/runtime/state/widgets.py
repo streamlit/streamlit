@@ -232,6 +232,53 @@ def register_widget_from_metadata(
             elif serde_name == "ColorPickerSerde":
                 serializers = (serialize_color, deserialize_color)
 
+        # NumberInput with format-aware rounding to match displayed precision
+        if effective_value_type == "double_value" and serde_name == "NumberInputSerde":
+            import re
+
+            data_type = getattr(serde_instance, "data_type", 0)
+            format_str = getattr(serde_instance, "format_str", None)
+
+            # Extract decimal places from format string like "%.6f" or "%0.2f"
+            format_precision: int | None = None
+            if format_str and "f" in format_str.lower():
+                match = re.search(r"\.(\d+)f", format_str, re.IGNORECASE)
+                if match:
+                    format_precision = int(match.group(1))
+
+            def _round_to_precision(value: float | None) -> float | None:
+                """Round value to match the display format precision."""
+                if value is None:
+                    return None
+                if format_precision is not None:
+                    return round(value, format_precision)
+                # Fallback: no format precision, return as-is
+                return value
+
+            def _serialize_number_formatted(value: object) -> str:
+                if value is None:
+                    return ""
+                # NumberInputProto.INT = 0, NumberInputProto.FLOAT = 1
+                if data_type == 0:  # INT
+                    return str(int(value))  # type: ignore[call-overload]
+                # Round to format precision for floats (matches what user sees)
+                rounded = _round_to_precision(float(value))  # type: ignore[arg-type]
+                return serialize_number(rounded)
+
+            def _deserialize_number_formatted(
+                v: str | list[str],
+            ) -> int | float | None:
+                # NumberInputProto.INT = 0, NumberInputProto.FLOAT = 1
+                parsed = deserialize_number(v, as_int=(data_type == 0))
+                if parsed is None:
+                    return None
+                # Round deserialized values to format precision
+                if data_type != 0 and format_precision is not None:
+                    return _round_to_precision(float(parsed))
+                return parsed
+
+            serializers = (_serialize_number_formatted, _deserialize_number_formatted)
+
         # Category C: Selection widgets with value-based serialization
         # st.radio uses int_value (index), convert to value-based for human-friendly URLs
         if effective_value_type == "int_value" and serde_name == "RadioSerde":
@@ -262,17 +309,20 @@ def register_widget_from_metadata(
                 serde_instance, "formatted_option_to_option_index", {}
             )
 
-            # Build a lookup from option value to formatted string
-            option_to_formatted = {
-                opt: formatted_options[i] for i, opt in enumerate(options)
-            }
+            def _get_formatted_for_value(v: object) -> str:
+                """Get formatted string for a value, handling unhashable types."""
+                for i, opt in enumerate(options):
+                    if opt == v:
+                        return formatted_options[i]
+                # Fallback to str() for values not in options
+                return str(v)
 
             def _serialize_multiselect(values: object) -> list[str]:
                 if values is None:
                     return []
                 if not isinstance(values, (list, tuple)):
                     values = [values]
-                return [option_to_formatted.get(v, str(v)) for v in values]
+                return [_get_formatted_for_value(v) for v in values]
 
             def _deserialize_multiselect(v: str | list[str]) -> list[object]:
                 if isinstance(v, str):
@@ -337,9 +387,12 @@ def register_widget_from_metadata(
             # Sliders always use double_array_value in widget state, even for single-value
             # sliders. Query param strings should be human-friendly, so deserialize to the
             # slider's Python return type (int/float/date/time/datetime).
+            import math as _math
+
             from streamlit.proto.Slider_pb2 import Slider as SliderProto
 
             data_type = getattr(serde_instance, "data_type", SliderProto.FLOAT)
+            slider_step = getattr(serde_instance, "step", None)
             if data_type == SliderProto.INT:
                 slider_data_type = "int"
             elif data_type == SliderProto.DATE:
@@ -353,10 +406,31 @@ def register_widget_from_metadata(
 
             single_value = bool(getattr(serde_instance, "single_value", True))
 
+            def _snap_to_step(val: float | int) -> float | int:
+                """Snap a numeric value to the nearest step."""
+                if slider_step is None or slider_step == 0:
+                    return val
+                if slider_data_type == "int":
+                    return int(round(val / slider_step) * slider_step)
+                # Round to nearest step
+                snapped = round(val / slider_step) * slider_step
+                # Determine decimal places from step to avoid floating point artifacts
+                if slider_step >= 1:
+                    decimal_places = 0
+                else:
+                    decimal_places = max(0, -_math.floor(_math.log10(abs(slider_step))))
+                return round(snapped, decimal_places)
+
             def _deserialize_slider(v: str | list[str]) -> object | None:
                 parsed = deserialize_slider_value(v, data_type=slider_data_type)
                 if parsed is None:
                     return None
+                # Snap float values to nearest step
+                if slider_data_type == "float" and slider_step:
+                    if isinstance(parsed, tuple):
+                        parsed = (_snap_to_step(parsed[0]), _snap_to_step(parsed[1]))
+                    else:
+                        parsed = _snap_to_step(parsed)
                 if single_value:
                     return None if isinstance(parsed, tuple) else parsed
                 return parsed if isinstance(parsed, tuple) else None

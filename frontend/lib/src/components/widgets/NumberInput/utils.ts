@@ -80,6 +80,57 @@ export const formatValue = ({
   }
 }
 
+/**
+ * Extract decimal precision from a format string like "%.6f" or "%0.2f".
+ * Returns the number of decimal places, or null if not a float format.
+ */
+export const getFormatPrecision = (
+  format: string | null | undefined
+): number | null => {
+  if (isNullOrUndefined(format)) {
+    return null
+  }
+  // Match patterns like %.6f, %0.2f, %.0f
+  const match = format.match(/\.(\d+)f/i)
+  if (match) {
+    return parseInt(match[1], 10)
+  }
+  return null
+}
+
+/**
+ * Round a number to the precision specified by the format string.
+ * This ensures the value stored matches what the user sees displayed.
+ */
+export const roundToFormatPrecision = ({
+  value,
+  format,
+  dataType,
+}: {
+  value: number | null
+  format?: string | null
+  dataType: NumberInputProto.DataType
+}): number | null => {
+  if (isNullOrUndefined(value)) {
+    return null
+  }
+
+  // Integers don't need rounding
+  if (dataType === NumberInputProto.DataType.INT) {
+    return Math.round(value)
+  }
+
+  const precision = getFormatPrecision(format)
+  if (precision !== null) {
+    // Round to the format's decimal precision
+    const factor = Math.pow(10, precision)
+    return Math.round(value * factor) / factor
+  }
+
+  // No format precision specified, return as-is
+  return value
+}
+
 export const canDecrement = (
   value: number | null,
   step: number,

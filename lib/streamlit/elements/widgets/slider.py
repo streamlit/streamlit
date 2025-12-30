@@ -171,6 +171,7 @@ class SliderSerde:
     data_type: int
     single_value: bool
     orig_tz: tzinfo | None
+    step: float | None = None
 
     def deserialize_single_value(self, value: float) -> SliderScalar:
         if self.data_type == SliderProto.INT:
@@ -987,6 +988,7 @@ class SliderMixin:
             data_type,
             single_value,
             orig_tz,
+            step=cast("float", step),
         )
 
         widget_state = register_widget(

@@ -69,6 +69,8 @@ FloatOrNone = TypeVar("FloatOrNone", float, None)
 class NumberInputSerde:
     value: Number | None
     data_type: int
+    step: Number | None = None
+    format_str: str | None = None
 
     def serialize(self, v: Number | None) -> Number | None:
         return v
@@ -618,7 +620,7 @@ class NumberInputMixin:
         if icon is not None:
             number_input_proto.icon = validate_icon_or_emoji(icon)
 
-        serde = NumberInputSerde(value, data_type)
+        serde = NumberInputSerde(value, data_type, step, number_format)
         widget_state = register_widget(
             number_input_proto.id,
             on_change_handler=on_change,
