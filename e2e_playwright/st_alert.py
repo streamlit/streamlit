@@ -119,3 +119,14 @@ st.error("This is an error with width='stretch' and icon", width="stretch", icon
 
 # Alerts with width=200 and icon
 st.info("This is an info message with width=200 and icon", width=200, icon="👉🏻")
+
+### Test title parameter ###
+
+# Basic title for all alert types
+st.error("Error body content", title="Error Title")
+st.warning("Warning body content", title="Warning Title")
+st.info("Info body content", title="Info Title")
+st.success("Success body content", title="Success Title")
+
+# Title with icon
+st.error("Error with title and icon", title="Critical Error", icon="🚨")

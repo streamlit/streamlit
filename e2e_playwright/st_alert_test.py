@@ -23,7 +23,7 @@ def test_alerts_rendering_themed(
 ):
     """Test that alerts render correctly with theme-dependent styling."""
     alert_elements = themed_app.get_by_test_id("stAlert")
-    expect(alert_elements).to_have_count(32)
+    expect(alert_elements).to_have_count(37)
 
     # The first 4 alerts are super basic, no need to screenshot test those
     expect(alert_elements.nth(0)).to_have_text("This is an error")
@@ -52,11 +52,18 @@ def test_alerts_rendering_themed(
     # Alert with heading (heading colors differ by theme)
     assert_snapshot(alert_elements.nth(20), name="st_alert-error_with_heading")
 
+    # Title parameter tests (title styling may differ by theme)
+    assert_snapshot(alert_elements.nth(32), name="st_alert-error_with_title")
+    assert_snapshot(alert_elements.nth(33), name="st_alert-warning_with_title")
+    assert_snapshot(alert_elements.nth(34), name="st_alert-info_with_title")
+    assert_snapshot(alert_elements.nth(35), name="st_alert-success_with_title")
+    assert_snapshot(alert_elements.nth(36), name="st_alert-error_with_title_and_icon")
+
 
 def test_alerts_rendering_layout(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that alerts layout variations render correctly (theme-independent)."""
     alert_elements = app.get_by_test_id("stAlert")
-    expect(alert_elements).to_have_count(32)
+    expect(alert_elements).to_have_count(37)
 
     # Line wrapping (layout behavior)
     assert_snapshot(alert_elements.nth(8), name="st_alert-error_line_wrapping_1")
@@ -93,6 +100,6 @@ def test_material_symbol_from_latest_font_version_rendering(
 ):
     """Test that icon from latest version material symbols font renders correctly."""
     alert_elements = app.get_by_test_id("stAlert")
-    expect(alert_elements).to_have_count(32)
+    expect(alert_elements).to_have_count(37)
 
     assert_snapshot(alert_elements.nth(21), name="st_alert-latest_material_symbol")
