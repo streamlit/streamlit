@@ -625,7 +625,7 @@ def _load_theme_file(
             _raise_file_too_large()
 
         # Parse the TOML content
-        parsed_theme = toml.loads(content)
+        parsed_theme = toml.loads(content)  # ty: ignore[possibly-unresolved-reference]
 
         # Validate that the theme file has a theme section
         if "theme" not in parsed_theme:

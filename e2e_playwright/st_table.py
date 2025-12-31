@@ -215,7 +215,7 @@ headers = {
 }
 styled_df.set_table_styles([cell_hover, headers])  # type: ignore
 styled_df.set_table_styles(
-    {
+    {  # ty: ignore[invalid-argument-type]
         ("Regression", "Tumour"): [
             {"selector": "th", "props": "border-left: 1px solid white"},
             {"selector": "td", "props": "border-left: 1px solid #000066"},

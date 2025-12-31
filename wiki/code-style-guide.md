@@ -2,6 +2,9 @@
 
 Streamlit uses code auto-formatters and linters on pre-commit. Most of the style-related work is automatically done for you. For everything else, there's this page.
 
+> [!NOTE]
+> We have added [development guides](README.md#development-guides) for different parts of the Streamlit codebase. While written primarily for AI agents, these guides are also helpful for human developers.
+
 ## Every language
 
 - **Write tests!** It is very rare that any contribution will be accepted without tests.
@@ -22,6 +25,7 @@ We use [PEP8 style](https://pep8.org) for Python code, with a few adjustments:
 - Use [Numpydoc style](https://numpydoc.readthedocs.io/en/latest/format.html).
 - Docstrings are meant for users of a function, not developers who may edit the internals of that function in the future. If you want to talk to future developers, use comments.
 - All modules that we expect users to interact with must have top-level docstrings. If a user is not meant to interact with a module, docstrings are optional.
+- Brief docstring comments on test functions are recommended, but not enforced.
 - A docstring should not be a simple re-statement of the function name / class name / filename. For example, this is a bad docstring for DeltaGenerator.py: "Declares the DeltaGenerator class".
 
 ### Logging and printing

@@ -15,15 +15,7 @@
  */
 import { NumberInput as NumberInputProto } from "@streamlit/protobuf"
 
-import { WidgetStateManager } from "~lib/WidgetStateManager"
-
-import {
-  canDecrement,
-  canIncrement,
-  formatValue,
-  getInitialValue,
-  getStep,
-} from "./utils"
+import { canDecrement, canIncrement, formatValue, getStep } from "./utils"
 
 describe("canDecrement function", () => {
   it("returns true if decrementing stays above min", () => {
@@ -154,66 +146,5 @@ describe("getStep function", () => {
       dataType: NumberInputProto.DataType.FLOAT,
     })
     expect(getStep(element)).toBe(0.01)
-  })
-})
-
-describe("getInitialValue function", () => {
-  it("returns widget value when dataType is INT and the widget has a value", () => {
-    const props = {
-      element: NumberInputProto.create({
-        label: "Label",
-        dataType: NumberInputProto.DataType.INT,
-      }),
-      widgetMgr: new WidgetStateManager({
-        sendRerunBackMsg: vi.fn(),
-        formsDataChanged: vi.fn(),
-      }),
-    }
-    vi.spyOn(props.widgetMgr, "getIntValue").mockReturnValue(3)
-    expect(getInitialValue(props)).toBe(3)
-  })
-
-  it("returns widget value when the dataType is FLOAT and the widget has a value", () => {
-    const props = {
-      element: NumberInputProto.create({
-        label: "Label",
-        dataType: NumberInputProto.DataType.FLOAT,
-      }),
-      widgetMgr: new WidgetStateManager({
-        sendRerunBackMsg: vi.fn(),
-        formsDataChanged: vi.fn(),
-      }),
-    }
-    vi.spyOn(props.widgetMgr, "getDoubleValue").mockReturnValue(0.03)
-    expect(getInitialValue(props)).toBe(0.03)
-  })
-
-  it("returns default value when widget has no value", () => {
-    const props = {
-      element: NumberInputProto.create({
-        label: "Label",
-        dataType: NumberInputProto.DataType.FLOAT,
-        default: 0.01,
-      }),
-      widgetMgr: new WidgetStateManager({
-        sendRerunBackMsg: vi.fn(),
-        formsDataChanged: vi.fn(),
-      }),
-    }
-    expect(getInitialValue(props)).toBe(0.01)
-  })
-
-  it("returns null when widget has no value and no default is provided", () => {
-    const props = {
-      element: NumberInputProto.create({
-        label: "Label",
-        dataType: NumberInputProto.DataType.FLOAT,
-      }),
-      widgetMgr: new WidgetStateManager({
-        sendRerunBackMsg: vi.fn(),
-        formsDataChanged: vi.fn(),
-      }),
-    }
-    expect(getInitialValue(props)).toBe(null)
   })
 })

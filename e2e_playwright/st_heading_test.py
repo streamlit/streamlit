@@ -22,6 +22,8 @@ from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     expect_help_tooltip,
     get_heading,
+    reset_focus,
+    tab_until_focused,
 )
 
 # Does not include divider header/subheaders
@@ -155,6 +157,30 @@ def test_clicking_on_anchor_changes_url(app: Page):
     expect(app).to_have_url(re.compile(".*#info-this-header-is-awesome"))
 
 
+def test_anchor_icon_is_keyboard_focusable_and_visible_on_focus(app: Page):
+    """Test that the anchor icon can be reached via keyboard without hover.
+
+    The icon is intentionally hidden by default to reduce visual noise, but it must
+    remain in the tab order. When focused, it should become visible and be
+    activatable using the keyboard.
+    """
+    header = get_heading(app, "This header is awesome!").locator("h2")
+    header.scroll_into_view_if_needed()
+
+    link = header.get_by_role("link", name="Link to heading")
+    expect(link).to_have_attribute("href", "#info-this-header-is-awesome")
+    expect(link).to_have_css("opacity", "0")
+
+    reset_focus(app)
+    tab_until_focused(app, link)
+
+    expect(link).to_be_focused()
+    expect(link).to_have_css("opacity", "1")
+
+    app.keyboard.press("Enter")
+    expect(app).to_have_url(re.compile(".*#info-this-header-is-awesome"))
+
+
 def test_headers_snapshot_match(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
@@ -173,9 +199,9 @@ def test_headers_hovered_snapshot_match(
     # Test simple header with visible anchor on hover
     header = get_heading(themed_app, "This header is awesome!")
     link_container = header.get_by_test_id("stHeaderActionElements").locator("a")
-    expect(link_container).to_have_css("visibility", "hidden")
+    expect(link_container).to_have_css("opacity", "0")
     header.hover()
-    expect(link_container).to_have_css("visibility", "visible")
+    expect(link_container).to_have_css("opacity", "1")
     assert_snapshot(header, name="st_header-hover_with_visible_anchor")
 
     # Test header with help and anchor on hover (exact match)
@@ -183,9 +209,9 @@ def test_headers_hovered_snapshot_match(
     link_container = header_with_help.get_by_test_id("stHeaderActionElements").locator(
         "a"
     )
-    expect(link_container).to_have_css("visibility", "hidden")
+    expect(link_container).to_have_css("opacity", "0")
     header_with_help.hover()
-    expect(link_container).to_have_css("visibility", "visible")
+    expect(link_container).to_have_css("opacity", "1")
     assert_snapshot(header_with_help, name="st_header-hover_with_help_and_anchor")
 
     # Test header with help and hidden anchor (no link)
@@ -215,9 +241,9 @@ def test_subheaders_hovered_snapshot_match(
     # Test simple subheader with visible anchor on hover
     subheader = get_heading(themed_app, "This subheader is awesome!")
     link_container = subheader.get_by_test_id("stHeaderActionElements").locator("a")
-    expect(link_container).to_have_css("visibility", "hidden")
+    expect(link_container).to_have_css("opacity", "0")
     subheader.hover()
-    expect(link_container).to_have_css("visibility", "visible")
+    expect(link_container).to_have_css("opacity", "1")
     assert_snapshot(subheader, name="st_subheader-hover_with_visible_anchor")
 
     # Test subheader with help and anchor on hover (exact match)
@@ -225,9 +251,9 @@ def test_subheaders_hovered_snapshot_match(
     link_container = subheader_with_help.get_by_test_id(
         "stHeaderActionElements"
     ).locator("a")
-    expect(link_container).to_have_css("visibility", "hidden")
+    expect(link_container).to_have_css("opacity", "0")
     subheader_with_help.hover()
-    expect(link_container).to_have_css("visibility", "visible")
+    expect(link_container).to_have_css("opacity", "1")
     assert_snapshot(subheader_with_help, name="st_subheader-hover_with_help_and_anchor")
 
     # Test subheader with help and hidden anchor (no link)

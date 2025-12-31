@@ -62,7 +62,12 @@ from streamlit.runtime.caching.storage.dummy_cache_storage import (
     MemoryCacheStorageManager,
 )
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.runtime.stats import CacheStat, StatsProvider, group_cache_stats
+from streamlit.runtime.stats import (
+    CACHE_MEMORY_FAMILY,
+    CacheStat,
+    StatsProvider,
+    group_cache_stats,
+)
 from streamlit.time_util import time_to_seconds
 
 if TYPE_CHECKING:
@@ -156,6 +161,10 @@ class DataCaches(StatsProvider):
         self._caches_lock = threading.Lock()
         self._function_caches: dict[str, DataCache[Any]] = {}
 
+    @property
+    def stats_families(self) -> Sequence[str]:
+        return (CACHE_MEMORY_FAMILY,)
+
     def get_cache(
         self,
         key: str,
@@ -241,7 +250,9 @@ class DataCaches(StatsProvider):
                     data_cache.storage.close()
             self._function_caches = {}
 
-    def get_stats(self) -> list[CacheStat]:
+    def get_stats(
+        self, _family_names: Sequence[str] | None = None
+    ) -> dict[str, list[CacheStat]]:
         with self._caches_lock:
             # Shallow-clone our caches. We don't want to hold the global
             # lock during stats-gathering.
@@ -249,8 +260,15 @@ class DataCaches(StatsProvider):
 
         stats: list[CacheStat] = []
         for cache in function_caches.values():
-            stats.extend(cache.get_stats())
-        return group_cache_stats(stats)
+            cache_stats = cache.get_stats()
+            for family_stats in cache_stats.values():
+                stats.extend(family_stats)
+        if not stats:
+            return {}
+        # In general, get_stats methods need to be able to return only requested stat
+        # families, but this method only returns a single family, and we're guaranteed
+        # that it was one of those requested if we make it here.
+        return {CACHE_MEMORY_FAMILY: group_cache_stats(stats)}
 
     def validate_cache_params(
         self,
@@ -631,10 +649,15 @@ class DataCache(Cache[R]):
         self.max_entries = max_entries
         self.persist = persist
 
-    def get_stats(self) -> Sequence[CacheStat]:
+    def get_stats(
+        self, _family_names: Sequence[str] | None = None
+    ) -> dict[str, list[CacheStat]]:
+        # In general, get_stats methods need to be able to return only requested stat
+        # families, but this method only returns a single family, and we're guaranteed
+        # that it was one of those requested if we make it here.
         if isinstance(self.storage, StatsProvider):
-            return cast("Sequence[CacheStat]", self.storage.get_stats())
-        return []
+            return cast("dict[str, list[CacheStat]]", self.storage.get_stats())
+        return {}
 
     def read_result(self, key: str) -> CachedResult[R]:
         """Read a value and messages from the cache. Raise `CacheKeyNotFoundError`

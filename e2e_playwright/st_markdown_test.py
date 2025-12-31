@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import re
+
 import pytest
 from playwright.sync_api import Locator, Page, expect
 
@@ -23,6 +25,7 @@ from e2e_playwright.shared.app_utils import (
     get_caption,
     get_element_by_key,
     get_markdown,
+    tab_until_focused,
     wait_for_all_images_to_be_loaded,
 )
 
@@ -315,6 +318,34 @@ def test_anchor_scrolling(app: Page):
     expect(app.get_by_text("Bold header1")).to_be_in_viewport()
 
 
+def test_markdown_heading_anchor_icon_is_keyboard_focusable_and_visible(app: Page):
+    """Test that st.markdown headings expose a keyboard-focusable anchor icon.
+
+    The anchor icon is hidden by default to reduce visual noise, but it must be
+    reachable by tabbing. When focused, it should become visible and be
+    activatable using the keyboard.
+    """
+    heading = app.locator("h1#bold-header1")
+    heading.scroll_into_view_if_needed()
+
+    link = heading.get_by_role("link", name="Link to heading")
+    expect(link).to_have_attribute("href", "#bold-header1")
+    expect(link).to_have_css("opacity", "0")
+
+    # Start tabbing from a deterministic, nearby focusable element that appears before
+    # this heading in the document.
+    app.get_by_test_id("stMainBlockContainer").get_by_role(
+        "textbox", name="This is a label"
+    ).click()
+    tab_until_focused(app, link)
+
+    expect(link).to_be_focused()
+    expect(link).to_have_css("opacity", "1")
+
+    app.keyboard.press("Enter")
+    expect(app).to_have_url(re.compile(".*#bold-header1"))
+
+
 @pytest.mark.performance
 def test_markdown_rendering_performance(app: Page):
     """Test that the performance of st.markdown and st.text."""
@@ -461,3 +492,128 @@ def test_caption_text_alignment(app: Page, assert_snapshot: ImageCompareFunction
     caption_justify = get_caption(app, "Justified caption text")
     caption_justify.scroll_into_view_if_needed()
     assert_snapshot(caption_justify, name="st_caption-text_alignment_justify")
+
+
+@pytest.mark.parametrize(
+    ("element_key", "expected_text", "element_test_id"),
+    [
+        (
+            "markdown_newlines_tooltip",
+            "Markdown with newlines in tooltip",
+            "stMarkdownContainer",
+        ),
+        (
+            "caption_newlines_tooltip",
+            "Caption with newlines in tooltip",
+            "stCaptionContainer",
+        ),
+        (
+            "markdown_center_newlines_tooltip",
+            "Center aligned with newlines in tooltip",
+            "stMarkdownContainer",
+        ),
+        (
+            "markdown_spaces_around_newlines",
+            "Markdown with spaces around newlines",
+            "stMarkdownContainer",
+        ),
+        (
+            "markdown_bracket_in_tooltip",
+            "Markdown with closing bracket in tooltip",
+            "stMarkdownContainer",
+        ),
+    ],
+)
+def test_tooltip_with_newlines_gh_13339(
+    app: Page,
+    element_key: str,
+    expected_text: str,
+    element_test_id: str,
+):
+    r"""Test that tooltips with newlines render correctly inside the tooltip (gh-13339).
+
+    This regression test verifies that when help text contains double newlines (\n\n),
+    the text renders inside the tooltip box with proper paragraph breaks rather than
+    outside of it.
+
+    The bug caused the directive syntax to break, leaking the help text into the
+    markdown container itself instead of keeping it in the tooltip popup.
+    """
+    element_container = get_element_by_key(app, element_key)
+    element_container.scroll_into_view_if_needed()
+    expect(element_container).to_be_visible()
+
+    # Get the actual markdown/caption element inside the container
+    element = element_container.get_by_test_id(element_test_id)
+
+    # CRITICAL: Verify the help text is NOT leaked into the element content
+    # In the bug condition, "Line 2" and "Line 3" would appear in the visible text
+    expect(element).to_have_text(expected_text)
+    expect(element).not_to_contain_text("Line 2")
+    expect(element).not_to_contain_text("Line 3")
+
+    # Hover to show tooltip
+    hover_target = element_container.get_by_test_id("stTooltipHoverTarget")
+    hover_target.hover()
+
+    # Verify tooltip is visible and contains the multiline content
+    tooltip_content = app.get_by_test_id("stTooltipContent")
+    expect(tooltip_content).to_be_visible()
+
+    # All test cases now use consistent "Line 1/2/3" format for simplicity
+    expect(tooltip_content).to_contain_text("Line 1")
+    expect(tooltip_content).to_contain_text("Line 2")
+    expect(tooltip_content).to_contain_text("Line 3")
+
+
+def test_tooltip_with_complex_markdown_gh_13339(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that tooltips with complex markdown features render correctly.
+
+    Comprehensive test verifying that help tooltips support:
+    - Bold, italic, and other text formatting
+    - Inline code and code blocks
+    - Links
+    - Color directives
+    - Brackets [ and ]
+    - Emojis
+
+    Uses snapshot testing to verify the markdown is rendered correctly.
+    """
+    element_container = get_element_by_key(app, "markdown_complex_tooltip")
+    element_container.scroll_into_view_if_needed()
+    expect(element_container).to_be_visible()
+
+    element = element_container.get_by_test_id("stMarkdownContainer")
+
+    # Verify the help text is NOT leaked into the markdown content
+    expect(element).to_have_text("Tooltip with complex markdown")
+    expect(element).not_to_contain_text("Bold")
+    expect(element).not_to_contain_text("italic")
+    expect(element).not_to_contain_text("array[index]")
+    expect(element).not_to_contain_text("Streamlit")
+
+    hover_target = element_container.get_by_test_id("stTooltipHoverTarget")
+    hover_target.hover()
+
+    tooltip_content = app.get_by_test_id("stTooltipContent")
+    expect(tooltip_content).to_be_visible()
+
+    expect(tooltip_content).to_contain_text("Bold")
+    expect(tooltip_content).to_contain_text("italic")
+    expect(tooltip_content).to_contain_text("code")
+    expect(tooltip_content).to_contain_text("brackets [x]")
+    expect(tooltip_content).to_contain_text("Streamlit")
+    expect(tooltip_content).to_contain_text("array[index]")
+    expect(tooltip_content).to_contain_text("🎉")
+
+    expect(tooltip_content.locator("code")).to_have_count(1)
+
+    expect(tooltip_content.locator("a")).to_have_attribute(
+        "href", "https://streamlit.io"
+    )
+
+    assert_snapshot(
+        tooltip_content, name="st_markdown-complex_tooltip_with_markdown_formatting"
+    )

@@ -40,6 +40,11 @@ export const StyledWidgetLabel = styled.label<StyledWidgetProps>(
   })
 )
 
+/**
+ * @deprecated Please utilize `WidgetLabelHelpIcon` instead of using this
+ * directly in order to support a11y best practices and keep behavior consistent
+ * across widgets.
+ */
 export const StyledWidgetLabelHelp = styled.div({
   display: "flex",
   flexDirection: "row",
@@ -57,7 +62,12 @@ export const StyledWidgetInstructions = styled.div(({ theme }) => ({
   right: `calc(${theme.fontSizes.mdLg} * 0.5)`,
 }))
 
-export const StyledWidgetLabelHelpInline = styled.label(({ theme }) => ({
+/**
+ * @deprecated Please utilize `WidgetLabelHelpIconInline` instead of using this
+ * directly in order to support a11y best practices and keep behavior consistent
+ * across widgets.
+ */
+export const StyledWidgetLabelHelpInline = styled.span(({ theme }) => ({
   marginLeft: theme.spacing.xs,
   position: "relative",
   display: "flex",

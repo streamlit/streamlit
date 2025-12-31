@@ -21,6 +21,7 @@ import pytest
 
 from streamlit.runtime.script_data import ScriptData
 from streamlit.runtime.session_manager import SessionStorage
+from streamlit.runtime.stats import CounterStat, GaugeStat, Stat
 from streamlit.runtime.websocket_session_manager import WebsocketSessionManager
 
 
@@ -299,3 +300,188 @@ class WebsocketSessionManagerTests(unittest.TestCase):
         assert {s.session.id for s in self.session_mgr.list_sessions()} == set(
             session_ids
         )
+
+
+@patch(
+    "streamlit.runtime.app_session.asyncio.get_running_loop",
+    new=MagicMock(),
+)
+@patch("streamlit.runtime.app_session.LocalSourcesWatcher", new=MagicMock())
+@patch("streamlit.runtime.app_session.ScriptRunner", new=MagicMock())
+class WebsocketSessionManagerMetricsTests(unittest.TestCase):
+    """Tests for session metrics collection in WebsocketSessionManager."""
+
+    def setUp(self) -> None:
+        self.session_mgr = WebsocketSessionManager(
+            session_storage=MockSessionStorage(),
+            uploaded_file_manager=MagicMock(),
+            script_cache=MagicMock(),
+            message_enqueued_callback=MagicMock(),
+        )
+
+    def connect_session(
+        self,
+        existing_session_id: str | None = None,
+        session_id_override: str | None = None,
+    ) -> str:
+        return self.session_mgr.connect_session(
+            client=MagicMock(),
+            script_data=ScriptData("/fake/script_path.py", is_hello=False),
+            user_info={},
+            existing_session_id=existing_session_id,
+            session_id_override=session_id_override,
+        )
+
+    def _get_stat_value(
+        self,
+        stats_dict: dict[str, list[Stat]],
+        family_name: str,
+        label_type: str | None = None,
+    ) -> int:
+        """Helper to extract a stat value from the stats dict."""
+        if family_name not in stats_dict:
+            raise ValueError(f"Family not found: {family_name}")
+        for stat in stats_dict[family_name]:
+            if label_type is None:
+                # For GaugeStat without labels
+                if isinstance(stat, GaugeStat):
+                    return stat.value
+            # For CounterStat with labels
+            elif (
+                isinstance(stat, CounterStat)
+                and stat.labels
+                and stat.labels.get("type") == label_type
+            ):
+                return stat.value
+        raise ValueError(f"Stat not found: {family_name}, {label_type}")
+
+    def test_initial_stats_are_zero(self) -> None:
+        """Stats should all be zero initially."""
+        stats = self.session_mgr.get_stats()
+
+        assert self._get_stat_value(stats, "session_events_total", "connect") == 0
+        assert self._get_stat_value(stats, "session_events_total", "reconnect") == 0
+        assert self._get_stat_value(stats, "session_events_total", "disconnect") == 0
+        assert self._get_stat_value(stats, "active_sessions") == 0
+
+    def test_new_connection_increments_counter(self) -> None:
+        """Creating a new session should increment connection counter."""
+        self.connect_session()
+        stats = self.session_mgr.get_stats()
+
+        assert self._get_stat_value(stats, "session_events_total", "connect") == 1
+        assert self._get_stat_value(stats, "session_events_total", "reconnect") == 0
+        assert self._get_stat_value(stats, "session_events_total", "disconnect") == 0
+        assert self._get_stat_value(stats, "active_sessions") == 1
+
+    def test_multiple_connections(self) -> None:
+        """Multiple new sessions should increment connection counter."""
+        self.connect_session()
+        self.connect_session()
+        self.connect_session()
+        stats = self.session_mgr.get_stats()
+
+        assert self._get_stat_value(stats, "session_events_total", "connect") == 3
+        assert self._get_stat_value(stats, "active_sessions") == 3
+
+    @patch(
+        "streamlit.runtime.app_session.AppSession.disconnect_file_watchers",
+        new=MagicMock(),
+    )
+    @patch(
+        "streamlit.runtime.app_session.AppSession.request_script_stop",
+        new=MagicMock(),
+    )
+    @patch(
+        "streamlit.runtime.app_session.AppSession.register_file_watchers",
+        new=MagicMock(),
+    )
+    def test_reconnection_increments_counter(self) -> None:
+        """Reconnecting an existing session should increment reconnection counter."""
+        session_id = self.connect_session()
+        self.session_mgr.disconnect_session(session_id)
+        self.connect_session(existing_session_id=session_id)
+        stats = self.session_mgr.get_stats()
+
+        assert self._get_stat_value(stats, "session_events_total", "connect") == 1
+        assert self._get_stat_value(stats, "session_events_total", "reconnect") == 1
+        assert self._get_stat_value(stats, "active_sessions") == 1
+
+    def test_disconnect_session_increments_disconnection(self) -> None:
+        """Disconnecting a session should increment disconnection counter."""
+        session_id = self.connect_session()
+        self.session_mgr.disconnect_session(session_id)
+        stats = self.session_mgr.get_stats()
+
+        assert self._get_stat_value(stats, "session_events_total", "connect") == 1
+        assert self._get_stat_value(stats, "session_events_total", "disconnect") == 1
+        assert self._get_stat_value(stats, "active_sessions") == 0
+
+    def test_disconnect_session_on_invalid_session_does_not_increment(self) -> None:
+        """Disconnecting an invalid session should not increment disconnection counter."""
+        self.session_mgr.disconnect_session("nonexistent_session")
+        stats = self.session_mgr.get_stats()
+
+        assert self._get_stat_value(stats, "session_events_total", "disconnect") == 0
+
+    @patch("streamlit.runtime.app_session.AppSession.shutdown", new=MagicMock())
+    def test_close_active_session_increments_disconnection(self) -> None:
+        """Closing an active session should increment disconnection counter."""
+        session_id = self.connect_session()
+        self.session_mgr.close_session(session_id)
+        stats = self.session_mgr.get_stats()
+
+        assert self._get_stat_value(stats, "session_events_total", "connect") == 1
+        assert self._get_stat_value(stats, "session_events_total", "disconnect") == 1
+        assert self._get_stat_value(stats, "active_sessions") == 0
+
+    @patch("streamlit.runtime.app_session.AppSession.shutdown", new=MagicMock())
+    def test_close_stored_session_does_not_increment_disconnection(self) -> None:
+        """Closing a session from storage should not increment disconnection counter.
+
+        The disconnect was already counted when disconnect_session was called.
+        """
+        session_id = self.connect_session()
+        # Disconnect moves session to storage and increments counter
+        self.session_mgr.disconnect_session(session_id)
+        stats_after_disconnect = self.session_mgr.get_stats()
+        disconnect_count = self._get_stat_value(
+            stats_after_disconnect, "session_events_total", "disconnect"
+        )
+
+        # Close the stored session - should not increment counter again
+        self.session_mgr.close_session(session_id)
+        stats_after_close = self.session_mgr.get_stats()
+
+        assert (
+            self._get_stat_value(
+                stats_after_close, "session_events_total", "disconnect"
+            )
+            == disconnect_count
+        )
+
+    def test_get_stats_returns_correct_format(self) -> None:
+        """get_stats should return stats in the correct format."""
+        self.connect_session()
+        stats_dict = self.session_mgr.get_stats()
+
+        assert len(stats_dict) == 2
+        assert "session_events_total" in stats_dict
+        assert "active_sessions" in stats_dict
+
+        # Check session_events_total counters
+        session_events = stats_dict["session_events_total"]
+        assert len(session_events) == 3
+        for stat in session_events:
+            assert isinstance(stat, CounterStat)
+            assert stat.family_name == "session_events_total"
+            assert stat.type == "counter"
+            assert stat.labels is not None
+            assert "type" in stat.labels
+
+        # Check active_sessions gauge
+        active_sessions = stats_dict["active_sessions"]
+        assert len(active_sessions) == 1
+        assert isinstance(active_sessions[0], GaugeStat)
+        assert active_sessions[0].family_name == "active_sessions"
+        assert active_sessions[0].type == "gauge"

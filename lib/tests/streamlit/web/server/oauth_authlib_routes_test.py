@@ -153,7 +153,8 @@ class LogoutHandlerTest(tornado.testing.AsyncHTTPTestCase):
                     AuthLogoutHandler,
                     {"base_url": ""},
                 )
-            ]
+            ],
+            cookie_secret="test_secret",
         )
 
     def test_logout_success(self):
@@ -200,7 +201,14 @@ class AuthCallbackHandlerTest(tornado.testing.AsyncHTTPTestCase):
         return_value=(
             MagicMock(
                 authorize_access_token=MagicMock(
-                    return_value={"userinfo": {"email": "test@example.com"}}
+                    return_value={
+                        "userinfo": {"email": "test@example.com"},
+                        "access_token": "test_access_token",
+                        "refresh_token": "test_refresh_token",
+                        "id_token": "test_id_token",
+                        "token_type": "Bearer",
+                        "expires_in": 3600,
+                    }
                 )
             ),
             MagicMock(),
@@ -217,7 +225,11 @@ class AuthCallbackHandlerTest(tornado.testing.AsyncHTTPTestCase):
                 "email": "test@example.com",
                 "origin": "http://localhost:8501",
                 "is_logged_in": True,
-            }
+            },
+            {
+                "access_token": "test_access_token",
+                "id_token": "test_id_token",
+            },
         )
 
         assert response.code == 302

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, ReactNode } from "react"
+import { ReactElement, ReactNode } from "react"
 
 import { DialogType } from "@streamlit/app/src/components/StreamlitDialog/constants"
 import {

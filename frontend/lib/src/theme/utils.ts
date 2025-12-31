@@ -26,11 +26,7 @@ import { cloneDeep, isObject, merge, mergeWith, once } from "lodash-es"
 import { getLogger } from "loglevel"
 
 import { CustomThemeConfig, ICustomThemeConfig } from "@streamlit/protobuf"
-import {
-  localStorageAvailable,
-  StreamlitConfig,
-  type StreamlitWindowObject,
-} from "@streamlit/utils"
+import { localStorageAvailable, StreamlitConfig } from "@streamlit/utils"
 
 import { CircularBuffer } from "~lib/components/shared/Profiler/CircularBuffer"
 import {
@@ -62,7 +58,6 @@ export const CUSTOM_THEME_AUTO_NAME = "Custom Theme Auto"
 
 declare global {
   interface Window {
-    __streamlit?: StreamlitWindowObject
     __streamlit_profiles__?: Record<
       string,
       CircularBuffer<{
@@ -1266,6 +1261,28 @@ export function blend(color: string, background: string | undefined): string {
   const go = Math.round((a * g + ba * bg * (1 - a)) / ao)
   const bo = Math.round((a * b + ba * bb * (1 - a)) / ao)
   return toHex(`rgba(${ro}, ${go}, ${bo}, ${ao})`)
+}
+
+/**
+ * Canonical focus ring used across Streamlit components for keyboard focus
+ * (usually applied via `:focus-visible`).
+ */
+export const getFocusBoxShadow = (
+  color: string,
+  /**
+   * The alpha value to use for the focus ring.
+   * Matches color2k.transparentize: 0 = unchanged, 1 = fully transparent.
+   */
+  alpha: number = 0.5,
+  width: string = "0.2rem"
+): string => {
+  return `0 0 0 ${width} ${transparentize(color, alpha)}`
+}
+
+export const getPrimaryFocusBoxShadow = (
+  theme: Pick<EmotionTheme, "colors">
+): string => {
+  return getFocusBoxShadow(theme.colors.primary)
 }
 
 /**

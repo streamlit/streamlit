@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-import React from "react"
-
 import { act, render, screen } from "@testing-library/react"
 
 import { PlotlyChart as PlotlyChartProto } from "@streamlit/protobuf"

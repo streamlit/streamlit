@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { memo, ReactElement } from "react"
+import { memo, ReactElement } from "react"
 
 import AlertContainer, { Kind } from "~lib/components/shared/AlertContainer"
 import { DynamicIcon } from "~lib/components/shared/Icon"

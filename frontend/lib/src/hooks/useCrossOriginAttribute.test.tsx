@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { useMemo } from "react"
+import { useMemo } from "react"
 
 import { renderHook } from "@testing-library/react"
 

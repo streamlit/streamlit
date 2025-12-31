@@ -45,6 +45,13 @@ NumberFormat: TypeAlias = Literal[
     "bytes",
 ]
 
+DateTimeFormat: TypeAlias = Literal[
+    "localized",
+    "distance",
+    "calendar",
+    "iso8601",
+]
+
 ColumnWidth: TypeAlias = Literal["small", "medium", "large"] | int
 
 # Type alias that represents all available column types
@@ -194,9 +201,7 @@ class MultiselectColumnConfig(TypedDict):
 
 class DatetimeColumnConfig(TypedDict):
     type: Literal["datetime"]
-    format: NotRequired[
-        str | Literal["localized", "distance", "calendar", "iso8601"] | None
-    ]
+    format: NotRequired[str | DateTimeFormat | None]
     min_value: NotRequired[str | None]
     max_value: NotRequired[str | None]
     step: NotRequired[int | float | None]
@@ -1972,7 +1977,7 @@ def DatetimeColumn(
     required: bool | None = None,
     pinned: bool | None = None,
     default: datetime.datetime | None = None,
-    format: str | Literal["localized", "distance", "calendar", "iso8601"] | None = None,
+    format: str | DateTimeFormat | None = None,
     min_value: datetime.datetime | None = None,
     max_value: datetime.datetime | None = None,
     step: int | float | datetime.timedelta | None = None,

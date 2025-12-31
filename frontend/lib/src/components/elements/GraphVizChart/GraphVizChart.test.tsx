@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-import React from "react"
-
 import { screen } from "@testing-library/react"
 import { graphviz } from "d3-graphviz"
 import { Mock, MockInstance } from "vitest"

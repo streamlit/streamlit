@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { memo, ReactElement } from "react"
+import { memo, ReactElement } from "react"
 
 import { UploadFileInfo } from "~lib/components/widgets/FileUploader/UploadFileInfo"
 

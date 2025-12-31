@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { Suspense } from "react"
+import { Suspense } from "react"
 
 import { IconSize } from "~lib/theme"
 

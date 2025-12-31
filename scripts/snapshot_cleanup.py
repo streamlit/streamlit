@@ -293,6 +293,7 @@ def main() -> None:
     if not ci:
         print(f"Found {len(all_snapshot_files)} total snapshot files")
 
+    debug_test: str | None = None
     # Debug specific test
     if debug and "--test" in sys.argv:
         test_idx = sys.argv.index("--test")

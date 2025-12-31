@@ -494,3 +494,44 @@ text justification properly. The text stretches to fill the available width.""",
     text_alignment="justify",
     help="This is a help tooltip!",
 )
+
+# Test for gh-13339: Tooltip with newlines should render correctly
+st.header("Tooltip with Newlines (gh-13339)")
+
+st.container(key="markdown_newlines_tooltip").markdown(
+    "Markdown with newlines in tooltip",
+    help="Line 1\n\nLine 2\n\nLine 3",
+)
+
+st.container(key="caption_newlines_tooltip").caption(
+    "Caption with newlines in tooltip",
+    help="Line 1\n\nLine 2\n\nLine 3",
+)
+
+st.container(key="markdown_center_newlines_tooltip").markdown(
+    "Center aligned with newlines in tooltip",
+    text_alignment="center",
+    help="Line 1\n\nLine 2\n\nLine 3",
+)
+
+st.container(key="markdown_spaces_around_newlines").markdown(
+    "Markdown with spaces around newlines",
+    help="Line 1 \n\n Line 2 \n\n Line 3",
+)
+
+st.container(key="markdown_bracket_in_tooltip").markdown(
+    "Markdown with closing bracket in tooltip",
+    help="Line 1 ] Line 2 ] Line 3",
+)
+
+# Complex markdown in tooltip - comprehensive test
+st.header("Complex Tooltip Case")
+
+st.container(key="markdown_complex_tooltip").markdown(
+    "Tooltip with complex markdown",
+    help="""**Bold**, *italic*, and `code` with brackets [x]
+
+Links: [Streamlit](https://streamlit.io) Colors: :red[red] :blue[blue]
+
+Emoji: 🎉 Array: array[index] Dict: dict[key]""",
+)

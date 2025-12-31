@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { FC, MouseEvent } from "react"
+import { FC, MouseEvent } from "react"
 
 import { BaseButton, BaseButtonKind } from "@streamlit/lib"
 
