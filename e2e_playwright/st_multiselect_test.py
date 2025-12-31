@@ -487,8 +487,9 @@ def test_multiselect_preserves_scroll_position_on_remove(app: Page):
         '[data-baseweb="select"] > div > div:first-child'
     )
 
-    # Scroll to bottom of the value container
-    value_container.evaluate("el => { el.scrollTop = el.scrollHeight; }")
+    # Scroll to middle of the value container (not bottom, to avoid clamping issues
+    # when items are removed and scrollHeight decreases)
+    value_container.evaluate("el => { el.scrollTop = el.scrollHeight / 2; }")
 
     # Get initial scroll position (should be > 0 since there are many items)
     initial_scroll = value_container.evaluate("el => el.scrollTop")
@@ -497,6 +498,6 @@ def test_multiselect_preserves_scroll_position_on_remove(app: Page):
     # Remove an item by clicking its delete button
     del_from_multiselect(app, "multiselect 17 - show maxHeight", "fifteen")
 
-    # Verify scroll position is preserved (within small tolerance for item removal)
+    # Verify scroll position is preserved
     final_scroll = value_container.evaluate("el => el.scrollTop")
     assert final_scroll == initial_scroll
