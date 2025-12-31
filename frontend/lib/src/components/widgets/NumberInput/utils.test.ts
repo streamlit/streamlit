@@ -127,6 +127,30 @@ describe("formatValue function", () => {
       })
     ).toBe("123.46")
   })
+
+  describe("scientific notation steps", () => {
+    it("formats float with scientific notation step (1e-7)", () => {
+      expect(
+        formatValue({
+          value: 0.0000005,
+          format: null,
+          step: 0.0000001, // 1e-7
+          dataType: NumberInputProto.DataType.FLOAT,
+        })
+      ).toBe("0.0000005")
+    })
+
+    it("formats float with scientific notation step with decimal coefficient (2.5e-8)", () => {
+      expect(
+        formatValue({
+          value: 0.000000025,
+          format: null,
+          step: 2.5e-8,
+          dataType: NumberInputProto.DataType.FLOAT,
+        })
+      ).toBe("0.000000025")
+    })
+  })
 })
 
 describe("getStep function", () => {
@@ -179,10 +203,26 @@ describe("getDecimalPlaces function", () => {
       { step: 0.00000001, expected: 8 }, // 1e-8
       { step: 0.000000001, expected: 9 }, // 1e-9
       { step: 0.0000000001, expected: 10 }, // 1e-10
-      { step: 5e-7, expected: 7 },
-      { step: 2.5e-8, expected: 8 },
+      { step: 5e-7, expected: 7 }, // coefficient 5 has no decimals
     ])(
       "returns $expected for step=$step (scientific notation)",
+      ({ step, expected }) => {
+        expect(getDecimalPlaces(step)).toBe(expected)
+      }
+    )
+  })
+
+  describe("scientific notation with decimal coefficients", () => {
+    // For coefficients with decimals (e.g., 2.5e-8), we need to add
+    // the coefficient's decimal places to the exponent
+    // 2.5e-8 = 0.000000025 = 9 decimal places (1 from 2.5 + 8 from exponent)
+    it.each([
+      { step: 2.5e-8, expected: 9 }, // 0.000000025
+      { step: 1.25e-6, expected: 8 }, // 0.00000125 (2 decimals + 6 exponent)
+      { step: 3.14e-5, expected: 7 }, // 0.0000314 (2 decimals + 5 exponent)
+      { step: 1.5e-10, expected: 11 }, // (1 decimal + 10 exponent)
+    ])(
+      "returns $expected for step=$step (coefficient with decimals)",
       ({ step, expected }) => {
         expect(getDecimalPlaces(step)).toBe(expected)
       }
