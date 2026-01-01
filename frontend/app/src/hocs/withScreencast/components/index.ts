@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,5 +16,5 @@
 
 // Dialogs
 export { default as ScreencastDialog } from "./ScreencastDialog/ScreencastDialog"
-export { default as VideoRecordedDialog } from "./VideoRecordedDialog/VideoRecordedDialog"
 export { default as UnsupportedBrowserDialog } from "./UnsupportedBrowserDialog/UnsupportedBrowserDialog"
+export { default as VideoRecordedDialog } from "./VideoRecordedDialog/VideoRecordedDialog"
