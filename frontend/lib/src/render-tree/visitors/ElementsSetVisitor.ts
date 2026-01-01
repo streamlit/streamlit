@@ -19,6 +19,7 @@ import { Element } from "@streamlit/protobuf"
 import { AppNode } from "~lib/render-tree/AppNode.interface"
 import { BlockNode } from "~lib/render-tree/BlockNode"
 import { ElementNode } from "~lib/render-tree/ElementNode"
+import { TransientNode } from "~lib/render-tree/TransientNode"
 import type { AppNodeVisitor } from "~lib/render-tree/visitors/AppNodeVisitor.interface"
 
 /**
@@ -53,6 +54,18 @@ export class ElementsSetVisitor implements AppNodeVisitor<Set<Element>> {
     for (const child of node.children) {
       child.accept(this)
     }
+    return this.elements
+  }
+
+  visitTransientNode(node: TransientNode): Set<Element> {
+    // Add all transient elements to the set
+    node.transientNodes.forEach(element => {
+      element.accept(this)
+    })
+
+    // Also visit the anchor ElementNode to collect its element
+    node.anchor?.accept(this)
+
     return this.elements
   }
 

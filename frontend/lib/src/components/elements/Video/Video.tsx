@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { memo, ReactElement, useEffect, useMemo, useRef } from "react"
+import { memo, ReactElement, useEffect, useMemo, useRef } from "react"
 
 import { getLogger } from "loglevel"
 

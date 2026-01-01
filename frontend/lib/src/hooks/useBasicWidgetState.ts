@@ -145,8 +145,7 @@ export function useBasicWidgetClientState<
 }
 
 // Interface for a proto that has a setValue, and .formId
-interface ValueElementProtoInterfaceWithSetValue
-  extends ValueElementProtoInterface {
+interface ValueElementProtoInterfaceWithSetValue extends ValueElementProtoInterface {
   setValue: boolean
 }
 
@@ -162,6 +161,13 @@ export interface UseBasicWidgetStateArgs<
 
 /**
  * A React hook that makes the simplest kinds of widgets very easy to implement.
+ *
+ * This hook handles the standard widget state management pattern, including:
+ * - Initializing from WidgetStateManager or default values
+ * - Responding to setValue updates from session_state
+ * - Handling form clearing for clear_on_submit forms
+ *
+ * Examples: TextInput, NumberInput, Checkbox, Slider, etc.
  */
 export function useBasicWidgetState<
   T, // Type of the value stored in WidgetStateManager.

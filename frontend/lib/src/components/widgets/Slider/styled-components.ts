@@ -16,7 +16,8 @@
 
 import styled from "@emotion/styled"
 import { type StyleProps } from "baseui/slider"
-import { transparentize } from "color2k"
+
+import { getPrimaryFocusBoxShadow } from "~lib/theme/utils"
 
 export const StyledSlider = styled.div({
   position: "relative",
@@ -46,14 +47,12 @@ export const StyledThumb = styled.div<StyledThumbProps>(
     justifyContent: "center",
     height: theme.sizes.sliderThumb,
     width: theme.sizes.sliderThumb,
-    boxShadow: isDragged
-      ? `0 0 0 0.2rem ${transparentize(theme.colors.primary, 0.5)}`
-      : "none",
+    boxShadow: isDragged ? getPrimaryFocusBoxShadow(theme) : "none",
     ":focus": {
       outline: "none",
     },
     ":focus-visible": {
-      boxShadow: `0 0 0 0.2rem ${transparentize(theme.colors.primary, 0.5)}`,
+      boxShadow: getPrimaryFocusBoxShadow(theme),
     },
   })
 )

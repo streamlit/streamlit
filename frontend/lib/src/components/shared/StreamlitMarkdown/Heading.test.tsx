@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-import React from "react"
-
 import { screen, waitFor } from "@testing-library/react"
 
 import { Heading as HeadingProto } from "@streamlit/protobuf"
@@ -68,9 +66,9 @@ describe("Heading", () => {
     const props = getHeadingProps({ body: "hello" })
     render(<Heading {...props} />)
 
-    // trying to trigger the :hover css state did not work, so using 'hidden: true' here. We have an e2e test to check the hovering.
-    const link = screen.getByRole("link", { hidden: true })
+    const link = screen.getByRole("link")
     expect(link).toHaveAttribute("href", "#some-anchor")
+    expect(link).toHaveAccessibleName("Link to heading")
   })
 
   it("does not render anchor link when it is hidden", () => {

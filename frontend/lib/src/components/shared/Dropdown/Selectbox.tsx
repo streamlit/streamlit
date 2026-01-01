@@ -19,7 +19,6 @@ import {
   memo,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
   useRef,
   useState,
@@ -31,13 +30,12 @@ import { type OnChangeParams, Select as UISelect } from "baseui/select"
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import { getBorderColor } from "~lib/components/shared/Base/styled-components"
 import VirtualDropdown from "~lib/components/shared/Dropdown/VirtualDropdown"
-import { Placement } from "~lib/components/shared/Tooltip"
-import TooltipIcon from "~lib/components/shared/TooltipIcon"
 import {
-  StyledWidgetLabelHelp,
   WidgetLabel,
+  WidgetLabelHelpIcon,
 } from "~lib/components/widgets/BaseWidget"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
 import { useSelectCommon } from "~lib/hooks/useSelectCommon"
 import { LabelVisibilityOptions } from "~lib/util/utils"
 
@@ -75,10 +73,11 @@ const Selectbox: FC<Props> = ({
   // the value in case the user dismisses the changes by clicking away.
   const valueBeforeRemoval = useRef<string | null>(value)
 
-  // Update the value whenever the value provided by the props changes
-  // TODO: Find a better way to handle this to prevent unneeded re-renders
-  useEffect(() => {
+  useExecuteWhenChanged(() => {
     setValue(propValue)
+    // Reset the ref when propValue changes externally (e.g., via session state)
+    // to prevent handleBlur from restoring a stale value.
+    valueBeforeRemoval.current = null
   }, [propValue])
 
   const handleChange = useCallback(
@@ -144,11 +143,7 @@ const Selectbox: FC<Props> = ({
         labelVisibility={labelVisibility}
         disabled={selectDisabled}
       >
-        {help && (
-          <StyledWidgetLabelHelp>
-            <TooltipIcon content={help} placement={Placement.TOP_RIGHT} />
-          </StyledWidgetLabelHelp>
-        )}
+        {help && <WidgetLabelHelpIcon content={help} label={label} />}
       </WidgetLabel>
       <UISelect
         creatable={acceptNewOptions}

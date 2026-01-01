@@ -18,9 +18,24 @@ import { buildHttpUri } from "@streamlit/utils"
 
 import {
   buildWsUri,
+  FetchError,
+  fetchWithTimeout,
   getPossibleBaseUris,
+  isHostConfigBypassEnabled,
   parseUriIntoBaseParts,
+  serializeForDisplay,
 } from "./utils"
+
+// Mock StreamlitConfig using global mock state (see vitest.setup.ts)
+vi.mock("@streamlit/utils", async importOriginal => {
+  const actual = await importOriginal<typeof import("@streamlit/utils")>()
+  return {
+    ...actual,
+    get StreamlitConfig() {
+      return globalThis.__mockStreamlitConfig
+    },
+  }
+})
 
 describe("parseUriIntoBaseParts", () => {
   const location: Partial<Location> = {}
@@ -38,7 +53,7 @@ describe("parseUriIntoBaseParts", () => {
     })
   })
 
-  test("gets all window URI parts", () => {
+  it("gets all window URI parts", () => {
     location.href = "https://the_host:9988/foo"
 
     expect(parseUriIntoBaseParts()).toMatchObject({
@@ -49,7 +64,7 @@ describe("parseUriIntoBaseParts", () => {
     })
   })
 
-  test("gets window URI parts without basePath", () => {
+  it("gets window URI parts without basePath", () => {
     location.href = "https://the_host:9988"
 
     expect(parseUriIntoBaseParts()).toMatchObject({
@@ -60,7 +75,7 @@ describe("parseUriIntoBaseParts", () => {
     })
   })
 
-  test("gets window URI parts with long basePath", () => {
+  it("gets window URI parts with long basePath", () => {
     location.href = "https://the_host:9988/foo/bar"
 
     expect(parseUriIntoBaseParts()).toMatchObject({
@@ -71,7 +86,7 @@ describe("parseUriIntoBaseParts", () => {
     })
   })
 
-  test("gets window URI parts with weird basePath", () => {
+  it("gets window URI parts with weird basePath", () => {
     location.href = "https://the_host:9988///foo/bar//"
 
     expect(parseUriIntoBaseParts()).toMatchObject({
@@ -83,7 +98,7 @@ describe("parseUriIntoBaseParts", () => {
   })
 })
 
-test("Uses provided URL instead of window.location.href to get URI parts if provided", () => {
+it("Uses provided URL instead of window.location.href to get URI parts if provided", () => {
   location.href = "https://the_host:9988/foo/bar"
 
   expect(
@@ -96,7 +111,7 @@ test("Uses provided URL instead of window.location.href to get URI parts if prov
   })
 })
 
-test("builds HTTP URI correctly", () => {
+it("builds HTTP URI correctly", () => {
   location.href = "http://something"
   const uri = buildHttpUri(
     {
@@ -110,7 +125,7 @@ test("builds HTTP URI correctly", () => {
   expect(uri).toBe("http://the_host:9988/foo/bar/baz")
 })
 
-test("builds HTTPS URI correctly", () => {
+it("builds HTTPS URI correctly", () => {
   location.href = "https://something"
   const uri = buildHttpUri(
     {
@@ -124,7 +139,7 @@ test("builds HTTPS URI correctly", () => {
   expect(uri).toBe("https://the_host:9988/foo/bar/baz")
 })
 
-test("builds HTTP URI with no base path", () => {
+it("builds HTTP URI with no base path", () => {
   location.href = "http://something"
   const uri = buildHttpUri(
     {
@@ -138,7 +153,7 @@ test("builds HTTP URI with no base path", () => {
   expect(uri).toBe("http://the_host:9988/baz")
 })
 
-test("builds WS URI correctly", () => {
+it("builds WS URI correctly", () => {
   location.href = "http://something"
   const uri = buildWsUri(
     {
@@ -152,7 +167,7 @@ test("builds WS URI correctly", () => {
   expect(uri).toBe("ws://the_host:9988/foo/bar/baz")
 })
 
-test("builds WSS URI correctly", () => {
+it("builds WSS URI correctly", () => {
   const uri = buildWsUri(
     {
       protocol: "https:",
@@ -165,7 +180,7 @@ test("builds WSS URI correctly", () => {
   expect(uri).toBe("wss://the_host:9988/foo/bar/baz")
 })
 
-test("builds WS URI with no base path", () => {
+it("builds WS URI with no base path", () => {
   location.href = "http://something"
   const uri = buildWsUri(
     {
@@ -196,7 +211,7 @@ describe("getPossibleBaseUris", () => {
   })
 
   afterEach(() => {
-    window.__streamlit = undefined
+    globalThis.__mockStreamlitConfig = {}
     Object.defineProperty(window, "location", {
       value: { ...originalLocation, pathname: originalPathName },
       writable: true,
@@ -237,8 +252,9 @@ describe("getPossibleBaseUris", () => {
     })
   })
 
-  it("Calculates possibleBaseUris with window.__streamlit.BACKEND_BASE_URL if set", () => {
-    window.__streamlit = { BACKEND_BASE_URL: "https://used_host:443/foo/bar" }
+  it("Calculates possibleBaseUris with StreamlitConfig.BACKEND_BASE_URL if set", () => {
+    globalThis.__mockStreamlitConfig.BACKEND_BASE_URL =
+      "https://used_host:443/foo/bar"
     window.location.href = "https://unused_host:443/foo/bar"
 
     const possibleBaseUris = getPossibleBaseUris()
@@ -253,5 +269,544 @@ describe("getPossibleBaseUris", () => {
       hostname: "used_host",
       pathname: "/foo",
     })
+  })
+})
+
+describe("serializeForDisplay", () => {
+  it("returns undefined for null", () => {
+    expect(serializeForDisplay(null)).toBeUndefined()
+  })
+
+  it("returns undefined for undefined", () => {
+    expect(serializeForDisplay(undefined)).toBeUndefined()
+  })
+
+  it("returns string as-is", () => {
+    expect(serializeForDisplay("hello")).toBe("hello")
+  })
+
+  it("converts number to string", () => {
+    expect(serializeForDisplay(42)).toBe("42")
+  })
+
+  it("converts boolean to string", () => {
+    expect(serializeForDisplay(true)).toBe("true")
+    expect(serializeForDisplay(false)).toBe("false")
+  })
+
+  it("pretty-prints object as JSON", () => {
+    expect(serializeForDisplay({ foo: "bar" })).toBe('{\n  "foo": "bar"\n}')
+  })
+
+  it("pretty-prints array as JSON", () => {
+    expect(serializeForDisplay([1, 2, 3])).toBe("[\n  1,\n  2,\n  3\n]")
+  })
+
+  it("returns undefined for function", () => {
+    expect(serializeForDisplay(() => {})).toBeUndefined()
+  })
+
+  it("returns undefined for symbol", () => {
+    expect(serializeForDisplay(Symbol("test"))).toBeUndefined()
+  })
+})
+
+describe("FetchError", () => {
+  it("creates error with message and url", () => {
+    const error = new FetchError("Test error", "http://example.com")
+
+    expect(error.message).toBe("Test error")
+    expect(error.url).toBe("http://example.com")
+    expect(error.name).toBe("FetchError")
+    expect(error.isTimeout).toBe(false)
+    expect(error.isNetworkError).toBe(false)
+    expect(error.response).toBeUndefined()
+  })
+
+  it("creates timeout error", () => {
+    const error = new FetchError("Timeout", "http://example.com", {
+      isTimeout: true,
+    })
+
+    expect(error.isTimeout).toBe(true)
+    expect(error.isNetworkError).toBe(false)
+  })
+
+  it("creates network error", () => {
+    const error = new FetchError("Network failed", "http://example.com", {
+      isNetworkError: true,
+    })
+
+    expect(error.isNetworkError).toBe(true)
+    expect(error.isTimeout).toBe(false)
+  })
+
+  it("creates error with response", () => {
+    const error = new FetchError("Server error", "http://example.com", {
+      response: {
+        status: 500,
+        statusText: "Internal Server Error",
+        data: { error: "Something went wrong" },
+      },
+    })
+
+    expect(error.response).toEqual({
+      status: 500,
+      statusText: "Internal Server Error",
+      data: { error: "Something went wrong" },
+    })
+  })
+
+  it("is an instance of Error", () => {
+    const error = new FetchError("Test", "http://example.com")
+    expect(error instanceof Error).toBe(true)
+    expect(error instanceof FetchError).toBe(true)
+  })
+})
+
+describe("fetchWithTimeout", () => {
+  const mockUrl = "http://example.com/api"
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it("returns data on successful JSON fetch", async () => {
+    const mockData = { success: true }
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      text: () => Promise.resolve(JSON.stringify(mockData)),
+    })
+
+    const result = await fetchWithTimeout(mockUrl, 5000)
+    expect(result).toEqual({ data: mockData, url: mockUrl })
+  })
+
+  it("returns plain text when response is not JSON (e.g., healthz returns 'ok')", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      text: () => Promise.resolve("ok"),
+    })
+
+    const result = await fetchWithTimeout(mockUrl, 5000)
+    expect(result).toEqual({ data: "ok", url: mockUrl })
+  })
+
+  it("throws FetchError with response on HTTP error", async () => {
+    const errorData = { error: "Not found" }
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 404,
+      statusText: "Not Found",
+      json: () => Promise.resolve(errorData),
+    })
+
+    await expect(fetchWithTimeout(mockUrl, 5000)).rejects.toMatchObject({
+      name: "FetchError",
+      response: {
+        status: 404,
+        statusText: "Not Found",
+        data: errorData,
+      },
+    })
+  })
+
+  it("correctly passes status 403 for CORS/forbidden errors", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 403,
+      statusText: "Forbidden",
+      json: () => Promise.resolve({ message: "Access denied" }),
+    })
+
+    await expect(fetchWithTimeout(mockUrl, 5000)).rejects.toMatchObject({
+      name: "FetchError",
+      response: {
+        status: 403,
+        statusText: "Forbidden",
+        data: { message: "Access denied" },
+      },
+    })
+  })
+
+  it("correctly passes status 0 for no-response scenarios", async () => {
+    // Status 0 typically indicates the request was blocked (CORS) or couldn't complete
+    // With native fetch this is rare (usually throws TypeError), but we handle it for completeness
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 0,
+      statusText: "",
+      json: () => Promise.reject(new Error("No body")),
+      text: () => Promise.reject(new Error("No body")),
+    })
+
+    await expect(fetchWithTimeout(mockUrl, 5000)).rejects.toMatchObject({
+      name: "FetchError",
+      response: {
+        status: 0,
+        statusText: "",
+        data: null,
+      },
+    })
+  })
+
+  it("falls back to text when JSON parsing fails on error response", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 500,
+      statusText: "Internal Server Error",
+      json: () => Promise.reject(new Error("Invalid JSON")),
+      text: () => Promise.resolve("Plain text error"),
+    })
+
+    await expect(fetchWithTimeout(mockUrl, 5000)).rejects.toMatchObject({
+      name: "FetchError",
+      response: { data: "Plain text error" },
+    })
+  })
+
+  it("sets data to null when both JSON and text parsing fail", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 500,
+      statusText: "Internal Server Error",
+      json: () => Promise.reject(new Error("Invalid JSON")),
+      text: () => Promise.reject(new Error("Text failed")),
+    })
+
+    await expect(fetchWithTimeout(mockUrl, 5000)).rejects.toMatchObject({
+      name: "FetchError",
+      response: { data: null },
+    })
+  })
+
+  it("throws FetchError with isTimeout on abort", async () => {
+    // Mock fetch to never resolve, forcing the timeout to trigger
+    globalThis.fetch = vi.fn().mockImplementation((_url, options) => {
+      return new Promise((_, reject) => {
+        // Listen to the abort signal and reject when aborted
+        options?.signal?.addEventListener("abort", () => {
+          reject(new DOMException("Aborted", "AbortError"))
+        })
+      })
+    })
+
+    // Use a very short timeout
+    await expect(fetchWithTimeout(mockUrl, 10)).rejects.toMatchObject({
+      name: "FetchError",
+      isTimeout: true,
+      message: "Connection timed out",
+    })
+  })
+
+  it("throws FetchError with isNetworkError on TypeError", async () => {
+    globalThis.fetch = vi
+      .fn()
+      .mockRejectedValue(new TypeError("Failed to fetch"))
+
+    await expect(fetchWithTimeout(mockUrl, 5000)).rejects.toMatchObject({
+      name: "FetchError",
+      isNetworkError: true,
+      message: "Failed to fetch",
+    })
+  })
+
+  it("throws FetchError with generic message on unknown error", async () => {
+    globalThis.fetch = vi
+      .fn()
+      .mockRejectedValue(new Error("Something went wrong"))
+
+    await expect(fetchWithTimeout(mockUrl, 5000)).rejects.toMatchObject({
+      name: "FetchError",
+      message: "Something went wrong",
+      isTimeout: false,
+      isNetworkError: false,
+    })
+  })
+
+  it("handles non-Error thrown values", async () => {
+    globalThis.fetch = vi.fn().mockRejectedValue("string error")
+
+    await expect(fetchWithTimeout(mockUrl, 5000)).rejects.toMatchObject({
+      name: "FetchError",
+      message: "Unknown error",
+    })
+  })
+
+  it("preserves the original url in all error types", async () => {
+    const testUrl = "http://test-server.com/healthz"
+
+    // Test HTTP error
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 500,
+      statusText: "Server Error",
+      json: () => Promise.resolve({}),
+    })
+    await expect(fetchWithTimeout(testUrl, 5000)).rejects.toMatchObject({
+      url: testUrl,
+    })
+
+    // Test network error
+    globalThis.fetch = vi
+      .fn()
+      .mockRejectedValue(new TypeError("Failed to fetch"))
+    await expect(fetchWithTimeout(testUrl, 5000)).rejects.toMatchObject({
+      url: testUrl,
+    })
+  })
+
+  it("clears timeout on successful response", async () => {
+    const clearTimeoutSpy = vi.spyOn(globalThis, "clearTimeout")
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      text: () => Promise.resolve(JSON.stringify({ status: "ok" })),
+    })
+
+    await fetchWithTimeout(mockUrl, 5000)
+    expect(clearTimeoutSpy).toHaveBeenCalled()
+  })
+
+  it("clears timeout on error response", async () => {
+    const clearTimeoutSpy = vi.spyOn(globalThis, "clearTimeout")
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error("Network error"))
+
+    await expect(fetchWithTimeout(mockUrl, 5000)).rejects.toThrow()
+    expect(clearTimeoutSpy).toHaveBeenCalled()
+  })
+})
+
+describe("isHostConfigBypassEnabled", () => {
+  afterEach(() => {
+    globalThis.__mockStreamlitConfig = {}
+  })
+
+  // Tests for invalid configurations that should return false
+  it.each([
+    ["StreamlitConfig is empty", {}],
+    [
+      "BACKEND_BASE_URL is missing",
+      {
+        HOST_CONFIG: {
+          allowedOrigins: ["https://example.com"],
+          useExternalAuthToken: true,
+        },
+      },
+    ],
+    [
+      "HOST_CONFIG is missing",
+      {
+        BACKEND_BASE_URL: "https://backend.example.com",
+      },
+    ],
+    [
+      "allowedOrigins is missing",
+      {
+        BACKEND_BASE_URL: "https://backend.example.com",
+        HOST_CONFIG: {
+          useExternalAuthToken: true,
+        },
+      },
+    ],
+    [
+      "allowedOrigins is empty array",
+      {
+        BACKEND_BASE_URL: "https://backend.example.com",
+        HOST_CONFIG: {
+          allowedOrigins: [],
+          useExternalAuthToken: true,
+        },
+      },
+    ],
+    [
+      "useExternalAuthToken is missing",
+      {
+        BACKEND_BASE_URL: "https://backend.example.com",
+        HOST_CONFIG: {
+          allowedOrigins: ["https://example.com"],
+        },
+      },
+    ],
+    [
+      "only expanded fields but missing minimal required fields",
+      {
+        BACKEND_BASE_URL: "https://backend.example.com",
+        HOST_CONFIG: {
+          metricsUrl: "postMessage",
+          enableCustomParentMessages: true,
+          mapboxToken: "test-token",
+          disableFullscreenMode: true,
+        },
+      },
+    ],
+    [
+      "only LibConfig fields (no minimal required fields)",
+      {
+        BACKEND_BASE_URL: "https://backend.example.com",
+        HOST_CONFIG: {
+          mapboxToken: "test-token",
+          disableFullscreenMode: true,
+          enforceDownloadInNewTab: true,
+          resourceCrossOriginMode: "anonymous" as const,
+        },
+      },
+    ],
+    [
+      "allowedOrigins but missing useExternalAuthToken even if other fields present",
+      {
+        BACKEND_BASE_URL: "https://backend.example.com",
+        HOST_CONFIG: {
+          allowedOrigins: ["https://example.com"],
+          metricsUrl: "postMessage",
+          enableCustomParentMessages: true,
+          mapboxToken: "test-token",
+        },
+      },
+    ],
+    [
+      "useExternalAuthToken but missing allowedOrigins even if other fields present",
+      {
+        BACKEND_BASE_URL: "https://backend.example.com",
+        HOST_CONFIG: {
+          useExternalAuthToken: true,
+          metricsUrl: "postMessage",
+          mapboxToken: "test-token",
+          disableFullscreenMode: true,
+        },
+      },
+    ],
+  ])("returns false when %s", (_description, config) => {
+    globalThis.__mockStreamlitConfig = config
+    expect(isHostConfigBypassEnabled()).toBe(false)
+  })
+
+  // Tests for invalid allowedOrigins values (require @ts-expect-error)
+  it("returns false when allowedOrigins is not an array", () => {
+    globalThis.__mockStreamlitConfig = {
+      BACKEND_BASE_URL: "https://backend.example.com",
+      HOST_CONFIG: {
+        // @ts-expect-error - Testing invalid type
+        allowedOrigins: "https://example.com",
+        useExternalAuthToken: true,
+      },
+    }
+    expect(isHostConfigBypassEnabled()).toBe(false)
+  })
+
+  it("returns false when allowedOrigins contains non-string values", () => {
+    globalThis.__mockStreamlitConfig = {
+      BACKEND_BASE_URL: "https://backend.example.com",
+      HOST_CONFIG: {
+        // @ts-expect-error - Testing invalid type
+        allowedOrigins: ["https://valid.com", 123, null],
+        useExternalAuthToken: true,
+      },
+    }
+    expect(isHostConfigBypassEnabled()).toBe(false)
+  })
+
+  it.each([
+    ["contains empty strings", ["https://valid.com", ""]],
+    ["contains only empty strings", ["", ""]],
+  ])("returns false when allowedOrigins %s", (_description, origins) => {
+    globalThis.__mockStreamlitConfig = {
+      BACKEND_BASE_URL: "https://backend.example.com",
+      HOST_CONFIG: {
+        allowedOrigins: origins,
+        useExternalAuthToken: true,
+      },
+    }
+    expect(isHostConfigBypassEnabled()).toBe(false)
+  })
+
+  // Tests for valid configurations that should return true
+  it.each([
+    [
+      "all required fields are present with useExternalAuthToken=true",
+      {
+        BACKEND_BASE_URL: "https://backend.example.com",
+        HOST_CONFIG: {
+          allowedOrigins: ["https://example.com"],
+          useExternalAuthToken: true,
+        },
+      },
+    ],
+    [
+      "all required fields are present with useExternalAuthToken=false",
+      {
+        BACKEND_BASE_URL: "https://backend.example.com",
+        HOST_CONFIG: {
+          allowedOrigins: ["https://example.com"],
+          useExternalAuthToken: false,
+        },
+      },
+    ],
+    [
+      "multiple allowed origins",
+      {
+        BACKEND_BASE_URL: "https://backend.example.com",
+        HOST_CONFIG: {
+          allowedOrigins: ["https://example.com", "https://other.example.com"],
+          useExternalAuthToken: true,
+        },
+      },
+    ],
+    [
+      "additional HOST_CONFIG fields are present",
+      {
+        BACKEND_BASE_URL: "https://backend.example.com",
+        HOST_CONFIG: {
+          allowedOrigins: ["https://example.com"],
+          useExternalAuthToken: true,
+          metricsUrl: "postMessage",
+        },
+      },
+    ],
+    [
+      "minimal fields plus all expanded AppConfig fields",
+      {
+        BACKEND_BASE_URL: "https://backend.example.com",
+        HOST_CONFIG: {
+          allowedOrigins: ["https://example.com"],
+          useExternalAuthToken: true,
+          enableCustomParentMessages: true,
+          blockErrorDialogs: true,
+        },
+      },
+    ],
+    [
+      "minimal fields plus all expanded LibConfig fields",
+      {
+        BACKEND_BASE_URL: "https://backend.example.com",
+        HOST_CONFIG: {
+          allowedOrigins: ["https://example.com"],
+          useExternalAuthToken: true,
+          mapboxToken: "test-token",
+          disableFullscreenMode: true,
+          enforceDownloadInNewTab: true,
+          resourceCrossOriginMode: "anonymous" as const,
+        },
+      },
+    ],
+    [
+      "minimal fields plus all 9 HOST_CONFIG fields",
+      {
+        BACKEND_BASE_URL: "https://backend.example.com",
+        HOST_CONFIG: {
+          allowedOrigins: ["https://example.com"],
+          useExternalAuthToken: true,
+          metricsUrl: "postMessage",
+          enableCustomParentMessages: true,
+          blockErrorDialogs: true,
+          mapboxToken: "test-token",
+          disableFullscreenMode: false,
+          enforceDownloadInNewTab: true,
+          resourceCrossOriginMode: "use-credentials" as const,
+        },
+      },
+    ],
+  ])("returns true when %s", (_description, config) => {
+    globalThis.__mockStreamlitConfig = config
+    expect(isHostConfigBypassEnabled()).toBe(true)
   })
 })

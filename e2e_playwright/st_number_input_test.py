@@ -211,7 +211,7 @@ def test_number_input_has_correct_value_on_blur(app: Page):
 
 def test_number_input_typing_decimal_via_keyboard(app: Page):
     """Typing a decimal value using the keyboard should work and commit correctly."""
-    first_number_input_field = app.get_by_label("number input 1 (default)")
+    first_number_input_field = app.get_by_label("number input 1 (default)", exact=True)
     first_number_input_field.click()
     first_number_input_field.select_text()
     first_number_input_field.type("12.34")

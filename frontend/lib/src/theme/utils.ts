@@ -26,8 +26,7 @@ import { cloneDeep, isObject, merge, mergeWith, once } from "lodash-es"
 import { getLogger } from "loglevel"
 
 import { CustomThemeConfig, ICustomThemeConfig } from "@streamlit/protobuf"
-import type { StreamlitWindowObject } from "@streamlit/utils"
-import { localStorageAvailable } from "@streamlit/utils"
+import { localStorageAvailable, StreamlitConfig } from "@streamlit/utils"
 
 import { CircularBuffer } from "~lib/components/shared/Profiler/CircularBuffer"
 import {
@@ -59,7 +58,6 @@ export const CUSTOM_THEME_AUTO_NAME = "Custom Theme Auto"
 
 declare global {
   interface Window {
-    __streamlit?: StreamlitWindowObject
     __streamlit_profiles__?: Record<
       string,
       CircularBuffer<{
@@ -73,6 +71,38 @@ declare global {
   }
 }
 const LOG = getLogger("theme:utils")
+
+/**
+ * Recursively sorts the theme input keys to ensure consistent theme hashing.
+ * Used in App.tsx createThemeHash method.
+ *
+ * @param obj - The theme input object (or any nested value within it)
+ * @returns The same structure with all object keys sorted alphabetically
+ */
+export function sortThemeInputKeys(obj: unknown): unknown {
+  if (obj === null || obj === undefined) {
+    return obj
+  }
+
+  // Handle arrays by recursively sorting their elements
+  if (Array.isArray(obj)) {
+    return obj.map(item => sortThemeInputKeys(item))
+  }
+
+  // Handle objects (including nested theme sections)
+  if (typeof obj === "object") {
+    const sorted: Record<string, unknown> = {}
+    Object.keys(obj)
+      .sort()
+      .forEach(key => {
+        sorted[key] = sortThemeInputKeys((obj as Record<string, unknown>)[key])
+      })
+    return sorted
+  }
+
+  // Return primitives as-is
+  return obj
+}
 
 function mergeTheme(
   theme: ThemeConfig,
@@ -91,10 +121,10 @@ function mergeTheme(
 }
 
 export const getMergedLightTheme = once(() =>
-  mergeTheme(lightTheme, window.__streamlit?.LIGHT_THEME)
+  mergeTheme(lightTheme, StreamlitConfig.LIGHT_THEME)
 )
 export const getMergedDarkTheme = once(() =>
-  mergeTheme(darkTheme, window.__streamlit?.DARK_THEME)
+  mergeTheme(darkTheme, StreamlitConfig.DARK_THEME)
 )
 
 export const getSystemThemePreference = (): "light" | "dark" => {
@@ -1093,6 +1123,18 @@ export const getCachedTheme = (): ThemeConfig | null => {
       return getMergedLightTheme()
     case darkTheme.name:
       return getMergedDarkTheme()
+    case CUSTOM_THEME_LIGHT_NAME:
+      // Restore custom light theme with displayName
+      return {
+        ...createTheme(themeName, themeInput as Partial<CustomThemeConfig>),
+        displayName: "Light",
+      }
+    case CUSTOM_THEME_DARK_NAME:
+      // Restore custom dark theme with displayName
+      return {
+        ...createTheme(themeName, themeInput as Partial<CustomThemeConfig>),
+        displayName: "Dark",
+      }
     default:
       // At this point we're guaranteed that themeInput is defined.
       return createTheme(themeName, themeInput as Partial<CustomThemeConfig>)
@@ -1219,6 +1261,28 @@ export function blend(color: string, background: string | undefined): string {
   const go = Math.round((a * g + ba * bg * (1 - a)) / ao)
   const bo = Math.round((a * b + ba * bb * (1 - a)) / ao)
   return toHex(`rgba(${ro}, ${go}, ${bo}, ${ao})`)
+}
+
+/**
+ * Canonical focus ring used across Streamlit components for keyboard focus
+ * (usually applied via `:focus-visible`).
+ */
+export const getFocusBoxShadow = (
+  color: string,
+  /**
+   * The alpha value to use for the focus ring.
+   * Matches color2k.transparentize: 0 = unchanged, 1 = fully transparent.
+   */
+  alpha: number = 0.5,
+  width: string = "0.2rem"
+): string => {
+  return `0 0 0 ${width} ${transparentize(color, alpha)}`
+}
+
+export const getPrimaryFocusBoxShadow = (
+  theme: Pick<EmotionTheme, "colors">
+): string => {
+  return getFocusBoxShadow(theme.colors.primary)
 }
 
 /**
@@ -1472,4 +1536,49 @@ export const createSidebarTheme = (activeTheme: ThemeConfig): ThemeConfig => {
     undefined, // Creating a new theme from scratch
     true // inSidebar
   )
+}
+
+// Bidirectional theme name mappings for preset ↔ custom theme equivalents
+const THEME_MAPPING: Record<string, string> = {
+  [lightTheme.name]: CUSTOM_THEME_LIGHT_NAME,
+  [darkTheme.name]: CUSTOM_THEME_DARK_NAME,
+  [CUSTOM_THEME_LIGHT_NAME]: lightTheme.name,
+  [CUSTOM_THEME_DARK_NAME]: darkTheme.name,
+}
+
+/**
+ * Maps a user's cached theme preference to the best matching theme from available themes.
+ * Handles intelligent mapping between preset and custom themes:
+ * - "Light" preset → "Custom Theme Light" (when custom light/dark exist)
+ * - "Dark" preset → "Custom Theme Dark" (when custom light/dark exist)
+ * - "Custom Theme Light" → "Light" preset (when custom themes removed)
+ * - "Custom Theme Dark" → "Dark" preset (when custom themes removed)
+ *
+ * @param cachedTheme - The user's cached theme preference
+ * @param availableThemes - The list of currently available themes
+ * @returns The best matching theme, or null if no suitable match found
+ */
+export const mapCachedThemeToAvailableTheme = (
+  cachedTheme: ThemeConfig | null,
+  availableThemes: ThemeConfig[]
+): ThemeConfig | null => {
+  if (!cachedTheme) {
+    return null
+  }
+
+  // If the cached theme exactly matches an available theme, use it
+  const exactMatch = availableThemes.find(
+    theme => theme.name === cachedTheme.name
+  )
+  if (exactMatch) {
+    return exactMatch
+  }
+
+  // Try to map to equivalent theme (e.g., "Light" → "Custom Theme Light")
+  const mappedName = THEME_MAPPING[cachedTheme.name]
+  if (mappedName) {
+    return availableThemes.find(theme => theme.name === mappedName) ?? null
+  }
+
+  return null
 }

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { memo, ReactElement } from "react"
+import { memo, ReactElement } from "react"
 
 import { Block as BlockProto } from "@streamlit/protobuf"
 
@@ -47,6 +47,9 @@ function ChatMessageAvatar(
 
   if (avatar) {
     switch (avatarType) {
+      case undefined:
+        // Fall through to default avatar
+        break
       case BlockProto.ChatMessage.AvatarType.IMAGE:
         return (
           <StyledAvatarImage

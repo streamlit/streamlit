@@ -107,6 +107,34 @@ DISALLOWED_SNAPSHOTS = {
     "st_data_editor-input_data_32[firefox].png",
     "st_data_editor-input_data_33[firefox].png",
     "st_data_editor-input_data_34[firefox].png",
+    # st_chat_input file chip snapshots that are not detected by static analysis
+    "st_chat_input-file_chip_archive[chromium-archive].png",
+    "st_chat_input-file_chip_archive[firefox-archive].png",
+    "st_chat_input-file_chip_archive[webkit-archive].png",
+    "st_chat_input-file_chip_audio[chromium-audio].png",
+    "st_chat_input-file_chip_audio[firefox-audio].png",
+    "st_chat_input-file_chip_audio[webkit-audio].png",
+    "st_chat_input-file_chip_code[chromium-code].png",
+    "st_chat_input-file_chip_code[firefox-code].png",
+    "st_chat_input-file_chip_code[webkit-code].png",
+    "st_chat_input-file_chip_pdf[chromium-pdf].png",
+    "st_chat_input-file_chip_pdf[firefox-pdf].png",
+    "st_chat_input-file_chip_pdf[webkit-pdf].png",
+    "st_chat_input-file_chip_spreadsheet[chromium-spreadsheet].png",
+    "st_chat_input-file_chip_spreadsheet[firefox-spreadsheet].png",
+    "st_chat_input-file_chip_spreadsheet[webkit-spreadsheet].png",
+    "st_chat_input-file_chip_text[chromium-text].png",
+    "st_chat_input-file_chip_text[firefox-text].png",
+    "st_chat_input-file_chip_text[webkit-text].png",
+    "st_chat_input-file_chip_truncated[chromium-truncated].png",
+    "st_chat_input-file_chip_truncated[firefox-truncated].png",
+    "st_chat_input-file_chip_truncated[webkit-truncated].png",
+    "st_chat_input-file_chip_unknown[chromium-unknown].png",
+    "st_chat_input-file_chip_unknown[firefox-unknown].png",
+    "st_chat_input-file_chip_unknown[webkit-unknown].png",
+    "st_chat_input-file_chip_video[chromium-video].png",
+    "st_chat_input-file_chip_video[firefox-video].png",
+    "st_chat_input-file_chip_video[webkit-video].png",
 }
 
 
@@ -265,6 +293,7 @@ def main() -> None:
     if not ci:
         print(f"Found {len(all_snapshot_files)} total snapshot files")
 
+    debug_test: str | None = None
     # Debug specific test
     if debug and "--test" in sys.argv:
         test_idx = sys.argv.index("--test")
@@ -378,6 +407,11 @@ def main() -> None:
         ):
             count = len(orphaned_by_test[test_name])
             print(f"  {test_name}: {count} orphaned files")
+
+        print("\n--- COPY_PASTE_START ---")
+        for filename in sorted([os.path.basename(f) for f in orphaned_files]):
+            print(f'    "{filename}",')
+        print("--- COPY_PASTE_END ---")
 
         print("\nTo fix this, run: python scripts/snapshot_cleanup.py")
         print("Or review the snapshots manually to ensure they're actually orphaned.")

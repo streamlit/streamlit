@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import re
+
 import pytest
 from playwright.sync_api import Locator, Page, expect
 
@@ -23,6 +25,7 @@ from e2e_playwright.shared.app_utils import (
     get_caption,
     get_element_by_key,
     get_markdown,
+    tab_until_focused,
     wait_for_all_images_to_be_loaded,
 )
 
@@ -230,6 +233,11 @@ def test_help_tooltip_works(app: Page):
 
 
 def test_latex_elements(themed_app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that LaTeX elements are rendered correctly.
+
+    Uses themed_app for formula rendering which may have theme-dependent colors.
+    Width tests are in test_latex_width_examples.
+    """
     latex_elements = get_element_by_key(themed_app, "latex_elements").get_by_test_id(
         "stMarkdown"
     )
@@ -248,6 +256,16 @@ def test_latex_elements(themed_app: Page, assert_snapshot: ImageCompareFunction)
 
     expect(latex_elements.nth(4)).to_contain_text("this is a very long formula")
     assert_snapshot(latex_elements.nth(4), name="st_latex-long-help")
+
+
+def test_latex_width_examples(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test LaTeX elements with different width configurations.
+
+    Uses single-theme (app) fixture since width/layout behavior is theme-independent.
+    """
+    latex_elements = get_element_by_key(app, "latex_elements").get_by_test_id(
+        "stMarkdown"
+    )
 
     assert_snapshot(latex_elements.nth(5), name="st_latex-width_pixels")
     assert_snapshot(latex_elements.nth(6), name="st_latex-width_stretch")
@@ -300,6 +318,34 @@ def test_anchor_scrolling(app: Page):
     expect(app.get_by_text("Bold header1")).to_be_in_viewport()
 
 
+def test_markdown_heading_anchor_icon_is_keyboard_focusable_and_visible(app: Page):
+    """Test that st.markdown headings expose a keyboard-focusable anchor icon.
+
+    The anchor icon is hidden by default to reduce visual noise, but it must be
+    reachable by tabbing. When focused, it should become visible and be
+    activatable using the keyboard.
+    """
+    heading = app.locator("h1#bold-header1")
+    heading.scroll_into_view_if_needed()
+
+    link = heading.get_by_role("link", name="Link to heading")
+    expect(link).to_have_attribute("href", "#bold-header1")
+    expect(link).to_have_css("opacity", "0")
+
+    # Start tabbing from a deterministic, nearby focusable element that appears before
+    # this heading in the document.
+    app.get_by_test_id("stMainBlockContainer").get_by_role(
+        "textbox", name="This is a label"
+    ).click()
+    tab_until_focused(app, link)
+
+    expect(link).to_be_focused()
+    expect(link).to_have_css("opacity", "1")
+
+    app.keyboard.press("Enter")
+    expect(app).to_have_url(re.compile(".*#bold-header1"))
+
+
 @pytest.mark.performance
 def test_markdown_rendering_performance(app: Page):
     """Test that the performance of st.markdown and st.text."""
@@ -314,60 +360,65 @@ def test_markdown_rendering_performance(app: Page):
     expect(app.get_by_text("DONE")).to_be_attached()
 
 
-def test_markdown_width_examples(
-    themed_app: Page, assert_snapshot: ImageCompareFunction
-):
-    """Test that markdown elements with different width configurations are displayed correctly."""
+def test_markdown_width_examples(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that markdown elements with different width configurations are displayed correctly.
+
+    Uses single-theme (app) fixture since width/layout behavior is theme-independent.
+    """
     # Test content width
-    markdown_content = get_markdown(themed_app, r"Content width:")
+    markdown_content = get_markdown(app, r"Content width:")
     markdown_content.scroll_into_view_if_needed()
     assert_snapshot(markdown_content, name="st_markdown-width_content")
 
     # Test fixed width (200px)
-    markdown_200px = get_markdown(themed_app, r"Fixed width \(200px\):")
+    markdown_200px = get_markdown(app, r"Fixed width \(200px\):")
     markdown_200px.scroll_into_view_if_needed()
     assert_snapshot(markdown_200px, name="st_markdown-width_200px")
 
     # Test stretch width
-    markdown_stretch = get_markdown(themed_app, r"Stretch width:")
+    markdown_stretch = get_markdown(app, r"Stretch width:")
     markdown_stretch.scroll_into_view_if_needed()
     assert_snapshot(markdown_stretch, name="st_markdown-width_stretch")
 
 
-def test_caption_width_examples(
-    themed_app: Page, assert_snapshot: ImageCompareFunction
-):
-    """Test that caption elements with different width configurations are displayed correctly."""
+def test_caption_width_examples(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that caption elements with different width configurations are displayed correctly.
+
+    Uses single-theme (app) fixture since width/layout behavior is theme-independent.
+    """
     # Test content width
-    caption_content = get_caption(themed_app, r"caption with content-based width")
+    caption_content = get_caption(app, r"caption with content-based width")
     caption_content.scroll_into_view_if_needed()
     assert_snapshot(caption_content, name="st_caption-width_content")
 
     # Test fixed width (300px)
-    caption_300px = get_caption(themed_app, r"caption with a fixed width of 300 pixels")
+    caption_300px = get_caption(app, r"caption with a fixed width of 300 pixels")
     caption_300px.scroll_into_view_if_needed()
     assert_snapshot(caption_300px, name="st_caption-width_300px")
 
     # Test stretch width
-    caption_stretch = get_caption(themed_app, r"caption that stretches to fill")
+    caption_stretch = get_caption(app, r"caption that stretches to fill")
     caption_stretch.scroll_into_view_if_needed()
     assert_snapshot(caption_stretch, name="st_caption-width_stretch")
 
 
-def test_badge_width_examples(themed_app: Page, assert_snapshot: ImageCompareFunction):
-    """Test that badge elements with different width configurations are displayed correctly."""
+def test_badge_width_examples(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that badge elements with different width configurations are displayed correctly.
+
+    Uses single-theme (app) fixture since width/layout behavior is theme-independent.
+    """
     # Test content width (default)
-    badge_content = get_markdown(themed_app, r"Default badge")
+    badge_content = get_markdown(app, r"Default badge")
     badge_content.scroll_into_view_if_needed()
     assert_snapshot(badge_content, name="st_badge-width_content")
 
     # Test fixed width (100px)
-    badge_100px = get_markdown(themed_app, r"Fixed 100px badge")
+    badge_100px = get_markdown(app, r"Fixed 100px badge")
     badge_100px.scroll_into_view_if_needed()
     assert_snapshot(badge_100px, name="st_badge-width_100px")
 
     # Test stretch width
-    badge_stretch = get_markdown(themed_app, r"Stretch badge")
+    badge_stretch = get_markdown(app, r"Stretch badge")
     badge_stretch.scroll_into_view_if_needed()
     assert_snapshot(badge_stretch, name="st_badge-width_stretch")
 
@@ -383,3 +434,186 @@ def test_long_word_in_container(app: Page, assert_snapshot: ImageCompareFunction
     container = get_element_by_key(app, "long_word")
     expect(container).to_be_visible()
     assert_snapshot(container, name="st_markdown-long_word_in_container")
+
+
+@pytest.mark.parametrize(
+    ("alignment_value", "text_content"),
+    [
+        ("left", "Left aligned text is the default behavior"),
+        ("center", "Center aligned text with some content"),
+        ("right", "Right aligned text content demonstrates"),
+        ("justify", "Justified text alignment"),
+    ],
+)
+def test_markdown_text_alignment(
+    app: Page,
+    assert_snapshot: ImageCompareFunction,
+    alignment_value: str,
+    text_content: str,
+):
+    """Test st.markdown text alignment for all alignment types.
+
+    This test verifies that text, tables, and nested lists all respond correctly
+    to text-align CSS for each alignment value.
+    """
+    markdown_element = get_markdown(app, text_content)
+    markdown_element.scroll_into_view_if_needed()
+
+    assert_snapshot(
+        markdown_element, name=f"st_markdown-text_alignment_{alignment_value}"
+    )
+
+
+def test_markdown_short_text_alignment_with_help(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test short centered markdown with help tooltip to verify icon alignment."""
+    short_centered = get_markdown(app, "Short text")
+    short_centered.scroll_into_view_if_needed()
+
+    expect_help_tooltip(app, short_centered, "This is a help tooltip!")
+
+    assert_snapshot(short_centered, name="st_markdown-short_text_center_with_help")
+
+
+def test_caption_text_alignment(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test st.caption with text alignment."""
+    # Test center alignment
+    caption_center = get_caption(app, "Centered caption text")
+    caption_center.scroll_into_view_if_needed()
+    assert_snapshot(caption_center, name="st_caption-text_alignment_center")
+
+    # Test right alignment
+    caption_right = get_caption(app, "Right aligned caption")
+    caption_right.scroll_into_view_if_needed()
+    assert_snapshot(caption_right, name="st_caption-text_alignment_right")
+
+    # Test justify alignment
+    caption_justify = get_caption(app, "Justified caption text")
+    caption_justify.scroll_into_view_if_needed()
+    assert_snapshot(caption_justify, name="st_caption-text_alignment_justify")
+
+
+@pytest.mark.parametrize(
+    ("element_key", "expected_text", "element_test_id"),
+    [
+        (
+            "markdown_newlines_tooltip",
+            "Markdown with newlines in tooltip",
+            "stMarkdownContainer",
+        ),
+        (
+            "caption_newlines_tooltip",
+            "Caption with newlines in tooltip",
+            "stCaptionContainer",
+        ),
+        (
+            "markdown_center_newlines_tooltip",
+            "Center aligned with newlines in tooltip",
+            "stMarkdownContainer",
+        ),
+        (
+            "markdown_spaces_around_newlines",
+            "Markdown with spaces around newlines",
+            "stMarkdownContainer",
+        ),
+        (
+            "markdown_bracket_in_tooltip",
+            "Markdown with closing bracket in tooltip",
+            "stMarkdownContainer",
+        ),
+    ],
+)
+def test_tooltip_with_newlines_gh_13339(
+    app: Page,
+    element_key: str,
+    expected_text: str,
+    element_test_id: str,
+):
+    r"""Test that tooltips with newlines render correctly inside the tooltip (gh-13339).
+
+    This regression test verifies that when help text contains double newlines (\n\n),
+    the text renders inside the tooltip box with proper paragraph breaks rather than
+    outside of it.
+
+    The bug caused the directive syntax to break, leaking the help text into the
+    markdown container itself instead of keeping it in the tooltip popup.
+    """
+    element_container = get_element_by_key(app, element_key)
+    element_container.scroll_into_view_if_needed()
+    expect(element_container).to_be_visible()
+
+    # Get the actual markdown/caption element inside the container
+    element = element_container.get_by_test_id(element_test_id)
+
+    # CRITICAL: Verify the help text is NOT leaked into the element content
+    # In the bug condition, "Line 2" and "Line 3" would appear in the visible text
+    expect(element).to_have_text(expected_text)
+    expect(element).not_to_contain_text("Line 2")
+    expect(element).not_to_contain_text("Line 3")
+
+    # Hover to show tooltip
+    hover_target = element_container.get_by_test_id("stTooltipHoverTarget")
+    hover_target.hover()
+
+    # Verify tooltip is visible and contains the multiline content
+    tooltip_content = app.get_by_test_id("stTooltipContent")
+    expect(tooltip_content).to_be_visible()
+
+    # All test cases now use consistent "Line 1/2/3" format for simplicity
+    expect(tooltip_content).to_contain_text("Line 1")
+    expect(tooltip_content).to_contain_text("Line 2")
+    expect(tooltip_content).to_contain_text("Line 3")
+
+
+def test_tooltip_with_complex_markdown_gh_13339(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that tooltips with complex markdown features render correctly.
+
+    Comprehensive test verifying that help tooltips support:
+    - Bold, italic, and other text formatting
+    - Inline code and code blocks
+    - Links
+    - Color directives
+    - Brackets [ and ]
+    - Emojis
+
+    Uses snapshot testing to verify the markdown is rendered correctly.
+    """
+    element_container = get_element_by_key(app, "markdown_complex_tooltip")
+    element_container.scroll_into_view_if_needed()
+    expect(element_container).to_be_visible()
+
+    element = element_container.get_by_test_id("stMarkdownContainer")
+
+    # Verify the help text is NOT leaked into the markdown content
+    expect(element).to_have_text("Tooltip with complex markdown")
+    expect(element).not_to_contain_text("Bold")
+    expect(element).not_to_contain_text("italic")
+    expect(element).not_to_contain_text("array[index]")
+    expect(element).not_to_contain_text("Streamlit")
+
+    hover_target = element_container.get_by_test_id("stTooltipHoverTarget")
+    hover_target.hover()
+
+    tooltip_content = app.get_by_test_id("stTooltipContent")
+    expect(tooltip_content).to_be_visible()
+
+    expect(tooltip_content).to_contain_text("Bold")
+    expect(tooltip_content).to_contain_text("italic")
+    expect(tooltip_content).to_contain_text("code")
+    expect(tooltip_content).to_contain_text("brackets [x]")
+    expect(tooltip_content).to_contain_text("Streamlit")
+    expect(tooltip_content).to_contain_text("array[index]")
+    expect(tooltip_content).to_contain_text("🎉")
+
+    expect(tooltip_content.locator("code")).to_have_count(1)
+
+    expect(tooltip_content.locator("a")).to_have_attribute(
+        "href", "https://streamlit.io"
+    )
+
+    assert_snapshot(
+        tooltip_content, name="st_markdown-complex_tooltip_with_markdown_formatting"
+    )

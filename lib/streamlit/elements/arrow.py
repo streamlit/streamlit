@@ -392,11 +392,14 @@ class ArrowMixin:
               the parent container, the width of the element matches the width
               of the parent container.
 
-        height : int, "auto", "content", or "stretch"
+        height : "auto", "content", "stretch", or int
             The height of the dataframe element. This can be one of the following:
 
             - ``"auto"`` (default): Streamlit sets the height to show at most
               ten rows.
+            - ``"content"``: The height of the element matches the height of
+              its content. The height is capped at 10,000 pixels to prevent
+              performance issues with very large dataframes.
             - ``"stretch"``: The height of the element expands to fill the
               available vertical space in its parent container. When multiple
               elements with stretch height are in the same container, they
@@ -406,9 +409,6 @@ class ArrowMixin:
               container.
             - An integer specifying the height in pixels: The element has a
               fixed height.
-            - ``"content"``: The height of the element matches the height of
-              its content. The height is capped at 10,000 pixels to prevent
-              performance issues with very large dataframes.
 
             Vertical scrolling within the dataframe element is enabled when the
             height does not accommodate all rows.
@@ -517,9 +517,10 @@ class ArrowMixin:
             which fits one line of text.
 
         placeholder : str or None
-            The text that should be shown for missing values (such as ``"None"``,
-            ``"NaN"``, ``"-"``, or ``""``). If this is ``None`` (default),
-            missing values are displayed as ``"None"``.
+            The text that should be shown for missing values. If this is
+            ``None`` (default), missing values are displayed as "None". To
+            leave a cell empty, use an empty string (``""``). Other common
+            values are ``"null"``, ``"NaN"`` and ``"-"``.
 
         Returns
         -------

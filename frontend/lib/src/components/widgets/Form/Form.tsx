@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, {
+import {
   memo,
   ReactElement,
   ReactNode,

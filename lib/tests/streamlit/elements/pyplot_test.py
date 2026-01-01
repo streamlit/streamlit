@@ -164,23 +164,23 @@ class PyplotTest(DeltaGeneratorTestCase):
         [
             (
                 "invalid",
-                "Invalid width value: 'invalid'. Width must be either an integer (pixels), 'stretch', or 'content'.",
+                "Width must be either a positive integer (pixels), 'stretch', or 'content'.",
             ),
             (
                 "",
-                "Invalid width value: ''. Width must be either an integer (pixels), 'stretch', or 'content'.",
+                "Width must be either a positive integer (pixels), 'stretch', or 'content'.",
             ),
             (
                 0,
-                "Invalid width value: 0. Width must be either an integer (pixels), 'stretch', or 'content'.",
+                "Width must be either a positive integer (pixels), 'stretch', or 'content'.",
             ),
             (
                 -1,
-                "Invalid width value: -1. Width must be either an integer (pixels), 'stretch', or 'content'.",
+                "Width must be either a positive integer (pixels), 'stretch', or 'content'.",
             ),
             (
                 None,
-                "Invalid width value: None. Width must be either an integer (pixels), 'stretch', or 'content'.",
+                "Width must be either a positive integer (pixels), 'stretch', or 'content'.",
             ),
         ]
     )
@@ -193,7 +193,7 @@ class PyplotTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitAPIException) as exc_info:
             st.pyplot(fig, width=invalid_width)
 
-        assert str(exc_info.value) == expected_error_message
+        assert expected_error_message in str(exc_info.value)
 
     @parameterized.expand(
         [

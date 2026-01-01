@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { memo, PropsWithChildren, useMemo } from "react"
+import { memo, PropsWithChildren, useMemo } from "react"
 
 import {
   DownloadContext,
@@ -67,6 +67,7 @@ type NavigationContextValues = {
 
 type SidebarConfigContextValues = {
   initialSidebarState: PageConfig.SidebarState
+  initialSidebarWidth?: number
   appLogo: Logo | null
   sidebarChevronDownshift: number
   expandSidebarNav: boolean
@@ -125,6 +126,7 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
   appPages,
   // SidebarConfigContext
   initialSidebarState,
+  initialSidebarWidth,
   appLogo,
   sidebarChevronDownshift,
   expandSidebarNav,
@@ -159,6 +161,7 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
   const sidebarConfigContextProps = useMemo<SidebarConfigContextProps>(
     () => ({
       initialSidebarState,
+      initialSidebarWidth,
       appLogo,
       sidebarChevronDownshift,
       expandSidebarNav,
@@ -166,6 +169,7 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
     }),
     [
       initialSidebarState,
+      initialSidebarWidth,
       appLogo,
       sidebarChevronDownshift,
       expandSidebarNav,
@@ -220,9 +224,12 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
     [scriptRunState, scriptRunId, fragmentIdsThisRun]
   )
 
-  const formsContextProps: FormsContextProps = {
-    formsData,
-  }
+  const formsContextProps: FormsContextProps = useMemo(
+    () => ({
+      formsData,
+    }),
+    [formsData]
+  )
 
   const downloadContextProps: DownloadContextProps =
     useMemo<DownloadContextProps>(

@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import React from "react"
+import { isValidElement } from "react"
 
-import { BlockNode } from "~lib/AppNode"
+import { BlockNode, TransientNode } from "~lib/AppNode"
 import { ComponentRegistry } from "~lib/components/widgets/CustomComponent"
 import { FileUploadClient } from "~lib/FileUploadClient"
 import { mockEndpoints, mockSessionInfo } from "~lib/mocks/mocks"
@@ -67,7 +67,7 @@ describe("RenderNodeVisitor", () => {
       const result = visitor.visitElementNode(elementNode)
 
       expect(result).not.toBeNull()
-      expect(React.isValidElement(result)).toBe(true)
+      expect(isValidElement(result)).toBe(true)
       expect(visitor.reactElements).toHaveLength(1)
       expect(visitor.reactElements[0]).toBe(result)
     })
@@ -103,7 +103,7 @@ describe("RenderNodeVisitor", () => {
       // Only one widget should be rendered
       expect(visitor.reactElements).toHaveLength(1)
       expect(result1).not.toBeNull()
-      expect(React.isValidElement(result1)).toBe(true)
+      expect(isValidElement(result1)).toBe(true)
       expect(visitor.reactElements[0]).toBe(result1)
       expect(result2).toBeNull()
     })
@@ -119,7 +119,7 @@ describe("RenderNodeVisitor", () => {
 
       expect(visitor.reactElements).toHaveLength(1)
       expect(result).not.toBeNull()
-      expect(React.isValidElement(result)).toBe(true)
+      expect(isValidElement(result)).toBe(true)
       expect(visitor.reactElements[0]).toBe(result)
       expect((result as React.ReactElement).key).toBe(
         element.element?.textInput?.id
@@ -137,7 +137,7 @@ describe("RenderNodeVisitor", () => {
       const result = visitor.visitBlockNode(blockNode)
 
       expect(result).not.toBeNull()
-      expect(React.isValidElement(result)).toBe(true)
+      expect(isValidElement(result)).toBe(true)
       expect(visitor.reactElements).toHaveLength(1)
       expect(visitor.reactElements[0]).toBe(result)
     })
@@ -167,7 +167,7 @@ describe("RenderNodeVisitor", () => {
       const result = visitor.visitBlockNode(blockNode)
 
       expect(result).not.toBeNull()
-      expect(React.isValidElement(result)).toBe(true)
+      expect(isValidElement(result)).toBe(true)
       // The key should be "0" for the first block
       expect((result as React.ReactElement).key).toBe("0")
     })
@@ -184,7 +184,7 @@ describe("RenderNodeVisitor", () => {
       const result = visitor.visitBlockNode(blockNode)
 
       expect(result).not.toBeNull()
-      expect(React.isValidElement(result)).toBe(true)
+      expect(isValidElement(result)).toBe(true)
       // Check that the props contain disableFullscreenMode: true
       const props = (result as React.ReactElement).props
       expect(props.disableFullscreenMode).toBe(true)
@@ -204,9 +204,9 @@ describe("RenderNodeVisitor", () => {
       const blockResult = visitor.visitBlockNode(blockNode)
 
       expect(elementResult).not.toBeNull()
-      expect(React.isValidElement(elementResult)).toBe(true)
+      expect(isValidElement(elementResult)).toBe(true)
       expect(blockResult).not.toBeNull()
-      expect(React.isValidElement(blockResult)).toBe(true)
+      expect(isValidElement(blockResult)).toBe(true)
 
       expect(visitor.reactElements).toHaveLength(2)
       expect(visitor.reactElements[0]).toBe(elementResult)
@@ -238,7 +238,7 @@ describe("RenderNodeVisitor", () => {
       expect(result).toHaveLength(3)
       result.forEach(element => {
         expect(element).not.toBeNull()
-        expect(React.isValidElement(element)).toBe(true)
+        expect(isValidElement(element)).toBe(true)
       })
     })
 
@@ -253,9 +253,9 @@ describe("RenderNodeVisitor", () => {
 
       expect(result).toHaveLength(1)
       expect(result[0]).not.toBeNull()
-      expect(React.isValidElement(result[0])).toBe(true)
+      expect(isValidElement(result[0])).toBe(true)
       // Check that the props contain disableFullscreenMode: true
-      const props = (result[0] as React.ReactElement).props
+      const props = result[0].props
       expect(props.disableFullscreenMode).toBe(true)
     })
 
@@ -289,7 +289,7 @@ describe("RenderNodeVisitor", () => {
       expect(result).toHaveLength(4)
       result.forEach(element => {
         expect(element).not.toBeNull()
-        expect(React.isValidElement(element)).toBe(true)
+        expect(isValidElement(element)).toBe(true)
       })
     })
   })
@@ -308,8 +308,106 @@ describe("RenderNodeVisitor", () => {
       expect(result).toHaveLength(3)
       result.forEach(element => {
         expect(element).not.toBeNull()
-        expect(React.isValidElement(element)).toBe(true)
+        expect(isValidElement(element)).toBe(true)
       })
+    })
+  })
+
+  describe("visitTransientNode", () => {
+    it("renders transient elements and anchor with expected keys and order", () => {
+      const transient1 = text("t1")
+      const transient2 = text("t2")
+      const anchorEl = text("anchor")
+      const transientNode = new TransientNode("run-1", anchorEl, [
+        transient1,
+        transient2,
+      ])
+
+      const rootBlock = block([])
+      const mockProps = createMockProps(rootBlock)
+      const visitor = new RenderNodeVisitor(mockProps)
+
+      const result = visitor.visitTransientNode(transientNode)
+
+      if (!Array.isArray(result)) {
+        throw new Error("Expected visitTransientNode to return an array")
+      }
+      expect(result).toHaveLength(3)
+
+      // Transient children get deterministic keys transient-0, transient-1
+      expect((result[0] as React.ReactElement).key).toBe("transient-0")
+      expect((result[1] as React.ReactElement).key).toBe("transient-1")
+      // Anchor is visited by the same visitor and thus uses the current index as key ("0")
+      expect((result[2] as React.ReactElement).key).toBe("0")
+
+      // Visitor collects transient elements first, then the anchor
+      expect(visitor.reactElements).toHaveLength(3)
+      expect(visitor.reactElements[0]).toBe(result[0])
+      expect(visitor.reactElements[1]).toBe(result[1])
+      expect(visitor.reactElements[2]).toBe(result[2])
+    })
+
+    it("returns only transients when there is no anchor", () => {
+      const transient1 = text("t1")
+      const transientNode = new TransientNode("run-2", undefined, [transient1])
+
+      const rootBlock = block([])
+      const mockProps = createMockProps(rootBlock)
+      const visitor = new RenderNodeVisitor(mockProps)
+
+      const result = visitor.visitTransientNode(transientNode)
+
+      if (!Array.isArray(result)) {
+        throw new Error("Expected visitTransientNode to return an array")
+      }
+      expect(result).toHaveLength(1)
+      expect((result[0] as React.ReactElement).key).toBe("transient-0")
+      // Only one element collected in visitor as well
+      expect(visitor.reactElements).toHaveLength(1)
+      expect(visitor.reactElements[0]).toBe(result[0])
+    })
+
+    it("increments transient keys across multiple calls", () => {
+      const t1 = text("t1")
+      const t2 = text("t2")
+
+      const node1 = new TransientNode("run-a", undefined, [t1])
+      const node2 = new TransientNode("run-a", undefined, [t2])
+
+      const rootBlock = block([])
+      const mockProps = createMockProps(rootBlock)
+      const visitor = new RenderNodeVisitor(mockProps)
+
+      const r1 = visitor.visitTransientNode(node1)
+      const r2 = visitor.visitTransientNode(node2)
+
+      if (!Array.isArray(r1) || !Array.isArray(r2)) {
+        throw new Error("Expected visitTransientNode to return arrays")
+      }
+      expect((r1[0] as React.ReactElement).key).toBe("transient-0")
+      expect((r2[0] as React.ReactElement).key).toBe("transient-1")
+    })
+
+    it("supports a BlockNode anchor", () => {
+      const transient1 = text("t1")
+      const anchorBlock = block([text("child-of-anchor")])
+      const transientNode = new TransientNode("run-3", anchorBlock, [
+        transient1,
+      ])
+
+      const rootBlock = block([])
+      const mockProps = createMockProps(rootBlock)
+      const visitor = new RenderNodeVisitor(mockProps)
+
+      const result = visitor.visitTransientNode(transientNode)
+
+      if (!Array.isArray(result)) {
+        throw new Error("Expected visitTransientNode to return an array")
+      }
+      expect(result).toHaveLength(2)
+      expect((result[0] as React.ReactElement).key).toBe("transient-0")
+      // Anchor BlockNode will be the first visited element in this visitor; key should be "0"
+      expect((result[1] as React.ReactElement).key).toBe("0")
     })
   })
 })

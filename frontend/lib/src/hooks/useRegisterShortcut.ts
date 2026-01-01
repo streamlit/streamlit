@@ -82,6 +82,75 @@ interface UseRegisterShortcutOptions {
 let filterConfigured = false
 
 /**
+ * Find the first editable element (input, textarea, select, or contentEditable)
+ * associated with a keyboard event.
+ *
+ * This must handle events that originate inside shadow DOM trees: in that case,
+ * listeners attached outside the shadow root see a retargeted event whose
+ * `target` is the shadow host (e.g. a wrapping `div`), not the actual `<input>`
+ * element. To correctly detect editable contexts, we inspect the event's
+ * composed path where available and fall back to `event.target` for older
+ * browsers that do not support composed paths.
+ */
+function getEditableEventTarget(event: KeyboardEvent): HTMLElement | null {
+  // Prefer the composed path because it exposes the *actual* event target
+  // inside Shadow DOM trees instead of the retargeted shadow host.
+  const composedPath = event.composedPath?.()
+  if (composedPath?.length) {
+    for (const candidate of composedPath) {
+      const element = candidate as HTMLElement | null
+      if (
+        element?.tagName &&
+        (EDITABLE_TAGS.has(element.tagName) ||
+          // Some environments (e.g. jsdom) expose contentEditable primarily via
+          // the attribute, so we explicitly check both the property and the
+          // attribute to reliably detect editable hosts.
+          element.isContentEditable ||
+          element.getAttribute("contenteditable") === "true")
+      ) {
+        return element
+      }
+    }
+
+    // If a composed path exists but none of its entries are editable, we treat
+    // the event as non-editable even if the top-level target is a non-input
+    // container (e.g. the shadow host).
+    return null
+  }
+
+  // Fallback for environments without composedPath: inspect the (possibly
+  // retargeted) event target.
+  const target = (event.target || event.srcElement) as HTMLElement | null
+  if (
+    target?.tagName &&
+    (EDITABLE_TAGS.has(target.tagName) ||
+      target.isContentEditable ||
+      target.getAttribute("contenteditable") === "true")
+  ) {
+    return target
+  }
+
+  return null
+}
+
+/**
+ * Public helper to determine whether a keyboard event originated from an
+ * editable context (e.g. text input, textarea, contentEditable), including when
+ * the actual input lives inside a Shadow DOM tree.
+ *
+ * This is used by both widget-level and app-level shortcut handlers to ensure
+ * we never fire single-key shortcuts while the user is typing.
+ */
+export function isKeyboardEventFromEditableTarget(
+  event?: KeyboardEvent
+): boolean {
+  if (!event) {
+    return false
+  }
+  return Boolean(getEditableEventTarget(event))
+}
+
+/**
  * Ensure the hotkeys filter is configured.
  */
 export function ensureHotkeysFilterConfigured(): void {
@@ -93,16 +162,11 @@ export function ensureHotkeysFilterConfigured(): void {
   }
 
   hotkeys.filter = event => {
-    const target = (event.target || event.srcElement) as HTMLElement | null
-    if (!target) {
-      return true
-    }
+    const editableTarget = getEditableEventTarget(event)
 
-    const tagName = target.tagName
-    const isEditable =
-      EDITABLE_TAGS.has(tagName) || Boolean(target.isContentEditable)
-
-    if (!isEditable) {
+    // If the key event did not originate from an editable context, always
+    // allow shortcuts to fire.
+    if (!editableTarget) {
       return true
     }
 
@@ -174,14 +238,8 @@ function shouldBlockShortcutInInput(
   parsedShortcut: ShortcutTokens,
   event: KeyboardEvent
 ): boolean {
-  const target = (event.target || event.srcElement) as HTMLElement | null
-  if (!target) {
-    return false
-  }
-
-  const isEditable =
-    EDITABLE_TAGS.has(target.tagName) || Boolean(target.isContentEditable)
-  if (!isEditable) {
+  const editableTarget = getEditableEventTarget(event)
+  if (!editableTarget) {
     return false
   }
 

@@ -21,8 +21,12 @@ import { BackMsg, ForwardMsg } from "@streamlit/protobuf"
 import { ConnectionState } from "./ConnectionState"
 import { MAX_RETRIES_BEFORE_CLIENT_ERROR } from "./constants"
 import { establishStaticConnection } from "./StaticConnection"
-import { ErrorDetails, IHostConfigResponse, StreamlitEndpoints } from "./types"
-import { getPossibleBaseUris } from "./utils"
+import {
+  ErrorDetails,
+  IHostConfigProperties,
+  StreamlitEndpoints,
+} from "./types"
+import { getPossibleBaseUris, isHostConfigBypassEnabled } from "./utils"
 import { WebsocketConnection } from "./WebsocketConnection"
 
 const LOG = getLogger("ConnectionManager")
@@ -76,7 +80,7 @@ interface Props {
    * Function to set the host config for this app (if in a relevant deployment
    * scenario).
    */
-  onHostConfigResp: (resp: IHostConfigResponse) => void
+  onHostConfigResp: (resp: IHostConfigProperties) => void
 }
 
 /**
@@ -206,7 +210,7 @@ export class ConnectionManager {
     this.websocketConnection?.disconnect()
   }
 
-  private setConnectionState = (
+  private readonly setConnectionState = (
     connectionState: ConnectionState,
     errMsg?: ErrorDetails
   ): void => {
@@ -220,7 +224,7 @@ export class ConnectionManager {
     }
   }
 
-  private showRetryError = (
+  private readonly showRetryError = (
     totalRetries: number,
     latestError: ErrorDetails,
     // The last argument of this function is unused and exists because the
@@ -235,6 +239,7 @@ export class ConnectionManager {
 
   private connectToRunningServer(): WebsocketConnection {
     const baseUriPartsList = getPossibleBaseUris()
+    const enableBypass = isHostConfigBypassEnabled()
     return new WebsocketConnection({
       getLastSessionId: this.props.getLastSessionId,
       endpoints: this.props.endpoints,
@@ -246,6 +251,7 @@ export class ConnectionManager {
       resetHostAuthToken: this.props.resetHostAuthToken,
       sendClientError: this.props.sendClientError,
       onHostConfigResp: this.props.onHostConfigResp,
+      enableBypass,
     })
   }
 }

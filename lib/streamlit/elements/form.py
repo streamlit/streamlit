@@ -30,6 +30,10 @@ from streamlit.elements.lib.policies import (
     check_session_state_rules,
 )
 from streamlit.elements.lib.utils import Key, to_key
+from streamlit.elements.widgets.button import (
+    IconPosition,
+    _normalize_icon_position,
+)
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto import Block_pb2
 from streamlit.runtime.metrics_util import gather_metrics
@@ -247,6 +251,7 @@ class FormMixin:
         key: Key | None = None,
         type: Literal["primary", "secondary", "tertiary"] = "secondary",
         icon: str | None = None,
+        icon_position: IconPosition = "left",
         disabled: bool = False,
         use_container_width: bool | None = None,
         width: Width = "content",
@@ -335,6 +340,10 @@ class FormMixin:
 
             - ``"spinner"``: Displays a spinner as an icon.
 
+        icon_position : "left" or "right"
+            The position of the icon relative to the button label. Defaults to
+            ``"left"``.
+
         disabled : bool
             Whether to disable the button. If this is ``False`` (default), the
             user can interact with the button. If this is ``True``, the button
@@ -373,19 +382,25 @@ class FormMixin:
               of the parent container.
 
         shortcut : str or None
-            An optional keyboard shortcut that triggers the submit button.
-            Provide a single alphanumeric key (e.g. ``"K"``, ``"4"``), a
-            function key (e.g. ``"F11"``), or a supported special key (e.g.
-            ``"Enter"``, ``"Esc"``), optionally combined with modifiers.
+            An optional keyboard shortcut that triggers the button. This can be
+            one of the following strings:
 
-            Examples: ``"Ctrl+K"``, ``"Cmd+Shift+O"``, ``"Mod+Enter"``.
+            - A single alphanumeric key like ``"K"`` or ``"4"``.
+            - A function key like ``"F11"``.
+            - A special key like ``"Enter"``, ``"Esc"``, or ``"Tab"``.
+            - Any of the above combined with modifiers. For example, you can use
+              ``"Ctrl+K"`` or ``"Cmd+Shift+O"``.
 
-            .. note::
-                The keys ``"C"`` and ``"R"`` are reserved and cannot be used,
-                even with modifiers. ``"Ctrl"``, ``"Cmd"``, and ``"Mod"`` are
-                platform-dependent: they map to ``"Command"`` (⌘) on macOS and
-                ``"Control"`` on Windows/Linux. Punctuation keys (e.g. ``"."``,
-                ``","``) are not currently supported.
+            .. important::
+                The keys ``"C"`` and ``"R"`` are reserved and can't be used,
+                even with modifiers. Punctuation keys like ``"."`` and ``","``
+                aren't currently supported.
+
+            For a list of supported keys and modifiers, see the documentation
+            for |st.button|_.
+
+            .. |st.button| replace:: ``st.button``
+            .. _st.button: https://docs.streamlit.io/develop/api-reference/widgets/st.button
 
         Returns
         -------
@@ -404,6 +419,10 @@ class FormMixin:
                 f'The argument passed was "{type}".'
             )
 
+        normalized_icon_position = _normalize_icon_position(
+            icon_position, "st.form_submit_button"
+        )
+
         return self._form_submit_button(
             label=label,
             help=help,
@@ -412,6 +431,7 @@ class FormMixin:
             kwargs=kwargs,
             type=type,
             icon=icon,
+            icon_position=normalized_icon_position,
             disabled=disabled,
             ctx=ctx,
             width=width,
@@ -430,6 +450,7 @@ class FormMixin:
         key: Key | None = None,
         type: Literal["primary", "secondary", "tertiary"] = "secondary",
         icon: str | None = None,
+        icon_position: IconPosition = "left",
         disabled: bool = False,
         ctx: ScriptRunContext | None = None,
         width: Width = "content",
@@ -447,6 +468,7 @@ class FormMixin:
             kwargs=kwargs,
             type=type,
             icon=icon,
+            icon_position=icon_position,
             disabled=disabled,
             ctx=ctx,
             width=width,

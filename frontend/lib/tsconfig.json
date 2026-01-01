@@ -18,6 +18,11 @@
       "@streamlit/utils": ["../utils/src"]
     }
   },
-  "include": ["src/**/*", "declarations.d.ts", "emotion.d.ts"],
+  "include": [
+    "src/**/*",
+    "declarations.d.ts",
+    "emotion.d.ts",
+    "../test-globals.d.ts"
+  ],
   "exclude": ["**/proto.js"]
 }

@@ -27,6 +27,7 @@ describe("eslint-plugin-streamlit-custom", () => {
       "no-hardcoded-theme-values",
       "enforce-memo",
       "no-force-reflow-access",
+      "no-aria-hidden-with-focusable-children",
     ]
 
     expect(Object.keys(plugin.rules)).toHaveLength(EXPECTED_RULES.length)

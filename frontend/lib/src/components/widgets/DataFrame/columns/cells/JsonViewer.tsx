@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { memo } from "react"
+import { memo } from "react"
 
 import styled from "@emotion/styled"
 import { TextCellEntry } from "@glideapps/glide-data-grid"

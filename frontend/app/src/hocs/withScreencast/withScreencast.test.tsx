@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { PureComponent, ReactElement } from "react"
+import { PureComponent, ReactElement } from "react"
 
 import { screen } from "@testing-library/react"
 

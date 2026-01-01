@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-import React from "react"
-
 import { Arrow, Arrow as ArrowProto, streamlit } from "@streamlit/protobuf"
 
 import { Quiver } from "~lib/dataframes/Quiver"

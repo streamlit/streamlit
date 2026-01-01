@@ -76,7 +76,7 @@ class TornadoOAuth2AppTest(unittest.TestCase):
         )
 
         app.framework.set_state_data.assert_called_once_with(
-            None, "some_state", {"redirect_uri": None, "url": "https://example.com"}
+            {}, "some_state", {"redirect_uri": None, "url": "https://example.com"}
         )
 
     def test_authorize_redirect_error_no_state(self):
@@ -101,6 +101,27 @@ class TornadoOAuth2AppTest(unittest.TestCase):
                 )
             )
         assert e.match("some_error")
+
+    def test_authorize_access_token_missing_state_data(self):
+        """Test authorize_access_token raises error when state data is missing."""
+        app = TornadoOAuth2App(
+            MagicMock(
+                get_state_data=MagicMock(return_value=None),  # State not found in cache
+            )
+        )
+
+        def get_argument_mock(name: str, *args):
+            if name == "code":
+                return "some_code"
+            if name == "state":
+                return "some_state"
+            return None
+
+        with pytest.raises(OAuthError) as e:
+            app.authorize_access_token(MagicMock(get_argument=get_argument_mock))
+
+        assert e.match("invalid_state")
+        assert "expired" in str(e.value.description).lower()
 
     @patch(
         "streamlit.web.server.oidc_mixin.TornadoOAuth2App.client_cls.request",

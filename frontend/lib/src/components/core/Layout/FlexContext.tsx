@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { createContext, FC, PropsWithChildren, useMemo } from "react"
+import { createContext, FC, PropsWithChildren, useMemo } from "react"
 
 import { Direction } from "./utils"
 

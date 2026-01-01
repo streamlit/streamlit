@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { FunctionComponent, ReactElement, ReactNode } from "react"
+import { FunctionComponent, ReactElement, ReactNode } from "react"
 
 import {
   type ModalProps,

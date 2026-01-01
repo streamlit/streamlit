@@ -30,11 +30,9 @@ import { MultiSelect as MultiSelectProto } from "@streamlit/protobuf"
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import { getBorderColor } from "~lib/components/shared/Base/styled-components"
 import { VirtualDropdown } from "~lib/components/shared/Dropdown"
-import { Placement } from "~lib/components/shared/Tooltip"
-import TooltipIcon from "~lib/components/shared/TooltipIcon"
 import {
-  StyledWidgetLabelHelp,
   WidgetLabel,
+  WidgetLabelHelpIcon,
 } from "~lib/components/widgets/BaseWidget"
 import { StyledUISelect } from "~lib/components/widgets/Multiselect/styled-components"
 import {
@@ -224,12 +222,7 @@ const Multiselect: FC<Props> = props => {
         )}
       >
         {element.help && (
-          <StyledWidgetLabelHelp>
-            <TooltipIcon
-              content={element.help}
-              placement={Placement.TOP_RIGHT}
-            />
-          </StyledWidgetLabelHelp>
+          <WidgetLabelHelpIcon content={element.help} label={element.label} />
         )}
       </WidgetLabel>
       <StyledUISelect>

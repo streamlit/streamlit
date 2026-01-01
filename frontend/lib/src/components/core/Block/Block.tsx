@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useContext } from "react"
+import { ReactElement, useContext } from "react"
 
 import classNames from "classnames"
 

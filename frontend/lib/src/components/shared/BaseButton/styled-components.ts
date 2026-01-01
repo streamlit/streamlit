@@ -20,6 +20,7 @@ import styled, { CSSObject } from "@emotion/styled"
 import { darken, transparentize } from "color2k"
 
 import { EmotionTheme } from "~lib/theme"
+import { getFocusBoxShadow, getPrimaryFocusBoxShadow } from "~lib/theme/utils"
 
 export enum BaseButtonKind {
   PRIMARY = "primary",
@@ -112,7 +113,7 @@ export const StyledBaseButton = styled.button<RequiredBaseButtonProps>(
         // When focus-visible (e.g. if the button was focused via keyboard navigation)
         // we use the hover style of the respective button type (see below) and
         // additionally show a colored focus ring
-        boxShadow: `0 0 0 0.2rem ${transparentize(theme.colors.primary, 0.5)}`,
+        boxShadow: getPrimaryFocusBoxShadow(theme),
       },
       ...getSizeStyle(size, theme),
     }
@@ -377,7 +378,7 @@ export const StyledHeaderButton = styled(
       outline: "none",
     },
     "&:focus-visible": {
-      boxShadow: `0 0 0 0.2rem ${transparentize(theme.colors.gray90, 0.8)}`,
+      boxShadow: getFocusBoxShadow(theme.colors.gray90, 0.8),
     },
     "&:hover": {
       backgroundColor: theme.colors.darkenedBgMix15,

@@ -25,3 +25,10 @@ if x:
 if st.user.get("is_logged_in"):
     st.markdown(f"YOU ARE LOGGED IN: {st.user.email}")
     st.markdown(st.user["name"])
+
+    if st.user.tokens:
+        st.markdown("TOKENS AVAILABLE")
+        if "id" in st.user.tokens:
+            st.markdown("HAS ID TOKEN")
+        if "access" in st.user.tokens:
+            st.markdown("HAS ACCESS TOKEN")

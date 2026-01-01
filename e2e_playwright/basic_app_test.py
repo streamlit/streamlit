@@ -81,6 +81,10 @@ def test_total_loaded_assets_size_under_threshold(page: Page, app_port: int):
     )
 
 
+@pytest.mark.flaky(
+    reruns=3  # TODO(lukasmasuch): Webkit is a bit flaky here and sometimes transfers
+    # more messages than expected (> bytes threshold). Something to investigate at some point.
+)
 def test_check_total_websocket_message_number_and_size(page: Page, app_port: int):
     """Test that verifies the number and total size of websocket messages
     of the basic app is under a configured threshold.

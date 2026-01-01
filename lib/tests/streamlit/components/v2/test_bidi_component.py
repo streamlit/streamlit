@@ -1190,6 +1190,66 @@ class BidiComponentIdentityTest(DeltaGeneratorTestCase):
 
         assert id1 == id2
 
+    def test_unkeyed_id_stable_when_default_unchanged(self):
+        """Without a user key, unchanged defaults must keep the same backend id."""
+        st._bidi_component(
+            "ident",
+            default={"foo": 1},
+            on_foo_change=MagicMock(),
+        )
+        id1 = self._render_and_get_id()
+
+        self._clear_widget_registrations_for_current_run()
+
+        st._bidi_component(
+            "ident",
+            default={"foo": 1},
+            on_foo_change=MagicMock(),
+        )
+        id2 = self._render_and_get_id()
+
+        assert id1 == id2
+
+    def test_unkeyed_id_changes_when_default_changes(self):
+        """Without a user key, changing defaults must change the backend id."""
+        st._bidi_component(
+            "ident",
+            default={"foo": 1},
+            on_foo_change=MagicMock(),
+        )
+        id1 = self._render_and_get_id()
+
+        st._bidi_component(
+            "ident",
+            default={"foo": 2},
+            on_foo_change=MagicMock(),
+        )
+        id2 = self._render_and_get_id()
+
+        assert id1 != id2
+
+    def test_keyed_id_stable_when_default_changes(self):
+        """With a user key, changing defaults must NOT change the backend id (same run)."""
+        st._bidi_component(
+            "ident",
+            key="DEF",
+            default={"foo": 1},
+            on_foo_change=MagicMock(),
+        )
+        id1 = self._render_and_get_id()
+
+        self._clear_widget_registrations_for_current_run()
+
+        st._bidi_component(
+            "ident",
+            key="DEF",
+            default={"foo": 2},
+            on_foo_change=MagicMock(),
+        )
+        id2 = self._render_and_get_id()
+
+        assert id1 == id2
+
     def test_identity_kwargs_raises_on_unhandled_oneof(self):
         """_build_bidi_identity_kwargs should raise if an unknown oneof is encountered."""
         mixin = BidiComponentMixin()

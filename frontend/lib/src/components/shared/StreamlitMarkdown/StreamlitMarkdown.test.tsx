@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import React, { ReactElement } from "react"
+import { ReactElement } from "react"
 
-import { cleanup, screen } from "@testing-library/react"
+import { cleanup, screen, within } from "@testing-library/react"
 import { transparentize } from "color2k"
 import ReactMarkdown from "react-markdown"
 
@@ -35,8 +35,20 @@ import StreamlitMarkdown, {
   CustomCodeTagProps,
   CustomMediaTag,
   CustomPreTag,
+  HeadingWithActionElements,
   LinkWithTargetBlank,
 } from "./StreamlitMarkdown"
+
+// Mock StreamlitConfig using global mock state (see vitest.setup.ts)
+vi.mock("@streamlit/utils", async () => {
+  const actual = await vi.importActual("@streamlit/utils")
+  return {
+    ...actual,
+    get StreamlitConfig() {
+      return globalThis.__mockStreamlitConfig
+    },
+  }
+})
 
 // Fixture Generator
 const getMarkdownElement = (body: string): ReactElement => {
@@ -411,6 +423,62 @@ describe("StreamlitMarkdown", () => {
     ).not.toBeInTheDocument()
   })
 
+  it("uses aria-labelledby when help is present in the sidebar (no anchor id)", () => {
+    render(
+      <IsSidebarContext.Provider value={true}>
+        <IsDialogContext.Provider value={false}>
+          <HeadingWithActionElements tag="h2" help="Help text">
+            Hello
+          </HeadingWithActionElements>
+        </IsDialogContext.Provider>
+      </IsSidebarContext.Provider>
+    )
+
+    const heading = screen.getByRole("heading", { name: "Hello" })
+    expect(heading).toHaveAttribute("aria-labelledby")
+    expect(heading).not.toHaveAttribute("id")
+
+    const labelId = heading.getAttribute("aria-labelledby")
+    expect(labelId).toBeTruthy()
+    expect(within(heading).getByText("Hello")).toHaveAttribute("id", labelId)
+  })
+
+  it("uses aria-labelledby when the anchor icon is present (non-sidebar)", () => {
+    render(
+      <IsSidebarContext.Provider value={false}>
+        <IsDialogContext.Provider value={false}>
+          <HeadingWithActionElements tag="h2" anchor="my-anchor">
+            Hello
+          </HeadingWithActionElements>
+        </IsDialogContext.Provider>
+      </IsSidebarContext.Provider>
+    )
+
+    const heading = screen.getByRole("heading", { name: "Hello" })
+    expect(heading).toHaveAttribute("id", "my-anchor")
+    expect(heading).toHaveAttribute("aria-labelledby")
+
+    const labelId = heading.getAttribute("aria-labelledby")
+    expect(labelId).toBeTruthy()
+    expect(within(heading).getByText("Hello")).toHaveAttribute("id", labelId)
+  })
+
+  it("does not use aria-labelledby when no action elements are present", () => {
+    render(
+      <IsSidebarContext.Provider value={false}>
+        <IsDialogContext.Provider value={false}>
+          <HeadingWithActionElements tag="h2" anchor="my-anchor" hideAnchor>
+            Hello
+          </HeadingWithActionElements>
+        </IsDialogContext.Provider>
+      </IsSidebarContext.Provider>
+    )
+
+    const heading = screen.getByRole("heading", { name: "Hello" })
+    expect(heading).toHaveAttribute("id", "my-anchor")
+    expect(heading).not.toHaveAttribute("aria-labelledby")
+  })
+
   it("propagates header attributes to custom header", async () => {
     const source = '<h1 data-test="lol">alsdkjhflaf</h1>'
     render(<StreamlitMarkdown source={source} allowHTML />)
@@ -441,7 +509,7 @@ describe("StreamlitMarkdown", () => {
     { input: ":material/search:", tag: "span", expected: "search" },
   ]
 
-  test.each(validCases)(
+  it.each(validCases)(
     "renders valid markdown when isLabel is true - $tag",
     async ({ input, tag, expected }) => {
       render(<StreamlitMarkdown source={input} allowHTML={false} isLabel />)
@@ -502,7 +570,7 @@ describe("StreamlitMarkdown", () => {
     { input: "`Code ->`", tag: "code", expected: "Code ->" },
   ]
 
-  test.each(symbolReplacementCases)(
+  it.each(symbolReplacementCases)(
     "replaces symbols with nicer typographical symbols - $input",
     ({ input, tag, expected }) => {
       render(<StreamlitMarkdown source={input} allowHTML={false} isLabel />)
@@ -556,7 +624,7 @@ describe("StreamlitMarkdown", () => {
     { input: "> Blockquote", tag: "blockquote", expected: "Blockquote" },
   ]
 
-  test.each(invalidCases)(
+  it.each(invalidCases)(
     "does NOT render invalid markdown when isLabel is true - $tag",
     ({ input, tag, expected }) => {
       render(<StreamlitMarkdown source={input} allowHTML={false} isLabel />)
@@ -675,6 +743,15 @@ describe("StreamlitMarkdown", () => {
     render(<StreamlitMarkdown source={source} allowHTML={false} />)
     const markdown = screen.getByText("test :foo test:test :")
     expect(markdown).toBeInTheDocument()
+  })
+
+  it("converts unsupported text directives to plain text", () => {
+    // Text directives use the syntax :name[content]
+    // Unsupported ones should render as :name (prefix only, content lost)
+    const source = `test :unknown[content] end`
+    render(<StreamlitMarkdown source={source} allowHTML={false} />)
+    const markdown = screen.getByText("test :unknown end")
+    expect(markdown).toBeVisible()
   })
 
   it("properly adds background colors", () => {
@@ -825,7 +902,7 @@ describe("CustomMediaTag", () => {
     { resourceCrossOriginMode: "use-credentials" },
     { resourceCrossOriginMode: undefined },
   ] as const)(
-    "should render img element without crossOrigin attribute when window.__streamlit?.BACKEND_BASE_URL is not set",
+    "should render img element without crossOrigin attribute when StreamlitConfig.BACKEND_BASE_URL is not set",
     ({ resourceCrossOriginMode }) => {
       renderWithContexts(<CustomMediaTag node={mockNode} {...mockProps} />, {
         libConfigContext: {
@@ -842,23 +919,20 @@ describe("CustomMediaTag", () => {
   )
 
   describe("with BACKEND_BASE_URL set", () => {
-    const originalStreamlit = window.__streamlit
-
     beforeEach(() => {
-      window.__streamlit = {
-        BACKEND_BASE_URL: "https://backend.example.com:8080/app",
-      }
+      globalThis.__mockStreamlitConfig.BACKEND_BASE_URL =
+        "https://backend.example.com:8080/app"
     })
 
     afterEach(() => {
-      window.__streamlit = originalStreamlit
+      globalThis.__mockStreamlitConfig = {}
     })
 
     it.each([
       {
         tagName: "img",
         expected: "anonymous",
-        resourceCrossOriginMode: "anonymous",
+        resourceCrossOriginMode: "anonymous" as const,
         src: "/media/image.jpg",
         extraProps: { alt: "Test image" },
         scenario: "img with relative URL and anonymous mode",
@@ -866,73 +940,30 @@ describe("CustomMediaTag", () => {
       {
         tagName: "video",
         expected: "use-credentials",
-        resourceCrossOriginMode: "use-credentials",
+        resourceCrossOriginMode: "use-credentials" as const,
         src: "/media/video.mp4",
         extraProps: { controls: true },
         scenario: "video with relative URL and use-credentials mode",
       },
       {
-        tagName: "audio",
-        expected: undefined,
-        resourceCrossOriginMode: undefined,
-        src: "/media/audio.mp3",
-        extraProps: { controls: true },
-        scenario: "audio with relative URL and undefined mode",
-      },
-      {
         tagName: "img",
         expected: "anonymous",
-        resourceCrossOriginMode: "anonymous",
+        resourceCrossOriginMode: "anonymous" as const,
         src: "https://backend.example.com:8080/media/image.jpg",
         extraProps: { alt: "Test image" },
         scenario:
           "img with same origin as BACKEND_BASE_URL and anonymous mode",
       },
       {
-        tagName: "img",
-        expected: undefined,
-        resourceCrossOriginMode: undefined,
-        src: "https://backend.example.com:8080/media/image.jpg",
-        extraProps: { alt: "Test image" },
-        scenario:
-          "img with same origin as BACKEND_BASE_URL and undefined mode",
-      },
-      {
-        tagName: "img",
-        expected: undefined,
-        resourceCrossOriginMode: "anonymous",
-        src: "https://external.example.com/media/image.jpg",
-        extraProps: { alt: "Test image" },
-        scenario: "img with different hostname than BACKEND_BASE_URL",
-      },
-      {
         tagName: "video",
         expected: "use-credentials",
-        resourceCrossOriginMode: "use-credentials",
+        resourceCrossOriginMode: "use-credentials" as const,
         src: "https://backend.example.com:8080/media/video.mp4",
         extraProps: { controls: true },
         scenario:
           "video with same origin as BACKEND_BASE_URL and use-credentials mode",
       },
-      {
-        tagName: "video",
-        expected: undefined,
-        resourceCrossOriginMode: "anonymous",
-        src: "https://backend.example.com:9000/media/video.mp4",
-        extraProps: { controls: true },
-        scenario:
-          "video with same origin as BACKEND_BASE_URL and different port",
-      },
-      {
-        tagName: "audio",
-        expected: undefined,
-        resourceCrossOriginMode: "anonymous",
-        src: "http://backend.example.com:8080/media/audio.mp3",
-        extraProps: { controls: true },
-        scenario:
-          "audio with same origin as BACKEND_BASE_URL and different protocol",
-      },
-    ] as const)(
+    ])(
       "should render $tagName element with crossOrigin='$expected' when $scenario",
       ({ tagName, expected, resourceCrossOriginMode, src, extraProps }) => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -954,11 +985,73 @@ describe("CustomMediaTag", () => {
             : container.querySelector(tagName)
 
         expect(element).toBeTruthy()
-        if (expected) {
-          expect(element).toHaveAttribute("crossOrigin", expected)
-        } else {
-          expect(element).not.toHaveAttribute("crossOrigin")
-        }
+        expect(element).toHaveAttribute("crossOrigin", expected)
+        expect(element).toHaveAttribute("src", src)
+      }
+    )
+
+    it.each([
+      {
+        tagName: "audio",
+        resourceCrossOriginMode: undefined,
+        src: "/media/audio.mp3",
+        extraProps: { controls: true },
+        scenario: "audio with relative URL and undefined mode",
+      },
+      {
+        tagName: "img",
+        resourceCrossOriginMode: undefined,
+        src: "https://backend.example.com:8080/media/image.jpg",
+        extraProps: { alt: "Test image" },
+        scenario:
+          "img with same origin as BACKEND_BASE_URL and undefined mode",
+      },
+      {
+        tagName: "img",
+        resourceCrossOriginMode: "anonymous" as const,
+        src: "https://external.example.com/media/image.jpg",
+        extraProps: { alt: "Test image" },
+        scenario: "img with different hostname than BACKEND_BASE_URL",
+      },
+      {
+        tagName: "video",
+        resourceCrossOriginMode: "anonymous" as const,
+        src: "https://backend.example.com:9000/media/video.mp4",
+        extraProps: { controls: true },
+        scenario:
+          "video with same origin as BACKEND_BASE_URL and different port",
+      },
+      {
+        tagName: "audio",
+        resourceCrossOriginMode: "anonymous" as const,
+        src: "http://backend.example.com:8080/media/audio.mp3",
+        extraProps: { controls: true },
+        scenario:
+          "audio with same origin as BACKEND_BASE_URL and different protocol",
+      },
+    ])(
+      "should render $tagName element without crossOrigin when $scenario",
+      ({ tagName, resourceCrossOriginMode, src, extraProps }) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const node = { tagName } as any
+        const props = { src, ...extraProps }
+
+        const { container } = renderWithContexts(
+          <CustomMediaTag node={node} {...props} />,
+          {
+            libConfigContext: {
+              resourceCrossOriginMode,
+            },
+          }
+        )
+
+        const element =
+          tagName === "img"
+            ? screen.getByRole("img")
+            : container.querySelector(tagName)
+
+        expect(element).toBeTruthy()
+        expect(element).not.toHaveAttribute("crossOrigin")
         expect(element).toHaveAttribute("src", src)
       }
     )

@@ -16,7 +16,7 @@
 
 /* eslint-disable @typescript-eslint/no-unused-vars */
 
-import React, { PureComponent, ReactElement } from "react"
+import { PureComponent, ReactElement } from "react"
 
 import { screen, waitFor } from "@testing-library/react"
 
@@ -249,7 +249,7 @@ class StreamlitLibExample extends PureComponent<Props, State> {
     )
   }
 
-  private sendRerunBackMsg = (): void => {}
+  private readonly sendRerunBackMsg = (): void => {}
 }
 
 describe("StreamlitLibExample", () => {
@@ -314,6 +314,13 @@ describe("StreamlitLibExample", () => {
     } as ConnectionLibConfig
 
     // This test passes if TypeScript compilation succeeds
-    expect(true).toBe(true)
+    // Just do some basic checks to mark the variables as used:
+    expect(appConfig).toEqual({})
+    expect(libConfigCheck).toEqual({
+      mapboxToken: "test",
+      disableFullscreenMode: false,
+      enforceDownloadInNewTab: true,
+      resourceCrossOriginMode: "anonymous",
+    })
   })
 })
