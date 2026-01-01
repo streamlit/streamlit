@@ -167,6 +167,31 @@ class ConvertDataToBytesAndInferMimeTest(unittest.TestCase):
                 unsupported_error=RuntimeError("unsupported"),
             )
 
+    @unittest.mock.patch("streamlit.runtime.download_data_util.os.path.isfile")
+    def test_plain_string_not_file_path_encodes_as_text(self, mock_isfile):
+        """Plain strings that aren't file paths are encoded as text/plain."""
+        mock_isfile.return_value = False  # Not a file
+        data_as_bytes, mime = convert_data_to_bytes_and_infer_mime(
+            "hello world", unsupported_error=RuntimeError("unsupported")
+        )
+        assert data_as_bytes == b"hello world"
+        assert mime == "text/plain"
+
+    @unittest.mock.patch(
+        "streamlit.runtime.download_data_util.file_util.local_file_down"
+    )
+    def test_pathlib_path_downloads_and_infers_mime_type(self, mock_local_file_down):
+        """pathlib.Path objects are downloaded and MIME type is inferred."""
+        from pathlib import Path
+
+        mock_local_file_down.return_value = b"path content"
+        data_as_bytes, mime = convert_data_to_bytes_and_infer_mime(
+            Path("/path/to/file.json"), unsupported_error=RuntimeError("unsupported")
+        )
+        assert data_as_bytes == b"path content"
+        assert mime == "application/json"
+        mock_local_file_down.assert_called_once_with("/path/to/file.json")
+
     def test_text_io_wrapper_is_converted_to_bytes_and_text_plain(self):
         """io.TextIOWrapper is read fully and inferred as text/plain."""
         content = "Line 1\nLine 2"

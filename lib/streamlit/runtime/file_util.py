@@ -107,7 +107,7 @@ def http_down(link: str) -> bytes:
     ValueError
         If the url is not http or https
     urllib.error.URLError
-    If the url fails or timeouts
+        If the url fails or timeouts
     """
     import urllib.request
     from urllib.parse import urlparse

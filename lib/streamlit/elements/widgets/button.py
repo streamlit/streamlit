@@ -747,8 +747,8 @@ class ButtonMixin:
         ... )
 
         .. note::
-        Make sure your AWS credentials are properly configured (via
-        environment variables, AWS CLI, or IAM roles).
+            Make sure your AWS credentials are properly configured (via
+            environment variables, AWS CLI, or IAM roles).
 
 
         """
