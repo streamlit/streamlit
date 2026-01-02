@@ -174,16 +174,12 @@ This implementation also will have `max_entries` scoped to the session, not scop
 
 ## Checklist
 
-* [x] Works on all deployment platforms (e.g. [Streamlit Community Cloud](https://streamlit.io/cloud), [Streamlit in Snowflake](https://www.snowflake.com/en/product/features/streamlit-in-snowflake/), [Hugging Face Spaces](https://huggingface.co/spaces))?
-* [x] No breaking API changes?
-  * No breaking changes.
-* [x] No new dependencies?
-  * Yes, no new dependencies.
-* [x] Metrics collected?
-  * Should be compatible with existing metrics.
-* [x] Any security or legal implications?
-  * No implications.
-* [x] Anything to keep in mind for docs?
-  * Nothing special.
-* [x] Any other risks?
-  * No additional risks.
+| Item                         | ✅ or comment                             |
+|------------------------------|-------------------------------------------|
+| Works on SiS, Cloud, etc?    | ✅                                        |
+| No breaking API changes      | ✅ No breaking changes.                   |
+| No new dependencies          | ✅                                        |
+| Metrics collected            | ✅ Compatible with existing metrics.      |
+| Any security/legal impact?   | ✅ No implications.                       |
+| Any docs changes needed?     | ✅ Nothing special.                       |
+| Any other risks?             | ✅ No additional risks.                   |
