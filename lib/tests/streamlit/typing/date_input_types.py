@@ -97,6 +97,13 @@ if TYPE_CHECKING:
     assert_type(
         date_input(
             "foo",
+            max_value="today",
+        ),
+        date,
+    )
+    assert_type(
+        date_input(
+            "foo",
             (date(2024, 1, 1), date(2024, 12, 31)),
             min_value=date(2022, 1, 1),
             max_value=date(2024, 12, 31),
