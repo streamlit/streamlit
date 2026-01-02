@@ -197,9 +197,29 @@ def _parse_decoded_user_cookie(decoded_cookie: bytes, origin: str) -> dict[str, 
 def _get_signed_cookie_with_chunks(
     cookies: dict[str, str], cookie_name: str
 ) -> bytes | None:
-    """Get a signed cookie, reconstructing from chunks if necessary.
+    """Get a signed cookie value, reconstructing from chunks if necessary.
 
+    Large cookies may be split into multiple chunks (e.g., `_streamlit_user`,
+    `_streamlit_user__1`, `_streamlit_user__2`) due to browser cookie size limits.
+    This function handles both single and chunked cookies transparently.
+
+    Parameters
+    ----------
+    cookies
+        Dictionary of cookie names to their string values.
+    cookie_name
+        The base name of the cookie to retrieve.
+
+    Returns
+    -------
+    bytes | None
+        The decoded (unsigned) cookie value, or None if the cookie doesn't exist
+        or has an invalid signature.
+
+    Notes
+    -----
     Uses itsdangerous signing which is NOT compatible with Tornado's format.
+    Cookies signed by Tornado will fail to decode.
     """
     secret = get_cookie_secret()
 
@@ -207,6 +227,7 @@ def _get_signed_cookie_with_chunks(
         raw_value = cookies.get(name)
         if raw_value is None:
             return None
+        # HTTP cookies use ISO-8859-1 (latin-1) encoding per the HTTP spec
         signed_value = raw_value.encode("latin-1")
         return starlette_app_utils.decode_signed_value(secret, name, signed_value)
 
@@ -214,7 +235,17 @@ def _get_signed_cookie_with_chunks(
 
 
 class StarletteSessionClient(SessionClient):
-    """WebSocket client for Starlette that implements SessionClient interface."""
+    """WebSocket client for Starlette that implements the SessionClient interface.
+
+    This class bridges the synchronous `write_forward_msg` calls from the Streamlit
+    runtime to the asynchronous WebSocket send operations. It uses an internal
+    queue and a background sender task to avoid blocking the calling thread.
+
+    Parameters
+    ----------
+    websocket
+        The Starlette WebSocket connection to send messages through.
+    """
 
     def __init__(self, websocket: WebSocket) -> None:
         self._websocket = websocket
@@ -229,10 +260,15 @@ class StarletteSessionClient(SessionClient):
         self._closed = asyncio.Event()
 
     async def _sender(self) -> None:
-        """Background task to drain the send_queue and write to the WebSocket.
+        """Background task that drains the send queue and writes to the WebSocket.
 
-        This decouples the message generation (which puts into the queue) from the
-        actual network I/O, allowing for non-blocking sends from the main thread.
+        This task runs continuously, waiting for messages on the queue and sending
+        them to the WebSocket. It decouples message generation (sync) from network
+        I/O (async), allowing non-blocking sends from the runtime thread.
+
+        The task terminates when the WebSocket disconnects or an error occurs,
+        at which point it sets the closed flag to signal the client is no longer
+        usable.
         """
         from starlette.websockets import WebSocketDisconnect
 
@@ -248,7 +284,22 @@ class StarletteSessionClient(SessionClient):
             self._closed.set()
 
     def write_forward_msg(self, msg: ForwardMsg) -> None:
-        """Send a ForwardMsg to the browser."""
+        """Send a ForwardMsg to the browser via the WebSocket.
+
+        This method is called synchronously from the Streamlit runtime. The message
+        is serialized and queued for asynchronous sending by the background sender task.
+
+        Parameters
+        ----------
+        msg
+            The ForwardMsg protobuf to send to the client.
+
+        Raises
+        ------
+        SessionClientDisconnectedError
+            If the client is already closed or the send queue is full (client
+            is overwhelmed and not consuming messages fast enough).
+        """
         if self._closed.is_set():
             raise SessionClientDisconnectedError
 
@@ -260,7 +311,11 @@ class StarletteSessionClient(SessionClient):
             raise SessionClientDisconnectedError from exc
 
     async def aclose(self) -> None:
-        """Close the client and cancel the sender task."""
+        """Close the client and release resources.
+
+        Sets the closed flag to prevent further message sends, cancels the
+        background sender task, and waits for it to complete cleanup.
+        """
         self._closed.set()
         self._sender_task.cancel()
         with suppress(asyncio.CancelledError):
@@ -268,9 +323,27 @@ class StarletteSessionClient(SessionClient):
 
 
 def create_websocket_handler(runtime: Runtime) -> Any:
-    """Create the WebSocket endpoint handler.
+    """Create the WebSocket endpoint handler for client-server communication.
 
-    This factory function creates the websocket handler with access to the runtime.
+    This factory function creates a Starlette WebSocket handler that manages the
+    bidirectional communication between the browser and the Streamlit runtime.
+    The handler performs:
+    - Origin validation (CORS/XSRF protection)
+    - Subprotocol negotiation
+    - Session management (connect/disconnect)
+    - User authentication via cookies and trusted headers
+    - BackMsg processing from the client
+    - ForwardMsg sending to the client (via StarletteSessionClient)
+
+    Parameters
+    ----------
+    runtime
+        The Streamlit runtime instance that manages sessions and script execution.
+
+    Returns
+    -------
+    Callable
+        An async function that handles WebSocket connections.
     """
     from starlette.websockets import WebSocketDisconnect
 
@@ -418,7 +491,24 @@ def create_websocket_handler(runtime: Runtime) -> Any:
 
 
 def create_websocket_routes(runtime: Runtime, base_url: str | None) -> list[BaseRoute]:
-    """Create the WebSocket route for client-server communication."""
+    """Create the WebSocket route for client-server communication.
+
+    Creates a route at `/_stcore/stream` (with optional base URL prefix) that handles
+    the bidirectional WebSocket connection between the browser and Streamlit runtime.
+
+    Parameters
+    ----------
+    runtime
+        The Streamlit runtime instance that manages sessions and script execution.
+    base_url
+        Optional base URL path prefix for the route (e.g., "myapp" results in
+        "/myapp/_stcore/stream").
+
+    Returns
+    -------
+    list[BaseRoute]
+        A list containing the single WebSocketRoute for the stream endpoint.
+    """
     from starlette.routing import WebSocketRoute
 
     from streamlit.url_util import make_url_path

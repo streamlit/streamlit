@@ -24,11 +24,15 @@ import pytest
 
 from streamlit.web.server.starlette import starlette_app_utils
 from streamlit.web.server.starlette.starlette_websocket import (
+    StarletteSessionClient,
     _gather_user_info,
+    _get_signed_cookie_with_chunks,
     _is_origin_allowed,
+    _parse_decoded_user_cookie,
     _parse_subprotocols,
     _parse_user_cookie_signed,
     create_websocket_handler,
+    create_websocket_routes,
 )
 from tests.testutil import patch_config_options
 
@@ -185,6 +189,68 @@ class TestGatherUserInfo:
         result = _gather_user_info(headers)
 
         assert result == {"email": "first@example.com"}
+
+
+class TestParseDecodedUserCookie:
+    """Tests for _parse_decoded_user_cookie function."""
+
+    def test_returns_empty_dict_for_invalid_json(self) -> None:
+        """Test that empty dict is returned for invalid JSON."""
+        result = _parse_decoded_user_cookie(b"not-valid-json", "http://localhost")
+
+        assert result == {}
+
+    def test_returns_empty_dict_for_invalid_utf8(self) -> None:
+        """Test that empty dict is returned for invalid UTF-8."""
+        result = _parse_decoded_user_cookie(b"\xff\xfe", "http://localhost")
+
+        assert result == {}
+
+    def test_returns_empty_dict_for_missing_scheme(self) -> None:
+        """Test that empty dict is returned when origin has no scheme."""
+        cookie_data = json.dumps({"origin": "http://localhost", "is_logged_in": True})
+
+        result = _parse_decoded_user_cookie(cookie_data.encode(), "localhost")
+
+        assert result == {}
+
+    def test_returns_empty_dict_for_origin_mismatch(self) -> None:
+        """Test that empty dict is returned when origins don't match."""
+        cookie_data = json.dumps({"origin": "http://localhost", "is_logged_in": True})
+
+        result = _parse_decoded_user_cookie(cookie_data.encode(), "http://other.com")
+
+        assert result == {}
+
+    def test_parses_valid_cookie(self) -> None:
+        """Test that valid cookie data is parsed correctly."""
+        cookie_data = json.dumps(
+            {
+                "origin": "http://localhost",
+                "is_logged_in": True,
+                "email": "user@test.com",
+                "name": "Test User",
+            }
+        )
+
+        result = _parse_decoded_user_cookie(cookie_data.encode(), "http://localhost")
+
+        assert result["is_logged_in"] is True
+        assert result["email"] == "user@test.com"
+        assert result["name"] == "Test User"
+        assert "origin" not in result
+
+    def test_handles_port_in_origin(self) -> None:
+        """Test that origin with port is handled correctly."""
+        cookie_data = json.dumps(
+            {"origin": "http://localhost:8501", "is_logged_in": True}
+        )
+
+        result = _parse_decoded_user_cookie(
+            cookie_data.encode(), "http://localhost:8501/some/path"
+        )
+
+        assert result["is_logged_in"] is True
 
 
 class TestParseUserCookieSigned:
@@ -436,3 +502,121 @@ class TestWebsocketHandlerUserInfoPrecedence:
         assert user_info["email"] == "header@example.com"
         # Cookie values that aren't overridden should still be present
         assert user_info["is_logged_in"] is True
+
+
+class TestGetSignedCookieWithChunks:
+    """Tests for _get_signed_cookie_with_chunks function."""
+
+    @patch_config_options({"server.cookieSecret": "test-secret"})
+    def test_returns_none_for_missing_cookie(self) -> None:
+        """Test that None is returned when cookie is not present."""
+        cookies: dict[str, str] = {}
+
+        result = _get_signed_cookie_with_chunks(cookies, "_streamlit_user")
+
+        assert result is None
+
+    @patch_config_options({"server.cookieSecret": "test-secret"})
+    def test_returns_decoded_value_for_valid_cookie(self) -> None:
+        """Test that signed cookie is decoded correctly."""
+        payload = "test-payload"
+        signed_cookie = starlette_app_utils.create_signed_value(
+            "test-secret", "_streamlit_user", payload
+        )
+        cookies = {"_streamlit_user": signed_cookie.decode("utf-8")}
+
+        result = _get_signed_cookie_with_chunks(cookies, "_streamlit_user")
+
+        assert result == payload.encode("utf-8")
+
+    @patch_config_options({"server.cookieSecret": "test-secret"})
+    def test_returns_none_for_invalid_signature(self) -> None:
+        """Test that None is returned for invalid signature."""
+        cookies = {"_streamlit_user": "invalid-signed-value"}
+
+        result = _get_signed_cookie_with_chunks(cookies, "_streamlit_user")
+
+        assert result is None
+
+
+class TestStarletteSessionClient:
+    """Tests for StarletteSessionClient class."""
+
+    @pytest.mark.anyio
+    async def test_write_forward_msg_raises_when_closed(self) -> None:
+        """Test that write_forward_msg raises when client is closed."""
+        from streamlit.runtime.session_manager import SessionClientDisconnectedError
+
+        mock_websocket = MagicMock()
+        client = StarletteSessionClient(mock_websocket)
+
+        # Mark as closed
+        client._closed.set()
+
+        mock_msg = MagicMock()
+        with pytest.raises(SessionClientDisconnectedError):
+            client.write_forward_msg(mock_msg)
+
+        # Cleanup
+        await client.aclose()
+
+    @pytest.mark.anyio
+    async def test_write_forward_msg_queues_message(self) -> None:
+        """Test that write_forward_msg adds message to queue."""
+        mock_websocket = MagicMock()
+        client = StarletteSessionClient(mock_websocket)
+
+        mock_msg = MagicMock()
+
+        with patch(
+            "streamlit.web.server.starlette.starlette_websocket.serialize_forward_msg"
+        ) as mock_serialize:
+            mock_serialize.return_value = b"serialized"
+            client.write_forward_msg(mock_msg)
+
+        assert client._send_queue.qsize() == 1
+
+        # Cleanup
+        await client.aclose()
+
+    @pytest.mark.anyio
+    async def test_aclose_sets_closed_and_cancels_task(self) -> None:
+        """Test that aclose sets closed flag and cancels sender task."""
+        mock_websocket = MagicMock()
+        client = StarletteSessionClient(mock_websocket)
+
+        await client.aclose()
+
+        assert client._closed.is_set()
+        assert client._sender_task.cancelled()
+
+
+class TestCreateWebsocketRoutes:
+    """Tests for create_websocket_routes function."""
+
+    def test_creates_websocket_route(self) -> None:
+        """Test that WebSocket route is created with correct path."""
+        mock_runtime = MagicMock()
+
+        routes = create_websocket_routes(mock_runtime, base_url=None)
+
+        assert len(routes) == 1
+        assert routes[0].path == "/_stcore/stream"
+
+    def test_creates_route_with_base_url(self) -> None:
+        """Test that WebSocket route is created with base URL prefix."""
+        mock_runtime = MagicMock()
+
+        routes = create_websocket_routes(mock_runtime, base_url="myapp")
+
+        assert len(routes) == 1
+        assert routes[0].path == "/myapp/_stcore/stream"
+
+    def test_creates_route_with_slashed_base_url(self) -> None:
+        """Test that slashes are handled correctly in base URL."""
+        mock_runtime = MagicMock()
+
+        routes = create_websocket_routes(mock_runtime, base_url="/myapp/")
+
+        assert len(routes) == 1
+        assert routes[0].path == "/myapp/_stcore/stream"
