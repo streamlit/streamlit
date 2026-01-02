@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { memo, useCallback, useRef } from "react"
+import { memo, useCallback, useRef } from "react"
 
 import { Check as CheckIcon, Copy as CopyIcon } from "react-feather"
 

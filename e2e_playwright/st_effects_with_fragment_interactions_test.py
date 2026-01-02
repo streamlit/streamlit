@@ -22,6 +22,7 @@ from e2e_playwright.shared.animation_utils import (
     check_if_onscreen,
     wait_for_animation_to_be_hidden,
 )
+from e2e_playwright.shared.app_utils import select_selectbox_option
 
 
 def test_balloons_visibility_with_fragment_interactions(app: Page):
@@ -54,10 +55,7 @@ def test_balloons_visibility_with_fragment_interactions(app: Page):
     wait_for_animation_to_be_hidden(app, animation_images)
 
     # Trigger the fragment re-run by changing the select box value
-    selectbox = app.get_by_test_id("stSelectbox").nth(0).locator("input")
-    selectbox.click()
-    selection_dropdown = app.locator('[data-baseweb="popover"]').first
-    selection_dropdown.locator("li").nth(1).click()
+    select_selectbox_option(app, "Choose a color", "yellow")
 
     # Wait briefly to be sure that the animations aren't running
     app.wait_for_timeout(500)
@@ -107,10 +105,7 @@ def test_snow_visibility_with_fragment_interactions(app: Page):
     wait_for_animation_to_be_hidden(app, animation_images)
 
     # Trigger the fragment re-run by changing the select box value
-    selectbox = app.get_by_test_id("stSelectbox").nth(0).locator("input")
-    selectbox.click()
-    selection_dropdown = app.locator('[data-baseweb="popover"]').first
-    selection_dropdown.locator("li").nth(1).click()
+    select_selectbox_option(app, "Choose a color", "yellow")
 
     # Wait briefly to be sure that the animations aren't running
     app.wait_for_timeout(500)

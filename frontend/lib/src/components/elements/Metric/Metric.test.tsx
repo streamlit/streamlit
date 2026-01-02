@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-import React from "react"
-
 import { screen, waitFor } from "@testing-library/react"
 import embed from "vega-embed"
 import { TopLevelSpec } from "vega-lite"
@@ -198,6 +196,146 @@ describe("Metric element", () => {
     )
   })
 
+  // Markdown support tests
+  describe("Markdown support", () => {
+    const markdownCases = [
+      {
+        name: "bold",
+        markdown: "**bold text**",
+        expectedText: "bold text",
+        expectedElements: ["strong"],
+      },
+      {
+        name: "italic",
+        markdown: "*italic text*",
+        expectedText: "italic text",
+        expectedElements: ["em"],
+      },
+      {
+        name: "inline code",
+        markdown: "`code text`",
+        expectedText: "code text",
+        expectedElements: ["code"],
+      },
+      {
+        name: "combined bold and italic",
+        markdown: "***bold italic***",
+        expectedText: "bold italic",
+        expectedElements: ["strong", "em"],
+      },
+    ]
+
+    it.each(markdownCases)(
+      "renders $name markdown in metric value",
+      ({ markdown, expectedText, expectedElements }) => {
+        const props = getProps({ body: markdown })
+        render(<Metric {...props} />)
+
+        const valueElement = screen.getByTestId("stMetricValue")
+        expectedElements.forEach(element => {
+          expect(valueElement.querySelector(element)).toBeVisible()
+        })
+        expect(valueElement).toHaveTextContent(expectedText)
+      }
+    )
+
+    it.each(markdownCases)(
+      "renders $name markdown in delta",
+      ({ markdown, expectedText, expectedElements }) => {
+        const props = getProps({ delta: markdown })
+        render(<Metric {...props} />)
+
+        const deltaElement = screen.getByTestId("stMetricDelta")
+        expectedElements.forEach(element => {
+          expect(deltaElement.querySelector(element)).toBeVisible()
+        })
+        expect(deltaElement).toHaveTextContent(expectedText)
+      }
+    )
+
+    it.each(["body", "delta"] as const)(
+      "does not render raw HTML in %s",
+      field => {
+        const props = getProps({ [field]: "<b>html text</b>" })
+        render(<Metric {...props} />)
+
+        const testId = field === "body" ? "stMetricValue" : "stMetricDelta"
+        const element = screen.getByTestId(testId)
+        // HTML should be escaped, not rendered as bold
+        expect(element.querySelector("b")).toBeNull()
+        expect(element).toHaveTextContent("<b>html text</b>")
+      }
+    )
+  })
+
+  // Format parameter tests
+  describe("Format parameter", () => {
+    it("formats value with %.2f format to exact decimal places", () => {
+      const props = getProps({ body: "1234.5678", format: "%.2f" })
+      render(<Metric {...props} />)
+
+      expect(screen.getByTestId("stMetricValue").textContent).toBe("1234.57")
+    })
+
+    it.each([
+      { value: "1234567", format: "compact", contains: ["M"] },
+      { value: "-1234567", format: "compact", contains: ["-"] },
+      { value: "1234.56", format: "dollar", contains: ["$"] },
+      { value: "0.5", format: "percent", contains: ["50", "%"] },
+    ])(
+      "formats value '$value' with format '$format'",
+      ({ value, format, contains }) => {
+        const props = getProps({ body: value, format })
+        render(<Metric {...props} />)
+
+        const valueElement = screen.getByTestId("stMetricValue")
+        contains.forEach(text => {
+          expect(valueElement.textContent).toContain(text)
+        })
+      }
+    )
+
+    it("formats numeric delta with compact format", () => {
+      const props = getProps({ delta: "1000", format: "compact" })
+      render(<Metric {...props} />)
+
+      const deltaElement = screen.getByTestId("stMetricDelta")
+      expect(deltaElement.textContent).not.toBe("1000")
+    })
+
+    it.each([
+      { field: "body", value: "70 °F", testId: "stMetricValue" },
+      { field: "delta", value: "+5%", testId: "stMetricDelta" },
+      { field: "body", value: "—", testId: "stMetricValue" },
+      { field: "body", value: "$100", testId: "stMetricValue" },
+    ])(
+      "does not format non-numeric $field '$value'",
+      ({ field, value, testId }) => {
+        const props = getProps({ [field]: value, format: "compact" })
+        render(<Metric {...props} />)
+
+        expect(screen.getByTestId(testId).textContent).toBe(value)
+      }
+    )
+
+    it("does not format when format is empty", () => {
+      const props = getProps({ body: "1234567", format: "" })
+      render(<Metric {...props} />)
+
+      expect(screen.getByTestId("stMetricValue").textContent).toBe("1234567")
+    })
+
+    it("falls back to original value when format is invalid", () => {
+      // "%d %d" expects two arguments, which will cause formatNumber to throw
+      const props = getProps({ body: "1234", delta: "100", format: "%d %d" })
+      render(<Metric {...props} />)
+
+      // Should fall back to unformatted values instead of crashing
+      expect(screen.getByTestId("stMetricValue").textContent).toBe("1234")
+      expect(screen.getByTestId("stMetricDelta").textContent).toBe("100")
+    })
+  })
+
   // Chart feature tests
   describe("Chart feature", () => {
     it("renders chart when chartData is provided", () => {
@@ -337,15 +475,13 @@ describe("Metric element", () => {
       })
 
       const embedCall = vi.mocked(embed).mock.calls[0]
-      const tooltipOptions = embedCall[2]?.tooltip as
-        | { formatTooltip: (value: { y: number }) => string }
-        | undefined
+      const tooltipOptions = embedCall[2]?.tooltip as {
+        formatTooltip: (value: { y: number }) => string
+      }
 
       expect(tooltipOptions).toBeDefined()
-      if (tooltipOptions) {
-        expect(tooltipOptions.formatTooltip({ y: 12.345 })).toBe("12.345")
-        expect(tooltipOptions.formatTooltip({ y: 42 })).toBe("42")
-      }
+      expect(tooltipOptions.formatTooltip({ y: 12.345 })).toBe("12.345")
+      expect(tooltipOptions.formatTooltip({ y: 42 })).toBe("42")
     })
   })
 
@@ -478,7 +614,27 @@ describe("Metric element", () => {
           encodings: ["x"],
           nearest: true,
           on: "mousemove",
-          clear: "mouseout",
+          clear: "mouseleave",
+        }),
+      })
+    })
+
+    it("throttles hover selection for large datasets", () => {
+      const largeChartData = Array.from({ length: 1500 }, (_, index) =>
+        Number(index)
+      )
+      const spec = getMetricChartSpec(
+        largeChartData,
+        MetricProto.ChartType.LINE,
+        200,
+        mockTheme.emotion,
+        MetricProto.MetricColor.RED
+      ) as TopLevelSpec & { layer: unknown[] }
+
+      const pointsLayer = spec.layer?.[1] as { params?: unknown[] }
+      expect(pointsLayer?.params?.[0]).toMatchObject({
+        select: expect.objectContaining({
+          on: "mousemove{16}",
         }),
       })
     })

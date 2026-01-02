@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, {
+import {
   memo,
   ReactElement,
   useCallback,
@@ -188,9 +188,7 @@ function Toast({ element }: Readonly<ToastProps>): ReactElement {
     }
 
     // Array must be empty to run as mount/cleanup
-    // TODO: Update to match React best practices
-    // eslint-disable-next-line react-hooks/react-compiler
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
   }, [])
 
   useEffect(() => {

@@ -22,4 +22,5 @@ option java_outer_classname = "HtmlProto";
 // st.html
 message Html {
   string body = 1;
+  bool unsafe_allow_javascript = 2;
 }

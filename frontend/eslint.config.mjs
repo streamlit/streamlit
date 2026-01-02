@@ -22,7 +22,7 @@ import { createJiti } from "jiti"
 import eslint from "@eslint/js"
 import tseslint from "typescript-eslint"
 import react from "eslint-plugin-react"
-import * as reactHooks from "eslint-plugin-react-hooks"
+import reactHooks from "eslint-plugin-react-hooks"
 import eslintReact from "@eslint-react/eslint-plugin"
 import importPlugin from "eslint-plugin-import"
 import eslintPluginPrettierRecommended from "eslint-plugin-prettier/recommended"
@@ -31,7 +31,7 @@ import vitest from "@vitest/eslint-plugin"
 import testingLibrary from "eslint-plugin-testing-library"
 import noRelativeImportPaths from "eslint-plugin-no-relative-import-paths"
 import globals from "globals"
-import { globalIgnores } from "eslint/config"
+import { defineConfig, globalIgnores } from "eslint/config"
 import jsxA11y from "eslint-plugin-jsx-a11y"
 
 // Import other configs
@@ -48,11 +48,100 @@ const streamlitCustom = await jiti.import(
   { default: true }
 )
 
-export default tseslint.config([
+/**
+ * Helper to create the no-restricted-imports rule config.
+ *
+ * @param {Object[]} additionalPatterns - Extra "patterns" to restrict (merged with the base rules).
+ * @param {boolean} isTestFile - Whether to apply the relaxed rules for test files.
+ */
+export const getNoRestrictedImports = (
+  additionalPatterns = [],
+  isTestFile = false
+) => {
+  const restrictedImportPaths = [
+    {
+      name: "timezone-mock",
+      message: "Please use the withTimezones test harness instead",
+    },
+    {
+      name: "@emotion/react",
+      message:
+        "Please use the useEmotionTheme hook instead of useTheme for type-safety",
+      importNames: ["useTheme"],
+    },
+    {
+      name: "axios",
+      importNames: ["CancelToken"],
+      message: "Please use the `AbortController` API instead of `CancelToken`",
+    },
+    {
+      name: "react",
+      importNames: ["default"],
+      message:
+        "Please use named imports for React (e.g., import { useState } from 'react';)",
+    },
+  ]
+
+  const basePaths = isTestFile
+    ? restrictedImportPaths
+    : [
+        ...restrictedImportPaths,
+        {
+          name: "@streamlit/lib/testing",
+          message: "Test utilities must stay in test files.",
+        },
+      ]
+  return [
+    "error",
+    {
+      paths: [...basePaths],
+      patterns: [...additionalPatterns],
+    },
+  ]
+}
+
+/**
+ * Helper to create the no-restricted-properties rule config.
+ *
+ * @param {boolean} allowWindowStreamlit - Whether to allow window.__streamlit access.
+ *   Set to true for test files that need to mock the config module itself.
+ */
+export const getNoRestrictedProperties = (allowWindowStreamlit = false) => {
+  const restrictions = [
+    {
+      object: "window",
+      property: "innerWidth",
+      message: "Please use the `useWindowDimensionsContext` hook instead.",
+    },
+    {
+      object: "window",
+      property: "innerHeight",
+      message: "Please use the `useWindowDimensionsContext` hook instead.",
+    },
+    {
+      object: "navigator",
+      property: "clipboard",
+      message: "Please use the `useCopyToClipboard` hook instead.",
+    },
+  ]
+
+  if (!allowWindowStreamlit) {
+    restrictions.push({
+      object: "window",
+      property: "__streamlit",
+      message:
+        "Please access window.__streamlit properties via StreamlitConfig in '@streamlit/utils' instead.",
+    })
+  }
+
+  return ["error", ...restrictions]
+}
+
+export default defineConfig([
   // Base recommended configs
   eslint.configs.recommended,
   tseslint.configs.recommendedTypeChecked,
-  reactHooks.configs.recommended,
+  reactHooks.configs.flat.recommended,
   eslintReact.configs["recommended-type-checked"],
   importPlugin.flatConfigs.recommended,
   eslintPluginPrettierRecommended,
@@ -104,9 +193,6 @@ export default tseslint.config([
       "react/prop-types": "off",
       // We don't escape entities
       "react/no-unescaped-entities": "off",
-      // Opting into the latest react-compiler rules
-      // @see https://react.dev/blog/2025/04/21/react-compiler-rc
-      "react-hooks/react-compiler": "error",
       // We do want to discourage the usage of flushSync
       "@eslint-react/dom/no-flush-sync": "error",
       // This was giving false positives
@@ -117,6 +203,8 @@ export default tseslint.config([
       "@eslint-react/hooks-extra/no-direct-set-state-in-use-effect": "off",
       // We don't want to warn about empty fragments
       "@eslint-react/no-useless-fragment": "off",
+      // Prevent context values from being recreated on every render
+      "react/jsx-no-constructed-context-values": "error",
       // We want to enforce display names for context providers for better debugging
       "@eslint-react/no-missing-context-display-name": "error",
       // TypeScript rules with type-checking
@@ -170,6 +258,17 @@ export default tseslint.config([
       "@typescript-eslint/no-non-null-assertion": "error",
       // Prefer optional chaining over && chains
       "@typescript-eslint/prefer-optional-chain": "error",
+      // Ensure switch statements cover all possible enum/union values
+      "@typescript-eslint/switch-exhaustiveness-check": [
+        "error",
+        {
+          considerDefaultExhaustiveForUnions: true, // Allow default case for unions
+        },
+      ],
+      // Flag class properties that are never modified and should be readonly
+      "@typescript-eslint/prefer-readonly": "warn",
+      // Ensure return await is used in try/catch for proper error stack traces
+      "@typescript-eslint/return-await": ["error", "in-try-catch"],
       // Permit for-of loops
       "no-restricted-syntax": [
         "error",
@@ -200,24 +299,7 @@ export default tseslint.config([
           message: "Please use the `useWindowDimensionsContext` hook instead.",
         },
       ],
-      "no-restricted-properties": [
-        "error",
-        {
-          object: "window",
-          property: "innerWidth",
-          message: "Please use the `useWindowDimensionsContext` hook instead.",
-        },
-        {
-          object: "window",
-          property: "innerHeight",
-          message: "Please use the `useWindowDimensionsContext` hook instead.",
-        },
-        {
-          object: "navigator",
-          property: "clipboard",
-          message: "Please use the `useCopyToClipboard` hook instead.",
-        },
-      ],
+      "no-restricted-properties": getNoRestrictedProperties(),
       // Imports should be `import "./FooModule"`, not `import "./FooModule.js"`
       // We need to configure this to check our .tsx files, see:
       // https://github.com/benmosher/eslint-plugin-import/issues/1615#issuecomment-577500405
@@ -298,39 +380,27 @@ export default tseslint.config([
       // We only turn this rule on for certain directories
       "streamlit-custom/enforce-memo": "off",
       "streamlit-custom/no-force-reflow-access": "error",
-      "no-restricted-imports": [
-        "error",
-        {
-          paths: [
-            {
-              name: "timezone-mock",
-              message: "Please use the withTimezones test harness instead",
-            },
-            {
-              name: "@emotion/react",
-              message:
-                "Please use the useEmotionTheme hook instead of useTheme for type-safety",
-              importNames: ["useTheme"],
-            },
-            {
-              name: "axios",
-              importNames: ["CancelToken"],
-              message:
-                "Please use the `AbortController` API instead of `CancelToken`",
-            },
-          ],
-        },
-      ],
+      "streamlit-custom/no-aria-hidden-with-focusable-children": "error",
+      "no-restricted-imports": getNoRestrictedImports(),
       // React configuration
       "react/jsx-uses-react": "off",
       "react/react-in-jsx-scope": "off",
       // React hooks rules
-      ...reactHooks.configs.recommended.rules,
+      ...reactHooks.configs.flat.recommended.rules,
+      // Enforce "You Might Not Need an Effect" pattern - don't derive state in effects
+      "react-hooks/no-deriving-state-in-effects": "error",
       // jsx-a11y rules
       ...jsxA11y.flatConfigs.recommended.rules,
       // prohibit autoFocus prop
       // https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/blob/main/docs/rules/no-autofocus.md
       "jsx-a11y/no-autofocus": ["error", { ignoreNonDOM: true }],
+      // Stricter a11y enforcement beyond the recommended ruleset:
+      // - Require accessible names for icon-only controls
+      "jsx-a11y/control-has-associated-label": "error",
+      // - Do not hide focusable controls from assistive technology
+      "jsx-a11y/no-aria-hidden-on-focusable": "error",
+      // - Avoid making non-interactive elements keyboard-focusable via tabIndex>=0
+      "jsx-a11y/no-noninteractive-tabindex": "error",
     },
     settings: {
       react: {
@@ -363,6 +433,31 @@ export default tseslint.config([
 
       // Testing library rules
       "testing-library/prefer-user-event": "error",
+      // Prefer screen.getBy* over destructured queries for consistency
+      "testing-library/prefer-screen-queries": "warn",
+      // Prefer findBy* over waitFor + getBy* patterns
+      "testing-library/prefer-find-by": "error",
+      // Enforce consistent use of it() over test()
+      "vitest/consistent-test-it": ["error", { fn: "it" }],
+      "no-restricted-imports": getNoRestrictedImports([], true),
+    },
+  },
+  // Specific test files that need to access window.__streamlit for testing the config module itself
+  {
+    files: ["utils/src/config/index.test.ts", "lib/src/theme/utils.test.ts"],
+    rules: {
+      // These test files need to set window.__streamlit to test the config capture behavior
+      "no-restricted-properties": getNoRestrictedProperties(true),
+    },
+  },
+  // Config module - allow direct window.__streamlit access for capturing values
+  {
+    files: ["utils/src/config/index.ts"],
+    rules: {
+      // This is the only place where direct window.__streamlit access is allowed
+      // as it captures values at module load time and exports frozen copies.
+      // Other restrictions (innerWidth, innerHeight, clipboard) still apply.
+      "no-restricted-properties": getNoRestrictedProperties(true),
     },
   },
   // Theme files specific configuration

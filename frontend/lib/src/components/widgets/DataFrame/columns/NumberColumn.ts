@@ -23,13 +23,13 @@ import {
   isPeriodType,
   isUnsignedIntegerType,
 } from "~lib/dataframes/arrowTypeUtils"
+import { formatNumber } from "~lib/util/formatNumber"
 import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
 
 import {
   BaseColumn,
   BaseColumnProps,
   countDecimals,
-  formatNumber,
   getErrorCell,
   mergeColumnParameters,
   toSafeNumber,

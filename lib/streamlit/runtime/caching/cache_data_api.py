@@ -25,6 +25,7 @@ from typing import (
     Literal,
     TypeAlias,
     TypeVar,
+    cast,
     overload,
 )
 
@@ -61,11 +62,16 @@ from streamlit.runtime.caching.storage.dummy_cache_storage import (
     MemoryCacheStorageManager,
 )
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.runtime.stats import CacheStat, CacheStatsProvider, group_stats
+from streamlit.runtime.stats import (
+    CACHE_MEMORY_FAMILY,
+    CacheStat,
+    StatsProvider,
+    group_cache_stats,
+)
 from streamlit.time_util import time_to_seconds
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Sequence
     from datetime import timedelta
 
     from streamlit.runtime.caching.hashing import HashFuncsDict
@@ -148,12 +154,16 @@ class CachedDataFuncInfo(CachedFuncInfo[P, R]):
         )
 
 
-class DataCaches(CacheStatsProvider):
+class DataCaches(StatsProvider):
     """Manages all DataCache instances."""
 
     def __init__(self) -> None:
         self._caches_lock = threading.Lock()
         self._function_caches: dict[str, DataCache[Any]] = {}
+
+    @property
+    def stats_families(self) -> Sequence[str]:
+        return (CACHE_MEMORY_FAMILY,)
 
     def get_cache(
         self,
@@ -240,7 +250,9 @@ class DataCaches(CacheStatsProvider):
                     data_cache.storage.close()
             self._function_caches = {}
 
-    def get_stats(self) -> list[CacheStat]:
+    def get_stats(
+        self, _family_names: Sequence[str] | None = None
+    ) -> dict[str, list[CacheStat]]:
         with self._caches_lock:
             # Shallow-clone our caches. We don't want to hold the global
             # lock during stats-gathering.
@@ -248,8 +260,15 @@ class DataCaches(CacheStatsProvider):
 
         stats: list[CacheStat] = []
         for cache in function_caches.values():
-            stats.extend(cache.get_stats())
-        return group_stats(stats)
+            cache_stats = cache.get_stats()
+            for family_stats in cache_stats.values():
+                stats.extend(family_stats)
+        if not stats:
+            return {}
+        # In general, get_stats methods need to be able to return only requested stat
+        # families, but this method only returns a single family, and we're guaranteed
+        # that it was one of those requested if we make it here.
+        return {CACHE_MEMORY_FAMILY: group_cache_stats(stats)}
 
     def validate_cache_params(
         self,
@@ -315,7 +334,7 @@ class DataCaches(CacheStatsProvider):
 _data_caches = DataCaches()
 
 
-def get_data_cache_stats_provider() -> CacheStatsProvider:
+def get_data_cache_stats_provider() -> StatsProvider:
     """Return the StatsProvider for all @st.cache_data functions."""
     return _data_caches
 
@@ -372,7 +391,7 @@ class CacheDataAPI:
         hash_funcs: HashFuncsDict | None = None,
     ) -> CachedFunc[P, R] | Callable[[Callable[P, R]], CachedFunc[P, R]]:
         return self._decorator(
-            func,
+            func,  # ty: ignore[invalid-argument-type]
             ttl=ttl,
             max_entries=max_entries,
             persist=persist,
@@ -630,10 +649,15 @@ class DataCache(Cache[R]):
         self.max_entries = max_entries
         self.persist = persist
 
-    def get_stats(self) -> list[CacheStat]:
-        if isinstance(self.storage, CacheStatsProvider):
-            return self.storage.get_stats()
-        return []
+    def get_stats(
+        self, _family_names: Sequence[str] | None = None
+    ) -> dict[str, list[CacheStat]]:
+        # In general, get_stats methods need to be able to return only requested stat
+        # families, but this method only returns a single family, and we're guaranteed
+        # that it was one of those requested if we make it here.
+        if isinstance(self.storage, StatsProvider):
+            return cast("dict[str, list[CacheStat]]", self.storage.get_stats())
+        return {}
 
     def read_result(self, key: str) -> CachedResult[R]:
         """Read a value and messages from the cache. Raise `CacheKeyNotFoundError`

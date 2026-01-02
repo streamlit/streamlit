@@ -15,9 +15,9 @@
  */
 
 import styled from "@emotion/styled"
-import { transparentize } from "color2k"
 
 import { STALE_STYLES, STALE_TRANSITION_PARAMS } from "~lib/theme"
+import { getPrimaryFocusBoxShadow } from "~lib/theme/utils"
 
 export interface StyledExpandableContainerProps {
   empty: boolean
@@ -50,7 +50,7 @@ export const StyledDetails = styled.details<StyledDetailsProps>(
   })
 )
 
-export const StyledSummaryHeading = styled.span({
+export const StyledSummaryHeading = styled.span(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   flexGrow: 1,
@@ -58,7 +58,8 @@ export const StyledSummaryHeading = styled.span({
   width: "100%",
   maxWidth: "100%",
   overflow: "hidden",
-})
+  gap: theme.spacing.sm,
+}))
 
 export const StyledSummaryLabelWrapper = styled.div({
   display: "flex",
@@ -85,7 +86,7 @@ export const StyledSummary = styled.summary<StyledSummaryProps>(
       outline: "none",
     },
     "&:focus-visible": {
-      boxShadow: `0 0 0 0.2rem ${transparentize(theme.colors.primary, 0.5)}`,
+      boxShadow: getPrimaryFocusBoxShadow(theme),
     },
     fontSize: "inherit",
     paddingLeft: theme.spacing.md,

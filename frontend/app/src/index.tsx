@@ -17,7 +17,7 @@
 // Timestamp when the Streamlit execution started for GUEST_READY message
 const streamlitExecutionStartedAt = Date.now()
 
-import React, { StrictMode } from "react"
+import { StrictMode } from "react"
 
 import log from "loglevel"
 import { createRoot } from "react-dom/client"

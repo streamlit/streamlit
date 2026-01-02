@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { memo } from "react"
+import { memo } from "react"
 
 import { ChevronLeft, ChevronRight } from "@emotion-icons/material-outlined"
 
@@ -27,7 +27,6 @@ import { StyledPagination, StyledPaginators } from "./styled-components"
 export interface Props {
   currentPage: number
   totalPages: number
-  // eslint-disable-next-line @eslint-react/no-unused-props
   pageSize: number
   onNext: (event: React.SyntheticEvent<HTMLElement>) => void
   onPrevious: (event: React.SyntheticEvent<HTMLElement>) => void

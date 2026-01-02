@@ -15,6 +15,7 @@
 import altair as alt
 import numpy as np
 import pandas as pd
+from vega_datasets import data
 
 import streamlit as st
 
@@ -140,3 +141,55 @@ cut_off_chart = (
 
 st.write("Altair chart cut off if legend title is None (Issue #9339)")
 st.altair_chart(cut_off_chart)
+
+# Issue #13410: Scatter plot with marginal histograms (nested vconcat+hconcat)
+st.write("Scatter plot with marginal histograms")
+
+# Create a scatter plot with marginal histograms using the pattern: top_hist & (points | right_hist)
+# This creates a vconcat containing hconcat, which was broken in v1.42+
+source = data.iris()
+base = alt.Chart(source)
+
+xscale = alt.Scale(domain=(4.0, 8.0))
+yscale = alt.Scale(domain=(1.9, 4.55))
+
+bar_args = {"opacity": 0.3, "binSpacing": 0}
+
+points = base.mark_circle().encode(
+    alt.X("sepalLength", scale=xscale),
+    alt.Y("sepalWidth", scale=yscale),
+    color="species",
+)
+
+top_hist = (
+    base.mark_bar(**bar_args)
+    .encode(
+        alt.X(
+            "sepalLength:Q",
+            bin=alt.Bin(maxbins=20, extent=xscale.domain),
+            stack=None,
+            title="",
+        ),
+        alt.Y("count()", stack=None, title=""),
+        alt.Color("species:N"),
+    )
+    .properties(height=60)
+)
+
+right_hist = (
+    base.mark_bar(**bar_args)
+    .encode(
+        alt.Y(
+            "sepalWidth:Q",
+            bin=alt.Bin(maxbins=20, extent=yscale.domain),
+            stack=None,
+            title="",
+        ),
+        alt.X("count()", stack=None, title=""),
+        alt.Color("species:N"),
+    )
+    .properties(width=60)
+)
+
+marginal_hist_chart = top_hist & (points | right_hist)
+st.altair_chart(marginal_hist_chart, theme="streamlit")

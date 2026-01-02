@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-import React from "react"
-
 import { screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
@@ -143,7 +141,7 @@ describe("AudioInputActionButton", () => {
     it("should render the uploading spinner", () => {
       render(<AudioInputActionButtons {...getProps()} isUploading={true} />)
 
-      expect(screen.getByLabelText("Uploading")).toBeInTheDocument()
+      expect(screen.getByTestId("stSpinnerIcon")).toBeVisible()
     })
   })
 

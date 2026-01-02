@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-import React, { memo, ReactElement } from "react"
+import { memo, ReactElement } from "react"
 
 import AlertContainer, { Kind } from "~lib/components/shared/AlertContainer"
 import { DynamicIcon } from "~lib/components/shared/Icon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 
-import { StyledAlertContent } from "./styled-components"
+import { StyledAlertContent, StyledAlertIcon } from "./styled-components"
 
 export interface AlertElementProps {
   body: string
@@ -50,11 +50,13 @@ function AlertElement({
       <AlertContainer kind={kind}>
         <StyledAlertContent>
           {icon && (
-            <DynamicIcon
-              iconValue={icon}
-              size="lg"
-              testid="stAlertDynamicIcon"
-            />
+            <StyledAlertIcon>
+              <DynamicIcon
+                iconValue={icon}
+                size="lg"
+                testid="stAlertDynamicIcon"
+              />
+            </StyledAlertIcon>
           )}
 
           <StreamlitMarkdown

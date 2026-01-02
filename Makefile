@@ -78,14 +78,11 @@ clean:
 	rm -rf lib/streamlit/static
 	rm -f lib/Pipfile.lock
 	rm -rf frontend/app/build
-	rm -rf frontend/node_modules
+	find . -name node_modules -type d -prune -exec rm -rf {} \; || true
 	rm -rf frontend/app/performance/lighthouse/reports
-	rm -rf frontend/app/node_modules
-	rm -rf frontend/lib/node_modules
-	rm -rf frontend/connection/node_modules
 	rm -rf frontend/test_results
-	rm -f frontend/protobuf/src/proto.js
-	rm -f frontend/protobuf/src/proto.d.ts
+	rm -f frontend/protobuf/proto.js
+	rm -f frontend/protobuf/proto.d.ts
 	rm -rf frontend/public/reports
 	rm -rf frontend/lib/dist
 	rm -rf frontend/connection/dist
@@ -214,7 +211,7 @@ frontend-init:
 .PHONY: frontend
 # Build the frontend.
 frontend:
-	cd frontend/ ; yarn workspaces foreach --all --topological run build
+	cd frontend/ ; yarn workspaces foreach --all --topological --parallel run build
 	rsync -av --delete --delete-excluded --exclude=reports \
 		frontend/app/build/ lib/streamlit/static/
 	# Move manifest.json to a location that can actually be served by the Tornado
@@ -225,7 +222,7 @@ frontend:
 # Build the frontend with the profiler enabled.
 frontend-with-profiler:
 	# Build frontend dependent libraries (excluding app and lib):
-	cd frontend/ ; yarn workspaces foreach --all --exclude @streamlit/app --exclude @streamlit/lib --topological run build
+	cd frontend/ ; yarn workspaces foreach --all --exclude @streamlit/app --exclude @streamlit/lib --topological --parallel run build
 	# Build the app with the profiler enabled:
 	cd frontend/ ; yarn workspace @streamlit/app buildWithProfiler
 	rsync -av --delete --delete-excluded --exclude=reports \
@@ -234,7 +231,7 @@ frontend-with-profiler:
 .PHONY: frontend-fast
 # Build the frontend (as fast as possible).
 frontend-fast:
-	cd frontend/ ; yarn workspaces foreach --recursive --topological --from @streamlit/app --exclude @streamlit/lib run build
+	cd frontend/ ; yarn workspaces foreach --recursive --topological --parallel --from @streamlit/app --exclude @streamlit/lib run build
 	rsync -av --delete --delete-excluded --exclude=reports \
 		frontend/app/build/ lib/streamlit/static/
 
@@ -246,18 +243,18 @@ frontend-dev:
 .PHONY: frontend-lint
 # Lint and check formatting of frontend files.
 frontend-lint:
-	cd frontend/ ; yarn workspaces foreach --all run formatCheck
-	cd frontend/ ; yarn workspaces foreach --all run lint
+	cd frontend/ ; yarn workspaces foreach --all --parallel run formatCheck
+	cd frontend/ ; yarn workspaces foreach --all --parallel run lint
 
 .PHONY: frontend-types
 # Run the frontend type checker.
 frontend-types:
-	cd frontend/ ; yarn workspaces foreach --all run typecheck
+	cd frontend/ ; yarn workspaces foreach --all --parallel run typecheck
 
 .PHONY: frontend-format
 # Format frontend files.
 frontend-format:
-	cd frontend/ ; yarn workspaces foreach --all run format
+	cd frontend/ ; yarn workspaces foreach --all --parallel run format
 
 .PHONY: frontend-tests
 # Run frontend unit tests and generate coverage report.
@@ -311,7 +308,6 @@ update-notices:
 	./scripts/append_license.sh frontend/app/src/assets/fonts/Source_Serif/Source-Serif.LICENSE
 	./scripts/append_license.sh frontend/app/src/assets/img/Material-Icons.LICENSE
 	./scripts/append_license.sh frontend/app/src/assets/img/Open-Iconic.LICENSE
-	./scripts/append_license.sh frontend/lib/src/vendor/bokeh/bokeh-LICENSE.txt
 	./scripts/append_license.sh frontend/lib/src/vendor/react-bootstrap-LICENSE.txt
 	./scripts/append_license.sh frontend/lib/src/vendor/fzy.js/fzyjs-LICENSE.txt
 
@@ -413,7 +409,9 @@ autofix:
 	# JS fixes:
 	make frontend-init
 	make frontend-format
-	cd frontend/ ; yarn workspaces foreach --all run lint --fix
+	cd frontend/ ; yarn workspaces foreach --all --parallel run lint --fix
+	# Dedupe yarn.lock
+	cd frontend ; yarn dedupe
 	# Other fixes:
 	make update-notices
 	# Run all pre-commit fixes but not fail if any of them don't work.

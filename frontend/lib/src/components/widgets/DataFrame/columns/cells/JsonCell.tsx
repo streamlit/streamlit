@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-import * as React from "react"
-
 import {
   type CustomCell,
   type CustomRenderer,

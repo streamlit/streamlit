@@ -51,6 +51,7 @@ from streamlit.runtime.scriptrunner_utils.script_requests import (
 )
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
     ScriptRunContext,
+    UserInfoType,
     add_script_run_ctx,
     get_script_run_ctx,
 )
@@ -174,7 +175,7 @@ class ScriptRunner:
         uploaded_file_mgr: UploadedFileManager,
         script_cache: ScriptCache,
         initial_rerun_data: RerunData,
-        user_info: dict[str, str | bool | None],
+        user_info: UserInfoType,
         fragment_storage: FragmentStorage,
         pages_manager: PagesManager,
     ) -> None:
@@ -529,7 +530,9 @@ class ScriptRunner:
                     widget_ids = {w.id for w in rerun_data.widget_states.widgets}
                 self._session_state.on_script_finished(widget_ids)
 
-            fragment_ids_this_run = list(rerun_data.fragment_id_queue)
+            fragment_ids_this_run: list[str] | None = (
+                rerun_data.fragment_id_queue or None
+            )
 
             ctx.reset(
                 query_string=rerun_data.query_string,

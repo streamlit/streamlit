@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-import React from "react"
-
 import { screen } from "@testing-library/react"
 
 import { render } from "~lib/test_util"
@@ -30,7 +28,7 @@ describe("Dataframe Tooltip", () => {
     clearTooltip: vi.fn(),
   }
 
-  test("renders the tooltip with provided content", () => {
+  it("renders the tooltip with provided content", () => {
     render(<Tooltip {...defaultProps} />)
 
     const tooltipContent = screen.getByText("This is a tooltip.")
@@ -39,7 +37,7 @@ describe("Dataframe Tooltip", () => {
     expect(tooltipContent).toHaveStyle("font-weight: 600")
   })
 
-  test("renders the tooltip at the correct position", () => {
+  it("renders the tooltip at the correct position", () => {
     const customPositionProps: TooltipProps = {
       top: 200,
       left: 300,

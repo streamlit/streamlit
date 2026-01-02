@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { FC } from "react"
+import { FC } from "react"
 
 import { screen } from "@testing-library/react"
 
@@ -34,8 +34,7 @@ interface InnerProps {
 let innerRenderCount = 0
 const Inner: FC<InnerProps> = props => {
   // Side-effect: mutable variable for testing render counts
-  // TODO: Update to match React best practices
-  // eslint-disable-next-line react-hooks/react-compiler
+  // eslint-disable-next-line react-hooks/globals -- TODO: Update to match React best practices
   innerRenderCount += 1
   return <div>{props.name}</div>
 }

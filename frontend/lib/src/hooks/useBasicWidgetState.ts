@@ -107,6 +107,7 @@ export function useBasicWidgetClientState<
   // widget manager to update its state too.
   useEffect(() => {
     if (isNullOrUndefined(nextValueWithSource)) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- TODO: Do not set state in effect
     setNextValueWithSource(null) // Clear "event".
 
     setCurrentValue(nextValueWithSource.value)
@@ -144,8 +145,7 @@ export function useBasicWidgetClientState<
 }
 
 // Interface for a proto that has a setValue, and .formId
-interface ValueElementProtoInterfaceWithSetValue
-  extends ValueElementProtoInterface {
+interface ValueElementProtoInterfaceWithSetValue extends ValueElementProtoInterface {
   setValue: boolean
 }
 
@@ -161,6 +161,13 @@ export interface UseBasicWidgetStateArgs<
 
 /**
  * A React hook that makes the simplest kinds of widgets very easy to implement.
+ *
+ * This hook handles the standard widget state management pattern, including:
+ * - Initializing from WidgetStateManager or default values
+ * - Responding to setValue updates from session_state
+ * - Handling form clearing for clear_on_submit forms
+ *
+ * Examples: TextInput, NumberInput, Checkbox, Slider, etc.
  */
 export function useBasicWidgetState<
   T, // Type of the value stored in WidgetStateManager.
@@ -199,8 +206,7 @@ export function useBasicWidgetState<
   // "event", this time using the .setValue property of the proto.
   useEffect(() => {
     if (!element.setValue) return
-    // TODO: Update to match React best practices
-    // eslint-disable-next-line react-hooks/react-compiler
+    // eslint-disable-next-line react-hooks/immutability -- TODO: Update to match React best practices
     element.setValue = false // Clear "event".
 
     setNextValueWithSource({

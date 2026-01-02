@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { memo, ReactElement } from "react"
+import { memo, ReactElement, useCallback } from "react"
 
 import { Button as ButtonProto } from "@streamlit/protobuf"
 
@@ -25,6 +25,8 @@ import BaseButton, {
   BaseButtonTooltip,
   DynamicButtonLabel,
 } from "~lib/components/shared/BaseButton"
+import { mapProtoIconPosition } from "~lib/components/shared/BaseButton/iconPosition"
+import { useRegisterShortcut } from "~lib/hooks/useRegisterShortcut"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 export interface Props {
@@ -36,6 +38,7 @@ export interface Props {
 
 function Button(props: Props): ReactElement {
   const { disabled, element, widgetMgr, fragmentId } = props
+  const shortcut = element.shortcut ? element.shortcut : undefined
 
   let kind = BaseButtonKind.SECONDARY
   if (element.type === "primary") {
@@ -43,6 +46,20 @@ function Button(props: Props): ReactElement {
   } else if (element.type === "tertiary") {
     kind = BaseButtonKind.TERTIARY
   }
+
+  const handleTrigger = useCallback(() => {
+    if (disabled) {
+      return
+    }
+
+    void widgetMgr.setTriggerValue(element, { fromUi: true }, fragmentId)
+  }, [disabled, widgetMgr, element, fragmentId])
+
+  useRegisterShortcut({
+    shortcut,
+    disabled,
+    onActivate: handleTrigger,
+  })
 
   return (
     <Box className="stButton" data-testid="stButton">
@@ -57,11 +74,14 @@ function Button(props: Props): ReactElement {
           size={BaseButtonSize.SMALL}
           disabled={disabled}
           containerWidth={true}
-          onClick={() =>
-            widgetMgr.setTriggerValue(element, { fromUi: true }, fragmentId)
-          }
+          onClick={handleTrigger}
         >
-          <DynamicButtonLabel icon={element.icon} label={element.label} />
+          <DynamicButtonLabel
+            icon={element.icon}
+            iconPosition={mapProtoIconPosition(element.iconPosition)}
+            label={element.label}
+            shortcut={shortcut}
+          />
         </BaseButton>
       </BaseButtonTooltip>
     </Box>

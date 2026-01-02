@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement } from "react"
+import { ReactElement } from "react"
 
 import Checkmark from "@streamlit/app/src/assets/svg/checkmark.svg"
 
@@ -22,7 +22,6 @@ import { StyledElement } from "./styled-components"
 
 export interface IDeployListElementProps {
   children?: React.ReactNode
-  // eslint-disable-next-line @eslint-react/no-unused-props
   extraSpacing?: boolean
 }
 

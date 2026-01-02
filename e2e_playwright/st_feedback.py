@@ -80,6 +80,10 @@ st.feedback("thumbs", width="content", key="thumbs_content_width")
 st.feedback("thumbs", width="stretch", key="thumbs_stretch_width")
 st.feedback("thumbs", width=300, key="thumbs_300px_width")
 
+st.subheader("Minimum width enforcement (gh-12068)")
+st.feedback("thumbs", width=10, key="thumbs_min_width")
+st.feedback("stars", width=10, key="stars_min_width")
+
 if "runs" not in st.session_state:
     st.session_state.runs = 0
 st.session_state.runs += 1

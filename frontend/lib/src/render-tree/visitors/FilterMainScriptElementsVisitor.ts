@@ -17,6 +17,7 @@
 import { AppNode } from "~lib/render-tree/AppNode.interface"
 import { BlockNode } from "~lib/render-tree/BlockNode"
 import { ElementNode } from "~lib/render-tree/ElementNode"
+import { TransientNode } from "~lib/render-tree/TransientNode"
 
 import { AppNodeVisitor } from "./AppNodeVisitor.interface"
 
@@ -32,9 +33,9 @@ import { AppNodeVisitor } from "./AppNodeVisitor.interface"
  * // filteredNode will be undefined if the node should be filtered out
  * ```
  */
-export class FilterMainScriptElementsVisitor
-  implements AppNodeVisitor<AppNode | undefined>
-{
+export class FilterMainScriptElementsVisitor implements AppNodeVisitor<
+  AppNode | undefined
+> {
   private readonly mainScriptHash: string
 
   constructor(mainScriptHash: string) {
@@ -76,6 +77,31 @@ export class FilterMainScriptElementsVisitor
       node.deltaBlock,
       node.scriptRunId,
       node.fragmentId,
+      node.deltaMsgReceivedAt
+    )
+  }
+
+  visitTransientNode(node: TransientNode): AppNode | undefined {
+    // visit both the anchor and the transient nodes to possibly filter them out
+    const anchorNode = node.anchor?.accept(this)
+    const transientNodes = node.updateTransientNodes(element => {
+      return element.accept(this) as ElementNode | undefined
+    })
+
+    // Everything is filtered out
+    if (!anchorNode && transientNodes.length === 0) {
+      return undefined
+    }
+
+    // All the transient nodes are filtered out, but not the anchor node
+    if (transientNodes.length === 0) {
+      return anchorNode
+    }
+
+    return new TransientNode(
+      node.scriptRunId,
+      anchorNode,
+      transientNodes,
       node.deltaMsgReceivedAt
     )
   }

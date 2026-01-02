@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import math
 import threading
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -29,7 +29,6 @@ from typing import (
     overload,
 )
 
-from cachetools import TTLCache
 from typing_extensions import ParamSpec
 
 import streamlit as st
@@ -41,6 +40,7 @@ from streamlit.runtime.caching.cache_utils import (
     Cache,
     CachedFunc,
     CachedFuncInfo,
+    OnRelease,
     make_cached_func_wrapper,
 )
 from streamlit.runtime.caching.cached_message_replay import (
@@ -48,8 +48,14 @@ from streamlit.runtime.caching.cached_message_replay import (
     CachedResult,
     MsgData,
 )
+from streamlit.runtime.caching.ttl_cleanup_cache import TTLCleanupCache
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.runtime.stats import CacheStat, CacheStatsProvider, group_stats
+from streamlit.runtime.stats import (
+    CACHE_MEMORY_FAMILY,
+    CacheStat,
+    StatsProvider,
+    group_cache_stats,
+)
 from streamlit.time_util import time_to_seconds
 
 if TYPE_CHECKING:
@@ -74,12 +80,20 @@ def _equal_validate_funcs(a: ValidateFunc | None, b: ValidateFunc | None) -> boo
     return (a is None and b is None) or (a is not None and b is not None)
 
 
-class ResourceCaches(CacheStatsProvider):
+def _no_op_release(ignored: Any) -> None:
+    """No-op OnRelease function."""
+
+
+class ResourceCaches(StatsProvider):
     """Manages all ResourceCache instances."""
 
     def __init__(self) -> None:
         self._caches_lock = threading.Lock()
         self._function_caches: dict[str, ResourceCache[Any]] = {}
+
+    @property
+    def stats_families(self) -> Sequence[str]:
+        return (CACHE_MEMORY_FAMILY,)
 
     def get_cache(
         self,
@@ -88,6 +102,7 @@ class ResourceCaches(CacheStatsProvider):
         max_entries: int | float | None,
         ttl: float | timedelta | str | None,
         validate: ValidateFunc | None,
+        on_release: OnRelease,
     ) -> ResourceCache[Any]:
         """Return the mem cache for the given key.
 
@@ -118,16 +133,25 @@ class ResourceCaches(CacheStatsProvider):
                 max_entries=max_entries,
                 ttl_seconds=ttl_seconds,
                 validate=validate,
+                on_release=on_release,
             )
             self._function_caches[key] = cache
             return cache
 
     def clear_all(self) -> None:
         """Clear all resource caches."""
+        # Hold the lock long enough to copy the caches.
         with self._caches_lock:
+            caches = list(self._function_caches.values())
             self._function_caches = {}
 
-    def get_stats(self) -> list[CacheStat]:
+        # Clear each cache to ensure any on_release functions are called.
+        for cache in caches:
+            cache.clear()
+
+    def get_stats(
+        self, _family_names: Sequence[str] | None = None
+    ) -> dict[str, list[CacheStat]]:
         with self._caches_lock:
             # Shallow-clone our caches. We don't want to hold the global
             # lock during stats-gathering.
@@ -135,15 +159,22 @@ class ResourceCaches(CacheStatsProvider):
 
         stats: list[CacheStat] = []
         for cache in function_caches.values():
-            stats.extend(cache.get_stats())
-        return group_stats(stats)
+            cache_stats = cache.get_stats()
+            for family_stats in cache_stats.values():
+                stats.extend(family_stats)
+        if not stats:
+            return {}
+        # In general, get_stats methods need to be able to return only requested stat
+        # families, but this method only returns a single family, and we're guaranteed
+        # that it was one of those requested if we make it here.
+        return {CACHE_MEMORY_FAMILY: group_cache_stats(stats)}
 
 
 # Singleton ResourceCaches instance
 _resource_caches = ResourceCaches()
 
 
-def get_resource_cache_stats_provider() -> CacheStatsProvider:
+def get_resource_cache_stats_provider() -> StatsProvider:
     """Return the StatsProvider for all @st.cache_resource functions."""
     return _resource_caches
 
@@ -164,6 +195,7 @@ class CachedResourceFuncInfo(CachedFuncInfo[P, R]):
         validate: ValidateFunc | None,
         hash_funcs: HashFuncsDict | None = None,
         show_time: bool = False,
+        on_release: OnRelease | None = None,
     ) -> None:
         super().__init__(
             func,
@@ -174,6 +206,7 @@ class CachedResourceFuncInfo(CachedFuncInfo[P, R]):
         self.max_entries = max_entries
         self.ttl = ttl
         self.validate = validate
+        self.on_release = on_release or _no_op_release
 
     @property
     def cache_type(self) -> CacheType:
@@ -195,6 +228,7 @@ class CachedResourceFuncInfo(CachedFuncInfo[P, R]):
             max_entries=self.max_entries,
             ttl=self.ttl,
             validate=self.validate,
+            on_release=self.on_release,
         )
 
 
@@ -246,15 +280,17 @@ class CacheResourceAPI:
         show_time: bool = False,
         validate: ValidateFunc | None = None,
         hash_funcs: HashFuncsDict | None = None,
+        on_release: OnRelease | None = None,
     ) -> CachedFunc[P, R] | Callable[[Callable[P, R]], CachedFunc[P, R]]:
-        return self._decorator(
-            func,
+        return self._decorator(  # ty: ignore[missing-argument]
+            func,  # ty: ignore[invalid-argument-type]
             ttl=ttl,
             max_entries=max_entries,
             show_spinner=show_spinner,
             show_time=show_time,
             validate=validate,
             hash_funcs=hash_funcs,
+            on_release=on_release,
         )
 
     def _decorator(
@@ -267,6 +303,7 @@ class CacheResourceAPI:
         show_time: bool = False,
         validate: ValidateFunc | None,
         hash_funcs: HashFuncsDict | None = None,
+        on_release: OnRelease | None = None,
     ) -> CachedFunc[P, R] | Callable[[Callable[P, R]], CachedFunc[P, R]]:
         """Decorator to cache functions that return global resources (e.g. database connections, ML models).
 
@@ -322,15 +359,20 @@ class CacheResourceAPI:
             - A number specifying the time in seconds.
             - A string specifying the time in a format supported by `Pandas's
               Timedelta constructor <https://pandas.pydata.org/docs/reference/api/pandas.Timedelta.html>`_,
-              e.g. ``"1d"``, ``"1.5 days"``, or ``"1h23s"``.
+              e.g. ``"1d"``, ``"1.5 days"``, or ``"1h23s"``. Note that number strings
+              without units are treated by Pandas as nanoseconds.
             - A ``timedelta`` object from `Python's built-in datetime library
               <https://docs.python.org/3/library/datetime.html#timedelta-objects>`_,
               e.g. ``timedelta(days=1)``.
+
+            Changes to this value will trigger a new cache to be created.
 
         max_entries : int or None
             The maximum number of entries to keep in the cache, or None
             for an unbounded cache. When a new entry is added to a full cache,
             the oldest cached entry will be removed. Defaults to None.
+
+            Changes to this value will trigger a new cache to be created.
 
         show_spinner : bool or str
             Enable the spinner. Default is True to show a spinner when there is
@@ -344,7 +386,7 @@ class CacheResourceAPI:
             format is not configurable.
 
         validate : callable or None
-            An optional validation function for cached data. ``validate`` is called
+            An optional validation function for cached resources. ``validate`` is called
             each time the cached value is accessed. It receives the cached value as
             its only parameter and it must return a boolean. If ``validate`` returns
             False, the current cached value is discarded, and the decorated function
@@ -358,6 +400,20 @@ class CacheResourceAPI:
             check to see if its type matches a key in this dict and, if so, will use
             the provided function to generate a hash for it. See below for an example
             of how this can be used.
+
+        on_release : callable or None
+            If set, a function to call when a cache entry is removed from the cache.
+            The removed item will be provided to the function as an argument.
+
+            This is only useful for caches which will remove entries normally: Those
+            with ``max_entries`` or ``ttl`` settings. Note that TTL expiration does not
+            happen on all reads - so ``ttl`` should not be used to guarantee timely
+            cleanup, only cleanup when expired resources are accessed. Also note that
+            expiration can happen on any app render or load, so care should be taken
+            to ensure that ``on_release`` functions are thread-safe and do not rely on
+            session state.
+
+            This will NOT be called when an app is shut down.
 
         Example
         -------
@@ -454,6 +510,7 @@ class CacheResourceAPI:
                     ttl=ttl,
                     validate=validate,
                     hash_funcs=hash_funcs,
+                    on_release=on_release,
                 )
             )
 
@@ -466,6 +523,7 @@ class CacheResourceAPI:
                 ttl=ttl,
                 validate=validate,
                 hash_funcs=hash_funcs,
+                on_release=on_release,
             )
         )
 
@@ -485,12 +543,24 @@ class ResourceCache(Cache[R]):
         ttl_seconds: float,
         validate: ValidateFunc | None,
         display_name: str,
+        on_release: OnRelease,
     ) -> None:
         super().__init__()
+
+        def wrapped_on_release(result: CachedResult[R]) -> None:
+            # Note that exceptions raised here will bubble out to the calling scope,
+            # which will then treat them as user script errors.
+            # This is also how exceptions thrown when generating cache values are
+            # treated.
+            on_release(result.value)
+
         self.key = key
         self.display_name = display_name
-        self._mem_cache: TTLCache[str, CachedResult[R]] = TTLCache(
-            maxsize=max_entries, ttl=ttl_seconds, timer=cache_utils.TTLCACHE_TIMER
+        self._mem_cache: TTLCleanupCache[str, CachedResult[R]] = TTLCleanupCache(
+            maxsize=max_entries,
+            ttl=ttl_seconds,
+            timer=cache_utils.TTLCACHE_TIMER,
+            on_release=wrapped_on_release,
         )
         self._mem_cache_lock = threading.Lock()
         self.validate = validate
@@ -533,21 +603,45 @@ class ResourceCache(Cache[R]):
     def _clear(self, key: str | None = None) -> None:
         with self._mem_cache_lock:
             if key is None:
-                self._mem_cache.clear()
-            elif key in self._mem_cache:
-                del self._mem_cache[key]
+                # Clear the whole cache.
+                # TTLCleanupCache will stop a clear() execution when an exception is
+                # thrown by an on_release. To ensure that our clear() actually flushes
+                # the cache and calls all cleanup functions, we clear each item
+                # individually. We also collect exceptions for logging.
+                errors: list[Exception] = []
+                while len(self._mem_cache) > 0:
+                    try:
+                        # TTLCleanupCache only reliably calls on_release for popitem -
+                        # so just use that.
+                        self._mem_cache.popitem()
+                    except Exception as e:  # noqa: PERF203 (we require a tight scope)
+                        errors.append(e)
 
-    def get_stats(self) -> list[CacheStat]:
+                # Log all errors encountered at warning. This could potentially result in a
+                # lot of log spam in the worst case - but for resources, a huge cache is very
+                # unlikely.
+                for error in errors:
+                    _LOGGER.warning("Error clearing resource cache: %s", error)
+            elif key in self._mem_cache:
+                # Note: This code path does not seem to be reachable through public APIs.
+                self._mem_cache.safe_del(key)
+
+    def get_stats(
+        self, _family_names: Sequence[str] | None = None
+    ) -> dict[str, list[CacheStat]]:
         # Shallow clone our cache. Computing item sizes is potentially
         # expensive, and we want to minimize the time we spend holding
         # the lock.
         with self._mem_cache_lock:
             cache_entries = list(self._mem_cache.values())
 
+        if not cache_entries:
+            return {}
+
         # Lazy-load vendored package to prevent import of numpy
         from streamlit.vendor.pympler.asizeof import asizeof
 
-        return [
+        stats = [
             CacheStat(
                 category_name="st_cache_resource",
                 cache_name=self.display_name,
@@ -555,3 +649,7 @@ class ResourceCache(Cache[R]):
             )
             for entry in cache_entries
         ]
+        # In general, get_stats methods need to be able to return only requested stat
+        # families, but this method only returns a single family, and we're guaranteed
+        # that it was one of those requested if we make it here.
+        return {CACHE_MEMORY_FAMILY: stats}

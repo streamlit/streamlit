@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-import React from "react"
-
 import { render } from "~lib/test_util"
 
 import StreamlitSyntaxHighlighter, {
@@ -72,5 +70,16 @@ describe("CustomCodeTag Element", () => {
     expect(
       baseElement.querySelector("pre code .token.string")?.innerHTML
     ).toBe('"Hello"')
+  })
+
+  it.each([
+    [null, ""],
+    [undefined, ""],
+    ["null", "null"],
+    ["undefined", "undefined"],
+  ])("renders children '%s' as '%s'", (children, expected) => {
+    const props = getStreamlitSyntaxHighlighterProps({ children })
+    const { baseElement } = render(<StreamlitSyntaxHighlighter {...props} />)
+    expect(baseElement.querySelector("pre code")).toHaveTextContent(expected)
   })
 })

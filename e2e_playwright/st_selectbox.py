@@ -90,7 +90,7 @@ v10 = st.selectbox(
 )
 st.write("value 10:", v10)
 
-v11 = st.selectbox(
+v11: str = st.selectbox(
     "selectbox 11 (options from dataframe)", pd.DataFrame({"foo": list(options)})
 )
 st.write("value 11:", v11)
@@ -150,7 +150,7 @@ st.selectbox("selectbox 19 (width='stretch')", options, index=0, width="stretch"
 if st.toggle("Update selectbox props"):
     sel_value = st.selectbox(
         "Updated dynamic selectbox",
-        index=1,
+        index=1,  # default is "papaya"
         width=200,
         help="updated help",
         key="dynamic_selectbox_with_key",
@@ -160,17 +160,18 @@ if st.toggle("Update selectbox props"):
         args=("Updated select arg",),
         kwargs={"param": "updated kwarg param"},
         placeholder="updated placeholder",
-        # options, format_func & accept_new_options are not yet supported for
-        # dynamic changes keeping it at the same value for now:
-        options=["apple", "banana", "orange"],
-        accept_new_options=True,
-        format_func=lambda x: x.capitalize(),
+        # "mango" exists in both lists at different indices for testing preservation
+        # mango is at index 0 here, but default is index 1 (papaya)
+        options=["mango", "papaya", "grape", "apple"],
+        format_func=lambda x: x.upper(),
+        # Whitelisted kwargs (keep stable):
+        accept_new_options=False,
     )
     st.write("Updated selectbox value:", sel_value)
 else:
     sel_value = st.selectbox(
         "Initial dynamic selectbox",
-        index=0,
+        index=0,  # default is "apple"
         width="stretch",
         help="initial help",
         key="dynamic_selectbox_with_key",
@@ -180,8 +181,26 @@ else:
         args=("Initial select arg",),
         kwargs={"param": "initial kwarg param"},
         placeholder="initial placeholder",
-        options=["apple", "banana", "orange"],
-        accept_new_options=True,
+        # "mango" exists in both lists at different indices for testing preservation
+        # mango is at index 2 here, default is index 0 (apple)
+        options=["apple", "banana", "mango", "orange"],
         format_func=lambda x: x.capitalize(),
+        # Whitelisted kwargs (keep stable):
+        accept_new_options=False,
     )
     st.write("Initial selectbox value:", sel_value)
+
+# Regression test for https://github.com/streamlit/streamlit/issues/13435
+# Test that selectbox UI stays in sync when value is set via session_state
+# and user opens/closes dropdown without selecting
+with st.container(horizontal=True):
+    for value in ("male", "female"):
+        if st.button(f"Set {value}", key=f"set_{value}_btn"):
+            st.session_state["selectbox20"] = value
+v20 = st.selectbox(
+    "selectbox 20 - session_state sync test",
+    options,
+    index=0,
+    key="selectbox20",
+)
+st.write("value 20:", v20)

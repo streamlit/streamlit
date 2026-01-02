@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { memo } from "react"
+import { memo } from "react"
 
 import { EmotionIcon } from "@emotion-icons/emotion-icon"
 import { Mic } from "@emotion-icons/material-outlined"
@@ -26,7 +26,7 @@ import {
 } from "@emotion-icons/material-rounded"
 
 import BaseButton, { BaseButtonKind } from "~lib/components/shared/BaseButton"
-import Icon, { StyledSpinnerIcon } from "~lib/components/shared/Icon"
+import Icon, { DynamicIcon } from "~lib/components/shared/Icon"
 
 import {
   StyledActionButtonContainerDiv,
@@ -179,12 +179,7 @@ const AudioInputActionButtons: React.FC<AudioInputActionButtonProps> = ({
   if (isUploading) {
     return (
       <StyledActionButtonContainerDiv>
-        <StyledSpinnerIcon
-          aria-label="Uploading"
-          size="base"
-          margin="0"
-          padding="0"
-        />
+        <DynamicIcon size="base" iconValue="spinner" />
       </StyledActionButtonContainerDiv>
     )
   }

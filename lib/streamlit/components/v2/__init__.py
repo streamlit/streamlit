@@ -322,7 +322,7 @@ def component(
         if result.clicked:
             st.write(f"You clicked {result.clicked}!")
 
-    .. output ::
+    .. output::
         https://doc-components-markdown-links.streamlit.app/
         height: 250px
 
@@ -386,7 +386,7 @@ def component(
         elif result.clicked == "link_2":
             st.write("You clicked the second link!")
 
-    .. output ::
+    .. output::
         https://doc-components-custom-anchors.streamlit.app/
         height: 250px
 
@@ -445,9 +445,65 @@ def component(
         result = my_component(on_clicked_change=lambda: None)
         result
 
-    .. output ::
+    .. output::
         https://doc-components-interactive-svg.streamlit.app/
         height: 550px
+
+    **Example 4: Clean up your component's resources**
+
+    You can use the return value of the component's JavaScript function to
+    clean up any resources when the component is unmounted. For example, you
+    can disconnect a MutationObserver that was monitoring changes in the DOM.
+
+    .. code-block:: python
+
+        import streamlit as st
+
+        JS = """
+        export default function(component) {
+            const { setStateValue, parentElement } = component;
+            const sidebar = document.querySelector('section.stSidebar');
+            const initialState = sidebar.getAttribute('aria-expanded') === 'true';
+
+            // Create observer to watch for aria-expanded attribute changes
+            const observer = new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => {
+                    if (mutation.type === 'attributes' && mutation.attributeName === 'aria-expanded') {
+                        const newIsExpanded = sidebar.getAttribute('aria-expanded') === 'true';
+                        setStateValue('expanded', newIsExpanded);
+                    }
+                });
+            });
+
+            // Start observing
+            observer.observe(sidebar, {
+                attributes: true,
+                attributeFilter: ['aria-expanded']
+            });
+
+            // Set initial state
+            setStateValue('expanded', initialState);
+
+            // Cleanup function to remove the observer
+            return () => {
+                observer.disconnect();
+            };
+
+        };
+        """
+
+        my_component = st.components.v2.component(
+            "sidebar_expansion_detector",
+            js=JS,
+        )
+
+        st.sidebar.write("Sidebar content")
+        result = my_component(on_expanded_change=lambda: None)
+        result
+
+    .. output::
+        https://doc-components-cleanup-function.streamlit.app/
+        height: 250px
 
     '''
     return _create_component_callable(name, html=html, css=css, js=js)

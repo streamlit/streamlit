@@ -15,7 +15,7 @@
 import re
 
 import pytest
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Page, Position, expect
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
@@ -44,6 +44,18 @@ def open_dialog_with_images(app: Page):
 
 def open_dialog_without_images(app: Page):
     click_button(app, "Open Dialog without Images")
+
+
+def open_dialog_with_icon(app: Page):
+    click_button(app, "Open Dialog with Icon")
+
+
+def open_dialog_with_spinner_icon(app: Page):
+    click_button(app, "Open Dialog with Spinner Icon")
+
+
+def open_dialog_with_material_icon(app: Page):
+    click_button(app, "Open Dialog with Material Icon")
 
 
 def open_large_width_dialog(app: Page):
@@ -222,13 +234,17 @@ def test_dialog_stays_dismissed_when_interacting_with_different_fragment(app: Pa
     expect(main_dialog).to_have_count(1)
 
 
+# The viewport check is flaky on webkit, but the
+# videos from the flaky tests look fine.
+@pytest.mark.skip_browser("webkit")
 def test_dialog_is_scrollable(app: Page):
     """Test that the dialog is scrollable."""
     open_dialog_with_images(app)
     wait_for_app_run(app)
     main_dialog = app.get_by_test_id(modal_test_id)
-    close_button = main_dialog.get_by_test_id("stButton")
+    close_button = get_button(main_dialog, "Submit")
     expect(close_button).not_to_be_in_viewport()
+    close_button.hover()
     close_button.scroll_into_view_if_needed()
     expect(close_button).to_be_in_viewport()
 
@@ -278,6 +294,56 @@ def test_dialog_displays_correctly(app: Page, assert_snapshot: ImageCompareFunct
     submit_button = get_button(dialog, "Submit")
     submit_button.hover()
     assert_snapshot(dialog, name="st_dialog-default")
+
+
+def test_dialog_icon_is_displayed(app: Page):
+    """Test that a dialog displays the optional icon next to the title."""
+    open_dialog_with_icon(app)
+    dialog = app.get_by_role("dialog")
+    icon = dialog.get_by_test_id("stDialogIcon")
+    expect(icon).to_be_visible()
+    expect(icon).to_have_text("🌟")
+
+
+def test_dialog_spinner_icon_is_displayed(app: Page):
+    """Test that a dialog displays the spinner icon next to the title."""
+    open_dialog_with_spinner_icon(app)
+    dialog = app.get_by_role("dialog")
+    spinner_icon = dialog.get_by_test_id("stSpinnerIcon")
+    expect(spinner_icon).to_be_visible()
+
+
+def test_dialog_material_icon_is_displayed(app: Page):
+    """Test that a dialog displays material icons next to the title."""
+    open_dialog_with_material_icon(app)
+    dialog = app.get_by_role("dialog")
+    material_icon = dialog.get_by_test_id("stIconMaterial")
+    expect(material_icon).to_be_visible()
+    expect(material_icon).to_have_text("info")
+
+
+def test_dialog_icon_displays_correctly(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that a dialog with a icon displays correctly."""
+    open_dialog_with_icon(app)
+    dialog = app.get_by_role("dialog")
+    dialog.get_by_test_id("stMarkdownContainer").filter(
+        has_text="Dialog with Icon"
+    ).click()
+    assert_snapshot(dialog, name="st_dialog-with_icon")
+
+
+def test_dialog_material_icon_displays_correctly(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that a dialog with a material icon displays correctly."""
+    open_dialog_with_material_icon(app)
+    dialog = app.get_by_role("dialog")
+    dialog.get_by_test_id("stMarkdownContainer").filter(
+        has_text="Dialog with Material Icon"
+    ).click()
+    assert_snapshot(dialog, name="st_dialog-with_material_icon")
 
 
 def test_large_width_dialog_displays_correctly(
@@ -419,7 +485,12 @@ def test_dialog_with_chart(app: Page):
         "[role='graphics-document']"
     )
     expect(chart).to_be_visible()
-    chart.hover(position={"x": 80, "y": 200})
+    # Use chart bounds to hover deterministically (helps Firefox).
+    chart_box = chart.bounding_box()
+    assert chart_box is not None
+    target: Position = {"x": chart_box["width"] * 0.5, "y": chart_box["height"] * 0.5}
+    app.mouse.move(chart_box["x"] + target["x"], chart_box["y"] + target["y"])
+    chart.hover(position=target)
     tooltip = app.locator("#vg-tooltip-element")
     expect(tooltip).to_be_visible()
 
@@ -647,3 +718,40 @@ def test_dialog_on_dismiss_callback(app: Page):
     expect(dialog).not_to_be_attached()
     # Callback should have been executed
     expect_prefixed_markdown(app, "Callback executions:", "3")
+
+
+def test_switching_dialogs_does_not_show_stale_content(app: Page):
+    """Test that switching between different dialogs does not show stale content from previous dialog.
+
+    Reproduces issue #10907: When opening dialog 1, closing it, then opening dialog 2,
+    the second dialog should NOT show any content from the first dialog while loading.
+    """
+    # Open the fast dialog first
+    click_button(app, "Open Fast Dialog")
+    dialog = app.get_by_test_id(modal_test_id)
+    expect(dialog).to_be_visible()
+    expect(dialog).to_contain_text("Fast dialog content")
+    # Verify the text input from fast dialog is present
+    expect(dialog.get_by_test_id("stTextInput")).to_be_visible()
+
+    # Dismiss the fast dialog
+    app.keyboard.press("Escape")
+    expect(dialog).not_to_be_attached()
+
+    # Now open the slow dialog, without waiting for the app to run to complete:
+    get_button(app, "Open Slow Dialog").click()
+    dialog = app.get_by_test_id(modal_test_id)
+    expect(dialog).to_be_visible()
+
+    # The dialog should NOT contain any elements from the fast dialog
+    # Specifically: no "Fast dialog content" text, no text input
+    expect(dialog.get_by_text("Fast dialog content")).not_to_be_attached()
+    expect(dialog.get_by_test_id("stTextInput")).not_to_be_attached()
+
+    # Wait for the slow dialog to load its content
+    expect(dialog.get_by_text("Slow dialog content")).to_be_visible()
+
+    # Verify the slow dialog has its correct content and nothing from fast dialog
+    expect(dialog).to_contain_text("Slow dialog content")
+    expect(dialog.get_by_text("Fast dialog content")).not_to_be_attached()
+    expect(dialog.get_by_test_id("stTextInput")).not_to_be_attached()

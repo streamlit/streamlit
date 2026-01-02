@@ -22,3 +22,5 @@ export {
 } from "./styled-components"
 
 export { WidgetLabel } from "./WidgetLabel"
+export { WidgetLabelHelpIcon } from "./WidgetLabelHelpIcon"
+export { WidgetLabelHelpIconInline } from "./WidgetLabelHelpIconInline"

@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-import React from "react"
-
 import FontFaceDeclaration from "@streamlit/app/src/components/FontFaceDeclaration"
 import FontSources from "@streamlit/app/src/components/FontSources"
 import {

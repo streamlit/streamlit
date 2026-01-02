@@ -14,9 +14,11 @@
  * limitations under the License.
  */
 
-import React, { memo, PropsWithChildren, useMemo } from "react"
+import { memo, PropsWithChildren, useMemo } from "react"
 
 import {
+  DownloadContext,
+  DownloadContextProps,
   FormsContext,
   FormsContextProps,
   FormsData,
@@ -35,7 +37,12 @@ import {
   ViewStateContext,
   ViewStateContextProps,
 } from "@streamlit/lib"
-import { IAppPage, Logo, PageConfig } from "@streamlit/protobuf"
+import {
+  DeferredFileResponse,
+  IAppPage,
+  Logo,
+  PageConfig,
+} from "@streamlit/protobuf"
 
 type ViewStateContextValues = {
   isFullScreen: boolean
@@ -60,6 +67,7 @@ type NavigationContextValues = {
 
 type SidebarConfigContextValues = {
   initialSidebarState: PageConfig.SidebarState
+  initialSidebarWidth?: number
   appLogo: Logo | null
   sidebarChevronDownshift: number
   expandSidebarNav: boolean
@@ -82,6 +90,10 @@ type FormsContextValues = {
   formsData: FormsData
 }
 
+type DownloadContextValues = {
+  requestDeferredFile?: (fileId: string) => Promise<DeferredFileResponse>
+}
+
 export type StreamlitContextProviderProps = PropsWithChildren<
   ViewStateContextValues &
     LibConfigContextValues &
@@ -89,7 +101,8 @@ export type StreamlitContextProviderProps = PropsWithChildren<
     SidebarConfigContextValues &
     ThemeContextValues &
     ScriptRunContextValues &
-    FormsContextValues
+    FormsContextValues &
+    DownloadContextValues
 >
 
 /**
@@ -113,6 +126,7 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
   appPages,
   // SidebarConfigContext
   initialSidebarState,
+  initialSidebarWidth,
   appLogo,
   sidebarChevronDownshift,
   expandSidebarNav,
@@ -127,6 +141,8 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
   fragmentIdsThisRun,
   // FormsContext
   formsData,
+  // DownloadContext
+  requestDeferredFile,
   // Children passed through
   children,
 }: StreamlitContextProviderProps) => {
@@ -145,6 +161,7 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
   const sidebarConfigContextProps = useMemo<SidebarConfigContextProps>(
     () => ({
       initialSidebarState,
+      initialSidebarWidth,
       appLogo,
       sidebarChevronDownshift,
       expandSidebarNav,
@@ -152,6 +169,7 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
     }),
     [
       initialSidebarState,
+      initialSidebarWidth,
       appLogo,
       sidebarChevronDownshift,
       expandSidebarNav,
@@ -206,11 +224,20 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
     [scriptRunState, scriptRunId, fragmentIdsThisRun]
   )
 
-  // formsData is not a stable reference, so memoization does not help
-  // eslint-disable-next-line @eslint-react/no-unstable-context-value
-  const formsContextProps: FormsContextProps = {
-    formsData,
-  }
+  const formsContextProps: FormsContextProps = useMemo(
+    () => ({
+      formsData,
+    }),
+    [formsData]
+  )
+
+  const downloadContextProps: DownloadContextProps =
+    useMemo<DownloadContextProps>(
+      () => ({
+        requestDeferredFile,
+      }),
+      [requestDeferredFile]
+    )
 
   /**
    * Providers conceptually grouped by stability (most to least) as follows:
@@ -226,13 +253,15 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
       <SidebarConfigContext.Provider value={sidebarConfigContextProps}>
         <ThemeContext.Provider value={themeContextProps}>
           <NavigationContext.Provider value={navigationContextProps}>
-            <ViewStateContext.Provider value={viewStateContextProps}>
-              <ScriptRunContext.Provider value={scriptRunContextProps}>
-                <FormsContext.Provider value={formsContextProps}>
-                  {children}
-                </FormsContext.Provider>
-              </ScriptRunContext.Provider>
-            </ViewStateContext.Provider>
+            <DownloadContext.Provider value={downloadContextProps}>
+              <ViewStateContext.Provider value={viewStateContextProps}>
+                <ScriptRunContext.Provider value={scriptRunContextProps}>
+                  <FormsContext.Provider value={formsContextProps}>
+                    {children}
+                  </FormsContext.Provider>
+                </ScriptRunContext.Provider>
+              </ViewStateContext.Provider>
+            </DownloadContext.Provider>
           </NavigationContext.Provider>
         </ThemeContext.Provider>
       </SidebarConfigContext.Provider>

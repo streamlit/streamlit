@@ -73,5 +73,5 @@ class MemorySessionStorage(SessionStorage):
     def delete(self, session_id: str) -> None:
         del self._cache[session_id]
 
-    def list(self) -> list[SessionInfo]:
+    def list(self) -> list[SessionInfo]:  # ty: ignore[invalid-type-form]
         return list(self._cache.values())

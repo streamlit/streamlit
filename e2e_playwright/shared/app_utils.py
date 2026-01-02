@@ -16,9 +16,9 @@ from __future__ import annotations
 
 import platform
 import re
-from re import Pattern
 from typing import Literal, cast
 
+from playwright.sync_api import Error as PlaywrightError
 from playwright.sync_api import Frame, FrameLocator, Locator, Page, expect
 
 from e2e_playwright.conftest import wait_for_app_loaded, wait_for_app_run
@@ -48,7 +48,7 @@ def get_chat_input(locator: Locator | Page, label: str | re.Pattern[str]) -> Loc
     return element
 
 
-def get_time_input(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
+def get_time_input(locator: Locator | Page, label: str | re.Pattern[str]) -> Locator:
     """Get a time input with the given label.
 
     Parameters
@@ -69,7 +69,30 @@ def get_time_input(locator: Locator | Page, label: str | Pattern[str]) -> Locato
     return element
 
 
-def get_camera_input(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
+def get_datetime_input(
+    locator: Locator | Page, label: str | re.Pattern[str]
+) -> Locator:
+    """Get a datetime input with the given label.
+
+    Parameters
+    ----------
+    locator : Locator
+        The locator to search for the element.
+
+    label : str or Pattern[str]
+        The label of the element to get.
+
+    Returns
+    -------
+    Locator
+        The element.
+    """
+    element = locator.get_by_test_id("stDateTimeInput").filter(has_text=label)
+    expect(element).to_be_visible()
+    return element
+
+
+def get_camera_input(locator: Locator | Page, label: str | re.Pattern[str]) -> Locator:
     """Get a camera input with the given label.
 
     Parameters
@@ -77,7 +100,7 @@ def get_camera_input(locator: Locator | Page, label: str | Pattern[str]) -> Loca
     locator : Locator | Page
         The locator to search for the element.
 
-    label : str | Pattern[str]
+    label : str | re.Pattern[str]
         The label of the element to get.
 
     Returns
@@ -90,7 +113,7 @@ def get_camera_input(locator: Locator | Page, label: str | Pattern[str]) -> Loca
     return element
 
 
-def get_color_picker(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
+def get_color_picker(locator: Locator | Page, label: str | re.Pattern[str]) -> Locator:
     """Get a color picker with the given label.
 
     Parameters
@@ -111,7 +134,7 @@ def get_color_picker(locator: Locator | Page, label: str | Pattern[str]) -> Loca
     return element
 
 
-def get_text_input(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
+def get_text_input(locator: Locator | Page, label: str | re.Pattern[str]) -> Locator:
     """Get a text input with the given label.
 
     Parameters
@@ -132,7 +155,7 @@ def get_text_input(locator: Locator | Page, label: str | Pattern[str]) -> Locato
     return element
 
 
-def get_text_area(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
+def get_text_area(locator: Locator | Page, label: str | re.Pattern[str]) -> Locator:
     """Get a text area with the given label.
 
     Parameters
@@ -153,7 +176,7 @@ def get_text_area(locator: Locator | Page, label: str | Pattern[str]) -> Locator
     return element
 
 
-def get_selectbox(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
+def get_selectbox(locator: Locator | Page, label: str | re.Pattern[str]) -> Locator:
     """Get a selectbox with the given label.
 
     Parameters
@@ -174,7 +197,46 @@ def get_selectbox(locator: Locator | Page, label: str | Pattern[str]) -> Locator
     return element
 
 
-def get_multiselect(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
+def select_selectbox_option(
+    locator: Locator | Page,
+    label: str | re.Pattern[str],
+    option: str,
+) -> None:
+    """Select an option from a selectbox dropdown by exact text match.
+
+    Parameters
+    ----------
+    locator : Locator or Page
+        The locator or page containing the selectbox.
+
+    label : str or Pattern[str]
+        The label of the selectbox.
+
+    option : str
+        The exact text of the option to select.
+    """
+    selectbox = get_selectbox(locator, label)
+
+    # Get the page from the locator
+    page = locator.page if isinstance(locator, Locator) else locator
+
+    # Type to filter the dropdown (handles virtualized lists where options
+    # may not be rendered until scrolled into view)
+    selectbox_input = selectbox.locator("input")
+    selectbox_input.click()
+    selectbox_input.fill(option)
+
+    # Select the option by exact text from the filtered virtual dropdown
+    dropdown = page.get_by_test_id("stSelectboxVirtualDropdown")
+    dropdown.get_by_text(option, exact=True).click()
+
+    wait_for_app_run(page)
+
+    # Verify the selection was applied
+    expect(selectbox).to_contain_text(option)
+
+
+def get_multiselect(locator: Locator | Page, label: str | re.Pattern[str]) -> Locator:
     """Get a multiselect with the given label.
 
     Parameters
@@ -192,7 +254,7 @@ def get_multiselect(locator: Locator | Page, label: str | Pattern[str]) -> Locat
     """
     # Prefer matching the widget label exactly to avoid substring collisions
     # like "multiselect 1" also matching "multiselect 11".
-    if isinstance(label, Pattern):
+    if isinstance(label, re.Pattern):
         label_locator = locator.get_by_test_id("stWidgetLabel").filter(has_text=label)
     else:
         label_locator = locator.get_by_test_id("stWidgetLabel").get_by_text(
@@ -204,7 +266,7 @@ def get_multiselect(locator: Locator | Page, label: str | Pattern[str]) -> Locat
     return element
 
 
-def get_date_input(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
+def get_date_input(locator: Locator | Page, label: str | re.Pattern[str]) -> Locator:
     """Get a date input with the given label.
 
     Parameters
@@ -220,7 +282,7 @@ def get_date_input(locator: Locator | Page, label: str | Pattern[str]) -> Locato
     Locator
         The element.
     """
-    if isinstance(label, Pattern):
+    if isinstance(label, re.Pattern):
         label_locator = locator.get_by_test_id("stWidgetLabel").filter(has_text=label)
     else:
         label_locator = locator.get_by_test_id("stWidgetLabel").get_by_text(
@@ -232,7 +294,7 @@ def get_date_input(locator: Locator | Page, label: str | Pattern[str]) -> Locato
     return element
 
 
-def get_slider(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
+def get_slider(locator: Locator | Page, label: str | re.Pattern[str]) -> Locator:
     """Get a slider with the given label.
 
     Parameters
@@ -249,7 +311,7 @@ def get_slider(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
         The element.
     """
     # Prefer matching the widget label exactly to avoid substring collisions
-    if isinstance(label, Pattern):
+    if isinstance(label, re.Pattern):
         label_locator = locator.get_by_test_id("stWidgetLabel").filter(has_text=label)
     else:
         label_locator = locator.get_by_test_id("stWidgetLabel").get_by_text(
@@ -261,7 +323,7 @@ def get_slider(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
     return element
 
 
-def get_checkbox(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
+def get_checkbox(locator: Locator | Page, label: str | re.Pattern[str]) -> Locator:
     """Get a checkbox widget with the given label.
 
     Parameters
@@ -282,7 +344,7 @@ def get_checkbox(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
     return element
 
 
-def get_toggle(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
+def get_toggle(locator: Locator | Page, label: str | re.Pattern[str]) -> Locator:
     """Get a toggle widget with the given label.
 
     Parameters
@@ -303,7 +365,7 @@ def get_toggle(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
     return element
 
 
-def get_radio_option(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
+def get_radio_option(locator: Locator | Page, label: str | re.Pattern[str]) -> Locator:
     """Get a radio button widget with the given label.
 
     Parameters
@@ -324,7 +386,7 @@ def get_radio_option(locator: Locator | Page, label: str | Pattern[str]) -> Loca
     return element
 
 
-def get_radio(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
+def get_radio(locator: Locator | Page, label: str | re.Pattern[str]) -> Locator:
     """Get a radio widget with the given label.
 
     Parameters
@@ -337,7 +399,7 @@ def get_radio(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
     """
     # Prefer matching the widget label exactly to avoid substring collisions
     # similar to multiselect/date input helpers.
-    if isinstance(label, Pattern):
+    if isinstance(label, re.Pattern):
         label_locator = locator.get_by_test_id("stWidgetLabel").filter(has_text=label)
     else:
         label_locator = locator.get_by_test_id("stWidgetLabel").get_by_text(
@@ -349,7 +411,7 @@ def get_radio(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
     return element
 
 
-def get_image(locator: Locator | Page, caption: str | Pattern[str]) -> Locator:
+def get_image(locator: Locator | Page, caption: str | re.Pattern[str]) -> Locator:
     """Get an image element with the given caption.
 
     Parameters
@@ -373,7 +435,7 @@ def get_image(locator: Locator | Page, caption: str | Pattern[str]) -> Locator:
     return element
 
 
-def get_button(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
+def get_button(locator: Locator | Page, label: str | re.Pattern[str]) -> Locator:
     """Get a button widget with the given label.
 
     Parameters
@@ -396,7 +458,7 @@ def get_button(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
     return element
 
 
-def get_popover(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
+def get_popover(locator: Locator | Page, label: str | re.Pattern[str]) -> Locator:
     """Get a popover with the given label.
 
     Parameters
@@ -417,7 +479,7 @@ def get_popover(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
     return element
 
 
-def open_popover(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
+def open_popover(locator: Locator | Page, label: str | re.Pattern[str]) -> Locator:
     """Open a popover with the given label and return the popover container.
 
     Parameters
@@ -440,7 +502,7 @@ def open_popover(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
 
 
 def get_form_submit_button(
-    locator: Locator | Page, label: str | Pattern[str]
+    locator: Locator | Page, label: str | re.Pattern[str]
 ) -> Locator:
     """Get a form submit button with the given label.
 
@@ -466,7 +528,7 @@ def get_form_submit_button(
     return element
 
 
-def get_expander(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
+def get_expander(locator: Locator | Page, label: str | re.Pattern[str]) -> Locator:
     """Get a expander container with the given label.
 
     Parameters
@@ -489,7 +551,7 @@ def get_expander(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
     return element
 
 
-def get_number_input(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
+def get_number_input(locator: Locator | Page, label: str | re.Pattern[str]) -> Locator:
     """Get a number input with the given label.
 
     Parameters
@@ -511,7 +573,7 @@ def get_number_input(locator: Locator | Page, label: str | Pattern[str]) -> Loca
 
 
 def get_markdown(
-    locator: Locator | Page, text_inside_markdown: str | Pattern[str]
+    locator: Locator | Page, text_inside_markdown: str | re.Pattern[str]
 ) -> Locator:
     """Get a markdown element with the given text inside.
 
@@ -539,10 +601,82 @@ def get_markdown(
     return markdown_element
 
 
+def get_text(locator: Locator | Page, text: str | re.Pattern[str]) -> Locator:
+    """Get a text element with the given text."""
+    if isinstance(text, str):
+        text = re.compile(text)
+
+    text_element = locator.get_by_test_id("stText").filter(has_text=text)
+
+    expect(text_element).to_be_visible()
+    return text_element
+
+
+def get_caption(
+    locator: Locator | Page, text_inside_caption: str | re.Pattern[str]
+) -> Locator:
+    """Get a caption element with the given text inside.
+
+    Parameters
+    ----------
+    locator : Locator | Page
+        The locator to search for the caption.
+
+    text_inside_caption : str or Pattern[str]
+        Some text to use to identify the caption element. The text should be contained
+        in the caption content.
+
+    Returns
+    -------
+    Locator
+        The caption element.
+    """
+    if isinstance(text_inside_caption, str):
+        text_inside_caption = re.compile(text_inside_caption)
+
+    caption_element = locator.get_by_test_id("stCaptionContainer").filter(
+        has_text=text_inside_caption
+    )
+    expect(caption_element).to_be_visible()
+    return caption_element
+
+
+def get_heading(
+    locator: Locator | Page, text_inside_heading: str | re.Pattern[str]
+) -> Locator:
+    """Get a heading element with the given text inside.
+
+    Works for st.title (h1), st.header (h2), and st.subheader (h3) since they
+    all use the same stHeading test ID.
+
+    Parameters
+    ----------
+    locator : Locator | Page
+        The locator to search for the heading.
+
+    text_inside_heading : str or Pattern[str]
+        Some text to use to identify the heading element. The text should be contained
+        in the heading content.
+
+    Returns
+    -------
+    Locator
+        The heading element container (stHeading).
+    """
+    if isinstance(text_inside_heading, str):
+        text_inside_heading = re.compile(text_inside_heading)
+
+    heading_element = locator.get_by_test_id("stHeading").filter(
+        has_text=text_inside_heading
+    )
+    expect(heading_element).to_be_visible()
+    return heading_element
+
+
 def expect_prefixed_markdown(
     locator: FrameLocator | Locator | Page,
     expected_prefix: str,
-    expected_markdown: str | Pattern[str],
+    expected_markdown: str | re.Pattern[str],
     exact_match: bool = False,
 ) -> None:
     """Find the markdown with the prefix and then ensure that the
@@ -575,8 +709,8 @@ def expect_prefixed_markdown(
         has_text=expected_prefix
     )
     if exact_match:
-        text_to_match: str | Pattern[str]
-        if isinstance(expected_markdown, Pattern):
+        text_to_match: str | re.Pattern[str]
+        if isinstance(expected_markdown, re.Pattern):
             # Recompile the pattern with the prefix:
             text_to_match = re.compile(f"{expected_prefix} {expected_markdown.pattern}")
         else:
@@ -589,7 +723,7 @@ def expect_prefixed_markdown(
 
 def expect_markdown(
     locator: Locator | Page,
-    expected_message: str | Pattern[str],
+    expected_message: str | re.Pattern[str],
 ) -> None:
     """Expect markdown with the given message to be displayed in the app.
 
@@ -611,7 +745,7 @@ def expect_markdown(
 
 def expect_text(
     locator: Locator | Page,
-    expected_message: str | Pattern[str],
+    expected_message: str | re.Pattern[str],
 ) -> None:
     """Expect a st.text element with the given message to be visible.
 
@@ -629,7 +763,7 @@ def expect_text(
 
 def expect_exception(
     locator: Locator | Page,
-    expected_message: str | Pattern[str] | None = None,
+    expected_message: str | re.Pattern[str] | None = None,
 ) -> None:
     """Expect an exception to be displayed in the app.
 
@@ -658,7 +792,7 @@ def expect_no_exception(locator: Locator | Page) -> None:
 
 def expect_warning(
     locator: Locator | Page,
-    expected_message: str | Pattern[str],
+    expected_message: str | re.Pattern[str],
 ) -> None:
     """Expect a warning to be displayed in the app.
 
@@ -676,7 +810,7 @@ def expect_warning(
 
 def click_checkbox(
     page: Page,
-    label: str | Pattern[str],
+    label: str | re.Pattern[str],
 ) -> None:
     """Click a checkbox with the given label
     and wait for the app to run.
@@ -697,7 +831,7 @@ def click_checkbox(
 
 def click_toggle(
     page: Page,
-    label: str | Pattern[str],
+    label: str | re.Pattern[str],
 ) -> None:
     """Click a toggle with the given label
     and wait for the app to run.
@@ -715,7 +849,7 @@ def click_toggle(
 
 def fill_number_input(
     locator: Locator | Page,
-    label: str | Pattern[str],
+    label: str | re.Pattern[str],
     value: int,
 ) -> None:
     """Set the value of a number input.
@@ -741,8 +875,8 @@ def fill_number_input(
 
 def select_radio_option(
     page: Page,
-    option: str | Pattern[str],
-    label: str | Pattern[str] | None = None,
+    option: str | re.Pattern[str],
+    label: str | re.Pattern[str] | None = None,
 ) -> None:
     """Click a radio option with the given option label
     and wait for the app to run.
@@ -771,7 +905,7 @@ def select_radio_option(
 
 def click_button(
     page: Page,
-    label: str | Pattern[str],
+    label: str | re.Pattern[str],
 ) -> None:
     """Click a button with the given label
     and wait for the app to run.
@@ -791,7 +925,7 @@ def click_button(
 
 def click_form_button(
     page: Page,
-    label: str | Pattern[str],
+    label: str | re.Pattern[str],
 ) -> None:
     """Click a form submit button with the given label
     and wait for the app to run.
@@ -812,7 +946,7 @@ def click_form_button(
 def expect_help_tooltip(
     app: Locator | Page,
     element_with_help_tooltip: Locator,
-    tooltip_text: str | Pattern[str],
+    tooltip_text: str | re.Pattern[str],
 ) -> None:
     """Expect a tooltip to be displayed when hovering over the help symbol of an element.
 
@@ -832,6 +966,9 @@ def expect_help_tooltip(
     tooltip_text : str or Pattern[str]
         The text of the tooltip to expect.
     """
+    # Reset hover state to ensure no stale tooltips are visible
+    reset_hovering(app)
+
     hover_target = element_with_help_tooltip.get_by_test_id("stTooltipHoverTarget")
     expect(hover_target).to_be_visible()
 
@@ -865,6 +1002,58 @@ def reset_focus(locator: Locator | Page) -> None:
     """Reset the focus of the app."""
     page = locator.page if isinstance(locator, Locator) else locator
     page.get_by_test_id("stApp").click(position={"x": 0, "y": 0}, force=True)
+
+
+def tab_until_focused(page: Page, locator: Locator, max_tabs: int = 50) -> None:
+    """Tab through the page until the given locator is focused.
+
+    This is a small utility to make keyboard navigation tests resilient.
+    Hard-coding an exact number of <Tab> presses tends to be brittle because tab
+    order can change when unrelated UI gains/removes focusable elements.
+
+    Notes
+    -----
+    This helper assumes the page already has a reasonable starting focus state
+    (for example, by clicking in the app first or calling `reset_focus()`). If
+    nothing in the document is focused, initial <Tab> behavior can vary and the
+    test may become flaky.
+
+    Parameters
+    ----------
+    page : Page
+        The Playwright page to send Tab key presses to.
+
+    locator : Locator
+        The locator of the element that should eventually receive focus.
+
+    max_tabs : int
+        The maximum number of Tab presses before failing the test.
+    """
+    expect(locator).to_be_attached()
+
+    consecutive_eval_errors = 0
+    for _ in range(max_tabs):
+        page.keyboard.press("Tab")
+        try:
+            if locator.evaluate("el => el.matches(':focus')"):
+                return
+            consecutive_eval_errors = 0
+        except PlaywrightError:
+            # Locator may detach during rerenders triggered by focus/hover changes.
+            # Keep tabbing until things stabilize (bounded by max_tabs).
+            consecutive_eval_errors += 1
+            # If the locator stays detached for several iterations, it's likely
+            # not a transient re-render anymore. Fail fast with a clearer error.
+            if consecutive_eval_errors >= 5:
+                raise AssertionError(
+                    "Locator became detached repeatedly while tabbing to focus. "
+                    "Ensure the element is present and stable in the DOM."
+                )
+
+    raise AssertionError(
+        "Element did not receive focus after tabbing. "
+        f"Attempted {max_tabs} Tab presses."
+    )
 
 
 def expect_script_state(
@@ -1233,7 +1422,7 @@ def goto_app(page: Page, url: str) -> None:
     wait_for_app_loaded(page)
 
 
-def get_metric(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
+def get_metric(locator: Locator | Page, label: str | re.Pattern[str]) -> Locator:
     """Get a metric element with the given label.
 
     Parameters
@@ -1241,7 +1430,7 @@ def get_metric(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
     locator : Locator | Page
         The locator to search for the metric element.
 
-    label : str | Pattern[str]
+    label : str | re.Pattern[str]
         The label of the metric element to get.
 
     Returns

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, {
+import {
   ChangeEvent,
   KeyboardEvent,
   memo,
@@ -25,7 +25,13 @@ import React, {
   useState,
 } from "react"
 
-import { Check, Close, Mic, Send } from "@emotion-icons/material-rounded"
+import {
+  ArrowUpward,
+  Check,
+  Close,
+  ErrorOutline,
+  Mic,
+} from "@emotion-icons/material-rounded"
 import { Textarea as UITextArea } from "baseui/textarea"
 import { useDropzone } from "react-dropzone"
 
@@ -40,8 +46,9 @@ import {
 
 import { useWaveformController } from "~lib/components/audio"
 import { LOG } from "~lib/components/ChatInput/logger"
-import Icon, { StyledSpinnerIcon } from "~lib/components/shared/Icon"
+import Icon, { DynamicIcon } from "~lib/components/shared/Icon"
 import InputInstructions from "~lib/components/shared/InputInstructions/InputInstructions"
+import Tooltip, { Placement } from "~lib/components/shared/Tooltip"
 import {
   UploadedStatus,
   UploadFileInfo,
@@ -66,12 +73,16 @@ import ChatUploadedFiles from "./fileUpload/ChatUploadedFiles"
 import { createDropHandler } from "./fileUpload/createDropHandler"
 import { createUploadFileHandler } from "./fileUpload/createFileUploadHandler"
 import {
+  StyledActionRow,
   StyledChatAudioWave,
   StyledChatInput,
   StyledChatInputContainer,
-  StyledInputInstructionsContainer,
+  StyledContentArea,
+  StyledInputInstructions,
+  StyledLeftCluster,
+  StyledPrimaryRegion,
+  StyledRightCluster,
   StyledSendIconButton,
-  StyledSendIconButtonContainer,
   StyledWaveformContainer,
 } from "./styled-components"
 
@@ -119,6 +130,7 @@ function ChatInput({
   const [files, setFiles] = useState<UploadFileInfo[]>([])
   const [fileDragged, setFileDragged] = useState(false)
   const [audioUploading, setAudioUploading] = useState(false)
+  const [recordingError, setRecordingError] = useState<string | null>(null)
 
   // Read acceptAudio from the element configuration
   const acceptAudio = element.acceptAudio ?? false
@@ -177,7 +189,7 @@ function ChatInput({
           .catch(error => {
             // Log deletion errors for observability, but don't block the user
             // File may already be deleted or server unavailable
-            LOG.error("Failed to delete file from server", error)
+            LOG.error("Failed to delete file from server:", error)
           })
       }
     },
@@ -199,6 +211,29 @@ function ChatInput({
       })
     },
     [deleteUploadedFile]
+  )
+
+  // Reference to dropHandler for retry functionality
+  // This is set after dropHandler is created below
+  const dropHandlerRef = useRef<
+    ((acceptedFiles: File[], rejectedFiles: never[]) => void) | null
+  >(null)
+
+  const handleRetry = useCallback(
+    (fileInfo: UploadFileInfo): void => {
+      if (!fileInfo.file || fileInfo.status.type !== "error") {
+        return
+      }
+
+      // Remove the failed file from state
+      setFiles(prevFiles => prevFiles.filter(f => f.id !== fileInfo.id))
+
+      // Re-trigger the upload using the drop handler
+      if (dropHandlerRef.current) {
+        dropHandlerRef.current([fileInfo.file], [])
+      }
+    },
+    [] // No dependencies - uses ref for dropHandler
   )
 
   const createChatInputWidgetFilesValue =
@@ -295,6 +330,9 @@ function ChatInput({
     },
     element,
   })
+
+  // Store dropHandler in ref for retry functionality
+  dropHandlerRef.current = dropHandler
 
   const { getRootProps, getInputProps } = useDropzone({
     onDrop: dropHandler,
@@ -399,7 +437,9 @@ function ChatInput({
         // 4. Submit immediately with audio info
         submitChatInput(audioInfo)
       } catch (error) {
+        const errorMessage = "Recording failed"
         LOG.error("Audio upload failed:", error)
+        setRecordingError(errorMessage)
         // Refocus on input after error
         if (chatInputRef.current) {
           chatInputRef.current.focus()
@@ -415,6 +455,19 @@ function ChatInput({
   const controllerEvents = useMemo(
     () => ({
       onApprove: handleAudioApprove,
+      onPermissionDenied: () => {
+        const errorMessage = "Microphone access denied"
+        setRecordingError(errorMessage)
+        LOG.error("Permission denied:", errorMessage)
+      },
+      onError: (error: Error) => {
+        const errorMessage = "Recording failed"
+        setRecordingError(errorMessage)
+        LOG.error("Recording error:", error)
+      },
+      onRecordStart: () => {
+        setRecordingError(null)
+      },
     }),
     [handleAudioApprove]
   )
@@ -422,6 +475,7 @@ function ChatInput({
   // Create waveform controller for audio recording
   const controller = useWaveformController({
     containerRef: waveformContainerRef,
+    sampleRate: element.audioSampleRate ?? undefined,
     events: controllerEvents,
   })
 
@@ -450,6 +504,11 @@ function ChatInput({
 
     setValue(targetValue)
     autoExpand.updateScrollHeight()
+
+    // Clear recording error when user starts typing
+    if (recordingError) {
+      setRecordingError(null)
+    }
   }
 
   const handleMicClick = useCallback(
@@ -461,7 +520,6 @@ function ChatInput({
         return
       }
 
-      // Error handling is done via controller events (onError, onPermissionDenied)
       await controller.start()
     },
     [acceptAudio, disabled, controller]
@@ -475,12 +533,27 @@ function ChatInput({
   }, [controller])
 
   const handleRecordingApprove = useCallback(async () => {
-    // Stop recording and get the blob
     const { blob } = await controller.stop()
-    // Approve the recording (encodes to WAV and triggers onApprove event which handles upload)
-    // Error handling is done via controller events (onError) and in the onApprove handler for upload errors
     await controller.approve(blob)
   }, [controller])
+
+  // Void wrappers for async handlers to satisfy eslint
+  const handleMicClickVoid = useCallback(
+    (e: React.MouseEvent) => {
+      void handleMicClick(e)
+    },
+    [handleMicClick]
+  )
+
+  const handleRecordingApproveVoid = useCallback(() => {
+    void handleRecordingApprove()
+  }, [handleRecordingApprove])
+
+  const focusInput = useCallback(() => {
+    if (chatInputRef.current) {
+      chatInputRef.current.focus()
+    }
+  }, [])
 
   // Handle setValue command from backend
   // This runs when element.setValue is true, indicating the backend wants to set a new value
@@ -542,183 +615,203 @@ function ChatInput({
   }, [fileDragged, innerWidth, innerHeight])
 
   const showDropzone = acceptFile !== AcceptFileValue.None && fileDragged
+  const isRecording = controller.state === "recording"
+
+  const showInstructions =
+    !isRecording && width > theme.breakpoints.hideWidgetDetails && maxChars > 0
 
   return (
-    <>
-      {acceptFile === AcceptFileValue.None ? null : (
-        <ChatUploadedFiles items={[...files]} onDelete={deleteFile} />
-      )}
-      <StyledChatInputContainer
-        className="stChatInput"
-        data-testid="stChatInput"
-        ref={elementRef}
-      >
-        {showDropzone ? (
-          <ChatFileUploadDropzone
-            getRootProps={getRootProps}
-            getInputProps={getInputProps}
-            acceptFile={acceptFile}
-            inputHeight={autoExpand.height}
-          />
-        ) : (
-          <StyledChatInput
-            extended={
-              autoExpand.isExtended || controller.state === "recording"
-            }
+    <StyledChatInputContainer
+      className="stChatInput"
+      data-testid="stChatInput"
+      ref={elementRef}
+    >
+      <StyledChatInput extended={autoExpand.isExtended || isRecording}>
+        {/* Character count - positioned in top-right corner */}
+        {showInstructions && (
+          <StyledInputInstructions
+            onClick={focusInput}
+            id="stChatInputInstructions"
           >
+            <InputInstructions
+              dirty={dirty}
+              value={value}
+              maxLength={maxChars}
+              type="chat"
+              inForm={false}
+              className="stChatInputInstructions"
+            />
+          </StyledInputInstructions>
+        )}
+
+        <StyledContentArea>
+          {showDropzone && (
+            <ChatFileUploadDropzone
+              getRootProps={getRootProps}
+              getInputProps={getInputProps}
+              acceptFile={acceptFile}
+            />
+          )}
+
+          {acceptFile !== AcceptFileValue.None && files.length > 0 && (
+            <ChatUploadedFiles
+              items={[...files]}
+              onDelete={deleteFile}
+              onRetry={handleRetry}
+            />
+          )}
+
+          <StyledPrimaryRegion>
             {/* Waveform - always mounted to ensure ref is available for initialization */}
-            <StyledWaveformContainer
-              isRecording={controller.state === "recording"}
-            >
+            <StyledWaveformContainer isRecording={isRecording}>
               <StyledChatAudioWave ref={waveformContainerRef} />
             </StyledWaveformContainer>
 
-            {acceptFile === AcceptFileValue.None ||
-            controller.state === "recording" ? null : (
+            {/* Textarea - only shown when not recording */}
+            {!isRecording && (
+              <>
+                <UITextArea
+                  inputRef={chatInputRef}
+                  value={value}
+                  placeholder={placeholder}
+                  onChange={handleChange}
+                  onKeyDown={handleKeyDown}
+                  aria-label={placeholder}
+                  disabled={disabled}
+                  rows={1}
+                  // Add aria-describedby when instructions are visible
+                  aria-describedby={
+                    showInstructions ? "stChatInputInstructions" : undefined
+                  }
+                  overrides={{
+                    Root: {
+                      style: {
+                        minHeight: theme.sizes.minElementHeight,
+                        outline: "none",
+                        borderLeftWidth: "0",
+                        borderRightWidth: "0",
+                        borderTopWidth: "0",
+                        borderBottomWidth: "0",
+                        borderTopLeftRadius: "0",
+                        borderTopRightRadius: "0",
+                        borderBottomRightRadius: "0",
+                        borderBottomLeftRadius: "0",
+                        width: "100%", // Ensure full width
+                      },
+                    },
+                    Input: {
+                      props: {
+                        "data-testid": "stChatInputTextArea",
+                      },
+                      style: {
+                        fontWeight: theme.fontWeights.normal,
+                        lineHeight: theme.lineHeights.inputWidget,
+                        "::placeholder": {
+                          color: theme.colors.fadedText60,
+                        },
+                        height: autoExpand.height,
+                        maxHeight: autoExpand.maxHeight,
+                        overflowY: "auto", // Enable scrolling when content exceeds maxHeight
+                        // Baseweb requires long-hand props
+                        paddingLeft: theme.spacing.none,
+                        paddingRight: theme.spacing.none,
+                        paddingBottom: theme.spacing.sm,
+                        paddingTop: theme.spacing.sm,
+                        width: "100%", // Ensure full width
+                      },
+                    },
+                  }}
+                />
+              </>
+            )}
+          </StyledPrimaryRegion>
+        </StyledContentArea>
+
+        <StyledActionRow>
+          <StyledLeftCluster>
+            {acceptFile !== AcceptFileValue.None && !isRecording && (
               <ChatFileUploadButton
                 getRootProps={getRootProps}
                 getInputProps={getInputProps}
                 acceptFile={acceptFile}
                 disabled={disabled}
-                theme={theme}
               />
             )}
 
-            {/* Textarea - only shown when not recording */}
-            {controller.state !== "recording" && (
-              <UITextArea
-                inputRef={chatInputRef}
-                value={value}
-                placeholder={placeholder}
-                onChange={handleChange}
-                onKeyDown={handleKeyDown}
-                aria-label={placeholder}
-                disabled={disabled}
-                rows={1}
-                overrides={{
-                  Root: {
-                    style: {
-                      minHeight: theme.sizes.minElementHeight,
-                      outline: "none",
-                      borderLeftWidth: "0",
-                      borderRightWidth: "0",
-                      borderTopWidth: "0",
-                      borderBottomWidth: "0",
-                      borderTopLeftRadius: "0",
-                      borderTopRightRadius: "0",
-                      borderBottomRightRadius: "0",
-                      borderBottomLeftRadius: "0",
-                    },
-                  },
-                  Input: {
-                    props: {
-                      "data-testid": "stChatInputTextArea",
-                    },
-                    style: {
-                      fontWeight: theme.fontWeights.normal,
-                      lineHeight: theme.lineHeights.inputWidget,
-                      "::placeholder": {
-                        color: theme.colors.fadedText60,
-                      },
-                      height: autoExpand.height,
-                      maxHeight: autoExpand.maxHeight,
-                      // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
-                      paddingLeft: theme.spacing.none,
-                      paddingBottom: theme.spacing.sm,
-                      paddingTop: theme.spacing.sm,
-                      // Calculate the right padding to account for button(s) on the right
-                      // Each button is: iconSizes.xl + 2 * spacing.sm (40px total)
-                      // When acceptAudio is true, there are 2 buttons (mic + send) = 80px
-                      paddingRight: acceptAudio
-                        ? `calc(2 * (${theme.iconSizes.xl} + 2 * ${theme.spacing.sm}))`
-                        : `calc(${theme.iconSizes.xl} + 2 * ${theme.spacing.sm} + ${theme.spacing.sm})`,
-                    },
-                  },
-                }}
-              />
-            )}
-
-            {/* Input instructions - hidden during recording */}
-            {controller.state !== "recording" &&
-              width > theme.breakpoints.hideWidgetDetails && (
-                <StyledInputInstructionsContainer acceptAudio={acceptAudio}>
-                  <InputInstructions
-                    dirty={dirty}
-                    value={value}
-                    maxLength={maxChars}
-                    type="chat"
-                    // Chat Input are not able to be used in forms
-                    inForm={false}
-                  />
-                </StyledInputInstructionsContainer>
-              )}
-
-            {/* Right-side buttons */}
-            <StyledSendIconButtonContainer
-              isRecording={controller.state === "recording"}
-            >
-              {controller.state === "recording" ? (
-                <>
-                  {/* Cancel button (X icon) */}
-                  <StyledSendIconButton
-                    onClick={handleRecordingCancel}
-                    disabled={disabled}
-                    extended={autoExpand.isExtended}
-                    data-testid="stChatInputCancelButton"
+            {acceptAudio && !isRecording && (
+              <>
+                {recordingError ? (
+                  <Tooltip
+                    content={recordingError}
+                    placement={Placement.TOP}
+                    error
                   >
-                    <Icon content={Close} size="lg" color="inherit" />
-                  </StyledSendIconButton>
-                  {/* Approve button (✓ icon or spinner during upload) */}
-                  <StyledSendIconButton
-                    onClick={() => {
-                      handleRecordingApprove().catch(_error => {
-                        // Error handling is done via controller events
-                      })
-                    }}
-                    disabled={disabled || audioUploading}
-                    extended={autoExpand.isExtended}
-                    data-testid="stChatInputApproveButton"
-                  >
-                    {audioUploading ? (
-                      <StyledSpinnerIcon size="lg" margin="0" padding="0" />
-                    ) : (
-                      <Icon content={Check} size="lg" color="inherit" />
-                    )}
-                  </StyledSendIconButton>
-                </>
-              ) : (
-                <>
-                  {/* Mic button */}
-                  {acceptAudio && (
                     <StyledSendIconButton
-                      onClick={(e: React.MouseEvent) => {
-                        handleMicClick(e).catch(_error => {
-                          // Error handling is done via controller events
-                        })
-                      }}
+                      onClick={handleMicClickVoid}
                       disabled={disabled || audioUploading}
-                      extended={autoExpand.isExtended}
+                      hasError
                       data-testid="stChatInputMicButton"
+                      aria-label="Start recording"
                     >
-                      <Icon content={Mic} size="xl" color="inherit" />
+                      <Icon content={ErrorOutline} size="xl" color="inherit" />
                     </StyledSendIconButton>
-                  )}
-                  {/* Send button */}
+                  </Tooltip>
+                ) : (
                   <StyledSendIconButton
-                    onClick={handleSubmit}
-                    disabled={!dirty || disabled || audioUploading}
-                    extended={autoExpand.isExtended}
-                    data-testid="stChatInputSubmitButton"
+                    onClick={handleMicClickVoid}
+                    disabled={disabled || audioUploading}
+                    data-testid="stChatInputMicButton"
+                    aria-label="Start recording"
                   >
-                    <Icon content={Send} size="xl" color="inherit" />
+                    <Icon content={Mic} size="xl" color="inherit" />
                   </StyledSendIconButton>
-                </>
-              )}
-            </StyledSendIconButtonContainer>
-          </StyledChatInput>
-        )}
-      </StyledChatInputContainer>
-    </>
+                )}
+              </>
+            )}
+          </StyledLeftCluster>
+
+          <StyledRightCluster>
+            {isRecording ? (
+              <>
+                {/* Cancel button */}
+                <StyledSendIconButton
+                  onClick={handleRecordingCancel}
+                  disabled={disabled}
+                  data-testid="stChatInputCancelButton"
+                  aria-label="Cancel recording"
+                >
+                  <Icon content={Close} size="lg" color="inherit" />
+                </StyledSendIconButton>
+                {/* Approve button */}
+                <StyledSendIconButton
+                  onClick={handleRecordingApproveVoid}
+                  disabled={disabled || audioUploading}
+                  data-testid="stChatInputApproveButton"
+                  aria-label="Submit recording"
+                >
+                  {audioUploading ? (
+                    <DynamicIcon size="lg" iconValue="spinner" />
+                  ) : (
+                    <Icon content={Check} size="lg" color="inherit" />
+                  )}
+                </StyledSendIconButton>
+              </>
+            ) : (
+              /* Send button */
+              <StyledSendIconButton
+                onClick={handleSubmit}
+                disabled={!dirty || disabled || audioUploading}
+                data-testid="stChatInputSubmitButton"
+                aria-label="Send message"
+                primary
+              >
+                <Icon content={ArrowUpward} size="lg" color="inherit" />
+              </StyledSendIconButton>
+            )}
+          </StyledRightCluster>
+        </StyledActionRow>
+      </StyledChatInput>
+    </StyledChatInputContainer>
   )
 }
 

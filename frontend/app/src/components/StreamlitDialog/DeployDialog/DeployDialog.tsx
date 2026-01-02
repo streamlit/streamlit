@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, ReactNode, useCallback } from "react"
+import { ReactElement, ReactNode, useCallback } from "react"
 
 import { StyledAction, StyledBody } from "baseui/card"
 
@@ -73,7 +73,6 @@ const getDeployAppUrl = (gitInfo: IGitInfo | null): string => {
 
 export interface DeployDialogProps {
   gitInfo: IGitInfo | null
-  // eslint-disable-next-line @eslint-react/no-unused-props
   type: DialogType.DEPLOY_DIALOG
   onClose: PlainEventHandler
   showDeployError: (

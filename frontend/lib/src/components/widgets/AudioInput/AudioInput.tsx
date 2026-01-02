@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, {
+import {
   memo,
   ReactElement,
   useCallback,
@@ -30,8 +30,10 @@ import { AudioInput as AudioInputProto } from "@streamlit/protobuf"
 import { useWaveformController } from "~lib/components/audio"
 import Toolbar, { ToolbarAction } from "~lib/components/shared/Toolbar"
 import { Placement } from "~lib/components/shared/Tooltip"
-import TooltipIcon from "~lib/components/shared/TooltipIcon"
-import { WidgetLabel } from "~lib/components/widgets/BaseWidget"
+import {
+  WidgetLabel,
+  WidgetLabelHelpIcon,
+} from "~lib/components/widgets/BaseWidget"
 import { FormClearHelper } from "~lib/components/widgets/Form"
 import { FileUploadClient } from "~lib/FileUploadClient"
 import useDownloadUrl from "~lib/hooks/useDownloadUrl"
@@ -56,7 +58,6 @@ import {
   StyledWaveformInnerDiv,
   StyledWaveformTimeCode,
   StyledWaveSurferDiv,
-  StyledWidgetLabelHelp,
 } from "./styled-components"
 
 export interface Props {
@@ -232,6 +233,7 @@ const AudioInput: React.FC<Props> = ({
   const controller = useWaveformController({
     containerRef,
     sampleRate: element.sampleRate ?? undefined,
+    waveformPadding: 4, // Pixels of vertical padding to prevent waveform from touching edges
     events: {
       onPermissionDenied: () => {
         setHasNoMicPermissions(true)
@@ -534,9 +536,11 @@ const AudioInput: React.FC<Props> = ({
         )}
       >
         {element.help && (
-          <StyledWidgetLabelHelp>
-            <TooltipIcon content={element.help} placement={Placement.TOP} />
-          </StyledWidgetLabelHelp>
+          <WidgetLabelHelpIcon
+            content={element.help}
+            placement={Placement.TOP}
+            label={element.label}
+          />
         )}
       </WidgetLabel>
       <StyledWaveformContainerDiv disabled={disabled}>

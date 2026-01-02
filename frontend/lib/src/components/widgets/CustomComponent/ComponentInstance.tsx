@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, {
+import {
   memo,
   ReactElement,
   useEffect,
@@ -32,6 +32,7 @@ import {
   ISpecialArg,
   Skeleton as SkeletonProto,
 } from "@streamlit/protobuf"
+import { StreamlitConfig } from "@streamlit/utils"
 
 import { withCalculatedWidth } from "~lib/components/core/Layout/withCalculatedWidth"
 import AlertElement from "~lib/components/elements/AlertElement"
@@ -97,8 +98,7 @@ function getSrc(
   }
 
   // Add streamlitUrl query parameter to src
-  const customComponentClientId =
-    window.__streamlit?.CUSTOM_COMPONENT_CLIENT_ID
+  const customComponentClientId = StreamlitConfig.CUSTOM_COMPONENT_CLIENT_ID
   const currentUrl = new URL(window.location.href)
   src = queryString.stringifyUrl({
     url: src,
@@ -218,10 +218,13 @@ function ComponentInstance(props: Props): ReactElement {
     dataframeArgs: [],
   })
   const haveDataframeArgsChanged = compareDataframeArgs(
+    // eslint-disable-next-line react-hooks/refs -- TODO: Do not access ref during render
     parsedArgsRef.current.dataframeArgs,
     parsedDataframeArgs
   )
+  // eslint-disable-next-line react-hooks/refs -- TODO: Do not access ref during render
   parsedArgsRef.current.args = parsedNewArgs
+  // eslint-disable-next-line react-hooks/refs -- TODO: Do not access ref during render
   parsedArgsRef.current.dataframeArgs = parsedDataframeArgs
 
   const [isReadyTimeout, setIsReadyTimeout] = useState<boolean>()
@@ -402,8 +405,7 @@ function ComponentInstance(props: Props): ReactElement {
 
   // Show the loading Skeleton while we have not received the ready message from the custom component
   // but while we also have not waited until the ready timeout
-  // TODO: Update to match React best practices
-
+  // eslint-disable-next-line react-hooks/refs -- TODO: Do not access ref during render
   const loadingSkeleton = !isReadyRef.current &&
     !isReadyTimeout &&
     // if height is explicitly set to 0, we don’t want to show the skeleton at all
@@ -420,8 +422,7 @@ function ComponentInstance(props: Props): ReactElement {
   // If we've timed out waiting for the READY message from the component,
   // display a warning.
   const warns =
-    // TODO: Update to match React best practices
-
+    // eslint-disable-next-line react-hooks/refs -- TODO: Do not access ref during render
     !isReadyRef.current && isReadyTimeout ? (
       <AlertElement
         body={getWarnMessage(componentName, url)}
@@ -445,6 +446,7 @@ function ComponentInstance(props: Props): ReactElement {
   // TODO: make sure horizontal scrolling still works!
   return (
     <>
+      {/* eslint-disable-next-line react-hooks/refs -- TODO: Do not access ref during render */}
       {loadingSkeleton}
       {warns}
       <StyledComponentIframe
@@ -459,8 +461,7 @@ function ComponentInstance(props: Props): ReactElement {
         scrolling="no"
         sandbox={DEFAULT_IFRAME_SANDBOX_POLICY}
         title={componentName}
-        // TODO: Update to match React best practices
-
+        // eslint-disable-next-line react-hooks/refs -- TODO: Do not access ref during render
         componentReady={isReadyRef.current}
         tabIndex={element.tabIndex ?? undefined}
       />

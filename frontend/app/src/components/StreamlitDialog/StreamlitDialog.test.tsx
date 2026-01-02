@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-import React, { Fragment } from "react"
+import { Fragment } from "react"
 
 import { screen } from "@testing-library/react"
 
 import { StreamlitDialog } from "@streamlit/app/src/components/StreamlitDialog"
 import { DialogType } from "@streamlit/app/src/components/StreamlitDialog/constants"
-import { render } from "@streamlit/lib"
+import { render } from "@streamlit/lib/testing"
 
 function flushPromises(): Promise<void> {
   return new Promise(process.nextTick)

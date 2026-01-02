@@ -65,3 +65,22 @@ def test_shows_copy_icon(themed_app: Page, assert_snapshot: ImageCompareFunction
     json_element.hover()
 
     assert_snapshot(json_element, name="st_json-copy_icon_on_hover")
+
+
+def test_shows_json_path_tooltip_on_click(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that clicking on a JSON value shows a tooltip with the JSON path."""
+    # Use a JSON element with nested values:
+    json_element = themed_app.get_by_test_id("stJson").nth(6)
+    expect(json_element).to_be_visible()
+
+    # Click on a string value to trigger the tooltip
+    string_value = json_element.locator(".string-value").first
+    string_value.click()
+
+    # Wait for and verify the tooltip appears
+    tooltip = themed_app.get_by_test_id("stJsonPathTooltip")
+    expect(tooltip).to_be_visible()
+
+    assert_snapshot(tooltip, name="st_json-path_tooltip")

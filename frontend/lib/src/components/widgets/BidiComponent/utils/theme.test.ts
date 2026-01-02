@@ -16,7 +16,10 @@
 
 import { describe, expect, expectTypeOf, it } from "vitest"
 
-import { StreamlitTheme } from "@streamlit/component-v2-lib"
+import {
+  StreamlitTheme,
+  StreamlitThemeCssProperties,
+} from "@streamlit/component-v2-lib"
 import { ICustomThemeConfig } from "@streamlit/protobuf"
 
 import {
@@ -53,7 +56,19 @@ describe("BidiComponent/utils/theme", () => {
         "1.25rem",
         "1rem",
       ],
+      headingFontSize1: "2.75rem",
+      headingFontSize2: "2.25rem",
+      headingFontSize3: "1.75rem",
+      headingFontSize4: "1.5rem",
+      headingFontSize5: "1.25rem",
+      headingFontSize6: "1rem",
       headingFontWeights: [700, 600, 600, 600, 600, 600],
+      headingFontWeight1: 700,
+      headingFontWeight2: 600,
+      headingFontWeight3: 600,
+      headingFontWeight4: 600,
+      headingFontWeight5: 600,
+      headingFontWeight6: 600,
       borderColor: "#eeeeee",
       borderColorLight: "#f5f5f5",
       dataframeBorderColor: "#f0f0f0",
@@ -77,6 +92,7 @@ describe("BidiComponent/utils/theme", () => {
       greenBackgroundColor: "rgba(0,255,0,0.1)",
       violetBackgroundColor: "rgba(170,0,255,0.1)",
       grayBackgroundColor: "rgba(136,136,136,0.1)",
+      widgetBorderColor: "transparent",
 
       redTextColor: "#ff0000",
       orangeTextColor: "#ff8800",
@@ -94,10 +110,26 @@ describe("BidiComponent/utils/theme", () => {
       expect(result["--st-primary-color"]).toBe("#ff0000")
       expect(result["--st-background-color"]).toBe("#ffffff")
       expect(result["--st-font"]).toBe("Source Sans Pro, sans-serif")
-
-      // This is an optional property, so if it doesn't exist, it should not be included in the result
-      expect(Object.keys(result)).not.toContain("--st-widget-border-color")
+      expect(result["--st-widget-border-color"]).toBe("transparent")
     })
+
+    it.each([
+      ["undefined", undefined],
+      ["null", null],
+    ])(
+      "serializes explicitly %s non-widget properties as CSS-wide 'unset'",
+      (_label, value) => {
+        const themeWithOverrides = createTheme({
+          borderColor: value as never,
+        })
+
+        const result = objectToCssCustomProperties(themeWithOverrides)
+        const dict = result as unknown as Record<string, string>
+
+        expect(dict["--st-border-color"]).toBe("unset")
+        expectTypeOf(dict["--st-border-color"]).toEqualTypeOf<string>()
+      }
+    )
 
     it.each([
       [true, "1"],
@@ -119,6 +151,35 @@ describe("BidiComponent/utils/theme", () => {
       const dict = result as unknown as Record<string, string>
       expect(dict[expectedKey]).toBe(String(value))
     })
+
+    it.each<
+      [
+        key: keyof StreamlitTheme,
+        value: string | number,
+        expectedKey: keyof StreamlitThemeCssProperties,
+      ]
+    >([
+      ["headingFontSize1", "2.75rem", "--st-heading-font-size-1"],
+      ["headingFontSize2", "2.25rem", "--st-heading-font-size-2"],
+      ["headingFontSize3", "1.75rem", "--st-heading-font-size-3"],
+      ["headingFontSize4", "1.5rem", "--st-heading-font-size-4"],
+      ["headingFontSize5", "1.25rem", "--st-heading-font-size-5"],
+      ["headingFontSize6", "1rem", "--st-heading-font-size-6"],
+      ["headingFontWeight1", 700, "--st-heading-font-weight-1"],
+      ["headingFontWeight2", 600, "--st-heading-font-weight-2"],
+      ["headingFontWeight3", 600, "--st-heading-font-weight-3"],
+      ["headingFontWeight4", 600, "--st-heading-font-weight-4"],
+      ["headingFontWeight5", 600, "--st-heading-font-weight-5"],
+      ["headingFontWeight6", 600, "--st-heading-font-weight-6"],
+    ])(
+      "converts individual heading property %s to CSS custom property",
+      (propName, value, expectedKey) => {
+        const overrides: Partial<StreamlitTheme> = { [propName]: value }
+        const result = objectToCssCustomProperties(createTheme(overrides))
+
+        expect(result[expectedKey]).toBe(String(value))
+      }
+    )
 
     it("serializes baseFontSize with px unit", () => {
       const result = objectToCssCustomProperties(
@@ -207,10 +268,8 @@ describe("BidiComponent/utils/theme", () => {
     // expect to be present in the extracted theme object.
     const protoFieldsToIgnore: Array<keyof ICustomThemeConfig> = [
       "base",
-      "font",
       "bodyFont",
       "widgetBackgroundColor",
-      "widgetBorderColor",
       "radii",
       "fontFaces",
       "fontSources",
@@ -309,6 +368,13 @@ describe("BidiComponent/utils/theme", () => {
 
       expectedThemeKeys.forEach(expectedKey => {
         expect(extractedThemeKeys).toContain(expectedKey)
+      })
+
+      protoFieldsToIgnore.forEach(ignoredKey => {
+        expect(
+          extractedThemeKeys,
+          `Expected ignored protobuf theme field "${ignoredKey}" to be omitted from extracted theme keys.`
+        ).not.toContain(ignoredKey)
       })
     })
   })

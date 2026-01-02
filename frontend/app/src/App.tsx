@@ -14,13 +14,11 @@
  * limitations under the License.
  */
 
-import React, { PureComponent, ReactNode } from "react"
+import { PureComponent, ReactNode } from "react"
 
 import classNames from "classnames"
 import { enableMapSet, enablePatches } from "immer"
-import without from "lodash/without"
 import { getLogger } from "loglevel"
-import moment from "moment"
 import { flushSync } from "react-dom"
 import Hotkeys from "react-hot-keys"
 
@@ -37,6 +35,7 @@ import {
   WarningProps,
 } from "@streamlit/app/src/components/StreamlitDialog"
 import { DialogType } from "@streamlit/app/src/components/StreamlitDialog/constants"
+import DialogErrorMessage from "@streamlit/app/src/components/StreamlitDialog/DialogErrorMessage"
 import { UserSettings } from "@streamlit/app/src/components/StreamlitDialog/UserSettings"
 import ToolbarActions from "@streamlit/app/src/components/ToolbarActions"
 import withScreencast, {
@@ -52,7 +51,9 @@ import {
   ConnectionManager,
   ConnectionState,
   DefaultStreamlitEndpoints,
-  IHostConfigResponse,
+  ErrorDetails,
+  IHostConfigProperties,
+  isHostConfigBypassEnabled,
   LibConfig,
   parseUriIntoBaseParts,
   StreamlitEndpoints,
@@ -65,8 +66,10 @@ import {
   createFormsData,
   createPresetThemes,
   CUSTOM_THEME_AUTO_NAME,
+  darkTheme,
   DeployedAppMetadata,
   ensureError,
+  ensureHotkeysFilterConfigured,
   extractPageNameFromPathName,
   FileUploadClient,
   FormsData,
@@ -77,6 +80,8 @@ import {
   getHostSpecifiedTheme,
   getIFrameEnclosingApp,
   getLocaleLanguage,
+  getQueryString,
+  getScreencastTimestamp,
   getTimezone,
   getTimezoneOffset,
   getUrl,
@@ -87,11 +92,14 @@ import {
   IMenuItem,
   isEmbed,
   isInChildFrame,
+  isKeyboardEventFromEditableTarget,
   isPaddingDisplayed,
   isPresetTheme,
   isScrollingHidden,
   isToolbarDisplayed,
   IToolbarItem,
+  lightTheme,
+  mapCachedThemeToAvailableTheme,
   mark,
   measure,
   notUndefined,
@@ -99,10 +107,9 @@ import {
   PresetThemeName,
   ScriptRunState,
   SessionInfo,
-  StreamlitMarkdown,
+  sortThemeInputKeys,
   ThemeConfig,
   toExportedTheme,
-  toThemeInput,
   WidgetStateManager,
 } from "@streamlit/lib"
 import {
@@ -111,6 +118,7 @@ import {
   BackMsg,
   Config,
   CustomThemeConfig,
+  DeferredFileResponse,
   Delta,
   FileURLsResponse,
   ForwardMsg,
@@ -137,12 +145,17 @@ import {
   isLocalhost,
   isNullOrUndefined,
   notNullOrUndefined,
+  StreamlitConfig,
 } from "@streamlit/utils"
 
 import { showDevelopmentOptions } from "./showDevelopmentOptions"
 // Used to import fonts + responsive reboot items
 import "@streamlit/app/src/assets/css/theme.scss"
 import { AppNavigation, MaybeStateUpdate } from "./util/AppNavigation"
+import {
+  includeIfDefined,
+  reconcileHostConfigValues,
+} from "./util/hostConfigHelpers"
 import { ThemeManager } from "./util/useThemeManager"
 
 // vite config builds global variable PACKAGE_METADATA
@@ -170,6 +183,7 @@ interface State {
   connectionErrorDismissed: boolean
   layout: PageConfig.Layout
   initialSidebarState: PageConfig.SidebarState
+  initialSidebarWidth?: number
   menuItems?: PageConfig.IMenuItems | null
   allowRunOnSave: boolean
   scriptFinishedHandlers: (() => void)[]
@@ -252,6 +266,12 @@ export class App extends PureComponent<Props, State> {
 
   private readonly embeddingId: string = generateUID()
 
+  // Listener registry for deferred file responses: fileId -> set of listeners
+  private readonly deferredFileListeners = new Map<
+    string,
+    Set<(response: DeferredFileResponse) => void>
+  >()
+
   private readonly appNavigation: AppNavigation
 
   private isInitializingConnectionManager: boolean = true
@@ -265,19 +285,12 @@ export class App extends PureComponent<Props, State> {
   public constructor(props: Props) {
     super(props)
 
+    // Register hotkey filter:
+    ensureHotkeysFilterConfigured()
+
     // Initialize immerjs
     enablePatches()
     enableMapSet()
-
-    // Theme hashes are only created for custom theme, and the custom theme
-    // may come from localStorage. We need to create the hash here to ensure
-    // that the theme is correctly represented.
-    let themeHash = this.createThemeHash()
-    if (!isPresetTheme(props.theme.activeTheme)) {
-      themeHash = this.createThemeHash(
-        toThemeInput(props.theme.activeTheme.emotion) as CustomThemeConfig
-      )
-    }
 
     this.state = {
       connectionState: ConnectionState.INITIAL,
@@ -294,10 +307,15 @@ export class App extends PureComponent<Props, State> {
       connectionErrorDismissed: false,
       layout: PageConfig.Layout.CENTERED,
       initialSidebarState: PageConfig.SidebarState.AUTO,
+      initialSidebarWidth: undefined,
       menuItems: undefined,
       allowRunOnSave: true,
       scriptFinishedHandlers: [],
-      themeHash,
+      // Initialize themeHash to empty string to ensure the first processThemeInput
+      // call always processes the theme (whether null or custom theme from server).
+      // This prevents the bug where a cached custom theme isn't cleared when the
+      // server sends null, because null and undefined both hash to the same value.
+      themeHash: "",
       gitInfo: null,
       formsData: createFormsData(),
       appPages: [],
@@ -352,7 +370,7 @@ export class App extends PureComponent<Props, State> {
         this.setState({ inputsDisabled })
       },
       themeChanged: this.handleThemeMessage,
-      pageChanged: this.onPageChange,
+      pageChanged: pageScriptHash => this.onPageChange(pageScriptHash),
       isOwnerChanged: isOwner => this.setState({ isOwner }),
       fileUploadClientConfigChanged: config => {
         if (this.endpoints.setFileUploadClientConfig !== undefined) {
@@ -443,8 +461,70 @@ export class App extends PureComponent<Props, State> {
     }
   }
 
+  private applyInitialHostConfig(): void {
+    // Apply window host configuration early when bypass mode is enabled.
+    //
+    // When bypass is enabled: WebSocket connects immediately (before host-config endpoint),
+    // so we need to apply window config early to enable host communication & apply app/lib configs
+    // for the first render.
+    //
+    // When bypass is disabled: WebSocket waits for host-config endpoint anyway,
+    // so window config will be applied during reconciliation in onHostConfigResp.
+    //
+    // This ensures we only set state when necessary and keeps the logic clear:
+    // - Bypass path: Apply ONLY provided window config early, reconcile when endpoint responds
+    // - Default path: Wait for endpoint, apply reconciled config once
+    //
+    // Note: We only set values that are explicitly provided. Components
+    // are designed to handle undefined config values gracefully.
+    // The endpoint response will fill in any missing values during reconciliation.
+    if (!isHostConfigBypassEnabled()) {
+      return
+    }
+
+    // isHostConfigBypassEnabled() guarantees HOST_CONFIG exists and has valid
+    // allowedOrigins (non-empty array) and useExternalAuthToken (boolean)
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    const hostConfig = StreamlitConfig.HOST_CONFIG!
+
+    // Build AppConfig with only provided fields - don't set defaults
+    // Required fields are guaranteed by isHostConfigBypassEnabled()
+    const appConfig: AppConfig = includeIfDefined<AppConfig>({
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      allowedOrigins: hostConfig.allowedOrigins!,
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      useExternalAuthToken: hostConfig.useExternalAuthToken!,
+      enableCustomParentMessages: hostConfig.enableCustomParentMessages,
+      blockErrorDialogs: hostConfig.blockErrorDialogs,
+    })
+
+    this.hostCommunicationMgr.setAllowedOrigins(appConfig)
+    this.setAppConfig(appConfig)
+
+    // Build LibConfig with only provided fields
+    // Note: Window config does not support deprecated setAnonymousCrossOriginPropertyOnMediaElements.
+    // Use resourceCrossOriginMode instead. The deprecated field is only supported via endpoint.
+    const libConfig: LibConfig = includeIfDefined<LibConfig>({
+      mapboxToken: hostConfig.mapboxToken,
+      disableFullscreenMode: hostConfig.disableFullscreenMode,
+      enforceDownloadInNewTab: hostConfig.enforceDownloadInNewTab,
+      resourceCrossOriginMode: hostConfig.resourceCrossOriginMode,
+    })
+
+    if (Object.keys(libConfig).length > 0) {
+      this.setLibConfig(libConfig)
+    }
+
+    // Apply metrics config if provided
+    if (hostConfig.metricsUrl !== undefined) {
+      this.metricsMgr.setMetricsConfig(hostConfig.metricsUrl)
+    }
+  }
+
   initializeConnectionManager(): void {
     this.isInitializingConnectionManager = true
+
+    this.applyInitialHostConfig()
 
     this.connectionManager = new ConnectionManager({
       getLastSessionId: () => this.sessionInfo.last?.sessionId,
@@ -467,7 +547,17 @@ export class App extends PureComponent<Props, State> {
           source,
         })
       },
-      onHostConfigResp: (response: IHostConfigResponse) => {
+      onHostConfigResp: (response: IHostConfigProperties) => {
+        // Reconcile window config values with endpoint response.
+        // All provided window config values take precedence over endpoint values:
+        // AppConfig: allowedOrigins, useExternalAuthToken, enableCustomParentMessages, blockErrorDialogs
+        // LibConfig: mapboxToken, disableFullscreenMode, enforceDownloadInNewTab, resourceCrossOriginMode
+        // MetricsConfig: metricsUrl
+        const reconciledConfig = reconcileHostConfigValues(
+          StreamlitConfig.HOST_CONFIG,
+          response
+        )
+
         const {
           allowedOrigins,
           useExternalAuthToken,
@@ -479,7 +569,7 @@ export class App extends PureComponent<Props, State> {
           blockErrorDialogs,
           setAnonymousCrossOriginPropertyOnMediaElements,
           resourceCrossOriginMode,
-        } = response
+        } = reconciledConfig
 
         const appConfig: AppConfig = {
           allowedOrigins,
@@ -492,11 +582,13 @@ export class App extends PureComponent<Props, State> {
           mapboxToken,
           disableFullscreenMode,
           enforceDownloadInNewTab,
+          // Use resourceCrossOriginMode if provided, otherwise fall back to
+          // deprecated setAnonymousCrossOriginPropertyOnMediaElements (if true, use "anonymous")
           resourceCrossOriginMode:
-            (resourceCrossOriginMode ??
-            setAnonymousCrossOriginPropertyOnMediaElements)
+            resourceCrossOriginMode ??
+            (setAnonymousCrossOriginPropertyOnMediaElements
               ? "anonymous"
-              : undefined,
+              : undefined),
         }
 
         // Set the metrics configuration:
@@ -643,19 +735,25 @@ export class App extends PureComponent<Props, State> {
 
   showError(
     title: string,
-    errorMarkdown: string,
+    errorDetails: ErrorDetails,
     dialogType:
       | DialogType.WARNING
       | DialogType.CONNECTION_ERROR = DialogType.WARNING
   ): void {
-    LOG.error(errorMarkdown)
+    LOG.error(errorDetails.message)
+
     const newDialog: WarningProps | ConnectionErrorProps = {
       type: dialogType,
       title,
-      msg: <StreamlitMarkdown source={errorMarkdown} allowHTML={false} />,
+      msg: (
+        <DialogErrorMessage
+          message={errorDetails.message}
+          codeBlock={errorDetails.codeBlock}
+        />
+      ),
       onClose: () => {},
     }
-    this.maybeShowErrorDialog(newDialog, errorMarkdown)
+    this.maybeShowErrorDialog(newDialog, errorDetails.message)
   }
 
   showDeployError = (
@@ -681,8 +779,8 @@ export class App extends PureComponent<Props, State> {
     let currentStreamlitVersion: string | undefined = undefined
 
     if (
-      window.__streamlit
-        ?.ENABLE_RELOAD_BASED_ON_HARDCODED_STREAMLIT_VERSION === true
+      StreamlitConfig.ENABLE_RELOAD_BASED_ON_HARDCODED_STREAMLIT_VERSION ===
+      true
     ) {
       currentStreamlitVersion = PACKAGE_METADATA.version
     } else if (this.sessionInfo.isSet) {
@@ -868,6 +966,8 @@ export class App extends PureComponent<Props, State> {
         autoRerun: (autoRerun: AutoRerun) => this.handleAutoRerun(autoRerun),
         fileUrlsResponse: (fileURLsResponse: FileURLsResponse) =>
           this.uploadClient.onFileURLsResponse(fileURLsResponse),
+        deferredFileResponse: (deferredFileResponse: DeferredFileResponse) =>
+          this.handleDeferredFileResponse(deferredFileResponse),
         parentMessage: (parentMessage: ParentMessage) =>
           this.handleCustomParentMessage(parentMessage),
         logo: (logo: Logo) =>
@@ -888,7 +988,7 @@ export class App extends PureComponent<Props, State> {
     } catch (e) {
       const err = ensureError(e)
       LOG.error(err)
-      this.showError("Bad message format", err.message)
+      this.showError("Bad message format", { message: err.message })
     }
   }
 
@@ -905,8 +1005,14 @@ export class App extends PureComponent<Props, State> {
   }
 
   handlePageConfigChanged = (pageConfig: PageConfig): void => {
-    const { title, favicon, layout, initialSidebarState, menuItems } =
-      pageConfig
+    const {
+      title,
+      favicon,
+      layout,
+      initialSidebarState,
+      initialSidebarWidth,
+      menuItems,
+    } = pageConfig
 
     this.appNavigation.handlePageConfigChanged(pageConfig)
 
@@ -947,6 +1053,21 @@ export class App extends PureComponent<Props, State> {
       }))
     }
 
+    // Extract pixelWidth from SidebarWidthConfig message
+    const sidebarWidthPixels =
+      initialSidebarWidth?.pixelWidth !== undefined
+        ? initialSidebarWidth.pixelWidth
+        : undefined
+
+    if (
+      notNullOrUndefined(sidebarWidthPixels) &&
+      sidebarWidthPixels !== this.state.initialSidebarWidth
+    ) {
+      this.setState(() => ({
+        initialSidebarWidth: sidebarWidthPixels,
+      }))
+    }
+
     // Check if menu items defined to prevent unnecessary state updates.
     if (menuItems) {
       // Now that we allow multiple set page config calls, menu items are additive
@@ -968,6 +1089,8 @@ export class App extends PureComponent<Props, State> {
       document.location.pathname + (queryString ? `?${queryString}` : "")
     window.history.pushState({}, "", targetUrl)
 
+    this.setState({ queryParams: queryString })
+
     this.hostCommunicationMgr.sendMessageToHost({
       type: "SET_QUERY_PARAM",
       queryParams: queryString ? `?${queryString}` : "",
@@ -978,7 +1101,9 @@ export class App extends PureComponent<Props, State> {
     const errMsg = pageName
       ? `You have requested page /${pageName}, but no corresponding file was found in the app's pages/ directory`
       : "The page that you have requested does not seem to exist"
-    this.showError("Page not found", `${errMsg}. Running the app's main page.`)
+    this.showError("Page not found", {
+      message: `${errMsg}. Running the app's main page.`,
+    })
   }
 
   handlePageNotFound = (pageNotFound: PageNotFound): void => {
@@ -1117,9 +1242,9 @@ export class App extends PureComponent<Props, State> {
 
     if (baseUriParts) {
       let pathname
-      if (window.__streamlit?.MAIN_PAGE_BASE_URL) {
+      if (StreamlitConfig.MAIN_PAGE_BASE_URL) {
         pathname = parseUriIntoBaseParts(
-          window.__streamlit.MAIN_PAGE_BASE_URL
+          StreamlitConfig.MAIN_PAGE_BASE_URL
         ).pathname
       } else {
         pathname = baseUriParts.pathname
@@ -1137,7 +1262,8 @@ export class App extends PureComponent<Props, State> {
       // See https://github.com/streamlit/streamlit/pull/6271#issuecomment-1465090690 for the discussion.
       if (prevPageName !== newPageName) {
         const pagePath = isViewingMainPage ? "" : newPageName
-        const queryString = preserveEmbedQueryParams()
+        const queryString =
+          this.state.queryParams || preserveEmbedQueryParams()
         const qs = queryString ? `?${queryString}` : ""
 
         const basePathPrefix = pathname === "/" ? "" : pathname
@@ -1212,8 +1338,14 @@ export class App extends PureComponent<Props, State> {
       })
       this.maybeSetState(this.appNavigation.handleNewSession(newSessionProto))
 
-      // Set the favicon to its default values
-      this.onPageIconChanged(`${import.meta.env.BASE_URL}favicon.png`)
+      // Only set default favicon once per page load, and only if no custom icon has been set
+      if (
+        !this.appNavigation.hasSetDefaultFavicon &&
+        !this.appNavigation.isPageIconSet
+      ) {
+        this.appNavigation.hasSetDefaultFavicon = true
+        this.onPageIconChanged(`${import.meta.env.BASE_URL}favicon.png`)
+      }
     } else {
       this.setState({
         fragmentIdsThisRun,
@@ -1286,7 +1418,11 @@ export class App extends PureComponent<Props, State> {
     if (isNullOrUndefined(targetAppPage) || (hasAnchor && isSamePage)) {
       return
     }
-    this.onPageChange(targetAppPage.pageScriptHash as string)
+    // Pass preserveQueryParams=true to preserve query params from the URL when
+    // navigating via browser history (back/forward buttons). This ensures that
+    // query params present in the URL after history navigation are sent to the
+    // server on the first script run.
+    this.onPageChange(targetAppPage.pageScriptHash as string, undefined, true)
   }
 
   /**
@@ -1308,10 +1444,17 @@ export class App extends PureComponent<Props, State> {
       return "hash_for_undefined_custom_theme"
     }
 
-    // Hash the sorted representation of the theme input:
-    return hashString(
-      JSON.stringify(themeInput, Object.keys(themeInput).sort())
-    )
+    // Convert to JSON and back to get a plain JS object without protobuf methods/metadata.
+    // JSON.stringify automatically filters out functions and non-enumerable properties.
+    // This ensures we hash only the actual theme data, not the protobuf object structure.
+    const plainObject = JSON.parse(JSON.stringify(themeInput))
+
+    // Recursively sort all keys (including nested objects like sidebar, light, dark)
+    // to ensure consistent hashing regardless of key order
+    const sorted = sortThemeInputKeys(plainObject)
+
+    // Hash the sorted representation
+    return hashString(JSON.stringify(sorted))
   }
 
   processThemeInput(themeInput: CustomThemeConfig): void {
@@ -1331,9 +1474,23 @@ export class App extends PureComponent<Props, State> {
       this.props.theme.addThemes(customThemes, { keepPresetThemes: false })
 
       const userPreference = getCachedTheme()
-      if (userPreference === null || usingCustomTheme) {
-        // If the user hasn't set a preference, or if a custom theme is currently active,
-        // update the theme to be a custom theme.
+      // Map the user's cached preference to the best matching theme from the new custom themes
+      // - Applies full server config while preserving user's light/dark selection
+      const mappedTheme = mapCachedThemeToAvailableTheme(
+        userPreference,
+        customThemes
+      )
+
+      if (mappedTheme) {
+        // User has a mappable preference - apply the full server config
+        // while preserving their light/dark selection
+        this.setAndSendTheme(mappedTheme)
+      } else {
+        // No mappable preference - set to default custom theme
+        // This handles cases where:
+        // - No user preference exists (userPreference === null)
+        // - User has a preset theme cached but custom themes are now available
+        // - User has an old custom theme that no longer matches
         if (customThemes.length > 1) {
           // When Custom Theme Light & Custom Theme Dark present, we create an auto theme based
           // on the system preference and set this as the active theme
@@ -1351,9 +1508,23 @@ export class App extends PureComponent<Props, State> {
       this.props.theme.addThemes([])
 
       if (usingCustomTheme) {
-        // Reset to the auto theme taking into account any host preferences
-        // aka embed query params.
-        this.setAndSendTheme(getHostSpecifiedTheme())
+        const userPreference = getCachedTheme()
+        const presetThemes = [lightTheme, darkTheme]
+        // Try to map custom theme preference back to preset themes
+        // e.g., "Custom Theme Light" → "Light", "Custom Theme Dark" → "Dark"
+        const mappedTheme = mapCachedThemeToAvailableTheme(
+          userPreference,
+          presetThemes
+        )
+
+        if (mappedTheme) {
+          // User had a custom theme preference that maps to a preset - preserve their choice
+          this.setAndSendTheme(mappedTheme)
+        } else {
+          // Reset to the auto theme taking into account any host preferences
+          // aka embed query params.
+          this.setAndSendTheme(getHostSpecifiedTheme())
+        }
       }
     }
 
@@ -1640,7 +1811,11 @@ export class App extends PureComponent<Props, State> {
     )
   }
 
-  onPageChange = (pageScriptHash: string): void => {
+  onPageChange = (
+    pageScriptHash: string,
+    queryString?: string,
+    preserveQueryParams?: boolean
+  ): void => {
     const { elements, mainScriptHash } = this.state
 
     // We are about to change the page, so clear all auto reruns
@@ -1664,7 +1839,10 @@ export class App extends PureComponent<Props, State> {
     this.sendRerunBackMsg(
       this.widgetMgr.getActiveWidgetStates(activeWidgetIds),
       undefined,
-      pageScriptHash
+      pageScriptHash,
+      undefined,
+      queryString,
+      preserveQueryParams
     )
   }
 
@@ -1681,7 +1859,9 @@ export class App extends PureComponent<Props, State> {
     widgetStates?: WidgetStates,
     fragmentId?: string,
     pageScriptHash?: string,
-    isAutoRerun?: boolean
+    isAutoRerun?: boolean,
+    queryStringOverride?: string,
+    preserveQueryParams?: boolean
   ): void => {
     const baseUriParts = this.getBaseUriParts()
     if (!baseUriParts) {
@@ -1694,7 +1874,7 @@ export class App extends PureComponent<Props, State> {
     }
 
     const { currentPageScriptHash } = this.state
-    let queryString = this.getQueryString()
+    let queryString = queryStringOverride ?? this.getQueryString()
     let pageName = ""
 
     const contextInfo = {
@@ -1709,9 +1889,16 @@ export class App extends PureComponent<Props, State> {
     if (pageScriptHash) {
       // The user specified exactly which page to run. We can simply use this
       // value in the BackMsg we send to the server.
-      if (pageScriptHash != currentPageScriptHash) {
-        // clear non-embed query parameters within a page change
-        queryString = preserveEmbedQueryParams()
+      if (pageScriptHash !== currentPageScriptHash && !preserveQueryParams) {
+        // Clear non-embed query parameters within a page change while we wait
+        // for the server to send updated query params (if any).
+        // Skip clearing if preserveQueryParams is true (e.g., browser back/forward
+        // navigation where query params from the URL should be preserved).
+        const preservedQueryParams = preserveEmbedQueryParams()
+
+        queryString = getQueryString(queryStringOverride, preservedQueryParams)
+
+        this.setState({ queryParams: queryString })
         this.hostCommunicationMgr.sendMessageToHost({
           type: "SET_QUERY_PARAM",
           queryParams: queryString,
@@ -1724,9 +1911,9 @@ export class App extends PureComponent<Props, State> {
       pageScriptHash = currentPageScriptHash
     } else {
       let pathname
-      if (window.__streamlit?.MAIN_PAGE_BASE_URL) {
+      if (StreamlitConfig.MAIN_PAGE_BASE_URL) {
         pathname = parseUriIntoBaseParts(
-          window.__streamlit.MAIN_PAGE_BASE_URL
+          StreamlitConfig.MAIN_PAGE_BASE_URL
         ).pathname
       } else {
         pathname = baseUriParts.pathname
@@ -1851,7 +2038,7 @@ export class App extends PureComponent<Props, State> {
   /**
    * Sends a message back to the server.
    */
-  private sendBackMsg = (msg: BackMsg): void => {
+  private readonly sendBackMsg = (msg: BackMsg): void => {
     if (this.connectionManager) {
       LOG.info(msg)
       this.connectionManager.sendMessage(msg)
@@ -1864,7 +2051,7 @@ export class App extends PureComponent<Props, State> {
   /**
    * Updates the app body when there's a connection error.
    */
-  handleConnectionError = (errMarkdown: string): void => {
+  handleConnectionError = (errDetails: ErrorDetails): void => {
     // Don't show the error dialog if it has been dismissed for this session
     if (this.state.connectionErrorDismissed) {
       return
@@ -1872,11 +2059,7 @@ export class App extends PureComponent<Props, State> {
 
     // This is just a regular error dialog, but with type CONNECTION_ERROR
     // instead of WARNING, so we can rescind the dialog later when reconnected.
-    this.showError(
-      "Connection error",
-      errMarkdown,
-      DialogType.CONNECTION_ERROR
-    )
+    this.showError("Connection error", errDetails, DialogType.CONNECTION_ERROR)
   }
 
   /**
@@ -1945,7 +2128,7 @@ export class App extends PureComponent<Props, State> {
   screencastCallback = (): void => {
     const { scriptName } = this.state
     const { startRecording } = this.props.screenCast
-    const date = moment().format("YYYY-MM-DD-HH-MM-SS")
+    const date = getScreencastTimestamp()
 
     startRecording(`streamlit-${scriptName}-${date}`)
   }
@@ -1979,9 +2162,8 @@ export class App extends PureComponent<Props, State> {
   removeScriptFinishedHandler = (func: () => void): void => {
     this.setState((prevState, _) => {
       return {
-        scriptFinishedHandlers: without(
-          prevState.scriptFinishedHandlers,
-          func
+        scriptFinishedHandlers: prevState.scriptFinishedHandlers.filter(
+          h => h !== func
         ),
       }
     })
@@ -2048,13 +2230,85 @@ export class App extends PureComponent<Props, State> {
       backMsg.type = "fileUrlsRequest"
       this.sendBackMsg(backMsg)
     } else {
+      // Reject the request immediately with an error. This can happen on mobile
+      // browsers when the file picker is open for an extended period causing
+      // the WebSocket connection to time out.
+      //
+      // We can't queue and retry because reconnection triggers a script rerun,
+      // which remounts the FileUploader component and invalidates the promise
+      // callback. The user needs to re-select the file after reconnection.
       LOG.warn(
         `Cannot request file URLs (isServerConnected: ${isConnected}, isSessionInfoSet: ${isSessionInfoSet})`
       )
+      this.uploadClient.onFileURLsResponse({
+        responseId: requestId,
+        errorMsg:
+          "Connection lost. Please wait for the app to reconnect, then try again.",
+      })
     }
   }
 
-  handleKeyDown = (keyName: string): void => {
+  requestDeferredFile = (fileId: string): Promise<DeferredFileResponse> => {
+    const isConnected = this.isServerConnected()
+    const isSessionInfoSet = this.sessionInfo.isSet
+
+    if (!isConnected || !isSessionInfoSet) {
+      return Promise.reject(
+        new Error("Not connected to server or session not initialized")
+      )
+    }
+
+    const resolver = Promise.withResolvers<DeferredFileResponse>()
+
+    // Register a one-time listener for this fileId
+    const listeners =
+      this.deferredFileListeners.get(fileId) ??
+      new Set<(response: DeferredFileResponse) => void>()
+    const once = (response: DeferredFileResponse): void => {
+      listeners.delete(once)
+      resolver.resolve(response)
+    }
+    listeners.add(once)
+    this.deferredFileListeners.set(fileId, listeners)
+
+    const backMsg = new BackMsg({
+      deferredFileRequest: {
+        fileId,
+        sessionId: this.sessionInfo.current.sessionId,
+      },
+    })
+
+    backMsg.type = "deferredFileRequest"
+    this.sendBackMsg(backMsg)
+
+    return resolver.promise
+  }
+
+  handleDeferredFileResponse = (response: DeferredFileResponse): void => {
+    const listeners = this.deferredFileListeners.get(response.fileId)
+    if (!listeners || listeners.size === 0) return
+
+    // Notify and clear all listeners for this fileId
+    for (const listener of Array.from(listeners)) {
+      try {
+        listener(response)
+      } catch {
+        // Swallow listener errors to avoid breaking notification fanout
+      }
+    }
+    this.deferredFileListeners.delete(response.fileId)
+  }
+
+  handleKeyDown = (keyName: string, keyboardEvent?: KeyboardEvent): void => {
+    // See `isKeyboardEventFromEditableTarget` for editable/shadow DOM behavior.
+    // We never fire global single-letter shortcuts while the user is typing.
+    if (
+      (keyName === "c" || keyName === "r") &&
+      isKeyboardEventFromEditableTarget(keyboardEvent)
+    ) {
+      return
+    }
+
     switch (keyName) {
       case "c":
         // CLEAR CACHE
@@ -2080,12 +2334,12 @@ export class App extends PureComponent<Props, State> {
   /**
    * Checks if there are any app-defined menu items configured via st.set_page_config
    */
-  private hasAppDefinedMenuItems = (): boolean => {
+  private readonly hasAppDefinedMenuItems = (): boolean => {
     const { menuItems } = this.state
     return Boolean(
       menuItems?.aboutSectionMd ||
-        (menuItems?.getHelpUrl && !menuItems?.hideGetHelp) ||
-        (menuItems?.reportABugUrl && !menuItems?.hideReportABug)
+      (menuItems?.getHelpUrl && !menuItems?.hideGetHelp) ||
+      (menuItems?.reportABugUrl && !menuItems?.hideReportABug)
     )
   }
 
@@ -2093,7 +2347,7 @@ export class App extends PureComponent<Props, State> {
    * Determines whether the toolbar should be visible based on embed mode,
    * toolbar mode settings, and availability of host menu/toolbar items.
    */
-  private shouldShowToolbar = (
+  private readonly shouldShowToolbar = (
     hostMenuItems: IMenuItem[],
     hostToolbarItems: IToolbarItem[]
   ): boolean => {
@@ -2179,6 +2433,7 @@ export class App extends PureComponent<Props, State> {
     return (
       <StreamlitContextProvider
         initialSidebarState={initialSidebarState}
+        initialSidebarWidth={this.state.initialSidebarWidth}
         pageLinkBaseUrl={pageLinkBaseUrl}
         currentPageScriptHash={currentPageScriptHash}
         onPageChange={this.onPageChange}
@@ -2187,7 +2442,11 @@ export class App extends PureComponent<Props, State> {
         appLogo={elements.logo}
         sidebarChevronDownshift={sidebarChevronDownshift}
         expandSidebarNav={expandSidebarNav}
-        hideSidebarNav={hideSidebarNav || hostHideSidebarNav}
+        hideSidebarNav={
+          hideSidebarNav ||
+          hostHideSidebarNav ||
+          effectiveNavigationPosition === Navigation.Position.TOP
+        }
         isFullScreen={isFullScreen}
         setFullScreen={this.handleFullScreen}
         activeTheme={this.props.theme.activeTheme}
@@ -2202,6 +2461,7 @@ export class App extends PureComponent<Props, State> {
         mapboxToken={libConfig.mapboxToken}
         enforceDownloadInNewTab={libConfig.enforceDownloadInNewTab}
         resourceCrossOriginMode={libConfig.resourceCrossOriginMode}
+        requestDeferredFile={this.requestDeferredFile}
       >
         <Hotkeys
           keyName="r,c,esc"

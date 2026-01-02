@@ -15,11 +15,9 @@
  */
 
 // TODO: fix incorrect hook usage and delete this lint suppression
-// TODO: Update to match React best practices
-// eslint-disable-next-line react-hooks/react-compiler
-/* eslint-disable react-hooks/exhaustive-deps */
+/* eslint-disable react-hooks/exhaustive-deps -- TODO: Update to match React best practices */
 
-import React, { useLayoutEffect, useState } from "react"
+import { useLayoutEffect, useState } from "react"
 
 import { Size as ResizableSize } from "re-resizable"
 
@@ -89,7 +87,10 @@ function useTableSizer(
   // Group row + column header row
   const numHeaderRows = usesGroupRow ? 2 : 1
   const numTrailingRows =
-    element.editingMode === ArrowProto.EditingMode.DYNAMIC ? 1 : 0
+    element.editingMode === ArrowProto.EditingMode.DYNAMIC ||
+    element.editingMode === ArrowProto.EditingMode.ADD_ONLY
+      ? 1
+      : 0
 
   // Calculate the height of the table based on the number of rows:
   const totalDataRows = numRows + numTrailingRows

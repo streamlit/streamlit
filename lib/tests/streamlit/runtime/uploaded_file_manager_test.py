@@ -90,22 +90,21 @@ class UploadedFileManagerTest(unittest.TestCase):
         assert self.mgr.get_files("session2", [FILE_1.file_id]) == [FILE_1]
 
     def test_cache_stats_provider(self):
-        """Test CacheStatsProvider implementation."""
+        """Test StatsProvider implementation."""
 
         # Test empty manager
-        assert self.mgr.get_stats() == []
+        assert self.mgr.get_stats() == {}
 
         # Test manager with files
         self.mgr.add_file("session1", FILE_1)
         self.mgr.add_file("session1", FILE_2)
 
-        expected = [
-            CacheStat(
-                category_name="UploadedFileManager",
-                cache_name="",
-                byte_length=len(FILE_1.data) + len(FILE_2.data),
-            ),
-        ]
+        expected_stat = CacheStat(
+            category_name="UploadedFileManager",
+            cache_name="",
+            byte_length=len(FILE_1.data) + len(FILE_2.data),
+        )
+        expected = {expected_stat.family_name: [expected_stat]}
         assert expected == self.mgr.get_stats()
 
 

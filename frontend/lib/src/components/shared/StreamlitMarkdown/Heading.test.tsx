@@ -14,9 +14,7 @@
  * limitations under the License.
  */
 
-import React from "react"
-
-import { screen } from "@testing-library/react"
+import { screen, waitFor } from "@testing-library/react"
 
 import { Heading as HeadingProto } from "@streamlit/protobuf"
 
@@ -39,13 +37,16 @@ const getHeadingProps = (
 })
 
 describe("Heading", () => {
-  it("renders properly after a new line", () => {
+  it("renders properly after a new line", async () => {
     const props = getHeadingProps()
     render(<Heading {...props} />)
 
     const heading = screen.getByRole("heading")
     expect(heading).toHaveTextContent("hello world")
     expect(heading).not.toHaveTextContent("this is a new line")
+
+    // Wait for the lazy-loaded code block to render
+    await screen.findByText("this is a new line")
     expect(screen.getByText("this is a new line")).toBeInTheDocument()
     expect(screen.getAllByTestId("stMarkdownContainer")).toHaveLength(1)
 
@@ -65,9 +66,9 @@ describe("Heading", () => {
     const props = getHeadingProps({ body: "hello" })
     render(<Heading {...props} />)
 
-    // trying to trigger the :hover css state did not work, so using 'hidden: true' here. We have an e2e test to check the hovering.
-    const link = screen.getByRole("link", { hidden: true })
+    const link = screen.getByRole("link")
     expect(link).toHaveAttribute("href", "#some-anchor")
+    expect(link).toHaveAccessibleName("Link to heading")
   })
 
   it("does not render anchor link when it is hidden", () => {
@@ -162,7 +163,7 @@ describe("Heading", () => {
     expect(screen.queryByRole("blockquote")).not.toBeInTheDocument()
   })
 
-  it("does not render tables", () => {
+  it("does not render tables", async () => {
     const props = getHeadingProps({
       body: `| Syntax | Description |
            | ----------- | ----------- |
@@ -171,12 +172,17 @@ describe("Heading", () => {
     })
     render(<Heading {...props} />)
 
-    expect(screen.getByTestId("stMarkdownContainer")).toHaveTextContent(
-      "| Syntax | Description | | ----------- | ----------- | | Header | Title | | Paragraph | Text |"
-    )
     expect(screen.getByRole("heading")).toHaveTextContent(
       `| Syntax | Description |`
     )
+
+    // Wait for lazy-loaded content to render
+    await waitFor(() => {
+      expect(screen.getByTestId("stMarkdownContainer")).toHaveTextContent(
+        "| Syntax | Description | | ----------- | ----------- | | Header | Title | | Paragraph | Text |"
+      )
+    })
+
     expect(screen.queryByRole("table")).not.toBeInTheDocument()
     expect(screen.getAllByTestId("stMarkdownContainer")).toHaveLength(1)
   })

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, ReactNode, useContext } from "react"
+import { ReactElement, ReactNode, useContext } from "react"
 
 import {
   BaseButton,
@@ -95,7 +95,7 @@ const Header = ({
                   >
                     <DynamicIcon
                       size="xl"
-                      iconValue={":material/keyboard_double_arrow_right:"}
+                      iconValue=":material/keyboard_double_arrow_right:"
                       color={activeTheme.emotion.colors.fadedText60}
                     />
                   </BaseButton>

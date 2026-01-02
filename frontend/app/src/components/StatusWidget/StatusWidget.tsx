@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import React, {
+import {
   ReactElement,
   ReactNode,
   useCallback,
@@ -31,6 +31,7 @@ import {
   BaseButtonKind,
   DynamicIcon,
   Icon,
+  isKeyboardEventFromEditableTarget,
   Placement,
   ScriptRunState,
   Timer,
@@ -127,9 +128,14 @@ const StatusWidget: React.FC<StatusWidgetProps> = ({
     }
   }
 
-  const handleKeyDown = (keyName: string): void => {
-    // NOTE: 'r' is handled at the App Level
-    if (keyName === "a") {
+  const handleKeyDown = (
+    keyName: string,
+    keyboardEvent?: KeyboardEvent
+  ): void => {
+    // NOTE: 'r' and 'c' are handled at the App level.
+    // See `isKeyboardEventFromEditableTarget` for editable/shadow DOM behavior;
+    // we suppress the "Always rerun" hotkey while the user is typing.
+    if (keyName === "a" && !isKeyboardEventFromEditableTarget(keyboardEvent)) {
       handleAlwaysRerunClick()
     }
   }
@@ -210,7 +216,7 @@ const StatusWidget: React.FC<StatusWidgetProps> = ({
         <StyledAppStatus>
           <DynamicIcon
             size="lg"
-            iconValue={":material/info:"}
+            iconValue=":material/info:"
             color={theme.colors.fadedText60}
           />
           <StyledAppStatusLabel isPrompt>File change.</StyledAppStatusLabel>
@@ -275,17 +281,22 @@ const StatusWidget: React.FC<StatusWidgetProps> = ({
   // via `this.curView`, so that we can fade out our previous state
   // if `renderWidget` returns null after returning a non-null value.
   const curView = useRef<ReactNode>()
+  // eslint-disable-next-line react-hooks/refs -- TODO: Do not access ref during render
   const prevView = curView.current
+  // eslint-disable-next-line react-hooks/refs -- TODO: Do not access ref during render
   curView.current = renderWidget()
 
+  // eslint-disable-next-line react-hooks/refs -- TODO: Do not access ref during render
   if (isNullOrUndefined(curView.current) && isNullOrUndefined(prevView)) {
     return <></>
   }
 
   let animateIn: boolean
   let renderView: ReactNode
+  // eslint-disable-next-line react-hooks/refs -- TODO: Do not access ref during render
   if (notNullOrUndefined(curView.current)) {
     animateIn = true
+    // eslint-disable-next-line react-hooks/refs -- TODO: Do not access ref during render
     renderView = curView.current
   } else {
     animateIn = false

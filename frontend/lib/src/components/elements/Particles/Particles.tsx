@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import React, { FC, memo, useContext, useMemo } from "react"
+import { FC, memo, useContext, useMemo } from "react"
 
-import range from "lodash/range"
+import { range } from "lodash-es"
 
 import { LibConfigContext } from "~lib/components/core/LibConfigContext"
 
@@ -47,6 +47,7 @@ const Particles: FC<React.PropsWithChildren<Props>> = ({
   const particleTypes = useMemo(
     () =>
       range(numParticles).map(() =>
+        // eslint-disable-next-line react-hooks/purity -- TODO: Update to match React best practices
         Math.floor(Math.random() * numParticleTypes)
       ),
     [numParticles, numParticleTypes]

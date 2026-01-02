@@ -26,6 +26,46 @@ if st.button("Run spinner with time"):
     with st.spinner("Loading...", show_time=True):
         time.sleep(2)
 
+if st.button("Run double spinner"):
+    with st.spinner("Loading..."):
+        with st.spinner("Also loading..."):
+            time.sleep(3)
+
+        time.sleep(3)
+
+if st.button("Run markdown updated with spinner"):
+    placeholder = st.markdown("Some Text")
+    with placeholder.spinner("something"):
+        time.sleep(2)
+
+if st.button("Run spinner in with st.empty block"):
+    with st.empty():
+        with st.spinner("spinner in empty block"):
+            time.sleep(2)
+            st.markdown("Some More Text")
+
+if st.button("Run spinner in fragment"):
+
+    @st.fragment
+    def test_fragment():
+        with st.spinner("Loading..."):
+            time.sleep(2)
+
+        st.button("Run fragment")
+
+    test_fragment()
+
+
+if st.button("Run spinner before fragment"):
+    with st.spinner("Loading..."):
+        time.sleep(2)
+
+        @st.fragment
+        def test_fragment():
+            st.button("Run fragment")
+
+        test_fragment()
+
 st.header("Spinner - width examples")
 
 if st.button("Run spinner with content width (default)"):

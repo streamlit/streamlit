@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-import React from "react"
-
 import { fireEvent, screen } from "@testing-library/react"
 
 import { shouldShowNavigation } from "@streamlit/app/src/components/Navigation"
@@ -30,11 +28,10 @@ import {
   mockSessionInfo,
   mockTheme,
   NavigationContextProps,
-  render,
-  renderWithContexts,
   SidebarConfigContextProps,
   WidgetStateManager,
 } from "@streamlit/lib"
+import { render, renderWithContexts } from "@streamlit/lib/testing"
 import {
   Block as BlockProto,
   Element,

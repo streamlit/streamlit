@@ -14,10 +14,49 @@
  * limitations under the License.
  */
 
-import { makePath } from "@streamlit/utils"
+import {
+  isValidAllowedOrigins,
+  makePath,
+  StreamlitConfig,
+} from "@streamlit/utils"
 
 const FINAL_SLASH_RE = /\/+$/
 const INITIAL_SLASH_RE = /^\/+/
+
+/**
+ * Returns true when host has provided sufficient config properties for establishing the
+ * initial websocket connection without waiting for the host-config endpoint response.
+ *
+ * This bypass relies on minimal host configuration provided via window.__streamlit (StreamlitConfig)
+ *
+ * Required fields:
+ * - BACKEND_BASE_URL: string
+ * - HOST_CONFIG.allowedOrigins: non-empty array of non-empty strings
+ * - HOST_CONFIG.useExternalAuthToken: boolean (true or false)
+ *
+ * NOTE: changes to this function must be reflected in the mock in App.test.tsx
+ */
+export function isHostConfigBypassEnabled(): boolean {
+  const initialHostConfig = StreamlitConfig.HOST_CONFIG
+
+  if (!initialHostConfig) {
+    return false
+  }
+
+  const { allowedOrigins, useExternalAuthToken } = initialHostConfig
+
+  // Validate required fields using shared validation logic
+  const hasValidBackendBaseUrl = Boolean(StreamlitConfig.BACKEND_BASE_URL)
+  const hasValidAllowedOrigins = isValidAllowedOrigins(allowedOrigins)
+  const hasValidUseExternalAuthToken =
+    typeof useExternalAuthToken === "boolean"
+
+  return (
+    hasValidBackendBaseUrl &&
+    hasValidAllowedOrigins &&
+    hasValidUseExternalAuthToken
+  )
+}
 
 /**
  * Return the BaseUriParts for either the given url or the global window
@@ -45,9 +84,7 @@ export function parseUriIntoBaseParts(url?: string): URL {
 // the best path forward may be tricky as I wasn't able to come up with an
 // easy solution covering every deployment scenario.
 export function getPossibleBaseUris(): Array<URL> {
-  const baseUriParts = parseUriIntoBaseParts(
-    window.__streamlit?.BACKEND_BASE_URL
-  )
+  const baseUriParts = parseUriIntoBaseParts(StreamlitConfig.BACKEND_BASE_URL)
   const { pathname } = baseUriParts
 
   if (pathname === "/") {
@@ -81,4 +118,138 @@ export function buildWsUri(
   const wsProtocol = protocol === "https:" ? "wss" : "ws"
   const fullPath = makePath(pathname, path)
   return `${wsProtocol}://${hostname}:${port}/${fullPath}`
+}
+
+/**
+ * Serialize data for display in error messages.
+ * Objects are pretty-printed as JSON, primitives are converted to strings.
+ * Returns undefined for null, undefined, or non-serializable types.
+ */
+export function serializeForDisplay(data: unknown): string | undefined {
+  if (data === null || data === undefined) {
+    return undefined
+  }
+
+  switch (typeof data) {
+    case "object":
+      return JSON.stringify(data, null, 2)
+    case "string":
+    case "number":
+    case "boolean":
+      return String(data)
+    default:
+      return undefined
+  }
+}
+
+/**
+ * Custom error class to normalize fetch errors into a consistent structure.
+ * This mimics axios error patterns for compatibility with previous error handling logic.
+ */
+export class FetchError extends Error {
+  url: string
+
+  isTimeout: boolean
+
+  response?: {
+    status: number
+    statusText: string
+    data: unknown
+  }
+
+  isNetworkError: boolean
+
+  constructor(
+    message: string,
+    url: string,
+    options: {
+      isTimeout?: boolean
+      isNetworkError?: boolean
+      response?: { status: number; statusText: string; data: unknown }
+    } = {}
+  ) {
+    super(message)
+    this.name = "FetchError"
+    this.url = url
+    this.isTimeout = options.isTimeout ?? false
+    this.isNetworkError = options.isNetworkError ?? false
+    this.response = options.response
+  }
+}
+
+/**
+ * Fetch with timeout support using AbortController.
+ * Normalizes different error types (timeout, network, HTTP errors) into FetchError.
+ */
+export async function fetchWithTimeout(
+  url: string,
+  timeoutMs: number
+): Promise<{ data: unknown; url: string }> {
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
+
+  try {
+    const response = await fetch(url, { signal: controller.signal })
+    clearTimeout(timeoutId)
+
+    if (!response.ok) {
+      // Server responded with error status
+      let data: unknown
+      try {
+        data = await response.json()
+      } catch {
+        try {
+          data = await response.text()
+        } catch {
+          data = null
+        }
+      }
+
+      throw new FetchError(
+        `Request failed with status ${response.status}`,
+        url,
+        {
+          response: {
+            status: response.status,
+            statusText: response.statusText,
+            data,
+          },
+        }
+      )
+    }
+
+    // Try JSON first, fall back to text (healthz returns string, host-config returns JSON)
+    // We don't rely on Content-Type since proxies/CDNs may not preserve headers correctly
+    const text = await response.text()
+    try {
+      return { data: JSON.parse(text), url }
+    } catch {
+      return { data: text, url }
+    }
+  } catch (error) {
+    clearTimeout(timeoutId)
+
+    // Re-throw FetchError as-is
+    if (error instanceof FetchError) {
+      throw error
+    }
+
+    // Handle AbortController timeout
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new FetchError("Connection timed out", url, { isTimeout: true })
+    }
+
+    // Handle network errors (TypeError from fetch when network fails)
+    if (error instanceof TypeError) {
+      throw new FetchError(error.message || "Network error", url, {
+        isNetworkError: true,
+      })
+    }
+
+    // Generic error
+    throw new FetchError(
+      error instanceof Error ? error.message : "Unknown error",
+      url
+    )
+  }
 }

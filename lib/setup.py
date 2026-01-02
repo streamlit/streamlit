@@ -23,32 +23,37 @@ from setuptools.command.install import install
 
 THIS_DIRECTORY = Path(__file__).parent
 
-VERSION = "1.51.0"  # PEP-440
+VERSION = "1.52.2"  # PEP-440
 
 # IMPORTANT: We should try very hard *not* to add dependencies to Streamlit.
 # And if you do add one, make the required version as general as possible:
 # - Include relevant lower bound for any features we use from our dependencies
 # - Always include the lower bound as >= VERSION, to keep testing min versions easy
 # - And include an upper bound that's < NEXT_MAJOR_VERSION
+# NOTE: If you change the lower bound of a version, you will need to run
+# `make update-min-deps` and commit the changes to `min-constraints-gen.txt`.
 INSTALL_REQUIRES = [
     # Altair 5.4.0 and 5.4.1 have compatibility issues with narwhals library
     # that cause st.line_chart and other built-in charts to fail rendering.
     # See: https://github.com/streamlit/streamlit/issues/12064
-    "altair>=4.0, <6, !=5.4.0, !=5.4.1",
+    "altair>=4.0, <7, !=5.4.0, !=5.4.1",
     "blinker>=1.5.0, <2",
-    "cachetools>=4.0, <7",
+    "cachetools>=5.5, <7",
     "click>=7.0, <9",
     "numpy>=1.23, <3",
-    "packaging>=20, <26",
+    # The "packaging" package isn't version-capped because they use calendar-based
+    # versioning, i.e. "major" version increase != breaking changes
+    "packaging>=20",
     # Pandas <1.4 has a bug related to deleting columns in a DataFrame changing
     # the index dtype.
     "pandas>=1.4.0, <3",
     "pillow>=7.1.0, <13",
     # `protoc` < 3.20 is not able to generate protobuf code compatible with protobuf >= 3.20.
     "protobuf>=3.20, <7",
-    # pyarrow v22 is causing 2 test failures in dataframe_util_test.py and arrow_dataframe_test.py.
-    # temporarily restrict to <22 to avoid breaking changes.
-    "pyarrow>=7.0, <22",
+    # pyarrow is not semantically versioned, gets new major versions frequently, and
+    # doesn't tend to break the API on major version upgrades, so we don't put an
+    # upper bound on it.
+    "pyarrow>=7.0",
     "requests>=2.27, <3",
     "tenacity>=8.1.0, <10",
     # Starting from Python 3.11, Python has built in support for reading TOML files.
@@ -102,9 +107,16 @@ EXTRA_REQUIRES = {
     "sql": [
         "SQLAlchemy>=2.0.0",
     ],
+    # Optional dependency for better performance:
+    "performance": [
+        # orjson speeds up large plotly figure processing by 5-10x:
+        "orjson>=3.5.0",
+        # uvloop speeds up the event loop:
+        "uvloop>=0.15.2; sys_platform != 'win32' and (sys_platform != 'cygwin' and platform_python_implementation != 'PyPy')",  # noqa: E501
+    ],
     # Install all optional dependencies:
     "all": [
-        "streamlit[auth,charts,snowflake,sql,pdf]",
+        "streamlit[auth,charts,snowflake,sql,pdf,performance]",
         # Improved exception traceback formatting:
         "rich>=11.0.0",
     ],
@@ -163,6 +175,7 @@ setup(
         "Programming Language :: Python :: 3.11",
         "Programming Language :: Python :: 3.12",
         "Programming Language :: Python :: 3.13",
+        "Programming Language :: Python :: 3.14",
         "Topic :: Database :: Front-Ends",
         "Topic :: Office/Business :: Financial :: Spreadsheet",
         "Topic :: Scientific/Engineering :: Information Analysis",

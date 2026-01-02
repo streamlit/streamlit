@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement } from "react"
+import { ReactElement } from "react"
 
 import { StyledCode } from "~lib/components/elements/CodeBlock/styled-components"
 import AlertContainer, { Kind } from "~lib/components/shared/AlertContainer"

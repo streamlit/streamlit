@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import React, { FC, PropsWithChildren, useCallback, useRef } from "react"
+import { FC, PropsWithChildren, useCallback, useRef } from "react"
 
 import { StyledDataFrameOverlay } from "~lib/styled-components"
 

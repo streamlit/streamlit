@@ -252,8 +252,10 @@ export function useScrollToBottom<T extends HTMLElement>(
     }
   }, [scrollableRef, active])
 
+  // eslint-disable-next-line react-hooks/refs -- TODO: Do not access ref during render
   useScrollSpy(scrollableRef.current, handleScroll, active)
   useScrollAnimation(
+    // eslint-disable-next-line react-hooks/refs -- TODO: Do not access ref during render
     scrollableRef.current,
     handleScrollToBottomFinished,
     isAnimating,

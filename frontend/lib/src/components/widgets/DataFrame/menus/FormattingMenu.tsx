@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { memo, ReactElement } from "react"
+import { memo, ReactElement } from "react"
 
 import { PLACEMENT, Popover, TRIGGER_TYPE } from "baseui/popover"
 
@@ -215,12 +215,7 @@ function FormattingMenu({
               }}
               role="menuitem"
             >
-              <DynamicIcon
-                size={"base"}
-                margin="0"
-                color="inherit"
-                iconValue={format.icon}
-              />
+              <DynamicIcon size="base" iconValue={format.icon} />
               {format.label}
             </StyledMenuListItem>
           ))}

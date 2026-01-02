@@ -127,6 +127,21 @@ const generateSpec = (
     if ("vconcat" in spec) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
       spec.vconcat.forEach((child: any) => {
+        // Skip non-object children (defensive check)
+        if (child === null || typeof child !== "object") {
+          return
+        }
+        // Skip setting width on children that are nested compositions
+        // (hconcat, vconcat, concat, layer) as it causes "infinite extent" errors.
+        // In valid Vega-Lite specs, composition operators are always top-level keys.
+        if (
+          "hconcat" in child ||
+          "vconcat" in child ||
+          "concat" in child ||
+          "layer" in child
+        ) {
+          return
+        }
         child.width = containerWidth
       })
     }
@@ -179,8 +194,7 @@ export const useVegaElementPreprocessor = (
   // reference).
   const selectionMode = useMemo(() => {
     return inputSelectionMode
-    // eslint-disable-next-line react-hooks/react-compiler
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
   }, [JSON.stringify(inputSelectionMode)])
 
   const spec = useMemo(

@@ -14,13 +14,12 @@
  * limitations under the License.
  */
 
-import React from "react"
-
 import { screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
 import { MetricsManager } from "@streamlit/app/src/MetricsManager"
-import { mockSessionInfo, render } from "@streamlit/lib"
+import { mockSessionInfo } from "@streamlit/lib"
+import { render } from "@streamlit/lib/testing"
 
 import ToolbarActions, {
   ActionButton,

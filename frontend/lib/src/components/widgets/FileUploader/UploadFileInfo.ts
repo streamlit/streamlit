@@ -55,21 +55,29 @@ export class UploadFileInfo {
   public readonly id: number
 
   /**
+   * The original File object. Stored for retry functionality when uploads fail.
+   * Optional because some existing code paths may not provide it.
+   */
+  public readonly file?: File
+
+  /**
    * Create a clone of this UploadFileInfo with the given status.
    */
   public setStatus(status: FileStatus): UploadFileInfo {
-    return new UploadFileInfo(this.name, this.size, this.id, status)
+    return new UploadFileInfo(this.name, this.size, this.id, status, this.file)
   }
 
   public constructor(
     name: string,
     size: number,
     id: number,
-    status: FileStatus
+    status: FileStatus,
+    file?: File
   ) {
     this.name = name
     this.size = size
     this.id = id
     this.status = status
+    this.file = file
   }
 }
