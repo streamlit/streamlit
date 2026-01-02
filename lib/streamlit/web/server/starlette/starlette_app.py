@@ -50,6 +50,8 @@ if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
     from starlette.applications import Starlette
+    from starlette.middleware import Middleware
+    from starlette.routing import BaseRoute
 
     from streamlit.runtime import Runtime
     from streamlit.runtime.media_file_manager import MediaFileManager
@@ -57,39 +59,23 @@ if TYPE_CHECKING:
     from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
 
 
-def create_starlette_app(runtime: Runtime) -> Starlette:
-    """Create a Starlette application for serving Streamlit.
+def create_streamlit_routes(runtime: Runtime) -> list[BaseRoute]:
+    """Create the Streamlit-internal routes for the application.
 
-    This factory function creates a fully configured Starlette app that provides
-    the full web-server functionality required for Streamlit:
-    - WebSocket endpoint for client-server communication
-    - Health check endpoints
-    - Media file serving with range request support
-    - File upload handling
-    - Custom component serving
-    - Static file serving with SPA fallback
-    - XSRF protection
-    - Session middleware
-    - GZip compression
+    This function creates all the routes required for Streamlit's core functionality
+    including WebSocket communication, health checks, media serving, file uploads,
+    and static file serving.
+
+    Parameters
+    ----------
+    runtime
+        The Streamlit Runtime instance that manages the application state.
+
+    Returns
+    -------
+    list[BaseRoute]
+        A list of Starlette route objects for Streamlit's core functionality.
     """
-    try:
-        from starlette.applications import Starlette
-        from starlette.middleware.sessions import SessionMiddleware
-    except ModuleNotFoundError as exc:  # pragma: no cover - import guard
-        raise RuntimeError(
-            "Starlette is not installed. Run `pip install streamlit[starlette]` "
-            "or disable `server.useStarlette`."
-        ) from exc
-
-    # Define lifespan context manager for startup/shutdown events
-    @asynccontextmanager
-    async def _lifespan(_app: Starlette) -> AsyncIterator[None]:
-        # Startup
-        await runtime.start()
-        yield
-        # Shutdown
-        runtime.stop()
-
     # Extract runtime components
     media_manager: MediaFileManager = runtime.media_file_mgr
     upload_mgr: MemoryUploadedFileManager = runtime.uploaded_file_mgr  # type: ignore
@@ -133,16 +119,38 @@ def create_starlette_app(runtime: Runtime) -> Starlette:
     if not dev_mode:
         routes.extend(create_streamlit_static_assets_routes(base_url=base_url))
 
-    # Create the Starlette application with lifespan handler
-    app = Starlette(routes=routes, lifespan=_lifespan)
+    return routes
+
+
+def create_streamlit_middleware() -> list[Middleware]:
+    """Create the Streamlit-internal middleware stack.
+
+    This function creates the middleware required for Streamlit's core functionality
+    including session management and GZip compression.
+
+    Returns
+    -------
+    list[Middleware]
+        A list of Starlette Middleware objects for Streamlit's core functionality.
+    """
+    from starlette.middleware import Middleware
+    from starlette.middleware.sessions import SessionMiddleware
+
+    from streamlit.web.server.starlette.starlette_gzip_middleware import (
+        MediaAwareGZipMiddleware,
+    )
+
+    middleware: list[Middleware] = []
 
     # Add session middleware
-    app.add_middleware(
-        SessionMiddleware,  # ty: ignore[invalid-argument-type]
-        secret_key=get_cookie_secret() or generate_random_hex_string(),
-        same_site="lax",
-        https_only=bool(config.get_option("server.sslCertFile")),
-        session_cookie=SESSION_COOKIE_NAME,
+    middleware.append(
+        Middleware(
+            SessionMiddleware,  # ty: ignore[invalid-argument-type]
+            secret_key=get_cookie_secret() or generate_random_hex_string(),
+            same_site="lax",
+            https_only=bool(config.get_option("server.sslCertFile")),
+            session_cookie=SESSION_COOKIE_NAME,
+        )
     )
 
     # Add GZip compression middleware.
@@ -151,17 +159,55 @@ def create_starlette_app(runtime: Runtime) -> Starlette:
     # especially with range requests. Using a custom middleware instead of setting
     # Content-Encoding: identity provides better browser compatibility, as some
     # browsers (especially WebKit) have issues with explicit identity encoding.
-    from streamlit.web.server.starlette.starlette_gzip_middleware import (
-        MediaAwareGZipMiddleware,
+    middleware.append(
+        Middleware(
+            MediaAwareGZipMiddleware,  # ty: ignore[invalid-argument-type]
+            minimum_size=GZIP_MINIMUM_SIZE,
+            compresslevel=GZIP_COMPRESSLEVEL,
+        )
     )
 
-    app.add_middleware(
-        MediaAwareGZipMiddleware,  # ty: ignore[invalid-argument-type]
-        minimum_size=GZIP_MINIMUM_SIZE,
-        compresslevel=GZIP_COMPRESSLEVEL,
-    )
+    return middleware
 
-    return app
+
+def create_starlette_app(runtime: Runtime) -> Starlette:
+    """Create a Starlette application for serving Streamlit.
+
+    This factory function creates a fully configured Starlette app that provides
+    the full web-server functionality required for Streamlit:
+    - WebSocket endpoint for client-server communication
+    - Health check endpoints
+    - Media file serving with range request support
+    - File upload handling
+    - Custom component serving
+    - Static file serving with SPA fallback
+    - XSRF protection
+    - Session middleware
+    - GZip compression
+    """
+    try:
+        from starlette.applications import Starlette
+    except ModuleNotFoundError as exc:  # pragma: no cover - import guard
+        raise RuntimeError(
+            "Starlette is not installed. Run `pip install streamlit[starlette]` "
+            "or disable `server.useStarlette`."
+        ) from exc
+
+    # Define lifespan context manager for startup/shutdown events
+    @asynccontextmanager
+    async def _lifespan(_app: Starlette) -> AsyncIterator[None]:
+        # Startup
+        await runtime.start()
+        yield
+        # Shutdown
+        runtime.stop()
+
+    # Get routes and middleware from helper functions
+    routes = create_streamlit_routes(runtime)
+    middleware = create_streamlit_middleware()
+
+    # Create the Starlette application with lifespan handler
+    return Starlette(routes=routes, middleware=middleware, lifespan=_lifespan)
 
 
 __all__ = ["create_starlette_app"]
