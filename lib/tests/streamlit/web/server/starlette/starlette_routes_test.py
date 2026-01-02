@@ -17,15 +17,17 @@
 from __future__ import annotations
 
 import asyncio
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 from starlette.responses import Response
 
 from streamlit.web.server.starlette.starlette_routes import (
+    _ensure_xsrf_cookie,
     _set_cors_headers,
     _set_unquoted_cookie,
     _with_base,
 )
+from streamlit.web.server.starlette.starlette_server_config import XSRF_COOKIE_NAME
 from tests.testutil import patch_config_options
 
 
@@ -144,6 +146,114 @@ class TestSetCorsHeaders:
         asyncio.run(_set_cors_headers(request, response))
 
         assert "Access-Control-Allow-Origin" not in response.headers
+
+    @patch_config_options(
+        {
+            "server.enableCORS": True,
+            "global.developmentMode": False,
+            "server.corsAllowedOrigins": ["http://allowed.example.com"],
+        }
+    )
+    def test_allows_configured_origin(self) -> None:
+        """Test that configured allowed origins are permitted."""
+        request = MagicMock()
+        request.headers = MagicMock()
+        request.headers.get.return_value = "http://allowed.example.com"
+        response = MagicMock()
+        response.headers = {}
+
+        asyncio.run(_set_cors_headers(request, response))
+
+        assert (
+            response.headers["Access-Control-Allow-Origin"]
+            == "http://allowed.example.com"
+        )
+
+
+class TestEnsureXsrfCookie:
+    """Tests for _ensure_xsrf_cookie function."""
+
+    @patch_config_options({"server.enableXsrfProtection": False})
+    def test_no_cookie_when_xsrf_disabled(self) -> None:
+        """Test that no cookie is set when XSRF protection is disabled."""
+        request = MagicMock()
+        request.cookies = {}
+        response = Response()
+
+        _ensure_xsrf_cookie(request, response)
+
+        cookie_headers = [
+            value
+            for name, value in response.raw_headers
+            if name.lower() == b"set-cookie"
+        ]
+        assert len(cookie_headers) == 0
+
+    @patch_config_options(
+        {"server.enableXsrfProtection": True, "server.sslCertFile": None}
+    )
+    def test_generates_new_token_when_no_cookie(self) -> None:
+        """Test that a new XSRF token is generated when no cookie exists."""
+        request = MagicMock()
+        request.cookies = {}
+        response = Response()
+
+        _ensure_xsrf_cookie(request, response)
+
+        cookie_headers = [
+            value.decode("latin-1")
+            for name, value in response.raw_headers
+            if name.lower() == b"set-cookie"
+        ]
+        assert len(cookie_headers) == 1
+        assert cookie_headers[0].startswith(f"{XSRF_COOKIE_NAME}=2|")
+        assert "Secure" not in cookie_headers[0]
+
+    @patch_config_options(
+        {"server.enableXsrfProtection": True, "server.sslCertFile": "/path/to/cert"}
+    )
+    def test_sets_secure_flag_with_ssl(self) -> None:
+        """Test that Secure flag is added when SSL is configured."""
+        request = MagicMock()
+        request.cookies = {}
+        response = Response()
+
+        _ensure_xsrf_cookie(request, response)
+
+        cookie_headers = [
+            value.decode("latin-1")
+            for name, value in response.raw_headers
+            if name.lower() == b"set-cookie"
+        ]
+        assert len(cookie_headers) == 1
+        assert "Secure" in cookie_headers[0]
+
+    @patch_config_options(
+        {"server.enableXsrfProtection": True, "server.sslCertFile": None}
+    )
+    @patch(
+        "streamlit.web.server.starlette.starlette_routes.starlette_app_utils.decode_xsrf_token_string"
+    )
+    @patch(
+        "streamlit.web.server.starlette.starlette_routes.starlette_app_utils.generate_xsrf_token_string"
+    )
+    def test_preserves_existing_token(
+        self, mock_generate: MagicMock, mock_decode: MagicMock
+    ) -> None:
+        """Test that existing token bytes and timestamp are preserved."""
+        existing_token = b"existing_token_bytes"
+        existing_timestamp = 1234567890
+        mock_decode.return_value = (existing_token, existing_timestamp)
+        mock_generate.return_value = "2|mocked|token|1234567890"
+
+        request = MagicMock()
+        request.cookies = {XSRF_COOKIE_NAME: "existing_cookie_value"}
+        response = Response()
+
+        _ensure_xsrf_cookie(request, response)
+
+        mock_decode.assert_called_once_with("existing_cookie_value")
+        mock_generate.assert_called_once_with(existing_token, existing_timestamp)
 
 
 class TestSetUnquotedCookie:

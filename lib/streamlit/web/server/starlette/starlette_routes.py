@@ -84,7 +84,21 @@ _ROUTE_APP_STATIC: Final = "app/static/{path:path}"
 
 
 def _with_base(path: str, base_url: str | None = None) -> str:
-    """Prepend the base URL path to a route path."""
+    """Prepend the base URL path to a route path.
+
+    Parameters
+    ----------
+    path
+        The route path to prepend the base URL to (e.g., "_stcore/health").
+    base_url
+        Optional explicit base URL. If None, uses the configured server.baseUrlPath.
+        If an empty string, no base URL is prepended.
+
+    Returns
+    -------
+    str
+        The full route path with base URL prepended (e.g., "/myapp/_stcore/health").
+    """
     from streamlit.url_util import make_url_path
 
     base = (
@@ -94,7 +108,19 @@ def _with_base(path: str, base_url: str | None = None) -> str:
 
 
 async def _set_cors_headers(request: Request, response: Response) -> None:
-    """Set CORS headers on a response based on configuration."""
+    """Set CORS headers on a response based on configuration.
+
+    Configures the Access-Control-Allow-Origin header according to the following rules:
+    - If CORS is disabled or in development mode: allows all origins ("*")
+    - Otherwise: only allows origins that match the configured allowlist
+
+    Parameters
+    ----------
+    request
+        The incoming Starlette request (used to read the Origin header).
+    response
+        The outgoing Starlette response to set headers on.
+    """
     if allow_all_cross_origin_requests():
         response.headers["Access-Control-Allow-Origin"] = "*"
         return
@@ -105,14 +131,27 @@ async def _set_cors_headers(request: Request, response: Response) -> None:
 
 
 def _ensure_xsrf_cookie(request: Request, response: Response) -> None:
-    """Ensure that the XSRF cookie is set.
+    """Ensure that the XSRF cookie is set on the response.
 
-    We manually manage XSRF generation and validation here to strictly match
-    Tornado's implementation and cookie format.
+    This function manages XSRF (Cross-Site Request Forgery) token generation
+    and cookie setting to maintain compatibility with Tornado's implementation.
+    If an existing valid XSRF cookie is present, its token bytes and timestamp
+    are preserved. Otherwise, a new token is generated.
+
+    The cookie is only set if XSRF protection is enabled in the configuration.
+    The Secure flag is added when SSL is configured.
+
+    Parameters
+    ----------
+    request
+        The incoming Starlette request (used to read existing XSRF cookie).
+    response
+        The outgoing Starlette response to set the cookie on.
     """
     if not is_xsrf_enabled():
         return
 
+    # Try to decode existing XSRF cookie to preserve token across requests
     raw_cookie = request.cookies.get(XSRF_COOKIE_NAME)
     token_bytes: bytes | None = None
     timestamp: int | None = None
@@ -121,6 +160,7 @@ def _ensure_xsrf_cookie(request: Request, response: Response) -> None:
             raw_cookie
         )
 
+    # Generate token string (reuses existing token bytes/timestamp if available)
     cookie_value = starlette_app_utils.generate_xsrf_token_string(
         token_bytes, timestamp
     )
@@ -140,7 +180,27 @@ def _set_unquoted_cookie(
     *,
     secure: bool,
 ) -> None:
-    """Set a cookie without quoting the value (for Tornado compatibility)."""
+    """Set a cookie without URL-encoding or quoting the value.
+
+    Starlette's standard set_cookie() method URL-encodes special characters
+    (like `|`) in cookie values. This function bypasses that encoding to
+    maintain compatibility with Tornado's cookie format, which is required
+    for XSRF tokens that use the format "2|mask|token|timestamp".
+
+    If a cookie with the same name already exists, it is replaced.
+
+    Parameters
+    ----------
+    response
+        The Starlette response to set the cookie on.
+    cookie_name
+        The name of the cookie.
+    cookie_value
+        The raw cookie value (will not be URL-encoded or quoted).
+    secure
+        Whether to add the Secure flag (should be True when using HTTPS).
+    """
+    # Build the Set-Cookie header value manually to avoid encoding
     header_value = "; ".join(
         [
             f"{cookie_name}={cookie_value}",
@@ -150,6 +210,7 @@ def _set_unquoted_cookie(
         ]
     )
 
+    # Remove any existing cookie with the same name before adding the new one
     key_prefix = f"{cookie_name}=".encode("latin-1")
     filtered_headers: list[tuple[bytes, bytes]] = [
         (name, value)
@@ -164,7 +225,24 @@ def _set_unquoted_cookie(
 
 
 def create_health_routes(runtime: Runtime, base_url: str | None) -> list[BaseRoute]:
-    """Create health check route handlers."""
+    """Create health check route handlers for /_stcore/health.
+
+    The health endpoint returns 200 OK when the runtime is ready to accept
+    browser connections, or 503 Service Unavailable otherwise. This is used
+    by load balancers and orchestration systems to determine service readiness.
+
+    Parameters
+    ----------
+    runtime
+        The Streamlit runtime instance to check health status.
+    base_url
+        Optional base URL path prefix for the routes.
+
+    Returns
+    -------
+    list[BaseRoute]
+        List of Starlette Route objects for GET, HEAD, and OPTIONS methods.
+    """
     from starlette.responses import PlainTextResponse, Response
     from starlette.routing import Route
 
@@ -316,7 +394,24 @@ def create_host_config_routes(base_url: str | None) -> list[BaseRoute]:
 def create_media_routes(
     media_storage: MemoryMediaFileStorage, base_url: str | None
 ) -> list[BaseRoute]:
-    """Create media file route handlers."""
+    """Create media file route handlers for /media/{file_id}.
+
+    Serves media files (images, audio, video) stored by st.image, st.audio,
+    st.video, and st.download_button. Supports HTTP range requests for
+    streaming media playback.
+
+    Parameters
+    ----------
+    media_storage
+        The media file storage backend.
+    base_url
+        Optional base URL path prefix for the routes.
+
+    Returns
+    -------
+    list[BaseRoute]
+        List of Starlette Route objects for GET, HEAD, and OPTIONS methods.
+    """
     from starlette.exceptions import HTTPException
     from starlette.responses import Response
     from starlette.routing import Route
@@ -406,7 +501,25 @@ def create_upload_routes(
     upload_mgr: MemoryUploadedFileManager,
     base_url: str | None,
 ) -> list[BaseRoute]:
-    """Create file upload route handlers."""
+    """Create file upload route handlers for /_stcore/upload_file/{session_id}/{file_id}.
+
+    Handles file uploads from st.file_uploader widgets. Supports PUT for uploading
+    files and DELETE for removing them. XSRF protection is enforced when enabled.
+
+    Parameters
+    ----------
+    runtime
+        The Streamlit runtime instance (used to validate session IDs).
+    upload_mgr
+        The uploaded file manager to store/retrieve files.
+    base_url
+        Optional base URL path prefix for the routes.
+
+    Returns
+    -------
+    list[BaseRoute]
+        List of Starlette Route objects for PUT, DELETE, and OPTIONS methods.
+    """
     from starlette.datastructures import UploadFile
     from starlette.exceptions import HTTPException
     from starlette.responses import Response
