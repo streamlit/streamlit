@@ -1,6 +1,6 @@
 {
   "name": "streamlit",
-  "version": "1.52.2",
+  "version": "1.52.3-dev20260101",
   "private": true,
   "workspaces": [
     "app",
