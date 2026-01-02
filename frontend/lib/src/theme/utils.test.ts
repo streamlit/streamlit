@@ -46,6 +46,7 @@ import {
   getDefaultTheme,
   getFocusBoxShadow,
   getHostSpecifiedTheme,
+  getHostSpecifiedThemeOnly,
   getPrimaryFocusBoxShadow,
   getSystemTheme,
   handleSectionInheritance,
@@ -618,6 +619,52 @@ describe("getHostSpecifiedTheme", () => {
     expect(defaultTheme.name).toBe("Light")
     // Also verify that the theme is our lightTheme.
     expect(defaultTheme.emotion.colors).toEqual(lightTheme.emotion.colors)
+  })
+})
+
+describe("getHostSpecifiedThemeOnly", () => {
+  let windowSpy: MockInstance
+
+  afterEach(() => {
+    windowSpy.mockRestore()
+    window.localStorage.clear()
+  })
+
+  it("returns null when there is no theme in query params", () => {
+    windowSpy = mockWindow()
+    const theme = getHostSpecifiedThemeOnly()
+
+    expect(theme).toBeNull()
+  })
+
+  it("returns light theme when embed_options=light_theme", () => {
+    windowSpy = mockWindow(
+      windowLocationSearch("?embed=true&embed_options=light_theme")
+    )
+    const theme = getHostSpecifiedThemeOnly()
+
+    expect(theme).not.toBeNull()
+    expect(theme?.name).toBe("Light")
+    expect(theme?.emotion.colors).toEqual(lightTheme.emotion.colors)
+  })
+
+  it("returns dark theme when embed_options=dark_theme", () => {
+    windowSpy = mockWindow(
+      windowLocationSearch("?embed=true&embed_options=dark_theme")
+    )
+    const theme = getHostSpecifiedThemeOnly()
+
+    expect(theme).not.toBeNull()
+    expect(theme?.name).toBe("Dark")
+    expect(theme?.emotion.colors).toEqual(darkTheme.emotion.colors)
+  })
+
+  it("ignores system theme preference when no query params", () => {
+    windowSpy = mockWindow(windowMatchMedia("dark"))
+    const theme = getHostSpecifiedThemeOnly()
+
+    // Should return null, NOT the dark theme based on system preference
+    expect(theme).toBeNull()
   })
 })
 

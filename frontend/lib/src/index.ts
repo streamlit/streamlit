@@ -129,6 +129,7 @@ export {
   getCachedTheme,
   getDefaultTheme,
   getHostSpecifiedTheme,
+  getHostSpecifiedThemeOnly,
   getSystemThemePreference,
   globalStyles,
   hasLightBackgroundColor,

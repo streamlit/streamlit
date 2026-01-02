@@ -2740,6 +2740,173 @@ describe("App", () => {
     })
   })
 
+  describe("embed_options with custom themes", () => {
+    let windowSpy: MockInstance
+
+    beforeEach(() => {
+      window.localStorage.clear()
+    })
+
+    afterEach(() => {
+      windowSpy?.mockRestore()
+    })
+
+    it("respects embed_options=light_theme over cached dark preference", () => {
+      // Set cached theme to dark
+      const cachedTheme: CachedTheme = {
+        name: CUSTOM_THEME_DARK_NAME,
+      }
+      window.localStorage.setItem(
+        LocalStore.ACTIVE_THEME,
+        JSON.stringify(cachedTheme)
+      )
+
+      // Mock query params with light_theme
+      windowSpy = mockWindow(
+        windowLocationSearch("?embed=true&embed_options=light_theme")
+      )
+
+      const props = getProps()
+      renderApp(props)
+
+      // Send custom theme config with light and dark sections
+      const customTheme = new CustomThemeConfig({
+        primaryColor: "blue",
+        light: {
+          backgroundColor: "white",
+        },
+        dark: {
+          backgroundColor: "black",
+        },
+      })
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        customTheme,
+      })
+
+      // Should apply Custom Theme Light (from embed_options), not Dark (from cache)
+      expect(props.theme.setTheme).toHaveBeenCalled()
+      const appliedTheme = vi.mocked(props.theme.setTheme).mock.calls[0][0]
+      expect(appliedTheme.name).toBe(CUSTOM_THEME_LIGHT_NAME)
+      expect(appliedTheme.emotion.colors.bgColor).toBe("white")
+    })
+
+    it("respects embed_options=dark_theme over cached light preference", () => {
+      // Set cached theme to light
+      const cachedTheme: CachedTheme = {
+        name: CUSTOM_THEME_LIGHT_NAME,
+      }
+      window.localStorage.setItem(
+        LocalStore.ACTIVE_THEME,
+        JSON.stringify(cachedTheme)
+      )
+
+      // Mock query params with dark_theme
+      windowSpy = mockWindow(
+        windowLocationSearch("?embed=true&embed_options=dark_theme")
+      )
+
+      const props = getProps()
+      renderApp(props)
+
+      // Send custom theme config with light and dark sections
+      const customTheme = new CustomThemeConfig({
+        primaryColor: "blue",
+        light: {
+          backgroundColor: "white",
+        },
+        dark: {
+          backgroundColor: "black",
+        },
+      })
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        customTheme,
+      })
+
+      // Should apply Custom Theme Dark (from embed_options), not Light (from cache)
+      expect(props.theme.setTheme).toHaveBeenCalled()
+      const appliedTheme = vi.mocked(props.theme.setTheme).mock.calls[0][0]
+      expect(appliedTheme.name).toBe(CUSTOM_THEME_DARK_NAME)
+      expect(appliedTheme.emotion.colors.bgColor).toBe("black")
+    })
+
+    it("falls back to cached preference when no embed_options", () => {
+      // Set cached theme to dark
+      const cachedTheme: CachedTheme = {
+        name: CUSTOM_THEME_DARK_NAME,
+      }
+      window.localStorage.setItem(
+        LocalStore.ACTIVE_THEME,
+        JSON.stringify(cachedTheme)
+      )
+
+      // No query params
+      windowSpy = mockWindow()
+
+      const props = getProps()
+      renderApp(props)
+
+      // Send custom theme config
+      const customTheme = new CustomThemeConfig({
+        primaryColor: "blue",
+        light: {
+          backgroundColor: "white",
+        },
+        dark: {
+          backgroundColor: "black",
+        },
+      })
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        customTheme,
+      })
+
+      // Should apply cached Custom Theme Dark
+      expect(props.theme.setTheme).toHaveBeenCalled()
+      const appliedTheme = vi.mocked(props.theme.setTheme).mock.calls[0][0]
+      expect(appliedTheme.name).toBe(CUSTOM_THEME_DARK_NAME)
+    })
+
+    it("maps embed_options to preset theme when custom theme removed", () => {
+      // Mock query params with dark_theme
+      windowSpy = mockWindow(
+        windowLocationSearch("?embed=true&embed_options=dark_theme")
+      )
+
+      const props = getProps()
+      renderApp(props)
+
+      // First send custom theme
+      const customTheme = new CustomThemeConfig({
+        primaryColor: "blue",
+        light: { backgroundColor: "white" },
+        dark: { backgroundColor: "black" },
+      })
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        customTheme,
+      })
+
+      vi.mocked(props.theme.setTheme).mockClear()
+
+      // Then remove custom theme (send null)
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        customTheme: null,
+      })
+
+      // Should apply preset Dark theme (respecting embed_options)
+      expect(props.theme.setTheme).toHaveBeenCalled()
+      const appliedTheme = vi.mocked(props.theme.setTheme).mock.calls[0][0]
+      expect(appliedTheme.name).toBe("Dark")
+    })
+  })
+
   describe("App theme hash change detection", () => {
     it("detects changes when sidebar config is modified", () => {
       const props = getProps()
