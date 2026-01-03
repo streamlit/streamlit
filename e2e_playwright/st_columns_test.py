@@ -65,58 +65,34 @@ def test_columns_with_border(app: Page, assert_snapshot: ImageCompareFunction):
     assert_snapshot(column_container, name="st_columns-with_border")
 
 
-def test_column_gap_small_is_correctly_applied(
+def test_column_gap_is_correctly_applied(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
-    """Test that the small column gap is correctly applied."""
-    column_gap_small = (
-        get_expander(app, "Column gap small").get_by_test_id("stHorizontalBlock").nth(0)
-    )
-    # We use regex here since some browsers may resolve this to two numbers:
-    expect(column_gap_small).to_have_css("gap", re.compile("16px"))
-    column_gap_small.scroll_into_view_if_needed()
-    assert_snapshot(column_gap_small, name="st_columns-column_gap_small")
+    """Test that the different-sized column gaps are correctly applied."""
 
+    gaps = [
+        (None, "0"),
+        ("xxsmall", "4px"),
+        ("xsmall", "8px"),
+        ("small", "16px"),
+        ("medium", "32px"),
+        ("large", "64px"),
+        ("xlarge", "96px"),
+        ("xxlarge", "128px"),
+    ]
 
-def test_column_gap_medium_is_correctly_applied(
-    app: Page, assert_snapshot: ImageCompareFunction
-):
-    """Test that the medium column gap is correctly applied."""
-    column_gap_medium = (
-        get_expander(app, "Column gap medium")
-        .get_by_test_id("stHorizontalBlock")
-        .nth(0)
-    )
-    # We use regex here since some browsers may resolve this to two numbers:
-    expect(column_gap_medium).to_have_css("gap", re.compile("32px"))
-    column_gap_medium.scroll_into_view_if_needed()
-    assert_snapshot(column_gap_medium, name="st_columns-column_gap_medium")
+    for gap, gap_value in gaps:
+        gap_name = str(gap).lower()
 
-
-def test_column_gap_large_is_correctly_applied(
-    app: Page, assert_snapshot: ImageCompareFunction
-):
-    """Test that the large column gap is correctly applied."""
-    column_gap_large = (
-        get_expander(app, "Column gap large").get_by_test_id("stHorizontalBlock").nth(0)
-    )
-    # We use regex here since some browsers may resolve this to two numbers:
-    expect(column_gap_large).to_have_css("gap", re.compile("64px"))
-    column_gap_large.scroll_into_view_if_needed()
-    assert_snapshot(column_gap_large, name="st_columns-column_gap_large")
-
-
-def test_column_gap_none_is_correctly_applied(
-    app: Page, assert_snapshot: ImageCompareFunction
-):
-    """Test that the none column gap is correctly applied."""
-    column_gap_none = (
-        get_expander(app, "Column gap none").get_by_test_id("stHorizontalBlock").nth(0)
-    )
-    # We use regex here since some browsers may resolve this to two numbers:
-    expect(column_gap_none).to_have_css("gap", re.compile("0px"))
-    column_gap_none.scroll_into_view_if_needed()
-    assert_snapshot(column_gap_none, name="st_columns-column_gap_none")
+        column_gap = (
+            get_expander(app, f"Column gap {gap_name}")
+            .get_by_test_id("stHorizontalBlock")
+            .nth(0)
+        )
+        # We use regex here since some browsers may resolve this to two numbers:
+        expect(column_gap).to_have_css("gap", re.compile(gap_value))
+        column_gap.scroll_into_view_if_needed()
+        assert_snapshot(column_gap, name=f"st_columns-column_gap_{gap_name}")
 
 
 def test_one_level_nesting_works_correctly(

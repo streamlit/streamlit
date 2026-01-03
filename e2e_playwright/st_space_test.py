@@ -12,7 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from playwright.sync_api import Page, expect
+from collections.abc import Callable
+
+from playwright.sync_api import Locator, Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_until
 from e2e_playwright.shared.app_utils import get_element_by_key
@@ -28,30 +30,22 @@ def test_space_elements_exist(app: Page):
     first_space = space_elements.first
     expect(first_space).to_have_text("")
 
-    # Check the first three space elements (in vertical layout, so height should be set)
-    # First space: st.space("small") = 0.75rem = 12px height (default size)
-    first_space = space_elements.nth(0)
-    wait_until(
-        app,
-        lambda: (bbox := first_space.bounding_box()) is not None
-        and int(bbox["height"]) == 12,  # 0.75rem * 16px = 12px
-    )
+    heights_em = [0.25, 0.5, 0.75, 2.5, 4.25, 6, 8]
 
-    # Second space: st.space("medium") = 2.5rem = 40px height
-    second_space = space_elements.nth(1)
-    wait_until(
-        app,
-        lambda: (bbox := second_space.bounding_box()) is not None
-        and int(bbox["height"]) == 40,  # 2.5rem * 16px = 40px
-    )
+    # Check the first space elements (in vertical layout, so height should
+    # be set)
 
-    # Third space: st.space("large") = 4.25rem = 68px height
-    third_space = space_elements.nth(2)
-    wait_until(
-        app,
-        lambda: (bbox := third_space.bounding_box()) is not None
-        and int(bbox["height"]) == 68,  # 4.25rem * 16px = 68px
-    )
+    def wait_condition(space: Locator, height_px: int) -> Callable[[], bool]:
+        return (
+            lambda: (bbox := space.bounding_box()) is not None
+            and int(bbox["height"]) == height_px
+        )
+
+    for i, height_em in enumerate(heights_em):
+        height_px = round(height_em * 16)
+        space = space_elements.nth(i)
+
+        wait_until(app, wait_condition(space, height_px))
 
 
 def test_horizontal_container_spacing(app: Page, assert_snapshot: ImageCompareFunction):

@@ -12,17 +12,35 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, cast
+
 import streamlit as st
 
+if TYPE_CHECKING:
+    from streamlit.elements.lib.layout_utils import Gap
+
+SPACES = cast(
+    "list[Gap]",
+    [
+        "xxsmall",
+        "xsmall",
+        "small",
+        "medium",
+        "large",
+        "xlarge",
+        "xxlarge",
+    ],
+)
+
 st.write("Tests Outside of Containers")
-st.space("small")
-st.write("After small space")
 
-st.space("medium")
-st.write("After medium space")
-
-st.space("large")
-st.write("After large space")
+for space_names in SPACES:
+    with st.expander(f"Space set to {space_names}", expanded=True):
+        st.button(f"Before {space_names} space")
+        st.space(space_names)
+        st.button(f"After {space_names} space")
 
 st.divider()
 
