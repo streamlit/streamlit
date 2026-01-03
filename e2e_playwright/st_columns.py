@@ -60,7 +60,7 @@ with st.expander("Variable-width columns (absolute numbers)", expanded=True):
 # Various column gaps
 
 GAPS = cast(
-    "list[Gap]",
+    "list[Gap|None]",
     [
         None,
         "xxsmall",
