@@ -620,6 +620,122 @@ export function deserializeSelectSlider(
   return index >= 0 ? [index] : undefined
 }
 
+// --- ButtonGroup (Pills / Segmented Control) Serializers ---
+
+/** ButtonGroup option type with optional icon and content fields */
+type ButtonGroupOption = {
+  content?: string | null
+  contentIcon?: string | null
+}
+
+/**
+ * Get the full formatted content of a ButtonGroup option.
+ * Reconstructs "icon content" format from separate fields.
+ */
+function getFullOptionContent(option: ButtonGroupOption): string {
+  const icon = option.contentIcon ?? ""
+  const content = option.content ?? ""
+  if (icon && content) {
+    return `${icon} ${content}`
+  }
+  return icon || content
+}
+
+/**
+ * Find option index by matching against full content OR just the content part.
+ * This allows URLs like ?mood=Thinking to match "🤔 Thinking".
+ */
+function findOptionIndex(
+  str: string,
+  options: readonly ButtonGroupOption[]
+): number {
+  // First try exact match on full content (icon + text)
+  let index = options.findIndex(opt => getFullOptionContent(opt) === str)
+  if (index >= 0) return index
+
+  // Fallback: try matching just the content (without icon)
+  index = options.findIndex(opt => opt.content === str)
+  return index
+}
+
+/**
+ * Serialize a single-select ButtonGroup selection by converting the selected
+ * index to its full option content (icon + text).
+ * @param index - The selected index (from value[0])
+ * @param options - The options array from the widget proto (ButtonGroupProto.Option[])
+ * @returns The full formatted content of the selected option, or "" if invalid
+ */
+export function serializeButtonGroupSingle(
+  index: number | null | undefined,
+  options: readonly ButtonGroupOption[]
+): string {
+  if (index === null || index === undefined || index < 0) return ""
+  if (index >= options.length) return ""
+  return getFullOptionContent(options[index])
+}
+
+/**
+ * Deserialize a query param value to a single-select ButtonGroup index.
+ * @param value - The query param value
+ * @param options - The options array from the widget proto
+ * @returns The index of the matching option, or undefined if not found
+ */
+export function deserializeButtonGroupSingle(
+  value: string | string[] | null,
+  options: readonly ButtonGroupOption[]
+): number | undefined {
+  if (value === null) return undefined
+
+  const str = Array.isArray(value) ? (value[value.length - 1] ?? "") : value
+  if (!str) return undefined
+
+  const index = findOptionIndex(str, options)
+  return index >= 0 ? index : undefined
+}
+
+/**
+ * Serialize a multi-select ButtonGroup selection by converting selected indices
+ * to their full option contents (icon + text).
+ * @param indices - Array of selected indices
+ * @param options - The options array from the widget proto
+ * @returns Array of full option content strings
+ */
+export function serializeButtonGroupMulti(
+  indices: number[] | null,
+  options: readonly ButtonGroupOption[]
+): string[] {
+  if (!indices || indices.length === 0) return []
+
+  return indices
+    .filter(idx => idx >= 0 && idx < options.length)
+    .map(idx => getFullOptionContent(options[idx]))
+    .filter(content => content !== "")
+}
+
+/**
+ * Deserialize query param values to multi-select ButtonGroup indices.
+ * @param value - Single string or array of strings from query params
+ * @param options - The options array from the widget proto
+ * @returns Array of matching option indices, or undefined if none found
+ */
+export function deserializeButtonGroupMulti(
+  value: string | string[] | null,
+  options: readonly ButtonGroupOption[]
+): number[] | undefined {
+  if (value === null) return undefined
+
+  const values = Array.isArray(value) ? value : [value]
+  if (values.length === 0 || (values.length === 1 && !values[0])) {
+    return undefined
+  }
+
+  const indices = values
+    .map(v => findOptionIndex(v, options))
+    .filter(idx => idx >= 0)
+
+  return indices.length > 0 ? indices : undefined
+}
+
 // --- Query Param Key Detection ---
 
 /** Prefix for user keys that should be bound to URL query parameters. */
