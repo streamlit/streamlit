@@ -51,7 +51,9 @@ export const getDecimalPlaces = (step: number): number => {
   // Handle scientific notation (e.g., "1e-7", "2.5e-8")
   // JavaScript uses this for very small numbers (typically < 1e-6)
   if (stepStr.includes("e-")) {
-    const match = stepStr.match(/(\d+\.?\d*)?e-(\d+)/)
+    // Regex requires at least one digit before the exponent to avoid matching
+    // malformed inputs like "e-7". The decimal portion is optional but properly grouped.
+    const match = stepStr.match(/(\d+(?:\.\d+)?)e-(\d+)/)
     if (match) {
       // Account for decimal places in the coefficient (e.g., "2.5" has 1)
       const coefficientDecimals = (match[1]?.split(".")[1] || "").length
@@ -158,6 +160,13 @@ export const preciseStepArithmetic = (
   operation: "add" | "subtract"
 ): number => {
   const decimalPlaces = getDecimalPlaces(step)
+
+  // Fast path for integer steps (decimalPlaces === 0)
+  // Standard arithmetic is exact for integers, no scaling needed
+  if (decimalPlaces === 0) {
+    return operation === "add" ? currentValue + step : currentValue - step
+  }
+
   const scale = Math.pow(10, decimalPlaces)
 
   return operation === "add"
