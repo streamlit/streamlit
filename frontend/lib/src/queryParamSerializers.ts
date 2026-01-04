@@ -279,6 +279,100 @@ export function deserializeTime(
   return { hour, minute, second }
 }
 
+// --- Datetime Serializers (for DateTimeInput) ---
+
+/**
+ * Serialize a datetime string (from DateTimeInput proto format) to ISO 8601 format.
+ * DateTimeInput stores dates as "YYYY/MM/DD, HH:mm" internally (note: comma + space separator).
+ * We convert to "YYYY-MM-DDTHH:MM:SS" for URL compatibility.
+ */
+export function serializeDateTimeString(value: string | null): string {
+  if (!value) return ""
+
+  const cleaned = value.trim()
+
+  // If already in ISO format (has T separator), just clean up
+  if (cleaned.includes("T")) {
+    // Strip microseconds if present (anything after seconds)
+    const [datePart, timePart] = cleaned.split("T")
+    if (timePart) {
+      const timeOnly = timePart.split(".")[0] // Remove microseconds
+      return `${datePart}T${timeOnly}`
+    }
+    return cleaned
+  }
+
+  // Handle proto format "YYYY/MM/DD, HH:mm" (comma + space separator)
+  // Also handle "YYYY/MM/DD HH:MM:SS" format without comma
+  const separatorMatch = /, | /.exec(cleaned)
+  if (!separatorMatch) {
+    // Just a date, no time
+    return `${cleaned.replace(/\//g, "-")}T00:00:00`
+  }
+
+  const separatorIndex = separatorMatch.index
+  const datePart = cleaned.slice(0, separatorIndex)
+  const timePart = cleaned.slice(separatorIndex + separatorMatch[0].length)
+
+  if (!datePart) return ""
+
+  // Convert date part from YYYY/MM/DD to YYYY-MM-DD
+  const isoDate = datePart.replace(/\//g, "-")
+
+  if (!timePart) {
+    return `${isoDate}T00:00:00`
+  }
+
+  // Parse time and ensure we have seconds
+  const timeParts = timePart.split(":")
+  const hh = timeParts[0] || "00"
+  const mm = timeParts[1] || "00"
+  const ss = timeParts[2] || "00"
+
+  return `${isoDate}T${hh}:${mm}:${ss}`
+}
+
+/**
+ * Deserialize an ISO 8601 datetime string to DateTimeInput proto format.
+ * Converts "YYYY-MM-DDTHH:MM:SS" to "YYYY/MM/DD, HH:mm" (the format used by DateTimeInput).
+ */
+export function deserializeDateTimeString(
+  value: string | string[] | null
+): string | undefined {
+  if (value === null) return undefined
+
+  const str = Array.isArray(value) ? (value[value.length - 1] ?? "") : value
+  if (!str) return undefined
+
+  // Parse ISO format YYYY-MM-DDTHH:MM:SS (time separator can be T or space)
+  const match =
+    /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?/.exec(str)
+  if (!match) return undefined
+
+  const [, year, month, day, hour, minute] = match
+
+  // Validate date/time components
+  const monthNum = parseInt(month, 10)
+  const dayNum = parseInt(day, 10)
+  const hourNum = parseInt(hour, 10)
+  const minuteNum = parseInt(minute, 10)
+
+  // Basic validation
+  if (
+    monthNum < 1 ||
+    monthNum > 12 ||
+    dayNum < 1 ||
+    dayNum > 31 ||
+    hourNum > 23 ||
+    minuteNum > 59
+  ) {
+    return undefined
+  }
+
+  // Return in proto format "YYYY/MM/DD, HH:mm" (DateTimeInput's DATE_TIME_FORMAT)
+  return `${year}/${month}/${day}, ${hour}:${minute}`
+}
+
 // --- Number Range Serializers (for Slider range mode) ---
 
 /**
