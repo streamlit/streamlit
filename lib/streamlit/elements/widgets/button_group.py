@@ -38,6 +38,7 @@ from streamlit.elements.lib.layout_utils import (
 from streamlit.elements.lib.options_selector_utils import (
     check_and_convert_to_indices,
     convert_to_sequence_and_check_comparable,
+    create_mappings,
     get_default_indices,
 )
 from streamlit.elements.lib.policies import (
@@ -168,10 +169,16 @@ class ButtonGroupSerde(Generic[T]):
         options: Sequence[T],
         default_values: list[int],
         type: Literal["single", "multi"],
+        *,
+        formatted_options: list[str] | None = None,
+        formatted_option_to_option_index: dict[str, int] | None = None,
     ) -> None:
         self.options = options
         self.default_values = default_values
         self.type = type
+        # For query param binding support (matches SelectboxSerde pattern)
+        self.formatted_options = formatted_options or []
+        self.formatted_option_to_option_index = formatted_option_to_option_index or {}
         self.serde: _SingleSelectSerde[T] | _MultiSelectSerde[T] = (
             _SingleSelectSerde(options, default_value=default_values)
             if type == "single"
@@ -987,8 +994,18 @@ class ButtonGroupMixin:
         indexable_options = convert_to_sequence_and_check_comparable(options)
         default_values = get_default_indices(indexable_options, default)
 
+        # Create formatted options mapping for query param binding support
+        # Use the format_func if provided, otherwise str()
+        formatted_options, formatted_option_to_option_index = create_mappings(
+            indexable_options, format_func if format_func else str
+        )
+
         serde: ButtonGroupSerde[V] = ButtonGroupSerde[V](
-            indexable_options, default_values, selection_mode
+            indexable_options,
+            default_values,
+            selection_mode,
+            formatted_options=formatted_options,
+            formatted_option_to_option_index=formatted_option_to_option_index,
         )
 
         res = self._button_group(

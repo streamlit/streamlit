@@ -448,6 +448,85 @@ def register_widget_from_metadata(
 
             serializers = (_serialize_select_slider_full, _deserialize_select_slider)
 
+        # st.pills and st.segmented_control use int_array_value (indices)
+        # Convert to formatted value for human-friendly URLs
+        if (
+            effective_value_type == "int_array_value"
+            and serde_name == "ButtonGroupSerde"
+        ):
+            options = getattr(serde_instance, "options", [])
+            formatted_options = getattr(serde_instance, "formatted_options", [])
+            formatted_to_index = getattr(
+                serde_instance, "formatted_option_to_option_index", {}
+            )
+            selection_type = getattr(serde_instance, "type", "single")
+            is_multi = selection_type == "multi"
+
+            def _get_formatted_for_button_group_value(v: object) -> str:
+                """Get formatted string for a button group value."""
+                for i, opt in enumerate(options):
+                    if opt == v:
+                        return (
+                            formatted_options[i]
+                            if i < len(formatted_options)
+                            else str(opt)
+                        )
+                return str(v)
+
+            def _deserialize_button_group_option(param_str: str) -> object | None:
+                """Deserialize a single option from URL param string."""
+                if not param_str:
+                    return None
+                # Look up via formatted_option_to_option_index (uses format_func)
+                idx = formatted_to_index.get(param_str)
+                if idx is not None:
+                    return options[idx]
+                # Fallback: try matching str(option)
+                for opt in options:
+                    if str(opt) == param_str:
+                        return opt
+                # Fallback: try matching the text part without emoji/icon prefix
+                # Pills/segmented_control extract emoji/icon to a separate field,
+                # so "😢 Sad" becomes icon="😢" content="Sad". Allow matching "Sad".
+                for i, fmt_opt in enumerate(formatted_options):
+                    # Check if formatted option ends with the param string
+                    # (handles "😢 Sad" matching "Sad")
+                    if fmt_opt.endswith(f" {param_str}") or fmt_opt == param_str:
+                        return options[i]
+                    # Also try splitting on first space and matching the rest
+                    parts = fmt_opt.split(" ", 1)
+                    if len(parts) == 2 and parts[1] == param_str:
+                        return options[i]
+                return None
+
+            def _serialize_button_group(value: object) -> str | list[str]:
+                if value is None:
+                    return "" if not is_multi else []
+                if is_multi:
+                    if not isinstance(value, (list, tuple)):
+                        value = [value]
+                    return [_get_formatted_for_button_group_value(v) for v in value]
+                return _get_formatted_for_button_group_value(value)
+
+            def _deserialize_button_group(
+                v: str | list[str],
+            ) -> object | list[object] | None:
+                if is_multi:
+                    # Multi-select: expect repeated params ?key=a&key=b
+                    if isinstance(v, str):
+                        v = [v] if v else []
+                    result = []
+                    for val in v:
+                        opt = _deserialize_button_group_option(val)
+                        if opt is not None:
+                            result.append(opt)
+                    return result if result else None
+                # Single-select
+                param_str = v[-1] if isinstance(v, list) else v
+                return _deserialize_button_group_option(param_str)
+
+            serializers = (_serialize_button_group, _deserialize_button_group)
+
         if effective_value_type == "double_array_value" and serde_name == "SliderSerde":
             # Sliders always use double_array_value in widget state, even for single-value
             # sliders. Query param strings should be human-friendly, so deserialize to the

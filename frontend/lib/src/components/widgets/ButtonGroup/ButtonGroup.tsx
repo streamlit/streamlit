@@ -49,6 +49,13 @@ import {
   ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { useQueryParamBinding } from "~lib/hooks/useQueryParamBinding"
+import {
+  deserializeButtonGroupMulti,
+  deserializeButtonGroupSingle,
+  serializeButtonGroupMulti,
+  serializeButtonGroupSingle,
+} from "~lib/queryParamSerializers"
 import { EmotionTheme } from "~lib/theme"
 import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
@@ -316,6 +323,39 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
   } = element
   const theme = useEmotionTheme()
 
+  const isMultiSelect = clickMode === ButtonGroupProto.ClickMode.MULTI_SELECT
+
+  // Create serializer/deserializer based on selection mode
+  const serializer = useMemo(
+    () =>
+      isMultiSelect
+        ? (indices: number[] | null) =>
+            serializeButtonGroupMulti(indices, options)
+        : (indices: number[] | null) =>
+            serializeButtonGroupSingle(indices?.[0] ?? null, options),
+    [options, isMultiSelect]
+  )
+
+  const deserializer = useMemo(
+    () =>
+      isMultiSelect
+        ? (value: string | string[] | null) =>
+            deserializeButtonGroupMulti(value, options)
+        : (value: string | string[] | null) => {
+            const idx = deserializeButtonGroupSingle(value, options)
+            return idx !== undefined ? [idx] : undefined
+          },
+    [options, isMultiSelect]
+  )
+
+  // Register query param binding if widget key starts with "?"
+  const { isBound, syncToUrl } = useQueryParamBinding<number[] | null>({
+    elementId: element.id,
+    widgetMgr,
+    serializer,
+    deserializer,
+  })
+
   const [value, setValueWithSource] = useBasicWidgetState<
     ButtonGroupValue,
     ButtonGroupProto
@@ -331,13 +371,17 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
 
   const containerWidth = shouldWidthStretch(widthConfig)
 
-  const onClick = (
-    _event: React.SyntheticEvent<HTMLButtonElement>,
-    index: number
-  ): void => {
-    const newSelected = handleSelection(clickMode, index, value)
-    setValueWithSource({ value: newSelected, fromUi: true })
-  }
+  const onClick = useCallback(
+    (_event: React.SyntheticEvent<HTMLButtonElement>, index: number): void => {
+      const newSelected = handleSelection(clickMode, index, value)
+      setValueWithSource({ value: newSelected, fromUi: true })
+      // Sync to URL if bound
+      if (isBound) {
+        syncToUrl(newSelected)
+      }
+    },
+    [clickMode, value, setValueWithSource, isBound, syncToUrl]
+  )
 
   let mode = undefined
   if (clickMode === ButtonGroupProto.ClickMode.SINGLE_SELECT) {
