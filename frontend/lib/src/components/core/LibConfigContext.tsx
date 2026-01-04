@@ -69,8 +69,8 @@ export interface LibConfigContextProps extends Omit<
   locale: typeof window.navigator.language
 
   /**
-   * Whether to show external help links (Google, ChatGPT) in exception displays
-   * when running on localhost. Defaults to true.
+   * Whether to show external help links (Google, ChatGPT) in exception displays.
+   * Defaults to AUTO (shows on localhost only).
    *
    * Consumed by:
    * @see ExceptionElement

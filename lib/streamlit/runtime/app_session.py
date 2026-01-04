@@ -1001,7 +1001,10 @@ def _get_show_error_links() -> Config.ShowErrorLinks.ValueType:
         Config.ShowErrorLinks, enum_name, None
     )
     if enum_value is None:
-        allowed_values = "auto, true, false"
+        allowed_values = ", ".join(
+            k.replace("SHOW_ERROR_LINKS_", "").lower()
+            for k in Config.ShowErrorLinks.keys()
+        )
         raise ValueError(
             f"Config {config_key!r} expects to have one of "
             f"the following values: {allowed_values}. "
