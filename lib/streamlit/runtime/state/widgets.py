@@ -39,7 +39,6 @@ from streamlit.runtime.state.query_param_serializers import (
     deserialize_datetime,
     deserialize_number,
     deserialize_number_range,
-    deserialize_option,
     deserialize_slider_value,
     deserialize_string,
     deserialize_time,
@@ -49,7 +48,6 @@ from streamlit.runtime.state.query_param_serializers import (
     serialize_datetime,
     serialize_number,
     serialize_number_range,
-    serialize_option,
     serialize_slider_value,
     serialize_string,
     serialize_time,
@@ -280,19 +278,47 @@ def register_widget_from_metadata(
             serializers = (_serialize_number_formatted, _deserialize_number_formatted)
 
         # Category C: Selection widgets with value-based serialization
-        # st.radio uses int_value (index), convert to value-based for human-friendly URLs
+        # st.radio uses int_value (index), convert to formatted value for human-friendly URLs
         if effective_value_type == "int_value" and serde_name == "RadioSerde":
             options = getattr(serde_instance, "options", [])
+            formatted_options = getattr(serde_instance, "formatted_options", [])
+            formatted_to_index = getattr(
+                serde_instance, "formatted_option_to_option_index", {}
+            )
             default_index = getattr(serde_instance, "index", 0)
 
+            def _get_formatted_for_radio_value(v: object) -> str:
+                """Get formatted string for a radio value, handling unhashable types."""
+                for i, opt in enumerate(options):
+                    if opt == v:
+                        return (
+                            formatted_options[i]
+                            if i < len(formatted_options)
+                            else str(opt)
+                        )
+                # Fallback to str() for values not in options
+                return str(v)
+
             def _serialize_radio(value: object) -> str:
-                return serialize_option(value, options)
+                if value is None:
+                    return ""
+                return _get_formatted_for_radio_value(value)
 
             def _deserialize_radio(v: str | list[str]) -> object | None:
-                default_val = (
-                    options[default_index] if default_index is not None else None
-                )
-                return deserialize_option(v, options, default=default_val)
+                # Normalize to string
+                param_str = v[-1] if isinstance(v, list) else v
+                if not param_str:
+                    return options[default_index] if default_index is not None else None
+                # Look up via formatted_option_to_option_index (uses format_func)
+                idx = formatted_to_index.get(param_str)
+                if idx is not None:
+                    return options[idx]
+                # Fallback: try matching str(option)
+                for opt in options:
+                    if str(opt) == param_str:
+                        return opt
+                # Not found, return default
+                return options[default_index] if default_index is not None else None
 
             serializers = (_serialize_radio, _deserialize_radio)
 
@@ -344,21 +370,51 @@ def register_widget_from_metadata(
             serializers = (_serialize_multiselect, _deserialize_multiselect)
 
         # st.select_slider uses double_array_value (indices as floats)
-        # Convert to value-based for human-friendly URLs
+        # Convert to formatted value for human-friendly URLs
         if (
             effective_value_type == "double_array_value"
             and serde_name == "SelectSliderSerde"
         ):
             options = getattr(serde_instance, "options", [])
+            formatted_options = getattr(serde_instance, "formatted_options", [])
+            formatted_to_index = getattr(
+                serde_instance, "formatted_option_to_option_index", {}
+            )
             is_range = bool(getattr(serde_instance, "is_range_value", False))
+
+            def _get_formatted_for_slider_value(v: object) -> str:
+                """Get formatted string for a slider value, handling unhashable types."""
+                for i, opt in enumerate(options):
+                    if opt == v:
+                        return (
+                            formatted_options[i]
+                            if i < len(formatted_options)
+                            else str(opt)
+                        )
+                # Fallback to str() for values not in options
+                return str(v)
+
+            def _deserialize_slider_option(param_str: str) -> object | None:
+                """Deserialize a single option from URL param string."""
+                if not param_str:
+                    return None
+                # Look up via formatted_option_to_option_index (uses format_func)
+                idx = formatted_to_index.get(param_str)
+                if idx is not None:
+                    return options[idx]
+                # Fallback: try matching str(option)
+                for opt in options:
+                    if str(opt) == param_str:
+                        return opt
+                return None
 
             def _serialize_select_slider_full(value: object) -> str:
                 # Handle range values (tuple/list)
                 if isinstance(value, (tuple, list)) and len(value) == 2:
-                    s1 = serialize_option(value[0], options)
-                    s2 = serialize_option(value[1], options)
+                    s1 = _get_formatted_for_slider_value(value[0])
+                    s2 = _get_formatted_for_slider_value(value[1])
                     return f"{s1},{s2}"
-                return serialize_option(value, options)
+                return _get_formatted_for_slider_value(value)
 
             def _deserialize_select_slider(v: str | list[str]) -> object | None:
                 # Normalize to string
@@ -370,8 +426,8 @@ def register_widget_from_metadata(
                 # Check for range format first (comma-separated values like "A,C")
                 if "," in v:
                     parts = v.split(",", 1)
-                    start = deserialize_option(parts[0].strip(), options)
-                    end = deserialize_option(parts[1].strip(), options)
+                    start = _deserialize_slider_option(parts[0].strip())
+                    end = _deserialize_slider_option(parts[1].strip())
                     if start is not None and end is not None:
                         # Only return tuple for range sliders
                         if is_range:
@@ -381,7 +437,7 @@ def register_widget_from_metadata(
                     return None
 
                 # Single value - deserialize directly
-                result = deserialize_option(v, options)
+                result = _deserialize_slider_option(v)
                 if result is None:
                     return None
 

@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from textwrap import dedent
 from typing import (
     TYPE_CHECKING,
@@ -30,6 +30,7 @@ from streamlit.dataframe_util import OptionSequence, convert_anything_to_list
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import LayoutConfig, validate_width
 from streamlit.elements.lib.options_selector_utils import (
+    create_mappings,
     index_,
     maybe_coerce_enum,
     maybe_coerce_enum_sequence,
@@ -77,6 +78,9 @@ class SelectSliderSerde(Generic[T]):
     options: Sequence[T]
     value: list[int]
     is_range_value: bool
+    # Formatted options for query param binding support (matches SelectboxSerde pattern)
+    formatted_options: list[str] = field(default_factory=list)
+    formatted_option_to_option_index: dict[str, int] = field(default_factory=dict)
 
     def serialize(self, v: object) -> list[int]:
         return self._as_index_list(v)
@@ -374,6 +378,11 @@ class SelectSliderMixin:
         # Convert element to index of the elements
         slider_value = as_index_list(value)
 
+        # Create formatted options mapping for query param binding support
+        formatted_options, formatted_option_to_option_index = create_mappings(
+            opt, format_func
+        )
+
         element_id = compute_and_register_element_id(
             "select_slider",
             user_key=key,
@@ -383,7 +392,7 @@ class SelectSliderMixin:
             key_as_main_identity={"options", "format_func"},
             dg=self.dg,
             label=label,
-            options=[str(format_func(option)) for option in opt],
+            options=formatted_options,
             value=slider_value,
             help=help,
             width=width,
@@ -399,7 +408,7 @@ class SelectSliderMixin:
         slider_proto.max = len(opt) - 1
         slider_proto.step = 1  # default for index changes
         slider_proto.data_type = SliderProto.INT
-        slider_proto.options[:] = [str(format_func(option)) for option in opt]
+        slider_proto.options[:] = formatted_options
         slider_proto.form_id = current_form_id(self.dg)
         slider_proto.disabled = disabled
         slider_proto.label_visibility.value = get_label_visibility_proto_value(
@@ -411,7 +420,13 @@ class SelectSliderMixin:
         validate_width(width)
         layout_config = LayoutConfig(width=width)
 
-        serde = SelectSliderSerde(opt, slider_value, _is_range_value(value))
+        serde = SelectSliderSerde(
+            opt,
+            slider_value,
+            _is_range_value(value),
+            formatted_options=formatted_options,
+            formatted_option_to_option_index=formatted_option_to_option_index,
+        )
 
         widget_state = register_widget(
             slider_proto.id,
