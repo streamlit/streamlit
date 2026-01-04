@@ -39,6 +39,11 @@ import {
 import { useIntlLocale } from "~lib/components/widgets/DateInput/useIntlLocale"
 import { useBasicWidgetState } from "~lib/hooks/useBasicWidgetState"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { useQueryParamBinding } from "~lib/hooks/useQueryParamBinding"
+import {
+  deserializeDateTimeString,
+  serializeDateTimeString,
+} from "~lib/queryParamSerializers"
 import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -83,6 +88,15 @@ function DateTimeInput({
     element,
     widgetMgr,
     fragmentId,
+  })
+
+  // Register query param binding if widget key starts with "?"
+  // DateTimeInput uses string values in "YYYY/MM/DD HH:MM:SS" proto format
+  const { isBound, syncToUrl } = useQueryParamBinding<string | null>({
+    elementId: element.id,
+    widgetMgr,
+    serializer: serializeDateTimeString,
+    deserializer: deserializeDateTimeString,
   })
 
   const { locale } = useContext(LibConfigContext)
@@ -190,8 +204,13 @@ function DateTimeInput({
 
     if (hasChanged) {
       setValueWithSource({ value: newValue, fromUi: true })
+
+      // Sync to URL if bound
+      if (isBound) {
+        syncToUrl(newValue)
+      }
     }
-  }, [pendingDate, value, setValueWithSource])
+  }, [pendingDate, value, setValueWithSource, isBound, syncToUrl])
 
   const inputOverrides = createDateTimePickerOverrides({
     theme,
