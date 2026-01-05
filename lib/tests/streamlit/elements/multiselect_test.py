@@ -568,7 +568,10 @@ def test_multiselect_enum_coercion():
             C = 3
 
         selected_list = st.multiselect("my_enum", EnumA, default=[EnumA.A, EnumA.C])
-        st.text(id(selected_list[0].__class__))
+        if selected_list:
+            st.text(id(selected_list[0].__class__))
+        else:
+            st.text("empty")
         st.text(id(EnumA))
         st.text(all(selected in EnumA for selected in selected_list))
 
