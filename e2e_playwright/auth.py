@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -25,3 +25,10 @@ if x:
 if st.user.get("is_logged_in"):
     st.markdown(f"YOU ARE LOGGED IN: {st.user.email}")
     st.markdown(st.user["name"])
+
+    if st.user.tokens:
+        st.markdown("TOKENS AVAILABLE")
+        if "id" in st.user.tokens:
+            st.markdown("HAS ID TOKEN")
+        if "access" in st.user.tokens:
+            st.markdown("HAS ACCESS TOKEN")

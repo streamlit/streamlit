@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +21,11 @@ import { BackMsg, ForwardMsg } from "@streamlit/protobuf"
 import { ConnectionState } from "./ConnectionState"
 import { MAX_RETRIES_BEFORE_CLIENT_ERROR } from "./constants"
 import { establishStaticConnection } from "./StaticConnection"
-import { ErrorDetails, IHostConfigResponse, StreamlitEndpoints } from "./types"
+import {
+  ErrorDetails,
+  IHostConfigProperties,
+  StreamlitEndpoints,
+} from "./types"
 import { getPossibleBaseUris, isHostConfigBypassEnabled } from "./utils"
 import { WebsocketConnection } from "./WebsocketConnection"
 
@@ -76,7 +80,7 @@ interface Props {
    * Function to set the host config for this app (if in a relevant deployment
    * scenario).
    */
-  onHostConfigResp: (resp: IHostConfigResponse) => void
+  onHostConfigResp: (resp: IHostConfigProperties) => void
 }
 
 /**

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -127,6 +127,21 @@ const generateSpec = (
     if ("vconcat" in spec) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
       spec.vconcat.forEach((child: any) => {
+        // Skip non-object children (defensive check)
+        if (child === null || typeof child !== "object") {
+          return
+        }
+        // Skip setting width on children that are nested compositions
+        // (hconcat, vconcat, concat, layer) as it causes "infinite extent" errors.
+        // In valid Vega-Lite specs, composition operators are always top-level keys.
+        if (
+          "hconcat" in child ||
+          "vconcat" in child ||
+          "concat" in child ||
+          "layer" in child
+        ) {
+          return
+        }
         child.width = containerWidth
       })
     }

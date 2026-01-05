@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -357,6 +357,9 @@ def test_window_config_download_url(app: Page):
     def capture_request(request: Request) -> None:
         url = request.url
         # Capture any requests to media endpoints or download URLs
+        # Exclude static assets like /static/media/fireworks.gif (New Year's easter egg)
+        if "/static/media/" in url:
+            return
         if (
             "/media/" in url
             or "cdn.example.com" in url

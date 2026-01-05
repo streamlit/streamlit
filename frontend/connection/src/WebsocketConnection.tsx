@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,7 +39,7 @@ import { ForwardMsgCache } from "./ForwardMessageCache"
 import {
   ErrorDetails,
   Event,
-  IHostConfigResponse,
+  IHostConfigProperties,
   OnConnectionStateChange,
   OnMessage,
   OnRetry,
@@ -103,7 +103,7 @@ export interface Args {
    * Function to set the host config and allowed-message-origins for this app (if in a relevant deployment
    * scenario).
    */
-  onHostConfigResp: (resp: IHostConfigResponse) => void
+  onHostConfigResp: (resp: IHostConfigProperties) => void
 
   /**
    * Enables host to bypass waiting for health/host-config endpoint responses

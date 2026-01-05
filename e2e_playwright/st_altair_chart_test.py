@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ from e2e_playwright.conftest import ImageCompareFunction
 from e2e_playwright.shared.app_utils import check_top_level_class
 from e2e_playwright.shared.react18_utils import wait_for_react_stability
 
-NUM_CHARTS = 8
+NUM_CHARTS = 9
 
 
 def test_altair_chart_displays_correctly(
@@ -55,6 +55,7 @@ def test_altair_chart_displays_correctly(
     assert_snapshot(
         charts.nth(7), name="st_altair_chart-altair_chart_cut_off_legend_title_none"
     )
+    assert_snapshot(charts.nth(8), name="st_altair_chart-marginal_histogram")
 
 
 def test_check_top_level_class(app: Page):

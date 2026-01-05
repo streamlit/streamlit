@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -43,6 +43,13 @@ NumberFormat: TypeAlias = Literal[
     "engineering",
     "accounting",
     "bytes",
+]
+
+DateTimeFormat: TypeAlias = Literal[
+    "localized",
+    "distance",
+    "calendar",
+    "iso8601",
 ]
 
 ColumnWidth: TypeAlias = Literal["small", "medium", "large"] | int
@@ -194,9 +201,7 @@ class MultiselectColumnConfig(TypedDict):
 
 class DatetimeColumnConfig(TypedDict):
     type: Literal["datetime"]
-    format: NotRequired[
-        str | Literal["localized", "distance", "calendar", "iso8601"] | None
-    ]
+    format: NotRequired[str | DateTimeFormat | None]
     min_value: NotRequired[str | None]
     max_value: NotRequired[str | None]
     step: NotRequired[int | float | None]
@@ -1972,7 +1977,7 @@ def DatetimeColumn(
     required: bool | None = None,
     pinned: bool | None = None,
     default: datetime.datetime | None = None,
-    format: str | Literal["localized", "distance", "calendar", "iso8601"] | None = None,
+    format: str | DateTimeFormat | None = None,
     min_value: datetime.datetime | None = None,
     max_value: datetime.datetime | None = None,
     step: int | float | datetime.timedelta | None = None,

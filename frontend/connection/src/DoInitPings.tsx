@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,7 +36,7 @@ import {
   PING_TIMEOUT_MS,
   SERVER_PING_PATH,
 } from "./constants"
-import { ErrorDetails, IHostConfigResponse, OnRetry } from "./types"
+import { ErrorDetails, IHostConfigProperties, OnRetry } from "./types"
 import {
   FetchError,
   fetchWithTimeout,
@@ -67,7 +67,7 @@ export function doInitPings(
     message: string,
     source: string
   ) => void,
-  onHostConfigResp: (resp: IHostConfigResponse) => void
+  onHostConfigResp: (resp: IHostConfigProperties) => void
 ): AsyncPingRequest {
   const { promise, resolve, reject } = Promise.withResolvers<number>()
   let totalTries = 0
@@ -185,7 +185,7 @@ If you are trying to access a Streamlit app running on another server, this coul
       fetchWithTimeout(hostConfigUri, PING_TIMEOUT_MS),
     ])
       .then(([_, hostConfigResp]) => {
-        onHostConfigResp(hostConfigResp.data as IHostConfigResponse)
+        onHostConfigResp(hostConfigResp.data as IHostConfigProperties)
         resolve(uriNumber)
       })
       .catch((error: FetchError) => {

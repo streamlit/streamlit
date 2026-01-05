@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,8 +27,8 @@ import {
 } from "./utils"
 
 // Mock StreamlitConfig using global mock state (see vitest.setup.ts)
-vi.mock("@streamlit/utils", async () => {
-  const actual = await vi.importActual("@streamlit/utils")
+vi.mock("@streamlit/utils", async importOriginal => {
+  const actual = await importOriginal<typeof import("@streamlit/utils")>()
   return {
     ...actual,
     get StreamlitConfig() {
@@ -581,49 +581,106 @@ describe("isHostConfigBypassEnabled", () => {
     globalThis.__mockStreamlitConfig = {}
   })
 
-  it("returns false when StreamlitConfig is empty", () => {
-    globalThis.__mockStreamlitConfig = {}
-    expect(isHostConfigBypassEnabled()).toBe(false)
-  })
-
-  it("returns false when BACKEND_BASE_URL is missing", () => {
-    globalThis.__mockStreamlitConfig = {
-      HOST_CONFIG: {
-        allowedOrigins: ["https://example.com"],
-        useExternalAuthToken: true,
+  // Tests for invalid configurations that should return false
+  it.each([
+    ["StreamlitConfig is empty", {}],
+    [
+      "BACKEND_BASE_URL is missing",
+      {
+        HOST_CONFIG: {
+          allowedOrigins: ["https://example.com"],
+          useExternalAuthToken: true,
+        },
       },
-    }
-    expect(isHostConfigBypassEnabled()).toBe(false)
-  })
-
-  it("returns false when HOST_CONFIG is missing", () => {
-    globalThis.__mockStreamlitConfig = {
-      BACKEND_BASE_URL: "https://backend.example.com",
-    }
-    expect(isHostConfigBypassEnabled()).toBe(false)
-  })
-
-  it("returns false when allowedOrigins is missing", () => {
-    globalThis.__mockStreamlitConfig = {
-      BACKEND_BASE_URL: "https://backend.example.com",
-      HOST_CONFIG: {
-        useExternalAuthToken: true,
+    ],
+    [
+      "HOST_CONFIG is missing",
+      {
+        BACKEND_BASE_URL: "https://backend.example.com",
       },
-    }
-    expect(isHostConfigBypassEnabled()).toBe(false)
-  })
-
-  it("returns false when allowedOrigins is empty array", () => {
-    globalThis.__mockStreamlitConfig = {
-      BACKEND_BASE_URL: "https://backend.example.com",
-      HOST_CONFIG: {
-        allowedOrigins: [],
-        useExternalAuthToken: true,
+    ],
+    [
+      "allowedOrigins is missing",
+      {
+        BACKEND_BASE_URL: "https://backend.example.com",
+        HOST_CONFIG: {
+          useExternalAuthToken: true,
+        },
       },
-    }
+    ],
+    [
+      "allowedOrigins is empty array",
+      {
+        BACKEND_BASE_URL: "https://backend.example.com",
+        HOST_CONFIG: {
+          allowedOrigins: [],
+          useExternalAuthToken: true,
+        },
+      },
+    ],
+    [
+      "useExternalAuthToken is missing",
+      {
+        BACKEND_BASE_URL: "https://backend.example.com",
+        HOST_CONFIG: {
+          allowedOrigins: ["https://example.com"],
+        },
+      },
+    ],
+    [
+      "only expanded fields but missing minimal required fields",
+      {
+        BACKEND_BASE_URL: "https://backend.example.com",
+        HOST_CONFIG: {
+          metricsUrl: "postMessage",
+          enableCustomParentMessages: true,
+          mapboxToken: "test-token",
+          disableFullscreenMode: true,
+        },
+      },
+    ],
+    [
+      "only LibConfig fields (no minimal required fields)",
+      {
+        BACKEND_BASE_URL: "https://backend.example.com",
+        HOST_CONFIG: {
+          mapboxToken: "test-token",
+          disableFullscreenMode: true,
+          enforceDownloadInNewTab: true,
+          resourceCrossOriginMode: "anonymous" as const,
+        },
+      },
+    ],
+    [
+      "allowedOrigins but missing useExternalAuthToken even if other fields present",
+      {
+        BACKEND_BASE_URL: "https://backend.example.com",
+        HOST_CONFIG: {
+          allowedOrigins: ["https://example.com"],
+          metricsUrl: "postMessage",
+          enableCustomParentMessages: true,
+          mapboxToken: "test-token",
+        },
+      },
+    ],
+    [
+      "useExternalAuthToken but missing allowedOrigins even if other fields present",
+      {
+        BACKEND_BASE_URL: "https://backend.example.com",
+        HOST_CONFIG: {
+          useExternalAuthToken: true,
+          metricsUrl: "postMessage",
+          mapboxToken: "test-token",
+          disableFullscreenMode: true,
+        },
+      },
+    ],
+  ])("returns false when %s", (_description, config) => {
+    globalThis.__mockStreamlitConfig = config
     expect(isHostConfigBypassEnabled()).toBe(false)
   })
 
+  // Tests for invalid allowedOrigins values (require @ts-expect-error)
   it("returns false when allowedOrigins is not an array", () => {
     globalThis.__mockStreamlitConfig = {
       BACKEND_BASE_URL: "https://backend.example.com",
@@ -648,80 +705,108 @@ describe("isHostConfigBypassEnabled", () => {
     expect(isHostConfigBypassEnabled()).toBe(false)
   })
 
-  it("returns false when allowedOrigins contains empty strings", () => {
+  it.each([
+    ["contains empty strings", ["https://valid.com", ""]],
+    ["contains only empty strings", ["", ""]],
+  ])("returns false when allowedOrigins %s", (_description, origins) => {
     globalThis.__mockStreamlitConfig = {
       BACKEND_BASE_URL: "https://backend.example.com",
       HOST_CONFIG: {
-        allowedOrigins: ["https://valid.com", ""],
+        allowedOrigins: origins,
         useExternalAuthToken: true,
       },
     }
     expect(isHostConfigBypassEnabled()).toBe(false)
   })
 
-  it("returns false when allowedOrigins contains only empty strings", () => {
-    globalThis.__mockStreamlitConfig = {
-      BACKEND_BASE_URL: "https://backend.example.com",
-      HOST_CONFIG: {
-        allowedOrigins: ["", ""],
-        useExternalAuthToken: true,
+  // Tests for valid configurations that should return true
+  it.each([
+    [
+      "all required fields are present with useExternalAuthToken=true",
+      {
+        BACKEND_BASE_URL: "https://backend.example.com",
+        HOST_CONFIG: {
+          allowedOrigins: ["https://example.com"],
+          useExternalAuthToken: true,
+        },
       },
-    }
-    expect(isHostConfigBypassEnabled()).toBe(false)
-  })
-
-  it("returns false when useExternalAuthToken is missing", () => {
-    globalThis.__mockStreamlitConfig = {
-      BACKEND_BASE_URL: "https://backend.example.com",
-      HOST_CONFIG: {
-        allowedOrigins: ["https://example.com"],
+    ],
+    [
+      "all required fields are present with useExternalAuthToken=false",
+      {
+        BACKEND_BASE_URL: "https://backend.example.com",
+        HOST_CONFIG: {
+          allowedOrigins: ["https://example.com"],
+          useExternalAuthToken: false,
+        },
       },
-    }
-    expect(isHostConfigBypassEnabled()).toBe(false)
-  })
-
-  it("returns true when all required fields are present with useExternalAuthToken=true", () => {
-    globalThis.__mockStreamlitConfig = {
-      BACKEND_BASE_URL: "https://backend.example.com",
-      HOST_CONFIG: {
-        allowedOrigins: ["https://example.com"],
-        useExternalAuthToken: true,
+    ],
+    [
+      "multiple allowed origins",
+      {
+        BACKEND_BASE_URL: "https://backend.example.com",
+        HOST_CONFIG: {
+          allowedOrigins: ["https://example.com", "https://other.example.com"],
+          useExternalAuthToken: true,
+        },
       },
-    }
-    expect(isHostConfigBypassEnabled()).toBe(true)
-  })
-
-  it("returns true when all required fields are present with useExternalAuthToken=false", () => {
-    globalThis.__mockStreamlitConfig = {
-      BACKEND_BASE_URL: "https://backend.example.com",
-      HOST_CONFIG: {
-        allowedOrigins: ["https://example.com"],
-        useExternalAuthToken: false,
+    ],
+    [
+      "additional HOST_CONFIG fields are present",
+      {
+        BACKEND_BASE_URL: "https://backend.example.com",
+        HOST_CONFIG: {
+          allowedOrigins: ["https://example.com"],
+          useExternalAuthToken: true,
+          metricsUrl: "postMessage",
+        },
       },
-    }
-    expect(isHostConfigBypassEnabled()).toBe(true)
-  })
-
-  it("returns true with multiple allowed origins", () => {
-    globalThis.__mockStreamlitConfig = {
-      BACKEND_BASE_URL: "https://backend.example.com",
-      HOST_CONFIG: {
-        allowedOrigins: ["https://example.com", "https://other.example.com"],
-        useExternalAuthToken: true,
+    ],
+    [
+      "minimal fields plus all expanded AppConfig fields",
+      {
+        BACKEND_BASE_URL: "https://backend.example.com",
+        HOST_CONFIG: {
+          allowedOrigins: ["https://example.com"],
+          useExternalAuthToken: true,
+          enableCustomParentMessages: true,
+          blockErrorDialogs: true,
+        },
       },
-    }
-    expect(isHostConfigBypassEnabled()).toBe(true)
-  })
-
-  it("returns true when additional HOST_CONFIG fields are present", () => {
-    globalThis.__mockStreamlitConfig = {
-      BACKEND_BASE_URL: "https://backend.example.com",
-      HOST_CONFIG: {
-        allowedOrigins: ["https://example.com"],
-        useExternalAuthToken: true,
-        metricsUrl: "postMessage",
+    ],
+    [
+      "minimal fields plus all expanded LibConfig fields",
+      {
+        BACKEND_BASE_URL: "https://backend.example.com",
+        HOST_CONFIG: {
+          allowedOrigins: ["https://example.com"],
+          useExternalAuthToken: true,
+          mapboxToken: "test-token",
+          disableFullscreenMode: true,
+          enforceDownloadInNewTab: true,
+          resourceCrossOriginMode: "anonymous" as const,
+        },
       },
-    }
+    ],
+    [
+      "minimal fields plus all 9 HOST_CONFIG fields",
+      {
+        BACKEND_BASE_URL: "https://backend.example.com",
+        HOST_CONFIG: {
+          allowedOrigins: ["https://example.com"],
+          useExternalAuthToken: true,
+          metricsUrl: "postMessage",
+          enableCustomParentMessages: true,
+          blockErrorDialogs: true,
+          mapboxToken: "test-token",
+          disableFullscreenMode: false,
+          enforceDownloadInNewTab: true,
+          resourceCrossOriginMode: "use-credentials" as const,
+        },
+      },
+    ],
+  ])("returns true when %s", (_description, config) => {
+    globalThis.__mockStreamlitConfig = config
     expect(isHostConfigBypassEnabled()).toBe(true)
   })
 })
