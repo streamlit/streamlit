@@ -781,3 +781,41 @@ def test_multiselect_resets_when_all_selections_removed():
     at.run()
     assert at.multiselect[0].value == []
     assert at.text[0].value == "[]"
+
+
+def test_multiselect_session_state_updated_when_key_provided():
+    """Test that session state is updated when a key is provided and options change."""
+
+    def script():
+        import streamlit as st
+
+        if "run" not in st.session_state:
+            st.session_state.run = 1
+
+        if st.session_state.run == 1:
+            value = st.multiselect(
+                "test", key="ms", options=["a", "b", "c", "d"], default=["a"]
+            )
+        else:
+            # Options shrink, "c" and "d" are no longer valid
+            value = st.multiselect("test", key="ms", options=["a", "b"], default=["a"])
+
+        # Output the widget return value
+        st.text(f"widget_value={value}")
+        # Output session state value to verify it's updated
+        st.text(f"session_state_value={st.session_state.ms}")
+
+    at = AppTest.from_function(script).run()
+    # Select values including some that will become invalid
+    at.multiselect[0].set_value(["a", "c", "d"]).run()
+    assert at.multiselect[0].value == ["a", "c", "d"]
+    assert at.text[0].value == "widget_value=['a', 'c', 'd']"
+    assert at.text[1].value == "session_state_value=['a', 'c', 'd']"
+
+    # Change to run 2 where options shrink
+    at.session_state.run = 2
+    at.run()
+    # Both widget value and session state should be filtered to only valid options
+    assert at.multiselect[0].value == ["a"]
+    assert at.text[0].value == "widget_value=['a']"
+    assert at.text[1].value == "session_state_value=['a']"
