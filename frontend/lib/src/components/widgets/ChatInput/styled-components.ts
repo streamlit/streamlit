@@ -30,15 +30,14 @@ export interface StyledChatInputProps {
 
 export const StyledChatInput = styled.div<StyledChatInputProps>(
   ({ theme }) => ({
-    // Per Figma: Widget styling with proper theme colors
-    backgroundColor: theme.colors.secondaryBg, // Widget background (matches other input widgets)
+    backgroundColor: theme.colors.secondaryBg,
     border: `${theme.sizes.borderWidth} solid`,
     borderColor: theme.colors.widgetBorderColor ?? theme.colors.transparent,
     position: "relative",
     display: "flex",
     flexDirection: "column",
     alignItems: "stretch",
-    flex: 1, // Fill parent height so children can use marginTop: auto
+    flex: 1,
     padding: theme.spacing.lg,
     borderRadius: theme.radii.default,
     boxSizing: "border-box",
@@ -53,7 +52,7 @@ export const StyledContentArea = styled.div(({ theme }) => ({
   position: "relative",
   display: "flex",
   flexDirection: "column",
-  gap: theme.spacing.sm, // Gap between FilePreviewList and PrimaryRegion
+  gap: theme.spacing.sm,
 }))
 
 export const StyledPrimaryRegion = styled.div({
