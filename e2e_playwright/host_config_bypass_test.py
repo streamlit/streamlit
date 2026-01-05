@@ -23,10 +23,36 @@ from __future__ import annotations
 
 import json
 
+import pytest
 from playwright.sync_api import Page, Route, WebSocket, expect
 
 from e2e_playwright.conftest import wait_until
 from e2e_playwright.shared.app_utils import goto_app
+
+
+def _verify_fullscreen_button(page: Page, *, should_be_visible: bool) -> None:
+    """Verify fullscreen button visibility after hovering over the dataframe.
+
+    Parameters
+    ----------
+    page : Page
+        The Playwright page object.
+    should_be_visible : bool
+        If True, expects fullscreen button to be visible.
+        If False, expects toolbar visible but fullscreen button not attached.
+    """
+    expect(page.get_by_text("Fullscreen mode test")).to_be_visible()
+
+    dataframe_element = page.get_by_test_id("stDataFrame")
+    dataframe_element.hover()
+
+    if should_be_visible:
+        fullscreen_button = dataframe_element.get_by_role("button", name="Fullscreen")
+        expect(fullscreen_button).to_be_visible()
+    else:
+        dataframe_toolbar = dataframe_element.get_by_test_id("stElementToolbar")
+        expect(dataframe_toolbar).to_have_css("opacity", "1")
+        expect(page.get_by_role("button", name="Fullscreen")).not_to_be_attached()
 
 
 def _inject_bypass_config(page: Page, backend_url: str) -> None:
@@ -365,3 +391,203 @@ def test_bypass_requires_non_empty_allowed_origins(page: Page, app_port: int) ->
 
     # App should still load (fallback to default path)
     expect(page.get_by_text("Connection status test")).to_be_visible()
+
+
+def test_disable_fullscreen_mode_via_window_in_bypass(
+    page: Page, app_port: int
+) -> None:
+    """Test that disableFullscreenMode can be set via window config in bypass mode.
+
+    When disableFullscreenMode is true, the fullscreen button should NOT be visible
+    in the dataframe toolbar.
+    """
+    page.add_init_script(
+        f"""
+        window.__streamlit = {{
+            BACKEND_BASE_URL: "http://localhost:{app_port}",
+            HOST_CONFIG: {{
+                allowedOrigins: ["http://localhost"],
+                useExternalAuthToken: false,
+                disableFullscreenMode: true
+            }}
+        }}
+    """
+    )
+
+    goto_app(page, f"http://localhost:{app_port}/")
+
+    _verify_fullscreen_button(page, should_be_visible=False)
+
+
+def test_disable_fullscreen_mode_window_takes_precedence_over_endpoint_in_bypass(
+    page: Page, app_port: int
+) -> None:
+    """Test that window config takes precedence over endpoint for disableFullscreenMode in bypass.
+
+    Window config: disableFullscreenMode = false (allow fullscreen)
+    Endpoint: disableFullscreenMode = true (block fullscreen)
+    Expected: Fullscreen button IS visible (window wins)
+    """
+
+    # Modify endpoint to return disableFullscreenMode: true
+    def modify_host_config(route: Route) -> None:
+        response = route.fetch()
+        body = response.json()
+        body["disableFullscreenMode"] = True
+        route.fulfill(response=response, json=body)
+
+    page.route("**/_stcore/host-config", modify_host_config)
+
+    # Window config sets disableFullscreenMode: false (should take precedence)
+    page.add_init_script(
+        f"""
+        window.__streamlit = {{
+            BACKEND_BASE_URL: "http://localhost:{app_port}",
+            HOST_CONFIG: {{
+                allowedOrigins: ["http://localhost"],
+                useExternalAuthToken: false,
+                disableFullscreenMode: false
+            }}
+        }}
+    """
+    )
+
+    goto_app(page, f"http://localhost:{app_port}/")
+
+    _verify_fullscreen_button(page, should_be_visible=True)
+
+
+def test_disable_fullscreen_mode_window_takes_precedence_over_endpoint_without_bypass(
+    page: Page, app_port: int
+) -> None:
+    """Test that window config takes precedence over endpoint for disableFullscreenMode without bypass.
+
+    Without bypass (incomplete window config), the app waits for endpoint response,
+    but window config values should still take precedence during reconciliation.
+
+    Window config: disableFullscreenMode = false (allow fullscreen)
+    Endpoint: disableFullscreenMode = true (block fullscreen)
+    Expected: Fullscreen button IS visible (window wins after reconciliation)
+    """
+
+    # Modify endpoint to return disableFullscreenMode: true
+    def modify_host_config(route: Route) -> None:
+        response = route.fetch()
+        body = response.json()
+        body["disableFullscreenMode"] = True
+        route.fulfill(response=response, json=body)
+
+    page.route("**/_stcore/host-config", modify_host_config)
+
+    # Incomplete window config (missing useExternalAuthToken) so bypass won't activate
+    # But disableFullscreenMode should still be applied during reconciliation
+    page.add_init_script(
+        f"""
+        window.__streamlit = {{
+            BACKEND_BASE_URL: "http://localhost:{app_port}",
+            HOST_CONFIG: {{
+                disableFullscreenMode: false
+            }}
+        }}
+    """
+    )
+
+    goto_app(page, f"http://localhost:{app_port}/")
+
+    _verify_fullscreen_button(page, should_be_visible=True)
+
+
+def test_block_error_dialogs_via_window_config_bypass(
+    page: Page, app_port: int
+) -> None:
+    """Test that blockErrorDialogs can be set via window config in bypass mode.
+
+    When blockErrorDialogs is true, error dialogs should not be shown.
+    Instead, errors are sent to the host via postMessage.
+    """
+    page.add_init_script(
+        f"""
+        window.__streamlit = {{
+            BACKEND_BASE_URL: "http://localhost:{app_port}",
+            HOST_CONFIG: {{
+                allowedOrigins: ["http://localhost"],
+                useExternalAuthToken: false,
+                blockErrorDialogs: true
+            }}
+        }}
+    """
+    )
+
+    # Initial load of page
+    goto_app(page, f"http://localhost:{app_port}")
+
+    # Verify app loaded
+    expect(page.get_by_text("Connection status test")).to_be_visible()
+
+    # Capture console messages to verify error is logged (not shown in dialog)
+    messages: list[str] = []
+    page.on("console", lambda msg: messages.append(msg.text))
+
+    # Navigate to a non-existent page to trigger page not found error
+    page.goto(f"http://localhost:{app_port}/nonexistent_page")
+
+    # Wait until the expected error is logged
+    wait_until(
+        page,
+        lambda: any(
+            "The page that you have requested does not seem to exist" in message
+            for message in messages
+        ),
+    )
+
+    # Verify no error dialog is shown (blockErrorDialogs is working)
+    expect(page.get_by_role("dialog")).not_to_be_attached()
+
+
+# Firefox doesn't render pydeck charts properly in CI, so no Mapbox API requests are made
+@pytest.mark.skip_browser("firefox")
+def test_mapbox_token_via_window_config_bypass(page: Page, app_port: int) -> None:
+    """Test that mapboxToken from window config is used in Mapbox API requests.
+
+    The app contains a pydeck chart with explicit Mapbox style (mapbox://styles/mapbox/light-v9).
+    This triggers requests to api.mapbox.com with the access token.
+    We intercept these requests and verify our custom token is included.
+    """
+    test_token = "pk.test_window_config_token_12345"
+    mapbox_requests: list[str] = []
+
+    # Intercept requests to Mapbox API to verify the token is used
+    def track_mapbox_request(route: Route) -> None:
+        mapbox_requests.append(route.request.url)
+        # Abort the request - we just want to verify the token, not actually load tiles
+        route.abort()
+
+    page.route("**/api.mapbox.com/**", track_mapbox_request)
+
+    page.add_init_script(
+        f"""
+        window.__streamlit = {{
+            BACKEND_BASE_URL: "http://localhost:{app_port}",
+            HOST_CONFIG: {{
+                allowedOrigins: ["http://localhost"],
+                useExternalAuthToken: false,
+                mapboxToken: "{test_token}"
+            }}
+        }}
+    """
+    )
+
+    goto_app(page, f"http://localhost:{app_port}/")
+
+    # Wait for the pydeck chart to be visible (it uses Mapbox style)
+    expect(page.get_by_text("Mapbox token test")).to_be_visible()
+    map_element = page.get_by_test_id("stDeckGlJsonChart")
+    expect(map_element).to_be_visible(timeout=15000)
+
+    # Wait for Mapbox API requests to be made (map loading tiles)
+    wait_until(page, lambda: len(mapbox_requests) > 0, timeout=15000)
+    token_used = any(test_token in url for url in mapbox_requests)
+    assert token_used, (
+        f"Expected mapboxToken '{test_token}' to be used in Mapbox API requests. "
+        f"Requests made: {mapbox_requests}"
+    )
