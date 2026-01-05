@@ -27,8 +27,16 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
+from streamlit.errors import StreamlitAPIException
 from streamlit.runtime import Runtime
-from streamlit.runtime.caching import cache_data, cache_resource
+from streamlit.runtime.caching import (
+    cache_data,
+    cache_data_api,
+    cache_resource,
+    cache_resource_api,
+    clear_session_data_cache,
+    clear_session_resource_cache,
+)
 from streamlit.runtime.caching.cache_errors import CacheReplayClosureError
 from streamlit.runtime.caching.cache_utils import CachedResult
 from streamlit.runtime.caching.storage.dummy_cache_storage import (
@@ -684,6 +692,159 @@ class CommonCacheTest(DeltaGeneratorTestCase):
         # Since we automatically prevent spinners for nested cached functions,
         # there should only be a single transient spinner element.
         assert transient_elements_count == 1
+
+    @parameterized.expand(
+        [
+            ("cache_data", cache_data, cache_data_api),
+            (
+                "cache_resource",
+                cache_resource,
+                cache_resource_api,
+            ),
+        ]
+    )
+    def test_session_scope_handles_lookup(self, _, cache_decorator, cache_module):
+        """A cache should work with session scoping."""
+
+        counter = 0
+        curr_session_id: str
+
+        @cache_decorator(scope="session")
+        def get_value(val: str) -> str:
+            nonlocal counter
+            nonlocal curr_session_id
+            counter += 1
+            return f"{val}-{curr_session_id}-{counter}"
+
+        # Simulate one session.
+        curr_session_id = "aaa"
+        with patch.object(
+            cache_module, "get_session_id_or_throw"
+        ) as mock_get_session_id:
+            mock_get_session_id.return_value = curr_session_id
+
+            # Validate function is called twice for new args.
+            result_a_first = get_value("first")
+            assert result_a_first == "first-aaa-1"
+            result_a_second = get_value("second")
+            assert result_a_second == "second-aaa-2"
+
+            # Validate function is not called again for same args.
+            assert result_a_first == get_value("first")
+            assert result_a_second == get_value("second")
+
+        # Simulate a second session.
+        curr_session_id = "bbbb"
+        with patch.object(
+            cache_module, "get_session_id_or_throw"
+        ) as mock_get_session_id:
+            mock_get_session_id.return_value = curr_session_id
+
+            # Validate function is called twice for new args.
+            result_b_first = get_value("first")
+            assert result_b_first == "first-bbbb-3"
+            result_b_second = get_value("second")
+            assert result_b_second == "second-bbbb-4"
+
+            # Validate function is not called again for same args.
+            assert result_b_first == get_value("first")
+            assert result_b_second == get_value("second")
+
+        # Validate the first session still has a cache.
+        # Simulate one session.
+        curr_session_id = "aaa"
+        with patch.object(
+            cache_module, "get_session_id_or_throw"
+        ) as mock_get_session_id:
+            mock_get_session_id.return_value = curr_session_id
+
+            assert result_a_first == get_value("first")
+            assert result_a_second == get_value("second")
+
+    @parameterized.expand(
+        [
+            ("cache_data", cache_data, cache_data_api, clear_session_data_cache),
+            (
+                "cache_resource",
+                cache_resource,
+                cache_resource_api,
+                clear_session_resource_cache,
+            ),
+        ]
+    )
+    def test_session_scope_handles_clear(
+        self, _, cache_decorator, cache_module, clear_session_cache
+    ):
+        """Clearing a single session's scope should work."""
+        counter = 0
+        curr_session_id: str
+
+        @cache_decorator(scope="session")
+        def get_value(val: str) -> str:
+            nonlocal counter
+            nonlocal curr_session_id
+            counter += 1
+            return f"{val}-{curr_session_id}-{counter}"
+
+        # Simulate one session.
+        curr_session_id = "aaa"
+        with patch.object(
+            cache_module, "get_session_id_or_throw"
+        ) as mock_get_session_id:
+            mock_get_session_id.return_value = curr_session_id
+
+            assert get_value("first") == "first-aaa-1"
+            assert get_value("second") == "second-aaa-2"
+
+        # Simulate a second session.
+        curr_session_id = "bbbb"
+        with patch.object(
+            cache_module, "get_session_id_or_throw"
+        ) as mock_get_session_id:
+            mock_get_session_id.return_value = curr_session_id
+
+            result_b_first = get_value("first")
+            assert result_b_first == "first-bbbb-3"
+            result_b_second = get_value("second")
+            assert result_b_second == "second-bbbb-4"
+
+        # Clear the first session, and assert we get new values.
+        curr_session_id = "aaa"
+        clear_session_cache(curr_session_id)
+        with patch.object(
+            cache_module, "get_session_id_or_throw"
+        ) as mock_get_session_id:
+            mock_get_session_id.return_value = curr_session_id
+
+            assert get_value("first") == "first-aaa-5"
+            assert get_value("second") == "second-aaa-6"
+
+        # Validate that the second session remained unchanged.
+        curr_session_id = "bbbb"
+        with patch.object(
+            cache_module, "get_session_id_or_throw"
+        ) as mock_get_session_id:
+            mock_get_session_id.return_value = curr_session_id
+
+            assert result_b_first == get_value("first")
+            assert result_b_second == get_value("second")
+
+    @parameterized.expand(
+        [
+            ("cache_data", cache_data),
+            ("cache_resource", cache_resource),
+        ]
+    )
+    def test_bad_scope_raises_exception(self, _, cache_decorator):
+        """A bad scope argument should raise an exception."""
+
+        with pytest.raises(StreamlitAPIException) as e:
+
+            @cache_decorator(scope="request")
+            def get_foo() -> None:
+                pass
+
+        e.match("Unsupported scope option.*request")
 
 
 class CommonCacheTTLTest(unittest.TestCase):

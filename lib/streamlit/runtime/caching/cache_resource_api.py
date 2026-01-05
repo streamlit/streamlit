@@ -32,6 +32,7 @@ from typing import (
 from typing_extensions import ParamSpec
 
 import streamlit as st
+from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.runtime.caching import cache_utils
 from streamlit.runtime.caching.cache_errors import CacheKeyNotFoundError
@@ -40,7 +41,9 @@ from streamlit.runtime.caching.cache_utils import (
     Cache,
     CachedFunc,
     CachedFuncInfo,
+    CacheScope,
     OnRelease,
+    get_session_id_or_throw,
     make_cached_func_wrapper,
 )
 from streamlit.runtime.caching.cached_message_replay import (
@@ -89,7 +92,8 @@ class ResourceCaches(StatsProvider):
 
     def __init__(self) -> None:
         self._caches_lock = threading.Lock()
-        self._function_caches: dict[str, ResourceCache[Any]] = {}
+        # Map of session IDs to map of function keys to caches.
+        self._function_caches: dict[str | None, dict[str, ResourceCache[Any]]] = {}
 
     @property
     def stats_families(self) -> Sequence[str]:
@@ -103,20 +107,39 @@ class ResourceCaches(StatsProvider):
         ttl: float | timedelta | str | None,
         validate: ValidateFunc | None,
         on_release: OnRelease,
+        scope: CacheScope = "global",
     ) -> ResourceCache[Any]:
         """Return the mem cache for the given key.
 
         If it doesn't exist, create a new one with the given params.
+
+        Raises
+        ------
+        StreamlitAPIException
+            Raised when ``scope`` is ``"session"`` and there is no thread-local run
+            context.
         """
         if max_entries is None:
             max_entries = math.inf
 
         ttl_seconds = time_to_seconds(ttl)
 
+        # Fetch the session ID. Note that this will throw an exception if there is no
+        # session associated with the current thread.
+        session_id: str | None
+        if scope == "global":
+            session_id = None
+        else:
+            session_id = get_session_id_or_throw()
+
         # Get the existing cache, if it exists, and validate that its params
         # haven't changed.
         with self._caches_lock:
-            cache = self._function_caches.get(key)
+            session_caches = self._function_caches.get(session_id)
+            if session_caches is None:
+                session_caches = self._function_caches[session_id] = {}
+
+            cache = session_caches.get(key)
             if (
                 cache is not None
                 and cache.ttl_seconds == ttl_seconds
@@ -135,14 +158,30 @@ class ResourceCaches(StatsProvider):
                 validate=validate,
                 on_release=on_release,
             )
-            self._function_caches[key] = cache
+            self._function_caches[session_id][key] = cache
             return cache
+
+    def clear_session(self, session_id: str) -> None:
+        """Clears all caches for the given session ID."""
+        # Hold the lock while removing the cache, but release it while clearing.
+        with self._caches_lock:
+            session_caches = self._function_caches.get(session_id)
+            if session_caches is not None:
+                del self._function_caches[session_id]
+
+        if session_caches is not None:
+            for cache in session_caches.values():
+                cache.clear()
 
     def clear_all(self) -> None:
         """Clear all resource caches."""
         # Hold the lock long enough to copy the caches.
         with self._caches_lock:
-            caches = list(self._function_caches.values())
+            caches = [
+                cache
+                for caches in self._function_caches.values()
+                for cache in caches.values()
+            ]
             self._function_caches = {}
 
         # Clear each cache to ensure any on_release functions are called.
@@ -152,13 +191,18 @@ class ResourceCaches(StatsProvider):
     def get_stats(
         self, _family_names: Sequence[str] | None = None
     ) -> dict[str, list[CacheStat]]:
+        function_caches: list[ResourceCache[Any]]
         with self._caches_lock:
             # Shallow-clone our caches. We don't want to hold the global
             # lock during stats-gathering.
-            function_caches = self._function_caches.copy()
+            function_caches = [
+                cache
+                for caches in self._function_caches.values()
+                for cache in caches.values()
+            ]
 
         stats: list[CacheStat] = []
-        for cache in function_caches.values():
+        for cache in function_caches:
             cache_stats = cache.get_stats()
             for family_stats in cache_stats.values():
                 stats.extend(family_stats)
@@ -172,6 +216,11 @@ class ResourceCaches(StatsProvider):
 
 # Singleton ResourceCaches instance
 _resource_caches = ResourceCaches()
+
+
+def clear_session_cache(session_id: str) -> None:
+    """Clears all caches for the given session ID."""
+    _resource_caches.clear_session(session_id)
 
 
 def get_resource_cache_stats_provider() -> StatsProvider:
@@ -196,12 +245,14 @@ class CachedResourceFuncInfo(CachedFuncInfo[P, R]):
         hash_funcs: HashFuncsDict | None = None,
         show_time: bool = False,
         on_release: OnRelease | None = None,
+        scope: CacheScope = "global",
     ) -> None:
         super().__init__(
             func,
             hash_funcs=hash_funcs,
             show_spinner=show_spinner,
             show_time=show_time,
+            scope=scope,
         )
         self.max_entries = max_entries
         self.ttl = ttl
@@ -229,6 +280,7 @@ class CachedResourceFuncInfo(CachedFuncInfo[P, R]):
             ttl=self.ttl,
             validate=self.validate,
             on_release=self.on_release,
+            scope=self.scope,
         )
 
 
@@ -268,6 +320,8 @@ class CacheResourceAPI:
         show_time: bool = False,
         validate: ValidateFunc | None = None,
         hash_funcs: HashFuncsDict | None = None,
+        on_release: OnRelease | None = None,
+        scope: CacheScope = "global",
     ) -> Callable[[Callable[P, R]], CachedFunc[P, R]]: ...
 
     def __call__(
@@ -281,6 +335,7 @@ class CacheResourceAPI:
         validate: ValidateFunc | None = None,
         hash_funcs: HashFuncsDict | None = None,
         on_release: OnRelease | None = None,
+        scope: CacheScope = "global",
     ) -> CachedFunc[P, R] | Callable[[Callable[P, R]], CachedFunc[P, R]]:
         return self._decorator(  # ty: ignore[missing-argument]
             func,  # ty: ignore[invalid-argument-type]
@@ -291,6 +346,7 @@ class CacheResourceAPI:
             validate=validate,
             hash_funcs=hash_funcs,
             on_release=on_release,
+            scope=scope,
         )
 
     def _decorator(
@@ -304,6 +360,7 @@ class CacheResourceAPI:
         validate: ValidateFunc | None,
         hash_funcs: HashFuncsDict | None = None,
         on_release: OnRelease | None = None,
+        scope: CacheScope = "global",
     ) -> CachedFunc[P, R] | Callable[[Callable[P, R]], CachedFunc[P, R]]:
         """Decorator to cache functions that return global resources (e.g. database connections, ML models).
 
@@ -415,6 +472,15 @@ class CacheResourceAPI:
 
             This will NOT be called when an app is shut down.
 
+        scope : "global" or "session"
+            The scope for the resource. If "global", cache globally. If "session",
+            cache in the session.
+
+            Session-scoped cache entries will be expired when a user's session is
+            disconnected. Note that disconnected sessions can reconnect - so it is
+            possible for the cache to populate multiple times in a single session for
+            the same key.
+
         Example
         -------
         >>> import streamlit as st
@@ -498,6 +564,11 @@ class CacheResourceAPI:
         ...     return person.name
         """
 
+        if scope not in ("global", "session"):
+            raise StreamlitAPIException(
+                f"Unsupported scope option '{scope}'. Valid values are 'global' or 'session'."
+            )
+
         # Support passing the params via function decorator, e.g.
         # @st.cache_resource(show_spinner=False)
         if func is None:
@@ -511,6 +582,7 @@ class CacheResourceAPI:
                     validate=validate,
                     hash_funcs=hash_funcs,
                     on_release=on_release,
+                    scope=scope,
                 )
             )
 
@@ -524,6 +596,7 @@ class CacheResourceAPI:
                 validate=validate,
                 hash_funcs=hash_funcs,
                 on_release=on_release,
+                scope=scope,
             )
         )
 

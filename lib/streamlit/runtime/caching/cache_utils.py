@@ -30,6 +30,7 @@ from typing import (
     Any,
     Final,
     Generic,
+    Literal,
     TypeAlias,
     TypeVar,
     cast,
@@ -41,6 +42,7 @@ from typing_extensions import ParamSpec
 from streamlit import type_util
 from streamlit.dataframe_util import is_unevaluated_data_object
 from streamlit.delta_generator_singletons import get_dg_singleton_instance
+from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.runtime.caching.cache_errors import (
     CacheError,
@@ -81,6 +83,32 @@ R = TypeVar("R")
 OnRelease: TypeAlias = Callable[[Any], None]
 
 
+# The scope of a cache.
+CacheScope: TypeAlias = Literal["global", "session"]
+
+
+def get_session_id_or_throw() -> str:
+    """Returns the active session ID from the thread-local run context.
+
+    Raises
+    ------
+    StreamlitAPIException
+        Raised if there is no thread-local run context.
+    """
+    from streamlit.runtime.scriptrunner_utils.script_run_context import (
+        get_script_run_ctx,
+    )
+
+    ctx = get_script_run_ctx()
+    if ctx is None:
+        raise StreamlitAPIException(
+            "A session-scoped cache was accessed outside of the app execution thread. "
+            "Make sure all session-scoped caches are read during rendering and not "
+            "read in background threads."
+        )
+    return ctx.session_id
+
+
 class Cache(Generic[R]):
     """Function cache interface. Caches persist across script runs."""
 
@@ -96,7 +124,9 @@ class Cache(Generic[R]):
         ------
         CacheKeyNotFoundError
             Raised if value_key is not in the cache.
-
+        StreamlitAPIException
+            Raised when a thread attempts to read from a session-scoped cache but that
+            thread does not have a session associated with it.
         """
         raise NotImplementedError
 
@@ -104,6 +134,12 @@ class Cache(Generic[R]):
     def write_result(self, value_key: str, value: R, messages: list[MsgData]) -> None:
         """Write a value and associated messages to the cache, overwriting any existing
         result that uses the value_key.
+
+        Raises
+        ------
+        StreamlitAPIException
+            Raised when a thread attempts to write to a session-scoped cache but that
+            thread does not have a session associated with it.
         """
         # We *could* `del self._value_locks[value_key]` here, since nobody will be taking
         # a compute_value_lock for this value_key after the result is written.
@@ -150,11 +186,13 @@ class CachedFuncInfo(Generic[P, R]):
         hash_funcs: HashFuncsDict | None,
         show_spinner: bool | str,
         show_time: bool = False,
+        scope: CacheScope = "global",
     ) -> None:
         self.func = func
         self.hash_funcs = hash_funcs
         self.show_spinner = show_spinner
         self.show_time = show_time
+        self.scope = scope
 
     @property
     def cache_type(self) -> CacheType:
@@ -165,7 +203,10 @@ class CachedFuncInfo(Generic[P, R]):
         raise NotImplementedError
 
     def get_function_cache(self, function_key: str) -> Cache[R]:
-        """Get or create the function cache for the given key."""
+        """Get or create the function cache for the given key.
+
+        This is responsible for handling cache scope correctly.
+        """
         raise NotImplementedError
 
 

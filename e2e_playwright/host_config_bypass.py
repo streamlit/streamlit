@@ -14,6 +14,10 @@
 
 """Test app for host config bypass feature."""
 
+import numpy as np
+import pandas as pd
+import pydeck as pdk
+
 import streamlit as st
 
 
@@ -59,3 +63,27 @@ if st.button("Click me"):
 with st.sidebar:
     st.metric("Temperature", "70 °F", "1.2 °F")
     st.metric("Wind", "9 mph", "-8%")
+
+# Elements for testing disableFullscreenMode
+st.subheader("Fullscreen mode test", divider="gray")
+# Always generate the same data
+np.random.seed(0)
+st.dataframe(
+    pd.DataFrame(np.random.randint(0, 100, size=(10, 4)), columns=list("ABCD")),
+    key="test_dataframe",
+)
+
+# Elements for testing mapboxToken - uses pydeck with explicit Mapbox style
+# This ensures the mapboxToken from host config is actually used in API requests
+st.subheader("Mapbox token test", divider="gray")
+st.pydeck_chart(
+    pdk.Deck(
+        map_style="mapbox://styles/mapbox/light-v9",
+        map_provider="mapbox",
+        initial_view_state=pdk.ViewState(
+            latitude=37.76,
+            longitude=-122.4,
+            zoom=11,
+        ),
+    )
+)
