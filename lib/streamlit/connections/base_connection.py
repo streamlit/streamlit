@@ -195,5 +195,9 @@ class BaseConnection(ABC, Generic[RawConnectionT]):
 
         ``close`` is registered as an ``on_release`` hook in the resource cache when a
         connection is created with ``st.connection``.
+
+        Returns
+        -------
+        None
         """
         # NOTE: Default implementation is intentionally a no-op.

@@ -265,6 +265,7 @@ type="snowpark"
 
         class ConnectionWithClose(BaseConnection):
             def __init__(self):
+                super().__init__("test")
                 self.close_count = 0
 
             def _connect(self, **kwargs):
