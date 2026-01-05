@@ -16,7 +16,6 @@
  */
 
 import { act } from "react"
-import { MockInstance } from "vitest"
 
 import {
   fireEvent,
