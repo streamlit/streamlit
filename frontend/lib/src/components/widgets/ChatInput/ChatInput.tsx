@@ -67,6 +67,8 @@ import {
 } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
+import { EmotionTheme } from "~lib/theme"
+
 import ChatFileUploadButton from "./fileUpload/ChatFileUploadButton"
 import ChatFileUploadDropzone from "./fileUpload/ChatFileUploadDropzone"
 import ChatUploadedFiles from "./fileUpload/ChatUploadedFiles"
@@ -86,6 +88,58 @@ import {
   StyledSimpleRow,
   StyledWaveformContainer,
 } from "./styled-components"
+
+/**
+ * Creates the common UITextArea overrides configuration used by both
+ * simple and extended chat input modes.
+ *
+ * @param theme - The Emotion theme for accessing design tokens
+ * @param autoExpand - Auto-expand configuration with height and maxHeight
+ * @param rootLayoutStyle - Layout-specific style for Root (e.g., flex or width)
+ */
+function createTextAreaOverrides(
+  theme: EmotionTheme,
+  autoExpand: { height: string; maxHeight: string },
+  rootLayoutStyle: Record<string, string | number>
+): React.ComponentProps<typeof UITextArea>["overrides"] {
+  return {
+    Root: {
+      style: {
+        minHeight: theme.sizes.chatInputTextareaMinHeight,
+        outline: "none",
+        borderLeftWidth: "0",
+        borderRightWidth: "0",
+        borderTopWidth: "0",
+        borderBottomWidth: "0",
+        borderTopLeftRadius: "0",
+        borderTopRightRadius: "0",
+        borderBottomRightRadius: "0",
+        borderBottomLeftRadius: "0",
+        ...rootLayoutStyle,
+      },
+    },
+    Input: {
+      props: {
+        "data-testid": "stChatInputTextArea",
+      },
+      style: {
+        fontWeight: theme.fontWeights.normal,
+        lineHeight: theme.lineHeights.inputWidget,
+        "::placeholder": {
+          color: theme.colors.fadedText60,
+        },
+        height: autoExpand.height,
+        maxHeight: autoExpand.maxHeight,
+        overflowY: "auto",
+        paddingLeft: theme.spacing.none,
+        paddingRight: theme.spacing.none,
+        paddingBottom: theme.spacing.sm,
+        paddingTop: theme.spacing.sm,
+        width: "100%",
+      },
+    },
+  }
+}
 
 export interface Props {
   disabled: boolean
@@ -663,43 +717,9 @@ function ChatInput({
               aria-describedby={
                 showInstructions ? "stChatInputInstructions" : undefined
               }
-              overrides={{
-                Root: {
-                  style: {
-                    minHeight: theme.sizes.chatInputTextareaMinHeight,
-                    outline: "none",
-                    borderLeftWidth: "0",
-                    borderRightWidth: "0",
-                    borderTopWidth: "0",
-                    borderBottomWidth: "0",
-                    borderTopLeftRadius: "0",
-                    borderTopRightRadius: "0",
-                    borderBottomRightRadius: "0",
-                    borderBottomLeftRadius: "0",
-                    flex: 1,
-                  },
-                },
-                Input: {
-                  props: {
-                    "data-testid": "stChatInputTextArea",
-                  },
-                  style: {
-                    fontWeight: theme.fontWeights.normal,
-                    lineHeight: theme.lineHeights.inputWidget,
-                    "::placeholder": {
-                      color: theme.colors.fadedText60,
-                    },
-                    height: autoExpand.height,
-                    maxHeight: autoExpand.maxHeight,
-                    overflowY: "auto",
-                    paddingLeft: theme.spacing.none,
-                    paddingRight: theme.spacing.none,
-                    paddingBottom: theme.spacing.sm,
-                    paddingTop: theme.spacing.sm,
-                    width: "100%",
-                  },
-                },
-              }}
+              overrides={createTextAreaOverrides(theme, autoExpand, {
+                flex: 1,
+              })}
             />
             <StyledSendIconButton
               onClick={handleSubmit}
@@ -754,43 +774,9 @@ function ChatInput({
                     aria-describedby={
                       showInstructions ? "stChatInputInstructions" : undefined
                     }
-                    overrides={{
-                      Root: {
-                        style: {
-                          minHeight: theme.sizes.chatInputTextareaMinHeight,
-                          outline: "none",
-                          borderLeftWidth: "0",
-                          borderRightWidth: "0",
-                          borderTopWidth: "0",
-                          borderBottomWidth: "0",
-                          borderTopLeftRadius: "0",
-                          borderTopRightRadius: "0",
-                          borderBottomRightRadius: "0",
-                          borderBottomLeftRadius: "0",
-                          width: "100%",
-                        },
-                      },
-                      Input: {
-                        props: {
-                          "data-testid": "stChatInputTextArea",
-                        },
-                        style: {
-                          fontWeight: theme.fontWeights.normal,
-                          lineHeight: theme.lineHeights.inputWidget,
-                          "::placeholder": {
-                            color: theme.colors.fadedText60,
-                          },
-                          height: autoExpand.height,
-                          maxHeight: autoExpand.maxHeight,
-                          overflowY: "auto",
-                          paddingLeft: theme.spacing.none,
-                          paddingRight: theme.spacing.none,
-                          paddingBottom: theme.spacing.sm,
-                          paddingTop: theme.spacing.sm,
-                          width: "100%",
-                        },
-                      },
-                    }}
+                    overrides={createTextAreaOverrides(theme, autoExpand, {
+                      width: "100%",
+                    })}
                   />
                 )}
               </StyledPrimaryRegion>
