@@ -2773,6 +2773,7 @@ describe("App", () => {
       // Set cached theme to dark
       const cachedTheme: CachedTheme = {
         name: CUSTOM_THEME_DARK_NAME,
+        themeInput: { primaryColor: "blue" },
       }
       window.localStorage.setItem(
         LocalStore.ACTIVE_THEME,
@@ -2812,6 +2813,7 @@ describe("App", () => {
       // Set cached theme to light
       const cachedTheme: CachedTheme = {
         name: CUSTOM_THEME_LIGHT_NAME,
+        themeInput: { primaryColor: "blue" },
       }
       window.localStorage.setItem(
         LocalStore.ACTIVE_THEME,
@@ -2851,6 +2853,7 @@ describe("App", () => {
       // Set cached theme to dark
       const cachedTheme: CachedTheme = {
         name: CUSTOM_THEME_DARK_NAME,
+        themeInput: { primaryColor: "blue" },
       }
       window.localStorage.setItem(
         LocalStore.ACTIVE_THEME,
