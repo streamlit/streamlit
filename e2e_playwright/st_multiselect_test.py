@@ -299,7 +299,7 @@ def test_dynamic_multiselect_props(app: Page, assert_snapshot: ImageCompareFunct
     4. Selection is preserved when the selected values exist in new options
 
     Initial options: [apple, banana, mango, orange] with format_func=capitalize, default=['apple']
-    Updated options: [mango, papaya, grape, apple] with format_func=upper, default=[]
+    Updated options: [mango, papaya, grape, apple] with format_func=capitalize, default=[]
     """
     dynamic_ms = get_element_by_key(app, "dynamic_multiselect_with_key")
     expect(dynamic_ms).to_be_visible()
@@ -335,8 +335,8 @@ def test_dynamic_multiselect_props(app: Page, assert_snapshot: ImageCompareFunct
 
     # --- Test 2: Selection PRESERVED when value exists in both option sets ---
     # Select "mango" - it exists in BOTH option sets at different indices:
-    # Initial: index 2 (displayed "Mango"), Updated: index 0 (displayed "MANGO")
-    select_for_multiselect(app, "Updated dynamic multiselect", "MANGO", True)
+    # Initial: index 2 (displayed "Mango"), Updated: index 0 (displayed "Mango")
+    select_for_multiselect(app, "Updated dynamic multiselect", "Mango", True)
     expect_prefixed_markdown(app, "Updated multiselect value:", "['apple', 'mango']")
 
     # Toggle back to initial options - "mango" and "apple" exist in initial too
@@ -345,6 +345,11 @@ def test_dynamic_multiselect_props(app: Page, assert_snapshot: ImageCompareFunct
 
     # Selection should be PRESERVED since both "apple" and "mango" are in both option sets
     expect_prefixed_markdown(app, "Initial multiselect value:", "['apple', 'mango']")
+
+    # Toggle again and check that the selection is preserved:
+    click_toggle(app, "Update multiselect props")
+    expect(dynamic_ms).to_contain_text("Updated dynamic multiselect")
+    expect_prefixed_markdown(app, "Updated multiselect value:", "['apple', 'mango']")
 
 
 def test_multiselect_accept_new_options(app: Page):
