@@ -76,13 +76,13 @@ export function formatJsonPath(namespace: Array<string | null>): string {
  */
 export function useJsonTooltip(): UseJsonTooltipResult {
   const [tooltip, setTooltip] = useState<TooltipState | null>(null)
-  const lastMousePosition = useRef({ x: 0, y: 0 })
+  const lastMousePositionRef = useRef({ x: 0, y: 0 })
 
   // Track mouse position on mousedown to capture click coordinates.
   // This avoids using the deprecated window.event.
   useEffect(() => {
     const handleMouseDown = (e: MouseEvent): void => {
-      lastMousePosition.current = { x: e.clientX, y: e.clientY }
+      lastMousePositionRef.current = { x: e.clientX, y: e.clientY }
     }
 
     document.addEventListener("mousedown", handleMouseDown)
@@ -90,7 +90,7 @@ export function useJsonTooltip(): UseJsonTooltipResult {
   }, [])
 
   const handleSelect = useCallback((select: OnSelectProps): void => {
-    const { x, y } = lastMousePosition.current
+    const { x, y } = lastMousePositionRef.current
 
     // namespace contains the path to the parent, we need to add the current key (name)
     const fullNamespace = [...select.namespace, select.name]

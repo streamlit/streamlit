@@ -133,7 +133,10 @@ export const useTextInputAutoExpand = ({
   dependencies = [],
 }: UseTextInputAutoExpandOptions): UseTextInputAutoExpandResult => {
   const theme = useEmotionTheme()
-  const heightGuidance = useRef<HeightGuidance>({ minHeight: 0, maxHeight: 0 })
+  const heightGuidanceRef = useRef<HeightGuidance>({
+    minHeight: 0,
+    maxHeight: 0,
+  })
 
   const [scrollHeight, setScrollHeight] = useState(0)
   const [isExtended, setIsExtended] = useState(false)
@@ -149,13 +152,13 @@ export const useTextInputAutoExpand = ({
   // Initialize height guidance
   useLayoutEffect(() => {
     if (textareaRef.current) {
-      initializeHeightGuidance(textareaRef, heightGuidance)
+      initializeHeightGuidance(textareaRef, heightGuidanceRef)
     }
   }, [textareaRef])
 
   // Update extended state when scroll height changes
   useLayoutEffect(() => {
-    const { minHeight } = heightGuidance.current
+    const { minHeight } = heightGuidanceRef.current
     setIsExtended(calculateIsExtended(scrollHeight, minHeight, textareaRef))
   }, [scrollHeight, textareaRef])
 
@@ -164,7 +167,7 @@ export const useTextInputAutoExpand = ({
     updateScrollHeight()
   }, [textareaRef, updateScrollHeight, ...dependencies]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const { maxHeight: maxHeightValue } = heightGuidance.current
+  const { maxHeight: maxHeightValue } = heightGuidanceRef.current
 
   // Calculate height values using theme default
   const defaultHeight = theme.sizes.minElementHeight
