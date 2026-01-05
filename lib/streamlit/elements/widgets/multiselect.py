@@ -550,17 +550,19 @@ class MultiSelectMixin:
         )
 
         if accept_new_options:
+            # accept_new_options is True, so we keep the user-entered values.
             current_values = widget_state.value
             value_needs_reset = False
-        elif key is not None:
+        else:
+            # Validate the current values against the new options.
+            # If values are no longer valid (not in options), filter them out.
+            # This handles the case where options change dynamically and the
+            # previously selected values are no longer available.
             current_values, value_needs_reset = (
                 validate_multiselect_value_against_options(
                     widget_state.value, indexable_options, key
                 )
             )
-        else:
-            current_values = widget_state.value
-            value_needs_reset = False
 
         if value_needs_reset or widget_state.value_changed:
             proto.raw_values[:] = serde.serialize(current_values)
