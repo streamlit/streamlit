@@ -78,7 +78,6 @@ import {
   getCachedTheme,
   getElementId,
   getEmbeddingIdClassName,
-  getHostSpecifiedTheme,
   getHostSpecifiedThemeOnly,
   getIFrameEnclosingApp,
   getLocaleLanguage,

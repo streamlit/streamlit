@@ -16,6 +16,7 @@
  */
 
 import { act } from "react"
+import { MockInstance } from "vitest"
 
 import {
   fireEvent,
@@ -42,6 +43,7 @@ import {
   CUSTOM_THEME_DARK_NAME,
   CUSTOM_THEME_LIGHT_NAME,
   CUSTOM_THEME_NAME,
+  CachedTheme,
   FileUploadClient,
   getDefaultTheme,
   getHostSpecifiedTheme,
