@@ -38,11 +38,11 @@ import {
   mockEndpoints,
 } from "@streamlit/connection"
 import {
+  CachedTheme,
   CUSTOM_THEME_AUTO_NAME,
   CUSTOM_THEME_DARK_NAME,
   CUSTOM_THEME_LIGHT_NAME,
   CUSTOM_THEME_NAME,
-  CachedTheme,
   FileUploadClient,
   getDefaultTheme,
   getHostSpecifiedTheme,
