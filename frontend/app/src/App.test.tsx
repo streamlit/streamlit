@@ -2743,15 +2743,32 @@ describe("App", () => {
   })
 
   describe("embed_options with custom themes", () => {
-    let windowSpy: MockInstance
+    let prevWindowLocation: Location
 
     beforeEach(() => {
       window.localStorage.clear()
+      prevWindowLocation = window.location
     })
 
     afterEach(() => {
-      windowSpy?.mockRestore()
+      Object.defineProperty(window, "location", {
+        value: prevWindowLocation,
+        writable: true,
+        configurable: true,
+      })
     })
+
+    const setLocationSearch = (search: string): void => {
+      Object.defineProperty(window, "location", {
+        value: {
+          ...prevWindowLocation,
+          search,
+          href: `http://localhost/${search}`,
+        },
+        writable: true,
+        configurable: true,
+      })
+    }
 
     it("respects embed_options=light_theme over cached dark preference", () => {
       // Set cached theme to dark
@@ -2764,9 +2781,7 @@ describe("App", () => {
       )
 
       // Mock query params with light_theme
-      windowSpy = mockWindow(
-        windowLocationSearch("?embed=true&embed_options=light_theme")
-      )
+      setLocationSearch("?embed=true&embed_options=light_theme")
 
       const props = getProps()
       renderApp(props)
@@ -2805,9 +2820,7 @@ describe("App", () => {
       )
 
       // Mock query params with dark_theme
-      windowSpy = mockWindow(
-        windowLocationSearch("?embed=true&embed_options=dark_theme")
-      )
+      setLocationSearch("?embed=true&embed_options=dark_theme")
 
       const props = getProps()
       renderApp(props)
@@ -2846,7 +2859,7 @@ describe("App", () => {
       )
 
       // No query params
-      windowSpy = mockWindow()
+      setLocationSearch("")
 
       const props = getProps()
       renderApp(props)
@@ -2875,9 +2888,7 @@ describe("App", () => {
 
     it("maps embed_options to preset theme when custom theme removed", () => {
       // Mock query params with dark_theme
-      windowSpy = mockWindow(
-        windowLocationSearch("?embed=true&embed_options=dark_theme")
-      )
+      setLocationSearch("?embed=true&embed_options=dark_theme")
 
       const props = getProps()
       renderApp(props)
