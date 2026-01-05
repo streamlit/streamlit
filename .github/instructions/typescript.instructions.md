@@ -29,7 +29,7 @@ applyTo: "**/*.ts, **/*.tsx"
 - Follow the [Rules of React](https://react.dev/reference/rules): pure components and hooks, immutable props and state, and call hooks at the top level of React functions.
 - Write performant frontend code.
 - Ensure referential stability by leveraging React Hooks.
-- **Name refs with a `Ref`/`ref` suffix**: Variables assigned from `useRef(...)` must end with `Ref` (preferred) or `ref`. This is enforced by `@eslint-react/naming-convention/ref-name`.
+- Name refs with a `Ref` suffix: Variables assigned from `useRef(...)` must end with `Ref`. This is enforced by eslint.
   - ✅ `const inputRef = useRef<HTMLInputElement>(null)`
   - ❌ `const input = useRef<HTMLInputElement>(null)`
 - **Updater functions must be pure**: `setState(prev => newState)` updaters must not mutate `prev` or have side effects—return a new object. See [useState](https://react.dev/reference/react/useState#setstate-parameters).
