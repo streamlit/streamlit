@@ -58,6 +58,7 @@ import { FileUploadClient } from "~lib/FileUploadClient"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useTextInputAutoExpand } from "~lib/hooks/useTextInputAutoExpand"
+import { EmotionTheme } from "~lib/theme"
 import { FileSize, sizeConverter } from "~lib/util/FileHelper"
 import { isEnterKeyPressed } from "~lib/util/inputUtils"
 import {
@@ -66,8 +67,6 @@ import {
   isNullOrUndefined,
 } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
-
-import { EmotionTheme } from "~lib/theme"
 
 import ChatFileUploadButton from "./fileUpload/ChatFileUploadButton"
 import ChatFileUploadDropzone from "./fileUpload/ChatFileUploadDropzone"
