@@ -190,10 +190,10 @@ if st.toggle("Update multiselect props"):
         # Whitelisted kwargs (keep stable):
         max_selections=3,
         accept_new_options=False,
-        # format func is not whitelisted, but changing the
-        # formatting of selected options will unselect those options.
-        # This is something  we might be able to support
-        # with some additional refactorings.
+        # format_func is not whitelisted. Changing format_func is allowed,
+        # but selected options will be unselected if their formatted label
+        # no longer matches (e.g., "Apple" vs "APPLE"). This is something
+        # we might be able to support with some additional refactorings.
         format_func=lambda x: x.capitalize(),
     )
     st.write("Updated multiselect value:", str(ms_value))
