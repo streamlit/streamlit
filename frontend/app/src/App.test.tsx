@@ -43,6 +43,7 @@ import {
   CUSTOM_THEME_DARK_NAME,
   CUSTOM_THEME_LIGHT_NAME,
   CUSTOM_THEME_NAME,
+  darkTheme,
   FileUploadClient,
   getDefaultTheme,
   getHostSpecifiedTheme,
@@ -2769,15 +2770,29 @@ describe("App", () => {
       })
     }
 
+    const customTheme = new CustomThemeConfig({
+      primaryColor: "blue",
+      light: {
+        backgroundColor: "white",
+      },
+      dark: {
+        backgroundColor: "black",
+      },
+    })
+    const cachedLightTheme: CachedTheme = {
+      name: CUSTOM_THEME_LIGHT_NAME,
+      themeInput: customTheme,
+    }
+    const cachedDarkTheme: CachedTheme = {
+      name: CUSTOM_THEME_DARK_NAME,
+      themeInput: customTheme,
+    }
+
     it("respects embed_options=light_theme over cached dark preference", () => {
       // Set cached theme to dark
-      const cachedTheme: CachedTheme = {
-        name: CUSTOM_THEME_DARK_NAME,
-        themeInput: { primaryColor: "blue" },
-      }
       window.localStorage.setItem(
         LocalStore.ACTIVE_THEME,
-        JSON.stringify(cachedTheme)
+        JSON.stringify(cachedDarkTheme)
       )
 
       // Mock query params with light_theme
@@ -2787,16 +2802,6 @@ describe("App", () => {
       renderApp(props)
 
       // Send custom theme config with light and dark sections
-      const customTheme = new CustomThemeConfig({
-        primaryColor: "blue",
-        light: {
-          backgroundColor: "white",
-        },
-        dark: {
-          backgroundColor: "black",
-        },
-      })
-
       sendForwardMessage("newSession", {
         ...NEW_SESSION_JSON,
         customTheme,
@@ -2811,13 +2816,9 @@ describe("App", () => {
 
     it("respects embed_options=dark_theme over cached light preference", () => {
       // Set cached theme to light
-      const cachedTheme: CachedTheme = {
-        name: CUSTOM_THEME_LIGHT_NAME,
-        themeInput: { primaryColor: "blue" },
-      }
       window.localStorage.setItem(
         LocalStore.ACTIVE_THEME,
-        JSON.stringify(cachedTheme)
+        JSON.stringify(cachedLightTheme)
       )
 
       // Mock query params with dark_theme
@@ -2827,16 +2828,6 @@ describe("App", () => {
       renderApp(props)
 
       // Send custom theme config with light and dark sections
-      const customTheme = new CustomThemeConfig({
-        primaryColor: "blue",
-        light: {
-          backgroundColor: "white",
-        },
-        dark: {
-          backgroundColor: "black",
-        },
-      })
-
       sendForwardMessage("newSession", {
         ...NEW_SESSION_JSON,
         customTheme,
@@ -2851,13 +2842,9 @@ describe("App", () => {
 
     it("falls back to cached preference when no embed_options", () => {
       // Set cached theme to dark
-      const cachedTheme: CachedTheme = {
-        name: CUSTOM_THEME_DARK_NAME,
-        themeInput: { primaryColor: "blue" },
-      }
       window.localStorage.setItem(
         LocalStore.ACTIVE_THEME,
-        JSON.stringify(cachedTheme)
+        JSON.stringify(cachedDarkTheme)
       )
 
       // No query params
@@ -2867,16 +2854,6 @@ describe("App", () => {
       renderApp(props)
 
       // Send custom theme config
-      const customTheme = new CustomThemeConfig({
-        primaryColor: "blue",
-        light: {
-          backgroundColor: "white",
-        },
-        dark: {
-          backgroundColor: "black",
-        },
-      })
-
       sendForwardMessage("newSession", {
         ...NEW_SESSION_JSON,
         customTheme,
@@ -2893,15 +2870,17 @@ describe("App", () => {
       setLocationSearch("?embed=true&embed_options=dark_theme")
 
       const props = getProps()
+      props.theme.activeTheme = {
+        name: CUSTOM_THEME_DARK_NAME,
+        displayName: "Dark",
+        emotion: { ...darkTheme.emotion },
+        basewebTheme: darkTheme.basewebTheme,
+        primitives: darkTheme.primitives,
+        themeInput: customTheme,
+      }
       renderApp(props)
 
       // First send custom theme
-      const customTheme = new CustomThemeConfig({
-        primaryColor: "blue",
-        light: { backgroundColor: "white" },
-        dark: { backgroundColor: "black" },
-      })
-
       sendForwardMessage("newSession", {
         ...NEW_SESSION_JSON,
         customTheme,
