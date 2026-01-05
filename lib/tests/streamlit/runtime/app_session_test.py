@@ -31,7 +31,7 @@ from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.Common_pb2 import FileURLs, FileURLsRequest, FileURLsResponse
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.NewSession_pb2 import FontFace, FontSource
-from streamlit.runtime import Runtime, app_session
+from streamlit.runtime import Runtime, app_session, caching
 from streamlit.runtime.app_session import AppSession, AppSessionState
 from streamlit.runtime.caching.storage.dummy_cache_storage import (
     MemoryCacheStorageManager,
@@ -127,21 +127,33 @@ class AppSessionTest(unittest.TestCase):
     )
     def test_shutdown(self, patched_disconnect):
         """Test that AppSession.shutdown behaves sanely."""
-        session = _create_test_session()
+        with (
+            patch.object(
+                caching, "clear_session_data_cache"
+            ) as mock_clear_session_data,
+            patch.object(
+                caching, "clear_session_resource_cache"
+            ) as mock_clear_session_resource,
+        ):
+            session = _create_test_session()
 
-        mock_file_mgr = MagicMock(spec=UploadedFileManager)
-        session._uploaded_file_mgr = mock_file_mgr
+            mock_file_mgr = MagicMock(spec=UploadedFileManager)
+            session._uploaded_file_mgr = mock_file_mgr
 
-        session.shutdown()
-        assert session._state == AppSessionState.SHUTDOWN_REQUESTED
-        mock_file_mgr.remove_session_files.assert_called_once_with(session.id)
-        patched_disconnect.assert_called_once_with(session._on_secrets_file_changed)
+            session.shutdown()
+            assert session._state == AppSessionState.SHUTDOWN_REQUESTED
+            mock_file_mgr.remove_session_files.assert_called_once_with(session.id)
+            mock_clear_session_data.assert_called_once_with(session.id)
+            mock_clear_session_resource.assert_called_once_with(session.id)
+            patched_disconnect.assert_called_once_with(session._on_secrets_file_changed)
 
-        # A 2nd shutdown call should have no effect.
-        session.shutdown()
-        assert session._state == AppSessionState.SHUTDOWN_REQUESTED
+            # A 2nd shutdown call should have no effect.
+            session.shutdown()
+            assert session._state == AppSessionState.SHUTDOWN_REQUESTED
 
-        mock_file_mgr.remove_session_files.assert_called_once_with(session.id)
+            mock_file_mgr.remove_session_files.assert_called_once_with(session.id)
+            mock_clear_session_data.assert_called_once_with(session.id)
+            mock_clear_session_resource.assert_called_once_with(session.id)
 
     def test_shutdown_with_running_scriptrunner(self):
         """If we have a running ScriptRunner, shutting down should stop it."""
@@ -692,6 +704,17 @@ class AppSessionTest(unittest.TestCase):
         assert session._client_state.context_info.locale == "en-GB"
         assert session._client_state.query_string == "shutdown_query"
         assert session._client_state.page_script_hash == "shutdown_hash"
+
+    def test_clear_session_caches(self) -> None:
+        """Tests clear_session_caches."""
+
+        test_session = _create_test_session()
+
+        with patch.object(app_session, "caching") as mock_caching:
+            test_session.clear_session_caches()
+
+        mock_caching.clear_session_data_cache.assert_called_with(test_session.id)
+        mock_caching.clear_session_resource_cache.assert_called_with(test_session.id)
 
 
 def _mock_get_options_for_section(

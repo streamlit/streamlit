@@ -166,6 +166,7 @@ class WebsocketSessionManager(SessionManager, StatsProvider):
 
             session.request_script_stop()
             session.disconnect_file_watchers()
+            session.clear_session_caches()
 
             self._session_storage.save(
                 SessionInfo(

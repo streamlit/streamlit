@@ -221,6 +221,15 @@ class AppSession:
         self._stop_config_listener = None
         self._stop_pages_listener = None
 
+    def clear_session_caches(self) -> None:
+        """Clears session-level caches for this session.
+
+        This should be called when a session is disconnected or shut down, since this
+        ensures memory is freed up and resource release hooks are called.
+        """
+        caching.clear_session_data_cache(self.id)
+        caching.clear_session_resource_cache(self.id)
+
     def flush_browser_queue(self) -> list[ForwardMsg]:
         """Clear the forward message queue and return the messages it contained.
 
@@ -263,6 +272,9 @@ class AppSession:
             # Disconnect all file watchers if we haven't already, although we will have
             # generally already done so by the time we get here.
             self.disconnect_file_watchers()
+
+            # Clear any session caches. This ensures shutdown hooks are called.
+            self.clear_session_caches()
 
     def _enqueue_forward_msg(self, msg: ForwardMsg) -> None:
         """Enqueue a new ForwardMsg to our browser queue.
@@ -691,9 +703,10 @@ class AppSession:
                 )
 
             if self._state == AppSessionState.SHUTDOWN_REQUESTED:
-                # Only clear media files if the script is done running AND the
-                # session is actually shutting down.
+                # Only clear media files and session caches if the script is done
+                # running AND the session is actually shutting down.
                 runtime.get_instance().media_file_mgr.clear_session_refs(self.id)
+                self.clear_session_caches()
 
             self._client_state = client_state
             self._scriptrunner = None
