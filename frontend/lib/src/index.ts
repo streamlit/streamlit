@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -113,6 +113,10 @@ export { ScriptRunState } from "./ScriptRunState"
 export { SessionInfo } from "./SessionInfo"
 export {
   AUTO_THEME_NAME,
+  CUSTOM_THEME_AUTO_NAME,
+  CUSTOM_THEME_DARK_NAME,
+  CUSTOM_THEME_LIGHT_NAME,
+  CUSTOM_THEME_NAME,
   baseTheme,
   convertRemToPx,
   createAutoTheme,
@@ -120,10 +124,6 @@ export {
   createPresetThemes,
   createSidebarTheme,
   createTheme,
-  CUSTOM_THEME_AUTO_NAME,
-  CUSTOM_THEME_DARK_NAME,
-  CUSTOM_THEME_LIGHT_NAME,
-  CUSTOM_THEME_NAME,
   customTheme,
   darkTheme,
   getCachedTheme,
@@ -181,5 +181,5 @@ export {
   preserveEmbedQueryParams,
   setCookie,
 } from "./util/utils"
-export { createFormsData, WidgetStateManager } from "./WidgetStateManager"
+export { WidgetStateManager, createFormsData } from "./WidgetStateManager"
 export type { FormsData } from "./WidgetStateManager"
