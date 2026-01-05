@@ -343,8 +343,8 @@ class WebsocketSessionManagerMetricsTests(unittest.TestCase):
             raise ValueError(f"Family not found: {family_name}")
         for stat in stats_dict[family_name]:
             if label_type is None:
-                # For GaugeStat without labels
-                if isinstance(stat, GaugeStat):
+                # For GaugeStat or CounterStat without labels
+                if isinstance(stat, (GaugeStat, CounterStat)) and not stat.labels:
                     return stat.value
             # For CounterStat with labels
             elif (
@@ -362,6 +362,7 @@ class WebsocketSessionManagerMetricsTests(unittest.TestCase):
         assert self._get_stat_value(stats, "session_events_total", "connect") == 0
         assert self._get_stat_value(stats, "session_events_total", "reconnect") == 0
         assert self._get_stat_value(stats, "session_events_total", "disconnect") == 0
+        assert self._get_stat_value(stats, "session_duration_seconds_total") == 0
         assert self._get_stat_value(stats, "active_sessions") == 0
 
     def test_new_connection_increments_counter(self) -> None:
@@ -465,8 +466,9 @@ class WebsocketSessionManagerMetricsTests(unittest.TestCase):
         self.connect_session()
         stats_dict = self.session_mgr.get_stats()
 
-        assert len(stats_dict) == 2
+        assert len(stats_dict) == 3
         assert "session_events_total" in stats_dict
+        assert "session_duration_seconds_total" in stats_dict
         assert "active_sessions" in stats_dict
 
         # Check session_events_total counters
@@ -479,9 +481,115 @@ class WebsocketSessionManagerMetricsTests(unittest.TestCase):
             assert stat.labels is not None
             assert "type" in stat.labels
 
+        # Check session_duration_seconds_total counter
+        session_duration = stats_dict["session_duration_seconds_total"]
+        assert len(session_duration) == 1
+        assert isinstance(session_duration[0], CounterStat)
+        assert session_duration[0].family_name == "session_duration_seconds_total"
+        assert session_duration[0].type == "counter"
+        assert session_duration[0].unit == "seconds"
+
         # Check active_sessions gauge
         active_sessions = stats_dict["active_sessions"]
         assert len(active_sessions) == 1
         assert isinstance(active_sessions[0], GaugeStat)
         assert active_sessions[0].family_name == "active_sessions"
         assert active_sessions[0].type == "gauge"
+
+    @patch("streamlit.runtime.app_session.AppSession.shutdown", new=MagicMock())
+    @patch("streamlit.runtime.websocket_session_manager.time.monotonic")
+    def test_session_duration_accumulated_on_close(
+        self, mock_monotonic: MagicMock
+    ) -> None:
+        """Session duration should be accumulated when a session is closed."""
+        # Simulate 10 seconds of session time
+        mock_monotonic.side_effect = [0.0, 10.0]
+
+        session_id = self.connect_session()
+        self.session_mgr.close_session(session_id)
+
+        stats = self.session_mgr.get_stats()
+        assert self._get_stat_value(stats, "session_duration_seconds_total") == 10
+
+    @patch("streamlit.runtime.app_session.AppSession.shutdown", new=MagicMock())
+    @patch("streamlit.runtime.websocket_session_manager.time.monotonic")
+    def test_session_duration_accumulated_from_multiple_sessions(
+        self, mock_monotonic: MagicMock
+    ) -> None:
+        """Session duration should accumulate across multiple closed sessions."""
+        # Session 1 length: 10 seconds, Session 2 length: 20 seconds
+        mock_monotonic.side_effect = [0.0, 10.0, 11.0, 31.0]
+
+        session_id_1 = self.connect_session()
+        self.session_mgr.close_session(session_id_1)
+        session_id_2 = self.connect_session()
+        self.session_mgr.close_session(session_id_2)
+
+        stats = self.session_mgr.get_stats()
+        assert self._get_stat_value(stats, "session_duration_seconds_total") == 30
+
+    @patch(
+        "streamlit.runtime.app_session.AppSession.disconnect_file_watchers",
+        new=MagicMock(),
+    )
+    @patch(
+        "streamlit.runtime.app_session.AppSession.request_script_stop",
+        new=MagicMock(),
+    )
+    @patch("streamlit.runtime.websocket_session_manager.time.monotonic")
+    def test_session_duration_accumulated_on_disconnect(
+        self, mock_monotonic: MagicMock
+    ) -> None:
+        """Session duration should be accumulated when a session disconnects."""
+        # Connect at 0, disconnect at 10
+        mock_monotonic.side_effect = [0.0, 10.0]
+
+        session_id = self.connect_session()
+        self.session_mgr.disconnect_session(session_id)
+
+        stats = self.session_mgr.get_stats()
+        assert self._get_stat_value(stats, "session_duration_seconds_total") == 10
+
+    @patch(
+        "streamlit.runtime.app_session.AppSession.disconnect_file_watchers",
+        new=MagicMock(),
+    )
+    @patch(
+        "streamlit.runtime.app_session.AppSession.request_script_stop",
+        new=MagicMock(),
+    )
+    @patch("streamlit.runtime.app_session.AppSession.shutdown", new=MagicMock())
+    @patch("streamlit.runtime.websocket_session_manager.time.monotonic")
+    def test_session_duration_not_double_counted_on_close_from_storage(
+        self, mock_monotonic: MagicMock
+    ) -> None:
+        """Duration accumulated on disconnect should not be double-counted on close."""
+        # Connect at 0, disconnect at 5, close at 15
+        mock_monotonic.side_effect = [0.0, 5.0, 15.0]
+
+        session_id = self.connect_session()
+        self.session_mgr.disconnect_session(session_id)
+        self.session_mgr.close_session(session_id)
+
+        stats = self.session_mgr.get_stats()
+        # Duration from connect (0) to disconnect (5) = 5 seconds
+        # The time before the session was closed should not add more duration
+        # since no reconnect happened in between.
+        assert self._get_stat_value(stats, "session_duration_seconds_total") == 5
+
+    @patch("streamlit.runtime.app_session.AppSession.shutdown", new=MagicMock())
+    @patch("streamlit.runtime.websocket_session_manager.time.monotonic")
+    def test_session_duration_with_reconnect(self, mock_monotonic: MagicMock) -> None:
+        """Session duration should accumulate across disconnect and reconnect cycles."""
+        # Connect at 0, disconnect at 5, reconnect at 6, close at 16
+        mock_monotonic.side_effect = [0.0, 5.0, 6.0, 16.0]
+
+        session_id = self.connect_session()
+        self.session_mgr.disconnect_session(session_id)
+        session_id = self.connect_session(session_id)
+        self.session_mgr.close_session(session_id)
+
+        stats = self.session_mgr.get_stats()
+        # Duration from connect (0) to disconnect (5) = 5 seconds
+        # Duration from reconnect (6) to close (16) = 10 seconds
+        assert self._get_stat_value(stats, "session_duration_seconds_total") == 15
