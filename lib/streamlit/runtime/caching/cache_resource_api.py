@@ -218,6 +218,11 @@ class ResourceCaches(StatsProvider):
 _resource_caches = ResourceCaches()
 
 
+def clear_session_cache(session_id: str) -> None:
+    """Clears all caches for the given session ID."""
+    _resource_caches.clear_session(session_id)
+
+
 def get_resource_cache_stats_provider() -> StatsProvider:
     """Return the StatsProvider for all @st.cache_resource functions."""
     return _resource_caches
@@ -599,10 +604,6 @@ class CacheResourceAPI:
     def clear(self) -> None:
         """Clear all cache_resource caches."""
         _resource_caches.clear_all()
-
-    def clear_session(self, session_id: str) -> None:
-        """Clears all caches for the given session ID."""
-        _resource_caches.clear_session(session_id)
 
 
 class ResourceCache(Cache[R]):

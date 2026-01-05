@@ -128,8 +128,12 @@ class AppSessionTest(unittest.TestCase):
     def test_shutdown(self, patched_disconnect):
         """Test that AppSession.shutdown behaves sanely."""
         with (
-            patch.object(caching, "cache_data") as mock_cache_data,
-            patch.object(caching, "cache_resource") as mock_cache_resource,
+            patch.object(
+                caching, "clear_session_data_cache"
+            ) as mock_clear_session_data,
+            patch.object(
+                caching, "clear_session_resource_cache"
+            ) as mock_clear_session_resource,
         ):
             session = _create_test_session()
 
@@ -139,8 +143,8 @@ class AppSessionTest(unittest.TestCase):
             session.shutdown()
             assert session._state == AppSessionState.SHUTDOWN_REQUESTED
             mock_file_mgr.remove_session_files.assert_called_once_with(session.id)
-            mock_cache_data.clear_session.assert_called_once_with(session.id)
-            mock_cache_resource.clear_session.assert_called_once_with(session.id)
+            mock_clear_session_data.assert_called_once_with(session.id)
+            mock_clear_session_resource.assert_called_once_with(session.id)
             patched_disconnect.assert_called_once_with(session._on_secrets_file_changed)
 
             # A 2nd shutdown call should have no effect.
@@ -148,8 +152,8 @@ class AppSessionTest(unittest.TestCase):
             assert session._state == AppSessionState.SHUTDOWN_REQUESTED
 
             mock_file_mgr.remove_session_files.assert_called_once_with(session.id)
-            mock_cache_data.clear_session.assert_called_once_with(session.id)
-            mock_cache_resource.clear_session.assert_called_once_with(session.id)
+            mock_clear_session_data.assert_called_once_with(session.id)
+            mock_clear_session_resource.assert_called_once_with(session.id)
 
     def test_shutdown_with_running_scriptrunner(self):
         """If we have a running ScriptRunner, shutting down should stop it."""
@@ -709,8 +713,8 @@ class AppSessionTest(unittest.TestCase):
         with patch.object(app_session, "caching") as mock_caching:
             test_session.clear_session_caches()
 
-        mock_caching.cache_data.clear_session.assert_called_with(test_session.id)
-        mock_caching.cache_resource.clear_session.assert_called_with(test_session.id)
+        mock_caching.clear_session_data_cache.assert_called_with(test_session.id)
+        mock_caching.clear_session_resource_cache.assert_called_with(test_session.id)
 
 
 def _mock_get_options_for_section(

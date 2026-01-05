@@ -271,6 +271,7 @@ class DataCaches(StatsProvider):
         if session_caches is not None:
             for cache in session_caches.values():
                 cache.clear()
+                cache.storage.close()
 
     def clear_all(self) -> None:
         """Clear all in-memory and on-disk caches."""
@@ -374,6 +375,11 @@ class DataCaches(StatsProvider):
 
 # Singleton DataCaches instance
 _data_caches = DataCaches()
+
+
+def clear_session_cache(session_id: str) -> None:
+    """Clears all caches for the given session ID."""
+    _data_caches.clear_session(session_id)
 
 
 def get_data_cache_stats_provider() -> StatsProvider:
@@ -689,10 +695,6 @@ class CacheDataAPI:
     def clear(self) -> None:
         """Clear all in-memory and on-disk data caches."""
         _data_caches.clear_all()
-
-    def clear_session(self, session_id: str) -> None:
-        """Clears all caches for the given session ID."""
-        _data_caches.clear_session(session_id)
 
 
 class DataCache(Cache[R]):

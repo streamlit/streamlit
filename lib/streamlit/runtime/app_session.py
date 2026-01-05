@@ -227,8 +227,8 @@ class AppSession:
         This should be called when a session is disconnected or shut down, since this
         ensures memory is freed up and resource release hooks are called.
         """
-        caching.cache_data.clear_session(self.id)
-        caching.cache_resource.clear_session(self.id)
+        caching.clear_session_data_cache(self.id)
+        caching.clear_session_resource_cache(self.id)
 
     def flush_browser_queue(self) -> list[ForwardMsg]:
         """Clear the forward message queue and return the messages it contained.

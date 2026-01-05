@@ -34,6 +34,8 @@ from streamlit.runtime.caching import (
     cache_data_api,
     cache_resource,
     cache_resource_api,
+    clear_session_data_cache,
+    clear_session_resource_cache,
 )
 from streamlit.runtime.caching.cache_errors import CacheReplayClosureError
 from streamlit.runtime.caching.cache_utils import CachedResult
@@ -761,11 +763,18 @@ class CommonCacheTest(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            ("cache_data", cache_data, cache_data_api),
-            ("cache_resource", cache_resource, cache_resource_api),
+            ("cache_data", cache_data, cache_data_api, clear_session_data_cache),
+            (
+                "cache_resource",
+                cache_resource,
+                cache_resource_api,
+                clear_session_resource_cache,
+            ),
         ]
     )
-    def test_session_scope_handles_clear(self, _, cache_decorator, cache_module):
+    def test_session_scope_handles_clear(
+        self, _, cache_decorator, cache_module, clear_session_cache
+    ):
         """Clearing a single session's scope should work."""
         counter = 0
         curr_session_id: str
@@ -801,7 +810,7 @@ class CommonCacheTest(DeltaGeneratorTestCase):
 
         # Clear the first session, and assert we get new values.
         curr_session_id = "aaa"
-        cache_decorator.clear_session(curr_session_id)
+        clear_session_cache(curr_session_id)
         with patch.object(
             cache_module, "get_session_id_or_throw"
         ) as mock_get_session_id:
