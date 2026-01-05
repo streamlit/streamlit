@@ -315,6 +315,11 @@ def test_window_config_download_url(app: Page):
 
     NOTE: We don't test download success/failure since these are not real base urls,
     just the URL construction.
+
+    NOTE: This test excludes /static/media/ URLs from validation. These are bundled
+    static assets (compiled by Vite with content hashes) that are served directly
+    and do not use DOWNLOAD_ASSETS_BASE_URL. Examples include the New Years fireworks
+    easter egg (fireworks.gif, active Dec 31-Jan 6) loaded by IconRunning component.
     """
     # Set DOWNLOAD_ASSETS_BASE_URL before load
     app.add_init_script("""
@@ -356,9 +361,11 @@ def test_window_config_download_url(app: Page):
 
     def capture_request(request: Request) -> None:
         url = request.url
-        # Capture any requests to media endpoints or download URLs
+        # Capture requests to media endpoints or download URLs
+        # IMPORTANT: Exclude /static/media/ URLs - these are bundled static assets
+        # (like fireworks.gif for New Years easter egg) that don't use DOWNLOAD_ASSETS_BASE_URL
         if (
-            "/media/" in url
+            ("/media/" in url and "/static/media/" not in url)
             or "cdn.example.com" in url
             or "malicious.example.com" in url
         ):
