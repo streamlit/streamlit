@@ -73,8 +73,8 @@ export const SettingsDialog: FC<Props> = memo(function SettingsDialog({
 }) {
   const { activeTheme, availableThemes, setTheme } = useContext(ThemeContext)
 
-  const activeSettings = useRef(settings)
-  const isFirstRun = useRef(true)
+  const activeSettingsRef = useRef(settings)
+  const isFirstRunRef = useRef(true)
   const [state, setState] = useState<UserSettings>({ ...settings })
 
   const changeSingleSetting = useCallback(
@@ -85,13 +85,13 @@ export const SettingsDialog: FC<Props> = memo(function SettingsDialog({
   )
 
   useEffect(() => {
-    if (isFirstRun.current) {
-      isFirstRun.current = false
+    if (isFirstRunRef.current) {
+      isFirstRunRef.current = false
       return
     }
 
-    activeSettings.current = state
-    onSave(activeSettings.current)
+    activeSettingsRef.current = state
+    onSave(activeSettingsRef.current)
   }, [onSave, state])
 
   const handleCheckboxChange = useCallback(

@@ -214,8 +214,7 @@ const noAriaHiddenWithFocusableChildren = createRule<Options, MessageIds>({
           "aria-hidden"
         )
         if (
-          !ariaHiddenAttr ||
-          ariaHiddenAttr.type !== AST_NODE_TYPES.JSXAttribute ||
+          ariaHiddenAttr?.type !== AST_NODE_TYPES.JSXAttribute ||
           !isAriaHiddenTruthy(ariaHiddenAttr)
         ) {
           return

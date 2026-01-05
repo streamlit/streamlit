@@ -24,14 +24,14 @@ import {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
 export const usePrevious = (value: any): any => {
-  const ref = useRef()
+  const valueRef = useRef()
 
   useEffect(() => {
-    ref.current = value
+    valueRef.current = value
   }, [value])
 
   // eslint-disable-next-line react-hooks/refs -- TODO: Do not access ref during render
-  return ref.current
+  return valueRef.current
 }
 
 export const useIsOverflowing = (

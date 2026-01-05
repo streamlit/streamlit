@@ -152,8 +152,7 @@ export function getDataArray(
   // If the dataframe is multi-index, the remaining index columns will be ignored.
   const firstIndexColumnType = quiverData.columnTypes[0] ?? undefined
   const hasSupportedIndex =
-    firstIndexColumnType &&
-    firstIndexColumnType.type === DataFrameCellType.INDEX &&
+    firstIndexColumnType?.type === DataFrameCellType.INDEX &&
     (isNumericType(firstIndexColumnType) ||
       isDatetimeType(firstIndexColumnType) ||
       isDateType(firstIndexColumnType))

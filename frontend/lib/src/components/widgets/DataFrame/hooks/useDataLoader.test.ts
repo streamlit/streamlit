@@ -114,8 +114,8 @@ describe("useDataLoader hook", () => {
     const numRows = data.dimensions.numRows
 
     const { result } = renderHook(() => {
-      const editingState = useRef<EditingState>(new EditingState(numRows))
-      return useDataLoader(data, MOCK_COLUMNS, numRows, editingState)
+      const editingStateRef = useRef<EditingState>(new EditingState(numRows))
+      return useDataLoader(data, MOCK_COLUMNS, numRows, editingStateRef)
     })
 
     // Row 1
@@ -155,8 +155,8 @@ describe("useDataLoader hook", () => {
     const numRows = data.dimensions.numRows
 
     const { result } = renderHook(() => {
-      const editingState = useRef<EditingState>(new EditingState(numRows))
-      return useDataLoader(data, MOCK_COLUMNS, numRows, editingState)
+      const editingStateRef = useRef<EditingState>(new EditingState(numRows))
+      return useDataLoader(data, MOCK_COLUMNS, numRows, editingStateRef)
     })
 
     // Check that row 0 is returning the correct cell value:
@@ -175,14 +175,14 @@ describe("useDataLoader hook", () => {
     const numRows = data.dimensions.numRows
 
     const { result } = renderHook(() => {
-      const editingState = useRef<EditingState>(new EditingState(numRows))
-      editingState.current.setCell(1, 0, {
+      const editingStateRef = useRef<EditingState>(new EditingState(numRows))
+      editingStateRef.current.setCell(1, 0, {
         kind: GridCellKind.Text,
         displayData: "edited",
         data: "edited",
         allowOverlay: true,
       })
-      return useDataLoader(data, MOCK_COLUMNS, numRows, editingState)
+      return useDataLoader(data, MOCK_COLUMNS, numRows, editingStateRef)
     })
 
     // Check if value got edited
@@ -201,9 +201,9 @@ describe("useDataLoader hook", () => {
     const numRows = data.dimensions.numRows
 
     const { result } = renderHook(() => {
-      const editingState = useRef<EditingState>(new EditingState(numRows))
-      editingState.current.deleteRow(0)
-      return useDataLoader(data, MOCK_COLUMNS, numRows, editingState)
+      const editingStateRef = useRef<EditingState>(new EditingState(numRows))
+      editingStateRef.current.deleteRow(0)
+      return useDataLoader(data, MOCK_COLUMNS, numRows, editingStateRef)
     })
 
     // Should return value of second row
@@ -229,8 +229,8 @@ describe("useDataLoader hook", () => {
     } as unknown as Quiver
 
     const { result } = renderHook(() => {
-      const editingState = useRef<EditingState>(new EditingState(numRows))
-      return useDataLoader(errorData, MOCK_COLUMNS, numRows, editingState)
+      const editingStateRef = useRef<EditingState>(new EditingState(numRows))
+      return useDataLoader(errorData, MOCK_COLUMNS, numRows, editingStateRef)
     })
 
     // We should get an error cell since an error is thrown in the try/catch block
@@ -245,14 +245,14 @@ describe("useDataLoader hook", () => {
     const numRows = realData.dimensions.numRows
 
     const { result } = renderHook(() => {
-      const editingState = useRef<EditingState>(new EditingState(numRows))
-      editingState.current.getCell = () => {
+      const editingStateRef = useRef<EditingState>(new EditingState(numRows))
+      editingStateRef.current.getCell = () => {
         throw new Error("Error getting cell from editing state")
       }
-      editingState.current.isAddedRow = () => {
+      editingStateRef.current.isAddedRow = () => {
         return true
       }
-      return useDataLoader(realData, MOCK_COLUMNS, numRows, editingState)
+      return useDataLoader(realData, MOCK_COLUMNS, numRows, editingStateRef)
     })
 
     // We should get an error cell since an error is thrown in the try/catch block
