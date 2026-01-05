@@ -20,16 +20,20 @@ import { StyledDataFrameOverlay } from "~lib/styled-components"
 import { PortalContext } from "./PortalContext"
 
 export const PortalProvider: FC<PropsWithChildren> = ({ children }) => {
-  const ref = useRef<HTMLDivElement>(null)
+  const overlayRef = useRef<HTMLDivElement>(null)
 
   const getRefElement = useCallback(() => {
-    return ref.current
+    return overlayRef.current
   }, [])
 
   return (
     <PortalContext.Provider value={getRefElement}>
       {children}
-      <StyledDataFrameOverlay data-testid="portal" id="portal" ref={ref} />
+      <StyledDataFrameOverlay
+        data-testid="portal"
+        id="portal"
+        ref={overlayRef}
+      />
     </PortalContext.Provider>
   )
 }

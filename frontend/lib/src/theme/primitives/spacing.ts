@@ -27,4 +27,6 @@ export const spacing = {
   twoXL: "1.5rem", // 24px
   threeXL: "2rem", // 32px
   fourXL: "4rem", // 64px
+  fiveXL: "6rem", // 96px
+  sixXL: "8rem", // 128px
 }

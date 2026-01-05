@@ -35,9 +35,13 @@ class SpaceTest(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
+            ("xxsmall", 0.25),
+            ("xsmall", 0.5),
             ("small", 0.75),
             ("medium", 2.5),
             ("large", 4.25),
+            ("xlarge", 6),
+            ("xxlarge", 8),
         ]
     )
     def test_space_rem_sizes(self, size_name, expected_rem):

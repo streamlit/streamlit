@@ -12,160 +12,73 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, cast
+
 import streamlit as st
 
-with st.container(
-    border=True,
-    gap="small",
-    horizontal=True,
-    key="container-horizontal-gap-small",
-):
-    st.html(
-        '<div style="background:lightblue">One</div>',
-        width="stretch",
-    )
-    st.html(
-        '<div style="background:lightblue">Two</div>',
-        width="stretch",
-    )
-    st.html(
-        '<div style="background:lightblue">Three</div>',
-        width="stretch",
-    )
-    st.html(
-        '<div style="background:lightblue">Four</div>',
-        width="stretch",
-    )
+if TYPE_CHECKING:
+    from streamlit.elements.lib.layout_utils import Gap
 
-with st.container(
-    border=True,
-    gap="medium",
-    horizontal=True,
-    key="container-horizontal-gap-medium",
-):
-    st.html(
-        '<div style="background:lightblue">One</div>',
-        width="stretch",
-    )
-    st.html(
-        '<div style="background:lightblue">Two</div>',
-        width="stretch",
-    )
-    st.html(
-        '<div style="background:lightblue">Three</div>',
-        width="stretch",
-    )
-    st.html(
-        '<div style="background:lightblue">Four</div>',
-        width="stretch",
-    )
+GAPS = cast(
+    "list[Gap | None]",
+    [
+        None,
+        "xxsmall",
+        "xsmall",
+        "small",
+        "medium",
+        "large",
+        "xlarge",
+        "xxlarge",
+    ],
+)
 
-with st.container(
-    border=True,
-    gap="large",
-    horizontal=True,
-    key="container-horizontal-gap-large",
-):
-    st.html(
-        '<div style="background:lightblue">One</div>',
-        width="stretch",
-    )
-    st.html(
-        '<div style="background:lightblue">Two</div>',
-        width="stretch",
-    )
-    st.html(
-        '<div style="background:lightblue">Three</div>',
-        width="stretch",
-    )
-    st.html(
-        '<div style="background:lightblue">Four</div>',
-        width="stretch",
-    )
+for gap in GAPS:
+    gap_name = str(gap).lower()
 
-with st.container(
-    border=True,
-    gap=None,
-    horizontal=True,
-    key="container-horizontal-gap-none",
-):
-    st.html(
-        '<div style="background:lightblue">One</div>',
-        width="stretch",
-    )
-    st.html(
-        '<div style="background:lightblue">Two</div>',
-        width="stretch",
-    )
-    st.html(
-        '<div style="background:lightblue">Three</div>',
-        width="stretch",
-    )
-    st.html(
-        '<div style="background:lightblue">Four</div>',
-        width="stretch",
-    )
+    with st.container(
+        border=True,
+        gap=gap,
+        horizontal=True,
+        key=f"container-horizontal-gap-{gap_name}",
+    ):
+        st.html(
+            '<div style="background:lightblue">One</div>',
+            width="stretch",
+        )
+        st.html(
+            '<div style="background:lightblue">Two</div>',
+            width="stretch",
+        )
+        st.html(
+            '<div style="background:lightblue">Three</div>',
+            width="stretch",
+        )
+        st.html(
+            '<div style="background:lightblue">Four</div>',
+            width="stretch",
+        )
 
-with st.container(
-    border=True, gap="small", horizontal=False, key="container-vertical-gap-small"
-):
-    st.html(
-        '<div style="background:lightblue">One</div>',
-        width="stretch",
-    )
-    st.html(
-        '<div style="background:lightblue">Two</div>',
-        width="stretch",
-    )
-    st.html(
-        '<div style="background:lightblue">Three</div>',
-        width="stretch",
-    )
+for gap in GAPS:
+    gap_name = str(gap).lower()
 
-with st.container(
-    border=True, gap="medium", horizontal=False, key="container-vertical-gap-medium"
-):
-    st.html(
-        '<div style="background:lightblue">One</div>',
-        width="stretch",
-    )
-    st.html(
-        '<div style="background:lightblue">Two</div>',
-        width="stretch",
-    )
-    st.html(
-        '<div style="background:lightblue">Three</div>',
-        width="stretch",
-    )
-
-with st.container(
-    border=True, gap="large", horizontal=False, key="container-vertical-gap-large"
-):
-    st.html(
-        '<div style="background:lightblue">One</div>',
-        width="stretch",
-    )
-    st.html(
-        '<div style="background:lightblue">Two</div>',
-        width="stretch",
-    )
-    st.html(
-        '<div style="background:lightblue">Three</div>',
-        width="stretch",
-    )
-
-with st.container(
-    border=True, gap=None, horizontal=False, key="container-vertical-gap-none"
-):
-    st.html(
-        '<div style="background:lightblue">One</div>',
-        width="stretch",
-    )
-    st.html(
-        '<div style="background:lightblue">Two</div>',
-        width="stretch",
-    )
-    st.html(
-        '<div style="background:lightblue">Three</div>',
-        width="stretch",
-    )
+    with st.container(
+        border=True,
+        gap=gap,
+        horizontal=False,
+        key=f"container-vertical-gap-{gap_name}",
+    ):
+        st.html(
+            '<div style="background:lightblue">One</div>',
+            width="stretch",
+        )
+        st.html(
+            '<div style="background:lightblue">Two</div>',
+            width="stretch",
+        )
+        st.html(
+            '<div style="background:lightblue">Three</div>',
+            width="stretch",
+        )

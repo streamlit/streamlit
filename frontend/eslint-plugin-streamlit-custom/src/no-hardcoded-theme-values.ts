@@ -66,10 +66,8 @@ const noHardcodedThemeValues = createRule<[], MessageIds>({
         node.properties.forEach(property => {
           if (
             property.type !== AST_NODE_TYPES.Property ||
-            !property.key ||
-            property.key.type !== AST_NODE_TYPES.Identifier ||
-            !property.value ||
-            property.value.type !== AST_NODE_TYPES.Literal ||
+            property.key?.type !== AST_NODE_TYPES.Identifier ||
+            property.value?.type !== AST_NODE_TYPES.Literal ||
             typeof property.value.raw !== "string"
           ) {
             return

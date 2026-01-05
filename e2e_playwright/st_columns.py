@@ -14,10 +14,15 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING, cast
+
 import numpy as np
 import numpy.typing as npt
 
 import streamlit as st
+
+if TYPE_CHECKING:
+    from streamlit.elements.lib.layout_utils import Gap
 
 LOREM_IPSUM = (
     "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor "
@@ -53,29 +58,28 @@ with st.expander("Variable-width columns (absolute numbers)", expanded=True):
         c.image(BLACK_IMG)
 
 # Various column gaps
-with st.expander("Column gap small", expanded=True):
-    c4, c5, c6 = st.columns(3, gap="small")
-    c4.image(BLACK_IMG)
-    c5.image(BLACK_IMG)
-    c6.image(BLACK_IMG)
 
-with st.expander("Column gap medium", expanded=True):
-    c7, c8, c9 = st.columns(3, gap="medium")
-    c7.image(BLACK_IMG)
-    c8.image(BLACK_IMG)
-    c9.image(BLACK_IMG)
+GAPS = cast(
+    "list[Gap|None]",
+    [
+        None,
+        "xxsmall",
+        "xsmall",
+        "small",
+        "medium",
+        "large",
+        "xlarge",
+        "xxlarge",
+    ],
+)
 
-with st.expander("Column gap large", expanded=True):
-    c10, c11, c12 = st.columns(3, gap="large")
-    c10.image(BLACK_IMG)
-    c11.image(BLACK_IMG)
-    c12.image(BLACK_IMG)
+for gap in GAPS:
+    gap_name = str(gap).lower()
 
-with st.expander("Column gap none", expanded=True):
-    c13, c14, c15 = st.columns(3, gap=None)
-    c13.image(BLACK_IMG)
-    c14.image(BLACK_IMG)
-    c15.image(BLACK_IMG)
+    with st.expander(f"Column gap {gap_name}", expanded=True):
+        cols = st.columns(3, gap=gap)
+        for col in cols:
+            col.image(BLACK_IMG)
 
 with st.expander("Nested columns - one level", expanded=True):
     col1, col2 = st.columns(2)
