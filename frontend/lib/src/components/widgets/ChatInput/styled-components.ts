@@ -38,6 +38,7 @@ export const StyledChatInput = styled.div<StyledChatInputProps>(
     display: "flex",
     flexDirection: "column",
     alignItems: "stretch",
+    flex: 1, // Fill parent height so children can use marginTop: auto
     padding: theme.spacing.lg,
     borderRadius: theme.radii.default,
     boxSizing: "border-box",

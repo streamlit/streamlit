@@ -66,7 +66,7 @@ export const sizes = {
   headerItemHeight: "1.75rem",
   headerRightContentMaxWidth: "12.5rem",
   chatInputTextareaMinHeight: "1.5rem",
-  chatInputPrimaryButtonSize: "2rem",
+  chatInputPrimaryButtonSize: "4rem", // TEMP: 2x size to force snapshot updates
   // Offset to vertically center button with textarea text in simple mode
   // (3px margin the bottom with flex-end to center by default but keep it at the bottom)
   chatInputButtonVerticalOffset: "0.1875rem",
