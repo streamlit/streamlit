@@ -363,6 +363,7 @@ class Server:
     @property
     def stopped(self) -> Awaitable[None]:
         """A Future that completes when the Server's run loop has exited."""
+
         if self._starlette_server is not None:
 
             async def _wait_for_starlette_stop() -> None:

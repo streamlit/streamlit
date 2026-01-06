@@ -394,6 +394,7 @@ class InitializeMimetypesTest(unittest.TestCase):
 
     def test_registers_common_mimetypes(self) -> None:
         """Test that common MIME types are registered correctly."""
+
         import mimetypes
 
         Server.initialize_mimetypes()
@@ -411,6 +412,7 @@ class SetTornadoLogLevelsTest(unittest.TestCase):
     @patch_config_options({"global.developmentMode": True})
     def test_dev_mode_does_not_suppress_logs(self) -> None:
         """Test that Tornado log levels are not suppressed in development mode."""
+
         from streamlit.web.server.server import _set_tornado_log_levels
 
         # Set to a known level before testing
@@ -424,6 +426,7 @@ class SetTornadoLogLevelsTest(unittest.TestCase):
     @patch_config_options({"global.developmentMode": False})
     def test_non_dev_mode_suppresses_logs(self) -> None:
         """Test that Tornado log levels are suppressed in non-development mode."""
+
         from streamlit.web.server.server import _set_tornado_log_levels
 
         _set_tornado_log_levels()
