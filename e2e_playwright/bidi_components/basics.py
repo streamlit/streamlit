@@ -32,11 +32,11 @@ st.header("Custom Components v2 - Basics")
 # ---------------------------------------------------------------------------
 # Empty content: component with no HTML/CSS/JS should not error
 # ---------------------------------------------------------------------------
-_EMPTY_CMP = st.components.v2.component("bidi_empty_content")
+_EMPTY_CMP = st.components.v2.component("bidi_empty_content", isolate_styles=False)
 
 with st.container(key="empty_component_container"):
     st.subheader("Empty content")
-    _EMPTY_CMP(isolate_styles=False, key="empty_component")
+    _EMPTY_CMP(key="empty_component")
     st.write("After empty component")
 
 
@@ -109,7 +109,6 @@ def stateful_component(
     default: dict[str, Any] | None = None,
 ) -> BidiComponentResult:
     return _STATEFUL_CMP(
-        isolate_styles=True,
         key=key,
         data=data,
         on_range_change=on_range_change,
@@ -168,7 +167,6 @@ def trigger_component(
     on_bar_change: WidgetCallback | None = None,
 ) -> BidiComponentResult:
     return _TRIGGER_CMP(
-        isolate_styles=True,
         key=key,
         data=data,
         on_foo_change=on_foo_change,
@@ -232,7 +230,6 @@ def ctx_component(
     on_clicked_change: WidgetCallback | None = None,
 ) -> BidiComponentResult:
     return _CTX_CMP(
-        isolate_styles=True,
         key=key,
         data=data,
         on_text_change=on_text_change,
@@ -501,7 +498,6 @@ div {
         default: dict[str, Any] | None = None,
     ) -> BidiComponentResult:
         return _BASIC_CMP(
-            isolate_styles=True,
             key=key,
             data=data,
             on_formValues_change=on_formValues_change,

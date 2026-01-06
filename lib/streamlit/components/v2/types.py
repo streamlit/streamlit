@@ -141,14 +141,6 @@ class BidiComponentCallable(Protocol):
         You are responsible for ensuring the component's inner HTML content is
         responsive to the ``<div>`` wrapper.
 
-    isolate_styles : bool
-        Whether to sandbox the component styles in a shadow root. If this is
-        ``True`` (default), the component's HTML is mounted inside a shadow DOM
-        and, in your component's JavaScript, ``parentElement`` returns a
-        ``ShadowRoot``. If this is ``False``, the component's HTML is mounted
-        directly into the app's DOM tree, and ``parentElement`` returns a
-        regular ``HTMLElement``.
-
     **callbacks : Callable or None
         Callbacks with the naming pattern ``on_<key>_change`` for each state and
         trigger key. For example, if your component has a state key of
@@ -255,11 +247,12 @@ class BidiComponentCallable(Protocol):
 
     **Example 2: Add Tailwind CSS to a component**
 
-    You can use the ``isolate_styles`` parameter to disable shadow DOM
-    isolation and apply global styles like Tailwind CSS to your component. The
-    following example creates a simple button styled with Tailwind CSS. This
-    example also demonstrates using different keys to mount multiple instances
-    of the same component in one app.
+    You can use the ``isolate_styles`` parameter in
+    ``st.components.v2.component`` to disable shadow DOM isolation and apply
+    global styles like Tailwind CSS to your component. The following example
+    creates a simple button styled with Tailwind CSS. This example also
+    demonstrates using different keys to mount multiple instances of the same
+    component in one app.
 
     .. code-block:: python
 
@@ -289,15 +282,12 @@ class BidiComponentCallable(Protocol):
             "my_tailwind_button",
             html=HTML,
             js=JS,
+            isolate_styles=False,
         )
-        result_1 = my_component(
-            isolate_styles=False, on_clicked_change=lambda: None, key="one"
-        )
+        result_1 = my_component(on_clicked_change=lambda: None, key="one")
         result_1
 
-        result_2 = my_component(
-            isolate_styles=False, on_clicked_change=lambda: None, key="two"
-        )
+        result_2 = my_component(on_clicked_change=lambda: None, key="two")
         result_2
 
     .. output::
@@ -314,7 +304,6 @@ class BidiComponentCallable(Protocol):
         default: BidiComponentDefaults = None,
         width: Width = "stretch",
         height: Height = "content",
-        isolate_styles: ComponentIsolateStyles = True,
         **on_callbacks: WidgetCallback | None,
     ) -> BidiComponentResult: ...
 
