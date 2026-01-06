@@ -64,21 +64,23 @@ st.widget(..., persist=["query-params", "session"])  # both
 **Pros:**
 
 - Just one new parameter on each widget instead of two.
-- `persist` rhymes well with `st.cache_data` and `st.cache_resource`.
+- `persist` rhymes well with the same parameter on `st.cache_data` and `st.cache_resource`.
 - Can be nicely extended in the future, e.g. `persist="localstorage"`.
 
 **Cons:**
 
-- Concepts are related but not exactly the same.
+- Concepts are related but not exactly the same. Might be confusing?
 
 **Open questions:**
 
 - Do we also want a way to persist across page switches, but not across the entire
   session/if the widget isn't rendered? I guess this would be a very niche case and most
   devs would just use `persist="session"`, but not sure? We could add `persist="pages"`
-  or `persist="page-switch"` to cover this but would certainly make it more complex.
-- Should they work only if `key` is set or also without it? I guess at least for
-  `"query-params"` it would be nice to have a `key`.
+  or `persist="page-switch"` to cover this but would certainly make it more complex
+  (especially since `"query-params"` is the odd one out then).
+- At least `"query-params"` should only work when `key` is set, otherwise it might
+  create long, ugly, and unstable URLs (plus, would add a lot of implementation time).
+  Should the same be true for `"session"` or can we make this work without setting `key`?
 
 ### Option 2: Two separate APIs
 
@@ -86,9 +88,9 @@ st.widget(..., persist=["query-params", "session"])  # both
 
 Some ideas we had in the past:
 
-- `st.widget(..., bind_query_param=True)`
+- `st.widget(..., bind_query_param=True)` -> Definitely means two parameters then.
 - `st.widget(..., query_key="foo")` -> Seems redundant given that we already have `key`.
-- `st.widget(..., key="?foo")` -> Bit too magical, was disliked by several people in
+- `st.widget(..., key="?foo")` -> Bit too magical, was disliked when we discussed it in
   the past.
 - `st.query_params.bind("session_state_key")` -> Could still do this later on, useful if
   you want to bind arbitrary session state keys, not just widget state. But seems a bit
