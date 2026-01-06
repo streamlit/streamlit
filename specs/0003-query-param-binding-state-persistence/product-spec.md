@@ -57,7 +57,7 @@ parameters to each widget:
 ```python
 st.widget(..., persist=None)  # no persistence, default
 st.widget(..., persist="query-params")  # binds widget state to query params
-st.widget(..., persist="session")  # persists widget state
+st.widget(..., persist="session")  # persists widget state for the entire session (even if widget isn't rendered or page is switched)
 st.widget(..., persist=["query-params", "session"])  # both
 ```
 
