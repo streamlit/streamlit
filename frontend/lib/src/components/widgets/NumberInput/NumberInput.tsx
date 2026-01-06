@@ -158,7 +158,7 @@ const NumberInput: React.FC<Props> = ({
     : dirty
   // Hide input instructions for small widget sizes.
   const shouldShowInstructions =
-    isFocused && width > theme.breakpoints.hideWidgetDetails
+    isFocused && width > convertRemToPx(theme.breakpoints.hideWidgetDetails)
 
   // Sync formatted value when the core value changes from the backend.
   // This Effect is justified because it synchronizes with an external system:
