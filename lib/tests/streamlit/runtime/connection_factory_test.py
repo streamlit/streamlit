@@ -18,6 +18,7 @@ import os
 import sys
 import threading
 import unittest
+from typing import Literal
 from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
@@ -214,7 +215,7 @@ type="snowpark"
 
         class BadScopeConnection(BaseConnection):
             @classmethod
-            def scope(cls) -> str:
+            def scope(cls) -> Literal["request"]:
                 return "request"
 
             def _connect(self, **kwargs):
@@ -230,7 +231,7 @@ type="snowpark"
 
         class SessionScopedConnection(BaseConnection):
             @classmethod
-            def scope(cls) -> str:
+            def scope(cls) -> Literal["session"]:
                 return "session"
 
             def _connect(self, **kwargs):
@@ -238,7 +239,7 @@ type="snowpark"
 
         class GloballyScopedConnection(BaseConnection):
             @classmethod
-            def scope(cls) -> str:
+            def scope(cls) -> Literal["global"]:
                 return "global"
 
             def _connect(self, **kwargs):
