@@ -1297,6 +1297,19 @@ export const getPrimaryFocusBoxShadow = (
 }
 
 /**
+ * Elevation shadow for popovers, toasts, dropdowns, and menus.
+ * Automatically selects light or dark variant based on theme background.
+ *
+ * Used by: Popover.tsx, Toast.tsx, TopNavSection.tsx
+ */
+export const getPopoverBoxShadow = (
+  theme: Pick<EmotionTheme, "colors">
+): string => {
+  const isLight = getLuminance(theme.colors.bgColor) > 0.5
+  return isLight ? shadows.popoverLight : shadows.popoverDark
+}
+
+/**
  * Convert a SCSS rem value to pixels.
  * @param scssValue: a string containing a value in rem units with or without the "rem" unit suffix
  * @returns pixel value of the given rem value

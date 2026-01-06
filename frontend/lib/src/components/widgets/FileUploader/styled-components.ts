@@ -16,7 +16,7 @@
 
 import styled, { CSSObject } from "@emotion/styled"
 
-import { convertRemToPx, EmotionTheme } from "~lib/theme"
+import { convertRemToPx, EmotionTheme, getFocusBoxShadow } from "~lib/theme"
 
 export interface StyledFileDropzone {
   isDisabled: boolean
@@ -38,7 +38,8 @@ export const StyledFileDropzoneSection = styled.section<StyledFileDropzone>(
       outline: "none",
     },
     ":focus-visible": {
-      boxShadow: `0 0 0 1px ${theme.colors.primary}`,
+      // Solid 1px outline (no blur) for dropzone focus
+      boxShadow: getFocusBoxShadow(theme.colors.primary, 0, "1px"),
     },
     cursor: isDisabled ? "not-allowed" : "pointer",
   })

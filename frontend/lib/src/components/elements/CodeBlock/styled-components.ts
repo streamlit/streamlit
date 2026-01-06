@@ -17,6 +17,8 @@
 import { CSSObject, Theme } from "@emotion/react"
 import styled from "@emotion/styled"
 
+import { getFocusBoxShadow } from "~lib/theme/utils"
+
 const codeLink: CSSObject = {
   // Streamline the style when inside anchors to avoid broken underline and more
   "a > &": {
@@ -274,6 +276,6 @@ export const StyledCopyButton = styled.button(({ theme }) => ({
 
   // Accessible focus ring when keyboard focusing the button
   "&:focus-visible": {
-    boxShadow: `0 0 0 0.2rem ${theme.colors.darkenedBgMix25}`,
+    boxShadow: getFocusBoxShadow(theme.colors.darkenedBgMix25),
   },
 }))
