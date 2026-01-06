@@ -414,6 +414,6 @@ app = st.App(
 | No breaking API changes | ✅ |
 | No new dependencies | ✅ will already added in Starlette migration |
 | Metrics collected | We need to track the st.App usage via a flag in the metrics. |
-| Any security/legal impact? | ✅ no new implicatations besides whats relevant for Starlette migration |
+| Any security/legal impact? | ✅ no new implications besides whats relevant for Starlette migration |
 | Any docs changes needed? | New section: "Advanced Deployment with st.App" |
 | Any other risks? | ✅ |
