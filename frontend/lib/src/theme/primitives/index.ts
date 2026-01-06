@@ -18,12 +18,13 @@ export { breakpoints } from "./breakpoints"
 export { colors, type PrimitiveColors } from "./colors"
 export { iconSizes } from "./iconSizes"
 export { radii } from "./radii"
+export { shadows } from "./shadows"
 export { sizes } from "./sizes"
 export { spacing } from "./spacing"
 export {
+  fonts,
   fontSizes,
   fontWeights,
-  fonts,
   genericFonts,
   lineHeights,
 } from "./typography"

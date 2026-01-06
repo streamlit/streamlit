@@ -47,6 +47,7 @@ import {
 
 import { createBaseUiTheme } from "./createBaseUiTheme"
 import { computeDerivedColors, createEmotionColors } from "./getColors"
+import { shadows } from "./primitives/shadows"
 import { fonts } from "./primitives/typography"
 import { DerivedColors, EmotionThemeColors } from "./types"
 
@@ -1283,8 +1284,8 @@ export const getFocusBoxShadow = (
    * The alpha value to use for the focus ring.
    * Matches color2k.transparentize: 0 = unchanged, 1 = fully transparent.
    */
-  alpha: number = 0.5,
-  width: string = "0.2rem"
+  alpha: number = shadows.focusRingAlpha,
+  width: string = shadows.focusRingWidth
 ): string => {
   return `0 0 0 ${width} ${transparentize(color, alpha)}`
 }
