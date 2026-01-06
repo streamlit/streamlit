@@ -45,17 +45,17 @@ class ClientContext(Protocol):
     @property
     def headers(self) -> Iterable[tuple[str, str]]:
         """All headers as (name, value) tuples. Headers may be repeated."""
-        raise NotImplementedError
+        ...
 
     @property
     def cookies(self) -> Mapping[str, str]:
         """Cookies as a name-to-value mapping."""
-        raise NotImplementedError
+        ...
 
     @property
     def remote_ip(self) -> str | None:
         """The remote IP address of the client, or None if unavailable."""
-        raise NotImplementedError
+        ...
 
 
 class SessionClient(Protocol):
