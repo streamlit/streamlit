@@ -61,10 +61,11 @@ class _AsyncAuthCache:
     expire OAuth state entries, preventing unbounded memory growth from
     abandoned auth flows.
 
-    Cache size is expected to be very small: typically one entry per concurrent
-    OAuth login flow (between clicking "Login" and completing OAuth callback).
-    Each entry is a few hundred bytes (state token + provider name), and entries
-    expire after 1 hour (Authlib's default) or upon successful callback.
+    Cache size is expected to be very small: one entry is created per login
+    attempt (not per user/session) and exists only during the OAuth flow—from
+    clicking "Login" until the OAuth callback completes (typically seconds).
+    Each entry is a few hundred bytes. Entries expire after 1 hour (Authlib's
+    default) or are consumed upon successful callback.
     """
 
     # Fallback TTL if authlib doesn't provide an expiration time.
