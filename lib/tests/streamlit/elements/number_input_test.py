@@ -613,10 +613,9 @@ def test_dynamic_min_value_resets_value_when_below_new_min():
     at = at.number_input[0].set_value(25).run()
     assert at.number_input[0].value == 25
 
-    # Toggle bounds - this updates session_state, but the widget is still
-    # rendered with old bounds in this run
+    # Toggle bounds - the click updates session_state["update_bounds"] to True
     at = at.button[0].click().run()
-    # Need another run for the new bounds to take effect
+    # AppTest requires an additional run to process the widget with the new bounds
     at = at.run()
     # Now min_value=50, so 25 is invalid and should reset to default (75)
     assert at.number_input[0].value == 75
@@ -652,10 +651,9 @@ def test_dynamic_max_value_resets_value_when_above_new_max():
     at = at.number_input[0].set_value(75).run()
     assert at.number_input[0].value == 75
 
-    # Toggle bounds - this updates session_state, but the widget is still
-    # rendered with old bounds in this run
+    # Toggle bounds - the click updates session_state["update_bounds"] to True
     at = at.button[0].click().run()
-    # Need another run for the new bounds to take effect
+    # AppTest requires an additional run to process the widget with the new bounds
     at = at.run()
     # Now max_value=50, so 75 is invalid and should reset to default (25)
     assert at.number_input[0].value == 25
@@ -687,9 +685,9 @@ def test_dynamic_bounds_preserves_valid_value():
     at = AppTest.from_function(script).run()
     assert at.number_input[0].value == 50
 
-    # Toggle bounds - this updates session_state
+    # Toggle bounds - the click updates session_state["update_bounds"] to True
     at = at.button[0].click().run()
-    # Need another run for the new bounds to take effect
+    # AppTest requires an additional run to process the widget with the new bounds
     at = at.run()
     # 50 is still valid (between 25 and 75), so it should be preserved
     assert at.number_input[0].value == 50
@@ -725,10 +723,9 @@ def test_dynamic_bounds_with_float_values():
     at = at.number_input[0].set_value(2.5).run()
     assert at.number_input[0].value == 2.5
 
-    # Toggle bounds - this updates session_state, but the widget is still
-    # rendered with old bounds in this run
+    # Toggle bounds - the click updates session_state["update_bounds"] to True
     at = at.button[0].click().run()
-    # Need another run for the new bounds to take effect
+    # AppTest requires an additional run to process the widget with the new bounds
     at = at.run()
     # Now min_value=5.0, so 2.5 is invalid and should reset to default (7.5)
     assert at.number_input[0].value == 7.5
