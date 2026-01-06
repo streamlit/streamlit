@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -73,6 +73,31 @@ if TYPE_CHECKING:
             date(2024, 1, 1),
             min_value=date(2022, 1, 1),
             max_value=date(2024, 12, 31),
+        ),
+        date,
+    )
+    assert_type(
+        date_input(
+            "foo",
+            date(2024, 1, 1),
+            min_value=date(2022, 1, 1),
+            max_value="today",
+        ),
+        date,
+    )
+    assert_type(
+        date_input(
+            "foo",
+            "today",
+            min_value="today",
+            max_value=date(2050, 12, 31),
+        ),
+        date,
+    )
+    assert_type(
+        date_input(
+            "foo",
+            max_value="today",
         ),
         date,
     )

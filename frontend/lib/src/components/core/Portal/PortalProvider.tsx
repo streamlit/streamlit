@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,16 +20,20 @@ import { StyledDataFrameOverlay } from "~lib/styled-components"
 import { PortalContext } from "./PortalContext"
 
 export const PortalProvider: FC<PropsWithChildren> = ({ children }) => {
-  const ref = useRef<HTMLDivElement>(null)
+  const overlayRef = useRef<HTMLDivElement>(null)
 
   const getRefElement = useCallback(() => {
-    return ref.current
+    return overlayRef.current
   }, [])
 
   return (
     <PortalContext.Provider value={getRefElement}>
       {children}
-      <StyledDataFrameOverlay data-testid="portal" id="portal" ref={ref} />
+      <StyledDataFrameOverlay
+        data-testid="portal"
+        id="portal"
+        ref={overlayRef}
+      />
     </PortalContext.Provider>
   )
 }

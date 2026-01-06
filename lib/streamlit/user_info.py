@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -468,6 +468,16 @@ class TokensProxy(Mapping[str, str]):
 
     def __len__(self) -> int:
         return len(self._tokens)
+
+    def to_dict(self) -> dict[str, str]:
+        """Return the token mapping as a standard dictionary.
+
+        Returns
+        -------
+        dict[str, str]
+            A dictionary mapping token names to token values.
+        """
+        return dict(self._tokens)
 
 
 class UserInfoProxy(Mapping[str, str | bool | TokensProxy | None]):
