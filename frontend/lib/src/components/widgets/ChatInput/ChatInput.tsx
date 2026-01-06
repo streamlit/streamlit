@@ -726,6 +726,7 @@ function ChatInput({
               data-testid="stChatInputSubmitButton"
               aria-label="Send message"
               primary
+              withVerticalOffset
             >
               <Icon content={ArrowUpward} size="lg" color="inherit" />
             </StyledSendIconButton>

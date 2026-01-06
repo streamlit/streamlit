@@ -117,10 +117,12 @@ interface StyledSendIconButtonProps {
   extended?: boolean
   hasError?: boolean
   primary?: boolean
+  /** Applies vertical offset for alignment in simple mode layout */
+  withVerticalOffset?: boolean
 }
 
 export const StyledSendIconButton = styled.button<StyledSendIconButtonProps>(
-  ({ theme, disabled, hasError, primary }) => {
+  ({ theme, disabled, hasError, primary, withVerticalOffset }) => {
     if (primary) {
       return {
         border: "none",
@@ -133,7 +135,9 @@ export const StyledSendIconButton = styled.button<StyledSendIconButtonProps>(
         justifyContent: "center",
         lineHeight: theme.lineHeights.none,
         margin: theme.spacing.none,
-        marginBottom: theme.sizes.chatInputButtonVerticalOffset,
+        marginBottom: withVerticalOffset
+          ? theme.sizes.chatInputButtonVerticalOffset
+          : undefined,
         padding: theme.spacing.xs,
         width: theme.sizes.chatInputPrimaryButtonSize,
         height: theme.sizes.chatInputPrimaryButtonSize,
