@@ -366,6 +366,9 @@ class Server:
             async def _wait_for_starlette_stop() -> None:
                 if self._starlette_server is not None:
                     await self._starlette_server.stopped.wait()
+                # Also wait for the runtime to complete its shutdown
+                # (session cleanup, etc.) to ensure graceful shutdown.
+                await self._runtime.stopped
 
             return _wait_for_starlette_stop()
         return self._runtime.stopped

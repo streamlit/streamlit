@@ -797,8 +797,8 @@ class ConfigTest(unittest.TestCase):
                 "server.showEmailPrompt",
                 "server.sslCertFile",
                 "server.sslKeyFile",
-                "server.useStarlette",
                 "server.trustedUserHeaders",
+                "server.useStarlette",
                 "ui.hideTopBar",
             ]
         )

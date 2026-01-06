@@ -45,8 +45,6 @@ _LOGGER: Final = get_logger(__name__)
 class RetriesExceededError(Exception):
     """Raised when the server cannot find an available port after max retries."""
 
-    pass
-
 
 def _server_port_is_manually_set() -> bool:
     """Check if the server port was explicitly configured by the user."""
@@ -254,12 +252,16 @@ class StarletteServer:
                     startup_complete.set()  # noqa: B023
                     raise
                 finally:
-                    if self._server is not None:
-                        await self._server.shutdown(sockets=[self._socket])
-                    if self._socket is not None:
-                        self._socket.close()
-                        self._socket = None
-                    self._stopped_event.set()
+                    try:
+                        if self._server is not None:
+                            await self._server.shutdown(sockets=[self._socket])
+                    finally:
+                        # Ensure socket cleanup and stopped event are always set,
+                        # even if shutdown raises an exception.
+                        if self._socket is not None:
+                            self._socket.close()
+                            self._socket = None
+                        self._stopped_event.set()
 
             self._server_task = asyncio.create_task(
                 serve_with_signal(), name="starlette-server"

@@ -19,10 +19,15 @@ from __future__ import annotations
 import asyncio
 import errno
 import socket
+from typing import TYPE_CHECKING
 from unittest import mock
 from unittest.mock import AsyncMock, patch
 
 import pytest
+
+if TYPE_CHECKING:
+    from collections.abc import Coroutine
+    from typing import Any
 
 from streamlit import config
 from streamlit.runtime import Runtime
@@ -177,7 +182,7 @@ class TestServerAddressIsUnixSocket:
 
 
 class TestStartStarletteServer:
-    """Integration tests for start_starlette_server function."""
+    """Integration tests for the Server._start_starlette() method."""
 
     def setUp(self) -> None:
         """Set up test fixtures."""
@@ -205,7 +210,7 @@ class TestStartStarletteServer:
         server._runtime._eventloop = self.loop
         return server
 
-    def _run_async(self, coro: asyncio.Future) -> None:
+    def _run_async(self, coro: Coroutine[Any, Any, None]) -> None:
         """Run an async coroutine in the test event loop."""
         self.loop.run_until_complete(coro)
 
@@ -382,7 +387,7 @@ class TestServerLifecycle:
         server._runtime._eventloop = self.loop
         return server
 
-    def _run_async(self, coro: asyncio.Future) -> None:
+    def _run_async(self, coro: Coroutine[Any, Any, None]) -> None:
         """Run an async coroutine in the test event loop."""
         self.loop.run_until_complete(coro)
 
