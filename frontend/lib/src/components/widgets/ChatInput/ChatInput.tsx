@@ -726,9 +726,6 @@ function ChatInput({
               data-testid="stChatInputSubmitButton"
               aria-label="Send message"
               primary
-              style={{
-                marginBottom: theme.sizes.chatInputButtonVerticalOffset,
-              }}
             >
               <Icon content={ArrowUpward} size="lg" color="inherit" />
             </StyledSendIconButton>

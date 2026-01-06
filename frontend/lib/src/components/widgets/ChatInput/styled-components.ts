@@ -133,6 +133,7 @@ export const StyledSendIconButton = styled.button<StyledSendIconButtonProps>(
         justifyContent: "center",
         lineHeight: theme.lineHeights.none,
         margin: theme.spacing.none,
+        marginBottom: theme.sizes.chatInputButtonVerticalOffset,
         padding: theme.spacing.xs,
         width: theme.sizes.chatInputPrimaryButtonSize,
         height: theme.sizes.chatInputPrimaryButtonSize,
