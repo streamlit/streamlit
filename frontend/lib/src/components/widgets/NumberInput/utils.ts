@@ -164,14 +164,24 @@ export const preciseStepArithmetic = (
   // Fast path for integer steps (decimalPlaces === 0)
   // Standard arithmetic is exact for integers, no scaling needed
   if (decimalPlaces === 0) {
-    return operation === "add" ? currentValue + step : currentValue - step
+    switch (operation) {
+      case "add":
+        return currentValue + step
+      case "subtract":
+        return currentValue - step
+    }
   }
 
   const scale = Math.pow(10, decimalPlaces)
+  const scaledCurrent = Math.round(currentValue * scale)
+  const scaledStep = Math.round(step * scale)
 
-  return operation === "add"
-    ? (Math.round(currentValue * scale) + Math.round(step * scale)) / scale
-    : (Math.round(currentValue * scale) - Math.round(step * scale)) / scale
+  switch (operation) {
+    case "add":
+      return (scaledCurrent + scaledStep) / scale
+    case "subtract":
+      return (scaledCurrent - scaledStep) / scale
+  }
 }
 
 export const getStep = ({
