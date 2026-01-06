@@ -8,8 +8,9 @@ status: Draft
 
 ## Summary
 
-Add a `persist` parameter to most widgets that enables binding the widget state to query
-params and persisting widget state if the widget is not shown or the page is switched.
+Add a `persist` parameter to most widgets that enables 1) binding the widget state to
+query params and 2) persisting widget state if the widget is not shown or the page is
+switched.
 
 ## Problem
 
@@ -18,10 +19,10 @@ There are two problems here:
 1. **Binding widget state to query params:** Devs often add the values of widgets
    to the URL's query parameters as an easy way to preserve or share the state of an app.
    It's possible to build this manually with `st.query_params` but it's
-   annoying due to Streamlit's rerun model. There are serveral community-maintained
+   annoying due to Streamlit's rerun model. There are several community-maintained
    packages for this, e.g. [streamlit-qs](https://github.com/Asaurus1/streamlit-qs).
 
-   Issues: #302
+   Issue: #302
 
 2. **Persisting widget state:** Today, a widget loses its state:
 
@@ -34,7 +35,7 @@ There are two problems here:
    Both behaviors were deliberately chosen when we introduced session state and
    multipage apps to avoid cluttering session state, to prevent old widget states from
    causing confusion, and to make pages act like isolated "mini-apps" (see e.g.
-   [this comment](https://github.com/streamlit/streamlit/issues/5813#issuecomment-1338155093))
+   [this comment](https://github.com/streamlit/streamlit/issues/5813#issuecomment-1338155093)).
 
    However, sometimes you want to persist widget state if the widget is not shown or the
    page is switched. Use cases include using the same widget on multiple pages, or
@@ -56,21 +57,21 @@ parameters to each widget:
 ```python
 st.widget(..., persist=None)  # no persistence, default
 st.widget(..., persist="query-params")  # binds widget state to query params
-st.widget(..., persist="session")  # persists widget state; or should this be `persist="state"`?
+st.widget(..., persist="session")  # persists widget state
 st.widget(..., persist=["query-params", "session"])  # both
 ```
 
-Pros:
+**Pros:**
 
 - Just one new parameter on each widget instead of two.
 - `persist` rhymes well with `st.cache_data` and `st.cache_resource`.
 - Can be nicely extended in the future, e.g. `persist="localstorage"`.
 
-Cons:
+**Cons:**
 
 - Concepts are related but not exactly the same.
 
-Open questions:
+**Open questions:**
 
 - Do we also want a way to persist across page switches, but not across the entire
   session/if the widget isn't rendered? I guess this would be a very niche case and most
