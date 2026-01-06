@@ -107,7 +107,7 @@ We've been also thinking in the past about doing this as a global config option,
 think that might be confusing. I can imagine that in many cases, you just have a few
 widgets that you want to persist, so having a global config option might interfere too
 much with other widgets. It also seems confusing to have "two operating modes" for
-widgets in Streamlit – makes it a lot harder to understand code then. 
+widgets in Streamlit – makes it a lot harder to understand code then.
 
 ### Details
 
