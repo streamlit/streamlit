@@ -175,8 +175,16 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
 
     @property
     def client_context(self) -> ClientContext:
-        """Return the client's connection context."""
-        return TornadoClientContext(self.request)
+        """Return the client's connection context.
+
+        The context is cached on first access to avoid repeatedly
+        constructing a new TornadoClientContext instance.
+        """
+        context = getattr(self, "_client_context", None)
+        if context is None:
+            context = TornadoClientContext(self.request)
+            self._client_context = context
+        return context
 
     def select_subprotocol(self, subprotocols: list[str]) -> str | None:
         """Return the first subprotocol in the given list.

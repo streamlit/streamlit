@@ -198,6 +198,37 @@ class BrowserWebSocketHandlerTest(ServerTestCase):
 
                 patched_stop_runtime.assert_called_once()
 
+    @tornado.testing.gen_test
+    async def test_client_context_returns_tornado_client_context(self):
+        """Test that client_context property returns a TornadoClientContext instance."""
+        with self._patch_app_session():
+            await self.server.start()
+            await self.ws_connect()
+
+            # Get our BrowserWebSocketHandler
+            session_info = self.server._runtime._session_mgr.list_active_sessions()[0]
+            websocket_handler: BrowserWebSocketHandler = session_info.client
+
+            client_context = websocket_handler.client_context
+
+            assert isinstance(client_context, TornadoClientContext)
+
+    @tornado.testing.gen_test
+    async def test_client_context_is_cached(self):
+        """Test that client_context property returns the same instance on repeated access."""
+        with self._patch_app_session():
+            await self.server.start()
+            await self.ws_connect()
+
+            # Get our BrowserWebSocketHandler
+            session_info = self.server._runtime._session_mgr.list_active_sessions()[0]
+            websocket_handler: BrowserWebSocketHandler = session_info.client
+
+            context1 = websocket_handler.client_context
+            context2 = websocket_handler.client_context
+
+            assert context1 is context2
+
 
 class TornadoClientContextTest(tornado.testing.AsyncTestCase):
     """Tests for TornadoClientContext class."""
