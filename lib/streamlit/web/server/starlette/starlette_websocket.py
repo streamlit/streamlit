@@ -28,6 +28,7 @@ from streamlit.logger import get_logger
 from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.runtime.runtime_util import serialize_forward_msg
 from streamlit.runtime.session_manager import (
+    ClientContext,
     SessionClient,
     SessionClientDisconnectedError,
 )
@@ -45,6 +46,8 @@ from streamlit.web.server.starlette.starlette_server_config import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable, Mapping
+
     from starlette.datastructures import Headers
     from starlette.routing import BaseRoute
     from starlette.websockets import WebSocket
@@ -234,6 +237,36 @@ def _get_signed_cookie_with_chunks(
     return get_cookie_with_chunks(get_single_cookie, cookie_name)
 
 
+class StarletteClientContext(ClientContext):
+    """Starlette-specific implementation of ClientContext.
+
+    Captures headers, cookies, and client info from the initial WebSocket handshake.
+    Values are cached at construction time since they represent the initial request
+    context and should not change during the connection lifetime.
+    """
+
+    def __init__(self, websocket: WebSocket) -> None:
+        self._headers: list[tuple[str, str]] = list(websocket.headers.items())
+        self._cookies: dict[str, str] = dict(websocket.cookies)
+        client = websocket.client
+        self._remote_ip: str | None = client.host if client else None
+
+    @property
+    def headers(self) -> Iterable[tuple[str, str]]:
+        """All headers as (name, value) tuples."""
+        return self._headers
+
+    @property
+    def cookies(self) -> Mapping[str, str]:
+        """Cookies as a name-to-value mapping."""
+        return self._cookies
+
+    @property
+    def remote_ip(self) -> str | None:
+        """The client's remote IP address."""
+        return self._remote_ip
+
+
 class StarletteSessionClient(SessionClient):
     """WebSocket client for Starlette that implements the SessionClient interface.
 
@@ -249,6 +282,7 @@ class StarletteSessionClient(SessionClient):
 
     def __init__(self, websocket: WebSocket) -> None:
         self._websocket = websocket
+        self._client_context = StarletteClientContext(websocket)
         # The queue bridges sync write_forward_msg calls to async WebSocket sends.
         # Overwhelmed clients get disconnected via SessionClientDisconnectedError.
         self._send_queue: asyncio.Queue[bytes] = asyncio.Queue(
@@ -309,6 +343,11 @@ class StarletteSessionClient(SessionClient):
         except asyncio.QueueFull as exc:  # pragma: no cover - defensive
             self._closed.set()
             raise SessionClientDisconnectedError from exc
+
+    @property
+    def client_context(self) -> ClientContext:
+        """Return the client's connection context."""
+        return self._client_context
 
     async def aclose(self) -> None:
         """Close the client and release resources.
