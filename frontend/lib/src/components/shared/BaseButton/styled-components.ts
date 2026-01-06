@@ -335,16 +335,20 @@ export const StyledSegmentedControlButton = styled(
       // Elevate the hovered button above adjacent buttons so its borders render on top.
       zIndex: theme.zIndices.priority,
     },
-    // When this button is hovered, hide the next button's left border to prevent
+    // When this button is hovered/focused, hide the next button's left border to prevent
     // double-layering of semi-transparent borders on the right edge.
-    "&:hover + button, &:focus-visible + button": {
-      borderLeftColor: theme.colors.transparent,
-    },
-    // When the next button is hovered, hide this button's right border to prevent
+    // Exclude case where next button is also hovered/focused to avoid border gap.
+    "&:hover + button:not(:hover):not(:focus-visible), &:focus-visible + button:not(:hover):not(:focus-visible)":
+      {
+        borderLeftColor: theme.colors.transparent,
+      },
+    // When the next button is hovered/focused, hide this button's right border to prevent
     // double-layering of semi-transparent borders on the left edge.
-    "&:has(+ button:hover), &:has(+ button:focus-visible)": {
-      borderRightColor: theme.colors.transparent,
-    },
+    // Exclude case where this button is also hovered/focused to avoid border gap.
+    "&:not(:hover):not(:focus-visible):has(+ button:hover), &:not(:hover):not(:focus-visible):has(+ button:focus-visible)":
+      {
+        borderRightColor: theme.colors.transparent,
+      },
   }
 })
 

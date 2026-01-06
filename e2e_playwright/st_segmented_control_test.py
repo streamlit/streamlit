@@ -299,5 +299,8 @@ def test_segmented_control_hover_border_consistency(
     # Hover over the middle button
     middle_button.hover()
 
+    # Ensure hover state is applied before taking the snapshot (z-index changes to 1 on hover)
+    expect(middle_button).to_have_css("z-index", "1")
+
     # Take a snapshot with the button in hover state to verify border consistency
     assert_snapshot(segmented_control, name="st_segmented_control-hover_state")
