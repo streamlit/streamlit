@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -66,10 +66,8 @@ const noHardcodedThemeValues = createRule<[], MessageIds>({
         node.properties.forEach(property => {
           if (
             property.type !== AST_NODE_TYPES.Property ||
-            !property.key ||
-            property.key.type !== AST_NODE_TYPES.Identifier ||
-            !property.value ||
-            property.value.type !== AST_NODE_TYPES.Literal ||
+            property.key?.type !== AST_NODE_TYPES.Identifier ||
+            property.value?.type !== AST_NODE_TYPES.Literal ||
             typeof property.value.raw !== "string"
           ) {
             return
