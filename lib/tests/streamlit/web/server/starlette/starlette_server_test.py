@@ -518,3 +518,59 @@ class TestServerLifecycle:
             from streamlit.web.server.starlette.starlette_server import StarletteServer
 
             assert isinstance(server1._starlette_server, StarletteServer)
+
+    def test_raises_on_startup_failure(self) -> None:
+        """Test that RuntimeError is raised when uvicorn startup fails."""
+        server = self._create_server()
+        mock_socket = mock.MagicMock(spec=socket.socket)
+
+        with (
+            patch(
+                "streamlit.web.server.starlette.starlette_server._bind_socket",
+                return_value=mock_socket,
+            ),
+            patch("uvicorn.Server") as uvicorn_server_cls,
+        ):
+            uvicorn_instance = mock.MagicMock()
+            uvicorn_instance.startup = AsyncMock()
+            uvicorn_instance.shutdown = AsyncMock()
+            # Simulate startup failure by setting should_exit to True after startup
+            uvicorn_instance.should_exit = True
+            uvicorn_server_cls.return_value = uvicorn_instance
+
+            with pytest.raises(RuntimeError, match="Server startup failed"):
+                self._run_async(server._start_starlette())
+
+    def test_stopped_event_set_after_main_loop_completes(self) -> None:
+        """Test that stopped event is set after the server main loop completes."""
+        from streamlit.web.server.starlette.starlette_server import StarletteServer
+
+        server = self._create_server()
+        mock_socket = mock.MagicMock(spec=socket.socket)
+
+        with (
+            patch(
+                "streamlit.web.server.starlette.starlette_server._bind_socket",
+                return_value=mock_socket,
+            ),
+            patch("uvicorn.Server") as uvicorn_server_cls,
+        ):
+            uvicorn_instance = mock.MagicMock()
+            uvicorn_instance.startup = AsyncMock()
+            uvicorn_instance.shutdown = AsyncMock()
+            uvicorn_instance.should_exit = False
+
+            # Make main_loop complete immediately
+            uvicorn_instance.main_loop = AsyncMock(return_value=None)
+            uvicorn_server_cls.return_value = uvicorn_instance
+
+            self._run_async(server._start_starlette())
+
+            starlette_server: StarletteServer = server._starlette_server  # type: ignore
+            assert starlette_server is not None
+
+            # Give the background task time to complete
+            self._run_async(asyncio.sleep(0.1))
+
+            # The stopped event should be set after main_loop completes
+            assert starlette_server.stopped.is_set()

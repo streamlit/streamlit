@@ -75,6 +75,12 @@ def _get_websocket_settings() -> tuple[int, int]:
 def _bind_socket(address: str, port: int, backlog: int) -> socket.socket:
     """Bind a non-blocking TCP socket to the given address and port.
 
+    We pre-bind the socket ourselves (rather than letting uvicorn do it) to:
+
+    1. Detect port conflicts before creating the uvicorn.Server instance
+    2. Enable port retry logic when the configured port is already in use
+    3. Have explicit control over socket options (SO_REUSEADDR, IPV6_V6ONLY)
+
     Parameters
     ----------
     address

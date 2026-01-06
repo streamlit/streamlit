@@ -133,9 +133,10 @@ MAX_PORT_SEARCH_RETRIES: Final = 100
 # to an unix socket.
 UNIX_SOCKET_PREFIX: Final = "unix://"
 
-# Please make sure to also update frontend/app/vite.config.ts
-# dev server proxy when changing or updating these endpoints as well
-# as the endpoints in frontend/connection/src/DefaultStreamlitEndpoints
+# Server endpoint paths for the Streamlit API.
+# IMPORTANT: Keep these in sync with:
+# - frontend/app/vite.config.ts (dev server proxy configuration)
+# - frontend/connection/src/DefaultStreamlitEndpoints.ts
 MEDIA_ENDPOINT: Final = "/media"
 COMPONENT_ENDPOINT: Final = "/component"
 BIDI_COMPONENT_ENDPOINT: Final = "/_stcore/bidi-components"

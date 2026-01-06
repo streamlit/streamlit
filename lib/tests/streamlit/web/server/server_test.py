@@ -19,6 +19,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import errno
+import logging
 import os
 import re
 import subprocess
@@ -386,6 +387,51 @@ class ServerTest(ServerTestCase):
 
         # Reset config
         config._set_option("server.websocketPingInterval", None, "test")
+
+
+class InitializeMimetypesTest(unittest.TestCase):
+    """Tests for Server.initialize_mimetypes()."""
+
+    def test_registers_common_mimetypes(self) -> None:
+        """Test that common MIME types are registered correctly."""
+        import mimetypes
+
+        Server.initialize_mimetypes()
+
+        assert mimetypes.guess_type("test.html")[0] == "text/html"
+        assert mimetypes.guess_type("test.js")[0] == "application/javascript"
+        assert mimetypes.guess_type("test.mjs")[0] == "application/javascript"
+        assert mimetypes.guess_type("test.css")[0] == "text/css"
+        assert mimetypes.guess_type("test.webp")[0] == "image/webp"
+
+
+class SetTornadoLogLevelsTest(unittest.TestCase):
+    """Tests for _set_tornado_log_levels()."""
+
+    @patch_config_options({"global.developmentMode": True})
+    def test_dev_mode_does_not_suppress_logs(self) -> None:
+        """Test that Tornado log levels are not suppressed in development mode."""
+        from streamlit.web.server.server import _set_tornado_log_levels
+
+        # Set to a known level before testing
+        logging.getLogger("tornado.access").setLevel(logging.DEBUG)
+
+        _set_tornado_log_levels()
+
+        # In dev mode, log level should remain unchanged (not set to ERROR)
+        assert logging.getLogger("tornado.access").level != logging.ERROR
+
+    @patch_config_options({"global.developmentMode": False})
+    def test_non_dev_mode_suppresses_logs(self) -> None:
+        """Test that Tornado log levels are suppressed in non-development mode."""
+        from streamlit.web.server.server import _set_tornado_log_levels
+
+        _set_tornado_log_levels()
+
+        # In non-dev mode, log levels should be set to ERROR
+        assert logging.getLogger("tornado.access").level == logging.ERROR
+        assert logging.getLogger("tornado.application").level == logging.ERROR
+        assert logging.getLogger("tornado.general").level == logging.ERROR
 
 
 class PortRotateAHundredTest(unittest.TestCase):
