@@ -114,6 +114,7 @@ class TestGetWebsocketSettings:
     @patch_config_options({"server.websocketPingInterval": None})
     def test_default_settings(self) -> None:
         """Test that default settings are returned when not configured."""
+
         interval, timeout = _get_websocket_settings()
 
         assert interval == 30
@@ -122,6 +123,7 @@ class TestGetWebsocketSettings:
     @patch_config_options({"server.websocketPingInterval": 45})
     def test_custom_interval(self) -> None:
         """Test that custom interval is respected."""
+
         interval, timeout = _get_websocket_settings()
 
         assert interval == 45
@@ -130,6 +132,7 @@ class TestGetWebsocketSettings:
     @patch_config_options({"server.websocketPingInterval": 10})
     def test_low_interval_accepted(self) -> None:
         """Test that low interval values are accepted (no Tornado constraints)."""
+
         interval, timeout = _get_websocket_settings()
 
         assert interval == 10
@@ -141,6 +144,7 @@ class TestServerPortIsManuallySet:
 
     def test_returns_true_when_manually_set(self) -> None:
         """Test that True is returned when port is manually configured."""
+
         with patch("streamlit.config.is_manually_set", return_value=True):
             result = _server_port_is_manually_set()
 
@@ -148,6 +152,7 @@ class TestServerPortIsManuallySet:
 
     def test_returns_false_when_default(self) -> None:
         """Test that False is returned when port is not manually configured."""
+
         with patch("streamlit.config.is_manually_set", return_value=False):
             result = _server_port_is_manually_set()
 
@@ -160,6 +165,7 @@ class TestServerAddressIsUnixSocket:
     @patch_config_options({"server.address": "unix:///tmp/streamlit.sock"})
     def test_returns_true_for_unix_socket(self) -> None:
         """Test that True is returned for Unix socket address."""
+
         result = _server_address_is_unix_socket()
 
         assert result is True
@@ -167,6 +173,7 @@ class TestServerAddressIsUnixSocket:
     @patch_config_options({"server.address": "127.0.0.1"})
     def test_returns_false_for_ip_address(self) -> None:
         """Test that False is returned for IP address."""
+
         result = _server_address_is_unix_socket()
 
         assert result is False
@@ -174,6 +181,7 @@ class TestServerAddressIsUnixSocket:
     @patch_config_options({"server.address": None})
     def test_returns_false_for_none(self) -> None:
         """Test that False is returned when address is None."""
+
         result = _server_address_is_unix_socket()
 
         assert result is False
@@ -181,6 +189,7 @@ class TestServerAddressIsUnixSocket:
     @patch_config_options({"server.address": ""})
     def test_returns_false_for_empty_string(self) -> None:
         """Test that False is returned for empty string."""
+
         result = _server_address_is_unix_socket()
 
         assert result is False
@@ -205,22 +214,26 @@ class TestStartStarletteServer:
     @pytest.fixture(autouse=True)
     def setup_and_teardown(self) -> None:
         """Pytest fixture for setup and teardown."""
+
         self.setUp()
         yield
         self.tearDown()
 
     def _create_server(self) -> Server:
         """Create a Server instance for testing."""
+
         server = Server("mock/script/path", is_hello=False)
         server._runtime._eventloop = self.loop
         return server
 
     def _run_async(self, coro: Coroutine[Any, Any, None]) -> None:
         """Run an async coroutine in the test event loop."""
+
         self.loop.run_until_complete(coro)
 
     def test_retries_on_port_in_use(self) -> None:
         """Test that server retries the next port when the first is busy."""
+
         server = self._create_server()
         mock_socket = mock.MagicMock(spec=socket.socket)
 
@@ -250,6 +263,7 @@ class TestStartStarletteServer:
 
     def test_honors_manual_port_setting(self) -> None:
         """Test that server exits when manual port is busy."""
+
         server = self._create_server()
 
         with (
@@ -267,6 +281,7 @@ class TestStartStarletteServer:
 
     def test_raises_on_max_retries_exceeded(self) -> None:
         """Test that RetriesExceededError is raised after max retries."""
+
         server = self._create_server()
 
         with (
@@ -284,6 +299,7 @@ class TestStartStarletteServer:
 
     def test_raises_on_unix_socket(self) -> None:
         """Test that RuntimeError is raised for Unix socket addresses."""
+
         server = self._create_server()
 
         with patch_config_options({"server.address": "unix:///tmp/streamlit.sock"}):
@@ -292,6 +308,7 @@ class TestStartStarletteServer:
 
     def test_propagates_non_address_in_use_errors(self) -> None:
         """Test that non-EADDRINUSE errors are propagated immediately."""
+
         server = self._create_server()
 
         with patch(
@@ -305,6 +322,7 @@ class TestStartStarletteServer:
 
     def test_uses_default_address_when_not_configured(self) -> None:
         """Test that 0.0.0.0 is used when address is not configured."""
+
         server = self._create_server()
         mock_socket = mock.MagicMock(spec=socket.socket)
 
@@ -331,6 +349,7 @@ class TestStartStarletteServer:
 
     def test_uses_configured_address(self) -> None:
         """Test that configured address is used."""
+
         server = self._create_server()
         mock_socket = mock.MagicMock(spec=socket.socket)
 
