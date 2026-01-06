@@ -507,7 +507,7 @@ describe("Metric element", () => {
             mark: expect.objectContaining({
               type: "line",
               strokeCap: "round",
-              strokeWidth: 2,
+              strokeWidth: mockTheme.emotion.sizes.metricStrokeWidth,
             }),
           }),
         ]),
@@ -556,7 +556,7 @@ describe("Metric element", () => {
               type: "area",
               opacity: 1,
               line: expect.objectContaining({
-                strokeWidth: 2,
+                strokeWidth: mockTheme.emotion.sizes.metricStrokeWidth,
                 strokeCap: "round",
               }),
             }),
