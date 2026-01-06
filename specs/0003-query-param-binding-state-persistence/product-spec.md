@@ -103,6 +103,12 @@ Probably needs a parameter similar to above:
 - `persist=True|False`
 - `scope="page"|"app"|"session"` (where `"app"` would mean across page switches)
 
+We've been also thinking in the past about doing this as a global config option, but I
+think that might be confusing. I can imagine that in many cases, you just have a few
+widgets that you want to persist, so having a global config option might interfere too
+much with other widgets. It also seems confusing to have "two operating modes" for
+widgets in Streamlit – makes it a lot harder to understand code then. 
+
 ### Details
 
 A lot of details are already covered in the [tech spec](https://www.notion.so/snowflake-corp/Widget-Binding-Tech-Spec-v1-2df7170bb416807b895feae457c9a790)
