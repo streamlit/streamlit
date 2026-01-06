@@ -16,13 +16,13 @@
 
 import { createContext } from "react"
 
-import { ComponentState, StreamlitTheme } from "@streamlit/component-v2-lib"
+import { FrontendState, StreamlitTheme } from "@streamlit/component-v2-lib"
 
 import { ComponentRegistry } from "~lib/components/widgets/CustomComponent"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 export type BidiComponentContextShape<
-  TComponentState extends ComponentState = ComponentState,
+  TComponentState extends FrontendState = FrontendState,
   DataShape = unknown,
 > = {
   componentName: string
