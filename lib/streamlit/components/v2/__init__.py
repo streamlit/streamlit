@@ -202,8 +202,9 @@ def component(
 ) -> BidiComponentCallable:
     '''Register an ``st.components.v2`` component and return a callable to mount it.
 
-    A component must have HTML, JavaScript, or both. If you want a component
-    with only CSS, use ``st.html`` instead.
+    Components may provide any combination of HTML, CSS, and JavaScript. If none
+    are provided, the component will render as an empty element without raising
+    an error.
 
     If your component is defined in an installed package, you can declare an
     asset directory (``asset_dir``) through ``pyproject.toml`` files in the
@@ -250,9 +251,6 @@ def component(
         element and populate it via JavaScript. Alternatively, you can append
         a new element to the parent. For more information, see Example 2.
 
-        ``html`` and ``js`` can't both be ``None``. At least one of them must
-        be provided.
-
     css : str or None
         Inline CSS. This can be one of the following strings:
 
@@ -266,9 +264,6 @@ def component(
         - Raw JavaScript (without a ``<script>`` block).
         - A path or glob to a JS file, relative to the component's
           asset directory.
-
-        ``html`` and ``js`` can't both be ``None``. At least one of them must
-        be provided.
 
     Returns
     -------

@@ -13,7 +13,11 @@
 # limitations under the License.
 from playwright.sync_api import Locator, Page, expect
 
-from e2e_playwright.shared.app_utils import click_form_button
+from e2e_playwright.shared.app_utils import (
+    click_form_button,
+    expect_no_exception,
+    get_element_by_key,
+)
 
 
 def section(app: Page, heading_name: str) -> Locator:
@@ -23,6 +27,15 @@ def section(app: Page, heading_name: str) -> Locator:
     """
     heading = app.get_by_role("heading", name=heading_name, exact=True)
     return app.locator("[data-testid='stLayoutWrapper']").filter(has=heading).first
+
+
+def test_empty_content_does_not_crash(app: Page) -> None:
+    """CCv2 should allow empty component definitions (no js/html/css) without errors."""
+    empty_container = get_element_by_key(app, "empty_component_container")
+    expect(empty_container.get_by_role("heading", name="Empty content")).to_be_visible()
+    expect_no_exception(app)
+    expect(empty_container.get_by_test_id("stBidiComponentRegular")).to_have_count(1)
+    expect(empty_container.get_by_text("After empty component")).to_be_visible()
 
 
 def test_stateful_interactions(app: Page) -> None:

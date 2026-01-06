@@ -30,6 +30,17 @@ st.header("Custom Components v2 - Basics")
 
 
 # ---------------------------------------------------------------------------
+# Empty content: component with no HTML/CSS/JS should not error
+# ---------------------------------------------------------------------------
+_EMPTY_CMP = st.components.v2.component("bidi_empty_content")
+
+with st.container(key="empty_component_container"):
+    st.subheader("Empty content")
+    _EMPTY_CMP(isolate_styles=False, key="empty_component")
+    st.write("After empty component")
+
+
+# ---------------------------------------------------------------------------
 # Shared: simple stateful component (range + text) used in multiple sections
 # ---------------------------------------------------------------------------
 _STATEFUL_JS = """

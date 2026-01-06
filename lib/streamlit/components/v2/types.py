@@ -22,6 +22,10 @@ authoring wrappers/utilities around `st.components.v2.component`.
 The goal is to keep the public argument surface documented in one place and
 reusable across both the user-facing factory in `components/v2/__init__.py`
 and the internal implementation in `components/v2/bidi_component/main.py`.
+
+Component definitions may provide any combination of HTML, CSS, and
+JavaScript. If none are supplied, the component renders as an empty
+placeholder without raising an error.
 """
 
 from __future__ import annotations

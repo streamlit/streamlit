@@ -476,18 +476,6 @@ class BidiComponentInvalidIdError(LocalizableStreamlitException):
         )
 
 
-class BidiComponentMissingContentError(LocalizableStreamlitException):
-    """Exception raised when a component is missing required content."""
-
-    def __init__(self, component_name: str) -> None:
-        super().__init__(
-            "Component `{component_name}` must have either JavaScript content "
-            "(`js_content` or `js_url`) or HTML content (`html_content`), or both. "
-            "Please ensure the component definition includes at least one of these.",
-            component_name=component_name,
-        )
-
-
 class BidiComponentInvalidCallbackNameError(LocalizableStreamlitException):
     """Exception raised when a callback with an invalid name is provided."""
 
