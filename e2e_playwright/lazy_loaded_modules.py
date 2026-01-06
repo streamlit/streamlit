@@ -33,6 +33,7 @@ lazy_loaded_modules = [
     # "PIL",
     "pyarrow",
     "pydeck",
+    "rich",
     "tenacity",
     # toml is automatically loaded if there is a secret.toml, config.toml or
     # a local credentials.toml file. So, we cannot test this here.

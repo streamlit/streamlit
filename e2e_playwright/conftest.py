@@ -1143,8 +1143,6 @@ def start_app_server(
         "none",
         "--server.enableStaticServing",
         "true",
-        "--server.useStarlette",
-        "true",
         "--server.scriptHealthCheckEnabled",
         "true",
     ]
