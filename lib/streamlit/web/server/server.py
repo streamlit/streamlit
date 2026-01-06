@@ -134,6 +134,7 @@ MAX_PORT_SEARCH_RETRIES: Final = 100
 UNIX_SOCKET_PREFIX: Final = "unix://"
 
 # Server endpoint paths for the Streamlit API.
+
 # IMPORTANT: Keep these in sync with:
 # - frontend/app/vite.config.ts (dev server proxy configuration)
 # - frontend/connection/src/DefaultStreamlitEndpoints.ts

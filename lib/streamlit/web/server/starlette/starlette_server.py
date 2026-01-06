@@ -85,8 +85,10 @@ def _bind_socket(address: str, port: int, backlog: int) -> socket.socket:
     ----------
     address
         The IP address to bind to (e.g., "127.0.0.1" or "::").
+
     port
         The port number to bind to.
+
     backlog
         The maximum number of queued connections.
 

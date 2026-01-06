@@ -47,6 +47,7 @@ class TestBindSocket:
 
     def test_creates_ipv4_socket(self) -> None:
         """Test that IPv4 address creates AF_INET socket."""
+
         mock_sock = mock.MagicMock()
         with patch("socket.socket", return_value=mock_sock) as mock_socket_cls:
             result = _bind_socket("127.0.0.1", 8501, 100)
@@ -63,6 +64,7 @@ class TestBindSocket:
 
     def test_creates_ipv6_socket(self) -> None:
         """Test that IPv6 address creates AF_INET6 socket."""
+
         mock_sock = mock.MagicMock()
         with patch("socket.socket", return_value=mock_sock) as mock_socket_cls:
             result = _bind_socket("::", 8501, 100)
@@ -76,6 +78,7 @@ class TestBindSocket:
 
     def test_detects_ipv6_by_colon(self) -> None:
         """Test that addresses with colons are treated as IPv6."""
+
         mock_sock = mock.MagicMock()
         with patch("socket.socket", return_value=mock_sock) as mock_socket_cls:
             _bind_socket("::1", 8501, 100)
@@ -84,6 +87,7 @@ class TestBindSocket:
 
     def test_closes_socket_on_bind_failure(self) -> None:
         """Test that socket is closed when bind raises an exception."""
+
         mock_sock = mock.MagicMock()
         mock_sock.bind.side_effect = OSError(errno.EADDRINUSE, "Address already in use")
         with patch("socket.socket", return_value=mock_sock):
@@ -94,6 +98,7 @@ class TestBindSocket:
 
     def test_closes_socket_on_listen_failure(self) -> None:
         """Test that socket is closed when listen raises an exception."""
+
         mock_sock = mock.MagicMock()
         mock_sock.listen.side_effect = OSError("Listen failed")
         with patch("socket.socket", return_value=mock_sock):
