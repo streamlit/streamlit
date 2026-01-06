@@ -21,12 +21,9 @@ There are two problems here:
    annoying due to Streamlit's rerun model. There are serveral community-maintained
    packages for this, e.g. [streamlit-qs](https://github.com/Asaurus1/streamlit-qs).
 
-   Issues:
+   Issues: #302
 
-   - #302
-   - #9279
-
-2. **Persisting widget state:** Today, a widget loses its state
+2. **Persisting widget state:** Today, a widget loses its state:
 
    - if it is not rendered (even if that's temporary and even if `key` is set), and
    - when the page is switched (even if the new page contains the same widget with
