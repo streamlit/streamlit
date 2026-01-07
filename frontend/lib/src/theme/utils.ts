@@ -46,13 +46,8 @@ import {
 } from "~lib/util/utils"
 
 import { createBaseUiTheme } from "./createBaseUiTheme"
-import lightElevationShadows from "./emotionBaseTheme/elevationShadows"
-import darkElevationShadows from "./emotionDarkTheme/elevationShadows"
-import {
-  computeDerivedColors,
-  createEmotionColors,
-  createShadows,
-} from "./getColors"
+import { computeDerivedColors, createEmotionColors } from "./getColors"
+import { createShadows } from "./getShadows"
 import { fonts } from "./primitives/typography"
 import { DerivedColors, EmotionThemeColors } from "./types"
 
@@ -1000,14 +995,8 @@ export const createEmotionTheme = (
     fontsOverride.headingFont = parseFont(bodyFont, fonts.sansSerif)
   }
 
-  // Determine elevation shadows based on background color luminance
-  const isLightBg = getLuminance(conditionalOverrides.colors.bgColor) > 0.5
-  const elevationShadows = isLightBg
-    ? lightElevationShadows
-    : darkElevationShadows
-
-  // Create shadows using elevation shadows + derived focus ring shadows from colors
-  const shadows = createShadows(elevationShadows, conditionalOverrides.colors)
+  // Create shadows - auto-determines light/dark based on bgColor luminance
+  const shadows = createShadows(conditionalOverrides.colors)
 
   return {
     ...baseThemeConfig.emotion,

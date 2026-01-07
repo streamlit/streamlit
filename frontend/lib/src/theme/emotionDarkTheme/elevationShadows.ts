@@ -23,6 +23,7 @@ const elevationShadows = {
   popover: "0px 4px 16px rgba(0, 0, 0, 0.7)",
   toolbar: "1px 2px 8px rgba(0, 0, 0, 0.2)",
   sidebar: "-2rem 0 2rem 2rem rgba(0, 0, 0, 0.4)",
+  none: "none",
 }
 
 export default elevationShadows

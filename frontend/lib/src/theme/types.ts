@@ -24,7 +24,7 @@ import {
   OptionalThemeColors,
   RequiredThemeColors,
 } from "./emotionBaseTheme/themeColors"
-import { ThemeShadows } from "./getColors"
+import { ThemeShadows } from "./getShadows"
 import { PrimitiveColors } from "./primitives"
 
 /**
