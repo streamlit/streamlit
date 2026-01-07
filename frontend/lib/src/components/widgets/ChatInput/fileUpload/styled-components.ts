@@ -108,7 +108,8 @@ export const StyledChatUploadedFileIconContainer =
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
-      borderRadius: theme.radii.md,
+      // TEMP: Using 50px to force snapshot failure, will revert to theme.radii.default
+      borderRadius: "50px",
       width: theme.sizes.chatInputFileIconSize,
       height: theme.sizes.chatInputFileIconSize,
       flexShrink: 0,
