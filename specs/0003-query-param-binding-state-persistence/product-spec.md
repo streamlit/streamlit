@@ -91,7 +91,40 @@ it's persisted across the page as well.
   keeping the widget state around, maybe it makes sense to also keep the query params,
   so you can share your app with the same state?
 
-### Option 2: Two separate APIs
+### Option 2: `st.query_params.bind` but make it work nicely with widgets
+
+OK new idea! Use `st.query_params.bind("session_state_key")` to bind query
+params to arbitrary values in session state, no matter if widget state or not. What
+bothered me about this in the past was that you have to call the `bind` function
+for every widget, which seems verbose:
+
+```python
+st.widget(..., key="foo")
+st.query_params.bind("foo")
+```
+
+But what if we made `st.query_params.bind` return the key it gets passed as a string,
+then you could just do:
+
+```python
+st.widget(..., key=st.query_params.bind("foo"))
+```
+
+Only need to figure out how the order works then (because here it would bind the key
+before it exists). Maybe we do it in a way where if you call `st.query_params.bind`,
+it will bind every session state key created during that run, no matter if it already
+exists or not.
+
+And this would also allow us to add more parameters to `st.query_params.bind`, e.g.:
+
+- `query_key: str` to use a different key in the query param than in session state/the
+  widget key.
+- `format_func: Callable[[Any], str]` to format the value before it's added to the
+  query param. Should obviously aim to do most of the conversion ourselves, but just in
+  case devs want something custom (e.g. because they don't want to expose
+  the session state value itself). 
+
+### Option 3: Two separate APIs
 
 #### Query params binding
 
