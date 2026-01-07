@@ -195,6 +195,120 @@ class TestServerAddressIsUnixSocket:
         assert result is False
 
 
+class TestSslConfiguration:
+    """Tests for SSL configuration validation in StarletteServer."""
+
+    def setUp(self) -> None:
+        """Set up test fixtures."""
+        Runtime._instance = None
+        self.original_port = config.get_option("server.port")
+        config.set_option("server.port", 8650)
+        self.loop = asyncio.new_event_loop()
+
+    def tearDown(self) -> None:
+        """Tear down test fixtures."""
+        Runtime._instance = None
+        config.set_option("server.port", self.original_port)
+        self.loop.close()
+
+    @pytest.fixture(autouse=True)
+    def setup_and_teardown(self) -> None:
+        """Pytest fixture for setup and teardown."""
+        self.setUp()
+        yield
+        self.tearDown()
+
+    def _create_server(self) -> Server:
+        """Create a Server instance for testing."""
+        server = Server("mock/script/path", is_hello=False)
+        server._runtime._eventloop = self.loop
+        return server
+
+    def _run_async(self, coro: Coroutine[Any, Any, None]) -> None:
+        """Run an async coroutine in the test event loop."""
+        self.loop.run_until_complete(coro)
+
+    @patch_config_options(
+        {"server.sslCertFile": "/tmp/cert.pem", "server.sslKeyFile": None}
+    )
+    def test_exits_when_only_cert_file_set(self) -> None:
+        """Test that server exits when only sslCertFile is set without sslKeyFile."""
+        server = self._create_server()
+
+        with pytest.raises(SystemExit):
+            self._run_async(server._start_starlette())
+
+    @patch_config_options(
+        {"server.sslCertFile": None, "server.sslKeyFile": "/tmp/key.pem"}
+    )
+    def test_exits_when_only_key_file_set(self) -> None:
+        """Test that server exits when only sslKeyFile is set without sslCertFile."""
+        server = self._create_server()
+
+        with pytest.raises(SystemExit):
+            self._run_async(server._start_starlette())
+
+    @patch_config_options({"server.sslCertFile": None, "server.sslKeyFile": None})
+    def test_no_ssl_when_neither_option_set(self) -> None:
+        """Test that server starts without SSL when neither option is set."""
+        server = self._create_server()
+        mock_socket = mock.MagicMock(spec=socket.socket)
+
+        with (
+            patch(
+                "streamlit.web.server.starlette.starlette_server._bind_socket",
+                return_value=mock_socket,
+            ),
+            patch("uvicorn.Config") as uvicorn_config_cls,
+            patch("uvicorn.Server") as uvicorn_server_cls,
+        ):
+            uvicorn_instance = mock.MagicMock()
+            uvicorn_instance.startup = AsyncMock()
+            uvicorn_instance.main_loop = AsyncMock()
+            uvicorn_instance.shutdown = AsyncMock()
+            uvicorn_instance.should_exit = False
+            uvicorn_server_cls.return_value = uvicorn_instance
+
+            self._run_async(server._start_starlette())
+
+            # Verify uvicorn.Config was called with ssl_certfile=None, ssl_keyfile=None
+            uvicorn_config_cls.assert_called_once()
+            call_kwargs = uvicorn_config_cls.call_args[1]
+            assert call_kwargs["ssl_certfile"] is None
+            assert call_kwargs["ssl_keyfile"] is None
+
+    @patch_config_options(
+        {"server.sslCertFile": "/tmp/cert.pem", "server.sslKeyFile": "/tmp/key.pem"}
+    )
+    def test_ssl_options_passed_to_uvicorn(self) -> None:
+        """Test that SSL options are passed to uvicorn when both are set."""
+        server = self._create_server()
+        mock_socket = mock.MagicMock(spec=socket.socket)
+
+        with (
+            patch(
+                "streamlit.web.server.starlette.starlette_server._bind_socket",
+                return_value=mock_socket,
+            ),
+            patch("uvicorn.Config") as uvicorn_config_cls,
+            patch("uvicorn.Server") as uvicorn_server_cls,
+        ):
+            uvicorn_instance = mock.MagicMock()
+            uvicorn_instance.startup = AsyncMock()
+            uvicorn_instance.main_loop = AsyncMock()
+            uvicorn_instance.shutdown = AsyncMock()
+            uvicorn_instance.should_exit = False
+            uvicorn_server_cls.return_value = uvicorn_instance
+
+            self._run_async(server._start_starlette())
+
+            # Verify uvicorn.Config was called with the correct SSL options
+            uvicorn_config_cls.assert_called_once()
+            call_kwargs = uvicorn_config_cls.call_args[1]
+            assert call_kwargs["ssl_certfile"] == "/tmp/cert.pem"
+            assert call_kwargs["ssl_keyfile"] == "/tmp/key.pem"
+
+
 class TestStartStarletteServer:
     """Integration tests for the Server._start_starlette() method."""
 
