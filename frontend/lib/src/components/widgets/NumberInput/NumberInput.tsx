@@ -62,6 +62,7 @@ import {
   getDefaultStateFromProto,
   getStateFromWidgetMgr,
   getStep,
+  preciseStepArithmetic,
   updateWidgetMgrState,
 } from "./utils"
 
@@ -269,14 +270,22 @@ const NumberInput: React.FC<Props> = ({
 
   const increment = useCallback(() => {
     if (canInc) {
-      const newValue = (currentNumericValue ?? min) + step
+      const newValue = preciseStepArithmetic(
+        currentNumericValue ?? min,
+        step,
+        "add"
+      )
       commitValue({ value: newValue, fromUi: true })
     }
   }, [currentNumericValue, min, step, canInc, commitValue])
 
   const decrement = useCallback(() => {
     if (canDec) {
-      const newValue = (currentNumericValue ?? max) - step
+      const newValue = preciseStepArithmetic(
+        currentNumericValue ?? max,
+        step,
+        "subtract"
+      )
       commitValue({ value: newValue, fromUi: true })
     }
   }, [currentNumericValue, max, step, canDec, commitValue])
