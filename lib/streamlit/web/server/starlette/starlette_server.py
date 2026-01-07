@@ -202,16 +202,18 @@ class StarletteServer:
                 )
             except OSError as exc:
                 last_exception = exc
-                if exc.errno == errno.EADDRINUSE:
+                # EADDRINUSE: port in use by another process
+                # EACCES: port reserved by system (common on Windows, see #13521)
+                if exc.errno in (errno.EADDRINUSE, errno.EACCES):
                     if _server_port_is_manually_set():
-                        _LOGGER.error("Port %s is already in use", port)  # noqa: TRY400
+                        _LOGGER.error("Port %s is not available", port)  # noqa: TRY400
                         sys.exit(1)
                     _LOGGER.debug(
-                        "Port %s already in use, trying to use the next one.", port
+                        "Port %s not available, trying to use the next one.", port
                     )
                     if attempt == MAX_PORT_SEARCH_RETRIES:
                         raise RetriesExceededError(
-                            f"Cannot start Streamlit server. Port {port} is already in use, "
+                            f"Cannot start Streamlit server. Port {port} is not available, "
                             f"and Streamlit was unable to find a free port after "
                             f"{MAX_PORT_SEARCH_RETRIES} attempts."
                         ) from exc

@@ -457,21 +457,25 @@ class PortRotateAHundredTest(unittest.TestCase):
 
         return httpserver
 
-    def test_rotates_a_hundred_ports(self):
+    def test_rotates_a_hundred_ports(self) -> None:
+        """Test that port rotation retries up to MAX_PORT_SEARCH_RETRIES times."""
         app = mock.MagicMock()
 
         RetriesExceededError = streamlit.web.server.server.RetriesExceededError
         with (
-            pytest.raises(RetriesExceededError) as pytest_wrapped_e,
+            pytest.raises(RetriesExceededError),
+            patch(
+                "streamlit.web.server.server.server_port_is_manually_set",
+                return_value=False,
+            ),
             patch(
                 "streamlit.web.server.server.HTTPServer",
                 return_value=self.get_httpserver(),
             ) as mock_server,
         ):
             start_listening(app)
-            assert pytest_wrapped_e.type is SystemExit
-            assert pytest_wrapped_e.value.code == errno.EADDRINUSE
-            assert mock_server.listen.call_count == MAX_PORT_SEARCH_RETRIES
+
+        assert mock_server.return_value.listen.call_count == MAX_PORT_SEARCH_RETRIES
 
 
 class PortRotateOneTest(unittest.TestCase):
@@ -510,6 +514,42 @@ class PortRotateOneTest(unittest.TestCase):
             patched__set_option.assert_called_with(
                 "server.port", 8501, config.ConfigOption.STREAMLIT_DEFINITION
             )
+
+
+class PortPermissionDeniedTest(unittest.TestCase):
+    """Tests port retry on permission denied errors (Windows system-reserved ports).
+
+    See: https://github.com/streamlit/streamlit/issues/13521
+    """
+
+    @staticmethod
+    def get_httpserver_with_eacces():
+        """Create mock HTTP server that raises EACCES on first listen attempt."""
+        httpserver = mock.MagicMock()
+        # First call raises EACCES, subsequent calls succeed
+        httpserver.listen = mock.Mock(
+            side_effect=[OSError(errno.EACCES, "permission denied"), None]
+        )
+        return httpserver
+
+    def test_retries_on_permission_denied(self) -> None:
+        """Test that server retries on EACCES (permission denied) errors."""
+        app = mock.MagicMock()
+
+        with (
+            patch(
+                "streamlit.web.server.server.server_port_is_manually_set",
+                return_value=False,
+            ),
+            patch(
+                "streamlit.web.server.server.HTTPServer",
+                return_value=self.get_httpserver_with_eacces(),
+            ) as mock_server,
+        ):
+            start_listening(app)
+
+            # Should have tried twice (first failed with EACCES, second succeeded)
+            assert mock_server.return_value.listen.call_count == 2
 
 
 class SslServerTest(unittest.TestCase):

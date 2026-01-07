@@ -420,19 +420,51 @@ class TestStartStarletteServer:
             with pytest.raises(RuntimeError, match="Unix sockets are not supported"):
                 self._run_async(server._start_starlette())
 
-    def test_propagates_non_address_in_use_errors(self) -> None:
-        """Test that non-EADDRINUSE errors are propagated immediately."""
+    def test_retries_on_permission_denied(self) -> None:
+        """Test that server retries on EACCES (permission denied) errors.
 
+        On Windows, system-reserved ports return EACCES instead of EADDRINUSE.
+        See: https://github.com/streamlit/streamlit/issues/13521
+        """
+        server = self._create_server()
+        mock_socket = mock.MagicMock(spec=socket.socket)
+
+        with (
+            patch(
+                "streamlit.web.server.starlette.starlette_server._bind_socket",
+                side_effect=[OSError(errno.EACCES, "permission denied"), mock_socket],
+            ) as bind_socket,
+            patch(
+                "streamlit.web.server.starlette.starlette_server._server_port_is_manually_set",
+                return_value=False,
+            ),
+            patch("uvicorn.Server") as uvicorn_server_cls,
+        ):
+            uvicorn_instance = mock.MagicMock()
+            uvicorn_instance.startup = AsyncMock()
+            uvicorn_instance.main_loop = AsyncMock()
+            uvicorn_instance.shutdown = AsyncMock()
+            uvicorn_instance.should_exit = False
+            uvicorn_server_cls.return_value = uvicorn_instance
+
+            self._run_async(server._start_starlette())
+
+        assert bind_socket.call_count == 2
+        uvicorn_instance.startup.assert_awaited_once()
+        assert config.get_option("server.port") == 8601
+
+    def test_propagates_non_retryable_errors(self) -> None:
+        """Test that non-retryable errors (not EADDRINUSE/EACCES) are propagated."""
         server = self._create_server()
 
         with patch(
             "streamlit.web.server.starlette.starlette_server._bind_socket",
-            side_effect=OSError(errno.EACCES, "permission denied"),
+            side_effect=OSError(errno.ENOENT, "no such file"),
         ):
-            with pytest.raises(OSError, match="permission denied") as exc_info:
+            with pytest.raises(OSError, match="no such file") as exc_info:
                 self._run_async(server._start_starlette())
 
-            assert exc_info.value.errno == errno.EACCES
+            assert exc_info.value.errno == errno.ENOENT
 
     def test_uses_default_address_when_not_configured(self) -> None:
         """Test that 0.0.0.0 is used when address is not configured."""
