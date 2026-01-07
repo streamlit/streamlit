@@ -48,7 +48,7 @@ There are two problems here:
 
 ## Proposal
 
-### Option 1: One common API for both problems
+### Option 1: One `persist` parameter for both problems
 
 Both problems are related, relatively niche, and affect almost all widgets. It would be
 nice to solve them together with a single new parameter, instead of adding two
@@ -132,7 +132,7 @@ one new parameter on each widget instead.
 Note that there's also an (old) prototype from Asaurus
 [in this issue](https://github.com/streamlit/streamlit/issues/9325).
 
-### Option 3: Two separate APIs
+### Option 3: Other separate APIs
 
 #### Query params binding
 
