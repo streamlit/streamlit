@@ -16,7 +16,7 @@
 
 import styled, { StyledComponent } from "@emotion/styled"
 
-import { hasLightBackgroundColor, shadows } from "~lib/theme"
+import { hasLightBackgroundColor } from "~lib/theme"
 
 export const TOP_DISTANCE = "-2.65rem"
 
@@ -59,7 +59,7 @@ export const StyledToolbar = styled.div(({ theme }) => ({
   flexDirection: "row",
   alignItems: "center",
   justifyContent: "flex-end",
-  boxShadow: shadows.toolbarLight,
+  boxShadow: theme.shadows.toolbar,
   borderRadius: theme.radii.default,
   backgroundColor: theme.colors.lightenedBg05,
   width: "fit-content",

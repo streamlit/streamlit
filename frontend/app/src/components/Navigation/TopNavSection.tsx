@@ -23,7 +23,7 @@ import {
 import { PLACEMENT, TRIGGER_TYPE, Popover as UIPopover } from "baseui/popover"
 
 import { StreamlitEndpoints } from "@streamlit/connection"
-import { getPopoverBoxShadow, Icon, useEmotionTheme } from "@streamlit/lib"
+import { Icon, useEmotionTheme } from "@streamlit/lib"
 import { IAppPage } from "@streamlit/protobuf"
 import { isNullOrUndefined } from "@streamlit/utils"
 
@@ -159,7 +159,7 @@ const TopNavSection = ({
             borderTopColor: theme.colors.borderColor,
             borderBottomColor: theme.colors.borderColor,
 
-            boxShadow: getPopoverBoxShadow(theme),
+            boxShadow: theme.shadows.popover,
 
             [`@media (max-width: ${theme.breakpoints.sm})`]: {
               maxWidth: `calc(100% - ${theme.spacing.threeXL})`,

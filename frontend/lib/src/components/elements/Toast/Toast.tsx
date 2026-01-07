@@ -33,11 +33,7 @@ import { Kind } from "~lib/components/shared/AlertContainer"
 import { DynamicIcon } from "~lib/components/shared/Icon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import {
-  EmotionTheme,
-  getPopoverBoxShadow,
-  hasLightBackgroundColor,
-} from "~lib/theme"
+import { EmotionTheme, hasLightBackgroundColor } from "~lib/theme"
 
 import {
   StyledMessageWrapper,
@@ -76,7 +72,7 @@ function generateToastOverrides(theme: EmotionTheme): ToastOverrides {
         filter: lightBackground ? "brightness(0.98)" : "brightness(1.2)",
         color: theme.colors.bodyText,
         // Take standard BaseWeb shadow and adjust for dark backgrounds
-        boxShadow: getPopoverBoxShadow(theme),
+        boxShadow: theme.shadows.popover,
       },
     },
     CloseIcon: {

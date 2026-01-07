@@ -47,7 +47,7 @@ import {
 
 import { createBaseUiTheme } from "./createBaseUiTheme"
 import { computeDerivedColors, createEmotionColors } from "./getColors"
-import { shadows } from "./primitives/shadows"
+import { sizes } from "./primitives/sizes"
 import { fonts } from "./primitives/typography"
 import { DerivedColors, EmotionThemeColors } from "./types"
 
@@ -1284,8 +1284,8 @@ export const getFocusBoxShadow = (
    * The alpha value to use for the focus ring.
    * Matches color2k.transparentize: 0 = unchanged, 1 = fully transparent.
    */
-  alpha: number = shadows.focusRingAlpha,
-  width: string = shadows.focusRingWidth
+  alpha: number = 0.5,
+  width: string = sizes.focusRingWidth
 ): string => {
   return `0 0 0 ${width} ${transparentize(color, alpha)}`
 }
@@ -1294,19 +1294,6 @@ export const getPrimaryFocusBoxShadow = (
   theme: Pick<EmotionTheme, "colors">
 ): string => {
   return getFocusBoxShadow(theme.colors.primary)
-}
-
-/**
- * Elevation shadow for popovers, toasts, dropdowns, and menus.
- * Automatically selects light or dark variant based on theme background.
- *
- * Used by: Popover.tsx, Toast.tsx, TopNavSection.tsx
- */
-export const getPopoverBoxShadow = (
-  theme: Pick<EmotionTheme, "colors">
-): string => {
-  const isLight = getLuminance(theme.colors.bgColor) > 0.5
-  return isLight ? shadows.popoverLight : shadows.popoverDark
 }
 
 /**

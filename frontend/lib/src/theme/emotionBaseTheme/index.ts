@@ -31,6 +31,23 @@ import {
 
 import genericColors from "./themeColors"
 
+/**
+ * Elevation shadows for light theme.
+ * Dark theme overrides these in emotionDarkTheme.
+ */
+const shadows = {
+  // Small floating elements like tooltips
+  tooltip: "0px 1px 4px rgba(0, 0, 0, 0.16)",
+  // Popovers, toasts, dropdowns, menus
+  popover: "0px 4px 16px rgba(0, 0, 0, 0.16)",
+  // Subtle toolbar/floating bar elevation
+  toolbar: "1px 2px 8px rgba(0, 0, 0, 0.08)",
+  // Mobile sidebar overlay shadow
+  sidebar: "-2rem 0 2rem 2rem rgba(0, 0, 0, 0.16)",
+}
+
+export type ThemeShadows = typeof shadows
+
 export default {
   inSidebar: false,
   showSidebarBorder: false,
@@ -44,6 +61,7 @@ export default {
   iconSizes,
   lineHeights,
   radii,
+  shadows,
   sizes,
   spacing,
   zIndices,

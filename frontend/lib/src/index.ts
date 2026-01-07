@@ -130,7 +130,6 @@ export {
   getDefaultTheme,
   getHostSpecifiedTheme,
   getHostSpecifiedThemeOnly,
-  getPopoverBoxShadow,
   getSystemThemePreference,
   globalStyles,
   hasLightBackgroundColor,

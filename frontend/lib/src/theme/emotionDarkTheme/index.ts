@@ -19,6 +19,17 @@ import { createEmotionColors } from "~lib/theme/getColors"
 
 import genericColors from "./themeColors"
 
+/**
+ * Elevation shadows for dark theme.
+ * Higher opacity values for better visibility on dark backgrounds.
+ */
+const shadows = {
+  tooltip: "0px 1px 4px rgba(0, 0, 0, 0.4)",
+  popover: "0px 4px 16px rgba(0, 0, 0, 0.7)",
+  toolbar: "1px 2px 8px rgba(0, 0, 0, 0.2)",
+  sidebar: "-2rem 0 2rem 2rem rgba(0, 0, 0, 0.4)",
+}
+
 export default {
   ...emotionBaseTheme,
   inSidebar: false,
@@ -26,4 +37,5 @@ export default {
     ...emotionBaseTheme.colors,
     ...genericColors,
   }),
+  shadows,
 }

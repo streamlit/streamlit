@@ -31,7 +31,6 @@ import BaseButton, {
 import { DynamicIcon } from "~lib/components/shared/Icon"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { getPopoverBoxShadow } from "~lib/theme"
 
 import {
   StyledPopoverExpansionIcon,
@@ -133,7 +132,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
               borderTopColor: theme.colors.borderColor,
               borderBottomColor: theme.colors.borderColor,
 
-              boxShadow: getPopoverBoxShadow(theme),
+              boxShadow: theme.shadows.popover,
             }),
           },
         }}

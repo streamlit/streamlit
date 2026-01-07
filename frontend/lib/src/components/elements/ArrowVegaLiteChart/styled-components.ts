@@ -18,7 +18,7 @@ import { CSSObject } from "@emotion/react"
 import styled from "@emotion/styled"
 import { transparentize } from "color2k"
 
-import { EmotionTheme, shadows } from "~lib/theme"
+import { EmotionTheme } from "~lib/theme"
 
 export const StyledVegaLiteChartTooltips = (
   theme: EmotionTheme
@@ -31,7 +31,7 @@ export const StyledVegaLiteChartTooltips = (
     border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
     backgroundColor: transparentize(theme.colors.bgColor, 0.05),
     fontSize: theme.fontSizes.twoSm,
-    boxShadow: shadows.tooltipLight,
+    boxShadow: theme.shadows.tooltip,
     maxWidth: theme.sizes.maxChartTooltipWidth,
     padding: `${theme.spacing.xs} ${theme.spacing.md}`,
     borderRadius: theme.radii.default,
@@ -137,7 +137,7 @@ export const StyledVegaLiteChartContainer =
           right: 0,
           // Customize menu UI to look like the Streamlit menu:
           backgroundColor: theme.colors.bgColor,
-          boxShadow: shadows.popoverLight,
+          boxShadow: theme.shadows.popover,
           border: `${theme.sizes.borderWidth} solid ${theme.colors.fadedText10}`,
           animationDuration: "0.15s",
           animationName: "scale-in",
