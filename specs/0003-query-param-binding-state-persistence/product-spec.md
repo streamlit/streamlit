@@ -123,10 +123,14 @@ And this would also allow us to add more parameters to `st.query_params.bind`, e
   query param. Should obviously aim to do most of the conversion ourselves, but just in
   case devs want something custom (e.g. because they don't want to expose
   the session state value itself).
+- Some parameter to define if the query param is persisted across page switches.
 
 And then in the future, we can add a `persist` or `scope` parameter to every widget to
 set how it should persist its state. Would have a clear separation then + still only
 one new parameter on each widget instead.
+
+Note that there's also an (old) prototype from Asaurus
+[in this issue](https://github.com/streamlit/streamlit/issues/9325).
 
 ### Option 3: Two separate APIs
 
