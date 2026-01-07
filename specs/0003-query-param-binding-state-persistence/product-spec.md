@@ -58,12 +58,12 @@ parameters to each widget:
 st.widget(..., persist=None)  # no persistence, default
 st.widget(..., persist="query-params")  # binds widget state to query params
 st.widget(..., persist="page")  # persist widget state if widget is not rendered, but deletes it on page switch
-st.widget(..., persist="session")  # persists widget state for the entire session
+st.widget(..., persist="session")  # persists widget state for the entire session (i.e. if not rendered or page is switched)
 st.widget(..., persist=["query-params", "session"])  # binds to query params + persists for the entire session
 ```
 
 Could make `"session"` and `"page"` exclusive, since `"session"` naturally means
-it's persisted across the page as well. 
+it's persisted across the page as well.
 
 **Pros:**
 
@@ -85,12 +85,12 @@ it's persisted across the page as well.
 - At least `"query-params"` should only work when `key` is set, otherwise it might
   create long, ugly, and unstable URLs (plus, would add a lot of implementation time).
   Should the same be true for `"session"` or can we make this work without setting `key`?
-  - If `persist=["query-params", "page"]` or `persist=["query-params", "session"]` is
-    set, should we keep the query params if the widget is not rendered (and for
-    `"session"` if the page is switched)? Today they would get removed if the widget is
-    not rendered or the page is switched (which always nukes query params). But if we're
-    keeping the widget state around, maybe it makes sense to also keep the query params,
-    so you can share your app with the same state?
+- If `persist=["query-params", "page"]` or `persist=["query-params", "session"]` is
+  set, should we keep the query params if the widget is not rendered (and for
+  `"session"` if the page is switched)? Today they would get removed if the widget is
+  not rendered or the page is switched (which always nukes query params). But if we're
+  keeping the widget state around, maybe it makes sense to also keep the query params,
+  so you can share your app with the same state?
 
 ### Option 2: Two separate APIs
 
