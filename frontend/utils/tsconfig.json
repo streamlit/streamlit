@@ -1,5 +1,0 @@
-{
-  "root": true,
-  "extends": "@streamlit/typescript-config/base.tsconfig.json",
-  "include": ["src/**/*"]
-}

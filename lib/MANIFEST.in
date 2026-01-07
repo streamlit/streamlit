@@ -1,3 +1,0 @@
-include streamlit/py.typed
-recursive-include streamlit/hello *
-recursive-include streamlit/static *

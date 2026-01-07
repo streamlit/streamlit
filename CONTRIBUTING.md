@@ -6,7 +6,7 @@ This wiki is for people who want to contribute code to Streamlit. There are also
 
 ## Before contributing
 
-**If your contribution is more than a few lines of code, then prior to starting to code on it please post in the issue saying you want to volunteer, and then wait for a positive response.** And if there is no issue for it yet, create it first.
+**If your contribution is more than a few lines of code (i.e., more than a tiny fix), comment on the relevant GitHub issue to say you want to work on it and wait for a maintainer to approve before you start.** If no issue exists yet, open one first.
 
 This helps make sure:
 

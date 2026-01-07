@@ -1,5 +1,0 @@
-{
-  "setup-worktree": [
-    "cd \"$(git rev-parse --show-toplevel)\"; [ -d .venv ] || uv venv; VIRTUAL_ENV=.venv PATH=\".venv/bin:.venv/Scripts:$PATH\" make all-dev frontend"
-  ]
-}

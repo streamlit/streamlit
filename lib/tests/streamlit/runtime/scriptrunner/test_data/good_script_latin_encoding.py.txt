@@ -1,8 +1,0 @@
-# -*- coding: latin-1 -*-
-
-
-"""A test script for ScriptRunnerTest that enqueues a delta."""
-
-import streamlit as st
-
-st.text("complete! 👨‍🎤")
