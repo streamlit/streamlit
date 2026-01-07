@@ -12,12 +12,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from streamlit.web.server.starlette.starlette_app import App, create_starlette_app
-from streamlit.web.server.starlette.starlette_server import UvicornRunner, UvicornServer
+"""Starlette integration for Streamlit.
 
-__all__ = [
-    "App",
-    "UvicornRunner",
-    "UvicornServer",
-    "create_starlette_app",
-]
+This module provides the ASGI-compatible App class for running Streamlit
+applications with any ASGI server (uvicorn, hypercorn, etc.).
+
+Example
+-------
+>>> from streamlit.starlette import App
+>>> app = App("main.py")
+
+Run with uvicorn:
+
+.. code-block:: bash
+
+    uvicorn myapp:app --host 0.0.0.0 --port 8501
+"""
+
+from streamlit.web.server.starlette.starlette_app import App
+
+__all__ = ["App"]

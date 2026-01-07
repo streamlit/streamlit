@@ -16,8 +16,10 @@
 
 from __future__ import annotations
 
+import inspect
 from contextlib import asynccontextmanager
-from typing import TYPE_CHECKING, Any
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, Final
 
 from streamlit import config
 from streamlit.web.server.server_util import get_cookie_secret
@@ -26,6 +28,10 @@ from streamlit.web.server.starlette.starlette_app_utils import (
 )
 from streamlit.web.server.starlette.starlette_auth_routes import create_auth_routes
 from streamlit.web.server.starlette.starlette_routes import (
+    BASE_ROUTE_COMPONENT,
+    BASE_ROUTE_CORE,
+    BASE_ROUTE_MEDIA,
+    BASE_ROUTE_UPLOAD_FILE,
     create_app_static_serving_routes,
     create_bidi_component_routes,
     create_component_routes,
@@ -47,16 +53,25 @@ from streamlit.web.server.starlette.starlette_static_routes import (
 from streamlit.web.server.starlette.starlette_websocket import create_websocket_routes
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator
+    from collections.abc import AsyncIterator, Callable, Mapping, Sequence
+    from contextlib import AbstractAsyncContextManager
 
     from starlette.applications import Starlette
     from starlette.middleware import Middleware
     from starlette.routing import BaseRoute
+    from starlette.types import ExceptionHandler, Receive, Scope, Send
 
     from streamlit.runtime import Runtime
     from streamlit.runtime.media_file_manager import MediaFileManager
     from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
     from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
+
+# Reserved route prefixes that users cannot override
+_RESERVED_ROUTE_PREFIXES: Final[tuple[str, ...]] = (
+    f"/{BASE_ROUTE_CORE}/",
+    f"/{BASE_ROUTE_MEDIA}/",
+    f"/{BASE_ROUTE_COMPONENT}/",
+)
 
 
 def create_streamlit_routes(runtime: Runtime) -> list[BaseRoute]:
@@ -210,4 +225,236 @@ def create_starlette_app(runtime: Runtime) -> Starlette:
     return Starlette(routes=routes, middleware=middleware, lifespan=_lifespan)
 
 
-__all__ = ["create_starlette_app"]
+class App:
+    """ASGI-compatible Streamlit application.
+
+    This class provides a way to configure and run Streamlit applications
+    with custom routes, middleware, lifespan hooks, and exception handlers.
+
+    Parameters
+    ----------
+    script_path : str | Path
+        Path to the main Streamlit script (relative to the app file or absolute).
+    lifespan : Callable[[App], AbstractAsyncContextManager[dict[str, Any] | None]] | None
+        Async context manager for startup/shutdown logic. The context manager
+        receives the App instance and can yield a dictionary of state that will
+        be accessible via ``app.state``.
+    routes : Sequence[BaseRoute] | None
+        Additional routes to mount alongside Streamlit. User routes are checked
+        against reserved Streamlit routes and will raise ValueError if they conflict.
+    middleware : Sequence[Middleware] | None
+        Middleware stack to apply to all requests. User middleware runs before
+        Streamlit's internal middleware.
+    exception_handlers : Mapping[Any, ExceptionHandler] | None
+        Custom exception handlers for user routes.
+    debug : bool
+        Enable debug mode for the underlying Starlette application.
+
+    Examples
+    --------
+    Basic usage:
+
+    >>> from streamlit.web.server.starlette import App
+    >>> app = App("main.py")
+
+    With lifespan hooks:
+
+    >>> from contextlib import asynccontextmanager
+    >>> from streamlit.web.server.starlette import App
+    >>>
+    >>> @asynccontextmanager
+    ... async def lifespan(app):
+    ...     print("Starting up...")
+    ...     yield {"model": "loaded"}
+    ...     print("Shutting down...")
+    >>>
+    >>> app = App("main.py", lifespan=lifespan)
+
+    With custom routes:
+
+    >>> from starlette.routing import Route
+    >>> from starlette.responses import JSONResponse
+    >>> from streamlit.web.server.starlette import App
+    >>>
+    >>> async def health(request):
+    ...     return JSONResponse({"status": "ok"})
+    >>>
+    >>> app = App("main.py", routes=[Route("/health", health)])
+    """
+
+    def __init__(
+        self,
+        script_path: str | Path,
+        *,
+        lifespan: (
+            Callable[[App], AbstractAsyncContextManager[dict[str, Any] | None]] | None
+        ) = None,
+        routes: Sequence[BaseRoute] | None = None,
+        middleware: Sequence[Middleware] | None = None,
+        exception_handlers: Mapping[Any, ExceptionHandler] | None = None,
+        debug: bool = False,
+    ) -> None:
+        self._script_path = Path(script_path)
+        self._user_lifespan = lifespan
+        self._user_routes = list(routes) if routes else []
+        self._user_middleware = list(middleware) if middleware else []
+        self._exception_handlers = (
+            dict(exception_handlers) if exception_handlers else {}
+        )
+        self._debug = debug
+
+        self._runtime: Runtime | None = None
+        self._starlette_app: Starlette | None = None
+        self._state: dict[str, Any] = {}
+
+        # Validate user routes don't conflict with reserved routes
+        self._validate_routes()
+
+    def _validate_routes(self) -> None:
+        """Validate that user routes don't conflict with reserved Streamlit routes."""
+        for route in self._user_routes:
+            path = getattr(route, "path", None)
+            if path:
+                for reserved in _RESERVED_ROUTE_PREFIXES:
+                    if path.startswith(reserved) or path == reserved.rstrip("/"):
+                        raise ValueError(
+                            f"Route '{path}' conflicts with reserved Streamlit route "
+                            f"prefix '{reserved}'. Use a different path like '/api/...'."
+                        )
+
+    @property
+    def script_path(self) -> Path:
+        """The entry point script path."""
+        return self._script_path
+
+    @property
+    def state(self) -> dict[str, Any]:
+        """Application state, populated by lifespan context manager."""
+        return self._state
+
+    def _resolve_script_path(self) -> Path:
+        """Resolve the entry point path relative to the caller's location."""
+        if self._script_path.is_absolute():
+            return self._script_path
+
+        # Get the frame of the caller (the file that created App)
+        # We need to traverse up the stack to find the original caller
+        frame = inspect.currentframe()
+        try:
+            if frame:
+                # Walk up the stack to find the first frame outside this module
+                current_file = frame.f_globals.get("__file__")
+                caller_frame = frame.f_back
+                while caller_frame:
+                    caller_file = caller_frame.f_globals.get("__file__")
+                    if caller_file and caller_file != current_file:
+                        caller_dir = Path(caller_file).parent
+                        return (caller_dir / self._script_path).resolve()
+                    caller_frame = caller_frame.f_back
+        finally:
+            del frame
+
+        return self._script_path.resolve()
+
+    def _create_runtime(self) -> Runtime:
+        """Create the Streamlit runtime (but don't start it yet)."""
+        from streamlit.runtime import Runtime, RuntimeConfig
+        from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
+        from streamlit.runtime.memory_session_storage import MemorySessionStorage
+        from streamlit.runtime.memory_uploaded_file_manager import (
+            MemoryUploadedFileManager,
+        )
+        from streamlit.web.cache_storage_manager_config import (
+            create_default_cache_storage_manager,
+        )
+
+        script_path = self._resolve_script_path()
+        media_file_storage = MemoryMediaFileStorage(f"/{BASE_ROUTE_MEDIA}")
+        uploaded_file_mgr = MemoryUploadedFileManager(f"/{BASE_ROUTE_UPLOAD_FILE}")
+
+        return Runtime(
+            RuntimeConfig(
+                script_path=str(script_path),
+                command_line=None,
+                media_file_storage=media_file_storage,
+                uploaded_file_manager=uploaded_file_mgr,
+                cache_storage_manager=create_default_cache_storage_manager(),
+                is_hello=False,
+                session_storage=MemorySessionStorage(
+                    ttl_seconds=config.get_option("server.disconnectedSessionTTL")
+                ),
+            ),
+        )
+
+    @asynccontextmanager
+    async def _combined_lifespan(self, _app: Starlette) -> AsyncIterator[None]:
+        """Combine Streamlit runtime lifecycle with user's lifespan.
+
+        The runtime must already be created (via _create_runtime) before this
+        lifespan runs. This lifespan handles starting and stopping the runtime.
+        """
+        from streamlit.web.bootstrap import prepare_streamlit_environment
+
+        if self._runtime is None:
+            raise RuntimeError(
+                "Runtime not initialized. Call _create_runtime before lifespan."
+            )
+
+        # Prepare the Streamlit environment (secrets, pydeck, static folder check)
+        prepare_streamlit_environment(str(self._script_path))
+
+        # Start runtime (enables full cache support)
+        await self._runtime.start()
+
+        try:
+            # Run user's lifespan
+            if self._user_lifespan:
+                async with self._user_lifespan(self) as state:
+                    if state:
+                        self._state.update(state)
+                    yield
+            else:
+                yield
+        finally:
+            # Stop runtime
+            self._runtime.stop()
+
+    def _build_starlette_app(self) -> Starlette:
+        """Build the Starlette application with all routes and middleware."""
+        from starlette.applications import Starlette
+
+        # Create the runtime if not already created
+        if self._runtime is None:
+            self._runtime = self._create_runtime()
+
+        # Get Streamlit's internal routes
+        streamlit_routes = create_streamlit_routes(self._runtime)
+
+        # User routes come first (higher priority), then Streamlit routes
+        # This allows users to override non-reserved routes like static files
+        all_routes = self._user_routes + streamlit_routes
+
+        # Get Streamlit's internal middleware
+        streamlit_middleware = create_streamlit_middleware()
+
+        # User middleware wraps Streamlit middleware (runs first on request,
+        # last on response)
+        all_middleware = self._user_middleware + streamlit_middleware
+
+        return Starlette(
+            debug=self._debug,
+            routes=all_routes,
+            middleware=all_middleware,
+            exception_handlers=self._exception_handlers,
+            lifespan=self._combined_lifespan,
+        )
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        """ASGI interface."""
+        if self._starlette_app is None:
+            self._starlette_app = self._build_starlette_app()
+
+        await self._starlette_app(scope, receive, send)
+
+
+__all__ = ["App", "create_starlette_app"]
