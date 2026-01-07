@@ -124,11 +124,9 @@ if st.toggle("Update number input props"):
         ),
         args=("Updated text arg",),
         kwargs={"param": "updated kwarg param"},
-        # min_value, max_value, and step are not yet supported for dynamic changes
-        # keeping it at the same value:
-        min_value=0,
-        max_value=100,
-        step=1,
+        min_value=10,
+        max_value=50,
+        step=5,
     )
     st.write("Updated number input value:", dyn_val)
 else:

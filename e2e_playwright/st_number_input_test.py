@@ -297,7 +297,12 @@ def test_check_top_level_class(app: Page):
 # but functional everything is working fine with firefox.
 @pytest.mark.skip_browser("firefox")
 def test_dynamic_number_input_props(app: Page, assert_snapshot: ImageCompareFunction):
-    """Test that the number input can be updated dynamically while keeping the state."""
+    """Test that the number input can be updated dynamically while keeping the state.
+
+    This tests that:
+    1. Value is preserved when it remains valid after bound changes
+    2. Value resets to default when it becomes invalid after bound changes
+    """
     dynamic_number_input = get_element_by_key(app, "dynamic_number_input_with_key")
     expect(dynamic_number_input).to_be_visible()
 
@@ -307,29 +312,47 @@ def test_dynamic_number_input_props(app: Page, assert_snapshot: ImageCompareFunc
     # Check that the help tooltip is correct:
     expect_help_tooltip(app, dynamic_number_input, "initial help")
 
-    # Type something and submit
+    # Type a value that's valid in both ranges [0, 100] and [10, 50]
     input_field = dynamic_number_input.locator("input").first
-    input_field.fill("7")
+    input_field.fill("25")
     input_field.press("Enter")
     wait_for_app_run(app)
 
-    expect_prefixed_markdown(app, "Initial number input value:", "7")
+    expect_prefixed_markdown(app, "Initial number input value:", "25")
 
-    # Click the toggle to update the number input props
-
+    # Click the toggle to update the number input props (min changes to 10, max to 50)
     click_toggle(app, "Update number input props")
 
-    # new number input is visible:
+    # New number input is visible:
     expect(dynamic_number_input).to_contain_text("Updated dynamic number input")
 
-    # Ensure the previously entered value remains visible
-    expect_prefixed_markdown(app, "Updated number input value:", "7")
+    # Value 25 is still valid in [10, 50], so it should be preserved
+    expect_prefixed_markdown(app, "Updated number input value:", "25")
 
     dynamic_number_input.scroll_into_view_if_needed()
     assert_snapshot(dynamic_number_input, name="st_number_input-dynamic_updated")
 
     # Check that the help tooltip is correct:
     expect_help_tooltip(app, dynamic_number_input, "updated help")
+
+    # Now set a value that will be invalid when we toggle back
+    # Set to 5, which is valid in [0, 100] but NOT in [10, 50]
+    click_toggle(app, "Update number input props")
+    expect(dynamic_number_input).to_contain_text("Initial dynamic number input")
+
+    input_field = dynamic_number_input.locator("input").first
+    input_field.fill("5")
+    input_field.press("Enter")
+    wait_for_app_run(app)
+
+    expect_prefixed_markdown(app, "Initial number input value:", "5")
+
+    # Toggle again - now min becomes 10, so value 5 is invalid and should reset to 15
+    click_toggle(app, "Update number input props")
+
+    expect(dynamic_number_input).to_contain_text("Updated dynamic number input")
+    # Value should have been reset to 15 (the new default) since 5 < 10 (new min)
+    expect_prefixed_markdown(app, "Updated number input value:", "15")
 
 
 def test_number_input_tab_focus_behavior(
