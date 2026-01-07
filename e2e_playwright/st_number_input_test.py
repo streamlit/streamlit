@@ -27,6 +27,7 @@ from e2e_playwright.shared.app_utils import (
     fill_number_input,
     get_element_by_key,
     get_number_input,
+    reset_hovering,
 )
 
 NUMBER_INPUT_COUNT = 20
@@ -37,6 +38,8 @@ def test_number_input_widget_display(
 ):
     """Test that st.number_input renders correctly."""
     expect(themed_app.get_by_test_id("stNumberInput")).to_have_count(NUMBER_INPUT_COUNT)
+    # reset hovering to avoid some flakiness with hovered clear button:
+    reset_hovering(themed_app)
 
     assert_snapshot(
         get_number_input(themed_app, "number input 1 (default)"),
