@@ -13,9 +13,10 @@
 # limitations under the License.
 
 from streamlit.web.server.starlette.starlette_app import create_starlette_app
-from streamlit.web.server.starlette.starlette_server import StarletteServer
+from streamlit.web.server.starlette.starlette_server import UvicornRunner, UvicornServer
 
 __all__ = [
-    "StarletteServer",
+    "UvicornRunner",
+    "UvicornServer",
     "create_starlette_app",
 ]

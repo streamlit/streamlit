@@ -65,7 +65,7 @@ if TYPE_CHECKING:
     from collections.abc import Awaitable
     from ssl import SSLContext
 
-    from streamlit.web.server.starlette import StarletteServer
+    from streamlit.web.server.starlette import UvicornServer
 
 _LOGGER: Final = get_logger(__name__)
 
@@ -296,7 +296,7 @@ class Server:
 
         self._main_script_path = main_script_path
         self._use_starlette = bool(config.get_option("server.useStarlette"))
-        self._starlette_server: StarletteServer | None = None
+        self._starlette_server: UvicornServer | None = None
 
         # The task that runs the server if an event loop is already running.
         # We need to save a reference to it so that it doesn't get
@@ -548,9 +548,9 @@ class Server:
             self._runtime.stop()
 
     async def _start_starlette(self) -> None:
-        from streamlit.web.server.starlette import StarletteServer
+        from streamlit.web.server.starlette import UvicornServer
 
-        self._starlette_server = StarletteServer(self._runtime)
+        self._starlette_server = UvicornServer(self._runtime)
         await self._starlette_server.start()
 
 

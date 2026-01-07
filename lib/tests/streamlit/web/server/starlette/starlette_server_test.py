@@ -34,10 +34,11 @@ from streamlit.runtime import Runtime
 from streamlit.web.server.server import Server
 from streamlit.web.server.starlette.starlette_server import (
     RetriesExceededError,
+    UvicornRunner,
     _bind_socket,
     _get_websocket_settings,
+    _is_port_manually_set,
     _server_address_is_unix_socket,
-    _server_port_is_manually_set,
 )
 from tests.testutil import patch_config_options
 
@@ -140,13 +141,13 @@ class TestGetWebsocketSettings:
 
 
 class TestServerPortIsManuallySet:
-    """Tests for _server_port_is_manually_set function."""
+    """Tests for _is_port_manually_set function."""
 
     def test_returns_true_when_manually_set(self) -> None:
         """Test that True is returned when port is manually configured."""
 
         with patch("streamlit.config.is_manually_set", return_value=True):
-            result = _server_port_is_manually_set()
+            result = _is_port_manually_set()
 
         assert result is True
 
@@ -154,7 +155,7 @@ class TestServerPortIsManuallySet:
         """Test that False is returned when port is not manually configured."""
 
         with patch("streamlit.config.is_manually_set", return_value=False):
-            result = _server_port_is_manually_set()
+            result = _is_port_manually_set()
 
         assert result is False
 
@@ -357,7 +358,7 @@ class TestStartStarletteServer:
                 side_effect=[OSError(errno.EADDRINUSE, "busy"), mock_socket],
             ) as bind_socket,
             patch(
-                "streamlit.web.server.starlette.starlette_server._server_port_is_manually_set",
+                "streamlit.web.server.starlette.starlette_server._is_port_manually_set",
                 return_value=False,
             ),
             patch("uvicorn.Server") as uvicorn_server_cls,
@@ -386,7 +387,7 @@ class TestStartStarletteServer:
                 side_effect=OSError(errno.EADDRINUSE, "busy"),
             ),
             patch(
-                "streamlit.web.server.starlette.starlette_server._server_port_is_manually_set",
+                "streamlit.web.server.starlette.starlette_server._is_port_manually_set",
                 return_value=True,
             ),
         ):
@@ -404,7 +405,7 @@ class TestStartStarletteServer:
                 side_effect=OSError(errno.EADDRINUSE, "busy"),
             ),
             patch(
-                "streamlit.web.server.starlette.starlette_server._server_port_is_manually_set",
+                "streamlit.web.server.starlette.starlette_server._is_port_manually_set",
                 return_value=False,
             ),
         ):
@@ -435,7 +436,7 @@ class TestStartStarletteServer:
                 side_effect=[OSError(errno.EACCES, "permission denied"), mock_socket],
             ) as bind_socket,
             patch(
-                "streamlit.web.server.starlette.starlette_server._server_port_is_manually_set",
+                "streamlit.web.server.starlette.starlette_server._is_port_manually_set",
                 return_value=False,
             ),
             patch("uvicorn.Server") as uvicorn_server_cls,
@@ -685,9 +686,9 @@ class TestServerLifecycle:
             assert server1._starlette_server is not None
 
             # Verify it's instance-specific (not a module global)
-            from streamlit.web.server.starlette.starlette_server import StarletteServer
+            from streamlit.web.server.starlette.starlette_server import UvicornServer
 
-            assert isinstance(server1._starlette_server, StarletteServer)
+            assert isinstance(server1._starlette_server, UvicornServer)
 
     def test_raises_on_startup_failure(self) -> None:
         """Test that RuntimeError is raised when uvicorn startup fails."""
@@ -713,7 +714,7 @@ class TestServerLifecycle:
 
     def test_stopped_event_set_after_main_loop_completes(self) -> None:
         """Test that stopped event is set after the server main loop completes."""
-        from streamlit.web.server.starlette.starlette_server import StarletteServer
+        from streamlit.web.server.starlette.starlette_server import UvicornServer
 
         server = self._create_server()
         mock_socket = mock.MagicMock(spec=socket.socket)
@@ -736,7 +737,7 @@ class TestServerLifecycle:
 
             self._run_async(server._start_starlette())
 
-            starlette_server: StarletteServer = server._starlette_server  # type: ignore
+            starlette_server: UvicornServer = server._starlette_server  # type: ignore
             assert starlette_server is not None
 
             # Give the background task time to complete
@@ -744,3 +745,88 @@ class TestServerLifecycle:
 
             # The stopped event should be set after main_loop completes
             assert starlette_server.stopped.is_set()
+
+
+class TestUvicornRunner:
+    """Tests for UvicornRunner class (sync blocking runner for st.App mode)."""
+
+    def test_run_calls_uvicorn_with_correct_args(self) -> None:
+        """Test that run() calls uvicorn.run with correct arguments."""
+        with (
+            patch_config_options({"server.address": "0.0.0.0", "server.port": 8502}),
+            patch(
+                "streamlit.web.server.starlette.starlette_server._get_uvicorn_config_kwargs",
+                return_value={"ssl_certfile": None, "ssl_keyfile": None},
+            ),
+            patch("uvicorn.run") as mock_uvicorn_run,
+        ):
+            runner = UvicornRunner("myapp:app")
+            runner.run()
+
+            mock_uvicorn_run.assert_called_once()
+            call_kwargs = mock_uvicorn_run.call_args
+            assert call_kwargs[0][0] == "myapp:app"
+            assert call_kwargs[1]["host"] == "0.0.0.0"
+            assert call_kwargs[1]["port"] == 8502
+
+    def test_run_retries_on_port_in_use(self) -> None:
+        """Test that run() retries on EADDRINUSE."""
+        call_count = 0
+
+        def mock_run(*args: Any, **kwargs: Any) -> None:
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                raise OSError(errno.EADDRINUSE, "Address already in use")
+            # Second call succeeds
+
+        with (
+            patch_config_options({"server.address": "127.0.0.1", "server.port": 8501}),
+            patch(
+                "streamlit.web.server.starlette.starlette_server._get_uvicorn_config_kwargs",
+                return_value={},
+            ),
+            patch(
+                "streamlit.web.server.starlette.starlette_server._is_port_manually_set",
+                return_value=False,
+            ),
+            patch("uvicorn.run", side_effect=mock_run),
+        ):
+            runner = UvicornRunner("myapp:app")
+            runner.run()
+
+            assert call_count == 2
+
+    def test_run_exits_when_port_manually_set_and_unavailable(self) -> None:
+        """Test that run() exits when port is manually set and unavailable."""
+        with (
+            patch_config_options({"server.address": "127.0.0.1", "server.port": 8501}),
+            patch(
+                "streamlit.web.server.starlette.starlette_server._get_uvicorn_config_kwargs",
+                return_value={},
+            ),
+            patch(
+                "streamlit.web.server.starlette.starlette_server._is_port_manually_set",
+                return_value=True,
+            ),
+            patch(
+                "uvicorn.run",
+                side_effect=OSError(errno.EADDRINUSE, "Address already in use"),
+            ),
+            pytest.raises(SystemExit),
+        ):
+            runner = UvicornRunner("myapp:app")
+            runner.run()
+
+    def test_run_rejects_unix_sockets(self) -> None:
+        """Test that run() raises for Unix socket addresses."""
+        with (
+            patch_config_options({"server.address": "unix://test.sock"}),
+            patch(
+                "streamlit.web.server.starlette.starlette_server._get_uvicorn_config_kwargs",
+                return_value={},
+            ),
+        ):
+            runner = UvicornRunner("myapp:app")
+            with pytest.raises(RuntimeError, match="Unix sockets are not supported"):
+                runner.run()
