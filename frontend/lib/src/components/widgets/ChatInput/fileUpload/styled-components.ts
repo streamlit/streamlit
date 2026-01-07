@@ -174,14 +174,14 @@ export const StyledChatUploadedFileDeleteButton = styled.small(
       maxWidth: "unset",
       borderRadius: "50%",
       backgroundColor: "transparent",
-      color: theme.colors.fadedText20,
+      color: theme.colors.bgColor,
       padding: 0,
       overflow: "hidden",
       boxSizing: "border-box",
       lineHeight: 0,
       "&:hover": {
         backgroundColor: "transparent",
-        color: theme.colors.fadedText40,
+        color: theme.colors.bgColor,
       },
     },
   })
