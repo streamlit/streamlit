@@ -19,11 +19,12 @@ import { lightThemePrimitives } from "baseui"
 import { CustomThemeConfig } from "@streamlit/protobuf"
 
 import { baseuiLightTheme } from "./baseui"
-import emotionBaseTheme, { ThemeShadows } from "./emotionBaseTheme"
+import emotionBaseTheme from "./emotionBaseTheme"
 import {
   OptionalThemeColors,
   RequiredThemeColors,
 } from "./emotionBaseTheme/themeColors"
+import { ThemeShadows } from "./getColors"
 import { PrimitiveColors } from "./primitives"
 
 /**

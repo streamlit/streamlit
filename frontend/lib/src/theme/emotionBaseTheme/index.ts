@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { createEmotionColors } from "~lib/theme/getColors"
+import { createEmotionColors, createShadows } from "~lib/theme/getColors"
 import {
   breakpoints,
   fonts,
@@ -29,31 +29,21 @@ import {
   zIndices,
 } from "~lib/theme/primitives"
 
+import elevationShadows from "./elevationShadows"
 import genericColors from "./themeColors"
 
-/**
- * Elevation shadows for light theme.
- * Dark theme overrides these in emotionDarkTheme.
- */
-const shadows = {
-  // Small floating elements like tooltips
-  tooltip: "0px 1px 4px rgba(0, 0, 0, 0.16)",
-  // Popovers, toasts, dropdowns, menus
-  popover: "0px 4px 16px rgba(0, 0, 0, 0.16)",
-  // Subtle toolbar/floating bar elevation
-  toolbar: "1px 2px 8px rgba(0, 0, 0, 0.08)",
-  // Mobile sidebar overlay shadow
-  sidebar: "-2rem 0 2rem 2rem rgba(0, 0, 0, 0.16)",
-}
+// Create colors first (includes derived colors like darkenedBgMix25)
+const colors = createEmotionColors(genericColors)
 
-export type ThemeShadows = typeof shadows
+// Create shadows using elevation shadows + derived focus ring shadows from colors
+const shadows = createShadows(elevationShadows, colors)
 
 export default {
   inSidebar: false,
   showSidebarBorder: false,
   linkUnderline: true,
   breakpoints,
-  colors: createEmotionColors(genericColors),
+  colors,
   fonts,
   fontSizes,
   fontWeights,

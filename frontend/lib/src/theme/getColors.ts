@@ -16,12 +16,56 @@
 
 import { darken, getLuminance, lighten, mix, transparentize } from "color2k"
 
+import { ElevationShadows } from "./emotionBaseTheme/elevationShadows"
+import { sizes } from "./primitives/sizes"
 import {
   DerivedColors,
   EmotionTheme,
   EmotionThemeColors,
   GenericColors,
 } from "./types"
+
+/**
+ * Derived shadows - computed from theme colors.
+ */
+type DerivedShadows = {
+  focusRing: string
+  focusRingSubtle: string
+  focusRingOutline: string
+  focusRingMuted: string
+}
+
+// Full shadows type combining elevation + derived + reset
+export type ThemeShadows = ElevationShadows &
+  DerivedShadows & {
+    none: "none"
+  }
+
+/**
+ * Create the complete shadows object for a theme.
+ * Combines static elevation shadows with derived focus ring shadows.
+ *
+ * @param elevationShadows - Theme-specific elevation shadows (light or dark)
+ * @param colors - Emotion theme colors (must include primary, darkenedBgMix25, gray90)
+ */
+export const createShadows = (
+  elevationShadows: ElevationShadows,
+  colors: Pick<EmotionThemeColors, "primary" | "darkenedBgMix25" | "gray90">
+): ThemeShadows => {
+  const width = sizes.focusRingWidth
+  return {
+    ...elevationShadows,
+    // Primary focus ring - buttons, checkboxes, sliders, inputs
+    focusRing: `0 0 0 ${width} ${transparentize(colors.primary, 0.5)}`,
+    // Subtle focus ring - CodeBlock copy button
+    focusRingSubtle: `0 0 0 ${width} ${transparentize(colors.darkenedBgMix25, 0.5)}`,
+    // Solid outline focus ring - FileUploader dropzone
+    focusRingOutline: `0 0 0 1px ${colors.primary}`,
+    // Muted focus ring - header link buttons
+    focusRingMuted: `0 0 0 ${width} ${transparentize(colors.gray90, 0.8)}`,
+    none: "none",
+  }
+}
 
 export const computeDerivedColors = (
   genericColors: GenericColors

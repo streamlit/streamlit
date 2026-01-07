@@ -14,24 +14,5 @@
  * limitations under the License.
  */
 
-import emotionBaseTheme from "~lib/theme/emotionBaseTheme"
-import { createEmotionColors, createShadows } from "~lib/theme/getColors"
-
-import elevationShadows from "./elevationShadows"
-import genericColors from "./themeColors"
-
-// Create colors first (includes derived colors like darkenedBgMix25)
-const colors = createEmotionColors({
-  ...emotionBaseTheme.colors,
-  ...genericColors,
-})
-
-// Create shadows using dark elevation shadows + derived focus ring shadows from colors
-const shadows = createShadows(elevationShadows, colors)
-
-export default {
-  ...emotionBaseTheme,
-  inSidebar: false,
-  colors,
-  shadows,
-}
+// Light theme uses base theme elevation shadows
+export { default } from "~lib/theme/emotionBaseTheme/elevationShadows"

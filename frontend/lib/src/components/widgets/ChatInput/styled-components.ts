@@ -15,8 +15,6 @@
  */
 import styled from "@emotion/styled"
 
-import { getPrimaryFocusBoxShadow } from "~lib/theme/utils"
-
 export const StyledChatInputContainer = styled.div({
   position: "relative",
   display: "flex",
@@ -146,7 +144,7 @@ export const StyledSendIconButton = styled.button<StyledSendIconButtonProps>(
           outline: "none",
         },
         "&:focus-visible": {
-          boxShadow: getPrimaryFocusBoxShadow(theme),
+          boxShadow: theme.shadows.focusRing,
         },
         "&:hover": {
           backgroundColor: disabled
@@ -181,7 +179,7 @@ export const StyledSendIconButton = styled.button<StyledSendIconButtonProps>(
         outline: "none",
       },
       "&:focus-visible": {
-        boxShadow: getPrimaryFocusBoxShadow(theme),
+        boxShadow: theme.shadows.focusRing,
       },
       "&:hover": {
         color: hasError ? theme.colors.redColor : theme.colors.bodyText,

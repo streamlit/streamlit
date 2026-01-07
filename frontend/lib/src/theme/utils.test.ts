@@ -44,10 +44,8 @@ import {
   CUSTOM_THEME_NAME,
   getCachedTheme,
   getDefaultTheme,
-  getFocusBoxShadow,
   getHostSpecifiedTheme,
   getHostSpecifiedThemeOnly,
-  getPrimaryFocusBoxShadow,
   getSystemTheme,
   handleSectionInheritance,
   hasThemeSectionConfigs,
@@ -115,23 +113,158 @@ describe("Styling utils", () => {
     })
   })
 
-  describe("Focus ring helpers", () => {
-    it("creates a canonical focus-ring box-shadow with default parameters", () => {
-      expect(getFocusBoxShadow("blue")).toBe(
-        "0 0 0 0.2rem rgba(0, 0, 255, 0.5)"
-      )
+  describe("theme.shadows", () => {
+    describe("light theme", () => {
+      it("has all required shadow properties", () => {
+        const { shadows } = lightTheme.emotion
+
+        // Elevation shadows
+        expect(shadows).toHaveProperty("tooltip")
+        expect(shadows).toHaveProperty("popover")
+        expect(shadows).toHaveProperty("toolbar")
+        expect(shadows).toHaveProperty("sidebar")
+        // Focus ring shadows
+        expect(shadows).toHaveProperty("focusRing")
+        expect(shadows).toHaveProperty("focusRingSubtle")
+        expect(shadows).toHaveProperty("focusRingOutline")
+        expect(shadows).toHaveProperty("focusRingMuted")
+        // Reset value
+        expect(shadows).toHaveProperty("none")
+      })
+
+      it("returns correct elevation shadow values for light theme", () => {
+        const { shadows } = lightTheme.emotion
+
+        expect(shadows.tooltip).toBe("0px 1px 4px rgba(0, 0, 0, 0.16)")
+        expect(shadows.popover).toBe("0px 4px 16px rgba(0, 0, 0, 0.16)")
+        expect(shadows.toolbar).toBe("1px 2px 8px rgba(0, 0, 0, 0.08)")
+        expect(shadows.sidebar).toBe("-2rem 0 2rem 2rem rgba(0, 0, 0, 0.16)")
+      })
+
+      it("returns correct focus ring shadow values for light theme", () => {
+        const { shadows } = lightTheme.emotion
+
+        // Primary focus ring uses primary color (#ff4b4b) with 0.5 alpha
+        expect(shadows.focusRing).toBe("0 0 0 0.2rem rgba(255, 75, 75, 0.5)")
+        // Subtle focus ring uses darkenedBgMix25
+        expect(shadows.focusRingSubtle).toMatch(/^0 0 0 0\.2rem rgba\(/)
+        // Outline focus ring - solid 1px outline without blur
+        expect(shadows.focusRingOutline).toBe("0 0 0 1px #ff4b4b")
+        // Muted focus ring uses gray90 (#262730) with 0.8 alpha
+        expect(shadows.focusRingMuted).toBe(
+          "0 0 0 0.2rem rgba(38, 39, 48, 0.2)"
+        )
+        // None should be "none"
+        expect(shadows.none).toBe("none")
+      })
+
+      it("uses lower opacity values than dark theme for elevation shadows", () => {
+        const lightShadows = lightTheme.emotion.shadows
+        const darkShadows = darkTheme.emotion.shadows
+
+        // Light theme shadows have lower opacity (0.08-0.16) than dark theme (0.2-0.7)
+        expect(lightShadows.popover).toContain("0.16")
+        expect(darkShadows.popover).toContain("0.7")
+      })
     })
 
-    it("creates a canonical focus-ring box-shadow with custom parameters", () => {
-      expect(getFocusBoxShadow("#000", 0.8, "2px")).toBe(
-        "0 0 0 2px rgba(0, 0, 0, 0.2)"
-      )
+    describe("dark theme", () => {
+      it("has all required shadow properties", () => {
+        const { shadows } = darkTheme.emotion
+
+        // Elevation shadows
+        expect(shadows).toHaveProperty("tooltip")
+        expect(shadows).toHaveProperty("popover")
+        expect(shadows).toHaveProperty("toolbar")
+        expect(shadows).toHaveProperty("sidebar")
+        // Focus ring shadows
+        expect(shadows).toHaveProperty("focusRing")
+        expect(shadows).toHaveProperty("focusRingSubtle")
+        expect(shadows).toHaveProperty("focusRingOutline")
+        expect(shadows).toHaveProperty("focusRingMuted")
+        // Reset value
+        expect(shadows).toHaveProperty("none")
+      })
+
+      it("returns correct elevation shadow values for dark theme", () => {
+        const { shadows } = darkTheme.emotion
+
+        expect(shadows.tooltip).toBe("0px 1px 4px rgba(0, 0, 0, 0.4)")
+        expect(shadows.popover).toBe("0px 4px 16px rgba(0, 0, 0, 0.7)")
+        expect(shadows.toolbar).toBe("1px 2px 8px rgba(0, 0, 0, 0.2)")
+        expect(shadows.sidebar).toBe("-2rem 0 2rem 2rem rgba(0, 0, 0, 0.4)")
+      })
+
+      it("returns correct focus ring shadow values for dark theme", () => {
+        const { shadows } = darkTheme.emotion
+
+        // Primary focus ring uses same primary color across themes
+        expect(shadows.focusRing).toBe("0 0 0 0.2rem rgba(255, 75, 75, 0.5)")
+        // Subtle focus ring uses dark theme's darkenedBgMix25 (different from light)
+        expect(shadows.focusRingSubtle).toMatch(/^0 0 0 0\.2rem rgba\(/)
+        // Outline focus ring - same across themes
+        expect(shadows.focusRingOutline).toBe("0 0 0 1px #ff4b4b")
+        // Muted focus ring - same across themes
+        expect(shadows.focusRingMuted).toBe(
+          "0 0 0 0.2rem rgba(38, 39, 48, 0.2)"
+        )
+        // None should be "none"
+        expect(shadows.none).toBe("none")
+      })
+
+      it("uses higher opacity values for better visibility on dark backgrounds", () => {
+        const { shadows } = darkTheme.emotion
+
+        // Dark theme uses higher opacity values
+        expect(shadows.tooltip).toContain("0.4")
+        expect(shadows.popover).toContain("0.7")
+        expect(shadows.toolbar).toContain("0.2")
+        expect(shadows.sidebar).toContain("0.4")
+      })
     })
 
-    it("creates a primary focus ring using the theme primary color", () => {
-      expect(getPrimaryFocusBoxShadow(lightTheme.emotion)).toBe(
-        "0 0 0 0.2rem rgba(255, 75, 75, 0.5)"
-      )
+    describe("shadow structure consistency", () => {
+      it("light and dark themes have the same shadow property keys", () => {
+        const lightKeys = Object.keys(lightTheme.emotion.shadows).sort()
+        const darkKeys = Object.keys(darkTheme.emotion.shadows).sort()
+
+        expect(lightKeys).toEqual(darkKeys)
+      })
+
+      it("all shadow values are valid CSS box-shadow strings", () => {
+        const themes = [lightTheme.emotion, darkTheme.emotion]
+
+        themes.forEach(theme => {
+          Object.values(theme.shadows).forEach(shadow => {
+            // Each shadow should be a non-empty string
+            expect(typeof shadow).toBe("string")
+            expect(shadow.length).toBeGreaterThan(0)
+            // Each shadow should be either "none", contain a hex color, or contain rgba
+            expect(
+              shadow === "none" ||
+                shadow.includes("#") ||
+                shadow.includes("rgba(")
+            ).toBe(true)
+          })
+        })
+      })
+    })
+
+    describe("custom themes", () => {
+      it("computes focus ring shadows based on custom primary color", () => {
+        const customTheme = createTheme(
+          "Custom",
+          new CustomThemeConfig({
+            primaryColor: "#00ff00", // green
+          })
+        )
+
+        const { shadows } = customTheme.emotion
+
+        // Focus ring should use the custom primary color
+        expect(shadows.focusRing).toContain("rgba(0, 255, 0")
+        expect(shadows.focusRingOutline).toBe("0 0 0 1px #00ff00")
+      })
     })
   })
 })
