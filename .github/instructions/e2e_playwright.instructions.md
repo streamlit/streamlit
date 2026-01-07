@@ -37,6 +37,8 @@ Import from `conftest.py`:
 - As a guiding principle, tests should resemble how users interact with the UI.
 - Use `expect` for auto-wait assertions, not `assert` (reduces flakiness)
 - If `expect` is insufficient, use the `wait_until` utility. Never use `wait_for_timeout`.
+- Add at least one “must NOT happen” check per scenario when practical: Alongside the positive UI outcome, assert the absence of a likely regression (e.g., no duplicate element appears, a tooltip is not shown until hover, a widget remains non-interactive when `disabled=True`, no unexpected rerun/state change, etc.).
+- Keep negatives high-signal: E2E is expensive—prefer one targeted negative assertion per scenario over large negative matrices.
 - Prefer label- or key-based locators over index-based access (e.g. `get_by_test_id().nth(0)`). The recommended order of priority is:
   1. get elements by label (see `app_utils` methods, e.g. `get_text_input`).
   2. elements that don't support `label` but support `key`: get elements by a unique key (`get_element_by_key`).

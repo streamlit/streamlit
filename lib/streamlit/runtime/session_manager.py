@@ -16,10 +16,10 @@ from __future__ import annotations
 
 from abc import abstractmethod
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Protocol, cast
+from typing import TYPE_CHECKING, Protocol, cast, runtime_checkable
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Iterable, Mapping
 
     from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
     from streamlit.runtime.app_session import AppSession
@@ -33,6 +33,31 @@ class SessionClientDisconnectedError(Exception):
     """Raised by operations on a disconnected SessionClient."""
 
 
+@runtime_checkable
+class ClientContext(Protocol):
+    """Framework-agnostic context for the client WebSocket connection.
+
+    This protocol abstracts away framework-specific request types (Tornado/Starlette)
+    to provide a consistent interface for accessing headers, cookies, and client info
+    from the initial WebSocket handshake.
+    """
+
+    @property
+    def headers(self) -> Iterable[tuple[str, str]]:
+        """All headers as (name, value) tuples. Headers may be repeated."""
+        ...
+
+    @property
+    def cookies(self) -> Mapping[str, str]:
+        """Cookies as a name-to-value mapping."""
+        ...
+
+    @property
+    def remote_ip(self) -> str | None:
+        """The remote IP address of the client, or None if unavailable."""
+        ...
+
+
 class SessionClient(Protocol):
     """Interface for sending data to a session's client."""
 
@@ -44,6 +69,14 @@ class SessionClient(Protocol):
         SessionClientDisconnectedError.
         """
         raise NotImplementedError
+
+    @property
+    def client_context(self) -> ClientContext | None:
+        """The client's connection context (headers, cookies, IP).
+
+        Returns None if request context information is not available.
+        """
+        return None
 
 
 @dataclass

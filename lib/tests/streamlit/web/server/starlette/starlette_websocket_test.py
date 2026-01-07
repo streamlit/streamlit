@@ -24,6 +24,7 @@ import pytest
 
 from streamlit.web.server.starlette import starlette_app_utils
 from streamlit.web.server.starlette.starlette_websocket import (
+    StarletteClientContext,
     StarletteSessionClient,
     _gather_user_info,
     _get_signed_cookie_with_chunks,
@@ -620,3 +621,77 @@ class TestCreateWebsocketRoutes:
 
         assert len(routes) == 1
         assert routes[0].path == "/myapp/_stcore/stream"
+
+
+class TestStarletteClientContext:
+    """Tests for StarletteClientContext class."""
+
+    def test_headers_returns_all_headers(self) -> None:
+        """Test that headers property returns all headers including duplicates."""
+        mock_websocket = MagicMock()
+        mock_websocket.headers.items.return_value = [
+            ("Content-Type", "text/html"),
+            ("Accept", "application/json"),
+            ("Accept", "text/plain"),
+        ]
+
+        ctx = StarletteClientContext(mock_websocket)
+        headers = list(ctx.headers)
+
+        assert len(headers) == 3
+        assert ("Content-Type", "text/html") in headers
+        assert ("Accept", "application/json") in headers
+        assert ("Accept", "text/plain") in headers
+
+    def test_cookies_returns_all_cookies(self) -> None:
+        """Test that cookies property returns all cookies."""
+        mock_websocket = MagicMock()
+        mock_websocket.cookies = {"session": "abc123", "user": "test"}
+
+        ctx = StarletteClientContext(mock_websocket)
+
+        assert ctx.cookies == {"session": "abc123", "user": "test"}
+
+    def test_remote_ip_returns_client_host(self) -> None:
+        """Test that remote_ip property returns client host."""
+        mock_websocket = MagicMock()
+        mock_client = MagicMock()
+        mock_client.host = "192.168.1.100"
+        mock_websocket.client = mock_client
+
+        ctx = StarletteClientContext(mock_websocket)
+
+        assert ctx.remote_ip == "192.168.1.100"
+
+    def test_remote_ip_returns_none_when_no_client(self) -> None:
+        """Test that remote_ip property returns None when client is None."""
+        mock_websocket = MagicMock()
+        mock_websocket.client = None
+
+        ctx = StarletteClientContext(mock_websocket)
+
+        assert ctx.remote_ip is None
+
+
+class TestStarletteSessionClientClientContext:
+    """Tests for client_context property on StarletteSessionClient."""
+
+    @pytest.mark.anyio
+    async def test_client_context_returns_starlette_context(self) -> None:
+        """Test that client_context property returns a StarletteClientContext."""
+        mock_websocket = MagicMock()
+        mock_websocket.headers.items.return_value = [("Host", "localhost")]
+        mock_websocket.cookies = {"test": "cookie"}
+
+        client = StarletteSessionClient(mock_websocket)
+
+        ctx = client.client_context
+        assert isinstance(ctx, StarletteClientContext)
+
+        # Verify it wraps the same websocket
+        headers = list(ctx.headers)
+        assert headers == [("Host", "localhost")]
+        assert ctx.cookies == {"test": "cookie"}
+
+        # Cleanup
+        await client.aclose()

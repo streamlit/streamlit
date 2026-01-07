@@ -19,10 +19,6 @@ import json
 from typing import TYPE_CHECKING, Any, Final
 from urllib.parse import urlparse
 
-import tornado.concurrent
-import tornado.locks
-import tornado.netutil
-import tornado.web
 import tornado.websocket
 from tornado.escape import utf8
 from tornado.websocket import WebSocketHandler
@@ -33,6 +29,7 @@ from streamlit.logger import get_logger
 from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.runtime import Runtime, SessionClient, SessionClientDisconnectedError
 from streamlit.runtime.runtime_util import serialize_forward_msg
+from streamlit.runtime.session_manager import ClientContext
 from streamlit.web.server.server_util import (
     AUTH_COOKIE_NAME,
     TOKENS_COOKIE_NAME,
@@ -41,11 +38,44 @@ from streamlit.web.server.server_util import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Awaitable
+    from collections.abc import Awaitable, Iterable, Mapping
+
+    from tornado.httputil import HTTPServerRequest
 
     from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 
 _LOGGER: Final = get_logger(__name__)
+
+
+class TornadoClientContext(ClientContext):
+    """Tornado-specific implementation of ClientContext.
+
+    Captures headers, cookies, and client info from the initial WebSocket handshake.
+    Values are cached at construction time since they represent the initial request
+    context and should not change during the connection lifetime.
+    """
+
+    def __init__(self, tornado_request: HTTPServerRequest) -> None:
+        self._headers: list[tuple[str, str]] = list(tornado_request.headers.get_all())
+        self._cookies: dict[str, str] = {
+            k: m.value for k, m in tornado_request.cookies.items()
+        }
+        self._remote_ip: str | None = tornado_request.remote_ip
+
+    @property
+    def headers(self) -> Iterable[tuple[str, str]]:
+        """All headers as (name, value) tuples."""
+        return self._headers
+
+    @property
+    def cookies(self) -> Mapping[str, str]:
+        """Cookies as a name-to-value mapping."""
+        return self._cookies
+
+    @property
+    def remote_ip(self) -> str | None:
+        """The client's remote IP address."""
+        return self._remote_ip
 
 
 class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
@@ -142,6 +172,19 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
             self.write_message(serialize_forward_msg(msg), binary=True)
         except tornado.websocket.WebSocketClosedError as e:
             raise SessionClientDisconnectedError from e
+
+    @property
+    def client_context(self) -> ClientContext:
+        """Return the client's connection context.
+
+        The context is cached on first access to avoid repeatedly
+        constructing a new TornadoClientContext instance.
+        """
+        context = getattr(self, "_client_context", None)
+        if context is None:
+            context = TornadoClientContext(self.request)
+            self._client_context = context
+        return context
 
     def select_subprotocol(self, subprotocols: list[str]) -> str | None:
         """Return the first subprotocol in the given list.
