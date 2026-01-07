@@ -38,7 +38,7 @@ def test_number_input_widget_display(
 ):
     """Test that st.number_input renders correctly."""
     expect(themed_app.get_by_test_id("stNumberInput")).to_have_count(NUMBER_INPUT_COUNT)
-    # reset hovering to avoid some flakiness with hovered clear button:
+    # Reset hovering to avoid some flakiness with hovered clear button:
     reset_hovering(themed_app)
 
     assert_snapshot(
