@@ -80,8 +80,7 @@ it's persisted across the page as well.
 - Do we also want a way to persist across page switches, but not across the entire
   session/if the widget isn't rendered? I guess this would be a very niche case and most
   devs would just use `persist="session"`, but not sure? We could add `persist="pages"`
-  or `persist="page-switch"` to cover this but would certainly make it more complex
-  (especially since `"query-params"` is the odd one out then).
+  or `persist="page-switch"` to cover this but not sure if we need it (Debbie says no).
 - At least `"query-params"` should only work when `key` is set, otherwise it might
   create long, ugly, and unstable URLs (plus, would add a lot of implementation time).
   Should the same be true for `"session"` or can we make this work without setting `key`?
