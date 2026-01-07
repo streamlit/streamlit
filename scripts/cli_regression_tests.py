@@ -201,7 +201,7 @@ class TestCLIRegressions:
         )
 
         assert ":8501" in out_one, f"Incorrect port. See output:\n{out_one}"
-        assert "Port 8501 is already in use" in out_two, (
+        assert "Port 8501 is not available" in out_two, (
             f"Incorrect conflict. See output:\n{out_one}"
         )
 
