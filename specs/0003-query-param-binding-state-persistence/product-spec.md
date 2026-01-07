@@ -62,6 +62,9 @@ st.widget(..., persist="session")  # persists widget state for the entire sessio
 st.widget(..., persist=["query-params", "session"])  # binds to query params + persists for the entire session
 ```
 
+Could make `"session"` and `"page"` exclusive, since `"session"` naturally means
+it's persisted across the page as well. 
+
 **Pros:**
 
 - Just one new parameter on each widget instead of two.
@@ -82,13 +85,12 @@ st.widget(..., persist=["query-params", "session"])  # binds to query params + p
 - At least `"query-params"` should only work when `key` is set, otherwise it might
   create long, ugly, and unstable URLs (plus, would add a lot of implementation time).
   Should the same be true for `"session"` or can we make this work without setting `key`?
-  - Today, query params get deleted when the page is switched. I think it makes sense to
-    keep that for `persist="query-params"` or `persist=["query-params", "page"]`.
-    (Exception could be widgets created in the entry point file, but I _think_ these will
-    automatically keep their query params if they are continuously rendered). But for
-    `persist=["query-params", "session"]`, should we keep the query params on page
-    switch? I mean we're also keeping the widget state, so probably makes sense to keep
-    the query param state as well?
+  - If `persist=["query-params", "page"]` or `persist=["query-params", "session"]` is
+    set, should we keep the query params if the widget is not rendered (and for
+    `"session"` if the page is switched)? Today they would get removed if the widget is
+    not rendered or the page is switched (which always nukes query params). But if we're
+    keeping the widget state around, maybe it makes sense to also keep the query params,
+    so you can share your app with the same state?
 
 ### Option 2: Two separate APIs
 
