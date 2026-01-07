@@ -22,7 +22,10 @@ There are two problems here:
    annoying due to Streamlit's rerun model. There are several community-maintained
    packages for this, e.g. [streamlit-qs](https://github.com/Asaurus1/streamlit-qs).
 
-   Issue: #302
+   Issues:
+
+   - #302
+   - #9325
 
 2. **Persisting widget state:** Today, a widget loses its state:
 
