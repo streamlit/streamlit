@@ -341,9 +341,12 @@ class UvicornServer:
                     startup_complete.set()  # noqa: B023
 
                     await self._server.main_loop()
-                except Exception as e:
+                except BaseException as e:
+                    # Catch BaseException to handle CancelledError (which is not
+                    # an Exception). This ensures startup_complete is set even if
+                    # the task is cancelled before startup completes, preventing
+                    # a deadlock in start() which awaits startup_complete.
                     startup_exception = e
-                    startup_complete.set()  # noqa: B023
                     raise
                 finally:
                     try:
@@ -356,6 +359,9 @@ class UvicornServer:
                             self._socket.close()
                             self._socket = None
                         self._stopped_event.set()
+                        # Always set startup_complete to prevent deadlock in start()
+                        # if task is cancelled before normal startup_complete.set().
+                        startup_complete.set()  # noqa: B023
 
             self._server_task = asyncio.create_task(
                 serve_with_signal(), name="uvicorn-server"

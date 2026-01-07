@@ -746,6 +746,50 @@ class TestServerLifecycle:
             # The stopped event should be set after main_loop completes
             assert starlette_server.stopped.is_set()
 
+    def test_no_deadlock_on_task_cancellation(self) -> None:
+        """Test that start() doesn't deadlock if task is cancelled during startup.
+
+        This tests a fix for a potential deadlock where CancelledError (which is
+        a BaseException, not Exception) would bypass the exception handler that
+        sets startup_complete, causing start() to hang forever on await
+        startup_complete.wait().
+
+        The fix ensures startup_complete is set in the finally block.
+        """
+        from streamlit.web.server.starlette.starlette_server import UvicornServer
+
+        server = self._create_server()
+        mock_socket = mock.MagicMock(spec=socket.socket)
+
+        async def test_cancellation() -> None:
+            with (
+                patch(
+                    "streamlit.web.server.starlette.starlette_server._bind_socket",
+                    return_value=mock_socket,
+                ),
+                patch("uvicorn.Server") as uvicorn_server_cls,
+            ):
+                uvicorn_instance = mock.MagicMock()
+                uvicorn_instance.shutdown = AsyncMock()
+                uvicorn_instance.should_exit = False
+
+                # Make startup raise CancelledError to simulate task cancellation
+                uvicorn_instance.startup = AsyncMock(
+                    side_effect=asyncio.CancelledError()
+                )
+                uvicorn_server_cls.return_value = uvicorn_instance
+
+                starlette_server = UvicornServer(server._runtime)
+
+                # This should raise CancelledError, not deadlock
+                with pytest.raises(asyncio.CancelledError):
+                    await asyncio.wait_for(starlette_server.start(), timeout=2.0)
+
+                # The stopped event should still be set (cleanup happened)
+                assert starlette_server.stopped.is_set()
+
+        self._run_async(test_cancellation())
+
 
 class TestUvicornRunner:
     """Tests for UvicornRunner class (sync blocking runner for st.App mode)."""
