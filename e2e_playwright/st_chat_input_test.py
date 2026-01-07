@@ -643,6 +643,34 @@ def test_uploads_and_deletes_multiple_files(
     expect(uploaded_file_names).to_have_text(files[1]["name"], use_inner_text=True)
 
 
+@use_chat_input("multiple_files")
+def test_multiple_files_wrapping_behavior(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that multiple uploaded files wrap correctly within the chat input."""
+    themed_app.set_viewport_size({"width": 750, "height": 2000})
+    chat_input = get_element_by_key(themed_app, "multiple_files")
+
+    # Create 6 files to test wrapping behavior
+    files = [
+        FilePayload(name=f"document{i}.txt", mimeType="text/plain", buffer=b"content")
+        for i in range(1, 7)
+    ]
+
+    file_upload_helper(themed_app, chat_input, files)
+
+    uploaded_files = chat_input.get_by_test_id("stChatUploadedFiles").first
+
+    # Wait for all file names to be visible
+    for i in range(1, 7):
+        expect(uploaded_files.get_by_text(f"document{i}.txt")).to_be_visible()
+
+    # Dismiss any tooltips before taking snapshot
+    reset_hovering(themed_app)
+
+    assert_snapshot(chat_input, name="st_chat_input-multiple_files_wrapping")
+
+
 @use_chat_input("single_file")
 def test_file_upload_error_message_disallowed_files(
     themed_app: Page, assert_snapshot: ImageCompareFunction
