@@ -62,6 +62,7 @@ import {
   AppRoot,
   CircularBuffer,
   ComponentRegistry,
+  createAutoTheme,
   createCustomThemes,
   createFormsData,
   createPresetThemes,
@@ -77,7 +78,7 @@ import {
   getCachedTheme,
   getElementId,
   getEmbeddingIdClassName,
-  getHostSpecifiedTheme,
+  getHostSpecifiedThemeOnly,
   getIFrameEnclosingApp,
   getLocaleLanguage,
   getQueryString,
@@ -1473,8 +1474,10 @@ export class App extends PureComponent<Props, State> {
       // Add the new custom themes to the theme manager and remove the preset themes
       this.props.theme.addThemes(customThemes, { keepPresetThemes: false })
 
-      const userPreference = getCachedTheme()
-      // Map the user's cached preference to the best matching theme from the new custom themes
+      // Check for host-specified theme first (embed_options query params)
+      const hostSpecified = getHostSpecifiedThemeOnly()
+      const userPreference = hostSpecified ?? getCachedTheme()
+      // Map the user's preference (host-specified or cached) to the best matching theme
       // - Applies full server config while preserving user's light/dark selection
       const mappedTheme = mapCachedThemeToAvailableTheme(
         userPreference,
@@ -1508,9 +1511,11 @@ export class App extends PureComponent<Props, State> {
       this.props.theme.addThemes([])
 
       if (usingCustomTheme) {
-        const userPreference = getCachedTheme()
+        // Check for host-specified theme first (embed_options query params)
+        const hostSpecified = getHostSpecifiedThemeOnly()
+        const userPreference = hostSpecified ?? getCachedTheme()
         const presetThemes = [lightTheme, darkTheme]
-        // Try to map custom theme preference back to preset themes
+        // Try to map preference (host-specified or cached) back to preset themes
         // e.g., "Custom Theme Light" → "Light", "Custom Theme Dark" → "Dark"
         const mappedTheme = mapCachedThemeToAvailableTheme(
           userPreference,
@@ -1521,9 +1526,8 @@ export class App extends PureComponent<Props, State> {
           // User had a custom theme preference that maps to a preset - preserve their choice
           this.setAndSendTheme(mappedTheme)
         } else {
-          // Reset to the auto theme taking into account any host preferences
-          // aka embed query params.
-          this.setAndSendTheme(getHostSpecifiedTheme())
+          // Reset to the auto theme
+          this.setAndSendTheme(createAutoTheme())
         }
       }
     }
