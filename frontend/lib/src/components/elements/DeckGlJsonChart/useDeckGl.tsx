@@ -164,6 +164,56 @@ function updateWidgetMgrState(
   )
 }
 
+/**
+ * Refreshes the selection objects dict with current layer data.
+ *
+ * When the pydeck spec changes but the selection state persists (due to key-based
+ * identity), the `objects` dict may contain stale data from the previous spec.
+ * This function refreshes the objects by looking up current data at the selected indices.
+ *
+ * @param selection - The current selection state with indices and objects
+ * @param layers - The current layers from the parsed pydeck config
+ * @returns Updated selection with refreshed objects from current layer data
+ */
+function refreshSelectionObjects(
+  selection: DeckGlElementState["selection"],
+  layers: ParsedDeckGlConfig["layers"]
+): DeckGlElementState["selection"] {
+  const refreshedObjects: Record<string, unknown[]> = {}
+  let hasChanges = false
+
+  for (const [layerId, indices] of Object.entries(selection.indices)) {
+    const layer = layers?.find(l => `${l?.id || null}` === layerId)
+    const layerData = layer?.data
+
+    if (Array.isArray(layerData)) {
+      // Refresh objects from current data, filtering out invalid indices
+      const validIndices = indices.filter(i => i < layerData.length)
+      refreshedObjects[layerId] = validIndices.map(i => layerData[i])
+
+      // Check if objects changed (different length or reference)
+      const existingObjects = selection.objects[layerId] || []
+      if (
+        existingObjects.length !== refreshedObjects[layerId].length ||
+        !existingObjects.every(
+          (obj, idx) => obj === refreshedObjects[layerId][idx]
+        )
+      ) {
+        hasChanges = true
+      }
+    } else {
+      // Keep existing objects if data isn't an array (URL data source)
+      refreshedObjects[layerId] = selection.objects[layerId] || []
+    }
+  }
+
+  // Only return new object if something changed to avoid unnecessary updates
+  if (hasChanges) {
+    return { indices: selection.indices, objects: refreshedObjects }
+  }
+  return selection
+}
+
 export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
   const {
     height: fullScreenHeight,
@@ -230,6 +280,73 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
   }, [isFullScreen, isLightTheme, element.json])
 
+  // Sanitize and refresh selection when pydeck spec changes.
+  // This effect handles two scenarios:
+  // - Remove selections for layers that no longer exist in the spec
+  // - Refresh objects dict with current layer data (fixes stale object references)
+  useEffect(() => {
+    if (!isSelectionModeActivated || !element.id) return
+    // Skip if no selections exist
+    if (Object.keys(data.selection.indices).length === 0) return
+
+    // C1: Get current layer IDs to check for stale selections
+    const currentLayerIds = new Set(
+      (parsedPydeckJson.layers || [])
+        .filter(Boolean)
+        .map(layer => `${layer.id || null}`)
+    )
+
+    // Check if any selected layers no longer exist
+    const hasStaleLayerIds = Object.keys(data.selection.indices).some(
+      layerId => !currentLayerIds.has(layerId)
+    )
+
+    // Filter to only valid layer IDs
+    let sanitizedSelection = data.selection
+    if (hasStaleLayerIds) {
+      const validatedIndices: Record<string, number[]> = {}
+      const validatedObjects: Record<string, unknown[]> = {}
+
+      for (const [layerId, indices] of Object.entries(
+        data.selection.indices
+      )) {
+        if (currentLayerIds.has(layerId)) {
+          validatedIndices[layerId] = indices
+          validatedObjects[layerId] = data.selection.objects[layerId] || []
+        }
+      }
+
+      sanitizedSelection = {
+        indices: validatedIndices,
+        objects: validatedObjects,
+      }
+    }
+
+    // C2: Refresh objects with current layer data
+    const refreshedSelection = refreshSelectionObjects(
+      sanitizedSelection,
+      parsedPydeckJson.layers
+    )
+
+    // Only update if something actually changed
+    if (
+      hasStaleLayerIds ||
+      (refreshedSelection !== sanitizedSelection &&
+        refreshedSelection !== data.selection)
+    ) {
+      setSelection({
+        value: { selection: refreshedSelection },
+        fromUi: false, // Don't trigger rerun - this is just data cleanup/refresh
+      })
+    }
+  }, [
+    parsedPydeckJson.layers,
+    isSelectionModeActivated,
+    element.id,
+    data.selection,
+    setSelection,
+  ])
+
   const deck = useMemo<DeckObject>(() => {
     const jsonCopy = { ...parsedPydeckJson }
 
@@ -253,9 +370,21 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
     }
 
     if (jsonCopy.layers) {
-      const anyLayersHaveSelection = Object.values(
-        data.selection.indices
-      ).some(layer => layer?.length)
+      // Smarter dimming check - only consider selections with valid indices
+      // for current layers. This prevents "everything dimmed but nothing highlighted"
+      // when selections reference invalid indices (e.g., data shrunk).
+      const anyLayersHaveValidSelection = jsonCopy.layers.some(layer => {
+        if (!layer) return false
+        const layerId = `${layer.id || null}`
+        const selectedIndices = data.selection.indices[layerId] || []
+        const layerData = layer.data
+        // If data is an array, check if any selected index is within bounds
+        // If data is a URL/expression, assume indices are valid (we can't check)
+        const dataLength = Array.isArray(layerData)
+          ? layerData.length
+          : Infinity
+        return selectedIndices.some(i => i < dataLength)
+      })
 
       const anyLayersHavePickableDefined = jsonCopy.layers.some(layer =>
         Object.hasOwn(layer, "pickable")
@@ -296,11 +425,11 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
             [fillFunction]: [
               ...(clonedLayer.updateTriggers?.[fillFunction] || []),
               selectedIndices,
-              anyLayersHaveSelection,
+              anyLayersHaveValidSelection,
             ],
           }
 
-          const shouldUseOriginalFillFunction = !anyLayersHaveSelection
+          const shouldUseOriginalFillFunction = !anyLayersHaveValidSelection
 
           const originalFillFunction = layer[fillFunction] as
             | FillFunction

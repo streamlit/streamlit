@@ -553,14 +553,19 @@ class PydeckMixin:
             )
             pydeck_proto.form_id = current_form_id(self.dg)
 
+            # Extract structural fingerprint for stable ID computation when key is provided.
+            # This allows selection state to persist across data content changes while
+            # still resetting when structure changes (layer IDs or data lengths).
+            structural_fingerprint = _extract_structural_fingerprint(spec)
+
             pydeck_proto.id = compute_and_register_element_id(
                 "deck_gl_json_chart",
                 user_key=key,
-                key_as_main_identity=False,
+                key_as_main_identity={"selection_mode", "structural_fingerprint"},
                 dg=self.dg,
                 is_selection_activated=is_selection_activated,
                 selection_mode=selection_mode,
-                use_container_width=use_container_width,
+                structural_fingerprint=structural_fingerprint,
                 spec=spec,
             )
 
@@ -591,6 +596,67 @@ class PydeckMixin:
     def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)
+
+
+def _extract_structural_fingerprint(spec: str) -> str:
+    """Extract structural info from pydeck spec for stable ID computation.
+
+    Returns a fingerprint string that changes when layer structure changes
+    (IDs or data lengths) but NOT when data content or styling changes.
+
+    This enables selection state persistence when:
+    - Data content changes (same structure, different values)
+    - View state changes (zoom, pan, pitch)
+    - Styling changes (colors, sizes)
+
+    While still resetting selections when:
+    - Layers are added, removed, or renamed
+    - Data lengths change (which would invalidate index-based selections)
+
+    Parameters
+    ----------
+    spec : str
+        The JSON spec string from the pydeck object.
+
+    Returns
+    -------
+    str
+        A fingerprint string that can be used in ID computation.
+        Returns empty string if parsing fails.
+    """
+    try:
+        parsed = json.loads(spec)
+        layers = parsed.get("layers", [])
+
+        # Sorted layer IDs for deterministic ordering
+        layer_ids = sorted(
+            str(layer.get("id", f"layer_{i}"))
+            for i, layer in enumerate(layers)
+            if layer
+        )
+
+        # Data lengths per layer (or hash for URL data sources)
+        data_lengths: list[int] = []
+        for layer in layers:
+            if not layer:
+                continue
+            data = layer.get("data")
+            if isinstance(data, list):
+                data_lengths.append(len(data))
+            elif isinstance(data, str):
+                # URL/expression - use deterministic hash for stability across restarts.
+                # Python's built-in hash() is randomized per-process, so we use
+                # a simple string length + character sum as a lightweight fingerprint.
+                data_lengths.append(len(data) + sum(ord(c) for c in data[:100]))
+            else:
+                data_lengths.append(0)
+
+        # Return a deterministic string representation
+        return (
+            f"layers:{','.join(layer_ids)}|lengths:{','.join(map(str, data_lengths))}"
+        )
+    except (json.JSONDecodeError, TypeError, AttributeError):
+        return ""
 
 
 def _get_pydeck_width(pydeck_obj: Deck | None) -> int | None:

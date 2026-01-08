@@ -254,14 +254,21 @@ const RawElementNodeRenderer = (
       )
     }
 
-    case "deckGlJsonChart":
+    case "deckGlJsonChart": {
+      const deck_gl_chart_proto = node.element
+        .deckGlJsonChart as DeckGlJsonChartProto
       return (
         <DeckGlJsonChart
-          element={node.element.deckGlJsonChart as DeckGlJsonChartProto}
+          element={deck_gl_chart_proto}
+          // DeckGL chart can be used as a widget (when selections are activated) or
+          // an element. We only want to set the key in case of it being used as a widget
+          // since otherwise it might break some apps that show the same charts multiple times.
+          // So we only compute an element ID if it's a widget, otherwise its an empty string.
+          key={deck_gl_chart_proto.id || undefined}
           {...widgetProps}
         />
       )
-
+    }
     case "docString":
       return (
         <DocString

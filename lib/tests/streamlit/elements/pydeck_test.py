@@ -484,3 +484,324 @@ class PyDeckChartHeightTest(DeltaGeneratorTestCase):
 
         assert el.height_config.WhichOneof("height_spec") == "pixel_height"
         assert el.height_config.pixel_height == 500
+
+
+class PyDeckKeyAsMainIdentityTest(DeltaGeneratorTestCase):
+    """Tests for key-as-main-identity behavior with pydeck_chart."""
+
+    def _clear_widget_registry(self) -> None:
+        """Clear the widget registry to simulate a new script run."""
+        from streamlit.runtime.scriptrunner_utils.script_run_context import (
+            get_script_run_ctx,
+        )
+
+        ctx = get_script_run_ctx()
+        if ctx is not None:
+            ctx.widget_ids_this_run.clear()
+            ctx.widget_user_keys_this_run.clear()
+
+    def test_element_id_stable_with_key_and_same_structure(self) -> None:
+        """Test that element ID stays stable when key is provided and structure is same."""
+        # First call with initial data
+        st.pydeck_chart(
+            pdk.Deck(layers=[pdk.Layer("ScatterplotLayer", data=df1, id="my-layer")]),
+            on_select="rerun",
+            key="my-chart",
+        )
+        el1 = self.get_delta_from_queue().new_element
+        id1 = el1.deck_gl_json_chart.id
+
+        # Clear registry to simulate new script run
+        self._clear_widget_registry()
+
+        # Second call with different data but same structure (same length)
+        df2 = pd.DataFrame({"lat": [5, 6, 7, 8], "lon": [50, 60, 70, 80]})
+        st.pydeck_chart(
+            pdk.Deck(layers=[pdk.Layer("ScatterplotLayer", data=df2, id="my-layer")]),
+            on_select="rerun",
+            key="my-chart",
+        )
+        el2 = self.get_delta_from_queue().new_element
+        id2 = el2.deck_gl_json_chart.id
+
+        # IDs should be the same because structure is unchanged
+        assert id1 == id2
+
+    def test_element_id_changes_with_key_and_different_structure(self) -> None:
+        """Test that element ID changes when structure changes even with same key."""
+        # First call with 4 data points
+        st.pydeck_chart(
+            pdk.Deck(layers=[pdk.Layer("ScatterplotLayer", data=df1, id="my-layer")]),
+            on_select="rerun",
+            key="my-chart",
+        )
+        el1 = self.get_delta_from_queue().new_element
+        id1 = el1.deck_gl_json_chart.id
+
+        # Clear registry to simulate new script run
+        self._clear_widget_registry()
+
+        # Second call with different data length (5 instead of 4)
+        df2 = pd.DataFrame({"lat": [1, 2, 3, 4, 5], "lon": [10, 20, 30, 40, 50]})
+        st.pydeck_chart(
+            pdk.Deck(layers=[pdk.Layer("ScatterplotLayer", data=df2, id="my-layer")]),
+            on_select="rerun",
+            key="my-chart",
+        )
+        el2 = self.get_delta_from_queue().new_element
+        id2 = el2.deck_gl_json_chart.id
+
+        # IDs should be different because data length changed
+        assert id1 != id2
+
+    def test_element_id_changes_with_key_and_different_layer_id(self) -> None:
+        """Test that element ID changes when layer ID changes even with same key."""
+        st.pydeck_chart(
+            pdk.Deck(layers=[pdk.Layer("ScatterplotLayer", data=df1, id="layer-a")]),
+            on_select="rerun",
+            key="my-chart",
+        )
+        el1 = self.get_delta_from_queue().new_element
+        id1 = el1.deck_gl_json_chart.id
+
+        # Clear registry to simulate new script run
+        self._clear_widget_registry()
+
+        st.pydeck_chart(
+            pdk.Deck(layers=[pdk.Layer("ScatterplotLayer", data=df1, id="layer-b")]),
+            on_select="rerun",
+            key="my-chart",
+        )
+        el2 = self.get_delta_from_queue().new_element
+        id2 = el2.deck_gl_json_chart.id
+
+        # IDs should be different because layer ID changed
+        assert id1 != id2
+
+    def test_element_id_changes_without_key(self) -> None:
+        """Test that element ID changes when spec changes and no key is provided."""
+        st.pydeck_chart(
+            pdk.Deck(layers=[pdk.Layer("ScatterplotLayer", data=df1, id="my-layer")]),
+            on_select="rerun",
+        )
+        el1 = self.get_delta_from_queue().new_element
+        id1 = el1.deck_gl_json_chart.id
+
+        # Clear registry to simulate new script run
+        self._clear_widget_registry()
+
+        # Different data content (same length)
+        df2 = pd.DataFrame({"lat": [5, 6, 7, 8], "lon": [50, 60, 70, 80]})
+        st.pydeck_chart(
+            pdk.Deck(layers=[pdk.Layer("ScatterplotLayer", data=df2, id="my-layer")]),
+            on_select="rerun",
+        )
+        el2 = self.get_delta_from_queue().new_element
+        id2 = el2.deck_gl_json_chart.id
+
+        # IDs should be different without a key, even with same structure
+        assert id1 != id2
+
+
+class StructuralFingerprintTest(DeltaGeneratorTestCase):
+    """Tests for _extract_structural_fingerprint function."""
+
+    def test_basic_fingerprint_with_layers(self) -> None:
+        """Test that fingerprint extracts layer IDs and data lengths."""
+        spec = json.dumps(
+            {
+                "layers": [
+                    {"id": "layer-a", "data": [1, 2, 3]},
+                    {"id": "layer-b", "data": [1, 2, 3, 4, 5]},
+                ]
+            }
+        )
+        fingerprint = deck_gl_json_chart._extract_structural_fingerprint(spec)
+
+        # Should contain both layer IDs and data lengths
+        assert "layer-a" in fingerprint
+        assert "layer-b" in fingerprint
+        assert "3" in fingerprint  # data length of layer-a
+        assert "5" in fingerprint  # data length of layer-b
+
+    def test_fingerprint_with_no_layers(self) -> None:
+        """Test that fingerprint handles empty layers array."""
+        spec = json.dumps({"layers": []})
+        fingerprint = deck_gl_json_chart._extract_structural_fingerprint(spec)
+
+        assert fingerprint == "layers:|lengths:"
+
+    def test_fingerprint_with_missing_layers(self) -> None:
+        """Test that fingerprint handles missing layers key."""
+        spec = json.dumps({"initialViewState": {"latitude": 0}})
+        fingerprint = deck_gl_json_chart._extract_structural_fingerprint(spec)
+
+        assert fingerprint == "layers:|lengths:"
+
+    def test_fingerprint_with_auto_generated_layer_ids(self) -> None:
+        """Test that fingerprint generates IDs for layers without explicit IDs."""
+        spec = json.dumps(
+            {
+                "layers": [
+                    {"data": [1, 2]},  # No ID - should get "layer_0"
+                    {"id": "my-layer", "data": [3, 4, 5]},
+                ]
+            }
+        )
+        fingerprint = deck_gl_json_chart._extract_structural_fingerprint(spec)
+
+        assert "layer_0" in fingerprint
+        assert "my-layer" in fingerprint
+
+    def test_fingerprint_with_url_data(self) -> None:
+        """Test that fingerprint handles URL data sources with hash."""
+        spec = json.dumps(
+            {
+                "layers": [
+                    {"id": "layer-a", "data": "https://example.com/data.csv"},
+                ]
+            }
+        )
+        fingerprint = deck_gl_json_chart._extract_structural_fingerprint(spec)
+
+        # Should contain layer ID and a hash value for the URL
+        assert "layer-a" in fingerprint
+        # The hash should be a number
+        parts = fingerprint.split("|")
+        lengths_part = parts[1].replace("lengths:", "")
+        assert lengths_part.isdigit() or lengths_part == ""
+
+    def test_fingerprint_with_none_data(self) -> None:
+        """Test that fingerprint handles layers with no data."""
+        spec = json.dumps(
+            {
+                "layers": [
+                    {"id": "layer-a"},  # No data key
+                ]
+            }
+        )
+        fingerprint = deck_gl_json_chart._extract_structural_fingerprint(spec)
+
+        assert "layer-a" in fingerprint
+        assert "0" in fingerprint  # Default length for missing data
+
+    def test_fingerprint_is_deterministic(self) -> None:
+        """Test that fingerprint is deterministic for same input."""
+        spec = json.dumps(
+            {
+                "layers": [
+                    {"id": "layer-b", "data": [1, 2]},
+                    {"id": "layer-a", "data": [3, 4, 5]},
+                ]
+            }
+        )
+        fingerprint1 = deck_gl_json_chart._extract_structural_fingerprint(spec)
+        fingerprint2 = deck_gl_json_chart._extract_structural_fingerprint(spec)
+
+        assert fingerprint1 == fingerprint2
+
+    def test_fingerprint_layer_ids_are_sorted(self) -> None:
+        """Test that layer IDs are sorted for deterministic output."""
+        spec = json.dumps(
+            {
+                "layers": [
+                    {"id": "z-layer", "data": []},
+                    {"id": "a-layer", "data": []},
+                    {"id": "m-layer", "data": []},
+                ]
+            }
+        )
+        fingerprint = deck_gl_json_chart._extract_structural_fingerprint(spec)
+
+        # IDs should be sorted alphabetically
+        assert "a-layer,m-layer,z-layer" in fingerprint
+
+    def test_fingerprint_changes_with_different_layer_ids(self) -> None:
+        """Test that fingerprint changes when layer IDs change."""
+        spec1 = json.dumps({"layers": [{"id": "layer-a", "data": [1, 2, 3]}]})
+        spec2 = json.dumps({"layers": [{"id": "layer-b", "data": [1, 2, 3]}]})
+
+        fingerprint1 = deck_gl_json_chart._extract_structural_fingerprint(spec1)
+        fingerprint2 = deck_gl_json_chart._extract_structural_fingerprint(spec2)
+
+        assert fingerprint1 != fingerprint2
+
+    def test_fingerprint_changes_with_different_data_lengths(self) -> None:
+        """Test that fingerprint changes when data lengths change."""
+        spec1 = json.dumps({"layers": [{"id": "layer-a", "data": [1, 2, 3]}]})
+        spec2 = json.dumps({"layers": [{"id": "layer-a", "data": [1, 2, 3, 4, 5]}]})
+
+        fingerprint1 = deck_gl_json_chart._extract_structural_fingerprint(spec1)
+        fingerprint2 = deck_gl_json_chart._extract_structural_fingerprint(spec2)
+
+        assert fingerprint1 != fingerprint2
+
+    def test_fingerprint_same_with_different_data_content(self) -> None:
+        """Test that fingerprint stays same when only data content changes."""
+        spec1 = json.dumps({"layers": [{"id": "layer-a", "data": [1, 2, 3]}]})
+        spec2 = json.dumps({"layers": [{"id": "layer-a", "data": [4, 5, 6]}]})
+
+        fingerprint1 = deck_gl_json_chart._extract_structural_fingerprint(spec1)
+        fingerprint2 = deck_gl_json_chart._extract_structural_fingerprint(spec2)
+
+        # Same structure (same ID, same length) should produce same fingerprint
+        assert fingerprint1 == fingerprint2
+
+    def test_fingerprint_handles_invalid_json(self) -> None:
+        """Test that fingerprint returns empty string for invalid JSON."""
+        fingerprint = deck_gl_json_chart._extract_structural_fingerprint(
+            "not valid json"
+        )
+
+        assert fingerprint == ""
+
+    def test_fingerprint_handles_null_layers(self) -> None:
+        """Test that fingerprint handles null values in layers array."""
+        spec = json.dumps(
+            {
+                "layers": [
+                    None,
+                    {"id": "layer-a", "data": [1, 2]},
+                    None,
+                ]
+            }
+        )
+        fingerprint = deck_gl_json_chart._extract_structural_fingerprint(spec)
+
+        # Should only include the valid layer
+        assert "layer-a" in fingerprint
+        # The fingerprint format is "layers:layer-a|lengths:2"
+        # Extract the layers part to check only one layer ID is present
+        layers_part = fingerprint.split("|")[0].replace("layers:", "")
+        assert layers_part == "layer-a"  # Only one layer ID
+
+    def test_fingerprint_url_is_deterministic(self) -> None:
+        """Test that URL data fingerprint is deterministic across calls."""
+        spec = json.dumps(
+            {
+                "layers": [
+                    {"id": "layer-a", "data": "https://example.com/data.csv"},
+                ]
+            }
+        )
+        # Call multiple times to ensure deterministic behavior
+        fingerprint1 = deck_gl_json_chart._extract_structural_fingerprint(spec)
+        fingerprint2 = deck_gl_json_chart._extract_structural_fingerprint(spec)
+        fingerprint3 = deck_gl_json_chart._extract_structural_fingerprint(spec)
+
+        assert fingerprint1 == fingerprint2 == fingerprint3
+
+    def test_fingerprint_different_urls_produce_different_fingerprints(self) -> None:
+        """Test that different URLs produce different fingerprints."""
+        spec1 = json.dumps(
+            {"layers": [{"id": "layer-a", "data": "https://example.com/data1.csv"}]}
+        )
+        spec2 = json.dumps(
+            {"layers": [{"id": "layer-a", "data": "https://example.com/data2.csv"}]}
+        )
+
+        fingerprint1 = deck_gl_json_chart._extract_structural_fingerprint(spec1)
+        fingerprint2 = deck_gl_json_chart._extract_structural_fingerprint(spec2)
+
+        # Different URLs should produce different fingerprints
+        assert fingerprint1 != fingerprint2
