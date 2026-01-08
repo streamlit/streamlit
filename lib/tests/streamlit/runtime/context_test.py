@@ -27,31 +27,41 @@ from streamlit.runtime.context import (
     StreamlitCookies,
     StreamlitHeaders,
     StreamlitTheme,
-    _get_request,
+    _get_client_context,
     _normalize_header,
 )
 
 
-class StContextTest(unittest.TestCase):
-    mocked_cookie = Morsel()
-    mocked_cookie.set("cookieName", "cookieValue", "cookieValue")
+def _create_mock_client_context(
+    headers: list[tuple[str, str]] | None = None,
+    cookies: dict[str, str] | None = None,
+    remote_ip: str | None = None,
+) -> MagicMock:
+    """Create a mock ClientContext for testing."""
+    mock_context = MagicMock()
+    mock_context.headers = headers or []
+    mock_context.cookies = cookies or {}
+    mock_context.remote_ip = remote_ip
+    return mock_context
 
-    @patch(
-        "streamlit.runtime.context._get_request",
-        MagicMock(
-            return_value=MagicMock(headers=HTTPHeaders({"the-header": "header-value"}))
-        ),
-    )
-    def test_context_headers(self):
-        """Test that `st.context.headers` returns headers from ScriptRunContext"""
+
+class StContextTest(unittest.TestCase):
+    """Test st.context API."""
+
+    @patch("streamlit.runtime.context._get_client_context")
+    def test_context_headers(self, mock_get_client_context: MagicMock) -> None:
+        """Test that `st.context.headers` returns headers from ClientContext."""
+        mock_get_client_context.return_value = _create_mock_client_context(
+            headers=[("the-header", "header-value")]
+        )
         assert st.context.headers.to_dict() == {"The-Header": "header-value"}
 
-    @patch(
-        "streamlit.runtime.context._get_request",
-        MagicMock(return_value=MagicMock(cookies={"cookieName": mocked_cookie})),
-    )
-    def test_context_cookies(self):
-        """Test that `st.context.cookies` returns cookies from ScriptRunContext"""
+    @patch("streamlit.runtime.context._get_client_context")
+    def test_context_cookies(self, mock_get_client_context: MagicMock) -> None:
+        """Test that `st.context.cookies` returns cookies from ClientContext."""
+        mock_get_client_context.return_value = _create_mock_client_context(
+            cookies={"cookieName": "cookieValue"}
+        )
         assert st.context.cookies.to_dict() == {"cookieName": "cookieValue"}
 
     @parameterized.expand(
@@ -62,10 +72,17 @@ class StContextTest(unittest.TestCase):
             ("::1", None),  # IPv6 localhost
         ]
     )
-    @patch("streamlit.runtime.context._get_request")
-    def test_ip_address_values(self, remote_ip, expected_value, mock_get_request):
-        """Test that `st.context.ip_address` handles different IP addresses correctly"""
-        mock_get_request.return_value = MagicMock(remote_ip=remote_ip)
+    @patch("streamlit.runtime.context._get_client_context")
+    def test_ip_address_values(
+        self,
+        remote_ip: str,
+        expected_value: str | None,
+        mock_get_client_context: MagicMock,
+    ) -> None:
+        """Test that `st.context.ip_address` handles different IP addresses correctly."""
+        mock_get_client_context.return_value = _create_mock_client_context(
+            remote_ip=remote_ip
+        )
         assert st.context.ip_address == expected_value
 
     @patch(
@@ -234,15 +251,19 @@ class StreamlitThemeTest(unittest.TestCase):
 class ContextPropertiesNoneTest(unittest.TestCase):
     """Test context properties when context or request is None."""
 
-    @patch("streamlit.runtime.context._get_request", MagicMock(return_value=None))
-    def test_headers_none_request(self):
-        """Test that headers returns empty when request is None."""
+    @patch(
+        "streamlit.runtime.context._get_client_context", MagicMock(return_value=None)
+    )
+    def test_headers_none_client_context(self) -> None:
+        """Test that headers returns empty when client_context is None."""
         headers = st.context.headers
         assert headers.to_dict() == {}
 
-    @patch("streamlit.runtime.context._get_request", MagicMock(return_value=None))
-    def test_cookies_none_request(self):
-        """Test that cookies returns empty when request is None."""
+    @patch(
+        "streamlit.runtime.context._get_client_context", MagicMock(return_value=None)
+    )
+    def test_cookies_none_client_context(self) -> None:
+        """Test that cookies returns empty when client_context is None."""
         cookies = st.context.cookies
         assert cookies.to_dict() == {}
 
@@ -314,26 +335,28 @@ class ContextPropertiesNoneTest(unittest.TestCase):
         else:
             assert getattr(st.context, property_name) == expected_value
 
-    @patch("streamlit.runtime.context._get_request", MagicMock(return_value=None))
-    def test_ip_address_none_request(self):
-        """Test that ip_address returns None when request is None."""
+    @patch(
+        "streamlit.runtime.context._get_client_context", MagicMock(return_value=None)
+    )
+    def test_ip_address_none_client_context(self) -> None:
+        """Test that ip_address returns None when client_context is None."""
         assert st.context.ip_address is None
 
 
-class GetRequestTest(unittest.TestCase):
-    """Test _get_request function edge cases."""
+class GetClientContextTest(unittest.TestCase):
+    """Test _get_client_context function edge cases."""
 
     @patch("streamlit.runtime.context.get_script_run_ctx", MagicMock(return_value=None))
-    def test_get_request_none_context(self):
-        """Test that _get_request returns None when context is None."""
-        assert _get_request() is None
+    def test_get_client_context_none_context(self) -> None:
+        """Test that _get_client_context returns None when script context is None."""
+        assert _get_client_context() is None
 
     @patch("streamlit.runtime.context.get_script_run_ctx")
     @patch("streamlit.runtime.context.runtime")
-    def test_get_request_none_session_client(
-        self, mock_runtime, mock_get_script_run_ctx
-    ):
-        """Test that _get_request returns None when session_client is None."""
+    def test_get_client_context_none_session_client(
+        self, mock_runtime: MagicMock, mock_get_script_run_ctx: MagicMock
+    ) -> None:
+        """Test that _get_client_context returns None when session_client is None."""
         mock_ctx = MagicMock()
         mock_ctx.session_id = "test_session"
         mock_get_script_run_ctx.return_value = mock_ctx
@@ -342,51 +365,49 @@ class GetRequestTest(unittest.TestCase):
         mock_instance.get_client.return_value = None
         mock_runtime.get_instance.return_value = mock_instance
 
-        assert _get_request() is None
+        assert _get_client_context() is None
 
     @patch("streamlit.runtime.context.get_script_run_ctx")
     @patch("streamlit.runtime.context.runtime")
-    def test_get_request_non_websocket_handler(
-        self, mock_runtime, mock_get_script_run_ctx
-    ):
-        """Test that _get_request returns None for non-BrowserWebSocketHandler."""
+    def test_get_client_context_no_client_context_property(
+        self, mock_runtime: MagicMock, mock_get_script_run_ctx: MagicMock
+    ) -> None:
+        """Test that _get_client_context returns None when client has no context."""
         mock_ctx = MagicMock()
         mock_ctx.session_id = "test_session"
         mock_get_script_run_ctx.return_value = mock_ctx
 
-        # Create a mock session client that is not a BrowserWebSocketHandler
+        # Create a mock session client without a client_context
         mock_session_client = MagicMock()
-        type(mock_session_client).__module__ = "some.other.module"
-        type(mock_session_client).__qualname__ = "SomeOtherHandler"
+        mock_session_client.client_context = None
 
         mock_instance = MagicMock()
         mock_instance.get_client.return_value = mock_session_client
         mock_runtime.get_instance.return_value = mock_instance
 
-        assert _get_request() is None
+        assert _get_client_context() is None
 
     @patch("streamlit.runtime.context.get_script_run_ctx")
     @patch("streamlit.runtime.context.runtime")
-    def test_get_request_valid_websocket_handler(
-        self, mock_runtime, mock_get_script_run_ctx
-    ):
-        """Test that _get_request returns request for valid BrowserWebSocketHandler."""
+    def test_get_client_context_valid_session_client(
+        self, mock_runtime: MagicMock, mock_get_script_run_ctx: MagicMock
+    ) -> None:
+        """Test that _get_client_context returns client_context from valid client."""
         mock_ctx = MagicMock()
         mock_ctx.session_id = "test_session"
         mock_get_script_run_ctx.return_value = mock_ctx
 
-        # Create a mock session client that is a BrowserWebSocketHandler
-        mock_request = MagicMock()
+        # Create a mock session client with a client_context
+        mock_client_context = _create_mock_client_context(
+            headers=[("test-header", "test-value")],
+            cookies={"test": "cookie"},
+            remote_ip="1.2.3.4",
+        )
         mock_session_client = MagicMock()
-        # Use type() to properly mock the module and qualname
-        type(
-            mock_session_client
-        ).__module__ = "streamlit.web.server.browser_websocket_handler"
-        type(mock_session_client).__qualname__ = "BrowserWebSocketHandler"
-        mock_session_client.request = mock_request
+        mock_session_client.client_context = mock_client_context
 
         mock_instance = MagicMock()
         mock_instance.get_client.return_value = mock_session_client
         mock_runtime.get_instance.return_value = mock_instance
 
-        assert _get_request() == mock_request
+        assert _get_client_context() == mock_client_context

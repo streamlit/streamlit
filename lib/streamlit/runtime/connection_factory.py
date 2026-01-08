@@ -95,10 +95,23 @@ def _create_connection(
     __create_connection.__qualname__ = (
         f"{__create_connection.__qualname__}_{ttl_str}_{max_entries}"
     )
+
+    scope = connection_class.scope()
+    if scope not in ("global", "session"):
+        raise StreamlitAPIException(
+            f"Connection class {connection_class} has scope '{scope}'. Valid values "
+            "are 'global' or 'session'."
+        )
+
+    def on_release_wrapped(connection: ConnectionClass) -> None:
+        connection.close()
+
     __create_connection = cache_resource(
         max_entries=max_entries,
         show_spinner="Running `st.connection(...)`.",
         ttl=ttl,
+        scope=scope,
+        on_release=on_release_wrapped,
     )(__create_connection)
 
     return __create_connection(name, connection_class, **kwargs)
@@ -220,7 +233,8 @@ def connection_factory(  # type: ignore
     - Any connection-specific configuration files.
 
     The connection returned from ``st.connection`` is internally cached with
-    ``st.cache_resource`` and is therefore shared between sessions.
+    ``st.cache_resource``. Connection types with a scope of ``"global"`` will be shared
+    between sessions.
 
     Parameters
     ----------

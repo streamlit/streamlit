@@ -14,17 +14,18 @@
 
 from __future__ import annotations
 
+from http.cookies import Morsel
 from unittest.mock import ANY, MagicMock, patch
 
 import pytest
-import tornado.httpserver
 import tornado.testing
-import tornado.web
 import tornado.websocket
+from tornado.httputil import HTTPHeaders
 
 from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime import Runtime, SessionClientDisconnectedError
+from streamlit.web.server.browser_websocket_handler import TornadoClientContext
 from streamlit.web.server.server import BrowserWebSocketHandler
 from tests.streamlit.web.server.server_test_case import ServerTestCase
 from tests.testutil import patch_config_options
@@ -196,3 +197,88 @@ class BrowserWebSocketHandlerTest(ServerTestCase):
                 )
 
                 patched_stop_runtime.assert_called_once()
+
+    @tornado.testing.gen_test
+    async def test_client_context_returns_tornado_client_context(self):
+        """Test that client_context property returns a TornadoClientContext instance."""
+        with self._patch_app_session():
+            await self.server.start()
+            await self.ws_connect()
+
+            # Get our BrowserWebSocketHandler
+            session_info = self.server._runtime._session_mgr.list_active_sessions()[0]
+            websocket_handler: BrowserWebSocketHandler = session_info.client
+
+            client_context = websocket_handler.client_context
+
+            assert isinstance(client_context, TornadoClientContext)
+
+    @tornado.testing.gen_test
+    async def test_client_context_is_cached(self):
+        """Test that client_context property returns the same instance on repeated access."""
+        with self._patch_app_session():
+            await self.server.start()
+            await self.ws_connect()
+
+            # Get our BrowserWebSocketHandler
+            session_info = self.server._runtime._session_mgr.list_active_sessions()[0]
+            websocket_handler: BrowserWebSocketHandler = session_info.client
+
+            context1 = websocket_handler.client_context
+            context2 = websocket_handler.client_context
+
+            assert context1 is context2
+
+
+class TornadoClientContextTest(tornado.testing.AsyncTestCase):
+    """Tests for TornadoClientContext class."""
+
+    def test_headers_returns_all_headers(self) -> None:
+        """Test that headers property returns all headers including duplicates."""
+        mock_request = MagicMock()
+        headers = HTTPHeaders()
+        headers.add("Content-Type", "text/html")
+        headers.add("Accept", "application/json")
+        headers.add("Accept", "text/plain")
+        mock_request.headers = headers
+
+        ctx = TornadoClientContext(mock_request)
+        result_headers = list(ctx.headers)
+
+        assert len(result_headers) == 3
+        # Tornado normalizes header names to title case
+        assert ("Content-Type", "text/html") in result_headers
+        assert ("Accept", "application/json") in result_headers
+        assert ("Accept", "text/plain") in result_headers
+
+    def test_cookies_returns_all_cookies(self) -> None:
+        """Test that cookies property returns all cookies as a mapping."""
+        mock_request = MagicMock()
+
+        morsel1 = Morsel()
+        morsel1.set("session", "abc123", "abc123")
+        morsel2 = Morsel()
+        morsel2.set("user", "test_user", "test_user")
+        mock_request.cookies = {"session": morsel1, "user": morsel2}
+
+        ctx = TornadoClientContext(mock_request)
+
+        assert ctx.cookies == {"session": "abc123", "user": "test_user"}
+
+    def test_remote_ip_returns_ip(self) -> None:
+        """Test that remote_ip property returns the client's IP address."""
+        mock_request = MagicMock()
+        mock_request.remote_ip = "192.168.1.100"
+
+        ctx = TornadoClientContext(mock_request)
+
+        assert ctx.remote_ip == "192.168.1.100"
+
+    def test_remote_ip_returns_none_when_no_ip(self) -> None:
+        """Test that remote_ip property returns None when remote_ip is None."""
+        mock_request = MagicMock()
+        mock_request.remote_ip = None
+
+        ctx = TornadoClientContext(mock_request)
+
+        assert ctx.remote_ip is None

@@ -3239,7 +3239,7 @@ __metadata:
     "@types/uuid": "npm:^11.0.0"
     "@typescript-eslint/eslint-plugin": "npm:^8.51.0"
     "@vitejs/plugin-react-swc": "npm:^4.2.2"
-    "@vitest/eslint-plugin": "npm:^1.5.4"
+    "@vitest/eslint-plugin": "npm:^1.6.5"
     axios-mock-adapter: "npm:^2.1.0"
     baseui: "npm:12.2.0"
     buffer: "npm:^6.0.3"
@@ -3258,7 +3258,7 @@ __metadata:
     eslint-plugin-react-hooks: "npm:^7.0.1"
     eslint-plugin-streamlit-custom: "workspace:^"
     eslint-plugin-testing-library: "npm:^7.15.4"
-    globals: "npm:^16.5.0"
+    globals: "npm:^17.0.0"
     hoist-non-react-statics: "npm:^3.3.2"
     humanize-string: "npm:^3.1.0"
     iframe-resizer: "npm:4.3.11"
@@ -5106,7 +5106,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@typescript-eslint/scope-manager@npm:8.51.0, @typescript-eslint/scope-manager@npm:^8.46.1, @typescript-eslint/scope-manager@npm:^8.51.0":
+"@typescript-eslint/scope-manager@npm:8.51.0, @typescript-eslint/scope-manager@npm:^8.51.0":
   version: 8.51.0
   resolution: "@typescript-eslint/scope-manager@npm:8.51.0"
   dependencies:
@@ -5167,7 +5167,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@typescript-eslint/utils@npm:8.51.0, @typescript-eslint/utils@npm:^8.46.1, @typescript-eslint/utils@npm:^8.51.0":
+"@typescript-eslint/utils@npm:8.51.0, @typescript-eslint/utils@npm:^8.51.0":
   version: 8.51.0
   resolution: "@typescript-eslint/utils@npm:8.51.0"
   dependencies:
@@ -5357,12 +5357,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@vitest/eslint-plugin@npm:^1.5.4":
-  version: 1.6.4
-  resolution: "@vitest/eslint-plugin@npm:1.6.4"
+"@vitest/eslint-plugin@npm:^1.6.5":
+  version: 1.6.6
+  resolution: "@vitest/eslint-plugin@npm:1.6.6"
   dependencies:
-    "@typescript-eslint/scope-manager": "npm:^8.46.1"
-    "@typescript-eslint/utils": "npm:^8.46.1"
+    "@typescript-eslint/scope-manager": "npm:^8.51.0"
+    "@typescript-eslint/utils": "npm:^8.51.0"
   peerDependencies:
     eslint: ">=8.57.0"
     typescript: ">=5.0.0"
@@ -5372,7 +5372,7 @@ __metadata:
       optional: true
     vitest:
       optional: true
-  checksum: 10c0/2f450083588c7e296a8ad6c116fb4d24a205377b2bbc414dfe476a655064505f487e641608c03db29a7b66b7d51d9f8f26ae2da21a017d614b7c3964f3343c95
+  checksum: 10c0/4b3a5ff3b27d6aab17f43a737f1f03bab0739b9d95c75e9c19d44003c605bdd0ce067f14f064def7fab7ab3251a2d23155849ea061a1a9d16569b3e990b11a62
   languageName: node
   linkType: hard
 
@@ -10434,10 +10434,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"globals@npm:^16.5.0":
-  version: 16.5.0
-  resolution: "globals@npm:16.5.0"
-  checksum: 10c0/615241dae7851c8012f5aa0223005b1ed6607713d6813de0741768bd4ddc39353117648f1a7086b4b0fa45eae733f1c0a0fe369aa4e543bb63f8de8990178ea9
+"globals@npm:^17.0.0":
+  version: 17.0.0
+  resolution: "globals@npm:17.0.0"
+  checksum: 10c0/e3c169fdcb0fc6755707b697afb367bea483eb29992cfc0de1637382eb893146e17f8f96db6d7453e3696b478a7863ae2000e6c71cd2f4061410285106d3847a
   languageName: node
   linkType: hard
 

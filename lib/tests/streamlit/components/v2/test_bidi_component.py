@@ -441,9 +441,8 @@ class BidiComponentTest(DeltaGeneratorTestCase):
         assert bidi_component_proto.html_content == "<div>Hello World</div>"
         assert bidi_component_proto.css_content == "div { color: red; }"
 
-    def test_component_with_no_js_or_html_raises_exception(self):
-        """Test that component with neither JS nor HTML content raises StreamlitAPIException."""
-        # Register a component with only CSS content (no JS or HTML)
+    def test_component_with_css_only_succeeds(self):
+        """Test that a CSS-only component mounts without raising."""
         self.mock_component_manager.register(
             BidiComponentDefinition(
                 name="css_only_component",
@@ -451,42 +450,31 @@ class BidiComponentTest(DeltaGeneratorTestCase):
             )
         )
 
-        # Call the component and expect an exception
-        with pytest.raises(StreamlitAPIException) as exc_info:
-            st._bidi_component("css_only_component")
+        st._bidi_component("css_only_component")
 
-        # Verify the error message
-        error_message = str(exc_info.value)
-        assert "css_only_component" in error_message
-        assert "must have either JavaScript content" in error_message
-        assert (
-            "(`js_content` or `js_url`) or HTML content (`html_content`)"
-            in error_message
+        delta = self.get_delta_from_queue()
+        bidi_component_proto = delta.new_element.bidi_component
+        assert bidi_component_proto.component_name == "css_only_component"
+        assert bidi_component_proto.css_content == "div { color: red; }"
+        assert bidi_component_proto.js_content == ""
+        assert bidi_component_proto.html_content == ""
+
+    def test_component_with_no_content_succeeds(self):
+        """Test that a component with no JS/HTML/CSS mounts without raising."""
+        self.mock_component_manager.register(
+            BidiComponentDefinition(
+                name="empty_component",
+            )
         )
 
-    def test_component_with_empty_js_and_html_raises_exception(self):
-        """Test that component with empty JS and HTML content raises StreamlitAPIException."""
-        # Create a mock component definition with empty content
-        mock_component_def = MagicMock(spec=BidiComponentDefinition)
-        mock_component_def.js_content = ""  # Empty string
-        mock_component_def.js_url = None
-        mock_component_def.html_content = ""  # Empty string
-        mock_component_def.css_content = "div { color: red; }"
-        mock_component_def.css_url = None
-        mock_component_def.isolate_styles = True
+        st._bidi_component("empty_component")
 
-        # Mock the registry to return our component
-        with patch.object(
-            self.mock_component_manager, "get", return_value=mock_component_def
-        ):
-            # Call the component and expect an exception
-            with pytest.raises(StreamlitAPIException) as exc_info:
-                st._bidi_component("empty_component")
-
-            # Verify the error message
-            error_message = str(exc_info.value)
-            assert "empty_component" in error_message
-            assert "must have either JavaScript content" in error_message
+        delta = self.get_delta_from_queue()
+        bidi_component_proto = delta.new_element.bidi_component
+        assert bidi_component_proto.component_name == "empty_component"
+        assert bidi_component_proto.css_content == ""
+        assert bidi_component_proto.js_content == ""
+        assert bidi_component_proto.html_content == ""
 
     def test_unregistered_component_raises_value_error(self):
         """Test that calling an unregistered component raises ValueError."""

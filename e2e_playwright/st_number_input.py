@@ -124,11 +124,9 @@ if st.toggle("Update number input props"):
         ),
         args=("Updated text arg",),
         kwargs={"param": "updated kwarg param"},
-        # min_value, max_value, and step are not yet supported for dynamic changes
-        # keeping it at the same value:
-        min_value=0,
-        max_value=100,
-        step=1,
+        min_value=10,
+        max_value=50,
+        step=5,
     )
     st.write("Updated number input value:", dyn_val)
 else:
@@ -151,3 +149,29 @@ else:
         step=1,
     )
     st.write("Initial number input value:", dyn_val)
+
+# Test very small step values that JavaScript represents in scientific notation (1e-7)
+# This input starts at 0 for testing increment
+v18 = st.number_input(
+    "number input 18 (small step increment)",
+    value=0.0,
+    min_value=0.0,
+    max_value=0.001,
+    step=0.0000001,
+    format="%0.7f",
+    key="number_input_18",
+)
+# Format explicitly to avoid Python's scientific notation (e.g., 1e-07)
+st.write(f"number input 18 (small step increment) - value: {v18:.7f}")
+
+# This input starts at 0.0000005 for testing decrement
+v19 = st.number_input(
+    "number input 19 (small step decrement)",
+    value=0.0000005,
+    min_value=0.0,
+    max_value=0.001,
+    step=0.0000001,
+    format="%0.7f",
+    key="number_input_19",
+)
+st.write(f"number input 19 (small step decrement) - value: {v19:.7f}")
