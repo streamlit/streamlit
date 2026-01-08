@@ -15,7 +15,8 @@
  */
 
 import { AppNode, BlockNode, ElementNode, TransientNode } from "~lib/AppNode"
-import { AppNodeVisitor } from "~lib/render-tree/visitors/AppNodeVisitor.interface"
+
+import { AppNodeVisitor } from "./AppNodeVisitor.interface"
 
 /**
  * Visitor that clears stale nodes from the render tree. It does this by:

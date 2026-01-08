@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 import threading
 import unittest
 from unittest.mock import MagicMock, PropertyMock, patch
@@ -19,7 +20,8 @@ from unittest.mock import MagicMock, PropertyMock, patch
 import pytest
 
 import streamlit as st
-from streamlit.connections import SnowflakeConnection
+from streamlit.connections import SnowflakeCallersRightsConnection, SnowflakeConnection
+from streamlit.connections.snowflake_connection import SNOWPARK_USER_TOKEN_HEADER_NAME
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.scriptrunner import add_script_run_ctx
 from streamlit.runtime.secrets import AttrDict
@@ -224,3 +226,114 @@ class SnowflakeConnectionTest(unittest.TestCase):
         # conn._connect should have just been called once when first creating the
         # connection.
         assert conn._connect.call_count == 1
+
+
+class TestSnowflakeCallersRightsConnection:
+    def test_get_connection_params_errors_on_missing_env(self):
+        """Tests that _get_connection_params handles missing environment variables."""
+
+        env_var_names = [
+            "SNOWFLAKE_ACCOUNT",
+            "SNOWFLAKE_HOST",
+            "SNOWFLAKE_DATABASE",
+            "SNOWFLAKE_SCHEMA",
+        ]
+
+        # Validate that we throw an exception if any env vars are missing.
+        for missing_var in env_var_names:
+
+            def fake_getenv(key: str) -> str | None:
+                if key == missing_var:  # noqa: B023 (deliberately capturing loop var)
+                    return None
+                return "exists"
+
+            with patch.object(os, "getenv", new=fake_getenv):
+                with pytest.raises(
+                    StreamlitAPIException, match=f"Environment variable.*{missing_var}"
+                ):
+                    SnowflakeCallersRightsConnection._get_connection_params()
+
+    def test_get_connection_params_missing_file(self):
+        """Tests that a missing token file produces an error."""
+
+        with patch.object(os, "getenv"):
+            with pytest.raises(StreamlitAPIException, match=r"Token file.*not found"):
+                SnowflakeCallersRightsConnection._get_connection_params()
+
+    def test_get_connection_params_missing_headers(self):
+        """Tests that a missing token header produces an error."""
+
+        with (
+            patch.object(os, "getenv"),
+            patch.object(os.path, "exists"),
+            patch.object(SnowflakeCallersRightsConnection, "_read_token_file"),
+            patch.object(st, "context") as mock_context,
+        ):
+            mock_context.headers = {}
+            with pytest.raises(StreamlitAPIException, match="Token header not found"):
+                SnowflakeCallersRightsConnection._get_connection_params()
+
+    def test_get_connection_params_all_values_ok(self):
+        """Tests that correct parameters are generated when all values are present."""
+
+        fake_env_values = {
+            "SNOWFLAKE_ACCOUNT": "my-account",
+            "SNOWFLAKE_HOST": "account.snowf.com",
+            "SNOWFLAKE_DATABASE": "my_database",
+            "SNOWFLAKE_SCHEMA": "streamlit_schema",
+        }
+
+        def fake_getenv(key: str) -> str:
+            return fake_env_values.get(key)
+
+        fake_file_token = "ondisk_secret"
+        fake_header_token = "header_secret"
+        fake_headers = {SNOWPARK_USER_TOKEN_HEADER_NAME: fake_header_token}
+
+        with (
+            patch.object(os, "getenv", new=fake_getenv),
+            patch.object(os.path, "exists"),
+            patch.object(
+                SnowflakeCallersRightsConnection, "_read_token_file"
+            ) as mock_read_token_file,
+            patch.object(st, "context") as mock_context,
+        ):
+            mock_read_token_file.return_value = fake_file_token
+            mock_context.headers = fake_headers
+            got_params = SnowflakeCallersRightsConnection._get_connection_params()
+
+        assert got_params == {
+            "authenticator": "oauth",
+            "ocsp_fail_open": True,
+            "client_session_keep_alive": True,
+            "account": "my-account",
+            "host": "account.snowf.com",
+            "database": "my_database",
+            "schema": "streamlit_schema",
+            "token": "ondisk_secret.header_secret",
+        }
+
+    @pytest.mark.require_integration
+    def test_connect(self):
+        """Tests that _connect works."""
+
+        fake_params = {"account": "from_env", "token": "its_a_token"}
+
+        with (
+            patch("snowflake.connector") as mock_connector,
+            patch.object(
+                SnowflakeCallersRightsConnection, "_get_connection_params"
+            ) as mock_get_connection_params,
+        ):
+            mock_get_connection_params.return_value = fake_params
+
+            SnowflakeCallersRightsConnection(
+                "snowflake-callers-rights",
+                account="account_override",
+                some_kwarg="some_value",
+            )
+
+            assert mock_connector.paramstyle == "qmark"
+            mock_connector.connect.assert_called_once_with(
+                account="account_override", token="its_a_token", some_kwarg="some_value"
+            )

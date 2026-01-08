@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING, Any, Final, Literal, TypeVar, overload
 
 from streamlit.connections import (
     BaseConnection,
+    SnowflakeCallersRightsConnection,
     SnowflakeConnection,
     SnowparkConnection,
     SQLConnection,
@@ -40,6 +41,7 @@ if TYPE_CHECKING:
 #   3. Updating test_get_first_party_connection_helper in connection_factory_test.py.
 _FIRST_PARTY_CONNECTIONS: Final[dict[str, type[BaseConnection[Any]]]] = {
     "snowflake": SnowflakeConnection,
+    "snowflake-callers-rights": SnowflakeCallersRightsConnection,
     "snowpark": SnowparkConnection,
     "sql": SQLConnection,
 }
@@ -170,6 +172,29 @@ def connection_factory(
     autocommit: bool = False,
     **kwargs: Any,
 ) -> SnowflakeConnection:
+    pass
+
+
+@overload
+def connection_factory(
+    name: Literal["snowflake-callers-rights"],
+    max_entries: int | None = None,
+    ttl: float | timedelta | None = None,
+    autocommit: bool = False,
+    **kwargs: Any,
+) -> SnowflakeCallersRightsConnection:
+    pass
+
+
+@overload
+def connection_factory(
+    name: str,
+    type: Literal["snowflake-callers-rights"],
+    max_entries: int | None = None,
+    ttl: float | timedelta | None = None,
+    autocommit: bool = False,
+    **kwargs: Any,
+) -> SnowflakeCallersRightsConnection:
     pass
 
 

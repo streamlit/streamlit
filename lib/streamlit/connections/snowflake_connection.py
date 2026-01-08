@@ -20,7 +20,8 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Final, cast
+import os
+from typing import TYPE_CHECKING, Any, Final, Literal, cast
 
 from streamlit import logger
 from streamlit.connections import BaseConnection
@@ -45,11 +46,18 @@ if TYPE_CHECKING:
 # (see docs: https://docs.snowflake.com/en/developer-guide/python-connector/python-connector-api#id6)
 SQLSTATE_CONNECTION_WAS_NOT_ESTABLISHED: Final = "08001"
 
+# The location on disk where Snowpark Container Services will mount service connection tokens.
+SNOWPARK_CONNECTION_TOKEN_FILE = "/snowflake/session/token"  # noqa: S105 (not a password)
 
-class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
+# The header where Snowpark Container Services will put per-user connection tokens.
+SNOWPARK_USER_TOKEN_HEADER_NAME = "Sf-Context-Current-User-Token"  # noqa: S105 (not a password)
+
+
+class BaseSnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
     """A connection to Snowflake using the Snowflake Connector for Python.
 
-    Initialize this connection object using ``st.connection("snowflake")`` or
+    For standard connections, create an instance of this using
+    ``st.connection("snowflake")`` or
     ``st.connection("<name>", type="snowflake")``. Connection parameters for a
     SnowflakeConnection can be specified using ``secrets.toml`` and/or
     ``**kwargs``. Connection parameters are passed to
@@ -61,7 +69,14 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
     case. Use ``secrets.toml`` and ``**kwargs`` to configure your connection
     for local development.
 
-    SnowflakeConnection includes several convenience methods. For example, you
+    When an app is running in Snowpark Container Services and has caller's rights
+    enabled, ``st.connection("snowflake-callers-rights")`` connects automatically
+    using the current user's identity tokens. This will be a session-scoped connection
+    to ensure that the identity stays tied to the active user. Unlike with
+    ``"snowflake"`` connections, it will use the Snowpark Container Services connection
+    settings even when other ``**kwargs`` are provided.
+
+    BaseSnowflakeConnection includes several convenience methods. For example, you
     can directly execute a SQL query with ``.query()`` or access the underlying
     Snowflake Connector object with ``.raw_connection``.
 
@@ -84,6 +99,12 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
         organization. This is dash-separated, not dot-separated like when used
         in SQL queries. For more information, see `Account identifiers
         <https://docs.snowflake.com/en/user-guide/admin-account-identifier>`_.
+
+    .. Important::
+        Caller's rights connections rely on credentials provided when a user first
+        connects to a Streamlit app. These credentials are only valid for a short period
+        of time - so caller's rights connections must be created at the top of an app
+        or else the connection may fail.
 
     Examples
     --------
@@ -222,64 +243,23 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
     >>> conn = st.connection("snowflake")
     >>> df = conn.query("SELECT * FROM my_table")
 
+    **Example 7: Caller's rights connection when running in Snowpark Container Services**
+
+    This connection will work for any Streamlit-in-Snowflake app using a container
+    runtime, as well as any self-managed caller's rights Service in Snowpark Container
+    Services that is hosting Streamlit.
+
+    This will use the Snowpark-provided account, host, database, and schema to connect.
+    Additionally, it will set ``client_session_keep_alive`` to ``True``. These values
+    may be overridden with ``**kwargs``.
+
+    Your app code:
+
+    >>> import streamlit as st
+    >>> conn = st.connection("snowflake-callers-rights")
+    >>> df = conn.query("SELECT * FROM my_table")
+
     """
-
-    def _connect(self, **kwargs: Any) -> InternalSnowflakeConnection:
-        import snowflake.connector  # type:ignore[import]
-        from snowflake.connector import Error as SnowflakeError  # type:ignore[import]
-
-        # If we're running in SiS, just call get_active_session() and retrieve the
-        # lower-level connection from it.
-        if running_in_sis():
-            from snowflake.snowpark.context import (  # type:ignore[import]  # isort: skip
-                get_active_session,
-            )
-
-            session = get_active_session()
-
-            if hasattr(session, "connection"):
-                return session.connection
-            # session.connection is only a valid attr in more recent versions of
-            # snowflake-connector-python, so we fall back to grabbing
-            # session._conn._conn if `.connection` is unavailable.
-            return session._conn._conn
-
-        # We require qmark-style parameters everywhere for consistency across different
-        # environments where SnowflakeConnections may be used.
-        snowflake.connector.paramstyle = "qmark"
-
-        # Otherwise, attempt to create a new connection from whatever credentials we
-        # have available.
-        st_secrets = self._secrets.to_dict()
-        try:
-            if len(st_secrets):
-                _LOGGER.info(
-                    "Connect to Snowflake using the Streamlit secret defined under "
-                    "[connections.snowflake]."
-                )
-                conn_kwargs = {**st_secrets, **kwargs}
-                return snowflake.connector.connect(**conn_kwargs)
-
-            # Use the default configuration as defined in https://docs.snowflake.com/en/developer-guide/python-connector/python-connector-connect#setting-a-default-connection
-            if self._connection_name == "snowflake":
-                _LOGGER.info(
-                    "Connect to Snowflake using the default configuration as defined "
-                    "in https://docs.snowflake.com/en/developer-guide/python-connector/python-connector-connect#setting-a-default-connection"
-                )
-                return snowflake.connector.connect()
-
-            return snowflake.connector.connect(**kwargs)
-        except SnowflakeError:
-            if not len(st_secrets) and not kwargs:
-                raise StreamlitAPIException(
-                    "Missing Snowflake connection configuration. "
-                    "Did you forget to set this in `secrets.toml`, a Snowflake configuration file, "
-                    "or as kwargs to `st.connection`? "
-                    "See the [SnowflakeConnection configuration documentation]"
-                    "(https://docs.streamlit.io/st.connections.snowflakeconnection-configuration) "
-                    "for more details and examples."
-                )
-            raise
 
     def query(
         self,
@@ -563,3 +543,169 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
         return cast(
             "Session", Session.builder.configs({"connection": self._instance}).create()
         )
+
+    def close(self) -> None:
+        """Closes the underlying Snowflake connection."""
+        if self._raw_instance is not None:
+            self._raw_instance.close()
+
+
+class SnowflakeConnection(BaseSnowflakeConnection):
+    """A connection to Snowflake using the Snowflake Connector for Python.
+
+    See ``BaseSnowflakeConnection`` for complete docs.
+    """
+
+    def _connect(self, **kwargs: Any) -> InternalSnowflakeConnection:
+        import snowflake.connector  # type:ignore[import]
+        from snowflake.connector import Error as SnowflakeError  # type:ignore[import]
+
+        # If we're running in SiS-on-warehouses, just call get_active_session() and
+        # retrieve the lower-level connection from it.
+        if running_in_sis():
+            from snowflake.snowpark.context import (  # type:ignore[import]  # isort: skip
+                get_active_session,
+            )
+
+            session = get_active_session()
+
+            if hasattr(session, "connection"):
+                return session.connection
+            # session.connection is only a valid attr in more recent versions of
+            # snowflake-connector-python, so we fall back to grabbing
+            # session._conn._conn if `.connection` is unavailable.
+            return session._conn._conn
+
+        # We require qmark-style parameters everywhere for consistency across different
+        # environments where SnowflakeConnections may be used.
+        snowflake.connector.paramstyle = "qmark"
+
+        # Otherwise, attempt to create a new connection from whatever credentials we
+        # have available.
+        st_secrets = self._secrets.to_dict()
+        try:
+            if len(st_secrets):
+                _LOGGER.info(
+                    "Connect to Snowflake using the Streamlit secret defined under "
+                    "[connections.snowflake]."
+                )
+                conn_kwargs = {**st_secrets, **kwargs}
+                return snowflake.connector.connect(**conn_kwargs)
+
+            # Use the default configuration as defined in https://docs.snowflake.com/en/developer-guide/python-connector/python-connector-connect#setting-a-default-connection
+            if self._connection_name == "snowflake":
+                _LOGGER.info(
+                    "Connect to Snowflake using the default configuration as defined "
+                    "in https://docs.snowflake.com/en/developer-guide/python-connector/python-connector-connect#setting-a-default-connection"
+                )
+                return snowflake.connector.connect()
+
+            return snowflake.connector.connect(**kwargs)
+        except SnowflakeError:
+            if not len(st_secrets) and not kwargs:
+                raise StreamlitAPIException(
+                    "Missing Snowflake connection configuration. "
+                    "Did you forget to set this in `secrets.toml`, a Snowflake configuration file, "
+                    "or as kwargs to `st.connection`? "
+                    "See the [SnowflakeConnection configuration documentation]"
+                    "(https://docs.streamlit.io/st.connections.snowflakeconnection-configuration) "
+                    "for more details and examples."
+                )
+            raise
+
+
+class SnowflakeCallersRightsConnection(SnowflakeConnection):
+    """A caller's rights connection to Snowflake using the Snowflake Connector for Python.
+
+    This will only work when running on Snowpark Container Services or another
+    compatible platform.
+
+    See ``BaseSnowflakeConnection`` for complete docs.
+    """
+
+    @classmethod
+    def scope(cls) -> Literal["session"]:
+        """Returns ``"session"``.
+
+        Caller's rights Snowflake connections rely on per-session connection tokens and
+        therefore must be session-scoped.
+        """
+        return "session"
+
+    @classmethod
+    def _read_token_file(cls) -> str:
+        """Returns the contents of the Snowpark token file on disk."""
+        with open(SNOWPARK_CONNECTION_TOKEN_FILE) as token_file:
+            return token_file.read()
+
+    @classmethod
+    def _get_connection_params(cls) -> dict[str, str | bool]:
+        """Returns caller's rights connection parameters for the current session.
+
+        Raises
+        ------
+            StreamlitAPIException: if any Snowpark environment variables or connection
+            tokens are missing; or if this is called outside of a session context.
+        """
+        # Local import needed to avoid cycles.
+        from streamlit import context as st_context
+
+        # See Snowflake docs:
+        # https://docs.snowflake.com/en/developer-guide/snowpark-container-services/additional-considerations-services-jobs#configuring-caller-s-rights-for-your-service
+
+        # Base parameters, common to all connections.
+        params: dict[str, str | bool] = {
+            "authenticator": "oauth",
+            # OCSP checks do not work in Snowflake containers.
+            "ocsp_fail_open": True,
+            # We want to keep this alive, as the user token will expire fairly quickly
+            # - so we can't create a new session on expiration.
+            "client_session_keep_alive": True,
+        }
+        for param_name, env_var_name in (
+            ("account", "SNOWFLAKE_ACCOUNT"),
+            ("host", "SNOWFLAKE_HOST"),
+            ("database", "SNOWFLAKE_DATABASE"),
+            ("schema", "SNOWFLAKE_SCHEMA"),
+        ):
+            value = os.getenv(env_var_name)
+            if value is None:
+                raise StreamlitAPIException(
+                    f"Environment variable `{env_var_name}` not found. Is this app "
+                    "running in a Snowflake container environment?"
+                )
+            params[param_name] = value
+
+        # Validate the token file exists, and read it.
+        if not os.path.exists(SNOWPARK_CONNECTION_TOKEN_FILE):
+            raise StreamlitAPIException(
+                f"Token file `{SNOWPARK_CONNECTION_TOKEN_FILE}` not found. Is this app "
+                "running in a Snowflake container environment?"
+            )
+        login_token = cls._read_token_file()
+
+        # Validate the token header exists, and read it.
+        if SNOWPARK_USER_TOKEN_HEADER_NAME not in st_context.headers:
+            raise StreamlitAPIException(
+                "Token header not found. Is this app running with caller's "
+                "rights enabled, and is this connection being created in an app "
+                "execution thread?"
+            )
+        user_token = st_context.headers[SNOWPARK_USER_TOKEN_HEADER_NAME]
+
+        # Build the actual caller's rights token.
+        params["token"] = f"{login_token}.{user_token}"
+
+        return params
+
+    def _connect(self, **kwargs: Any) -> InternalSnowflakeConnection:
+        import snowflake.connector  # type:ignore[import]
+
+        # We require qmark-style parameters everywhere for consistency across different
+        # environments where SnowflakeConnections may be used.
+        snowflake.connector.paramstyle = "qmark"
+
+        params = self._get_connection_params()
+
+        # Connect with the params we generated, overriding with user-specified params.
+        return snowflake.connector.connect(**{**params, **kwargs})

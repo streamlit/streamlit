@@ -75,7 +75,9 @@ When adding or modifying tests for an element, ensure the following are covered:
 
 ## Running tests
 
-- Single test: `make run-e2e-test e2e_playwright/name_of_the_test.py`
+- Single test file: `make run-e2e-test e2e_playwright/name_of_the_test.py`
+- Single test: `make run-e2e-test e2e_playwright/name_of_the_test.py::test_name`
+- Pass any pytest arguments via `PYTEST_ADDOPTS`, e.g. `PYTEST_ADDOPTS='-k test_name -vvv' make run-e2e-test e2e_playwright/name_of_the_test.py`
 - Debug test (needs manual interactions): `make debug-e2e-test e2e_playwright/name_of_the_test.py`
 - If frontend logic was changed, it will require running `make frontend-fast` to update the frontend.
 - You can ignore missing or mismatched snapshot errors. These need to be updated manually.
