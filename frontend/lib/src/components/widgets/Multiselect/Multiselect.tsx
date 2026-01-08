@@ -407,7 +407,7 @@ const Multiselect: FC<Props> = props => {
             ValueContainer: {
               style: () => ({
                 overflowY: "auto",
-                paddingLeft: theme.spacing.sm,
+                paddingLeft: theme.spacing.xs,
                 paddingTop: theme.spacing.none,
                 paddingBottom: theme.spacing.none,
                 paddingRight: theme.spacing.none,
@@ -450,7 +450,7 @@ const Multiselect: FC<Props> = props => {
                       fontSize: theme.fontSizes.md,
                       paddingLeft: theme.spacing.sm,
                       marginLeft: theme.spacing.none,
-                      marginRight: theme.spacing.sm,
+                      marginRight: theme.spacing.xs,
                       // The tag height is derived from the minElementHeight
                       // minus a top and bottom padding (2 * spacing.xs)
                       // to nicely fit into the input field.

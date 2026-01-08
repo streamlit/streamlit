@@ -120,8 +120,8 @@ const VirtualDropdown = forwardRef<any, any>((props, ref) => {
         // Padding to inset items from the edges
         paddingTop: theme.spacing.none,
         paddingBottom: theme.spacing.none,
-        paddingLeft: theme.spacing.sm,
-        paddingRight: theme.spacing.sm,
+        paddingLeft: theme.spacing.xs,
+        paddingRight: theme.spacing.xs,
         // Somehow this adds an additional shadow, even though we already have
         // one on the popover, so we need to remove it here.
         boxShadow: "none",
