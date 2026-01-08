@@ -628,28 +628,31 @@ def _extract_structural_fingerprint(spec: str) -> str:
         parsed = json.loads(spec)
         layers = parsed.get("layers", [])
 
-        # Sorted layer IDs for deterministic ordering
-        layer_ids = sorted(
-            str(layer.get("id", f"layer_{i}"))
-            for i, layer in enumerate(layers)
-            if layer
-        )
-
-        # Data lengths per layer (or hash for URL data sources)
-        data_lengths: list[int] = []
-        for layer in layers:
+        # Build a mapping of layer_id -> data_length for each layer.
+        # This ensures data lengths are correctly associated with their layer IDs
+        # even when layers are reordered.
+        layer_data: list[tuple[str, int]] = []
+        for i, layer in enumerate(layers):
             if not layer:
                 continue
+            layer_id = str(layer.get("id", f"layer_{i}"))
             data = layer.get("data")
             if isinstance(data, list):
-                data_lengths.append(len(data))
+                data_length = len(data)
             elif isinstance(data, str):
                 # URL/expression - use deterministic hash for stability across restarts.
                 # Python's built-in hash() is randomized per-process, so we use
                 # a simple string length + character sum as a lightweight fingerprint.
-                data_lengths.append(len(data) + sum(ord(c) for c in data[:100]))
+                data_length = len(data) + sum(ord(c) for c in data[:100])
             else:
-                data_lengths.append(0)
+                data_length = 0
+            layer_data.append((layer_id, data_length))
+
+        # Sort by layer ID to ensure deterministic ordering.
+        # Both layer IDs and data lengths are sorted together to maintain correspondence.
+        layer_data.sort(key=lambda x: x[0])
+        layer_ids = [ld[0] for ld in layer_data]
+        data_lengths = [ld[1] for ld in layer_data]
 
         # Return a deterministic string representation
         return (

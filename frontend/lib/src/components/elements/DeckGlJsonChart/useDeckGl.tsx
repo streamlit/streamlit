@@ -179,6 +179,7 @@ function refreshSelectionObjects(
   selection: DeckGlElementState["selection"],
   layers: ParsedDeckGlConfig["layers"]
 ): DeckGlElementState["selection"] {
+  const refreshedIndices: Record<string, number[]> = {}
   const refreshedObjects: Record<string, unknown[]> = {}
   let hasChanges = false
 
@@ -187,13 +188,19 @@ function refreshSelectionObjects(
     const layerData = layer?.data
 
     if (Array.isArray(layerData)) {
-      // Refresh objects from current data, filtering out invalid indices
+      // Filter out invalid indices and refresh objects from current data.
+      // Both indices and objects are filtered together to maintain correspondence.
       const validIndices = indices.filter(i => i < layerData.length)
+      refreshedIndices[layerId] = validIndices
       refreshedObjects[layerId] = validIndices.map(i => layerData[i])
 
-      // Check if objects changed (different length or reference)
+      // Check if anything changed (indices filtered or objects differ).
+      // Note: We use reference equality for objects since layer data items
+      // are typically new objects on each render. This intentionally triggers
+      // updates when data content changes to keep objects in sync.
       const existingObjects = selection.objects[layerId] || []
       if (
+        indices.length !== validIndices.length ||
         existingObjects.length !== refreshedObjects[layerId].length ||
         !existingObjects.every(
           (obj, idx) => obj === refreshedObjects[layerId][idx]
@@ -202,14 +209,15 @@ function refreshSelectionObjects(
         hasChanges = true
       }
     } else {
-      // Keep existing objects if data isn't an array (URL data source)
+      // Keep existing indices and objects if data isn't an array (URL data source)
+      refreshedIndices[layerId] = indices
       refreshedObjects[layerId] = selection.objects[layerId] || []
     }
   }
 
   // Only return new object if something changed to avoid unnecessary updates
   if (hasChanges) {
-    return { indices: selection.indices, objects: refreshedObjects }
+    return { indices: refreshedIndices, objects: refreshedObjects }
   }
   return selection
 }

@@ -526,6 +526,10 @@ class PyDeckKeyAsMainIdentityTest(DeltaGeneratorTestCase):
 
         # IDs should be the same because structure is unchanged
         assert id1 == id2
+        # Anti-regression: IDs should be valid non-empty strings containing the key
+        assert id1  # Non-empty
+        assert id2  # Non-empty
+        assert "my-chart" in id1  # Key should be part of the ID
 
     def test_element_id_changes_with_key_and_different_structure(self) -> None:
         """Test that element ID changes when structure changes even with same key."""
@@ -553,6 +557,11 @@ class PyDeckKeyAsMainIdentityTest(DeltaGeneratorTestCase):
 
         # IDs should be different because data length changed
         assert id1 != id2
+        # Anti-regression: Both IDs should be valid non-empty strings
+        assert id1
+        assert id2
+        assert "my-chart" in id1  # Key present in first ID
+        assert "my-chart" in id2  # Key present in second ID
 
     def test_element_id_changes_with_key_and_different_layer_id(self) -> None:
         """Test that element ID changes when layer ID changes even with same key."""
@@ -577,6 +586,11 @@ class PyDeckKeyAsMainIdentityTest(DeltaGeneratorTestCase):
 
         # IDs should be different because layer ID changed
         assert id1 != id2
+        # Anti-regression: Both IDs should be valid non-empty strings
+        assert id1
+        assert id2
+        assert "my-chart" in id1  # Key present in first ID
+        assert "my-chart" in id2  # Key present in second ID
 
     def test_element_id_changes_without_key(self) -> None:
         """Test that element ID changes when spec changes and no key is provided."""
@@ -601,6 +615,12 @@ class PyDeckKeyAsMainIdentityTest(DeltaGeneratorTestCase):
 
         # IDs should be different without a key, even with same structure
         assert id1 != id2
+        # Anti-regression: Both IDs should be valid non-empty strings
+        assert id1
+        assert id2
+        # Without a key, the ID should not contain a user key suffix
+        assert id1.endswith("-None")
+        assert id2.endswith("-None")
 
 
 class StructuralFingerprintTest(DeltaGeneratorTestCase):
@@ -715,6 +735,42 @@ class StructuralFingerprintTest(DeltaGeneratorTestCase):
 
         # IDs should be sorted alphabetically
         assert "a-layer,m-layer,z-layer" in fingerprint
+
+    def test_fingerprint_reordered_layers_with_different_data_lengths(self) -> None:
+        """Test that reordered layers with different data lengths produce different fingerprints.
+
+        This is a regression test for the bug where layer IDs were sorted but data lengths
+        were not, causing incorrect fingerprint collisions when layers were reordered.
+        """
+        # Layers in order: b has 2 items, a has 5 items
+        spec1 = json.dumps(
+            {
+                "layers": [
+                    {"id": "b", "data": [1, 2]},
+                    {"id": "a", "data": [1, 2, 3, 4, 5]},
+                ]
+            }
+        )
+        # Layers in order: a has 2 items, b has 5 items (swapped data lengths)
+        spec2 = json.dumps(
+            {
+                "layers": [
+                    {"id": "a", "data": [1, 2]},
+                    {"id": "b", "data": [1, 2, 3, 4, 5]},
+                ]
+            }
+        )
+
+        fingerprint1 = deck_gl_json_chart._extract_structural_fingerprint(spec1)
+        fingerprint2 = deck_gl_json_chart._extract_structural_fingerprint(spec2)
+
+        # Fingerprints should be different because data lengths per layer differ
+        assert fingerprint1 != fingerprint2
+        # Anti-regression: verify both fingerprints are valid
+        assert fingerprint1
+        assert fingerprint2
+        assert "a,b" in fingerprint1  # Same sorted layer IDs in first
+        assert "a,b" in fingerprint2  # Same sorted layer IDs in second
 
     def test_fingerprint_changes_with_different_layer_ids(self) -> None:
         """Test that fingerprint changes when layer IDs change."""
