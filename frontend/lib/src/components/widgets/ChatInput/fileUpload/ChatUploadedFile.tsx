@@ -21,6 +21,7 @@ import { Cancel } from "@emotion-icons/material-rounded"
 
 import BaseButton, { BaseButtonKind } from "~lib/components/shared/BaseButton"
 import Icon, { DynamicIcon } from "~lib/components/shared/Icon"
+import Tooltip, { Placement } from "~lib/components/shared/Tooltip"
 import { UploadFileInfo } from "~lib/components/widgets/FileUploader/UploadFileInfo"
 import { assertNever } from "~lib/util/assertNever"
 import { FileSize, getSizeDisplay } from "~lib/util/FileHelper"
@@ -29,7 +30,6 @@ import { getFileTypeIcon } from "./getFileTypeIcon"
 import {
   StyledChatUploadedFile,
   StyledChatUploadedFileDeleteButton,
-  StyledChatUploadedFileError,
   StyledChatUploadedFileIconContainer,
   StyledChatUploadedFileInfo,
   StyledChatUploadedFileName,
@@ -129,7 +129,7 @@ const ChatUploadedFile = ({
     ? `${fileInfo.name}, ${errorMessage}`
     : `${fileInfo.name}, ${sizeDisplay}`
 
-  return (
+  const fileChip = (
     <StyledChatUploadedFile
       className="stChatInputFile"
       data-testid="stChatInputFile"
@@ -154,15 +154,9 @@ const ChatUploadedFile = ({
         >
           {truncateFilename(fileInfo.name)}
         </StyledChatUploadedFileName>
-        {isError ? (
-          <StyledChatUploadedFileError data-testid="stChatInputFileError">
-            {errorMessage}
-          </StyledChatUploadedFileError>
-        ) : (
-          <StyledChatUploadedFileSize>
-            {getSizeDisplay(fileInfo.size, FileSize.Byte)}
-          </StyledChatUploadedFileSize>
-        )}
+        <StyledChatUploadedFileSize>
+          {getSizeDisplay(fileInfo.size, FileSize.Byte)}
+        </StyledChatUploadedFileSize>
       </StyledChatUploadedFileInfo>
       <StyledChatUploadedFileDeleteButton data-testid="stChatInputDeleteBtn">
         <BaseButton
@@ -175,6 +169,16 @@ const ChatUploadedFile = ({
       </StyledChatUploadedFileDeleteButton>
     </StyledChatUploadedFile>
   )
+
+  if (isError) {
+    return (
+      <Tooltip content={errorMessage} placement={Placement.TOP} error>
+        {fileChip}
+      </Tooltip>
+    )
+  }
+
+  return fileChip
 }
 
 export default memo(ChatUploadedFile)

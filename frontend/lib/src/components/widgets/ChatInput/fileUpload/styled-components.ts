@@ -147,11 +147,6 @@ export const StyledChatUploadedFileSize = styled.div(({ theme }) => ({
   fontSize: theme.fontSizes.sm,
 }))
 
-export const StyledChatUploadedFileError = styled.div(({ theme }) => ({
-  color: theme.colors.redTextColor,
-  fontSize: theme.fontSizes.sm,
-}))
-
 export const StyledChatUploadedFileDeleteButton = styled.small(
   ({ theme }) => ({
     position: "absolute",
