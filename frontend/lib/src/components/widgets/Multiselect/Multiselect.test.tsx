@@ -333,14 +333,10 @@ describe("Multiselect widget", () => {
     await user.click(match)
 
     // Options list should only have c available - a & b selected
+    // "Select all" is not shown when there's only 1 unselected option
     const remainingOptions = screen.getAllByRole("option")
-    // Should have "Select all (1)" + "c" option = 2 total
-    expect(remainingOptions.length).toBe(2)
-    // Find the actual data option (not "Select all")
-    const dataOption = remainingOptions.find(
-      option => !option.textContent?.startsWith("Select all")
-    )
-    expect(dataOption).toHaveTextContent("c")
+    expect(remainingOptions.length).toBe(1)
+    expect(remainingOptions[0]).toHaveTextContent("c")
 
     expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
       props.element,
@@ -437,7 +433,7 @@ describe("Multiselect widget", () => {
       await user.click(expandListButton)
       // Options list should only have b & c available - default a selected
       const options = screen.getAllByRole("option")
-      // Should have "Select all (2)" + "b" + "c" = 3 total
+      // Should have "Select all" + "b" + "c" = 3 total
       expect(options.length).toBe(3)
       // Find actual data options (not "Select all")
       const dataOptions = options.filter(
@@ -499,7 +495,7 @@ describe("Multiselect widget", () => {
       const expandListButton = screen.getAllByTitle("open")[0]
       await user.click(expandListButton)
       const updatedOptions = screen.getAllByRole("option")
-      // Should have "Select all (2)" + "a" + "c" = 3 total
+      // Should have "Select all" + "a" + "c" = 3 total
       expect(updatedOptions.length).toBe(3)
       // Find actual data options (not "Select all")
       const dataOptions = updatedOptions.filter(
@@ -536,8 +532,8 @@ describe("Multiselect widget", () => {
     await user.type(selectboxInput, "aa")
 
     const options = screen.queryAllByRole("option")
-    expect(options).toHaveLength(4) // 3 matches + "Select all matches" option
-    expect(options[0]).toHaveTextContent("Select all matches (3)")
+    expect(options).toHaveLength(4) // 3 matches + "Select x matches" option
+    expect(options[0]).toHaveTextContent("Select 3 matches")
     expect(options[1]).toHaveTextContent("aa")
     expect(options[2]).toHaveTextContent("Aa")
     expect(options[3]).toHaveTextContent("aA")
@@ -584,7 +580,7 @@ describe("Multiselect widget", () => {
   })
 
   describe("Select all matches functionality", () => {
-    it("shows 'Select all matches' option when searching with multiple results", async () => {
+    it("shows 'Select x matches' option when searching with multiple results", async () => {
       const user = userEvent.setup()
       const props = getProps({
         default: [],
@@ -595,8 +591,8 @@ describe("Multiselect widget", () => {
       const multiSelect = screen.getByRole("combobox")
       await user.type(multiSelect, "ap")
 
-      // Should show "Select all matches" option with count
-      expect(screen.getByText("Select all matches (2)")).toBeInTheDocument()
+      // Should show "Select x matches" option
+      expect(screen.getByText("Select 2 matches")).toBeInTheDocument()
 
       // Should show filtered options
       expect(screen.getByText("apple")).toBeInTheDocument()
@@ -605,7 +601,7 @@ describe("Multiselect widget", () => {
       expect(screen.queryByText("cherry")).not.toBeInTheDocument()
     })
 
-    it("does not show 'Select all matches' when no search query", async () => {
+    it("does not show 'Select x matches' when no search query", async () => {
       const user = userEvent.setup()
       const props = getProps({
         default: [],
@@ -616,8 +612,8 @@ describe("Multiselect widget", () => {
       const expandButton = screen.getAllByTitle("open")[0]
       await user.click(expandButton)
 
-      // Should not show "Select all matches" option
-      expect(screen.queryByText(/Select all matches/)).not.toBeInTheDocument()
+      // Should not show "Select x matches" option
+      expect(screen.queryByText(/Select \d+ matches/)).not.toBeInTheDocument()
 
       // Should show all options
       expect(screen.getByText("apple")).toBeInTheDocument()
@@ -626,7 +622,7 @@ describe("Multiselect widget", () => {
       expect(screen.getByText("cherry")).toBeInTheDocument()
     })
 
-    it("does not show 'Select all matches' when no matches found", async () => {
+    it("does not show 'Select x matches' when no matches found", async () => {
       const user = userEvent.setup()
       const props = getProps({
         default: [],
@@ -637,14 +633,14 @@ describe("Multiselect widget", () => {
       const multiSelect = screen.getByRole("combobox")
       await user.type(multiSelect, "xyz")
 
-      // Should not show "Select all matches" option
-      expect(screen.queryByText(/Select all matches/)).not.toBeInTheDocument()
+      // Should not show "Select x matches" option
+      expect(screen.queryByText(/Select \d+ matches/)).not.toBeInTheDocument()
 
       // Should show no results message
       expect(screen.getByText("No results")).toBeInTheDocument()
     })
 
-    it("does not show 'Select all matches' when only one match found", async () => {
+    it("does not show 'Select x matches' when only one match found", async () => {
       const user = userEvent.setup()
       const props = getProps({
         default: [],
@@ -655,8 +651,8 @@ describe("Multiselect widget", () => {
       const multiSelect = screen.getByRole("combobox")
       await user.type(multiSelect, "bana")
 
-      // Should not show "Select all matches" option when only one result
-      expect(screen.queryByText(/Select all matches/)).not.toBeInTheDocument()
+      // Should not show "Select x matches" option when only one result
+      expect(screen.queryByText(/Select \d+ matches/)).not.toBeInTheDocument()
 
       // Should show the single matching option
       expect(screen.getByText("banana")).toBeInTheDocument()
@@ -665,7 +661,7 @@ describe("Multiselect widget", () => {
       expect(screen.queryByText("cherry")).not.toBeInTheDocument()
     })
 
-    it("selects all matching options when 'Select all matches' is clicked", async () => {
+    it("selects all matching options when 'Select x matches' is clicked", async () => {
       const user = userEvent.setup()
       const props = getProps({
         default: [],
@@ -677,7 +673,7 @@ describe("Multiselect widget", () => {
       const multiSelect = screen.getByRole("combobox")
       await user.type(multiSelect, "ap")
 
-      const selectAllOption = screen.getByText("Select all matches (2)")
+      const selectAllOption = screen.getByText("Select 2 matches")
       await user.click(selectAllOption)
 
       // Should have called setStringArrayValue with both apple and apricot
@@ -689,7 +685,7 @@ describe("Multiselect widget", () => {
       )
     })
 
-    it("does not duplicate already selected options when using 'Select all matches'", async () => {
+    it("does not duplicate already selected options when using 'Select x matches'", async () => {
       const user = userEvent.setup()
       const props = getProps({
         default: [0], // "apple" is already selected (index 0)
@@ -701,8 +697,8 @@ describe("Multiselect widget", () => {
       const multiSelect = screen.getByRole("combobox")
       await user.type(multiSelect, "ap")
 
-      // Should not show "Select all matches" option when only one match is unselected
-      expect(screen.queryByText(/Select all matches/)).not.toBeInTheDocument()
+      // Should not show "Select x matches" option when only one match is unselected
+      expect(screen.queryByText(/Select \d+ matches/)).not.toBeInTheDocument()
 
       // Click on the single available option
       const apricotOption = screen.getByText("apricot")
@@ -731,7 +727,7 @@ describe("Multiselect widget", () => {
       await user.type(multiSelect, "strem")
 
       // Check if fuzzy matching works and shows multiple results
-      const selectAllOption = screen.queryByText(/Select all matches/)
+      const selectAllOption = screen.queryByText(/Select \d+ matches/)
       if (selectAllOption) {
         await user.click(selectAllOption)
 
@@ -745,7 +741,7 @@ describe("Multiselect widget", () => {
       }
     })
 
-    it("respects maxSelections when using 'Select all matches'", async () => {
+    it("respects maxSelections when using 'Select x matches'", async () => {
       const user = userEvent.setup()
       const props = getProps({
         default: [0], // "apple" is already selected (index 0)
@@ -758,8 +754,8 @@ describe("Multiselect widget", () => {
       const multiSelect = screen.getByRole("combobox")
       await user.type(multiSelect, "ap")
 
-      // Should show "Select all matches" option
-      const selectAllOption = screen.getByText("Select all matches (2)")
+      // Should show "Select x matches" option
+      const selectAllOption = screen.getByText("Select 2 matches")
       await user.click(selectAllOption)
 
       // Should add new options up to the max limit
@@ -784,8 +780,8 @@ describe("Multiselect widget", () => {
       const multiSelect = screen.getByRole("combobox")
       await userEvent.click(multiSelect)
 
-      // Should show "Select all" option with count of unselected options (2 remaining: b, c)
-      expect(screen.getByText("Select all (2)")).toBeInTheDocument()
+      // Should show "Select all" option (2 remaining: b, c)
+      expect(screen.getByText("Select all")).toBeInTheDocument()
     })
 
     it("does not show 'Select all' when all options are selected", async () => {
@@ -812,7 +808,7 @@ describe("Multiselect widget", () => {
       const multiSelect = screen.getByRole("combobox")
       await user.click(multiSelect)
 
-      const selectAllOption = screen.getByText("Select all (2)")
+      const selectAllOption = screen.getByText("Select all")
       await user.click(selectAllOption)
 
       // Should select all unselected options
@@ -836,7 +832,7 @@ describe("Multiselect widget", () => {
       const multiSelect = screen.getByRole("combobox")
       await user.click(multiSelect)
 
-      const selectAllOption = screen.getByText("Select all (2)")
+      const selectAllOption = screen.getByText("Select all")
       await user.click(selectAllOption)
 
       // Should add unselected options up to the max limit
@@ -850,7 +846,7 @@ describe("Multiselect widget", () => {
       )
     })
 
-    it("does not show 'Select all' when searching (shows 'Select all matches' instead)", async () => {
+    it("does not show 'Select all' when searching (shows 'Select x matches' instead)", async () => {
       const props = getProps({
         default: [0], // "a" is already selected (index 0)
         options: ["apple", "apricot", "banana", "cherry"], // Need multiple matches for "ap" search
@@ -861,12 +857,12 @@ describe("Multiselect widget", () => {
       await userEvent.type(multiSelect, "ap")
 
       // Should not show "Select all" option when searching
-      expect(screen.queryByText(/^Select all \(/)).not.toBeInTheDocument()
-      // Should also not show "Select all matches" since there's only 1 unselected match (apricot)
-      expect(screen.queryByText(/Select all matches/)).not.toBeInTheDocument()
+      expect(screen.queryByText(/^Select all$/)).not.toBeInTheDocument()
+      // Should also not show "Select x matches" since there's only 1 unselected match (apricot)
+      expect(screen.queryByText(/Select \d+ matches/)).not.toBeInTheDocument()
     })
 
-    it("updates the count when options are selected/deselected", async () => {
+    it("shows 'Select all' consistently when options are selected/deselected", async () => {
       const user = userEvent.setup()
       const props = getProps({
         default: [], // No options selected initially
@@ -875,17 +871,17 @@ describe("Multiselect widget", () => {
 
       const multiSelect = screen.getByRole("combobox")
 
-      // Initially should show all 3 options
+      // Initially should show "Select all" (all 3 options available)
       await user.click(multiSelect)
-      expect(screen.getByText("Select all (3)")).toBeInTheDocument()
+      expect(screen.getByText("Select all")).toBeInTheDocument()
 
       // Select one option manually
       const aOption = screen.getByText("a")
       await user.click(aOption)
 
-      // Open dropdown again - should now show 2 unselected options
+      // Open dropdown again - should still show "Select all" (2 unselected options remain)
       await user.click(multiSelect)
-      expect(screen.getByText("Select all (2)")).toBeInTheDocument()
+      expect(screen.getByText("Select all")).toBeInTheDocument()
     })
   })
 })

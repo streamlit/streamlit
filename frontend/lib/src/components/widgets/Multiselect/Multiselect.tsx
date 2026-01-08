@@ -247,35 +247,35 @@ const Multiselect: FC<Props> = props => {
       // Get filtered options (excluding already selected ones) for the dropdown
       const filteredOptions = createFilterOptions(value)(options, filterValue)
 
-      // Add "Select all" or "Select all matches" option
+      // Add "Select all" or "Select x matches" option
       if (filterValue.trim()) {
         // Filter out already selected options from the matches first
         const unselectedMatches = allMatches.filter(
           (opt: Option) => !value.includes(opt.value as string)
         )
-        // Add "Select all matches" option when searching and multiple unselected matches found
+        // Add "Select x matches" option when searching and multiple unselected matches found
         if (unselectedMatches.length > 1) {
           const allMatchedValues = allMatches
             .map((opt: Option) => opt.value)
             .join("|||")
           const selectAllOption: Option = {
-            label: `Select all matches (${unselectedMatches.length})`,
+            label: `Select ${unselectedMatches.length} matches`,
             value: `__SELECT_ALL_MATCHES__|||${allMatchedValues}`,
             id: "__SELECT_ALL_MATCHES__",
           }
           return [selectAllOption, ...filteredOptions]
         }
       } else {
-        // Add "Select all" option when not searching and there are unselected options
+        // Add "Select all" option when not searching and there are multiple unselected options
         const unselectedOptions = options.filter(
           option => !value.includes(option.value as string)
         )
-        if (unselectedOptions.length > 0) {
+        if (unselectedOptions.length > 1) {
           const allUnselectedValues = unselectedOptions
             .map((opt: Option) => opt.value)
             .join("|||")
           const selectAllOption: Option = {
-            label: `Select all (${unselectedOptions.length})`,
+            label: "Select all",
             value: `__SELECT_ALL__|||${allUnselectedValues}`,
             id: "__SELECT_ALL__",
           }
