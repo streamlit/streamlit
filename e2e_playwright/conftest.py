@@ -67,6 +67,16 @@ class StaticPage(Page):
     pass
 
 
+def pytest_addoption(parser: pytest.Parser) -> None:
+    """Register custom command-line options."""
+    parser.addoption(
+        "--use-starlette",
+        action="store_true",
+        default=False,
+        help="Run tests with the experimental Starlette server instead of Tornado",
+    )
+
+
 def pytest_configure(config: pytest.Config) -> None:
     """Register custom markers."""
     config.addinivalue_line(
@@ -251,9 +261,12 @@ def app_port(worker_id: str) -> int:
 
 
 @pytest.fixture(scope="module")
-def app_server_extra_args() -> list[str]:
+def app_server_extra_args(request: pytest.FixtureRequest) -> list[str]:
     """Fixture that returns extra arguments to pass to the Streamlit app server."""
-    return []
+    args: list[str] = []
+    if request.config.getoption("--use-starlette"):
+        args.extend(["--server.useStarlette", "true"])
+    return args
 
 
 @pytest.fixture(scope="module", autouse=True)
