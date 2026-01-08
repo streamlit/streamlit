@@ -23,44 +23,50 @@ export const StyledChatInputContainer = styled.div({
   flexDirection: "column",
 })
 
-export interface StyledChatInputProps {
-  extended?: boolean
-}
-
-export const StyledChatInput = styled.div<StyledChatInputProps>(
-  ({ theme }) => ({
-    backgroundColor: theme.colors.secondaryBg,
-    border: `${theme.sizes.borderWidth} solid`,
-    borderColor: theme.colors.widgetBorderColor ?? theme.colors.transparent,
-    position: "relative",
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "stretch",
-    flex: 1,
-    padding: theme.spacing.lg,
-    borderRadius: theme.radii.default,
-    boxSizing: "border-box",
-
-    ":focus-within": {
-      borderColor: theme.colors.primary,
-    },
-  })
-)
-
-export const StyledContentArea = styled.div(({ theme }) => ({
+export const StyledChatInput = styled.div(({ theme }) => ({
+  backgroundColor: theme.colors.secondaryBg,
+  border: `${theme.sizes.borderWidth} solid`,
+  borderColor: theme.colors.widgetBorderColor ?? theme.colors.transparent,
   position: "relative",
   display: "flex",
   flexDirection: "column",
+  alignItems: "stretch",
+  flex: 1,
+  padding: theme.spacing.lg,
+  gap: theme.spacing.sm,
+  borderRadius: theme.radii.default,
+  boxSizing: "border-box",
+
+  ":focus-within": {
+    borderColor: theme.colors.primary,
+  },
+}))
+
+// Files area - wrapping container for file chips above the input row
+export const StyledFilesArea = styled.div(({ theme }) => ({
+  display: "flex",
+  flexWrap: "wrap",
   gap: theme.spacing.sm,
 }))
 
-export const StyledPrimaryRegion = styled.div({
-  position: "relative",
+// Textarea row - shown above button row when textarea is expanded
+export const StyledTextareaRow = styled.div({
   display: "flex",
-  flexDirection: "column",
+  flexDirection: "row",
+  width: "100%",
 })
 
-export const StyledActionRow = styled.div(({ theme }) => ({
+// Main input row - contains [left cluster] [textarea/waveform] [right cluster] (inline mode)
+export const StyledInputRow = styled.div(({ theme }) => ({
+  display: "flex",
+  flexDirection: "row",
+  alignItems: "center",
+  width: "100%",
+  gap: theme.spacing.sm,
+}))
+
+// Button row - used in stacked mode, positions + on left, mic/send on right
+export const StyledButtonRow = styled.div(({ theme }) => ({
   display: "flex",
   flexDirection: "row",
   justifyContent: "space-between",
@@ -69,20 +75,11 @@ export const StyledActionRow = styled.div(({ theme }) => ({
   gap: theme.spacing.sm,
 }))
 
-// Single-row layout for simple mode (no file upload, no audio)
-export const StyledSimpleRow = styled.div(({ theme }) => ({
-  display: "flex",
-  flexDirection: "row",
-  alignItems: "flex-end",
-  width: "100%",
-  marginTop: "auto",
-  gap: theme.spacing.lg,
-}))
-
+// Left cluster - flex-shrink so it collapses when empty
 export const StyledLeftCluster = styled.div(({ theme }) => ({
   display: "flex",
   flexDirection: "row",
-  flex: "1 0 0",
+  flexShrink: 0,
   gap: theme.spacing.sm,
   alignItems: "center",
 }))
@@ -113,15 +110,12 @@ export const StyledInputInstructions = styled.div(({ theme }) => ({
 
 interface StyledSendIconButtonProps {
   disabled: boolean
-  extended?: boolean
   hasError?: boolean
   primary?: boolean
-  /** Applies vertical offset for alignment in simple mode layout */
-  withVerticalOffset?: boolean
 }
 
 export const StyledSendIconButton = styled.button<StyledSendIconButtonProps>(
-  ({ theme, disabled, hasError, primary, withVerticalOffset }) => {
+  ({ theme, disabled, hasError, primary }) => {
     if (primary) {
       return {
         border: "none",
@@ -134,9 +128,6 @@ export const StyledSendIconButton = styled.button<StyledSendIconButtonProps>(
         justifyContent: "center",
         lineHeight: theme.lineHeights.none,
         margin: theme.spacing.none,
-        marginBottom: withVerticalOffset
-          ? theme.sizes.chatInputButtonVerticalOffset
-          : undefined,
         padding: theme.spacing.xs,
         width: theme.sizes.chatInputPrimaryButtonSize,
         height: theme.sizes.chatInputPrimaryButtonSize,

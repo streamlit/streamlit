@@ -74,23 +74,21 @@ import ChatUploadedFiles from "./fileUpload/ChatUploadedFiles"
 import { createDropHandler } from "./fileUpload/createDropHandler"
 import { createUploadFileHandler } from "./fileUpload/createFileUploadHandler"
 import {
-  StyledActionRow,
   StyledChatAudioWave,
   StyledChatInput,
   StyledChatInputContainer,
-  StyledContentArea,
+  StyledFilesArea,
   StyledInputInstructions,
+  StyledInputRow,
   StyledLeftCluster,
-  StyledPrimaryRegion,
   StyledRightCluster,
   StyledSendIconButton,
-  StyledSimpleRow,
+  StyledTextareaRow,
   StyledWaveformContainer,
 } from "./styled-components"
 
 /**
- * Creates the common UITextArea overrides configuration used by both
- * simple and extended chat input modes.
+ * Creates the UITextArea overrides configuration for the chat input.
  *
  * @param theme - The Emotion theme for accessing design tokens
  * @param autoExpand - Auto-expand configuration with height and maxHeight
@@ -185,6 +183,7 @@ function ChatInput({
   const [fileDragged, setFileDragged] = useState(false)
   const [audioUploading, setAudioUploading] = useState(false)
   const [recordingError, setRecordingError] = useState<string | null>(null)
+  const [isStacked, setIsStacked] = useState(false)
 
   // Forces dropzone to remount when files are cleared
   const [dropzoneResetCounter, setDropzoneResetCounter] = useState(0)
@@ -204,6 +203,59 @@ function ChatInput({
     textareaRef: chatInputRef,
     dependencies: [placeholder],
   })
+
+  // Manage stacked layout mode transitions
+  // Switch to stacked when text fills the available width
+  useEffect(() => {
+    if (value === "") {
+      setIsStacked(false)
+    } else if (chatInputRef.current && !isStacked) {
+      const textarea = chatInputRef.current
+
+      // Measure actual text width using canvas
+      const computedStyle = window.getComputedStyle(textarea)
+      const font = `${computedStyle.fontWeight} ${computedStyle.fontSize} ${computedStyle.fontFamily}`
+
+      const canvas = document.createElement("canvas")
+      const ctx = canvas.getContext("2d")
+      if (ctx) {
+        ctx.font = font
+        const textWidth = ctx.measureText(value).width
+
+        // Get the textarea's content width (excluding padding)
+        const paddingLeft = parseFloat(computedStyle.paddingLeft) || 0
+        const paddingRight = parseFloat(computedStyle.paddingRight) || 0
+        const availableWidth =
+          textarea.clientWidth - paddingLeft - paddingRight
+
+        // Switch to stacked when text width approaches available width
+        // Use a small buffer (10px) to trigger before text actually touches the edge
+        const shouldStack = textWidth > availableWidth - 10
+
+        if (shouldStack) {
+          setIsStacked(true)
+        }
+      }
+    }
+  }, [value, isStacked])
+
+  // Refocus textarea after mode transition
+  useEffect(() => {
+    // When isStacked changes and we have a ref, restore focus
+    if (
+      chatInputRef.current &&
+      document.activeElement !== chatInputRef.current
+    ) {
+      // Only refocus if the chat input container has focus (user was typing)
+      const chatContainer = chatInputRef.current.closest(".stChatInput")
+      if (chatContainer?.contains(document.activeElement) || value !== "") {
+        chatInputRef.current.focus()
+        // Move cursor to end
+        const len = chatInputRef.current.value.length
+        chatInputRef.current.setSelectionRange(len, len)
+      }
+    }
+  }, [isStacked, value])
 
   /**
    * @returns True if the user-specified state.value has not yet been synced to
@@ -443,6 +495,7 @@ function ChatInput({
 
       setFiles([])
       setValue("")
+      setIsStacked(false)
       autoExpand.clearScrollHeight()
     },
     [
@@ -684,9 +737,6 @@ function ChatInput({
 
   const showDropzone = acceptFile !== AcceptFileValue.None && fileDragged
   const isRecording = controller.state === "recording"
-  // Simple mode: single-row layout when no file upload and no audio features
-  const isSimpleMode =
-    acceptFile === AcceptFileValue.None && !acceptAudio && !isRecording
 
   const showInstructions =
     !isRecording &&
@@ -699,7 +749,7 @@ function ChatInput({
       data-testid="stChatInput"
       ref={elementRef}
     >
-      <StyledChatInput extended={autoExpand.isExtended || isRecording}>
+      <StyledChatInput>
         {/* Character count - positioned in top-right corner */}
         {showInstructions && (
           <StyledInputInstructions
@@ -717,9 +767,68 @@ function ChatInput({
           </StyledInputInstructions>
         )}
 
-        {isSimpleMode ? (
-          /* Simple mode: single-row layout with textarea and send button side by side */
-          <StyledSimpleRow>
+        {/* Dropzone overlay - shown when dragging files over */}
+        {showDropzone && (
+          <ChatFileUploadDropzone
+            getRootProps={getRootProps}
+            getInputProps={getInputProps}
+            acceptFile={acceptFile}
+          />
+        )}
+
+        {/* Files area - shown above input row when files are uploaded */}
+        {acceptFile !== AcceptFileValue.None && files.length > 0 && (
+          <StyledFilesArea>
+            <ChatUploadedFiles
+              items={[...files]}
+              onDelete={deleteFile}
+              onRetry={handleRetry}
+            />
+          </StyledFilesArea>
+        )}
+
+        {/* Waveform container - always rendered for ref, hidden when not recording */}
+        <StyledWaveformContainer isRecording={isRecording}>
+          <StyledChatAudioWave ref={waveformContainerRef} />
+        </StyledWaveformContainer>
+
+        {/* Stacked layout: Textarea on its own row (full width) */}
+        {isStacked && !isRecording && (
+          <StyledTextareaRow>
+            <UITextArea
+              inputRef={chatInputRef}
+              value={value}
+              placeholder={placeholder}
+              onChange={handleChange}
+              onKeyDown={handleKeyDown}
+              aria-label={placeholder}
+              disabled={disabled}
+              rows={1}
+              aria-describedby={
+                showInstructions ? "stChatInputInstructions" : undefined
+              }
+              overrides={createTextAreaOverrides(theme, autoExpand, {
+                width: "100%",
+              })}
+            />
+          </StyledTextareaRow>
+        )}
+
+        {/* Main row - either buttons only (stacked) or full inline layout */}
+        <StyledInputRow>
+          <StyledLeftCluster>
+            {acceptFile !== AcceptFileValue.None && !isRecording && (
+              <ChatFileUploadButton
+                getRootProps={getRootProps}
+                getInputProps={getInputProps}
+                acceptFile={acceptFile}
+                disabled={disabled}
+              />
+            )}
+          </StyledLeftCluster>
+
+          {/* Inline mode: textarea in the middle */}
+          {!isStacked && !isRecording && (
             <UITextArea
               inputRef={chatInputRef}
               value={value}
@@ -736,166 +845,84 @@ function ChatInput({
                 flex: 1,
               })}
             />
-            <StyledSendIconButton
-              onClick={handleSubmit}
-              disabled={!dirty || disabled}
-              data-testid="stChatInputSubmitButton"
-              aria-label="Send message"
-              primary
-              withVerticalOffset
-            >
-              <Icon content={ArrowUpward} size="lg" color="inherit" />
-            </StyledSendIconButton>
-          </StyledSimpleRow>
-        ) : (
-          /* Extended mode: two-row layout with content area and action row */
-          <>
-            <StyledContentArea>
-              {showDropzone && (
-                <ChatFileUploadDropzone
-                  getRootProps={getRootProps}
-                  getInputProps={getInputProps}
-                  acceptFile={acceptFile}
-                />
-              )}
+          )}
 
-              {acceptFile !== AcceptFileValue.None && files.length > 0 && (
-                <ChatUploadedFiles
-                  items={[...files]}
-                  onDelete={deleteFile}
-                  onRetry={handleRetry}
-                />
-              )}
+          {/* Stacked mode: spacer to push buttons to the right */}
+          {isStacked && !isRecording && <div style={{ flex: 1 }} />}
 
-              <StyledPrimaryRegion>
-                {/* Waveform - always mounted to ensure ref is available for initialization */}
-                <StyledWaveformContainer isRecording={isRecording}>
-                  <StyledChatAudioWave ref={waveformContainerRef} />
-                </StyledWaveformContainer>
-
-                {/* Textarea - only shown when not recording */}
-                {!isRecording && (
-                  <UITextArea
-                    inputRef={chatInputRef}
-                    value={value}
-                    placeholder={placeholder}
-                    onChange={handleChange}
-                    onKeyDown={handleKeyDown}
-                    aria-label={placeholder}
-                    disabled={disabled}
-                    rows={1}
-                    aria-describedby={
-                      showInstructions ? "stChatInputInstructions" : undefined
-                    }
-                    overrides={createTextAreaOverrides(theme, autoExpand, {
-                      width: "100%",
-                    })}
-                  />
-                )}
-              </StyledPrimaryRegion>
-            </StyledContentArea>
-
-            <StyledActionRow>
-              <StyledLeftCluster>
-                {acceptFile !== AcceptFileValue.None && !isRecording && (
-                  <ChatFileUploadButton
-                    key={dropzoneResetCounter}
-                    onDrop={dropHandler}
-                    multiple={
-                      acceptFile === AcceptFileValue.Multiple ||
-                      acceptFile === AcceptFileValue.Directory
-                    }
-                    accept={getAccept(element.fileType)}
-                    maxSize={maxFileSize}
-                    acceptFile={acceptFile}
-                    disabled={disabled}
-                  />
-                )}
-              </StyledLeftCluster>
-
-              <StyledRightCluster>
-                {isRecording ? (
+          <StyledRightCluster>
+            {isRecording ? (
+              <>
+                <StyledSendIconButton
+                  onClick={handleRecordingCancel}
+                  disabled={disabled}
+                  data-testid="stChatInputCancelButton"
+                  aria-label="Cancel recording"
+                >
+                  <Icon content={Close} size="lg" color="inherit" />
+                </StyledSendIconButton>
+                <StyledSendIconButton
+                  onClick={handleRecordingApproveVoid}
+                  disabled={disabled || audioUploading}
+                  data-testid="stChatInputApproveButton"
+                  aria-label="Submit recording"
+                >
+                  {audioUploading ? (
+                    <DynamicIcon size="lg" iconValue="spinner" />
+                  ) : (
+                    <Icon content={Check} size="lg" color="inherit" />
+                  )}
+                </StyledSendIconButton>
+              </>
+            ) : (
+              <>
+                {acceptAudio && (
                   <>
-                    {/* Cancel button */}
-                    <StyledSendIconButton
-                      onClick={handleRecordingCancel}
-                      disabled={disabled}
-                      data-testid="stChatInputCancelButton"
-                      aria-label="Cancel recording"
-                    >
-                      <Icon content={Close} size="lg" color="inherit" />
-                    </StyledSendIconButton>
-                    {/* Approve button */}
-                    <StyledSendIconButton
-                      onClick={handleRecordingApproveVoid}
-                      disabled={disabled || audioUploading}
-                      data-testid="stChatInputApproveButton"
-                      aria-label="Submit recording"
-                    >
-                      {audioUploading ? (
-                        <DynamicIcon size="lg" iconValue="spinner" />
-                      ) : (
-                        <Icon content={Check} size="lg" color="inherit" />
-                      )}
-                    </StyledSendIconButton>
-                  </>
-                ) : (
-                  <>
-                    {/* Mic button */}
-                    {acceptAudio && (
-                      <>
-                        {recordingError ? (
-                          <Tooltip
-                            content={recordingError}
-                            placement={Placement.TOP}
-                            error
-                          >
-                            <StyledSendIconButton
-                              onClick={handleMicClickVoid}
-                              disabled={disabled || audioUploading}
-                              hasError
-                              data-testid="stChatInputMicButton"
-                              aria-label="Start recording"
-                            >
-                              <Icon
-                                content={ErrorOutline}
-                                size="xl"
-                                color="inherit"
-                              />
-                            </StyledSendIconButton>
-                          </Tooltip>
-                        ) : (
-                          <StyledSendIconButton
-                            onClick={handleMicClickVoid}
-                            disabled={disabled || audioUploading}
-                            data-testid="stChatInputMicButton"
-                            aria-label="Start recording"
-                          >
-                            <Icon
-                              content={MicNone}
-                              size="xl"
-                              color="inherit"
-                            />
-                          </StyledSendIconButton>
-                        )}
-                      </>
+                    {recordingError ? (
+                      <Tooltip
+                        content={recordingError}
+                        placement={Placement.TOP}
+                        error
+                      >
+                        <StyledSendIconButton
+                          onClick={handleMicClickVoid}
+                          disabled={disabled || audioUploading}
+                          hasError
+                          data-testid="stChatInputMicButton"
+                          aria-label="Start recording"
+                        >
+                          <Icon
+                            content={ErrorOutline}
+                            size="xl"
+                            color="inherit"
+                          />
+                        </StyledSendIconButton>
+                      </Tooltip>
+                    ) : (
+                      <StyledSendIconButton
+                        onClick={handleMicClickVoid}
+                        disabled={disabled || audioUploading}
+                        data-testid="stChatInputMicButton"
+                        aria-label="Start recording"
+                      >
+                        <Icon content={MicNone} size="xl" color="inherit" />
+                      </StyledSendIconButton>
                     )}
-                    {/* Send button */}
-                    <StyledSendIconButton
-                      onClick={handleSubmit}
-                      disabled={!dirty || disabled || audioUploading}
-                      data-testid="stChatInputSubmitButton"
-                      aria-label="Send message"
-                      primary
-                    >
-                      <Icon content={ArrowUpward} size="lg" color="inherit" />
-                    </StyledSendIconButton>
                   </>
                 )}
-              </StyledRightCluster>
-            </StyledActionRow>
-          </>
-        )}
+                <StyledSendIconButton
+                  onClick={handleSubmit}
+                  disabled={!dirty || disabled || audioUploading}
+                  data-testid="stChatInputSubmitButton"
+                  aria-label="Send message"
+                  primary
+                >
+                  <Icon content={ArrowUpward} size="lg" color="inherit" />
+                </StyledSendIconButton>
+              </>
+            )}
+          </StyledRightCluster>
+        </StyledInputRow>
       </StyledChatInput>
     </StyledChatInputContainer>
   )
