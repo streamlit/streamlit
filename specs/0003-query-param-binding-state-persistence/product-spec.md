@@ -8,9 +8,8 @@ status: Draft
 
 ## Summary
 
-Find an API to bind widget state to query params and persist widget state if the widget
-is not shown or the page is switched. These problems are slightly related, so speccing
-them out together.
+Find an API to (1) bind widget state to query params and (2) persist widget state across
+conditional rendering and/or page switches. Both are related, so speccing them together.
 
 ## Problem
 
@@ -18,9 +17,9 @@ There are two problems here:
 
 1. **Binding widget state to query params:** Devs often add the values of widgets
    to the URL's query parameters as an easy way to preserve or share the state of an app.
-   It's possible to build this manually with `st.query_params` but it's
-   annoying due to Streamlit's rerun model. There are several community-maintained
-   packages for this, e.g. [streamlit-qs](https://github.com/Asaurus1/streamlit-qs).
+   It's hard to build this manually with `st.query_params` due to Streamlit's rerun
+   model. There are several community-maintained packages for this, e.g.
+   [streamlit-qs](https://github.com/Asaurus1/streamlit-qs).
 
    Issues:
 
@@ -29,15 +28,14 @@ There are two problems here:
 
 2. **Persisting widget state:** Today, a widget loses its state:
 
-   - if it is not rendered (even if that's temporary and even if `key` is set), and
-   - when the page is switched (even if the new page contains the same widget with
-     the same `key`; this is because the page factors into the widget's identity).
+   - if it is not rendered (even temporarily, even with `key`), and
+   - when switching pages (page factors into widget identity, even with the same `key`).
 
    See more info in [this guide](https://docs.streamlit.io/develop/concepts/architecture/widget-behavior).
 
-   Both behaviors were deliberately chosen when we introduced session state and
-   multipage apps to avoid cluttering session state, to prevent old widget states from
-   causing confusion, and to make pages act like isolated "mini-apps" (see e.g.
+   Both behaviors were deliberately chosen when we introduced session state and multipage
+   apps (avoid cluttering session state, prevent stale state surprises, make pages act
+   like isolated "mini-apps"; see e.g.
    [this comment](https://github.com/streamlit/streamlit/issues/5813#issuecomment-1338155093)).
 
    However, sometimes you want to persist widget state if the widget is not shown or the
@@ -78,14 +76,14 @@ st.widget(..., persist_state=None|"page"|"session")
 
 ### Option 1: One parameter for both problems
 
-Both problems are related, relatively niche, and affect almost all widgets. To avoid
-adding too many parameters, we could solve them with a single parameter:
+Both problems affect almost all widgets. To avoid multiple new parameters, we could use
+a single parameter:
 
 ```python
 st.widget(..., persist=None)  # no persistence, default
 st.widget(..., persist="query-params")  # binds widget state to query params
-st.widget(..., persist="page")  # persist widget state if widget is not rendered, but deletes it on page switch
-st.widget(..., persist="session")  # persists widget state for the entire session (i.e. if not rendered or page is switched)
+st.widget(..., persist="page")  # keep state if not rendered, delete on page switch
+st.widget(..., persist="session")  # keep state for the session (even if not rendered / across pages)
 st.widget(..., persist=["query-params", "session"])  # binds to query params + persists for the entire session
 ```
 
@@ -109,12 +107,10 @@ st.widget(..., persist=["query-params", "session"])  # binds to query params + p
 
 **Open questions:**
 
-- Do we also want a way to persist across page switches, but not across the entire
-  session/if the widget isn't rendered? I guess this would be a very niche case and most
-  devs would just use `persist="session"`, but not sure? -> Probably not needed.
-- At least `"query-params"` should only work when `key` is set, otherwise it might
-  create long, ugly, and unstable URLs (plus, would add a lot of implementation time).
-  Should the same be true for `"session"` or can we make this work without setting `key`?
+- Do we need a mode to persists state across page switches but _not_ while not rendered?
+  Probably not.
+- `"query-params"` likely should require explicit `key` (to avoid unstable/ugly URLs
+  with automated keys). Should `"page"`/`"session"` require `key` too?
 - If `persist=["query-params", "page"]` or `persist=["query-params", "session"]` is
   set, should we keep the query params if the widget is not rendered (and for
   `"session"` if the page is switched)? Today they would get removed if the widget is
@@ -150,17 +146,14 @@ st.widget(..., persist_state=None|"page"|"session")
 
 **Notes:**
 
-- Need to figure out how the order works; if we do `key=st.query_params.bind("foo")`,
-  it would bind the key before it exists. Maybe we do it in a way where it binds every
-  session state key created during that run, no matter if it already exists or not.
+- Need to define ordering; `key=st.query_params.bind("foo")` binds before the widget runs.
+  One option: bindings apply to keys created during the run (whether they already existed or not).
 - Can add additional parameters to `st.query_params.bind`, e.g.:
   - `query_key: str` to use a different key in the query param than in session state/the
     widget key.
   - `format_func: Callable[[Any], str]` to format the value before it's added to the
-    query param. Should obviously aim to do most of the conversion ourselves, but just in
-    case devs want something custom (e.g. because they don't want to expose
-    the session state value itself).
-  - Some parameter to define if the query param is persisted across page switches.
+    query param (for custom encodings / not exposing raw values).
+  - A parameter to define whether query params persist across page switches.
 - Note that there's also an (old) prototype from Asaurus
   [in this issue](https://github.com/streamlit/streamlit/issues/9325).
 
@@ -174,7 +167,7 @@ st.widget(..., persist_state=None|"page"|"session")
 **Cons:**
 
 - `key=st.query_params.bind("foo")` feels a bit magical.
-- Very different from current prototype and potentially harder to implement.
+- Different from current prototype; potentially harder to implement.
 - No way to "unbind" a widget from query params.
 - No good way to show for which widgets query param binding doesn't work.
 
@@ -191,10 +184,9 @@ st.widget(..., persist_state=None|"page"|"session")
 
 ### Details
 
-A lot of details (e.g. how to serialize different widget values for query params)
-are already covered in the [tech spec](https://www.notion.so/snowflake-corp/Widget-Binding-Tech-Spec-v1-2df7170bb416807b895feae457c9a790)
-and [demo app](https://widget-query-params-demo.streamlit.app/),
-so will not repeat them here.
+Details (e.g. serialization format) are covered in the
+[tech spec](https://www.notion.so/snowflake-corp/Widget-Binding-Tech-Spec-v1-2df7170bb416807b895feae457c9a790)
+and [demo app](https://widget-query-params-demo.streamlit.app/).
 
 ## Checklist
 
