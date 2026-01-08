@@ -172,6 +172,8 @@ class _DummyRuntime:
 def starlette_client(tmp_path: Path) -> Iterator[tuple[TestClient, _DummyRuntime]]:
     static_dir = tmp_path / "static"
     static_dir.mkdir()
+    # Starlette's StaticFiles requires index.html to exist when html=True
+    (static_dir / "index.html").write_text("<html>test</html>")
     component_dir = tmp_path / "component"
     component_dir.mkdir()
     (component_dir / "index.html").write_text("component")
@@ -1179,6 +1181,18 @@ class TestAppAsgi:
     @pytest.fixture(autouse=True)
     def _reset_runtime(self, reset_runtime: None) -> None:
         """Auto-use the reset_runtime fixture for all tests in this class."""
+
+    @pytest.fixture(autouse=True)
+    def _mock_static_dir(self, tmp_path: Path) -> Iterator[None]:
+        """Mock the static directory for all tests in this class."""
+        static_dir = tmp_path / "static"
+        static_dir.mkdir()
+        # Starlette's StaticFiles requires index.html to exist when html=True
+        (static_dir / "index.html").write_text("<html>test</html>")
+        monkeypatch = pytest.MonkeyPatch()
+        monkeypatch.setattr(file_util, "get_static_dir", lambda: str(static_dir))
+        yield
+        monkeypatch.undo()
 
     @patch_config_options(
         {

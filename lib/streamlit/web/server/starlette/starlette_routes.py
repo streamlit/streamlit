@@ -81,8 +81,7 @@ _ROUTE_METRICS: Final = f"{BASE_ROUTE_CORE}/metrics"
 _ROUTE_HOST_CONFIG: Final = f"{BASE_ROUTE_CORE}/host-config"
 
 # Media and file routes
-_ROUTE_MEDIA_BASE: Final = BASE_ROUTE_MEDIA + "/"
-_ROUTE_MEDIA: Final = f"{_ROUTE_MEDIA_BASE}/{{file_id:path}}"
+_ROUTE_MEDIA: Final = f"{BASE_ROUTE_MEDIA}/{{file_id:path}}"
 _ROUTE_UPLOAD_FILE: Final = f"{BASE_ROUTE_UPLOAD_FILE}/{{session_id}}/{{file_id}}"
 
 # Component routes
