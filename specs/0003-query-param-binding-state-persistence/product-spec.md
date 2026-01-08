@@ -8,9 +8,9 @@ status: Draft
 
 ## Summary
 
-Add a `persist` parameter to most widgets that enables 1) binding the widget state to
-query params and 2) persisting widget state if the widget is not shown or the page is
-switched.
+Find an API to bind widget state to query params and persist widget state if the widget
+is not shown or the page is switched. These problems are slightly related, so speccing
+them out together.
 
 ## Problem
 
@@ -51,11 +51,35 @@ There are two problems here:
 
 ## Proposal
 
-### Option 1: One `persist` parameter for both problems
+### Option 0: Two separate parameters
 
-Both problems are related, relatively niche, and affect almost all widgets. It would be
-nice to solve them together with a single new parameter, instead of adding two
-parameters to each widget:
+```python
+st.widget(..., bind="query-params")
+st.widget(..., persist_state=None|"page"|"session")
+```
+
+**Notes:**
+
+- `bind` could be extended to `"localstorage"` later.
+- `"page"` means persist if not rendered but delete on page switch. `"session"` means
+  persist for the entire session (i.e. if not rendered or page is switched).
+- Alternative names:
+  - `bind`: sync
+  - `persist_state`: persist, scope, lifetime
+
+**Pros:**
+
+- Very explicit. Clear separation of concerns.
+- Can leave out `bind` for unsupported widgets (e.g. `st.file_uploader`).
+
+**Cons:**
+
+- Two new parameters for almost every widget.
+
+### Option 1: One parameter for both problems
+
+Both problems are related, relatively niche, and affect almost all widgets. To avoid
+adding too many parameters, we could solve them with a single parameter:
 
 ```python
 st.widget(..., persist=None)  # no persistence, default
@@ -65,25 +89,29 @@ st.widget(..., persist="session")  # persists widget state for the entire sessio
 st.widget(..., persist=["query-params", "session"])  # binds to query params + persists for the entire session
 ```
 
-Could make `"session"` and `"page"` exclusive, since `"session"` naturally means
-it's persisted across the page as well.
+**Notes:**
+
+- Could add `"localstorage"` later.
+- Could make `"session"` and `"page"` exclusive, since `"session"` naturally means
+  it's persisted across the page as well.
 
 **Pros:**
 
 - Just one new parameter on each widget instead of two.
-- `persist` rhymes well with the same parameter on `st.cache_data` and `st.cache_resource`.
-- Can be nicely extended in the future, e.g. `persist="localstorage"`.
 
 **Cons:**
 
-- Concepts are related but not exactly the same. Might be confusing?
+- Concepts are related but not exactly the same. Might be confusing, especially because
+  in the list format, you can't mix and match, but for now only combine `"query-params"`
+  and one of the other values.
+- Would still need to add `persist` for widgets that don't support query param binding.
+  Can of course leave out `"query-params"` then, but it's a bit less clean.
 
 **Open questions:**
 
 - Do we also want a way to persist across page switches, but not across the entire
   session/if the widget isn't rendered? I guess this would be a very niche case and most
-  devs would just use `persist="session"`, but not sure? We could add `persist="pages"`
-  or `persist="page-switch"` to cover this but not sure if we need it (Debbie says no).
+  devs would just use `persist="session"`, but not sure? -> Probably not needed.
 - At least `"query-params"` should only work when `key` is set, otherwise it might
   create long, ugly, and unstable URLs (plus, would add a lot of implementation time).
   Should the same be true for `"session"` or can we make this work without setting `key`?
@@ -96,10 +124,9 @@ it's persisted across the page as well.
 
 ### Option 2: `st.query_params.bind` but make it work nicely with widgets
 
-OK new idea! Use `st.query_params.bind("session_state_key")` to bind query
-params to arbitrary values in session state, no matter if widget state or not. What
-bothered me about this in the past was that you have to call the `bind` function
-for every widget, which seems verbose:
+Use `st.query_params.bind("session_state_key")` to bind query params to arbitrary
+session state keys, no matter if widget state or not. What bothered me about this in the
+past was that you have to call the `bind` function for every widget, which seems verbose:
 
 ```python
 st.widget(..., key="foo")
@@ -135,32 +162,16 @@ one new parameter on each widget instead.
 Note that there's also an (old) prototype from Asaurus
 [in this issue](https://github.com/streamlit/streamlit/issues/9325).
 
-### Option 3: Other separate APIs
+### Other ideas we had in the past
 
-#### Query params binding
-
-Some ideas we had in the past:
-
-- `st.widget(..., bind_query_param=True)` -> Definitely means two parameters then.
 - `st.widget(..., query_key="foo")` -> Seems redundant given that we already have `key`.
 - `st.widget(..., key="?foo")` -> Bit too magical, was disliked when we discussed it in
   the past.
-- `st.query_params.bind("session_state_key")` -> Could still do this later on, useful if
-  you want to bind arbitrary session state keys, not just widget state. But seems a bit
-  annoying to do this for every widget.
-
-#### Persisting widget state
-
-Probably needs a parameter similar to above:
-
-- `persist=True|False`
-- `scope="page"|"app"|"session"` (where `"app"` would mean across page switches)
-
-We've been also thinking in the past about doing this as a global config option, but I
-think that might be confusing. I can imagine that in many cases, you just have a few
-widgets that you want to persist, so having a global config option might interfere too
-much with other widgets. It also seems confusing to have "two operating modes" for
-widgets in Streamlit – makes it a lot harder to understand code then.
+- Having global config options instead of per-widget parameters, but I think that might
+  be confusing. I can imagine that in many cases, you just have a few
+  widgets that you want to persist, so having a global config option might interfere too
+  much with other widgets. It also seems confusing to have "two operating modes" for
+  widgets in Streamlit – makes it a lot harder to understand code then.
 
 ### Details
 
