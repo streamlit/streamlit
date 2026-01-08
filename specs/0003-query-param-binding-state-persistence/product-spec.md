@@ -145,7 +145,7 @@ st.widget(..., key=st.query_params.bind("foo"))
 For state persistence, add a parameter to widgets, similar to option 0:
 
 ```python
-st.widget(..., persist=None|"page"|"session")
+st.widget(..., persist_state=None|"page"|"session")
 ```
 
 **Notes:**
@@ -167,7 +167,7 @@ st.widget(..., persist=None|"page"|"session")
 **Pros:**
 
 - Only adds one parameter for state persistence.
-- Very powerful for query param binding (arbitrary session state vablues, additional
+- Very powerful for query param binding (arbitrary session state values, additional
   parameters).
 - Small API surface for widget binding since `st.query_params` already exists.
 
@@ -176,7 +176,7 @@ st.widget(..., persist=None|"page"|"session")
 - `key=st.query_params.bind("foo")` feels a bit magical.
 - Very different from current prototype and potentially harder to implement.
 - No way to "unbind" a widget from query params.
-- No good way to show for which widgets query param binding doesn't work. 
+- No good way to show for which widgets query param binding doesn't work.
 
 ### Other ideas we had in the past
 
