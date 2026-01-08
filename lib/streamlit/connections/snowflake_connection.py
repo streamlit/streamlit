@@ -671,7 +671,7 @@ class SnowflakeCallersRightsConnection(SnowflakeConnection):
             if value is None:
                 raise StreamlitAPIException(
                     f"Environment variable `{env_var_name}` not found. Is this app "
-                    "runnning in a Snowflake container environment?"
+                    "running in a Snowflake container environment?"
                 )
             params[param_name] = value
 
@@ -679,14 +679,14 @@ class SnowflakeCallersRightsConnection(SnowflakeConnection):
         if not os.path.exists(SNOWPARK_CONNECTION_TOKEN_FILE):
             raise StreamlitAPIException(
                 f"Token file `{SNOWPARK_CONNECTION_TOKEN_FILE}` not found. Is this app "
-                "runnning in a Snowflake container environment?"
+                "running in a Snowflake container environment?"
             )
         login_token = cls._read_token_file()
 
         # Validate the token header exists, and read it.
         if SNOWPARK_USER_TOKEN_HEADER_NAME not in st_context.headers:
             raise StreamlitAPIException(
-                "Token header not found. Is this app runnning with caller's "
+                "Token header not found. Is this app running with caller's "
                 "rights enabled, and is this connection being created in an app "
                 "execution thread?"
             )
