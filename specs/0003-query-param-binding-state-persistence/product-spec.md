@@ -61,8 +61,8 @@ st.widget(..., persist_state=None|"page"|"session")
 **Notes:**
 
 - `bind` could be extended to `"localstorage"` later.
-- `"page"` means persist if not rendered but delete on page switch. `"session"` means
-  persist for the entire session (i.e. if not rendered or page is switched).
+- `"page"` means persist state if not rendered but delete on page switch. `"session"`
+  means persist for the entire session (i.e. if not rendered or page is switched).
 - Alternative names:
   - `bind`: sync
   - `persist_state`: persist, scope, lifetime
@@ -125,42 +125,55 @@ st.widget(..., persist=["query-params", "session"])  # binds to query params + p
 ### Option 2: `st.query_params.bind` but make it work nicely with widgets
 
 Use `st.query_params.bind("session_state_key")` to bind query params to arbitrary
-session state keys, no matter if widget state or not. What bothered me about this in the
-past was that you have to call the `bind` function for every widget, which seems verbose:
+session state keys, no matter if widget state or not:
 
 ```python
 st.widget(..., key="foo")
 st.query_params.bind("foo")
+
+st.session_state.bar = 123
+st.query_params.bind("bar")
 ```
 
-But what if we made `st.query_params.bind` return the key it gets passed as a string,
-then you could just do:
+As a shorthand, we could make `st.query_params.bind` return the key it gets passed as a
+string, then you could just do:
 
 ```python
 st.widget(..., key=st.query_params.bind("foo"))
 ```
 
-Only need to figure out how the order works then (because here it would bind the key
-before it exists). Maybe we do it in a way where if you call `st.query_params.bind`,
-it will bind every session state key created during that run, no matter if it already
-exists or not.
+For state persistence, add a parameter to widgets, similar to option 0:
 
-And this would also allow us to add more parameters to `st.query_params.bind`, e.g.:
+```python
+st.widget(..., persist=None|"page"|"session")
+```
 
-- `query_key: str` to use a different key in the query param than in session state/the
-  widget key.
-- `format_func: Callable[[Any], str]` to format the value before it's added to the
-  query param. Should obviously aim to do most of the conversion ourselves, but just in
-  case devs want something custom (e.g. because they don't want to expose
-  the session state value itself).
-- Some parameter to define if the query param is persisted across page switches.
+**Notes:**
 
-And then in the future, we can add a `persist` or `scope` parameter to every widget to
-set how it should persist its state. Would have a clear separation then + still only
-one new parameter on each widget instead.
+- Need to figure out how the order works; if we do `key=st.query_params.bind("foo")`,
+  it would bind the key before it exists. Maybe we do it in a way where it binds every
+  session state key created during that run, no matter if it already exists or not.
+- Can add additional parameters to `st.query_params.bind`, e.g.:
+  - `query_key: str` to use a different key in the query param than in session state/the
+    widget key.
+  - `format_func: Callable[[Any], str]` to format the value before it's added to the
+    query param. Should obviously aim to do most of the conversion ourselves, but just in
+    case devs want something custom (e.g. because they don't want to expose
+    the session state value itself).
+  - Some parameter to define if the query param is persisted across page switches.
+- Note that there's also an (old) prototype from Asaurus
+  [in this issue](https://github.com/streamlit/streamlit/issues/9325).
 
-Note that there's also an (old) prototype from Asaurus
-[in this issue](https://github.com/streamlit/streamlit/issues/9325).
+**Pros:**
+
+- Only adds one parameter for state persistence.
+- Very powerful for query param binding (arbitrary session state vablues, additional
+  parameters).
+- Small API surface for widget binding since `st.query_params` already exists.
+
+**Cons:**
+
+- `key=st.query_params.bind("foo")` feels a bit magical.
 
 ### Other ideas we had in the past
 
