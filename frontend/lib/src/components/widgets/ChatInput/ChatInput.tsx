@@ -78,6 +78,7 @@ import {
   StyledChatInput,
   StyledChatInputContainer,
   StyledFilesArea,
+  StyledInlineTextareaWrapper,
   StyledInputInstructions,
   StyledInputRow,
   StyledLeftCluster,
@@ -829,26 +830,25 @@ function ChatInput({
 
           {/* Inline mode: textarea in the middle */}
           {!isStacked && !isRecording && (
-            <UITextArea
-              inputRef={chatInputRef}
-              value={value}
-              placeholder={placeholder}
-              onChange={handleChange}
-              onKeyDown={handleKeyDown}
-              aria-label={placeholder}
-              disabled={disabled}
-              rows={1}
-              aria-describedby={
-                showInstructions ? "stChatInputInstructions" : undefined
-              }
-              overrides={createTextAreaOverrides(theme, autoExpand, {
-                flex: 1,
-              })}
-            />
+            <StyledInlineTextareaWrapper>
+              <UITextArea
+                inputRef={chatInputRef}
+                value={value}
+                placeholder={placeholder}
+                onChange={handleChange}
+                onKeyDown={handleKeyDown}
+                aria-label={placeholder}
+                disabled={disabled}
+                rows={1}
+                aria-describedby={
+                  showInstructions ? "stChatInputInstructions" : undefined
+                }
+                overrides={createTextAreaOverrides(theme, autoExpand, {
+                  flex: 1,
+                })}
+              />
+            </StyledInlineTextareaWrapper>
           )}
-
-          {/* Stacked mode: spacer to push buttons to the right */}
-          {isStacked && !isRecording && <div style={{ flex: 1 }} />}
 
           <StyledRightCluster>
             {isRecording ? (

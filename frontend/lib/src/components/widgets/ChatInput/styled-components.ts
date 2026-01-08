@@ -49,7 +49,7 @@ export const StyledFilesArea = styled.div(({ theme }) => ({
   gap: theme.spacing.sm,
 }))
 
-// Textarea row - shown above button row when textarea is expanded
+// Textarea row - shown above button row when textarea is expanded (stacked mode)
 export const StyledTextareaRow = styled.div({
   display: "flex",
   flexDirection: "row",
@@ -57,23 +57,22 @@ export const StyledTextareaRow = styled.div({
 })
 
 // Main input row - contains [left cluster] [textarea/waveform] [right cluster] (inline mode)
+// Or just [left cluster] [right cluster] in stacked mode (space-between handles spacing)
 export const StyledInputRow = styled.div(({ theme }) => ({
   display: "flex",
   flexDirection: "row",
   alignItems: "center",
+  justifyContent: "space-between",
   width: "100%",
   gap: theme.spacing.sm,
 }))
 
-// Button row - used in stacked mode, positions + on left, mic/send on right
-export const StyledButtonRow = styled.div(({ theme }) => ({
+// Wrapper for inline textarea - takes up remaining space
+export const StyledInlineTextareaWrapper = styled.div({
+  flex: 1,
   display: "flex",
-  flexDirection: "row",
-  justifyContent: "space-between",
-  alignItems: "center",
-  width: "100%",
-  gap: theme.spacing.sm,
-}))
+  minWidth: 0,
+})
 
 // Left cluster - flex-shrink so it collapses when empty
 export const StyledLeftCluster = styled.div(({ theme }) => ({
@@ -84,12 +83,12 @@ export const StyledLeftCluster = styled.div(({ theme }) => ({
   alignItems: "center",
 }))
 
+// Right cluster - contains mic and send buttons
 export const StyledRightCluster = styled.div(({ theme }) => ({
   display: "flex",
   flexDirection: "row",
   gap: theme.spacing.sm,
   alignItems: "center",
-  position: "relative",
 }))
 
 export const StyledInputInstructions = styled.div(({ theme }) => ({
