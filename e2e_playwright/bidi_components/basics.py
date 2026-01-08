@@ -527,6 +527,56 @@ div {
     st.text(f"session_state: {st.session_state.get('basic_component_1')}")
     st.write(f"Click count: {st.session_state.basic_click_count}")
 
+st.divider()
+
+with st.container():
+    st.subheader("Global hotkey interface")
+
+    if "hotkey_runs" not in st.session_state:
+        st.session_state.hotkey_runs = 0
+    st.session_state.hotkey_runs += 1
+
+    _HOTKEY_JS = """
+export default function(component) {
+  const { parentElement, setStateValue } = component
+
+  const form = parentElement.querySelector("form")
+  const input = parentElement.querySelector("#hotkey-text")
+
+  const handleSubmit = (event) => {
+    event.preventDefault()
+    setStateValue("text", input?.value ?? "")
+  }
+
+  form.addEventListener("submit", handleSubmit)
+
+  return () => {
+    form.removeEventListener("submit", handleSubmit)
+  }
+}
+"""
+
+    _HOTKEY_HTML = """
+<form>
+  <label for="hotkey-text">Hotkey Text</label>
+  <input type="text" id="hotkey-text" name="hotkey-text" value="" />
+  <button type="submit">Submit</button>
+</form>
+"""
+
+    _HOTKEY_CMP = st.components.v2.component(
+        name="bidi_hotkey_regression",
+        js=_HOTKEY_JS,
+        html=_HOTKEY_HTML,
+    )
+
+    def hotkey_regression_component(*, key: str) -> BidiComponentResult:
+        return _HOTKEY_CMP(key=key)
+
+    hotkey_result = hotkey_regression_component(key="hotkey_regression_component")
+    st.write(f"Hotkey runs: {st.session_state.hotkey_runs}")
+    st.write(f"Result: {hotkey_result}")
+
 
 st.divider()
 
