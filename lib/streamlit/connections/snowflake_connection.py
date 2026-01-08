@@ -707,4 +707,4 @@ class SnowflakeCallersRightsConnection(SnowflakeConnection):
         params = self._get_connection_params()
 
         # Connect with the params we generated, overriding with user-specified params.
-        return snowflake.connector.connect(**params, **kwargs)
+        return snowflake.connector.connect(**{**params, **kwargs})

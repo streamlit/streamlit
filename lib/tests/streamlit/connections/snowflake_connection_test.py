@@ -312,3 +312,28 @@ class TestSnowflakeCallersRightsConnection:
             "schema": "streamlit_schema",
             "token": "ondisk_secret.header_secret",
         }
+
+    @pytest.mark.require_integration
+    def test_connect(self):
+        """Tests that _connect works."""
+
+        fake_params = {"account": "from_env", "token": "its_a_token"}
+
+        with (
+            patch("snowflake.connector") as mock_connector,
+            patch.object(
+                SnowflakeCallersRightsConnection, "_get_connection_params"
+            ) as mock_get_connection_params,
+        ):
+            mock_get_connection_params.return_value = fake_params
+
+            SnowflakeCallersRightsConnection(
+                "snowflake-callers-rights",
+                account="account_override",
+                some_kwarg="some_value",
+            )
+
+            assert mock_connector.paramstyle == "qmark"
+            mock_connector.connect.assert_called_once_with(
+                account="account_override", token="its_a_token", some_kwarg="some_value"
+            )
