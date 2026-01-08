@@ -174,6 +174,9 @@ st.widget(..., persist=None|"page"|"session")
 **Cons:**
 
 - `key=st.query_params.bind("foo")` feels a bit magical.
+- Very different from current prototype and potentially harder to implement.
+- No way to "unbind" a widget from query params.
+- No good way to show for which widgets query param binding doesn't work. 
 
 ### Other ideas we had in the past
 
