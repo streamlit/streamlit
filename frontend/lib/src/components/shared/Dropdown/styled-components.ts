@@ -18,18 +18,43 @@ import isPropValid from "@emotion/is-prop-valid"
 import styled from "@emotion/styled"
 import { StyledDropdownListItem } from "baseui/select"
 
+interface ThemedStyledDropdownListItemProps {
+  $isHighlighted?: boolean
+  $isSelectAll?: boolean
+  $isCreatable?: boolean
+}
+
 export const ThemedStyledDropdownListItem = styled(StyledDropdownListItem, {
-  shouldForwardProp: isPropValid,
-})(({ theme, $isHighlighted }) => {
+  shouldForwardProp: prop =>
+    isPropValid(prop) && prop !== "$isSelectAll" && prop !== "$isCreatable",
+})<ThemedStyledDropdownListItemProps>(({
+  theme,
+  $isHighlighted,
+  $isSelectAll,
+  $isCreatable,
+}) => {
+  // Separator line style shared by select all (::after) and creatable (::before)
+  const separatorStyle = {
+    content: '""',
+    position: "absolute" as const,
+    left: 0,
+    right: 0,
+    height: "1px",
+    backgroundColor: theme.colors.fadedText10,
+  }
+
   return {
     display: "flex",
     alignItems: "center",
     paddingTop: theme.spacing.none,
     paddingBottom: theme.spacing.none,
-    paddingLeft: theme.spacing.lg,
-    paddingRight: theme.spacing.lg,
-    background: $isHighlighted ? theme.colors.darkenedBgMix15 : undefined,
+    // No horizontal padding on li - padding and highlight is on the first div child
+    paddingLeft: theme.spacing.none,
+    paddingRight: theme.spacing.none,
+    background: "transparent",
     fontWeight: theme.fontWeights.normal,
+    // Position relative for pseudo-elements
+    position: "relative",
 
     // Override the default itemSize set on the component's JSX
     // on mobile, so we can make list items taller and scrollable
@@ -37,8 +62,25 @@ export const ThemedStyledDropdownListItem = styled(StyledDropdownListItem, {
       minHeight: theme.sizes.dropdownItemHeight,
       height: "auto !important",
     },
-    "&:hover, &:active, &:focus-visible": {
-      background: theme.colors.darkenedBgMix15,
+
+    // Apply highlight effect and padding to the first div inside the li
+    "& > div:first-of-type": {
+      paddingLeft: theme.spacing.sm,
+      paddingRight: theme.spacing.sm,
+      paddingTop: theme.spacing.threeXS,
+      paddingBottom: theme.spacing.threeXS,
+      borderRadius: theme.radii.md,
+      background: $isHighlighted
+        ? theme.colors.darkenedBgMix15
+        : "transparent",
     },
+    "&:hover > div:first-of-type, &:active > div:first-of-type, &:focus-visible > div:first-of-type":
+      {
+        background: theme.colors.darkenedBgMix15,
+      },
+    // Separator line BEFORE creatable "Add:" items
+    "&::before": $isCreatable ? { ...separatorStyle, top: 0 } : undefined,
+    // Separator line AFTER select all items
+    "&::after": $isSelectAll ? { ...separatorStyle, bottom: 0 } : undefined,
   }
 })

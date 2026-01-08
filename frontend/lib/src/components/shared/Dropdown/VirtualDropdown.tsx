@@ -52,19 +52,12 @@ function FixedSizeListItem(props: FixedSizeListItemProps): ReactElement {
   const isSelectAllOption =
     item.id === "__SELECT_ALL__" || item.id === "__SELECT_ALL_MATCHES__"
 
-  const theme = useEmotionTheme()
-
-  // Add divider styling for select all options
-  const selectAllStyle = isSelectAllOption
-    ? {
-        borderBottom: `1px solid ${theme.colors.fadedText10}`,
-      }
-    : {}
-
   return (
     <ThemedStyledDropdownListItem
       key={item.value}
-      style={{ ...style, ...selectAllStyle }}
+      style={style}
+      $isSelectAll={isSelectAllOption}
+      $isCreatable={item.isCreatable}
       {...restChildProps}
     >
       <OverflowTooltip content={label} placement={Placement.AUTO}>
@@ -124,8 +117,11 @@ const VirtualDropdown = forwardRef<any, any>((props, ref) => {
     <StyledList
       ref={ref}
       $style={{
-        paddingTop: 0,
-        paddingBottom: 0,
+        // Padding to inset items from the edges
+        paddingTop: theme.spacing.none,
+        paddingBottom: theme.spacing.none,
+        paddingLeft: theme.spacing.sm,
+        paddingRight: theme.spacing.sm,
         // Somehow this adds an additional shadow, even though we already have
         // one on the popover, so we need to remove it here.
         boxShadow: "none",
