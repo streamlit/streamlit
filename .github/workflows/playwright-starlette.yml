@@ -1,4 +1,4 @@
-# This is only a temporary workflow to test the Starlette server in CI.
+# TODO(lukasmasuch): This is only a temporary workflow to test the Starlette server in CI.
 # It will be removed once the Tornado server is replaced by the Starlette server.
 name: Playwright E2E Tests (Starlette)
 

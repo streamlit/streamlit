@@ -69,6 +69,8 @@ class StaticPage(Page):
 
 def pytest_addoption(parser: pytest.Parser) -> None:
     """Register custom command-line options."""
+    # Temporary option for testing the Starlette server migration.
+    # This can be removed once Tornado is fully replaced by Starlette.
     parser.addoption(
         "--use-starlette",
         action="store_true",
