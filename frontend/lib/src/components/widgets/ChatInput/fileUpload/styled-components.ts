@@ -112,6 +112,7 @@ export const StyledChatUploadedFileIconContainer =
       width: theme.sizes.chatInputFileIconSize,
       height: theme.sizes.chatInputFileIconSize,
       flexShrink: 0,
+      overflow: "hidden",
       ...(fileStatus === "uploaded" && {
         backgroundColor: theme.colors.bodyText,
         color: theme.colors.bgColor,
@@ -126,6 +127,12 @@ export const StyledChatUploadedFileIconContainer =
       }),
     })
   )
+
+export const StyledChatUploadedFileImagePreview = styled.img({
+  width: "100%",
+  height: "100%",
+  objectFit: "cover",
+})
 
 export interface StyledChatUploadedFileStatusProps {
   fileStatus: FileStatus

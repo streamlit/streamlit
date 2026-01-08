@@ -1648,8 +1648,9 @@ def test_file_chip_theming(
 ):
     """Test file chip theming with one representative file type (light and dark)."""
     # Use image file type as representative - theme styling is shared across all file types
+    # Uses a real PNG so the image preview thumbnail renders correctly
     chat_input = get_element_by_key(themed_app, "multiple_files")
-    file = FilePayload(name="photo.png", mimeType="image/png", buffer=b"fake image")
+    file = FilePayload(name="photo.png", mimeType="image/png", buffer=SMILEY_PNG)
     upload_single_file_and_snapshot(
         themed_app,
         chat_input,
@@ -1658,6 +1659,15 @@ def test_file_chip_theming(
         assert_snapshot,
     )
 
+
+# Minimal 8x8 smiley face PNG for image preview testing
+# This is a valid PNG that renders as a yellow smiley face
+SMILEY_PNG = (
+    b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x08\x00\x00\x00\x08\x08\x02"
+    b'\x00\x00\x00Km)\xdc\x00\x00\x00"IDATx\xdac\xf8\x7f\x86\x01+\x82Q\x98\x0c\x02'
+    b"\x12\xd8\x8db@\x95\x86p\x890\n\x02\xd0]\x85\x89\x007\xa7`\xd3Z\xff>.\x00\x00"
+    b"\x00\x00IEND\xaeB`\x82"
+)
 
 # File types to test (excluding image which is tested in test_file_chip_theming)
 FILE_CHIP_VARIATIONS = [

@@ -31,12 +31,14 @@ import {
   StyledChatUploadedFile,
   StyledChatUploadedFileDeleteButton,
   StyledChatUploadedFileIconContainer,
+  StyledChatUploadedFileImagePreview,
   StyledChatUploadedFileInfo,
   StyledChatUploadedFileName,
   StyledChatUploadedFileSize,
   StyledVisuallyHidden,
 } from "./styled-components"
 import { truncateFilename } from "./truncateFilename"
+import { useImagePreview } from "./useImagePreview"
 
 export interface Props {
   fileInfo: UploadFileInfo
@@ -46,10 +48,12 @@ export interface Props {
 
 export interface ChatUploadedFileIconProps {
   fileInfo: UploadFileInfo
+  imagePreviewUrl: string | null
 }
 
 export const ChatUploadedFileIcon: FC<ChatUploadedFileIconProps> = ({
   fileInfo,
+  imagePreviewUrl,
 }) => {
   const { type } = fileInfo.status
 
@@ -71,6 +75,15 @@ export const ChatUploadedFileIcon: FC<ChatUploadedFileIconProps> = ({
         />
       )
     case "uploaded":
+      if (imagePreviewUrl) {
+        return (
+          <StyledChatUploadedFileImagePreview
+            src={imagePreviewUrl}
+            alt={fileInfo.name}
+            data-testid="stChatInputFileImagePreview"
+          />
+        )
+      }
       return <Icon content={getFileTypeIcon(fileInfo.name)} size="lg" />
     default:
       assertNever(type)
@@ -91,6 +104,9 @@ const ChatUploadedFile = ({
 
   // Generate unique ID for aria-describedby linking
   const errorId = useId()
+
+  // Create image preview URL for image files
+  const imagePreviewUrl = useImagePreview(fileInfo.file, fileInfo.name)
 
   // Extract error message once to avoid duplication
   const errorMessage =
@@ -150,7 +166,10 @@ const ChatUploadedFile = ({
       aria-describedby={isError ? errorId : undefined}
     >
       <StyledChatUploadedFileIconContainer fileStatus={statusType}>
-        <ChatUploadedFileIcon fileInfo={fileInfo} />
+        <ChatUploadedFileIcon
+          fileInfo={fileInfo}
+          imagePreviewUrl={imagePreviewUrl}
+        />
       </StyledChatUploadedFileIconContainer>
       <StyledChatUploadedFileInfo>
         <StyledChatUploadedFileName
