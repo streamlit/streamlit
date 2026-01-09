@@ -671,13 +671,17 @@ def test_file_upload_error_message_disallowed_files(
     expect(file_chip).to_have_attribute("tabindex", "0")
     expect(file_chip).to_have_attribute("title", "Click to retry upload")
 
-    # Hover to show error tooltip, then snapshot the chat input (includes tooltip above)
+    # Snapshot the error file chip (without tooltip)
+    assert_snapshot(file_chip, name="st_chat_input-file_uploaded_error")
+
+    # Hover to show error tooltip
     file_chip.hover()
     error_tooltip = themed_app.get_by_test_id("stTooltipErrorContent").first
     expect(error_tooltip).to_be_visible()
     expect(error_tooltip).to_have_text("application/json files are not allowed.")
 
-    assert_snapshot(chat_input, name="st_chat_input-file_uploaded_error")
+    # Snapshot the tooltip content directly (tooltips are portals rendered to <body>)
+    assert_snapshot(error_tooltip, name="st_chat_input-file_uploaded_error_tooltip")
 
 
 @use_chat_input("single_file")
