@@ -27,7 +27,6 @@ from streamlit.web.server.app_discovery import (
     _get_module_string_from_path,
     _is_asgi_app_call,
     discover_asgi_app,
-    discover_streamlit_app,
 )
 
 if TYPE_CHECKING:
@@ -308,19 +307,6 @@ st.write("Hello")
         result = discover_asgi_app(script)
         assert result.is_asgi_app is True
         assert result.app_name == "app"
-
-
-class TestDiscoverStreamlitAppAlias:
-    """Tests for backwards compatible discover_streamlit_app alias."""
-
-    def test_alias_works(self, tmp_path: Path) -> None:
-        """Test that discover_streamlit_app is an alias for discover_asgi_app."""
-        script = tmp_path / "main.py"
-        script.write_text('app = App("main.py")')
-
-        result = discover_streamlit_app(script)
-        assert result.is_asgi_app is True
-        assert result.is_st_app is True  # Backwards compatible property
 
 
 class TestAppDiscoveryResult:

@@ -16,7 +16,6 @@ from __future__ import annotations
 
 import errno
 import logging
-import mimetypes
 import os
 import sys
 from pathlib import Path
@@ -292,7 +291,6 @@ class Server:
     def __init__(self, main_script_path: str, is_hello: bool) -> None:
         """Create the server. It won't be started yet."""
         _set_tornado_log_levels()
-        self.initialize_mimetypes()
 
         self._main_script_path = main_script_path
         self._use_starlette = bool(config.get_option("server.useStarlette"))
@@ -322,17 +320,6 @@ class Server:
                 ),
             ),
         )
-
-        self._runtime.stats_mgr.register_provider(media_file_storage)
-
-    @classmethod
-    def initialize_mimetypes(cls) -> None:
-        """Ensures that common mime-types are robust against system misconfiguration."""
-        mimetypes.add_type("text/html", ".html")
-        mimetypes.add_type("application/javascript", ".js")
-        mimetypes.add_type("application/javascript", ".mjs")
-        mimetypes.add_type("text/css", ".css")
-        mimetypes.add_type("image/webp", ".webp")
 
     def __repr__(self) -> str:
         return util.repr_(self)

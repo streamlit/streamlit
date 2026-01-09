@@ -18,6 +18,7 @@ import asyncio
 import json
 from contextlib import asynccontextmanager
 from http import HTTPStatus
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import pytest
@@ -46,7 +47,6 @@ from tests.testutil import patch_config_options
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Iterator
-    from pathlib import Path
 
     from starlette.requests import Request
 
@@ -1123,13 +1123,50 @@ class TestAppScriptPathResolution:
         resolved = app._resolve_script_path()
         assert resolved == script_path
 
-    def test_relative_path_is_resolved(self) -> None:
-        """Test that relative script paths are resolved relative to caller."""
+    def test_relative_path_is_resolved_to_cwd(self) -> None:
+        """Test that relative script paths are resolved relative to cwd."""
         app = App("main.py")
-        # The relative path should be resolved
+        # The relative path should be resolved to an absolute path
         resolved = app._resolve_script_path()
         assert resolved.is_absolute()
         assert resolved.name == "main.py"
+        # Without config._main_script_path set, should resolve relative to cwd
+        assert resolved == (Path.cwd() / "main.py").resolve()
+
+    def test_relative_path_uses_main_script_path_when_set(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test that relative paths resolve relative to main_script_path when set by CLI."""
+        from streamlit import config
+
+        # Simulate CLI setting the main script path
+        main_script = tmp_path / "app" / "server.py"
+        main_script.parent.mkdir(parents=True, exist_ok=True)
+        main_script.touch()
+        monkeypatch.setattr(config, "_main_script_path", str(main_script))
+
+        app = App("pages/dashboard.py")
+        resolved = app._resolve_script_path()
+
+        # Should resolve relative to main_script_path's parent directory
+        expected = (tmp_path / "app" / "pages" / "dashboard.py").resolve()
+        assert resolved == expected
+        # Should NOT resolve relative to cwd
+        assert resolved != (Path.cwd() / "pages" / "dashboard.py").resolve()
+
+    def test_nonexistent_script_raises_file_not_found(
+        self, tmp_path: Path, reset_runtime: None
+    ) -> None:
+        """Test that a descriptive FileNotFoundError is raised for non-existent scripts."""
+        nonexistent_script = tmp_path / "does_not_exist.py"
+        app = App(nonexistent_script)
+
+        with pytest.raises(FileNotFoundError) as exc_info:
+            app._create_runtime()
+
+        # Error message should include the path and be descriptive
+        assert "does_not_exist.py" in str(exc_info.value)
+        assert "not found" in str(exc_info.value).lower()
 
 
 class TestAppExports:

@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import asyncio
+import mimetypes
 import os
 import signal
 import sys
@@ -157,6 +158,19 @@ def _fix_pydeck_mapbox_api_warning() -> None:
         os.environ["MAPBOX_API_KEY"] = config.get_option("mapbox.token")
 
 
+def _initialize_mimetypes() -> None:
+    """Ensure common MIME types are correctly registered.
+
+    Some systems may have misconfigured /etc/mime.types, so we explicitly
+    register the types we need for serving web assets correctly.
+    """
+    mimetypes.add_type("text/html", ".html")
+    mimetypes.add_type("application/javascript", ".js")
+    mimetypes.add_type("application/javascript", ".mjs")
+    mimetypes.add_type("text/css", ".css")
+    mimetypes.add_type("image/webp", ".webp")
+
+
 def prepare_streamlit_environment(main_script_path: str) -> None:
     """Prepare the Streamlit environment for running an app.
 
@@ -165,6 +179,7 @@ def prepare_streamlit_environment(main_script_path: str) -> None:
     (`streamlit run`) or an ASGI server (`uvicorn myapp:app`).
 
     This function:
+    - Ensures common MIME types are correctly registered
     - Sets the MAPBOX_API_KEY environment variable for PyDeck
     - Loads secrets from secrets.toml if it exists
     - Validates static folder configuration
@@ -180,6 +195,7 @@ def prepare_streamlit_environment(main_script_path: str) -> None:
     ``st.App`` with uvicorn directly, this is called during the ASGI lifespan
     startup phase.
     """
+    _initialize_mimetypes()
     _fix_pydeck_mapbox_api_warning()
 
     # Load secrets.toml if it exists

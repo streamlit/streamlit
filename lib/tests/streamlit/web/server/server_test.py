@@ -390,14 +390,15 @@ class ServerTest(ServerTestCase):
 
 
 class InitializeMimetypesTest(unittest.TestCase):
-    """Tests for Server.initialize_mimetypes()."""
+    """Tests for _initialize_mimetypes() in bootstrap.py."""
 
     def test_registers_common_mimetypes(self) -> None:
         """Test that common MIME types are registered correctly."""
-
         import mimetypes
 
-        Server.initialize_mimetypes()
+        from streamlit.web.bootstrap import _initialize_mimetypes
+
+        _initialize_mimetypes()
 
         assert mimetypes.guess_type("test.html")[0] == "text/html"
         assert mimetypes.guess_type("test.js")[0] == "application/javascript"

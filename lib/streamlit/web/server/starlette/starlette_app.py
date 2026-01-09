@@ -16,7 +16,6 @@
 
 from __future__ import annotations
 
-import inspect
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final
@@ -333,27 +332,22 @@ class App:
         return self._state
 
     def _resolve_script_path(self) -> Path:
-        """Resolve the entry point path relative to the caller's location."""
+        """Resolve the script path to an absolute path.
+
+        Resolution order:
+        1. If already absolute, return as-is
+        2. If CLI set main_script_path (via `streamlit run`), resolve relative to it
+        3. Otherwise, resolve relative to current working directory (e.g. when started via uvicorn)
+        """
         if self._script_path.is_absolute():
             return self._script_path
 
-        # Get the frame of the caller (the file that created App)
-        # We need to traverse up the stack to find the original caller
-        frame = inspect.currentframe()
-        try:
-            if frame:
-                # Walk up the stack to find the first frame outside this module
-                current_file = frame.f_globals.get("__file__")
-                caller_frame = frame.f_back
-                while caller_frame:
-                    caller_file = caller_frame.f_globals.get("__file__")
-                    if caller_file and caller_file != current_file:
-                        caller_dir = Path(caller_file).parent
-                        return (caller_dir / self._script_path).resolve()
-                    caller_frame = caller_frame.f_back
-        finally:
-            del frame
+        # Check if CLI set the main script path (streamlit run)
+        # This is set in cli.py before config is loaded
+        if config._main_script_path:
+            return (Path(config._main_script_path).parent / self._script_path).resolve()
 
+        # Fallback: resolve relative to cwd (direct uvicorn usage)
         return self._script_path.resolve()
 
     def _create_runtime(self) -> Runtime:
@@ -369,6 +363,14 @@ class App:
         )
 
         script_path = self._resolve_script_path()
+
+        # Validate that the script file exists
+        if not script_path.is_file():
+            raise FileNotFoundError(
+                f"Streamlit script not found: '{script_path}'. "
+                f"Please verify that the path '{self._script_path}' is correct."
+            )
+
         media_file_storage = MemoryMediaFileStorage(f"/{BASE_ROUTE_MEDIA}")
         uploaded_file_mgr = MemoryUploadedFileManager(f"/{BASE_ROUTE_UPLOAD_FILE}")
 

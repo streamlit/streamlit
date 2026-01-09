@@ -315,7 +315,4 @@ def discover_asgi_app(
     )
 
 
-# Backwards compatible alias
-discover_streamlit_app = discover_asgi_app
-
-__all__ = ["AppDiscoveryResult", "discover_asgi_app", "discover_streamlit_app"]
+__all__ = ["AppDiscoveryResult", "discover_asgi_app"]
