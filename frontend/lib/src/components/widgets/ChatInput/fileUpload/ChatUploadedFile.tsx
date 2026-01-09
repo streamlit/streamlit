@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { FC, memo, useCallback } from "react"
+import { FC, memo, useCallback, useId } from "react"
 
 import { ErrorOutline } from "@emotion-icons/material-outlined"
 import { Cancel } from "@emotion-icons/material-rounded"
@@ -34,6 +34,7 @@ import {
   StyledChatUploadedFileInfo,
   StyledChatUploadedFileName,
   StyledChatUploadedFileSize,
+  StyledVisuallyHidden,
 } from "./styled-components"
 import { truncateFilename } from "./truncateFilename"
 
@@ -88,6 +89,9 @@ const ChatUploadedFile = ({
   const canRetry =
     isError && onRetry !== undefined && fileInfo.file !== undefined
 
+  // Generate unique ID for aria-describedby linking
+  const errorId = useId()
+
   // Extract error message once to avoid duplication
   const errorMessage =
     fileInfo.status.type === "error"
@@ -141,6 +145,8 @@ const ChatUploadedFile = ({
       role={canRetry ? "button" : undefined}
       tabIndex={canRetry ? 0 : undefined}
       aria-label={chipAriaLabel}
+      aria-invalid={isError || undefined}
+      aria-describedby={isError ? errorId : undefined}
     >
       <StyledChatUploadedFileIconContainer fileStatus={statusType}>
         <ChatUploadedFileIcon fileInfo={fileInfo} />
@@ -167,6 +173,18 @@ const ChatUploadedFile = ({
           <Icon content={Cancel} size="md" />
         </BaseButton>
       </StyledChatUploadedFileDeleteButton>
+      {/*
+        Accessibility: Error messages are shown in a tooltip on hover, but tooltips
+        are portals rendered outside this component and use accessibilityType="tooltip",
+        which assistive tech treats as supplementary info. To meet WCAG 3.3.1 (Error
+        Identification), we include a visually hidden element with role="alert" that
+        screen readers announce immediately, linked via aria-describedby above.
+      */}
+      {isError && (
+        <StyledVisuallyHidden id={errorId} role="alert">
+          Error: {errorMessage}
+        </StyledVisuallyHidden>
+      )}
     </StyledChatUploadedFile>
   )
 
