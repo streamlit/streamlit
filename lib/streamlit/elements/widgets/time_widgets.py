@@ -472,6 +472,46 @@ class TimeInputSerde:
         return time.strftime(v, "%H:%M")
 
 
+def _validate_and_reset_date_value(
+    current_value: DateWidgetReturn,
+    parsed_values: _DateInputValues,
+) -> tuple[DateWidgetReturn, bool]:
+    """Validate current value against min/max bounds and reset if needed.
+
+    Returns the (potentially reset) value and a boolean indicating if a reset occurred.
+    """
+    if current_value is None:
+        return current_value, False
+
+    value_needs_reset = False
+
+    # For range inputs, current_value is a tuple; for single inputs, it's a date
+    if (
+        parsed_values.is_range
+        and isinstance(current_value, tuple)
+        and len(current_value) > 0
+    ):
+        # For range mode, check if any date in the tuple is outside bounds
+        start_date = current_value[0]
+        end_date = current_value[-1] if len(current_value) > 1 else start_date
+        if start_date < parsed_values.min or end_date > parsed_values.max:
+            value_needs_reset = True
+    elif not parsed_values.is_range and isinstance(current_value, date):
+        # For single date mode
+        if current_value < parsed_values.min or current_value > parsed_values.max:
+            value_needs_reset = True
+
+    if not value_needs_reset:
+        return current_value, False
+
+    # Reset to the default value from parsed_values
+    if parsed_values.value is None or len(parsed_values.value) == 0:
+        return (() if parsed_values.is_range else None), True
+    if not parsed_values.is_range:
+        return parsed_values.value[0], True
+    return cast("DateWidgetReturn", tuple(parsed_values.value)), True
+
+
 @dataclass
 class DateInputSerde:
     value: _DateInputValues
@@ -1480,12 +1520,10 @@ class TimeWidgetsMixin:
         element_id = compute_and_register_element_id(
             "date_input",
             user_key=key,
-            # Ensure stable ID when key is provided; explicitly whitelist parameters
-            # that might invalidate the current widget state.
-            # format should be supported. However, there is a bug in baseweb where
-            # changing the format dynamically leads to a wrongly formatted date.
-            # So, we whitelist it for now until we migrate this away from baseweb.
-            key_as_main_identity={"min_value", "max_value", "format"},
+            # Ensure stable ID when key is provided. Only format is whitelisted because
+            # there is a bug in baseweb where changing the format dynamically leads to
+            # a wrongly formatted date. min_value and max_value support dynamic changes.
+            key_as_main_identity={"format"},
             dg=self.dg,
             label=label,
             value=parsed,
@@ -1564,15 +1602,26 @@ class TimeWidgetsMixin:
             value_type="string_array_value",
         )
 
-        if widget_state.value_changed:
-            date_input_proto.value[:] = serde.serialize(widget_state.value)
+        # Validate the current value against the new min/max bounds and reset if needed.
+        current_value, value_was_reset = _validate_and_reset_date_value(
+            widget_state.value, parsed_values
+        )
+
+        if value_was_reset and key is not None:
+            # Update session_state so subsequent accesses in this run
+            # return the corrected value. Use reset_state_value to avoid
+            # the "cannot be modified after widget instantiated" error.
+            get_session_state().reset_state_value(key, current_value)
+
+        if value_was_reset or widget_state.value_changed:
+            date_input_proto.value[:] = serde.serialize(current_value)
             date_input_proto.set_value = True
 
         validate_width(width)
         layout_config = LayoutConfig(width=width)
 
         self.dg._enqueue("date_input", date_input_proto, layout_config=layout_config)
-        return widget_state.value
+        return current_value
 
     @property
     def dg(self) -> DeltaGenerator:
