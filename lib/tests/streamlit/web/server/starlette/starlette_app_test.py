@@ -1197,6 +1197,125 @@ class TestAppLifespan:
             asyncio.run(app({"type": "http"}, None, None))
 
 
+class TestAppServerModeTracking:
+    """Tests for server mode tracking in App."""
+
+    @pytest.fixture(autouse=True)
+    def reset_server_mode(self) -> Iterator[None]:
+        """Reset the server mode before and after each test."""
+        from streamlit import config
+
+        original_mode = config._server_mode
+        config._server_mode = None
+        yield
+        config._server_mode = original_mode
+
+    def test_standalone_app_via_cli_sets_starlette_app_mode(
+        self, tmp_path: Path, reset_runtime: None
+    ) -> None:
+        """Test that standalone st.App via CLI keeps 'starlette-app' mode."""
+        from streamlit import config
+
+        script = tmp_path / "app.py"
+        script.write_text("import streamlit as st\nst.write('hello')")
+
+        # Simulate CLI setting the mode (bootstrap.run_asgi_app does this)
+        config._server_mode = "starlette-app"
+
+        app = App(script)
+
+        with TestClient(app) as client:
+            # _combined_lifespan runs and should NOT change mode
+            # since _external_lifespan is False
+            response = client.get("/_stcore/health")
+            assert response.status_code == HTTPStatus.OK
+
+        # Mode should remain starlette-app
+        assert config._server_mode == "starlette-app"
+
+    def test_mounted_app_via_cli_sets_asgi_mounted_mode(
+        self, tmp_path: Path, reset_runtime: None
+    ) -> None:
+        """Test that mounted st.App via CLI changes to 'asgi-mounted' mode."""
+        from streamlit import config
+
+        script = tmp_path / "app.py"
+        script.write_text("import streamlit as st\nst.write('hello')")
+
+        # Simulate CLI setting the mode (bootstrap.run_asgi_app does this)
+        config._server_mode = "starlette-app"
+
+        app = App(script)
+        # Simulate mounting: calling lifespan() sets _external_lifespan = True
+        app.lifespan()
+
+        # Create a wrapper app that uses the lifespan
+        from starlette.applications import Starlette
+
+        wrapper = Starlette(lifespan=app.lifespan())
+        wrapper.mount("/streamlit", app)
+
+        with TestClient(wrapper) as client:
+            # The combined lifespan runs and should change mode to asgi-mounted
+            response = client.get("/streamlit/_stcore/health")
+            assert response.status_code == HTTPStatus.OK
+
+        # Mode should be changed to asgi-mounted
+        assert config._server_mode == "asgi-mounted"
+
+    def test_standalone_app_via_external_asgi_sets_asgi_server_mode(
+        self, tmp_path: Path, reset_runtime: None
+    ) -> None:
+        """Test that standalone st.App via external ASGI sets 'asgi-server' mode."""
+        from streamlit import config
+
+        script = tmp_path / "app.py"
+        script.write_text("import streamlit as st\nst.write('hello')")
+
+        # No CLI, so server_mode is None (simulating direct uvicorn usage)
+        assert config._server_mode is None
+
+        app = App(script)
+
+        with TestClient(app) as client:
+            # _combined_lifespan runs and should set mode to asgi-server
+            response = client.get("/_stcore/health")
+            assert response.status_code == HTTPStatus.OK
+
+        # Mode should be asgi-server
+        assert config._server_mode == "asgi-server"
+
+    def test_mounted_app_via_external_asgi_sets_asgi_mounted_mode(
+        self, tmp_path: Path, reset_runtime: None
+    ) -> None:
+        """Test that mounted st.App via external ASGI sets 'asgi-mounted' mode."""
+        from streamlit import config
+
+        script = tmp_path / "app.py"
+        script.write_text("import streamlit as st\nst.write('hello')")
+
+        # No CLI, so server_mode is None (simulating direct uvicorn usage)
+        assert config._server_mode is None
+
+        app = App(script)
+        # Simulate mounting: calling lifespan() sets _external_lifespan = True
+        lifespan_cm = app.lifespan()
+
+        # Create a wrapper app that uses the lifespan
+        from starlette.applications import Starlette
+
+        wrapper = Starlette(lifespan=lifespan_cm)
+        wrapper.mount("/streamlit", app)
+
+        with TestClient(wrapper) as client:
+            # The combined lifespan runs and should set mode to asgi-mounted
+            response = client.get("/streamlit/_stcore/health")
+            assert response.status_code == HTTPStatus.OK
+
+        # Mode should be asgi-mounted
+        assert config._server_mode == "asgi-mounted"
+
+
 class TestAppScriptPathResolution:
     """Tests for script path resolution in App."""
 
