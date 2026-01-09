@@ -309,6 +309,7 @@ class App:
         self._runtime: Runtime | None = None
         self._starlette_app: Starlette | None = None
         self._state: dict[str, Any] = {}
+        self._external_lifespan: bool = False
 
         # Validate user routes don't conflict with reserved routes
         self._validate_routes()
@@ -334,6 +335,38 @@ class App:
     def state(self) -> dict[str, Any]:
         """Application state, populated by lifespan context manager."""
         return self._state
+
+    def lifespan(self) -> Callable[[Any], AbstractAsyncContextManager[None]]:
+        """Get a lifespan context manager for mounting on external ASGI frameworks.
+
+        Use this when mounting st.App as a sub-application on another framework
+        like FastAPI. The Streamlit runtime lifecycle will be managed by the
+        parent framework's lifespan instead of st.App's internal lifespan.
+
+        Returns
+        -------
+        Callable[[Any], AbstractAsyncContextManager[None]]
+            A lifespan context manager compatible with Starlette/FastAPI.
+
+        Examples
+        --------
+        Mount st.App on FastAPI:
+
+        >>> from fastapi import FastAPI
+        >>> from streamlit.starlette import App
+        >>>
+        >>> streamlit_app = App("dashboard.py")
+        >>> fastapi_app = FastAPI(lifespan=streamlit_app.lifespan())
+        >>> fastapi_app.mount("/dashboard", streamlit_app)
+        """
+        # Create runtime now (but don't start it - lifespan will do that)
+        if self._runtime is None:
+            self._runtime = self._create_runtime()
+
+        # Mark that lifespan is externally managed
+        self._external_lifespan = True
+
+        return self._combined_lifespan
 
     def _resolve_script_path(self) -> Path:
         """Resolve the script path to an absolute path.
@@ -447,12 +480,16 @@ class App:
         # last on response)
         all_middleware = self._user_middleware + streamlit_middleware
 
+        # If lifespan() was called, the parent framework manages the lifecycle.
+        # Otherwise, use our internal lifespan to manage the runtime.
+        app_lifespan = None if self._external_lifespan else self._combined_lifespan
+
         return Starlette(
             debug=self._debug,
             routes=all_routes,
             middleware=all_middleware,
             exception_handlers=self._exception_handlers,
-            lifespan=self._combined_lifespan,
+            lifespan=app_lifespan,
         )
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:

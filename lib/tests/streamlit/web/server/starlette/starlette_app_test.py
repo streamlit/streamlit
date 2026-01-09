@@ -1110,6 +1110,71 @@ class TestAppLifespan:
         app = App("main.py", lifespan=lifespan)
         assert app._user_lifespan is not None
 
+    def test_lifespan_method_creates_runtime(
+        self, tmp_path: Path, reset_runtime: None
+    ) -> None:
+        """Test that lifespan() creates the runtime if not already created."""
+        script = tmp_path / "app.py"
+        script.write_text("import streamlit as st\nst.write('hello')")
+
+        app = App(script)
+        assert app._runtime is None
+
+        app.lifespan()
+
+        assert app._runtime is not None
+
+    def test_lifespan_method_sets_external_lifespan_flag(
+        self, tmp_path: Path, reset_runtime: None
+    ) -> None:
+        """Test that lifespan() sets _external_lifespan to True."""
+        script = tmp_path / "app.py"
+        script.write_text("import streamlit as st\nst.write('hello')")
+
+        app = App(script)
+        assert app._external_lifespan is False
+
+        app.lifespan()
+
+        assert app._external_lifespan is True
+
+    def test_lifespan_method_returns_combined_lifespan(
+        self, tmp_path: Path, reset_runtime: None
+    ) -> None:
+        """Test that lifespan() returns the _combined_lifespan method."""
+        script = tmp_path / "app.py"
+        script.write_text("import streamlit as st\nst.write('hello')")
+
+        app = App(script)
+        result = app.lifespan()
+
+        # Should return the bound method _combined_lifespan
+        assert result == app._combined_lifespan
+        assert callable(result)
+
+    def test_lifespan_method_is_idempotent(
+        self, tmp_path: Path, reset_runtime: None
+    ) -> None:
+        """Test that calling lifespan() multiple times returns the same result."""
+        script = tmp_path / "app.py"
+        script.write_text("import streamlit as st\nst.write('hello')")
+
+        app = App(script)
+
+        # Call lifespan() multiple times
+        result1 = app.lifespan()
+        result2 = app.lifespan()
+
+        # Should return the same bound method
+        assert result1 == result2
+        # Runtime should only be created once
+        assert app._runtime is not None
+
+    def test_external_lifespan_flag_defaults_to_false(self) -> None:
+        """Test that _external_lifespan defaults to False."""
+        app = App("main.py")
+        assert app._external_lifespan is False
+
 
 class TestAppScriptPathResolution:
     """Tests for script path resolution in App."""
