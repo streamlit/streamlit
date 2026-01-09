@@ -29,7 +29,8 @@ from streamlit.elements.lib.options_selector_utils import (
     index_,
     maybe_coerce_enum,
     maybe_coerce_enum_sequence,
-    validate_value_against_options,
+    validate_and_sync_multiselect_value_with_options,
+    validate_and_sync_value_with_options,
 )
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.state.common import RegisterWidgetResult
@@ -452,8 +453,8 @@ class TestCreateMappings:
         assert mapping == {}
 
 
-class TestValidateValueAgainstOptions(unittest.TestCase):
-    """Test class for validate_value_against_options utility function."""
+class TestValidateAndSyncValueWithOptions(unittest.TestCase):
+    """Test class for validate_and_sync_value_with_options utility function."""
 
     @parameterized.expand(
         [
@@ -496,7 +497,7 @@ class TestValidateValueAgainstOptions(unittest.TestCase):
             ("float_value_in_options", 0.2, [0.1, 0.2, 0.3], 0, 0.2, False),
         ]
     )
-    def test_validate_value_against_options(
+    def test_validate_and_sync_value_with_options(
         self,
         _name: str,
         current_value,
@@ -505,16 +506,16 @@ class TestValidateValueAgainstOptions(unittest.TestCase):
         expected_value,
         expected_needs_reset: bool,
     ):
-        """Test validate_value_against_options with various inputs."""
-        value, needs_reset = validate_value_against_options(
+        """Test validate_and_sync_value_with_options with various inputs."""
+        value, needs_reset = validate_and_sync_value_with_options(
             current_value, options, default_index, None
         )
         assert value == expected_value
         assert needs_reset is expected_needs_reset
 
 
-class TestValidateMultiselectValueAgainstOptions(unittest.TestCase):
-    """Test class for validate_multiselect_value_against_options utility function."""
+class TestValidateAndSyncMultiselectValueWithOptions(unittest.TestCase):
+    """Test class for validate_and_sync_multiselect_value_with_options utility function."""
 
     @parameterized.expand(
         [
@@ -562,7 +563,7 @@ class TestValidateMultiselectValueAgainstOptions(unittest.TestCase):
             ),
         ]
     )
-    def test_validate_multiselect_value_against_options(
+    def test_validate_and_sync_multiselect_value_with_options(
         self,
         _name: str,
         current_values: list,
@@ -570,12 +571,8 @@ class TestValidateMultiselectValueAgainstOptions(unittest.TestCase):
         expected_values: list,
         expected_needs_reset: bool,
     ):
-        """Test validate_multiselect_value_against_options with various inputs."""
-        from streamlit.elements.lib.options_selector_utils import (
-            validate_multiselect_value_against_options,
-        )
-
-        values, needs_reset = validate_multiselect_value_against_options(
+        """Test validate_and_sync_multiselect_value_with_options with various inputs."""
+        values, needs_reset = validate_and_sync_multiselect_value_with_options(
             current_values, options, None
         )
         assert values == expected_values

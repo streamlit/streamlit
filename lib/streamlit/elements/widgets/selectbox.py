@@ -37,7 +37,7 @@ from streamlit.elements.lib.options_selector_utils import (
     create_mappings,
     index_,
     maybe_coerce_enum,
-    validate_value_against_options,
+    validate_and_sync_value_with_options,
 )
 from streamlit.elements.lib.policies import (
     check_widget_policies,
@@ -604,7 +604,7 @@ class SelectboxMixin:
             # If the value is no longer valid (not in options), reset to default.
             # This handles the case where options change dynamically and the
             # previously selected value is no longer available.
-            current_value, value_needs_reset = validate_value_against_options(
+            current_value, value_needs_reset = validate_and_sync_value_with_options(
                 widget_state.value, opt, index, key
             )
 

@@ -285,13 +285,16 @@ def create_mappings(
     )
 
 
-def validate_value_against_options(
+def validate_and_sync_value_with_options(
     current_value: T | None,
     opt: Sequence[T],
     default_index: int | None,
     key: str | int | None,
 ) -> tuple[T | None, bool]:
-    """Validate if current value is still in options and reset if not.
+    """Validate current value against options, resetting session state if invalid.
+
+    This function has a side-effect: if the value is not found in the options
+    and a key is provided, it will update session state with the new value.
 
     Parameters
     ----------
@@ -307,7 +310,7 @@ def validate_value_against_options(
     Returns
     -------
     tuple[T | None, bool]
-        A tuple of (validated_value, value_needs_reset).
+        A tuple of (validated_value, value_was_reset).
     """
     if current_value is None:
         return current_value, False
@@ -332,12 +335,15 @@ def validate_value_against_options(
         return new_value, True
 
 
-def validate_multiselect_value_against_options(
+def validate_and_sync_multiselect_value_with_options(
     current_values: list[T] | list[T | str],
     opt: Sequence[T],
     key: str | int | None,
 ) -> tuple[list[T] | list[T | str], bool]:
-    """Validate if current multiselect values are still in options, filtering invalid ones.
+    """Validate multiselect values against options, syncing session state if needed.
+
+    This function has a side-effect: if any values are filtered out and a key
+    is provided, it will update session state with the filtered list.
 
     Unlike selectbox which resets to a default when the value is invalid,
     multiselect filters out invalid values and keeps the valid ones.
@@ -354,7 +360,7 @@ def validate_multiselect_value_against_options(
     Returns
     -------
     tuple[list[T] | list[T | str], bool]
-        A tuple of (validated_values, value_needs_reset).
+        A tuple of (validated_values, values_were_filtered).
     """
     if not current_values:
         return current_values, False

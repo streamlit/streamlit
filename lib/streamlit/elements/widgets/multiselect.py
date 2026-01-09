@@ -38,7 +38,7 @@ from streamlit.elements.lib.options_selector_utils import (
     create_mappings,
     get_default_indices,
     maybe_coerce_enum_sequence,
-    validate_multiselect_value_against_options,
+    validate_and_sync_multiselect_value_with_options,
 )
 from streamlit.elements.lib.policies import (
     check_widget_policies,
@@ -559,7 +559,7 @@ class MultiSelectMixin:
             # This handles the case where options change dynamically and the
             # previously selected values are no longer available.
             current_values, value_needs_reset = (
-                validate_multiselect_value_against_options(
+                validate_and_sync_multiselect_value_with_options(
                     widget_state.value, indexable_options, key
                 )
             )
