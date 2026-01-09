@@ -34,11 +34,12 @@ export const ThemedStyledDropdownListItem = styled(StyledDropdownListItem, {
   $isCreatable,
 }) => {
   // Separator line style shared by select all (::after) and creatable (::before)
+  // right: xs to match container's left padding (right has no container padding, scrollbar overlays)
   const separatorStyle = {
     content: '""',
     position: "absolute" as const,
     left: 0,
-    right: 0,
+    right: theme.spacing.xs,
     height: "1px",
     backgroundColor: theme.colors.fadedText10,
   }
@@ -69,6 +70,8 @@ export const ThemedStyledDropdownListItem = styled(StyledDropdownListItem, {
       paddingRight: theme.spacing.sm,
       paddingTop: theme.spacing.threeXS,
       paddingBottom: theme.spacing.threeXS,
+      // Right margin creates inset from scrollbar (matches container's left padding)
+      marginRight: theme.spacing.xs,
       borderRadius: theme.radii.md,
       background: $isHighlighted
         ? theme.colors.darkenedBgMix15
