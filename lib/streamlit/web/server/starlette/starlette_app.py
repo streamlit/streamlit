@@ -227,6 +227,10 @@ def create_starlette_app(runtime: Runtime) -> Starlette:
 class App:
     """ASGI-compatible Streamlit application.
 
+    .. warning::
+        This feature is experimental and may change or be removed in future
+        versions without warning. Use at your own risk.
+
     This class provides a way to configure and run Streamlit applications
     with custom routes, middleware, lifespan hooks, and exception handlers.
 
