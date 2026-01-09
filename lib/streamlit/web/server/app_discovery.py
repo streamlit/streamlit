@@ -37,24 +37,21 @@ _LOGGER: Final = get_logger(__name__)
 
 # Preferred variable names to look for when discovering ASGI app instances.
 # These are checked in order of priority.
-_PREFERRED_APP_NAMES: Final[tuple[str, ...]] = ("app", "application", "streamlit_app")
+_PREFERRED_APP_NAMES: Final[tuple[str, ...]] = ("app", "streamlit_app")
 
-# Patterns that indicate an ASGI app constructor call.
-# Each pattern is a tuple of possible attribute chains that resolve to an App class.
-# For example, ("streamlit", "starlette", "App") matches `streamlit.starlette.App(...)`
-_ASGI_APP_PATTERNS: Final[tuple[tuple[str, ...], ...]] = (
-    # Streamlit App patterns
-    ("App",),  # from streamlit.starlette import App; app = App(...)
-    ("st", "App"),  # import streamlit as st; app = st.App(...)  (future)
-    ("streamlit", "App"),  # import streamlit; app = streamlit.App(...)  (future)
-    ("streamlit", "starlette", "App"),  # app = streamlit.starlette.App(...)
-    ("starlette", "App"),  # from streamlit import starlette; app = starlette.App(...)
-    # FastAPI patterns
-    ("FastAPI",),  # from fastapi import FastAPI; app = FastAPI(...)
-    ("fastapi", "FastAPI"),  # import fastapi; app = fastapi.FastAPI(...)
-    # Starlette patterns
-    ("Starlette",),  # from starlette.applications import Starlette
-    ("starlette", "applications", "Starlette"),
+# Known ASGI app classes with their fully qualified module paths.
+# Each entry is a dotted path like "module.submodule.ClassName".
+# Only classes matching these paths will be detected as ASGI apps.
+_KNOWN_ASGI_APP_CLASSES: Final[tuple[str, ...]] = (
+    # Streamlit App
+    "streamlit.starlette.App",
+    "streamlit.web.server.starlette.App",
+    "streamlit.web.server.starlette.starlette_app.App",
+    # FastAPI
+    "fastapi.FastAPI",
+    "fastapi.applications.FastAPI",
+    # Starlette
+    "starlette.applications.Starlette",
 )
 
 
@@ -116,24 +113,118 @@ def _get_call_name_parts(node: ast.Call) -> tuple[str, ...] | None:
     return None
 
 
-def _is_asgi_app_call(node: ast.Call) -> bool:
-    """Check if a Call node represents an ASGI app constructor.
+def _extract_imports(tree: ast.AST) -> dict[str, str]:
+    """Extract import mappings from an AST.
+
+    Builds a mapping from local names to their fully qualified module paths.
+
+    For example:
+    - `from streamlit.starlette import App` → {"App": "streamlit.starlette.App"}
+    - `from streamlit import starlette` → {"starlette": "streamlit.starlette"}
+    - `import streamlit as st` → {"st": "streamlit"}
+    - `import fastapi` → {"fastapi": "fastapi"}
+
+    Parameters
+    ----------
+    tree
+        The parsed AST of a Python module.
+
+    Returns
+    -------
+    dict[str, str]
+        A mapping from local names to their fully qualified module paths.
+    """
+    imports: dict[str, str] = {}
+
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            # Handle: import x, import x as y
+            for alias in node.names:
+                local_name = alias.asname or alias.name
+                imports[local_name] = alias.name
+
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            # Handle: from x.y import z, from x.y import z as w
+            for alias in node.names:
+                local_name = alias.asname or alias.name
+                imports[local_name] = f"{node.module}.{alias.name}"
+
+    return imports
+
+
+def _resolve_call_to_module_path(
+    parts: tuple[str, ...], imports: dict[str, str]
+) -> str | None:
+    """Resolve a call's name parts to a fully qualified module path.
+
+    Uses the import mapping to resolve the first part of the call chain,
+    then appends any remaining parts.
+
+    For example, with imports {"App": "streamlit.starlette.App"}:
+    - ("App",) → "streamlit.starlette.App"
+
+    With imports {"st": "streamlit"}:
+    - ("st", "starlette", "App") → "streamlit.starlette.App"
+
+    Parameters
+    ----------
+    parts
+        The name parts from a Call node (e.g., ("st", "App")).
+    imports
+        The import mapping from _extract_imports.
+
+    Returns
+    -------
+    str | None
+        The fully qualified module path, or None if resolution fails.
+    """
+    if not parts:
+        return None
+
+    first_part = parts[0]
+    remaining_parts = parts[1:]
+
+    if first_part in imports:
+        # The first part was imported, resolve it
+        base_path = imports[first_part]
+        if remaining_parts:
+            return f"{base_path}.{'.'.join(remaining_parts)}"
+        return base_path
+
+    # Not imported - could be a fully qualified name or unknown
+    # For fully qualified names like streamlit.starlette.App(),
+    # just join all parts
+    return ".".join(parts)
+
+
+def _is_asgi_app_call(node: ast.Call, imports: dict[str, str]) -> bool:
+    """Check if a Call node represents a known ASGI app constructor.
+
+    This function resolves the call to its fully qualified module path
+    using the import mapping, then checks if it matches any known
+    ASGI app class.
 
     Parameters
     ----------
     node
         An AST Call node.
+    imports
+        The import mapping from _extract_imports.
 
     Returns
     -------
     bool
-        True if the call matches a known ASGI app pattern.
+        True if the call is a known ASGI app constructor.
     """
     parts = _get_call_name_parts(node)
     if parts is None:
         return False
 
-    return parts in _ASGI_APP_PATTERNS
+    resolved_path = _resolve_call_to_module_path(parts, imports)
+    if resolved_path is None:
+        return False
+
+    return resolved_path in _KNOWN_ASGI_APP_CLASSES
 
 
 def _get_module_string_from_path(path: Path) -> str:
@@ -172,6 +263,10 @@ def _get_module_string_from_path(path: Path) -> str:
 def _find_asgi_app_assignments(source: str) -> dict[str, int]:
     """Find all variable assignments to ASGI app constructors in source code.
 
+    This function parses the source code, extracts import statements to
+    understand the module context, then finds assignments to known ASGI
+    app constructors.
+
     Parameters
     ----------
     source
@@ -189,6 +284,9 @@ def _find_asgi_app_assignments(source: str) -> dict[str, int]:
         _LOGGER.debug("Failed to parse source: %s", e)
         return {}
 
+    # Extract imports to resolve call names to their source modules
+    imports = _extract_imports(tree)
+
     app_assignments: dict[str, int] = {}
 
     for node in ast.walk(tree):
@@ -196,7 +294,7 @@ def _find_asgi_app_assignments(source: str) -> dict[str, int]:
         if (
             isinstance(node, ast.Assign)
             and isinstance(node.value, ast.Call)
-            and _is_asgi_app_call(node.value)
+            and _is_asgi_app_call(node.value, imports)
         ):
             for target in node.targets:
                 if isinstance(target, ast.Name):
@@ -207,7 +305,7 @@ def _find_asgi_app_assignments(source: str) -> dict[str, int]:
             isinstance(node, ast.AnnAssign)
             and node.value
             and isinstance(node.value, ast.Call)
-            and _is_asgi_app_call(node.value)
+            and _is_asgi_app_call(node.value, imports)
             and isinstance(node.target, ast.Name)
         ):
             app_assignments[node.target.id] = node.lineno
@@ -221,12 +319,19 @@ def discover_asgi_app(
 ) -> AppDiscoveryResult:
     """Discover if a Python file contains an ASGI app instance using AST parsing.
 
-    This function safely analyzes the source code without executing it,
-    looking for patterns like:
-    - `app = App("main.py")`
-    - `app = streamlit.starlette.App(...)`
-    - `app = FastAPI()`
-    - `app = Starlette(...)`
+    This function safely analyzes the source code without executing it.
+    It tracks import statements to verify that detected App classes actually
+    come from known ASGI frameworks (streamlit, fastapi, starlette), preventing
+    false positives from custom classes with the same name.
+
+    Supported import patterns:
+    - `from streamlit.starlette import App`
+    - `import streamlit` (for `streamlit.starlette.App`)
+    - `from fastapi import FastAPI`
+    - `from starlette.applications import Starlette`
+
+    The app variable can have any name (e.g., `app`, `my_dashboard`, `server`).
+    Preferred names checked first: "app", "streamlit_app".
 
     Parameters
     ----------
@@ -235,7 +340,7 @@ def discover_asgi_app(
     app_name
         Optional specific variable name to look for. If provided, only that
         name is checked. If not provided, checks preferred names first
-        ("app", "application", "streamlit_app"), then falls back to any
+        ("app", "streamlit_app"), then falls back to any
         discovered ASGI app.
 
     Returns

@@ -22,10 +22,12 @@ import pytest
 
 from streamlit.web.server.app_discovery import (
     AppDiscoveryResult,
+    _extract_imports,
     _find_asgi_app_assignments,
     _get_call_name_parts,
     _get_module_string_from_path,
     _is_asgi_app_call,
+    _resolve_call_to_module_path,
     discover_asgi_app,
 )
 
@@ -61,63 +63,144 @@ class TestGetCallNameParts:
         assert _get_call_name_parts(call) == ("streamlit", "starlette", "App")
 
 
+class TestExtractImports:
+    """Tests for _extract_imports function."""
+
+    def test_import_statement(self) -> None:
+        """Test extracting from 'import x' style imports."""
+        import ast
+
+        tree = ast.parse("import streamlit")
+        imports = _extract_imports(tree)
+        assert imports == {"streamlit": "streamlit"}
+
+    def test_import_with_alias(self) -> None:
+        """Test extracting from 'import x as y' style imports."""
+        import ast
+
+        tree = ast.parse("import streamlit as st")
+        imports = _extract_imports(tree)
+        assert imports == {"st": "streamlit"}
+
+    def test_from_import(self) -> None:
+        """Test extracting from 'from x import y' style imports."""
+        import ast
+
+        tree = ast.parse("from streamlit.starlette import App")
+        imports = _extract_imports(tree)
+        assert imports == {"App": "streamlit.starlette.App"}
+
+    def test_from_import_with_alias(self) -> None:
+        """Test extracting from 'from x import y as z' style imports."""
+        import ast
+
+        tree = ast.parse("from fastapi import FastAPI as FA")
+        imports = _extract_imports(tree)
+        assert imports == {"FA": "fastapi.FastAPI"}
+
+
+class TestResolveCallToModulePath:
+    """Tests for _resolve_call_to_module_path function."""
+
+    def test_resolves_imported_name(self) -> None:
+        """Test resolving a name that was imported."""
+        imports = {"App": "streamlit.starlette.App"}
+        result = _resolve_call_to_module_path(("App",), imports)
+        assert result == "streamlit.starlette.App"
+
+    def test_resolves_aliased_module(self) -> None:
+        """Test resolving a call through an aliased module."""
+        imports = {"st": "streamlit"}
+        result = _resolve_call_to_module_path(("st", "starlette", "App"), imports)
+        assert result == "streamlit.starlette.App"
+
+    def test_returns_joined_parts_for_unknown(self) -> None:
+        """Test that unknown names are joined as-is."""
+        imports = {}
+        result = _resolve_call_to_module_path(
+            ("streamlit", "starlette", "App"), imports
+        )
+        assert result == "streamlit.starlette.App"
+
+
 class TestIsAsgiAppCall:
     """Tests for _is_asgi_app_call function."""
 
     @pytest.mark.parametrize(
-        "code",
+        ("code", "imports"),
         [
-            "App()",
-            "streamlit.starlette.App()",
-            "starlette.App()",
-            "FastAPI()",
-            "fastapi.FastAPI()",
-            "Starlette()",
+            # Streamlit App with proper import
+            ("App()", {"App": "streamlit.starlette.App"}),
+            # Fully qualified streamlit.starlette.App
+            ("streamlit.starlette.App()", {"streamlit": "streamlit"}),
+            # FastAPI with proper import
+            ("FastAPI()", {"FastAPI": "fastapi.FastAPI"}),
+            ("fastapi.FastAPI()", {"fastapi": "fastapi"}),
+            # Starlette with proper import
+            ("Starlette()", {"Starlette": "starlette.applications.Starlette"}),
         ],
     )
-    def test_recognizes_asgi_app_patterns(self, code: str) -> None:
-        """Test that known ASGI app patterns are recognized."""
+    def test_recognizes_asgi_app_patterns(
+        self, code: str, imports: dict[str, str]
+    ) -> None:
+        """Test that known ASGI app patterns are recognized with proper imports."""
         import ast
 
         tree = ast.parse(code)
         call = tree.body[0].value  # type: ignore
-        assert _is_asgi_app_call(call) is True
+        assert _is_asgi_app_call(call, imports) is True
 
     @pytest.mark.parametrize(
-        "code",
+        ("code", "imports"),
         [
-            "SomeOtherClass()",
-            "my_function()",
-            "random.thing.Call()",
+            # App without import - could be user's custom class
+            ("App()", {}),
+            # App imported from unknown module
+            ("App()", {"App": "my_custom_lib.App"}),
+            # Random class
+            ("SomeOtherClass()", {}),
+            ("my_function()", {}),
+            ("random.thing.Call()", {}),
         ],
     )
-    def test_rejects_non_asgi_patterns(self, code: str) -> None:
-        """Test that non-ASGI patterns are rejected."""
+    def test_rejects_non_asgi_patterns(
+        self, code: str, imports: dict[str, str]
+    ) -> None:
+        """Test that non-ASGI patterns and unimported App are rejected."""
         import ast
 
         tree = ast.parse(code)
         call = tree.body[0].value  # type: ignore
-        assert _is_asgi_app_call(call) is False
+        assert _is_asgi_app_call(call, imports) is False
 
 
 class TestFindAsgiAppAssignments:
     """Tests for _find_asgi_app_assignments function."""
 
-    def test_finds_simple_assignment(self) -> None:
-        """Test finding simple assignment like app = App(...)."""
-        source = 'app = App("main.py")'
-        result = _find_asgi_app_assignments(source)
-        assert result == {"app": 1}
-
-    def test_finds_annotated_assignment(self) -> None:
-        """Test finding annotated assignment like app: App = App(...)."""
-        source = 'app: App = App("main.py")'
-        result = _find_asgi_app_assignments(source)
-        assert result == {"app": 1}
-
-    def test_finds_multiple_assignments(self) -> None:
-        """Test finding multiple ASGI app assignments."""
+    def test_finds_simple_assignment_with_import(self) -> None:
+        """Test finding assignment when App is properly imported."""
         source = """
+from streamlit.starlette import App
+app = App("main.py")
+"""
+        result = _find_asgi_app_assignments(source)
+        assert result == {"app": 3}
+
+    def test_finds_annotated_assignment_with_import(self) -> None:
+        """Test finding annotated assignment with proper import."""
+        source = """
+from streamlit.starlette import App
+app: App = App("main.py")
+"""
+        result = _find_asgi_app_assignments(source)
+        assert result == {"app": 3}
+
+    def test_finds_multiple_assignments_with_imports(self) -> None:
+        """Test finding multiple ASGI app assignments with proper imports."""
+        source = """
+from streamlit.starlette import App
+from fastapi import FastAPI
+from starlette.applications import Starlette
 app = App("main.py")
 another = FastAPI()
 third = Starlette()
@@ -127,15 +210,26 @@ third = Starlette()
         assert "another" in result
         assert "third" in result
 
-    def test_ignores_non_asgi_assignments(self) -> None:
-        """Test that non-ASGI assignments are ignored."""
+    def test_ignores_app_without_import(self) -> None:
+        """Test that App() without proper import is ignored (prevents false positives)."""
         source = """
 x = 1
 y = SomeClass()
 app = App("main.py")
 """
         result = _find_asgi_app_assignments(source)
-        assert result == {"app": 4}  # Line 4 because of leading newline
+        # App without import should NOT be detected
+        assert result == {}
+
+    def test_ignores_app_from_wrong_module(self) -> None:
+        """Test that App from a custom module is not detected."""
+        source = """
+from my_custom_lib import App
+app = App("main.py")
+"""
+        result = _find_asgi_app_assignments(source)
+        # App from unknown module should NOT be detected
+        assert result == {}
 
     def test_handles_syntax_error(self) -> None:
         """Test that syntax errors return empty dict."""
@@ -180,26 +274,23 @@ class TestDiscoverAsgiApp:
     def test_discovers_app_named_app(self, tmp_path: Path) -> None:
         """Test discovery of ASGI app named 'app'."""
         script = tmp_path / "streamlit_app.py"
-        script.write_text('app = App("main.py")')
+        script.write_text("""
+from streamlit.starlette import App
+app = App("main.py")
+""")
 
         result = discover_asgi_app(script)
         assert result.is_asgi_app is True
         assert result.app_name == "app"
         assert "streamlit_app:app" in (result.import_string or "")
 
-    def test_discovers_app_named_application(self, tmp_path: Path) -> None:
-        """Test discovery of ASGI app named 'application'."""
-        script = tmp_path / "streamlit_app.py"
-        script.write_text('application = App("main.py")')
-
-        result = discover_asgi_app(script)
-        assert result.is_asgi_app is True
-        assert result.app_name == "application"
-
     def test_discovers_app_named_streamlit_app(self, tmp_path: Path) -> None:
         """Test discovery of ASGI app named 'streamlit_app'."""
         script = tmp_path / "my_module.py"
-        script.write_text('streamlit_app = App("main.py")')
+        script.write_text("""
+from streamlit.starlette import App
+streamlit_app = App("main.py")
+""")
 
         result = discover_asgi_app(script)
         assert result.is_asgi_app is True
@@ -208,13 +299,12 @@ class TestDiscoverAsgiApp:
     def test_prefers_app_over_other_names(self, tmp_path: Path) -> None:
         """Test that 'app' is preferred over other ASGI app instances."""
         script = tmp_path / "streamlit_app.py"
-        script.write_text(
-            """
+        script.write_text("""
+from streamlit.starlette import App
 my_custom_app = App("main.py")
 app = App("main.py")
 another_app = App("main.py")
-"""
-        )
+""")
 
         result = discover_asgi_app(script)
         assert result.is_asgi_app is True
@@ -223,7 +313,10 @@ another_app = App("main.py")
     def test_discovers_custom_named_app(self, tmp_path: Path) -> None:
         """Test discovery of ASGI app with a custom name."""
         script = tmp_path / "streamlit_app.py"
-        script.write_text('my_dashboard = App("main.py")')
+        script.write_text("""
+from streamlit.starlette import App
+my_dashboard = App("main.py")
+""")
 
         result = discover_asgi_app(script)
         assert result.is_asgi_app is True
@@ -232,12 +325,11 @@ another_app = App("main.py")
     def test_discovers_specific_app_name(self, tmp_path: Path) -> None:
         """Test discovery of ASGI app with a specific name provided."""
         script = tmp_path / "streamlit_app.py"
-        script.write_text(
-            """
+        script.write_text("""
+from streamlit.starlette import App
 app = App("main.py")
 secondary_app = App("main.py")
-"""
-        )
+""")
 
         result = discover_asgi_app(script, app_name="secondary_app")
         assert result.is_asgi_app is True
@@ -246,17 +338,34 @@ secondary_app = App("main.py")
     def test_returns_false_for_no_app(self, tmp_path: Path) -> None:
         """Test that discovery returns False when no ASGI app is found."""
         script = tmp_path / "streamlit_app.py"
-        script.write_text(
-            """
+        script.write_text("""
 import streamlit as st
 st.write("Hello")
-"""
-        )
+""")
 
         result = discover_asgi_app(script)
         assert result.is_asgi_app is False
         assert result.app_name is None
         assert result.import_string is None
+
+    def test_returns_false_for_app_without_import(self, tmp_path: Path) -> None:
+        """Test that App without proper import is not detected (prevents false positives)."""
+        script = tmp_path / "streamlit_app.py"
+        script.write_text('app = App("main.py")')
+
+        result = discover_asgi_app(script)
+        assert result.is_asgi_app is False
+
+    def test_returns_false_for_custom_app_class(self, tmp_path: Path) -> None:
+        """Test that a custom App class from user's module is not detected."""
+        script = tmp_path / "streamlit_app.py"
+        script.write_text("""
+from my_custom_lib import App
+app = App("main.py")
+""")
+
+        result = discover_asgi_app(script)
+        assert result.is_asgi_app is False
 
     def test_returns_false_for_nonexistent_file(self, tmp_path: Path) -> None:
         """Test that discovery returns False for nonexistent files."""
@@ -276,24 +385,33 @@ st.write("Hello")
     def test_returns_false_for_specific_name_not_found(self, tmp_path: Path) -> None:
         """Test that discovery returns False when specific name is not found."""
         script = tmp_path / "streamlit_app.py"
-        script.write_text('app = App("main.py")')
+        script.write_text("""
+from streamlit.starlette import App
+app = App("main.py")
+""")
 
         result = discover_asgi_app(script, app_name="nonexistent")
         assert result.is_asgi_app is False
 
     def test_discovers_fastapi_app(self, tmp_path: Path) -> None:
-        """Test that FastAPI apps are discovered."""
+        """Test that FastAPI apps are discovered with proper import."""
         script = tmp_path / "main.py"
-        script.write_text("app = FastAPI()")
+        script.write_text("""
+from fastapi import FastAPI
+app = FastAPI()
+""")
 
         result = discover_asgi_app(script)
         assert result.is_asgi_app is True
         assert result.app_name == "app"
 
     def test_discovers_starlette_app(self, tmp_path: Path) -> None:
-        """Test that Starlette apps are discovered."""
+        """Test that Starlette apps are discovered with proper import."""
         script = tmp_path / "main.py"
-        script.write_text("app = Starlette(routes=[])")
+        script.write_text("""
+from starlette.applications import Starlette
+app = Starlette(routes=[])
+""")
 
         result = discover_asgi_app(script)
         assert result.is_asgi_app is True
@@ -302,7 +420,10 @@ st.write("Hello")
     def test_discovers_fully_qualified_app(self, tmp_path: Path) -> None:
         """Test discovery of fully qualified ASGI app like streamlit.starlette.App."""
         script = tmp_path / "main.py"
-        script.write_text('app = streamlit.starlette.App("main.py")')
+        script.write_text("""
+import streamlit
+app = streamlit.starlette.App("main.py")
+""")
 
         result = discover_asgi_app(script)
         assert result.is_asgi_app is True
