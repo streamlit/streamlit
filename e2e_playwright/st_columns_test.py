@@ -152,6 +152,7 @@ def test_column_vertical_alignment_top(
     # simpler visual alignment with other elements.
 
 
+
     assert_snapshot(
         column,
         name="st_columns-vertical_alignment_top",
@@ -194,6 +195,7 @@ def test_column_vertical_alignment_bottom(
 
     # Should apply a bottom margin to the last checkbox for
     # simpler visual alignment with other elements.
+
 
     assert_snapshot(
         column,
