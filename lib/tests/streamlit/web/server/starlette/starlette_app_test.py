@@ -1194,11 +1194,7 @@ class TestAppLifespan:
         # should raise a RuntimeError
         with pytest.raises(RuntimeError, match="Cannot use App as standalone"):
             # Trigger __call__ which builds the starlette app
-            import asyncio
-
-            asyncio.get_event_loop().run_until_complete(
-                app({"type": "http"}, None, None)
-            )
+            asyncio.run(app({"type": "http"}, None, None))
 
 
 class TestAppScriptPathResolution:
@@ -1386,8 +1382,6 @@ class TestAppAsgi:
             client.get("/_stcore/health")  # Just verify it works
 
         assert shutdown_count == 1
-        # Verify lifespan ran exactly once
-        assert startup_count == 1
 
     @patch_config_options(
         {

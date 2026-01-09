@@ -73,12 +73,6 @@ class AppDiscoveryResult:
     app_name: str | None
     import_string: str | None
 
-    # Keep is_st_app as an alias for backwards compatibility
-    @property
-    def is_st_app(self) -> bool:
-        """Alias for is_asgi_app for backwards compatibility."""
-        return self.is_asgi_app
-
 
 def _get_call_name_parts(node: ast.Call) -> tuple[str, ...] | None:
     """Extract the name parts from a Call node's func attribute.

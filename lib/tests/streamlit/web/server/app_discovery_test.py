@@ -446,7 +446,6 @@ class TestAppDiscoveryResult:
             import_string="mymodule:app",
         )
         assert result.is_asgi_app is True
-        assert result.is_st_app is True  # Backwards compatible
         assert result.app_name == "app"
         assert result.import_string == "mymodule:app"
 
@@ -458,6 +457,5 @@ class TestAppDiscoveryResult:
             import_string=None,
         )
         assert result.is_asgi_app is False
-        assert result.is_st_app is False  # Backwards compatible
         assert result.app_name is None
         assert result.import_string is None
