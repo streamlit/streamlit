@@ -1179,6 +1179,27 @@ class TestAppLifespan:
         app = App("main.py")
         assert app._external_lifespan is False
 
+    def test_standalone_use_after_lifespan_raises_error(
+        self, tmp_path: Path, reset_runtime: None
+    ) -> None:
+        """Test that using app standalone after calling lifespan() raises RuntimeError."""
+        script = tmp_path / "app.py"
+        script.write_text("import streamlit as st\nst.write('hello')")
+
+        app = App(script)
+        # Call lifespan() which sets _external_lifespan = True
+        app.lifespan()
+
+        # Now trying to use the app standalone (which builds the starlette app)
+        # should raise a RuntimeError
+        with pytest.raises(RuntimeError, match="Cannot use App as standalone"):
+            # Trigger __call__ which builds the starlette app
+            import asyncio
+
+            asyncio.get_event_loop().run_until_complete(
+                app({"type": "http"}, None, None)
+            )
+
 
 class TestAppScriptPathResolution:
     """Tests for script path resolution in App."""
@@ -1366,7 +1387,7 @@ class TestAppAsgi:
 
         assert shutdown_count == 1
         # Verify lifespan ran exactly once
-        assert startup_count == shutdown_count == 1
+        assert startup_count == 1
 
     @patch_config_options(
         {

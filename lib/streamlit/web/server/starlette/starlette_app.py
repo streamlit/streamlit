@@ -463,6 +463,23 @@ class App:
         """Build the Starlette application with all routes and middleware."""
         from starlette.applications import Starlette
 
+        from streamlit.runtime import RuntimeState
+
+        # If lifespan() was called, the parent framework manages the lifecycle.
+        # Check if the runtime was actually started by the parent framework.
+        # If not, the user likely called lifespan() but then used the app standalone,
+        # which would result in the runtime never starting.
+        if self._external_lifespan:
+            runtime_not_started = (
+                self._runtime is None or self._runtime.state == RuntimeState.INITIAL
+            )
+            if runtime_not_started:
+                raise RuntimeError(
+                    "Cannot use App as standalone ASGI application after calling "
+                    "lifespan(). The lifespan() method should only be used when "
+                    "mounting this App on another ASGI framework like FastAPI."
+                )
+
         # Create the runtime if not already created
         if self._runtime is None:
             self._runtime = self._create_runtime()
@@ -481,8 +498,7 @@ class App:
         # last on response)
         all_middleware = self._user_middleware + streamlit_middleware
 
-        # If lifespan() was called, the parent framework manages the lifecycle.
-        # Otherwise, use our internal lifespan to manage the runtime.
+        # If external lifespan, the parent manages lifecycle; otherwise use internal
         app_lifespan = None if self._external_lifespan else self._combined_lifespan
 
         return Starlette(
