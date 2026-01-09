@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -86,16 +86,11 @@ export function applyStreamlitTheme(config: any, theme: EmotionTheme): any {
       titleFontWeight: theme.fontWeights.normal,
       titleFontStyle: "normal",
       titleColor: getGray70(theme),
-      // TODO(lukasmasuch): Change padding here to use a spacing
-      // based on our available spacings (-> 4px = 0.25rem)
-      titlePadding: 5,
+      titlePadding: convertRemToPx(theme.spacing.twoXS),
       labelPadding: convertRemToPx(theme.spacing.lg),
       columnPadding: convertRemToPx(theme.spacing.sm),
       rowPadding: convertRemToPx(theme.spacing.twoXS),
-      // TODO(lukasmasuch): Change padding here to use a spacing
-      // based on our available spacings (-> 8px = 0.5rem)
-      // eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values
-      padding: 7,
+      padding: convertRemToPx(theme.spacing.sm),
       symbolStrokeWidth: convertRemToPx(theme.spacing.twoXS),
     },
     range: {

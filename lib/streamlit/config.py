@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -1001,6 +1001,16 @@ _create_option(
     type_=str,
     # Hide until API is finalized.
     visibility="hidden",
+)
+
+_create_option(
+    "server.useStarlette",
+    description="""
+        Enable the experimental Starlette-based server implementation instead of
+        Tornado. This is an experimental feature and may be removed in the future.
+    """,
+    default_val=False,
+    type_=bool,
 )
 
 # Config Section: Browser #

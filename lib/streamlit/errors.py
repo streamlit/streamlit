@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -265,7 +265,9 @@ class StreamlitInvalidColumnGapError(LocalizableStreamlitException):
 
     def __init__(self, gap: str, element_type: str) -> None:
         super().__init__(
-            'The `gap` argument to `{element_type}` must be `"small"`, `"medium"`, `"large"`, or `"none"`. \n'
+            'The `gap` argument to `{element_type}` must be `"xxsmall"`, '
+            '`"xsmall"`, `"small"`, `"medium"`, `"large"`, `"xlarge"`, '
+            '`"xxlarge"`, or `"none"`. \n'
             "The argument passed was {gap}.",
             gap=gap,
             element_type=element_type,
@@ -471,18 +473,6 @@ class BidiComponentInvalidIdError(LocalizableStreamlitException):
             "the delimiter sequence `{delimiter}`.",
             part=part,
             delimiter=delimiter,
-        )
-
-
-class BidiComponentMissingContentError(LocalizableStreamlitException):
-    """Exception raised when a component is missing required content."""
-
-    def __init__(self, component_name: str) -> None:
-        super().__init__(
-            "Component `{component_name}` must have either JavaScript content "
-            "(`js_content` or `js_url`) or HTML content (`html_content`), or both. "
-            "Please ensure the component definition includes at least one of these.",
-            component_name=component_name,
         )
 
 

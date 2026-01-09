@@ -23,6 +23,16 @@ pytest>=8.3.5
 pytest-cov
 requests-mock
 testfixtures
+
+# Required for Starlette support:
+starlette>=0.40.0
+uvicorn>=0.30.0
+python-multipart>=0.0.10
+websockets>=12.0.0
+itsdangerous>=2.1.2
+# only for unit tests:
+httpx>=0.24.1
+
 # We pin playwright to a minor version to avoid new browser versions
 # breaking our CI. But this version should be updated regularly as soon as
 # new playwright versions are released.

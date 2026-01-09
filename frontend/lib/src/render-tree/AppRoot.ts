@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,6 +39,7 @@ import { BlockNode } from "./BlockNode"
 import { ElementNode } from "./ElementNode"
 import { TransientNode } from "./TransientNode"
 import { ClearStaleNodeVisitor } from "./visitors/ClearStaleNodeVisitor"
+import { ClearTransientNodesVisitor } from "./visitors/ClearTransientNodesVisitor"
 import { DebugVisitor } from "./visitors/DebugVisitor"
 import { ElementsSetVisitor } from "./visitors/ElementsSetVisitor"
 import { FilterMainScriptElementsVisitor } from "./visitors/FilterMainScriptElementsVisitor"
@@ -353,6 +354,24 @@ export class AppRoot {
         currentScriptRunId
       ),
       appLogo
+    )
+  }
+
+  public clearTransientNodes(fragmentIdsThisRun?: Array<string>): AppRoot {
+    const visitor = new ClearTransientNodesVisitor(fragmentIdsThisRun)
+    const newChildren = this.root.children.map(node =>
+      this.ensureBlockNode(node.accept(visitor))
+    )
+
+    return new AppRoot(
+      this.mainScriptHash,
+      new BlockNode(
+        this.mainScriptHash,
+        newChildren,
+        new BlockProto({ allowEmpty: true }),
+        this.main.scriptRunId
+      ),
+      this.appLogo
     )
   }
 

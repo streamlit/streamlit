@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -220,6 +220,16 @@ describe("FlexBoxContainer layout props", () => {
 
   it.each([
     [
+      "gap: xxsmall",
+      { gapConfig: { gapSize: streamlit.GapSize.XXSMALL } },
+      "gap: 0.25rem;",
+    ],
+    [
+      "gap: xsmall",
+      { gapConfig: { gapSize: streamlit.GapSize.XSMALL } },
+      "gap: 0.5rem;",
+    ],
+    [
       "gap: small",
       { gapConfig: { gapSize: streamlit.GapSize.SMALL } },
       "gap: 1rem;",
@@ -233,6 +243,16 @@ describe("FlexBoxContainer layout props", () => {
       "gap: large",
       { gapConfig: { gapSize: streamlit.GapSize.LARGE } },
       "gap: 4rem;",
+    ],
+    [
+      "gap: xlarge",
+      { gapConfig: { gapSize: streamlit.GapSize.XLARGE } },
+      "gap: 6rem;",
+    ],
+    [
+      "gap: xxlarge",
+      { gapConfig: { gapSize: streamlit.GapSize.XXLARGE } },
+      "gap: 8rem;",
     ],
     [
       "gap: none",

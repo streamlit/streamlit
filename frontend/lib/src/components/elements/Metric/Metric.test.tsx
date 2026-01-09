@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -507,7 +507,7 @@ describe("Metric element", () => {
             mark: expect.objectContaining({
               type: "line",
               strokeCap: "round",
-              strokeWidth: 2,
+              strokeWidth: mockTheme.emotion.sizes.metricStrokeWidth,
             }),
           }),
         ]),
@@ -556,7 +556,7 @@ describe("Metric element", () => {
               type: "area",
               opacity: 1,
               line: expect.objectContaining({
-                strokeWidth: 2,
+                strokeWidth: mockTheme.emotion.sizes.metricStrokeWidth,
                 strokeCap: "round",
               }),
             }),
