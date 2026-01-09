@@ -90,12 +90,17 @@ def prepare_secrets_file(app_port: int, oidc_server_port: int):
 
 
 @pytest.fixture(scope="module")
-def app_server_extra_args(prepare_secrets_file: str) -> list[str]:
+def app_server_extra_args(
+    prepare_secrets_file: str, request: pytest.FixtureRequest
+) -> list[str]:
     """Fixture that returns extra arguments to pass to the Streamlit app server."""
-    return [
+    args = [
         "--secrets.files",
         prepare_secrets_file,
     ]
+    if request.config.getoption("--use-starlette"):
+        args.extend(["--server.useStarlette", "true"])
+    return args
 
 
 @pytest.mark.parametrize("fake_oidc_server", ["success"], indirect=True)

@@ -114,7 +114,7 @@ function useCustomTheme(): Readonly<CustomGridTheme> {
     return {
       glideTheme,
       tableBorderRadius: theme.radii.default,
-      tableBorderWidth: 1,
+      tableBorderWidth: parseInt(theme.sizes.borderWidth),
       // glide-data-grid can only handle integer pixel values:
       defaultTableHeight: Math.round(convertRemToPx("25rem")),
       minColumnWidth: Math.round(convertRemToPx("3.125rem")),

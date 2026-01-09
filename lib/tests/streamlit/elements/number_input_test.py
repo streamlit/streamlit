@@ -25,7 +25,6 @@ from streamlit.errors import (
     StreamlitAPIException,
     StreamlitInvalidWidthError,
     StreamlitValueAboveMaxError,
-    StreamlitValueBelowMinError,
 )
 from streamlit.proto.Alert_pb2 import Alert as AlertProto
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
@@ -458,19 +457,26 @@ class NumberInputTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitValueAboveMaxError):
             st.number_input("My Label", value=value, max_value=max_value)
 
-    def test_should_raise_exception_when_session_state_value_out_of_range(self):
-        """Test out of range interactions by using st.session_state to set number input widget values beyond min/max."""
-        with pytest.raises(StreamlitValueAboveMaxError):
-            st.session_state.number_input = 10
-            st.number_input(
-                "number_input", min_value=1, max_value=5, key="number_input"
-            )
+    def test_session_state_value_out_of_range_resets_to_default(self):
+        """Test that out of range session_state values reset to default.
 
-        with pytest.raises(StreamlitValueBelowMinError):
-            st.session_state.number_input_1 = 10
-            st.number_input(
-                "number_input_1", min_value=15, max_value=20, key="number_input_1"
-            )
+        When session_state is set to a value outside min/max bounds, the widget
+        should reset to its default value (similar to dynamic options in selectbox).
+        This supports dynamic min/max value changes.
+        """
+        # Value above max - should reset to default (min_value since value="min")
+        st.session_state.number_input = 10
+        result = st.number_input(
+            "number_input", min_value=1, max_value=5, key="number_input"
+        )
+        assert result == 1  # Reset to min_value (default when value="min")
+
+        # Value below min - should reset to default
+        st.session_state.number_input_1 = 10
+        result = st.number_input(
+            "number_input_1", min_value=15, max_value=20, key="number_input_1"
+        )
+        assert result == 15  # Reset to min_value (default when value="min")
 
     def test_shows_cached_widget_replay_warning(self):
         """Test that a warning is shown when this widget is used inside a cached function."""
@@ -487,7 +493,7 @@ class NumberInputTest(DeltaGeneratorTestCase):
             "streamlit.elements.lib.utils._register_element_id",
             return_value=MagicMock(),
         ):
-            # First render with certain params (keep whitelisted kwargs stable)
+            # First render with certain params
             st.number_input(
                 label="Label 1",
                 key="number_input_key",
@@ -509,7 +515,7 @@ class NumberInputTest(DeltaGeneratorTestCase):
             c1 = self.get_delta_from_queue().new_element.number_input
             id1 = c1.id
 
-            # Second render with different non-whitelisted params but same key
+            # Second render with different params but same key - ID should be stable
             st.number_input(
                 label="Label 2",
                 key="number_input_key",
@@ -524,49 +530,14 @@ class NumberInputTest(DeltaGeneratorTestCase):
                 placeholder="placeholder 2",
                 format="%d",
                 icon="💵",
-                # Keep whitelisted the same to ensure ID stability
-                min_value=0,
-                max_value=10,
-                step=1,
+                # Also change min_value, max_value, step - ID should still be stable
+                min_value=1,
+                max_value=20,
+                step=2,
             )
             c2 = self.get_delta_from_queue().new_element.number_input
             id2 = c2.id
             assert id1 == id2
-
-    @parameterized.expand(
-        [
-            ("min_value", 0, 1),
-            ("max_value", 10, 11),
-            ("step", 1, 2),
-        ]
-    )
-    def test_whitelisted_stable_key_kwargs(
-        self, kwarg_name: str, value1: object, value2: object
-    ):
-        """Test that the widget ID changes when a whitelisted kwarg changes even when the key is provided."""
-        with patch(
-            "streamlit.elements.lib.utils._register_element_id",
-            return_value=MagicMock(),
-        ):
-            base_kwargs = {
-                "label": "Label",
-                "key": "number_input_key",
-                # keep other whitelisted values stable to avoid type/format interactions
-                "min_value": 0,
-                "max_value": 10,
-                "step": 1,
-            }
-            base_kwargs[kwarg_name] = value1
-
-            st.number_input(**base_kwargs)
-            c1 = self.get_delta_from_queue().new_element.number_input
-            id1 = c1.id
-
-            base_kwargs[kwarg_name] = value2
-            st.number_input(**base_kwargs)
-            c2 = self.get_delta_from_queue().new_element.number_input
-            id2 = c2.id
-            assert id1 != id2
 
 
 def test_number_input_interaction():
@@ -610,3 +581,151 @@ def test_None_session_state_value_retained():
     at = AppTest.from_function(script).run()
     at = at.button[0].click().run()
     assert at.number_input[0].value is None
+
+
+def test_dynamic_min_value_resets_value_when_below_new_min():
+    """Test that value resets to default when dynamically changing min_value makes current value invalid."""
+
+    def script():
+        import streamlit as st
+
+        if "update_bounds" not in st.session_state:
+            st.session_state["update_bounds"] = False
+
+        if st.session_state["update_bounds"]:
+            # New min_value=50 makes the previous value of 25 invalid
+            value = st.number_input(
+                "number", min_value=50, max_value=100, key="number", value=75
+            )
+        else:
+            value = st.number_input(
+                "number", min_value=0, max_value=100, key="number", value=50
+            )
+        st.write(f"value: {value}")
+
+        if st.button("Toggle bounds"):
+            st.session_state["update_bounds"] = not st.session_state["update_bounds"]
+
+    at = AppTest.from_function(script).run()
+    assert at.number_input[0].value == 50
+
+    # Set value to 25 (valid with min_value=0)
+    at = at.number_input[0].set_value(25).run()
+    assert at.number_input[0].value == 25
+
+    # Toggle bounds - the click updates session_state["update_bounds"] to True
+    at = at.button[0].click().run()
+    # AppTest requires an additional run to process the widget with the new bounds
+    at = at.run()
+    # Now min_value=50, so 25 is invalid and should reset to default (75)
+    assert at.number_input[0].value == 75
+
+
+def test_dynamic_max_value_resets_value_when_above_new_max():
+    """Test that value resets to default when dynamically changing max_value makes current value invalid."""
+
+    def script():
+        import streamlit as st
+
+        if "update_bounds" not in st.session_state:
+            st.session_state["update_bounds"] = False
+
+        if st.session_state["update_bounds"]:
+            # New max_value=50 makes the previous value of 75 invalid
+            value = st.number_input(
+                "number", min_value=0, max_value=50, key="number", value=25
+            )
+        else:
+            value = st.number_input(
+                "number", min_value=0, max_value=100, key="number", value=50
+            )
+        st.write(f"value: {value}")
+
+        if st.button("Toggle bounds"):
+            st.session_state["update_bounds"] = not st.session_state["update_bounds"]
+
+    at = AppTest.from_function(script).run()
+    assert at.number_input[0].value == 50
+
+    # Set value to 75 (valid with max_value=100)
+    at = at.number_input[0].set_value(75).run()
+    assert at.number_input[0].value == 75
+
+    # Toggle bounds - the click updates session_state["update_bounds"] to True
+    at = at.button[0].click().run()
+    # AppTest requires an additional run to process the widget with the new bounds
+    at = at.run()
+    # Now max_value=50, so 75 is invalid and should reset to default (25)
+    assert at.number_input[0].value == 25
+
+
+def test_dynamic_bounds_preserves_valid_value():
+    """Test that value is preserved when it remains valid after bound changes."""
+
+    def script():
+        import streamlit as st
+
+        if "update_bounds" not in st.session_state:
+            st.session_state["update_bounds"] = False
+
+        if st.session_state["update_bounds"]:
+            # Changing bounds but 50 is still valid (between 25-75)
+            value = st.number_input(
+                "number", min_value=25, max_value=75, key="number", value=50
+            )
+        else:
+            value = st.number_input(
+                "number", min_value=0, max_value=100, key="number", value=50
+            )
+        st.write(f"value: {value}")
+
+        if st.button("Toggle bounds"):
+            st.session_state["update_bounds"] = not st.session_state["update_bounds"]
+
+    at = AppTest.from_function(script).run()
+    assert at.number_input[0].value == 50
+
+    # Toggle bounds - the click updates session_state["update_bounds"] to True
+    at = at.button[0].click().run()
+    # AppTest requires an additional run to process the widget with the new bounds
+    at = at.run()
+    # 50 is still valid (between 25 and 75), so it should be preserved
+    assert at.number_input[0].value == 50
+
+
+def test_dynamic_bounds_with_float_values():
+    """Test dynamic min/max value changes with float values."""
+
+    def script():
+        import streamlit as st
+
+        if "update_bounds" not in st.session_state:
+            st.session_state["update_bounds"] = False
+
+        if st.session_state["update_bounds"]:
+            # New min_value=5.0 makes the previous value of 2.5 invalid
+            value = st.number_input(
+                "number", min_value=5.0, max_value=10.0, key="number", value=7.5
+            )
+        else:
+            value = st.number_input(
+                "number", min_value=0.0, max_value=10.0, key="number", value=5.0
+            )
+        st.write(f"value: {value}")
+
+        if st.button("Toggle bounds"):
+            st.session_state["update_bounds"] = not st.session_state["update_bounds"]
+
+    at = AppTest.from_function(script).run()
+    assert at.number_input[0].value == 5.0
+
+    # Set value to 2.5 (valid with min_value=0.0)
+    at = at.number_input[0].set_value(2.5).run()
+    assert at.number_input[0].value == 2.5
+
+    # Toggle bounds - the click updates session_state["update_bounds"] to True
+    at = at.button[0].click().run()
+    # AppTest requires an additional run to process the widget with the new bounds
+    at = at.run()
+    # Now min_value=5.0, so 2.5 is invalid and should reset to default (7.5)
+    assert at.number_input[0].value == 7.5

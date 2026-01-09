@@ -467,6 +467,46 @@ def test_public_api_path_object_rejection() -> None:
         component("test", css=["invalid", "list"])  # List instead of string/Path
 
 
+def test_component_mount_ignores_isolate_styles_kwarg() -> None:
+    """Verify mount-time isolate_styles is ignored (and does not raise).
+
+    Without the mount-time kwarg being stripped, the mount callable would end
+    up calling ``st._bidi_component(..., isolate_styles=<from component()>, **kwargs)``
+    where ``kwargs`` also contains ``isolate_styles``. That would raise a
+    ``TypeError`` about multiple values for the same keyword argument before
+    `_bidi_component` runs.
+    """
+    import streamlit as st
+
+    on_clicked_change = MagicMock(name="on_clicked_change")
+
+    with (
+        patch.object(
+            st.components.v2, "_register_component", return_value="test_component"
+        ),
+        patch.object(
+            st, "_bidi_component", return_value=MagicMock()
+        ) as mock_bidi_component,
+    ):
+        mount = component(
+            "test_component",
+            js="console.log('test');",
+            isolate_styles=False,
+        )
+
+        mount(
+            key="k",
+            isolate_styles=True,  # legacy-style kwarg should be dropped silently
+            on_clicked_change=on_clicked_change,
+        )
+
+    args, kwargs = mock_bidi_component.call_args
+    assert args[0] == "test_component"
+    assert kwargs["isolate_styles"] is False
+    assert kwargs["key"] == "k"
+    assert kwargs["on_clicked_change"] is on_clicked_change
+
+
 def test_register_from_manifest_basic(temp_manager_setup) -> None:
     """Test basic manifest registration with a single component.
 

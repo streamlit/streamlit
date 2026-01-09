@@ -37,6 +37,7 @@ import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import useOnInputChange from "~lib/hooks/useOnInputChange"
 import useSubmitFormViaEnterKey from "~lib/hooks/useSubmitFormViaEnterKey"
 import useUpdateUiValue from "~lib/hooks/useUpdateUiValue"
+import { convertRemToPx } from "~lib/theme"
 import { isInForm, labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -112,7 +113,7 @@ function TextInput({
 
   // Hide input instructions for small widget sizes.
   const shouldShowInstructions =
-    focused && width > theme.breakpoints.hideWidgetDetails
+    focused && width > convertRemToPx(theme.breakpoints.hideWidgetDetails)
 
   const onBlur = useCallback((): void => {
     if (dirty) {

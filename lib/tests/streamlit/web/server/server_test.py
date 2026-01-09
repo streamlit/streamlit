@@ -19,6 +19,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import errno
+import logging
 import os
 import re
 import subprocess
@@ -30,9 +31,7 @@ from unittest import mock
 from unittest.mock import patch
 
 import pytest
-import tornado.httpserver
 import tornado.testing
-import tornado.web
 import tornado.websocket
 from parameterized import parameterized
 
@@ -390,6 +389,54 @@ class ServerTest(ServerTestCase):
         config._set_option("server.websocketPingInterval", None, "test")
 
 
+class InitializeMimetypesTest(unittest.TestCase):
+    """Tests for Server.initialize_mimetypes()."""
+
+    def test_registers_common_mimetypes(self) -> None:
+        """Test that common MIME types are registered correctly."""
+
+        import mimetypes
+
+        Server.initialize_mimetypes()
+
+        assert mimetypes.guess_type("test.html")[0] == "text/html"
+        assert mimetypes.guess_type("test.js")[0] == "application/javascript"
+        assert mimetypes.guess_type("test.mjs")[0] == "application/javascript"
+        assert mimetypes.guess_type("test.css")[0] == "text/css"
+        assert mimetypes.guess_type("test.webp")[0] == "image/webp"
+
+
+class SetTornadoLogLevelsTest(unittest.TestCase):
+    """Tests for _set_tornado_log_levels()."""
+
+    @patch_config_options({"global.developmentMode": True})
+    def test_dev_mode_does_not_suppress_logs(self) -> None:
+        """Test that Tornado log levels are not suppressed in development mode."""
+
+        from streamlit.web.server.server import _set_tornado_log_levels
+
+        # Set to a known level before testing
+        logging.getLogger("tornado.access").setLevel(logging.DEBUG)
+
+        _set_tornado_log_levels()
+
+        # In dev mode, log level should remain unchanged (not set to ERROR)
+        assert logging.getLogger("tornado.access").level != logging.ERROR
+
+    @patch_config_options({"global.developmentMode": False})
+    def test_non_dev_mode_suppresses_logs(self) -> None:
+        """Test that Tornado log levels are suppressed in non-development mode."""
+
+        from streamlit.web.server.server import _set_tornado_log_levels
+
+        _set_tornado_log_levels()
+
+        # In non-dev mode, log levels should be set to ERROR
+        assert logging.getLogger("tornado.access").level == logging.ERROR
+        assert logging.getLogger("tornado.application").level == logging.ERROR
+        assert logging.getLogger("tornado.general").level == logging.ERROR
+
+
 class PortRotateAHundredTest(unittest.TestCase):
     """Tests port rotation handles a MAX_PORT_SEARCH_RETRIES attempts then sys exits"""
 
@@ -410,21 +457,25 @@ class PortRotateAHundredTest(unittest.TestCase):
 
         return httpserver
 
-    def test_rotates_a_hundred_ports(self):
+    def test_rotates_a_hundred_ports(self) -> None:
+        """Test that port rotation retries up to MAX_PORT_SEARCH_RETRIES times."""
         app = mock.MagicMock()
 
         RetriesExceededError = streamlit.web.server.server.RetriesExceededError
         with (
-            pytest.raises(RetriesExceededError) as pytest_wrapped_e,
+            pytest.raises(RetriesExceededError),
+            patch(
+                "streamlit.web.server.server.server_port_is_manually_set",
+                return_value=False,
+            ),
             patch(
                 "streamlit.web.server.server.HTTPServer",
                 return_value=self.get_httpserver(),
             ) as mock_server,
         ):
             start_listening(app)
-            assert pytest_wrapped_e.type is SystemExit
-            assert pytest_wrapped_e.value.code == errno.EADDRINUSE
-            assert mock_server.listen.call_count == MAX_PORT_SEARCH_RETRIES
+
+        assert mock_server.return_value.listen.call_count == MAX_PORT_SEARCH_RETRIES
 
 
 class PortRotateOneTest(unittest.TestCase):
@@ -463,6 +514,42 @@ class PortRotateOneTest(unittest.TestCase):
             patched__set_option.assert_called_with(
                 "server.port", 8501, config.ConfigOption.STREAMLIT_DEFINITION
             )
+
+
+class PortPermissionDeniedTest(unittest.TestCase):
+    """Tests port retry on permission denied errors (Windows system-reserved ports).
+
+    See: https://github.com/streamlit/streamlit/issues/13521
+    """
+
+    @staticmethod
+    def get_httpserver_with_eacces():
+        """Create mock HTTP server that raises EACCES on first listen attempt."""
+        httpserver = mock.MagicMock()
+        # First call raises EACCES, subsequent calls succeed
+        httpserver.listen = mock.Mock(
+            side_effect=[OSError(errno.EACCES, "permission denied"), None]
+        )
+        return httpserver
+
+    def test_retries_on_permission_denied(self) -> None:
+        """Test that server retries on EACCES (permission denied) errors."""
+        app = mock.MagicMock()
+
+        with (
+            patch(
+                "streamlit.web.server.server.server_port_is_manually_set",
+                return_value=False,
+            ),
+            patch(
+                "streamlit.web.server.server.HTTPServer",
+                return_value=self.get_httpserver_with_eacces(),
+            ) as mock_server,
+        ):
+            start_listening(app)
+
+            # Should have tried twice (first failed with EACCES, second succeeded)
+            assert mock_server.return_value.listen.call_count == 2
 
 
 class SslServerTest(unittest.TestCase):
@@ -597,7 +684,7 @@ class UnixSocketTest(unittest.TestCase):
         return httpserver
 
     @unittest.skipIf("win32" in sys.platform, "Windows does not have unit sockets")
-    def test_unix_socket(self):
+    def test_unix_socket_tornado(self):
         app = mock.MagicMock()
 
         config.set_option("server.address", "unix://~/fancy-test/testasd")
@@ -624,6 +711,7 @@ class ScriptCheckEndpointExistsTest(tornado.testing.AsyncHTTPTestCase):
         return True, "test_message"
 
     def setUp(self):
+        Runtime._instance = None
         self._old_config = config.get_option("server.scriptHealthCheckEnabled")
         config._set_option("server.scriptHealthCheckEnabled", True, "test")
         super().setUp()
@@ -662,6 +750,7 @@ class ScriptCheckEndpointDoesNotExistTest(tornado.testing.AsyncHTTPTestCase):
         self.fail("Should not be called")
 
     def setUp(self):
+        Runtime._instance = None
         self._old_config = config.get_option("server.scriptHealthCheckEnabled")
         config._set_option("server.scriptHealthCheckEnabled", False, "test")
         super().setUp()

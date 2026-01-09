@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING, Any, Final, Literal, TypeVar, overload
 
 from streamlit.connections import (
     BaseConnection,
+    SnowflakeCallersRightsConnection,
     SnowflakeConnection,
     SnowparkConnection,
     SQLConnection,
@@ -40,6 +41,7 @@ if TYPE_CHECKING:
 #   3. Updating test_get_first_party_connection_helper in connection_factory_test.py.
 _FIRST_PARTY_CONNECTIONS: Final[dict[str, type[BaseConnection[Any]]]] = {
     "snowflake": SnowflakeConnection,
+    "snowflake-callers-rights": SnowflakeCallersRightsConnection,
     "snowpark": SnowparkConnection,
     "sql": SQLConnection,
 }
@@ -95,10 +97,23 @@ def _create_connection(
     __create_connection.__qualname__ = (
         f"{__create_connection.__qualname__}_{ttl_str}_{max_entries}"
     )
+
+    scope = connection_class.scope()
+    if scope not in ("global", "session"):
+        raise StreamlitAPIException(
+            f"Connection class {connection_class} has scope '{scope}'. Valid values "
+            "are 'global' or 'session'."
+        )
+
+    def on_release_wrapped(connection: ConnectionClass) -> None:
+        connection.close()
+
     __create_connection = cache_resource(
         max_entries=max_entries,
         show_spinner="Running `st.connection(...)`.",
         ttl=ttl,
+        scope=scope,
+        on_release=on_release_wrapped,
     )(__create_connection)
 
     return __create_connection(name, connection_class, **kwargs)
@@ -162,6 +177,29 @@ def connection_factory(
 
 @overload
 def connection_factory(
+    name: Literal["snowflake-callers-rights"],
+    max_entries: int | None = None,
+    ttl: float | timedelta | None = None,
+    autocommit: bool = False,
+    **kwargs: Any,
+) -> SnowflakeCallersRightsConnection:
+    pass
+
+
+@overload
+def connection_factory(
+    name: str,
+    type: Literal["snowflake-callers-rights"],
+    max_entries: int | None = None,
+    ttl: float | timedelta | None = None,
+    autocommit: bool = False,
+    **kwargs: Any,
+) -> SnowflakeCallersRightsConnection:
+    pass
+
+
+@overload
+def connection_factory(
     name: Literal["snowpark"],
     max_entries: int | None = None,
     ttl: float | timedelta | None = None,
@@ -220,7 +258,8 @@ def connection_factory(  # type: ignore
     - Any connection-specific configuration files.
 
     The connection returned from ``st.connection`` is internally cached with
-    ``st.cache_resource`` and is therefore shared between sessions.
+    ``st.cache_resource``. Connection types with a scope of ``"global"`` will be shared
+    between sessions.
 
     Parameters
     ----------

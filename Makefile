@@ -331,6 +331,9 @@ debug-e2e-test:
 		exit 1; \
 	fi
 	@echo "Running test: $(filter-out $@,$(MAKECMDGOALS)) in debug mode."
+	@if [[ -n "$$PYTEST_ADDOPTS" ]]; then \
+		echo "Using PYTEST_ADDOPTS=$$PYTEST_ADDOPTS"; \
+	fi
 	@TEST_SCRIPT=$$(echo $(filter-out $@,$(MAKECMDGOALS)) | sed 's|^e2e_playwright/||'); \
 	cd e2e_playwright && PWDEBUG=1 pytest $$TEST_SCRIPT --tracing on || ( \
 		echo "If you implemented changes in the frontend, make sure to call \`make frontend-fast\` to use the up-to-date frontend build in the test."; \
@@ -346,6 +349,9 @@ run-e2e-test:
 		exit 1; \
 	fi
 	@echo "Running test: $(filter-out $@,$(MAKECMDGOALS))"
+	@if [[ -n "$$PYTEST_ADDOPTS" ]]; then \
+		echo "Using PYTEST_ADDOPTS=$$PYTEST_ADDOPTS"; \
+	fi
 	@TEST_SCRIPT=$$(echo $(filter-out $@,$(MAKECMDGOALS)) | sed 's|^e2e_playwright/||'); \
 	cd e2e_playwright && pytest $$TEST_SCRIPT --tracing retain-on-failure --reruns 0 || ( \
 		echo "If you implemented changes in the frontend, make sure to call \`make frontend-fast\` to use the up-to-date frontend build in the test."; \

@@ -132,6 +132,9 @@ Run from the repo root:
 - Robustness: Test edge cases and error handling scenarios.
 - Accessibility: Validate component accessibility compliance.
 - Parameterized Tests: Use `it.each` for repeated tests with varying inputs.
+- Positive + negative assertions (anti-regression): When you assert that something appears/changes, also add at least one complementary assertion when practical that something else does **not** appear/change (inverse state, error message that must not show, callback that must not fire, etc.).
+  - Presence: `getBy*` / `findBy*` + `toBeVisible()`
+  - Absence: `queryBy*` + `not.toBeInTheDocument()` or `not.toBeVisible()`
 - Framework Exclusivity: Only use Vitest syntax; do not use Jest.
 
 ### Running Tests

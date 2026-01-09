@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import json
 from abc import ABC, abstractmethod
-from typing import Any, Generic, TypeVar, cast
+from typing import Any, Generic, Literal, TypeVar, cast
 
 from streamlit.runtime.secrets import AttrDict, secrets_singleton
 from streamlit.util import calc_md5
@@ -174,3 +174,30 @@ class BaseConnection(ABC, Generic[RawConnectionT]):
             The underlying connection object.
         """
         raise NotImplementedError
+
+    @classmethod
+    def scope(cls) -> Literal["global", "session"]:
+        """Returns the scope of this connection type.
+
+        "global" connection instances will be cached globally, and typically created
+        once during the lifetime of an application. "session" connection instances will
+        be cached per session, and typically will be created once per user session.
+
+        Returns
+        -------
+        "global" or "session"
+            The scope of this connection type.
+        """
+        return "global"
+
+    def close(self) -> None:
+        """A function to invoke when this connection needs to be cleaned up.
+
+        ``close`` is registered as an ``on_release`` hook in the resource cache when a
+        connection is created with ``st.connection``.
+
+        Returns
+        -------
+        None
+        """
+        # NOTE: Default implementation is intentionally a no-op.

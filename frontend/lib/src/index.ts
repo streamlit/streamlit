@@ -129,6 +129,7 @@ export {
   getCachedTheme,
   getDefaultTheme,
   getHostSpecifiedTheme,
+  getHostSpecifiedThemeOnly,
   getSystemThemePreference,
   globalStyles,
   hasLightBackgroundColor,
@@ -141,7 +142,12 @@ export {
   toExportedTheme,
   toThemeInput,
 } from "./theme"
-export type { EmotionTheme, PresetThemeName, ThemeConfig } from "./theme"
+export type {
+  CachedTheme,
+  EmotionTheme,
+  PresetThemeName,
+  ThemeConfig,
+} from "./theme"
 export { default as emotionLightTheme } from "./theme/emotionLightTheme"
 export { fonts, spacing } from "./theme/primitives"
 export { ensureError } from "./util/ErrorHandling"

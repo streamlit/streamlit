@@ -129,10 +129,10 @@ function Checkbox({
               $checked: boolean
               $isHovered: boolean
             }) => {
-              let backgroundColor = colors.fadedText40
+              let backgroundColor = colors.borderColor
 
               if ($isHovered && !disabled) {
-                backgroundColor = colors.fadedText20
+                backgroundColor = colors.darkenedBgMix15
               }
 
               if ($checked && !disabled) {
@@ -167,7 +167,7 @@ function Checkbox({
               $checked: boolean
             }) => {
               const borderColor =
-                $checked && !disabled ? colors.primary : colors.fadedText40
+                $checked && !disabled ? colors.primary : colors.borderColor
 
               return {
                 outline: 0,
