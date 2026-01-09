@@ -674,6 +674,9 @@ def test_file_upload_error_message_disallowed_files(
     # Snapshot the error file chip (without tooltip)
     assert_snapshot(file_chip, name="st_chat_input-file_uploaded_error")
 
+    # Verify tooltip is NOT visible before hovering
+    expect(themed_app.get_by_test_id("stTooltipErrorContent")).not_to_be_visible()
+
     # Hover to show error tooltip
     file_chip.hover()
     error_tooltip = themed_app.get_by_test_id("stTooltipErrorContent").first
