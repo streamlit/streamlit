@@ -58,7 +58,7 @@ import { FileUploadClient } from "~lib/FileUploadClient"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useTextInputAutoExpand } from "~lib/hooks/useTextInputAutoExpand"
-import { EmotionTheme } from "~lib/theme"
+import { convertRemToPx, EmotionTheme } from "~lib/theme"
 import { FileSize, sizeConverter } from "~lib/util/FileHelper"
 import { isEnterKeyPressed } from "~lib/util/inputUtils"
 import {
@@ -675,7 +675,9 @@ function ChatInput({
     acceptFile === AcceptFileValue.None && !acceptAudio && !isRecording
 
   const showInstructions =
-    !isRecording && width > theme.breakpoints.hideWidgetDetails && maxChars > 0
+    !isRecording &&
+    width > convertRemToPx(theme.breakpoints.hideWidgetDetails) &&
+    maxChars > 0
 
   return (
     <StyledChatInputContainer

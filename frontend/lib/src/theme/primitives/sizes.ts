@@ -70,4 +70,7 @@ export const sizes = {
   // Offset to vertically center button with textarea text in simple mode
   // (3px margin the bottom with flex-end to center by default but keep it at the bottom)
   chatInputButtonVerticalOffset: "0.1875rem",
+  dialogLargeWidth: "80rem",
+  defaultStrokeWidth: 2.25,
+  metricStrokeWidth: 2,
 }

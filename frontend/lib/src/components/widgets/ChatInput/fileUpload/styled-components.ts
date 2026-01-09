@@ -108,7 +108,7 @@ export const StyledChatUploadedFileIconContainer =
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
-      borderRadius: theme.radii.md,
+      borderRadius: theme.radii.default,
       width: theme.sizes.chatInputFileIconSize,
       height: theme.sizes.chatInputFileIconSize,
       flexShrink: 0,

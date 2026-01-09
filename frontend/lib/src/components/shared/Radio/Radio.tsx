@@ -191,7 +191,7 @@ function Radio({
                   backgroundColor:
                     $checked && !shouldDisable
                       ? theme.colors.primary
-                      : theme.colors.fadedText40,
+                      : theme.colors.borderColor,
                 }),
               },
               RadioMarkInner: {

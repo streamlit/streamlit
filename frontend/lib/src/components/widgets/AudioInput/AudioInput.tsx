@@ -37,7 +37,9 @@ import {
 import { FormClearHelper } from "~lib/components/widgets/Form"
 import { FileUploadClient } from "~lib/FileUploadClient"
 import useDownloadUrl from "~lib/hooks/useDownloadUrl"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import useWidgetManagerElementState from "~lib/hooks/useWidgetManagerElementState"
+import { convertRemToPx } from "~lib/theme"
 import { uploadFiles } from "~lib/util/uploadFiles"
 import {
   isNullOrUndefined,
@@ -75,6 +77,7 @@ const AudioInput: React.FC<Props> = ({
   fragmentId,
   disabled,
 }): ReactElement => {
+  const theme = useEmotionTheme()
   const containerRef = useRef<HTMLDivElement>(null)
 
   const [hasNoMicPermissions, setHasNoMicPermissions] = useState(false)
@@ -233,7 +236,7 @@ const AudioInput: React.FC<Props> = ({
   const controller = useWaveformController({
     containerRef,
     sampleRate: element.sampleRate ?? undefined,
-    waveformPadding: 4, // Pixels of vertical padding to prevent waveform from touching edges
+    waveformPadding: convertRemToPx(theme.spacing.twoXS), // Pixels of vertical padding to prevent waveform from touching edges
     events: {
       onPermissionDenied: () => {
         setHasNoMicPermissions(true)
