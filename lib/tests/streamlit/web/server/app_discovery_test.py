@@ -258,14 +258,19 @@ class TestGetModuleStringFromPath:
         assert result == "main"
 
     def test_nested_file_with_init(self, tmp_path: Path) -> None:
-        """Test module string for nested file with __init__.py (package)."""
+        """Test module string for nested file with __init__.py (package).
+
+        Since streamlit run adds the script's directory to sys.path,
+        we only return the script's stem, not the full package path.
+        """
         subdir = tmp_path / "myapp"
         subdir.mkdir()
         (subdir / "__init__.py").touch()
         script = subdir / "main.py"
         script.touch()
         result = _get_module_string_from_path(script)
-        assert result == "myapp.main"
+        # Only return the stem since _fix_sys_path adds script's dir to sys.path
+        assert result == "main"
 
 
 class TestDiscoverAsgiApp:

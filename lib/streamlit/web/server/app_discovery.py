@@ -230,6 +230,10 @@ def _is_asgi_app_call(node: ast.Call, imports: dict[str, str]) -> bool:
 def _get_module_string_from_path(path: Path) -> str:
     """Convert a file path to a module import string.
 
+    Since `streamlit run` adds the script's directory to sys.path via
+    _fix_sys_path, the module string should just be the script's stem,
+    not a fully qualified package path.
+
     Parameters
     ----------
     path
@@ -238,26 +242,15 @@ def _get_module_string_from_path(path: Path) -> str:
     Returns
     -------
     str
-        The module string suitable for uvicorn (e.g., "myapp" or "myapp.main").
+        The module string suitable for uvicorn (e.g., "myapp").
     """
     resolved = path.resolve()
-    module_path = resolved
 
-    # Handle __init__.py files
+    # Handle __init__.py files - use the directory name
     if resolved.is_file() and resolved.stem == "__init__":
-        module_path = resolved.parent
+        return resolved.parent.stem
 
-    module_paths = [module_path]
-
-    # Walk up the directory tree to find package boundaries
-    for parent in module_path.parents:
-        init_path = parent / "__init__.py"
-        if init_path.is_file():
-            module_paths.insert(0, parent)
-        else:
-            break
-
-    return ".".join(p.stem for p in module_paths)
+    return resolved.stem
 
 
 def _find_asgi_app_assignments(source: str) -> dict[str, int]:

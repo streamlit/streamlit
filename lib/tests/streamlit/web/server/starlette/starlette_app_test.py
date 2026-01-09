@@ -1123,6 +1123,10 @@ class TestAppLifespan:
         app.lifespan()
 
         assert app._runtime is not None
+        # Runtime should be created but not started yet (lifespan will start it)
+        from streamlit.runtime import RuntimeState
+
+        assert app._runtime.state == RuntimeState.INITIAL
 
     def test_lifespan_method_sets_external_lifespan_flag(
         self, tmp_path: Path, reset_runtime: None
@@ -1341,24 +1345,28 @@ class TestAppAsgi:
     )
     def test_app_lifespan_populates_state(self, simple_script: Path) -> None:
         """Test that user lifespan can populate app state."""
-        startup_called = False
-        shutdown_called = False
+        startup_count = 0
+        shutdown_count = 0
 
         @asynccontextmanager
         async def lifespan(app: App) -> AsyncIterator[dict[str, Any]]:
-            nonlocal startup_called, shutdown_called
-            startup_called = True
+            nonlocal startup_count, shutdown_count
+            startup_count += 1
             yield {"model": "loaded", "version": "1.0"}
-            shutdown_called = True
+            shutdown_count += 1
 
         app = App(simple_script, lifespan=lifespan)
 
         with TestClient(app) as client:
-            assert startup_called
+            assert startup_count == 1
             assert app.state == {"model": "loaded", "version": "1.0"}
+            # State should not contain unexpected keys
+            assert len(app.state) == 2
             client.get("/_stcore/health")  # Just verify it works
 
-        assert shutdown_called
+        assert shutdown_count == 1
+        # Verify lifespan ran exactly once
+        assert startup_count == shutdown_count == 1
 
     @patch_config_options(
         {
@@ -1369,7 +1377,7 @@ class TestAppAsgi:
     )
     def test_app_applies_custom_middleware(self, simple_script: Path) -> None:
         """Test that user-provided middleware is applied."""
-        middleware_called = False
+        middleware_call_count = 0
 
         class TestMiddleware:
             def __init__(self, app: Any) -> None:
@@ -1378,9 +1386,9 @@ class TestAppAsgi:
             async def __call__(
                 self, scope: dict[str, Any], receive: Any, send: Any
             ) -> None:
-                nonlocal middleware_called
+                nonlocal middleware_call_count
                 if scope["type"] == "http":
-                    middleware_called = True
+                    middleware_call_count += 1
                 await self.app(scope, receive, send)
 
         middleware = [Middleware(TestMiddleware)]
@@ -1388,7 +1396,8 @@ class TestAppAsgi:
 
         with TestClient(app) as client:
             client.get("/_stcore/health")
-            assert middleware_called
+            # Middleware should be called exactly once for this request
+            assert middleware_call_count == 1
 
     @patch_config_options(
         {

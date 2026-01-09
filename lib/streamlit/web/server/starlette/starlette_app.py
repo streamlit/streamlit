@@ -440,7 +440,8 @@ class App:
             )
 
         # Prepare the Streamlit environment (secrets, pydeck, static folder check)
-        prepare_streamlit_environment(str(self._script_path))
+        # Use resolved path to ensure correct directory for static folder check
+        prepare_streamlit_environment(str(self._resolve_script_path()))
 
         # Start runtime (enables full cache support)
         await self._runtime.start()
