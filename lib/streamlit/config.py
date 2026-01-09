@@ -71,7 +71,11 @@ _main_script_path: str | None = None
 # - "asgi-mounted": st.App mounted on another ASGI framework (FastAPI, Starlette)
 _server_mode: (
     Literal[
-        "tornado", "starlette-managed", "starlette-app", "asgi-server", "asgi-mounted"
+        "tornado",
+        "starlette-managed",
+        "starlette-app",
+        "asgi-server",
+        "asgi-mounted",
     ]
     | None
 ) = None
