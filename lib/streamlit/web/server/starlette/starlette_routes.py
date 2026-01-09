@@ -150,6 +150,11 @@ def _ensure_xsrf_cookie(request: Request, response: Response) -> None:
     The cookie is only set if XSRF protection is enabled in the configuration.
     The Secure flag is added when SSL is configured.
 
+    Note: The XSRF cookie intentionally does NOT have the HttpOnly flag. This
+    is required for the double-submit cookie pattern: JavaScript reads the
+    cookie value and includes it in the X-Xsrftoken request header, which the
+    server then compares against the cookie value to validate requests.
+
     Parameters
     ----------
     request
@@ -197,6 +202,15 @@ def _set_unquoted_cookie(
     for XSRF tokens that use the format "2|mask|token|timestamp".
 
     If a cookie with the same name already exists, it is replaced.
+
+    Cookie flags set:
+    - Path=/: Available to all paths
+    - SameSite=Lax: Protects against CSRF while allowing top-level navigations
+    - Secure (conditional): Added when SSL is configured
+
+    HttpOnly is intentionally NOT set for XSRF cookies because JavaScript must
+    read the cookie value to include it in request headers (double-submit pattern).
+    This matches Tornado's behavior.
 
     Parameters
     ----------
