@@ -232,7 +232,7 @@ const Multiselect: FC<Props> = props => {
 
   const handleValueContainerScroll = useCallback(
     (e: React.UIEvent<HTMLDivElement>) => {
-      // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Reading scroll position on scroll event
+      // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Safe: layout already computed during scroll event
       scrollTopRef.current = e.currentTarget.scrollTop
     },
     []
