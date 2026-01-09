@@ -237,7 +237,10 @@ class App:
     Parameters
     ----------
     script_path : str | Path
-        Path to the main Streamlit script (relative to the app file or absolute).
+        Path to the main Streamlit script. Can be absolute or relative. Relative
+        paths are resolved based on context: when started via ``streamlit run``,
+        they resolve relative to the main script; when started directly via uvicorn
+        or another ASGI server, they resolve relative to the current working directory.
     lifespan : Callable[[App], AbstractAsyncContextManager[dict[str, Any] | None]] | None
         Async context manager for startup/shutdown logic. The context manager
         receives the App instance and can yield a dictionary of state that will

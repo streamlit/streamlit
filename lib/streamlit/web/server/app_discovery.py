@@ -18,6 +18,12 @@ This module provides functions to discover if a Python script contains an
 ASGI application instance (like st.App, FastAPI, or Starlette), enabling
 the CLI to auto-detect whether to run in traditional mode or ASGI mode.
 
+By design, this supports not only Streamlit's st.App but also other ASGI
+frameworks like FastAPI and Starlette. This allows `streamlit run` to serve
+as a unified entry point for any ASGI app, providing a consistent developer
+experience for projects that combine Streamlit with other frameworks or use
+ASGI apps directly.
+
 The detection uses AST (Abstract Syntax Tree) parsing to safely analyze
 the source code without executing it.
 """
@@ -42,6 +48,11 @@ _PREFERRED_APP_NAMES: Final[tuple[str, ...]] = ("app", "streamlit_app")
 # Known ASGI app classes with their fully qualified module paths.
 # Each entry is a dotted path like "module.submodule.ClassName".
 # Only classes matching these paths will be detected as ASGI apps.
+#
+# Note: FastAPI and Starlette are intentionally included here. This enables
+# `streamlit run` to serve as a unified entry point for ASGI apps, which is
+# useful for projects that mount Streamlit within other frameworks or want
+# to use `streamlit run` for any ASGI application.
 _KNOWN_ASGI_APP_CLASSES: Final[tuple[str, ...]] = (
     # Streamlit App
     "streamlit.starlette.App",

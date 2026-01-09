@@ -304,7 +304,9 @@ def _main_run(
 
     check_credentials()
 
-    # Check if the script contains an st.App instance
+    # Check if the script contains an ASGI app instance (st.App, FastAPI, Starlette).
+    # This intentionally supports non-Streamlit ASGI frameworks to enable `streamlit run`
+    # as a unified entry point for projects that combine Streamlit with other frameworks.
     from streamlit.web.server.app_discovery import discover_asgi_app
 
     discovery_result = discover_asgi_app(Path(main_script_path))

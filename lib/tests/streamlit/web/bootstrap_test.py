@@ -378,18 +378,15 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
 
     @patch("streamlit.web.bootstrap.asyncio.get_running_loop", Mock())
     @patch("streamlit.web.bootstrap._maybe_print_static_folder_warning", Mock())
-    @patch("streamlit.web.bootstrap._LOGGER.error")
+    @patch("streamlit.web.bootstrap._LOGGER.exception")
     @patch("streamlit.web.bootstrap.secrets.load_if_toml_exists")
-    def test_log_secret_load_error(self, mock_load_secrets, mock_log_error):
+    def test_log_secret_load_error(self, mock_load_secrets, mock_log_exception):
         """If secrets throws an error on startup, we catch and log it."""
         mock_exception = Exception("Secrets exploded!")
         mock_load_secrets.side_effect = mock_exception
 
         bootstrap._on_server_start(Mock())
-        mock_log_error.assert_called_once_with(
-            "Failed to load secrets.toml file",
-            exc_info=True,
-        )
+        mock_log_exception.assert_called_once_with("Failed to load secrets.toml file")
 
     @patch("streamlit.config.get_config_options")
     @patch("streamlit.web.bootstrap.watch_file")
