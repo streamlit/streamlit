@@ -224,6 +224,8 @@ const Multiselect: FC<Props> = props => {
     return `${pxMaxHeight}px`
   }, [theme.fontSizes.baseFontSize])
 
+  // Runs every render to capture BaseWeb's internal DOM updates that can reset scroll position.
+  // Performance is acceptable since this is a leaf component with no children to re-render.
   useLayoutEffect(() => {
     if (valueContainerRef.current) {
       valueContainerRef.current.scrollTop = scrollTopRef.current
