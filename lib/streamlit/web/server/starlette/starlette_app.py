@@ -442,17 +442,18 @@ class App:
                 "Runtime not initialized. Call _create_runtime before lifespan."
             )
 
-        # Set server mode for metrics tracking if not already set by CLI.
-        # If _server_mode is None, it means the app was started via an external
-        # ASGI server (uvicorn, gunicorn, etc.) rather than `streamlit run`.
-        if config._server_mode is None:
-            # Distinguish between:
-            # - "asgi-mounted": st.App mounted on another framework (FastAPI, etc.)
-            # - "asgi-server": st.App run directly with external ASGI server
-            if self._external_lifespan:
-                config._server_mode = "asgi-mounted"
-            else:
-                config._server_mode = "asgi-server"
+        # Set server mode for metrics tracking.
+        # We need to detect if the app is mounted on another framework (FastAPI, etc.)
+        # based on the _external_lifespan flag, which is set when lifespan() is called.
+        if self._external_lifespan:
+            # App is mounted on another framework - this takes precedence over CLI mode
+            # because it reflects the actual architectural pattern being used.
+            config._server_mode = "asgi-mounted"
+        elif config._server_mode is None:
+            # Standalone st.App started directly via external ASGI server (not CLI)
+            config._server_mode = "asgi-server"
+        # If config._server_mode is already "starlette-app" (set by CLI) and
+        # _external_lifespan is False, keep it as "starlette-app"
 
         # Prepare the Streamlit environment (secrets, pydeck, static folder check)
         # Use resolved path to ensure correct directory for static folder check
