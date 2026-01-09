@@ -446,7 +446,13 @@ class App:
         # If _server_mode is None, it means the app was started via an external
         # ASGI server (uvicorn, gunicorn, etc.) rather than `streamlit run`.
         if config._server_mode is None:
-            config._server_mode = "asgi-server"
+            # Distinguish between:
+            # - "asgi-mounted": st.App mounted on another framework (FastAPI, etc.)
+            # - "asgi-server": st.App run directly with external ASGI server
+            if self._external_lifespan:
+                config._server_mode = "asgi-mounted"
+            else:
+                config._server_mode = "asgi-server"
 
         # Prepare the Streamlit environment (secrets, pydeck, static folder check)
         # Use resolved path to ensure correct directory for static folder check

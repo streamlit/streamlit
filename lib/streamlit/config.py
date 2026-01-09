@@ -68,8 +68,12 @@ _main_script_path: str | None = None
 # - "starlette-managed": Starlette server via server.useStarlette config
 # - "starlette-app": st.App started via streamlit run
 # - "asgi-server": st.App with external ASGI server (uvicorn, gunicorn, etc.)
+# - "asgi-mounted": st.App mounted on another ASGI framework (FastAPI, Starlette)
 _server_mode: (
-    Literal["tornado", "starlette-managed", "starlette-app", "asgi-server"] | None
+    Literal[
+        "tornado", "starlette-managed", "starlette-app", "asgi-server", "asgi-mounted"
+    ]
+    | None
 ) = None
 
 # Indicates that a config option was defined by the user.
