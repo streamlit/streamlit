@@ -186,11 +186,14 @@ if st.toggle("Update multiselect props"):
         args=("Updated ms arg",),
         kwargs={"param": "updated kwarg param"},
         placeholder="updated placeholder",
-        # options, max_selections, format_func & accept_new_options are not yet supported for dynamic changes
-        # keeping it at the same value for now:
-        options=["apple", "banana", "orange", "kiwi"],
+        options=["mango", "papaya", "grape", "apple"],
+        # Whitelisted kwargs (keep stable):
         max_selections=3,
-        accept_new_options=True,
+        accept_new_options=False,
+        # format_func is not whitelisted. Changing format_func is allowed,
+        # but selected options will be unselected if their formatted label
+        # no longer matches (e.g., "Apple" vs "APPLE"). This is something
+        # we might be able to support with some additional refactorings.
         format_func=lambda x: x.capitalize(),
     )
     st.write("Updated multiselect value:", str(ms_value))
@@ -207,9 +210,10 @@ else:
         args=("Initial ms arg",),
         kwargs={"param": "initial kwarg param"},
         placeholder="initial placeholder",
-        options=["apple", "banana", "orange", "kiwi"],
+        options=["apple", "banana", "mango", "orange"],
+        # Whitelisted kwargs (keep stable):
         max_selections=3,
-        accept_new_options=True,
+        accept_new_options=False,
         format_func=lambda x: x.capitalize(),
     )
     st.write("Initial multiselect value:", str(sms_value))

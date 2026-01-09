@@ -19,9 +19,9 @@ import { useEffect, useMemo, useRef } from "react"
 import { v4 as uuidv4 } from "uuid"
 
 import {
-  ComponentArgs,
-  ComponentState,
-  OptionalComponentCleanupFunction,
+  CleanupFunction,
+  FrontendRendererArgs,
+  FrontendState,
 } from "@streamlit/component-v2-lib"
 
 import { BidiComponentContext } from "~lib/components/widgets/BidiComponent/BidiComponentContext"
@@ -47,7 +47,7 @@ import type { WidgetStateManager } from "~lib/WidgetStateManager"
  * If you need to handle untrusted input, do not use this function without your
  * own sanitization/defense-in-depth strategy.
  */
-const loadAndRunModule = async <T extends ComponentState>({
+const loadAndRunModule = async <T extends FrontendState>({
   componentId,
   componentIdForWidgetMgr,
   componentName,
@@ -69,7 +69,7 @@ const loadAndRunModule = async <T extends ComponentState>({
   moduleUrl: string
   parentElement: HTMLElement | ShadowRoot
   widgetMgr: WidgetStateManager
-}): Promise<OptionalComponentCleanupFunction> => {
+}): Promise<CleanupFunction | void> => {
   const module = await import(/* @vite-ignore */ moduleUrl)
 
   if (!module) {
@@ -80,7 +80,7 @@ const loadAndRunModule = async <T extends ComponentState>({
     throw new Error("JS module does not have a default export function.")
   }
 
-  const setStateValue = <T extends ComponentState>(
+  const setStateValue = <T extends FrontendState>(
     name: string,
     value: T[keyof T]
   ): void => {
@@ -103,7 +103,7 @@ const loadAndRunModule = async <T extends ComponentState>({
     )
   }
 
-  const setTriggerValue = <T extends ComponentState>(
+  const setTriggerValue = <T extends FrontendState>(
     name: string,
     value: T[keyof T]
   ): void => {
@@ -135,7 +135,7 @@ const loadAndRunModule = async <T extends ComponentState>({
     parentElement,
     setStateValue,
     setTriggerValue,
-  } satisfies ComponentArgs)
+  } satisfies FrontendRendererArgs)
 }
 
 /**
@@ -207,7 +207,7 @@ export const useHandleJsContent = ({
 
   // Lifecycle refs to ensure we only run the user-written JS cleanup function
   // when the component is unmounted by Streamlit.
-  const cleanupRef = useRef<OptionalComponentCleanupFunction>()
+  const cleanupRef = useRef<CleanupFunction | void>()
   const scriptElementRef = useRef<HTMLScriptElement>()
   const unmountedRef = useRef(false)
 

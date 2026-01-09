@@ -45,7 +45,7 @@ BidiComponentDefaults = dict[str, Any] | None
 ComponentIsolateStyles = bool
 
 
-class BidiComponentCallable(Protocol):
+class ComponentRenderer(Protocol):
     '''Signature of the mounting command returned by ``st.components.v2.component``.
 
     This callable mounts a bidirectional component in a Streamlit app and
@@ -69,8 +69,8 @@ class BidiComponentCallable(Protocol):
         .. note::
             If you want to access this key in your component's frontend, you
             must pass it explicitly within the ``data`` parameter. The ``key``
-            parameter in ``BidiComponentCallable`` is not the same as the
-            ``key`` property in ``ComponentArgs`` in the component's frontend
+            parameter in ``ComponentRenderer`` is not the same as the
+            ``key`` property in ``FrontendRendererArgs`` in the component's frontend
             code.
 
             The frontend key is automatically generated to be unique among all
@@ -309,9 +309,9 @@ class BidiComponentCallable(Protocol):
 
 
 __all__ = [
-    "BidiComponentCallable",
     "BidiComponentData",
     "BidiComponentDefaults",
     "BidiComponentKey",
     "ComponentIsolateStyles",
+    "ComponentRenderer",
 ]

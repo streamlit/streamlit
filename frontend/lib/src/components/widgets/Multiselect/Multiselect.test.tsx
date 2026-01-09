@@ -508,6 +508,40 @@ describe("Multiselect widget", () => {
     expect(options[2]).toHaveTextContent("aA")
   })
 
+  describe("scroll position preservation", () => {
+    it("preserves scroll position when removing an item", async () => {
+      const user = userEvent.setup()
+      const options = Array.from({ length: 20 }, (_, i) => `Option ${i + 1}`)
+      const props = getProps({
+        default: options.map((_, i) => i),
+        options,
+      })
+      render(<Multiselect {...props} />)
+
+      const multiselect = screen.getByTestId("stMultiSelect")
+      const valueContainer = multiselect.querySelector(
+        '[data-baseweb="select"] > div > div:first-child'
+      )
+
+      expect(valueContainer).not.toBeNull()
+      if (valueContainer === null) {
+        return
+      }
+
+      Object.defineProperty(valueContainer, "scrollTop", {
+        writable: true,
+        configurable: true,
+        value: 100,
+      })
+      valueContainer.dispatchEvent(new Event("scroll", { bubbles: true }))
+
+      const deleteButtons = screen.getAllByTitle("Delete")
+      await user.click(deleteButtons[5])
+
+      expect(valueContainer.scrollTop).toBe(100)
+    })
+  })
+
   describe("on mobile", () => {
     beforeEach(() => {
       vi.spyOn(MobileUtil, "isMobile").mockReturnValue(true)
