@@ -573,6 +573,10 @@ def create_page_profile_message(
 
     page_profile.headless = config.get_option("server.headless")
 
+    # Include the server mode for metrics tracking
+    if config._server_mode:
+        page_profile.server_mode = config._server_mode
+
     # Collect all config options that have been manually set
     config_options: set[str] = set()
     if config._config_options:

@@ -442,6 +442,12 @@ class App:
                 "Runtime not initialized. Call _create_runtime before lifespan."
             )
 
+        # Set server mode for metrics tracking if not already set by CLI.
+        # If _server_mode is None, it means the app was started via an external
+        # ASGI server (uvicorn, gunicorn, etc.) rather than `streamlit run`.
+        if config._server_mode is None:
+            config._server_mode = "asgi-server"
+
         # Prepare the Streamlit environment (secrets, pydeck, static folder check)
         # Use resolved path to ensure correct directory for static folder check
         prepare_streamlit_environment(str(self._resolve_script_path()))

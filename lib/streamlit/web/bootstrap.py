@@ -362,6 +362,9 @@ def run_asgi_app(
     _fix_sys_argv(main_script_path, args)
     _install_config_watchers(flag_options)
 
+    # Set server mode for metrics tracking (CLI-managed st.App)
+    config._server_mode = "starlette-app"
+
     # Report watchdog availability for file watching
     report_watchdog_availability()
 
@@ -390,6 +393,13 @@ def run(
     _fix_tornado_crash()
     _fix_sys_argv(main_script_path, args)
     _install_config_watchers(flag_options)
+
+    # Set server mode for metrics tracking
+    # The Server class may use Starlette (via server.useStarlette config) or Tornado
+    if config.get_option("server.useStarlette"):
+        config._server_mode = "starlette-managed"
+    else:
+        config._server_mode = "tornado"
 
     # Create the server. It won't start running yet.
     server = Server(main_script_path, is_hello)
