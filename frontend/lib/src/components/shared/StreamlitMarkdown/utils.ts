@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -64,7 +64,7 @@ type RemarkTransformer = (
 ) => MdastRoot | undefined | void
 
 /** A remark plugin factory that returns a transformer when called with options */
-type RemarkPluginFactory<Options = unknown> = (
+export type RemarkPluginFactory<Options = unknown> = (
   options?: Options
 ) => RemarkTransformer
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,7 +44,10 @@ import {
   CUSTOM_THEME_NAME,
   getCachedTheme,
   getDefaultTheme,
+  getFocusBoxShadow,
   getHostSpecifiedTheme,
+  getHostSpecifiedThemeOnly,
+  getPrimaryFocusBoxShadow,
   getSystemTheme,
   handleSectionInheritance,
   hasThemeSectionConfigs,
@@ -108,6 +111,26 @@ describe("Styling utils", () => {
       )
       expect(computeSpacingStyle("xs  0  px  lg", lightTheme.emotion)).toEqual(
         "0.375rem 0 1px 1rem"
+      )
+    })
+  })
+
+  describe("Focus ring helpers", () => {
+    it("creates a canonical focus-ring box-shadow with default parameters", () => {
+      expect(getFocusBoxShadow("blue")).toBe(
+        "0 0 0 0.2rem rgba(0, 0, 255, 0.5)"
+      )
+    })
+
+    it("creates a canonical focus-ring box-shadow with custom parameters", () => {
+      expect(getFocusBoxShadow("#000", 0.8, "2px")).toBe(
+        "0 0 0 2px rgba(0, 0, 0, 0.2)"
+      )
+    })
+
+    it("creates a primary focus ring using the theme primary color", () => {
+      expect(getPrimaryFocusBoxShadow(lightTheme.emotion)).toBe(
+        "0 0 0 0.2rem rgba(255, 75, 75, 0.5)"
       )
     })
   })
@@ -596,6 +619,52 @@ describe("getHostSpecifiedTheme", () => {
     expect(defaultTheme.name).toBe("Light")
     // Also verify that the theme is our lightTheme.
     expect(defaultTheme.emotion.colors).toEqual(lightTheme.emotion.colors)
+  })
+})
+
+describe("getHostSpecifiedThemeOnly", () => {
+  let windowSpy: MockInstance
+
+  afterEach(() => {
+    windowSpy.mockRestore()
+    window.localStorage.clear()
+  })
+
+  it("returns null when there is no theme in query params", () => {
+    windowSpy = mockWindow()
+    const theme = getHostSpecifiedThemeOnly()
+
+    expect(theme).toBeNull()
+  })
+
+  it("returns light theme when embed_options=light_theme", () => {
+    windowSpy = mockWindow(
+      windowLocationSearch("?embed=true&embed_options=light_theme")
+    )
+    const theme = getHostSpecifiedThemeOnly()
+
+    expect(theme).not.toBeNull()
+    expect(theme?.name).toBe("Light")
+    expect(theme?.emotion.colors).toEqual(lightTheme.emotion.colors)
+  })
+
+  it("returns dark theme when embed_options=dark_theme", () => {
+    windowSpy = mockWindow(
+      windowLocationSearch("?embed=true&embed_options=dark_theme")
+    )
+    const theme = getHostSpecifiedThemeOnly()
+
+    expect(theme).not.toBeNull()
+    expect(theme?.name).toBe("Dark")
+    expect(theme?.emotion.colors).toEqual(darkTheme.emotion.colors)
+  })
+
+  it("ignores system theme preference when no query params", () => {
+    windowSpy = mockWindow(windowMatchMedia("dark"))
+    const theme = getHostSpecifiedThemeOnly()
+
+    // Should return null, NOT the dark theme based on system preference
+    expect(theme).toBeNull()
   })
 })
 

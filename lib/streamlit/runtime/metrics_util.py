@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -308,7 +308,8 @@ class Installation:
             with cls._instance_lock:
                 if cls._instance is None:
                     cls._instance = Installation()
-        return cls._instance
+
+        return cls._instance  # ty: ignore[invalid-return-type]
 
     def __init__(self) -> None:
         self.installation_id_v3 = str(
@@ -571,6 +572,10 @@ def create_page_profile_message(
     page_profile.prep_time = prep_time
 
     page_profile.headless = config.get_option("server.headless")
+
+    # Include the server mode for metrics tracking
+    if config._server_mode:
+        page_profile.server_mode = config._server_mode
 
     # Collect all config options that have been manually set
     config_options: set[str] = set()

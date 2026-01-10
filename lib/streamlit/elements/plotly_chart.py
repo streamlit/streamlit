@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -59,8 +59,8 @@ from streamlit.util import AttributeDictionary
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
-    import matplotlib as mpl
     import plotly.graph_objs as go
+    from matplotlib.figure import Figure as MatplotlibFigure
     from plotly.basedatatypes import BaseFigure
 
     from streamlit.delta_generator import DeltaGenerator
@@ -80,7 +80,7 @@ FigureOrData: TypeAlias = Union[
     # align with the docstring.
     dict[str, _AtomicFigureOrData],
     "BaseFigure",
-    "mpl.figure.Figure",
+    "MatplotlibFigure",
 ]
 
 SelectionMode: TypeAlias = Literal["lasso", "points", "box"]

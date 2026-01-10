@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -625,7 +625,7 @@ def _load_theme_file(
             _raise_file_too_large()
 
         # Parse the TOML content
-        parsed_theme = toml.loads(content)
+        parsed_theme = toml.loads(content)  # ty: ignore[possibly-unresolved-reference]
 
         # Validate that the theme file has a theme section
         if "theme" not in parsed_theme:

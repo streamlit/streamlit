@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 import styled from "@emotion/styled"
 
 import { hasLightBackgroundColor } from "~lib/theme"
+import { getPrimaryFocusBoxShadow } from "~lib/theme/utils"
 
 export const StyledChatInputContainer = styled.div({
   position: "relative",
@@ -29,16 +30,15 @@ export interface StyledChatInputProps {
 
 export const StyledChatInput = styled.div<StyledChatInputProps>(
   ({ theme }) => ({
-    // Per Figma: Widget styling with proper theme colors
-    backgroundColor: theme.colors.secondaryBg, // Widget background (matches other input widgets)
+    backgroundColor: theme.colors.secondaryBg,
     border: `${theme.sizes.borderWidth} solid`,
     borderColor: theme.colors.widgetBorderColor ?? theme.colors.transparent,
     position: "relative",
     display: "flex",
     flexDirection: "column",
     alignItems: "stretch",
+    flex: 1,
     padding: theme.spacing.lg,
-    gap: theme.spacing.lg,
     borderRadius: theme.radii.default,
     boxSizing: "border-box",
 
@@ -52,7 +52,7 @@ export const StyledContentArea = styled.div(({ theme }) => ({
   position: "relative",
   display: "flex",
   flexDirection: "column",
-  gap: theme.spacing.sm, // Gap between FilePreviewList and PrimaryRegion
+  gap: theme.spacing.sm,
 }))
 
 export const StyledPrimaryRegion = styled.div({
@@ -68,6 +68,16 @@ export const StyledActionRow = styled.div(({ theme }) => ({
   alignItems: "center",
   width: "100%",
   gap: theme.spacing.sm,
+}))
+
+// Single-row layout for simple mode (no file upload, no audio)
+export const StyledSimpleRow = styled.div(({ theme }) => ({
+  display: "flex",
+  flexDirection: "row",
+  alignItems: "flex-end",
+  width: "100%",
+  marginTop: "auto",
+  gap: theme.spacing.lg,
 }))
 
 export const StyledLeftCluster = styled.div(({ theme }) => ({
@@ -88,7 +98,7 @@ export const StyledRightCluster = styled.div(({ theme }) => ({
 
 export const StyledInputInstructions = styled.div(({ theme }) => ({
   position: "absolute",
-  top: theme.spacing.sm,
+  top: theme.spacing.twoXS,
   right: theme.spacing.lg,
   color: theme.colors.fadedText60,
   fontSize: theme.fontSizes.twoSm,
@@ -107,10 +117,12 @@ interface StyledSendIconButtonProps {
   extended?: boolean
   hasError?: boolean
   primary?: boolean
+  /** Applies vertical offset for alignment in simple mode layout */
+  withVerticalOffset?: boolean
 }
 
 export const StyledSendIconButton = styled.button<StyledSendIconButtonProps>(
-  ({ theme, disabled, hasError, primary }) => {
+  ({ theme, disabled, hasError, primary, withVerticalOffset }) => {
     if (primary) {
       return {
         border: "none",
@@ -123,9 +135,12 @@ export const StyledSendIconButton = styled.button<StyledSendIconButtonProps>(
         justifyContent: "center",
         lineHeight: theme.lineHeights.none,
         margin: theme.spacing.none,
+        marginBottom: withVerticalOffset
+          ? theme.sizes.chatInputButtonVerticalOffset
+          : undefined,
         padding: theme.spacing.xs,
-        width: theme.sizes.minElementHeight,
-        height: theme.sizes.minElementHeight,
+        width: theme.sizes.chatInputPrimaryButtonSize,
+        height: theme.sizes.chatInputPrimaryButtonSize,
         color: disabled ? theme.colors.fadedText40 : theme.colors.white,
         cursor: disabled ? "not-allowed" : "pointer",
         transition: "background-color 200ms ease",
@@ -134,6 +149,9 @@ export const StyledSendIconButton = styled.button<StyledSendIconButtonProps>(
         },
         ":focus": {
           outline: "none",
+        },
+        "&:focus-visible": {
+          boxShadow: getPrimaryFocusBoxShadow(theme),
         },
         "&:hover": {
           backgroundColor: disabled
@@ -176,6 +194,7 @@ export const StyledSendIconButton = styled.button<StyledSendIconButtonProps>(
         backgroundColor: lightTheme
           ? theme.colors.gray10
           : theme.colors.gray90,
+        boxShadow: getPrimaryFocusBoxShadow(theme),
       },
       "&:hover": {
         color: hasError ? theme.colors.red70 : theme.colors.primary,

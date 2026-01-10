@@ -29,6 +29,9 @@ applyTo: "**/*.ts, **/*.tsx"
 - Follow the [Rules of React](https://react.dev/reference/rules): pure components and hooks, immutable props and state, and call hooks at the top level of React functions.
 - Write performant frontend code.
 - Ensure referential stability by leveraging React Hooks.
+- Name refs with a `Ref` suffix: Variables assigned from `useRef(...)` must end with `Ref`. This is enforced by eslint.
+  - ✅ `const inputRef = useRef<HTMLInputElement>(null)`
+  - ❌ `const input = useRef<HTMLInputElement>(null)`
 - **Updater functions must be pure**: `setState(prev => newState)` updaters must not mutate `prev` or have side effects—return a new object. See [useState](https://react.dev/reference/react/useState#setstate-parameters).
 - Prefix event handlers with "handle" (e.g., handleClick, handleSubmit).
 - Favor leveraging @emotion/styled instead of inline styles.
@@ -40,6 +43,23 @@ applyTo: "**/*.ts, **/*.tsx"
 - Use the following pattern for naming custom CSS classes and test IDs: `stComponentSubcomponent`, for example: `stTextInputIcon`.
 - Avoid using pixel sizes for styling, always use rem, em, percentage, or other relative units.
 
+## Accessibility (a11y) Guidelines (must-follow)
+
+- **Prefer semantic HTML for interaction**: Use `<button>` for clicks and `<a href>` for navigation. Avoid `onClick` on non-interactive elements.
+- **Focusable controls must have an accessible name**:
+  - Icon-only buttons/links must have `aria-label` (and decorative SVGs should use `aria-hidden="true"`).
+  - For reusable components that render a focusable trigger by default, prefer TypeScript prop unions to make unlabeled triggers impossible (example: `TooltipIcon`).
+- **Don’t hide interactive content from assistive tech**:
+  - Never set `aria-hidden` on a wrapper that contains focusable descendants (it hides them from screen readers).
+  - If you need to avoid duplicate announcements, apply `aria-hidden` only to the _visual label text node_ (e.g. wrap the label text in `<span aria-hidden="true">…</span>`), not the entire label container.
+- **Avoid duplicate tab stops**:
+  - Be careful with libraries that spread props onto wrappers (e.g. `react-dropzone` `getRootProps()` adds `tabIndex=0` by default).
+  - If there’s an inner "real" control (like a `<button>`), set the wrapper `tabIndex={-1}` so keyboard users don’t hit the same control twice.
+- **Focus styling must be keyboard-friendly**:
+  - We **assume the browser supports `:focus-visible`**. Do not implement `:focus-visible` fallbacks (e.g. `:focus` + `:focus:not(:focus-visible)` patterns).
+  - Don’t remove focus outlines without replacing them. Prefer `:focus-visible` styles and use our theme helper (`getPrimaryFocusBoxShadow`) for consistent rings.
+- **Keyboard dismissal shouldn’t steal focus**: Popovers/tooltips/dialogs should support Escape to dismiss while keeping focus on the trigger unless there’s a strong reason to move it.
+
 ## Static Data Structures
 
 - Extract static lookup maps and constants to module-level scope outside functions/components
@@ -47,6 +67,7 @@ applyTo: "**/*.ts, **/*.tsx"
 - Exception: Keep inside function only if data depends on parameters, props, or state
 
 <good-example>
+
 ```tsx
 // ✅ Module-level - created once
 const ALIGNMENT_MAP: Record<Alignment, CSSProperties["textAlign"]> = {
@@ -58,15 +79,18 @@ const ALIGNMENT_MAP: Record<Alignment, CSSProperties["textAlign"]> = {
 function getAlignment(config: AlignmentConfig) {
   return ALIGNMENT_MAP[config.alignment]
 }
-
 ```
+
 </good-example>
 
 <bad-example>
+
 ```tsx
 // ❌ Recreated every call
 function getAlignment(config: AlignmentConfig) {
-  const alignmentMap = { /* same data */ }
+  const alignmentMap = {
+    /* same data */
+  }
   return alignmentMap[config.alignment]
 }
 ```
@@ -108,6 +132,9 @@ Run from the repo root:
 - Robustness: Test edge cases and error handling scenarios.
 - Accessibility: Validate component accessibility compliance.
 - Parameterized Tests: Use `it.each` for repeated tests with varying inputs.
+- Positive + negative assertions (anti-regression): When you assert that something appears/changes, also add at least one complementary assertion when practical that something else does **not** appear/change (inverse state, error message that must not show, callback that must not fire, etc.).
+  - Presence: `getBy*` / `findBy*` + `toBeVisible()`
+  - Absence: `queryBy*` + `not.toBeInTheDocument()` or `not.toBeVisible()`
 - Framework Exclusivity: Only use Vitest syntax; do not use Jest.
 
 ### Running Tests

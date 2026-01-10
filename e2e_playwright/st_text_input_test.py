@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -24,6 +24,10 @@ from e2e_playwright.shared.app_utils import (
     expect_prefixed_markdown,
     get_element_by_key,
     get_text_input,
+)
+from e2e_playwright.shared.input_utils import (
+    expect_global_hotkeys_not_fired,
+    type_common_characters_into_input,
 )
 
 TEXT_INPUT_ELEMENTS = 19
@@ -119,6 +123,27 @@ def test_text_input_has_correct_initial_values(app: Page):
     expect_markdown(app, "text input 12 (value from state) - value: xyz")
     expect_markdown(app, "text input 13 (value from form) - value:")
     expect_markdown(app, "Rerun counter: 1")
+
+
+def test_text_input_typing_common_characters_does_not_trigger_global_hotkeys(
+    app: Page,
+) -> None:
+    """Typing into st.text_input must not trigger global hotkeys (e.g. c/r)."""
+    text_input_field = (
+        get_text_input(app, "text input 1 (default)").locator("input").first
+    )
+    rerun_counter = app.get_by_text("Rerun counter: 1", exact=True)
+
+    expect_global_hotkeys_not_fired(app, expected_runs=1, runs_locator=rerun_counter)
+    typed = type_common_characters_into_input(
+        text_input_field,
+        after_each=lambda _ch: expect_global_hotkeys_not_fired(
+            app,
+            expected_runs=1,
+            runs_locator=rerun_counter,
+        ),
+    )
+    expect(text_input_field).to_have_value(typed)
 
 
 def test_text_input_shows_instructions_when_dirty(

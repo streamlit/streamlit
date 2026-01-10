@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { memo, ReactElement } from "react"
+import { memo, ReactElement } from "react"
 
 import {
   LABEL_PLACEMENT,
@@ -22,11 +22,11 @@ import {
   Checkbox as UICheckbox,
 } from "baseui/checkbox"
 import { PLACEMENT, TRIGGER_TYPE, Popover as UIPopover } from "baseui/popover"
-import { transparentize } from "color2k"
 
 import { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { hasLightBackgroundColor } from "~lib/theme"
+import { getPrimaryFocusBoxShadow } from "~lib/theme/utils"
 
 import { StyledMenuDivider } from "./styled-components"
 
@@ -106,7 +106,7 @@ const CheckboxItem: React.FC<CheckboxItemProps> = ({
             const borderColor =
               $checked || $isIndeterminate
                 ? theme.colors.primary
-                : theme.colors.fadedText40
+                : theme.colors.borderColor
 
             return {
               outline: 0,
@@ -117,7 +117,7 @@ const CheckboxItem: React.FC<CheckboxItemProps> = ({
               marginBottom: 0,
               boxShadow:
                 $isFocusVisible && ($checked || $isIndeterminate)
-                  ? `0 0 0 0.2rem ${transparentize(theme.colors.primary, 0.5)}`
+                  ? getPrimaryFocusBoxShadow(theme)
                   : "",
               borderLeftWidth: theme.sizes.borderWidth,
               borderRightWidth: theme.sizes.borderWidth,

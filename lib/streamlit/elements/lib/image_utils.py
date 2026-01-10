@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -315,7 +315,7 @@ def image_to_url(
 
     # Numpy Arrays (ie opencv)
     elif isinstance(image, np.ndarray):
-        image = _clip_image(_verify_np_shape(image), clamp)
+        image = _clip_image(_verify_np_shape(image), clamp)  # ty: ignore[invalid-argument-type]
 
         if channels == "BGR":
             if len(image.shape) == 3:
@@ -405,12 +405,12 @@ def marshall_images(
     if isinstance(image, (list, set, tuple)):
         images = list(image)
     elif isinstance(image, np.ndarray) and len(image.shape) == 4:
-        images = _4d_to_list_3d(image)
+        images = _4d_to_list_3d(image)  # ty: ignore[invalid-argument-type]
     else:
         images = cast("Sequence[AtomicImage]", [image])
 
     if isinstance(caption, list):
-        captions: Sequence[str | None] = caption
+        captions: Sequence[str | None] = caption  # ty: ignore[invalid-assignment]
     elif isinstance(caption, str):
         captions = [caption]
     elif isinstance(caption, np.ndarray) and len(caption.shape) == 1:

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -153,7 +153,7 @@ def _parse_date_value(value: DateValue) -> tuple[list[date] | None, bool]:
 
     if isinstance(value, Sequence) and not isinstance(value, str):
         is_range = True
-        value_tuple = value
+        value_tuple = value  # ty: ignore[invalid-assignment]
     else:
         is_range = False
         value_tuple = [cast("NullableScalarDateValue", value)]
@@ -164,7 +164,7 @@ def _parse_date_value(value: DateValue) -> tuple[list[date] | None, bool]:
             "0 - 2 date/datetime values"
         )
 
-    parsed_dates = [_convert_datelike_to_date(v) for v in value_tuple]  # ty: ignore[invalid-argument-type]
+    parsed_dates = [_convert_datelike_to_date(v) for v in value_tuple]
 
     return parsed_dates, is_range
 
@@ -1471,7 +1471,7 @@ class TimeWidgetsMixin:
         if value == "today":
             parsed = None
         elif isinstance(value, Sequence):
-            parsed = [parse_date_deterministic_for_id(v) for v in value]
+            parsed = [parse_date_deterministic_for_id(v) for v in value]  # ty: ignore[invalid-argument-type]
         else:
             parsed = parse_date_deterministic_for_id(value)
 
