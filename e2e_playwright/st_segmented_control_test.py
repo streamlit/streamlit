@@ -304,3 +304,35 @@ def test_segmented_control_hover_border_consistency(
 
     # Take a snapshot with the button in hover state to verify border consistency
     assert_snapshot(segmented_control, name="st_segmented_control-hover_state")
+
+    # Take away hover focus
+    themed_app.get_by_test_id("stApp").click(position={"x": 0, "y": 0})
+
+    # Get the first button (to test left border and right border behavior)
+    # The first option is ":material/star: Hello there!", but we can filter by "Hello there"
+    first_button = get_segment_button(segmented_control, "Hello there!")
+
+    # Hover over the first button
+    first_button.hover()
+
+    # Ensure hover state is applied
+    expect(first_button).to_have_css("z-index", "1")
+
+    # Take a snapshot with the first button in hover state
+    assert_snapshot(segmented_control, name="st_segmented_control-hover_first")
+
+    # Take away hover focus
+    themed_app.get_by_test_id("stApp").click(position={"x": 0, "y": 0})
+
+    # Get the last button
+    # The last option is "Icon in the end: :material/rocket:", filter by "Icon in the end"
+    last_button = get_segment_button(segmented_control, "Icon in the end")
+
+    # Hover over the last button
+    last_button.hover()
+
+    # Ensure hover state is applied
+    expect(last_button).to_have_css("z-index", "1")
+
+    # Take a snapshot with the last button in hover state
+    assert_snapshot(segmented_control, name="st_segmented_control-hover_last")
