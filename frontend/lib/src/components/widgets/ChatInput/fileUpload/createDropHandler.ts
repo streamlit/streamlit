@@ -118,13 +118,32 @@ export const createDropHandler =
       rejectedFiles = [...rejectedFiles, ...rejected]
     }
 
-    // If only single file upload is allowed but multiple were dropped/selected,
-    // all files will be rejected by default. In this case, we take the first
-    // valid file into acceptedFiles, and reject the rest.
+    // Enforce single file limit: when only one file is allowed but multiple
+    // were dropped/selected, keep only the first valid file and reject the rest
+    if (!acceptMultipleFiles && acceptedFiles.length > 1) {
+      // Keep first accepted file, reject the rest
+      const [firstFile, ...extraFiles] = acceptedFiles
+      acceptedFiles = [firstFile]
+      rejectedFiles = [
+        ...rejectedFiles,
+        ...extraFiles.map(file => ({
+          file,
+          errors: [
+            {
+              code: FileErrorCode.TooManyFiles,
+              message: "Only one file can be uploaded at a time.",
+            },
+          ],
+        })),
+      ]
+    }
+
+    // Handle case where all files were rejected but one should be allowed
+    // (e.g., when react-dropzone rejects all with TooManyFiles)
     if (
       !acceptMultipleFiles &&
       acceptedFiles.length === 0 &&
-      rejectedFiles.length > 1
+      rejectedFiles.length > 0
     ) {
       const firstFileIndex = rejectedFiles.findIndex(
         // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison -- TODO: Fix this
