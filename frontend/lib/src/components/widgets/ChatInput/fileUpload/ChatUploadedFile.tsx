@@ -128,10 +128,11 @@ const ChatUploadedFile = ({
     : `Remove ${fileInfo.name}`
 
   // Determine aria-label for the file chip
+  // Keep aria-label stable (name + size) regardless of error state to avoid
+  // double-announcing errors - screen readers get error info via aria-invalid
+  // and the visually hidden error message linked by aria-describedby
   const sizeDisplay = getSizeDisplay(fileInfo.size, FileSize.Byte)
-  const chipAriaLabel = isError
-    ? `${fileInfo.name}, ${errorMessage}`
-    : `${fileInfo.name}, ${sizeDisplay}`
+  const chipAriaLabel = `${fileInfo.name}, ${sizeDisplay}`
 
   const fileChip = (
     <StyledChatUploadedFile
