@@ -24,7 +24,7 @@ import Icon from "~lib/components/shared/Icon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
 import Tooltip, { Placement } from "~lib/components/shared/Tooltip"
 import { StyledTimeDropdownListItem } from "~lib/components/widgets/TimeInput/styled-components"
-import { EmotionTheme, hasLightBackgroundColor } from "~lib/theme"
+import { EmotionTheme, getDarkModePopoverBorderStyles, hasLightBackgroundColor } from "~lib/theme"
 
 type DateTimePickerOverrides = NonNullable<DatepickerProps<Date>["overrides"]>
 
@@ -100,12 +100,12 @@ export const createDateTimePickerOverrides = ({
         borderColor: theme.colors.transparent,
       },
       ...(hasLightBackgroundColor(theme) &&
-      $isHovered &&
-      $pseudoSelected &&
-      !$selected
+        $isHovered &&
+        $pseudoSelected &&
+        !$selected
         ? {
-            color: theme.colors.secondaryBg,
-          }
+          color: theme.colors.secondaryBg,
+        }
         : {}),
     }),
   },

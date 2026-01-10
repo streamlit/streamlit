@@ -69,6 +69,18 @@ export function hasLightBackgroundColor(theme: EmotionTheme): boolean {
   return _isLightBackground(theme.colors.bgColor)
 }
 
+export function getDarkModePopoverBorderStyles(theme: EmotionTheme): object {
+  const lightBackground = hasLightBackgroundColor(theme)
+  if (lightBackground) {
+    return {}
+  }
+
+  return {
+    border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
+    borderRadius: theme.radii.xl,
+  }
+}
+
 export const createEmotionColors = (
   genericColors: GenericColors
 ): EmotionThemeColors => {
@@ -287,29 +299,29 @@ function defaultCategoricalColorsArray(
 ): string[] {
   return _isLightBackground(genericColors.bgColor)
     ? [
-        genericColors.blue80,
-        genericColors.blue40,
-        genericColors.red80,
-        genericColors.red40,
-        genericColors.blueGreen80,
-        genericColors.green40,
-        genericColors.orange80,
-        genericColors.orange50,
-        genericColors.purple80,
-        genericColors.gray40,
-      ]
+      genericColors.blue80,
+      genericColors.blue40,
+      genericColors.red80,
+      genericColors.red40,
+      genericColors.blueGreen80,
+      genericColors.green40,
+      genericColors.orange80,
+      genericColors.orange50,
+      genericColors.purple80,
+      genericColors.gray40,
+    ]
     : [
-        genericColors.blue40,
-        genericColors.blue80,
-        genericColors.red40,
-        genericColors.red80,
-        genericColors.green40,
-        genericColors.blueGreen80,
-        genericColors.orange50,
-        genericColors.orange80,
-        genericColors.purple80,
-        genericColors.gray40,
-      ]
+      genericColors.blue40,
+      genericColors.blue80,
+      genericColors.red40,
+      genericColors.red80,
+      genericColors.green40,
+      genericColors.blueGreen80,
+      genericColors.orange50,
+      genericColors.orange80,
+      genericColors.purple80,
+      genericColors.gray40,
+    ]
 }
 
 export function getDecreasingRed(theme: EmotionTheme): string {
