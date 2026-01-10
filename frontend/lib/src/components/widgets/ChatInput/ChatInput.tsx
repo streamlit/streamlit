@@ -316,7 +316,6 @@ function ChatInput({
     acceptMultipleFiles:
       acceptFile === AcceptFileValue.Multiple ||
       acceptFile === AcceptFileValue.Directory,
-    acceptDirectoryFiles: acceptFile === AcceptFileValue.Directory,
     maxFileSize: maxFileSize,
     uploadClient: uploadClient,
     uploadFile: createUploadFileHandler({
