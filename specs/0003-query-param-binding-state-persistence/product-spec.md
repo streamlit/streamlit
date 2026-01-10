@@ -51,6 +51,8 @@ There are two problems here:
 
 (Final proposal, previously discussed as option 0).
 
+Add two separate parameters to widgets:
+
 ```python
 st.widget(..., bind="query-params")
 st.widget(..., persist_state=None|"page"|"session")
