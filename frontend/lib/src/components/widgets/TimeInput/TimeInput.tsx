@@ -33,7 +33,7 @@ import {
   ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { hasLightBackgroundColor } from "~lib/theme"
+import { getDarkModePopoverBorderStyles, hasLightBackgroundColor } from "~lib/theme"
 import {
   isNullOrUndefined,
   labelVisibilityProtoValueToEnum,
@@ -74,7 +74,6 @@ function TimeInput({
 
   const clearable = isNullOrUndefined(element.default) && !disabled
   const theme = useEmotionTheme()
-  const lightBackground = hasLightBackgroundColor(theme)
 
   const selectOverrides = {
     Select: {
@@ -150,25 +149,6 @@ function TimeInput({
                 Body: {
                   style: () => ({
                     marginTop: theme.spacing.px,
-                    // Add border in dark mode for better visibility since shadows don't work well
-                    ...(!lightBackground && {
-                      borderTopLeftRadius: theme.radii.xl,
-                      borderTopRightRadius: theme.radii.xl,
-                      borderBottomLeftRadius: theme.radii.xl,
-                      borderBottomRightRadius: theme.radii.xl,
-                      borderLeftWidth: theme.sizes.borderWidth,
-                      borderRightWidth: theme.sizes.borderWidth,
-                      borderTopWidth: theme.sizes.borderWidth,
-                      borderBottomWidth: theme.sizes.borderWidth,
-                      borderLeftStyle: "solid",
-                      borderRightStyle: "solid",
-                      borderTopStyle: "solid",
-                      borderBottomStyle: "solid",
-                      borderLeftColor: theme.colors.borderColor,
-                      borderRightColor: theme.colors.borderColor,
-                      borderTopColor: theme.colors.borderColor,
-                      borderBottomColor: theme.colors.borderColor,
-                    }),
                   }),
                 },
               },

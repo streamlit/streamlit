@@ -23,6 +23,7 @@ import {
   getMarkdownBgColors,
   getMarkdownTextColors,
   hasLightBackgroundColor,
+  getDarkModePopoverBorderStyles,
 } from "./getColors"
 
 describe("getDividerColors", () => {
@@ -238,5 +239,20 @@ describe("getMarkdownTextColors", () => {
     expect(result.purple).toBe(colors.purple80)
     expect(result.gray).toBe(colors.grayTextColor)
     expect(result.primary).toBe(colors.primary)
+  })
+})
+
+describe("getDarkModePopoverBorderStyles", () => {
+  it("returns empty object for light theme", () => {
+    const result = getDarkModePopoverBorderStyles(lightTheme.emotion)
+    expect(result).toEqual({})
+  })
+
+  it("returns border styles for dark theme", () => {
+    const result = getDarkModePopoverBorderStyles(darkTheme.emotion)
+    expect(result).toEqual({
+      border: `${darkTheme.emotion.sizes.borderWidth} solid ${darkTheme.emotion.colors.borderColor}`,
+      borderRadius: darkTheme.emotion.radii.xl,
+    })
   })
 })
