@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING, Final, NamedTuple, Protocol, runtime_checkable
 
 CACHE_MEMORY_FAMILY: Final = "cache_memory_bytes"
 SESSION_EVENTS_FAMILY: Final = "session_events_total"
+SESSION_DURATION_FAMILY: Final = "session_duration_seconds_total"
 ACTIVE_SESSIONS_FAMILY: Final = "active_sessions"
 
 if TYPE_CHECKING:

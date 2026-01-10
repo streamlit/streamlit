@@ -116,9 +116,9 @@ const StatusWidget: React.FC<StatusWidgetProps> = ({
   showScriptChangedActions,
 }) => {
   const [showRunningMan, setShowRunningMan] = useState(false)
-  const minimizePromptTimer: React.MutableRefObject<Timer | null> =
+  const minimizePromptTimerRef: React.MutableRefObject<Timer | null> =
     useRef(null)
-  const delayShowRunningManTimer: React.MutableRefObject<Timer | null> =
+  const delayShowRunningManTimerRef: React.MutableRefObject<Timer | null> =
     useRef(null)
   const theme = useEmotionTheme()
 
@@ -144,8 +144,8 @@ const StatusWidget: React.FC<StatusWidgetProps> = ({
 
   const showRunningManAfterInitialDelay = useCallback(
     (delay: number): void => {
-      if (delayShowRunningManTimer.current !== null) {
-        delayShowRunningManTimer.current.setTimeout(() => {
+      if (delayShowRunningManTimerRef.current !== null) {
+        delayShowRunningManTimerRef.current.setTimeout(() => {
           setShowRunningMan(true)
         }, delay)
       }
@@ -162,15 +162,15 @@ const StatusWidget: React.FC<StatusWidgetProps> = ({
   }
 
   useEffect(() => {
-    if (minimizePromptTimer.current === null) {
-      minimizePromptTimer.current = new Timer()
+    if (minimizePromptTimerRef.current === null) {
+      minimizePromptTimerRef.current = new Timer()
     }
-    if (delayShowRunningManTimer.current === null) {
-      delayShowRunningManTimer.current = new Timer()
+    if (delayShowRunningManTimerRef.current === null) {
+      delayShowRunningManTimerRef.current = new Timer()
     }
 
-    const minimizePromptTimerCurr = minimizePromptTimer.current
-    const delayShowRunningManTimerCurr = minimizePromptTimer.current
+    const minimizePromptTimerCurr = minimizePromptTimerRef.current
+    const delayShowRunningManTimerCurr = minimizePromptTimerRef.current
 
     return () => {
       minimizePromptTimerCurr.cancel()
@@ -280,24 +280,24 @@ const StatusWidget: React.FC<StatusWidgetProps> = ({
   // We keep track of our most recent result from `renderWidget`,
   // via `this.curView`, so that we can fade out our previous state
   // if `renderWidget` returns null after returning a non-null value.
-  const curView = useRef<ReactNode>()
+  const curViewRef = useRef<ReactNode>()
   // eslint-disable-next-line react-hooks/refs -- TODO: Do not access ref during render
-  const prevView = curView.current
+  const prevView = curViewRef.current
   // eslint-disable-next-line react-hooks/refs -- TODO: Do not access ref during render
-  curView.current = renderWidget()
+  curViewRef.current = renderWidget()
 
   // eslint-disable-next-line react-hooks/refs -- TODO: Do not access ref during render
-  if (isNullOrUndefined(curView.current) && isNullOrUndefined(prevView)) {
+  if (isNullOrUndefined(curViewRef.current) && isNullOrUndefined(prevView)) {
     return <></>
   }
 
   let animateIn: boolean
   let renderView: ReactNode
   // eslint-disable-next-line react-hooks/refs -- TODO: Do not access ref during render
-  if (notNullOrUndefined(curView.current)) {
+  if (notNullOrUndefined(curViewRef.current)) {
     animateIn = true
     // eslint-disable-next-line react-hooks/refs -- TODO: Do not access ref during render
-    renderView = curView.current
+    renderView = curViewRef.current
   } else {
     animateIn = false
     renderView = prevView

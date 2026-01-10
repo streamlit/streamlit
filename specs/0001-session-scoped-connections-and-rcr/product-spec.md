@@ -1,7 +1,7 @@
-Author: @sfc-gh-jkinkead
-
-Status: Draft
-
+---
+author: sfc-gh-jkinkead
+created: 2025-11-18
+status: Approved
 ---
 
 # Session-scoped Connections and Snowflake Restricted Caller's Rights
@@ -32,6 +32,7 @@ connections, and how we will use these changes to write a connection to handle S
 caller’s rights connections.
 
 The proposed API changes are:
+
 * Add session-scoped connections. This would be a natural extension to the current connection API, and would support any
     user-scoped connection, like an HTTP client that’s using per-user OAuth credentials to make requests.
 * Add connection close hooks. Connections should be able to be closed when they are removed from a cache.
@@ -50,6 +51,7 @@ The proposed API changes are:
     in an appropriately-configured Snowpark Container Services service.
 
 ### Restricted caller's rights (RCR) details
+
 On Snowpark Container Services, when restricted caller’s rights (RCR) are enabled for a service, all requests handled by
 the service come with an authentication token header that can be used to create a new session with Snowflake which will
 have RCR permissions enabled. These tokens are valid for a relatively short period of time, typically two minutes. In
@@ -61,6 +63,7 @@ app load. Additionally, they can’t use the globally-scoped `st.cache_resource`
 `st.cache_resource` under the hood).
 
 So, an app author is stuck with several bad options:
+
 * Create a new connection with each script execution. This will slow the app down and start failing after the token expires in two minutes.
 * Create a connection without session keepalive enabled, and store the connection in the app’s session state. This will stop working if the client does not send a query for the idle session timeout. This has as a default time of four hours, but may be set to a different value for the account.
 * Create a connection with session keepalive enabled, and store the connection in the app’s session state. This will leak memory, since keepalive starts a background thread to periodically ping Snowflake, and this thread is only shut down when the connection is closed.
@@ -69,6 +72,7 @@ See [this tutorial](https://docs.snowflake.com/en/developer-guide/snowpark-conta
 for detailed examples and explanation from the Snowpark Container Services side.
 
 ### Related issues
+
 * [#8545](https://github.com/streamlit/streamlit/issues/8545), which can be implemented by a simple session-scoped cached resource with a close hook.
 * [#10089](https://github.com/streamlit/streamlit/issues/10089), which can be implemented by a simple session-scoped cached resource at the start of the script.
 * [#8674](https://github.com/streamlit/streamlit/issues/8674), asking specifically for close hooks on cached resources. This would implement that request.
@@ -163,22 +167,19 @@ The parameter `use_callers_rights: bool` will toggle between the global `Snowfla
 The parameter `callers_rights_token: str` will allow the user to pass in a full (user + base) token to make the RCR connection if users wish to implement something custom. This allows for future caller's rights connections outside of the current Snowpark Container Services model.
 
 ### Other notes
+
 All `ttl` and `max_entries` cache expirations happen only on write and `len` checks, not on normal reads. This is how the underlying `TTLCache` works. This will be fine for session-scoped items, since they’ll be expired manually when the session expires, but needs to be called out in the docs as a limitation of the existing cache. This will really only matter for `ttl` when users treat it as a guaranteed close, and not as an invalidation.
 
 This implementation also will have `max_entries` scoped to the session, not scoped globally. This can be documented, and shouldn’t be an issue for connections, since they will not grow beyond the number of active sessions.
 
 ## Checklist
 
-- [x] Works on all deployment platforms (e.g. [Streamlit Community Cloud](https://streamlit.io/cloud), [Streamlit in Snowflake](https://www.snowflake.com/en/product/features/streamlit-in-snowflake/), [Hugging Face Spaces](https://huggingface.co/spaces))?
-- [x] No breaking API changes?
-    - No breaking changes.
-- [x] No new dependencies?
-    - Yes, no new dependencies.
-- [x] Metrics collected?
-    - Should be compatible with existing metrics.
-- [x] Any security or legal implications?
-    - No implications.
-- [x] Anything to keep in mind for docs?
-    - Nothing special.
-- [x] Any other risks?
-    - No additional risks.
+| Item                         | ✅ or comment                             |
+|------------------------------|-------------------------------------------|
+| Works on SiS, Cloud, etc?    | ✅                                        |
+| No breaking API changes      | ✅ No breaking changes.                   |
+| No new dependencies          | ✅                                        |
+| Metrics collected            | ✅ Compatible with existing metrics.      |
+| Any security/legal impact?   | ✅ No implications.                       |
+| Any docs changes needed?     | ✅ Nothing special.                       |
+| Any other risks?             | ✅ No additional risks.                   |

@@ -18,6 +18,7 @@ import { screen } from "@testing-library/react"
 import { BaseProvider, LightTheme } from "baseui"
 
 import { render } from "~lib/test_util"
+import { sizes } from "~lib/theme/primitives"
 
 import Modal, { calculateModalSize } from "./Modal"
 
@@ -49,7 +50,7 @@ describe("calculateModalSize", () => {
   })
 
   it("calculates the size based on the spacing and content width when size is 'large'", () => {
-    const size = calculateModalSize("large", "100px", "100px")
-    expect(size).toBe("80rem")
+    const size = calculateModalSize("large", "100px", "100px", "80rem")
+    expect(size).toBe(sizes.dialogLargeWidth)
   })
 })

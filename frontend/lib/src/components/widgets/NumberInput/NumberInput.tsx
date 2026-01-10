@@ -62,6 +62,7 @@ import {
   getDefaultStateFromProto,
   getStateFromWidgetMgr,
   getStep,
+  preciseStepArithmetic,
   updateWidgetMgrState,
 } from "./utils"
 
@@ -157,7 +158,7 @@ const NumberInput: React.FC<Props> = ({
     : dirty
   // Hide input instructions for small widget sizes.
   const shouldShowInstructions =
-    isFocused && width > theme.breakpoints.hideWidgetDetails
+    isFocused && width > convertRemToPx(theme.breakpoints.hideWidgetDetails)
 
   // Sync formatted value when the core value changes from the backend.
   // This Effect is justified because it synchronizes with an external system:
@@ -269,14 +270,22 @@ const NumberInput: React.FC<Props> = ({
 
   const increment = useCallback(() => {
     if (canInc) {
-      const newValue = (currentNumericValue ?? min) + step
+      const newValue = preciseStepArithmetic(
+        currentNumericValue ?? min,
+        step,
+        "add"
+      )
       commitValue({ value: newValue, fromUi: true })
     }
   }, [currentNumericValue, min, step, canInc, commitValue])
 
   const decrement = useCallback(() => {
     if (canDec) {
-      const newValue = (currentNumericValue ?? max) - step
+      const newValue = preciseStepArithmetic(
+        currentNumericValue ?? max,
+        step,
+        "subtract"
+      )
       commitValue({ value: newValue, fromUi: true })
     }
   }, [currentNumericValue, max, step, canDec, commitValue])
@@ -329,9 +338,13 @@ const NumberInput: React.FC<Props> = ({
     // Account for icon size + its left/right padding
     convertRemToPx(theme.iconSizes.lg) +
     2 * convertRemToPx(theme.spacing.twoXS)
+
+  const hideControlsBreakpoint = convertRemToPx(
+    theme.breakpoints.hideNumberInputControls
+  )
   const numberInputControlBreakpoint = icon
-    ? theme.breakpoints.hideNumberInputControls + iconAdjustment
-    : theme.breakpoints.hideNumberInputControls
+    ? hideControlsBreakpoint + iconAdjustment
+    : hideControlsBreakpoint
 
   return (
     <div

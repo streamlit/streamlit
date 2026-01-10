@@ -71,26 +71,26 @@ const Selectbox: FC<Props> = ({
   const [value, setValue] = useState<string | null>(propValue)
   // This ref is used to store the value before the user starts removing characters so that we can restore
   // the value in case the user dismisses the changes by clicking away.
-  const valueBeforeRemoval = useRef<string | null>(value)
+  const valueBeforeRemovalRef = useRef<string | null>(value)
 
   useExecuteWhenChanged(() => {
     setValue(propValue)
     // Reset the ref when propValue changes externally (e.g., via session state)
     // to prevent handleBlur from restoring a stale value.
-    valueBeforeRemoval.current = null
+    valueBeforeRemovalRef.current = null
   }, [propValue])
 
   const handleChange = useCallback(
     (params: OnChangeParams): void => {
       if (params.type === "remove") {
-        valueBeforeRemoval.current = params.option?.value
+        valueBeforeRemovalRef.current = params.option?.value
         // We set the value so that BaseWeb updates the element's value while typing.
         // We don't want to commit the change yet, so we don't call onChange.
         setValue(null)
         return
       }
 
-      valueBeforeRemoval.current = null
+      valueBeforeRemovalRef.current = null
 
       if (params.type === "clear") {
         setValue(null)
@@ -106,8 +106,8 @@ const Selectbox: FC<Props> = ({
   )
 
   const handleBlur = useCallback(() => {
-    if (valueBeforeRemoval.current !== null) {
-      setValue(valueBeforeRemoval.current)
+    if (valueBeforeRemovalRef.current !== null) {
+      setValue(valueBeforeRemovalRef.current)
     }
   }, [])
 

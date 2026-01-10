@@ -357,6 +357,9 @@ def test_window_config_download_url(app: Page):
     def capture_request(request: Request) -> None:
         url = request.url
         # Capture any requests to media endpoints or download URLs
+        # Exclude static assets like /static/media/fireworks.gif (New Year's easter egg)
+        if "/static/media/" in url:
+            return
         if (
             "/media/" in url
             or "cdn.example.com" in url

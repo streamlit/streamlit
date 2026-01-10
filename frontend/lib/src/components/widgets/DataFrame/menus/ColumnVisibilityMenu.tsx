@@ -106,7 +106,7 @@ const CheckboxItem: React.FC<CheckboxItemProps> = ({
             const borderColor =
               $checked || $isIndeterminate
                 ? theme.colors.primary
-                : theme.colors.fadedText40
+                : theme.colors.borderColor
 
             return {
               outline: 0,

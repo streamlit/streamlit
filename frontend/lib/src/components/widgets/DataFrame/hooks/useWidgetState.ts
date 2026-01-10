@@ -113,24 +113,26 @@ function useWidgetState({
   const { READ_ONLY } = ArrowProto.EditingMode
 
   // EditingState management
-  const editingState = useRef<EditingState>(new EditingState(originalNumRows))
-  const [numRows, setNumRows] = useState(editingState.current.getNumRows())
+  const editingStateRef = useRef<EditingState>(
+    new EditingState(originalNumRows)
+  )
+  const [numRows, setNumRows] = useState(editingStateRef.current.getNumRows())
 
   // Reset editing state when originalNumRows changes.
   // Using useExecuteWhenChanged instead of useEffect to follow React best practices
   // for adjusting state when props change (avoids extra render cycle).
   // See: https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
   useExecuteWhenChanged(() => {
-    editingState.current = new EditingState(originalNumRows)
-    setNumRows(editingState.current.getNumRows())
+    editingStateRef.current = new EditingState(originalNumRows)
+    setNumRows(editingStateRef.current.getNumRows())
   }, [originalNumRows])
 
   /**
    * Resets the editing state to a fresh state
    */
   const resetEditingState = useCallback(() => {
-    editingState.current = new EditingState(originalNumRows)
-    setNumRows(editingState.current.getNumRows())
+    editingStateRef.current = new EditingState(originalNumRows)
+    setNumRows(editingStateRef.current.getNumRows())
   }, [originalNumRows])
 
   /**
@@ -140,7 +142,7 @@ function useWidgetState({
    */
   const updateNumRows = useCallback(() => {
     setNumRows(currentNumRows => {
-      const newNumRows = editingState.current.getNumRows()
+      const newNumRows = editingStateRef.current.getNumRows()
       return currentNumRows !== newNumRows ? newNumRows : currentNumRows
     })
   }, [])
@@ -171,8 +173,8 @@ function useWidgetState({
         return
       }
 
-      editingState.current.fromJson(initialWidgetValue, originalColumns)
-      setNumRows(editingState.current.getNumRows())
+      editingStateRef.current.fromJson(initialWidgetValue, originalColumns)
+      setNumRows(editingStateRef.current.getNumRows())
     },
     // We only want to run this effect once during the initial component load
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -188,7 +190,7 @@ function useWidgetState({
       return
     }
 
-    const currentEditingState = editingState.current.toJson(originalColumns)
+    const currentEditingState = editingStateRef.current.toJson(originalColumns)
     let currentWidgetState = widgetMgr.getStringValue({
       id: element.id,
       formId: element.formId,
@@ -421,7 +423,7 @@ function useWidgetState({
   }, [resetEditingState])
 
   return {
-    editingState,
+    editingState: editingStateRef,
     numRows,
     resetEditingState,
     updateNumRows,

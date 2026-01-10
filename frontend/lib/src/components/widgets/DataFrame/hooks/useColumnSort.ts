@@ -122,7 +122,7 @@ function useColumnSort(
       if (direction === "auto") {
         // Toggle from asc -> desc -> remove
         sortDirection = "asc"
-        if (sort && sort.column.id === clickedColumn.id) {
+        if (sort?.column.id === clickedColumn.id) {
           // The clicked column is already sorted
           if (sort.direction === "asc") {
             // Sort column descending

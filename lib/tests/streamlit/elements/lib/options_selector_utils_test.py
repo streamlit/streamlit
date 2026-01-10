@@ -29,6 +29,8 @@ from streamlit.elements.lib.options_selector_utils import (
     index_,
     maybe_coerce_enum,
     maybe_coerce_enum_sequence,
+    validate_and_sync_multiselect_value_with_options,
+    validate_and_sync_value_with_options,
 )
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.state.common import RegisterWidgetResult
@@ -449,3 +451,129 @@ class TestCreateMappings:
         # Check both results are empty
         assert formatted_options == []
         assert mapping == {}
+
+
+class TestValidateAndSyncValueWithOptions(unittest.TestCase):
+    """Test class for validate_and_sync_value_with_options utility function."""
+
+    @parameterized.expand(
+        [
+            (
+                "value_in_options",
+                "banana",
+                ["apple", "banana", "cherry"],
+                0,
+                "banana",
+                False,
+            ),
+            ("none_value", None, ["apple", "banana"], 0, None, False),
+            (
+                "value_not_in_options_resets_to_default",
+                "mango",
+                ["apple", "banana", "cherry"],
+                0,
+                "apple",
+                True,
+            ),
+            (
+                "value_not_in_options_custom_default_index",
+                "mango",
+                ["apple", "banana", "cherry"],
+                2,
+                "cherry",
+                True,
+            ),
+            (
+                "value_not_in_options_none_default_index",
+                "mango",
+                ["apple", "banana"],
+                None,
+                None,
+                True,
+            ),
+            ("value_not_in_empty_options", "apple", [], 0, None, True),
+            ("numeric_value_in_options", 2, [1, 2, 3], 0, 2, False),
+            ("numeric_value_not_in_options", 5, [1, 2, 3], 1, 2, True),
+            ("float_value_in_options", 0.2, [0.1, 0.2, 0.3], 0, 0.2, False),
+        ]
+    )
+    def test_validate_and_sync_value_with_options(
+        self,
+        _name: str,
+        current_value,
+        options: list,
+        default_index: int | None,
+        expected_value,
+        expected_needs_reset: bool,
+    ):
+        """Test validate_and_sync_value_with_options with various inputs."""
+        value, needs_reset = validate_and_sync_value_with_options(
+            current_value, options, default_index, None
+        )
+        assert value == expected_value
+        assert needs_reset is expected_needs_reset
+
+
+class TestValidateAndSyncMultiselectValueWithOptions(unittest.TestCase):
+    """Test class for validate_and_sync_multiselect_value_with_options utility function."""
+
+    @parameterized.expand(
+        [
+            (
+                "all_values_in_options",
+                ["apple", "banana"],
+                ["apple", "banana", "cherry"],
+                ["apple", "banana"],
+                False,
+            ),
+            (
+                "empty_values",
+                [],
+                ["apple", "banana"],
+                [],
+                False,
+            ),
+            (
+                "some_values_not_in_options",
+                ["apple", "mango", "banana"],
+                ["apple", "banana", "cherry"],
+                ["apple", "banana"],
+                True,
+            ),
+            (
+                "all_values_not_in_options",
+                ["mango", "papaya"],
+                ["apple", "banana", "cherry"],
+                [],
+                True,
+            ),
+            (
+                "numeric_values_all_in_options",
+                [1, 3],
+                [1, 2, 3, 4],
+                [1, 3],
+                False,
+            ),
+            (
+                "numeric_values_some_not_in_options",
+                [1, 5, 3],
+                [1, 2, 3, 4],
+                [1, 3],
+                True,
+            ),
+        ]
+    )
+    def test_validate_and_sync_multiselect_value_with_options(
+        self,
+        _name: str,
+        current_values: list,
+        options: list,
+        expected_values: list,
+        expected_needs_reset: bool,
+    ):
+        """Test validate_and_sync_multiselect_value_with_options with various inputs."""
+        values, needs_reset = validate_and_sync_multiselect_value_with_options(
+            current_values, options, None
+        )
+        assert values == expected_values
+        assert needs_reset is expected_needs_reset

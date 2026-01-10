@@ -41,6 +41,8 @@ from streamlit.runtime.caching.cache_utils import (
     Cache,
     CachedFunc,
     CachedFuncInfo,
+    CacheScope,
+    get_session_id_or_throw,
     make_cached_func_wrapper,
 )
 from streamlit.runtime.caching.cached_message_replay import (
@@ -104,12 +106,14 @@ class CachedDataFuncInfo(CachedFuncInfo[P, R]):
         show_spinner: bool | str,
         show_time: bool = False,
         hash_funcs: HashFuncsDict | None = None,
+        scope: CacheScope = "global",
     ) -> None:
         super().__init__(
             func,
             hash_funcs=hash_funcs,
             show_spinner=show_spinner,
             show_time=show_time,
+            scope=scope,
         )
         self.persist = persist
         self.max_entries = max_entries
@@ -137,6 +141,7 @@ class CachedDataFuncInfo(CachedFuncInfo[P, R]):
             max_entries=self.max_entries,
             ttl=self.ttl,
             display_name=self.display_name,
+            scope=self.scope,
         )
 
     def validate_params(self) -> None:
@@ -159,7 +164,8 @@ class DataCaches(StatsProvider):
 
     def __init__(self) -> None:
         self._caches_lock = threading.Lock()
-        self._function_caches: dict[str, DataCache[Any]] = {}
+        # Map of session IDs to map of function keys to caches.
+        self._function_caches: dict[str | None, dict[str, DataCache[Any]]] = {}
 
     @property
     def stats_families(self) -> Sequence[str]:
@@ -172,18 +178,37 @@ class DataCaches(StatsProvider):
         max_entries: int | None,
         ttl: int | float | timedelta | str | None,
         display_name: str,
+        scope: CacheScope = "global",
     ) -> DataCache[Any]:
         """Return the mem cache for the given key.
 
         If it doesn't exist, create a new one with the given params.
+
+        Raises
+        ------
+        StreamlitAPIException
+            Raised when ``scope`` is ``"session"`` and there is no thread-local run
+            context.
         """
 
         ttl_seconds = time_to_seconds(ttl, coerce_none_to_inf=False)
 
+        # Fetch the session ID. Note that this will throw an exception if there is no
+        # session associated with the current thread.
+        session_id: str | None
+        if scope == "global":
+            session_id = None
+        else:
+            session_id = get_session_id_or_throw()
+
         # Get the existing cache, if it exists, and validate that its params
         # haven't changed.
         with self._caches_lock:
-            cache = self._function_caches.get(key)
+            session_caches = self._function_caches.get(session_id)
+            if session_caches is None:
+                session_caches = self._function_caches[session_id] = {}
+
+            cache = session_caches.get(key)
             if (
                 cache is not None
                 and cache.ttl_seconds == ttl_seconds
@@ -232,8 +257,21 @@ class DataCaches(StatsProvider):
                 ttl_seconds=ttl_seconds,
                 display_name=display_name,
             )
-            self._function_caches[key] = cache
+            self._function_caches[session_id][key] = cache
             return cache
+
+    def clear_session(self, session_id: str) -> None:
+        """Clears all caches for the given session ID."""
+        # Hold the lock while removing the cache, but release it while clearing.
+        with self._caches_lock:
+            session_caches = self._function_caches.get(session_id)
+            if session_caches is not None:
+                del self._function_caches[session_id]
+
+        if session_caches is not None:
+            for cache in session_caches.values():
+                cache.clear()
+                cache.storage.close()
 
     def clear_all(self) -> None:
         """Clear all in-memory and on-disk caches."""
@@ -245,9 +283,10 @@ class DataCaches(StatsProvider):
                 # available storages one by one
                 self.get_storage_manager().clear_all()
             except NotImplementedError:
-                for data_cache in self._function_caches.values():
-                    data_cache.clear()
-                    data_cache.storage.close()
+                for data_caches in self._function_caches.values():
+                    for data_cache in data_caches.values():
+                        data_cache.clear()
+                        data_cache.storage.close()
             self._function_caches = {}
 
     def get_stats(
@@ -256,10 +295,14 @@ class DataCaches(StatsProvider):
         with self._caches_lock:
             # Shallow-clone our caches. We don't want to hold the global
             # lock during stats-gathering.
-            function_caches = self._function_caches.copy()
+            function_caches = [
+                cache
+                for caches in self._function_caches.values()
+                for cache in caches.values()
+            ]
 
         stats: list[CacheStat] = []
-        for cache in function_caches.values():
+        for cache in function_caches:
             cache_stats = cache.get_stats()
             for family_stats in cache_stats.values():
                 stats.extend(family_stats)
@@ -334,6 +377,11 @@ class DataCaches(StatsProvider):
 _data_caches = DataCaches()
 
 
+def clear_session_cache(session_id: str) -> None:
+    """Clears all caches for the given session ID."""
+    _data_caches.clear_session(session_id)
+
+
 def get_data_cache_stats_provider() -> StatsProvider:
     """Return the StatsProvider for all @st.cache_data functions."""
     return _data_caches
@@ -377,6 +425,7 @@ class CacheDataAPI:
         show_time: bool = False,
         persist: CachePersistType | bool = None,
         hash_funcs: HashFuncsDict | None = None,
+        scope: CacheScope = "global",
     ) -> Callable[[Callable[P, R]], CachedFunc[P, R]]: ...
 
     def __call__(
@@ -389,6 +438,7 @@ class CacheDataAPI:
         show_time: bool = False,
         persist: CachePersistType | bool = None,
         hash_funcs: HashFuncsDict | None = None,
+        scope: CacheScope = "global",
     ) -> CachedFunc[P, R] | Callable[[Callable[P, R]], CachedFunc[P, R]]:
         return self._decorator(
             func,  # ty: ignore[invalid-argument-type]
@@ -398,6 +448,7 @@ class CacheDataAPI:
             show_spinner=show_spinner,
             show_time=show_time,
             hash_funcs=hash_funcs,
+            scope=scope,
         )
 
     def _decorator(
@@ -410,6 +461,7 @@ class CacheDataAPI:
         show_time: bool = False,
         persist: CachePersistType | bool,
         hash_funcs: HashFuncsDict | None = None,
+        scope: CacheScope = "global",
     ) -> CachedFunc[P, R] | Callable[[Callable[P, R]], CachedFunc[P, R]]:
         """Decorator to cache functions that return data (e.g. dataframe transforms, database queries, ML inference).
 
@@ -490,6 +542,15 @@ class CacheDataAPI:
             check to see if its type matches a key in this dict and, if so, will use
             the provided function to generate a hash for it. See below for an example
             of how this can be used.
+
+        scope : "global" or "session"
+            The scope for the resource. If "global", cache globally. If "session",
+            cache in the session.
+
+            Session-scoped cache entries will be expired when a user's session is
+            disconnected. Note that disconnected sessions can reconnect - so it is
+            possible for the cache to populate multiple times in a single session for
+            the same key.
 
         Example
         -------
@@ -595,6 +656,11 @@ class CacheDataAPI:
                 f"Unsupported persist option '{persist}'. Valid values are 'disk' or None."
             )
 
+        if scope not in ("global", "session"):
+            raise StreamlitAPIException(
+                f"Unsupported scope option '{scope}'. Valid values are 'global' or 'session'."
+            )
+
         def wrapper(f: Callable[P, R]) -> CachedFunc[P, R]:
             return make_cached_func_wrapper(
                 CachedDataFuncInfo(
@@ -605,6 +671,7 @@ class CacheDataAPI:
                     max_entries=max_entries,
                     ttl=ttl,
                     hash_funcs=hash_funcs,
+                    scope=scope,
                 )
             )
 
@@ -620,6 +687,7 @@ class CacheDataAPI:
                 max_entries=max_entries,
                 ttl=ttl,
                 hash_funcs=hash_funcs,
+                scope=scope,
             )
         )
 
