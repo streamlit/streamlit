@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-const DEFAULT_MAX_LENGTH = 36
+const DEFAULT_MAX_LENGTH = 14
 
 /**
  * Truncates a filename using middle truncation, preserving the file extension.
