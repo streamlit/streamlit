@@ -164,7 +164,10 @@ const ChatUploadedFile = ({
           </StyledChatUploadedFileSize>
         )}
       </StyledChatUploadedFileInfo>
-      <StyledChatUploadedFileDeleteButton data-testid="stChatInputDeleteBtn">
+      <StyledChatUploadedFileDeleteButton
+        data-testid="stChatInputDeleteBtn"
+        isError={isError}
+      >
         <BaseButton
           onClick={handleDeleteClick}
           kind={BaseButtonKind.MINIMAL}
