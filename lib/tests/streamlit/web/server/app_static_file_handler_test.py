@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -27,7 +27,6 @@ import tornado.web
 import tornado.websocket
 from parameterized import parameterized
 
-from streamlit.web.server import Server
 from streamlit.web.server.app_static_file_handler import (
     MAX_APP_STATIC_FILE_SIZE,
     AppStaticFileHandler,
@@ -238,7 +237,9 @@ class AppStaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
         r = self.fetch(f"/app/static/{self._temp_filenames['webp']}")
         assert r.headers["Content-Type"] == "custom/webp"
 
-        Server.initialize_mimetypes()
+        from streamlit.web.bootstrap import _initialize_mimetypes
+
+        _initialize_mimetypes()
 
         r = self.fetch(f"/app/static/{self._temp_filenames['webp']}")
         assert r.headers["Content-Type"] == "image/webp"

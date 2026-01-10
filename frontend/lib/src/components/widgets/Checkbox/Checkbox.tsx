@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -129,10 +129,10 @@ function Checkbox({
               $checked: boolean
               $isHovered: boolean
             }) => {
-              let backgroundColor = colors.fadedText40
+              let backgroundColor = colors.borderColor
 
               if ($isHovered && !disabled) {
-                backgroundColor = colors.fadedText20
+                backgroundColor = colors.darkenedBgMix15
               }
 
               if ($checked && !disabled) {
@@ -167,7 +167,7 @@ function Checkbox({
               $checked: boolean
             }) => {
               const borderColor =
-                $checked && !disabled ? colors.primary : colors.fadedText40
+                $checked && !disabled ? colors.primary : colors.borderColor
 
               return {
                 outline: 0,

@@ -25,6 +25,9 @@
 - Follow the [Rules of React](https://react.dev/reference/rules): pure components and hooks, immutable props and state, and call hooks at the top level of React functions.
 - Write performant frontend code.
 - Ensure referential stability by leveraging React Hooks.
+- Name refs with a `Ref` suffix: Variables assigned from `useRef(...)` must end with `Ref`. This is enforced by eslint.
+  - ✅ `const inputRef = useRef<HTMLInputElement>(null)`
+  - ❌ `const input = useRef<HTMLInputElement>(null)`
 - **Updater functions must be pure**: `setState(prev => newState)` updaters must not mutate `prev` or have side effects—return a new object. See [useState](https://react.dev/reference/react/useState#setstate-parameters).
 - Prefix event handlers with "handle" (e.g., handleClick, handleSubmit).
 - Favor leveraging @emotion/styled instead of inline styles.
@@ -125,6 +128,9 @@ Run from the repo root:
 - Robustness: Test edge cases and error handling scenarios.
 - Accessibility: Validate component accessibility compliance.
 - Parameterized Tests: Use `it.each` for repeated tests with varying inputs.
+- Positive + negative assertions (anti-regression): When you assert that something appears/changes, also add at least one complementary assertion when practical that something else does **not** appear/change (inverse state, error message that must not show, callback that must not fire, etc.).
+  - Presence: `getBy*` / `findBy*` + `toBeVisible()`
+  - Absence: `queryBy*` + `not.toBeInTheDocument()` or `not.toBeVisible()`
 - Framework Exclusivity: Only use Vitest syntax; do not use Jest.
 
 ### Running Tests

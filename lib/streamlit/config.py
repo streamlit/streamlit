@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -61,6 +61,20 @@ _config_options: dict[str, ConfigOption] | None = None
 # Stores the path to the main script. This is used to
 # resolve config and secret files relative to the main script:
 _main_script_path: str | None = None
+
+# Stores the server mode for metrics tracking.
+# Possible values:
+# - "tornado": Traditional Tornado server
+# - "starlette-managed": Starlette server via server.useStarlette config
+# - "starlette-app": st.App started via streamlit run
+# - "asgi-server": st.App with external ASGI server (uvicorn, gunicorn, etc.)
+# - "asgi-mounted": st.App mounted on another ASGI framework (FastAPI, Starlette)
+_server_mode: (
+    Literal[
+        "tornado", "starlette-managed", "starlette-app", "asgi-server", "asgi-mounted"
+    ]
+    | None
+) = None
 
 # Indicates that a config option was defined by the user.
 _USER_DEFINED: Final = "<user defined>"
@@ -1001,6 +1015,16 @@ _create_option(
     type_=str,
     # Hide until API is finalized.
     visibility="hidden",
+)
+
+_create_option(
+    "server.useStarlette",
+    description="""
+        Enable the experimental Starlette-based server implementation instead of
+        Tornado. This is an experimental feature and may be removed in the future.
+    """,
+    default_val=False,
+    type_=bool,
 )
 
 # Config Section: Browser #

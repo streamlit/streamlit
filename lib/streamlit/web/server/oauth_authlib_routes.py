@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -231,7 +231,19 @@ class AuthCallbackHandler(AuthHandlerMixin, tornado.web.RequestHandler):
         current_cache_keys = list(auth_cache.get_dict().keys())
         state_provider_mapping = {}
         for key in current_cache_keys:
-            _, _, recorded_provider, code = key.split("_")
+            # Authlib stores OAuth state in the cache using keys in the format:
+            # "_state_{provider}_{state_code}" (e.g., "_state_google_abc123").
+            #
+            # Note: This split assumes no underscores in provider names or state codes.
+            # This is safe because: (1) provider names with underscores are explicitly
+            # blocked in validate_auth_credentials() in auth_util.py, and (2) Authlib's
+            # generate_token() uses only alphanumeric characters (a-zA-Z0-9) for state
+            # codes. See auth_util.py for the underscore validation.
+            try:
+                _, _, recorded_provider, code = key.split("_")
+            except ValueError:
+                # Skip cache keys that don't match the expected 4-part format.
+                continue
             state_provider_mapping[code] = recorded_provider
 
         provider: str | None = state_provider_mapping.get(state_code_from_url)
