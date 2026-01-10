@@ -49,7 +49,7 @@ There are two problems here:
 
 ## Proposal
 
-### Option 0: Two separate parameters
+(Final proposal, previously discussed as option 0).
 
 ```python
 st.widget(..., bind="query-params")
@@ -74,7 +74,12 @@ st.widget(..., persist_state=None|"page"|"session")
 
 - Two new parameters for almost every widget.
 
-### Option 1: One parameter for both problems
+### Alternatives considered
+
+<details>
+<summary>Show details</summary>
+
+#### Option 1: One parameter for both problems
 
 Both problems affect almost all widgets. To avoid multiple new parameters, we could use
 a single parameter:
@@ -118,7 +123,7 @@ st.widget(..., persist=["query-params", "session"])  # binds to query params + p
   keeping the widget state around, maybe it makes sense to also keep the query params,
   so you can share your app with the same state?
 
-### Option 2: `st.query_params.bind` but make it work nicely with widgets
+#### Option 2: `st.query_params.bind` but make it work nicely with widgets
 
 Use `st.query_params.bind("session_state_key")` to bind query params to arbitrary
 session state keys, no matter if widget state or not:
@@ -171,7 +176,7 @@ st.widget(..., persist_state=None|"page"|"session")
 - No way to "unbind" a widget from query params.
 - No good way to show for which widgets query param binding doesn't work.
 
-### Other ideas we had in the past
+#### Other ideas we had in the past
 
 - `st.widget(..., query_key="foo")` -> Seems redundant given that we already have `key`.
 - `st.widget(..., key="?foo")` -> Bit too magical, was disliked when we discussed it in
@@ -181,6 +186,8 @@ st.widget(..., persist_state=None|"page"|"session")
   widgets that you want to persist, so having a global config option might interfere too
   much with other widgets. It also seems confusing to have "two operating modes" for
   widgets in Streamlit – makes it a lot harder to understand code then.
+
+</details>
 
 ### Details
 
