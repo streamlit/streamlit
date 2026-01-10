@@ -101,6 +101,9 @@ describe("BidiComponent/utils/theme", () => {
       greenTextColor: "#00ff00",
       violetTextColor: "#aa00ff",
       grayTextColor: "#888888",
+
+      metricValueFontSize: null,
+      metricValueFontWeight: null,
       ...overrides,
     })
 

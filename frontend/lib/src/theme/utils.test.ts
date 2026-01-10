@@ -3175,15 +3175,18 @@ describe("createEmotionTheme", () => {
     expect(theme.metricValueFontSize).toBeUndefined()
   })
 
-  it("does not set metricValueFontSize if value is not > 0", () => {
-    const themeInput: Partial<CustomThemeConfig> = {
-      metricValueFontSize: 0,
+  it.each([0, -10, -100])(
+    "does not set metricValueFontSize if value is not > 0: %s",
+    metricValueFontSize => {
+      const themeInput: Partial<CustomThemeConfig> = {
+        metricValueFontSize,
+      }
+
+      const theme = createEmotionTheme(themeInput)
+
+      expect(theme.metricValueFontSize).toBeUndefined()
     }
-
-    const theme = createEmotionTheme(themeInput)
-
-    expect(theme.metricValueFontSize).toBeUndefined()
-  })
+  )
 
   it("uses metricValueFontWeight when configured", () => {
     const themeInput: Partial<CustomThemeConfig> = {
