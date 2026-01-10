@@ -25,12 +25,12 @@ import {
   useState,
 } from "react"
 
+import { Mic } from "@emotion-icons/material-outlined"
 import {
   ArrowUpward,
   Check,
   Close,
   ErrorOutline,
-  Mic,
 } from "@emotion-icons/material-rounded"
 import { Textarea as UITextArea } from "baseui/textarea"
 import { useDropzone } from "react-dropzone"
