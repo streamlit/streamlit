@@ -215,12 +215,16 @@ message CustomThemeConfig {
   optional string violet_text_color = 57;
   optional string gray_text_color = 58;
 
+  // Metric value styling:
+  optional int32 metric_value_font_size = 62;
+  optional int32 metric_value_font_weight = 63;
+
   // Theme sections:
   optional CustomThemeConfig sidebar = 24;
   optional CustomThemeConfig light = 60;
   optional CustomThemeConfig dark = 61;
 
-  // Next ID: 62
+  // Next ID: 64
 }
 
 message FontFace {

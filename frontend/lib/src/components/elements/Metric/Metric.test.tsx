@@ -198,12 +198,12 @@ describe("Metric element", () => {
 
   // Metric value font styling tests
   describe("Metric value font styling", () => {
-    it("applies font-weight to metric value text", () => {
+    it("does not set font-weight when theme does not specify metricValueFontWeight", () => {
       const props = getProps({ body: "123" })
       render(<Metric {...props} />)
 
-      // Default font-weight should be bold (600) when theme doesn't specify metricValueFontWeight
-      expect(screen.getByTestId("stMetricValue")).toHaveStyle(
+      // fontWeight should inherit from parent when not configured
+      expect(screen.getByTestId("stMetricValue")).not.toHaveStyle(
         "font-weight: 600"
       )
     })

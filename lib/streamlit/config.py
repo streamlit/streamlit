@@ -1892,6 +1892,29 @@ _create_theme_options(
 )
 
 _create_theme_options(
+    "metricValueFontSize",
+    categories=["theme"],
+    description="""
+        The font size (in pixels) for st.metric value text.
+
+        If this isn't set, the font size will be threeXL (approximately 28px).
+    """,
+    type_=int,
+)
+
+_create_theme_options(
+    "metricValueFontWeight",
+    categories=["theme"],
+    description="""
+        The font weight for st.metric value text.
+
+        This is an integer between 100 and 900 (CSS font-weight values).
+        If this isn't set, the font weight will inherit from the parent element.
+    """,
+    type_=int,
+)
+
+_create_theme_options(
     "headingFont",
     categories=[
         "theme",

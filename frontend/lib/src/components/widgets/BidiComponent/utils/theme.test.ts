@@ -306,6 +306,8 @@ describe("BidiComponent/utils/theme", () => {
       codeFontSize: null,
       headingFontSizes: null,
       headingFontWeights: null,
+      metricValueFontSize: null,
+      metricValueFontWeight: null,
 
       borderColor: null,
       dataframeBorderColor: null,

@@ -97,6 +97,8 @@ export type SpecialEmotionColors = {
  */
 export interface EmotionTheme extends Omit<typeof emotionBaseTheme, "colors"> {
   colors: EmotionThemeColors
+  metricValueFontSize?: number
+  metricValueFontWeight?: number
 }
 
 export type ThemeConfig = {

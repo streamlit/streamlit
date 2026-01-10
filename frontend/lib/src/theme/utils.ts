@@ -704,6 +704,9 @@ export const createEmotionTheme = (
     // Since chart color configs passed as array, handle separate from parsedColors
     chartCategoricalColors,
     chartSequentialColors,
+    // Metric value styling
+    metricValueFontSize,
+    metricValueFontWeight,
     ...customColors
   } = themeInput
 
@@ -998,6 +1001,14 @@ export const createEmotionTheme = (
     ...baseThemeConfig.emotion,
     genericFonts: fontsOverride,
     ...conditionalOverrides,
+    ...(metricValueFontSize && metricValueFontSize > 0
+      ? { metricValueFontSize }
+      : {}),
+    ...(metricValueFontWeight &&
+    metricValueFontWeight >= 100 &&
+    metricValueFontWeight <= 900
+      ? { metricValueFontWeight }
+      : {}),
   }
 }
 
