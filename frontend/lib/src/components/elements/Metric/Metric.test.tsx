@@ -196,6 +196,29 @@ describe("Metric element", () => {
     )
   })
 
+  // Metric value font styling tests
+  describe("Metric value font styling", () => {
+    it("applies font-weight to metric value text", () => {
+      const props = getProps({ body: "123" })
+      render(<Metric {...props} />)
+
+      // Default font-weight should be bold (600) when theme doesn't specify metricValueFontWeight
+      expect(screen.getByTestId("stMetricValue")).toHaveStyle(
+        "font-weight: 600"
+      )
+    })
+
+    it("applies font-size to metric value text", () => {
+      const props = getProps({ body: "123" })
+      render(<Metric {...props} />)
+
+      // Default font-size should be threeXL (2.25rem) when theme doesn't specify metricValueFontSize
+      expect(screen.getByTestId("stMetricValue")).toHaveStyle(
+        "font-size: 2.25rem"
+      )
+    })
+  })
+
   // Markdown support tests
   describe("Markdown support", () => {
     const markdownCases = [

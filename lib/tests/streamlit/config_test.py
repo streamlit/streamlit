@@ -73,6 +73,8 @@ class ConfigTest(unittest.TestCase):
             "baseFontSize",
             "baseFontWeight",
             "fontFaces",
+            "metricValueFontSize",
+            "metricValueFontWeight",
             "showSidebarBorder",
             "chartCategoricalColors",
             "chartSequentialColors",
@@ -982,6 +984,8 @@ class ConfigTest(unittest.TestCase):
             "fontFaces": None,
             "baseFontSize": None,
             "baseFontWeight": None,
+            "metricValueFontSize": None,
+            "metricValueFontWeight": None,
             "codeTextColor": None,
             "codeBackgroundColor": None,
             "dataframeHeaderBackgroundColor": None,
@@ -1051,6 +1055,8 @@ class ConfigTest(unittest.TestCase):
         config._set_option("theme.codeFontWeight", 300, "test")
         config._set_option("theme.baseFontSize", 14, "test")
         config._set_option("theme.baseFontWeight", 300, "test")
+        config._set_option("theme.metricValueFontSize", 32, "test")
+        config._set_option("theme.metricValueFontWeight", 600, "test")
         config._set_option("theme.headingFontWeights", [700, 600, 500], "test")
         config._set_option(
             "theme.headingFontSizes",
@@ -1125,6 +1131,8 @@ class ConfigTest(unittest.TestCase):
             ],
             "baseFontSize": 14,
             "baseFontWeight": 300,
+            "metricValueFontSize": 32,
+            "metricValueFontWeight": 600,
             "showSidebarBorder": True,
             "chartCategoricalColors": ["#000000", "#111111", "#222222"],
             "chartSequentialColors": ["#000000", "#111111", "#222222"],

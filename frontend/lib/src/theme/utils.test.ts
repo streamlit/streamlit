@@ -3157,6 +3157,63 @@ describe("createEmotionTheme", () => {
     }
   )
 
+  // == Metric value font properties ==
+
+  it("uses metricValueFontSize when configured", () => {
+    const themeInput: Partial<CustomThemeConfig> = {
+      metricValueFontSize: 32,
+    }
+
+    const theme = createEmotionTheme(themeInput)
+
+    expect(theme.metricValueFontSize).toBe(32)
+  })
+
+  it("does not set metricValueFontSize if not configured", () => {
+    const theme = createEmotionTheme({})
+
+    expect(theme.metricValueFontSize).toBeUndefined()
+  })
+
+  it("does not set metricValueFontSize if value is not > 0", () => {
+    const themeInput: Partial<CustomThemeConfig> = {
+      metricValueFontSize: 0,
+    }
+
+    const theme = createEmotionTheme(themeInput)
+
+    expect(theme.metricValueFontSize).toBeUndefined()
+  })
+
+  it("uses metricValueFontWeight when configured", () => {
+    const themeInput: Partial<CustomThemeConfig> = {
+      metricValueFontWeight: 600,
+    }
+
+    const theme = createEmotionTheme(themeInput)
+
+    expect(theme.metricValueFontWeight).toBe(600)
+  })
+
+  it("does not set metricValueFontWeight if not configured", () => {
+    const theme = createEmotionTheme({})
+
+    expect(theme.metricValueFontWeight).toBeUndefined()
+  })
+
+  it.each([50, 950, -100])(
+    "does not set metricValueFontWeight if value is out of range: %s",
+    metricValueFontWeight => {
+      const themeInput: Partial<CustomThemeConfig> = {
+        metricValueFontWeight,
+      }
+
+      const theme = createEmotionTheme(themeInput)
+
+      expect(theme.metricValueFontWeight).toBeUndefined()
+    }
+  )
+
   // == Theme font properties ==
 
   it("uses bodyFont when configured", () => {
