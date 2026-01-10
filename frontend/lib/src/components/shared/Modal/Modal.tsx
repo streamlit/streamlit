@@ -177,9 +177,8 @@ export function calculateModalSize(
 
 function Modal(props: StreamlitModalProps): ReactElement {
   const { spacing, radii, colors, sizes } = useEmotionTheme()
-  const [dialogContainer, setDialogContainer] = useState<HTMLDivElement | null>(
-    null
-  )
+  const [dialogContainer, setDialogContainer] =
+    useState<HTMLDivElement | null>(null)
 
   // Callback ref to capture the dialog container element
   const dialogContainerRef = useCallback((node: HTMLDivElement | null) => {
