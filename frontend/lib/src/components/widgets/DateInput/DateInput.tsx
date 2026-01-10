@@ -115,13 +115,14 @@ function DateInput({
     fragmentId,
   })
 
-  // Register query param binding if widget key starts with "?"
+  // Register query param binding using queryParamKey from proto
   // DateInput uses string array values in YYYY/MM/DD format
   const { isBound, syncToUrl } = useQueryParamBinding<string[] | null>({
     elementId: element.id,
     widgetMgr,
     serializer: serializeDateStringArray,
     deserializer: deserializeDateStringArray,
+    queryParamKey: element.queryParamKey,
   })
 
   const [isEmpty, setIsEmpty] = useState(false)

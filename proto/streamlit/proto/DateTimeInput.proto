@@ -36,4 +36,8 @@ message DateTimeInput {
   string format = 12;
   int64 step = 13;
   bool is_range = 14;
+
+  // Query param binding - if set, widget syncs its value with this URL param.
+  // Empty/unset means no binding.
+  optional string query_param_key = 15;
 }

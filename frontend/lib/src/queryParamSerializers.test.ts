@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,10 +25,7 @@ import {
   deserializeNumberRange,
   deserializeString,
   deserializeTime,
-  extractQueryParamName,
   getLastValue,
-  isQueryParamKey,
-  QUERY_PARAM_KEY_PREFIX,
   serializeBool,
   serializeColor,
   serializeDate,
@@ -229,49 +226,6 @@ describe("getLastValue", () => {
 
   it("returns null for empty array", () => {
     expect(getLastValue([])).toBeNull()
-  })
-})
-
-describe("Query param key detection", () => {
-  describe("QUERY_PARAM_KEY_PREFIX", () => {
-    it("is the question mark character", () => {
-      expect(QUERY_PARAM_KEY_PREFIX).toBe("?")
-    })
-  })
-
-  describe("isQueryParamKey", () => {
-    it.each([
-      ["?enabled", true],
-      ["?my_long_param_name", true],
-      ["?x", true],
-      ["?", true], // Edge case: just the prefix
-      ["enabled", false],
-      ["_enabled", false],
-      ["#enabled", false],
-      ["", false],
-    ])("returns %s for '%s'", (input, expected) => {
-      expect(isQueryParamKey(input)).toBe(expected)
-    })
-
-    it("returns false for null", () => {
-      expect(isQueryParamKey(null)).toBe(false)
-    })
-
-    it("returns false for undefined", () => {
-      expect(isQueryParamKey(undefined)).toBe(false)
-    })
-  })
-
-  describe("extractQueryParamName", () => {
-    it.each([
-      ["?enabled", "enabled"],
-      ["?my_long_param_name", "my_long_param_name"],
-      ["?x", "x"],
-      ["?", ""], // Edge case: just the prefix
-      ["?query-with-dashes", "query-with-dashes"],
-    ])("extracts '%s' from '%s'", (input, expected) => {
-      expect(extractQueryParamName(input)).toBe(expected)
-    })
   })
 })
 

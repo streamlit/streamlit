@@ -348,12 +348,13 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
     [options, isMultiSelect]
   )
 
-  // Register query param binding if widget key starts with "?"
+  // Register query param binding using queryParamKey from proto
   const { isBound, syncToUrl } = useQueryParamBinding<number[] | null>({
     elementId: element.id,
     widgetMgr,
     serializer,
     deserializer,
+    queryParamKey: element.queryParamKey,
   })
 
   const [value, setValueWithSource] = useBasicWidgetState<

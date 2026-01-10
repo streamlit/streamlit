@@ -50,5 +50,9 @@ message NumberInput {
   string placeholder = 23;
   string icon = 24;
 
+  // Query param binding - if set, widget syncs its value with this URL param.
+  // Empty/unset means no binding.
+  optional string query_param_key = 25;
+
   reserved 4, 5, 6, 7, 9, 10;
 }

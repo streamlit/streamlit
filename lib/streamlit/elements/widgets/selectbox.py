@@ -70,6 +70,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
 
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.runtime.state.common import BindOption
 
 T = TypeVar("T")
 
@@ -285,6 +286,7 @@ class SelectboxMixin:
         label_visibility: LabelVisibility = "visible",
         accept_new_options: bool = False,
         width: WidthWithoutContent = "stretch",
+        bind: BindOption | None = None,
     ) -> T | str | None:
         r"""Display a select widget.
 
@@ -484,6 +486,7 @@ class SelectboxMixin:
             accept_new_options=accept_new_options,
             width=width,
             ctx=ctx,
+            bind=bind,
         )
 
     def _selectbox(
@@ -504,6 +507,7 @@ class SelectboxMixin:
         accept_new_options: bool = False,
         width: WidthWithoutContent = "stretch",
         ctx: ScriptRunContext | None = None,
+        bind: BindOption | None = None,
     ) -> T | str | None:
         key = to_key(key)
 
@@ -578,6 +582,16 @@ class SelectboxMixin:
         if help is not None:
             selectbox_proto.help = dedent(help)
 
+        # Set query param binding on the proto if enabled
+        query_param_key: str | None = None
+        if bind == "query-params":
+            if key is None:
+                raise StreamlitAPIException(
+                    "A 'key' must be provided when using bind='query-params'."
+                )
+            query_param_key = key
+            selectbox_proto.query_param_key = key
+
         serde = SelectboxSerde(
             opt,
             formatted_options=formatted_options,
@@ -593,6 +607,8 @@ class SelectboxMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="string_value",
+            bind=bind,
+            query_param_key=query_param_key,
         )
         widget_state = maybe_coerce_enum(widget_state, options, opt)
 

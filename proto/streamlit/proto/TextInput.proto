@@ -44,4 +44,8 @@ message TextInput {
   bool disabled = 12;
   LabelVisibilityMessage label_visibility = 13;
   string icon = 14;
+
+  // Query param binding - if set, widget syncs its value with this URL param.
+  // Empty/unset means no binding.
+  optional string query_param_key = 15;
 }

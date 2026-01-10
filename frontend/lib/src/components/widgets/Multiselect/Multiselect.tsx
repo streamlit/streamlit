@@ -117,12 +117,13 @@ const Multiselect: FC<Props> = props => {
     [options]
   )
 
-  // Register query param binding if widget key starts with "?"
+  // Register query param binding using queryParamKey from proto
   const { isBound, syncToUrl } = useQueryParamBinding<MultiselectValue>({
     elementId: element.id,
     widgetMgr,
     serializer: serializeMultiselect,
     deserializer,
+    queryParamKey: element.queryParamKey,
   })
 
   const [value, setValueWithSource] = useBasicWidgetState<

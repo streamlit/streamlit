@@ -66,5 +66,9 @@ message ButtonGroup {
   LabelVisibilityMessage label_visibility = 12;
   optional string help = 13;
 
-  // next id: 14
+  // Query param binding - if set, widget syncs its value with this URL param.
+  // Empty/unset means no binding.
+  optional string query_param_key = 14;
+
+  // next id: 15
 }

@@ -58,6 +58,7 @@ from streamlit.string_util import validate_icon_or_emoji
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.runtime.state.common import BindOption
 
 
 Number: TypeAlias = int | float
@@ -233,6 +234,7 @@ class NumberInputMixin:
         label_visibility: LabelVisibility = "visible",
         icon: str | None = None,
         width: WidthWithoutContent = "stretch",
+        bind: BindOption | None = None,
     ) -> Number | None:
         r"""Display a numeric input widget.
 
@@ -418,6 +420,7 @@ class NumberInputMixin:
             icon=icon,
             width=width,
             ctx=ctx,
+            bind=bind,
         )
 
     def _number_input(
@@ -440,6 +443,7 @@ class NumberInputMixin:
         icon: str | None = None,
         width: WidthWithoutContent = "stretch",
         ctx: ScriptRunContext | None = None,
+        bind: BindOption | None = None,
     ) -> Number | None:
         key = to_key(key)
 
@@ -618,6 +622,18 @@ class NumberInputMixin:
         if icon is not None:
             number_input_proto.icon = validate_icon_or_emoji(icon)
 
+        # Set query param binding on the proto if enabled
+        query_param_key: str | None = None
+        if bind == "query-params":
+            if key is None:
+                from streamlit.errors import StreamlitAPIException
+
+                raise StreamlitAPIException(
+                    "A 'key' must be provided when using bind='query-params'."
+                )
+            query_param_key = key
+            number_input_proto.query_param_key = key
+
         serde = NumberInputSerde(value, data_type, step, number_format)
         widget_state = register_widget(
             number_input_proto.id,
@@ -628,6 +644,8 @@ class NumberInputMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="double_value",
+            bind=bind,
+            query_param_key=query_param_key,
         )
 
         # Validate the current value against the new min/max bounds.

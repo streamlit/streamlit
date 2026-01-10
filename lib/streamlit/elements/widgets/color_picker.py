@@ -49,6 +49,7 @@ from streamlit.runtime.state import (
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.runtime.state.common import BindOption
 
 
 @dataclass
@@ -77,6 +78,7 @@ class ColorPickerMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
+        bind: BindOption | None = None,
     ) -> str:
         r"""Display a color picker widget.
 
@@ -186,6 +188,7 @@ class ColorPickerMixin:
             label_visibility=label_visibility,
             width=width,
             ctx=ctx,
+            bind=bind,
         )
 
     def _color_picker(
@@ -202,6 +205,7 @@ class ColorPickerMixin:
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
         ctx: ScriptRunContext | None = None,
+        bind: BindOption | None = None,
     ) -> str:
         key = to_key(key)
 
@@ -267,6 +271,16 @@ like '#00FFAA' or '#000'.
         if help is not None:
             color_picker_proto.help = dedent(help)
 
+        # Set query param binding on the proto if enabled
+        query_param_key: str | None = None
+        if bind == "query-params":
+            if key is None:
+                raise StreamlitAPIException(
+                    "A 'key' must be provided when using bind='query-params'."
+                )
+            query_param_key = key
+            color_picker_proto.query_param_key = key
+
         serde = ColorPickerSerde(value)
 
         widget_state = register_widget(
@@ -278,6 +292,8 @@ like '#00FFAA' or '#000'.
             serializer=serde.serialize,
             ctx=ctx,
             value_type="string_value",
+            bind=bind,
+            query_param_key=query_param_key,
         )
 
         if widget_state.value_changed:

@@ -41,5 +41,9 @@ message MultiSelect {
   string placeholder = 12;
   optional bool accept_new_options = 13;
 
-  // Next: 15
+  // Query param binding - if set, widget syncs its value with this URL param.
+  // Empty/unset means no binding.
+  optional string query_param_key = 15;
+
+  // Next: 16
 }

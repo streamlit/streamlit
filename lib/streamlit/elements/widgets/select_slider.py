@@ -64,7 +64,7 @@ if TYPE_CHECKING:
 
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.elements.lib.layout_utils import WidthWithoutContent
-    from streamlit.runtime.state.common import RegisterWidgetResult
+    from streamlit.runtime.state.common import BindOption, RegisterWidgetResult
 
 T = TypeVar("T")
 
@@ -162,6 +162,7 @@ class SelectSliderMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
+        bind: BindOption | None = None,
     ) -> T | tuple[T, T]:
         r"""
         Display a slider widget to select items from a list.
@@ -325,6 +326,7 @@ class SelectSliderMixin:
             label_visibility=label_visibility,
             ctx=ctx,
             width=width,
+            bind=bind,
         )
 
     def _select_slider(
@@ -342,6 +344,7 @@ class SelectSliderMixin:
         label_visibility: LabelVisibility = "visible",
         ctx: ScriptRunContext | None = None,
         width: WidthWithoutContent = "stretch",
+        bind: BindOption | None = None,
     ) -> T | tuple[T, T]:
         key = to_key(key)
 
@@ -428,6 +431,16 @@ class SelectSliderMixin:
             formatted_option_to_option_index=formatted_option_to_option_index,
         )
 
+        # Set query param binding on the proto if enabled
+        query_param_key: str | None = None
+        if bind == "query-params":
+            if key is None:
+                raise StreamlitAPIException(
+                    "A 'key' must be provided when using bind='query-params'."
+                )
+            query_param_key = key
+            slider_proto.query_param_key = key
+
         widget_state = register_widget(
             slider_proto.id,
             on_change_handler=on_change,
@@ -437,6 +450,8 @@ class SelectSliderMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="double_array_value",
+            bind=bind,
+            query_param_key=query_param_key,
         )
         if isinstance(widget_state.value, tuple):
             widget_state = maybe_coerce_enum_sequence(

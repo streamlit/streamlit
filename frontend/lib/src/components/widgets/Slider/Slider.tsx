@@ -161,13 +161,14 @@ function Slider({
     [isSelectSlider, options]
   )
 
-  // Register query param binding if widget key starts with "?"
+  // Register query param binding using queryParamKey from proto
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Union type requires flexible typing
   const { isBound, syncToUrl } = useQueryParamBinding<any>({
     elementId: element.id,
     widgetMgr,
     serializer,
     deserializer,
+    queryParamKey: element.queryParamKey,
   })
 
   // We tie the UI to `uiValue` rather than `value` because `value` only

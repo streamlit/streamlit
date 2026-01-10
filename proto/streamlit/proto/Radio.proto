@@ -34,4 +34,8 @@ message Radio {
   bool horizontal = 10;
   LabelVisibilityMessage label_visibility = 11;
   repeated string captions = 12;
+
+  // Query param binding - if set, widget syncs its value with this URL param.
+  // Empty/unset means no binding.
+  optional string query_param_key = 13;
 }

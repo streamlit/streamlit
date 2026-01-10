@@ -63,6 +63,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
 
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.runtime.state.common import BindOption
 
 T = TypeVar("T")
 
@@ -172,6 +173,7 @@ class RadioMixin:
         captions: Sequence[str] | None = None,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
+        bind: BindOption | None = None,
     ) -> T | None:
         r"""Display a radio button widget.
 
@@ -338,6 +340,7 @@ class RadioMixin:
             label_visibility=label_visibility,
             ctx=ctx,
             width=width,
+            bind=bind,
         )
 
     def _radio(
@@ -358,6 +361,7 @@ class RadioMixin:
         captions: Sequence[str] | None = None,
         ctx: ScriptRunContext | None,
         width: Width = "content",
+        bind: BindOption | None = None,
     ) -> T | None:
         key = to_key(key)
 
@@ -441,6 +445,16 @@ class RadioMixin:
         if help is not None:
             radio_proto.help = dedent(help)
 
+        # Set query param binding on the proto if enabled
+        query_param_key: str | None = None
+        if bind == "query-params":
+            if key is None:
+                raise StreamlitAPIException(
+                    "A 'key' must be provided when using bind='query-params'."
+                )
+            query_param_key = key
+            radio_proto.query_param_key = key
+
         serde = RadioSerde(
             opt,
             index,
@@ -457,6 +471,8 @@ class RadioMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="int_value",
+            bind=bind,
+            query_param_key=query_param_key,
         )
         widget_state = maybe_coerce_enum(widget_state, options, opt)
 

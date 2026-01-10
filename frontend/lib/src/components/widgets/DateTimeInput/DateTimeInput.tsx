@@ -90,13 +90,14 @@ function DateTimeInput({
     fragmentId,
   })
 
-  // Register query param binding if widget key starts with "?"
+  // Register query param binding using queryParamKey from proto
   // DateTimeInput uses string values in "YYYY/MM/DD HH:MM:SS" proto format
   const { isBound, syncToUrl } = useQueryParamBinding<string | null>({
     elementId: element.id,
     widgetMgr,
     serializer: serializeDateTimeString,
     deserializer: deserializeDateTimeString,
+    queryParamKey: element.queryParamKey,
   })
 
   const { locale } = useContext(LibConfigContext)

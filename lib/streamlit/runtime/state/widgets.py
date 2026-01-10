@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING
 
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.state.common import (
+    BindOption,
     RegisterWidgetResult,
     T,
     ValueFieldName,
@@ -28,8 +29,6 @@ from streamlit.runtime.state.common import (
     WidgetMetadata,
     WidgetSerializer,
     WidgetValuePresenter,
-    extract_query_param_name,
-    is_query_param_key,
     user_key_from_element_id,
 )
 from streamlit.runtime.state.query_param_serializers import (
@@ -107,6 +106,8 @@ def register_widget(
     kwargs: WidgetKwargs | None = None,
     value_type: ValueFieldName,
     presenter: WidgetValuePresenter | None = None,
+    bind: BindOption | None = None,
+    query_param_key: str | None = None,
 ) -> RegisterWidgetResult[T]:
     """Register a widget with Streamlit, and return its current value.
     NOTE: This function should be called after the proto has been filled.
@@ -141,6 +142,12 @@ def register_widget(
     presenter : WidgetValuePresenter or None
         An optional hook that allows a widget to customize how its value should be
         presented.
+    bind : BindOption or None
+        Optional binding option. Use "query-params" to sync widget value with URL
+        query parameters.
+    query_param_key : str or None
+        The query parameter key to bind to. Required when bind="query-params".
+        This is typically the same as the widget's user key.
 
     Returns
     -------
@@ -165,12 +172,6 @@ def register_widget(
 
         For both paths a widget return value is provided, allowing the widgets
         to be used in a non-streamlit setting.
-
-    Notes
-    -----
-    If the widget's key starts with "?" (e.g., key="?enabled"), it will be
-    automatically bound to a URL query parameter with that name (minus the "?").
-    This allows widget values to be synchronized with the URL.
     """
     if on_change_handler is not None and callbacks is not None:
         raise StreamlitAPIException(
@@ -190,13 +191,18 @@ def register_widget(
         fragment_id=ctx.current_fragment_id if ctx else None,
         presenter=presenter,
     )
-    return register_widget_from_metadata(metadata, ctx, value_type)
+    return register_widget_from_metadata(
+        metadata, ctx, value_type, bind=bind, query_param_key=query_param_key
+    )
 
 
 def register_widget_from_metadata(
     metadata: WidgetMetadata[T],
     ctx: ScriptRunContext | None,
     value_type: ValueFieldName | None = None,
+    *,
+    bind: BindOption | None = None,
+    query_param_key: str | None = None,
 ) -> RegisterWidgetResult[T]:
     """Register a widget and return its value, using an already constructed
     `WidgetMetadata`.
@@ -205,6 +211,14 @@ def register_widget_from_metadata(
     widgets by saving and reusing the completed metadata.
 
     See `register_widget` for details on what this returns.
+
+    Parameters
+    ----------
+    bind : BindOption or None
+        Optional binding option. Use "query-params" to sync widget value with URL
+        query parameters.
+    query_param_key : str or None
+        The query parameter key to bind to. Required when bind="query-params".
     """
     if ctx is None:
         # Early-out if we don't have a script run context (which probably means
@@ -214,9 +228,15 @@ def register_widget_from_metadata(
     widget_id = metadata.id
     user_key = user_key_from_element_id(widget_id)
 
-    # Auto-detect query param binding from user key prefix ("?")
-    if user_key is not None and is_query_param_key(user_key):
-        param_key = extract_query_param_name(user_key)
+    # Determine if we should bind to query params via the bind parameter
+    should_bind_query_params = bind == "query-params"
+    param_key = query_param_key if should_bind_query_params else None
+
+    if should_bind_query_params:
+        if param_key is None:
+            raise StreamlitAPIException(
+                "A 'key' must be provided when using bind='query-params'."
+            )
         # Get serializers for this value type
         effective_value_type = value_type or metadata.value_type
         serializers = _VALUE_TYPE_SERIALIZERS.get(effective_value_type)

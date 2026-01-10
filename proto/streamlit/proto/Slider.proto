@@ -57,4 +57,8 @@ message Slider {
   bool disabled = 15;
   LabelVisibilityMessage label_visibility = 16;
   Type type = 17;
+
+  // Query param binding - if set, widget syncs its value with this URL param.
+  // Empty/unset means no binding.
+  optional string query_param_key = 18;
 }

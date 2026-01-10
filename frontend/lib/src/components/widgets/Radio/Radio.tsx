@@ -60,12 +60,13 @@ function Radio({
     [options]
   )
 
-  // Register query param binding if widget key starts with "?"
+  // Register query param binding using queryParamKey from proto
   const { isBound, syncToUrl } = useQueryParamBinding<RadioValue>({
     elementId: element.id,
     widgetMgr,
     serializer,
     deserializer,
+    queryParamKey: element.queryParamKey,
   })
 
   const [value, setValueWithSource] = useBasicWidgetState<

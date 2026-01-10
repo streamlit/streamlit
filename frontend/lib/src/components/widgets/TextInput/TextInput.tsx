@@ -58,12 +58,13 @@ function TextInput({
   widgetMgr,
   fragmentId,
 }: Props): ReactElement {
-  // Register query param binding if widget key starts with "?"
+  // Register query param binding using queryParamKey from proto
   const { isBound, syncToUrl } = useQueryParamBinding<string | null>({
     elementId: element.id,
     widgetMgr,
     serializer: serializeString,
     deserializer: deserializeString,
+    queryParamKey: element.queryParamKey,
   })
 
   /**

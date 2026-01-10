@@ -72,13 +72,14 @@ function TimeInput({
     fragmentId,
   })
 
-  // Register query param binding if widget key starts with "?"
+  // Register query param binding using queryParamKey from proto
   // TimeInput uses string value in HH:MM format which serializes directly
   const { isBound, syncToUrl } = useQueryParamBinding<string | null>({
     elementId: element.id,
     widgetMgr,
     serializer: serializeString,
     deserializer: deserializeString,
+    queryParamKey: element.queryParamKey,
   })
 
   const isInSidebar = useContext(IsSidebarContext)

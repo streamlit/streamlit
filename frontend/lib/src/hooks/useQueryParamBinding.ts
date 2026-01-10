@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,10 +16,7 @@
 
 import { useCallback, useEffect, useRef } from "react"
 
-import { getKeyFromId } from "~lib/components/core/Block/utils"
 import {
-  extractQueryParamName,
-  isQueryParamKey,
   QueryParamDeserializer,
   QueryParamSerializer,
 } from "~lib/queryParamSerializers"
@@ -34,12 +31,18 @@ export interface UseQueryParamBindingArgs<T> {
   deserializer: QueryParamDeserializer<T>
   /** The WidgetStateManager instance */
   widgetMgr: WidgetStateManager
+  /**
+   * The query parameter key from the widget proto (e.g., element.queryParamKey).
+   * If set (non-null, non-empty string), the widget binds to this URL query parameter.
+   * Protobuf generates this as string | null | undefined for optional fields.
+   */
+  queryParamKey?: string | null
 }
 
 export interface UseQueryParamBindingResult<T> {
   /** Whether this widget is bound to a query parameter */
   isBound: boolean
-  /** The query parameter key (without "?" prefix), or undefined if not bound */
+  /** The query parameter key, or undefined if not bound */
   paramKey: string | undefined
   /** Get the initial value from the URL if present */
   getUrlValue: () => T | undefined
@@ -51,7 +54,7 @@ export interface UseQueryParamBindingResult<T> {
  * A React hook that manages query parameter binding for widgets.
  *
  * This hook:
- * 1. Detects if the widget's key starts with "?" (indicating query param binding)
+ * 1. Checks if queryParamKey is provided (via bind="query_params")
  * 2. If bound, registers the binding with WidgetStateManager
  * 3. Provides utilities for getting initial URL values and syncing changes
  *
@@ -62,6 +65,7 @@ export interface UseQueryParamBindingResult<T> {
  *   serializer: serializeBool,
  *   deserializer: deserializeBool,
  *   widgetMgr,
+ *   queryParamKey: element.queryParamKey,
  * })
  *
  * // Get initial value from URL (call once during initialization)
@@ -78,19 +82,18 @@ export function useQueryParamBinding<T>({
   serializer,
   deserializer,
   widgetMgr,
+  queryParamKey,
 }: UseQueryParamBindingArgs<T>): UseQueryParamBindingResult<T> {
-  // Extract user key from element ID
-  const userKey = getKeyFromId(elementId)
-  const isBound = isQueryParamKey(userKey)
-  const paramKey =
-    isBound && userKey ? extractQueryParamName(userKey) : undefined
+  // Widget is bound if queryParamKey is a non-empty string
+  const isBound = Boolean(queryParamKey)
+  const paramKey = queryParamKey || undefined
 
   // Track if we've already registered to avoid duplicate registrations
-  const isRegistered = useRef(false)
+  const isRegisteredRef = useRef(false)
 
   // Register/unregister the binding
   useEffect(() => {
-    if (!isBound || !paramKey || isRegistered.current) {
+    if (!isBound || !paramKey || isRegisteredRef.current) {
       return
     }
 
@@ -100,11 +103,11 @@ export function useQueryParamBinding<T>({
       serializer,
       deserializer,
     })
-    isRegistered.current = true
+    isRegisteredRef.current = true
 
     return (): void => {
       widgetMgr.unregisterQueryParamBinding(elementId)
-      isRegistered.current = false
+      isRegisteredRef.current = false
     }
   }, [elementId, paramKey, isBound, serializer, deserializer, widgetMgr])
 

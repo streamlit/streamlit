@@ -54,6 +54,7 @@ from streamlit.type_util import SupportsStr
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.runtime.state.common import BindOption
     from streamlit.type_util import SupportsStr
 
 
@@ -143,6 +144,7 @@ class TextWidgetsMixin:
         label_visibility: LabelVisibility = "visible",
         icon: str | None = None,
         width: WidthWithoutContent = "stretch",
+        bind: BindOption | None = None,
     ) -> str | None:
         r"""Display a single-line text input widget.
 
@@ -292,6 +294,7 @@ class TextWidgetsMixin:
             icon=icon,
             width=width,
             ctx=ctx,
+            bind=bind,
         )
 
     def _text_input(
@@ -313,6 +316,7 @@ class TextWidgetsMixin:
         icon: str | None = None,
         width: WidthWithoutContent = "stretch",
         ctx: ScriptRunContext | None = None,
+        bind: BindOption | None = None,
     ) -> str | None:
         key = to_key(key)
 
@@ -387,6 +391,16 @@ class TextWidgetsMixin:
             autocomplete = "new-password" if type == "password" else ""
         text_input_proto.autocomplete = autocomplete
 
+        # Set query param binding on the proto if enabled
+        query_param_key: str | None = None
+        if bind == "query-params":
+            if key is None:
+                raise StreamlitAPIException(
+                    "A 'key' must be provided when using bind='query-params'."
+                )
+            query_param_key = key
+            text_input_proto.query_param_key = key
+
         serde = TextInputSerde(value)
 
         widget_state = register_widget(
@@ -398,6 +412,8 @@ class TextWidgetsMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="string_value",
+            bind=bind,
+            query_param_key=query_param_key,
         )
 
         if widget_state.value_changed:
@@ -468,6 +484,7 @@ class TextWidgetsMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
+        bind: BindOption | None = None,
     ) -> str | None:
         r"""Display a multi-line text input widget.
 
@@ -612,6 +629,7 @@ class TextWidgetsMixin:
             label_visibility=label_visibility,
             width=width,
             ctx=ctx,
+            bind=bind,
         )
 
     def _text_area(
@@ -631,6 +649,7 @@ class TextWidgetsMixin:
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
         ctx: ScriptRunContext | None = None,
+        bind: BindOption | None = None,
     ) -> str | None:
         key = to_key(key)
 
@@ -684,6 +703,16 @@ class TextWidgetsMixin:
         if placeholder is not None:
             text_area_proto.placeholder = str(placeholder)
 
+        # Set query param binding on the proto if enabled
+        query_param_key: str | None = None
+        if bind == "query-params":
+            if key is None:
+                raise StreamlitAPIException(
+                    "A 'key' must be provided when using bind='query-params'."
+                )
+            query_param_key = key
+            text_area_proto.query_param_key = key
+
         serde = TextAreaSerde(value)
         widget_state = register_widget(
             text_area_proto.id,
@@ -694,6 +723,8 @@ class TextWidgetsMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="string_value",
+            bind=bind,
+            query_param_key=query_param_key,
         )
 
         if widget_state.value_changed:

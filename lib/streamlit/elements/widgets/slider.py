@@ -64,6 +64,7 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.elements.lib.column_types import DateTimeFormat, NumberFormat
     from streamlit.elements.lib.layout_utils import WidthWithoutContent
+    from streamlit.runtime.state.common import BindOption
 
 SliderNumericT = TypeVar("SliderNumericT", int, float)
 SliderDatelikeT = TypeVar("SliderDatelikeT", date, time, datetime)
@@ -440,6 +441,7 @@ class SliderMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
+        bind: BindOption | None = None,
     ) -> Any:
         r"""Display a slider widget.
 
@@ -668,6 +670,7 @@ class SliderMixin:
             label_visibility=label_visibility,
             width=width,
             ctx=ctx,
+            bind=bind,
         )
 
     def _slider(
@@ -688,6 +691,7 @@ class SliderMixin:
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
         ctx: ScriptRunContext | None = None,
+        bind: BindOption | None = None,
     ) -> SliderReturn:
         key = to_key(key)
 
@@ -983,6 +987,16 @@ class SliderMixin:
         if help is not None:
             slider_proto.help = dedent(help)
 
+        # Set query param binding on the proto if enabled
+        query_param_key: str | None = None
+        if bind == "query-params":
+            if key is None:
+                raise StreamlitAPIException(
+                    "A 'key' must be provided when using bind='query-params'."
+                )
+            query_param_key = key
+            slider_proto.query_param_key = key
+
         serde = SliderSerde(
             prepared_value,
             data_type,
@@ -1000,6 +1014,8 @@ class SliderMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="double_array_value",
+            bind=bind,
+            query_param_key=query_param_key,
         )
 
         if widget_state.value_changed:

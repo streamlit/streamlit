@@ -62,6 +62,7 @@ from streamlit.time_util import adjust_years
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.runtime.state.common import BindOption
 
 # Type for things that point to a specific time (even if a default time, though not None).
 TimeValue: TypeAlias = time | datetime | str | Literal["now"]
@@ -552,6 +553,7 @@ class TimeWidgetsMixin:
         label_visibility: LabelVisibility = "visible",
         step: int | timedelta = timedelta(minutes=DEFAULT_STEP_MINUTES),
         width: WidthWithoutContent = "stretch",
+        bind: BindOption | None = None,
     ) -> time | None:
         r"""Display a time input widget.
 
@@ -689,6 +691,7 @@ class TimeWidgetsMixin:
             step=step,
             width=width,
             ctx=ctx,
+            bind=bind,
         )
 
     def _time_input(
@@ -706,6 +709,7 @@ class TimeWidgetsMixin:
         step: int | timedelta = timedelta(minutes=DEFAULT_STEP_MINUTES),
         width: WidthWithoutContent = "stretch",
         ctx: ScriptRunContext | None = None,
+        bind: BindOption | None = None,
     ) -> time | None:
         key = to_key(key)
 
@@ -764,6 +768,16 @@ class TimeWidgetsMixin:
         if help is not None:
             time_input_proto.help = dedent(help)
 
+        # Set query param binding on the proto if enabled
+        query_param_key: str | None = None
+        if bind == "query-params":
+            if key is None:
+                raise StreamlitAPIException(
+                    "A 'key' must be provided when using bind='query-params'."
+                )
+            query_param_key = key
+            time_input_proto.query_param_key = key
+
         serde = TimeInputSerde(parsed_time)
         widget_state = register_widget(
             time_input_proto.id,
@@ -774,6 +788,8 @@ class TimeWidgetsMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="string_value",
+            bind=bind,
+            query_param_key=query_param_key,
         )
 
         if widget_state.value_changed:
@@ -845,6 +861,7 @@ class TimeWidgetsMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
+        bind: BindOption | None = None,
     ) -> datetime | None:
         r"""Display a date and time input widget.
 
@@ -1012,6 +1029,7 @@ class TimeWidgetsMixin:
             label_visibility=label_visibility,
             width=width,
             ctx=ctx,
+            bind=bind,
         )
 
     def _datetime_input(
@@ -1032,6 +1050,7 @@ class TimeWidgetsMixin:
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
         ctx: ScriptRunContext | None = None,
+        bind: BindOption | None = None,
     ) -> datetime | None:
         key = to_key(key)
 
@@ -1130,6 +1149,17 @@ class TimeWidgetsMixin:
             min=datetime_values.min,
             max=datetime_values.max,
         )
+
+        # Set query param binding on the proto if enabled
+        query_param_key: str | None = None
+        if bind == "query-params":
+            if key is None:
+                raise StreamlitAPIException(
+                    "A 'key' must be provided when using bind='query-params'."
+                )
+            query_param_key = key
+            date_time_input_proto.query_param_key = key
+
         widget_state = register_widget(
             date_time_input_proto.id,
             on_change_handler=on_change,
@@ -1139,6 +1169,8 @@ class TimeWidgetsMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="string_array_value",
+            bind=bind,
+            query_param_key=query_param_key,
         )
 
         if widget_state.value_changed:
@@ -1229,6 +1261,7 @@ class TimeWidgetsMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
+        bind: BindOption | None = None,
     ) -> DateWidgetReturn:
         r"""Display a date input widget.
 
@@ -1420,6 +1453,7 @@ class TimeWidgetsMixin:
             format=format,
             width=width,
             ctx=ctx,
+            bind=bind,
         )
 
     def _date_input(
@@ -1439,6 +1473,7 @@ class TimeWidgetsMixin:
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
         ctx: ScriptRunContext | None = None,
+        bind: BindOption | None = None,
     ) -> DateWidgetReturn:
         key = to_key(key)
 
@@ -1551,6 +1586,16 @@ class TimeWidgetsMixin:
         if help is not None:
             date_input_proto.help = dedent(help)
 
+        # Set query param binding on the proto if enabled
+        query_param_key: str | None = None
+        if bind == "query-params":
+            if key is None:
+                raise StreamlitAPIException(
+                    "A 'key' must be provided when using bind='query-params'."
+                )
+            query_param_key = key
+            date_input_proto.query_param_key = key
+
         serde = DateInputSerde(parsed_values)
 
         widget_state = register_widget(
@@ -1562,6 +1607,8 @@ class TimeWidgetsMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="string_array_value",
+            bind=bind,
+            query_param_key=query_param_key,
         )
 
         if widget_state.value_changed:

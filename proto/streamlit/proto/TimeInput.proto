@@ -32,4 +32,8 @@ message TimeInput {
   bool disabled = 8;
   LabelVisibilityMessage label_visibility = 9;
   int64 step = 10;
+
+  // Query param binding - if set, widget syncs its value with this URL param.
+  // Empty/unset means no binding.
+  optional string query_param_key = 11;
 }

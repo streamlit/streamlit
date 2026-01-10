@@ -47,6 +47,7 @@ from streamlit.runtime.state import (
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.runtime.state.common import BindOption
 
 
 @dataclass
@@ -75,6 +76,7 @@ class CheckboxMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
+        bind: BindOption | None = None,
     ) -> bool:
         r"""Display a checkbox widget.
 
@@ -185,6 +187,7 @@ class CheckboxMixin:
             type=CheckboxProto.StyleType.DEFAULT,
             ctx=ctx,
             width=width,
+            bind=bind,
         )
 
     @gather_metrics("toggle")
@@ -201,6 +204,7 @@ class CheckboxMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
+        bind: BindOption | None = None,
     ) -> bool:
         r"""Display a toggle widget.
 
@@ -311,6 +315,7 @@ class CheckboxMixin:
             type=CheckboxProto.StyleType.TOGGLE,
             ctx=ctx,
             width=width,
+            bind=bind,
         )
 
     def _checkbox(
@@ -328,6 +333,7 @@ class CheckboxMixin:
         type: CheckboxProto.StyleType.ValueType = CheckboxProto.StyleType.DEFAULT,
         ctx: ScriptRunContext | None = None,
         width: Width = "content",
+        bind: BindOption | None = None,
     ) -> bool:
         key = to_key(key)
 
@@ -364,6 +370,18 @@ class CheckboxMixin:
         if help is not None:
             checkbox_proto.help = dedent(help)
 
+        # Set query param binding on the proto if enabled
+        query_param_key: str | None = None
+        if bind == "query-params":
+            if key is None:
+                from streamlit.errors import StreamlitAPIException
+
+                raise StreamlitAPIException(
+                    "A 'key' must be provided when using bind='query-params'."
+                )
+            query_param_key = key
+            checkbox_proto.query_param_key = key
+
         validate_width(width, allow_content=True)
         layout_config = LayoutConfig(width=width)
 
@@ -378,6 +396,8 @@ class CheckboxMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="bool_value",
+            bind=bind,
+            query_param_key=query_param_key,
         )
 
         if checkbox_state.value_changed:

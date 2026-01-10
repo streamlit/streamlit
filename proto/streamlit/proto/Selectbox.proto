@@ -40,5 +40,9 @@ message Selectbox {
   string placeholder = 11;
   optional bool accept_new_options = 12;
 
-  // Next: 15
+  // Query param binding - if set, widget syncs its value with this URL param.
+  // Empty/unset means no binding.
+  optional string query_param_key = 14;
+
+  // Next: 16
 }

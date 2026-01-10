@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -734,30 +734,4 @@ export function deserializeButtonGroupMulti(
     .filter(idx => idx >= 0)
 
   return indices.length > 0 ? indices : undefined
-}
-
-// --- Query Param Key Detection ---
-
-/** Prefix for user keys that should be bound to URL query parameters. */
-export const QUERY_PARAM_KEY_PREFIX = "?"
-
-/**
- * Returns true if the user key indicates query param binding.
- * A user key starting with "?" indicates that the widget should be
- * bound to a URL query parameter of the same name (without the prefix).
- */
-export function isQueryParamKey(userKey: string | undefined | null): boolean {
-  if (!userKey) return false
-  return userKey.startsWith(QUERY_PARAM_KEY_PREFIX)
-}
-
-/**
- * Extracts the query param name from a user key with the "?" prefix.
- * Assumes the key starts with "?" - use isQueryParamKey() to check first.
- *
- * @param userKey - The user key with "?" prefix (e.g., "?enabled")
- * @returns The query param name (e.g., "enabled")
- */
-export function extractQueryParamName(userKey: string): string {
-  return userKey.slice(QUERY_PARAM_KEY_PREFIX.length)
 }

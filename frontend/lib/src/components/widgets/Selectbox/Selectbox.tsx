@@ -91,13 +91,14 @@ const Selectbox: FC<Props> = ({
     acceptNewOptions,
   } = element
 
-  // Register query param binding if widget key starts with "?"
+  // Register query param binding using queryParamKey from proto
   // Selectbox uses string values directly, so we use simple string serializers
   const { isBound, syncToUrl } = useQueryParamBinding<SelectboxValue>({
     elementId: element.id,
     widgetMgr,
     serializer: serializeString,
     deserializer: deserializeString,
+    queryParamKey: element.queryParamKey,
   })
 
   const [value, setValueWithSource] = useBasicWidgetState<

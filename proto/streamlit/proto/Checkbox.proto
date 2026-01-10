@@ -37,4 +37,8 @@ message Checkbox {
   bool disabled = 8;
   LabelVisibilityMessage label_visibility = 9;
   StyleType type = 10;
+
+  // Query param binding - if set, widget syncs its value with this URL param.
+  // Empty/unset means no binding.
+  optional string query_param_key = 11;
 }

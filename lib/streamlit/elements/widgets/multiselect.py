@@ -73,6 +73,7 @@ if TYPE_CHECKING:
         WidgetCallback,
         WidgetKwargs,
     )
+    from streamlit.runtime.state.common import BindOption
 
 T = TypeVar("T")
 
@@ -249,6 +250,7 @@ class MultiSelectMixin:
         label_visibility: LabelVisibility = "visible",
         accept_new_options: Literal[False, True] | bool = False,
         width: WidthWithoutContent = "stretch",
+        bind: BindOption | None = None,
     ) -> list[T] | list[T | str]:
         r"""Display a multiselect widget.
         The multiselect widget starts as empty.
@@ -443,6 +445,7 @@ class MultiSelectMixin:
             accept_new_options=accept_new_options,
             width=width,
             ctx=ctx,
+            bind=bind,
         )
 
     def _multiselect(
@@ -464,6 +467,7 @@ class MultiSelectMixin:
         accept_new_options: bool = False,
         width: WidthWithoutContent = "stretch",
         ctx: ScriptRunContext | None = None,
+        bind: BindOption | None = None,
     ) -> list[T] | list[T | str]:
         key = to_key(key)
 
@@ -525,6 +529,18 @@ class MultiSelectMixin:
             proto.help = dedent(help)
         proto.accept_new_options = accept_new_options
 
+        # Set query param binding on the proto if enabled
+        query_param_key: str | None = None
+        if bind == "query-params":
+            if key is None:
+                from streamlit.errors import StreamlitAPIException
+
+                raise StreamlitAPIException(
+                    "A 'key' must be provided when using bind='query-params'."
+                )
+            query_param_key = key
+            proto.query_param_key = key
+
         serde = MultiSelectSerde(
             indexable_options,
             formatted_options=formatted_options,
@@ -541,6 +557,8 @@ class MultiSelectMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="string_array_value",
+            bind=bind,
+            query_param_key=query_param_key,
         )
 
         _check_max_selections(widget_state.value, max_selections)

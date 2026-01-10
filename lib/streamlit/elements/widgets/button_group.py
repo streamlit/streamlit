@@ -69,6 +69,7 @@ if TYPE_CHECKING:
         WidgetKwargs,
     )
     from streamlit.runtime.state.common import (
+        BindOption,
         RegisterWidgetResult,
         WidgetDeserializer,
         WidgetSerializer,
@@ -536,6 +537,7 @@ class ButtonGroupMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
+        bind: BindOption | None = None,
     ) -> list[V] | V | None:
         r"""Display a pills widget.
 
@@ -709,6 +711,7 @@ class ButtonGroupMixin:
             disabled=disabled,
             label_visibility=label_visibility,
             width=width,
+            bind=bind,
         )
 
     @overload
@@ -765,6 +768,7 @@ class ButtonGroupMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
+        bind: BindOption | None = None,
     ) -> list[V] | V | None:
         r"""Display a segmented control widget.
 
@@ -941,6 +945,7 @@ class ButtonGroupMixin:
             disabled=disabled,
             label_visibility=label_visibility,
             width=width,
+            bind=bind,
         )
 
     @gather_metrics("_internal_button_group")
@@ -960,6 +965,7 @@ class ButtonGroupMixin:
         label: str | None = None,
         label_visibility: LabelVisibility = "visible",
         help: str | None = None,
+        bind: BindOption | None = None,
         width: Width = "content",
     ) -> list[V] | V | None:
         maybe_raise_label_warnings(label, label_visibility)
@@ -1025,6 +1031,7 @@ class ButtonGroupMixin:
             label=label,
             label_visibility=label_visibility,
             width=width,
+            bind=bind,
         )
 
         if selection_mode == "multi":
@@ -1056,6 +1063,7 @@ class ButtonGroupMixin:
         label_visibility: LabelVisibility = "visible",
         help: str | None = None,
         width: Width = "content",
+        bind: BindOption | None = None,
     ) -> RegisterWidgetResult[T]:
         _maybe_raise_selection_mode_warning(selection_mode)
 
@@ -1140,6 +1148,16 @@ class ButtonGroupMixin:
             help=help,
         )
 
+        # Set query param binding on the proto if enabled
+        query_param_key: str | None = None
+        if bind == "query-params":
+            if key is None:
+                raise StreamlitAPIException(
+                    "A 'key' must be provided when using bind='query-params'."
+                )
+            query_param_key = key
+            proto.query_param_key = key
+
         widget_state = register_widget(
             proto.id,
             on_change_handler=on_change,
@@ -1149,6 +1167,8 @@ class ButtonGroupMixin:
             serializer=serializer,
             ctx=ctx,
             value_type="int_array_value",
+            bind=bind,
+            query_param_key=query_param_key,
         )
 
         if widget_state.value_changed:

@@ -54,12 +54,13 @@ function Checkbox({
   widgetMgr,
   fragmentId,
 }: Readonly<Props>): ReactElement {
-  // Register query param binding if widget key starts with "?"
+  // Register query param binding using queryParamKey from proto
   const { isBound, syncToUrl } = useQueryParamBinding<boolean>({
     elementId: element.id,
     widgetMgr,
     serializer: serializeBool,
     deserializer: deserializeBool,
+    queryParamKey: element.queryParamKey,
   })
 
   const [value, setValueWithSource] = useBasicWidgetState<

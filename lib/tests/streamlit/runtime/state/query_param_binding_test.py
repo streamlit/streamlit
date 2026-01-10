@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,17 +16,17 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from parameterized import parameterized
 
-from streamlit.runtime.state.common import (
-    QUERY_PARAM_KEY_PREFIX,
-    extract_query_param_name,
-    is_query_param_key,
-)
 from streamlit.runtime.state.query_params import (
     QueryParams,
     WidgetBinding,
 )
+
+if TYPE_CHECKING:
+    from streamlit.runtime.state.common import BindOption
 
 
 def _int_serializer(x: int) -> str:
@@ -495,42 +495,11 @@ class TestQueryParamsWidgetBindingsIntegration:
         assert query_params.get_bound_value("number_input_1") == expected_deserialized
 
 
-class TestQueryParamKeyDetection:
-    """Tests for the query param key detection helper functions."""
+class TestBindOption:
+    """Tests for the bind parameter API."""
 
-    @parameterized.expand(
-        [
-            ("query_param_key", "?enabled", True),
-            ("query_param_key_long", "?my_long_param_name", True),
-            ("regular_key", "enabled", False),
-            ("empty_string", "", False),
-            ("just_prefix", "?", True),  # Edge case: just the prefix
-            ("underscore_prefix", "_enabled", False),
-            ("hash_prefix", "#enabled", False),
-        ]
-    )
-    def test_is_query_param_key(self, _name: str, key: str, expected: bool) -> None:
-        """Test detection of query param keys based on the '?' prefix."""
-        assert is_query_param_key(key) == expected
-
-    def test_is_query_param_key_none(self) -> None:
-        """Test that None returns False."""
-        assert is_query_param_key(None) is False
-
-    @parameterized.expand(
-        [
-            ("simple", "?enabled", "enabled"),
-            ("long_name", "?my_long_param_name", "my_long_param_name"),
-            ("with_underscore", "?my_param", "my_param"),
-            ("just_prefix", "?", ""),  # Edge case: just the prefix
-        ]
-    )
-    def test_extract_query_param_name(
-        self, _name: str, key: str, expected: str
-    ) -> None:
-        """Test extraction of query param name from user key."""
-        assert extract_query_param_name(key) == expected
-
-    def test_query_param_key_prefix_constant(self) -> None:
-        """Test that the prefix constant is '?'."""
-        assert QUERY_PARAM_KEY_PREFIX == "?"
+    def test_bind_option_type(self) -> None:
+        """Test that BindOption is a valid Literal type."""
+        # BindOption should accept "query-params"
+        bind_value: BindOption = "query-params"
+        assert bind_value == "query-params"
