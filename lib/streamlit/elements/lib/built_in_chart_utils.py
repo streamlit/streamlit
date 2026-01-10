@@ -24,13 +24,12 @@ from typing import (
     Any,
     Final,
     Literal,
-    Protocol,
     TypeAlias,
     TypedDict,
     cast,
 )
 
-from streamlit import dataframe_util, type_util
+from streamlit import config, dataframe_util, type_util
 from streamlit.elements.lib.color_util import (
     Color,
     is_color_like,
@@ -77,12 +76,6 @@ BUILTIN_COLOR_NAMES: Final[frozenset[str]] = frozenset(
 )
 
 
-class ThemeLike(Protocol):
-    """Duck typing for theme objects with color attributes."""
-
-    def __getattr__(self, name: str) -> Any: ...
-
-
 def is_builtin_color_name(color: Any) -> bool:
     """Check if color is a Streamlit built-in color name.
 
@@ -112,15 +105,16 @@ def is_builtin_color_name(color: Any) -> bool:
     return isinstance(color, str) and color.lower() in BUILTIN_COLOR_NAMES
 
 
-def resolve_builtin_color_name(name: str, theme: ThemeLike | None = None) -> str:
-    """Resolve built-in color name to theme color token.
+def resolve_builtin_color_name(name: str) -> str:
+    """Resolve built-in color name to theme color using config.
+
+    This function reads the theme color from Streamlit's config system,
+    which respects user-defined theme settings in .streamlit/config.toml.
 
     Parameters
     ----------
     name : str
         Built-in color name (case-insensitive)
-    theme : ThemeLike | None
-        Current theme object (duck typing with getattr support)
 
     Returns
     -------
@@ -129,12 +123,12 @@ def resolve_builtin_color_name(name: str, theme: ThemeLike | None = None) -> str
 
     Examples
     --------
-    >>> resolve_builtin_color_name("red", theme)
-    "#ff4b4b"  # theme.redColor
-    >>> resolve_builtin_color_name("primary", theme)
-    "#ff4b4b"  # theme.primaryColor (prioritized)
-    >>> resolve_builtin_color_name("grey", theme)
-    "#808495"  # theme.grayColor (grey is alias for gray)
+    >>> resolve_builtin_color_name("red")
+    "#ff4b4b"  # from config theme.redColor
+    >>> resolve_builtin_color_name("primary")
+    "#ff4b4b"  # from config theme.primaryColor
+    >>> resolve_builtin_color_name("grey")
+    "#a3a8b8"  # grey is alias for gray
     """
     name_lower = name.lower()
 
@@ -142,27 +136,28 @@ def resolve_builtin_color_name(name: str, theme: ThemeLike | None = None) -> str
     if name_lower == "grey":
         name_lower = "gray"
 
-    # Default values (fallback when theme is unavailable or missing attributes)
+    # Default values (fallback when config returns None)
     # Source: lib/streamlit/config.py theme color definitions (light theme defaults)
-    defaults = {
-        "red": "#ff4b4b",  # config.py line 1210
-        "orange": "#ffa421",  # config.py line 1225
-        "yellow": "#faca2b",  # config.py line 1240
-        "blue": "#1c83e1",  # config.py line 1255
-        "green": "#21c354",  # config.py line 1270
-        "violet": "#803df5",  # config.py line 1285
-        "gray": "#a3a8b8",  # config.py line 1299
-        "primary": "#ff4b4b",  # Same as red (default primaryColor)
+    defaults: dict[str, str] = {
+        "red": "#ff4b4b",
+        "orange": "#ffa421",
+        "yellow": "#faca2b",
+        "blue": "#1c83e1",
+        "green": "#21c354",
+        "violet": "#803df5",
+        "gray": "#a3a8b8",
+        "primary": "#ff4b4b",
     }
 
-    # Theme token name (camelCase)
-    # Note: For 'primary', the token name is explicitly set to 'primaryColor'.
-    # This is the same as the default pattern, but the conditional is kept for clarity.
-    token_name = f"{name_lower}Color" if name_lower != "primary" else "primaryColor"
+    # Config option key (e.g., "theme.redColor", "theme.primaryColor")
+    config_key = (
+        f"theme.{name_lower}Color" if name_lower != "primary" else "theme.primaryColor"
+    )
 
-    # Get from theme, fallback to default
-    if theme is not None:
-        return getattr(theme, token_name, defaults[name_lower])
+    # Get from config, fallback to default if None
+    theme_color = config.get_option(config_key)
+    if theme_color is not None:
+        return theme_color
 
     return defaults[name_lower]
 
@@ -261,7 +256,6 @@ def maybe_raise_stack_warning(
 
 def _resolve_color_names(
     color: str | Color | list[Color] | None,
-    theme: ThemeLike | None = None,
 ) -> str | Color | list[Color] | None:
     """Resolve built-in color names to theme colors.
 
@@ -269,8 +263,6 @@ def _resolve_color_names(
     ----------
     color : str | Color | list[Color] | None
         Color specification (may contain built-in color names)
-    theme : ThemeLike | None
-        Theme object for color resolution
 
     Returns
     -------
@@ -283,7 +275,7 @@ def _resolve_color_names(
     # Array case: resolve each element
     if isinstance(color, list):
         return [
-            resolve_builtin_color_name(cast("str", c), theme)
+            resolve_builtin_color_name(cast("str", c))
             if is_builtin_color_name(c)
             else c
             for c in color
@@ -291,7 +283,7 @@ def _resolve_color_names(
 
     # Single value case
     if is_builtin_color_name(color):
-        return resolve_builtin_color_name(cast("str", color), theme)
+        return resolve_builtin_color_name(cast("str", color))
 
     return color
 
@@ -313,7 +305,6 @@ def generate_chart(
     # Bar charts only:
     horizontal: bool = False,
     sort_from_user: bool | str = False,
-    theme: ThemeLike | None = None,  # Theme for built-in color name resolution
 ) -> tuple[alt.Chart | alt.LayerChart, AddRowsMetadata]:
     """Function to use the chart's type, data columns and indices to figure out the
     chart's spec.
@@ -338,7 +329,7 @@ def generate_chart(
     # Resolve built-in color names AFTER column parsing (column names have priority)
     # Only resolve if color is a value (not a column reference)
     if color_column is None and color_value is not None:
-        color_value = _resolve_color_names(color_value, theme)
+        color_value = _resolve_color_names(color_value)
     # Get name of column to use for size, or constant value to use. Any/both could
     #  be None.
     size_column, size_value = _parse_generic_column(df, size_from_user)

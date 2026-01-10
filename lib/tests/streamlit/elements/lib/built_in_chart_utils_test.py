@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 from typing import Any
+from unittest.mock import patch
 
 import pytest
 
@@ -24,24 +25,6 @@ from streamlit.elements.lib.built_in_chart_utils import (
     is_builtin_color_name,
     resolve_builtin_color_name,
 )
-
-
-class MockTheme:
-    """Mock theme object for testing."""
-
-    def __init__(self, **kwargs: str) -> None:
-        self._colors = kwargs
-
-    def __getattr__(self, name: str) -> str:
-        if name.startswith("_"):
-            raise AttributeError(
-                f"'{type(self).__name__}' object has no attribute '{name}'"
-            )
-        if name not in self._colors:
-            raise AttributeError(
-                f"'{type(self).__name__}' object has no attribute '{name}'"
-            )
-        return self._colors[name]
 
 
 class TestIsBuiltinColorName:
@@ -89,52 +72,99 @@ class TestIsBuiltinColorName:
 class TestResolveBuiltinColorName:
     """Test resolve_builtin_color_name function."""
 
-    def test_resolve_with_theme(self) -> None:
-        """Test color resolution with a theme object."""
-        theme = MockTheme(
-            redColor="#custom_red",
-            blueColor="#custom_blue",
-            primaryColor="#custom_primary",
-        )
+    def test_resolve_with_custom_theme_config(self) -> None:
+        """Test color resolution when theme is configured via config.get_option()."""
 
-        assert resolve_builtin_color_name("red", theme) == "#custom_red"
-        assert resolve_builtin_color_name("blue", theme) == "#custom_blue"
-        assert resolve_builtin_color_name("primary", theme) == "#custom_primary"
+        def mock_get_option(key: str) -> str | None:
+            config_values = {
+                "theme.redColor": "#custom_red",
+                "theme.blueColor": "#custom_blue",
+                "theme.primaryColor": "#custom_primary",
+            }
+            return config_values.get(key)
 
-    def test_resolve_without_theme(self) -> None:
-        """Test color resolution without a theme (fallback to defaults)."""
-        # Default values from lib/streamlit/config.py (light theme)
-        assert resolve_builtin_color_name("red", None) == "#ff4b4b"
-        assert resolve_builtin_color_name("orange", None) == "#ffa421"
-        assert resolve_builtin_color_name("yellow", None) == "#faca2b"
-        assert resolve_builtin_color_name("blue", None) == "#1c83e1"
-        assert resolve_builtin_color_name("green", None) == "#21c354"
-        assert resolve_builtin_color_name("violet", None) == "#803df5"
-        assert resolve_builtin_color_name("gray", None) == "#a3a8b8"
-        assert resolve_builtin_color_name("primary", None) == "#ff4b4b"
+        with patch(
+            "streamlit.elements.lib.built_in_chart_utils.config.get_option",
+            side_effect=mock_get_option,
+        ):
+            assert resolve_builtin_color_name("red") == "#custom_red"
+            assert resolve_builtin_color_name("blue") == "#custom_blue"
+            assert resolve_builtin_color_name("primary") == "#custom_primary"
+
+    def test_resolve_with_default_theme(self) -> None:
+        """Test color resolution with default theme (config returns None)."""
+        with patch(
+            "streamlit.elements.lib.built_in_chart_utils.config.get_option",
+            return_value=None,
+        ):
+            # Default values from lib/streamlit/config.py (light theme)
+            assert resolve_builtin_color_name("red") == "#ff4b4b"
+            assert resolve_builtin_color_name("orange") == "#ffa421"
+            assert resolve_builtin_color_name("yellow") == "#faca2b"
+            assert resolve_builtin_color_name("blue") == "#1c83e1"
+            assert resolve_builtin_color_name("green") == "#21c354"
+            assert resolve_builtin_color_name("violet") == "#803df5"
+            assert resolve_builtin_color_name("gray") == "#a3a8b8"
+            assert resolve_builtin_color_name("primary") == "#ff4b4b"
 
     def test_grey_alias(self) -> None:
         """Test that 'grey' is correctly aliased to 'gray'."""
-        theme = MockTheme(grayColor="#custom_gray")
-        assert resolve_builtin_color_name("grey", theme) == "#custom_gray"
-        assert resolve_builtin_color_name("GREY", theme) == "#custom_gray"
 
-        # Without theme, grey should return gray's default
-        assert resolve_builtin_color_name("grey", None) == "#a3a8b8"
+        def mock_get_option(key: str) -> str | None:
+            if key == "theme.grayColor":
+                return "#custom_gray"
+            return None
+
+        with patch(
+            "streamlit.elements.lib.built_in_chart_utils.config.get_option",
+            side_effect=mock_get_option,
+        ):
+            assert resolve_builtin_color_name("grey") == "#custom_gray"
+            assert resolve_builtin_color_name("GREY") == "#custom_gray"
+
+        # Without custom config, grey should return gray's default
+        with patch(
+            "streamlit.elements.lib.built_in_chart_utils.config.get_option",
+            return_value=None,
+        ):
+            assert resolve_builtin_color_name("grey") == "#a3a8b8"
 
     def test_case_insensitivity(self) -> None:
         """Test that color names are case-insensitive."""
-        theme = MockTheme(redColor="#custom_red")
-        assert resolve_builtin_color_name("RED", theme) == "#custom_red"
-        assert resolve_builtin_color_name("Red", theme) == "#custom_red"
-        assert resolve_builtin_color_name("red", theme) == "#custom_red"
 
-    def test_theme_fallback_to_default(self) -> None:
-        """Test that missing theme colors fallback to defaults."""
-        theme = MockTheme()  # Empty theme
-        # Default values from lib/streamlit/config.py (light theme)
-        assert resolve_builtin_color_name("red", theme) == "#ff4b4b"
-        assert resolve_builtin_color_name("blue", theme) == "#1c83e1"
+        def mock_get_option(key: str) -> str | None:
+            if key == "theme.redColor":
+                return "#custom_red"
+            return None
+
+        with patch(
+            "streamlit.elements.lib.built_in_chart_utils.config.get_option",
+            side_effect=mock_get_option,
+        ):
+            assert resolve_builtin_color_name("RED") == "#custom_red"
+            assert resolve_builtin_color_name("Red") == "#custom_red"
+            assert resolve_builtin_color_name("red") == "#custom_red"
+
+    def test_config_key_mapping(self) -> None:
+        """Test that correct config keys are used for each color."""
+        called_keys: list[str] = []
+
+        def mock_get_option(key: str) -> str | None:
+            called_keys.append(key)
+            return None
+
+        with patch(
+            "streamlit.elements.lib.built_in_chart_utils.config.get_option",
+            side_effect=mock_get_option,
+        ):
+            resolve_builtin_color_name("red")
+            resolve_builtin_color_name("primary")
+            resolve_builtin_color_name("grey")
+
+        assert "theme.redColor" in called_keys
+        assert "theme.primaryColor" in called_keys
+        # grey should be normalized to gray
+        assert "theme.grayColor" in called_keys
 
 
 class TestResolveColorNames:
@@ -142,34 +172,63 @@ class TestResolveColorNames:
 
     def test_resolve_none(self) -> None:
         """Test that None is passed through unchanged."""
-        assert _resolve_color_names(None, None) is None
+        assert _resolve_color_names(None) is None
 
     def test_resolve_builtin_color_string(self) -> None:
         """Test resolving a single built-in color name."""
-        theme = MockTheme(redColor="#custom_red")
-        assert _resolve_color_names("red", theme) == "#custom_red"
-        assert _resolve_color_names("red", None) == "#ff4b4b"
+
+        def mock_get_option(key: str) -> str | None:
+            if key == "theme.redColor":
+                return "#custom_red"
+            return None
+
+        with patch(
+            "streamlit.elements.lib.built_in_chart_utils.config.get_option",
+            side_effect=mock_get_option,
+        ):
+            assert _resolve_color_names("red") == "#custom_red"
+
+        with patch(
+            "streamlit.elements.lib.built_in_chart_utils.config.get_option",
+            return_value=None,
+        ):
+            assert _resolve_color_names("red") == "#ff4b4b"
 
     def test_resolve_non_builtin_color_string(self) -> None:
         """Test that non-built-in colors are passed through unchanged."""
-        assert _resolve_color_names("#FF0000", None) == "#FF0000"
-        assert _resolve_color_names("notacolor", None) == "notacolor"
+        assert _resolve_color_names("#FF0000") == "#FF0000"
+        assert _resolve_color_names("notacolor") == "notacolor"
 
     def test_resolve_color_list(self) -> None:
         """Test resolving a list of colors."""
-        theme = MockTheme(redColor="#custom_red", blueColor="#custom_blue")
-        result = _resolve_color_names(["red", "#00FF00", "blue"], theme)
-        assert result == ["#custom_red", "#00FF00", "#custom_blue"]
+
+        def mock_get_option(key: str) -> str | None:
+            config_values = {
+                "theme.redColor": "#custom_red",
+                "theme.blueColor": "#custom_blue",
+            }
+            return config_values.get(key)
+
+        with patch(
+            "streamlit.elements.lib.built_in_chart_utils.config.get_option",
+            side_effect=mock_get_option,
+        ):
+            result = _resolve_color_names(["red", "#00FF00", "blue"])
+            assert result == ["#custom_red", "#00FF00", "#custom_blue"]
 
     def test_resolve_mixed_list(self) -> None:
         """Test resolving a list with built-in and non-built-in colors."""
-        result = _resolve_color_names(["red", "#AABBCC", "notacolor"], None)
-        assert result == ["#ff4b4b", "#AABBCC", "notacolor"]
+        with patch(
+            "streamlit.elements.lib.built_in_chart_utils.config.get_option",
+            return_value=None,
+        ):
+            result = _resolve_color_names(["red", "#AABBCC", "notacolor"])
+            assert result == ["#ff4b4b", "#AABBCC", "notacolor"]
 
     def test_preserve_column_names(self) -> None:
         """Test that non-color strings (like column names) are preserved."""
         # This simulates the case where a column name might match a color name
-        result = _resolve_color_names("mycolumn", None)
+        result = _resolve_color_names("mycolumn")
         assert result == "mycolumn"
 
 

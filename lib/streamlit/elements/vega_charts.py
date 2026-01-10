@@ -107,20 +107,6 @@ _CHANNELS: Final = {
 }
 
 
-def _get_theme() -> Any:
-    """Get the current theme from script run context.
-
-    Returns
-    -------
-    Any | None
-        Theme object if available, None otherwise
-    """
-    ctx = get_script_run_ctx()
-    if ctx and hasattr(ctx, "session_state") and ctx.session_state:
-        return getattr(ctx.session_state, "theme", None)
-    return None
-
-
 VegaLiteSpec: TypeAlias = dict[str, Any]
 AltairChart: TypeAlias = Union[
     "alt.Chart",
@@ -905,7 +891,6 @@ class VegaChartsMixin:
             width=width,
             height=height,
             use_container_width=(width == "stretch"),
-            theme=_get_theme(),  # NEW: Pass theme for built-in color name resolution
         )
 
         return cast(
@@ -1198,7 +1183,6 @@ class VegaChartsMixin:
             height=height,
             stack=stack,
             use_container_width=(width == "stretch"),
-            theme=_get_theme(),  # NEW: Pass theme for built-in color name resolution
         )
         return cast(
             "DeltaGenerator",
@@ -1532,7 +1516,6 @@ class VegaChartsMixin:
             stack=stack,
             horizontal=horizontal,
             sort_from_user=sort,
-            theme=_get_theme(),  # NEW: Pass theme for built-in color name resolution
         )
         return cast(
             "DeltaGenerator",
@@ -1784,7 +1767,6 @@ class VegaChartsMixin:
             width=width,
             height=height,
             use_container_width=(width == "stretch"),
-            theme=_get_theme(),  # NEW: Pass theme for built-in color name resolution
         )
         return cast(
             "DeltaGenerator",
