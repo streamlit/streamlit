@@ -1897,7 +1897,7 @@ _create_theme_options(
     description="""
         The font size (in pixels) for st.metric value text.
 
-        If this isn't set, the font size will be threeXL (approximately 28px).
+        If this isn't set, the font size will be threeXL (2.25rem, approximately 36px).
     """,
     type_=int,
 )
