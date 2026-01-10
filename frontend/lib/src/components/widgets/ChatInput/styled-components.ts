@@ -188,7 +188,7 @@ export const StyledSendIconButton = styled.button<StyledSendIconButtonProps>(
         boxShadow: getPrimaryFocusBoxShadow(theme),
       },
       "&:hover": {
-        color: hasError ? theme.colors.red70 : theme.colors.bodyText,
+        color: hasError ? theme.colors.redColor : theme.colors.bodyText,
       },
       "&:active": {
         color: theme.colors.primary,
