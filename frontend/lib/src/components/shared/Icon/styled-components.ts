@@ -123,7 +123,7 @@ export const StyledEmojiIcon = styled.span<StyledEmojiIconProps>(
     return {
       display: "inline-flex",
       alignItems: "center",
-      justifyContents: "center",
+      justifyContent: "center",
       fontSize: adjustedIconSize,
       width: adjustedIconSize,
       height: adjustedIconSize,
