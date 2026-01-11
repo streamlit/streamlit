@@ -773,8 +773,8 @@ class ArrowMixin:
                 user_key=key,
                 # There are some edge cases where selections can become orphaned when the data changes
                 # - e.g. when rows get removed. The frontend can handle this without errors,
-                # but it might be a nice enhancement to automatically reset the selection state in the backend
-                # and frontend in this case.
+                # but it might be a nice enhancement to automatically reset the backend & frontend
+                # selection state in this case.
                 key_as_main_identity={"selection_mode", "is_selection_activated"},
                 dg=self.dg,
                 data=proto.data,
