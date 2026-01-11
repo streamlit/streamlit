@@ -186,17 +186,10 @@ function ChatInput({
   const [audioUploading, setAudioUploading] = useState(false)
   const [recordingError, setRecordingError] = useState<string | null>(null)
 
-  // Counter to force re-render of dropzone-related components when files are cleared
+  // Counter to force re-render of dropzone-related components when files are cleared.
+  // Incremented directly when files are cleared (not via useEffect) to avoid
+  // deriving state from state changes.
   const [dropzoneResetCounter, setDropzoneResetCounter] = useState(0)
-  const prevFilesLengthRef = useRef(files.length)
-
-  // Increment counter when files transition from non-empty to empty
-  useEffect(() => {
-    if (prevFilesLengthRef.current > 0 && files.length === 0) {
-      setDropzoneResetCounter(c => c + 1)
-    }
-    prevFilesLengthRef.current = files.length
-  }, [files.length])
 
   // Read acceptAudio from the element configuration
   const acceptAudio = element.acceptAudio ?? false
@@ -273,7 +266,14 @@ function ChatInput({
         // Handle abort/deletion using shared helper
         deleteUploadedFile(file)
 
-        return prevFiles.filter(fileArg => fileArg.id !== fileId)
+        const newFiles = prevFiles.filter(fileArg => fileArg.id !== fileId)
+
+        // Reset dropzone when all files are cleared
+        if (newFiles.length === 0) {
+          setDropzoneResetCounter(c => c + 1)
+        }
+
+        return newFiles
       })
     },
     [deleteUploadedFile]
@@ -440,6 +440,12 @@ function ChatInput({
         { fromUi: true },
         fragmentId
       )
+
+      // Reset dropzone when files are cleared on submit
+      if (files.length > 0) {
+        setDropzoneResetCounter(c => c + 1)
+      }
+
       setFiles([])
       setValue("")
       autoExpand.clearScrollHeight()
@@ -448,6 +454,7 @@ function ChatInput({
       dirty,
       disabled,
       value,
+      files.length,
       createChatInputWidgetFilesValue,
       widgetMgr,
       element,
