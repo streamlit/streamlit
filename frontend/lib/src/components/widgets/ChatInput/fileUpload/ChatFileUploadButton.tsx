@@ -17,6 +17,7 @@
 import { memo } from "react"
 
 import { Add } from "@emotion-icons/material-rounded"
+import { Accept, FileRejection, useDropzone } from "react-dropzone"
 
 import Icon from "~lib/components/shared/Icon"
 import Tooltip, { Placement } from "~lib/components/shared/Tooltip"
@@ -30,20 +31,30 @@ import {
 import { StyledFileUploadButton } from "./styled-components"
 
 export interface Props {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  getRootProps: any
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  getInputProps: any
+  onDrop: (acceptedFiles: File[], rejectedFiles: FileRejection[]) => void
+  multiple: boolean
+  accept?: Accept
+  maxSize: number
   acceptFile: AcceptFileValue
   disabled: boolean
 }
 
 const ChatFileUploadButton = ({
-  getRootProps,
-  getInputProps,
+  onDrop,
+  multiple,
+  accept,
+  maxSize,
   acceptFile,
   disabled,
 }: Props): React.ReactElement => {
+  const { getRootProps, getInputProps } = useDropzone({
+    onDrop,
+    multiple,
+    accept,
+    maxSize,
+    useFsAccessApi: false,
+  })
+
   const inputProps = configureFileInputProps(getInputProps(), acceptFile)
 
   // React-dropzone's root props include `tabIndex=0` by default, which makes the

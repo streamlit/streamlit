@@ -1775,3 +1775,71 @@ def test_file_upload_retry_click_success(app: Page):
     finally:
         # Clean up route interception
         app.unroute("**/_stcore/upload_file/**")
+
+
+@use_chat_input("single_file")
+@pytest.mark.only_browser("chromium")  # DataTransfer only works in Chromium/Firefox
+def test_upload_button_works_after_drag_drop_and_delete(app: Page):
+    """Test that the upload button still works after drag-dropping a file and deleting it."""
+    app.set_viewport_size({"width": 750, "height": 2000})
+
+    chat_input = get_element_by_key(app, "single_file")
+    expect(chat_input).to_be_visible()
+
+    # Step 1: Simulate drag and drop of a file using DataTransfer
+    file_name = "drag_drop_test.txt"
+    file_content = "test content for drag drop"
+
+    # Create a DataTransfer with file data and dispatch drop event
+    data_transfer = app.evaluate_handle(
+        """([fileName, fileContent]) => {
+            const dt = new DataTransfer();
+            const file = new File([fileContent], fileName, { type: 'text/plain' });
+            dt.items.add(file);
+            return dt;
+        }""",
+        [file_name, file_content],
+    )
+
+    # Get the upload button element which has its own dropzone
+    upload_button = chat_input.get_by_test_id("stChatInputFileUploadButton")
+    expect(upload_button).to_be_visible()
+
+    # Dispatch drop event to the upload button's dropzone
+    upload_button.dispatch_event("drop", {"dataTransfer": data_transfer})
+
+    wait_for_app_run(app, 500)
+
+    # Verify the file was uploaded
+    uploaded_files = chat_input.get_by_test_id("stChatUploadedFiles").first
+    expect(uploaded_files).to_be_visible()
+    expect(uploaded_files.get_by_text(file_name)).to_be_visible()
+
+    # Step 2: Delete the uploaded file
+    uploaded_files.get_by_test_id("stChatInputDeleteBtn").first.click()
+    wait_for_app_run(app, 500)
+
+    # Verify the file was deleted
+    expect(chat_input.get_by_test_id("stChatUploadedFiles")).not_to_be_visible()
+
+    # Step 3: Verify the upload button still works after the drag-drop + delete cycle
+    expect(upload_button).to_be_visible()
+    expect(upload_button).to_be_enabled()
+
+    # Upload a new file using the button
+    new_file_name = "after_delete.txt"
+    new_file = FilePayload(
+        name=new_file_name, mimeType="text/plain", buffer=b"new file content"
+    )
+
+    with app.expect_file_chooser() as fc_info:
+        upload_button.click(force=True)
+        file_chooser = fc_info.value
+        file_chooser.set_files(files=[new_file])
+
+    wait_for_app_run(app, 500)
+
+    # Verify the new file was uploaded successfully
+    uploaded_files = chat_input.get_by_test_id("stChatUploadedFiles").first
+    expect(uploaded_files).to_be_visible()
+    expect(uploaded_files.get_by_text(new_file_name)).to_be_visible()

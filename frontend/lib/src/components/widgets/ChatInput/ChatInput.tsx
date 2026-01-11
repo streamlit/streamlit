@@ -186,6 +186,18 @@ function ChatInput({
   const [audioUploading, setAudioUploading] = useState(false)
   const [recordingError, setRecordingError] = useState<string | null>(null)
 
+  // Counter to force re-render of dropzone-related components when files are cleared
+  const [dropzoneResetCounter, setDropzoneResetCounter] = useState(0)
+  const prevFilesLengthRef = useRef(files.length)
+
+  // Increment counter when files transition from non-empty to empty
+  useEffect(() => {
+    if (prevFilesLengthRef.current > 0 && files.length === 0) {
+      setDropzoneResetCounter(c => c + 1)
+    }
+    prevFilesLengthRef.current = files.length
+  }, [files.length])
+
   // Read acceptAudio from the element configuration
   const acceptAudio = element.acceptAudio ?? false
 
@@ -394,6 +406,7 @@ function ChatInput({
       acceptFile === AcceptFileValue.Directory,
     accept: getAccept(element.fileType),
     maxSize: maxFileSize,
+    useFsAccessApi: false,
   })
 
   const submitChatInput = useCallback(
@@ -784,8 +797,14 @@ function ChatInput({
               <StyledLeftCluster>
                 {acceptFile !== AcceptFileValue.None && !isRecording && (
                   <ChatFileUploadButton
-                    getRootProps={getRootProps}
-                    getInputProps={getInputProps}
+                    key={dropzoneResetCounter}
+                    onDrop={dropHandler}
+                    multiple={
+                      acceptFile === AcceptFileValue.Multiple ||
+                      acceptFile === AcceptFileValue.Directory
+                    }
+                    accept={getAccept(element.fileType)}
+                    maxSize={maxFileSize}
                     acceptFile={acceptFile}
                     disabled={disabled}
                   />
