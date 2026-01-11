@@ -202,40 +202,70 @@ function ChatInput({
 
   const autoExpand = useTextInputAutoExpand({
     textareaRef: chatInputRef,
-    dependencies: [placeholder],
+    dependencies: [placeholder, isStacked],
   })
+
+  // Cache font string and available width for text measurement
+  // These values only change on mount or resize, not on every keystroke
+  const fontStringRef = useRef<string>("")
+  const availableWidthRef = useRef<number>(0)
+
+  // Update cached measurements when textarea mounts, resizes, or layout mode changes
+  // ResizeObserver callbacks run after layout is computed, so reads are cheap
+  useEffect(() => {
+    const textarea = chatInputRef.current
+    if (!textarea) {
+      return
+    }
+
+    const updateMeasurements = (): void => {
+      const computedStyle = getComputedStyle(textarea)
+      fontStringRef.current = `${computedStyle.fontWeight} ${computedStyle.fontSize} ${computedStyle.fontFamily}`
+
+      const paddingLeft = parseFloat(computedStyle.paddingLeft) || 0
+      const paddingRight = parseFloat(computedStyle.paddingRight) || 0
+      availableWidthRef.current =
+        textarea.clientWidth - paddingLeft - paddingRight
+    }
+
+    // Initial measurement on mount (or when isStacked changes)
+    updateMeasurements()
+
+    // Update on resize
+    const observer = new ResizeObserver(updateMeasurements)
+    observer.observe(textarea)
+
+    return () => observer.disconnect()
+  }, [isStacked])
 
   // Manage stacked layout mode transitions
   // Switch to stacked when text fills the available width
+  // Only does cheap canvas measurement per keystroke - expensive reads are cached above
   useEffect(() => {
     if (value === "") {
       setIsStacked(false)
-    } else if (chatInputRef.current && !isStacked) {
-      const textarea = chatInputRef.current
+      return
+    }
 
-      // Measure actual text width using canvas
-      const computedStyle = window.getComputedStyle(textarea)
-      const font = `${computedStyle.fontWeight} ${computedStyle.fontSize} ${computedStyle.fontFamily}`
+    if (
+      isStacked ||
+      availableWidthRef.current <= 0 ||
+      !fontStringRef.current
+    ) {
+      return
+    }
 
-      const canvas = document.createElement("canvas")
-      const ctx = canvas.getContext("2d")
-      if (ctx) {
-        ctx.font = font
-        const textWidth = ctx.measureText(value).width
+    // Canvas measureText is cheap - doesn't force reflow
+    const canvas = document.createElement("canvas")
+    const ctx = canvas.getContext("2d")
+    if (ctx) {
+      ctx.font = fontStringRef.current
+      const textWidth = ctx.measureText(value).width
 
-        // Get the textarea's content width (excluding padding)
-        const paddingLeft = parseFloat(computedStyle.paddingLeft) || 0
-        const paddingRight = parseFloat(computedStyle.paddingRight) || 0
-        const availableWidth =
-          textarea.clientWidth - paddingLeft - paddingRight
-
-        // Switch to stacked when text width approaches available width
-        // Use a small buffer (10px) to trigger before text actually touches the edge
-        const shouldStack = textWidth > availableWidth - 10
-
-        if (shouldStack) {
-          setIsStacked(true)
-        }
+      // Switch to stacked when text width approaches available width
+      // Use a small buffer (10px) to trigger before text actually touches the edge
+      if (textWidth > availableWidthRef.current - 10) {
+        setIsStacked(true)
       }
     }
   }, [value, isStacked])
