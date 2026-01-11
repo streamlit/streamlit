@@ -97,14 +97,11 @@ describe("ChatUploadedFile", () => {
       expect(fileChip).toHaveAttribute("aria-invalid", "true")
     })
 
-    it("includes error message in aria-label", () => {
+    it("keeps aria-label stable with file size (not error) to avoid double announcements", () => {
       render(<ChatUploadedFile {...errorProps} />)
 
       const fileChip = screen.getByTestId("stChatInputFile")
-      expect(fileChip).toHaveAttribute(
-        "aria-label",
-        `test.json, ${errorMessage}`
-      )
+      expect(fileChip).toHaveAttribute("aria-label", "test.json, 0.5KB")
     })
 
     it("has aria-describedby linking to visually hidden error message", () => {
