@@ -467,3 +467,52 @@ def test_selection_state_remains_after_unmounting_snapshot(
 def test_custom_css_class_via_key(app: Page):
     """Test that the element can have a custom css class via the key argument."""
     expect(get_element_by_key(app, "scatter_point")).to_be_visible()
+
+
+def _get_persistent_selection_chart(app: Page) -> Locator:
+    return get_element_by_key(app, "persistent_selection_chart").locator(
+        "[role='graphics-document']"
+    )
+
+
+def test_selection_persists_after_data_update(app: Page):
+    """Test that selections persist when data changes but key remains the same.
+
+    This verifies the key_as_main_identity feature for st.altair_chart selections.
+    When a key is provided and selection_mode stays the same, selections should
+    be preserved even when the underlying data changes.
+    """
+    chart = _get_persistent_selection_chart(app)
+    expect(chart).to_be_visible()
+    chart.scroll_into_view_if_needed()
+
+    # Initially no selection
+    empty_selection = re.compile(
+        "\\{'selection': \\{'persistent_selection': \\{\\}\\}\\}"
+    )
+    expect_prefixed_markdown(app, "Persistent selection:", empty_selection)
+    expect_prefixed_markdown(app, "Chart data update count:", "0", exact_match=True)
+
+    # Click on a bar to select it
+    # Using coordinates similar to bar_point test which works at (150, 180)
+    _click(app, chart, _MousePosition(150, 180))
+
+    # Verify selection was made - could be any category depending on exact position
+    expected_selection = re.compile(
+        "\\{'selection': \\{'persistent_selection': \\[\\{'category': '[A-E]'.+\\}\\]\\}\\}"
+    )
+    expect_prefixed_markdown(app, "Persistent selection:", expected_selection)
+
+    # Click the button to update data (changes the chart data)
+    # Use the key-based locator for precise selection
+    update_button = get_element_by_key(app, "update_chart_data_btn").locator("button")
+    update_button.scroll_into_view_if_needed()
+    update_button.click()
+    wait_for_app_run(app)
+
+    # Verify data was updated
+    expect_prefixed_markdown(app, "Chart data update count:", "1", exact_match=True)
+
+    # Verify selection persisted after data change
+    # The selection should still show the same category even though values changed
+    expect_prefixed_markdown(app, "Persistent selection:", expected_selection)

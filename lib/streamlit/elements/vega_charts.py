@@ -2404,7 +2404,7 @@ class VegaChartsMixin:
             vega_lite_proto.id = compute_and_register_element_id(
                 "arrow_vega_lite_chart",
                 user_key=key,
-                key_as_main_identity=False,
+                key_as_main_identity={"selection_mode"},
                 dg=self.dg,
                 vega_lite_spec=vega_lite_proto.spec,
                 # The data is either in vega_lite_proto.data.data
