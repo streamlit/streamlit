@@ -25,7 +25,7 @@ import {
   useState,
 } from "react"
 
-import { Mic } from "@emotion-icons/material-outlined"
+import { MicNone } from "@emotion-icons/material-outlined"
 import {
   ArrowUpward,
   Check,
@@ -850,7 +850,11 @@ function ChatInput({
                             data-testid="stChatInputMicButton"
                             aria-label="Start recording"
                           >
-                            <Icon content={Mic} size="xl" color="inherit" />
+                            <Icon
+                              content={MicNone}
+                              size="xl"
+                              color="inherit"
+                            />
                           </StyledSendIconButton>
                         )}
                       </>
