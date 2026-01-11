@@ -3500,10 +3500,6 @@ class VegaChartsSelectionsStableIdTest(DeltaGeneratorTestCase):
             # ID should be stable since key and selection_mode are the same
             assert id1 == id2
 
-    @unittest.skipIf(
-        is_altair_version_less_than("5.0.0") is True,
-        "This test only runs if altair is >= 5.0.0",
-    )
     @parameterized.expand(
         [
             (
@@ -3512,6 +3508,10 @@ class VegaChartsSelectionsStableIdTest(DeltaGeneratorTestCase):
                 "my_interval_selection",
             ),
         ]
+    )
+    @unittest.skipIf(
+        is_altair_version_less_than("5.0.0") is True,
+        "This test only runs if altair is >= 5.0.0",
     )
     def test_whitelisted_stable_key_kwargs(
         self, name: str, selection1: str, selection2: str
