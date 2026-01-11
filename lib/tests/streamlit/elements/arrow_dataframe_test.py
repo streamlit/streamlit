@@ -555,6 +555,43 @@ class DataframeSelectionsStableIdTest(DeltaGeneratorTestCase):
             # ID should be stable since key and selection_mode are the same
             assert id1 == id2
 
+    def test_unstable_id_without_key_and_selections(self):
+        """Test that the element ID changes when data changes and no key is provided.
+
+        Without a key, the element ID is derived from all parameters including the data.
+        This test verifies that changing data or other parameters causes the element ID
+        to change, demonstrating that the key_as_main_identity feature is required for
+        ID stability.
+        """
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            # First render without a key
+            df1 = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+            st.dataframe(
+                df1,
+                height=200,
+                on_select="rerun",
+                selection_mode="multi-row",
+            )
+            c1 = self.get_delta_from_queue().new_element.arrow_data_frame
+            id1 = c1.id
+
+            # Second render with different data but no key
+            df2 = pd.DataFrame({"x": [10, 20], "y": [30, 40]})
+            st.dataframe(
+                df2,
+                height=200,
+                on_select="rerun",
+                selection_mode="multi-row",
+            )
+            c2 = self.get_delta_from_queue().new_element.arrow_data_frame
+            id2 = c2.id
+
+            # ID should change since no key is provided and data is different
+            assert id1 != id2
+
     @parameterized.expand(
         [
             ("selection_mode_single_to_multi", "single-row", "multi-row"),
