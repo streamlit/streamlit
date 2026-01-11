@@ -170,28 +170,28 @@ def set_page_config(
         .. _st.image: https://docs.streamlit.io/develop/api-reference/media/st.image
 
     layout: "centered", "wide", or None
-        How the page content should be laid out. If this is ``None`` (default),
-        the page layout is inherited from the previous call of
-        ``st.set_page_config``. If this is ``None`` and no previous call
-        exists, the page layout is ``"centered"``.
+        Layout of the page content. The following layouts are supported:
 
-        ``"centered"`` constrains the elements into a centered column of fixed
-        width. ``"wide"`` uses the entire screen.
+        - ``None`` (default): The page layout is inherited from the previous
+          call of ``st.set_page_config``. If no previous call exists, the page
+          layout is ``"centered"``.
+        - ``"centered"``: Page elements are constrained to a centered column of
+          fixed width.
+        - ``"wide"``: Page elements use the entire screen width.
 
     initial_sidebar_state: "auto", "expanded", "collapsed", int, or None
-        How the sidebar should start out. If this is ``None`` (default), the
-        sidebar state is inherited from the previous call of
-        ``st.set_page_config``. If no previous call exists, the sidebar state
-        is ``"auto"``.
+        Initial state of the sidebar. The following states are supported:
 
-        The following states are supported:
-
-        - ``"auto"``: The sidebar is hidden on small devices and shown otherwise.
+        - ``None`` (default): The sidebar state is inherited from the previous
+          call of ``st.set_page_config``. If no previous call exists, the
+          sidebar state is ``"auto"``.
+        - ``"auto"``: The sidebar is hidden on small devices and shown
+          otherwise.
         - ``"expanded"``: The sidebar is shown initially.
         - ``"collapsed"``: The sidebar is hidden initially.
-        - ``int``: Set the initial sidebar width in pixels. The sidebar will use
-          "auto" behavior but start with the specified width. Must be a positive integer.
-          The width is limited to a minimum of 200px and a maximum of 600px.
+        - ``int``: The sidebar will use ``"auto"`` behavior but start with the
+          specified width in pixels. The width must be between 200 and 600
+          pixels, inclusive.
 
         In most cases, ``"auto"`` provides the best user experience across
         devices of different sizes.
