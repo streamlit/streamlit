@@ -155,19 +155,20 @@ class MetricMixin:
             subject to the same limitations described in the ``label`` parameter.
 
         delta_color : str
-            The color of the delta indicator. This can be one of the following:
+            The color of the delta indicator and chart. This can be one of the
+            following:
 
-            - ``"normal"`` (default): The delta indicator is green when
-                positive and red when negative.
-            - ``"inverse"``: The delta indicator is red when positive and
-                green when negative. This is useful when a negative change is
-                considered good, e.g. if cost decreased.
-            - ``"off"``: The delta indicator is shown in gray regardless of
-                its value.
-            - A named color from the basic palette: ``"red"``, ``"orange"``,
-                ``"yellow"``, ``"green"``, ``"blue"``, ``"violet"``,
-                ``"gray"``/``"grey"``, or ``"primary"``. The delta indicator
-                and chart uses that color regardless of its value.
+            - ``"normal"`` (default): The color is red when the delta indicator
+              is negative and green otherwise.
+            - ``"inverse"``: The color is green when the delta indicator is
+              negative and red otherwise. This is useful when a negative change
+              is considered good, like a decrease in cost.
+            - ``"off"``: The color is gray regardless of the delta indicator.
+            - A named color from the basic palette: The chart and delta
+              indicator are the specified color regardless of their value. This
+              can be one of the following: ``"red"``, ``"orange"``,
+              ``"yellow"``, ``"green"``, ``"blue"``, ``"violet"``,
+              ``"gray"``/``"grey"``, or ``"primary"``.
 
         help : str or None
             A tooltip that gets displayed next to the metric label. Streamlit
@@ -221,6 +222,9 @@ class MetricMixin:
             ``set``. If the sequence is dataframe-like, the first column will
             be used. Each value will be cast to ``float`` internally by
             default.
+
+            The chart uses the color of the delta indicator, which can be
+            modified using the ``delta_color`` parameter.
 
         chart_type : "line", "bar", or "area"
             The type of sparkline chart to display. This can be one of the
