@@ -1843,3 +1843,47 @@ def test_upload_button_works_after_upload_and_delete(app: Page):
 
     # Verify the first deleted file doesn't reappear (negative assertion)
     expect(uploaded_files.get_by_text(first_file_name)).not_to_be_visible()
+
+
+@use_chat_input("inline")
+def test_dynamic_stacked_layout_transitions(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that chat input dynamically transitions between inline and stacked layouts.
+
+    The layout should:
+    1. Start in inline mode (buttons and textarea on same row)
+    2. Switch to stacked mode when text fills available width
+    3. Stay in stacked mode when text is partially deleted (still has content)
+    4. Return to inline mode only when all text is cleared
+    """
+    app.set_viewport_size({"width": 750, "height": 400})
+
+    chat_input = get_element_by_key(app, "inline")
+    textarea = chat_input.locator("textarea").first
+
+    # 1. Type ~20 chars - should still be in inline mode
+    short_text = "Hello, this is test"  # 19 chars
+    textarea.type(short_text)
+    assert_snapshot(chat_input, name="st_chat_input-layout_inline_short_text")
+
+    # 2. Type more text (~100+ more chars) to trigger stacked mode
+    long_text = (
+        " and now I'm adding a lot more text to fill up the available width "
+        "so that the layout switches to stacked mode with buttons below"
+    )
+    textarea.type(long_text)
+    assert_snapshot(chat_input, name="st_chat_input-layout_stacked_long_text")
+
+    # 3. Backspace until ~20 chars remain - should STAY in stacked mode
+    # We need to delete enough chars to get back to ~20 chars
+    chars_to_delete = len(long_text) - 1  # Keep short_text + 1 char
+    for _ in range(chars_to_delete):
+        textarea.press("Backspace", delay=5)
+    assert_snapshot(chat_input, name="st_chat_input-layout_stacked_after_delete")
+
+    # 4. Delete all remaining text - should return to inline mode
+    remaining_chars = len(short_text) + 1
+    for _ in range(remaining_chars):
+        textarea.press("Backspace", delay=5)
+    assert_snapshot(chat_input, name="st_chat_input-layout_inline_after_clear")
