@@ -135,20 +135,24 @@ class MetricMixin:
         value : int, float, decimal.Decimal, str, or None
             Value of the metric. ``None`` is rendered as a long dash.
 
-            The value can optionally contain GitHub-flavored Markdown,
-            including the Markdown directives described in the ``body``
-            parameter of ``st.markdown``.
+            The value can optionally contain GitHub-flavored Markdown, subject
+            to the same limitations described in the ``label`` parameter.
 
         delta : int, float, decimal.Decimal, str, or None
-            Indicator of how the metric changed, rendered with an arrow below
-            the metric. If delta is negative (int/float) or starts with a minus
-            sign (str), the arrow points down and the text is red; else the
-            arrow points up and the text is green. If None (default), no delta
-            indicator is shown.
+            Indicator of how the metric changed. An arrow is shown next to the
+            delta indicator, oriented according its sign:
 
-            The delta can optionally contain GitHub-flavored Markdown
-            including the Markdown directives described in the ``body``
-            parameter of ``st.markdown``.
+            - If the delta indicator is ``None`` or an empty string, no arrow is
+              shown.
+            - If the delta indicator is a negative number or starts with a minus
+              sign, the arrow points down and the delta indicator is red.
+            - Otherwise, the arrow points up and the delta indicator is green.
+
+            You can modify the display, color, and orientation of the arrow
+            using the ``delta_color`` and ``delta_arrow`` parameters.
+
+            The delta indicator can optionally contain GitHub-flavored Markdown,
+            subject to the same limitations described in the ``label`` parameter.
 
         delta_color : str
             The color of the delta indicator. This can be one of the following:
