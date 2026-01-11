@@ -3500,22 +3500,11 @@ class VegaChartsSelectionsStableIdTest(DeltaGeneratorTestCase):
             # ID should be stable since key and selection_mode are the same
             assert id1 == id2
 
-    @parameterized.expand(
-        [
-            (
-                "selection_mode_point_to_interval",
-                "my_point_selection",
-                "my_interval_selection",
-            ),
-        ]
-    )
     @unittest.skipIf(
         is_altair_version_less_than("5.0.0") is True,
         "This test only runs if altair is >= 5.0.0",
     )
-    def test_whitelisted_stable_key_kwargs(
-        self, name: str, selection1: str, selection2: str
-    ):
+    def test_id_changes_when_selection_mode_changes(self):
         """Test that changing selection_mode changes the ID even when a key is provided.
 
         The selection_mode parameter is whitelisted, meaning changes to it should
@@ -3527,26 +3516,26 @@ class VegaChartsSelectionsStableIdTest(DeltaGeneratorTestCase):
         ):
             df = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
 
-            # First render with first selection
-            point = alt.selection_point(name=selection1)
+            # First render with point selection
+            point = alt.selection_point(name="my_point_selection")
             chart1 = alt.Chart(df).mark_bar().encode(x="a", y="b").add_params(point)
             st.altair_chart(
                 chart1,
                 key="changing_selection_chart",
                 on_select="rerun",
-                selection_mode=selection1,
+                selection_mode="my_point_selection",
             )
             c1 = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
             id1 = c1.id
 
-            # Second render with different selection mode
-            interval = alt.selection_interval(name=selection2)
+            # Second render with interval selection (different selection mode)
+            interval = alt.selection_interval(name="my_interval_selection")
             chart2 = alt.Chart(df).mark_bar().encode(x="a", y="b").add_params(interval)
             st.altair_chart(
                 chart2,
                 key="changing_selection_chart",
                 on_select="rerun",
-                selection_mode=selection2,
+                selection_mode="my_interval_selection",
             )
             c2 = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
             id2 = c2.id
