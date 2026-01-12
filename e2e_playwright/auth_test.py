@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import re
 import time
 from tempfile import NamedTemporaryFile
 from typing import TYPE_CHECKING
@@ -103,16 +104,25 @@ def app_server_extra_args(
     return args
 
 
+def _click_and_wait_for_oauth_redirect(app: Page, button_label: str) -> None:
+    """Click a button that triggers OAuth redirect and wait for navigation back to app.
+
+    OAuth login/logout triggers external redirects (app -> OIDC server -> app).
+    We wait for the URL to return to the app root instead of using a fixed timeout.
+    """
+    get_button(app, button_label).click()
+    # Wait for OAuth redirect chain to complete and return to app root
+    app.wait_for_url(re.compile(r"http://localhost:\d+/$"))
+    wait_for_app_run(app)
+
+
 @pytest.mark.parametrize("fake_oidc_server", ["success"], indirect=True)
 @pytest.mark.usefixtures("fake_oidc_server", "prepare_secrets_file")
 def test_login_successful(app: Page):
     """Test authentication flow with test provider."""
-    button_element = get_button(app, "TEST LOGIN")
-    button_element.click()
-    app.wait_for_timeout(2_000)
+    _click_and_wait_for_oauth_redirect(app, "TEST LOGIN")
 
     expect_markdown(app, "authtest@example.com")
-    wait_for_app_run(app)
 
     expect_markdown(app, "John Doe")
     expect_markdown(app, "TOKENS AVAILABLE")
@@ -124,10 +134,7 @@ def test_login_successful(app: Page):
 @pytest.mark.usefixtures("fake_oidc_server", "prepare_secrets_file")
 def test_login_failure(app: Page):
     """Test authentication flow with error response from oidc server."""
-    button_element = get_button(app, "TEST LOGIN")
-    button_element.click()
-    app.wait_for_timeout(2_000)
-    wait_for_app_run(app)
+    _click_and_wait_for_oauth_redirect(app, "TEST LOGIN")
 
     text = app.get_by_test_id("stMarkdownContainer").filter(has_text="John Doe")
     expect(text).not_to_be_attached()
@@ -141,20 +148,14 @@ def test_logout_with_end_session_endpoint(app: Page):
     This tests PR #12693: logout should redirect to provider's end_session_endpoint.
     """
     # First login
-    button_element = get_button(app, "TEST LOGIN")
-    button_element.click()
-    app.wait_for_timeout(2_000)
-    wait_for_app_run(app)
+    _click_and_wait_for_oauth_redirect(app, "TEST LOGIN")
 
     # Verify we're logged in
     expect_markdown(app, "YOU ARE LOGGED IN")
     expect_markdown(app, "John Doe")
 
-    # Now logout
-    logout_button = get_button(app, "TEST LOGOUT")
-    logout_button.click()
-    app.wait_for_timeout(2_000)
-    wait_for_app_run(app)
+    # Now logout (also goes through OIDC end_session_endpoint redirect)
+    _click_and_wait_for_oauth_redirect(app, "TEST LOGOUT")
 
     # Verify we're logged out
     expect_markdown(app, "NOT LOGGED IN")
