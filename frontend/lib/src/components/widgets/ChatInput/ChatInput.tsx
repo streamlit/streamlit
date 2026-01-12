@@ -213,14 +213,6 @@ function ChatInput({
   const measureCanvasRef = useRef<HTMLCanvasElement | null>(null)
   const measureCtxRef = useRef<CanvasRenderingContext2D | null>(null)
 
-  // Cleanup canvas refs on unmount to allow garbage collection
-  useEffect(() => {
-    return () => {
-      measureCanvasRef.current = null
-      measureCtxRef.current = null
-    }
-  }, [])
-
   // Update cached measurements when textarea mounts, resizes, or layout mode changes
   // ResizeObserver callbacks run after layout is computed, so reads are cheap
   useEffect(() => {
