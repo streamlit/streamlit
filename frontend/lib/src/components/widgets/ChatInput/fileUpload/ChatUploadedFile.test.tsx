@@ -22,16 +22,31 @@ import { render } from "~lib/test_util"
 
 import ChatUploadedFile, { Props } from "./ChatUploadedFile"
 
+const mockCreateObjectURL = vi.fn()
+const mockRevokeObjectURL = vi.fn()
+
+vi.stubGlobal("URL", {
+  createObjectURL: mockCreateObjectURL,
+  revokeObjectURL: mockRevokeObjectURL,
+})
+
 const createUploadedFileInfo = (
   name: string,
   size: number,
-  id: number
+  id: number,
+  file?: File
 ): UploadFileInfo =>
-  new UploadFileInfo(name, size, id, {
-    type: "uploaded",
-    fileId: "file-123",
-    fileUrls: {},
-  })
+  new UploadFileInfo(
+    name,
+    size,
+    id,
+    {
+      type: "uploaded",
+      fileId: "file-123",
+      fileUrls: {},
+    },
+    file
+  )
 
 const createErrorFileInfo = (
   name: string,
@@ -63,6 +78,15 @@ const createUploadingFileInfo = (
   })
 
 describe("ChatUploadedFile", () => {
+  beforeEach(() => {
+    mockCreateObjectURL.mockReturnValue("blob:http://localhost/mock-blob-url")
+  })
+
+  afterEach(() => {
+    mockCreateObjectURL.mockClear()
+    mockRevokeObjectURL.mockClear()
+  })
+
   const defaultProps: Props = {
     fileInfo: createUploadedFileInfo("test.txt", 1024, 1),
     onDelete: vi.fn(),
@@ -232,6 +256,75 @@ describe("ChatUploadedFile", () => {
       await user.click(deleteButton)
 
       expect(onDelete).toHaveBeenCalledWith(1)
+    })
+  })
+
+  describe("image preview", () => {
+    it("renders image preview with correct src and alt for image files", () => {
+      const imageFile = new File(["test"], "photo.jpg", { type: "image/jpeg" })
+      const props: Props = {
+        fileInfo: createUploadedFileInfo("photo.jpg", 2048, 1, imageFile),
+        onDelete: vi.fn(),
+      }
+
+      render(<ChatUploadedFile {...props} />)
+
+      const imagePreview = screen.getByTestId("stChatInputFileImagePreview")
+      expect(imagePreview).toBeVisible()
+      expect(imagePreview).toHaveAttribute(
+        "src",
+        "blob:http://localhost/mock-blob-url"
+      )
+      expect(imagePreview).toHaveAttribute("alt", "photo.jpg")
+    })
+
+    it("does not render image preview for non-image files", () => {
+      const pdfFile = new File(["test"], "document.pdf", {
+        type: "application/pdf",
+      })
+      const props: Props = {
+        fileInfo: createUploadedFileInfo("document.pdf", 2048, 1, pdfFile),
+        onDelete: vi.fn(),
+      }
+
+      render(<ChatUploadedFile {...props} />)
+
+      expect(
+        screen.queryByTestId("stChatInputFileImagePreview")
+      ).not.toBeInTheDocument()
+    })
+
+    it("does not render image preview when file object is not provided", () => {
+      // This can happen for files that were uploaded in a previous session
+      // where we only have the file metadata, not the actual File object
+      const props: Props = {
+        fileInfo: createUploadedFileInfo("photo.jpg", 2048, 1),
+        onDelete: vi.fn(),
+      }
+
+      render(<ChatUploadedFile {...props} />)
+
+      expect(
+        screen.queryByTestId("stChatInputFileImagePreview")
+      ).not.toBeInTheDocument()
+    })
+
+    it("revokes blob URL on unmount to prevent memory leaks", () => {
+      const imageFile = new File(["test"], "photo.jpg", { type: "image/jpeg" })
+      const props: Props = {
+        fileInfo: createUploadedFileInfo("photo.jpg", 2048, 1, imageFile),
+        onDelete: vi.fn(),
+      }
+
+      const { unmount } = render(<ChatUploadedFile {...props} />)
+
+      expect(mockRevokeObjectURL).not.toHaveBeenCalled()
+
+      unmount()
+
+      expect(mockRevokeObjectURL).toHaveBeenCalledWith(
+        "blob:http://localhost/mock-blob-url"
+      )
     })
   })
 })
