@@ -49,6 +49,7 @@ def create_realistic_signed_value(name: str, value: str) -> bytes:
     overhead = "x" * MOCK_SIGNING_OVERHEAD
     return f"{overhead}{base64_value}".encode()
 
+
 CONFIG_MOCK: dict[str, Any] = {}
 
 SECRETS_MOCK = {
@@ -120,6 +121,12 @@ class AuthUtilTest(unittest.TestCase):
         )
         result = get_redirect_uri(auth_section)
         assert result == "http://localhost:8502/oauth2callback"
+
+    def test_get_redirect_uri_not_present(self):
+        """Test get_redirect_uri returns None when redirect_uri is not in auth_section."""
+        auth_section = AttrDict({"client_id": "some_client_id"})
+        result = get_redirect_uri(auth_section)
+        assert result is None
 
 
 class ExposeTokensConfigTest(unittest.TestCase):
