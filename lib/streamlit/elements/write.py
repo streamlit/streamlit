@@ -174,7 +174,7 @@ class WriteMixin:
         cursor_str = cursor or ""
         stream_container: DeltaGenerator | None = None
         streamed_response: str = ""
-        written_content: list[Any] = StreamingOutput()
+        written_content: list[Any] = StreamingOutput()  # type: ignore[assignment]
 
         def flush_stream_response() -> None:
             """Write the full response to the app."""
