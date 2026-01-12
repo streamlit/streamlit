@@ -34,7 +34,7 @@ import {
   shouldWidthStretch,
 } from "~lib/components/core/Layout/utils"
 import { ScriptRunContext } from "~lib/components/core/ScriptRunContext"
-import ChatMessage from "~lib/components/elements/ChatMessage"
+import { ChatMessage } from "@streamlit/chat"
 import Dialog from "~lib/components/elements/Dialog"
 import Expander from "~lib/components/elements/Expander"
 import Popover from "~lib/components/elements/Popover"

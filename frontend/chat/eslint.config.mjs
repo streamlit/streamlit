@@ -14,5 +14,15 @@
  * limitations under the License.
  */
 
-export { default } from "./ChatMessage"
-export type { ChatMessageProps } from "./ChatMessage"
+import baseConfig from "../eslint.config.mjs"
+
+export default [
+  ...baseConfig,
+  // Allow relative imports in the chat package
+  {
+    files: ["src/**/*.ts", "src/**/*.tsx"],
+    rules: {
+      "no-relative-import-paths/no-relative-import-paths": "off",
+    },
+  },
+]

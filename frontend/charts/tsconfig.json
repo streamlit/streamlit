@@ -1,0 +1,16 @@
+{
+  "extends": "@streamlit/typescript-config/react.tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "declarationMap": true,
+    "baseUrl": ".",
+    "paths": {
+      "~lib/*": ["../lib/src/*"]
+    }
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.test.tsx"]
+}

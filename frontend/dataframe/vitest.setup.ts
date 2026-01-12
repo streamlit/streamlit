@@ -14,5 +14,4 @@
  * limitations under the License.
  */
 
-export { default } from "./ChatMessage"
-export type { ChatMessageProps } from "./ChatMessage"
+import "@testing-library/jest-dom/vitest"

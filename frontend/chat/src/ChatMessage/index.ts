@@ -14,5 +14,5 @@
  * limitations under the License.
  */
 
-export { default } from "./ChatMessage"
+export { default as ChatMessage } from "./ChatMessage"
 export type { ChatMessageProps } from "./ChatMessage"

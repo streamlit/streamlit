@@ -14,5 +14,13 @@
  * limitations under the License.
  */
 
-export { default } from "./ChatMessage"
-export type { ChatMessageProps } from "./ChatMessage"
+export {
+  ArrowVegaLiteChart,
+  applyVegaStreamlitTheme,
+  StyledVegaLiteChartTooltips,
+  DeckGlJsonChart,
+  GraphVizChart,
+  PlotlyChart,
+} from "@streamlit/lib"
+
+export type { VegaLiteChartElement, WrappedNamedDataset } from "@streamlit/lib"

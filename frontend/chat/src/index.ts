@@ -14,5 +14,9 @@
  * limitations under the License.
  */
 
-export { default } from "./ChatMessage"
+// ChatMessage is fully extracted to this package
+export { ChatMessage } from "./ChatMessage"
 export type { ChatMessageProps } from "./ChatMessage"
+
+// Note: ChatInput is not included in this package due to complex lib dependencies.
+// Import ChatInput directly from @streamlit/lib.

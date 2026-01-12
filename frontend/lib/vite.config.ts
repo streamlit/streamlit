@@ -52,7 +52,7 @@ export default defineConfig({
     rollupOptions: {
       input: "src/index.ts",
       // Externalize dependencies that shouldn't be bundled into your library
-      external: ["react", "react-dom"],
+      external: ["react", "react-dom", "@streamlit/chat"],
       output: {
         globals: {
           react: "React",

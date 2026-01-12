@@ -14,5 +14,10 @@
  * limitations under the License.
  */
 
-export { default } from "./ChatMessage"
-export type { ChatMessageProps } from "./ChatMessage"
+import { EmotionTheme as StreamlitTheme } from "@streamlit/theme"
+
+// This declaration allows us to extend our type declarations for emotion's
+// theme (an empty object) to be our type
+declare module "@emotion/react" {
+  export interface Theme extends StreamlitTheme {}
+}

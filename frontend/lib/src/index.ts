@@ -18,6 +18,7 @@
 import "@streamlit/utils"
 // These imports are each exported specifically in order to minimize public apis.
 export type { LibConfig } from "@streamlit/connection"
+export type { StreamlitEndpoints } from "./StreamlitEndpoints"
 export { AppRoot, BlockNode, ElementNode, TransientNode } from "./AppNode"
 export {
   ContainerContentsWrapper,
@@ -47,6 +48,28 @@ export { default as ThemeProvider } from "./components/core/ThemeProvider"
 export { ViewStateContext } from "./components/core/ViewStateContext"
 export type { ViewStateContextProps } from "./components/core/ViewStateContext"
 export { default as AlertElement } from "./components/elements/AlertElement"
+export {
+  default as ArrowVegaLiteChart,
+  applyStreamlitTheme as applyVegaStreamlitTheme,
+  StyledVegaLiteChartTooltips,
+} from "./components/elements/ArrowVegaLiteChart"
+export type {
+  VegaLiteChartElement,
+  WrappedNamedDataset,
+} from "./components/elements/ArrowVegaLiteChart"
+export { default as DeckGlJsonChart } from "./components/elements/DeckGlJsonChart"
+export { default as GraphVizChart } from "./components/elements/GraphVizChart"
+export { default as PlotlyChart } from "./components/elements/PlotlyChart"
+export { default as ArrowTable } from "./components/elements/ArrowTable"
+// ChatMessage is extracted to @streamlit/chat and re-exported for backward compatibility
+export { ChatMessage } from "@streamlit/chat"
+export type { ChatMessageProps } from "@streamlit/chat"
+export { default as ChatInput } from "./components/widgets/ChatInput"
+export type { Props as ChatInputProps } from "./components/widgets/ChatInput/ChatInput"
+export {
+  default as DataFrame,
+  ReadOnlyGrid,
+} from "./components/widgets/DataFrame"
 export { default as StreamlitErrorCodeBlock } from "./components/elements/CodeBlock/StreamlitErrorCodeBlock"
 export { handleFavicon } from "./components/elements/Favicon"
 export { default as TextElement } from "./components/elements/TextElement"

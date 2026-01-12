@@ -4,10 +4,13 @@
   "private": true,
   "workspaces": [
     "app",
+    "chat",
+    "charts",
     "component-v2-lib",
     "connection",
     "core",
     "data-utils",
+    "dataframe",
     "eslint-plugin-streamlit-custom",
     "lib",
     "protobuf",
