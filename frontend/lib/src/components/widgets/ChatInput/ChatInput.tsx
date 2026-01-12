@@ -834,14 +834,10 @@ function ChatInput({
           </StyledFilesArea>
         )}
 
-        {/* Waveform container - always rendered for ref, hidden when not recording */}
-        <StyledWaveformContainer isRecording={isRecording}>
-          <StyledChatAudioWave ref={waveformContainerRef} />
-        </StyledWaveformContainer>
-
         {/* Main row - uses flex-wrap and order to handle stacked/inline layouts
             In stacked mode: textarea wraps to its own line above buttons via CSS order
-            In inline mode: textarea sits between left and right button clusters */}
+            In inline mode: textarea sits between left and right button clusters
+            When recording: waveform replaces textarea inline with cancel/approve buttons */}
         <StyledInputRow isStacked={isStacked}>
           <StyledLeftCluster>
             {acceptFile !== AcceptFileValue.None && !isRecording && (
@@ -853,6 +849,11 @@ function ChatInput({
               />
             )}
           </StyledLeftCluster>
+
+          {/* Waveform - shown inline when recording, replaces textarea position */}
+          <StyledWaveformContainer isRecording={isRecording}>
+            <StyledChatAudioWave ref={waveformContainerRef} />
+          </StyledWaveformContainer>
 
           {/* Textarea - always at this position in the tree to preserve focus on layout change.
               StyledTextareaWrapper uses CSS (order, width) to visually move it above buttons when stacked */}

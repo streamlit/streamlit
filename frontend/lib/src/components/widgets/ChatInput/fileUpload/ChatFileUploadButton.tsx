@@ -77,6 +77,7 @@ const ChatFileUploadButton = ({
         onMouseEnterDelay={500}
       >
         <StyledSendIconButton
+          type="button"
           disabled={disabled}
           aria-label={`Upload ${getUploadDescription(acceptFile)}`}
         >
