@@ -131,3 +131,35 @@ def test_login_failure(app: Page):
 
     text = app.get_by_test_id("stMarkdownContainer").filter(has_text="John Doe")
     expect(text).not_to_be_attached()
+
+
+@pytest.mark.parametrize("fake_oidc_server", ["success"], indirect=True)
+@pytest.mark.usefixtures("fake_oidc_server", "prepare_secrets_file")
+def test_logout_with_end_session_endpoint(app: Page):
+    """Test logout flow using OIDC end_session_endpoint.
+
+    This tests PR #12693: logout should redirect to provider's end_session_endpoint.
+    """
+    # First login
+    button_element = get_button(app, "TEST LOGIN")
+    button_element.click()
+    app.wait_for_timeout(2_000)
+    wait_for_app_run(app)
+
+    # Verify we're logged in
+    expect_markdown(app, "YOU ARE LOGGED IN")
+    expect_markdown(app, "John Doe")
+
+    # Now logout
+    logout_button = get_button(app, "TEST LOGOUT")
+    logout_button.click()
+    app.wait_for_timeout(2_000)
+    wait_for_app_run(app)
+
+    # Verify we're logged out
+    expect_markdown(app, "NOT LOGGED IN")
+    # Verify the logged-in content is no longer visible
+    logged_in_text = app.get_by_test_id("stMarkdownContainer").filter(
+        has_text="YOU ARE LOGGED IN"
+    )
+    expect(logged_in_text).not_to_be_attached()
