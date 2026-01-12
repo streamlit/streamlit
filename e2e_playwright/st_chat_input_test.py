@@ -1783,8 +1783,6 @@ def test_file_upload_retry_click_success(app: Page):
 )  # DataTransfer dispatch_event not supported in WebKit
 def test_upload_button_works_after_drag_drop_and_delete(app: Page):
     """Test that the upload button still works after drag-dropping a file and deleting it."""
-    app.set_viewport_size({"width": 750, "height": 2000})
-
     chat_input = get_element_by_key(app, "single_file")
     expect(chat_input).to_be_visible()
 
