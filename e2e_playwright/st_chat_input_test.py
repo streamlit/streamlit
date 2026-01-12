@@ -1793,7 +1793,8 @@ def test_upload_button_works_after_upload_and_delete(app: Page):
     expect(upload_button).to_be_visible()
 
     # Step 1: Upload a file using the button
-    first_file_name = "first_upload.txt"
+    # Use short filenames (max 16 chars) to avoid truncation in the UI
+    first_file_name = "first.txt"
     first_file = FilePayload(
         name=first_file_name, mimeType="text/plain", buffer=b"first file content"
     )
@@ -1823,7 +1824,7 @@ def test_upload_button_works_after_upload_and_delete(app: Page):
     expect(upload_button).to_be_enabled()
 
     # Upload a new file using the button
-    second_file_name = "second_upload.txt"
+    second_file_name = "second.txt"
     second_file = FilePayload(
         name=second_file_name, mimeType="text/plain", buffer=b"second file content"
     )
