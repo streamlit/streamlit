@@ -33,7 +33,19 @@ interface IconPackEntry {
 
 export function parseIconPackEntry(iconName: string): IconPackEntry {
   // This is a regex to match icon pack and icon name from the strings of format
-  // :pack/icon: like :material/settings_suggest:
+
+  if (!iconName) {
+    return { pack: "emoji", icon: "" }
+  }
+
+  // This is a regex to match icon pack and icon name from the strings of format
+  const imageLike = /^(image:|https?:\/\/|data:|\/)/i
+  const hasImageExt = /\.(png|jpe?g|svg|gif|webp|ico)(\?.*)?$/i
+  if (imageLike.test(iconName) || hasImageExt.test(iconName)) {
+    const url = iconName.replace(/^image:/i, "")
+    return { pack: "image", icon: url }
+  }
+
   const matchResult = iconName.match(/^:(.+)\/(.+):$/)
   if (matchResult === null) {
     return { pack: "emoji", icon: iconName }
@@ -86,6 +98,16 @@ const DynamicIconDispatcher = ({
 
   const { pack, icon } = parseIconPackEntry(iconValue)
   switch (pack) {
+    case "image":
+      return (
+        <StyledDynamicIcon {...props}>
+          <StyledImageIcon
+            src={icon}
+            alt="icon"
+            data-testid={props.testid || "stImageIcon"}
+          />
+        </StyledDynamicIcon>
+      )
     case "material":
       switch (icon) {
         case "star_filled":
