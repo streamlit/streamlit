@@ -96,7 +96,7 @@ import {
  */
 function createTextAreaOverrides(
   theme: EmotionTheme,
-  autoExpand: { height: string; maxHeight: string },
+  autoExpand: { height: string; maxHeight: string; isExtended: boolean },
   rootLayoutStyle: Record<string, string | number>
 ): React.ComponentProps<typeof UITextArea>["overrides"] {
   return {
@@ -125,7 +125,7 @@ function createTextAreaOverrides(
         "::placeholder": {
           color: theme.colors.fadedText60,
         },
-        height: autoExpand.height,
+        height: autoExpand.isExtended ? autoExpand.height : "auto",
         maxHeight: autoExpand.maxHeight,
         overflowY: "auto",
         paddingLeft: theme.spacing.none,
@@ -215,6 +215,7 @@ function ChatInput({
 
   // Update cached measurements when textarea mounts, resizes, or layout mode changes
   // ResizeObserver callbacks run after layout is computed, so reads are cheap
+  // Also re-run when recording state changes to re-measure after textarea becomes visible
   useEffect(() => {
     const textarea = chatInputRef.current
     if (!textarea) {
@@ -758,6 +759,31 @@ function ChatInput({
 
   const showDropzone = acceptFile !== AcceptFileValue.None && fileDragged
   const isRecording = controller.state === "recording"
+
+  // Re-measure textarea width when recording ends (textarea remounts)
+  // This ensures the stacked layout logic has correct width measurements
+  useEffect(() => {
+    if (isRecording) {
+      return
+    }
+
+    // Small delay to allow textarea to mount and get proper dimensions
+    const timeoutId = setTimeout(() => {
+      const textarea = chatInputRef.current
+      if (textarea) {
+        const computedStyle = getComputedStyle(textarea)
+        fontStringRef.current = `${computedStyle.fontWeight} ${computedStyle.fontSize} ${computedStyle.fontFamily}`
+
+        const paddingLeft = parseFloat(computedStyle.paddingLeft) || 0
+        const paddingRight = parseFloat(computedStyle.paddingRight) || 0
+        // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Safe: runs in timeout after layout
+        availableWidthRef.current =
+          textarea.clientWidth - paddingLeft - paddingRight
+      }
+    }, 0)
+
+    return () => clearTimeout(timeoutId)
+  }, [isRecording])
 
   const showInstructions =
     !isRecording &&

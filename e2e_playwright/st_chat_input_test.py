@@ -1896,3 +1896,99 @@ def test_dynamic_stacked_layout_transitions(
     expect(textarea).to_have_value("Brief")
     # Take a snapshot to verify we're still in inline mode with brief text
     assert_snapshot(chat_input, name="st_chat_input-layout_inline_brief_text")
+
+
+@use_chat_input("audio_only")
+@pytest.mark.skip_browser("webkit")  # Webkit CI audio permission issue
+def test_layout_alignment_after_audio_submission(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that chat input alignment is correct after audio recording and submission.
+
+    Regression test: After recording and submitting audio, the textarea placeholder
+    should be vertically aligned with the buttons (not shifted higher).
+    """
+    app.set_viewport_size({"width": 750, "height": 400})
+
+    chat_input = get_element_by_key(app, "audio_only")
+
+    # 1. Capture initial alignment state
+    assert_snapshot(chat_input, name="st_chat_input-audio_initial_alignment")
+
+    # 2. Record and submit audio
+    record_audio_in_chat_input(app, chat_input)
+
+    # 3. Wait for submission and app rerun
+    wait_for_app_run(app)
+    expect_chat_input_value_contains_audio(app, "audio_only")
+
+    # 4. Capture alignment after audio submission - should match initial alignment
+    chat_input = get_element_by_key(app, "audio_only")
+    assert_snapshot(chat_input, name="st_chat_input-audio_alignment_after_submit")
+
+
+@use_chat_input("audio_only")
+@pytest.mark.skip_browser("webkit")  # Webkit CI audio permission issue
+def test_stacked_layout_triggers_after_audio_submission(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that stacked layout mode works correctly after audio submission.
+
+    Regression test: After recording and submitting audio, typing long text
+    should still trigger the stacked layout mode (textarea above buttons).
+    """
+    app.set_viewport_size({"width": 750, "height": 400})
+
+    chat_input = get_element_by_key(app, "audio_only")
+
+    # 1. Record and submit audio
+    record_audio_in_chat_input(app, chat_input)
+    wait_for_app_run(app)
+    expect_chat_input_value_contains_audio(app, "audio_only")
+
+    # 2. Get fresh reference and type long text
+    chat_input = get_element_by_key(app, "audio_only")
+    textarea = chat_input.locator("textarea").first
+
+    long_text = (
+        "This is a very long message that should trigger the stacked layout mode "
+        "where the textarea appears above the buttons instead of inline"
+    )
+    textarea.type(long_text)
+
+    # 3. Verify stacked layout is triggered
+    assert_snapshot(chat_input, name="st_chat_input-stacked_after_audio_submit")
+
+
+@use_chat_input("audio_only")
+@pytest.mark.skip_browser("webkit")  # Webkit CI audio permission issue
+def test_layout_after_audio_cancel(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that layout returns to correct state after canceling audio recording.
+
+    After canceling a recording, the textarea should:
+    1. Be visible and properly aligned with buttons
+    2. Support stacked layout mode when typing long text
+    """
+    app.set_viewport_size({"width": 750, "height": 400})
+
+    chat_input = get_element_by_key(app, "audio_only")
+
+    # 1. Start recording
+    start_audio_recording(chat_input)
+
+    # 2. Cancel recording
+    cancel_button = chat_input.get_by_test_id("stChatInputCancelButton")
+    cancel_button.click()
+
+    # 3. Verify textarea is back and aligned correctly
+    textarea = chat_input.locator("textarea").first
+    expect(textarea).to_be_visible()
+    assert_snapshot(chat_input, name="st_chat_input-alignment_after_audio_cancel")
+
+    # 4. Verify stacking still works after cancel
+    long_text = (
+        "A very long message that should trigger stacked mode even after "
+        "canceling an audio recording"
+    )
+    textarea.type(long_text)
+    assert_snapshot(chat_input, name="st_chat_input-stacked_after_audio_cancel")
