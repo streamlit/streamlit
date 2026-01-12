@@ -19,7 +19,7 @@ import re
 from collections.abc import Callable, Mapping
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Any, Final, TypedDict, cast
-from urllib.parse import urlparse
+from urllib.parse import urlencode, urlparse
 
 from streamlit import config
 from streamlit.errors import StreamlitAuthError
@@ -218,8 +218,6 @@ def build_logout_url(
     str
         The complete logout URL with query parameters.
     """
-    from urllib.parse import urlencode
-
     logout_params: dict[str, str] = {
         "client_id": client_id,
         "post_logout_redirect_uri": post_logout_redirect_uri,

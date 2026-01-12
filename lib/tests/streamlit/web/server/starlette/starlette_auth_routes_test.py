@@ -654,7 +654,7 @@ class TestGetProviderLogoutUrl:
         assert "https://example.com/logout" in result
         assert "client_id=test-client-id" in result
         assert "post_logout_redirect_uri" in result
-        # Verify provider in cookie is required for logout URL
+        # Verify that the validated redirect_uri is included in the logout URL
         assert "localhost" in result
 
     @patch_config_options({"server.cookieSecret": "test-secret"})
