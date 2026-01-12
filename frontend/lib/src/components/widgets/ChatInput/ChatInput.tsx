@@ -214,6 +214,14 @@ function ChatInput({
   const measureCanvasRef = useRef<HTMLCanvasElement | null>(null)
   const measureCtxRef = useRef<CanvasRenderingContext2D | null>(null)
 
+  // Cleanup canvas refs on unmount to allow garbage collection
+  useEffect(() => {
+    return () => {
+      measureCanvasRef.current = null
+      measureCtxRef.current = null
+    }
+  }, [])
+
   // Update cached measurements when textarea mounts, resizes, or layout mode changes
   // ResizeObserver callbacks run after layout is computed, so reads are cheap
   useEffect(() => {
@@ -279,23 +287,20 @@ function ChatInput({
     }
   }, [value, isStacked])
 
-  // Refocus textarea after mode transition
+  // Refocus textarea after layout mode transition
+  // The textarea is remounted in a different DOM location when isStacked changes,
+  // so we restore focus (layout only changes due to user typing, so they always have focus)
   useEffect(() => {
-    // When isStacked changes and we have a ref, restore focus
-    if (
-      chatInputRef.current &&
-      document.activeElement !== chatInputRef.current
-    ) {
-      // Only refocus if the chat input container has focus (user was typing)
-      const chatContainer = chatInputRef.current.closest(".stChatInput")
-      if (chatContainer?.contains(document.activeElement) || value !== "") {
-        chatInputRef.current.focus()
-        // Move cursor to end
-        const len = chatInputRef.current.value.length
-        chatInputRef.current.setSelectionRange(len, len)
-      }
+    const textarea = chatInputRef.current
+    if (!textarea) {
+      return
     }
-  }, [isStacked, value])
+
+    textarea.focus()
+    // Move cursor to end
+    const len = textarea.value.length
+    textarea.setSelectionRange(len, len)
+  }, [isStacked])
 
   /**
    * @returns True if the user-specified state.value has not yet been synced to

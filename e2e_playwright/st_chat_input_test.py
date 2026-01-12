@@ -1862,12 +1862,12 @@ def test_dynamic_stacked_layout_transitions(
     chat_input = get_element_by_key(app, "inline")
     textarea = chat_input.locator("textarea").first
 
-    # 1. Type ~20 chars - should still be in inline mode
+    # 1. Type short text - should still be in inline mode
     short_text = "Hello, this is test"  # 19 chars
     textarea.type(short_text)
     assert_snapshot(chat_input, name="st_chat_input-layout_inline_short_text")
 
-    # 2. Type more text (~100+ more chars) to trigger stacked mode
+    # 2. Type more text to trigger stacked mode
     long_text = (
         " and now I'm adding a lot more text to fill up the available width "
         "so that the layout switches to stacked mode with buttons below"
@@ -1875,15 +1875,24 @@ def test_dynamic_stacked_layout_transitions(
     textarea.type(long_text)
     assert_snapshot(chat_input, name="st_chat_input-layout_stacked_long_text")
 
-    # 3. Backspace until ~20 chars remain - should STAY in stacked mode
-    # We need to delete enough chars to get back to ~20 chars
-    chars_to_delete = len(long_text) - 1  # Keep short_text + 1 char
-    for _ in range(chars_to_delete):
-        textarea.press("Backspace", delay=5)
+    # 3. Replace with shorter text (but not empty) - should STAY in stacked mode
+    # Use fill() to efficiently replace text without character-by-character deletion
+    partial_text = "Hello, this is test "  # 20 chars - still has content
+    textarea.fill(partial_text)
     assert_snapshot(chat_input, name="st_chat_input-layout_stacked_after_delete")
 
-    # 4. Delete all remaining text - should return to inline mode
-    remaining_chars = len(short_text) + 1
-    for _ in range(remaining_chars):
-        textarea.press("Backspace", delay=5)
+    # 4. Clear all text - should return to inline mode
+    # Use select all + backspace for efficient clearing
+    textarea.press(
+        "Meta+a"
+        if app.evaluate("navigator.platform").startswith("Mac")
+        else "Control+a"
+    )
+    textarea.press("Backspace")
     assert_snapshot(chat_input, name="st_chat_input-layout_inline_after_clear")
+
+    # Negative assertion: verify that typing short text does NOT trigger stacked mode
+    textarea.type("Brief")
+    expect(textarea).to_have_value("Brief")
+    # Take a snapshot to verify we're still in inline mode with brief text
+    assert_snapshot(chat_input, name="st_chat_input-layout_inline_brief_text")
