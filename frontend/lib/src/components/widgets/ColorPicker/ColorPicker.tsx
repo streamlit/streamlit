@@ -80,15 +80,6 @@ const ColorPicker: FC<Props> = ({
   widgetMgr,
   fragmentId,
 }) => {
-  // Register query param binding using queryParamKey from proto
-  const { isBound, syncToUrl } = useQueryParamBinding<string>({
-    elementId: element.id,
-    widgetMgr,
-    serializer: serializeColor,
-    deserializer: deserializeColor,
-    queryParamKey: element.queryParamKey,
-  })
-
   const [value, setValueWithSource] = useBasicWidgetState<
     ColorPickerValue,
     ColorPickerProto
@@ -100,6 +91,16 @@ const ColorPicker: FC<Props> = ({
     element,
     widgetMgr,
     fragmentId,
+  })
+
+  // Register query param binding using queryParamKey from proto
+  const { isBound, syncToUrl } = useQueryParamBinding<string>({
+    elementId: element.id,
+    widgetMgr,
+    serializer: serializeColor,
+    deserializer: deserializeColor,
+    queryParamKey: element.queryParamKey,
+    currentValue: value,
   })
 
   const handleColorClose = useCallback(

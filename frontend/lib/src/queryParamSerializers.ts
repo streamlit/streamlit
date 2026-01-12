@@ -36,10 +36,17 @@ export function serializeBool(value: boolean): string {
   return value ? "true" : "false"
 }
 
-export function deserializeBool(value: string | string[] | null): boolean {
-  if (value === null) return false
+export function deserializeBool(
+  value: string | string[] | null
+): boolean | undefined {
+  if (value === null) return undefined
   const str = Array.isArray(value) ? (value[value.length - 1] ?? "") : value
-  return ["true", "1", "yes", "on"].includes(str.toLowerCase())
+  const lower = str.toLowerCase()
+  // Only accept explicit "true" and "false"
+  if (lower === "true") return true
+  if (lower === "false") return false
+  // Return undefined for invalid values (triggers auto-correction)
+  return undefined
 }
 
 // --- String Serializers (for TextInput, TextArea) ---
@@ -106,7 +113,17 @@ export function deserializeColor(
   if (!str) return undefined
 
   // Add # prefix if not present
-  return str.startsWith("#") ? str.toLowerCase() : `#${str.toLowerCase()}`
+  const color = str.startsWith("#")
+    ? str.toLowerCase()
+    : `#${str.toLowerCase()}`
+
+  // Validate hex color format: #RGB, #RGBA, #RRGGBB, or #RRGGBBAA
+  const hexPattern = /^#([0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i
+  if (!hexPattern.test(color)) {
+    return undefined // Invalid color triggers auto-correction
+  }
+
+  return color
 }
 
 // --- Date Serializers (for DateInput) ---

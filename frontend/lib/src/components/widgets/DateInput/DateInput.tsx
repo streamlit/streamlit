@@ -115,6 +115,16 @@ function DateInput({
     fragmentId,
   })
 
+  // Custom equality for arrays - compare by stringifying
+  const isArrayEqual = useCallback(
+    (a: string[] | null, b: string[] | null | undefined): boolean =>
+      JSON.stringify(a) === JSON.stringify(b),
+    []
+  )
+
+  // Convert Date[] to string[] for query param binding
+  const valueAsStrings = useMemo(() => datesToStrings(value), [value])
+
   // Register query param binding using queryParamKey from proto
   // DateInput uses string array values in YYYY/MM/DD format
   const { isBound, syncToUrl } = useQueryParamBinding<string[] | null>({
@@ -123,6 +133,8 @@ function DateInput({
     serializer: serializeDateStringArray,
     deserializer: deserializeDateStringArray,
     queryParamKey: element.queryParamKey,
+    currentValue: valueAsStrings,
+    isEqual: isArrayEqual,
   })
 
   const [isEmpty, setIsEmpty] = useState(false)

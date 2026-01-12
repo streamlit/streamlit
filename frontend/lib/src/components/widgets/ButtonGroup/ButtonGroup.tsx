@@ -348,15 +348,6 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
     [options, isMultiSelect]
   )
 
-  // Register query param binding using queryParamKey from proto
-  const { isBound, syncToUrl } = useQueryParamBinding<number[] | null>({
-    elementId: element.id,
-    widgetMgr,
-    serializer,
-    deserializer,
-    queryParamKey: element.queryParamKey,
-  })
-
   const [value, setValueWithSource] = useBasicWidgetState<
     ButtonGroupValue,
     ButtonGroupProto
@@ -368,6 +359,24 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
     element,
     widgetMgr,
     fragmentId,
+  })
+
+  // Custom equality for arrays - compare by stringifying
+  const isArrayEqual = useCallback(
+    (a: number[] | null, b: number[] | null | undefined): boolean =>
+      JSON.stringify(a) === JSON.stringify(b),
+    []
+  )
+
+  // Register query param binding using queryParamKey from proto
+  const { isBound, syncToUrl } = useQueryParamBinding<number[] | null>({
+    elementId: element.id,
+    widgetMgr,
+    serializer,
+    deserializer,
+    queryParamKey: element.queryParamKey,
+    currentValue: value,
+    isEqual: isArrayEqual,
   })
 
   const containerWidth = shouldWidthStretch(widthConfig)

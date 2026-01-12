@@ -98,6 +98,7 @@ function DateTimeInput({
     serializer: serializeDateTimeString,
     deserializer: deserializeDateTimeString,
     queryParamKey: element.queryParamKey,
+    currentValue: value,
   })
 
   const { locale } = useContext(LibConfigContext)

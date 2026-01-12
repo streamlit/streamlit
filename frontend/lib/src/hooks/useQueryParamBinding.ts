@@ -37,6 +37,18 @@ export interface UseQueryParamBindingArgs<T> {
    * Protobuf generates this as string | null | undefined for optional fields.
    */
   queryParamKey?: string | null
+  /**
+   * The widget's current value. If provided, the hook will auto-correct
+   * the URL on mount if the URL value differs from the widget value.
+   * This handles cases where the URL had an invalid value that was
+   * corrected by the backend.
+   */
+  currentValue: T
+  /**
+   * Optional equality function for comparing widget value to URL value.
+   * Defaults to strict equality (===). Use a custom function for arrays/objects.
+   */
+  isEqual?: (a: T, b: T | undefined) => boolean
 }
 
 export interface UseQueryParamBindingResult<T> {
@@ -77,12 +89,17 @@ export interface UseQueryParamBindingResult<T> {
  * }
  * ```
  */
+// Default equality function using strict equality
+const defaultIsEqual = <T>(a: T, b: T | undefined): boolean => a === b
+
 export function useQueryParamBinding<T>({
   elementId,
   serializer,
   deserializer,
   widgetMgr,
   queryParamKey,
+  currentValue,
+  isEqual = defaultIsEqual,
 }: UseQueryParamBindingArgs<T>): UseQueryParamBindingResult<T> {
   // Widget is bound if queryParamKey is a non-empty string
   const isBound = Boolean(queryParamKey)
@@ -90,6 +107,8 @@ export function useQueryParamBinding<T>({
 
   // Track if we've already registered to avoid duplicate registrations
   const isRegisteredRef = useRef(false)
+  // Track if we've already auto-corrected the URL
+  const hasAutoCorrectedRef = useRef(false)
 
   // Register/unregister the binding
   useEffect(() => {
@@ -110,6 +129,38 @@ export function useQueryParamBinding<T>({
       isRegisteredRef.current = false
     }
   }, [elementId, paramKey, isBound, serializer, deserializer, widgetMgr])
+
+  // Auto-correct URL if widget value differs from URL value.
+  // This handles cases where the URL had an invalid value that was corrected
+  // by the backend (e.g., slider=999 when max=100, corrected to slider=100).
+  useEffect(() => {
+    // Skip if not bound, value is undefined, or already corrected
+    if (
+      !isBound ||
+      currentValue === undefined ||
+      hasAutoCorrectedRef.current
+    ) {
+      return
+    }
+
+    const urlValue = widgetMgr.getValueFromQueryParams<T>(elementId)
+    // Check if the URL has the param at all (even if deserialization failed)
+    const urlHasParam =
+      paramKey !== undefined &&
+      new URLSearchParams(window.location.search).has(paramKey)
+
+    // Correct if:
+    // 1. URL has the param but value is invalid (urlValue undefined, urlHasParam true)
+    // 2. URL has the param and value differs from current widget value
+    const needsCorrection =
+      urlHasParam &&
+      (urlValue === undefined || !isEqual(currentValue, urlValue))
+
+    if (needsCorrection) {
+      widgetMgr.syncWidgetToQueryParams(elementId, currentValue)
+    }
+    hasAutoCorrectedRef.current = true
+  }, [isBound, currentValue, elementId, widgetMgr, isEqual, paramKey])
 
   // Get value from URL
   const getUrlValue = useCallback((): T | undefined => {

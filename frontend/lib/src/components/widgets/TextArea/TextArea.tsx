@@ -93,15 +93,6 @@ const TextArea: FC<Props> = ({
   fragmentId,
   outerElement,
 }) => {
-  // Register query param binding using queryParamKey from proto
-  const { isBound, syncToUrl } = useQueryParamBinding<string | null>({
-    elementId: element.id,
-    widgetMgr,
-    serializer: serializeString,
-    deserializer: deserializeString,
-    queryParamKey: element.queryParamKey,
-  })
-
   // eslint-disable-next-line react-hooks/refs -- TODO: Do not access ref during render
   const id = useRef(uniqueId("text_area_")).current
 
@@ -153,6 +144,16 @@ const TextArea: FC<Props> = ({
     widgetMgr,
     fragmentId,
     onFormCleared,
+  })
+
+  // Register query param binding using queryParamKey from proto
+  const { isBound, syncToUrl } = useQueryParamBinding<string | null>({
+    elementId: element.id,
+    widgetMgr,
+    serializer: serializeString,
+    deserializer: deserializeString,
+    queryParamKey: element.queryParamKey,
+    currentValue: value,
   })
 
   useUpdateUiValue(value, uiValue, setUiValue, dirty)

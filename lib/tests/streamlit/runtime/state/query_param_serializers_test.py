@@ -71,21 +71,31 @@ class TestBoolSerializer:
         [
             ("true_lowercase", "true", True),
             ("true_uppercase", "TRUE", True),
-            ("one", "1", True),
-            ("yes", "yes", True),
-            ("on", "on", True),
             ("false_lowercase", "false", False),
             ("false_uppercase", "FALSE", False),
-            ("zero", "0", False),
-            ("no", "no", False),
-            ("off", "off", False),
-            ("empty", "", False),
-            ("random_string", "random", False),
         ]
     )
-    def test_deserialize_bool(self, _name: str, value: str, expected: bool) -> None:
-        """Test deserialize_bool handles various string representations."""
+    def test_deserialize_bool_valid(
+        self, _name: str, value: str, expected: bool
+    ) -> None:
+        """Test deserialize_bool handles valid true/false strings."""
         assert deserialize_bool(value) == expected
+
+    @parameterized.expand(
+        [
+            ("one", "1"),
+            ("zero", "0"),
+            ("yes", "yes"),
+            ("no", "no"),
+            ("on", "on"),
+            ("off", "off"),
+            ("empty", ""),
+            ("random_string", "random"),
+        ]
+    )
+    def test_deserialize_bool_invalid(self, _name: str, value: str) -> None:
+        """Test deserialize_bool returns None for invalid values."""
+        assert deserialize_bool(value) is None
 
     def test_deserialize_bool_from_list(self) -> None:
         """Test deserialize_bool uses last value from list."""
@@ -94,7 +104,7 @@ class TestBoolSerializer:
 
     def test_deserialize_bool_empty_list(self) -> None:
         """Test deserialize_bool handles empty list."""
-        assert deserialize_bool([]) is False
+        assert deserialize_bool([]) is None
 
 
 class TestStringSerializer:

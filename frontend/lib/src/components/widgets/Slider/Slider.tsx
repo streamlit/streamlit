@@ -161,6 +161,13 @@ function Slider({
     [isSelectSlider, options]
   )
 
+  // Custom equality for arrays - compare by stringifying
+  const isArrayEqual = useCallback(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Union type requires flexible typing
+    (a: any, b: any): boolean => JSON.stringify(a) === JSON.stringify(b),
+    []
+  )
+
   // Register query param binding using queryParamKey from proto
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Union type requires flexible typing
   const { isBound, syncToUrl } = useQueryParamBinding<any>({
@@ -169,6 +176,8 @@ function Slider({
     serializer,
     deserializer,
     queryParamKey: element.queryParamKey,
+    currentValue: value,
+    isEqual: isArrayEqual,
   })
 
   // We tie the UI to `uiValue` rather than `value` because `value` only

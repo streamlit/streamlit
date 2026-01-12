@@ -47,12 +47,11 @@ def serialize_bool(value: bool) -> str:
     return "true" if value else "false"
 
 
-def deserialize_bool(value: str | list[str]) -> bool:
+def deserialize_bool(value: str | list[str]) -> bool | None:
     """Deserialize a query param string to a boolean value.
 
-    Accepts common boolean string representations (case-insensitive):
-    - true, 1, yes, on -> True
-    - false, 0, no, off -> False
+    Only accepts explicit "true" and "false" (case-insensitive).
+    Returns None for invalid values so the widget uses its default.
 
     Parameters
     ----------
@@ -61,13 +60,20 @@ def deserialize_bool(value: str | list[str]) -> bool:
 
     Returns
     -------
-    bool
-        The deserialized boolean value.
+    bool or None
+        The deserialized boolean value, or None if invalid.
     """
     if isinstance(value, list):
-        value = value[-1] if value else "false"
+        value = value[-1] if value else ""
 
-    return value.lower() in ("true", "1", "yes", "on")
+    lower = value.lower()
+    # Only accept explicit "true" and "false" - no magic values
+    if lower == "true":
+        return True
+    if lower == "false":
+        return False
+    # Invalid value - return None so widget uses default
+    return None
 
 
 def serialize_string(value: str | None) -> str:
@@ -744,7 +750,7 @@ def serialize_color(value: str | None) -> str:
 def deserialize_color(value: str | list[str]) -> str | None:
     """Deserialize a query param string to a hex color value.
 
-    Adds the leading '#' if not present.
+    Adds the leading '#' if not present. Returns None for invalid hex colors.
 
     Parameters
     ----------
@@ -754,8 +760,10 @@ def deserialize_color(value: str | list[str]) -> str | None:
     Returns
     -------
     str or None
-        The hex color with '#' (e.g., "#ff0000"), or None if empty.
+        The hex color with '#' (e.g., "#ff0000"), or None if invalid/empty.
     """
+    import re
+
     if isinstance(value, list):
         value = value[-1] if value else ""
 
@@ -766,4 +774,11 @@ def deserialize_color(value: str | list[str]) -> str | None:
     if not value.startswith("#"):
         value = f"#{value}"
 
-    return value.lower()
+    color = value.lower()
+
+    # Validate hex color format: #RGB, #RGBA, #RRGGBB, or #RRGGBBAA
+    hex_pattern = re.compile(r"^#([0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$")
+    if not hex_pattern.match(color):
+        return None  # Invalid color - widget will use default
+
+    return color

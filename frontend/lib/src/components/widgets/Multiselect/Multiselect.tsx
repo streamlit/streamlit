@@ -117,15 +117,6 @@ const Multiselect: FC<Props> = props => {
     [options]
   )
 
-  // Register query param binding using queryParamKey from proto
-  const { isBound, syncToUrl } = useQueryParamBinding<MultiselectValue>({
-    elementId: element.id,
-    widgetMgr,
-    serializer: serializeMultiselect,
-    deserializer,
-    queryParamKey: element.queryParamKey,
-  })
-
   const [value, setValueWithSource] = useBasicWidgetState<
     MultiselectValue,
     MultiSelectProto
@@ -137,6 +128,24 @@ const Multiselect: FC<Props> = props => {
     element,
     widgetMgr,
     fragmentId,
+  })
+
+  // Custom equality for arrays - compare by stringifying
+  const isArrayEqual = useCallback(
+    (a: MultiselectValue, b: MultiselectValue | undefined): boolean =>
+      JSON.stringify(a) === JSON.stringify(b),
+    []
+  )
+
+  // Register query param binding using queryParamKey from proto
+  const { isBound, syncToUrl } = useQueryParamBinding<MultiselectValue>({
+    elementId: element.id,
+    widgetMgr,
+    serializer: serializeMultiselect,
+    deserializer,
+    queryParamKey: element.queryParamKey,
+    currentValue: value,
+    isEqual: isArrayEqual,
   })
 
   const overMaxSelections =

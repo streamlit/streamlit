@@ -80,6 +80,7 @@ function TimeInput({
     serializer: serializeString,
     deserializer: deserializeString,
     queryParamKey: element.queryParamKey,
+    currentValue: value,
   })
 
   const isInSidebar = useContext(IsSidebarContext)

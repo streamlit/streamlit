@@ -51,22 +51,28 @@ describe("Boolean serializers", () => {
       ["true", true],
       ["TRUE", true],
       ["True", true],
-      ["1", true],
-      ["yes", true],
-      ["on", true],
       ["false", false],
       ["FALSE", false],
-      ["0", false],
-      ["no", false],
-      ["off", false],
-      ["", false],
-      ["random", false],
-    ])("deserializes '%s' to %s", (input, expected) => {
+      ["False", false],
+    ])("deserializes valid '%s' to %s", (input, expected) => {
       expect(deserializeBool(input)).toBe(expected)
     })
 
-    it("returns false for null", () => {
-      expect(deserializeBool(null)).toBe(false)
+    it.each([
+      ["1"],
+      ["0"],
+      ["yes"],
+      ["no"],
+      ["on"],
+      ["off"],
+      [""],
+      ["random"],
+    ])("returns undefined for invalid '%s'", input => {
+      expect(deserializeBool(input)).toBeUndefined()
+    })
+
+    it("returns undefined for null", () => {
+      expect(deserializeBool(null)).toBeUndefined()
     })
 
     it("uses last value from array", () => {
@@ -74,8 +80,8 @@ describe("Boolean serializers", () => {
       expect(deserializeBool(["true", "false"])).toBe(false)
     })
 
-    it("returns false for empty array", () => {
-      expect(deserializeBool([])).toBe(false)
+    it("returns undefined for empty array", () => {
+      expect(deserializeBool([])).toBeUndefined()
     })
   })
 })
@@ -193,8 +199,21 @@ describe("Color serializers", () => {
       ["#ff0000", "#ff0000"],
       ["#FF0000", "#ff0000"],
       ["aabbcc", "#aabbcc"],
-    ])("deserializes '%s' to '%s'", (input, expected) => {
+      ["#abc", "#abc"], // 3-digit hex
+      ["#abcd", "#abcd"], // 4-digit hex (with alpha)
+      ["#aabbccdd", "#aabbccdd"], // 8-digit hex (with alpha)
+    ])("deserializes valid '%s' to '%s'", (input, expected) => {
       expect(deserializeColor(input)).toBe(expected)
+    })
+
+    it.each([
+      ["2"], // Too short
+      ["#2"], // Too short with #
+      ["notacolor"],
+      ["#gggggg"], // Invalid hex chars
+      ["#12345"], // 5 digits (invalid)
+    ])("returns undefined for invalid '%s'", input => {
+      expect(deserializeColor(input)).toBeUndefined()
     })
 
     it("returns undefined for null", () => {

@@ -54,15 +54,6 @@ function Checkbox({
   widgetMgr,
   fragmentId,
 }: Readonly<Props>): ReactElement {
-  // Register query param binding using queryParamKey from proto
-  const { isBound, syncToUrl } = useQueryParamBinding<boolean>({
-    elementId: element.id,
-    widgetMgr,
-    serializer: serializeBool,
-    deserializer: deserializeBool,
-    queryParamKey: element.queryParamKey,
-  })
-
   const [value, setValueWithSource] = useBasicWidgetState<
     boolean,
     CheckboxProto
@@ -74,6 +65,16 @@ function Checkbox({
     element,
     widgetMgr,
     fragmentId,
+  })
+
+  // Register query param binding using queryParamKey from proto
+  const { isBound, syncToUrl } = useQueryParamBinding<boolean>({
+    elementId: element.id,
+    widgetMgr,
+    serializer: serializeBool,
+    deserializer: deserializeBool,
+    queryParamKey: element.queryParamKey,
+    currentValue: value,
   })
 
   const onChange = useCallback(

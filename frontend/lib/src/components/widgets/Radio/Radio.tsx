@@ -60,15 +60,6 @@ function Radio({
     [options]
   )
 
-  // Register query param binding using queryParamKey from proto
-  const { isBound, syncToUrl } = useQueryParamBinding<RadioValue>({
-    elementId: element.id,
-    widgetMgr,
-    serializer,
-    deserializer,
-    queryParamKey: element.queryParamKey,
-  })
-
   const [value, setValueWithSource] = useBasicWidgetState<
     RadioValue,
     RadioProto
@@ -80,6 +71,16 @@ function Radio({
     element,
     widgetMgr,
     fragmentId,
+  })
+
+  // Register query param binding using queryParamKey from proto
+  const { isBound, syncToUrl } = useQueryParamBinding<RadioValue>({
+    elementId: element.id,
+    widgetMgr,
+    serializer,
+    deserializer,
+    queryParamKey: element.queryParamKey,
+    currentValue: value,
   })
 
   const onChange = useCallback(

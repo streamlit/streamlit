@@ -94,15 +94,6 @@ const NumberInput: React.FC<Props> = ({
     max,
   } = element
 
-  // Register query param binding using queryParamKey from proto
-  const { isBound, syncToUrl } = useQueryParamBinding<number | null>({
-    elementId: element.id,
-    widgetMgr,
-    serializer: serializeNumber,
-    deserializer: deserializeNumber,
-    queryParamKey: element.queryParamKey,
-  })
-
   const { width, elementRef } = useCalculatedDimensions()
 
   const step = useMemo(
@@ -156,6 +147,16 @@ const NumberInput: React.FC<Props> = ({
       setDirty(false)
       setFormattedValue(formatCurrentValue(newValue))
     }, [elementDefault, formatCurrentValue]),
+  })
+
+  // Register query param binding using queryParamKey from proto
+  const { isBound, syncToUrl } = useQueryParamBinding<number | null>({
+    elementId: element.id,
+    widgetMgr,
+    serializer: serializeNumber,
+    deserializer: deserializeNumber,
+    queryParamKey: element.queryParamKey,
+    currentValue: value,
   })
 
   // Additional local state for UI interactions
