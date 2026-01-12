@@ -267,7 +267,7 @@ def _check_extension_or_raise(path_str: str) -> None:
 
 
 def _get_command_line_as_string() -> str | None:
-    import subprocess
+    import subprocess  # noqa: S404
 
     parent = click.get_current_context().parent
     if parent is None:

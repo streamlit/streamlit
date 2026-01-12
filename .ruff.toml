@@ -70,6 +70,8 @@ select = [
   "FURB189",
   "PLR6104",
   "FURB103",
+  "FURB154",
+  "S404",
 ]
 ignore = [
   # Rules planned to be supported in the future:
@@ -77,15 +79,14 @@ ignore = [
   "EM102",  # Checks for the use of f-strings in exception constructors.
   "TRY003", # Checks for exception messages that are not defined in the exception class itself.
   # Ignored rule sets:
-  "DTZ",  # Checks for usage of unsafe naive datetime class.
-  "PTH",  # Enforces usage of pathlib.
-  "C90",  # Checks for McCabe complexity.
-  "FBT",  # Forbids boolean positional arguments.
-  "SLF",  # Checks unexpected for private member access.
-  "BLE",  # Checks for blind except statements.
-  "CPY",  # Checks for copyright statement.
-  "DOC",  # Checks for correct docstring format.
-  "FURB", # Checks for potential math constants.
+  "DTZ", # Checks for usage of unsafe naive datetime class.
+  "PTH", # Enforces usage of pathlib.
+  "C90", # Checks for McCabe complexity.
+  "FBT", # Forbids boolean positional arguments.
+  "SLF", # Checks unexpected for private member access.
+  "BLE", # Checks for blind except statements.
+  "CPY", # Checks for copyright statement.
+  "DOC", # Checks for correct docstring format.
   # Ignored rules:
   "B904",    # Checks for raise statements in exception handlers that lack a from clause.
   "PYI041",  # Checks for parameter annotations that contain redundant unions between builtin numeric types (e.g., int | float).
@@ -139,6 +140,8 @@ ignore = [
   "PLR6201",
   "E266",    # Checks for multiple leading hashes for block comments.
   "FURB152", # Checks for potential math constants.
+  "PLW0108", # Checks for usage of unncessary lambda functions.
+  "RUF052",  # Checks for usage of dummy variables.
 ]
 exclude = [
   # pympler is a vendored dependency that doesn't conform to our linting rules:
