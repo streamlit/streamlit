@@ -341,8 +341,8 @@ class FormMixin:
             - ``"spinner"``: Displays a spinner as an icon.
 
         icon_position : "left" or "right"
-            The position of the icon relative to the button label. Defaults to
-            ``"left"``.
+            The position of the icon relative to the button label. This
+            defaults to ``"left"``.
 
         disabled : bool
             Whether to disable the button. If this is ``False`` (default), the
