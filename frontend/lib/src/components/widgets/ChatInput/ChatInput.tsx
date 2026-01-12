@@ -287,10 +287,19 @@ function ChatInput({
     }
   }, [value, isStacked])
 
+  // Track previous isStacked value to detect actual transitions
+  const prevIsStackedRef = useRef(isStacked)
+
   // Refocus textarea after layout mode transition
   // The textarea is remounted in a different DOM location when isStacked changes,
   // so we restore focus (layout only changes due to user typing, so they always have focus)
   useEffect(() => {
+    // Only focus when isStacked actually transitions (not on initial mount)
+    if (prevIsStackedRef.current === isStacked) {
+      return
+    }
+    prevIsStackedRef.current = isStacked
+
     const textarea = chatInputRef.current
     if (!textarea) {
       return
