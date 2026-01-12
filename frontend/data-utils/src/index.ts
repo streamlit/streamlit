@@ -16,6 +16,7 @@
 
 // Main Quiver class for Arrow DataFrame handling
 export { Quiver } from "./Quiver"
+export type { DataFrameCell } from "./Quiver"
 
 // Arrow utilities
 export * from "./arrowConcatUtils"

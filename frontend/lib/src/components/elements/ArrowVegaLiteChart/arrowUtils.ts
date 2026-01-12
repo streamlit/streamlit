@@ -20,61 +20,19 @@ import {
   isDatetimeType,
   isDateType,
   isNumericType,
-} from "~lib/dataframes/arrowTypeUtils"
-import { Quiver } from "~lib/dataframes/Quiver"
+  Quiver,
+} from "@streamlit/data-utils"
+import {
+  VegaLiteChartElement,
+  WrappedNamedDataset,
+} from "@streamlit/render-tree"
 import { isNullOrUndefined } from "~lib/util/utils"
+
+// Re-export types from @streamlit/render-tree
+export type { VegaLiteChartElement, WrappedNamedDataset }
 
 const MagicFields = {
   DATAFRAME_INDEX: "(index)",
-}
-
-/** All of the data that makes up a VegaLite chart. */
-export interface VegaLiteChartElement {
-  /**
-   * The dataframe that will be used as the chart's main data source, if
-   * specified using Vega-Lite's inline API.
-   *
-   * This is mutually exclusive with WrappedNamedDataset - if `data` is non-null,
-   * `datasets` will not be populated; if `datasets` is populated, then `data`
-   * will be null.
-   */
-  data: Quiver | null
-
-  /** The a JSON-formatted string with the Vega-Lite spec. */
-  spec: string
-
-  /**
-   * Dataframes associated with this chart using Vega-Lite's datasets API,
-   * if any.
-   */
-  datasets: WrappedNamedDataset[]
-
-  /** If True, will overwrite the chart width spec to fit to container. */
-  useContainerWidth: boolean
-
-  /** override the properties with a theme. Currently, only "streamlit" or None are accepted. */
-  vegaLiteTheme: string
-
-  /** The widget ID. Only set if selections are activated. */
-  id: string
-
-  /** Named selection parameters that are activated to trigger reruns. */
-  selectionMode: string[]
-
-  /** The form ID if the chart has activated selections and is used within a form. */
-  formId: string
-}
-
-/** A mapping of `ArrowNamedDataSet.proto`. */
-export interface WrappedNamedDataset {
-  /** The dataset's optional name. */
-  name: string | null
-
-  /** True if the name field (above) was manually set. */
-  hasName: boolean
-
-  /** The data itself, wrapped in a Quiver object. */
-  data: Quiver
 }
 
 export function getInlineData(

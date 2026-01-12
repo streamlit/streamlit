@@ -14,12 +14,5 @@
  * limitations under the License.
  */
 
-import { BlockNode } from "~lib/render-tree/BlockNode"
-import { ElementNode } from "~lib/render-tree/ElementNode"
-import { TransientNode } from "~lib/render-tree/TransientNode"
-
-export interface AppNodeVisitor<T> {
-  visitBlockNode(node: BlockNode): T
-  visitElementNode(node: ElementNode): T
-  visitTransientNode(node: TransientNode): T
-}
+// Re-export from @streamlit/render-tree to ensure type compatibility
+export type { AppNodeVisitor } from "@streamlit/render-tree"
