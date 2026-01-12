@@ -406,6 +406,8 @@ function ChatInput({
       acceptFile === AcceptFileValue.Directory,
     accept: getAccept(element.fileType),
     maxSize: maxFileSize,
+    // Disable the File System Access API to avoid browser-specific issues
+    // with drag-and-drop uploads (see issue #6176 and FileDropzone usage).
     useFsAccessApi: false,
   })
 
