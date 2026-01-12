@@ -181,7 +181,7 @@ export const StyledChatUploadedFileDeleteButton =
         lineHeight: 0,
         "&:hover": {
           backgroundColor: "transparent",
-          color: isError ? theme.colors.red70 : theme.colors.bodyText,
+          color: isError ? theme.colors.redColor : theme.colors.bodyText,
         },
       },
     })
