@@ -62,6 +62,20 @@ _config_options: dict[str, ConfigOption] | None = None
 # resolve config and secret files relative to the main script:
 _main_script_path: str | None = None
 
+# Stores the server mode for metrics tracking.
+# Possible values:
+# - "tornado": Traditional Tornado server
+# - "starlette-managed": Starlette server via server.useStarlette config
+# - "starlette-app": st.App started via streamlit run
+# - "asgi-server": st.App with external ASGI server (uvicorn, gunicorn, etc.)
+# - "asgi-mounted": st.App mounted on another ASGI framework (FastAPI, Starlette)
+_server_mode: (
+    Literal[
+        "tornado", "starlette-managed", "starlette-app", "asgi-server", "asgi-mounted"
+    ]
+    | None
+) = None
+
 # Indicates that a config option was defined by the user.
 _USER_DEFINED: Final = "<user defined>"
 

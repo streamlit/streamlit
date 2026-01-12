@@ -65,23 +65,28 @@ _LOGGER: Final = get_logger(__name__)
 # - frontend/app/vite.config.ts (dev server proxy configuration)
 # - frontend/connection/src/DefaultStreamlitEndpoints.ts
 
+BASE_ROUTE_CORE: Final = "_stcore"
+BASE_ROUTE_MEDIA: Final = "media"
+BASE_ROUTE_UPLOAD_FILE: Final = f"{BASE_ROUTE_CORE}/upload_file"
+BASE_ROUTE_COMPONENT: Final = "component"
+
 # Health check routes
-_ROUTE_HEALTH: Final = "_stcore/health"
-_ROUTE_SCRIPT_HEALTH: Final = "_stcore/script-health-check"
+_ROUTE_HEALTH: Final = f"{BASE_ROUTE_CORE}/health"
+_ROUTE_SCRIPT_HEALTH: Final = f"{BASE_ROUTE_CORE}/script-health-check"
 
 # Metrics routes
-_ROUTE_METRICS: Final = "_stcore/metrics"
+_ROUTE_METRICS: Final = f"{BASE_ROUTE_CORE}/metrics"
 
 # Host configuration
-_ROUTE_HOST_CONFIG: Final = "_stcore/host-config"
+_ROUTE_HOST_CONFIG: Final = f"{BASE_ROUTE_CORE}/host-config"
 
 # Media and file routes
-_ROUTE_MEDIA: Final = "media/{file_id:path}"
-_ROUTE_UPLOAD_FILE: Final = "_stcore/upload_file/{session_id}/{file_id}"
+_ROUTE_MEDIA: Final = f"{BASE_ROUTE_MEDIA}/{{file_id:path}}"
+_ROUTE_UPLOAD_FILE: Final = f"{BASE_ROUTE_UPLOAD_FILE}/{{session_id}}/{{file_id}}"
 
 # Component routes
-_ROUTE_COMPONENTS_V1: Final = "component/{path:path}"
-_ROUTE_COMPONENTS_V2: Final = "_stcore/bidi-components/{path:path}"
+_ROUTE_COMPONENTS_V1: Final = f"{BASE_ROUTE_COMPONENT}/{{path:path}}"
+_ROUTE_COMPONENTS_V2: Final = f"{BASE_ROUTE_CORE}/bidi-components/{{path:path}}"
 
 # App static files
 _ROUTE_APP_STATIC: Final = "app/static/{path:path}"
@@ -145,6 +150,11 @@ def _ensure_xsrf_cookie(request: Request, response: Response) -> None:
     The cookie is only set if XSRF protection is enabled in the configuration.
     The Secure flag is added when SSL is configured.
 
+    Note: The XSRF cookie intentionally does NOT have the HttpOnly flag. This
+    is required for the double-submit cookie pattern: JavaScript reads the
+    cookie value and includes it in the X-Xsrftoken request header, which the
+    server then compares against the cookie value to validate requests.
+
     Parameters
     ----------
     request
@@ -192,6 +202,15 @@ def _set_unquoted_cookie(
     for XSRF tokens that use the format "2|mask|token|timestamp".
 
     If a cookie with the same name already exists, it is replaced.
+
+    Cookie flags set:
+    - Path=/: Available to all paths
+    - SameSite=Lax: Protects against CSRF while allowing top-level navigations
+    - Secure (conditional): Added when SSL is configured
+
+    HttpOnly is intentionally NOT set for XSRF cookies because JavaScript must
+    read the cookie value to include it in request headers (double-submit pattern).
+    This matches Tornado's behavior.
 
     Parameters
     ----------

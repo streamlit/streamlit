@@ -53,7 +53,8 @@ jobs:
           NEXT="${{ inputs.new_version }}"
           if ! echo "$NEXT" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then echo "invalid semver: $NEXT"; exit 1; fi
           if [ "$NEXT" = "$CURR" ]; then echo "new_version equals current"; exit 1; fi
-          npm version "${{ inputs.new_version }}" --no-git-tag-version
+          # Bump the version in the package.json file
+          yarn version "${{ inputs.new_version }}"
           echo "next=$NEXT" >> $GITHUB_OUTPUT
 
       - name: Create branch and commit (@streamlit/component-v2-lib)

@@ -30,7 +30,7 @@ from streamlit.runtime import Runtime, RuntimeConfig
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
 from streamlit.runtime.scriptrunner import add_script_run_ctx
-from streamlit.web.server import ComponentRequestHandler, Server
+from streamlit.web.server import ComponentRequestHandler
 from tests.testutil import create_mock_script_run_ctx, patch_config_options
 
 URL = "http://not.a.real.url:3001"
@@ -291,7 +291,9 @@ class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
         assert ComponentRequestHandler.get_content_type("test.css") == "custom/css"
 
         # Have the server reinitialize the mimetypes
-        Server.initialize_mimetypes()
+        from streamlit.web.bootstrap import _initialize_mimetypes
+
+        _initialize_mimetypes()
 
         assert ComponentRequestHandler.get_content_type("test.html") == "text/html"
         assert (

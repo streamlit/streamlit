@@ -31,6 +31,13 @@ message PageProfile {
   string timezone = 9;
   bool headless = 10;
   bool is_fragment_run = 11;
+  // The server mode used to run the Streamlit app:
+  // - "tornado": Traditional Tornado server (streamlit run)
+  // - "starlette-managed": Starlette server via server.useStarlette config
+  // - "starlette-app": st.App started via streamlit run
+  // - "asgi-server": st.App run directly with external ASGI server (uvicorn, gunicorn)
+  // - "asgi-mounted": st.App mounted on another ASGI framework (FastAPI, Starlette)
+  string server_mode = 12;
 }
 
 // The field names are used as part of the event json sent

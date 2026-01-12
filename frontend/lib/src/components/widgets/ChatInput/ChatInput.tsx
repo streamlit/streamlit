@@ -25,12 +25,12 @@ import {
   useState,
 } from "react"
 
+import { MicNone } from "@emotion-icons/material-outlined"
 import {
   ArrowUpward,
   Check,
   Close,
   ErrorOutline,
-  Mic,
 } from "@emotion-icons/material-rounded"
 import { Textarea as UITextArea } from "baseui/textarea"
 import { useDropzone } from "react-dropzone"
@@ -316,7 +316,6 @@ function ChatInput({
     acceptMultipleFiles:
       acceptFile === AcceptFileValue.Multiple ||
       acceptFile === AcceptFileValue.Directory,
-    acceptDirectoryFiles: acceptFile === AcceptFileValue.Directory,
     maxFileSize: maxFileSize,
     uploadClient: uploadClient,
     uploadFile: createUploadFileHandler({
@@ -851,7 +850,11 @@ function ChatInput({
                             data-testid="stChatInputMicButton"
                             aria-label="Start recording"
                           >
-                            <Icon content={Mic} size="xl" color="inherit" />
+                            <Icon
+                              content={MicNone}
+                              size="xl"
+                              color="inherit"
+                            />
                           </StyledSendIconButton>
                         )}
                       </>

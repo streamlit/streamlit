@@ -15,7 +15,6 @@
  */
 import styled from "@emotion/styled"
 
-import { hasLightBackgroundColor } from "~lib/theme"
 import { getPrimaryFocusBoxShadow } from "~lib/theme/utils"
 
 export const StyledChatInputContainer = styled.div({
@@ -161,15 +160,10 @@ export const StyledSendIconButton = styled.button<StyledSendIconButtonProps>(
       }
     }
 
-    const lightTheme = hasLightBackgroundColor(theme)
-    const [cleanIconColor, dirtyIconColor] = lightTheme
-      ? [theme.colors.gray60, theme.colors.gray80]
-      : [theme.colors.gray80, theme.colors.gray40]
-
     const getSendIconColor = (): string => {
       if (hasError) return theme.colors.redTextColor
-      if (disabled) return cleanIconColor
-      return dirtyIconColor
+      if (disabled) return theme.colors.fadedText40
+      return theme.colors.fadedText60
     }
 
     return {
@@ -191,18 +185,18 @@ export const StyledSendIconButton = styled.button<StyledSendIconButtonProps>(
         outline: "none",
       },
       "&:focus-visible": {
-        backgroundColor: lightTheme
-          ? theme.colors.gray10
-          : theme.colors.gray90,
         boxShadow: getPrimaryFocusBoxShadow(theme),
       },
       "&:hover": {
-        color: hasError ? theme.colors.red70 : theme.colors.primary,
+        color: hasError ? theme.colors.redColor : theme.colors.bodyText,
+      },
+      "&:active": {
+        color: theme.colors.primary,
       },
       "&:disabled, &:disabled:hover, &:disabled:active": {
         backgroundColor: theme.colors.transparent,
         borderColor: theme.colors.transparent,
-        color: theme.colors.gray60,
+        color: theme.colors.fadedText40,
         cursor: "not-allowed",
       },
       "& svg": {

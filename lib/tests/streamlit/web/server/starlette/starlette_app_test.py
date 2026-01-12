@@ -16,10 +16,15 @@ from __future__ import annotations
 
 import asyncio
 import json
+from contextlib import asynccontextmanager
 from http import HTTPStatus
-from typing import TYPE_CHECKING
+from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
 import pytest
+from starlette.middleware import Middleware
+from starlette.responses import JSONResponse
+from starlette.routing import Route
 from starlette.testclient import TestClient
 
 from streamlit import file_util
@@ -32,13 +37,18 @@ from streamlit.runtime.stats import CacheStat, CounterStat, GaugeStat
 from streamlit.runtime.uploaded_file_manager import UploadedFileRec
 from streamlit.web.server.routes import STATIC_ASSET_CACHE_MAX_AGE_SECONDS
 from streamlit.web.server.starlette import starlette_app_utils
-from streamlit.web.server.starlette.starlette_app import create_starlette_app
+from streamlit.web.server.starlette.starlette_app import (
+    _RESERVED_ROUTE_PREFIXES,
+    App,
+    create_starlette_app,
+)
 from streamlit.web.server.stats_request_handler import StatsRequestHandler
 from tests.testutil import patch_config_options
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
-    from pathlib import Path
+    from collections.abc import AsyncIterator, Iterator
+
+    from starlette.requests import Request
 
 
 class _DummyStatsManager:
@@ -162,6 +172,8 @@ class _DummyRuntime:
 def starlette_client(tmp_path: Path) -> Iterator[tuple[TestClient, _DummyRuntime]]:
     static_dir = tmp_path / "static"
     static_dir.mkdir()
+    # Starlette's StaticFiles requires index.html to exist when html=True
+    (static_dir / "index.html").write_text("<html>test</html>")
     component_dir = tmp_path / "component"
     component_dir.mkdir()
     (component_dir / "index.html").write_text("component")
@@ -981,3 +993,589 @@ def test_websocket_allows_debug_shutdown_in_dev_mode(tmp_path: Path) -> None:
 
     # Runtime should be stopped
     assert runtime.stopped is True
+
+
+# ---------------------------------------------------------------------------
+# Tests for the App class (st.App ASGI entry point)
+# ---------------------------------------------------------------------------
+
+
+class TestAppInit:
+    """Tests for App initialization."""
+
+    def test_app_accepts_string_path(self) -> None:
+        """Test that App accepts a string script path."""
+        from pathlib import Path
+
+        app = App("main.py")
+        assert app.script_path == Path("main.py")
+
+    def test_app_accepts_path_object(self) -> None:
+        """Test that App accepts a Path object as script path."""
+        from pathlib import Path
+
+        app = App(Path("main.py"))
+        assert app.script_path == Path("main.py")
+
+    def test_app_state_is_empty_initially(self) -> None:
+        """Test that App state is empty on initialization."""
+        app = App("main.py")
+        assert app.state == {}
+
+    def test_app_stores_user_routes(self) -> None:
+        """Test that App stores user-provided routes."""
+
+        async def handler(request: Any) -> None:
+            pass
+
+        routes = [Route("/api/health", handler)]
+        app = App("main.py", routes=routes)
+        assert len(app._user_routes) == 1
+
+    def test_app_stores_user_middleware(self) -> None:
+        """Test that App stores user-provided middleware."""
+        from starlette.middleware.cors import CORSMiddleware
+
+        middleware = [Middleware(CORSMiddleware, allow_origins=["*"])]
+        app = App("main.py", middleware=middleware)
+        assert len(app._user_middleware) == 1
+
+    def test_app_stores_exception_handlers(self) -> None:
+        """Test that App stores user-provided exception handlers."""
+
+        async def handler(request: Any, exc: Exception) -> None:
+            pass
+
+        handlers = {ValueError: handler}
+        app = App("main.py", exception_handlers=handlers)
+        assert ValueError in app._exception_handlers
+
+    def test_app_stores_debug_flag(self) -> None:
+        """Test that App stores the debug flag."""
+        app = App("main.py", debug=True)
+        assert app._debug is True
+
+
+class TestAppRouteValidation:
+    """Tests for route validation in App."""
+
+    @pytest.mark.parametrize("reserved_prefix", _RESERVED_ROUTE_PREFIXES)
+    def test_app_rejects_reserved_route_prefix(self, reserved_prefix: str) -> None:
+        """Test that App rejects routes that conflict with reserved prefixes."""
+
+        async def handler(request: Any) -> None:
+            pass
+
+        route_path = f"{reserved_prefix}custom"
+        routes = [Route(route_path, handler)]
+
+        with pytest.raises(ValueError, match="conflicts with reserved Streamlit route"):
+            App("main.py", routes=routes)
+
+    def test_app_rejects_reserved_route_without_trailing_slash(self) -> None:
+        """Test that App rejects reserved routes without trailing slash."""
+
+        async def handler(request: Any) -> None:
+            pass
+
+        routes = [Route("/_stcore", handler)]
+        with pytest.raises(ValueError, match="conflicts with reserved Streamlit route"):
+            App("main.py", routes=routes)
+
+    def test_app_accepts_non_reserved_routes(self) -> None:
+        """Test that App accepts routes that don't conflict with reserved prefixes."""
+
+        async def handler(request: Any) -> None:
+            pass
+
+        routes = [
+            Route("/api/health", handler),
+            Route("/webhook", handler),
+            Route("/custom/route", handler),
+        ]
+        app = App("main.py", routes=routes)
+        assert len(app._user_routes) == 3
+
+
+class TestAppLifespan:
+    """Tests for App lifespan handling."""
+
+    def test_app_stores_user_lifespan(self) -> None:
+        """Test that App stores the user-provided lifespan context manager."""
+
+        @asynccontextmanager
+        async def lifespan(app: App) -> AsyncIterator[dict[str, Any]]:
+            yield {"key": "value"}
+
+        app = App("main.py", lifespan=lifespan)
+        assert app._user_lifespan is not None
+
+    def test_lifespan_method_creates_runtime(
+        self, tmp_path: Path, reset_runtime: None
+    ) -> None:
+        """Test that lifespan() creates the runtime if not already created."""
+        script = tmp_path / "app.py"
+        script.write_text("import streamlit as st\nst.write('hello')")
+
+        app = App(script)
+        assert app._runtime is None
+
+        app.lifespan()
+
+        assert app._runtime is not None
+        # Runtime should be created but not started yet (lifespan will start it)
+        from streamlit.runtime import RuntimeState
+
+        assert app._runtime.state == RuntimeState.INITIAL
+
+    def test_lifespan_method_sets_external_lifespan_flag(
+        self, tmp_path: Path, reset_runtime: None
+    ) -> None:
+        """Test that lifespan() sets _external_lifespan to True."""
+        script = tmp_path / "app.py"
+        script.write_text("import streamlit as st\nst.write('hello')")
+
+        app = App(script)
+        assert app._external_lifespan is False
+
+        app.lifespan()
+
+        assert app._external_lifespan is True
+
+    def test_lifespan_method_returns_combined_lifespan(
+        self, tmp_path: Path, reset_runtime: None
+    ) -> None:
+        """Test that lifespan() returns the _combined_lifespan method."""
+        script = tmp_path / "app.py"
+        script.write_text("import streamlit as st\nst.write('hello')")
+
+        app = App(script)
+        result = app.lifespan()
+
+        # Should return the bound method _combined_lifespan
+        assert result == app._combined_lifespan
+        assert callable(result)
+
+    def test_lifespan_method_is_idempotent(
+        self, tmp_path: Path, reset_runtime: None
+    ) -> None:
+        """Test that calling lifespan() multiple times returns the same result."""
+        script = tmp_path / "app.py"
+        script.write_text("import streamlit as st\nst.write('hello')")
+
+        app = App(script)
+
+        # Call lifespan() multiple times
+        result1 = app.lifespan()
+        result2 = app.lifespan()
+
+        # Should return the same bound method
+        assert result1 == result2
+        # Runtime should only be created once
+        assert app._runtime is not None
+
+    def test_external_lifespan_flag_defaults_to_false(self) -> None:
+        """Test that _external_lifespan defaults to False."""
+        app = App("main.py")
+        assert app._external_lifespan is False
+
+    def test_standalone_use_after_lifespan_raises_error(
+        self, tmp_path: Path, reset_runtime: None
+    ) -> None:
+        """Test that using app standalone after calling lifespan() raises RuntimeError."""
+        script = tmp_path / "app.py"
+        script.write_text("import streamlit as st\nst.write('hello')")
+
+        app = App(script)
+        # Call lifespan() which sets _external_lifespan = True
+        app.lifespan()
+
+        # Now trying to use the app standalone (which builds the starlette app)
+        # should raise a RuntimeError
+        with pytest.raises(RuntimeError, match="Cannot use App as standalone"):
+            # Trigger __call__ which builds the starlette app
+            asyncio.run(app({"type": "http"}, None, None))
+
+
+class TestAppServerModeTracking:
+    """Tests for server mode tracking in App."""
+
+    @pytest.fixture(autouse=True)
+    def reset_server_mode(self) -> Iterator[None]:
+        """Reset the server mode before and after each test."""
+        from streamlit import config
+
+        original_mode = config._server_mode
+        config._server_mode = None
+        yield
+        config._server_mode = original_mode
+
+    def test_standalone_app_via_cli_sets_starlette_app_mode(
+        self, tmp_path: Path, reset_runtime: None
+    ) -> None:
+        """Test that standalone st.App via CLI keeps 'starlette-app' mode."""
+        from streamlit import config
+
+        script = tmp_path / "app.py"
+        script.write_text("import streamlit as st\nst.write('hello')")
+
+        # Simulate CLI setting the mode (bootstrap.run_asgi_app does this)
+        config._server_mode = "starlette-app"
+
+        app = App(script)
+
+        with TestClient(app) as client:
+            # _combined_lifespan runs and should NOT change mode
+            # since _external_lifespan is False
+            response = client.get("/_stcore/health")
+            assert response.status_code == HTTPStatus.OK
+
+        # Mode should remain starlette-app
+        assert config._server_mode == "starlette-app"
+
+    def test_mounted_app_via_cli_sets_asgi_mounted_mode(
+        self, tmp_path: Path, reset_runtime: None
+    ) -> None:
+        """Test that mounted st.App via CLI changes to 'asgi-mounted' mode."""
+        from streamlit import config
+
+        script = tmp_path / "app.py"
+        script.write_text("import streamlit as st\nst.write('hello')")
+
+        # Simulate CLI setting the mode (bootstrap.run_asgi_app does this)
+        config._server_mode = "starlette-app"
+
+        app = App(script)
+        # Simulate mounting: calling lifespan() sets _external_lifespan = True
+        app.lifespan()
+
+        # Create a wrapper app that uses the lifespan
+        from starlette.applications import Starlette
+
+        wrapper = Starlette(lifespan=app.lifespan())
+        wrapper.mount("/streamlit", app)
+
+        with TestClient(wrapper) as client:
+            # The combined lifespan runs and should change mode to asgi-mounted
+            response = client.get("/streamlit/_stcore/health")
+            assert response.status_code == HTTPStatus.OK
+
+        # Mode should be changed to asgi-mounted
+        assert config._server_mode == "asgi-mounted"
+
+    def test_standalone_app_via_external_asgi_sets_asgi_server_mode(
+        self, tmp_path: Path, reset_runtime: None
+    ) -> None:
+        """Test that standalone st.App via external ASGI sets 'asgi-server' mode."""
+        from streamlit import config
+
+        script = tmp_path / "app.py"
+        script.write_text("import streamlit as st\nst.write('hello')")
+
+        # No CLI, so server_mode is None (simulating direct uvicorn usage)
+        assert config._server_mode is None
+
+        app = App(script)
+
+        with TestClient(app) as client:
+            # _combined_lifespan runs and should set mode to asgi-server
+            response = client.get("/_stcore/health")
+            assert response.status_code == HTTPStatus.OK
+
+        # Mode should be asgi-server
+        assert config._server_mode == "asgi-server"
+
+    def test_mounted_app_via_external_asgi_sets_asgi_mounted_mode(
+        self, tmp_path: Path, reset_runtime: None
+    ) -> None:
+        """Test that mounted st.App via external ASGI sets 'asgi-mounted' mode."""
+        from streamlit import config
+
+        script = tmp_path / "app.py"
+        script.write_text("import streamlit as st\nst.write('hello')")
+
+        # No CLI, so server_mode is None (simulating direct uvicorn usage)
+        assert config._server_mode is None
+
+        app = App(script)
+        # Simulate mounting: calling lifespan() sets _external_lifespan = True
+        lifespan_cm = app.lifespan()
+
+        # Create a wrapper app that uses the lifespan
+        from starlette.applications import Starlette
+
+        wrapper = Starlette(lifespan=lifespan_cm)
+        wrapper.mount("/streamlit", app)
+
+        with TestClient(wrapper) as client:
+            # The combined lifespan runs and should set mode to asgi-mounted
+            response = client.get("/streamlit/_stcore/health")
+            assert response.status_code == HTTPStatus.OK
+
+        # Mode should be asgi-mounted
+        assert config._server_mode == "asgi-mounted"
+
+
+class TestAppScriptPathResolution:
+    """Tests for script path resolution in App."""
+
+    def test_absolute_path_is_returned_unchanged(self, tmp_path: Path) -> None:
+        """Test that absolute script paths are returned unchanged."""
+        script_path = tmp_path / "main.py"
+        script_path.touch()
+
+        app = App(script_path)
+        resolved = app._resolve_script_path()
+        assert resolved == script_path
+
+    def test_relative_path_is_resolved_to_cwd(self) -> None:
+        """Test that relative script paths are resolved relative to cwd."""
+        app = App("main.py")
+        # The relative path should be resolved to an absolute path
+        resolved = app._resolve_script_path()
+        assert resolved.is_absolute()
+        assert resolved.name == "main.py"
+        # Without config._main_script_path set, should resolve relative to cwd
+        assert resolved == (Path.cwd() / "main.py").resolve()
+
+    def test_relative_path_uses_main_script_path_when_set(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test that relative paths resolve relative to main_script_path when set by CLI."""
+        from streamlit import config
+
+        # Simulate CLI setting the main script path
+        main_script = tmp_path / "app" / "server.py"
+        main_script.parent.mkdir(parents=True, exist_ok=True)
+        main_script.touch()
+        monkeypatch.setattr(config, "_main_script_path", str(main_script))
+
+        app = App("pages/dashboard.py")
+        resolved = app._resolve_script_path()
+
+        # Should resolve relative to main_script_path's parent directory
+        expected = (tmp_path / "app" / "pages" / "dashboard.py").resolve()
+        assert resolved == expected
+        # Should NOT resolve relative to cwd
+        assert resolved != (Path.cwd() / "pages" / "dashboard.py").resolve()
+
+    def test_nonexistent_script_raises_file_not_found(
+        self, tmp_path: Path, reset_runtime: None
+    ) -> None:
+        """Test that a descriptive FileNotFoundError is raised for non-existent scripts."""
+        nonexistent_script = tmp_path / "does_not_exist.py"
+        app = App(nonexistent_script)
+
+        with pytest.raises(FileNotFoundError) as exc_info:
+            app._create_runtime()
+
+        # Error message should include the path and be descriptive
+        assert "does_not_exist.py" in str(exc_info.value)
+        assert "not found" in str(exc_info.value).lower()
+
+
+class TestAppExports:
+    """Tests for App module exports."""
+
+    def test_app_is_exported_from_starlette_package(self) -> None:
+        """Test that App is exported from the web.server.starlette package."""
+        from streamlit.web.server.starlette import App as ExportedApp
+
+        assert ExportedApp is App
+
+    def test_app_is_exported_from_streamlit_starlette(self) -> None:
+        """Test that App is exported from the streamlit.starlette shortcut."""
+        from streamlit.starlette import App as ShortcutApp
+
+        assert ShortcutApp is App
+
+    def test_reserved_route_prefixes_constant(self) -> None:
+        """Test that reserved route prefixes constant is defined correctly."""
+        assert "/_stcore/" in _RESERVED_ROUTE_PREFIXES
+        assert "/media/" in _RESERVED_ROUTE_PREFIXES
+        assert "/component/" in _RESERVED_ROUTE_PREFIXES
+
+
+# --- Integration Tests for App class ---
+
+
+@pytest.fixture
+def simple_script(tmp_path: Path) -> Path:
+    """Create a simple Streamlit script for testing."""
+    script = tmp_path / "main.py"
+    script.write_text('import streamlit as st\nst.write("Hello")\n')
+    return script
+
+
+@pytest.fixture
+def reset_runtime() -> Iterator[None]:
+    """Reset the Runtime singleton before and after each test."""
+    from streamlit.runtime import Runtime
+
+    Runtime._instance = None
+    yield
+    Runtime._instance = None
+
+
+class TestAppAsgi:
+    """Integration tests for App as an ASGI application."""
+
+    @pytest.fixture(autouse=True)
+    def _reset_runtime(self, reset_runtime: None) -> None:
+        """Auto-use the reset_runtime fixture for all tests in this class."""
+
+    @pytest.fixture(autouse=True)
+    def _mock_static_dir(self, tmp_path: Path) -> Iterator[None]:
+        """Mock the static directory for all tests in this class."""
+        static_dir = tmp_path / "static"
+        static_dir.mkdir()
+        # Starlette's StaticFiles requires index.html to exist when html=True
+        (static_dir / "index.html").write_text("<html>test</html>")
+        monkeypatch = pytest.MonkeyPatch()
+        monkeypatch.setattr(file_util, "get_static_dir", lambda: str(static_dir))
+        yield
+        monkeypatch.undo()
+
+    @patch_config_options(
+        {
+            "server.baseUrlPath": "",
+            "global.developmentMode": False,
+            "server.enableXsrfProtection": False,
+        }
+    )
+    def test_app_serves_health_endpoint(self, simple_script: Path) -> None:
+        """Test that App serves Streamlit's health endpoint."""
+        app = App(simple_script)
+        with TestClient(app) as client:
+            response = client.get("/_stcore/health")
+            assert response.status_code == 200
+            assert response.text == "ok"
+
+    @patch_config_options(
+        {
+            "server.baseUrlPath": "",
+            "global.developmentMode": False,
+            "server.enableXsrfProtection": False,
+        }
+    )
+    def test_app_serves_custom_routes(self, simple_script: Path) -> None:
+        """Test that App serves user-provided custom routes."""
+
+        async def api_health(request: Request) -> JSONResponse:
+            return JSONResponse({"status": "healthy"})
+
+        routes = [Route("/api/health", api_health)]
+        app = App(simple_script, routes=routes)
+
+        with TestClient(app) as client:
+            response = client.get("/api/health")
+            assert response.status_code == 200
+            assert response.json() == {"status": "healthy"}
+
+    @patch_config_options(
+        {
+            "server.baseUrlPath": "",
+            "global.developmentMode": False,
+            "server.enableXsrfProtection": False,
+        }
+    )
+    def test_app_lifespan_populates_state(self, simple_script: Path) -> None:
+        """Test that user lifespan can populate app state."""
+        startup_count = 0
+        shutdown_count = 0
+
+        @asynccontextmanager
+        async def lifespan(app: App) -> AsyncIterator[dict[str, Any]]:
+            nonlocal startup_count, shutdown_count
+            startup_count += 1
+            yield {"model": "loaded", "version": "1.0"}
+            shutdown_count += 1
+
+        app = App(simple_script, lifespan=lifespan)
+
+        with TestClient(app) as client:
+            assert startup_count == 1
+            assert app.state == {"model": "loaded", "version": "1.0"}
+            # State should not contain unexpected keys
+            assert len(app.state) == 2
+            client.get("/_stcore/health")  # Just verify it works
+
+        assert shutdown_count == 1
+
+    @patch_config_options(
+        {
+            "server.baseUrlPath": "",
+            "global.developmentMode": False,
+            "server.enableXsrfProtection": False,
+        }
+    )
+    def test_app_applies_custom_middleware(self, simple_script: Path) -> None:
+        """Test that user-provided middleware is applied."""
+        middleware_call_count = 0
+
+        class TestMiddleware:
+            def __init__(self, app: Any) -> None:
+                self.app = app
+
+            async def __call__(
+                self, scope: dict[str, Any], receive: Any, send: Any
+            ) -> None:
+                nonlocal middleware_call_count
+                if scope["type"] == "http":
+                    middleware_call_count += 1
+                await self.app(scope, receive, send)
+
+        middleware = [Middleware(TestMiddleware)]
+        app = App(simple_script, middleware=middleware)
+
+        with TestClient(app) as client:
+            client.get("/_stcore/health")
+            # Middleware should be called exactly once for this request
+            assert middleware_call_count == 1
+
+    @patch_config_options(
+        {
+            "server.baseUrlPath": "",
+            "global.developmentMode": False,
+            "server.enableXsrfProtection": False,
+        }
+    )
+    def test_app_custom_routes_have_priority_over_fallback(
+        self, simple_script: Path
+    ) -> None:
+        """Test that custom routes take priority over Streamlit's fallback routes."""
+
+        async def custom_root(request: Request) -> JSONResponse:
+            return JSONResponse({"custom": True})
+
+        routes = [Route("/", custom_root)]
+        app = App(simple_script, routes=routes)
+
+        with TestClient(app) as client:
+            response = client.get("/")
+            assert response.status_code == 200
+            assert response.json() == {"custom": True}
+
+    @patch_config_options(
+        {
+            "server.baseUrlPath": "",
+            "global.developmentMode": False,
+            "server.enableXsrfProtection": False,
+        }
+    )
+    def test_app_lifespan_without_yield_state(self, simple_script: Path) -> None:
+        """Test that lifespan works even when yielding None."""
+        startup_called = False
+
+        @asynccontextmanager
+        async def lifespan(app: App) -> AsyncIterator[None]:
+            nonlocal startup_called
+            startup_called = True
+            yield
+
+        app = App(simple_script, lifespan=lifespan)
+
+        with TestClient(app) as client:
+            assert startup_called
+            assert app.state == {}
+            client.get("/_stcore/health")
