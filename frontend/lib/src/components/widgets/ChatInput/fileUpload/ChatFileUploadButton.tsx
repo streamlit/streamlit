@@ -52,6 +52,8 @@ const ChatFileUploadButton = ({
     multiple,
     accept,
     maxSize,
+    // Disable the File System Access API to avoid browser-specific issues
+    // (see issue #6176 and FileDropzone for details).
     useFsAccessApi: false,
   })
 
