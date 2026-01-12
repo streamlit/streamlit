@@ -140,16 +140,16 @@ def measure_performance(
 
         def on_web_socket(ws: WebSocket) -> None:
             def on_frame_sent(payload: str | bytes) -> None:
-                nonlocal total_websocket_sent_size_bytes
-                nonlocal total_websocket_messages_sent
+                nonlocal total_websocket_sent_size_bytes, total_websocket_messages_sent
                 if isinstance(payload, str):
                     payload = payload.encode("utf-8")
                 total_websocket_sent_size_bytes += len(payload)
                 total_websocket_messages_sent += 1
 
             def on_frame_received(payload: str | bytes) -> None:
-                nonlocal total_websocket_received_size_bytes
-                nonlocal total_websocket_messages_received
+                nonlocal \
+                    total_websocket_received_size_bytes, \
+                    total_websocket_messages_received
                 if isinstance(payload, str):
                     payload = payload.encode("utf-8")
                 total_websocket_received_size_bytes += len(payload)

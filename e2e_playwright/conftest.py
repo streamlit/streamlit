@@ -801,11 +801,12 @@ def assert_snapshot(
             If None (default), the app header will be shown based on the
             element type (page will always show the app header, other elements will hide it).
         """
-        nonlocal test_failure_messages
-        nonlocal snapshot_default_file_name
-        nonlocal module_snapshot_updates_dir
-        nonlocal module_snapshot_failures_dir
-        nonlocal snapshot_file_suffix
+        nonlocal \
+            test_failure_messages, \
+            snapshot_default_file_name, \
+            module_snapshot_updates_dir, \
+            module_snapshot_failures_dir, \
+            snapshot_file_suffix
 
         if show_app_header is False or (
             show_app_header is None and not isinstance(element, Page)
