@@ -283,16 +283,6 @@ class AuthCallbackHandler(AuthHandlerMixin, tornado.web.RequestHandler):
             self.redirect_to_base()
             return
 
-        if provider is None:
-            # See https://github.com/streamlit/streamlit/issues/13101
-            _LOGGER.warning(
-                "Missing provider for OAuth callback; this often indicates a stale "
-                "or replayed callback (for example, from browser back/forward "
-                "navigation).",
-            )
-            self.redirect_to_base()
-            return
-
         client, _ = create_oauth_client(provider)
         token = client.authorize_access_token(self)
         user = cast("dict[str, Any]", token.get("userinfo"))
