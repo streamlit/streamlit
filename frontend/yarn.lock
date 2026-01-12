@@ -3462,6 +3462,7 @@ __metadata:
     "@streamlit/data-utils": "workspace:^"
     "@streamlit/protobuf": "workspace:^"
     "@streamlit/render-tree": "workspace:^"
+    "@streamlit/theme": "workspace:^"
     "@streamlit/utils": "workspace:^"
     "@swc/plugin-emotion": "npm:^14.3.0"
     "@testing-library/dom": "npm:^10.4.1"
@@ -3598,6 +3599,34 @@ __metadata:
     vite-plugin-dts: "npm:^4.5.4"
     vite-tsconfig-paths: "npm:^6.0.2"
     vitest: "npm:^4.0.16"
+  languageName: unknown
+  linkType: soft
+
+"@streamlit/theme@workspace:^, @streamlit/theme@workspace:theme":
+  version: 0.0.0-use.local
+  resolution: "@streamlit/theme@workspace:theme"
+  dependencies:
+    "@emotion/react": "npm:^11.13.5"
+    "@streamlit/protobuf": "workspace:^"
+    "@streamlit/typescript-config": "workspace:^"
+    "@streamlit/utils": "workspace:^"
+    "@testing-library/jest-dom": "npm:^6.9.1"
+    "@types/lodash-es": "npm:~4.17.12"
+    baseui: "npm:12.2.0"
+    color2k: "npm:^2.0.2"
+    eslint: "npm:^9.39.2"
+    jsdom: "npm:^26.1.0"
+    lodash-es: "npm:^4.17.22"
+    loglevel: "npm:^1.9.2"
+    prettier: "npm:^3.7.4"
+    styletron-react: "npm:^6.1.0"
+    typescript: "npm:^5.8.3"
+    vite: "npm:^7.2.7"
+    vite-plugin-dts: "npm:^4.5.4"
+    vite-tsconfig-paths: "npm:^6.0.2"
+    vitest: "npm:^4.0.16"
+  peerDependencies:
+    react: ^17.0.0 || ^18.0.0
   languageName: unknown
   linkType: soft
 

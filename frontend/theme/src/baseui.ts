@@ -14,5 +14,23 @@
  * limitations under the License.
  */
 
-// Re-export everything from @streamlit/theme package
-export * from "@streamlit/theme"
+import {
+  darkThemePrimitives as baseuiDarkThemePrimitives,
+  lightThemePrimitives as baseuiLightThemePrimitives,
+} from "baseui"
+
+import { createBaseUiTheme } from "./createBaseUiTheme"
+import emotionDarkTheme from "./emotionDarkTheme"
+import emotionLightTheme from "./emotionLightTheme"
+
+export const baseuiLightTheme = createBaseUiTheme(
+  emotionLightTheme,
+  baseuiLightThemePrimitives
+)
+
+export const baseuiDarkTheme = createBaseUiTheme(
+  emotionDarkTheme,
+  baseuiDarkThemePrimitives
+)
+
+export type BaseUILightTheme = typeof baseuiLightTheme

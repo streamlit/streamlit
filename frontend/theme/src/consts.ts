@@ -14,5 +14,9 @@
  * limitations under the License.
  */
 
-// Re-export everything from @streamlit/theme package
-export * from "@streamlit/theme"
+export const STALE_TRANSITION_PARAMS = "1s ease-in 0.5s"
+
+export const STALE_STYLES = {
+  opacity: 0.33,
+  transition: `opacity ${STALE_TRANSITION_PARAMS}`,
+}

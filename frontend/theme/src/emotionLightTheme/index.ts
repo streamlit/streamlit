@@ -14,5 +14,16 @@
  * limitations under the License.
  */
 
-// Re-export everything from @streamlit/theme package
-export * from "@streamlit/theme"
+import emotionBaseTheme from "../emotionBaseTheme"
+import { createEmotionColors } from "../getColors"
+
+import genericColors from "./themeColors"
+
+export default {
+  ...emotionBaseTheme,
+  inSidebar: false,
+  colors: createEmotionColors({
+    ...emotionBaseTheme.colors,
+    ...genericColors,
+  }),
+}

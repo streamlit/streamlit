@@ -1,0 +1,57 @@
+{
+  "name": "@streamlit/theme",
+  "version": "1.52.2",
+  "private": true,
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "./dist/streamlit-theme.cjs.js",
+  "module": "./dist/streamlit-theme.es.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/streamlit-theme.es.js",
+      "require": "./dist/streamlit-theme.cjs.js"
+    }
+  },
+  "scripts": {
+    "build": "vite build",
+    "test": "vitest run --passWithNoTests",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint --cache --max-warnings 0 src",
+    "format": "prettier --write --config ../.prettierrc --ignore-path ../.prettierignore './src/**/*.{js,ts,tsx}'",
+    "formatCheck": "prettier --check --cache --config ../.prettierrc --ignore-path ../.prettierignore './src/**/*.{js,ts,tsx}'"
+  },
+  "dependencies": {
+    "@emotion/react": "^11.13.5",
+    "@streamlit/protobuf": "workspace:^",
+    "@streamlit/utils": "workspace:^",
+    "baseui": "12.2.0",
+    "color2k": "^2.0.2",
+    "lodash-es": "^4.17.22",
+    "loglevel": "^1.9.2",
+    "styletron-react": "^6.1.0"
+  },
+  "devDependencies": {
+    "@streamlit/typescript-config": "workspace:^",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@types/lodash-es": "~4.17.12",
+    "eslint": "^9.39.2",
+    "jsdom": "^26.1.0",
+    "prettier": "^3.7.4",
+    "typescript": "^5.8.3",
+    "vite": "^7.2.7",
+    "vite-plugin-dts": "^4.5.4",
+    "vite-tsconfig-paths": "^6.0.2",
+    "vitest": "^4.0.16"
+  },
+  "peerDependencies": {
+    "react": "^17.0.0 || ^18.0.0"
+  },
+  "browserslist": [
+    ">0.2%",
+    "not dead",
+    "not ie <= 11",
+    "not op_mini all"
+  ]
+}

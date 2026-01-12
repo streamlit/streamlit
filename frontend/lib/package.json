@@ -62,6 +62,7 @@
     "@streamlit/data-utils": "workspace:^",
     "@streamlit/protobuf": "workspace:^",
     "@streamlit/render-tree": "workspace:^",
+    "@streamlit/theme": "workspace:^",
     "@streamlit/utils": "workspace:^",
     "apache-arrow": "^21.1.0",
     "axios": "^1.13.2",

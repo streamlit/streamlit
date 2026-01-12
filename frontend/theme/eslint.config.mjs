@@ -14,5 +14,6 @@
  * limitations under the License.
  */
 
-// Re-export everything from @streamlit/theme package
-export * from "@streamlit/theme"
+import baseConfig from "../eslint.config.mjs"
+
+export default [...baseConfig]

@@ -14,5 +14,8 @@
  * limitations under the License.
  */
 
-// Re-export everything from @streamlit/theme package
-export * from "@streamlit/theme"
+import { colors } from "../primitives/colors"
+
+export default {
+  ...colors,
+}

@@ -14,5 +14,17 @@
  * limitations under the License.
  */
 
-// Re-export everything from @streamlit/theme package
-export * from "@streamlit/theme"
+export { breakpoints } from "./breakpoints"
+export { colors, type PrimitiveColors } from "./colors"
+export { iconSizes } from "./iconSizes"
+export { radii } from "./radii"
+export { sizes } from "./sizes"
+export { spacing } from "./spacing"
+export {
+  fontSizes,
+  fontWeights,
+  fonts,
+  genericFonts,
+  lineHeights,
+} from "./typography"
+export { zIndices } from "./zIndices"

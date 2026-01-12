@@ -11,6 +11,7 @@
     "lib",
     "protobuf",
     "render-tree",
+    "theme",
     "typescript-config",
     "utils"
   ],

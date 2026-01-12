@@ -14,5 +14,37 @@
  * limitations under the License.
  */
 
-// Re-export everything from @streamlit/theme package
-export * from "@streamlit/theme"
+import { createEmotionColors } from "../getColors"
+import {
+  breakpoints,
+  fonts,
+  fontSizes,
+  fontWeights,
+  genericFonts,
+  iconSizes,
+  lineHeights,
+  radii,
+  sizes,
+  spacing,
+  zIndices,
+} from "../primitives"
+
+import genericColors from "./themeColors"
+
+export default {
+  inSidebar: false,
+  showSidebarBorder: false,
+  linkUnderline: true,
+  breakpoints,
+  colors: createEmotionColors(genericColors),
+  fonts,
+  fontSizes,
+  fontWeights,
+  genericFonts,
+  iconSizes,
+  lineHeights,
+  radii,
+  sizes,
+  spacing,
+  zIndices,
+}

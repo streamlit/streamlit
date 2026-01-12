@@ -14,5 +14,14 @@
  * limitations under the License.
  */
 
-// Re-export everything from @streamlit/theme package
-export * from "@streamlit/theme"
+export * from "./baseui"
+export * from "./consts"
+export * from "./getColors"
+export * from "./globalStyles"
+export * from "./themeConfigs"
+export * from "./types"
+export * from "./utils"
+
+// Export utilities that were extracted for this package
+export * from "./queryParams"
+export { LocalStore } from "./storageUtils"
