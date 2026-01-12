@@ -32,7 +32,10 @@ export const StyledChatInput = styled.div(({ theme }) => ({
   flexDirection: "column",
   alignItems: "stretch",
   flex: 1,
-  padding: theme.spacing.lg,
+  paddingTop: theme.spacing.md,
+  paddingBottom: theme.spacing.md,
+  paddingLeft: theme.spacing.lg,
+  paddingRight: theme.spacing.lg,
   gap: theme.spacing.sm,
   borderRadius: theme.radii.default,
   boxSizing: "border-box",
@@ -68,9 +71,11 @@ export const StyledInputRow = styled.div(({ theme }) => ({
 }))
 
 // Wrapper for inline textarea - takes up remaining space
+// alignItems centers the textarea vertically when in inline (non-stacked) mode
 export const StyledInlineTextareaWrapper = styled.div({
   flex: 1,
   display: "flex",
+  alignItems: "center",
   minWidth: 0,
 })
 
