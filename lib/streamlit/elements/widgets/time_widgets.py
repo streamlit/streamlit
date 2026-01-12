@@ -475,12 +475,16 @@ class TimeInputSerde:
 def _validate_and_reset_date_value(
     current_value: DateWidgetReturn,
     parsed_values: _DateInputValues,
+    has_explicit_bounds: bool,
 ) -> tuple[DateWidgetReturn, bool]:
     """Validate current value against min/max bounds and reset if needed.
 
+    Only validates when has_explicit_bounds is True (user provided min_value or max_value).
+    This avoids incorrectly resetting values against computed default bounds.
+
     Returns the (potentially reset) value and a boolean indicating if a reset occurred.
     """
-    if current_value is None:
+    if current_value is None or not has_explicit_bounds:
         return current_value, False
 
     value_needs_reset = False
@@ -491,9 +495,11 @@ def _validate_and_reset_date_value(
         and isinstance(current_value, tuple)
         and len(current_value) > 0
     ):
-        # For range mode, check if any date in the tuple is outside bounds
-        start_date = current_value[0]
-        end_date = current_value[-1] if len(current_value) > 1 else start_date
+        # For range mode, check if any date in the tuple is outside bounds.
+        # Cast to tuple[date, ...] to satisfy the type checker after the length check.
+        non_empty_value = cast("tuple[date, ...]", current_value)
+        start_date = non_empty_value[0]
+        end_date = non_empty_value[-1] if len(non_empty_value) > 1 else start_date
         if start_date < parsed_values.min or end_date > parsed_values.max:
             value_needs_reset = True
     elif not parsed_values.is_range and isinstance(current_value, date):
@@ -1546,6 +1552,9 @@ class TimeWidgetsMixin:
             max_value=max_value,
         )
 
+        # Track if user explicitly set bounds (before del)
+        has_explicit_bounds = min_value is not None or max_value is not None
+
         if value == "today":
             # We need to know if this is a single or range date_input, but don't have
             # a default value, so we check if session_state can tell us.
@@ -1603,8 +1612,9 @@ class TimeWidgetsMixin:
         )
 
         # Validate the current value against the new min/max bounds and reset if needed.
+        # Only validate when user explicitly provided min_value or max_value.
         current_value, value_was_reset = _validate_and_reset_date_value(
-            widget_state.value, parsed_values
+            widget_state.value, parsed_values, has_explicit_bounds
         )
 
         if value_was_reset and key is not None:

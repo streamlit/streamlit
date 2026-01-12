@@ -483,18 +483,18 @@ def test_dynamic_date_input_props(app: Page, assert_snapshot: ImageCompareFuncti
 
     expect_prefixed_markdown(app, "Updated date input value:", "2020-01-03")
 
-    # Test dynamic min/max: set a value outside the updated bounds, then toggle back
-    # Set to 2028/01/01 which is valid in initial bounds (2010-2030) but NOT in updated (2020-2025)
+    # Test dynamic min/max behavior when bounds change:
+    # Toggle back to initial bounds (2010-2030)
+    click_toggle(app, "Update date input props")
+    expect_prefixed_markdown(app, "Initial date input value:", "2020-01-03")
+
+    # Set value to 2028/01/01 which is valid in initial bounds (2010-2030)
     input_field.fill("2028/01/01")
     input_field.press("Escape")
     wait_for_app_run(app)
-    expect_prefixed_markdown(app, "Updated date input value:", "2028-01-01")
-
-    # Toggle back to initial bounds - value should be preserved since 2028 is within 2010-2030
-    click_toggle(app, "Update date input props")
     expect_prefixed_markdown(app, "Initial date input value:", "2028-01-01")
 
-    # Toggle to updated bounds - value 2028 is outside 2020-2025, should reset to default (2023-09-10)
+    # Toggle to updated bounds (2020-2025) - value 2028 is outside, should reset to default (2023-09-10)
     click_toggle(app, "Update date input props")
     expect_prefixed_markdown(app, "Updated date input value:", "2023-09-10")
 
