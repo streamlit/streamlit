@@ -1,0 +1,38 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", "build/**"]
+    },
+    "@streamlit/protobuf#build": {
+      "dependsOn": [],
+      "outputs": ["proto.js", "proto.d.ts"]
+    },
+    "test": {
+      "dependsOn": ["^build"],
+      "outputs": [],
+      "inputs": ["src/**/*.ts", "src/**/*.tsx", "vitest.setup.ts"]
+    },
+    "typecheck": {
+      "dependsOn": ["^build"],
+      "outputs": []
+    },
+    "lint": {
+      "outputs": [],
+      "inputs": ["src/**/*.ts", "src/**/*.tsx", "eslint.config.js", "eslint.config.mjs"]
+    },
+    "format": {
+      "outputs": [],
+      "cache": false
+    },
+    "formatCheck": {
+      "outputs": [],
+      "inputs": ["src/**/*.ts", "src/**/*.tsx"]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    }
+  }
+}

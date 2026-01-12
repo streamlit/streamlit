@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 import { Block as BlockProto, streamlit } from "@streamlit/protobuf"
+import { ElementsSetVisitor } from "@streamlit/render-tree"
 
 import { AppNode, BlockNode } from "~lib/AppNode"
 import { Direction } from "~lib/components/core/Layout/utils"
 import { ComponentRegistry } from "~lib/components/widgets/CustomComponent"
 import { FileUploadClient } from "~lib/FileUploadClient"
-import { ElementsSetVisitor } from "~lib/render-tree/visitors/ElementsSetVisitor"
 import { ScriptRunState } from "~lib/ScriptRunState"
 import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
 import { EmotionTheme, getDividerColors } from "~lib/theme"

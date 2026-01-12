@@ -6,18 +6,25 @@
     "app",
     "component-v2-lib",
     "connection",
+    "data-utils",
     "eslint-plugin-streamlit-custom",
     "lib",
     "protobuf",
+    "render-tree",
     "typescript-config",
     "utils"
   ],
   "scripts": {
     "start": "yarn workspace @streamlit/app start",
     "buildWithProfiler": "yarn workspace @streamlit/app buildWithProfiler",
-    "test": "vitest run",
+    "build": "turbo run build",
+    "test": "turbo run test",
     "testWatch": "vitest",
-    "testCoverage": "vitest run --coverage"
+    "testCoverage": "vitest run --coverage",
+    "typecheck": "turbo run typecheck",
+    "lint": "turbo run lint",
+    "format": "turbo run format",
+    "formatCheck": "turbo run formatCheck"
   },
   "resolutions": {
     "d3-color": "^3.1.0",
@@ -37,6 +44,7 @@
     "@vitest/coverage-v8": "^4.0.16",
     "concurrently": "^9.2.1",
     "jiti": "^2.6.1",
+    "turbo": "^2.3.0",
     "vitest": "^4.0.16"
   }
 }

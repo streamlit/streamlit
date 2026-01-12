@@ -14,12 +14,6 @@
  * limitations under the License.
  */
 
-// Re-export from @streamlit/render-tree package
-export {
-  AppRoot,
-  BlockNode,
-  ElementNode,
-  TransientNode,
-  NO_SCRIPT_RUN_ID,
-  type AppNode,
-} from "@streamlit/render-tree"
+import baseConfig from "../eslint.config.mjs"
+
+export default [...baseConfig]

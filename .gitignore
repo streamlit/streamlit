@@ -75,6 +75,9 @@ tsconfig.tsbuildinfo
 # ESLint
 .eslintcache
 
+# Turbo cache
+.turbo
+
 # Coverage directory used by tools like istanbul
 coverage/
 

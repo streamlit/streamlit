@@ -16,8 +16,9 @@
 
 import { ReactElement } from "react"
 
+import { AppNodeVisitor } from "@streamlit/render-tree"
+
 import { BlockNode, ElementNode, TransientNode } from "~lib/AppNode"
-import { AppNodeVisitor } from "~lib/render-tree/visitors/AppNodeVisitor.interface"
 import { getElementId } from "~lib/util/utils"
 
 import { BlockNodeRenderer } from "./Block"

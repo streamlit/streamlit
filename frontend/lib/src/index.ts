@@ -77,7 +77,7 @@ export { WindowDimensionsProvider } from "./components/shared/WindowDimensions/P
 export type { WindowDimensions } from "./components/shared/WindowDimensions/useWindowDimensions"
 export { useWindowDimensionsContext } from "./components/shared/WindowDimensions/useWindowDimensionsContext"
 export { ComponentRegistry } from "./components/widgets/CustomComponent"
-export { Quiver } from "./dataframes/Quiver"
+export { Quiver } from "@streamlit/data-utils"
 export { FileUploadClient } from "./FileUploadClient"
 export { useCopyToClipboard } from "./hooks/useCopyToClipboard"
 export { useCrossOriginAttribute } from "./hooks/useCrossOriginAttribute"

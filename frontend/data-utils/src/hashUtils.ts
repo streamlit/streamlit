@@ -14,12 +14,13 @@
  * limitations under the License.
  */
 
-// Re-export from @streamlit/render-tree package
-export {
-  AppRoot,
-  BlockNode,
-  ElementNode,
-  TransientNode,
-  NO_SCRIPT_RUN_ID,
-  type AppNode,
-} from "@streamlit/render-tree"
+import xxhash from "xxhashjs"
+
+/**
+ * Hash a string using xxHash.
+ *
+ * Seed used: 0xDEADBEEF
+ */
+export function hashString(s: string): string {
+  return xxhash.h32(s, 0xdeadbeef).toString(16)
+}

@@ -1,0 +1,17 @@
+{
+  "extends": "@streamlit/typescript-config/react.tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "noEmit": false,
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "baseUrl": ".",
+    "paths": {
+      "@streamlit/protobuf": ["../protobuf"],
+      "@streamlit/utils": ["../utils/src"],
+      "src/*": ["src/*"]
+    }
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.test.tsx"]
+}

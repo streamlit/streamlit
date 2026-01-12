@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-// Re-export from @streamlit/render-tree package
-export {
-  AppRoot,
-  BlockNode,
-  ElementNode,
-  TransientNode,
-  NO_SCRIPT_RUN_ID,
-  type AppNode,
-} from "@streamlit/render-tree"
+import { BlockNode } from "../BlockNode"
+import { ElementNode } from "../ElementNode"
+import { TransientNode } from "../TransientNode"
+
+export interface AppNodeVisitor<T> {
+  visitBlockNode(node: BlockNode): T
+  visitElementNode(node: ElementNode): T
+  visitTransientNode(node: TransientNode): T
+}
