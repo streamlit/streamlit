@@ -16,4 +16,21 @@
 
 import baseConfig from "../eslint.config.mjs"
 
-export default [...baseConfig]
+export default [
+  ...baseConfig,
+  {
+    // Disable no-relative-import-paths for theme since it's a standalone package
+    // that doesn't use path aliases
+    rules: {
+      "no-relative-import-paths/no-relative-import-paths": "off",
+    },
+  },
+  {
+    // Disable no-hardcoded-theme-values for primitives since that's where
+    // theme values are defined
+    files: ["**/primitives/**"],
+    rules: {
+      "streamlit-custom/no-hardcoded-theme-values": "off",
+    },
+  },
+]

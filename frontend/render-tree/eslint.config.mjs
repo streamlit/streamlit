@@ -16,4 +16,13 @@
 
 import baseConfig from "../eslint.config.mjs"
 
-export default [...baseConfig]
+export default [
+  ...baseConfig,
+  {
+    // Disable no-relative-import-paths for render-tree since it's a standalone package
+    // that doesn't use path aliases
+    rules: {
+      "no-relative-import-paths/no-relative-import-paths": "off",
+    },
+  },
+]

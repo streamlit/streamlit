@@ -26,29 +26,29 @@ import { cloneDeep, isObject, merge, mergeWith, once } from "lodash-es"
 import { getLogger } from "loglevel"
 
 import { CustomThemeConfig, ICustomThemeConfig } from "@streamlit/protobuf"
-import { localStorageAvailable, notNullOrUndefined, StreamlitConfig } from "@streamlit/utils"
-
 import {
-  baseTheme,
-  darkTheme,
-  lightTheme,
-} from "./themeConfigs"
-import {
-  CachedTheme,
-  EmotionTheme,
-  ThemeConfig,
-  ThemeSpacing,
-} from "./types"
-import { LocalStore } from "./storageUtils"
-import {
-  isDarkThemeInQueryParams,
-  isLightThemeInQueryParams,
-} from "./queryParams"
+  localStorageAvailable,
+  notNullOrUndefined,
+  StreamlitConfig,
+} from "@streamlit/utils"
 
 import { createBaseUiTheme } from "./createBaseUiTheme"
 import { computeDerivedColors, createEmotionColors } from "./getColors"
 import { fonts } from "./primitives/typography"
-import { DerivedColors, EmotionThemeColors } from "./types"
+import {
+  isDarkThemeInQueryParams,
+  isLightThemeInQueryParams,
+} from "./queryParams"
+import { LocalStore } from "./storageUtils"
+import { baseTheme, darkTheme, lightTheme } from "./themeConfigs"
+import {
+  CachedTheme,
+  DerivedColors,
+  EmotionTheme,
+  EmotionThemeColors,
+  ThemeConfig,
+  ThemeSpacing,
+} from "./types"
 
 export const AUTO_THEME_NAME = "Use system setting"
 export const CUSTOM_THEME_NAME = "Custom Theme"
@@ -1436,7 +1436,9 @@ export const createCustomThemes = (
 
     // Also add an auto custom theme based on the system preference
     const autoCustomTheme =
-      getSystemThemePreference() === "dark" ? darkThemeConfig : lightThemeConfig
+      getSystemThemePreference() === "dark"
+        ? darkThemeConfig
+        : lightThemeConfig
     const autoTheme = {
       ...autoCustomTheme,
       displayName: AUTO_THEME_NAME,

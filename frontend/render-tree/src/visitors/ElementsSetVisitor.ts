@@ -20,6 +20,7 @@ import { AppNode } from "../AppNode.interface"
 import { BlockNode } from "../BlockNode"
 import { ElementNode } from "../ElementNode"
 import { TransientNode } from "../TransientNode"
+
 import type { AppNodeVisitor } from "./AppNodeVisitor.interface"
 
 /**

@@ -18,6 +18,7 @@ import { ReactElement, useContext } from "react"
 
 import classNames from "classnames"
 
+import { ChatMessage } from "@streamlit/chat"
 import { Block as BlockProto, streamlit } from "@streamlit/protobuf"
 
 import { BlockNode } from "~lib/AppNode"
@@ -34,7 +35,6 @@ import {
   shouldWidthStretch,
 } from "~lib/components/core/Layout/utils"
 import { ScriptRunContext } from "~lib/components/core/ScriptRunContext"
-import { ChatMessage } from "@streamlit/chat"
 import Dialog from "~lib/components/elements/Dialog"
 import Expander from "~lib/components/elements/Expander"
 import Popover from "~lib/components/elements/Popover"
