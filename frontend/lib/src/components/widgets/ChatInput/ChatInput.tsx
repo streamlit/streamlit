@@ -225,6 +225,7 @@ function ChatInput({
       const paddingLeft = parseFloat(computedStyle.paddingLeft) || 0
       const paddingRight = parseFloat(computedStyle.paddingRight) || 0
       availableWidthRef.current =
+        // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Safe: runs inside ResizeObserver callback after layout is computed
         textarea.clientWidth - paddingLeft - paddingRight
     }
 
