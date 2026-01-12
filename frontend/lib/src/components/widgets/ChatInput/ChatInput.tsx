@@ -210,6 +210,10 @@ function ChatInput({
   const fontStringRef = useRef<string>("")
   const availableWidthRef = useRef<number>(0)
 
+  // Reusable canvas for text measurement - avoids creating new canvas on every keystroke
+  const measureCanvasRef = useRef<HTMLCanvasElement | null>(null)
+  const measureCtxRef = useRef<CanvasRenderingContext2D | null>(null)
+
   // Update cached measurements when textarea mounts, resizes, or layout mode changes
   // ResizeObserver callbacks run after layout is computed, so reads are cheap
   useEffect(() => {
@@ -257,8 +261,12 @@ function ChatInput({
     }
 
     // Canvas measureText is cheap - doesn't force reflow
-    const canvas = document.createElement("canvas")
-    const ctx = canvas.getContext("2d")
+    // Reuse canvas element to avoid GC churn on every keystroke
+    if (!measureCanvasRef.current) {
+      measureCanvasRef.current = document.createElement("canvas")
+      measureCtxRef.current = measureCanvasRef.current.getContext("2d")
+    }
+    const ctx = measureCtxRef.current
     if (ctx) {
       ctx.font = fontStringRef.current
       const textWidth = ctx.measureText(value).width
