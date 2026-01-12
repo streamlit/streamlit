@@ -1778,42 +1778,37 @@ def test_file_upload_retry_click_success(app: Page):
 
 
 @use_chat_input("single_file")
-# DataTransfer dispatch_event only works reliably in Chromium.
-# WebKit doesn't support it, and Firefox has inconsistent behavior.
-@pytest.mark.only_browser("chromium")
-def test_upload_button_works_after_drag_drop_and_delete(app: Page):
-    """Test that the upload button still works after drag-dropping a file and deleting it."""
+def test_upload_button_works_after_upload_and_delete(app: Page):
+    """Test that the upload button still works after uploading a file and deleting it.
+
+    This tests a react-dropzone bug where the file input becomes unresponsive after
+    files are removed. The fix resets the dropzone state via React key when files
+    are deleted. See: https://github.com/react-dropzone/react-dropzone/issues/972
+    """
     chat_input = get_element_by_key(app, "single_file")
     expect(chat_input).to_be_visible()
 
-    # Step 1: Simulate drag and drop of a file using DataTransfer
-    file_name = "drag_drop_test.txt"
-    file_content = "test content for drag drop"
-
-    # Create a DataTransfer with file data and dispatch drop event
-    data_transfer = app.evaluate_handle(
-        """([fileName, fileContent]) => {
-            const dt = new DataTransfer();
-            const file = new File([fileContent], fileName, { type: 'text/plain' });
-            dt.items.add(file);
-            return dt;
-        }""",
-        [file_name, file_content],
-    )
-
-    # Get the upload button element which has its own dropzone
+    # Get the upload button
     upload_button = chat_input.get_by_test_id("stChatInputFileUploadButton")
     expect(upload_button).to_be_visible()
 
-    # Dispatch drop event to the upload button's dropzone
-    upload_button.dispatch_event("drop", {"dataTransfer": data_transfer})
+    # Step 1: Upload a file using the button
+    first_file_name = "first_upload.txt"
+    first_file = FilePayload(
+        name=first_file_name, mimeType="text/plain", buffer=b"first file content"
+    )
+
+    with app.expect_file_chooser() as fc_info:
+        upload_button.click(force=True)
+        file_chooser = fc_info.value
+        file_chooser.set_files(files=[first_file])
 
     wait_for_app_run(app, 500)
 
     # Verify the file was uploaded
     uploaded_files = chat_input.get_by_test_id("stChatUploadedFiles").first
     expect(uploaded_files).to_be_visible()
-    expect(uploaded_files.get_by_text(file_name)).to_be_visible()
+    expect(uploaded_files.get_by_text(first_file_name)).to_be_visible()
 
     # Step 2: Delete the uploaded file
     uploaded_files.get_by_test_id("stChatInputDeleteBtn").first.click()
@@ -1822,27 +1817,28 @@ def test_upload_button_works_after_drag_drop_and_delete(app: Page):
     # Verify the file was deleted
     expect(chat_input.get_by_test_id("stChatUploadedFiles")).not_to_be_visible()
 
-    # Step 3: Verify the upload button still works after the drag-drop + delete cycle
+    # Step 3: Verify the upload button still works after the upload + delete cycle
+    # This is the key assertion - without the fix, the button would be unresponsive
     expect(upload_button).to_be_visible()
     expect(upload_button).to_be_enabled()
 
     # Upload a new file using the button
-    new_file_name = "after_delete.txt"
-    new_file = FilePayload(
-        name=new_file_name, mimeType="text/plain", buffer=b"new file content"
+    second_file_name = "second_upload.txt"
+    second_file = FilePayload(
+        name=second_file_name, mimeType="text/plain", buffer=b"second file content"
     )
 
     with app.expect_file_chooser() as fc_info:
         upload_button.click(force=True)
         file_chooser = fc_info.value
-        file_chooser.set_files(files=[new_file])
+        file_chooser.set_files(files=[second_file])
 
     wait_for_app_run(app, 500)
 
     # Verify the new file was uploaded successfully
     uploaded_files = chat_input.get_by_test_id("stChatUploadedFiles").first
     expect(uploaded_files).to_be_visible()
-    expect(uploaded_files.get_by_text(new_file_name)).to_be_visible()
+    expect(uploaded_files.get_by_text(second_file_name)).to_be_visible()
 
-    # Verify the original deleted file doesn't reappear (negative assertion)
-    expect(uploaded_files.get_by_text(file_name)).not_to_be_visible()
+    # Verify the first deleted file doesn't reappear (negative assertion)
+    expect(uploaded_files.get_by_text(first_file_name)).not_to_be_visible()
