@@ -181,10 +181,13 @@ class AuthLogoutHandler(AuthHandlerMixin, tornado.web.RequestHandler):
 
     def _get_redirect_uri(self) -> str | None:
         auth_section = get_secrets_auth_section()
-        if not auth_section or not auth_section.get("redirect_uri"):
+        if not auth_section:
             return None
 
-        redirect_uri: str = auth_section["redirect_uri"]
+        redirect_uri = get_redirect_uri(auth_section)
+        if not redirect_uri:
+            return None
+
         if not redirect_uri.endswith("/oauth2callback"):
             _LOGGER.warning("Redirect URI does not end with /oauth2callback")
             return None
