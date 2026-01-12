@@ -401,7 +401,8 @@ class DateInputTest(DeltaGeneratorTestCase):
                 label_visibility="visible",
                 min_value=date(2010, 1, 1),
                 max_value=date(2030, 1, 1),
-                format="YYYY/MM/DD",  # Whitelisted - must stay the same
+                # Whitelisted kwargs:
+                format="YYYY/MM/DD",
             )
             c1 = self.get_delta_from_queue().new_element.date_input
             id1 = c1.id
@@ -420,7 +421,8 @@ class DateInputTest(DeltaGeneratorTestCase):
                 label_visibility="hidden",
                 min_value=date(2015, 1, 1),
                 max_value=date(2025, 1, 1),
-                format="YYYY/MM/DD",  # Keep format the same to ensure ID stability
+                # Whitelisted kwargs:
+                format="YYYY/MM/DD",
             )
             c2 = self.get_delta_from_queue().new_element.date_input
             id2 = c2.id
@@ -623,6 +625,8 @@ def test_dynamic_min_value_resets_value_when_below_new_min():
     at = at.run()
     # Now min_value=June 1, so March 1 is invalid and should reset to default (July 15)
     assert at.date_input[0].value == date(2024, 7, 15)
+    # Anti-regression: ensure it didn't keep the old invalid value
+    assert at.date_input[0].value != date(2024, 3, 1)
 
 
 def test_dynamic_max_value_resets_value_when_above_new_max():

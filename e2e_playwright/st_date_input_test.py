@@ -497,6 +497,8 @@ def test_dynamic_date_input_props(app: Page, assert_snapshot: ImageCompareFuncti
     # Toggle to updated bounds (2020-2025) - value 2028 is outside, should reset to default (2023-09-10)
     click_toggle(app, "Update date input props")
     expect_prefixed_markdown(app, "Updated date input value:", "2023-09-10")
+    # Anti-regression: ensure the old out-of-bounds value is not retained
+    expect(app.get_by_text("2028-01-01")).not_to_be_visible()
 
 
 def test_quick_select_feature_visibility(app: Page):

@@ -482,7 +482,24 @@ def _validate_and_reset_date_value(
     Only validates when has_explicit_bounds is True (user provided min_value or max_value).
     This avoids incorrectly resetting values against computed default bounds.
 
-    Returns the (potentially reset) value and a boolean indicating if a reset occurred.
+    Parameters
+    ----------
+    current_value : DateWidgetReturn
+        The current value of the date input widget. Can be a single date, a tuple of
+        dates (for range mode), or None.
+    parsed_values : _DateInputValues
+        Parsed configuration containing min, max, default value, and whether the widget
+        is in range mode.
+    has_explicit_bounds : bool
+        Whether the user explicitly provided min_value or max_value. If False, validation
+        is skipped to avoid resetting against computed default bounds.
+
+    Returns
+    -------
+    tuple[DateWidgetReturn, bool]
+        A tuple of (validated_value, was_reset) where validated_value is either the
+        original value (if valid) or the default value (if reset was needed), and
+        was_reset indicates whether a reset occurred.
     """
     if current_value is None or not has_explicit_bounds:
         return current_value, False
@@ -506,6 +523,10 @@ def _validate_and_reset_date_value(
         # For single date mode
         if current_value < parsed_values.min or current_value > parsed_values.max:
             value_needs_reset = True
+    else:
+        # Type mismatch: widget mode doesn't match current value type (e.g., range mode
+        # with a single date value or single mode with a tuple). Reset to match the mode.
+        value_needs_reset = True
 
     if not value_needs_reset:
         return current_value, False
