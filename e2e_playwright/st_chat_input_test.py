@@ -1845,3 +1845,6 @@ def test_upload_button_works_after_drag_drop_and_delete(app: Page):
     uploaded_files = chat_input.get_by_test_id("stChatUploadedFiles").first
     expect(uploaded_files).to_be_visible()
     expect(uploaded_files.get_by_text(new_file_name)).to_be_visible()
+
+    # Verify the original deleted file doesn't reappear (negative assertion)
+    expect(uploaded_files.get_by_text(file_name)).not_to_be_visible()
