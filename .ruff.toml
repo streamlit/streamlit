@@ -63,6 +63,9 @@ select = [
   "RUF056",
   "FURB145",
   "FURB142",
+  "FURB171",
+  "RUF038",
+  "S403",
 ]
 ignore = [
   # Rules planned to be supported in the future:

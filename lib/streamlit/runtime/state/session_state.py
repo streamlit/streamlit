@@ -15,7 +15,6 @@
 from __future__ import annotations
 
 import json
-import pickle
 from collections.abc import Iterator, KeysView, Mapping, MutableMapping, Sequence
 from copy import deepcopy
 from dataclasses import dataclass, field, replace
@@ -958,6 +957,8 @@ class SessionState:
         """
         for k in self:
             try:
+                import pickle  # noqa: S403
+
                 pickle.dumps(self[k])
             except Exception as e:  # noqa: PERF203
                 err_msg = (

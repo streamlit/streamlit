@@ -16,7 +16,7 @@
 
 from __future__ import annotations
 
-import pickle
+import pickle  # noqa: S403
 import threading
 from typing import (
     TYPE_CHECKING,
