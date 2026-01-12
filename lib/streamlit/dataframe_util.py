@@ -164,7 +164,7 @@ class DataframeInterchangeCompatible(Protocol):
     https://data-apis.org/dataframe-protocol/latest/index.html
     """
 
-    def __dataframe__(self, allow_copy: bool) -> Any: ...
+    def __dataframe__(self, allow_copy: bool) -> Any: ...  # noqa: PLW3201
 
 
 OptionSequence: TypeAlias = (

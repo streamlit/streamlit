@@ -121,7 +121,7 @@ class CustomDataframe:
     def __init__(self, data: pd.DataFrame):
         self._data: pd.DataFrame = data
 
-    def __dataframe__(self, allow_copy: bool = True):
+    def __dataframe__(self, allow_copy: bool = True):  # noqa: PLW3201
         return self._data.__dataframe__(allow_copy=allow_copy)
 
 

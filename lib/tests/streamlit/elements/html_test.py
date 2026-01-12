@@ -167,7 +167,7 @@ class StHtmlAPITest(DeltaGeneratorTestCase):
         """Test st.html with _repr_html_."""
 
         class MyClass:
-            def _repr_html_(self):
+            def _repr_html_(self):  # noqa: PLW3201
                 return "<div>html</div>"
 
         obj = MyClass()
@@ -184,7 +184,7 @@ class StHtmlAPITest(DeltaGeneratorTestCase):
             def __str__(self):
                 return "mystr"
 
-            def _repr_html_(self):
+            def _repr_html_(self):  # noqa: PLW3201
                 return "<div>html</div>"
 
         obj = MyClass()

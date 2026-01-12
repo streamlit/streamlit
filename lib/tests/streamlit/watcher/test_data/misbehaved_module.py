@@ -17,7 +17,7 @@ import types
 
 class _MisbehavedModule(types.ModuleType):
     @property
-    def __spec__(self):
+    def __spec__(self):  # noqa: PLW3201
         raise Exception("Oh noes!")
 
 

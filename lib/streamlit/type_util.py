@@ -63,7 +63,7 @@ class SupportsStr(Protocol):
 
 
 class SupportsReprHtml(Protocol):
-    def _repr_html_(self) -> str: ...
+    def _repr_html_(self) -> str: ...  # noqa: PLW3201
 
 
 class CustomDict(Protocol):

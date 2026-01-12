@@ -66,6 +66,7 @@ select = [
   "FURB171",
   "RUF038",
   "S403",
+  "PLW3201",
 ]
 ignore = [
   # Rules planned to be supported in the future:
@@ -131,6 +132,8 @@ ignore = [
   "PLR0917", # Checks for too many positional arguments.
   "PLC1901", # Checks for empty string comparisons.
   "PLR6201",
+  "E266",    # Checks for multiple leading hashes for block comments.
+  "FURB152", # Checks for potential math constants.
 ]
 exclude = [
   # pympler is a vendored dependency that doesn't conform to our linting rules:

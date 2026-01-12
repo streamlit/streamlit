@@ -57,7 +57,7 @@ class StreamlitWriteTest(unittest.TestCase):
         """Test st.write with an object that defines _repr_html_."""
 
         class FakeHTMLable:
-            def _repr_html_(self):
+            def _repr_html_(self):  # noqa: PLW3201
                 return "<strong>hello world</strong>"
 
         with patch("streamlit.delta_generator.DeltaGenerator.help") as p:
@@ -71,7 +71,7 @@ class StreamlitWriteTest(unittest.TestCase):
         unsafe HTML explicitly."""
 
         class FakeHTMLable:
-            def _repr_html_(self):
+            def _repr_html_(self):  # noqa: PLW3201
                 return "<strong>hello world</strong>"
 
         with patch("streamlit.delta_generator.DeltaGenerator.html") as p:
@@ -88,7 +88,7 @@ class StreamlitWriteTest(unittest.TestCase):
         """
 
         class FakeHTMLable:
-            def _repr_html_(self):
+            def _repr_html_(self):  # noqa: PLW3201
                 return "hello **world**"
 
         with (
