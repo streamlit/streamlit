@@ -78,13 +78,12 @@ import {
   StyledChatInput,
   StyledChatInputContainer,
   StyledFilesArea,
-  StyledInlineTextareaWrapper,
   StyledInputInstructions,
   StyledInputRow,
   StyledLeftCluster,
   StyledRightCluster,
   StyledSendIconButton,
-  StyledTextareaRow,
+  StyledTextareaWrapper,
   StyledWaveformContainer,
 } from "./styled-components"
 
@@ -286,30 +285,6 @@ function ChatInput({
       }
     }
   }, [value, isStacked])
-
-  // Track previous isStacked value to detect actual transitions
-  const prevIsStackedRef = useRef(isStacked)
-
-  // Refocus textarea after layout mode transition
-  // The textarea is remounted in a different DOM location when isStacked changes,
-  // so we restore focus (layout only changes due to user typing, so they always have focus)
-  useEffect(() => {
-    // Only focus when isStacked actually transitions (not on initial mount)
-    if (prevIsStackedRef.current === isStacked) {
-      return
-    }
-    prevIsStackedRef.current = isStacked
-
-    const textarea = chatInputRef.current
-    if (!textarea) {
-      return
-    }
-
-    textarea.focus()
-    // Move cursor to end
-    const len = textarea.value.length
-    textarea.setSelectionRange(len, len)
-  }, [isStacked])
 
   /**
    * @returns True if the user-specified state.value has not yet been synced to
@@ -846,30 +821,10 @@ function ChatInput({
           <StyledChatAudioWave ref={waveformContainerRef} />
         </StyledWaveformContainer>
 
-        {/* Stacked layout: Textarea on its own row (full width) */}
-        {isStacked && !isRecording && (
-          <StyledTextareaRow>
-            <UITextArea
-              inputRef={chatInputRef}
-              value={value}
-              placeholder={placeholder}
-              onChange={handleChange}
-              onKeyDown={handleKeyDown}
-              aria-label={placeholder}
-              disabled={disabled}
-              rows={1}
-              aria-describedby={
-                showInstructions ? "stChatInputInstructions" : undefined
-              }
-              overrides={createTextAreaOverrides(theme, autoExpand, {
-                width: "100%",
-              })}
-            />
-          </StyledTextareaRow>
-        )}
-
-        {/* Main row - either buttons only (stacked) or full inline layout */}
-        <StyledInputRow>
+        {/* Main row - uses flex-wrap and order to handle stacked/inline layouts
+            In stacked mode: textarea wraps to its own line above buttons via CSS order
+            In inline mode: textarea sits between left and right button clusters */}
+        <StyledInputRow isStacked={isStacked}>
           <StyledLeftCluster>
             {acceptFile !== AcceptFileValue.None && !isRecording && (
               <ChatFileUploadButton
@@ -881,9 +836,10 @@ function ChatInput({
             )}
           </StyledLeftCluster>
 
-          {/* Inline mode: textarea in the middle */}
-          {!isStacked && !isRecording && (
-            <StyledInlineTextareaWrapper>
+          {/* Textarea - always at this position in the tree to preserve focus on layout change.
+              StyledTextareaWrapper uses CSS (order, width) to visually move it above buttons when stacked */}
+          {!isRecording && (
+            <StyledTextareaWrapper isStacked={isStacked}>
               <UITextArea
                 inputRef={chatInputRef}
                 value={value}
@@ -897,10 +853,10 @@ function ChatInput({
                   showInstructions ? "stChatInputInstructions" : undefined
                 }
                 overrides={createTextAreaOverrides(theme, autoExpand, {
-                  flex: 1,
+                  width: "100%",
                 })}
               />
-            </StyledInlineTextareaWrapper>
+            </StyledTextareaWrapper>
           )}
 
           <StyledRightCluster>

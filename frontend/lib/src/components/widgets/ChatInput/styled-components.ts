@@ -52,32 +52,33 @@ export const StyledFilesArea = styled.div(({ theme }) => ({
   gap: theme.spacing.sm,
 }))
 
-// Textarea row - shown above button row when textarea is expanded (stacked mode)
-export const StyledTextareaRow = styled.div({
-  display: "flex",
-  flexDirection: "row",
-  width: "100%",
-})
+// Main input row - contains [left cluster] [textarea/waveform] [right cluster]
+// Uses flex-wrap to handle stacked mode: textarea wraps to its own line when stacked
+export const StyledInputRow = styled.div<{ isStacked?: boolean }>(
+  ({ theme, isStacked }) => ({
+    display: "flex",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    width: "100%",
+    gap: theme.spacing.sm,
+    flexWrap: isStacked ? "wrap" : "nowrap",
+  })
+)
 
-// Main input row - contains [left cluster] [textarea/waveform] [right cluster] (inline mode)
-// Or just [left cluster] [right cluster] in stacked mode (space-between handles spacing)
-export const StyledInputRow = styled.div(({ theme }) => ({
-  display: "flex",
-  flexDirection: "row",
-  alignItems: "center",
-  justifyContent: "space-between",
-  width: "100%",
-  gap: theme.spacing.sm,
-}))
-
-// Wrapper for inline textarea - takes up remaining space
-// alignItems centers the textarea vertically when in inline (non-stacked) mode
-export const StyledInlineTextareaWrapper = styled.div({
-  flex: 1,
-  display: "flex",
-  alignItems: "center",
-  minWidth: 0,
-})
+// Wrapper for textarea - adapts to inline or stacked layout
+// In stacked mode: order: -1 moves it above buttons, width: 100% makes it wrap to own line
+// In inline mode: flex: 1 makes it fill remaining space between button clusters
+export const StyledTextareaWrapper = styled.div<{ isStacked?: boolean }>(
+  ({ isStacked }) => ({
+    flex: isStacked ? "none" : 1,
+    width: isStacked ? "100%" : "auto",
+    order: isStacked ? -1 : 0,
+    display: "flex",
+    alignItems: "center",
+    minWidth: 0,
+  })
+)
 
 // Left cluster - flex-shrink so it collapses when empty
 export const StyledLeftCluster = styled.div(({ theme }) => ({
