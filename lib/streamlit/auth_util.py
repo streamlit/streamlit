@@ -132,7 +132,7 @@ def get_redirect_uri(auth_section: AttrDict) -> str | None:
     if "redirect_uri" not in auth_section:
         return None
 
-    redirect_uri = auth_section["redirect_uri"]
+    redirect_uri: str = auth_section["redirect_uri"]
     if "{port}" in redirect_uri:
         redirect_uri = redirect_uri.replace(
             "{port}", str(config.get_option("server.port"))

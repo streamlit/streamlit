@@ -42,7 +42,7 @@ def create_oauth_client(provider: str) -> tuple[TornadoOAuth2App, str]:
     """Create an OAuth client for the given provider based on secrets.toml configuration."""
     auth_section = get_secrets_auth_section()
     if auth_section:
-        redirect_uri = get_redirect_uri(auth_section)
+        redirect_uri = get_redirect_uri(auth_section) or "/"
         config = auth_section.to_dict()
     else:
         config = {}
