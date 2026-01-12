@@ -84,6 +84,15 @@ class SafeSessionState:
         with self._lock:
             return self._state.is_new_state_value(user_key)
 
+    def widget_has_frontend_state(self, widget_id: str) -> bool:
+        """Check if a widget has state from the frontend.
+
+        This returns True if the frontend sent state for this widget in the
+        current script run, indicating user interaction.
+        """
+        with self._lock:
+            return self._state.widget_has_frontend_state(widget_id)
+
     def reset_state_value(self, user_key: str, value: Any | None) -> None:
         """Reset a new session state value to a given value
         without triggering the "state value cannot be modified" error.

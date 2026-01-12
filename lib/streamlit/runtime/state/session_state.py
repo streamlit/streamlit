@@ -842,6 +842,25 @@ class SessionState:
         changed: bool = new_value != old_value
         return changed
 
+    def widget_has_frontend_state(self, widget_id: str) -> bool:
+        """Check if a widget has state from the frontend.
+
+        This returns True if the frontend sent state for this widget in the
+        current script run, indicating user interaction. Used to determine
+        whether URL query param values should override widget state.
+
+        Parameters
+        ----------
+        widget_id : str
+            The unique identifier for the widget.
+
+        Returns
+        -------
+        bool
+            True if the widget has state from the frontend, False otherwise.
+        """
+        return widget_id in self._new_widget_state.states
+
     def on_script_finished(self, widget_ids_this_run: set[str]) -> None:
         """Called by ScriptRunner after its script finishes running.
          Updates widgets to prepare for the next script run.

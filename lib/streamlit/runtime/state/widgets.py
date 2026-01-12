@@ -623,17 +623,34 @@ def register_widget_from_metadata(
                     deserializer=query_param_deserializer,
                 )
 
-                # Check if there's an initial value from the URL to use
-                # This must be done BEFORE register_widget to override the default
+                # Check if there's an initial value from the URL to use.
+                # This must be done BEFORE register_widget to override the default.
                 initial_url_value = query_params.get_initial_value(param_key)
                 if initial_url_value is not None:
                     # Deserialize the URL string value to the widget's value type
                     deserialized_value = query_param_deserializer(initial_url_value)
-                    if (
+
+                    # Only seed from URL if:
+                    # 1. The deserialized value is valid (not None)
+                    # 2. Frontend didn't send widget state for this widget
+                    #
+                    # Frontend state indicates user interaction, which should take
+                    # precedence over URL values. This check handles:
+                    # - Initial page load (no frontend state) -> URL wins
+                    # - User interaction (frontend state exists) -> Skip, user wins
+                    # - Browser back/forward (no frontend state) -> URL wins
+                    #
+                    # Note: We intentionally do NOT check `user_key not in session_state`
+                    # because developer code like:
+                    #   `if key not in session_state: session_state.key = default`
+                    # runs BEFORE widget registration, and we want URL to override
+                    # such defaults on initial page load.
+                    should_seed_from_url = (
                         deserialized_value is not None
-                        and user_key not in ctx.session_state
-                    ):
-                        # Seed the widget's initial value from the session's initial URL.
+                        and not ctx.session_state.widget_has_frontend_state(widget_id)
+                    )
+                    if should_seed_from_url:
+                        # Seed the widget's initial value from the URL.
                         #
                         # Important: use reset_state_value() (instead of __setitem__)
                         # because by this point the element ID has already been
@@ -641,9 +658,6 @@ def register_widget_from_metadata(
                         # user_key->widget_id mapping may already exist. That combination
                         # would otherwise trigger the "cannot be modified after the
                         # widget is instantiated" guard.
-                        #
-                        # Only seed once: if the user_key already exists in session
-                        # state, preserve the existing value (e.g. user interaction).
                         ctx.session_state.reset_state_value(
                             user_key, deserialized_value
                         )
