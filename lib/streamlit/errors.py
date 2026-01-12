@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# ruff: noqa: RUF027 - We intentionally use non-f-string templates for exception messages.
+
 from __future__ import annotations
 
 import os

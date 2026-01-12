@@ -593,7 +593,7 @@ class UserInfoProxy(Mapping[str, str | bool | TokensProxy | None]):
     >>> }
     """
 
-    def __getitem__(self, key: str) -> str | bool | None | TokensProxy:
+    def __getitem__(self, key: str) -> str | bool | TokensProxy | None:
         if key == "tokens":
             return self.tokens
         try:
@@ -601,7 +601,7 @@ class UserInfoProxy(Mapping[str, str | bool | TokensProxy | None]):
         except KeyError:
             raise KeyError(f'st.user has no key "{key}".')
 
-    def __getattr__(self, key: str) -> str | bool | None | TokensProxy:
+    def __getattr__(self, key: str) -> str | bool | TokensProxy | None:
         if key == "tokens":
             return self.tokens
         try:

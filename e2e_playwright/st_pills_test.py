@@ -32,7 +32,7 @@ from e2e_playwright.shared.app_utils import (
 
 
 def get_pill_button(locator: Locator, text: str) -> Locator:
-    return locator.get_by_test_id(re.compile("stBaseButton-pills(Active)?")).filter(
+    return locator.get_by_test_id(re.compile(r"stBaseButton-pills(Active)?")).filter(
         has_text=text
     )
 

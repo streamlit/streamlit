@@ -24,7 +24,7 @@ if TYPE_CHECKING:
 
     feedback = ButtonGroupMixin().feedback
 
-    assert_type(feedback(), None | Literal[0, 1])
-    assert_type(feedback("thumbs"), None | Literal[0, 1])
-    assert_type(feedback("faces"), None | Literal[0, 1, 2, 3, 4])
-    assert_type(feedback("stars"), None | Literal[0, 1, 2, 3, 4])
+    assert_type(feedback(), Literal[0, 1] | None)
+    assert_type(feedback("thumbs"), Literal[0, 1] | None)
+    assert_type(feedback("faces"), Literal[0, 1, 2, 3, 4] | None)
+    assert_type(feedback("stars"), Literal[0, 1, 2, 3, 4] | None)
