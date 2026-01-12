@@ -16,6 +16,7 @@
 from __future__ import annotations
 
 import os
+import pathlib
 import signal
 import subprocess
 from typing import TYPE_CHECKING
@@ -213,8 +214,9 @@ class TestCLIRegressions:
         assert ":9999" in out, f"Incorrect port. See output:\n{out}"
 
     def test_config_toml_defined_port(self) -> None:
-        with open(CONFIG_FILE_PATH, "w", encoding="utf-8") as file:
-            file.write("[server]\n  port=8888")
+        pathlib.Path(CONFIG_FILE_PATH).write_text(
+            "[server]\n  port=8888", encoding="utf-8"
+        )
 
         out = self.run_single_proc(
             f"streamlit run --server.headless=true {REPO_ROOT}/e2e_playwright/st_file_uploader.py",

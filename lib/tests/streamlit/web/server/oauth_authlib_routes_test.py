@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import json
+from collections import UserDict
 from unittest.mock import MagicMock, patch
 
 import tornado.httputil
@@ -33,7 +34,7 @@ from streamlit.web.server.oauth_authlib_routes import (
 from streamlit.web.server.server_util import AUTH_COOKIE_NAME, TOKENS_COOKIE_NAME
 
 
-class SecretMock(dict):
+class SecretMock(UserDict):
     def to_dict(self):
         return self
 

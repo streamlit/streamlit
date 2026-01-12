@@ -24,6 +24,8 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
+import pathlib
+
 from streamlit import cli_util, url_util
 from streamlit.config_option import ConfigOption
 from streamlit.elements.lib.color_util import is_css_color_like
@@ -616,8 +618,7 @@ def _load_theme_file(
             if not os.path.exists(file_path_or_url):
                 _raise_file_not_found()
 
-            with open(file_path_or_url, encoding="utf-8") as f:
-                content = f.read()
+            content = pathlib.Path(file_path_or_url).read_text(encoding="utf-8")
 
         # Check file size limit - theme files should be small configuration files
         content_size = len(content.encode("utf-8"))

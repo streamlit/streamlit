@@ -97,7 +97,7 @@ class RunWarningTest(unittest.TestCase):
 
         # Remove commands that are only exposed in the top-level namespace (st.*)
         # and cannot be called on a DeltaGenerator object.
-        expected_api = expected_api - {
+        expected_api -= {
             "dialog",
             "echo",
             "logo",

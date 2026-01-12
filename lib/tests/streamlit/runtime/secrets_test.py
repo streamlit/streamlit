@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import contextlib
 import os
+import pathlib
 import tempfile
 import threading
 import unittest
@@ -420,25 +421,16 @@ class SecretsDirectoryTest(unittest.TestCase):
         self.temp_dir = tempfile.TemporaryDirectory()
         self.temp_dir_path = self.temp_dir.name
         os.makedirs(os.path.join(self.temp_dir_path, "example_login"))
-        with open(
-            os.path.join(self.temp_dir_path, "example_login", "username"),
-            "w",
-            encoding="utf-8",
-        ) as f:
-            f.write("example_username")
-        with open(
-            os.path.join(self.temp_dir_path, "example_login", "password"),
-            "w",
-            encoding="utf-8",
-        ) as f:
-            f.write("example_password")
+        pathlib.Path(
+            os.path.join(self.temp_dir_path, "example_login", "username")
+        ).write_text("example_username", encoding="utf-8")
+        pathlib.Path(
+            os.path.join(self.temp_dir_path, "example_login", "password")
+        ).write_text("example_password", encoding="utf-8")
         os.makedirs(os.path.join(self.temp_dir_path, "example_token"))
-        with open(
-            os.path.join(self.temp_dir_path, "example_token", "token"),
-            "w",
-            encoding="utf-8",
-        ) as f:
-            f.write("token123")
+        pathlib.Path(
+            os.path.join(self.temp_dir_path, "example_token", "token")
+        ).write_text("token123", encoding="utf-8")
 
         self.secrets = Secrets()
 
@@ -464,12 +456,9 @@ class SecretsDirectoryTest(unittest.TestCase):
 
     @patch("streamlit.watcher.path_watcher.watch_dir", MagicMock())
     def test_secrets_reload(self):
-        with open(
-            os.path.join(self.temp_dir_path, "example_login", "password"),
-            "w",
-            encoding="utf-8",
-        ) as f:
-            f.write("example_password2")
+        pathlib.Path(
+            os.path.join(self.temp_dir_path, "example_login", "password")
+        ).write_text("example_password2", encoding="utf-8")
 
         mock_get_option = testutil.build_mock_config_get_option(
             {"secrets.files": [self.temp_dir_path]}

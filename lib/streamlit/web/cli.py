@@ -118,7 +118,7 @@ def _download_remote(main_script_path: str, url_path: str) -> None:
     import requests
     from requests.exceptions import RequestException
 
-    with open(main_script_path, "wb") as fp:
+    with open(main_script_path, "wb") as fp:  # noqa: FURB103
         try:
             resp = requests.get(url_path, timeout=30)
             resp.raise_for_status()

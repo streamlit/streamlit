@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import unittest
+from collections import UserDict
 from unittest.mock import Mock, patch
 
 from parameterized import parameterized
@@ -164,7 +165,7 @@ class DeprecationUtilTest(unittest.TestCase):
     def test_deprecate_obj_name(self, mock_show_warning: Mock):
         """Test that we override dunder methods."""
 
-        class DictClass(dict):
+        class DictClass(UserDict):
             pass
 
         beta_dict = deprecate_obj_name(
@@ -186,7 +187,7 @@ class DeprecationUtilTest(unittest.TestCase):
 
     @patch("streamlit.deprecation_util.show_deprecation_warning")
     def test_deprecate_obj_name_no_st_prefix(self, mock_show_warning: Mock):
-        class DictClass(dict):
+        class DictClass(UserDict):
             pass
 
         beta_dict = deprecate_obj_name(

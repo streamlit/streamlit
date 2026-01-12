@@ -20,6 +20,7 @@ import copy
 import json
 import logging
 import os
+import pathlib
 import secrets
 import threading
 from collections import OrderedDict
@@ -1077,9 +1078,11 @@ def _browser_server_port() -> int:
 
 
 _SSL_PRODUCTION_WARNING = [
-    "DO NOT USE THIS OPTION IN A PRODUCTION ENVIRONMENT. It has not gone through "
-    "security audits or performance tests. For a production environment, we "
-    "recommend performing SSL termination through a load balancer or reverse proxy."
+    (
+        "DO NOT USE THIS OPTION IN A PRODUCTION ENVIRONMENT. It has not gone through "
+        "security audits or performance tests. For a production environment, we "
+        "recommend performing SSL termination through a load balancer or reverse proxy."
+    )
 ]
 
 _create_option(
@@ -2667,8 +2670,7 @@ def get_config_options(
             if not os.path.exists(filename):
                 continue
 
-            with open(filename, encoding="utf-8") as file:
-                file_contents = file.read()
+            file_contents = pathlib.Path(filename).read_text(encoding="utf-8")
 
             _update_config_with_toml(file_contents, filename)
 

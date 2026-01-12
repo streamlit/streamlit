@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import os
+import pathlib
 import threading
 from collections.abc import Callable, ItemsView, Iterator, KeysView, Mapping, ValuesView
 from copy import deepcopy
@@ -252,8 +253,7 @@ class Secrets(Mapping[str, Any]):
         found_secrets_file = False
 
         try:
-            with open(path, encoding="utf-8") as f:
-                secrets_file_str = f.read()
+            secrets_file_str = pathlib.Path(path).read_text(encoding="utf-8")
 
             found_secrets_file = True
         except FileNotFoundError:

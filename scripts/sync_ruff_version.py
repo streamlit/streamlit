@@ -35,6 +35,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import pathlib
 import re
 import sys
 
@@ -80,8 +81,7 @@ def _get_ruff_version_from_pre_commit_config(repo_root: str) -> str | None:
 def _update_pre_commit_config(repo_root: str, new_version: str) -> bool:
     pre_commit_config_path = os.path.join(repo_root, ".pre-commit-config.yaml")
     try:
-        with open(pre_commit_config_path, encoding="utf-8") as f:
-            content = f.read()
+        content = pathlib.Path(pre_commit_config_path).read_text(encoding="utf-8")
 
         # Use re.DOTALL to handle variable number of lines between repo and rev
         pattern = r"(repo:\s*https://github\.com/astral-sh/ruff-pre-commit.*?rev:\s*v)[0-9]+\.[0-9]+\.[0-9]+"
@@ -91,8 +91,7 @@ def _update_pre_commit_config(repo_root: str, new_version: str) -> bool:
             print("Warning: No changes made to .pre-commit-config.yaml")
             return False
 
-        with open(pre_commit_config_path, "w", encoding="utf-8") as f:
-            f.write(new_content)
+        pathlib.Path(pre_commit_config_path).write_text(new_content, encoding="utf-8")
 
         print(f"Updated .pre-commit-config.yaml to ruff version v{new_version}")
         return True

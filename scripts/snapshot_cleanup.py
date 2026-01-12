@@ -35,6 +35,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import pathlib
 import re
 import subprocess
 import sys
@@ -165,8 +166,7 @@ def get_used_snapshots() -> dict[str, tuple[set[str], set[str]]]:
 
     for test_file in test_files:
         try:
-            with open(test_file, encoding="utf-8") as f:
-                content = f.read()
+            content = pathlib.Path(test_file).read_text(encoding="utf-8")
 
             test_name = os.path.basename(test_file).replace(".py", "")
             exact_names, prefixes = snapshots_by_test[test_name]

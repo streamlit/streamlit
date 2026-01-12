@@ -278,8 +278,10 @@ def _get_stack_trace_str_list(exception: BaseException) -> list[str]:
     # Format the extracted traceback and add it to the protobuf element.
     if extracted_traceback is None:
         trace_str_list = [
-            "Cannot extract the stack trace for this exception. "
-            "Try calling exception() within the `catch` block."
+            (
+                "Cannot extract the stack trace for this exception. "
+                "Try calling exception() within the `catch` block."
+            )
         ]
     else:
         internal_frames, external_frames = _split_internal_streamlit_frames(

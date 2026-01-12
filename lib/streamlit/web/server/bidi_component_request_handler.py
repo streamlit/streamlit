@@ -24,6 +24,7 @@ based on the server configuration.
 from __future__ import annotations
 
 import os
+import pathlib
 from typing import TYPE_CHECKING, Final, cast
 
 import tornado.web
@@ -116,8 +117,7 @@ class BidiComponentRequestHandler(tornado.web.RequestHandler):
             return
 
         try:
-            with open(abspath, "rb") as file:
-                contents = file.read()
+            contents = pathlib.Path(abspath).read_bytes()
         except OSError:
             sanitized_abspath = abspath.replace("\n", "").replace("\r", "")
             _LOGGER.exception(

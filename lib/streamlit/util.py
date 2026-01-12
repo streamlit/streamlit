@@ -19,6 +19,7 @@ from __future__ import annotations
 import dataclasses
 import functools
 import hashlib
+from collections import UserDict
 from typing import TYPE_CHECKING, Any
 
 from streamlit.proto.RootContainer_pb2 import RootContainer
@@ -79,7 +80,7 @@ def calc_md5(s: bytes | str) -> str:
     return h.hexdigest()
 
 
-class AttributeDictionary(dict[Any, Any]):
+class AttributeDictionary(UserDict[Any, Any]):
     """
     A dictionary subclass that supports attribute-style access.
 
