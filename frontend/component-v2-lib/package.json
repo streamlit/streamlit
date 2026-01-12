@@ -1,6 +1,6 @@
 {
   "name": "@streamlit/component-v2-lib",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Support code for Streamlit Components v2",
   "type": "module",
   "main": "./dist/streamlit-component-v2-lib.mjs",
