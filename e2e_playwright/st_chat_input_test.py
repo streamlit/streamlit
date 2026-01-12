@@ -1778,7 +1778,9 @@ def test_file_upload_retry_click_success(app: Page):
 
 
 @use_chat_input("single_file")
-@pytest.mark.only_browser("chromium")  # DataTransfer only works in Chromium/Firefox
+@pytest.mark.skip_browser(
+    "webkit"
+)  # DataTransfer dispatch_event not supported in WebKit
 def test_upload_button_works_after_drag_drop_and_delete(app: Page):
     """Test that the upload button still works after drag-dropping a file and deleting it."""
     app.set_viewport_size({"width": 750, "height": 2000})
