@@ -6,6 +6,7 @@
     "app",
     "component-v2-lib",
     "connection",
+    "core",
     "data-utils",
     "eslint-plugin-streamlit-custom",
     "lib",

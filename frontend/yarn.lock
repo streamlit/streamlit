@@ -3398,6 +3398,39 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@streamlit/core@workspace:^, @streamlit/core@workspace:core":
+  version: 0.0.0-use.local
+  resolution: "@streamlit/core@workspace:core"
+  dependencies:
+    "@emotion/react": "npm:^11.13.5"
+    "@emotion/styled": "npm:^11.14.1"
+    "@streamlit/data-utils": "workspace:^"
+    "@streamlit/protobuf": "workspace:^"
+    "@streamlit/render-tree": "workspace:^"
+    "@streamlit/shared": "workspace:^"
+    "@streamlit/theme": "workspace:^"
+    "@streamlit/typescript-config": "workspace:^"
+    "@streamlit/utils": "workspace:^"
+    "@testing-library/jest-dom": "npm:^6.9.1"
+    "@types/lodash-es": "npm:~4.17.12"
+    "@types/react": "npm:^18.2.0"
+    baseui: "npm:12.2.0"
+    eslint: "npm:^9.39.2"
+    jsdom: "npm:^26.1.0"
+    lodash-es: "npm:^4.17.22"
+    prettier: "npm:^3.7.4"
+    styletron-react: "npm:^6.1.0"
+    typescript: "npm:^5.8.3"
+    vite: "npm:^7.2.7"
+    vite-plugin-dts: "npm:^4.5.4"
+    vite-tsconfig-paths: "npm:^6.0.2"
+    vitest: "npm:^4.0.16"
+  peerDependencies:
+    react: ^17.0.0 || ^18.0.0
+    react-dom: ^17.0.0 || ^18.0.0
+  languageName: unknown
+  linkType: soft
+
 "@streamlit/data-utils@workspace:^, @streamlit/data-utils@workspace:data-utils":
   version: 0.0.0-use.local
   resolution: "@streamlit/data-utils@workspace:data-utils"
@@ -3459,6 +3492,7 @@ __metadata:
     "@loaders.gl/gltf": "npm:^4.3.4"
     "@sindresorhus/slugify": "npm:^3.0.0"
     "@streamlit/component-v2-lib": "workspace:^"
+    "@streamlit/core": "workspace:^"
     "@streamlit/data-utils": "workspace:^"
     "@streamlit/protobuf": "workspace:^"
     "@streamlit/render-tree": "workspace:^"
