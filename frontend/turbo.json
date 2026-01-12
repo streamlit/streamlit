@@ -14,6 +14,11 @@
       "outputs": [],
       "inputs": ["src/**/*.ts", "src/**/*.tsx", "vitest.setup.ts"]
     },
+    "testCoverage": {
+      "dependsOn": ["^build"],
+      "outputs": ["coverage/**"],
+      "inputs": ["src/**/*.ts", "src/**/*.tsx", "vitest.setup.ts"]
+    },
     "typecheck": {
       "dependsOn": ["^build"],
       "outputs": []

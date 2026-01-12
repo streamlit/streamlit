@@ -27,6 +27,7 @@
     "build": "vite build",
     "buildWatch": "env DEV_WATCH=1 vite build --watch",
     "test": "vitest run",
+    "testCoverage": "vitest run --coverage",
     "testWatch": "vitest",
     "lint": "eslint --cache --max-warnings 0 src",
     "typecheck": "yarn run typecheck:all",

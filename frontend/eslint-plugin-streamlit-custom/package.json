@@ -13,6 +13,7 @@
     "formatCheck": "prettier --check --cache --config ../.prettierrc --ignore-path ../.prettierignore './src/**/*.{js,ts,jsx,tsx}'",
     "lint": "eslint --cache --max-warnings 0 src",
     "test": "vitest run",
+    "testCoverage": "vitest run --coverage",
     "testWatch": "vitest",
     "typecheck": "tsc --noEmit",
     "typesync:ci": "typesync --dry=fail",

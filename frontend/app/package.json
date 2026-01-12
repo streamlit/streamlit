@@ -12,6 +12,7 @@
     "buildWithProfiler": "env NODE_OPTIONS=--max_old_space_size=8192 IS_PROFILER_BUILD=1 vite build",
     "preview": "vite preview",
     "test": "vitest run",
+    "testCoverage": "vitest run --coverage",
     "testWatch": "vitest",
     "lint": "eslint --cache --max-warnings 0 src",
     "lint:fix": "eslint --cache --max-warnings 0 --fix src",

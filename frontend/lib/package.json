@@ -26,6 +26,7 @@
     "build": "env NODE_OPTIONS=--max_old_space_size=8192 vite build",
     "typecheck": "yarn run typecheck:all",
     "test": "vitest run",
+    "testCoverage": "vitest run --coverage",
     "testWatch": "vitest",
     "lint": "eslint --cache --max-warnings 0 src",
     "lint:fix": "eslint --cache --max-warnings 0 --fix src",

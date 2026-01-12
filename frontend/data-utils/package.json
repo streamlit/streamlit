@@ -17,6 +17,7 @@
   "scripts": {
     "build": "vite build",
     "test": "vitest run --passWithNoTests",
+    "testCoverage": "vitest run --passWithNoTests --coverage",
     "typecheck": "tsc --noEmit",
     "lint": "eslint --cache --max-warnings 0 src",
     "format": "prettier --write --config ../.prettierrc --ignore-path ../.prettierignore './src/**/*.{js,ts,tsx}'",
