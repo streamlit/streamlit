@@ -1778,9 +1778,9 @@ def test_file_upload_retry_click_success(app: Page):
 
 
 @use_chat_input("single_file")
-@pytest.mark.skip_browser(
-    "webkit"
-)  # DataTransfer dispatch_event not supported in WebKit
+# DataTransfer dispatch_event only works reliably in Chromium.
+# WebKit doesn't support it, and Firefox has inconsistent behavior.
+@pytest.mark.only_browser("chromium")
 def test_upload_button_works_after_drag_drop_and_delete(app: Page):
     """Test that the upload button still works after drag-dropping a file and deleting it."""
     chat_input = get_element_by_key(app, "single_file")
