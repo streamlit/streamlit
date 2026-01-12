@@ -407,6 +407,9 @@ def _get_provider_logout_url(request: Request) -> str | None:
 
     Returns the end_session_endpoint URL with proper parameters for OIDC logout,
     or None if the provider doesn't support it or required data is unavailable.
+
+    This function returns None (rather than raising exceptions) to allow graceful
+    fallback to a simple base URL redirect when OIDC logout isn't possible.
     """
     cookie_value = _get_cookie_value_from_request(request, USER_COOKIE_NAME)
 
