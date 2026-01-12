@@ -31,6 +31,10 @@ from streamlit.web.server.starlette.starlette_auth_routes import (
     _parse_provider_token,
     create_auth_routes,
 )
+from streamlit.web.server.starlette.starlette_server_config import (
+    TOKENS_COOKIE_NAME,
+    USER_COOKIE_NAME,
+)
 from tests.testutil import patch_config_options
 
 if TYPE_CHECKING:
@@ -617,11 +621,18 @@ class TestGetProviderLogoutUrl:
             _get_provider_logout_url,
         )
 
-        # Mock user cookie with provider
+        # Mock cookies - must differentiate between USER and TOKENS cookies
+        def mock_get_cookie(request: Any, name: str) -> bytes | None:
+            if name == USER_COOKIE_NAME:
+                return b'{"provider": "testprovider"}'
+            if name == TOKENS_COOKIE_NAME:
+                return b'{"id_token": "test-id-token", "access_token": "test-access"}'
+            return None
+
         monkeypatch.setattr(
             starlette_auth_routes,
             "_get_cookie_value_from_request",
-            lambda request, name: b'{"provider": "testprovider"}',
+            mock_get_cookie,
         )
 
         # Mock OAuth client with end_session_endpoint
@@ -656,6 +667,8 @@ class TestGetProviderLogoutUrl:
         assert "post_logout_redirect_uri" in result
         # Verify that the validated redirect_uri is included in the logout URL
         assert "localhost" in result
+        # Verify id_token_hint is included when tokens cookie has id_token
+        assert "id_token_hint=test-id-token" in result
 
     @patch_config_options({"server.cookieSecret": "test-secret"})
     def test_returns_none_when_redirect_uri_invalid(
