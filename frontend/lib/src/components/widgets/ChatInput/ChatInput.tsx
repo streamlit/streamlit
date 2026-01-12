@@ -776,9 +776,10 @@ function ChatInput({
 
         const paddingLeft = parseFloat(computedStyle.paddingLeft) || 0
         const paddingRight = parseFloat(computedStyle.paddingRight) || 0
-        // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Safe: runs in timeout after layout
-        availableWidthRef.current =
-          textarea.clientWidth - paddingLeft - paddingRight
+        // Safe: runs in timeout after layout
+        // eslint-disable-next-line streamlit-custom/no-force-reflow-access
+        const clientWidth = textarea.clientWidth
+        availableWidthRef.current = clientWidth - paddingLeft - paddingRight
       }
     }, 0)
 
