@@ -177,10 +177,11 @@ class TestCLIRegressions:
         process.stdin.flush()  # type: ignore
         process.communicate()
 
-        with open(CREDENTIALS_FILE_PATH, encoding="utf-8") as f:
-            assert "regressiontest@streamlit.io" in f.read(), (
-                "Email address was not found in the credentials file"
-            )
+        content = pathlib.Path(CREDENTIALS_FILE_PATH).read_text(encoding="utf-8")
+
+        assert "regressiontest@streamlit.io" in content, (
+            "Email address was not found in the credentials file"
+        )
 
     def test_port_reassigned(self) -> None:
         """When starting a new Streamlit session, it will run on port 8501 by default. If 8501 is

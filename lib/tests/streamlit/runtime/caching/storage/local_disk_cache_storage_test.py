@@ -19,6 +19,7 @@ from __future__ import annotations
 import logging
 import math
 import os.path
+import pathlib
 import shutil
 import unittest
 from unittest.mock import MagicMock, patch
@@ -197,8 +198,10 @@ class LocalDiskPersistCacheStorageTest(unittest.TestCase):
         self.storage.set("new-key", b"new-value")
         assert os.path.exists(self.tempdir.path + "/func-key-new-key.memo")
 
-        with open(self.tempdir.path + "/func-key-new-key.memo", "rb") as f:
-            assert f.read() == b"new-value"
+        assert (
+            pathlib.Path(self.tempdir.path + "/func-key-new-key.memo").read_bytes()
+            == b"new-value"
+        )
 
     @patch(
         "streamlit.runtime.caching.storage.local_disk_cache_storage.streamlit_write",

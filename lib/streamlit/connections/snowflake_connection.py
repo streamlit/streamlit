@@ -21,6 +21,7 @@
 from __future__ import annotations
 
 import os
+import pathlib
 from typing import TYPE_CHECKING, Any, Final, Literal, cast
 
 from streamlit import logger
@@ -635,8 +636,7 @@ class SnowflakeCallersRightsConnection(SnowflakeConnection):
     @classmethod
     def _read_token_file(cls) -> str:
         """Returns the contents of the Snowpark token file on disk."""
-        with open(SNOWPARK_CONNECTION_TOKEN_FILE, encoding="utf-8") as token_file:
-            return token_file.read()
+        return pathlib.Path(SNOWPARK_CONNECTION_TOKEN_FILE).read_text(encoding="utf-8")
 
     @classmethod
     def _get_connection_params(cls) -> dict[str, str | bool]:

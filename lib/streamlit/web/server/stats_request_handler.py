@@ -76,9 +76,13 @@ class StatsRequestHandler(tornado.web.RequestHandler):
             # unit, and help text, so we can just use the first one to construct
             # our OpenMetrics comments.
             first_stat = stats[0]
-            result.append(f"# TYPE {first_stat.family_name} {first_stat.type}")
-            result.append(f"# UNIT {first_stat.family_name} {first_stat.unit}")
-            result.append(f"# HELP {first_stat.help}")
+            result.extend(
+                (
+                    f"# TYPE {first_stat.family_name} {first_stat.type}",
+                    f"# UNIT {first_stat.family_name} {first_stat.unit}",
+                    f"# HELP {first_stat.help}",
+                )
+            )
             result.extend(stat.to_metric_str() for stat in stats)
 
         result.append("# EOF\n")

@@ -284,7 +284,7 @@ def test_session_state_merges_ccv2_trigger_values_via_presenter() -> None:
     # Attach presenter (what bidi_component.py does during registration)
     presenter = make_bidi_component_presenter(aggregator_id)
     meta = session_state._new_widget_state.widget_metadata[component_id]
-    object.__setattr__(meta, "presenter", presenter)
+    object.__setattr__(meta, "presenter", presenter)  # noqa: PLC2801
 
     # User-visible filtered state should show merged view
     merged = session_state.filtered_state[user_key]
@@ -315,7 +315,7 @@ def test_session_state_presenter_errors_degrade_gracefully() -> None:
         serializer=lambda x: x,
         value_type="json_value",
     )
-    object.__setattr__(
+    object.__setattr__(  # noqa: PLC2801
         meta, "presenter", lambda _b, _s: exec('raise RuntimeError("boom")')
     )
     session_state._new_widget_state.widget_metadata[component_id] = meta

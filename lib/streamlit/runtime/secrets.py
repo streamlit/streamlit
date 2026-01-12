@@ -308,9 +308,10 @@ class Secrets(Mapping[str, Any]):
                 if os.path.isdir(file_path):
                     continue
 
-                with open(file_path, encoding="utf-8") as f:
-                    sub_secrets[filename] = f.read().strip()
-                    found_secrets_file = True
+                sub_secrets[filename] = (
+                    pathlib.Path(file_path).read_text(encoding="utf-8").strip()
+                )
+                found_secrets_file = True
 
             if len(sub_secrets) == 1:
                 # if there's just one file, collapse it so it's directly under `dirname`

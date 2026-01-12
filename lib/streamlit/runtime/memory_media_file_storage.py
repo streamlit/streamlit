@@ -20,6 +20,7 @@ import contextlib
 import hashlib
 import mimetypes
 import os.path
+import pathlib
 from typing import TYPE_CHECKING, Final, NamedTuple
 
 from streamlit.logger import get_logger
@@ -173,8 +174,7 @@ class MemoryMediaFileStorage(MediaFileStorage, StatsProvider):
     def _read_file(self, filename: str) -> bytes:
         """Read a file into memory. Raise MediaFileStorageError if we can't."""
         try:
-            with open(filename, "rb") as f:
-                return f.read()
+            return pathlib.Path(filename).read_bytes()
         except Exception as ex:
             raise MediaFileStorageError(f"Error opening '{filename}'") from ex
 

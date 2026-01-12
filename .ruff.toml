@@ -72,6 +72,9 @@ select = [
   "FURB103",
   "FURB154",
   "S404",
+  "B903",
+  "FURB101",
+  "PLC2801",
 ]
 ignore = [
   # Rules planned to be supported in the future:
@@ -142,6 +145,8 @@ ignore = [
   "FURB152", # Checks for potential math constants.
   "PLW0108", # Checks for usage of unncessary lambda functions.
   "RUF052",  # Checks for usage of dummy variables.
+  "FURB118",
+  # "RUF067",
 ]
 exclude = [
   # pympler is a vendored dependency that doesn't conform to our linting rules:

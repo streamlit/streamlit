@@ -145,8 +145,7 @@ def combine_agents_files() -> None:
     combined_content: list[str] = []
 
     # Add header
-    combined_content.append("# Streamlit Library Development Rules")
-    combined_content.append("")
+    combined_content.extend(("# Streamlit Library Development Rules", ""))
 
     # Process each file
     for i, file_path in enumerate(agent_files):
@@ -156,9 +155,7 @@ def combine_agents_files() -> None:
 
             # Add divider between files (except for the last one)
             if i < len(agent_files) - 1:
-                combined_content.append("")
-                combined_content.append("---")
-                combined_content.append("")
+                combined_content.extend(("", "---", ""))
 
     # Write combined content to output file
     output_content = "\n".join(combined_content) + "\n"

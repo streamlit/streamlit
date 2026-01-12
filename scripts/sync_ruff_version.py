@@ -62,16 +62,15 @@ def _get_ruff_version_from_dev_requirements(repo_root: str) -> str | None:
 def _get_ruff_version_from_pre_commit_config(repo_root: str) -> str | None:
     pre_commit_config_path = os.path.join(repo_root, ".pre-commit-config.yaml")
     try:
-        with open(pre_commit_config_path, encoding="utf-8") as f:
-            content = f.read()
-            # Use re.DOTALL to handle variable number of lines between repo and rev
-            match = re.search(
-                r"repo:\s*https://github\.com/astral-sh/ruff-pre-commit.*?rev:\s*v([0-9]+\.[0-9]+\.[0-9]+)",
-                content,
-                re.DOTALL,
-            )
-            if match:
-                return match.group(1)
+        content = pathlib.Path(pre_commit_config_path).read_text(encoding="utf-8")
+        # Use re.DOTALL to handle variable number of lines between repo and rev
+        match = re.search(
+            r"repo:\s*https://github\.com/astral-sh/ruff-pre-commit.*?rev:\s*v([0-9]+\.[0-9]+\.[0-9]+)",
+            content,
+            re.DOTALL,
+        )
+        if match:
+            return match.group(1)
     except FileNotFoundError:
         print(f"Error: File not found: {pre_commit_config_path}")
         return None

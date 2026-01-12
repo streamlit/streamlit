@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import contextlib
 import os
+import pathlib
 import subprocess
 import sys
 import tempfile
@@ -157,9 +158,11 @@ class CliTest(unittest.TestCase):
             with patch("streamlit.temporary_directory.TemporaryDirectory") as mock_tmp:
                 mock_tmp.return_value.__enter__.return_value = temp_dir.path
                 result = self.runner.invoke(cli, ["run", "http://url/app.py"])
-                with open(os.path.join(temp_dir.path, "app.py"), "rb") as f:
-                    assert file_content == f.read()
 
+                assert (
+                    pathlib.Path(os.path.join(temp_dir.path, "app.py")).read_bytes()
+                    == file_content
+                )
         assert result.exit_code == 0
 
     @tempdir()
