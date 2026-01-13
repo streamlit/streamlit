@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import pathlib
 from typing import TYPE_CHECKING, Final, cast
 
 import tornado.web
@@ -52,8 +53,7 @@ class ComponentRequestHandler(tornado.web.RequestHandler):
             self.set_status(403)
             return
         try:
-            with open(abspath, "rb") as file:
-                contents = file.read()
+            contents = pathlib.Path(abspath).read_bytes()
         except OSError:
             sanitized_abspath = abspath.replace("\n", "").replace("\r", "")
             _LOGGER.exception(

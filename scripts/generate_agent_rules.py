@@ -15,6 +15,7 @@
 # limitations under the License.
 
 import os
+import pathlib
 import subprocess
 from typing import Final, TypedDict
 
@@ -147,8 +148,7 @@ def generate_make_commands_rule() -> None:
     output_path = os.path.join(output_dir, "make_commands.mdc")
 
     # Write the formatted content to the file
-    with open(output_path, "w") as f:
-        f.write(formatted_content)
+    pathlib.Path(output_path).write_text(formatted_content, encoding="utf-8")
     print(f"Generated rule file: {output_path}")
 
 
@@ -176,8 +176,7 @@ def generate_agent_rules() -> None:
             raise FileNotFoundError(f"Missing AGENTS.md file at '{agents_md_path}'.")
 
         # Read the full content of the AGENTS.md file
-        with open(agents_md_path) as f:
-            agents_md_content = f.read()
+        agents_md_content = pathlib.Path(agents_md_path).read_text(encoding="utf-8")
 
         # Write cursor rule file:
 
@@ -190,8 +189,7 @@ def generate_agent_rules() -> None:
                 globs=globs, agents_md_content=agents_md_content.strip()
             )
 
-        with open(cursor_mdc_path, "w") as f:
-            f.write(content)
+        pathlib.Path(cursor_mdc_path).write_text(content, encoding="utf-8")
         print(f"Generated Cursor rule file: {cursor_mdc_path}")
 
         # Write github copilot rule file:
@@ -205,8 +203,7 @@ def generate_agent_rules() -> None:
                 globs=globs, agents_md_content=agents_md_content.strip()
             )
 
-        with open(github_copilot_path, "w") as f:
-            f.write(content)
+        pathlib.Path(github_copilot_path).write_text(content, encoding="utf-8")
         print(f"Generated GitHub Copilot rule file: {github_copilot_path}")
 
 

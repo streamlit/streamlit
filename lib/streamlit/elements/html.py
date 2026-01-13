@@ -120,8 +120,7 @@ class HtmlMixin:
         # Check if the body is a file path. May include filesystem lookup.
         elif isinstance(body, Path) or _is_file(body):
             file_path = str(body)
-            with open(file_path, encoding="utf-8") as f:
-                html_content = f.read()
+            html_content = Path(file_path).read_text(encoding="utf-8")
 
             # If it's a CSS file, wrap the content in style tags
             if Path(file_path).suffix.lower() == ".css":

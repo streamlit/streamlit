@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+from collections import UserDict
 from typing import TYPE_CHECKING, Any, TypedDict, cast
 
 from typing_extensions import Self
@@ -127,7 +128,7 @@ def make_bidi_component_presenter(
                 # st.session_state[component_user_key][name] = value. Using a
                 # dict subclass ensures pretty-printing and JSON serialization
                 # behave as expected for st.write and logs.
-                class _WriteThrough(dict[str, object]):
+                class _WriteThrough(UserDict[str, object]):
                     def __init__(self, data: dict[str, object]) -> None:
                         super().__init__(data)
 

@@ -127,7 +127,7 @@ def _convert_datelike_to_date(
     if isinstance(value, date):
         return value
 
-    if value in {"today"}:
+    if value == "today":
         return datetime.now().date()
 
     if isinstance(value, str):

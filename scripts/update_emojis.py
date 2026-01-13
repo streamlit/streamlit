@@ -22,6 +22,7 @@ This script requires the emoji package to be installed: pip install emoji.
 from __future__ import annotations
 
 import os
+import pathlib
 import re
 import sys
 
@@ -46,10 +47,8 @@ generated_code = f"""### EMOJIS START ###
 ALL_EMOJIS = {{{", ".join([f'"{emoji}"' for emoji in sorted(emoji_unicodes)])}}}
 ### EMOJIS END ###"""
 
-with open(EMOJIS_SCRIPT_PATH) as file:
-    script_content = file.read()
+script_content = pathlib.Path(EMOJIS_SCRIPT_PATH).read_text(encoding="utf-8")
 
 updated_script_content = re.sub(EMOJI_SET_REGEX, generated_code, script_content)
 
-with open(EMOJIS_SCRIPT_PATH, "w") as file:
-    file.write(updated_script_content)
+pathlib.Path(EMOJIS_SCRIPT_PATH).write_text(updated_script_content, encoding="utf-8")

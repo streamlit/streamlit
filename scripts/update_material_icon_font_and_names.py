@@ -23,6 +23,7 @@ And download the latest material symbols font file to
 from __future__ import annotations
 
 import os
+import pathlib
 import re
 import sys
 import urllib.request
@@ -93,13 +94,11 @@ generated_code = f"""### MATERIAL ICON NAMES START ###
 ALL_MATERIAL_ICONS = {{{", ".join([f'"{icon_name}"' for icon_name in sorted(icon_names)])}}}
 ### MATERIAL ICON NAMES END ###"""
 
-with open(NAMES_MODULE_PATH) as file:
-    script_content = file.read()
+script_content = pathlib.Path(NAMES_MODULE_PATH).read_text(encoding="utf-8")
 
 updated_script_content = re.sub(NAMES_SET_REGEX, generated_code, script_content)
 
-with open(NAMES_MODULE_PATH, "w") as file:
-    file.write(updated_script_content)
+pathlib.Path(NAMES_MODULE_PATH).write_text(updated_script_content, encoding="utf-8")
 
 # Fetch the content from the URL
 # We use custom User-Agent header here to get .woff2 font instead of .ttf
@@ -144,9 +143,9 @@ st.success(
 )
 ### LATEST MATERIAL ICON TEST END ###"""
 
-with open(PLAYWRIGHT_TEST_MODULE_PATH) as file:
-    script_content = file.read()
+script_content = pathlib.Path(PLAYWRIGHT_TEST_MODULE_PATH).read_text(encoding="utf-8")
 
 updated_script_content = re.sub(PLAYWRIGHT_TEST_REGEX, generated_code, script_content)
-with open(PLAYWRIGHT_TEST_MODULE_PATH, "w") as file:
-    file.write(updated_script_content)
+pathlib.Path(PLAYWRIGHT_TEST_MODULE_PATH).write_text(
+    updated_script_content, encoding="utf-8"
+)

@@ -926,7 +926,9 @@ class ThemeInheritanceUtilTest(unittest.TestCase):
         backgroundColor = "#ffffff"
         """
 
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".toml", delete=False) as f:
+        with tempfile.NamedTemporaryFile(
+            encoding="utf-8", mode="w", suffix=".toml", delete=False
+        ) as f:
             f.write(theme_toml)
             temp_path = f.name
 
@@ -996,7 +998,9 @@ class ThemeInheritanceUtilTest(unittest.TestCase):
         port = 8501
         """
 
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".toml", delete=False) as f:
+        with tempfile.NamedTemporaryFile(
+            encoding="utf-8", mode="w", suffix=".toml", delete=False
+        ) as f:
             f.write(content_toml)
             temp_path = f.name
 
@@ -1016,7 +1020,9 @@ class ThemeInheritanceUtilTest(unittest.TestCase):
         primaryColor = "#ff0000"
         """
 
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".toml", delete=False) as f:
+        with tempfile.NamedTemporaryFile(
+            encoding="utf-8", mode="w", suffix=".toml", delete=False
+        ) as f:
             f.write(invalid_toml)
             temp_path = f.name
 
@@ -1040,7 +1046,9 @@ class ThemeInheritanceUtilTest(unittest.TestCase):
             + "A" * (config_util._MAX_THEME_FILE_SIZE_BYTES + 1000)
         )
 
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".toml", delete=False) as f:
+        with tempfile.NamedTemporaryFile(
+            encoding="utf-8", mode="w", suffix=".toml", delete=False
+        ) as f:
             f.write(large_content)
             temp_path = f.name
 

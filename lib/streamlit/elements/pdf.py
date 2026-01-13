@@ -135,8 +135,7 @@ class PdfMixin:
             else:
                 # It's a local file path - read the content as bytes for security
                 try:
-                    with open(data_str, "rb") as file:
-                        file_param = file.read()
+                    file_param = Path(data_str).read_bytes()
                 except (FileNotFoundError, PermissionError) as e:
                     raise StreamlitAPIException(
                         f"Unable to read file '{data_str}': {e}"

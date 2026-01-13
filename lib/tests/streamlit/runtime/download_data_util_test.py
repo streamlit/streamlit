@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import io
 import os
+import pathlib
 import tempfile
 import unittest
 
@@ -41,8 +42,7 @@ class ConvertDataToBytesAndInferMimeTest(unittest.TestCase):
         fd, path = tempfile.mkstemp(text=True)
         os.close(fd)
         try:
-            with open(path, "w", encoding="utf-8") as f:
-                f.write(content)
+            pathlib.Path(path).write_text(content, encoding="utf-8")
             with open(path, encoding="utf-8") as text_io:
                 data_as_bytes, mime = convert_data_to_bytes_and_infer_mime(
                     text_io, unsupported_error=RuntimeError("unsupported")
@@ -81,8 +81,7 @@ class ConvertDataToBytesAndInferMimeTest(unittest.TestCase):
         os.close(fd)
         payload = b"\x10\x20\x30\x40"
         try:
-            with open(path, "wb") as f:
-                f.write(payload)
+            pathlib.Path(path).write_bytes(payload)
             with open(path, "rb") as f:
                 f.read(2)  # simulate prior read
                 data_as_bytes, mime = convert_data_to_bytes_and_infer_mime(
@@ -102,8 +101,7 @@ class ConvertDataToBytesAndInferMimeTest(unittest.TestCase):
         os.close(fd)
         payload = b"\xaa\xbb\xcc"
         try:
-            with open(path, "wb") as f:
-                f.write(payload)
+            pathlib.Path(path).write_bytes(payload)
             with io.FileIO(path, "rb") as raw:  # type: ignore[arg-type]
                 raw.read(1)  # simulate prior read
                 data_as_bytes, mime = convert_data_to_bytes_and_infer_mime(

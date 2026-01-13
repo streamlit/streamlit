@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import time
+from collections import UserDict
 from typing import TYPE_CHECKING, Any, Final, cast
 from urllib.parse import urlparse
 
@@ -139,7 +140,7 @@ def _looks_like_provider_section(value: dict[str, Any]) -> bool:
     return any(key in value for key in provider_keys)
 
 
-class _AuthlibConfig(dict[str, Any]):
+class _AuthlibConfig(UserDict[str, Any]):
     """Config adapter that exposes provider data via Authlib's flat lookup.
 
     Authlib expects a flat configuration dictionary (e.g. "GOOGLE_CLIENT_ID").

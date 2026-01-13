@@ -33,9 +33,41 @@ docstring-code-line-length = "dynamic"
 line-ending = "lf"
 
 [lint]
+preview = true
+explicit-preview-rules = true
 # We activate all rules and only ignore the rules that we don't want to enforce
 # or that are not relevant for our codebase.
-select = ["ALL"]
+select = [
+  "ALL",
+  # Preview rules:
+  "ASYNC212",
+  "ASYNC250",
+  "B901",
+  "B909",
+  "B912",
+  "LOG004",
+  "PLC2701",
+  "PLE4703",
+  "PLR0202",
+  "PLR0203",
+  "PLR6301",
+  "PLW0244",
+  "PLW1514",
+  "PT029",
+  "RUF027",
+  "RUF031",
+  "RUF045",
+  "RUF055",
+  "RUF061",
+  "RUF056",
+  "FURB145",
+  "FURB142",
+  "FURB171",
+  "RUF038",
+  "FURB189",
+  "PLR6104",
+  "FURB154",
+]
 ignore = [
   # Rules planned to be supported in the future:
   "EM101",  # Checks for the use of string literals in exception constructors.
@@ -94,6 +126,19 @@ ignore = [
   "PT012",   # Checks for pytest.raises context managers with multiple statements.
   "PT019",   # Checks for tests that should use @pytest.mark.usefixtures (incompatible with unittest.patch)
   "PLC0415", # Enforces imports to be at the top-level of the file.
+  # Preview rules:
+  "PLR1702", # Checks for too many nested blocks.
+  "PLR6301", # Checks for unnecessary self usage.
+  "PLC2701", # Checks for imports of private names (underscore prefix).
+  "PLR0917", # Checks for too many positional arguments.
+  "PLC1901", # Checks for empty string comparisons.
+  "PLR6201",
+  "E266",    # Checks for multiple leading hashes for block comments.
+  "FURB152", # Checks for potential math constants.
+  "PLW0108", # Checks for usage of unncessary lambda functions.
+  "RUF052",  # Checks for usage of dummy variables.
+  "FURB118",
+  # "RUF067",
 ]
 exclude = [
   # pympler is a vendored dependency that doesn't conform to our linting rules:
@@ -113,6 +158,7 @@ extend-safe-fixes = ["TC002", "TC003"]
   "S",
   "TRY",
   "NPY002",
+  "RUF039",
 ]
 "lib/tests/**" = [
   "PD",
@@ -125,6 +171,7 @@ extend-safe-fixes = ["TC002", "TC003"]
   "TRY",
   "ANN",
   "NPY002",
+  "RUF029",
 ]
 "scripts/**" = ["T20", "INP", "PERF", "S", "TRY002"]
 

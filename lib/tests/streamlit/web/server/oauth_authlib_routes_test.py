@@ -15,13 +15,12 @@
 from __future__ import annotations
 
 import json
+from collections import UserDict
 from unittest.mock import MagicMock, patch
 
-import tornado.httpserver
 import tornado.httputil
 import tornado.testing
 import tornado.web
-import tornado.websocket
 from tornado.web import create_signed_value
 
 from streamlit.auth_util import encode_provider_token
@@ -35,7 +34,7 @@ from streamlit.web.server.oauth_authlib_routes import (
 from streamlit.web.server.server_util import AUTH_COOKIE_NAME, TOKENS_COOKIE_NAME
 
 
-class SecretMock(dict):
+class SecretMock(UserDict):
     def to_dict(self):
         return self
 

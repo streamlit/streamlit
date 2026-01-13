@@ -635,7 +635,7 @@ class SnowflakeCallersRightsConnection(SnowflakeConnection):
     @classmethod
     def _read_token_file(cls) -> str:
         """Returns the contents of the Snowpark token file on disk."""
-        with open(SNOWPARK_CONNECTION_TOKEN_FILE) as token_file:
+        with open(SNOWPARK_CONNECTION_TOKEN_FILE, encoding="utf-8") as token_file:
             return token_file.read()
 
     @classmethod

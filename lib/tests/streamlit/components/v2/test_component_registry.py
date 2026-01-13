@@ -319,16 +319,13 @@ def temp_test_files() -> dict:
 
     # Create test files
     js_path = os.path.join(temp_dir.name, "index.js")
-    with open(js_path, "w") as f:
-        f.write("console.log('test');")
+    Path(js_path).write_text("console.log('test');", encoding="utf-8")
 
     html_path = os.path.join(temp_dir.name, "index.html")
-    with open(html_path, "w") as f:
-        f.write("<div>Test</div>")
+    Path(html_path).write_text("<div>Test</div>", encoding="utf-8")
 
     css_path = os.path.join(temp_dir.name, "styles.css")
-    with open(css_path, "w") as f:
-        f.write("div { color: blue; }")
+    Path(css_path).write_text("div { color: blue; }", encoding="utf-8")
 
     yield {
         "temp_dir": temp_dir,
@@ -348,8 +345,7 @@ def temp_manager_setup() -> dict:
 
     # Create test files
     js_path = os.path.join(temp_dir.name, "index.js")
-    with open(js_path, "w") as f:
-        f.write("console.log('test');")
+    Path(js_path).write_text("console.log('test');", encoding="utf-8")
 
     yield {
         "temp_dir": temp_dir,
@@ -759,8 +755,7 @@ def test_resolve_glob_pattern_direct() -> None:
 
         # Create test file
         test_file = os.path.join(temp_dir, "test-pattern.js")
-        with open(test_file, "w") as f:
-            f.write("console.log('test');")
+        Path(test_file).write_text("console.log('test');", encoding="utf-8")
 
         # Test successful resolution
         resolved = ComponentPathUtils.resolve_glob_pattern("test-*.js", package_root)
@@ -773,8 +768,7 @@ def test_resolve_glob_pattern_direct() -> None:
 
         # Test multiple matches
         duplicate_file = os.path.join(temp_dir, "test-duplicate.js")
-        with open(duplicate_file, "w") as f:
-            f.write("console.log('duplicate');")
+        Path(duplicate_file).write_text("console.log('duplicate');", encoding="utf-8")
 
         with pytest.raises(StreamlitComponentRegistryError) as exc_info:
             ComponentPathUtils.resolve_glob_pattern("test-*.js", package_root)

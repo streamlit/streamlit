@@ -20,6 +20,7 @@ import copy
 import json
 import logging
 import os
+import pathlib
 import secrets
 import threading
 from collections import OrderedDict
@@ -2667,8 +2668,7 @@ def get_config_options(
             if not os.path.exists(filename):
                 continue
 
-            with open(filename, encoding="utf-8") as file:
-                file_contents = file.read()
+            file_contents = pathlib.Path(filename).read_text(encoding="utf-8")
 
             _update_config_with_toml(file_contents, filename)
 

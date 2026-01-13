@@ -224,7 +224,7 @@ def _clip_image(image: npt.NDArray[Any], clamp: bool) -> npt.NDArray[Any]:
             data = np.clip(image, 0, 1.0)
         elif np.amin(image) < 0.0 or np.amax(image) > 1.0:
             raise RuntimeError("Data is outside [0.0, 1.0] and clamp is not set.")
-        data = data * 255
+        data *= 255
     elif clamp:
         data = np.clip(image, 0, 255)
     elif np.amin(image) < 0 or np.amax(image) > 255:
@@ -265,8 +265,7 @@ def image_to_url(
 
         if image.endswith(".svg") and os.path.isfile(image):
             # Unpack local SVG image file to an SVG string
-            with open(image) as textfile:
-                image = textfile.read()
+            image = Path(image).read_text(encoding="utf-8")
 
         # Following regex allows svg image files to start either via a "<?xml...>" tag
         # eventually followed by a "<svg...>" tag or directly starting with a "<svg>" tag
@@ -286,8 +285,7 @@ def image_to_url(
 
         # Otherwise, try to open it as a file.
         try:
-            with open(image, "rb") as f:
-                image_data = f.read()
+            image_data = Path(image).read_bytes()
         except Exception:
             # When we aren't able to open the image file, we still pass the path to
             # the MediaFileManager - its storage backend may have access to files

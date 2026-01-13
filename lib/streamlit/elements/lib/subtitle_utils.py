@@ -118,8 +118,7 @@ def _handle_string_or_path_data(data_or_path: str | Path) -> bytes:
                 f"Incorrect subtitle format {file_extension}. Subtitles must be in "
                 f"one of the following formats: {', '.join(SUBTITLE_ALLOWED_FORMATS)}"
             )
-        with open(data_or_path, "rb") as file:
-            content = file.read()
+        content = Path(data_or_path).read_bytes()
         return _srt_to_vtt(content) if file_extension == ".srt" else content
     if isinstance(data_or_path, Path):
         raise ValueError(f"File {data_or_path} does not exist.")  # noqa: TRY004
