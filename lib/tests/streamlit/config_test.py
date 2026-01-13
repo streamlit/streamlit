@@ -1617,7 +1617,7 @@ class ThemeInheritanceIntegrationTest(unittest.TestCase):
 
         # Use the same pattern as other tests in the repo
         with tempfile.NamedTemporaryFile(
-            mode="w", suffix=f"_{filename}", delete=False
+            encoding="utf-8", mode="w", suffix=f"_{filename}", delete=False
         ) as f:
             f.write(content)
             return f.name

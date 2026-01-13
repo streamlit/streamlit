@@ -17,11 +17,9 @@ from __future__ import annotations
 import json
 from unittest.mock import MagicMock, patch
 
-import tornado.httpserver
 import tornado.httputil
 import tornado.testing
 import tornado.web
-import tornado.websocket
 from tornado.web import create_signed_value
 
 from streamlit.auth_util import encode_provider_token

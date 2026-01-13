@@ -218,7 +218,7 @@ class AppTest:
 
         path = Path(TMP_DIR.name, script_name)
         aligned_script = textwrap.dedent(script)
-        path.write_text(aligned_script)
+        path.write_text(aligned_script, encoding="utf-8")
         return AppTest(
             str(path), default_timeout=default_timeout, args=args, kwargs=kwargs
         )
