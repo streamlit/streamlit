@@ -146,18 +146,18 @@ def make_bidi_component_presenter(
                         memo[id(self)] = self
                         return self
 
-                    def __setitem__(self, k: str, v: object) -> None:
-                        _check_modification(k)
+                    def __setitem__(self, key: str, item: object) -> None:
+                        _check_modification(key)
 
                         if (
                             allowed_state_keys is not None
-                            and k not in allowed_state_keys
+                            and key not in allowed_state_keys
                         ):
                             # Silently ignore invalid keys to match permissive session_state semantics
                             return
 
                         # Update the underlying stored base state and this dict
-                        super().__setitem__(k, v)
+                        super().__setitem__(key, item)
                         try:
                             # Store back to session state's widget store as a flat mapping
                             ss = session_state
@@ -169,10 +169,10 @@ def make_bidi_component_presenter(
                         except Exception as e:
                             _LOGGER.debug("Failed to persist CCv2 state update: %s", e)
 
-                    def __delitem__(self, k: str) -> None:
-                        _check_modification(k)
+                    def __delitem__(self, key: str) -> None:
+                        _check_modification(key)
 
-                        super().__delitem__(k)
+                        super().__delitem__(key)
                         try:
                             ss = session_state
                             if component_id is not None:
