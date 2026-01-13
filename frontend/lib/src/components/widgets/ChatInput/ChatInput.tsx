@@ -186,9 +186,7 @@ function ChatInput({
   const [audioUploading, setAudioUploading] = useState(false)
   const [recordingError, setRecordingError] = useState<string | null>(null)
 
-  // Counter to force re-render of dropzone-related components when files are cleared.
-  // Incremented directly when files are cleared (not via useEffect) to avoid
-  // deriving state from state changes.
+  // Forces dropzone to remount when files are cleared
   const [dropzoneResetCounter, setDropzoneResetCounter] = useState(0)
 
   // Read acceptAudio from the element configuration
