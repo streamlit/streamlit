@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# ruff: noqa: RUF027 - We allow template strings in exception messages.
+
 from __future__ import annotations
 
 import os
@@ -341,19 +343,19 @@ class StreamlitMixedNumericTypesError(LocalizableStreamlitException):
 
         if value:
             value_type = type(value).__name__
-            error_message += f"\n`value` has {value_type} type."
+            error_message += "\n`value` has {value_type} type."
 
         if min_value:
             min_value_type = type(min_value).__name__
-            error_message += f"\n`min_value` has {min_value_type} type."
+            error_message += "\n`min_value` has {min_value_type} type."
 
         if max_value:
             max_value_type = type(max_value).__name__
-            error_message += f"\n`max_value` has {max_value_type} type."
+            error_message += "\n`max_value` has {max_value_type} type."
 
         if step:
             step_type = type(step).__name__
-            error_message += f"\n`step` has {step_type} type."
+            error_message += "\n`step` has {step_type} type."
 
         super().__init__(
             error_message,
@@ -443,7 +445,7 @@ class StreamlitPageNotFoundError(LocalizableStreamlitException):
         directory = os.path.basename(main_script_directory)
 
         message = (
-            f"Could not find page: `{page}`. You must provide a `StreamlitPage` "
+            "Could not find page: `{page}`. You must provide a `StreamlitPage` "
             "object or file path relative to the entrypoint file. Only pages "
             "previously defined by `st.Page` and passed to `st.navigation` are "
             "allowed."
@@ -451,8 +453,8 @@ class StreamlitPageNotFoundError(LocalizableStreamlitException):
 
         if uses_pages_directory:
             message = (
-                f"Could not find page: `{page}`. You must provide a file path "
-                f"relative to the entrypoint file (from the directory `{directory}`). "
+                "Could not find page: `{page}`. You must provide a file path "
+                "relative to the entrypoint file (from the directory `{directory}`). "
                 "Only the entrypoint file and files in the `pages/` directory are supported."
             )
 
