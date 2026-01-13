@@ -107,11 +107,20 @@ def _new_fragment_id_queue(
 def _set_query_params_for_switch(
     query_params_state: QueryParams,
     new_query_params: QueryParamsInput | None,
+    main_script_hash: str | None = None,
 ) -> None:
-    """Set query params for a switch page."""
+    """Set query params for a switch page.
 
+    If main_script_hash is provided and new_query_params is None, preserves
+    query params for entry point widgets (widgets bound from the main script)
+    while clearing page-specific widget params.
+    """
     if new_query_params is None:
-        query_params_state.clear()
+        if main_script_hash is not None:
+            # Preserve params for entry point widgets only
+            query_params_state.clear_except_entry_point_bindings(main_script_hash)
+        else:
+            query_params_state.clear()
         return
 
     if isinstance(new_query_params, Mapping) or (
@@ -298,8 +307,11 @@ def switch_page(  # type: ignore[misc]
         page_script_hash = matched_pages[0]["page_script_hash"]
 
     # Reset query params (with exception of embed) and optionally apply overrides.
+    # Pass main_script_hash to preserve entry point widget params.
     with ctx.session_state.query_params() as qp:
-        _set_query_params_for_switch(qp, query_params)
+        _set_query_params_for_switch(
+            qp, query_params, main_script_hash=ctx.pages_manager.main_script_hash
+        )
         # Additional safeguard to ensure the query params
         #  are sent out to the frontend before the new rerun might clear
         # outstanding messages. This uses the same time that is used as waiting

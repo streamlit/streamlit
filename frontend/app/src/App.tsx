@@ -81,7 +81,6 @@ import {
   getHostSpecifiedThemeOnly,
   getIFrameEnclosingApp,
   getLocaleLanguage,
-  getQueryString,
   getScreencastTimestamp,
   getTimezone,
   getTimezoneOffset,
@@ -282,6 +281,11 @@ export class App extends PureComponent<Props, State> {
   // we have received a NewSession message after the latest rerun request.
   // This will allow us to ignore finished messages from previous script runs.
   private hasReceivedNewSession: boolean = false
+
+  // Whether we're currently navigating to a new page.
+  // This is used to skip URL updates in handlePageInfoChanged during page navigation,
+  // since maybeUpdatePageUrl will handle the pushState with the correct path.
+  private isNavigatingToNewPage: boolean = false
 
   public constructor(props: Props) {
     super(props)
@@ -1091,9 +1095,17 @@ export class App extends PureComponent<Props, State> {
 
   handlePageInfoChanged = (pageInfo: PageInfo): void => {
     const { queryString } = pageInfo
-    const targetUrl =
-      document.location.pathname + (queryString ? `?${queryString}` : "")
-    window.history.pushState({}, "", targetUrl)
+
+    // Only update URL if we're NOT navigating to a new page.
+    // During page navigation, maybeUpdatePageUrl will handle the URL update
+    // with the correct new path via pushState.
+    if (!this.isNavigatingToNewPage) {
+      const targetUrl =
+        document.location.pathname + (queryString ? `?${queryString}` : "")
+      // Use replaceState for query param changes within same page
+      // (similar to how widget-driven changes use replaceState)
+      window.history.replaceState({}, "", targetUrl)
+    }
 
     this.setState({ queryParams: queryString })
 
@@ -1296,6 +1308,9 @@ export class App extends PureComponent<Props, State> {
 
         window.history.pushState({}, "", pageUrl)
       }
+
+      // Reset the navigation flag after URL is updated
+      this.isNavigatingToNewPage = false
     }
   }
 
@@ -1847,6 +1862,10 @@ export class App extends PureComponent<Props, State> {
   ): void => {
     const { elements, mainScriptHash } = this.state
 
+    // Mark that we're navigating to a new page so handlePageInfoChanged
+    // knows not to update the URL (maybeUpdatePageUrl will handle it)
+    this.isNavigatingToNewPage = true
+
     // We are about to change the page, so clear all auto reruns
     // This also happens in handleNewSession, but it might be too late compared
     // to small interval values, which might trigger a rerun before the new
@@ -1890,7 +1909,7 @@ export class App extends PureComponent<Props, State> {
     pageScriptHash?: string,
     isAutoRerun?: boolean,
     queryStringOverride?: string,
-    preserveQueryParams?: boolean
+    _preserveQueryParams?: boolean
   ): void => {
     const baseUriParts = this.getBaseUriParts()
     if (!baseUriParts) {
@@ -1903,7 +1922,7 @@ export class App extends PureComponent<Props, State> {
     }
 
     const { currentPageScriptHash } = this.state
-    let queryString = queryStringOverride ?? this.getQueryString()
+    const queryString = queryStringOverride ?? this.getQueryString()
     let pageName = ""
 
     const contextInfo = {
@@ -1918,21 +1937,20 @@ export class App extends PureComponent<Props, State> {
     if (pageScriptHash) {
       // The user specified exactly which page to run. We can simply use this
       // value in the BackMsg we send to the server.
-      if (pageScriptHash !== currentPageScriptHash && !preserveQueryParams) {
-        // Clear non-embed query parameters within a page change while we wait
-        // for the server to send updated query params (if any).
-        // Skip clearing if preserveQueryParams is true (e.g., browser back/forward
-        // navigation where query params from the URL should be preserved).
-        const preservedQueryParams = preserveEmbedQueryParams()
-
-        queryString = getQueryString(queryStringOverride, preservedQueryParams)
-
-        this.setState({ queryParams: queryString })
-        this.hostCommunicationMgr.sendMessageToHost({
-          type: "SET_QUERY_PARAM",
-          queryParams: queryString,
-        })
-      }
+      //
+      // Query param handling on page change:
+      // - We pass all current query params to the backend in the rerun request
+      // - The backend filters params based on widget bindings:
+      //   - Entry point widget params: preserved
+      //   - Current page widget params: preserved
+      //   - Other page widget params: dropped
+      //   - Embed params: always preserved
+      //   - User-managed params: preserved
+      // - The backend sends a ForwardMsg (page_info_changed) with filtered params
+      // - handlePageInfoChanged() updates URL, state, and notifies host
+      //
+      // This approach ensures the backend is the source of truth for which
+      // params to keep, avoiding frontend/backend desync.
     } else if (currentPageScriptHash) {
       // The user didn't specify which page to run, which happens when they
       // click the "Rerun" button in the main menu. In this case, we

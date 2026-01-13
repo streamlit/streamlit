@@ -112,10 +112,12 @@ export function useQueryParamBinding<T>({
 
   // Track if we've already registered to avoid duplicate registrations
   const isRegisteredRef = useRef(false)
-  // Track if we've already auto-corrected the URL
-  const hasAutoCorrectedRef = useRef(false)
 
-  // Register/unregister the binding
+  // Register/unregister the binding.
+  // Note: We do NOT clear query params on unmount here. The backend handles:
+  // - Preserving entry point widget params during page switches
+  // - Clearing page-specific widget params during page switches
+  // For conditional widgets, the re-sync effect handles restoration when they remount.
   useEffect(() => {
     if (!isBound || !paramKey || isRegisteredRef.current) {
       return
@@ -135,17 +137,15 @@ export function useQueryParamBinding<T>({
     }
   }, [elementId, paramKey, isBound, serializer, deserializer, widgetMgr])
 
-  // Auto-correct URL on mount if needed.
+  // Sync widget value to URL when needed.
   // This handles:
-  // 1. Invalid URL values that were corrected by the backend
-  // 2. Default values in URL that should be cleared (keep URLs clean)
+  // 1. Auto-correction: URL has invalid value that backend corrected
+  // 2. Default cleanup: URL has param but value is default (remove it)
+  // 3. Re-sync after page switch: URL was cleared but widget has non-default state
+  //    (important for MPA v2 entry point widgets)
   useEffect(() => {
-    // Skip if not bound, value is undefined, or already corrected
-    if (
-      !isBound ||
-      currentValue === undefined ||
-      hasAutoCorrectedRef.current
-    ) {
+    // Skip if not bound or value is undefined
+    if (!isBound || currentValue === undefined) {
       return
     }
 
@@ -165,12 +165,12 @@ export function useQueryParamBinding<T>({
         // URL value is invalid or differs from current - correct it
         widgetMgr.syncWidgetToQueryParams(elementId, currentValue)
       }
+    } else if (!isCurrentDefault) {
+      // URL doesn't have param but widget has non-default value.
+      // This happens for entry point widgets after page switch clears URL.
+      // Re-sync to restore the param.
+      widgetMgr.syncWidgetToQueryParams(elementId, currentValue)
     }
-    // Note: If URL doesn't have param and value is non-default, we don't sync
-    // on initial load. This prevents cluttering URLs when navigating to pages.
-    // Values only sync to URL when explicitly changed by the user.
-
-    hasAutoCorrectedRef.current = true
   }, [
     isBound,
     currentValue,

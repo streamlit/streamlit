@@ -175,14 +175,16 @@ class ScriptRunContext:
             # host communication path in embedded scenarios)
             qp.update_initial_query_params(query_string)
 
-            qp.clear_with_no_forward_msg()
-            for key, val in parsed_query_params.items():
-                if len(val) == 0:
-                    qp.set_with_no_forward_msg(key, val="")
-                elif len(val) == 1:
-                    qp.set_with_no_forward_msg(key, val=val[-1])
-                else:
-                    qp.set_with_no_forward_msg(key, val)
+            # Clear and repopulate, preserving entry point and current page params.
+            # For params bound to widgets, keep if the widget is from:
+            # - The main script (entry point widget)
+            # - The current page (we're staying on or navigating to this page)
+            # Drop params for widgets from OTHER pages (we're leaving those pages).
+            main_script_hash = self.pages_manager.main_script_hash
+            current_page_hash = page_script_hash or main_script_hash
+            qp.clear_and_repopulate_preserving_entry_point_bindings(
+                parsed_query_params, main_script_hash, current_page_hash
+            )
 
     def on_script_start(self) -> None:
         self._has_script_started = True

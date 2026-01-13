@@ -616,11 +616,13 @@ def register_widget_from_metadata(
             # Use context manager to access query_params from SafeSessionState
             with ctx.session_state.query_params() as query_params:
                 # Register the binding for two-way sync
+                # Pass active_script_hash to track if this is an entry point widget
                 query_params.bind_widget(
                     param_key=param_key,
                     widget_id=widget_id,
                     serializer=query_param_serializer,
                     deserializer=query_param_deserializer,
+                    script_hash=ctx.active_script_hash,
                 )
 
                 # Check if there's an initial value from the URL to use.

@@ -56,6 +56,7 @@ class WidgetBinding:
     param_key: str
     serializer: QueryParamSerializer
     deserializer: QueryParamDeserializer
+    script_hash: str  # The script hash when this widget was bound (main vs page)
 
 
 @dataclass
@@ -256,6 +257,38 @@ class QueryParams(MutableMapping[str, str]):
         self.clear_with_no_forward_msg(preserve_embed=True)
         self._send_query_param_msg()
 
+    def clear_except_entry_point_bindings(self, main_script_hash: str) -> None:
+        """Clear all query params except those bound to entry point widgets.
+
+        Entry point widgets are those bound from the main script (app.py in MPA v2).
+        Their params should persist across page switches since the widgets themselves
+        persist in the entry point file.
+
+        Parameters
+        ----------
+        main_script_hash : str
+            The hash of the main script. Widgets bound with this hash are
+            considered entry point widgets.
+        """
+        self._ensure_single_query_api_used()
+
+        # Collect params to preserve: embed params + entry point widget params
+        params_to_preserve: dict[str, list[str] | str] = {}
+
+        for key, value in self._query_params.items():
+            # Always preserve embed params
+            if key.lower() in EMBED_QUERY_PARAMS_KEYS:
+                params_to_preserve[key] = value
+                continue
+
+            # Preserve params bound to entry point widgets (main script)
+            binding = self._bindings_by_param.get(key)
+            if binding is not None and binding.script_hash == main_script_hash:
+                params_to_preserve[key] = value
+
+        self._query_params = params_to_preserve
+        self._send_query_param_msg()
+
     def to_dict(self) -> dict[str, str]:
         self._ensure_single_query_api_used()
         # return the last query param if multiple values are set
@@ -290,6 +323,76 @@ class QueryParams(MutableMapping[str, str]):
             if key.lower() in EMBED_QUERY_PARAMS_KEYS and preserve_embed
         }
 
+    def clear_and_repopulate_preserving_entry_point_bindings(
+        self,
+        new_params: dict[str, list[str]],
+        main_script_hash: str,
+        current_page_hash: str,
+    ) -> None:
+        """Clear params and repopulate, keeping entry point and current page params.
+
+        For params that are bound to widgets, keep them if:
+        - The widget is from the main script (entry point file)
+        - The widget is from the current page (the page we're on/navigating to)
+
+        Drop params for widgets from OTHER pages (pages we're leaving).
+
+        Parameters
+        ----------
+        new_params : dict[str, list[str]]
+            Parsed query parameters from the URL (from parse.parse_qs).
+        main_script_hash : str
+            The hash of the main script. Widgets bound with this hash are
+            considered entry point widgets.
+        current_page_hash : str
+            The hash of the current/target page. Widgets bound with this hash
+            are on the current page and should be kept.
+        """
+        filtered_params: dict[str, list[str] | str] = {}
+
+        for key, val in new_params.items():
+            # Always keep embed params
+            if key.lower() in EMBED_QUERY_PARAMS_KEYS:
+                if len(val) == 0:
+                    filtered_params[key] = ""
+                elif len(val) == 1:
+                    filtered_params[key] = val[-1]
+                else:
+                    filtered_params[key] = val
+                continue
+
+            # Check if this param is bound to a widget
+            binding = self._bindings_by_param.get(key)
+
+            if binding is None:
+                # Not bound to any widget - keep it (user-managed param)
+                if len(val) == 0:
+                    filtered_params[key] = ""
+                elif len(val) == 1:
+                    filtered_params[key] = val[-1]
+                else:
+                    filtered_params[key] = val
+            elif binding.script_hash in (main_script_hash, current_page_hash):
+                # Bound to entry point OR current page widget - keep it
+                if len(val) == 0:
+                    filtered_params[key] = ""
+                elif len(val) == 1:
+                    filtered_params[key] = val[-1]
+                else:
+                    filtered_params[key] = val
+            # else: Bound to a DIFFERENT page's widget - drop it
+
+        # Check if we actually filtered anything out
+        old_keys = set(new_params.keys())
+        new_keys = set(filtered_params.keys())
+        dropped_keys = old_keys - new_keys
+
+        self._query_params = filtered_params
+
+        # If we dropped any params, send a forward message to update the frontend
+        if dropped_keys:
+            self._send_query_param_msg()
+
     def _ensure_single_query_api_used(self) -> None:
         ctx = get_script_run_ctx()
         if ctx is None:
@@ -304,6 +407,7 @@ class QueryParams(MutableMapping[str, str]):
         widget_id: str,
         serializer: QueryParamSerializer,
         deserializer: QueryParamDeserializer,
+        script_hash: str,
     ) -> None:
         """Bind a widget to a query parameter with serialization functions.
 
@@ -322,6 +426,10 @@ class QueryParams(MutableMapping[str, str]):
             Function to convert widget value to query param string(s).
         deserializer : QueryParamDeserializer
             Function to convert query param string(s) to widget value.
+        script_hash : str
+            The active script hash when this widget was bound. Used to
+            determine if the widget is an entry point widget (main script)
+            or a page-specific widget.
         """
         if param_key.lower() in EMBED_QUERY_PARAMS_KEYS:
             # Silently ignore attempts to bind to embed params
@@ -335,6 +443,7 @@ class QueryParams(MutableMapping[str, str]):
             param_key=param_key,
             serializer=serializer,
             deserializer=deserializer,
+            script_hash=script_hash,
         )
         self._bindings_by_param[param_key] = binding
         self._bindings_by_widget[widget_id] = binding
