@@ -20,13 +20,13 @@ import { createShadows } from "~lib/theme/getShadows"
 
 import genericColors from "./themeColors"
 
-// Create colors first (includes derived colors like darkenedBgMix25)
+// Create colors (includes derived colors)
 const colors = createEmotionColors({
   ...emotionBaseTheme.colors,
   ...genericColors,
 })
 
-// Create shadows - auto-determines light/dark based on bgColor luminance
+// Create shadows (dependent on colors/derived colors)
 const shadows = createShadows(colors)
 
 export default {

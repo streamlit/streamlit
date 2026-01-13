@@ -41,8 +41,8 @@ export type ThemeShadows = ElevationShadows & DerivedShadows
 /**
  * Create the complete shadows object for a theme.
  *
- * Automatically determines light/dark elevation shadows based on background luminance
- * (threshold: 0.5), then derives focus ring shadows from theme colors.
+ * Determines light/dark elevation shadows based on background
+ * luminance, then derives focus ring shadows from theme colors.
  *
  * @param colors - Emotion theme colors containing:
  *   - `bgColor`: Background color used to determine light/dark elevation shadows
