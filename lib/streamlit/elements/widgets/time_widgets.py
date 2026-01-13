@@ -472,7 +472,7 @@ class TimeInputSerde:
         return time.strftime(v, "%H:%M")
 
 
-def _validate_and_reset_date_value(
+def _validate_date_value(
     current_value: DateWidgetReturn,
     parsed_values: _DateInputValues,
     has_explicit_bounds: bool,
@@ -1632,19 +1632,20 @@ class TimeWidgetsMixin:
             value_type="string_array_value",
         )
 
-        # Validate the current value against the new min/max bounds and reset if needed.
+        # Validate the current value against the new min/max bounds.
         # Only validate when user explicitly provided min_value or max_value.
-        current_value, value_was_reset = _validate_and_reset_date_value(
+        current_value, value_needs_reset = _validate_date_value(
             widget_state.value, parsed_values, has_explicit_bounds
         )
 
-        if value_was_reset and key is not None:
+        # Reset if needed.
+        if value_needs_reset and key is not None:
             # Update session_state so subsequent accesses in this run
             # return the corrected value. Use reset_state_value to avoid
             # the "cannot be modified after widget instantiated" error.
             get_session_state().reset_state_value(key, current_value)
 
-        if value_was_reset or widget_state.value_changed:
+        if value_needs_reset or widget_state.value_changed:
             date_input_proto.value[:] = serde.serialize(current_value)
             date_input_proto.set_value = True
 
