@@ -19,7 +19,7 @@ import pytest
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
-from e2e_playwright.shared.app_utils import expect_no_skeletons
+from e2e_playwright.shared.app_utils import expect_no_skeletons, reset_focus
 
 
 @pytest.fixture(scope="module")
@@ -230,8 +230,8 @@ def test_theme_preference_persists_on_reload(
     # Wait for dialog to fully disappear
     expect(app.get_by_test_id("stDialog")).to_have_count(0)
 
-    # Move mouse away from interactive elements to avoid hover states in snapshot
-    app.mouse.move(0, 0)
+    # Reset focus and hover states to avoid them appearing in snapshot
+    reset_focus(app)
 
     assert_snapshot(app, name="persisted_on_reload_before", image_threshold=0.0003)
 
@@ -261,7 +261,7 @@ def test_theme_preference_persists_on_reload(
     # Wait for dialog to fully disappear
     expect(app.get_by_test_id("stDialog")).to_have_count(0)
 
-    # Move mouse away from interactive elements to avoid hover states in snapshot
-    app.mouse.move(0, 0)
+    # Reset focus and hover states to avoid them appearing in snapshot
+    reset_focus(app)
 
     assert_snapshot(app, name="persisted_on_reload_after", image_threshold=0.0003)
