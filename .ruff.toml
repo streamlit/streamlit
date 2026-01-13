@@ -104,7 +104,7 @@ ignore = [
   "PLR0917",  # Checks for functions with too many positional arguments.
   "RUF039",   # Checks for unraw regex patterns.
   "RUF029",   # Checks for async functions with no await statements.
-  "RUF067",   # Checks for unused noqa directives.
+  "RUF067",   # Checks for non empty __init__ modules.
   "FURB101",  # Checks for open and read calls that can be replaced by pathlib.
   "RUF036",   # Checks for None not at the end of union types.
   "FURB103",  # Checks for open and write calls that can be replaced by pathlib.
