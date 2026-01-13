@@ -614,7 +614,11 @@ class QueryParams(MutableMapping[str, str]):
         self._bindings_by_widget.clear()
 
     def remove_stale_bindings(self, active_widget_ids: set[str]) -> None:
-        """Remove bindings for widgets that are no longer active.
+        """Remove bindings and params for widgets that are no longer active.
+
+        This cleans up orphaned query params for widgets that didn't run in
+        the current script execution (e.g., conditional widgets that are hidden,
+        widgets in closed dialogs, etc.).
 
         Parameters
         ----------
@@ -624,8 +628,26 @@ class QueryParams(MutableMapping[str, str]):
         stale_widget_ids = [
             wid for wid in self._bindings_by_widget if wid not in active_widget_ids
         ]
+
+        # Collect param keys to remove before unbinding
+        params_to_remove = []
+        for widget_id in stale_widget_ids:
+            binding = self._bindings_by_widget.get(widget_id)
+            if binding and binding.param_key in self._query_params:
+                params_to_remove.append(binding.param_key)
+
+        # Unbind the stale widgets
         for widget_id in stale_widget_ids:
             self.unbind_widget(widget_id)
+
+        # Remove the orphaned params from _query_params
+        for param_key in params_to_remove:
+            if param_key in self._query_params:
+                del self._query_params[param_key]
+
+        # If we removed any params, notify the frontend
+        if params_to_remove:
+            self._send_query_param_msg()
 
 
 def missing_key_error_message(key: str) -> str:

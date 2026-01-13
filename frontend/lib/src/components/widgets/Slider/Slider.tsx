@@ -156,7 +156,11 @@ function Slider({
         if (isSelectSlider) {
           return deserializeSelectSlider(value, options)
         }
-        return deserializeNumberRange(value)
+        // deserializeNumberRange returns number | [number, number] | undefined
+        // but slider's internal state is number[], so convert to match
+        const result = deserializeNumberRange(value)
+        if (result === undefined) return undefined
+        return Array.isArray(result) ? result : [result]
       },
     [isSelectSlider, options]
   )

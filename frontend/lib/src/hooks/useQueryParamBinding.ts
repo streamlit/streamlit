@@ -113,11 +113,19 @@ export function useQueryParamBinding<T>({
   // Track if we've already registered to avoid duplicate registrations
   const isRegisteredRef = useRef(false)
 
-  // Register/unregister the binding.
-  // Note: We do NOT clear query params on unmount here. The backend handles:
-  // - Preserving entry point widget params during page switches
-  // - Clearing page-specific widget params during page switches
-  // For conditional widgets, the re-sync effect handles restoration when they remount.
+  // Store refs for unmount cleanup (to access current values without deps)
+  const elementIdRef = useRef(elementId)
+  const isBoundRef = useRef(isBound)
+  const widgetMgrRef = useRef(widgetMgr)
+
+  // Update refs in an effect to satisfy linting rules
+  useEffect(() => {
+    elementIdRef.current = elementId
+    isBoundRef.current = isBound
+    widgetMgrRef.current = widgetMgr
+  })
+
+  // Register the binding (no cleanup here - unmount effect handles everything)
   useEffect(() => {
     if (!isBound || !paramKey || isRegisteredRef.current) {
       return
@@ -130,12 +138,23 @@ export function useQueryParamBinding<T>({
       deserializer,
     })
     isRegisteredRef.current = true
-
-    return (): void => {
-      widgetMgr.unregisterQueryParamBinding(elementId)
-      isRegisteredRef.current = false
-    }
   }, [elementId, paramKey, isBound, serializer, deserializer, widgetMgr])
+
+  // Unmount cleanup - clears query param AND unregisters binding.
+  // This uses empty deps so it ONLY runs on unmount.
+  // By not unregistering in the registration effect, we ensure the binding
+  // still exists when this cleanup runs.
+  useEffect(() => {
+    return (): void => {
+      if (isBoundRef.current) {
+        // Clear the query param from URL
+        widgetMgrRef.current.clearQueryParamForWidget(elementIdRef.current)
+        // Unregister the binding
+        widgetMgrRef.current.unregisterQueryParamBinding(elementIdRef.current)
+        isRegisteredRef.current = false
+      }
+    }
+  }, [])
 
   // Sync widget value to URL when needed.
   // This handles:

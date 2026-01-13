@@ -875,6 +875,10 @@ class SessionState:
         self._reset_triggers()
         self._remove_stale_widgets(widget_ids_this_run)
 
+        # Clean up stale query param bindings for widgets that didn't run
+        # (e.g., conditional widgets that are hidden, widgets in closed dialogs)
+        self.query_params.remove_stale_bindings(widget_ids_this_run)
+
     def _reset_triggers(self) -> None:
         """Set all trigger values in our state dictionary to False."""
         for state_id in self._new_widget_state:
