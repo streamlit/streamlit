@@ -28,10 +28,12 @@ from streamlit.auth_util import (
     clear_cookie_and_chunks,
     get_cookie_with_chunks,
     get_expose_tokens_config,
+    get_redirect_uri,
     get_signing_secret,
     set_cookie_with_chunks,
 )
 from streamlit.errors import StreamlitAuthError
+from streamlit.runtime.secrets import AttrDict
 
 # Simulates realistic Tornado cookie signing overhead (~100 bytes for signature, timestamp, etc.)
 MOCK_SIGNING_OVERHEAD = 100
@@ -99,6 +101,32 @@ class AuthUtilTest(unittest.TestCase):
         """Get the cookie signing secret from the configuration or secrets.toml."""
         x = get_signing_secret()
         assert x == "your_cookie_secret_here"
+
+    def test_get_redirect_uri_verbatim(self):
+        """Test get_redirect_uri returns the existing redirect_uri when present."""
+        auth_section = AttrDict({"redirect_uri": "https://example.com/callback"})
+        result = get_redirect_uri(auth_section)
+        assert result == "https://example.com/callback"
+
+    @patch(
+        "streamlit.auth_util.config",
+        MagicMock(
+            get_option=MagicMock(return_value=8502),
+        ),
+    )
+    def test_get_redirect_uri_with_port_placeholder(self):
+        """Test get_redirect_uri substitutes {port} in redirect_uri when present."""
+        auth_section = AttrDict(
+            {"redirect_uri": "http://localhost:{port}/oauth2callback"}
+        )
+        result = get_redirect_uri(auth_section)
+        assert result == "http://localhost:8502/oauth2callback"
+
+    def test_get_redirect_uri_not_present(self):
+        """Test get_redirect_uri returns None when redirect_uri is not in auth_section."""
+        auth_section = AttrDict({"client_id": "some_client_id"})
+        result = get_redirect_uri(auth_section)
+        assert result is None
 
 
 class ExposeTokensConfigTest(unittest.TestCase):

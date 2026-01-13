@@ -14,16 +14,16 @@
  * limitations under the License.
  */
 
-const DEFAULT_MAX_LENGTH = 36
+const DEFAULT_MAX_LENGTH = 16
 
 /**
  * Truncates a filename using middle truncation, preserving the file extension.
  *
  * @param filename - The filename to truncate
- * @param maxLength - Maximum length of the result (default: 36)
+ * @param maxLength - Maximum length of the result (default: 16)
  *
  * @example
- * truncateFilename("very-long-filename.pdf") // "very-lon...name.pdf"
+ * truncateFilename("very-long-filename.pdf") // "very-...me.pdf"
  * truncateFilename("short.txt") // "short.txt"
  * truncateFilename("long-name.txt", 20) // "long-...e.txt"
  */

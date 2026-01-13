@@ -239,7 +239,7 @@ function BaseDateTimeColumn(
           // The moment date should never be invalid here.
           return getErrorCell(
             toSafeString(cellData),
-            // eslint-disable-next-line @typescript-eslint/no-base-to-string
+
             `Invalid moment date. This should never happen. Please report this bug. \nError: ${momentDate.toString()}`
           )
         }

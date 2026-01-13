@@ -284,9 +284,9 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
                 else:
                     # Fallback for non-encoded query strings (shouldn't happen)
                     initial_query_string = qs_token
-        except KeyError:
+        except (KeyError, json.JSONDecodeError):
             # Just let existing_session_id=None if we run into any error while trying to
-            # extract it from the Sec-Websocket-Protocol header.
+            # extract it from the Sec-Websocket-Protocol header or parsing cookie JSON.
             pass
 
         # Map in any user-configured headers. Note that these override anything coming

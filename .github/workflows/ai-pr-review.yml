@@ -255,4 +255,7 @@ jobs:
           if [ "$VERDICT" = "CHANGES_REQUESTED" ]; then
             echo "Adding 'do-not-merge' label"
             gh pr edit ${{ env.PR_NUMBER }} --add-label "do-not-merge" --repo ${{ github.repository }}
+          elif [ "$VERDICT" = "APPROVED" ]; then
+            echo "Removing 'do-not-merge' label if present"
+            gh pr edit ${{ env.PR_NUMBER }} --remove-label "do-not-merge" --repo ${{ github.repository }} || true
           fi

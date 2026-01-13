@@ -27,7 +27,11 @@ import {
 } from "@emotion-icons/material-outlined"
 import { describe, expect, it } from "vitest"
 
-import { getFileTypeIcon } from "./getFileTypeIcon"
+import {
+  getFileExtension,
+  getFileTypeIcon,
+  isImageFile,
+} from "./getFileTypeIcon"
 
 describe("getFileTypeIcon", () => {
   describe("image files", () => {
@@ -156,5 +160,54 @@ describe("getFileTypeIcon", () => {
     it("handles directory-style paths", () => {
       expect(getFileTypeIcon("uploads/folder/document.pdf")).toBe(Article)
     })
+  })
+})
+
+describe("getFileExtension", () => {
+  it("extracts extension from simple filename", () => {
+    expect(getFileExtension("file.txt")).toBe("txt")
+    expect(getFileExtension("document.pdf")).toBe("pdf")
+  })
+
+  it("returns lowercase extension regardless of input case", () => {
+    expect(getFileExtension("Photo.JPG")).toBe("jpg")
+    expect(getFileExtension("Document.PDF")).toBe("pdf")
+    expect(getFileExtension("image.PnG")).toBe("png")
+  })
+
+  it("returns empty string for files without extension", () => {
+    expect(getFileExtension("Makefile")).toBe("")
+    expect(getFileExtension("README")).toBe("")
+  })
+
+  it("returns empty string for files ending with dot", () => {
+    expect(getFileExtension("file.")).toBe("")
+  })
+
+  it("extracts last extension from files with multiple dots", () => {
+    expect(getFileExtension("archive.tar.gz")).toBe("gz")
+    expect(getFileExtension("my.file.name.pdf")).toBe("pdf")
+  })
+
+  it("handles empty string", () => {
+    expect(getFileExtension("")).toBe("")
+  })
+})
+
+describe("isImageFile", () => {
+  it.each(["jpg", "jpeg", "png", "gif", "webp", "svg", "bmp"])(
+    "returns true for .%s files",
+    extension => {
+      expect(isImageFile(`photo.${extension}`)).toBe(true)
+    }
+  )
+
+  it("returns false for non-image files", () => {
+    expect(isImageFile("document.pdf")).toBe(false)
+    expect(isImageFile("script.py")).toBe(false)
+  })
+
+  it("returns false for files without extension", () => {
+    expect(isImageFile("Makefile")).toBe(false)
   })
 })
