@@ -142,7 +142,6 @@ extend-safe-fixes = ["TC002", "TC003"]
   "S",
   "TRY",
   "NPY002",
-  "RUF039",
 ]
 "lib/tests/**" = [
   "PD",
@@ -155,7 +154,6 @@ extend-safe-fixes = ["TC002", "TC003"]
   "TRY",
   "ANN",
   "NPY002",
-  "RUF029",
 ]
 "scripts/**" = ["T20", "INP", "PERF", "S", "TRY002"]
 
