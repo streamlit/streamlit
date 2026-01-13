@@ -822,8 +822,14 @@ function ChatInput({
           <StyledLeftCluster>
             {acceptFile !== AcceptFileValue.None && !isRecording && (
               <ChatFileUploadButton
-                getRootProps={getRootProps}
-                getInputProps={getInputProps}
+                key={dropzoneResetCounter}
+                onDrop={dropHandler}
+                multiple={
+                  acceptFile === AcceptFileValue.Multiple ||
+                  acceptFile === AcceptFileValue.Directory
+                }
+                accept={getAccept(element.fileType)}
+                maxSize={maxFileSize}
                 acceptFile={acceptFile}
                 disabled={disabled}
               />
