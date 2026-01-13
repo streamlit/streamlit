@@ -250,18 +250,28 @@ function ChatInput({
 
   // Manage stacked layout mode transitions
   // Switch to stacked when text fills the available width
-  // Only does cheap canvas measurement per keystroke - expensive reads are cached above
   useEffect(() => {
     if (value === "") {
       setIsStacked(false)
       return
     }
 
-    if (
-      isStacked ||
-      availableWidthRef.current <= 0 ||
-      !fontStringRef.current
-    ) {
+    if (isStacked) {
+      return
+    }
+
+    const textarea = chatInputRef.current
+    if (!textarea) {
+      return
+    }
+
+    // If measurements aren't cached yet, compute them now
+    if (availableWidthRef.current <= 0 || !fontStringRef.current) {
+      updateMeasurements(textarea)
+    }
+
+    // Still no measurements? Can't determine layout
+    if (availableWidthRef.current <= 0 || !fontStringRef.current) {
       return
     }
 
@@ -282,7 +292,7 @@ function ChatInput({
         setIsStacked(true)
       }
     }
-  }, [value, isStacked])
+  }, [value, isStacked, updateMeasurements])
 
   /**
    * @returns True if the user-specified state.value has not yet been synced to
