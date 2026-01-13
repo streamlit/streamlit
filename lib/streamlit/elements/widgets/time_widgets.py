@@ -1174,6 +1174,18 @@ class TimeWidgetsMixin:
         )
 
         if widget_state.value_changed:
+            # Validate min/max bounds for the updated value (e.g., from URL params)
+            if widget_state.value is not None:
+                if widget_state.value < datetime_values.min:
+                    raise StreamlitAPIException(
+                        f"The value `{widget_state.value}` is less than the `min_value` "
+                        f"of `{datetime_values.min}`."
+                    )
+                if widget_state.value > datetime_values.max:
+                    raise StreamlitAPIException(
+                        f"The value `{widget_state.value}` is greater than the `max_value` "
+                        f"of `{datetime_values.max}`."
+                    )
             date_time_input_proto.value[:] = serde.serialize(widget_state.value)
             date_time_input_proto.set_value = True
 
@@ -1610,6 +1622,27 @@ class TimeWidgetsMixin:
             bind=bind,
             query_param_key=query_param_key,
         )
+
+        # Always validate min/max bounds for URL-provided values
+        # (widget_state.value may differ from the original value parameter)
+        if widget_state.value:
+            # widget_state.value can be a single date or a tuple of dates
+            values_to_check = (
+                widget_state.value
+                if isinstance(widget_state.value, tuple)
+                else (widget_state.value,)
+            )
+            for date_val in values_to_check:
+                if date_val < parsed_values.min:
+                    raise StreamlitAPIException(
+                        f"The value `{date_val}` is less than the `min_value` "
+                        f"of `{parsed_values.min}`."
+                    )
+                if date_val > parsed_values.max:
+                    raise StreamlitAPIException(
+                        f"The value `{date_val}` is greater than the `max_value` "
+                        f"of `{parsed_values.max}`."
+                    )
 
         if widget_state.value_changed:
             date_input_proto.value[:] = serde.serialize(widget_state.value)
