@@ -227,6 +227,12 @@ def test_theme_preference_persists_on_reload(
     # Close settings dialog
     settings_dialog.get_by_role("button", name="Close").click()
 
+    # Wait for dialog to fully disappear
+    expect(app.get_by_test_id("stDialog")).to_have_count(0)
+
+    # Move mouse away from interactive elements to avoid hover states in snapshot
+    app.mouse.move(0, 0)
+
     assert_snapshot(app, name="persisted_on_reload_before", image_threshold=0.0003)
 
     # Force a full page reload
@@ -251,5 +257,11 @@ def test_theme_preference_persists_on_reload(
 
     # Close the dialog
     settings_dialog.get_by_role("button", name="Close").click()
+
+    # Wait for dialog to fully disappear
+    expect(app.get_by_test_id("stDialog")).to_have_count(0)
+
+    # Move mouse away from interactive elements to avoid hover states in snapshot
+    app.mouse.move(0, 0)
 
     assert_snapshot(app, name="persisted_on_reload_after", image_threshold=0.0003)
