@@ -75,6 +75,7 @@ function Checkbox({
     deserializer: deserializeBool,
     queryParamKey: element.queryParamKey,
     currentValue: value,
+    defaultValue: getDefaultStateFromProto(element),
   })
 
   const onChange = useCallback(

@@ -100,6 +100,7 @@ function TextInput({
     deserializer: deserializeString,
     queryParamKey: element.queryParamKey,
     currentValue: value,
+    defaultValue: getDefaultStateFromProto(element),
   })
 
   useUpdateUiValue(value, uiValue, setUiValue, dirty)

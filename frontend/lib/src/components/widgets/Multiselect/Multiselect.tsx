@@ -145,6 +145,7 @@ const Multiselect: FC<Props> = props => {
     deserializer,
     queryParamKey: element.queryParamKey,
     currentValue: value,
+    defaultValue: getDefaultStateFromProto(element),
     isEqual: isArrayEqual,
   })
 

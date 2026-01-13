@@ -38,12 +38,16 @@ export interface UseQueryParamBindingArgs<T> {
    */
   queryParamKey?: string | null
   /**
-   * The widget's current value. If provided, the hook will auto-correct
-   * the URL on mount if the URL value differs from the widget value.
-   * This handles cases where the URL had an invalid value that was
-   * corrected by the backend.
+   * The widget's current value. Used for auto-correction when URL has invalid
+   * values, and for determining whether to sync to URL (only non-default values
+   * are synced).
    */
   currentValue: T
+  /**
+   * The widget's default value. Only values that differ from the default will
+   * be synced to the URL. This keeps URLs clean by not including default values.
+   */
+  defaultValue: T
   /**
    * Optional equality function for comparing widget value to URL value.
    * Defaults to strict equality (===). Use a custom function for arrays/objects.
@@ -99,6 +103,7 @@ export function useQueryParamBinding<T>({
   widgetMgr,
   queryParamKey,
   currentValue,
+  defaultValue,
   isEqual = defaultIsEqual,
 }: UseQueryParamBindingArgs<T>): UseQueryParamBindingResult<T> {
   // Widget is bound if queryParamKey is a non-empty string
@@ -130,9 +135,10 @@ export function useQueryParamBinding<T>({
     }
   }, [elementId, paramKey, isBound, serializer, deserializer, widgetMgr])
 
-  // Auto-correct URL if widget value differs from URL value.
-  // This handles cases where the URL had an invalid value that was corrected
-  // by the backend (e.g., slider=999 when max=100, corrected to slider=100).
+  // Auto-correct URL on mount if needed.
+  // This handles:
+  // 1. Invalid URL values that were corrected by the backend
+  // 2. Default values in URL that should be cleared (keep URLs clean)
   useEffect(() => {
     // Skip if not bound, value is undefined, or already corrected
     if (
@@ -149,18 +155,31 @@ export function useQueryParamBinding<T>({
       paramKey !== undefined &&
       new URLSearchParams(window.location.search).has(paramKey)
 
-    // Correct if:
-    // 1. URL has the param but value is invalid (urlValue undefined, urlHasParam true)
-    // 2. URL has the param and value differs from current widget value
-    const needsCorrection =
-      urlHasParam &&
-      (urlValue === undefined || !isEqual(currentValue, urlValue))
+    const isCurrentDefault = isEqual(currentValue, defaultValue)
 
-    if (needsCorrection) {
-      widgetMgr.syncWidgetToQueryParams(elementId, currentValue)
+    if (urlHasParam) {
+      if (isCurrentDefault) {
+        // Current value is default - remove the param from URL to keep it clean
+        widgetMgr.clearQueryParamForWidget(elementId)
+      } else if (urlValue === undefined || !isEqual(currentValue, urlValue)) {
+        // URL value is invalid or differs from current - correct it
+        widgetMgr.syncWidgetToQueryParams(elementId, currentValue)
+      }
     }
+    // Note: If URL doesn't have param and value is non-default, we don't sync
+    // on initial load. This prevents cluttering URLs when navigating to pages.
+    // Values only sync to URL when explicitly changed by the user.
+
     hasAutoCorrectedRef.current = true
-  }, [isBound, currentValue, elementId, widgetMgr, isEqual, paramKey])
+  }, [
+    isBound,
+    currentValue,
+    defaultValue,
+    elementId,
+    widgetMgr,
+    isEqual,
+    paramKey,
+  ])
 
   // Get value from URL
   const getUrlValue = useCallback((): T | undefined => {
@@ -168,13 +187,19 @@ export function useQueryParamBinding<T>({
     return widgetMgr.getValueFromQueryParams<T>(elementId)
   }, [elementId, isBound, widgetMgr])
 
-  // Sync value to URL
+  // Sync value to URL (only non-default values)
   const syncToUrl = useCallback(
     (value: T): void => {
       if (!isBound) return
-      widgetMgr.syncWidgetToQueryParams(elementId, value)
+      if (isEqual(value, defaultValue)) {
+        // Value is default - remove from URL to keep it clean
+        widgetMgr.clearQueryParamForWidget(elementId)
+      } else {
+        // Value differs from default - sync to URL
+        widgetMgr.syncWidgetToQueryParams(elementId, value)
+      }
     },
-    [elementId, isBound, widgetMgr]
+    [elementId, isBound, widgetMgr, defaultValue, isEqual]
   )
 
   return {

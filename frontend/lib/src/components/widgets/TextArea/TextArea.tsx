@@ -154,6 +154,7 @@ const TextArea: FC<Props> = ({
     deserializer: deserializeString,
     queryParamKey: element.queryParamKey,
     currentValue: value,
+    defaultValue: getDefaultStateFromProto(element),
   })
 
   useUpdateUiValue(value, uiValue, setUiValue, dirty)

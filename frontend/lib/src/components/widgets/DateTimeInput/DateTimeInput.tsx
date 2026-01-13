@@ -99,6 +99,7 @@ function DateTimeInput({
     deserializer: deserializeDateTimeString,
     queryParamKey: element.queryParamKey,
     currentValue: value,
+    defaultValue: getDefaultStateFromProto(element),
   })
 
   const { locale } = useContext(LibConfigContext)

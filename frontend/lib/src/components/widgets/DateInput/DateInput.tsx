@@ -127,6 +127,10 @@ function DateInput({
 
   // Register query param binding using queryParamKey from proto
   // DateInput uses string array values in YYYY/MM/DD format
+  const defaultAsStrings = useMemo(
+    () => datesToStrings(getDefaultStateFromProto(element)),
+    [element]
+  )
   const { isBound, syncToUrl } = useQueryParamBinding<string[] | null>({
     elementId: element.id,
     widgetMgr,
@@ -134,6 +138,7 @@ function DateInput({
     deserializer: deserializeDateStringArray,
     queryParamKey: element.queryParamKey,
     currentValue: valueAsStrings,
+    defaultValue: defaultAsStrings,
     isEqual: isArrayEqual,
   })
 

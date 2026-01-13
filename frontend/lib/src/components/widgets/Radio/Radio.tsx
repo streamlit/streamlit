@@ -81,6 +81,7 @@ function Radio({
     deserializer,
     queryParamKey: element.queryParamKey,
     currentValue: value,
+    defaultValue: getDefaultStateFromProto(element),
   })
 
   const onChange = useCallback(

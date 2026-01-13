@@ -101,6 +101,7 @@ const ColorPicker: FC<Props> = ({
     deserializer: deserializeColor,
     queryParamKey: element.queryParamKey,
     currentValue: value,
+    defaultValue: getDefaultStateFromProto(element),
   })
 
   const handleColorClose = useCallback(

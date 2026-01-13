@@ -81,6 +81,7 @@ function TimeInput({
     deserializer: deserializeString,
     queryParamKey: element.queryParamKey,
     currentValue: value,
+    defaultValue: getDefaultStateFromProto(element),
   })
 
   const isInSidebar = useContext(IsSidebarContext)

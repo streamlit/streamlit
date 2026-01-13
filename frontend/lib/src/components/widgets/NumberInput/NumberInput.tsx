@@ -157,6 +157,7 @@ const NumberInput: React.FC<Props> = ({
     deserializer: deserializeNumber,
     queryParamKey: element.queryParamKey,
     currentValue: value,
+    defaultValue: getDefaultStateFromProto(element),
   })
 
   // Additional local state for UI interactions

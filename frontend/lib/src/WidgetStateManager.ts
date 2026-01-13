@@ -1063,6 +1063,19 @@ export class WidgetStateManager {
   }
 
   /**
+   * Clear a widget's query parameter from the URL.
+   * This is used when a widget's value returns to its default.
+   */
+  public clearQueryParamForWidget(widgetId: string): void {
+    const binding = this.queryParamBindings.get(widgetId)
+    if (!binding) return
+
+    const params = new URLSearchParams(window.location.search)
+    params.delete(binding.paramKey)
+    this.onQueryParamsChange?.(params.toString())
+  }
+
+  /**
    * Update a single query parameter in the URL.
    */
   private updateQueryParam(key: string, value: string | string[]): void {

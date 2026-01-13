@@ -177,6 +177,7 @@ function Slider({
     deserializer,
     queryParamKey: element.queryParamKey,
     currentValue: value,
+    defaultValue: getDefaultStateFromProto(element),
     isEqual: isArrayEqual,
   })
 

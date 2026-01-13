@@ -376,6 +376,7 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
     deserializer,
     queryParamKey: element.queryParamKey,
     currentValue: value,
+    defaultValue: getDefaultStateFromProto(element),
     isEqual: isArrayEqual,
   })
 
