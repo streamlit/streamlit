@@ -34,63 +34,10 @@ line-ending = "lf"
 
 [lint]
 preview = true
-explicit-preview-rules = true
+explicit-preview-rules = false
 # We activate all rules and only ignore the rules that we don't want to enforce
 # or that are not relevant for our codebase.
-select = [
-  "ALL",
-  # Preview rules:
-  "ASYNC116",
-  "ASYNC212",
-  "ASYNC250",
-  "B901",
-  "B909",
-  "B912",
-  "FURB116",
-  "FURB131",
-  "FURB140",
-  "FURB142",
-  "FURB145",
-  "FURB148",
-  "FURB154",
-  "FURB156",
-  "FURB164",
-  "FURB171",
-  "FURB180",
-  "FURB192",
-  "LOG004",
-  "PLC0207",
-  "PLE0304",
-  "PLE1141",
-  "PLE4703",
-  "PLR0202",
-  "PLR0203",
-  "PLR6104",
-  "PLW0244",
-  "PLW1514",
-  "PT029",
-  "PYI059",
-  "PYI061",
-  "RUF027",
-  "RUF031",
-  "RUF037",
-  "RUF038",
-  "RUF043",
-  "RUF045",
-  "RUF047",
-  "RUF054",
-  "RUF055",
-  "RUF056",
-  "RUF059",
-  "RUF060",
-  "RUF061",
-  "RUF063",
-  "RUF064",
-  "RUF102",
-  "TC008",
-  "UP042",
-  "UP050",
-]
+select = ["ALL"]
 ignore = [
   # Rules planned to be supported in the future:
   "EM101",  # Checks for the use of string literals in exception constructors.
@@ -149,6 +96,33 @@ ignore = [
   "PT012",   # Checks for pytest.raises context managers with multiple statements.
   "PT019",   # Checks for tests that should use @pytest.mark.usefixtures (incompatible with unittest.patch)
   "PLC0415", # Enforces imports to be at the top-level of the file.
+  # Preview rules:
+  "PLR6301",  # Checks for methods that do not use self.
+  "PLC1901",  # Checks for comparisons to empty string.
+  "PLC2701",  # Checks for imports of private names.
+  "PLR6201",  # Checks for membership tests using a literal list or tuple.
+  "PLR0917",  # Checks for functions with too many positional arguments.
+  "RUF039",   # Checks for unraw regex patterns.
+  "RUF029",   # Checks for async functions with no await statements.
+  "RUF067",   # Checks for unused noqa directives.
+  "FURB101",  # Checks for open and read calls that can be replaced by pathlib.
+  "RUF036",   # Checks for None not at the end of union types.
+  "FURB103",  # Checks for open and write calls that can be replaced by pathlib.
+  "E266",     # Checks for multiple leading hashes in block comments.
+  "PLW0108",  # Checks for lambdas that can be replaced by existing functions.
+  "RUF052",   # Checks for dummy variables that are used.
+  "FURB152",  # Checks for math constants that could use math module.
+  "PLW3201",  # Checks for bad dunder method names.
+  "FURB118",  # Checks for operators that can be replaced by operator module.
+  "FURB110",  # Checks for if expressions that can be replaced by or operator.
+  "FURB189",  # Checks for subclassing of builtin types.
+  "ISC004",   # Checks for implicit string concatenation in collection literals.
+  "PLR1702",  # Checks for functions with too many nested blocks.
+  "ASYNC240", # Checks for blocking path methods in async functions.
+  "FURB113",  # Checks for repeated append calls that can be replaced by extend.
+  "PLC2801",  # Checks for unnecessary dunder method calls.
+  "S403",     # Checks for suspicious pickle imports.
+  "S404",     # Checks for suspicious subprocess imports.
 ]
 exclude = [
   # pympler is a vendored dependency that doesn't conform to our linting rules:
