@@ -432,8 +432,11 @@ class QueryParams(MutableMapping[str, str]):
             or a page-specific widget.
         """
         if param_key.lower() in EMBED_QUERY_PARAMS_KEYS:
-            # Silently ignore attempts to bind to embed params
-            return
+            raise StreamlitAPIException(
+                f"Cannot bind widget to reserved query parameter '{param_key}'. "
+                f"The parameters 'embed' and 'embed_options' are reserved for "
+                f"Streamlit's embed functionality. Please use a different key."
+            )
 
         # Remove any existing binding for this widget
         self.unbind_widget(widget_id)
