@@ -342,6 +342,59 @@ def register_widget_from_metadata(
 
             serializers = (_serialize_radio, _deserialize_radio)
 
+        # st.selectbox uses string_value (formatted string)
+        # Use formatted_options (from format_func) for human-readable URLs
+        if effective_value_type == "string_value" and serde_name == "SelectboxSerde":
+            options = getattr(serde_instance, "options", [])
+            formatted_options = getattr(serde_instance, "formatted_options", [])
+            formatted_to_index = getattr(
+                serde_instance, "formatted_option_to_option_index", {}
+            )
+            default_index = getattr(serde_instance, "default_option_index", 0)
+
+            def _get_formatted_for_selectbox_value(v: object) -> str:
+                """Get formatted string for a selectbox value."""
+                for i, opt in enumerate(options):
+                    if opt == v:
+                        return (
+                            formatted_options[i]
+                            if i < len(formatted_options)
+                            else str(opt)
+                        )
+                # Fallback to str() for values not in options
+                return str(v) if v is not None else ""
+
+            def _serialize_selectbox(value: object) -> str:
+                if value is None:
+                    return ""
+                return _get_formatted_for_selectbox_value(value)
+
+            def _deserialize_selectbox(v: str | list[str]) -> object | None:
+                # Normalize to string
+                param_str = v[-1] if isinstance(v, list) else v
+                if not param_str:
+                    return (
+                        options[default_index]
+                        if default_index is not None and len(options) > 0
+                        else None
+                    )
+                # Look up via formatted_option_to_option_index (uses format_func)
+                idx = formatted_to_index.get(param_str)
+                if idx is not None:
+                    return options[idx]
+                # Fallback: try matching str(option)
+                for opt in options:
+                    if str(opt) == param_str:
+                        return opt
+                # Not found, return default
+                return (
+                    options[default_index]
+                    if default_index is not None and len(options) > 0
+                    else None
+                )
+
+            serializers = (_serialize_selectbox, _deserialize_selectbox)
+
         # st.multiselect uses string_array_value (formatted strings)
         # Serialize as repeated query params: ?tags=a&tags=b
         # Use formatted_options (from format_func) for human-readable URLs
