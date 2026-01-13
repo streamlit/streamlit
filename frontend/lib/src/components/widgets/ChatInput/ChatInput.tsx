@@ -20,6 +20,7 @@ import {
   memo,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -213,35 +214,39 @@ function ChatInput({
   const measureCanvasRef = useRef<HTMLCanvasElement | null>(null)
   const measureCtxRef = useRef<CanvasRenderingContext2D | null>(null)
 
-  // Update cached measurements when textarea mounts, resizes, or layout mode changes
-  // ResizeObserver callbacks run after layout is computed, so reads are cheap
-  // Also re-run when recording state changes to re-measure after textarea becomes visible
-  useEffect(() => {
-    const textarea = chatInputRef.current
-    if (!textarea) {
-      return
-    }
-
-    const updateMeasurements = (): void => {
+  // Helper to measure textarea dimensions and cache font/width values
+  const updateMeasurements = useCallback(
+    (textarea: HTMLTextAreaElement): void => {
       const computedStyle = getComputedStyle(textarea)
       fontStringRef.current = `${computedStyle.fontWeight} ${computedStyle.fontSize} ${computedStyle.fontFamily}`
 
       const paddingLeft = parseFloat(computedStyle.paddingLeft) || 0
       const paddingRight = parseFloat(computedStyle.paddingRight) || 0
       availableWidthRef.current =
-        // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Safe: runs inside ResizeObserver callback after layout is computed
+        // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Safe: runs inside ResizeObserver callback or useLayoutEffect after paint
         textarea.clientWidth - paddingLeft - paddingRight
+    },
+    []
+  )
+
+  // Measure textarea when it becomes visible (e.g., after recording ends)
+  // useLayoutEffect runs synchronously after DOM mutations, guaranteeing the ref exists
+  // This is more reliable than setTimeout which has no timing guarantees
+  useLayoutEffect(() => {
+    const textarea = chatInputRef.current
+    if (!textarea) {
+      return
     }
 
-    // Initial measurement on mount (or when isStacked changes)
-    updateMeasurements()
+    // Measure immediately
+    updateMeasurements(textarea)
 
-    // Update on resize
-    const observer = new ResizeObserver(updateMeasurements)
+    // Set up ResizeObserver for future resizes
+    const observer = new ResizeObserver(() => updateMeasurements(textarea))
     observer.observe(textarea)
 
     return () => observer.disconnect()
-  }, [isStacked])
+  }, [updateMeasurements, isStacked])
 
   // Manage stacked layout mode transitions
   // Switch to stacked when text fills the available width
@@ -759,32 +764,6 @@ function ChatInput({
 
   const showDropzone = acceptFile !== AcceptFileValue.None && fileDragged
   const isRecording = controller.state === "recording"
-
-  // Re-measure textarea width when recording ends (textarea remounts)
-  // This ensures the stacked layout logic has correct width measurements
-  useEffect(() => {
-    if (isRecording) {
-      return
-    }
-
-    // Small delay to allow textarea to mount and get proper dimensions
-    const timeoutId = setTimeout(() => {
-      const textarea = chatInputRef.current
-      if (textarea) {
-        const computedStyle = getComputedStyle(textarea)
-        fontStringRef.current = `${computedStyle.fontWeight} ${computedStyle.fontSize} ${computedStyle.fontFamily}`
-
-        const paddingLeft = parseFloat(computedStyle.paddingLeft) || 0
-        const paddingRight = parseFloat(computedStyle.paddingRight) || 0
-        // Safe: runs in timeout after layout
-        // eslint-disable-next-line streamlit-custom/no-force-reflow-access
-        const clientWidth = textarea.clientWidth
-        availableWidthRef.current = clientWidth - paddingLeft - paddingRight
-      }
-    }, 0)
-
-    return () => clearTimeout(timeoutId)
-  }, [isRecording])
 
   const showInstructions =
     !isRecording &&
