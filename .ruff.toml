@@ -96,7 +96,7 @@ ignore = [
   "PT012",   # Checks for pytest.raises context managers with multiple statements.
   "PT019",   # Checks for tests that should use @pytest.mark.usefixtures (incompatible with unittest.patch)
   "PLC0415", # Enforces imports to be at the top-level of the file.
-  # Preview rules:
+  # Ignored preview rules:
   "PLR6301",  # Checks for methods that do not use self.
   "PLC1901",  # Checks for comparisons to empty string.
   "PLC2701",  # Checks for imports of private names.
