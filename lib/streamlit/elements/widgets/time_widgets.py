@@ -1555,6 +1555,11 @@ class TimeWidgetsMixin:
             max_value=max_value,
         )
 
+        # Store the original default values before any session state lookup.
+        # This ensures element.default always reflects the developer-specified value,
+        # not the user's current selection from session state.
+        original_default_values = parsed_values
+
         if value == "today":
             # We need to know if this is a single or range date_input, but don't have
             # a default value, so we check if session_state can tell us.
@@ -1582,14 +1587,18 @@ class TimeWidgetsMixin:
         )
         date_input_proto.format = format
         date_input_proto.label = label
-        if parsed_values.value is None:
+        # Use original_default_values for the proto's default field to ensure it
+        # always reflects the developer-specified value, not the session state value.
+        # This is important for query param binding, which compares current value
+        # against default to determine what to sync to URL.
+        if original_default_values.value is None:
             # An empty array represents the empty state. The reason for using an empty
             # array here is that we cannot optional keyword for repeated fields
             # in protobuf.
             date_input_proto.default[:] = []
         else:
             date_input_proto.default[:] = [
-                date.strftime(v, "%Y/%m/%d") for v in parsed_values.value
+                date.strftime(v, "%Y/%m/%d") for v in original_default_values.value
             ]
         date_input_proto.min = date.strftime(parsed_values.min, "%Y/%m/%d")
         date_input_proto.max = date.strftime(parsed_values.max, "%Y/%m/%d")
