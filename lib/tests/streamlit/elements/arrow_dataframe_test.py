@@ -505,6 +505,141 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
         self.benchmark(large_styler_df)
 
 
+class DataframeSelectionsStableIdTest(DeltaGeneratorTestCase):
+    """Tests for element ID stability when selections are enabled."""
+
+    def test_stable_id_with_key_and_selections(self):
+        """Test that the element ID is stable when data changes but key and selection_mode remain the same.
+
+        When selections are enabled and a key is provided, the element ID should remain
+        stable across data changes to preserve selection state. This test verifies that
+        changing data, column_config, column_order, and other non-whitelisted parameters
+        does not change the element ID.
+        """
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            # First render with certain params
+            df1 = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+            st.dataframe(
+                df1,
+                key="selectable_df",
+                height=200,
+                width=300,
+                column_order=["a", "b"],
+                hide_index=True,
+                # Whitelisted parameters
+                on_select="rerun",
+                selection_mode="multi-row",
+            )
+            c1 = self.get_delta_from_queue().new_element.arrow_data_frame
+            id1 = c1.id
+
+            # Second render with different data and params but same key and selection_mode
+            df2 = pd.DataFrame({"x": [10, 20], "y": [30, 40], "z": [50, 60]})
+            st.dataframe(
+                df2,
+                key="selectable_df",
+                height=400,
+                width=500,
+                column_order=["x", "y", "z"],
+                hide_index=False,
+                # Whitelisted parameters
+                on_select="rerun",
+                selection_mode="multi-row",
+            )
+            c2 = self.get_delta_from_queue().new_element.arrow_data_frame
+            id2 = c2.id
+
+            # ID should be stable since key and selection_mode are the same
+            assert id1 == id2
+
+    def test_unstable_id_without_key_and_selections(self):
+        """Test that the element ID changes when data changes and no key is provided.
+
+        Without a key, the element ID is derived from all parameters including the data.
+        This test verifies that changing data or other parameters causes the element ID
+        to change, demonstrating that the key_as_main_identity feature is required for
+        ID stability.
+        """
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            # First render without a key
+            df1 = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+            st.dataframe(
+                df1,
+                height=200,
+                on_select="rerun",
+                selection_mode="multi-row",
+            )
+            c1 = self.get_delta_from_queue().new_element.arrow_data_frame
+            id1 = c1.id
+
+            # Second render with different data but no key
+            df2 = pd.DataFrame({"x": [10, 20], "y": [30, 40]})
+            st.dataframe(
+                df2,
+                height=200,
+                on_select="rerun",
+                selection_mode="multi-row",
+            )
+            c2 = self.get_delta_from_queue().new_element.arrow_data_frame
+            id2 = c2.id
+
+            # ID should change since no key is provided and data is different
+            assert id1 != id2
+
+    @parameterized.expand(
+        [
+            ("selection_mode_single_to_multi", "single-row", "multi-row"),
+            ("selection_mode_row_to_column", "multi-row", "multi-column"),
+            (
+                "selection_mode_single_to_list",
+                "single-row",
+                ["multi-row", "multi-column"],
+            ),
+        ]
+    )
+    def test_whitelisted_stable_key_kwargs(
+        self, name: str, value1: object, value2: object
+    ):
+        """Test that changing selection_mode changes the ID even when a key is provided.
+
+        The selection_mode parameter is whitelisted, meaning changes to it should
+        result in a new element ID to ensure the widget state is reset when the
+        selection mode fundamentally changes.
+        """
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            df = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+
+            st.dataframe(
+                df,
+                key="selectable_df_whitelisted",
+                on_select="rerun",
+                selection_mode=value1,
+            )
+            c1 = self.get_delta_from_queue().new_element.arrow_data_frame
+            id1 = c1.id
+
+            st.dataframe(
+                df,
+                key="selectable_df_whitelisted",
+                on_select="rerun",
+                selection_mode=value2,
+            )
+            c2 = self.get_delta_from_queue().new_element.arrow_data_frame
+            id2 = c2.id
+
+            # ID should change since selection_mode is whitelisted
+            assert id1 != id2
+
+
 class StArrowTableAPITest(DeltaGeneratorTestCase):
     """Test Public Streamlit Public APIs."""
 

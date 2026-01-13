@@ -33,6 +33,8 @@ docstring-code-line-length = "dynamic"
 line-ending = "lf"
 
 [lint]
+preview = true
+explicit-preview-rules = false
 # We activate all rules and only ignore the rules that we don't want to enforce
 # or that are not relevant for our codebase.
 select = ["ALL"]
@@ -94,6 +96,33 @@ ignore = [
   "PT012",   # Checks for pytest.raises context managers with multiple statements.
   "PT019",   # Checks for tests that should use @pytest.mark.usefixtures (incompatible with unittest.patch)
   "PLC0415", # Enforces imports to be at the top-level of the file.
+  # Ignored preview rules:
+  "PLR6301",  # Checks for methods that do not use self.
+  "PLC1901",  # Checks for comparisons to empty string.
+  "PLC2701",  # Checks for imports of private names.
+  "PLR6201",  # Checks for membership tests using a literal list or tuple.
+  "PLR0917",  # Checks for functions with too many positional arguments.
+  "RUF039",   # Checks for unraw regex patterns.
+  "RUF029",   # Checks for async functions with no await statements.
+  "RUF067",   # Checks for non empty __init__ modules.
+  "FURB101",  # Checks for open and read calls that can be replaced by pathlib.
+  "RUF036",   # Checks for None not at the end of union types.
+  "FURB103",  # Checks for open and write calls that can be replaced by pathlib.
+  "E266",     # Checks for multiple leading hashes in block comments.
+  "PLW0108",  # Checks for lambdas that can be replaced by existing functions.
+  "RUF052",   # Checks for dummy variables that are used.
+  "FURB152",  # Checks for math constants that could use math module.
+  "PLW3201",  # Checks for bad dunder method names.
+  "FURB118",  # Checks for operators that can be replaced by operator module.
+  "FURB189",  # Checks for subclassing of builtin types.
+  "ISC004",   # Checks for implicit string concatenation in collection literals.
+  "PLR1702",  # Checks for functions with too many nested blocks.
+  "ASYNC240", # Checks for blocking path methods in async functions.
+  "FURB113",  # Checks for repeated append calls that can be replaced by extend.
+  "PLC2801",  # Checks for unnecessary dunder method calls.
+  "PLR6104",  # Checks for assignments that can be replaced with augmented assignment.
+  "S403",     # Checks for suspicious pickle imports.
+  "S404",     # Checks for suspicious subprocess imports.
 ]
 exclude = [
   # pympler is a vendored dependency that doesn't conform to our linting rules:

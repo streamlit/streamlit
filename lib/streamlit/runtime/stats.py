@@ -336,9 +336,7 @@ class StatsManager:
         """
         result: dict[str, Sequence[Stat]] = {}
 
-        families_to_query = (
-            family_names if family_names else list(self._providers_by_family.keys())
-        )
+        families_to_query = family_names or list(self._providers_by_family.keys())
 
         # Track which providers we've already queried to avoid duplicates.
         # The same provider may be registered for multiple families, and we call

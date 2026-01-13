@@ -166,7 +166,7 @@ def main() -> NoReturn:
     )
 
     # Run `yarn licenses` for app.
-    licenses_output = licenses_output + (
+    licenses_output += (
         subprocess.check_output(
             ["yarn", "licenses", "list", "--json", "--production", "--recursive"],
             cwd=str(FRONTEND_DIR_APP),

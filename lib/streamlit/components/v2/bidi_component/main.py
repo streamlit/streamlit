@@ -480,7 +480,7 @@ class BidiComponentMixin:
             deserializer=serde.deserialize,
             serializer=serde.serialize,
             ctx=ctx,
-            callbacks=callbacks_by_event if callbacks_by_event else None,
+            callbacks=callbacks_by_event or None,
             value_type="json_value",
             presenter=presenter,
         )
@@ -495,7 +495,7 @@ class BidiComponentMixin:
             deserializer=deserialize_trigger_list,  # always returns list or None
             serializer=lambda v: json.dumps(v),  # send dict as JSON
             ctx=ctx,
-            callbacks=callbacks_by_event if callbacks_by_event else None,
+            callbacks=callbacks_by_event or None,
             value_type="json_trigger_value",
         )
 
