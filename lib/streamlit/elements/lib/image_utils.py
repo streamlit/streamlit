@@ -224,7 +224,7 @@ def _clip_image(image: npt.NDArray[Any], clamp: bool) -> npt.NDArray[Any]:
             data = np.clip(image, 0, 1.0)
         elif np.amin(image) < 0.0 or np.amax(image) > 1.0:
             raise RuntimeError("Data is outside [0.0, 1.0] and clamp is not set.")
-        data *= 255
+        data = data * 255
     elif clamp:
         data = np.clip(image, 0, 255)
     elif np.amin(image) < 0 or np.amax(image) > 255:
