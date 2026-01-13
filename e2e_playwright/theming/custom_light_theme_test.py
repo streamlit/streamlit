@@ -19,7 +19,7 @@ import pytest
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
-from e2e_playwright.shared.app_utils import expect_no_skeletons
+from e2e_playwright.shared.app_utils import expect_no_skeletons, reset_hovering
 
 
 @pytest.fixture(scope="module")
@@ -230,6 +230,9 @@ def test_theme_preference_persists_on_reload(
     # Wait for dialog to fully disappear and theme CSS to be applied
     expect(app.get_by_test_id("stDialog")).to_have_count(0)
 
+    # Reset hover state to avoid any hover effects in snapshot
+    reset_hovering(app)
+
     # Give a moment for theme CSS to fully stabilize
     app.wait_for_timeout(300)
 
@@ -260,6 +263,9 @@ def test_theme_preference_persists_on_reload(
 
     # Wait for dialog to fully disappear and theme CSS to be applied
     expect(app.get_by_test_id("stDialog")).to_have_count(0)
+
+    # Reset hover state to avoid any hover effects in snapshot
+    reset_hovering(app)
 
     # Give a moment for theme CSS to fully stabilize
     app.wait_for_timeout(300)
