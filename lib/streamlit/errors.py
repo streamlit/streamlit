@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# ruff: noqa: RUF027 - We allow template strings in exception messages.
+# ruff: noqa: RUF027 - We allow template strings in localizable exception messages instead of f-strings.
 
 from __future__ import annotations
 
