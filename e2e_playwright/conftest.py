@@ -445,11 +445,7 @@ font-src {app_url}/static/fonts/ {app_url}/static/media/ https: data: blob:;
             query_params = "?" + parse.urlencode(_iframe_element_attrs.src_query_params)
 
         src = f"{app_url}/{query_params}"
-        additional_html_head = (
-            _iframe_element_attrs.additional_html_head
-            if _iframe_element_attrs.additional_html_head
-            else ""
-        )
+        additional_html_head = _iframe_element_attrs.additional_html_head or ""
         _iframed_body = (
             f"""
             <!DOCTYPE html>
@@ -462,11 +458,7 @@ font-src {app_url}/static/fonts/ {app_url}/static/media/ https: data: blob:;
                 <body style="height: 100%;">
                     <iframe
                         src={src}
-                        id={
-                _iframe_element_attrs.element_id
-                if _iframe_element_attrs.element_id
-                else ""
-            }
+                        id={_iframe_element_attrs.element_id or ""}
                         title="Iframed Streamlit App"
                         allow="clipboard-read; clipboard-write; microphone; camera;"
                         sandbox="allow-modals allow-popups allow-same-origin allow-scripts allow-downloads"

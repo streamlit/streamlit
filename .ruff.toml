@@ -114,7 +114,6 @@ ignore = [
   "FURB152",  # Checks for math constants that could use math module.
   "PLW3201",  # Checks for bad dunder method names.
   "FURB118",  # Checks for operators that can be replaced by operator module.
-  "FURB110",  # Checks for if expressions that can be replaced by or operator.
   "FURB189",  # Checks for subclassing of builtin types.
   "ISC004",   # Checks for implicit string concatenation in collection literals.
   "PLR1702",  # Checks for functions with too many nested blocks.
