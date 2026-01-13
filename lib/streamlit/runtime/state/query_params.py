@@ -149,6 +149,41 @@ class QueryParams(MutableMapping[str, str]):
         else:
             self._initial_query_params = {}
 
+    def _is_bound_param(self, key: str) -> bool:
+        """Check if a query parameter key is bound to a widget.
+
+        Parameters
+        ----------
+        key : str
+            The query parameter key to check.
+
+        Returns
+        -------
+        bool
+            True if the key is bound to a widget, False otherwise.
+        """
+        return key in self._bindings_by_param
+
+    def _raise_if_bound(self, key: str) -> None:
+        """Raise an error if attempting to modify a bound query parameter.
+
+        Parameters
+        ----------
+        key : str
+            The query parameter key to check.
+
+        Raises
+        ------
+        StreamlitAPIException
+            If the key is bound to a widget.
+        """
+        if self._is_bound_param(key):
+            raise StreamlitAPIException(
+                f"Cannot modify query parameter '{key}' because it is bound to a "
+                f"widget with `bind='query-params'`. To change this value, update "
+                f"the widget's value instead, or remove the `bind` parameter."
+            )
+
     def __iter__(self) -> Iterator[str]:
         self._ensure_single_query_api_used()
 
@@ -181,6 +216,7 @@ class QueryParams(MutableMapping[str, str]):
 
     def __setitem__(self, key: str, value: str | Iterable[str]) -> None:
         self._ensure_single_query_api_used()
+        self._raise_if_bound(key)
         self._set_item_internal(key, value)
         self._send_query_param_msg()
 
@@ -189,6 +225,7 @@ class QueryParams(MutableMapping[str, str]):
 
     def __delitem__(self, key: str) -> None:
         self._ensure_single_query_api_used()
+        self._raise_if_bound(key)
         if key.lower() in EMBED_QUERY_PARAMS_KEYS:
             raise KeyError(missing_key_error_message(key))
         try:
@@ -210,11 +247,14 @@ class QueryParams(MutableMapping[str, str]):
         if hasattr(other, "keys") and hasattr(other, "__getitem__"):
             other = cast("SupportsKeysAndGetItem[str, str | Iterable[str]]", other)
             for key in other.keys():  # noqa: SIM118
+                self._raise_if_bound(key)
                 self._set_item_internal(key, other[key])
         else:
             for key, value in other:
+                self._raise_if_bound(key)
                 self._set_item_internal(key, value)
         for key, value in kwds.items():
+            self._raise_if_bound(key)
             self._set_item_internal(key, value)
         self._send_query_param_msg()
 
@@ -254,7 +294,7 @@ class QueryParams(MutableMapping[str, str]):
 
     def clear(self) -> None:
         self._ensure_single_query_api_used()
-        self.clear_with_no_forward_msg(preserve_embed=True)
+        self.clear_with_no_forward_msg(preserve_embed=True, preserve_bound=True)
         self._send_query_param_msg()
 
     def clear_except_entry_point_bindings(self, main_script_hash: str) -> None:
@@ -316,11 +356,14 @@ class QueryParams(MutableMapping[str, str]):
     def set_with_no_forward_msg(self, key: str, val: list[str] | str) -> None:
         self._query_params[key] = val
 
-    def clear_with_no_forward_msg(self, preserve_embed: bool = False) -> None:
+    def clear_with_no_forward_msg(
+        self, preserve_embed: bool = False, preserve_bound: bool = False
+    ) -> None:
         self._query_params = {
             key: value
             for key, value in self._query_params.items()
-            if key.lower() in EMBED_QUERY_PARAMS_KEYS and preserve_embed
+            if (key.lower() in EMBED_QUERY_PARAMS_KEYS and preserve_embed)
+            or (key in self._bindings_by_param and preserve_bound)
         }
 
     def clear_and_repopulate_preserving_entry_point_bindings(
