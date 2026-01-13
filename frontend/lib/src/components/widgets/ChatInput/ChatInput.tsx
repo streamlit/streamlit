@@ -189,7 +189,6 @@ function ChatInput({
   // Forces dropzone to remount when files are cleared
   const [dropzoneResetCounter, setDropzoneResetCounter] = useState(0)
 
-  // Read acceptAudio from the element configuration
   const acceptAudio = element.acceptAudio ?? false
 
   // Cleanup: abort any in-progress uploads on unmount
@@ -261,7 +260,6 @@ function ChatInput({
           return prevFiles
         }
 
-        // Handle abort/deletion using shared helper
         deleteUploadedFile(file)
 
         const newFiles = prevFiles.filter(fileArg => fileArg.id !== fileId)
@@ -283,22 +281,19 @@ function ChatInput({
     ((acceptedFiles: File[], rejectedFiles: never[]) => void) | null
   >(null)
 
-  const handleRetry = useCallback(
-    (fileInfo: UploadFileInfo): void => {
-      if (!fileInfo.file || fileInfo.status.type !== "error") {
-        return
-      }
+  const handleRetry = useCallback((fileInfo: UploadFileInfo): void => {
+    if (!fileInfo.file || fileInfo.status.type !== "error") {
+      return
+    }
 
-      // Remove the failed file from state
-      setFiles(prevFiles => prevFiles.filter(f => f.id !== fileInfo.id))
+    // Remove the failed file from state
+    setFiles(prevFiles => prevFiles.filter(f => f.id !== fileInfo.id))
 
-      // Re-trigger the upload using the drop handler
-      if (dropHandlerRef.current) {
-        dropHandlerRef.current([fileInfo.file], [])
-      }
-    },
-    [] // No dependencies - uses ref for dropHandler
-  )
+    // Re-trigger the upload using the drop handler
+    if (dropHandlerRef.current) {
+      dropHandlerRef.current([fileInfo.file], [])
+    }
+  }, [])
 
   const createChatInputWidgetFilesValue =
     useCallback((): FileUploaderStateProto => {
