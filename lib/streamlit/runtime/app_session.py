@@ -53,6 +53,8 @@ from streamlit.watcher import LocalSourcesWatcher
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    from google.protobuf.internal.containers import RepeatedScalarFieldContainer
+
     from streamlit.proto.BackMsg_pb2 import BackMsg, DeferredFileRequest
     from streamlit.runtime.script_data import ScriptData
     from streamlit.runtime.scriptrunner.script_cache import ScriptCache
@@ -1019,7 +1021,7 @@ def _populate_config_msg(msg: Config) -> None:
 def _parse_and_populate_chart_colors(
     theme_opts: dict[str, Any],
     config_key: str,
-    msg_field: Any,
+    msg_field: RepeatedScalarFieldContainer[str],
     required_length: int | None = None,
 ) -> None:
     """Parse and populate chart colors from theme config to protobuf message field.
@@ -1031,7 +1033,7 @@ def _parse_and_populate_chart_colors(
     config_key
         The key in theme_opts to look for (e.g., "chartCategoricalColors").
     msg_field
-        The protobuf repeated field to append colors to.
+        The protobuf repeated string field to append colors to.
     required_length
         If provided, log an error if the colors array doesn't have this exact length.
     """
