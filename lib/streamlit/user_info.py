@@ -81,7 +81,8 @@ def login(provider: str | None = None) -> None:
     - ``cookie_secret`` should be a strong, randomly generated secret.
     - ``expose_tokens`` is a list of token types to expose. The supported token
       types are ``"id"`` and ``"access"``. This is an optional setting, and no
-      tokens are exposed by default.
+      tokens are exposed by default. For information and examples about exposing
+      tokens, see |st.user|_.
 
     In addition to the shared settings, the following settings are required:
 
@@ -398,32 +399,33 @@ class TokensProxy(Mapping[str, str]):
 
     This class provides access to tokens that have been explicitly exposed via
     the ``expose_tokens`` setting in your authentication configuration. Tokens
-    are accessed through ``st.user.tokens`` and contain sensitive credentials
-    that your app can use to authenticate with external services on behalf of
-    the logged-in user.
+    contain sensitive credentials that your app can use to authenticate with
+    external services on behalf of the logged-in user.
 
-    To expose tokens, add the ``expose_tokens`` parameter to your authentication
-    configuration in ``.streamlit/secrets.toml``. You can specify a single token
-    type as a string or multiple token types as a list. Streamlit supports
-    exposing ``"id"`` tokens (identity tokens) and ``"access"`` tokens (access
-    tokens). If ``expose_tokens`` is not configured, ``st.user.tokens`` will be
-    empty.
+    To expose tokens in ``st.user.tokens``, add the ``expose_tokens`` parameter to your authentication
+    configuration in ``.streamlit/secrets.toml``. ``expose_tokens`` must be in
+    the ``[auth]`` section and can't be a nested dictionary. You can specify a
+    single token type as a string or multiple token types as a list. Streamlit
+    supports exposing ``"id"`` tokens and ``"access"`` tokens. If
+    ``expose_tokens`` isn't configured, ``st.user.tokens`` is an empty dict.
 
-    .. Warning::
+    .. warning::
         Tokens are sensitive credentials that should be handled securely. Never
         expose tokens in your app's UI, logs, or error messages. Only use tokens
         for server-side API calls, and be mindful of token expiration times.
         Only expose tokens if your app needs them for specific API integrations.
 
-    You can access token values using either key notation (``st.user.tokens["id"]``)
-    or attribute notation (``st.user.tokens.id``). The object is read-only to
-    prevent accidental modification of sensitive credentials.
+    You can access token values using either key or attribute notation. For
+    example, use ``st.user.tokens["id"]`` or ``st.user.tokens.id`` to access
+    the ``id`` token. The object is read-only to prevent accidental modification of sensitive
+    credentials.
 
-    .. Note::
-        If no tokens are exposed or if the user is not logged in,
-        ``st.user.tokens`` will be an empty dict-like object. Attempting to
-        access a non-existent token will raise a ``KeyError`` (for key notation)
-        or ``AttributeError`` (for attribute notation).
+    Attributes
+    ----------
+    id : str
+        The identity token. This is only available if ``"id"`` is in ``expose_tokens``.
+    access : str
+        The access token. This is only available if ``"access"`` is in ``expose_tokens``.
 
     Examples
     --------
@@ -432,27 +434,59 @@ class TokensProxy(Mapping[str, str]):
     To expose only the identity token, add ``expose_tokens`` to your
     authentication configuration. This example uses an unnamed default provider.
 
-    ``.streamlit/secrets.toml``:
+    .. code-block:: toml
+        :filename: .streamlit/secrets.toml
 
-    >>> [auth]
-    >>> redirect_uri = "http://localhost:8501/oauth2callback"
-    >>> cookie_secret = "xxx"
-    >>> client_id = "xxx"
-    >>> client_secret = "xxx"
-    >>> server_metadata_url = "https://accounts.google.com/.well-known/openid-configuration"  # fmt: skip
-    >>> expose_tokens = "id"
+        [auth]
+        redirect_uri = "http://localhost:8501/oauth2callback"
+        cookie_secret = "xxx"
+        client_id = "xxx"
+        client_secret = "xxx"
+        server_metadata_url = "https://accounts.google.com/.well-known/openid-configuration"
+        expose_tokens = "id"
 
-    Your app code:
+    .. code-block:: python
+        :filename: streamlit_app.py
 
-    >>> import streamlit as st
-    >>>
-    >>> if st.user.is_logged_in:
-    >>>     try:
-    >>>         id_token = st.user.tokens["id"]
-    >>> # Use the token for API verification (never display it!)
-    >>>         st.success("ID token retrieved successfully")
-    >>>     except KeyError:
-    >>>         st.warning("ID token not available")
+        import streamlit as st
+
+        if st.user.is_logged_in:
+            id_token = st.user.tokens["id"]
+            # Use the token for API verification
+
+    **Example 2: Expose both ID and access tokens**
+
+    You can use a list to expose multiple tokens. If you use one or more named
+    identity providers, the same tokens must be exposed for all providers in
+    the shared ``[auth]`` section.
+
+    .. code-block:: toml
+        :filename: .streamlit/secrets.toml
+
+        [auth]
+        redirect_uri = "http://localhost:8501/oauth2callback"
+        cookie_secret = "xxx"
+        expose_tokens = ["id", "access"]
+
+        [auth.google]
+        client_id = "xxx"
+        client_secret = "xxx"
+        server_metadata_url = "https://accounts.google.com/.well-known/openid-configuration"
+
+        [auth.microsoft]
+        client_id = "xxx"
+        client_secret = "xxx"
+        server_metadata_url = "https://login.microsoftonline.com/{tenant}/v2.0/.well-known/openid-configuration"
+
+    .. code-block:: python
+        :filename: streamlit_app.py
+
+        import streamlit as st
+
+        if st.user.is_logged_in:
+            id_token = st.user.tokens["id"]
+            access_token = st.user.tokens["access"]
+            # Use the tokens for API verification
     """
 
     def __init__(self, tokens: dict[str, str]) -> None:
@@ -544,33 +578,36 @@ class UserInfoProxy(Mapping[str, str | bool | TokensProxy | None]):
     <https://developers.google.com/identity/openid-connect/openid-connect#obtainuserinfo>`_
     in Google's docs.
 
-    Your app code:
+    .. code-block:: python
+        :filename: streamlit_app.py
 
-    >>> import streamlit as st
-    >>>
-    >>> if st.user.is_logged_in:
-    >>>     st.write(st.user)
+        import streamlit as st
+
+        if st.user.is_logged_in:
+            st.write(st.user)
 
     Displayed data when a user is logged in:
 
-    >>> {
-    >>>     "is_logged_in":true
-    >>>     "iss":"https://accounts.google.com"
-    >>>     "azp":"{client_id}.apps.googleusercontent.com"
-    >>>     "aud":"{client_id}.apps.googleusercontent.com"
-    >>>     "sub":"{unique_user_id}"
-    >>>     "email":"{user}@gmail.com"
-    >>>     "email_verified":true
-    >>>     "at_hash":"{access_token_hash}"
-    >>>     "nonce":"{nonce_string}"
-    >>>     "name":"{full_name}"
-    >>>     "picture":"https://lh3.googleusercontent.com/a/{content_path}"
-    >>>     "given_name":"{given_name}"
-    >>>     "family_name":"{family_name}"
-    >>>     "iat":{issued_time}
-    >>>     "exp":{expiration_time}
-    >>>     "tokens":{}
-    >>> }
+    .. code-block:: json
+
+        {
+            "is_logged_in":true
+            "iss":"https://accounts.google.com"
+            "azp":"{client_id}.apps.googleusercontent.com"
+            "aud":"{client_id}.apps.googleusercontent.com"
+            "sub":"{unique_user_id}"
+            "email":"{user}@gmail.com"
+            "email_verified":true
+            "at_hash":"{access_token_hash}"
+            "nonce":"{nonce_string}"
+            "name":"{full_name}"
+            "picture":"https://lh3.googleusercontent.com/a/{content_path}"
+            "given_name":"{given_name}"
+            "family_name":"{family_name}"
+            "iat":{issued_time}
+            "exp":{expiration_time}
+            "tokens":{}
+    }
 
     **Example 2: Microsoft's identity token**
 
@@ -581,33 +618,36 @@ class UserInfoProxy(Mapping[str, str | bool | TokensProxy | None]):
     <https://learn.microsoft.com/en-us/entra/identity-platform/id-token-claims-reference>`_
     in Microsoft's docs.
 
-    Your app code:
+    .. code-block:: python
+        :filename: streamlit_app.py
 
-    >>> import streamlit as st
-    >>>
-    >>> if st.user.is_logged_in:
-    >>>     st.write(st.user)
+        import streamlit as st
+
+        if st.user.is_logged_in:
+            st.write(st.user)
 
     Displayed data when a user is logged in:
 
-    >>> {
-    >>>     "is_logged_in":true
-    >>>     "ver":"2.0"
-    >>>     "iss":"https://login.microsoftonline.com/{tenant_id}/v2.0"
-    >>>     "sub":"{application_user_id}"
-    >>>     "aud":"{application_id}"
-    >>>     "exp":{expiration_time}
-    >>>     "iat":{issued_time}
-    >>>     "nbf":{start_time}
-    >>>     "name":"{full_name}"
-    >>>     "preferred_username":"{username}"
-    >>>     "oid":"{user_GUID}"
-    >>>     "email":"{email}"
-    >>>     "tid":"{tenant_id}"
-    >>>     "nonce":"{nonce_string}"
-    >>>     "aio":"{opaque_string}"
-    >>>     "tokens":{}
-    >>> }
+    .. code-block:: json
+
+        {
+            "is_logged_in":true
+            "ver":"2.0"
+            "iss":"https://login.microsoftonline.com/{tenant_id}/v2.0"
+            "sub":"{application_user_id}"
+            "aud":"{application_id}"
+            "exp":{expiration_time}
+            "iat":{issued_time}
+            "nbf":{start_time}
+            "name":"{full_name}"
+            "preferred_username":"{username}"
+            "oid":"{user_GUID}"
+            "email":"{email}"
+            "tid":"{tenant_id}"
+            "nonce":"{nonce_string}"
+            "aio":"{opaque_string}"
+            "tokens":{}
+        }
     """
 
     def __getitem__(self, key: str) -> str | bool | None | TokensProxy:
