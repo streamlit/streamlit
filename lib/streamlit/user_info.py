@@ -70,15 +70,18 @@ def login(provider: str | None = None) -> None:
     ``st.user``. If the provider returns an access token, that
     token is ignored unless you explicitly expose it.
 
-    For all providers, there are two shared settings, ``redirect_uri`` and
-    ``cookie_secret``, which you must specify in an ``[auth]`` dictionary
-    in ``secrets.toml``. Other settings must be defined as described in the
-    ``provider`` parameter.
+    For all providers, there are three shared settings, ``redirect_uri``,
+    ``cookie_secret``, and ``expose_tokens``, which you must specify in an
+    ``[auth]`` dictionary in ``secrets.toml``. Other settings must be defined
+    as described in the ``provider`` parameter.
 
     - ``redirect_uri`` is your app's absolute URL with the pathname
       ``oauth2callback``. For local development using the default port, this is
       ``http://localhost:8501/oauth2callback``.
     - ``cookie_secret`` should be a strong, randomly generated secret.
+    - ``expose_tokens`` is a list of token types to expose. The supported token
+      types are ``"id"`` and ``"access"``. This is an optional setting, and no
+      tokens are exposed by default.
 
     In addition to the shared settings, the following settings are required:
 
@@ -148,26 +151,28 @@ def login(provider: str | None = None) -> None:
     using OIDC with Google, see `Google Identity
     <https://developers.google.com/identity/openid-connect/openid-connect>`_.
 
-    ``.streamlit/secrets.toml``:
+    .. code-block:: toml
+        :filename: .streamlit/secrets.toml
 
-    >>> [auth]
-    >>> redirect_uri = "http://localhost:8501/oauth2callback"
-    >>> cookie_secret = "xxx"
-    >>> client_id = "xxx"
-    >>> client_secret = "xxx"
-    >>> server_metadata_url = "https://accounts.google.com/.well-known/openid-configuration"  # fmt: skip
+        [auth]
+        redirect_uri = "http://localhost:8501/oauth2callback"
+        cookie_secret = "xxx"
+        client_id = "xxx"
+        client_secret = "xxx"
+        server_metadata_url = "https://accounts.google.com/.well-known/openid-configuration"  # fmt: skip
 
-    Your app code:
+    .. code-block:: python
+        :filename: streamlit_app.py
 
-    >>> import streamlit as st
-    >>>
-    >>> if not st.user.is_logged_in:
-    >>>     if st.button("Log in"):
-    >>>         st.login()
-    >>> else:
-    >>>     if st.button("Log out"):
-    >>>         st.logout()
-    >>>     st.write(f"Hello, {st.user.name}!")
+        import streamlit as st
+
+        if not st.user.is_logged_in:
+            if st.button("Log in"):
+                st.login()
+        else:
+            if st.button("Log out"):
+                st.logout()
+            st.write(f"Hello, {st.user.name}!")
 
     **Example 2: Use a named identity provider**
 
@@ -184,25 +189,27 @@ def login(provider: str | None = None) -> None:
     `Microsoft identity platform
     <https://learn.microsoft.com/en-us/entra/identity-platform/v2-protocols-oidc#find-your-apps-openid-configuration-document-uri>`_.
 
-    ``.streamlit/secrets.toml``:
+    .. code-block:: toml
+        :filename: .streamlit/secrets.toml
 
-    >>> [auth]
-    >>> redirect_uri = "http://localhost:8501/oauth2callback"
-    >>> cookie_secret = "xxx"
-    >>>
-    >>> [auth.microsoft]
-    >>> client_id = "xxx"
-    >>> client_secret = "xxx"
-    >>> server_metadata_url = "https://login.microsoftonline.com/{tenant}/v2.0/.well-known/openid-configuration"
+        [auth]
+        redirect_uri = "http://localhost:8501/oauth2callback"
+        cookie_secret = "xxx"
 
-    Your app code:
+        [auth.microsoft]
+        client_id = "xxx"
+        client_secret = "xxx"
+        server_metadata_url = "https://login.microsoftonline.com/{tenant}/v2.0/.well-known/openid-configuration"
 
-    >>> import streamlit as st
-    >>>
-    >>> if not st.user.is_logged_in:
-    >>>     st.login("microsoft")
-    >>> else:
-    >>>     st.write(f"Hello, {st.user.name}!")
+    .. code-block:: python
+        :filename: streamlit_app.py
+
+        import streamlit as st
+
+        if not st.user.is_logged_in:
+            st.login("microsoft")
+        else:
+            st.write(f"Hello, {st.user.name}!")
 
     **Example 3: Use multiple, named providers**
 
@@ -214,34 +221,38 @@ def login(provider: str | None = None) -> None:
     set ``{tenant}`` and ``{subdomain}`` in ``server_metadata_url`` for
     Microsoft and Okta, respectively.
 
-    >>> [auth]
-    >>> redirect_uri = "http://localhost:8501/oauth2callback"
-    >>> cookie_secret = "xxx"
-    >>>
-    >>> [auth.microsoft]
-    >>> client_id = "xxx"
-    >>> client_secret = "xxx"
-    >>> server_metadata_url = "https://login.microsoftonline.com/{tenant}/v2.0/.well-known/openid-configuration"
-    >>>
-    >>> [auth.okta]
-    >>> client_id = "xxx"
-    >>> client_secret = "xxx"
-    >>> server_metadata_url = "https://{subdomain}.okta.com/.well-known/openid-configuration"  # fmt: skip
+    .. code-block:: toml
+        :filename: .streamlit/secrets.toml
 
-    Your app code:
+        [auth]
+        redirect_uri = "http://localhost:8501/oauth2callback"
+        cookie_secret = "xxx"
 
-    >>> import streamlit as st
-    >>>
-    >>> if not st.user.is_logged_in:
-    >>>     st.header("Log in:")
-    >>>     if st.button("Microsoft"):
-    >>>         st.login("microsoft")
-    >>>     if st.button("Okta"):
-    >>>         st.login("okta")
-    >>> else:
-    >>>     if st.button("Log out"):
-    >>>         st.logout()
-    >>>     st.write(f"Hello, {st.user.name}!")
+        [auth.microsoft]
+        client_id = "xxx"
+        client_secret = "xxx"
+        server_metadata_url = "https://login.microsoftonline.com/{tenant}/v2.0/.well-known/openid-configuration"
+
+        [auth.okta]
+        client_id = "xxx"
+        client_secret = "xxx"
+        server_metadata_url = "https://{subdomain}.okta.com/.well-known/openid-configuration"
+
+    .. code-block:: python
+        :filename: streamlit_app.py
+
+        import streamlit as st
+
+        if not st.user.is_logged_in:
+            st.header("Log in:")
+            if st.button("Microsoft"):
+                st.login("microsoft")
+            if st.button("Okta"):
+                st.login("okta")
+        else:
+            if st.button("Log out"):
+                st.logout()
+            st.write(f"Hello, {st.user.name}!")
 
     **Example 4: Change the default connection settings**
 
@@ -256,28 +267,30 @@ def login(provider: str | None = None) -> None:
     `Customize Signup and Login Prompts
     <https://auth0.com/docs/customize/login-pages/universal-login/customize-signup-and-login-prompts>`_.
 
-    ``.streamlit/secrets.toml``:
+    .. code-block:: toml
+        :filename: .streamlit/secrets.toml
 
-    >>> [auth]
-    >>> redirect_uri = "http://localhost:8501/oauth2callback"
-    >>> cookie_secret = "xxx"
-    >>>
-    >>> [auth.auth0]
-    >>> client_id = "xxx"
-    >>> client_secret = "xxx"
-    >>> server_metadata_url = "https://{account}.{region}.auth0.com/.well-known/openid-configuration"  # fmt: skip
-    >>> client_kwargs = { "prompt" = "login" }
+        [auth]
+        redirect_uri = "http://localhost:8501/oauth2callback"
+        cookie_secret = "xxx"
 
-    Your app code:
+        [auth.auth0]
+        client_id = "xxx"
+        client_secret = "xxx"
+        server_metadata_url = "https://{account}.{region}.auth0.com/.well-known/openid-configuration"
+        client_kwargs = { "prompt" = "login" }
 
-    >>> import streamlit as st
-    >>>
-    >>> if st.button("Log in"):
-    >>>     st.login("auth0")
-    >>> if st.user.is_logged_in:
-    >>>     if st.button("Log out"):
-    >>>         st.logout()
-    >>>     st.write(f"Hello, {st.user.name}!)
+    .. code-block:: python
+        :filename: streamlit_app.py
+
+        import streamlit as st
+
+        if st.button("Log in"):
+            st.login("auth0")
+        if st.user.is_logged_in:
+            if st.button("Log out"):
+                st.logout()
+            st.write(f"Hello, {st.user.name}!)
 
     """
     if provider is None:
@@ -380,7 +393,7 @@ def _get_user_info() -> UserInfoType:
 
 class TokensProxy(Mapping[str, str]):
     """
-    A read-only, dict-like object for accessing exposed tokens from the
+    A read-only, dict-like object for accessing exposed tokens from the\
     identity provider.
 
     This class provides access to tokens that have been explicitly exposed via
@@ -509,10 +522,14 @@ class UserInfoProxy(Mapping[str, str | bool | TokensProxy | None]):
 
     Attributes
     ----------
-    is_logged_in: bool
+    is_logged_in : bool
         Whether a user is logged in. For a locally running app, this attribute
         is only available when authentication (``st.login()``) is configured in
         ``secrets.toml``. Otherwise, it does not exist.
+
+    tokens: TokensProxy
+        A read-only, dict-like object for accessing exposed tokens from the
+        identity provider.
 
     Examples
     --------
@@ -552,6 +569,7 @@ class UserInfoProxy(Mapping[str, str | bool | TokensProxy | None]):
     >>>     "family_name":"{family_name}"
     >>>     "iat":{issued_time}
     >>>     "exp":{expiration_time}
+    >>>     "tokens":{}
     >>> }
 
     **Example 2: Microsoft's identity token**
@@ -588,6 +606,7 @@ class UserInfoProxy(Mapping[str, str | bool | TokensProxy | None]):
     >>>     "tid":"{tenant_id}"
     >>>     "nonce":"{nonce_string}"
     >>>     "aio":"{opaque_string}"
+    >>>     "tokens":{}
     >>> }
     """
 
