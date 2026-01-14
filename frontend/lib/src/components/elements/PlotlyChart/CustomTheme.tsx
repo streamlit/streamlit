@@ -323,7 +323,6 @@ function replaceDivergingColors(
   const DIVERGING_7 = "#000028"
   const DIVERGING_8 = "#000029"
   const DIVERGING_9 = "#000030"
-  const DIVERGING_10 = "#000031"
 
   if (elementTheme === "streamlit") {
     const divergingColors = theme.colors.chartDivergingColors
@@ -337,20 +336,18 @@ function replaceDivergingColors(
     spec = spec.replaceAll(DIVERGING_7, divergingColors[7])
     spec = spec.replaceAll(DIVERGING_8, divergingColors[8])
     spec = spec.replaceAll(DIVERGING_9, divergingColors[9])
-    spec = spec.replaceAll(DIVERGING_10, divergingColors[10])
   } else {
-    // Default plotly colors
-    spec = spec.replaceAll(DIVERGING_0, "#8e0152")
-    spec = spec.replaceAll(DIVERGING_1, "#c51b7d")
-    spec = spec.replaceAll(DIVERGING_2, "#de77ae")
-    spec = spec.replaceAll(DIVERGING_3, "#f1b6da")
-    spec = spec.replaceAll(DIVERGING_4, "#fde0ef")
-    spec = spec.replaceAll(DIVERGING_5, "#f7f7f7")
-    spec = spec.replaceAll(DIVERGING_6, "#e6f5d0")
-    spec = spec.replaceAll(DIVERGING_7, "#b8e186")
-    spec = spec.replaceAll(DIVERGING_8, "#7fbc41")
-    spec = spec.replaceAll(DIVERGING_9, "#4d9221")
-    spec = spec.replaceAll(DIVERGING_10, "#276419")
+    // Default plotly colors (RdBu scale with 10 colors)
+    spec = spec.replaceAll(DIVERGING_0, "#67001f")
+    spec = spec.replaceAll(DIVERGING_1, "#b2182b")
+    spec = spec.replaceAll(DIVERGING_2, "#d6604d")
+    spec = spec.replaceAll(DIVERGING_3, "#f4a582")
+    spec = spec.replaceAll(DIVERGING_4, "#fddbc7")
+    spec = spec.replaceAll(DIVERGING_5, "#d1e5f0")
+    spec = spec.replaceAll(DIVERGING_6, "#92c5de")
+    spec = spec.replaceAll(DIVERGING_7, "#4393c3")
+    spec = spec.replaceAll(DIVERGING_8, "#2166ac")
+    spec = spec.replaceAll(DIVERGING_9, "#053061")
   }
   return spec
 }
