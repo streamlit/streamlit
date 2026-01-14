@@ -214,8 +214,8 @@ def component(
 ) -> ComponentRenderer:
     '''Register an ``st.components.v2`` component and return a callable to mount it.
 
-    Components may provide any combination of HTML, CSS, and JavaScript. If none
-    are provided, the component will render as an empty element without raising
+    Components can have any combination of HTML, CSS, and JavaScript. If none
+    are provided, the component renders as an empty element without raising
     an error.
 
     If your component is defined in an installed package, you can declare an

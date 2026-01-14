@@ -792,10 +792,10 @@ class DataEditorMixin:
             first index column.
 
         num_rows : "fixed", "dynamic", "add", or "delete"
-            Specifies if the user can add and delete rows in the data editor.
+            Specifies if the user can add and/or delete rows in the data editor.
 
-            - ``"fixed"`` (default): The user cannot add or delete rows.
-            - ``"dynamic"``: The user can add and delete rows, but column
+            - ``"fixed"`` (default): The user can't add or delete rows.
+            - ``"dynamic"``: The user can add and delete rows, and column
               sorting is disabled.
             - ``"add"``: The user can only add rows (no deleting), and column
               sorting is disabled.

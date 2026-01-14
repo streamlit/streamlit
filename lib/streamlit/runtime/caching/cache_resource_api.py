@@ -362,33 +362,30 @@ class CacheResourceAPI:
         on_release: OnRelease | None = None,
         scope: CacheScope = "global",
     ) -> CachedFunc[P, R] | Callable[[Callable[P, R]], CachedFunc[P, R]]:
-        """Decorator to cache functions that return global resources (e.g. database connections, ML models).
+        """Decorator to cache functions that return resource objects (e.g. database connections, ML models).
 
-        Cached objects are shared across all users, sessions, and reruns. They
-        must be thread-safe because they can be accessed from multiple threads
-        concurrently. If thread safety is an issue, consider using ``st.session_state``
-        to store resources per session instead.
+        Cached objects can be global or session-scoped. Global resources are
+        shared across all users, sessions, and reruns. Session-scoped resources are
+        scoped to the current session and are removed when the session disconnects.
+        Global resources must be thread-safe. If thread safety is an issue,
+        consider using a session-scoped cache or storing the resource in
+        ``st.session_state`` instead.
 
         You can clear a function's cache with ``func.clear()`` or clear the entire
         cache with ``st.cache_resource.clear()``.
 
-        A function's arguments must be hashable to cache it. If you have an
-        unhashable argument (like a database connection) or an argument you
-        want to exclude from caching, use an underscore prefix in the argument
-        name. In this case, Streamlit will return a cached value when all other
-        arguments match a previous function call. Alternatively, you can
-        declare custom hashing functions with ``hash_funcs``.
+        A function's arguments must be hashable to cache it. Streamlit makes a
+        best effort to hash a variety of objects, but the fallback hashing method
+        requires that the argument be pickleable, also. If you have an unhashable
+        argument (like a database connection) or an argument you want to exclude
+        from caching, use an underscore prefix in the argument name. In this case,
+        Streamlit will return a cached value when all other arguments match a
+        previous function call. Alternatively, you can declare custom hashing
+        functions with ``hash_funcs``.
 
-        Cached values are available to all users of your app. If you need to
-        save results that should only be accessible within a session, use
-        `Session State
-        <https://docs.streamlit.io/develop/concepts/architecture/session-state>`_
-        instead. Within each user session, an ``@st.cache_resource``-decorated
-        function returns the cached instance of the return value (if the value
-        is already cached). Therefore, objects cached by ``st.cache_resource``
-        act like singletons and can mutate. To cache data and return copies,
-        use ``st.cache_data`` instead. To learn more about caching, see
-        `Caching overview
+        Objects cached by ``st.cache_resource`` act like singletons and can
+        mutate. To cache data and return copies, use ``st.cache_data`` instead.
+        To learn more about caching, see `Caching overview
         <https://docs.streamlit.io/develop/concepts/architecture/caching>`_.
 
         .. warning::
@@ -410,7 +407,8 @@ class CacheResourceAPI:
             function's source code.
 
         ttl : float, timedelta, str, or None
-            The maximum time to keep an entry in the cache. Can be one of:
+            The maximum age of a returned entry from the cache. This can be one
+            of the following values:
 
             - ``None`` if cache entries should never expire (default).
             - A number specifying the time in seconds.
@@ -459,30 +457,40 @@ class CacheResourceAPI:
             of how this can be used.
 
         on_release : callable or None
-            If set, a function to call when a cache entry is removed from the cache.
+            A function to call when an entry is removed from the cache.
             The removed item will be provided to the function as an argument.
 
-            This is only useful for caches which will remove entries normally: Those
-            with ``max_entries`` or ``ttl`` settings. Note that TTL expiration does not
-            happen on all reads - so ``ttl`` should not be used to guarantee timely
-            cleanup, only cleanup when expired resources are accessed. Also note that
-            expiration can happen on any app render or load, so care should be taken
-            to ensure that ``on_release`` functions are thread-safe and do not rely on
-            session state.
+            This is only useful for caches that remove entries normally.
+            Most commonly, this is used session-scoped caches to release
+            per-session resources. This can also be used with ``max_entries``
+            or ``ttl`` settings.
 
-            This will NOT be called when an app is shut down.
+            TTL expiration only happens when expired resources are accessed.
+            Therefore, don't rely on TTL expiration to guarantee timely cleanup.
+            Also, expiration can happen on any script run. Ensure that
+            ``on_release`` functions are thread-safe and don't rely on session
+            state.
+
+            The ``on_release`` function isn't guaranteed to be called when an
+            app is shut down.
 
         scope : "global" or "session"
-            The scope for the resource. If "global", cache globally. If "session",
-            cache in the session.
+            The scope for the resource cache. If this is ``"global"`` (default),
+            the resource is cached globally. If this is ``"session"``, the
+            resource is removed from the cache when the session disconnects.
 
-            Session-scoped cache entries will be expired when a user's session is
-            disconnected. Note that disconnected sessions can reconnect - so it is
-            possible for the cache to populate multiple times in a single session for
-            the same key.
+            Because a session-scoped cache is cleared when a session disconnects,
+            an unstable network connection can cause the cache to populate
+            multiple times in a single session. If this is a problem, you might
+            consider adjusting the ``server.websocketPingInterval``
+            configuration option.
 
         Example
         -------
+        **Example 1: Global cache**
+
+        By default, an ``@st.cache_resource``-decorated function uses a global cache.
+
         >>> import streamlit as st
         >>>
         >>> @st.cache_resource
@@ -501,7 +509,22 @@ class CacheResourceAPI:
         >>> s3 = get_database_session(SESSION_URL_2)
         >>> # This is a different URL, so the function executes.
 
-        By default, all parameters to a cache_resource function must be hashable.
+        **Example 2: Session-scoped cache**
+
+        By passing ``scope="session"``, an ``@st.cache_resource``-decorated function
+        uses a session-scoped cache. You can also use ``on_release`` to clean up
+        resources when they are no longer needed.
+
+        >>> import streamlit as st
+        >>>
+        >>> @st.cache_resource(scope="session", on_release=lambda sess: sess.close())
+        ... def get_database_session(url):
+        ...     # Create a database session object that points to the URL.
+        ...     return session
+
+        **Example 3: Unhashable arguments**
+
+        By default, all parameters to a cached function must be hashable.
         Any parameter whose name begins with ``_`` will not be hashed. You can use
         this as an "escape hatch" for parameters that are not hashable:
 
@@ -521,7 +544,9 @@ class CacheResourceAPI:
         >>> # value - even though the _sessionmaker parameter was different
         >>> # in both calls.
 
-        A cache_resource function's cache can be procedurally cleared:
+        **Example 4: Clearing a cache**
+
+        A cached function's cache can be procedurally cleared:
 
         >>> import streamlit as st
         >>>
@@ -530,11 +555,13 @@ class CacheResourceAPI:
         ...     # Create a database connection object that points to the URL.
         ...     return connection
         >>>
-        >>> fetch_and_clean_data.clear(_sessionmaker, "https://streamlit.io/")
+        >>> get_database_session.clear(_sessionmaker, "https://streamlit.io/")
         >>> # Clear the cached entry for the arguments provided.
         >>>
         >>> get_database_session.clear()
         >>> # Clear all cached entries for this function.
+
+        **Example 5: Custom hashing**
 
         To override the default hashing behavior, pass a custom hash function.
         You can do that by mapping a type (e.g. ``Person``) to a hash
@@ -562,6 +589,7 @@ class CacheResourceAPI:
         >>> @st.cache_resource(hash_funcs={"__main__.Person": str})
         ... def get_person_name(person: Person):
         ...     return person.name
+
         """
 
         if scope not in ("global", "session"):

@@ -266,9 +266,12 @@ class FileUploaderMixin:
         width: WidthWithoutContent = "stretch",
     ) -> UploadedFile | list[UploadedFile] | None:
         r"""Display a file uploader widget.
+
         By default, uploaded files are limited to 200 MB each. You can
-        configure this using the ``server.maxUploadSize`` config option. For
-        more information on how to set config options, see |config.toml|_.
+        configure this globally using the ``server.maxUploadSize`` configuration
+        option. For more information on how to set configuration options, see
+        |config.toml|_. Additionally, you can set a per-widget limit using the
+        ``max_upload_size`` parameter.
 
         .. |config.toml| replace:: ``config.toml``
         .. _config.toml: https://docs.streamlit.io/develop/api-reference/configuration/config.toml
@@ -315,16 +318,12 @@ class FileUploaderMixin:
                 part of the app developer's responsibility.
 
         max_upload_size : int or None
-            The maximum allowed size of each uploaded file for this uploader,
-            in megabytes.
+            The maximum allowed size of each uploaded file in megabytes.
 
-            When set to a positive integer, this per-widget limit takes
-            precedence over the global ``server.maxUploadSize`` configuration
-            option.
-
-            When this is ``None`` (default), the uploader falls back to
-            ``server.maxUploadSize`` for its file size limit. For more
-            information on how to set config options, see |config.toml|_.
+            If this is ``None`` (default), the maximum file size is set by the
+            ``server.maxUploadSize`` configuration option in your
+            ``config.toml`` file. If this is an integer, it must be positive
+            and will override the ``server.maxUploadSize`` configuration option.
 
         accept_multiple_files : bool or "directory"
             Whether to accept more than one file in a submission. This can be one
