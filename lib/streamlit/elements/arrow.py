@@ -54,6 +54,7 @@ from streamlit.elements.lib.utils import Key, compute_and_register_element_id, t
 from streamlit.errors import StreamlitAPIException, StreamlitValueError
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.proto.Table_pb2 import Table as TableProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
     enqueue_message,
@@ -270,14 +271,14 @@ def parse_selection_mode(
     return set(parsed_selection_modes)
 
 
-def parse_border_mode(
+def _parse_table_border_mode(
     border: bool | Literal["horizontal"],
-) -> ArrowProto.BorderMode.ValueType:
-    """Parse and check the user provided border mode."""
+) -> TableProto.BorderMode.ValueType:
+    """Parse and check the user provided border mode for st.table."""
     if isinstance(border, bool):
-        return ArrowProto.BorderMode.ALL if border else ArrowProto.BorderMode.NONE
+        return TableProto.BorderMode.ALL if border else TableProto.BorderMode.NONE
     if border == "horizontal":
-        return ArrowProto.BorderMode.HORIZONTAL
+        return TableProto.BorderMode.HORIZONTAL
     raise StreamlitValueError("border", ["True", "False", "'horizontal'"])
 
 
@@ -882,7 +883,7 @@ class ArrowMixin:
 
         """
         # Parse border parameter to enum value
-        border_mode = parse_border_mode(border)
+        border_mode = _parse_table_border_mode(border)
 
         # Check if data is uncollected, and collect it but with 100 rows max, instead of
         # 10k rows, which is done in all other cases.
@@ -906,10 +907,10 @@ class ArrowMixin:
             height="content",
         )
 
-        proto = ArrowProto()
-        marshall(proto, data, default_uuid)
+        proto = TableProto()
+        _marshall_table(proto, data, default_uuid)
         proto.border_mode = border_mode
-        return self.dg._enqueue("arrow_table", proto, layout_config=layout_config)
+        return self.dg._enqueue("table", proto, layout_config=layout_config)
 
     @gather_metrics("add_rows")
     def add_rows(self, data: Data = None, **kwargs: Any) -> DeltaGenerator | None:
@@ -1170,3 +1171,82 @@ def marshall(proto: ArrowProto, data: Data, default_uuid: str | None = None) -> 
         marshall_styler(proto, data, default_uuid)
 
     proto.data = dataframe_util.convert_anything_to_arrow_bytes(data)
+
+
+def _marshall_table(proto: TableProto, data: Data, default_uuid: str) -> None:
+    """Marshall pandas.DataFrame into a Table proto for st.table.
+
+    Parameters
+    ----------
+    proto : proto.Table
+        Output. The protobuf for Streamlit Table proto.
+
+    data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, pyspark.sql.DataFrame, snowflake.snowpark.DataFrame, Iterable, dict, or None
+        Something that is or can be converted to a dataframe.
+
+    default_uuid : str
+        If pandas.Styler UUID is not provided, this value will be used.
+
+    """  # noqa: E501
+
+    if dataframe_util.is_pandas_styler(data):
+        _marshall_table_styler(proto, data, default_uuid)
+
+    proto.data = dataframe_util.convert_anything_to_arrow_bytes(data)
+
+
+def _marshall_table_styler(proto: TableProto, styler: Any, default_uuid: str) -> None:
+    """Marshall pandas.Styler into a Table proto.
+
+    Parameters
+    ----------
+    proto : proto.Table
+        Output. The protobuf for Streamlit Table proto.
+
+    styler : pandas.Styler
+        Helps style a DataFrame or Series according to the data with HTML and CSS.
+
+    default_uuid : str
+        If pandas.Styler uuid is not provided, this value will be used.
+
+    """
+    import pandas as pd
+
+    styler_data_df: pd.DataFrame = styler.data
+    if styler_data_df.size > int(pd.options.styler.render.max_elements):
+        raise StreamlitAPIException(
+            f"The dataframe has `{styler_data_df.size}` cells, but the maximum number "
+            "of cells allowed to be rendered by Pandas Styler is configured to "
+            f"`{pd.options.styler.render.max_elements}`. To allow more cells to be "
+            'styled, you can change the `"styler.render.max_elements"` config. For example: '
+            f'`pd.set_option("styler.render.max_elements", {styler_data_df.size})`'
+        )
+
+    # pandas.Styler uuid should be set before _compute is called.
+    if styler.uuid is None:
+        styler.set_uuid(default_uuid)
+    proto.styler.uuid = str(styler.uuid)
+
+    # We're using protected members of pandas.Styler to get styles,
+    # which is not ideal and could break if the interface changes.
+    styler._compute()
+    pandas_styles = styler._translate(False, False)
+
+    # Marshall caption
+    if styler.caption is not None:
+        proto.styler.caption = styler.caption
+
+    # Marshall styles
+    from streamlit.elements.lib.pandas_styler_utils import (
+        _marshall_styles,
+        _use_display_values,
+    )
+
+    # Reuse the style marshalling logic but write to Table proto
+    _marshall_styles(proto, styler, pandas_styles)  # type: ignore[arg-type]
+
+    # Marshall display values
+    new_df = _use_display_values(styler_data_df, pandas_styles)
+    proto.styler.display_values = dataframe_util.convert_pandas_df_to_arrow_bytes(
+        new_df
+    )

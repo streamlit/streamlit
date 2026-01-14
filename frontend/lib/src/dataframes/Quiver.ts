@@ -19,7 +19,10 @@
 import { Field, Vector } from "apache-arrow"
 import { immerable, produce } from "immer"
 
-import { IArrow, Styler as StylerProto } from "@streamlit/protobuf"
+import { IArrow, ITable, Styler as StylerProto } from "@streamlit/protobuf"
+
+/** Type alias for proto types that contain arrow data and optional styler. */
+type ArrowDataProto = IArrow | ITable
 
 import { hashString } from "~lib/util/utils"
 
@@ -147,7 +150,7 @@ export class Quiver {
   /** Number of bytes in the Arrow IPC bytes. */
   private readonly _num_bytes: number
 
-  constructor(element: IArrow) {
+  constructor(element: ArrowDataProto) {
     const {
       pandasIndexData,
       columnNames,
@@ -157,6 +160,7 @@ export class Quiver {
     } = parseArrowIpcBytes(element.data)
 
     // Load styler data (if provided):
+    // Both IArrow and ITable have a styler field with the same structure
     const styler = element.styler
       ? parseStyler(element.styler as StylerProto)
       : undefined

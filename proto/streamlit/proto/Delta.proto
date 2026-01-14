@@ -21,7 +21,6 @@ option java_outer_classname = "DeltaProto";
 
 import "streamlit/proto/Block.proto";
 import "streamlit/proto/Element.proto";
-import "streamlit/proto/NamedDataSet.proto";
 import "streamlit/proto/ArrowNamedDataSet.proto";
 import "streamlit/proto/Transient.proto";
 
@@ -39,11 +38,14 @@ message Delta {
 
     // Append data to a DataFrame in for current element. The element to add to
     // is identified by the ID field, above. The dataframe is identified either
-    // by NamedDataSet.name or by setting NamedDataSet.has_name to false.
+    // by ArrowNamedDataSet.name or by setting ArrowNamedDataSet.has_name to false.
     // All elements that contain a DataFrame should support add_rows.
-    NamedDataSet add_rows = 5;
     ArrowNamedDataSet arrow_add_rows = 7;
   }
+
+  // Reserved field numbers for removed deprecated fields:
+  // 5 = add_rows (deprecated NamedDataSet)
+  reserved 5;
 
   string fragment_id = 8;
 }

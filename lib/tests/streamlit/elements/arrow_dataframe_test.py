@@ -651,5 +651,5 @@ class StArrowTableAPITest(DeltaGeneratorTestCase):
 
         st.table(df)
 
-        proto = self.get_delta_from_queue().new_element.arrow_table
+        proto = self.get_delta_from_queue().new_element.table
         pd.testing.assert_frame_equal(convert_arrow_bytes_to_pandas_df(proto.data), df)

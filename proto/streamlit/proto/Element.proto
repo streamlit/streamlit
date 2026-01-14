@@ -21,6 +21,7 @@ option java_outer_classname = "ElementProto";
 
 import "streamlit/proto/Alert.proto";
 import "streamlit/proto/Arrow.proto";
+import "streamlit/proto/Table.proto";
 import "streamlit/proto/Audio.proto";
 import "streamlit/proto/AudioInput.proto";
 import "streamlit/proto/Balloons.proto";
@@ -34,7 +35,6 @@ import "streamlit/proto/ChatInput.proto";
 import "streamlit/proto/Checkbox.proto";
 import "streamlit/proto/Code.proto";
 import "streamlit/proto/ColorPicker.proto";
-import "streamlit/proto/DataFrame.proto";
 import "streamlit/proto/DateInput.proto";
 import "streamlit/proto/DateTimeInput.proto";
 import "streamlit/proto/DeckGlJsonChart.proto";
@@ -69,7 +69,6 @@ import "streamlit/proto/TextArea.proto";
 import "streamlit/proto/TextInput.proto";
 import "streamlit/proto/TimeInput.proto";
 import "streamlit/proto/Toast.proto";
-import "streamlit/proto/VegaLiteChart.proto";
 import "streamlit/proto/Video.proto";
 import "streamlit/proto/Heading.proto";
 import "streamlit/proto/BidiComponent.proto";
@@ -89,7 +88,7 @@ message Element {
   oneof type {
     Alert alert = 30;
     Arrow arrow_data_frame = 40;
-    Arrow arrow_table = 39;
+    Table table = 63;
     ArrowVegaLiteChart arrow_vega_lite_chart = 41;
     Audio audio = 13;
     AudioInput audio_input = 56;
@@ -104,10 +103,6 @@ message Element {
     Checkbox checkbox = 20;
     ColorPicker color_picker = 35;
     ComponentInstance component_instance = 37;
-    // DEPRECATED: This element is deprecated and unused:
-    DataFrame data_frame = 3;
-    // DEPRECATED: This element is deprecated and unused:
-    DataFrame table = 11;
     DateInput date_input = 27;
     DeckGlJsonChart deck_gl_json_chart = 34;
     DocString doc_string = 7;
@@ -141,13 +136,14 @@ message Element {
     TimeInput time_input = 26;
     DateTimeInput date_time_input = 62;
     Toast toast = 50;
-    // DEPRECATED: This element is deprecated and unused:
-    VegaLiteChart vega_lite_chart = 10;
     Video video = 14;
     Heading heading = 47;
     Code code = 48;
-    // Next ID: 63
+    // Next ID: 64
   }
 
-  reserved 9;
+  // Reserved field numbers for removed deprecated fields:
+  // 3 = data_frame (deprecated DataFrame), 9 = unknown, 10 = vega_lite_chart (deprecated VegaLiteChart),
+  // 11 = table (deprecated DataFrame), 39 = arrow_table (old name for table)
+  reserved 3, 9, 10, 11, 39;
 }

@@ -24,6 +24,7 @@ import {
   ForwardMsgMetadata,
   IArrow,
   IArrowNamedDataSet,
+  Table as TableProto,
 } from "@streamlit/protobuf"
 
 import {
@@ -78,15 +79,19 @@ export class ElementNode implements AppNode {
     }
 
     if (
-      this.element.type !== "arrowTable" &&
-      this.element.type !== "arrowDataFrame"
+      this.element.type !== "arrowDataFrame" &&
+      this.element.type !== "table"
     ) {
       throw new Error(
         `elementType '${this.element.type}' is not a valid Quiver element!`
       )
     }
 
-    const toReturn = new Quiver(this.element[this.element.type] as ArrowProto)
+    const proto =
+      this.element.type === "table"
+        ? (this.element.table as TableProto)
+        : (this.element.arrowDataFrame as ArrowProto)
+    const toReturn = new Quiver(proto)
     // TODO (lukasmasuch): Delete element from proto object?
     this.lazyQuiverElement = toReturn
     return toReturn
@@ -137,8 +142,8 @@ export class ElementNode implements AppNode {
     )
 
     switch (elementType) {
-      case "arrowTable":
-      case "arrowDataFrame": {
+      case "arrowDataFrame":
+      case "table": {
         newNode.lazyQuiverElement = ElementNode.quiverAddRowsHelper(
           this.quiverElement,
           namedDataSet

@@ -75,6 +75,7 @@ if TYPE_CHECKING:
     from streamlit.proto.Radio_pb2 import Radio as RadioProto
     from streamlit.proto.Selectbox_pb2 import Selectbox as SelectboxProto
     from streamlit.proto.Space_pb2 import Space as SpaceProto
+    from streamlit.proto.Table_pb2 import Table as TableProto
     from streamlit.proto.Text_pb2 import Text as TextProto
     from streamlit.proto.TextArea_pb2 import TextArea as TextAreaProto
     from streamlit.proto.TextInput_pb2 import TextInput as TextInputProto
@@ -1190,13 +1191,13 @@ class Slider(Widget, Generic[SliderValueT]):
 
 @dataclass(repr=False)
 class Table(Element):
-    proto: ArrowProto = field(repr=False)
+    proto: TableProto = field(repr=False)
 
-    def __init__(self, proto: ArrowProto, root: ElementTree) -> None:
+    def __init__(self, proto: TableProto, root: ElementTree) -> None:
         self.key = None
         self.proto = proto
         self.root = root
-        self.type = "arrow_table"
+        self.type = "table"
 
     @property
     def value(self) -> PandasDataframe:
@@ -1670,7 +1671,7 @@ class Block:
 
     @property
     def table(self) -> ElementList[Table]:
-        return ElementList(self.get("arrow_table"))  # type: ignore
+        return ElementList(self.get("table"))  # type: ignore
 
     @property
     def tabs(self) -> Sequence[Tab]:
@@ -2026,8 +2027,8 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                     )
             elif ty == "arrow_data_frame":
                 new_node = Dataframe(elt.arrow_data_frame, root=root)
-            elif ty == "arrow_table":
-                new_node = Table(elt.arrow_table, root=root)
+            elif ty == "table":
+                new_node = Table(elt.table, root=root)
             elif ty == "button":
                 new_node = Button(elt.button, root=root)
             elif ty == "button_group":
