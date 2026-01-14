@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { describe, expect, it } from "vitest"
+import { beforeAll, describe, expect, it } from "vitest"
 
 import { mockTheme } from "~lib/mocks/mockTheme"
 import { darkTheme } from "~lib/theme"
