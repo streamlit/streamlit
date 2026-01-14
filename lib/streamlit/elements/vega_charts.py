@@ -503,18 +503,38 @@ def _disallow_multi_view_charts(spec: VegaLiteSpec) -> None:
 
 
 def _extract_selection_parameters(spec: VegaLiteSpec) -> set[str]:
-    """Extract the names of all valid selection parameters from the spec."""
-    if not spec or "params" not in spec:
+    """Extract the names of all valid selection parameters from the spec.
+
+    This function recursively traverses composite view specs (layer, hconcat,
+    vconcat, concat, facet, repeat) to find all selection parameters, regardless
+    of where they are defined in the spec hierarchy.
+
+    Altair automatically hoists params to the top level, but raw Vega-Lite specs
+    may have params defined at any level in the view hierarchy.
+    """
+    if not spec:
         return set()
 
-    param_names = set()
+    param_names: set[str] = set()
 
-    for param in spec["params"]:
-        # Check if it looks like a valid selection parameter:
-        # https://vega.github.io/vega-lite/docs/selection.html
-        if param.get("name") and param.get("select"):
-            # Selection found, just return here to not show the exception.
-            param_names.add(param["name"])
+    # Extract from top-level params
+    if "params" in spec:
+        for param in spec["params"]:
+            # Check if it looks like a valid selection parameter:
+            # https://vega.github.io/vega-lite/docs/selection.html
+            if param.get("name") and param.get("select"):
+                param_names.add(param["name"])
+
+    # Recursively check composite view specs (layer, hconcat, vconcat, concat)
+    for key in ("layer", "hconcat", "vconcat", "concat"):
+        if key in spec and isinstance(spec[key], list):
+            for child_spec in spec[key]:
+                if isinstance(child_spec, dict):
+                    param_names.update(_extract_selection_parameters(child_spec))
+
+    # Check facet/repeat spec (the inner view specification)
+    if "spec" in spec and isinstance(spec["spec"], dict):
+        param_names.update(_extract_selection_parameters(spec["spec"]))
 
     return param_names
 
@@ -2391,8 +2411,6 @@ class VegaChartsMixin:
         if is_selection_activated:
             # Load the stabilized spec again as a dict:
             final_spec = json.loads(vega_lite_proto.spec)
-            # Temporary limitation to disallow multi-view charts (compositions) with selections.
-            _disallow_multi_view_charts(final_spec)
 
             # Parse and check the specified selection modes
             parsed_selection_modes = _parse_selection_mode(final_spec, selection_mode)
