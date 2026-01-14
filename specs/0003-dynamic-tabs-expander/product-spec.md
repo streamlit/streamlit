@@ -1,16 +1,14 @@
 ---
-Author(s): @sfc-gh-lwilby
-Status: Draft
-Related SEP: https://github.com/streamlit/streamlit-enhancement-proposals/pull/3
+author: sfc-gh-lwilby
+created: 2026-01-14
+status: Draft
 ---
 
 # Dynamic Tabs, Expander, and Popover (Lazy Execution)
 
 ## Summary
 
-Enable `st.tabs`, `st.expander`, and `st.popover` to execute content lazily (only for the active tab, when expanded, or when popover is open) instead of always executing on every rerun. This addresses a fundamental performance problem where all tab content runs regardless of which tab is visible, causing slower performance in apps with expensive operations across multiple tabs. Enabling state tracking may also unlocks programmatic control as a side benefit (depending on technical implementation decisions).
-
-**API Approach:** [Option 1b from SEP PR #3](https://github.com/streamlit/streamlit-enhancement-proposals/pull/3) - Add `on_change` parameter and `.open` attribute to enable state tracking and conditional execution.
+Enable `st.tabs`, `st.expander`, and `st.popover` to execute content lazily (only for the active tab, when expanded, or when popover is open) instead of always executing on every rerun. This addresses a fundamental performance problem where all tab content runs regardless of which tab is visible, causing slower performance in apps with expensive operations across multiple tabs. Enabling state tracking also unlocks programmatic control as a side benefit.
 
 ## Problem
 
@@ -33,6 +31,8 @@ with tab3:
 
 This ensures instant visibility when tabs are switched, but significantly slows apps when tabs contain expensive computations.
 
+**Current workarounds:** Users resort to `st.selectbox`, `st.radio`, or `st.segmented_control` instead of tabs to control execution, losing the visual organization benefits of tabs.
+
 ### User Requests
 
 **Primary GitHub Issues:**
@@ -44,22 +44,23 @@ This ensures instant visibility when tabs are switched, but significantly slows 
 
 - [#8239](https://github.com/streamlit/streamlit/issues/8239) - st.tabs & expander frontend state/mount handling (79 👍) - addresses broader state management issues
 
-### Real-World Examples
+### Use Cases
 
-1. **ML/Data Science:** Multiple models, each requiring expensive inference - ALL run even though user views one
-2. **API Dashboards:** All API calls execute every rerun (rate limits, costs, 1.5+ seconds)
-3. **Database Tools:** All queries run simultaneously (5-10 seconds for multiple queries)
-4. **Complex Visualizations:** All viz rendered even though only one visible (Plotly 3D, network graphs, etc.)
+This feature enables better performance and new interaction patterns for several types of apps:
 
-**Current workarounds:** Users resort to `st.selectbox`, `st.radio` or `st.segmented_control` instead of tabs to control execution, losing the visual organization benefits of tabs.
+1. **ML/Data Science Apps:** Compare multiple models with expensive inference, running only the selected model
+2. **API Dashboards:** Display multiple API endpoints in tabs without hitting rate limits or incurring unnecessary costs
+3. **Database Tools:** Query multiple data sources or views, executing only the active query
+4. **Complex Visualizations:** Display expensive charts (Plotly 3D, network graphs) only when the relevant tab is visible
+5. **Multi-Step Workflows:** Build wizard-style interfaces with Next/Back navigation between steps
 
-**Side benefit:** Enabling state tracking can unlock programmatic control (setting active tab/expander via session state), which could enable new use cases like multi-step workflows (Next/Back buttons) and conditional tab switching (e.g., auto-advance when validation passes).
+**Additional benefit:** Programmatic control via session state enables new interaction patterns like automated tab switching based on validation or workflow progression.
 
 ---
 
 ## Proposal
 
-### API Design (Option 1b)
+### API Design
 
 Add `on_change` parameter and `.open` attribute following the pattern established for chart/dataframe selections.
 
@@ -120,7 +121,7 @@ if pop.open:  # Only when popover is open
   - `"ignore"`: Current behavior, always execute all content, no state tracking
   - `"rerun"`: Trigger full app rerun when tab changes/expander toggles, enables state tracking
   - `callback`: _(Future addition for API consistency with widgets)_ Function to call before rerun
-    - Note: Callbacks could theoretically be used to define tab/expander content (combining Option 2 with Option 1b), but this would be unintuitive (callbacks typically run side effects, not define content) and would face fragment limitations if auto-wrapped. Better to let users explicitly use `@st.fragment` where needed.
+    - Note: Callbacks are intended for side effects (like updating other state), not for defining content. Content should be defined inline with `if .open:` checks. Users can wrap content in `@st.fragment` explicitly where needed for performance optimization.
 
 #### New parameter: `key` (for tabs)
 
@@ -195,7 +196,7 @@ if tabs[0].open:  # Developer must add this check
 
 ### Examples
 
-**Full example apps demonstrating Option 1b:**
+**Example apps demonstrating the proposed API:**
 
 1. **Lazy Execution Demo:** `e2e_playwright/dynamic_containers/dynamic_expander_test.py`
 
@@ -214,75 +215,188 @@ if tabs[0].open:  # Developer must add this check
    - Programmatic navigation between steps
    - Demonstrates validation and conditional logic
 
-**Comparison apps (Option 2):**
+---
 
-_Note: Option 2 API is not implemented. These apps demonstrate what the code would look like with the function argument approach for comparison purposes._
+## Alternatives Considered
 
-- `e2e_playwright/dynamic_containers/database_query_app_option2.py`
-- `e2e_playwright/dynamic_containers/wizard_pipeline_app_option2.py`
+Several alternative API designs were evaluated before selecting the proposed approach:
+
+### Option 1a: Boolean Evaluation of Delta Generator
+
+**Approach:** Make the delta generator itself evaluate to `True` when open/active.
+
+```python
+exp = st.expander("Show details", on_change="rerun")
+if exp:  # True if open
+    with exp:
+        st.write("Expander is open")
+
+tab1, tab2 = st.tabs(["A", "B"], on_change="rerun")
+if tab1:  # True if active
+    with tab1:
+        st.write("Tab A active")
+elif tab2:
+    with tab2:
+        st.write("Tab B active")
+```
+
+**Pros:**
+
+- ✅ Clean and readable
+- ✅ Minimal changes to existing patterns
+- ✅ Concise syntax
+
+**Cons:**
+
+- ❌ "Magic" behavior - delta generators normally don't have truthiness semantics
+- ❌ Not explicit about what's being checked
+- ❌ Could be confusing when delta generator is falsy
+
+**Why not selected:** The implicit truthiness check feels too magical and could lead to confusion about what's actually being evaluated.
 
 ---
 
-### Design Rationale: Why Option 1b?
+### Option 1c: Session State Value
 
-#### Alternative Considered: Option 2 (Function Argument)
+**Approach:** Use session state exclusively to track open/closed state.
 
-From [SEP PR #3](https://github.com/streamlit/streamlit-enhancement-proposals/pull/3), an alternative approach was considered:
+```python
+st.tabs(["A", "B"], key="tabs", on_change="rerun")
+if st.session_state.tabs == "A":
+    st.write("Tab A content")
+elif st.session_state.tabs == "B":
+    st.write("Tab B content")
 
-**Option 2:** Pass functions as arguments: `st.tabs({"A": func_a, "B": func_b}, args=(data,))`
+st.expander("Details", key="exp", on_change="rerun")
+if st.session_state.exp:
+    st.write("Expander content")
+```
 
-**Why not selected:**
+**Pros:**
 
-1. **Auto-fragmentation impractical** - Option 2's main performance advantage would be auto-wrapping functions in fragments (like `st.dialog`), but this imposes some restrictions:
+- ✅ Consistent with existing widget patterns
+- ✅ Familiar to users who understand session state
 
-   - ❌ Cannot use `st.sidebar` directly
-   - ❌ Widgets cannot write to external containers (breaks shared output area pattern)
-   - ❌ Elements accumulate/duplicate in external containers (duplication bug #12762)
-   - Note: Unlike `st.dialog` (isolated modals), tabs are part of main app flow where these patterns are likely
+**Cons:**
 
-2. **Not incrementally adoptable** - Requires refactoring existing code to functions
+- ❌ Verbose - requires explicit key parameter every time
+- ❌ Requires understanding of keys and session state (higher learning curve)
+- ❌ Less intuitive than accessing state directly from the element
+- ❌ Disconnects the state check from the element definition
 
-3. **Implicit execution** - Less clear when code runs
+**Why not selected:** Too verbose and requires extra boilerplate (keys) for a common use case.
 
-4. Programmatic control can still be implemented, but would likely still involve registering the element as a widget and adding a key and using session state to update the widget state (an established pattern with other elements). This control mechanism is more in sync with option 1b conceptually.
+---
 
-**Strengths:** Automatic execution, clean `args`/`kwargs`, less overhead. Automatic performance gain from fragments if we do auto-fragmentation.
+### Option 2: Function Argument
 
-#### Why Option 1b Was Selected
+**Approach:** Pass functions as arguments that get called only when the tab/expander is visible.
 
-**SteerCo Decision (Oct 15, 2024):** Strong support for Option 1b - "easier to grow into" and "feels more at home with Streamlit APIs"
+```python
+def show_expander(exp):
+    exp.write("Heavy content")
+
+st.expander("Show details", func=show_expander)
+
+def show_tab_a(tab):
+    tab.write("Tab A content")
+
+def show_tab_b(tab):
+    tab.write("Tab B content")
+
+st.tabs({"A": show_tab_a, "B": show_tab_b})
+```
+
+**Pros:**
+
+- ✅ Automatic lazy execution (no manual `if` checks needed)
+- ✅ Clean separation of tab/expander content
+- ✅ Could potentially auto-fragment for better performance
+- ✅ Aligns with lazy-loading patterns like deferred `st.download_button`
+
+**Cons:**
+
+- ❌ **Auto-fragmentation impractical** - Would impose fragment restrictions:
+  - Cannot use `st.sidebar` directly
+  - Widgets cannot write to external containers (breaks shared output area pattern)
+  - Elements accumulate/duplicate in external containers (duplication bug #12762)
+  - Unlike `st.dialog` (isolated modals), tabs are part of main app flow where these patterns are common
+- ❌ Not incrementally adoptable - requires refactoring existing code into functions
+- ❌ Implicit execution - less clear when code runs
+- ❌ No clear pattern in Streamlit (between widgets with `on_change` and decorators like `@st.fragment`)
+- ❌ Programmatic control would still require adding `key` parameter and using session state
+
+**Why not selected:** Would require refactoring existing code, and auto-fragmentation (the main performance benefit) is impractical due to common usage patterns that fragments don't support. Without auto-fragmentation, it offers no performance advantage over the selected approach.
+
+---
+
+### Option 3: Function Decorator
+
+**Approach:** Use a decorator pattern similar to `@st.fragment` and `@st.dialog`.
+
+```python
+@st.expander("Show details")
+def show_expander():
+    st.write("Heavy content")
+
+show_expander()
+```
+
+**Pros:**
+
+- ✅ Consistent with `@st.fragment` and `@st.dialog` decorators
+- ✅ Clean, Pythonic pattern
+
+**Cons:**
+
+- ❌ **Unclear how this works for `st.tabs`** with multiple functions
+- ❌ Should content automatically be a fragment? If so, inherits all fragment limitations (see Option 2)
+- ❌ Creates two ways to use `st.expander`/`st.tabs` - confusing for users
+- ❌ Not incrementally adoptable - requires refactoring to functions
+- ❌ Less flexible than context manager pattern
+
+**Why not selected:** Doesn't scale well to multi-tab scenarios, would create confusing dual APIs for the same elements, and inherits fragment limitations if auto-fragmented.
+
+---
+
+## Design Rationale
+
+**Selected Approach:** Option 1b (`.open` attribute + `on_change`)
+
+**SteerCo Decision (Oct 15, 2024):** Strong support for this approach - described as "easier to grow into" and "feels more at home with Streamlit APIs"
 
 **Key reasons:**
 
-1. ✅ **Consistency:** Matches `on_change` pattern (widgets, selections)
-2. ✅ **Explicitness:** `if tabs[i].open:` shows execution flow
-3. ✅ **Incremental adoption:** Add without refactoring
-4. ✅ **Programmatic control:** Well-defined via session state
-5. ✅ **No forced limitations:** Users can optionally use `@st.fragment` (not forced)
+1. ✅ **Consistency:** Matches `on_change` pattern established for chart/dataframe/map selections
+2. ✅ **Explicitness:** `if tabs[i].open:` clearly shows execution flow
+3. ✅ **Incremental adoption:** Can be added to existing code without refactoring
+4. ✅ **Programmatic control:** Well-defined via session state (established pattern)
+5. ✅ **No forced limitations:** Users can optionally use `@st.fragment` when needed (not forced)
+6. ✅ **Intuitive:** State is accessible directly from the element itself
 
-**Trade-off:** Full app rerun on tab switch (acceptable - avoids fragment restrictions that would break `st.sidebar`, external containers, etc.). Users can still control this with the st.fragment decorator applied as needed to tab/expander content.
+**Trade-off:** Full app rerun on tab switch/expander toggle (acceptable - avoids fragment restrictions that would break `st.sidebar`, external containers, etc.). Users can still optimize performance by wrapping tab/expander content in `@st.fragment` as needed.
 
 ---
 
 ## Checklist
 
-- [x] **Will this work on all deployment platforms?** Yes - uses session_state and widget callbacks (supported everywhere)
-- [x] **No breaking API changes?** Yes - new parameters are optional, existing code works unchanged
-- [x] **No new dependencies?** Yes - uses existing infrastructure
-- [x] **Metrics collected?** Yes
-- [x] **Any security or legal implications?** No - uses existing session_state mechanism
-- [x] **Anything to keep in mind for docs?**
-  - Explain trade-off: instant switching (static) vs lazy loading (dynamic)
-  - Document programmatic control pattern
-  - Show performance optimization use cases
-  - Cookbook recipe for expensive tab content
-- [] **Any other risks?**
+| Item                       | ✅ or comment                                                                                                                                                                                               |
+| -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Works on SiS, Cloud, etc?  | ✅ Yes - uses session_state and widget callbacks (supported everywhere)                                                                                                                                     |
+| No breaking API changes    | ✅ Yes - new parameters are optional, existing code works unchanged                                                                                                                                         |
+| No new dependencies        | ✅ Yes - uses existing infrastructure                                                                                                                                                                       |
+| Metrics collected          | ✅ Yes                                                                                                                                                                                                      |
+| Any security/legal impact? | ✅ No - uses existing session_state mechanism                                                                                                                                                               |
+| Any docs changes needed?   | ✅ Yes - Explain trade-off: instant switching (static) vs lazy loading (dynamic), document programmatic control pattern, show performance optimization use cases, cookbook recipe for expensive tab content |
+| Any other risks?           | None identified                                                                                                                                                                                             |
 
 ---
 
 ## References
 
-- **SEP:** [PR #3 - Dynamic tabs/expander/popover](https://github.com/streamlit/streamlit-enhancement-proposals/pull/3)
 - **Prototype PR:** [#13277](https://github.com/streamlit/streamlit/pull/13277)
 - **Related PRs:** [#13233 - st.Tab class spec](https://github.com/streamlit/streamlit/pull/13233)
-- **GitHub Issues:** [#6004](https://github.com/streamlit/streamlit/issues/6004) (230 👍), [#2399](https://github.com/streamlit/streamlit/issues/2399) (93 👍), [#8239](https://github.com/streamlit/streamlit/issues/8239) (79 👍)
+- **GitHub Issues:**
+  - [#6004](https://github.com/streamlit/streamlit/issues/6004) - Dynamic tabs (230 👍)
+  - [#2399](https://github.com/streamlit/streamlit/issues/2399) - st.expander expanded/collapsed state (93 👍)
+  - [#8239](https://github.com/streamlit/streamlit/issues/8239) - st.tabs & expander frontend state/mount handling (79 👍)
