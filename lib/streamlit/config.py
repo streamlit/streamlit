@@ -2279,6 +2279,35 @@ _create_theme_options(
     """,
 )
 
+_create_theme_options(
+    "chartDivergingColors",
+    categories=["theme"],
+    description="""
+        An array of ten colors to use for diverging chart data.
+
+        The ten colors create a diverging color scale, typically used for data
+        with a meaningful midpoint. These colors apply to Plotly, Altair, and
+        Vega-Lite charts.
+
+        Invalid color strings are skipped. If there are not exactly ten
+        valid colors specified, Streamlit uses a default set of colors.
+
+        The default colors are:
+        [
+            "#7d353b", #red100
+            "#bd4043", #red90
+            "#ff4b4b", #red70
+            "#ff8c8c", #red50
+            "#ffc7c7", #red30
+            "#a6dcff", #blue30
+            "#60b4ff", #blue50
+            "#1c83e1", #blue70
+            "#0054a3", #blue90
+            "#004280", #blue100
+        ]
+    """,
+)
+
 # Config Section: Secrets #
 
 _create_section("secrets", "Secrets configuration.")

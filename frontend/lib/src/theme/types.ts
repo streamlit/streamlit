@@ -90,6 +90,7 @@ export type SpecialEmotionColors = {
   // Chart colors (these are arrays of colors)
   chartCategoricalColors: string[]
   chartSequentialColors: string[]
+  chartDivergingColors: string[]
 }
 
 /**

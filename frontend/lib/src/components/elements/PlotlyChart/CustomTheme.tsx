@@ -22,7 +22,6 @@ import {
   EmotionTheme,
   getBlue80,
   getDecreasingRed,
-  getDivergingColorsArray,
   getGray30,
   getGray70,
   getGray90,
@@ -327,7 +326,7 @@ function replaceDivergingColors(
   const DIVERGING_10 = "#000031"
 
   if (elementTheme === "streamlit") {
-    const divergingColors = getDivergingColorsArray(theme)
+    const divergingColors = theme.colors.chartDivergingColors
     spec = spec.replaceAll(DIVERGING_0, divergingColors[0])
     spec = spec.replaceAll(DIVERGING_1, divergingColors[1])
     spec = spec.replaceAll(DIVERGING_2, divergingColors[2])

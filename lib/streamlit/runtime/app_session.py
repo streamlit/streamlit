@@ -1239,6 +1239,39 @@ def _populate_theme_msg(msg: CustomThemeConfig, section: str = "theme") -> None:
                     exc_info=e,
                 )
 
+    chart_diverging_colors = theme_opts.get("chartDivergingColors", None)
+    # If chartDivergingColors was configured via config.toml, it's already a list of
+    # strings. However, if it was provided via env variable or via CLI arg,
+    # it's a json string that needs to be parsed.
+    if isinstance(chart_diverging_colors, str):
+        try:
+            chart_diverging_colors = json.loads(chart_diverging_colors)
+        except json.JSONDecodeError as e:
+            _LOGGER.warning(
+                "Failed to parse the theme.chartDivergingColors config option: %s.",
+                chart_diverging_colors,
+                exc_info=e,
+            )
+            chart_diverging_colors = None
+
+    if chart_diverging_colors is not None:
+        # Check that the list has 10 color values
+        if len(chart_diverging_colors) != 10:
+            _LOGGER.error(
+                "Config theme.chartDivergingColors should have 10 color values, "
+                "but got %s. Defaulting to Streamlit's default colors.",
+                len(chart_diverging_colors),
+            )
+        for color in chart_diverging_colors:
+            try:
+                msg.chart_diverging_colors.append(color)
+            except Exception as e:  # noqa: PERF203
+                _LOGGER.warning(
+                    "Failed to parse the theme.chartDivergingColors config option: %s.",
+                    color,
+                    exc_info=e,
+                )
+
 
 def _populate_user_info_msg(msg: UserInfo) -> None:
     inst = Installation.instance()
