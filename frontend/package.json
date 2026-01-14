@@ -24,7 +24,10 @@
     "dompurify": "^3.2.4",
     "prismjs": "^1.30.0",
     "@protobufjs/inquire@npm:^1.1.0": "patch:@protobufjs/inquire@npm%3A1.1.0#~/.yarn/patches/@protobufjs-inquire-npm-1.1.0-3c7759e9ce.patch",
-    "@swc/core": "^1.15.3"
+    "@swc/core": "^1.15.3",
+    "@typescript-eslint/utils": "^8.52.0",
+    "@typescript-eslint/scope-manager": "^8.52.0",
+    "@typescript-eslint/types": "^8.52.0"
   },
   "browserslist": [
     ">0.2%",
