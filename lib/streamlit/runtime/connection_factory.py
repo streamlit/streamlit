@@ -298,9 +298,10 @@ def connection_factory(  # type: ignore
            they run in a Snowflake Snowpark Container Services environment. If
            they are used in a local environment, they will raise exceptions.
 
-           For local development, use an environment variable to logically
-           switch between a ``"snowflake"`` and ``"snowflake-callers-rights"``
-           connection depending on the runtime environment.
+           For local development, use an environment variable or secret to
+           logically switch between a ``"snowflake"`` and
+           ``"snowflake-callers-rights"`` connection depending on the runtime
+           environment.
 
         .. |SnowflakeConnection| replace:: ``SnowflakeConnection``
         .. _SnowflakeConnection: https://docs.streamlit.io/develop/api-reference/connections/st.connections.snowflakeconnection

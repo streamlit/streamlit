@@ -517,7 +517,7 @@ class CacheResourceAPI:
 
         >>> import streamlit as st
         >>>
-        >>> @st.cache_resource(scope="session", on_release=lambda conn: conn.close())
+        >>> @st.cache_resource(scope="session", on_release=lambda sess: sess.close())
         ... def get_database_session(url):
         ...     # Create a database session object that points to the URL.
         ...     return session
