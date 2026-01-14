@@ -54,211 +54,12 @@ SNOWPARK_USER_TOKEN_HEADER_NAME = "Sf-Context-Current-User-Token"  # noqa: S105 
 
 
 class BaseSnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
-    """A connection to Snowflake using the Snowflake Connector for Python.
+    """Base class for Snowflake connections.
 
-    For standard connections, create an instance of this using
-    ``st.connection("snowflake")`` or
-    ``st.connection("<name>", type="snowflake")``. Connection parameters for a
-    SnowflakeConnection can be specified using ``secrets.toml`` and/or
-    ``**kwargs``. Connection parameters are passed to
-    |snowflake.connector.connect()|.
-
-    When an app is running in Streamlit in Snowflake,
-    ``st.connection("snowflake")`` connects automatically using the app owner's
-    role without further configuration. ``**kwargs`` will be ignored in this
-    case. Use ``secrets.toml`` and ``**kwargs`` to configure your connection
-    for local development.
-
-    When an app is running in Snowpark Container Services and has caller's rights
-    enabled, ``st.connection("snowflake-callers-rights")`` connects automatically
-    using the current user's identity tokens. This will be a session-scoped connection
-    to ensure that the identity stays tied to the active user. Unlike with
-    ``"snowflake"`` connections, it will use the Snowpark Container Services connection
-    settings even when other ``**kwargs`` are provided.
-
-    BaseSnowflakeConnection includes several convenience methods. For example, you
-    can directly execute a SQL query with ``.query()`` or access the underlying
-    Snowflake Connector object with ``.raw_connection``.
-
-    .. |snowflake.connector.connect()| replace:: ``snowflake.connector.connect()``
-    .. _snowflake.connector.connect(): https://docs.snowflake.com/en/developer-guide/python-connector/python-connector-api#label-snowflake-connector-methods-connect
-
-    .. Important::
-        `snowflake-snowpark-python <https://pypi.org/project/snowflake-snowpark-python/>`_
-        must be installed in your environment to use this connection. You can
-        install it as an extra with Streamlit:
-
-        .. code-block:: shell
-
-           pip install streamlit[snowflake]
-
-    .. Important::
-        Account identifiers must be of the form ``<orgname>-<account_name>``
-        where ``<orgname>`` is the name of your Snowflake organization and
-        ``<account_name>`` is the unique name of your account within your
-        organization. This is dash-separated, not dot-separated like when used
-        in SQL queries. For more information, see `Account identifiers
-        <https://docs.snowflake.com/en/user-guide/admin-account-identifier>`_.
-
-    .. Important::
-        Caller's rights connections rely on credentials provided when a user first
-        connects to a Streamlit app. These credentials are only valid for a short period
-        of time - so caller's rights connections must be created at the top of an app
-        or else the connection may fail.
-
-    Examples
-    --------
-    **Example 1: Configuration with Streamlit secrets**
-
-    You can configure your Snowflake connection using Streamlit's
-    `Secrets management <https://docs.streamlit.io/develop/concepts/connections/secrets-management>`_.
-    For example, if you have MFA enabled on your account, you can connect using
-    `key-pair authentication <https://docs.snowflake.com/en/user-guide/key-pair-auth>`_.
-
-    ``.streamlit/secrets.toml``:
-
-    >>> [connections.snowflake]
-    >>> account = "xxx-xxx"
-    >>> user = "xxx"
-    >>> private_key_file = "/xxx/xxx/xxx.p8"
-    >>> role = "xxx"
-    >>> warehouse = "xxx"
-    >>> database = "xxx"
-    >>> schema = "xxx"
-
-    Your app code:
-
-    >>> import streamlit as st
-    >>> conn = st.connection("snowflake")
-    >>> df = conn.query("SELECT * FROM my_table")
-
-    **Example 2: Configuration with keyword arguments and external authentication**
-
-    You can configure your Snowflake connection with keyword arguments. The
-    keyword arguments are merged with (and take precedence over) the values in
-    ``secrets.toml``. However, if you name your connection ``"snowflake"`` and
-    don't have a ``[connections.snowflake]`` dictionary in your
-    ``secrets.toml`` file, Streamlit will ignore any keyword arguments and use
-    the default Snowflake connection as described in Example 5 and Example 6.
-    To configure your connection using only keyword arguments, declare a name
-    for the connection other than ``"snowflake"``.
-
-    For example, if your Snowflake account supports SSO, you can set up a quick
-    local connection for development using `browser-based SSO
-    <https://docs.snowflake.com/en/user-guide/admin-security-fed-auth-use#how-browser-based-sso-works>`_.
-    Because there is nothing configured in ``secrets.toml``, the name is an
-    empty string and the type is set to ``"snowflake"``. This prevents
-    Streamlit from ignoring the keyword arguments and using a default
-    Snowflake connection.
-
-    >>> import streamlit as st
-    >>> conn = st.connection(
-    ...     "",
-    ...     type="snowflake",
-    ...     account="xxx-xxx",
-    ...     user="xxx",
-    ...     authenticator="externalbrowser",
-    ... )
-    >>> df = conn.query("SELECT * FROM my_table")
-
-    **Example 3: Named connection with Snowflake's connection configuration file**
-
-    Snowflake's Python Connector supports a `connection configuration file
-    <https://docs.snowflake.com/en/developer-guide/python-connector/python-connector-connect#connecting-using-the-connections-toml-file>`_,
-    which is well integrated with Streamlit's ``SnowflakeConnection``. If you
-    already have one or more connections configured, all you need to do is pass
-    the name of the connection to use.
-
-    ``~/.snowflake/connections.toml``:
-
-    >>> [my_connection]
-    >>> account = "xxx-xxx"
-    >>> user = "xxx"
-    >>> password = "xxx"
-    >>> warehouse = "xxx"
-    >>> database = "xxx"
-    >>> schema = "xxx"
-
-    Your app code:
-
-    >>> import streamlit as st
-    >>> conn = st.connection("my_connection", type="snowflake")
-    >>> df = conn.query("SELECT * FROM my_table")
-
-    **Example 4: Named connection with Streamlit secrets and Snowflake's connection configuration file**
-
-    If you have a Snowflake configuration file with a connection named
-    ``my_connection`` as in Example 3, you can pass the connection name through
-    ``secrets.toml``.
-
-    ``.streamlit/secrets.toml``:
-
-    >>> [connections.snowflake]
-    >>> connection_name = "my_connection"
-
-    Your app code:
-
-    >>> import streamlit as st
-    >>> conn = st.connection("snowflake")
-    >>> df = conn.query("SELECT * FROM my_table")
-
-    **Example 5: Default connection with an environment variable**
-
-    If you don't have a ``[connections.snowflake]`` dictionary in your
-    ``secrets.toml`` file and use ``st.connection("snowflake")``, Streamlit
-    will use the default connection for the `Snowflake Python Connector
-    <https://docs.snowflake.com/en/developer-guide/python-connector/python-connector-connect#setting-a-default-connection>`_.
-
-    If you have a Snowflake configuration file with a connection named
-    ``my_connection`` as in Example 3, you can set an environment variable to
-    declare it as the default Snowflake connection.
-
-    >>> SNOWFLAKE_DEFAULT_CONNECTION_NAME = "my_connection"
-
-    Your app code:
-
-    >>> import streamlit as st
-    >>> conn = st.connection("snowflake")
-    >>> df = conn.query("SELECT * FROM my_table")
-
-    **Example 6: Default connection in Snowflake's connection configuration file**
-
-    If you have a Snowflake configuration file that defines your ``default``
-    connection, Streamlit will automatically use it if no other connection is
-    declared.
-
-    ``~/.snowflake/connections.toml``:
-
-    >>> [default]
-    >>> account = "xxx-xxx"
-    >>> user = "xxx"
-    >>> password = "xxx"
-    >>> warehouse = "xxx"
-    >>> database = "xxx"
-    >>> schema = "xxx"
-
-    Your app code:
-
-    >>> import streamlit as st
-    >>> conn = st.connection("snowflake")
-    >>> df = conn.query("SELECT * FROM my_table")
-
-    **Example 7: Caller's rights connection when running in Snowpark Container Services**
-
-    This connection will work for any Streamlit-in-Snowflake app using a container
-    runtime, as well as any self-managed caller's rights Service in Snowpark Container
-    Services that is hosting Streamlit.
-
-    This will use the Snowpark-provided account, host, database, and schema to connect.
-    Additionally, it will set ``client_session_keep_alive`` to ``True``. These values
-    may be overridden with ``**kwargs``.
-
-    Your app code:
-
-    >>> import streamlit as st
-    >>> conn = st.connection("snowflake-callers-rights")
-    >>> df = conn.query("SELECT * FROM my_table")
-
+    This base class provides the common methods and properties for Snowflake
+    connections. See the docstrings for each of these methods for more
+    information. The docstring for ``SnowflakeConnection`` provides an overall
+    description of the Snowflake connection types.
     """
 
     def query(
@@ -553,7 +354,255 @@ class BaseSnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
 class SnowflakeConnection(BaseSnowflakeConnection):
     """A connection to Snowflake using the Snowflake Connector for Python.
 
-    See ``BaseSnowflakeConnection`` for complete docs.
+    For standard connections, create an instance of this using
+    ``st.connection("snowflake")`` or
+    ``st.connection("<name>", type="snowflake")``. Connection parameters for a
+    SnowflakeConnection can be specified using ``secrets.toml`` and/or
+    ``**kwargs``. Connection parameters are passed to
+    |snowflake.connector.connect()|_.
+
+    When an app is running in Streamlit in Snowflake,
+    ``st.connection("snowflake")`` connects automatically using the app owner's
+    role without further configuration. ``**kwargs`` are ignored in this
+    case. Use ``secrets.toml`` and ``**kwargs`` to configure your connection
+    for local development.
+
+    When an app is running in Snowpark Container Services and has caller's rights
+    enabled, ``st.connection("snowflake-callers-rights")`` connects automatically
+    using the current user's identity tokens. This is a session-scoped connection
+    to ensure that the identity stays tied to the active user. Unlike with
+    ``"snowflake"`` connections, it will use the Snowpark Container Services
+    connection settings even when other ``**kwargs`` are provided.
+
+    The Snowflake connection includes several convenience methods. For example, you
+    can directly execute a SQL query with ``.query()`` or access the underlying
+    Snowflake Connector object with ``.raw_connection``.
+
+    .. |snowflake.connector.connect()| replace:: ``snowflake.connector.connect()``
+    .. _snowflake.connector.connect(): https://docs.snowflake.com/en/developer-guide/python-connector/python-connector-api#label-snowflake-connector-methods-connect
+
+    .. Important::
+        - `snowflake-snowpark-python <https://pypi.org/project/snowflake-snowpark-python/>`_
+          must be installed in your environment to use this connection. You can
+          install it as an extra with Streamlit:
+
+          .. code-block:: shell
+
+             pip install streamlit[snowflake]
+
+        - Account identifiers must be of the form ``<orgname>-<account_name>``
+          where ``<orgname>`` is the name of your Snowflake organization and
+          ``<account_name>`` is the unique name of your account within your
+          organization. This is dash-separated, not dot-separated like when used
+          in SQL queries. For more information, see `Account identifiers
+          <https://docs.snowflake.com/en/user-guide/admin-account-identifier>`_.
+
+        - Caller's rights connections rely on credentials provided when a user first
+          connects to a Streamlit app. These credentials are only valid for about
+          two minutes. Therefore, caller's rights connections must be created at
+          the top of an app or else the connection may fail.
+
+        - To develop locally with a caller's rights connection, use an
+          environment variable to logically switch between a ``"snowflake"``
+          connection locally and a ``"snowflake-callers-rights"`` connection in
+          Snowpark Container Services.
+
+    Examples
+    --------
+    **Example 1: Configuration with Streamlit secrets**
+
+    You can configure your Snowflake connection using Streamlit's
+    `Secrets management <https://docs.streamlit.io/develop/concepts/connections/secrets-management>`_.
+    For example, if you have MFA enabled on your account, you can connect using
+    `key-pair authentication <https://docs.snowflake.com/en/user-guide/key-pair-auth>`_.
+
+    .. code-block:: toml
+        :filename: ~/.snowflake/connections.toml
+
+        [connections.snowflake]
+        account = "xxx-xxx"
+        user = "xxx"
+        private_key_file = "/xxx/xxx/xxx.p8"
+        role = "xxx"
+        warehouse = "xxx"
+        database = "xxx"
+        schema = "xxx"
+
+    .. code-block:: python
+        :filename: streamlit_app.py
+
+        import streamlit as st
+
+        conn = st.connection("snowflake")
+        df = conn.query("SELECT * FROM my_table")
+
+    **Example 2: Configuration with keyword arguments and external authentication**
+
+    You can configure your Snowflake connection with keyword arguments. The
+    keyword arguments are merged with (and take precedence over) the values in
+    ``secrets.toml``. However, if you name your connection ``"snowflake"`` and
+    don't have a ``[connections.snowflake]`` dictionary in your
+    ``secrets.toml`` file, Streamlit will ignore any keyword arguments and use
+    the default Snowflake connection as described in Example 5 and Example 6.
+    To configure your connection using only keyword arguments, declare a name
+    for the connection other than ``"snowflake"``.
+
+    For example, if your Snowflake account supports SSO, you can set up a quick
+    local connection for development using `browser-based SSO
+    <https://docs.snowflake.com/en/user-guide/admin-security-fed-auth-use#how-browser-based-sso-works>`_.
+    Because there is nothing configured in ``secrets.toml``, the name is an
+    empty string and the type is set to ``"snowflake"``. This prevents
+    Streamlit from ignoring the keyword arguments and using a default
+    Snowflake connection.
+
+    .. code-block:: python
+        :filename: streamlit_app.py
+
+        import streamlit as st
+
+        conn = st.connection(
+            "",
+            type="snowflake",
+            account="xxx-xxx",
+            user="xxx",
+            authenticator="externalbrowser",
+        )
+        df = conn.query("SELECT * FROM my_table")
+
+    **Example 3: Named connection with Snowflake's connection configuration file**
+
+    Snowflake's Python Connector supports a `connection configuration file
+    <https://docs.snowflake.com/en/developer-guide/python-connector/python-connector-connect#connecting-using-the-connections-toml-file>`_,
+    which is well integrated with Streamlit's ``SnowflakeConnection``. If you
+    already have one or more connections configured, all you need to do is pass
+    the name of the connection to use.
+
+    .. code-block:: toml
+        :filename: ~/.snowflake/connections.toml
+
+        [my_connection]
+        account = "xxx-xxx"
+        user = "xxx"
+        password = "xxx"
+        warehouse = "xxx"
+        database = "xxx"
+        schema = "xxx"
+
+    .. code-block:: python
+        :filename: streamlit_app.py
+
+        import streamlit as st
+
+        conn = st.connection("my_connection", type="snowflake")
+        df = conn.query("SELECT * FROM my_table")
+
+    **Example 4: Named connection with Streamlit secrets and Snowflake's connection configuration file**
+
+    If you have a Snowflake configuration file with a connection named
+    ``my_connection`` as in Example 3, you can pass the connection name through
+    ``secrets.toml``.
+
+    .. code-block:: toml
+        :filename: .streamlit/secrets.toml
+
+        [connections.snowflake]
+        connection_name = "my_connection"
+
+    .. code-block:: python
+        :filename: streamlit_app.py
+
+        import streamlit as st
+
+        conn = st.connection("snowflake")
+        df = conn.query("SELECT * FROM my_table")
+
+    **Example 5: Default connection with an environment variable**
+
+    If you don't have a ``[connections.snowflake]`` dictionary in your
+    ``secrets.toml`` file and use ``st.connection("snowflake")``, Streamlit
+    will use the default connection for the `Snowflake Python Connector
+    <https://docs.snowflake.com/en/developer-guide/python-connector/python-connector-connect#setting-a-default-connection>`_.
+
+    If you have a Snowflake configuration file with a connection named
+    ``my_connection`` as in Example 3, you can set an environment variable to
+    declare it as the default Snowflake connection.
+
+    .. code-block:: toml
+        :filename: .streamlit/secrets.toml
+
+        SNOWFLAKE_DEFAULT_CONNECTION_NAME = "my_connection"
+
+    .. code-block:: python
+        :filename: streamlit_app.py
+
+        import streamlit as st
+
+        conn = st.connection("snowflake")
+        df = conn.query("SELECT * FROM my_table")
+
+    **Example 6: Default connection in Snowflake's connection configuration file**
+
+    If you have a Snowflake configuration file that defines your ``default``
+    connection, Streamlit will automatically use it if no other connection is
+    declared.
+
+    .. code-block:: toml
+        :filename: ~/.snowflake/connections.toml
+
+        [default]
+        account = "xxx-xxx"
+        user = "xxx"
+        password = "xxx"
+        warehouse = "xxx"
+        database = "xxx"
+        schema = "xxx"
+
+    .. code-block:: python
+        :filename: streamlit_app.py
+
+        import streamlit as st
+
+        conn = st.connection("snowflake")
+        df = conn.query("SELECT * FROM my_table")
+
+    **Example 7: Caller's rights connection when running in Snowpark Container Services**
+
+    You can use ``"snowflake-callers-rights"`` type connections in any
+    environment running on Snowpark Container Services, including Streamlit in
+    Snowflake on containers and any self-managed caller's rights Service.
+
+    This will use the Snowpark-provided account, host, database, and schema to connect.
+    Additionally, it will set ``client_session_keep_alive`` to ``True``. These values
+    may be overridden with ``**kwargs`` in ``st.connection``. For a complete list
+    of keyword arguments, see the documentation for |snowflake.connector.connect()|_.
+
+    .. |snowflake.connector.connect()| replace:: ``snowflake.connector.connect()``
+    .. _snowflake.connector.connect(): https://docs.snowflake.com/en/developer-guide/python-connector/python-connector-api#label-snowflake-connector-methods-connect
+
+    .. code-block:: python
+        :filename: streamlit_app.py
+
+        import streamlit as st
+
+        conn = st.connection("snowflake-callers-rights")
+        df = conn.query("SELECT * FROM my_table")
+
+    If you want to develop locally with a caller's rights connection, use an
+    environment variable to logically switch between a ``"snowflake"``
+    connection locally and a ``"snowflake-callers-rights"`` connection in
+    Snowpark Container Services.
+
+    .. code-block:: python
+        :filename: streamlit_app.py
+
+        import streamlit as st
+
+        conn = (
+            st.connection("snowflake")
+            if "LOCAL_DEVELOPMENT" in st.secrets and st.secrets["LOCAL_DEVELOPMENT"]
+            else st.connection("snowflake-callers-rights")
+        )
+        df = conn.query("SELECT * FROM my_table")
     """
 
     def _connect(self, **kwargs: Any) -> InternalSnowflakeConnection:
