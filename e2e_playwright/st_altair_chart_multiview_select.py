@@ -59,7 +59,8 @@ layer_chart = alt.layer(
 layer_selection = st.altair_chart(
     layer_chart, on_select="rerun", key="layer_chart", width="stretch"
 )
-if len(layer_selection["selection"]) > 0:
+# Check if any selection parameter has actual data (non-empty dict/list)
+if any(layer_selection["selection"].get(k) for k in layer_selection["selection"]):
     st.write("Layer chart selection:", str(layer_selection["selection"]))
 
 # HConcat chart with shared selection
@@ -89,7 +90,8 @@ hconcat_chart = alt.hconcat(
 hconcat_selection = st.altair_chart(
     hconcat_chart, on_select="rerun", key="hconcat_chart"
 )
-if len(hconcat_selection["selection"]) > 0:
+# Check if any selection parameter has actual data (non-empty dict/list)
+if any(hconcat_selection["selection"].get(k) for k in hconcat_selection["selection"]):
     st.write("HConcat chart selection:", str(hconcat_selection["selection"]))
 
 # VConcat chart with selection
@@ -119,7 +121,8 @@ vconcat_chart = alt.vconcat(
 vconcat_selection = st.altair_chart(
     vconcat_chart, on_select="rerun", key="vconcat_chart"
 )
-if len(vconcat_selection["selection"]) > 0:
+# Check if any selection parameter has actual data (non-empty dict/list)
+if any(vconcat_selection["selection"].get(k) for k in vconcat_selection["selection"]):
     st.write("VConcat chart selection:", str(vconcat_selection["selection"]))
 
 # HConcat chart with MULTIPLE selections (one per view)
@@ -153,5 +156,9 @@ hconcat_multi_chart = alt.hconcat(
 hconcat_multi_selection = st.altair_chart(
     hconcat_multi_chart, on_select="rerun", key="hconcat_multi_chart"
 )
-if len(hconcat_multi_selection["selection"]) > 0:
+# Check if any selection parameter has actual data (non-empty dict/list)
+if any(
+    hconcat_multi_selection["selection"].get(k)
+    for k in hconcat_multi_selection["selection"]
+):
     st.write("HConcat multi selection:", str(hconcat_multi_selection["selection"]))

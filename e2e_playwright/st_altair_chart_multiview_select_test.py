@@ -98,6 +98,10 @@ def test_layer_chart_point_selection(app: Page):
     expect(chart).to_be_visible()
     chart.scroll_into_view_if_needed()
 
+    # Verify no selection text is displayed before interaction
+    selection_text = app.get_by_text("Layer chart selection:")
+    expect(selection_text).not_to_be_visible()
+
     # Click on a point in the scatter layer
     _click(app, chart, _MousePosition(264, 120))
 

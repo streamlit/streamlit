@@ -525,7 +525,8 @@ def _extract_selection_parameters(spec: VegaLiteSpec) -> set[str]:
             if param.get("name") and param.get("select"):
                 param_names.add(param["name"])
 
-    # Recursively check composite view specs (layer, hconcat, vconcat, concat)
+    # Recursively check composite view specs (layer, hconcat, vconcat, concat).
+    # Non-dict entries in the list are silently skipped as they are malformed.
     for key in ("layer", "hconcat", "vconcat", "concat"):
         if key in spec and isinstance(spec[key], list):
             for child_spec in spec[key]:
@@ -1944,8 +1945,9 @@ class VegaChartsMixin:
             ``encodings`` in your selection. For example:
             ``alt.selection_point(fields=["Origin"])`` or
             ``alt.selection_point(encodings=["x", "y"])``. Without explicit
-            fields, selections may return internal row identifiers (``vgsid``)
-            instead of data values.
+            fields, Vega may add an internal row identifier field (``vgsid``)
+            to your data, and selections can then return this identifier
+            instead of your original data values.
 
         selection_mode : str or Iterable of str
             The selection parameters Streamlit should use. If

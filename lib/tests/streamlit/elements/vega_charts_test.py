@@ -1115,6 +1115,8 @@ class MultiViewSelectionsTest(DeltaGeneratorTestCase):
         # Only the specified selection should be active
         assert proto.selection_mode == ["my_point"]
         assert event.selection.my_point == {}
+        # Verify that the unactivated selection is NOT included in the selection state
+        assert not hasattr(event.selection, "my_interval")
 
 
 class VegaLiteMultiViewSelectionsTest(DeltaGeneratorTestCase):
