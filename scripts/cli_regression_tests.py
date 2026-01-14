@@ -176,7 +176,7 @@ class TestCLIRegressions:
         process.stdin.flush()  # type: ignore
         process.communicate()
 
-        with open(CREDENTIALS_FILE_PATH) as f:
+        with open(CREDENTIALS_FILE_PATH, encoding="utf-8") as f:
             assert "regressiontest@streamlit.io" in f.read(), (
                 "Email address was not found in the credentials file"
             )
@@ -213,7 +213,7 @@ class TestCLIRegressions:
         assert ":9999" in out, f"Incorrect port. See output:\n{out}"
 
     def test_config_toml_defined_port(self) -> None:
-        with open(CONFIG_FILE_PATH, "w") as file:
+        with open(CONFIG_FILE_PATH, "w", encoding="utf-8") as file:
             file.write("[server]\n  port=8888")
 
         out = self.run_single_proc(

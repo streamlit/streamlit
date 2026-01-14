@@ -26,9 +26,9 @@ describe("truncateFilename", () => {
     })
 
     it("returns filenames at exactly max length unchanged", () => {
-      // 16 characters exactly (12 chars + 4 for ".pdf")
-      const exactLength = "123456789012.pdf"
-      expect(exactLength.length).toBe(16) // verify test setup
+      // 20 characters exactly (16 chars + 4 for ".pdf")
+      const exactLength = "1234567890123456.pdf"
+      expect(exactLength.length).toBe(20) // verify test setup
       expect(truncateFilename(exactLength)).toBe(exactLength)
     })
 
@@ -43,7 +43,7 @@ describe("truncateFilename", () => {
       const longName = "this-is-a-very-long-filename-that-needs-truncation.pdf"
       const result = truncateFilename(longName)
 
-      expect(result.length).toBeLessThanOrEqual(16)
+      expect(result.length).toBeLessThanOrEqual(20)
       expect(result).toContain("...")
       expect(result).toMatch(/\.pdf$/)
     })
@@ -67,7 +67,7 @@ describe("truncateFilename", () => {
       )
 
       // Should start with beginning of filename
-      expect(result.startsWith("abcd")).toBe(true)
+      expect(result.startsWith("abcdefg")).toBe(true)
       // Should contain ellipsis
       expect(result).toContain("...")
       // Should end with extension
@@ -80,18 +80,18 @@ describe("truncateFilename", () => {
       const longName = "this-is-a-very-long-filename-without-any-extension"
       const result = truncateFilename(longName)
 
-      expect(result.length).toBeLessThanOrEqual(16)
+      expect(result.length).toBeLessThanOrEqual(20)
       expect(result).toContain("...")
       // Should have content from both start and end
-      expect(result.startsWith("this-i")).toBe(true)
-      expect(result.endsWith("ension")).toBe(true)
+      expect(result.startsWith("this-is-")).toBe(true)
+      expect(result.endsWith("xtension")).toBe(true)
     })
 
     it("handles files ending with dot as no extension", () => {
       const withDot = "some-very-long-filename-ending-with-dot."
       const result = truncateFilename(withDot)
 
-      expect(result.length).toBeLessThanOrEqual(16)
+      expect(result.length).toBeLessThanOrEqual(20)
       expect(result).toContain("...")
     })
   })
@@ -103,7 +103,7 @@ describe("truncateFilename", () => {
       const result = truncateFilename(longExt)
 
       // Should still truncate reasonably
-      expect(result.length).toBeLessThanOrEqual(16)
+      expect(result.length).toBeLessThanOrEqual(20)
       expect(result).toContain("...")
     })
   })
@@ -114,7 +114,7 @@ describe("truncateFilename", () => {
       const result = truncateFilename(tarGz)
 
       expect(result).toMatch(/\.gz$/)
-      expect(result.length).toBeLessThanOrEqual(16)
+      expect(result.length).toBeLessThanOrEqual(20)
     })
 
     it("handles version numbers in filenames", () => {
@@ -122,7 +122,7 @@ describe("truncateFilename", () => {
       const result = truncateFilename(versioned)
 
       expect(result).toMatch(/\.dmg$/)
-      expect(result.length).toBeLessThanOrEqual(16)
+      expect(result.length).toBeLessThanOrEqual(20)
     })
   })
 
@@ -144,7 +144,7 @@ describe("truncateFilename", () => {
 
       const longHidden = ".very-long-hidden-config-file-name-here"
       const result = truncateFilename(longHidden)
-      expect(result.length).toBeLessThanOrEqual(16)
+      expect(result.length).toBeLessThanOrEqual(20)
     })
 
     it("handles UUID-style filenames", () => {
@@ -152,7 +152,7 @@ describe("truncateFilename", () => {
         "2e1de717-dc5f-4d3e-a7e5-9558f33adaca_ExportBlock-54fa9781.zip"
       const result = truncateFilename(uuid)
 
-      expect(result.length).toBeLessThanOrEqual(16)
+      expect(result.length).toBeLessThanOrEqual(20)
       expect(result).toContain("...")
       expect(result).toMatch(/\.zip$/)
     })
@@ -162,9 +162,9 @@ describe("truncateFilename", () => {
     it("respects custom max length parameter", () => {
       const filename = "medium-length-filename.txt"
 
-      // With default (16), should truncate
+      // With default (20), should truncate
       const defaultResult = truncateFilename(filename)
-      expect(defaultResult.length).toBeLessThanOrEqual(16)
+      expect(defaultResult.length).toBeLessThanOrEqual(20)
       expect(defaultResult).toContain("...")
       expect(defaultResult).toMatch(/\.txt$/)
 
@@ -172,8 +172,8 @@ describe("truncateFilename", () => {
       expect(truncateFilename(filename, 36)).toBe(filename)
 
       // With custom max, should truncate to that length
-      const result = truncateFilename(filename, 20)
-      expect(result.length).toBeLessThanOrEqual(20)
+      const result = truncateFilename(filename, 16)
+      expect(result.length).toBeLessThanOrEqual(16)
       expect(result).toContain("...")
       expect(result).toMatch(/\.txt$/)
     })

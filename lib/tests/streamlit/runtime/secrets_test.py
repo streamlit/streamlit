@@ -421,15 +421,23 @@ class SecretsDirectoryTest(unittest.TestCase):
         self.temp_dir_path = self.temp_dir.name
         os.makedirs(os.path.join(self.temp_dir_path, "example_login"))
         with open(
-            os.path.join(self.temp_dir_path, "example_login", "username"), "w"
+            os.path.join(self.temp_dir_path, "example_login", "username"),
+            "w",
+            encoding="utf-8",
         ) as f:
             f.write("example_username")
         with open(
-            os.path.join(self.temp_dir_path, "example_login", "password"), "w"
+            os.path.join(self.temp_dir_path, "example_login", "password"),
+            "w",
+            encoding="utf-8",
         ) as f:
             f.write("example_password")
         os.makedirs(os.path.join(self.temp_dir_path, "example_token"))
-        with open(os.path.join(self.temp_dir_path, "example_token", "token"), "w") as f:
+        with open(
+            os.path.join(self.temp_dir_path, "example_token", "token"),
+            "w",
+            encoding="utf-8",
+        ) as f:
             f.write("token123")
 
         self.secrets = Secrets()
@@ -457,7 +465,9 @@ class SecretsDirectoryTest(unittest.TestCase):
     @patch("streamlit.watcher.path_watcher.watch_dir", MagicMock())
     def test_secrets_reload(self):
         with open(
-            os.path.join(self.temp_dir_path, "example_login", "password"), "w"
+            os.path.join(self.temp_dir_path, "example_login", "password"),
+            "w",
+            encoding="utf-8",
         ) as f:
             f.write("example_password2")
 

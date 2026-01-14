@@ -711,8 +711,7 @@ class CommonCacheTest(DeltaGeneratorTestCase):
 
         @cache_decorator(scope="session")
         def get_value(val: str) -> str:
-            nonlocal counter
-            nonlocal curr_session_id
+            nonlocal counter, curr_session_id
             counter += 1
             return f"{val}-{curr_session_id}-{counter}"
 
@@ -781,8 +780,7 @@ class CommonCacheTest(DeltaGeneratorTestCase):
 
         @cache_decorator(scope="session")
         def get_value(val: str) -> str:
-            nonlocal counter
-            nonlocal curr_session_id
+            nonlocal counter, curr_session_id
             counter += 1
             return f"{val}-{curr_session_id}-{counter}"
 

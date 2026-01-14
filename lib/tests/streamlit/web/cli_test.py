@@ -34,7 +34,6 @@ from parameterized import parameterized
 from requests.adapters import HTTPAdapter, Retry
 from testfixtures import tempdir
 
-import streamlit
 import streamlit.web.bootstrap
 from streamlit import config
 from streamlit.config_option import ConfigOption
@@ -609,11 +608,12 @@ class CliTest(unittest.TestCase):
                 assert Path(tmpdir, "streamlit_app.py").exists()
 
                 # Check file contents
-                assert "streamlit" in Path(tmpdir, "requirements.txt").read_text()
-                assert (
-                    "import streamlit as st"
-                    in Path(tmpdir, "streamlit_app.py").read_text()
+                assert "streamlit" in Path(tmpdir, "requirements.txt").read_text(
+                    encoding="utf-8"
                 )
+                assert "import streamlit as st" in Path(
+                    tmpdir, "streamlit_app.py"
+                ).read_text(encoding="utf-8")
             finally:
                 os.chdir(orig_dir)
 

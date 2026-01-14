@@ -41,7 +41,7 @@ def get_version() -> str | None:
     dirname = os.path.dirname(__file__)
     base_dir = os.path.abspath(os.path.join(dirname, "../.."))
     pattern = re.compile(r"(?:.*VERSION = \")(?P<version>.*)(?:\"  # PEP-440$)")
-    with open(os.path.join(base_dir, "setup.py")) as f:
+    with open(os.path.join(base_dir, "setup.py"), encoding="utf-8") as f:
         for line in f:
             m = pattern.match(line)
             if m:

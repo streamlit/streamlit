@@ -105,16 +105,16 @@ def test_check_total_websocket_message_number_and_size(page: Page, app_port: int
         print(f"WebSocket opened: {ws.url}")
 
         def on_frame_sent(payload: str | bytes):
-            nonlocal total_websocket_sent_size_bytes
-            nonlocal total_websocket_messages_sent
+            nonlocal total_websocket_sent_size_bytes, total_websocket_messages_sent
             if isinstance(payload, str):
                 payload = payload.encode("utf-8")
             total_websocket_sent_size_bytes += len(payload)
             total_websocket_messages_sent += 1
 
         def on_frame_received(payload: str | bytes):
-            nonlocal total_websocket_received_size_bytes
-            nonlocal total_websocket_messages_received
+            nonlocal \
+                total_websocket_received_size_bytes, \
+                total_websocket_messages_received
             if isinstance(payload, str):
                 payload = payload.encode("utf-8")
             total_websocket_received_size_bytes += len(payload)
