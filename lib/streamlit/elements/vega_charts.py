@@ -1939,6 +1939,14 @@ class VegaChartsMixin:
             <https://altair-viz.github.io/user_guide/interactions.html>`_
             in Altair's documentation.
 
+            For consistent selection output, especially in multi-view charts
+            (layer, hconcat, vconcat, facet, repeat), specify ``fields`` or
+            ``encodings`` in your selection. For example:
+            ``alt.selection_point(fields=["Origin"])`` or
+            ``alt.selection_point(encodings=["x", "y"])``. Without explicit
+            fields, selections may return internal row identifiers (``vgsid``)
+            instead of data values.
+
         selection_mode : str or Iterable of str
             The selection parameters Streamlit should use. If
             ``selection_mode`` is ``None`` (default), Streamlit will use all
@@ -2161,6 +2169,12 @@ class VegaChartsMixin:
             `Dynamic Behaviors with Parameters \
             <https://vega.github.io/vega-lite/docs/parameter.html>`_
             in Vega-Lite's documentation.
+
+            For consistent selection output, especially in multi-view charts
+            (layer, hconcat, vconcat, facet, repeat), specify ``fields`` or
+            ``encodings`` in your selection parameter. Without explicit fields,
+            selections may return internal row identifiers (``vgsid``) instead
+            of data values.
 
         selection_mode : str or Iterable of str
             The selection parameters Streamlit should use. If
