@@ -93,8 +93,8 @@ class MapMixin:
         *,
         latitude: str | None = None,
         longitude: str | None = None,
-        color: None | str | Color = None,
-        size: None | str | float = None,
+        color: str | Color | None = None,
+        size: str | float | None = None,
         zoom: int | None = None,
         width: WidthWithoutContent = "stretch",
         height: HeightWithoutContent = 500,
@@ -296,8 +296,8 @@ def to_deckgl_json(
     data: Data,
     lat: str | None,
     lon: str | None,
-    size: None | str | float,
-    color: None | str | Collection[float],
+    size: str | float | None,
+    color: str | Collection[float] | None,
     zoom: int | None,
 ) -> str:
     if data is None:
@@ -432,7 +432,7 @@ def _convert_color_arg_or_column(
     data: DataFrame,
     color_arg: str,
     color_col_name: str | None,
-) -> None | str | IntColorTuple:
+) -> str | IntColorTuple | None:
     """Converts color to a format accepted by PyDeck.
 
     For example:
@@ -443,7 +443,7 @@ def _convert_color_arg_or_column(
     NOTE: This function mutates the data argument.
     """
 
-    color_arg_out: None | str | IntColorTuple = None
+    color_arg_out: str | IntColorTuple | None = None
 
     if color_col_name is not None:
         # Convert color column to the right format.

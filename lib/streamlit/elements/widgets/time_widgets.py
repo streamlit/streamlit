@@ -1467,7 +1467,7 @@ class TimeWidgetsMixin:
         parsed_min_date = parse_date_deterministic_for_id(min_value)
         parsed_max_date = parse_date_deterministic_for_id(max_value)
 
-        parsed: str | None | list[str | None]
+        parsed: str | list[str | None] | None
         if value == "today":
             parsed = None
         elif isinstance(value, Sequence):

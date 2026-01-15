@@ -106,7 +106,6 @@ ignore = [
   "RUF029",   # Checks for async functions with no await statements.
   "RUF067",   # Checks for non empty __init__ modules.
   "FURB101",  # Checks for open and read calls that can be replaced by pathlib.
-  "RUF036",   # Checks for None not at the end of union types.
   "FURB103",  # Checks for open and write calls that can be replaced by pathlib.
   "E266",     # Checks for multiple leading hashes in block comments.
   "PLW0108",  # Checks for lambdas that can be replaced by existing functions.
