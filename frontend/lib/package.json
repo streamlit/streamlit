@@ -171,7 +171,7 @@
     "vite": "^7.3.1",
     "vite-plugin-dts": "^4.5.4",
     "vite-plugin-svgr": "^4.5.0",
-    "vite-tsconfig-paths": "^6.0.2",
+    "vite-tsconfig-paths": "^6.0.4",
     "vitest": "^4.0.16",
     "vitest-canvas-mock": "^1.1.2",
     "vitest-fetch-mock": "^0.4.5"
