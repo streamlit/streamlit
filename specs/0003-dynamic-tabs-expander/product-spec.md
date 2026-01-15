@@ -23,10 +23,7 @@ with tab1:
     load_large_dataset()  # ALWAYS runs, even if user is viewing tab2
 
 with tab2:
-    create_expensive_charts()  # ALWAYS runs, even if user is viewing tab3
-
-with tab3:
-    run_ml_inference()  # ALWAYS runs, even if user is viewing tab1
+    create_expensive_charts()  # ALWAYS runs, even if user is viewing tab1
 ```
 
 This ensures instant visibility when tabs are switched, but significantly slows apps when tabs contain expensive computations.
@@ -44,18 +41,6 @@ This ensures instant visibility when tabs are switched, but significantly slows 
 
 - [#8239](https://github.com/streamlit/streamlit/issues/8239) - st.tabs & expander frontend state/mount handling (79 👍) - addresses broader state management issues
 
-### Use Cases
-
-This feature enables better performance and new interaction patterns for several types of apps:
-
-1. **ML/Data Science Apps:** Compare multiple models with expensive inference, running only the selected model
-2. **API Dashboards:** Display multiple API endpoints in tabs without hitting rate limits or incurring unnecessary costs
-3. **Database Tools:** Query multiple data sources or views, executing only the active query
-4. **Complex Visualizations:** Display expensive charts (Plotly 3D, network graphs) only when the relevant tab is visible
-5. **Multi-Step Workflows:** Build wizard-style interfaces with Next/Back navigation between steps
-
-**Additional benefit:** Programmatic control via session state enables new interaction patterns like automated tab switching based on validation or workflow progression.
-
 ---
 
 ## Proposal
@@ -64,10 +49,12 @@ This feature enables better performance and new interaction patterns for several
 
 Add `on_change` parameter and `.open` attribute following the pattern established for chart/dataframe selections.
 
-#### For `st.tabs`:
+#### Lazy Execution with `.open` Attribute
+
+**For `st.tabs`:**
 
 ```python
-tabs = st.tabs(["Data", "Charts", "ML"], on_change="rerun", key="my_tabs")
+tabs = st.tabs(["Data", "Charts", "ML"], on_change="rerun")
 
 # Only execute content for the active tab
 if tabs[0].open:
@@ -77,37 +64,64 @@ if tabs[0].open:
 if tabs[1].open:
     with tabs[1]:
         create_expensive_charts()  # Only runs when this tab is active
-
-# Programmatic control
-def goto_charts():
-    st.session_state.my_tabs = "Charts"
-
-st.button("Go to Charts", on_click=goto_charts)
 ```
 
-#### For `st.expander`:
+**Alternative naming:** The following alternative property names were considered for checking if a tab is active: `.active`, `.selected`, `.visible`, and `.state`. `.open` was selected because it works naturally across tabs, expander, and popover with a simple boolean check. While `.active` is more precise for tabs, consistency across all three elements was prioritized.
+
+**For `st.expander`:**
 
 ```python
-exp = st.expander("Show details", on_change="rerun", key="details")
+exp = st.expander("Show details", on_change="rerun")
 
 if exp.open:  # Only when expanded
     with exp:
         expensive_operation()
+```
 
-# Programmatic control
+**For `st.popover`:**
+
+```python
+pop = st.popover("Options", on_change="rerun")
+
+if pop.open:  # Only when popover is open
+    with pop:
+        expensive_operation()
+```
+
+#### Programmatic Control via Session State
+
+When a `key` is provided, the element's state can be controlled programmatically via `st.session_state`:
+
+**For `st.tabs`:**
+
+```python
+tabs = st.tabs(["Data", "Charts", "ML"], on_change="rerun", key="my_tabs")
+
+# Control which tab is active
+def goto_charts():
+    st.session_state.my_tabs = "Charts"
+
+st.button("Go to Charts", on_click=goto_charts)
+
+# Conditional execution based on active tab
+if tabs[0].open:
+    with tabs[0]:
+        load_large_dataset()
+```
+
+**For `st.expander`:**
+
+```python
+exp = st.expander("Show details", on_change="rerun", key="details")
+
+# Control whether expander is open
 def open_details():
     st.session_state.details = True
 
 st.button("Show Details", on_click=open_details)
-```
 
-#### For `st.popover`:
-
-```python
-pop = st.popover("Options", on_change="rerun", key="options")
-
-if pop.open:  # Only when popover is open
-    with pop:
+if exp.open:
+    with exp:
         expensive_operation()
 ```
 
@@ -196,21 +210,21 @@ if tabs[0].open:  # Developer must add this check
 
 ### Examples
 
-**Example apps demonstrating the proposed API:**
+**Example apps demonstrating the proposed API** (see [prototype PR #13277](https://github.com/streamlit/streamlit/pull/13277)):
 
-1. **Lazy Execution Demo:** `e2e_playwright/dynamic_containers/dynamic_expander_test.py`
+1. **Lazy Execution Demo:** [`e2e_playwright/dynamic_containers/dynamic_expander_test.py`](https://github.com/streamlit/streamlit/pull/13277/files#diff-dynamic_expander_test.py)
 
    - Shows tabs and expander with `on_change="rerun"`
    - Demonstrates `.open` attribute usage
    - Programmatic control via session state
 
-2. **Database Query Dashboard:** `e2e_playwright/dynamic_containers/database_query_app_option1b.py`
+2. **Database Query Dashboard:** [`e2e_playwright/dynamic_containers/database_query_app_option1b.py`](https://github.com/streamlit/streamlit/pull/13277/files#diff-database_query_app_option1b.py)
 
    - Real-world example: Multiple database queries in tabs
    - Only active tab's query executes
    - Shows 70-80% performance improvement by simulating expensive database queries
 
-3. **Multi-Step Wizard:** `e2e_playwright/dynamic_containers/wizard_pipeline_app_option1b.py`
+3. **Multi-Step Wizard:** [`e2e_playwright/dynamic_containers/wizard_pipeline_app_option1b.py`](https://github.com/streamlit/streamlit/pull/13277/files#diff-wizard_pipeline_app_option1b.py)
    - Sequential workflow with Next/Back buttons
    - Programmatic navigation between steps
    - Demonstrates validation and conditional logic
@@ -221,7 +235,7 @@ if tabs[0].open:  # Developer must add this check
 
 Several alternative API designs were evaluated before selecting the proposed approach:
 
-### Option 1a: Boolean Evaluation of Delta Generator
+### Boolean Evaluation of Delta Generator
 
 **Approach:** Make the delta generator itself evaluate to `True` when open/active.
 
@@ -256,7 +270,7 @@ elif tab2:
 
 ---
 
-### Option 1c: Session State Value
+### Session State Value
 
 **Approach:** Use session state exclusively to track open/closed state.
 
@@ -288,7 +302,7 @@ if st.session_state.exp:
 
 ---
 
-### Option 2: Function Argument
+### Function Argument
 
 **Approach:** Pass functions as arguments that get called only when the tab/expander is visible.
 
@@ -330,7 +344,7 @@ st.tabs({"A": show_tab_a, "B": show_tab_b})
 
 ---
 
-### Option 3: Function Decorator
+### Function Decorator
 
 **Approach:** Use a decorator pattern similar to `@st.fragment` and `@st.dialog`.
 
@@ -361,7 +375,7 @@ show_expander()
 
 ## Design Rationale
 
-**Selected Approach:** Option 1b (`.open` attribute + `on_change`)
+**Selected Approach:** `.open` attribute + `on_change` parameter
 
 **SteerCo Decision (Oct 15, 2024):** Strong support for this approach - described as "easier to grow into" and "feels more at home with Streamlit APIs"
 
