@@ -21,6 +21,16 @@ import { isImageFile } from "./getFileTypeIcon"
 /**
  * Hook to create and manage a blob URL for image file previews.
  *
+ * Uses useState + useEffect to properly handle React 18 Strict Mode's
+ * double-invocation behavior. Each effect invocation creates its own
+ * blob URL and only revokes that specific URL on cleanup.
+ *
+ * Note: We disable the set-state-in-effect lint rule here because this is
+ * a legitimate use case - we're synchronizing with an external system
+ * (the browser's Blob URL API) that requires explicit resource management.
+ * The blob URL must be created and revoked together in the same effect to
+ * ensure proper cleanup in Strict Mode.
+ *
  * @param file - The File object to create a preview for (optional)
  * @param filename - The filename to check if it's an image
  * @returns The blob URL string if the file is an image, null otherwise
@@ -34,6 +44,7 @@ export function useImagePreview(
   useEffect(() => {
     // Don't create URL if no file or not an image
     if (!file || !isImageFile(filename)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Synchronizing with Blob URL API; see docstring
       setPreviewUrl(null)
       return
     }
