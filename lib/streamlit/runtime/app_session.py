@@ -1064,6 +1064,7 @@ def _parse_and_populate_chart_colors(
                 required_length,
                 len(colors),
             )
+            return  # Don't populate invalid data; let frontend use defaults
         for color in colors:
             try:
                 msg_field.append(color)
