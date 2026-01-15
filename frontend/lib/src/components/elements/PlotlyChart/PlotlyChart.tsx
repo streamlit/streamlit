@@ -514,11 +514,8 @@ export function PlotlyChart({
             figure.layout.height !== calculatedHeight ||
             figure.layout.width !== calculatedWidth
 
-          // Only create a new object if dimensions need to be overridden,
-          // to avoid unnecessary re-renders that can interfere with UI interactions.
-          // This fixes cumulative shrinking issues with go.Image charts
-          // (see GitHub issue #11178).
-          const finalFigure = needsDimensionOverride
+          // Always save to widget state for recovery purposes
+          const figureToSave = needsDimensionOverride
             ? {
                 ...figure,
                 layout: {
@@ -528,10 +525,18 @@ export function PlotlyChart({
                 },
               }
             : figure
+          widgetMgr.setElementState(element.id, "figure", figureToSave)
 
-          // Save the updated figure state to allow it to be recovered
-          widgetMgr.setElementState(element.id, "figure", finalFigure)
-          setPlotlyFigure(finalFigure)
+          // Only update React state when dimensions need to be overridden.
+          // This prevents an infinite render loop where:
+          // 1. setPlotlyFigure triggers re-render
+          // 2. layoutWithControlledDimensions gets new reference
+          // 3. Plotly re-renders and fires onUpdate again
+          // This fixes cumulative shrinking issues with go.Image charts
+          // (see GitHub issue #11178).
+          if (needsDimensionOverride) {
+            setPlotlyFigure(figureToSave)
+          }
         }}
       />
     </StyledPlotlyChartContainer>
