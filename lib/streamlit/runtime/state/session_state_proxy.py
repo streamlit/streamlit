@@ -408,7 +408,7 @@ class SessionStateProxy(MutableMapping[Key, Any]):
         """Return a dict containing all session_state and keyed widget values."""
         return get_session_state().filtered_state
 
-    @gather_metrics("session_state.__call__")
+    @gather_metrics("session_state")
     def __call__(self, cls: type[_T]) -> type[_T]:
         """Decorator to create a session state class.
 
