@@ -22,7 +22,7 @@ import {
   CUSTOM_THEME_NAME,
   darkTheme,
   LocalStore,
-  setCachedTheme,
+  setCachedThemeSelection,
   ThemeConfig,
 } from "@streamlit/lib"
 
@@ -95,10 +95,10 @@ describe("useThemeManager", () => {
       window.localStorage.getItem(LocalStore.ACTIVE_THEME) || ""
     )
 
-    expect(updatedLocalStorage.name).toBe("Dark")
+    expect(updatedLocalStorage).toBe("Dark")
   })
 
-  it("does not save Auto theme", () => {
+  it("saves Auto selection", () => {
     const { result } = renderHook(() => useThemeManager())
     const [themeManager] = result.current
 
@@ -115,11 +115,11 @@ describe("useThemeManager", () => {
       })
     })
 
-    const updatedLocalStorage = window.localStorage.getItem(
-      LocalStore.ACTIVE_THEME
+    const updatedLocalStorage = JSON.parse(
+      window.localStorage.getItem(LocalStore.ACTIVE_THEME) || ""
     )
 
-    expect(updatedLocalStorage).toBe(null)
+    expect(updatedLocalStorage).toBe("System")
   })
 
   it("updates availableThemes", () => {
@@ -141,7 +141,7 @@ describe("useThemeManager", () => {
   })
 
   it("sets the cached theme as the default theme if one is set", () => {
-    setCachedTheme(darkTheme)
+    setCachedThemeSelection(darkTheme)
 
     const { result } = renderHook(() => useThemeManager())
     const [themeManager] = result.current
@@ -149,20 +149,6 @@ describe("useThemeManager", () => {
 
     expect(activeTheme.name).toBe(darkTheme.name)
     expect(availableThemes.length).toBe(createPresetThemes().length)
-  })
-
-  it("includes a custom theme as an available theme if one is cached", () => {
-    setCachedTheme({
-      ...darkTheme,
-      name: CUSTOM_THEME_NAME,
-    })
-
-    const { result } = renderHook(() => useThemeManager())
-    const [themeManager] = result.current
-    const { activeTheme, availableThemes } = themeManager
-
-    expect(activeTheme.name).toBe(CUSTOM_THEME_NAME)
-    expect(availableThemes.length).toBe(createPresetThemes().length + 1)
   })
 
   it("handles custom theme sent from Host", () => {
@@ -279,8 +265,7 @@ describe("useThemeManager", () => {
         window.localStorage.getItem(LocalStore.ACTIVE_THEME) || ""
       )
 
-      expect(savedTheme.name).toBe(CUSTOM_THEME_NAME)
-      expect(savedTheme.themeInput).toBeDefined()
+      expect(savedTheme).toBe("System")
     })
 
     it("replaces the current theme completely", () => {
