@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { useEffect, useMemo } from "react"
+import { useEffect, useState } from "react"
 
 import { isImageFile } from "./getFileTypeIcon"
 
@@ -29,22 +29,24 @@ export function useImagePreview(
   file: File | undefined,
   filename: string
 ): string | null {
-  // Derive the preview URL during render - createObjectURL is synchronous
-  const previewUrl = useMemo(() => {
-    if (!file || !isImageFile(filename)) {
-      return null
-    }
-    return URL.createObjectURL(file)
-  }, [file, filename])
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
 
-  // Effect only for cleanup - revoke the blob URL when it changes or unmounts
   useEffect(() => {
-    return () => {
-      if (previewUrl) {
-        URL.revokeObjectURL(previewUrl)
-      }
+    // Don't create URL if no file or not an image
+    if (!file || !isImageFile(filename)) {
+      setPreviewUrl(null)
+      return
     }
-  }, [previewUrl])
+
+    // Create the blob URL
+    const url = URL.createObjectURL(file)
+    setPreviewUrl(url)
+
+    // Cleanup: revoke the URL when the effect re-runs or unmounts
+    return () => {
+      URL.revokeObjectURL(url)
+    }
+  }, [file, filename])
 
   return previewUrl
 }
