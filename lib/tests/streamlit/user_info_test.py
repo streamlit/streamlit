@@ -223,10 +223,9 @@ class UserInfoAuthTest(DeltaGeneratorTestCase):
             with pytest.raises(StreamlitAuthError) as ex:
                 st.login("google")
 
-            assert (
-                str(ex.value)
-                == """Authentication credentials in `.streamlit/secrets.toml` are missing the
-            "redirect_uri" key. Please check your configuration."""
+            assert str(ex.value) == (
+                "Authentication credentials in `.streamlit/secrets.toml` are missing "
+                'the "redirect_uri" key. Please check your configuration.'
             )
 
     def test_user_login_cookie_secret_missing(self):
@@ -246,10 +245,9 @@ class UserInfoAuthTest(DeltaGeneratorTestCase):
             with pytest.raises(StreamlitAuthError) as ex:
                 st.login("google")
 
-            assert (
-                str(ex.value)
-                == """Authentication credentials in `.streamlit/secrets.toml` are missing the
-            "cookie_secret" key. Please check your configuration."""
+            assert str(ex.value) == (
+                "Authentication credentials in `.streamlit/secrets.toml` are missing "
+                'the "cookie_secret" key. Please check your configuration.'
             )
 
     def test_user_login_required_fields_missing(self):

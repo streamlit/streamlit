@@ -45,6 +45,31 @@ SIGNING_OVERHEAD_SAFETY_BUFFER: Final = 50
 # Base64 encoding of 1 byte = 4 bytes, so overhead = total - 4
 SINGLE_BYTE_BASE64_SIZE: Final = 4
 
+# Module-level storage for programmatic auth config passed via st.login(**kwargs).
+# This allows users to configure auth via environment variables or other sources
+# instead of secrets.toml. Using a dict container to avoid global statement.
+_programmatic_auth_config: dict[str, dict[str, Any] | None] = {"config": None}
+
+
+def set_programmatic_auth_config(auth_config: dict[str, Any]) -> None:
+    """Store auth config passed via st.login(**kwargs).
+
+    This allows configuring authentication programmatically instead of using
+    secrets.toml. The config is stored at module level and persists for the
+    lifetime of the app.
+    """
+    _programmatic_auth_config["config"] = auth_config
+
+
+def get_programmatic_auth_config() -> dict[str, Any] | None:
+    """Get programmatically set auth config, if any."""
+    return _programmatic_auth_config["config"]
+
+
+def clear_programmatic_auth_config() -> None:
+    """Clear programmatic auth config."""
+    _programmatic_auth_config["config"] = None
+
 
 class AuthCache:
     """Simple cache implementation for storing info required for Authlib."""
@@ -83,8 +108,15 @@ def is_authlib_installed() -> bool:
 
 
 def get_signing_secret() -> str:
-    """Get the cookie signing secret from the configuration or secrets.toml."""
+    """Get the cookie signing secret from programmatic config, secrets.toml, or server config."""
     signing_secret: str = config.get_option("server.cookieSecret")
+
+    # Check programmatic config first
+    programmatic_config = get_programmatic_auth_config()
+    if programmatic_config and "cookie_secret" in programmatic_config:
+        return str(programmatic_config["cookie_secret"])
+
+    # Fall back to secrets.toml
     if secrets_singleton.load_if_toml_exists():
         auth_section = secrets_singleton.get("auth")
         if auth_section:
@@ -93,7 +125,13 @@ def get_signing_secret() -> str:
 
 
 def get_secrets_auth_section() -> AttrDict:
-    """Get the 'auth' section of the secrets.toml."""
+    """Get the 'auth' section from programmatic config or secrets.toml."""
+    # Check for programmatic config first
+    programmatic_config = get_programmatic_auth_config()
+    if programmatic_config:
+        return AttrDict(programmatic_config)
+
+    # Fall back to secrets.toml
     auth_section = AttrDict({})
     if secrets_singleton.load_if_toml_exists():
         auth_section = cast("AttrDict", secrets_singleton.get("auth", AttrDict({})))
@@ -423,6 +461,14 @@ def validate_auth_credentials(provider: str) -> None:
     """Validate the general auth credentials and auth credentials for the given
     provider.
     """
+    # Check for programmatic config first
+    programmatic_config = get_programmatic_auth_config()
+    if programmatic_config:
+        auth_section = AttrDict(programmatic_config)
+        _validate_auth_section(auth_section, provider, from_secrets_toml=False)
+        return
+
+    # Fall back to secrets.toml validation
     if not secrets_singleton.load_if_toml_exists():
         raise StreamlitAuthError(
             """To use authentication features you need to configure credentials for at
@@ -435,15 +481,39 @@ def validate_auth_credentials(provider: str) -> None:
             """To use authentication features you need to configure credentials for at
             least one authentication provider in `.streamlit/secrets.toml`."""
         )
+
+    _validate_auth_section(
+        cast("AttrDict", auth_section), provider, from_secrets_toml=True
+    )
+
+
+def _validate_auth_section(
+    auth_section: AttrDict, provider: str, *, from_secrets_toml: bool
+) -> None:
+    """Validate an auth section has all required keys.
+
+    Parameters
+    ----------
+    auth_section : AttrDict
+        The auth configuration section to validate.
+    provider : str
+        The name of the provider to validate.
+    from_secrets_toml : bool
+        Whether the config came from secrets.toml (affects error messages).
+    """
+    config_source = (
+        "`.streamlit/secrets.toml`" if from_secrets_toml else "authentication config"
+    )
+
     if "redirect_uri" not in auth_section:
         raise StreamlitAuthError(
-            """Authentication credentials in `.streamlit/secrets.toml` are missing the
-            "redirect_uri" key. Please check your configuration."""
+            f"Authentication credentials in {config_source} are missing the "
+            f'"redirect_uri" key. Please check your configuration.'
         )
     if "cookie_secret" not in auth_section:
         raise StreamlitAuthError(
-            """Authentication credentials in `.streamlit/secrets.toml` are missing the
-            "cookie_secret" key. Please check your configuration."""
+            f"Authentication credentials in {config_source} are missing the "
+            f'"cookie_secret" key. Please check your configuration.'
         )
 
     provider_section = auth_section.get(provider)
@@ -462,19 +532,19 @@ def validate_auth_credentials(provider: str) -> None:
     if provider_section is None:
         if provider == "default":
             raise StreamlitAuthError(
-                """Authentication credentials in `.streamlit/secrets.toml` are missing for
-                the default authentication provider. Please check your configuration."""
+                f"Authentication credentials in {config_source} are missing for "
+                f"the default authentication provider. Please check your configuration."
             )
         raise StreamlitAuthError(
-            f"Authentication credentials in `.streamlit/secrets.toml` are missing for "
+            f"Authentication credentials in {config_source} are missing for "
             f'the authentication provider "{provider}". Please check your '
             f"configuration."
         )
 
     if not isinstance(provider_section, Mapping):
         raise StreamlitAuthError(
-            f"Authentication credentials in `.streamlit/secrets.toml` for the "
-            f'authentication provider "{provider}" must be valid TOML. Please check '
+            f"Authentication credentials in {config_source} for the "
+            f'authentication provider "{provider}" must be a valid mapping. Please check '
             f"your configuration."
         )
 
@@ -483,12 +553,12 @@ def validate_auth_credentials(provider: str) -> None:
     if missing_keys:
         if provider == "default":
             raise StreamlitAuthError(
-                "Authentication credentials in `.streamlit/secrets.toml` for the "
+                f"Authentication credentials in {config_source} for the "
                 f"default authentication provider are missing the following keys: "
                 f"{missing_keys}. Please check your configuration."
             )
         raise StreamlitAuthError(
-            "Authentication credentials in `.streamlit/secrets.toml` for the "
+            f"Authentication credentials in {config_source} for the "
             f'authentication provider "{provider}" are missing the following keys: '
             f"{missing_keys}. Please check your configuration."
         )

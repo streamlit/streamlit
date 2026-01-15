@@ -26,11 +26,16 @@ from streamlit.auth_util import (
     AuthCache,
     _calculate_signing_overhead,
     clear_cookie_and_chunks,
+    clear_programmatic_auth_config,
     get_cookie_with_chunks,
     get_expose_tokens_config,
+    get_programmatic_auth_config,
     get_redirect_uri,
+    get_secrets_auth_section,
     get_signing_secret,
     set_cookie_with_chunks,
+    set_programmatic_auth_config,
+    validate_auth_credentials,
 )
 from streamlit.errors import StreamlitAuthError
 from streamlit.runtime.secrets import AttrDict
@@ -469,3 +474,182 @@ class CookieChunkingTest(unittest.TestCase):
         result = get_cookie_with_chunks(mock_get_cookie, "auth_cookie")
         assert result is not None
         assert json.loads(result) == data
+
+
+class ProgrammaticAuthConfigTest(unittest.TestCase):
+    """Tests for programmatic auth config functionality."""
+
+    def setUp(self) -> None:
+        """Clear programmatic config before each test."""
+        clear_programmatic_auth_config()
+
+    def tearDown(self) -> None:
+        """Clear programmatic config after each test."""
+        clear_programmatic_auth_config()
+
+    def test_set_and_get_programmatic_auth_config(self) -> None:
+        """Test setting and getting programmatic auth config."""
+        config = {
+            "redirect_uri": "http://localhost:8501/oauth2callback",
+            "cookie_secret": "test_secret",
+            "client_id": "test_client_id",
+            "client_secret": "test_client_secret",
+            "server_metadata_url": "https://example.com/.well-known/openid-configuration",
+        }
+        set_programmatic_auth_config(config)
+        result = get_programmatic_auth_config()
+        assert result == config
+
+    def test_get_programmatic_auth_config_returns_none_when_not_set(self) -> None:
+        """Test get_programmatic_auth_config returns None when config not set."""
+        result = get_programmatic_auth_config()
+        assert result is None
+
+    def test_clear_programmatic_auth_config(self) -> None:
+        """Test clearing programmatic auth config."""
+        config = {"redirect_uri": "http://localhost:8501/oauth2callback"}
+        set_programmatic_auth_config(config)
+        assert get_programmatic_auth_config() is not None
+        clear_programmatic_auth_config()
+        assert get_programmatic_auth_config() is None
+
+    def test_get_secrets_auth_section_returns_programmatic_config(self) -> None:
+        """Test get_secrets_auth_section returns programmatic config when set."""
+        config = {
+            "redirect_uri": "http://localhost:8501/oauth2callback",
+            "cookie_secret": "programmatic_secret",
+        }
+        set_programmatic_auth_config(config)
+        result = get_secrets_auth_section()
+        assert result["redirect_uri"] == "http://localhost:8501/oauth2callback"
+        assert result["cookie_secret"] == "programmatic_secret"
+
+    @patch(
+        "streamlit.auth_util.secrets_singleton",
+        MagicMock(
+            load_if_toml_exists=MagicMock(return_value=True),
+            get=MagicMock(
+                return_value={
+                    "redirect_uri": "http://secrets.toml/callback",
+                    "cookie_secret": "toml_secret",
+                }
+            ),
+        ),
+    )
+    def test_get_secrets_auth_section_prioritizes_programmatic_config(self) -> None:
+        """Test get_secrets_auth_section returns programmatic config over secrets.toml."""
+        config = {
+            "redirect_uri": "http://programmatic/callback",
+            "cookie_secret": "programmatic_secret",
+        }
+        set_programmatic_auth_config(config)
+        result = get_secrets_auth_section()
+        # Should return programmatic config, not secrets.toml
+        assert result["redirect_uri"] == "http://programmatic/callback"
+        assert result["cookie_secret"] == "programmatic_secret"
+
+    @patch(
+        "streamlit.auth_util.config",
+        MagicMock(get_option=MagicMock(return_value="default_secret")),
+    )
+    def test_get_signing_secret_returns_programmatic_cookie_secret(self) -> None:
+        """Test get_signing_secret returns programmatic config's cookie_secret."""
+        config = {"cookie_secret": "programmatic_cookie_secret"}
+        set_programmatic_auth_config(config)
+        result = get_signing_secret()
+        assert result == "programmatic_cookie_secret"
+
+    @patch(
+        "streamlit.auth_util.secrets_singleton",
+        MagicMock(
+            load_if_toml_exists=MagicMock(return_value=True),
+            get=MagicMock(return_value={"cookie_secret": "toml_cookie_secret"}),
+        ),
+    )
+    @patch(
+        "streamlit.auth_util.config",
+        MagicMock(get_option=MagicMock(return_value="default_secret")),
+    )
+    def test_get_signing_secret_prioritizes_programmatic_config(self) -> None:
+        """Test get_signing_secret returns programmatic config over secrets.toml."""
+        config = {"cookie_secret": "programmatic_cookie_secret"}
+        set_programmatic_auth_config(config)
+        result = get_signing_secret()
+        assert result == "programmatic_cookie_secret"
+
+    def test_validate_auth_credentials_with_programmatic_config(self) -> None:
+        """Test validate_auth_credentials works with programmatic config."""
+        config = {
+            "redirect_uri": "http://localhost:8501/oauth2callback",
+            "cookie_secret": "test_secret",
+            "client_id": "test_client_id",
+            "client_secret": "test_client_secret",
+            "server_metadata_url": "https://example.com/.well-known/openid-configuration",
+        }
+        set_programmatic_auth_config(config)
+        # Should not raise
+        validate_auth_credentials("default")
+
+    def test_validate_auth_credentials_missing_redirect_uri(self) -> None:
+        """Test validate_auth_credentials raises error when redirect_uri is missing."""
+        config = {
+            "cookie_secret": "test_secret",
+            "client_id": "test_client_id",
+            "client_secret": "test_client_secret",
+            "server_metadata_url": "https://example.com/.well-known/openid-configuration",
+        }
+        set_programmatic_auth_config(config)
+        with pytest.raises(StreamlitAuthError) as ex:
+            validate_auth_credentials("default")
+        assert "redirect_uri" in str(ex.value)
+
+    def test_validate_auth_credentials_missing_cookie_secret(self) -> None:
+        """Test validate_auth_credentials raises error when cookie_secret is missing."""
+        config = {
+            "redirect_uri": "http://localhost:8501/oauth2callback",
+            "client_id": "test_client_id",
+            "client_secret": "test_client_secret",
+            "server_metadata_url": "https://example.com/.well-known/openid-configuration",
+        }
+        set_programmatic_auth_config(config)
+        with pytest.raises(StreamlitAuthError) as ex:
+            validate_auth_credentials("default")
+        assert "cookie_secret" in str(ex.value)
+
+    def test_validate_auth_credentials_missing_required_provider_keys(self) -> None:
+        """Test validate_auth_credentials raises error when provider keys are missing."""
+        config = {
+            "redirect_uri": "http://localhost:8501/oauth2callback",
+            "cookie_secret": "test_secret",
+            # Missing client_id, client_secret, server_metadata_url
+        }
+        set_programmatic_auth_config(config)
+        with pytest.raises(StreamlitAuthError) as ex:
+            validate_auth_credentials("default")
+        assert "client_id" in str(ex.value)
+
+    def test_validate_auth_credentials_with_named_provider(self) -> None:
+        """Test validate_auth_credentials works with named provider in programmatic config."""
+        config = {
+            "redirect_uri": "http://localhost:8501/oauth2callback",
+            "cookie_secret": "test_secret",
+            "google": {
+                "client_id": "google_client_id",
+                "client_secret": "google_client_secret",
+                "server_metadata_url": "https://accounts.google.com/.well-known/openid-configuration",
+            },
+        }
+        set_programmatic_auth_config(config)
+        # Should not raise
+        validate_auth_credentials("google")
+
+    def test_validate_auth_credentials_missing_named_provider(self) -> None:
+        """Test validate_auth_credentials raises error when named provider is missing."""
+        config = {
+            "redirect_uri": "http://localhost:8501/oauth2callback",
+            "cookie_secret": "test_secret",
+        }
+        set_programmatic_auth_config(config)
+        with pytest.raises(StreamlitAuthError) as ex:
+            validate_auth_credentials("google")
+        assert "google" in str(ex.value)

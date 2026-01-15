@@ -28,6 +28,7 @@ from streamlit.auth_util import (
     encode_provider_token,
     get_secrets_auth_section,
     is_authlib_installed,
+    set_programmatic_auth_config,
     validate_auth_credentials,
 )
 from streamlit.deprecation_util import (
@@ -53,7 +54,7 @@ AUTH_LOGOUT_ENDPOINT: Final = "/auth/logout"
 
 
 @gather_metrics("login")
-def login(provider: str | None = None) -> None:
+def login(provider: str | None = None, **extra_config: Any) -> None:
     """Initiate the login flow for the given provider.
 
     This command redirects the user to an OpenID Connect (OIDC) provider. After
@@ -64,16 +65,17 @@ def login(provider: str | None = None) -> None:
     and start a new session.
 
     You can use any OIDC provider, including Google, Microsoft, Okta, and more.
-    You must configure the provider through secrets management. Although OIDC
-    is an extension of OAuth 2.0, you can't use generic OAuth providers.
-    Streamlit parses the user's identity token and surfaces its attributes in
-    ``st.user``. If the provider returns an access token, that
-    token is ignored unless you explicitly expose it.
+    You must configure the provider through secrets management or by passing
+    configuration as keyword arguments. Although OIDC is an extension of
+    OAuth 2.0, you can't use generic OAuth providers. Streamlit parses the
+    user's identity token and surfaces its attributes in ``st.user``. If the
+    provider returns an access token, that token is ignored unless you
+    explicitly expose it.
 
     For all providers, there are three shared settings, ``redirect_uri``,
-    ``cookie_secret``, and ``expose_tokens``, which you must specify in an
-    ``[auth]`` dictionary in ``secrets.toml``. Other settings must be defined
-    as described in the ``provider`` parameter.
+    ``cookie_secret``, and ``expose_tokens``, which you must specify either in
+    an ``[auth]`` dictionary in ``secrets.toml`` or as keyword arguments.
+    Other settings must be defined as described in the ``provider`` parameter.
 
     - ``redirect_uri`` is your app's absolute URL with the pathname
       ``oauth2callback``. For local development using the default port, this is
@@ -113,8 +115,8 @@ def login(provider: str | None = None) -> None:
         - All URLs declared in the settings must be absolute (i.e., begin with
           ``http://`` or ``https://``).
         - Streamlit automatically enables CORS and XSRF protection when you
-          configure authentication in ``secrets.toml``. This takes precedence
-          over configuration options in ``config.toml``.
+          configure authentication in ``secrets.toml`` or via keyword arguments.
+          This takes precedence over configuration options in ``config.toml``.
         - If a user is logged into your app and opens a new tab in the same
           browser, they will automatically be logged in to the new session with
           the same account.
@@ -132,7 +134,8 @@ def login(provider: str | None = None) -> None:
         The name of your provider configuration to use for login.
 
         If ``provider`` is ``None`` (default), Streamlit will use all settings
-        in the ``[auth]`` dictionary within your app's ``secrets.toml`` file.
+        in the ``[auth]`` dictionary within your app's ``secrets.toml`` file
+        or from the keyword arguments passed to this function.
         Otherwise, use an ``[auth.{provider}]`` dictionary for the named
         provider, as shown in the examples that follow. When you pass a string
         to ``provider``, Streamlit will use ``redirect_uri`` and
@@ -141,6 +144,14 @@ def login(provider: str | None = None) -> None:
 
         Due to internal implementation details, Streamlit does not support
         using an underscore within ``provider`` at this time.
+
+    **extra_config: Any
+        Optional authentication configuration as keyword arguments. If provided,
+        these settings are used instead of ``secrets.toml``. Supported keys
+        include: ``redirect_uri``, ``cookie_secret``, ``client_id``,
+        ``client_secret``, ``server_metadata_url``, ``client_kwargs``,
+        ``expose_tokens``. This allows you to configure authentication using
+        environment variables or other secrets management tools.
 
     Examples
     --------
@@ -293,9 +304,39 @@ def login(provider: str | None = None) -> None:
                 st.logout()
             st.write(f"Hello, {st.user.name}!)
 
+    **Example 5: Use environment variables for configuration**
+
+    Instead of using ``secrets.toml``, you can pass authentication settings
+    directly as keyword arguments. This is useful when deploying to platforms
+    that use environment variables for secrets management.
+
+    .. code-block:: python
+        :filename: streamlit_app.py
+
+        import os
+        import streamlit as st
+
+        if not st.user.is_logged_in:
+            if st.button("Log in"):
+                st.login(
+                    redirect_uri=os.getenv("REDIRECT_URI"),
+                    cookie_secret=os.getenv("COOKIE_SECRET"),
+                    client_id=os.getenv("OIDC_CLIENT_ID"),
+                    client_secret=os.getenv("OIDC_CLIENT_SECRET"),
+                    server_metadata_url=os.getenv("OIDC_METADATA_URL"),
+                )
+        else:
+            if st.button("Log out"):
+                st.logout()
+            st.write(f"Hello, {st.user.name}!")
+
     """
     if provider is None:
         provider = "default"
+
+    # Store programmatic config if provided via keyword arguments
+    if extra_config:
+        set_programmatic_auth_config(extra_config)
 
     context = _get_script_run_ctx()
     if context is not None:
