@@ -93,7 +93,8 @@ export function PlotlyChart({
     collapse,
   } = useRequiredContext(ElementFullscreenContext)
 
-  const { elementRef: containerRef } = useCalculatedDimensions([], 0)
+  const { height: chartContainerHeight, elementRef: containerRef } =
+    useCalculatedDimensions([], 0)
 
   const width = elWidth || 0
 
@@ -304,24 +305,28 @@ export function PlotlyChart({
           MIN_WIDTH
         )
 
-  // For height calculation, we use different strategies for fullscreen vs normal mode:
-  // - In fullscreen: use the fullscreen height from context
-  // - Not in fullscreen: use the initial figure's height or default
+  // For height calculation, we use different strategies based on whether the figure
+  // has an explicit height defined:
+  // - If the figure has explicit height: use it (stable, prevents feedback loops)
+  // - If no explicit height: use container height (for height="stretch" or height=N)
+  // - In fullscreen: always use fullscreen height from context
   //
-  // We intentionally do NOT use the container's measured height for this calculation
-  // because the container has `height: 100%` which follows the chart's rendered height.
-  // Using it would create a feedback loop where Plotly's rendered height determines
-  // the container height, which then determines calculatedHeight, causing cumulative
-  // shrinking issues especially with go.Image charts (see GitHub issue #11178).
+  // For charts with explicit layout height (like go.Image), we use that height to
+  // avoid a feedback loop where the container's height: 100% follows the chart's
+  // rendered height, causing cumulative shrinking (see GitHub issue #11178).
   let calculatedHeight: number
   if (isFullScreen) {
     calculatedWidth = width
     calculatedHeight = fullScreenHeight ?? DEFAULT_PLOTLY_HEIGHT
+  } else if (initialFigureSpec.layout?.height !== undefined) {
+    // Figure has explicit height - use it for stability
+    calculatedHeight = initialFigureSpec.layout.height
+  } else if (chartContainerHeight > 0) {
+    // No explicit height but container has measured height (from height="stretch" or height=N)
+    calculatedHeight = chartContainerHeight
   } else {
-    // Use the height from the initial spec if provided, otherwise use default.
-    // This ensures a stable height that doesn't depend on Plotly's rendering.
-    calculatedHeight =
-      initialFigureSpec.layout?.height ?? DEFAULT_PLOTLY_HEIGHT
+    // Fallback to figure's current height or default
+    calculatedHeight = plotlyFigure.layout?.height ?? DEFAULT_PLOTLY_HEIGHT
   }
 
   if (
