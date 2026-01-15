@@ -30,7 +30,7 @@ def test_check_top_level_class(app: Page):
 def test_plotly_dimensions(app: Page, assert_snapshot: ImageCompareFunction):
     """Tests that width and height parameters work correctly."""
     plotly_elements = app.get_by_test_id("stPlotlyChart")
-    expect(plotly_elements).to_have_count(8)
+    expect(plotly_elements).to_have_count(9)  # 8 dimension tests + 1 go.Image test
 
     # Width parameter tests
     assert_snapshot(plotly_elements.nth(0), name="st_plotly_chart-width_content")
@@ -116,4 +116,48 @@ def test_plotly_stretch_width_fullscreen(
     assert_snapshot(
         themed_app.get_by_test_id("stPlotlyChart").nth(index),
         name="st_plotly_chart-stretch_width_exited_fullscreen",
+    )
+
+
+def test_go_image_no_cumulative_shrinking_on_fullscreen_toggle(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that go.Image charts don't shrink cumulatively when toggling fullscreen.
+
+    This tests the fix for GitHub issue #11178.
+    """
+    index = 8  # go.Image chart is the last one
+    plotly_charts = app.get_by_test_id("stPlotlyChart")
+    expect(plotly_charts).to_have_count(9)  # 8 dimension tests + 1 go.Image test
+
+    go_image_chart = plotly_charts.nth(index)
+
+    # Toggle fullscreen multiple times to trigger cumulative shrinking bug
+    for _ in range(3):
+        # Enter fullscreen
+        go_image_chart.hover()
+        fullscreen_button = app.locator('[data-title="Fullscreen"]').last
+        fullscreen_button.hover()
+        fullscreen_button.click()
+
+        # Wait for fullscreen mode to activate
+        expect(app.get_by_test_id("stFullScreenFrame").nth(index)).to_have_css(
+            "position", "fixed"
+        )
+
+        # Exit fullscreen
+        close_button = app.locator('[data-title="Close fullscreen"]').last
+        close_button.hover()
+        close_button.click()
+
+        # Wait for fullscreen mode to deactivate
+        expect(app.get_by_test_id("stFullScreenFrame").nth(index)).not_to_have_css(
+            "position", "fixed"
+        )
+
+    # Snapshot after 3 fullscreen toggles - should match original size
+    # If the cumulative shrinking bug exists, this snapshot will show a smaller chart
+    assert_snapshot(
+        go_image_chart,
+        name="st_plotly_chart-go_image_after_fullscreen_toggles",
     )

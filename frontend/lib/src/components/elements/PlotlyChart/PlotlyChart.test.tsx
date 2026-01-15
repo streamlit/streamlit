@@ -327,20 +327,104 @@ describe("PlotlyChart Component", () => {
     expect(lastCallProps.onDoubleClick).toBeUndefined()
   })
 
-  it("saves figure to widget state on update", () => {
-    renderComponent()
+  it("saves figure to widget state on update with React-controlled dimensions", () => {
+    renderComponent({}, { width: 600 })
 
     const lastCallProps = getLastPlotProps()
-    const newFigure = { data: [], layout: { title: "New Title" } }
+    const newFigure = {
+      data: [{ type: "scatter" }],
+      layout: { title: "New Title", width: 999, height: 999 },
+    }
 
     act(() => {
       lastCallProps.onUpdate(newFigure)
     })
 
+    // Dimensions should be preserved from React state, not from Plotly's figure
     expect(widgetMgr.setElementState).toHaveBeenCalledWith(
       DEFAULT_ELEMENT.id,
       "figure",
-      newFigure
+      expect.objectContaining({
+        data: [{ type: "scatter" }],
+        layout: expect.objectContaining({
+          title: "New Title",
+          width: 600, // React-controlled width, not Plotly's 999
+          height: 450, // React-controlled height (from mock), not Plotly's 999
+        }),
+      })
+    )
+  })
+
+  it("preserves dimensions when exiting fullscreen to prevent cumulative shrinking", () => {
+    // This test verifies the fix for https://github.com/streamlit/streamlit/issues/11178
+    // where go.Image charts would shrink cumulatively when toggling fullscreen
+
+    // Start in fullscreen mode
+    const { rerender } = render(
+      <ElementFullscreenContext.Provider
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        value={{ expanded: true, width: 1000, height: 800 } as any}
+      >
+        <PlotlyChart
+          element={DEFAULT_ELEMENT}
+          widgetMgr={widgetMgr}
+          disabled={false}
+          width={1000}
+        />
+      </ElementFullscreenContext.Provider>
+    )
+
+    let lastCallProps = getLastPlotProps()
+    expect(lastCallProps.layout.width).toBe(1000)
+    expect(lastCallProps.layout.height).toBe(800)
+
+    // Simulate Plotly firing onUpdate with fullscreen dimensions
+    act(() => {
+      lastCallProps.onUpdate({
+        data: [],
+        layout: { width: 1000, height: 800 },
+      })
+    })
+
+    // Exit fullscreen - rerender with non-fullscreen context
+    rerender(
+      <ElementFullscreenContext.Provider
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        value={{ expanded: false, width: 600, height: undefined } as any}
+      >
+        <PlotlyChart
+          element={DEFAULT_ELEMENT}
+          widgetMgr={widgetMgr}
+          disabled={false}
+          width={600}
+        />
+      </ElementFullscreenContext.Provider>
+    )
+
+    lastCallProps = getLastPlotProps()
+    // Should use non-fullscreen dimensions
+    expect(lastCallProps.layout.width).toBe(600)
+    expect(lastCallProps.layout.height).toBe(450) // DEFAULT or from useCalculatedDimensions mock
+
+    // Simulate Plotly firing onUpdate with smaller (incorrect) dimensions
+    // This is what would cause the cumulative shrinking bug
+    act(() => {
+      lastCallProps.onUpdate({
+        data: [],
+        layout: { width: 400, height: 300 }, // Plotly reports smaller dimensions
+      })
+    })
+
+    // The saved figure should still have React-controlled dimensions
+    expect(widgetMgr.setElementState).toHaveBeenLastCalledWith(
+      DEFAULT_ELEMENT.id,
+      "figure",
+      expect.objectContaining({
+        layout: expect.objectContaining({
+          width: 600, // Not 400
+          height: 450, // Not 300
+        }),
+      })
     )
   })
 

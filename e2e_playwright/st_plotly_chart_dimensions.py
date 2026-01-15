@@ -14,6 +14,7 @@
 
 """E2E test app for st.plotly_chart width and height parameters."""
 
+import numpy as np
 import plotly.graph_objects as go
 
 import streamlit as st
@@ -74,3 +75,21 @@ tall_fig.update_layout(
     height=600, width=500, title="Chart with figure height=600 and height='content':"
 )
 st.plotly_chart(tall_fig, height="content", theme="streamlit")
+
+# go.Image chart test for fullscreen toggle (GitHub issue #11178)
+# This tests that go.Image charts don't shrink cumulatively when toggling fullscreen
+st.write("## go.Image Fullscreen Test")
+
+# Create a simple image using numpy array with fixed seed for consistent snapshots
+rng = np.random.default_rng(seed=42)
+img_array = rng.integers(0, 255, size=(100, 100, 3), dtype=np.uint8)
+
+image_fig = go.Figure()
+image_fig.add_trace(go.Image(z=img_array))
+image_fig.update_layout(
+    height=300,
+    width=300,
+    title="go.Image chart (toggle fullscreen to test)",
+    margin={"l": 0, "r": 0, "t": 30, "b": 0},
+)
+st.plotly_chart(image_fig, key="go_image_chart", theme="streamlit")

@@ -93,8 +93,7 @@ export function PlotlyChart({
     collapse,
   } = useRequiredContext(ElementFullscreenContext)
 
-  const { height: chartContainerHeight, elementRef: containerRef } =
-    useCalculatedDimensions([], 0)
+  const { elementRef: containerRef } = useCalculatedDimensions([], 0)
 
   const width = elWidth || 0
 
@@ -305,14 +304,24 @@ export function PlotlyChart({
           MIN_WIDTH
         )
 
-  let calculatedHeight =
-    chartContainerHeight > 0
-      ? chartContainerHeight
-      : (plotlyFigure.layout?.height ?? DEFAULT_PLOTLY_HEIGHT)
-
+  // For height calculation, we use different strategies for fullscreen vs normal mode:
+  // - In fullscreen: use the fullscreen height from context
+  // - Not in fullscreen: use the initial figure's height or default
+  //
+  // We intentionally do NOT use the container's measured height for this calculation
+  // because the container has `height: 100%` which follows the chart's rendered height.
+  // Using it would create a feedback loop where Plotly's rendered height determines
+  // the container height, which then determines calculatedHeight, causing cumulative
+  // shrinking issues especially with go.Image charts (see GitHub issue #11178).
+  let calculatedHeight: number
   if (isFullScreen) {
     calculatedWidth = width
     calculatedHeight = fullScreenHeight ?? DEFAULT_PLOTLY_HEIGHT
+  } else {
+    // Use the height from the initial spec if provided, otherwise use default.
+    // This ensures a stable height that doesn't depend on Plotly's rendering.
+    calculatedHeight =
+      initialFigureSpec.layout?.height ?? DEFAULT_PLOTLY_HEIGHT
   }
 
   if (
@@ -449,6 +458,19 @@ export function PlotlyChart({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
   }, [plotlyFigure.layout?.dragmode])
 
+  // Create the layout object to pass to Plot with our controlled dimensions.
+  // This is computed at render time to ensure Plot always receives correct
+  // dimensions immediately, without waiting for async state updates.
+  // This is critical for preventing the go.Image shrinking bug (#11178).
+  const layoutWithControlledDimensions = useMemo(
+    () => ({
+      ...plotlyFigure.layout,
+      width: calculatedWidth,
+      height: calculatedHeight,
+    }),
+    [plotlyFigure.layout, calculatedWidth, calculatedHeight]
+  )
+
   return (
     <StyledPlotlyChartContainer
       ref={containerRef}
@@ -457,14 +479,10 @@ export function PlotlyChart({
     >
       <Plot
         data={plotlyFigure.data}
-        layout={plotlyFigure.layout}
+        layout={layoutWithControlledDimensions}
         config={plotlyConfig}
         frames={plotlyFigure.frames ?? undefined}
         style={{
-          // Hide the plotly chart if the width is not defined yet
-          // to prevent flickering issues.
-          visibility:
-            plotlyFigure.layout?.width === undefined ? "hidden" : undefined,
           // If the scrollbars are activated, it leads to flickering issues.
           // We don't need overflow here since the parent container and plot dimensions are in sync.
           overflow: "hidden",
@@ -491,9 +509,26 @@ export function PlotlyChart({
         }}
         // Update the figure state on every change to the figure itself:
         onUpdate={figure => {
+          // Preserve React-controlled dimensions to prevent feedback loops
+          // where Plotly's reported dimensions (which may be incorrect during
+          // fullscreen transitions) overwrite our intended dimensions.
+          // This fixes cumulative shrinking issues with go.Image charts
+          // (see GitHub issue #11178).
+          const figureWithControlledDimensions = {
+            ...figure,
+            layout: {
+              ...figure.layout,
+              height: calculatedHeight,
+              width: calculatedWidth,
+            },
+          }
           // Save the updated figure state to allow it to be recovered
-          widgetMgr.setElementState(element.id, "figure", figure)
-          setPlotlyFigure(figure)
+          widgetMgr.setElementState(
+            element.id,
+            "figure",
+            figureWithControlledDimensions
+          )
+          setPlotlyFigure(figureWithControlledDimensions)
         }}
       />
     </StyledPlotlyChartContainer>
