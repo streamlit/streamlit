@@ -67,9 +67,13 @@ class SafeSessionState:
             #  to a Lock.)
             self._state.on_script_will_rerun(latest_widget_states)
 
-    def on_script_finished(self, widget_ids_this_run: set[str]) -> None:
+    def on_script_finished(
+        self, widget_ids_this_run: set[str], *, is_fragment_run: bool = False
+    ) -> None:
         with self._lock:
-            self._state.on_script_finished(widget_ids_this_run)
+            self._state.on_script_finished(
+                widget_ids_this_run, is_fragment_run=is_fragment_run
+            )
 
     def maybe_check_serializable(self) -> None:
         with self._lock:

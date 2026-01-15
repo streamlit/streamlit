@@ -861,7 +861,9 @@ class SessionState:
         """
         return widget_id in self._new_widget_state.states
 
-    def on_script_finished(self, widget_ids_this_run: set[str]) -> None:
+    def on_script_finished(
+        self, widget_ids_this_run: set[str], *, is_fragment_run: bool = False
+    ) -> None:
         """Called by ScriptRunner after its script finishes running.
          Updates widgets to prepare for the next script run.
 
@@ -871,13 +873,21 @@ class SessionState:
             The IDs of the widgets that were accessed during the script
             run. Any widget state whose ID does *not* appear in this set
             is considered "stale" and will be removed.
+        is_fragment_run: bool
+            If True, this was a fragment run (not a full script run).
+            Fragment runs only execute part of the app, so we skip
+            cleanup of query param bindings (which would incorrectly
+            remove bindings for widgets outside the fragment).
         """
         self._reset_triggers()
         self._remove_stale_widgets(widget_ids_this_run)
 
         # Clean up stale query param bindings for widgets that didn't run
-        # (e.g., conditional widgets that are hidden, widgets in closed dialogs)
-        self.query_params.remove_stale_bindings(widget_ids_this_run)
+        # (e.g., conditional widgets that are hidden, widgets in closed dialogs).
+        # Skip this for fragment runs since widget_ids_this_run only contains
+        # widgets from the fragment, not all widgets in the app.
+        if not is_fragment_run:
+            self.query_params.remove_stale_bindings(widget_ids_this_run)
 
     def _reset_triggers(self) -> None:
         """Set all trigger values in our state dictionary to False."""
