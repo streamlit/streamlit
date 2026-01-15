@@ -14,16 +14,22 @@
  * limitations under the License.
  */
 
-import { useEffect, useMemo, useRef } from "react"
+import { useEffect, useState } from "react"
 
 import { isImageFile } from "./getFileTypeIcon"
 
 /**
  * Hook to create and manage a blob URL for image file previews.
  *
- * Uses useMemo for synchronous URL creation during render, with useEffect
- * solely for cleanup. A counter ref forces useMemo to create a fresh URL
- * after Strict Mode cleanup revokes the previous one.
+ * Uses useState + useEffect to properly handle React 18 Strict Mode's
+ * double-invocation behavior. Each effect invocation creates its own
+ * blob URL and only revokes that specific URL on cleanup.
+ *
+ * Note: We disable the set-state-in-effect lint rule because this is a
+ * legitimate use case for synchronizing with an external system (the
+ * browser's Blob URL API). The blob URL must be created and cleaned up
+ * together in the same effect to ensure proper resource management,
+ * especially in Strict Mode where effects run twice in development.
  *
  * @param file - The File object to create a preview for (optional)
  * @param filename - The filename to check if it's an image
@@ -33,28 +39,22 @@ export function useImagePreview(
   file: File | undefined,
   filename: string
 ): string | null {
-  // Counter to force useMemo recalculation after cleanup revokes the URL.
-  // This handles React 18 Strict Mode's double-invocation behavior.
-  const revocationCounterRef = useRef(0)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
 
-  const previewUrl = useMemo(() => {
-    if (!file || !isImageFile(filename)) {
-      return null
-    }
-    return URL.createObjectURL(file)
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- revocationCounterRef.current forces recalc after cleanup
-  }, [file, filename, revocationCounterRef.current])
-
-  // Effect solely for cleanup - revoke the blob URL on unmount or dependency change
   useEffect(() => {
-    return () => {
-      if (previewUrl) {
-        URL.revokeObjectURL(previewUrl)
-        // Increment counter to force useMemo to create a new URL on next render
-        revocationCounterRef.current += 1
-      }
+    if (!file || !isImageFile(filename)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Synchronizing with Blob URL API external system
+      setPreviewUrl(null)
+      return
     }
-  }, [previewUrl])
+
+    const url = URL.createObjectURL(file)
+    setPreviewUrl(url)
+
+    return () => {
+      URL.revokeObjectURL(url)
+    }
+  }, [file, filename])
 
   return previewUrl
 }
