@@ -509,26 +509,29 @@ export function PlotlyChart({
         }}
         // Update the figure state on every change to the figure itself:
         onUpdate={figure => {
-          // Preserve React-controlled dimensions to prevent feedback loops
-          // where Plotly's reported dimensions (which may be incorrect during
-          // fullscreen transitions) overwrite our intended dimensions.
+          // Check if Plotly's dimensions differ from our controlled values
+          const needsDimensionOverride =
+            figure.layout.height !== calculatedHeight ||
+            figure.layout.width !== calculatedWidth
+
+          // Only create a new object if dimensions need to be overridden,
+          // to avoid unnecessary re-renders that can interfere with UI interactions.
           // This fixes cumulative shrinking issues with go.Image charts
           // (see GitHub issue #11178).
-          const figureWithControlledDimensions = {
-            ...figure,
-            layout: {
-              ...figure.layout,
-              height: calculatedHeight,
-              width: calculatedWidth,
-            },
-          }
+          const finalFigure = needsDimensionOverride
+            ? {
+                ...figure,
+                layout: {
+                  ...figure.layout,
+                  height: calculatedHeight,
+                  width: calculatedWidth,
+                },
+              }
+            : figure
+
           // Save the updated figure state to allow it to be recovered
-          widgetMgr.setElementState(
-            element.id,
-            "figure",
-            figureWithControlledDimensions
-          )
-          setPlotlyFigure(figureWithControlledDimensions)
+          widgetMgr.setElementState(element.id, "figure", finalFigure)
+          setPlotlyFigure(finalFigure)
         }}
       />
     </StyledPlotlyChartContainer>
