@@ -162,17 +162,17 @@ export function useQueryParamBinding<T>({
   // 2. Default cleanup: URL has param but value is default (remove it)
   // 3. Re-sync after page switch: URL was cleared but widget has non-default state
   //    (important for MPA v2 entry point widgets)
+  // 4. Multi-select cleanup: URL has mix of valid/invalid values - remove invalid ones
   useEffect(() => {
     // Skip if not bound or value is undefined
-    if (!isBound || currentValue === undefined) {
+    if (!isBound || currentValue === undefined || paramKey === undefined) {
       return
     }
 
     const urlValue = widgetMgr.getValueFromQueryParams<T>(elementId)
+    const searchParams = new URLSearchParams(window.location.search)
     // Check if the URL has the param at all (even if deserialization failed)
-    const urlHasParam =
-      paramKey !== undefined &&
-      new URLSearchParams(window.location.search).has(paramKey)
+    const urlHasParam = searchParams.has(paramKey)
 
     const isCurrentDefault = isEqual(currentValue, defaultValue)
 
@@ -183,6 +183,25 @@ export function useQueryParamBinding<T>({
       } else if (urlValue === undefined || !isEqual(currentValue, urlValue)) {
         // URL value is invalid or differs from current - correct it
         widgetMgr.syncWidgetToQueryParams(elementId, currentValue)
+      } else {
+        // Values match after deserialization, but we need to check if the URL
+        // contains extra invalid params that were filtered out during deserialization.
+        // This handles the case where URL has ?tags=valid&tags=invalid - the
+        // deserializer filters out "invalid", but we need to remove it from the URL.
+        const serializedValue = serializer(currentValue)
+        const rawUrlParams = searchParams.getAll(paramKey)
+
+        // Compare serialized output with raw URL params
+        const expectedParams = Array.isArray(serializedValue)
+          ? serializedValue
+          : [serializedValue]
+        const needsCorrection =
+          expectedParams.length !== rawUrlParams.length ||
+          !expectedParams.every((v, i) => v === rawUrlParams[i])
+
+        if (needsCorrection) {
+          widgetMgr.syncWidgetToQueryParams(elementId, currentValue)
+        }
       }
     } else if (!isCurrentDefault) {
       // URL doesn't have param but widget has non-default value.
@@ -198,6 +217,7 @@ export function useQueryParamBinding<T>({
     widgetMgr,
     isEqual,
     paramKey,
+    serializer,
   ])
 
   // Get value from URL
