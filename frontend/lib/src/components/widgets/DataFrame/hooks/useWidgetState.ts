@@ -89,6 +89,15 @@ export interface UseWidgetStateReturn {
     isCellSelectionActivated: boolean
     isMultiCellSelectionActivated: boolean
   }) => GridSelection | undefined
+  // Gets the programmatic selection state from element.selectionState if set
+  // Returns the GridSelection and syncs to widget manager if present
+  getProgrammaticSelectionState: (params: {
+    columns: BaseColumn[]
+    isRowSelectionActivated: boolean
+    isColumnSelectionActivated: boolean
+    isCellSelectionActivated: boolean
+    isMultiCellSelectionActivated: boolean
+  }) => GridSelection | undefined
 }
 
 /**
@@ -422,6 +431,110 @@ function useWidgetState({
     resetEditingState()
   }, [resetEditingState])
 
+  /**
+   * Gets the programmatic selection state from element.selectionState if set.
+   * This is used when the user sets the selection via st.session_state.
+   * Also syncs the selection to the widget manager.
+   *
+   * @param params - Parameters containing columns and selection mode flags
+   * @returns The GridSelection from element.selectionState if present, undefined otherwise
+   */
+  const getProgrammaticSelectionState = useCallback(
+    ({
+      columns,
+      isRowSelectionActivated,
+      isColumnSelectionActivated,
+      isCellSelectionActivated,
+      isMultiCellSelectionActivated: _isMultiCellSelectionActivated,
+    }: {
+      columns: BaseColumn[]
+      isRowSelectionActivated: boolean
+      isColumnSelectionActivated: boolean
+      isCellSelectionActivated: boolean
+      isMultiCellSelectionActivated: boolean
+    }): GridSelection | undefined => {
+      // Check if element.selectionState is set (programmatic selection)
+      if (!element.selectionState || !widgetMgr) {
+        return undefined
+      }
+
+      if (
+        !isRowSelectionActivated &&
+        !isColumnSelectionActivated &&
+        !isCellSelectionActivated
+      ) {
+        return undefined
+      }
+
+      const columnNames: string[] = columns.map(column =>
+        getColumnName(column)
+      )
+
+      const selectionState: DataframeState = JSON.parse(element.selectionState)
+
+      // Sync to widget manager so it persists
+      widgetMgr.setStringValue(
+        {
+          id: element.id,
+          formId: element.formId,
+        } as WidgetInfo,
+        element.selectionState,
+        {
+          fromUi: false,
+        },
+        fragmentId
+      )
+
+      let rowSelection = CompactSelection.empty()
+      let columnSelection = CompactSelection.empty()
+      let cellSelection: [number, number] | undefined = undefined
+
+      selectionState.selection?.rows?.forEach(row => {
+        rowSelection = rowSelection.add(row)
+      })
+
+      selectionState.selection?.columns?.forEach(column => {
+        const idx = columnNames.indexOf(column)
+        if (idx >= 0) {
+          columnSelection = columnSelection.add(idx)
+        }
+      })
+
+      // Reconstruct cell selection
+      if (isCellSelectionActivated) {
+        const [rowIdx, columnName] = selectionState.selection?.cells?.[0] ?? []
+        if (rowIdx !== undefined && columnName !== undefined) {
+          const columnIdx = columnNames.indexOf(columnName)
+          if (columnIdx >= 0) {
+            cellSelection = [columnIdx, rowIdx]
+          }
+        }
+      }
+
+      // Always return the selection state (even if empty) when element.selectionState is set
+      // This allows clearing selections programmatically
+      return {
+        rows: rowSelection,
+        columns: columnSelection,
+        current: cellSelection
+          ? {
+              cell: cellSelection,
+              range: {
+                x: cellSelection[0],
+                y: cellSelection[1],
+                // eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values
+                width: 1,
+                // eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values
+                height: 1,
+              },
+              rangeStack: [],
+            }
+          : undefined,
+      }
+    },
+    [element.selectionState, element.id, element.formId, widgetMgr, fragmentId]
+  )
+
   return {
     editingState: editingStateRef,
     numRows,
@@ -431,6 +544,7 @@ function useWidgetState({
     createSyncSelectionState,
     onFormCleared,
     loadInitialSelectionState,
+    getProgrammaticSelectionState,
   }
 }
 

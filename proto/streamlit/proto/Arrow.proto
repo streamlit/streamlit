@@ -51,6 +51,10 @@ message Arrow {
   BorderMode border_mode = 14;
   // Placeholder string used when rendering missing values (e.g. nulls, NaNs).
   optional string placeholder = 15;
+  // Selection state (JSON serialized), set when selection is changed programmatically
+  // via session state. When present, frontend applies this selection.
+  // When absent, frontend manages its own selection state.
+  optional string selection_state = 16;
 
   // Available editing modes:
   enum EditingMode {

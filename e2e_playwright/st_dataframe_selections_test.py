@@ -796,3 +796,64 @@ def test_selection_persists_after_data_update(app: Page):
         "{'selection': {'rows': [0, 2], 'columns': [], 'cells': []}}",
         exact_match=True,
     )
+
+
+def _get_programmatic_selection_df(app: Page) -> Locator:
+    return get_element_by_key(app, "programmatic_selection_df").get_by_test_id(
+        "stDataFrame"
+    )
+
+
+def test_programmatic_selection_via_session_state(app: Page):
+    """Test that selections can be pre-set and changed programmatically via session state.
+
+    This verifies the feature that allows users to set dataframe selections via
+    st.session_state["key"] = {"selection": {"rows": [...], ...}}.
+    """
+    # Scroll to the test section
+    set_selection_button = get_element_by_key(
+        app, "set_programmatic_selection_btn"
+    ).locator("button")
+    set_selection_button.scroll_into_view_if_needed()
+    expect(set_selection_button).to_be_visible()
+
+    canvas = _get_programmatic_selection_df(app)
+    expect_canvas_to_be_visible(canvas)
+    canvas.scroll_into_view_if_needed()
+
+    # Initially, the selection should be pre-set to rows [1, 3] via session state
+    expect_prefixed_markdown(
+        app,
+        "Programmatic selection:",
+        "{'selection': {'rows': [1, 3], 'columns': [], 'cells': []}}",
+        exact_match=True,
+    )
+
+    # Click the button to change selection programmatically to rows [0, 2, 4]
+    set_selection_button.scroll_into_view_if_needed()
+    set_selection_button.click()
+    wait_for_app_run(app)
+
+    # Selection should now be [0, 2, 4]
+    expect_prefixed_markdown(
+        app,
+        "Programmatic selection:",
+        "{'selection': {'rows': [0, 2, 4], 'columns': [], 'cells': []}}",
+        exact_match=True,
+    )
+
+    # User can still modify the selection manually
+    canvas.scroll_into_view_if_needed()
+    select_row(canvas, 2)  # Deselect row 1 (index 0 in UI, but row 1 is at position 2)
+    wait_for_app_run(app)
+
+    # The selection should be updated by user interaction
+    # Clicking row 2 (which is row index 1) should toggle it
+    # Since [0, 2, 4] were selected and we clicked on row position 2 (row index 1),
+    # it should add row 1 to selection: [0, 1, 2, 4]
+    expect_prefixed_markdown(
+        app,
+        "Programmatic selection:",
+        "{'selection': {'rows': [0, 1, 2, 4], 'columns': [], 'cells': []}}",
+        exact_match=True,
+    )

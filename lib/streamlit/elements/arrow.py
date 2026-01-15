@@ -96,8 +96,9 @@ class DataframeSelectionState(TypedDict, total=False):
     The schema for the dataframe selection state.
 
     The selection state is stored in a dictionary-like object that supports both
-    key and attribute notation. Selection states cannot be programmatically
-    changed or set through Session State.
+    key and attribute notation. Selection states can be programmatically set
+    through Session State by assigning a dictionary with the same schema to the
+    widget's key.
 
     .. warning::
         If a user sorts a dataframe, row selections will be reset. If your
@@ -160,8 +161,9 @@ class DataframeState(TypedDict, total=False):
     The schema for the dataframe event state.
 
     The event state is stored in a dictionary-like object that supports both
-    key and attribute notation. Event states cannot be programmatically
-    changed or set through Session State.
+    key and attribute notation. Event states can be programmatically set
+    through Session State by assigning a dictionary with the same schema to the
+    widget's key.
 
     Only selection events are supported at this time.
 
@@ -279,6 +281,105 @@ def parse_border_mode(
     if border == "horizontal":
         return ArrowProto.BorderMode.HORIZONTAL
     raise StreamlitValueError("border", ["True", "False", "'horizontal'"])
+
+
+def _validate_selection_state(
+    value: DataframeState,
+    num_rows: int,
+    column_names: list[str],
+    selection_mode_set: set[SelectionMode],
+) -> DataframeState:
+    """Validate a programmatically set selection state.
+
+    Parameters
+    ----------
+    value
+        The selection state to validate.
+    num_rows
+        The number of rows in the dataframe.
+    column_names
+        The list of column names in the dataframe.
+    selection_mode_set
+        The set of allowed selection modes.
+
+    Returns
+    -------
+    DataframeState
+        The validated selection state (with invalid entries filtered out).
+
+    Raises
+    ------
+    StreamlitAPIException
+        If the selection state structure is invalid.
+    """
+    # Validate structure
+    if "selection" not in value:
+        raise StreamlitAPIException(
+            "Selection state must contain a 'selection' key with 'rows', "
+            "'columns', and 'cells' arrays."
+        )
+
+    selection = value["selection"]
+    validated_selection: DataframeSelectionState = {
+        "rows": [],
+        "columns": [],
+        "cells": [],
+    }
+
+    # Determine selection mode constraints
+    is_row_selection_active = (
+        "single-row" in selection_mode_set or "multi-row" in selection_mode_set
+    )
+    is_multi_row = "multi-row" in selection_mode_set
+    is_column_selection_active = (
+        "single-column" in selection_mode_set or "multi-column" in selection_mode_set
+    )
+    is_multi_column = "multi-column" in selection_mode_set
+    is_cell_selection_active = (
+        "single-cell" in selection_mode_set or "multi-cell" in selection_mode_set
+    )
+    is_multi_cell = "multi-cell" in selection_mode_set
+
+    # Validate and filter rows
+    if "rows" in selection and is_row_selection_active:
+        valid_rows = [
+            row_idx
+            for row_idx in selection["rows"]
+            if isinstance(row_idx, int) and 0 <= row_idx < num_rows
+        ]
+        # Respect single vs multi-row mode
+        if valid_rows:
+            validated_selection["rows"] = valid_rows if is_multi_row else valid_rows[:1]
+
+    # Validate and filter columns
+    if "columns" in selection and is_column_selection_active:
+        valid_columns = [
+            col_name for col_name in selection["columns"] if col_name in column_names
+        ]
+        # Respect single vs multi-column mode
+        if valid_columns:
+            validated_selection["columns"] = (
+                valid_columns if is_multi_column else valid_columns[:1]
+            )
+
+    # Validate and filter cells
+    if "cells" in selection and is_cell_selection_active:
+        valid_cells: list[tuple[int, str]] = [
+            (cell[0], cell[1])
+            for cell in selection["cells"]
+            if isinstance(cell, (list, tuple))
+            and len(cell) == 2
+            and isinstance(cell[0], int)
+            and 0 <= cell[0] < num_rows
+            and cell[1] in column_names
+        ]
+        # Respect single vs multi-cell mode
+        if valid_cells:
+            validated_selection["cells"] = (
+                valid_cells if is_multi_cell else valid_cells[:1]
+            )
+
+    return {"selection": validated_selection}
 
 
 class ArrowMixin:
@@ -473,7 +574,11 @@ class ArrowMixin:
 
             Additionally, if selections are activated and ``key`` is provided,
             Streamlit will register the key in Session State to store the
-            selection state. The selection state is read-only.
+            selection state. You can set the selection state programmatically
+            by assigning a dictionary with a ``selection`` key to the session
+            state entry, e.g.,
+            ``st.session_state["my_key"] = {"selection": {"rows": [0, 2]}}``.
+            The selection will be applied on the next rerun.
 
         on_select : "ignore" or "rerun" or callable
             How the dataframe should respond to user selection events. This
@@ -664,7 +769,7 @@ class ArrowMixin:
                 key,
                 on_change=cast("WidgetCallback", on_select) if is_callback else None,
                 default_value=None,
-                writes_allowed=False,
+                writes_allowed=True,
                 enable_check_callback_rules=is_callback,
             )
 
@@ -708,10 +813,16 @@ class ArrowMixin:
 
         proto.editing_mode = ArrowProto.EditingMode.READ_ONLY
 
+        # Track data dimensions for selection validation
+        num_rows: int = 0
+        column_names: list[str] = []
+
         has_range_index: bool = False
         if isinstance(data, pa.Table):
             # For pyarrow tables, we can just serialize the table directly
             proto.data = dataframe_util.convert_arrow_table_to_arrow_bytes(data)
+            num_rows = data.num_rows
+            column_names = data.column_names
         else:
             # For all other data formats, we need to convert them to a pandas.DataFrame
             # thereby, we also apply some data specific configs
@@ -735,6 +846,8 @@ class ArrowMixin:
             apply_data_specific_configs(column_config_mapping, data_format)
             # Serialize the data to bytes:
             proto.data = dataframe_util.convert_pandas_df_to_arrow_bytes(data_df)
+            num_rows = len(data_df)
+            column_names = list(data_df.columns)
 
         if hide_index is not None:
             update_column_config(
@@ -767,6 +880,12 @@ class ArrowMixin:
             proto.selection_mode.extend(parse_selection_mode(selection_mode))
             proto.form_id = current_form_id(self.dg)
 
+            # Parse selection mode to string set for validation
+            if isinstance(selection_mode, str):
+                selection_mode_set = cast("set[SelectionMode]", {selection_mode})
+            else:
+                selection_mode_set = cast("set[SelectionMode]", set(selection_mode))
+
             ctx = get_script_run_ctx()
             proto.id = compute_and_register_element_id(
                 "dataframe",
@@ -798,6 +917,17 @@ class ArrowMixin:
                 ctx=ctx,
                 value_type="string_value",
             )
+
+            # Handle programmatic selection via session state
+            if widget_state.value_changed:
+                validated_state = _validate_selection_state(
+                    widget_state.value,
+                    num_rows=num_rows,
+                    column_names=column_names,
+                    selection_mode_set=selection_mode_set,
+                )
+                proto.selection_state = json.dumps(validated_state)
+
             self.dg._enqueue("arrow_data_frame", proto, layout_config=layout_config)
             return widget_state.value
         return self.dg._enqueue("arrow_data_frame", proto, layout_config=layout_config)

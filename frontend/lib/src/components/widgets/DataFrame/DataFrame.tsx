@@ -148,6 +148,8 @@ function DataFrame({
 
   const resizableRef = useRef<Resizable>(null)
   const dataEditorRef = useRef<DataEditorRef>(null)
+  // Track the last applied programmatic selection state to avoid re-applying on every rerun
+  const lastAppliedSelectionStateRef = useRef<string | null>(null)
   const scrollbarGutterSize = useScrollbarGutterSize()
 
   const {
@@ -265,6 +267,7 @@ function DataFrame({
     createSyncSelectionState,
     onFormCleared: handleFormCleared,
     loadInitialSelectionState,
+    getProgrammaticSelectionState,
   } = useWidgetState({
     element,
     widgetMgr,
@@ -371,6 +374,46 @@ function DataFrame({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
     []
   )
+
+  /**
+   * Handle programmatic selection changes from element.selectionState.
+   * This is triggered when the user sets the selection via st.session_state.
+   * We track the last applied value to avoid re-applying on every rerun.
+   */
+  useEffect(() => {
+    if (!element.selectionState) {
+      // Reset tracking when there's no programmatic selection
+      lastAppliedSelectionStateRef.current = null
+      return
+    }
+
+    // Only apply if this is a new programmatic selection value
+    if (element.selectionState === lastAppliedSelectionStateRef.current) {
+      return
+    }
+
+    const programmaticSelection = getProgrammaticSelectionState({
+      columns,
+      isRowSelectionActivated,
+      isColumnSelectionActivated,
+      isCellSelectionActivated,
+      isMultiCellSelectionActivated,
+    })
+
+    if (programmaticSelection) {
+      lastAppliedSelectionStateRef.current = element.selectionState
+      processSelectionChange(programmaticSelection)
+    }
+  }, [
+    element.selectionState,
+    columns,
+    isRowSelectionActivated,
+    isColumnSelectionActivated,
+    isCellSelectionActivated,
+    isMultiCellSelectionActivated,
+    getProgrammaticSelectionState,
+    processSelectionChange,
+  ])
 
   const { exportToCsv } = useDataExporter(
     getCellContent,

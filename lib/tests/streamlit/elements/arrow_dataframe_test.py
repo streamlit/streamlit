@@ -30,6 +30,7 @@ from streamlit.dataframe_util import (
     convert_arrow_bytes_to_pandas_df,
     is_pandas_version_less_than,
 )
+from streamlit.elements.arrow import _validate_selection_state
 from streamlit.elements.lib.column_config_utils import INDEX_IDENTIFIER
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
@@ -653,3 +654,206 @@ class StArrowTableAPITest(DeltaGeneratorTestCase):
 
         proto = self.get_delta_from_queue().new_element.arrow_table
         pd.testing.assert_frame_equal(convert_arrow_bytes_to_pandas_df(proto.data), df)
+
+
+class TestValidateSelectionState:
+    """Tests for _validate_selection_state function."""
+
+    def test_valid_row_selection(self) -> None:
+        """Test that valid row indices are preserved."""
+        value = {"selection": {"rows": [0, 2, 4], "columns": [], "cells": []}}
+        result = _validate_selection_state(
+            value,
+            num_rows=5,
+            column_names=["col1", "col2"],
+            selection_mode_set={"multi-row"},
+        )
+        assert result["selection"]["rows"] == [0, 2, 4]
+        assert result["selection"]["columns"] == []
+        assert result["selection"]["cells"] == []
+
+    def test_invalid_row_indices_filtered(self) -> None:
+        """Test that row indices outside valid range are filtered out."""
+        value = {"selection": {"rows": [0, 10, 20], "columns": [], "cells": []}}
+        result = _validate_selection_state(
+            value,
+            num_rows=5,
+            column_names=["col1"],
+            selection_mode_set={"multi-row"},
+        )
+        # Only row 0 is valid (0 <= 0 < 5)
+        assert result["selection"]["rows"] == [0]
+
+    def test_negative_row_indices_filtered(self) -> None:
+        """Test that negative row indices are filtered out."""
+        value = {"selection": {"rows": [-1, 0, 2], "columns": [], "cells": []}}
+        result = _validate_selection_state(
+            value,
+            num_rows=5,
+            column_names=["col1"],
+            selection_mode_set={"multi-row"},
+        )
+        assert result["selection"]["rows"] == [0, 2]
+
+    def test_valid_column_selection(self) -> None:
+        """Test that valid column names are preserved."""
+        value = {"selection": {"rows": [], "columns": ["col1", "col3"], "cells": []}}
+        result = _validate_selection_state(
+            value,
+            num_rows=5,
+            column_names=["col1", "col2", "col3"],
+            selection_mode_set={"multi-column"},
+        )
+        assert result["selection"]["columns"] == ["col1", "col3"]
+
+    def test_invalid_column_names_filtered(self) -> None:
+        """Test that non-existent column names are filtered out."""
+        value = {
+            "selection": {"rows": [], "columns": ["col1", "nonexistent"], "cells": []}
+        }
+        result = _validate_selection_state(
+            value,
+            num_rows=5,
+            column_names=["col1", "col2"],
+            selection_mode_set={"multi-column"},
+        )
+        assert result["selection"]["columns"] == ["col1"]
+
+    def test_single_row_mode_limits_selection(self) -> None:
+        """Test that single-row mode limits selection to first row."""
+        value = {"selection": {"rows": [1, 2, 3], "columns": [], "cells": []}}
+        result = _validate_selection_state(
+            value,
+            num_rows=5,
+            column_names=["col1"],
+            selection_mode_set={"single-row"},
+        )
+        # Single-row mode should only keep the first valid row
+        assert result["selection"]["rows"] == [1]
+
+    def test_single_column_mode_limits_selection(self) -> None:
+        """Test that single-column mode limits selection to first column."""
+        value = {"selection": {"rows": [], "columns": ["col1", "col2"], "cells": []}}
+        result = _validate_selection_state(
+            value,
+            num_rows=5,
+            column_names=["col1", "col2", "col3"],
+            selection_mode_set={"single-column"},
+        )
+        assert result["selection"]["columns"] == ["col1"]
+
+    def test_cell_selection_validation(self) -> None:
+        """Test that cell selections are validated correctly."""
+        value = {"selection": {"rows": [], "columns": [], "cells": [[0, "col1"]]}}
+        result = _validate_selection_state(
+            value,
+            num_rows=5,
+            column_names=["col1", "col2"],
+            selection_mode_set={"multi-cell"},
+        )
+        assert result["selection"]["cells"] == [(0, "col1")]
+
+    def test_invalid_cell_selections_filtered(self) -> None:
+        """Test that invalid cell selections are filtered out."""
+        value = {
+            "selection": {
+                "rows": [],
+                "columns": [],
+                "cells": [
+                    [0, "col1"],  # Valid
+                    [10, "col1"],  # Invalid row
+                    [0, "nonexistent"],  # Invalid column
+                ],
+            }
+        }
+        result = _validate_selection_state(
+            value,
+            num_rows=5,
+            column_names=["col1", "col2"],
+            selection_mode_set={"multi-cell"},
+        )
+        assert result["selection"]["cells"] == [(0, "col1")]
+
+    def test_single_cell_mode_limits_selection(self) -> None:
+        """Test that single-cell mode limits selection to first cell."""
+        value = {
+            "selection": {
+                "rows": [],
+                "columns": [],
+                "cells": [[0, "col1"], [1, "col2"]],
+            }
+        }
+        result = _validate_selection_state(
+            value,
+            num_rows=5,
+            column_names=["col1", "col2"],
+            selection_mode_set={"single-cell"},
+        )
+        assert result["selection"]["cells"] == [(0, "col1")]
+
+    def test_row_selection_ignored_without_mode(self) -> None:
+        """Test that row selections are ignored when row selection mode is not active."""
+        value = {"selection": {"rows": [0, 1], "columns": [], "cells": []}}
+        result = _validate_selection_state(
+            value,
+            num_rows=5,
+            column_names=["col1"],
+            selection_mode_set={"multi-column"},  # Only column selection active
+        )
+        # Rows should be empty since row selection is not active
+        assert result["selection"]["rows"] == []
+
+    def test_column_selection_ignored_without_mode(self) -> None:
+        """Test that column selections are ignored when column selection mode is not active."""
+        value = {"selection": {"rows": [], "columns": ["col1"], "cells": []}}
+        result = _validate_selection_state(
+            value,
+            num_rows=5,
+            column_names=["col1"],
+            selection_mode_set={"multi-row"},  # Only row selection active
+        )
+        assert result["selection"]["columns"] == []
+
+    def test_missing_selection_key_raises_error(self) -> None:
+        """Test that missing 'selection' key raises StreamlitAPIException."""
+        value: dict[str, Any] = {"invalid": {}}
+        with pytest.raises(StreamlitAPIException) as exc_info:
+            _validate_selection_state(
+                value,  # type: ignore[arg-type]
+                num_rows=5,
+                column_names=["col1"],
+                selection_mode_set={"multi-row"},
+            )
+        assert "selection" in str(exc_info.value)
+
+    def test_empty_selection_returns_empty(self) -> None:
+        """Test that empty selection returns empty validated selection."""
+        value = {"selection": {"rows": [], "columns": [], "cells": []}}
+        result = _validate_selection_state(
+            value,
+            num_rows=5,
+            column_names=["col1"],
+            selection_mode_set={"multi-row", "multi-column"},
+        )
+        assert result["selection"]["rows"] == []
+        assert result["selection"]["columns"] == []
+        assert result["selection"]["cells"] == []
+
+    def test_combined_selection_modes(self) -> None:
+        """Test validation with multiple selection modes active."""
+        value = {
+            "selection": {
+                "rows": [0, 1],
+                "columns": ["col1"],
+                "cells": [[2, "col2"]],
+            }
+        }
+        result = _validate_selection_state(
+            value,
+            num_rows=5,
+            column_names=["col1", "col2"],
+            selection_mode_set={"multi-row", "multi-column", "multi-cell"},
+        )
+        assert result["selection"]["rows"] == [0, 1]
+        assert result["selection"]["columns"] == ["col1"]
+        assert result["selection"]["cells"] == [(2, "col2")]
