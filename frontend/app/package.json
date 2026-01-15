@@ -62,7 +62,7 @@
   },
   "devDependencies": {
     "@eslint-react/eslint-plugin": "^2.5.3",
-    "@eslint/compat": "^2.0.0",
+    "@eslint/compat": "^2.0.1",
     "@eslint/eslintrc": "^3.3.3",
     "@eslint/js": "^9.39.2",
     "@swc/plugin-emotion": "^14.3.0",
