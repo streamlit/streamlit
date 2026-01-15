@@ -47,6 +47,7 @@ import {
 
 import { createBaseUiTheme } from "./createBaseUiTheme"
 import { computeDerivedColors, createEmotionColors } from "./getColors"
+import { createShadows } from "./getShadows"
 import { fonts } from "./primitives/typography"
 import { DerivedColors, EmotionThemeColors } from "./types"
 
@@ -1016,10 +1017,14 @@ export const createEmotionTheme = (
     fontsOverride.headingFont = parseFont(bodyFont, fonts.sansSerif)
   }
 
+  // Create shadows - auto-determines light/dark based on bgColor luminance
+  const shadows = createShadows(conditionalOverrides.colors)
+
   return {
     ...baseThemeConfig.emotion,
     genericFonts: fontsOverride,
     ...conditionalOverrides,
+    shadows,
   }
 }
 
@@ -1293,28 +1298,6 @@ export function blend(color: string, background: string | undefined): string {
   const go = Math.round((a * g + ba * bg * (1 - a)) / ao)
   const bo = Math.round((a * b + ba * bb * (1 - a)) / ao)
   return toHex(`rgba(${ro}, ${go}, ${bo}, ${ao})`)
-}
-
-/**
- * Canonical focus ring used across Streamlit components for keyboard focus
- * (usually applied via `:focus-visible`).
- */
-export const getFocusBoxShadow = (
-  color: string,
-  /**
-   * The alpha value to use for the focus ring.
-   * Matches color2k.transparentize: 0 = unchanged, 1 = fully transparent.
-   */
-  alpha: number = 0.5,
-  width: string = "0.2rem"
-): string => {
-  return `0 0 0 ${width} ${transparentize(color, alpha)}`
-}
-
-export const getPrimaryFocusBoxShadow = (
-  theme: Pick<EmotionTheme, "colors">
-): string => {
-  return getFocusBoxShadow(theme.colors.primary)
 }
 
 /**

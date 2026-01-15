@@ -59,7 +59,7 @@ export const StyledToolbar = styled.div(({ theme }) => ({
   flexDirection: "row",
   alignItems: "center",
   justifyContent: "flex-end",
-  boxShadow: "1px 2px 8px rgba(0, 0, 0, 0.08)",
+  boxShadow: theme.shadows.toolbar,
   borderRadius: theme.radii.default,
   backgroundColor: theme.colors.lightenedBg05,
   width: "fit-content",

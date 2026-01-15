@@ -19,9 +19,8 @@ import unittest
 from typing import TYPE_CHECKING
 
 import pytest
-from parameterized import parameterized
 
-from streamlit.errors import NoSessionContext, StreamlitAPIException
+from streamlit.errors import NoSessionContext
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.forward_msg_cache import populate_hash_if_needed
 from streamlit.runtime.fragment import MemoryFragmentStorage
@@ -126,46 +125,6 @@ class ScriptRunContextTest(unittest.TestCase):
 
             ctx.enqueue(new_msg)
             assert new_msg.metadata.active_script_hash == "new_hash"
-
-    @parameterized.expand(
-        [
-            (True, True, True),  # Both APIs used
-            (True, False, False),  # Only experimental API used
-            (False, True, False),  # Only final API used
-            (False, False, False),  # Neither API used
-        ]
-    )
-    def test_both_query_params_used(
-        self, experimental_used, production_used, should_raise
-    ):
-        def fake_enqueue(msg):
-            return None
-
-        ctx = _create_script_run_context(fake_enqueue)
-        ctx._experimental_query_params_used = experimental_used
-        ctx._production_query_params_used = production_used
-
-        if should_raise:
-            with pytest.raises(StreamlitAPIException):
-                ctx.ensure_single_query_api_used()
-        else:
-            ctx.ensure_single_query_api_used()
-
-    def test_mark_experimental_query_params_used_sets_true(self):
-        def fake_enqueue(msg):
-            return None
-
-        ctx = _create_script_run_context(fake_enqueue)
-        ctx.mark_experimental_query_params_used()
-        assert ctx._experimental_query_params_used is True
-
-    def test_mark_production_query_params_used_sets_true(self):
-        def fake_enqueue(msg):
-            return None
-
-        ctx = _create_script_run_context(fake_enqueue)
-        ctx.mark_production_query_params_used()
-        assert ctx._production_query_params_used is True
 
     def test_enqueue_message_raise_if_ctx_is_none(self):
         msg = ForwardMsg()

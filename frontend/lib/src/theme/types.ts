@@ -24,6 +24,7 @@ import {
   OptionalThemeColors,
   RequiredThemeColors,
 } from "./emotionBaseTheme/themeColors"
+import { ThemeShadows } from "./getShadows"
 import { PrimitiveColors } from "./primitives"
 
 /**
@@ -94,10 +95,14 @@ export type SpecialEmotionColors = {
 }
 
 /**
- * Complete emotion theme type with explicitly typed colors
+ * Complete emotion theme type with explicitly typed colors and shadows
  */
-export interface EmotionTheme extends Omit<typeof emotionBaseTheme, "colors"> {
+export interface EmotionTheme extends Omit<
+  typeof emotionBaseTheme,
+  "colors" | "shadows"
+> {
   colors: EmotionThemeColors
+  shadows: ThemeShadows
 }
 
 export type ThemeConfig = {
