@@ -206,7 +206,7 @@ if tabs[0].open:  # Developer must add this check
 
 - ❌ Cannot be used inside `@st.cache_data` decorated functions
 - ❌ Cannot be used inside `@st.fragment` (fragments can't contain widgets that write outside their scope)
-- This is why `on_change=None` is the default - to avoid breaking existing apps that use tabs in these contexts
+- This is why `on_change="ignore"` is the default - to avoid breaking existing apps that use tabs in these contexts
 
 ### Examples
 
