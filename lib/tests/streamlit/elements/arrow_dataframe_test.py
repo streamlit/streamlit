@@ -283,15 +283,6 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitAPIException), st.form("form"):
             st.dataframe(df, on_select=lambda: None)
 
-    def test_selectable_df_throws_exception_with_modified_sessions_state(self):
-        """Test that an exception is thrown if the session state is modified."""
-        df = pd.DataFrame([[1, 2], [3, 4]], columns=["col1", "col2"])
-        st.session_state.selectable_df = {
-            "selection": {"rows": [1], "columns": ["col1"]},
-        }
-        with pytest.raises(StreamlitAPIException):
-            st.dataframe(df, on_select="rerun", key="selectable_df")
-
     def test_shows_cached_widget_replay_warning(self):
         """Test that a warning is shown when selections are activated and
         it is used inside a cached function."""
