@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import json
-import pickle
+import pickle  # noqa: S403
 from collections.abc import Iterator, KeysView, Mapping, MutableMapping, Sequence
 from copy import deepcopy
 from dataclasses import dataclass, field, replace
