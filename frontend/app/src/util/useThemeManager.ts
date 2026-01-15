@@ -14,16 +14,20 @@
  * limitations under the License.
  */
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 
 import {
   AUTO_THEME_NAME,
   createAutoTheme,
   createPresetThemes,
   createTheme,
+  CUSTOM_THEME_AUTO_NAME,
+  CUSTOM_THEME_DARK_NAME,
+  CUSTOM_THEME_LIGHT_NAME,
   CUSTOM_THEME_NAME,
   getDefaultTheme,
   getHostSpecifiedTheme,
+  getSystemThemePreference,
   isPresetTheme,
   setCachedThemeSelection,
   ThemeConfig,
@@ -58,6 +62,23 @@ export function useThemeManager(): [
     ...createPresetThemes(),
     ...(isPresetTheme(defaultTheme) ? [] : [defaultTheme]),
   ])
+  // Keep updateTheme referentially stable while still reading the latest themes.
+  const availableThemesRef = useRef<ThemeConfig[]>(availableThemes)
+
+  useEffect(() => {
+    availableThemesRef.current = availableThemes
+  }, [availableThemes])
+
+  const getSystemCustomTheme = (
+    themes: ThemeConfig[]
+  ): ThemeConfig | undefined =>
+    themes.find(
+      currTheme =>
+        currTheme.name ===
+        (getSystemThemePreference() === "dark"
+          ? CUSTOM_THEME_DARK_NAME
+          : CUSTOM_THEME_LIGHT_NAME)
+    )
 
   const addThemes = (
     themeConfigs: ThemeConfig[],
@@ -72,11 +93,14 @@ export function useThemeManager(): [
     ])
   }
 
-  const updateTheme = useCallback(
-    (newTheme: ThemeConfig): void => {
+  const applyTheme = useCallback(
+    (newTheme: ThemeConfig, options: { persist?: boolean } = {}): void => {
+      const { persist = true } = options
       setTheme(prevTheme => {
         if (newTheme !== prevTheme) {
-          setCachedThemeSelection(newTheme)
+          if (persist) {
+            setCachedThemeSelection(newTheme)
+          }
           return newTheme
         }
         return prevTheme
@@ -85,15 +109,63 @@ export function useThemeManager(): [
     [setTheme]
   )
 
+  const updateTheme = useCallback(
+    (newTheme: ThemeConfig): void => {
+      if (newTheme.name === AUTO_THEME_NAME) {
+        applyTheme(getHostSpecifiedTheme())
+        return
+      }
+
+      if (newTheme.name === CUSTOM_THEME_AUTO_NAME) {
+        const systemCustomTheme = getSystemCustomTheme(
+          availableThemesRef.current
+        )
+        if (systemCustomTheme) {
+          applyTheme({
+            ...systemCustomTheme,
+            name: CUSTOM_THEME_AUTO_NAME,
+            displayName: AUTO_THEME_NAME,
+          })
+          return
+        }
+      }
+
+      applyTheme(newTheme)
+    },
+    [applyTheme]
+  )
+
   const updateAutoTheme = useCallback((): void => {
+    const systemTheme = getHostSpecifiedTheme()
     if (theme.name === AUTO_THEME_NAME) {
-      updateTheme(getHostSpecifiedTheme())
+      applyTheme(systemTheme, { persist: false })
     }
+
     const constantThemes = availableThemes.filter(
       currTheme => currTheme.name !== AUTO_THEME_NAME
     )
-    setAvailableThemes([createAutoTheme(), ...constantThemes])
-  }, [theme.name, availableThemes, updateTheme])
+    const hasCustomAutoTheme = constantThemes.some(
+      currTheme => currTheme.name === CUSTOM_THEME_AUTO_NAME
+    )
+
+    if (hasCustomAutoTheme && theme.name === CUSTOM_THEME_AUTO_NAME) {
+      const systemCustomTheme = getSystemCustomTheme(constantThemes)
+      if (systemCustomTheme) {
+        const autoCustomTheme = {
+          ...systemCustomTheme,
+          name: CUSTOM_THEME_AUTO_NAME,
+          displayName: AUTO_THEME_NAME,
+        }
+        applyTheme(autoCustomTheme, { persist: false })
+      }
+    }
+
+    setAvailableThemes(
+      hasCustomAutoTheme
+        ? constantThemes
+        : [createAutoTheme(), ...constantThemes]
+    )
+  }, [theme.name, availableThemes, applyTheme])
 
   const setFonts = useCallback(
     (themeInfo: ICustomThemeConfig): void => {

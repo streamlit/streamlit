@@ -1256,6 +1256,11 @@ export const getHostSpecifiedTheme = (): ThemeConfig => {
 
 export const getDefaultTheme = (): ThemeConfig => {
   // Priority for default theme
+  const hostSpecified = getHostSpecifiedThemeOnly()
+  if (hostSpecified) {
+    return hostSpecified
+  }
+
   const cachedSelection = getCachedThemeSelection()
   if (cachedSelection === "Light") {
     return getMergedLightTheme()
@@ -1265,7 +1270,7 @@ export const getDefaultTheme = (): ThemeConfig => {
     return getMergedDarkTheme()
   }
 
-  return getHostSpecifiedTheme()
+  return createAutoTheme()
 }
 
 const whiteSpace = /\s+/

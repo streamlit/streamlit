@@ -669,6 +669,18 @@ describe("getDefaultTheme", () => {
     expect(defaultTheme.emotion.colors).toEqual(darkTheme.emotion.colors)
   })
 
+  it("prioritizes embed query parameter over cached preference", () => {
+    windowSpy = mockWindow(
+      windowLocationSearch("?embed=true&embed_options=light_theme")
+    )
+    setCachedThemeSelection(darkTheme)
+
+    const defaultTheme = getDefaultTheme()
+
+    expect(defaultTheme.name).toBe("Light")
+    expect(defaultTheme.emotion.colors).toEqual(lightTheme.emotion.colors)
+  })
+
   it("sets default to the light theme when an embed query parameter is set", () => {
     windowSpy = mockWindow(
       windowLocationSearch("?embed=true&embed_options=light_theme")
