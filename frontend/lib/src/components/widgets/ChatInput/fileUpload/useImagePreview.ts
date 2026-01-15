@@ -43,7 +43,7 @@ export function useImagePreview(
 
   useEffect(() => {
     if (!file || !isImageFile(filename)) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- Synchronizing with Blob URL API external system
+      // eslint-disable-next-line -- Synchronizing with Blob URL API external system
       setPreviewUrl(null)
       return
     }
