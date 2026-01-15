@@ -118,7 +118,6 @@ ignore = [
   "ASYNC240", # Checks for blocking path methods in async functions.
   "FURB113",  # Checks for repeated append calls that can be replaced by extend.
   "PLC2801",  # Checks for unnecessary dunder method calls.
-  "PLR6104",  # Checks for assignments that can be replaced with augmented assignment.
 ]
 exclude = [
   # pympler is a vendored dependency that doesn't conform to our linting rules:
