@@ -136,6 +136,7 @@ export {
   hasLightBackgroundColor,
   isPresetTheme,
   lightTheme,
+  getPreferredTheme,
   mapCachedThemeSelectionToAvailableTheme,
   removeCachedTheme,
   setCachedThemeSelection,

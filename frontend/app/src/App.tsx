@@ -75,15 +75,13 @@ import {
   FileUploadClient,
   FormsData,
   generateUID,
-  getCachedThemeSelection,
   getElementId,
   getEmbeddingIdClassName,
-  getHostSpecifiedThemeOnly,
   getIFrameEnclosingApp,
   getLocaleLanguage,
+  getPreferredTheme,
   getQueryString,
   getScreencastTimestamp,
-  getThemeSelectionFromThemeConfig,
   getTimezone,
   getTimezoneOffset,
   getUrl,
@@ -101,7 +99,6 @@ import {
   isToolbarDisplayed,
   IToolbarItem,
   lightTheme,
-  mapCachedThemeSelectionToAvailableTheme,
   mark,
   measure,
   notUndefined,
@@ -1477,20 +1474,7 @@ export class App extends PureComponent<Props, State> {
       // Add the new custom themes to the theme manager and remove the preset themes
       this.props.theme.addThemes(customThemes, { keepPresetThemes: false })
 
-      // Check for host-specified theme first (embed_options query params)
-      const hostSpecified = getHostSpecifiedThemeOnly()
-      const hostSpecifiedSelection = hostSpecified
-        ? getThemeSelectionFromThemeConfig(hostSpecified)
-        : null
-      const userPreferenceSelection =
-        hostSpecifiedSelection ?? getCachedThemeSelection()
-      // Map the user's preference (host-specified or cached) to the best matching theme
-      // - Applies full server config while preserving user's light/dark selection
-      const mappedTheme = mapCachedThemeSelectionToAvailableTheme(
-        userPreferenceSelection,
-        customThemes
-      )
-
+      const mappedTheme = getPreferredTheme(customThemes)
       if (mappedTheme) {
         // User has a mappable preference - apply the full server config
         // while preserving their light/dark selection
@@ -1518,20 +1502,8 @@ export class App extends PureComponent<Props, State> {
       this.props.theme.addThemes([])
 
       if (usingCustomTheme) {
-        // Check for host-specified theme first (embed_options query params)
-        const hostSpecified = getHostSpecifiedThemeOnly()
-        const hostSpecifiedSelection = hostSpecified
-          ? getThemeSelectionFromThemeConfig(hostSpecified)
-          : null
-        const userPreferenceSelection =
-          hostSpecifiedSelection ?? getCachedThemeSelection()
         const presetThemes = [lightTheme, darkTheme]
-        // Try to map preference (host-specified or cached) back to preset themes
-        // e.g., "Custom Theme Light" → "Light", "Custom Theme Dark" → "Dark"
-        const mappedTheme = mapCachedThemeSelectionToAvailableTheme(
-          userPreferenceSelection,
-          presetThemes
-        )
+        const mappedTheme = getPreferredTheme(presetThemes)
 
         if (mappedTheme) {
           // User had a custom theme preference that maps to a preset - preserve their choice

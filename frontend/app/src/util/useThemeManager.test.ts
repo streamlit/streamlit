@@ -25,6 +25,7 @@ import {
   CUSTOM_THEME_LIGHT_NAME,
   CUSTOM_THEME_NAME,
   darkTheme,
+  lightTheme,
   LocalStore,
   setCachedThemeSelection,
   ThemeConfig,
@@ -267,6 +268,93 @@ describe("useThemeManager", () => {
     expect(result.current[0].activeTheme.name).toBe(CUSTOM_THEME_AUTO_NAME)
     expect(result.current[0].activeTheme.emotion.colors.primary).toBe(
       customLight.emotion.colors.primary
+    )
+    expect(
+      JSON.parse(window.localStorage.getItem(LocalStore.ACTIVE_THEME) || "")
+    ).toBe("System")
+  })
+
+  it("recalculates preset auto when user switches back to System", () => {
+    const { result } = renderHook(() => useThemeManager())
+    const [themeManager] = result.current
+
+    act(() => {
+      themeManager.setTheme(darkTheme)
+    })
+
+    act(() => {
+      themeManager.setTheme({
+        ...darkTheme,
+        name: AUTO_THEME_NAME,
+      })
+    })
+
+    const [themeManager2] = result.current
+    expect(themeManager2.activeTheme.name).toBe(AUTO_THEME_NAME)
+    expect(
+      JSON.parse(window.localStorage.getItem(LocalStore.ACTIVE_THEME) || "")
+    ).toBe("System")
+  })
+
+  it("recalibrates preset auto on system preference change", () => {
+    let mediaChangeHandler: ((event: MediaQueryListEvent) => void) | undefined
+    let prefersDark = false
+
+    Object.defineProperty(window, "matchMedia", {
+      writable: true,
+      value: vi.fn().mockImplementation(query => ({
+        matches: prefersDark,
+        media: query,
+        onchange: null,
+        addListener: vi.fn(), // deprecated
+        removeListener: vi.fn(), // deprecated
+        addEventListener: (
+          _event: string,
+          handler: (e: MediaQueryListEvent) => void
+        ) => {
+          mediaChangeHandler = handler
+        },
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      })),
+    })
+
+    const { result } = renderHook(() => useThemeManager())
+    const [themeManager] = result.current
+
+    act(() => {
+      themeManager.setTheme({
+        ...darkTheme,
+        name: AUTO_THEME_NAME,
+      })
+    })
+
+    expect(result.current[0].activeTheme.name).toBe(AUTO_THEME_NAME)
+    expect(
+      JSON.parse(window.localStorage.getItem(LocalStore.ACTIVE_THEME) || "")
+    ).toBe("System")
+
+    prefersDark = true
+    act(() => {
+      mediaChangeHandler?.({ matches: true } as MediaQueryListEvent)
+    })
+
+    expect(result.current[0].activeTheme.name).toBe(AUTO_THEME_NAME)
+    expect(result.current[0].activeTheme.emotion.colors.primary).toBe(
+      darkTheme.emotion.colors.primary
+    )
+    expect(
+      JSON.parse(window.localStorage.getItem(LocalStore.ACTIVE_THEME) || "")
+    ).toBe("System")
+
+    prefersDark = false
+    act(() => {
+      mediaChangeHandler?.({ matches: false } as MediaQueryListEvent)
+    })
+
+    expect(result.current[0].activeTheme.name).toBe(AUTO_THEME_NAME)
+    expect(result.current[0].activeTheme.emotion.colors.primary).toBe(
+      lightTheme.emotion.colors.primary
     )
     expect(
       JSON.parse(window.localStorage.getItem(LocalStore.ACTIVE_THEME) || "")

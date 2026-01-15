@@ -87,10 +87,12 @@ export function useThemeManager(): [
     // keepPresetThemes is false when adding custom themes
     // so that user cannot revert to a preset theme, true by default.
     const { keepPresetThemes = true } = options
-    setAvailableThemes([
+    const updatedThemes = [
       ...(keepPresetThemes ? createPresetThemes() : []),
       ...themeConfigs,
-    ])
+    ]
+    availableThemesRef.current = updatedThemes
+    setAvailableThemes(updatedThemes)
   }
 
   const applyTheme = useCallback(
@@ -218,7 +220,7 @@ export function useThemeManager(): [
       window.removeEventListener("afterprint", updateAutoTheme)
       mediaMatch.removeEventListener("change", updateAutoTheme)
     }
-  }, [theme, availableThemes, updateAutoTheme])
+  }, [updateAutoTheme])
 
   return [
     {

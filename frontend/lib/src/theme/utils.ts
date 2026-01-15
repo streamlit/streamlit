@@ -1603,3 +1603,26 @@ export const mapCachedThemeSelectionToAvailableTheme = (
 
   return null
 }
+
+/**
+ * Gets the user's preferred theme from available themes.
+ * Host-specified embed options take precedence over cached selections.
+ *
+ * @param availableThemes - The list of currently available themes
+ * @returns The best matching theme, or null if no preference found
+ */
+export const getPreferredTheme = (
+  availableThemes: ThemeConfig[]
+): ThemeConfig | null => {
+  const hostSpecified = getHostSpecifiedThemeOnly()
+  const hostSpecifiedSelection = hostSpecified
+    ? getThemeSelectionFromThemeConfig(hostSpecified)
+    : null
+  const userPreferenceSelection =
+    hostSpecifiedSelection ?? getCachedThemeSelection()
+
+  return mapCachedThemeSelectionToAvailableTheme(
+    userPreferenceSelection,
+    availableThemes
+  )
+}
