@@ -385,20 +385,18 @@ function AppView(props: AppViewProps): ReactElement {
           )}
         </Component>
       </StyledMainContent>
-      {/* Always render EventContainer so ToasterContainer is available for
-          frontend-triggered toasts (e.g., URL length warnings) */}
-      <EventContainer>
-        {hasEventElements && (
-          <Profiler id="Event">
+      {hasEventElements && (
+        <Profiler id="Event">
+          <EventContainer>
             <StyledEventBlockContainer
               className="stEvent"
               data-testid="stEvent"
             >
               {renderBlock(elements.event)}
             </StyledEventBlockContainer>
-          </Profiler>
-        )}
-      </EventContainer>
+          </EventContainer>
+        </Profiler>
+      )}
     </StyledAppViewContainer>
   )
 }

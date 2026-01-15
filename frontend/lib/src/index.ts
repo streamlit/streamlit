@@ -47,10 +47,7 @@ export { default as ThemeProvider } from "./components/core/ThemeProvider"
 export { ViewStateContext } from "./components/core/ViewStateContext"
 export type { ViewStateContextProps } from "./components/core/ViewStateContext"
 export { default as AlertElement } from "./components/elements/AlertElement"
-export {
-  createStyledToastContent,
-  generateToastOverrides,
-} from "./components/elements/Toast"
+export { generateToastOverrides } from "./components/elements/Toast"
 export { default as StreamlitErrorCodeBlock } from "./components/elements/CodeBlock/StreamlitErrorCodeBlock"
 export { handleFavicon } from "./components/elements/Favicon"
 export { default as TextElement } from "./components/elements/TextElement"

@@ -16,7 +16,6 @@
 
 import { PureComponent, ReactNode } from "react"
 
-import { toaster } from "baseui/toast"
 import classNames from "classnames"
 import { enableMapSet, enablePatches } from "immer"
 import { getLogger } from "loglevel"
@@ -67,7 +66,6 @@ import {
   createCustomThemes,
   createFormsData,
   createPresetThemes,
-  createStyledToastContent,
   CUSTOM_THEME_AUTO_NAME,
   darkTheme,
   DeployedAppMetadata,
@@ -76,7 +74,6 @@ import {
   extractPageNameFromPathName,
   FileUploadClient,
   FormsData,
-  generateToastOverrides,
   generateUID,
   getCachedTheme,
   getElementId,
@@ -289,9 +286,6 @@ export class App extends PureComponent<Props, State> {
   // This is used to skip URL updates in handlePageInfoChanged during page navigation,
   // since maybeUpdatePageUrl will handle the pushState with the correct path.
   private isNavigatingToNewPage: boolean = false
-
-  // Track last URL length warning to avoid spamming
-  private lastUrlLengthWarningTime: number = 0
 
   public constructor(props: Props) {
     super(props)
@@ -1122,43 +1116,6 @@ export class App extends PureComponent<Props, State> {
   }
 
   /**
-   * Check if URL length is approaching browser limits and show a warning toast.
-   * Debounced to avoid spamming the user with warnings.
-   */
-  private warnIfUrlTooLong(url: string): void {
-    const URL_LENGTH_WARNING_THRESHOLD = 1500
-    const URL_LENGTH_WARNING_DEBOUNCE_MS = 5000
-
-    if (url.length <= URL_LENGTH_WARNING_THRESHOLD) {
-      return
-    }
-
-    const now = Date.now()
-    if (
-      now - this.lastUrlLengthWarningTime <=
-      URL_LENGTH_WARNING_DEBOUNCE_MS
-    ) {
-      return
-    }
-
-    this.lastUrlLengthWarningTime = now
-    const theme = this.props.theme.activeTheme.emotion
-    const toastContent = createStyledToastContent(
-      `URL is currently ${url.length} characters. ` +
-        `URLs over 2000 characters may cause issues with bookmarks, ` +
-        `sharing, or browser compatibility.`,
-      "⚠️"
-    )
-    // Use setTimeout to ensure ToasterContainer is mounted
-    setTimeout(() => {
-      toaster.warning(toastContent, {
-        autoHideDuration: 4000,
-        overrides: generateToastOverrides(theme, "warning"),
-      })
-    }, 100)
-  }
-
-  /**
    * Handle query parameter changes originating from widget value changes.
    * This is called by WidgetStateManager when a widget bound to a query param
    * updates its value.
@@ -1166,8 +1123,6 @@ export class App extends PureComponent<Props, State> {
   handleQueryParamsFromWidget = (queryString: string): void => {
     const targetUrl =
       document.location.pathname + (queryString ? `?${queryString}` : "")
-
-    this.warnIfUrlTooLong(targetUrl)
 
     window.history.replaceState({}, "", targetUrl)
 

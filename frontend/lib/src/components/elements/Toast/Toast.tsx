@@ -45,13 +45,8 @@ export interface ToastProps {
   element: ToastProto
 }
 
-export function generateToastOverrides(
-  theme: EmotionTheme,
-  type?: string
-): ToastOverrides {
+export function generateToastOverrides(theme: EmotionTheme): ToastOverrides {
   const lightBackground = hasLightBackgroundColor(theme)
-  const isWarning = type === "warning"
-  const warningBackgroundColor = lightBackground ? "#F6BC2F" : "#7A5616"
 
   return {
     Body: {
@@ -74,14 +69,8 @@ export function generateToastOverrides(
         paddingBottom: theme.spacing.lg,
         paddingLeft: theme.spacing.twoXL,
         paddingRight: theme.spacing.twoXL,
-        backgroundColor: isWarning
-          ? warningBackgroundColor
-          : theme.colors.bgColor,
-        filter: isWarning
-          ? undefined
-          : lightBackground
-            ? undefined
-            : "brightness(1.2)",
+        backgroundColor: theme.colors.bgColor,
+        filter: lightBackground ? undefined : "brightness(1.2)",
         color: theme.colors.bodyText,
         // Take standard BaseWeb shadow and adjust for dark backgrounds
         boxShadow: lightBackground
@@ -122,30 +111,6 @@ export function shortenMessage(fullMessage: string): string {
   }
 
   return fullMessage
-}
-
-/**
- * Creates styled toast content that matches Streamlit's toast styling.
- * Use this for programmatic toasts (e.g., frontend warnings).
- *
- * @param message - The message to display in the toast
- * @param icon - Optional icon to display (e.g., "⚠️", ":material/warning:")
- * @returns JSX element that can be passed to toaster.info/warning/etc
- */
-export function createStyledToastContent(
-  message: string,
-  icon?: string
-): ReactElement {
-  return (
-    <StyledToastWrapper expanded>
-      {icon && (
-        <DynamicIcon iconValue={icon} size="xl" testid="stToastDynamicIcon" />
-      )}
-      <StyledMessageWrapper>
-        <StreamlitMarkdown source={message} allowHTML={false} isToast />
-      </StyledMessageWrapper>
-    </StyledToastWrapper>
-  )
 }
 
 function Toast({ element }: Readonly<ToastProps>): ReactElement {

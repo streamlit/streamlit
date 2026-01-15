@@ -14,8 +14,4 @@
  * limitations under the License.
  */
 
-export {
-  default,
-  createStyledToastContent,
-  generateToastOverrides,
-} from "./Toast"
+export { default, generateToastOverrides } from "./Toast"
