@@ -17,3 +17,5 @@ from streamlit.commands.page_config import MenuItems
 
 menu_items: MenuItems = {"about": "_*This can be markdown!*_"}
 st.set_page_config(menu_items=menu_items)
+
+st.header("Main Menu Test")
