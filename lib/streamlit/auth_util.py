@@ -376,7 +376,7 @@ def get_cookie_with_chunks(
         chunk_name = f"{cookie_name}_{i + 1}"
         chunk_value = get_single_cookie_fn(chunk_name)
         if chunk_value is None:
-            _LOGGER.exception("Missing chunk %d for cookie '%s'", i + 1, cookie_name)
+            _LOGGER.error("Missing chunk %d for cookie '%s'", i + 1, cookie_name)
             return None
         chunks.append(chunk_value)
 

@@ -132,6 +132,7 @@ FD = FieldDescriptor
                 ("show_sidebar_border", FD.LABEL_OPTIONAL, FD.TYPE_BOOL),
                 ("chart_categorical_colors", FD.LABEL_REPEATED, FD.TYPE_STRING),
                 ("chart_sequential_colors", FD.LABEL_REPEATED, FD.TYPE_STRING),
+                ("chart_diverging_colors", FD.LABEL_REPEATED, FD.TYPE_STRING),
                 ("red_color", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("orange_color", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("yellow_color", FD.LABEL_OPTIONAL, FD.TYPE_STRING),

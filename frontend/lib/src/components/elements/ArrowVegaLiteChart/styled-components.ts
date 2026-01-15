@@ -31,7 +31,7 @@ export const StyledVegaLiteChartTooltips = (
     border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
     backgroundColor: transparentize(theme.colors.bgColor, 0.05),
     fontSize: theme.fontSizes.twoSm,
-    boxShadow: "rgb(0 0 0 / 16%) 0px 1px 4px",
+    boxShadow: theme.shadows.tooltip,
     maxWidth: theme.sizes.maxChartTooltipWidth,
     padding: `${theme.spacing.xs} ${theme.spacing.md}`,
     borderRadius: theme.radii.default,
@@ -137,7 +137,7 @@ export const StyledVegaLiteChartContainer =
           right: 0,
           // Customize menu UI to look like the Streamlit menu:
           backgroundColor: theme.colors.bgColor,
-          boxShadow: "rgb(0 0 0 / 16%) 0px 4px 16px",
+          boxShadow: theme.shadows.popover,
           border: `${theme.sizes.borderWidth} solid ${theme.colors.fadedText10}`,
           animationDuration: "0.15s",
           animationName: "scale-in",

@@ -73,9 +73,7 @@ export function generateToastOverrides(theme: EmotionTheme): ToastOverrides {
         filter: lightBackground ? undefined : "brightness(1.2)",
         color: theme.colors.bodyText,
         // Take standard BaseWeb shadow and adjust for dark backgrounds
-        boxShadow: lightBackground
-          ? "0px 4px 16px rgba(0, 0, 0, 0.16)"
-          : "0px 4px 16px rgba(0, 0, 0, 0.7)",
+        boxShadow: theme.shadows.popover,
       },
     },
     CloseIcon: {

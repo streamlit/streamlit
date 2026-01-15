@@ -14,9 +14,18 @@
  * limitations under the License.
  */
 
-import emotionBaseTheme from "~lib/theme/emotionBaseTheme"
-
-export default {
-  ...emotionBaseTheme,
-  inSidebar: false,
+/**
+ * Elevation shadows for light theme.
+ * Lower opacity values work well on light backgrounds.
+ */
+const elevationShadows = {
+  tooltip: "0px 1px 4px rgba(0, 0, 0, 0.16)",
+  popover: "0px 4px 16px rgba(0, 0, 0, 0.16)",
+  toolbar: "1px 2px 8px rgba(0, 0, 0, 0.08)",
+  sidebar: "-2rem 0 2rem 2rem rgba(0, 0, 0, 0.16)",
+  none: "none",
 }
+
+export type ElevationShadows = typeof elevationShadows
+
+export default elevationShadows

@@ -1056,9 +1056,7 @@ def is_colum_type_arrow_incompatible(column: Series[Any] | Index[Any]) -> bool:
     """
     from pandas.api.types import infer_dtype, is_dict_like, is_list_like
 
-    if column.dtype.kind in [
-        "c",  # complex64, complex128, complex256
-    ]:
+    if column.dtype.kind == "c":  # complex64, complex128, complex256
         return True
 
     if str(column.dtype) in {

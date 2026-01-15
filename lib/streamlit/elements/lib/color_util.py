@@ -245,7 +245,7 @@ def _float_formatter(component: float, color: MaybeColor) -> float:
     Anything too small will become 0.0, and anything too large will become 1.0.
     """
     if isinstance(component, int):
-        component = component / 255.0
+        component /= 255.0
 
     if isinstance(component, float):
         return min(1.0, max(component, 0.0))

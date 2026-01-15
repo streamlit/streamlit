@@ -24,7 +24,6 @@ import {
   BaseButtonSize,
 } from "~lib/components/shared/BaseButton/styled-components"
 import { EmotionTheme } from "~lib/theme"
-import { getPrimaryFocusBoxShadow } from "~lib/theme/utils"
 
 export { BaseButtonKind, BaseButtonSize }
 
@@ -96,7 +95,7 @@ export const StyledBaseLinkButton = styled.a<RequiredBaseLinkButtonProps>(
         // When focus-visible (e.g. if the button was focused via keyboard navigation)
         // we use the hover style of the respective button type (see below) and
         // additionally show a colored focus ring
-        boxShadow: getPrimaryFocusBoxShadow(theme),
+        boxShadow: theme.shadows.focusRing,
       },
       "&:hover": {
         textDecoration: "none",

@@ -35,7 +35,6 @@ import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useQueryParamBinding } from "~lib/hooks/useQueryParamBinding"
 import { deserializeBool, serializeBool } from "~lib/queryParamSerializers"
 import { hasLightBackgroundColor } from "~lib/theme"
-import { getFocusBoxShadow } from "~lib/theme/utils"
 import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -194,9 +193,7 @@ function Checkbox({
                 marginLeft: 0,
                 marginBottom: 0,
                 boxShadow:
-                  $isFocusVisible && $checked
-                    ? getFocusBoxShadow(colors.primary)
-                    : "",
+                  $isFocusVisible && $checked ? theme.shadows.focusRing : "",
                 // This is painfully verbose, but baseweb seems to internally
                 // use the long-hand version, which means we can't use the
                 // shorthand names here as if we do we'll end up with warn

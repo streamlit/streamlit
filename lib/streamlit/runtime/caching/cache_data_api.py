@@ -465,6 +465,11 @@ class CacheDataAPI:
     ) -> CachedFunc[P, R] | Callable[[Callable[P, R]], CachedFunc[P, R]]:
         """Decorator to cache functions that return data (e.g. dataframe transforms, database queries, ML inference).
 
+        Cached objects can be global or session-scoped. Global cached data is
+        available across all users, sessions, and reruns. Session-scoped cached
+        data is only available in the current session and removed when the
+        session disconnects.
+
         Cached objects are stored in "pickled" form, which means that the return
         value of a cached function must be pickleable. Each caller of the cached
         function gets its own copy of the cached data.
@@ -472,20 +477,17 @@ class CacheDataAPI:
         You can clear a function's cache with ``func.clear()`` or clear the entire
         cache with ``st.cache_data.clear()``.
 
-        A function's arguments must be hashable to cache it. If you have an
-        unhashable argument (like a database connection) or an argument you
-        want to exclude from caching, use an underscore prefix in the argument
-        name. In this case, Streamlit will return a cached value when all other
-        arguments match a previous function call. Alternatively, you can
-        declare custom hashing functions with ``hash_funcs``.
+        A function's arguments must be hashable to cache it. Streamlit makes a
+        best effort to hash a variety of objects, but the fallback hashing method
+        requires that the argument be pickleable, also. If you have an unhashable
+        argument (like a database connection) or an argument you want to exclude
+        from caching, use an underscore prefix in the argument name. In this case,
+        Streamlit will return a cached value when all other arguments match a
+        previous function call. Alternatively, you can declare custom hashing
+        functions with ``hash_funcs``.
 
-        Cached values are available to all users of your app. If you need to
-        save results that should only be accessible within a session, use
-        `Session State
-        <https://docs.streamlit.io/develop/concepts/architecture/session-state>`_
-        instead. Within each user session, an ``@st.cache_data``-decorated
-        function returns a *copy* of the cached return value (if the value is
-        already cached). To cache shared global resources (singletons), use
+        Objects cached by ``st.cache_data`` are returned as copies. To cache a
+        shared resource or something you want to mutate in place, use
         ``st.cache_resource`` instead. To learn more about caching, see
         `Caching overview
         <https://docs.streamlit.io/develop/concepts/architecture/caching>`_.
@@ -544,13 +546,15 @@ class CacheDataAPI:
             of how this can be used.
 
         scope : "global" or "session"
-            The scope for the resource. If "global", cache globally. If "session",
-            cache in the session.
+            The scope for the data cache. If this is ``"global"`` (default),
+            the data is cached globally. If this is ``"session"``, the data is
+            removed from the cache when the session disconnects.
 
-            Session-scoped cache entries will be expired when a user's session is
-            disconnected. Note that disconnected sessions can reconnect - so it is
-            possible for the cache to populate multiple times in a single session for
-            the same key.
+            Because a session-scoped cache is cleared when a session disconnects,
+            an unstable network connection can cause the cache to populate
+            multiple times in a single session. If this is a problem, you might
+            consider adjusting the ``server.websocketPingInterval``
+            configuration option.
 
         Example
         -------

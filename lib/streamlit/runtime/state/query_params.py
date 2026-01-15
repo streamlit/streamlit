@@ -185,8 +185,6 @@ class QueryParams(MutableMapping[str, str]):
             )
 
     def __iter__(self) -> Iterator[str]:
-        self._ensure_single_query_api_used()
-
         return iter(
             key
             for key in self._query_params
@@ -198,7 +196,6 @@ class QueryParams(MutableMapping[str, str]):
         Returns the last item in a list or an empty string if empty.
         If the key is not present, raise KeyError.
         """
-        self._ensure_single_query_api_used()
         if key.lower() in EMBED_QUERY_PARAMS_KEYS:
             raise KeyError(missing_key_error_message(key))
 
@@ -243,7 +240,6 @@ class QueryParams(MutableMapping[str, str]):
     ) -> None:
         # This overrides the `update` provided by MutableMapping
         # to ensure only one one ForwardMsg is sent.
-        self._ensure_single_query_api_used()
         if hasattr(other, "keys") and hasattr(other, "__getitem__"):
             other = cast("SupportsKeysAndGetItem[str, str | Iterable[str]]", other)
             for key in other.keys():  # noqa: SIM118
@@ -259,14 +255,12 @@ class QueryParams(MutableMapping[str, str]):
         self._send_query_param_msg()
 
     def get_all(self, key: str) -> list[str]:
-        self._ensure_single_query_api_used()
         if key not in self._query_params or key.lower() in EMBED_QUERY_PARAMS_KEYS:
             return []
         value = self._query_params[key]
         return value if isinstance(value, list) else [value]
 
     def __len__(self) -> int:
-        self._ensure_single_query_api_used()
         return len(
             {
                 key
@@ -276,14 +270,12 @@ class QueryParams(MutableMapping[str, str]):
         )
 
     def __str__(self) -> str:
-        self._ensure_single_query_api_used()
         return str(self._query_params)
 
     def _send_query_param_msg(self) -> None:
         ctx = get_script_run_ctx()
         if ctx is None:
             return
-        self._ensure_single_query_api_used()
 
         msg = ForwardMsg()
         msg.page_info_changed.query_string = parse.urlencode(
@@ -330,7 +322,6 @@ class QueryParams(MutableMapping[str, str]):
         self._send_query_param_msg()
 
     def to_dict(self) -> dict[str, str]:
-        self._ensure_single_query_api_used()
         # return the last query param if multiple values are set
         return {
             key: self[key]
@@ -343,7 +334,6 @@ class QueryParams(MutableMapping[str, str]):
         _dict: Iterable[tuple[str, str | Iterable[str]]]
         | SupportsKeysAndGetItem[str, str | Iterable[str]],
     ) -> None:
-        self._ensure_single_query_api_used()
         old_value = self._query_params.copy()
         self.clear_with_no_forward_msg(preserve_embed=True)
         try:

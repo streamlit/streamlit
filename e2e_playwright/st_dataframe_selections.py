@@ -243,3 +243,36 @@ selection = st.dataframe(
     key="multi_row_multi_column_multi_cell_select",
 )
 st.write("Dataframe multi-row, multi-column & multi-cell selection:", str(selection))
+
+# Test for selection persistence with data changes (key_as_main_identity feature)
+st.header("Selection persistence with data changes:")
+
+# Initialize update counter in session state
+if "data_update_count" not in st.session_state:
+    st.session_state.data_update_count = 0
+
+
+def increment_data_count():
+    """Callback to increment the data update counter."""
+    st.session_state.data_update_count += 1
+
+
+# Create dynamic data based on update count - use fixed seed for reproducibility
+# but offset by the update count to ensure data actually changes
+rng = np.random.default_rng(42 + st.session_state.data_update_count)
+dynamic_df = pd.DataFrame({f"col_{i}": rng.standard_normal(5) for i in range(5)})
+
+selection = st.dataframe(
+    dynamic_df,
+    hide_index=True,
+    on_select="rerun",
+    selection_mode="multi-row",
+    column_config=column_config,
+    width="content",
+    key="persistent_selection_df",
+)
+st.write("Persistent selection:", str(selection))
+st.write("Data update count:", st.session_state.data_update_count)
+
+# Use on_click callback to ensure counter is incremented before the rerun completes
+st.button("Update data", key="update_data_btn", on_click=increment_data_count)

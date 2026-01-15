@@ -1681,8 +1681,8 @@ FILE_CHIP_VARIATIONS = [
     ("unknown", "data.unknown", "application/octet-stream", b"mystery"),
     (
         "truncated",
-        "this-is-a-very-long-filename-that-should-be-truncated.pdf",
-        "application/pdf",
+        "data_analysis_results.csv",
+        "text/csv",
         b"content",
     ),
 ]
