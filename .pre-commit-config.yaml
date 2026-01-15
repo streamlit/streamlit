@@ -54,7 +54,6 @@ repos:
         exclude: /vendor/
         language: node
         pass_filenames: true
-        verbose: true
       - id: prettier-connection
         name: Prettier Connection
         # NOTE: This hook currently does not work on Windows due to "yarn" not being an executable and win32api.CreateProcess
