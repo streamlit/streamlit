@@ -132,11 +132,14 @@ def test_go_image_no_cumulative_shrinking_on_fullscreen_toggle(
 
     go_image_chart = plotly_charts.nth(index)
 
+    # Snapshot before any fullscreen toggles - establishes the expected size
+    assert_snapshot(go_image_chart, name="st_plotly_chart-go_image_initial")
+
     # Toggle fullscreen multiple times to trigger cumulative shrinking bug
     for _ in range(3):
         # Enter fullscreen
         go_image_chart.hover()
-        fullscreen_button = app.locator('[data-title="Fullscreen"]').last
+        fullscreen_button = app.locator('[data-title="Fullscreen"]').nth(index)
         fullscreen_button.hover()
         fullscreen_button.click()
 
@@ -146,7 +149,7 @@ def test_go_image_no_cumulative_shrinking_on_fullscreen_toggle(
         )
 
         # Exit fullscreen
-        close_button = app.locator('[data-title="Close fullscreen"]').last
+        close_button = app.locator('[data-title="Close fullscreen"]').nth(0)
         close_button.hover()
         close_button.click()
 
@@ -155,7 +158,7 @@ def test_go_image_no_cumulative_shrinking_on_fullscreen_toggle(
             "position", "fixed"
         )
 
-    # Snapshot after 3 fullscreen toggles - should match original size
+    # Snapshot after 3 fullscreen toggles - should match initial size
     # If the cumulative shrinking bug exists, this snapshot will show a smaller chart
     assert_snapshot(
         go_image_chart,
