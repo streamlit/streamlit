@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -391,7 +391,7 @@ class ButtonGroupMixin:
         >>> if selected is not None:
         >>>     st.markdown(f"You selected {sentiment_mapping[selected]} star(s).")
 
-        .. output ::
+        .. output::
             https://doc-feedback-stars.streamlit.app/
             height: 200px
 
@@ -404,7 +404,7 @@ class ButtonGroupMixin:
         >>> if selected is not None:
         >>>     st.markdown(f"You selected: {sentiment_mapping[selected]}")
 
-        .. output ::
+        .. output::
             https://doc-feedback-thumbs.streamlit.app/
             height: 200px
 

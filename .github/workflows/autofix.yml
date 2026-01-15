@@ -45,6 +45,11 @@ jobs:
       - name: Setup virtual env
         uses: ./.github/actions/make_init
 
+      - name: Deduplicate frontend yarn.lock
+        run: |
+          cd frontend
+          yarn dedupe
+
       - name: Run make frontend-fast
         run: make frontend-fast
 

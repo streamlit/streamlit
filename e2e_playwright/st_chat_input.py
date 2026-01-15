@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -77,12 +77,10 @@ if key is None or key == "multiple_files":
     st.write("multiple_files - value:", multiple_files_value)
 
 if key is None or key == "width_300":
-    width_300_value = st.container().chat_input(
-        "Chat input (width=300px)", width=300, key="width_300"
-    )
+    st.container().chat_input("Chat input (width=300px)", width=300, key="width_300")
 
 if key is None or key == "width_stretch":
-    width_stretch_value = st.container().chat_input(
+    st.container().chat_input(
         "Chat input (width='stretch')", width="stretch", key="width_stretch"
     )
 

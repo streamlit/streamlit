@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -158,6 +158,30 @@ class FileUploaderTest(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.file_uploader
         assert c.max_upload_size_mb == config.get_option("server.maxUploadSize")
 
+    def test_max_upload_size_override(self):
+        """Test that a per-widget max_upload_size overrides the configuration value."""
+        st.file_uploader("the label", max_upload_size=123)
+
+        c = self.get_delta_from_queue().new_element.file_uploader
+        assert c.max_upload_size_mb == 123
+
+    @parameterized.expand(
+        [
+            ("zero", 0),
+            ("negative", -1),
+            ("float", 1.5),
+            ("string", "10"),
+        ]
+    )
+    def test_max_upload_size_invalid(self, _: str, max_upload_size: object):
+        """Test that invalid max_upload_size values raise an exception."""
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.file_uploader("the label", max_upload_size=max_upload_size)
+
+        assert "The `max_upload_size` parameter must be a positive integer" in str(
+            exc.value
+        )
+
     @patch("streamlit.elements.widgets.file_uploader._get_upload_files")
     def test_unique_uploaded_file_instance(self, get_upload_files_patch):
         """We should get a unique UploadedFile instance each time we access
@@ -245,7 +269,7 @@ class FileUploaderTest(DeltaGeneratorTestCase):
         st.cache_data(lambda: st.file_uploader("the label"))()
 
         # The widget itself is still created, so we need to go back one element more:
-        el = self.get_delta_from_queue(-2).new_element.exception
+        el = self.get_delta_from_queue(-3).new_element.exception
         assert el.type == "CachedWidgetWarning"
         assert el.is_warning
 

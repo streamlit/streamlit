@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -153,6 +153,17 @@ export const StyledSidebarHeaderContainer = styled.div(({ theme }) => ({
 }))
 
 export const StyledLogoLink = styled.a({
+  "&:hover": {
+    opacity: "0.7",
+  },
+})
+
+export const StyledLogoButton = styled.button({
+  // Reset button styles
+  background: "none",
+  border: "none",
+  padding: 0,
+  cursor: "pointer",
   "&:hover": {
     opacity: "0.7",
   },

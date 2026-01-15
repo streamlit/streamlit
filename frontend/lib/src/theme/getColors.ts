@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,8 +15,6 @@
  */
 
 import { darken, getLuminance, lighten, mix, transparentize } from "color2k"
-
-import { Metric as MetricProto } from "@streamlit/protobuf"
 
 import {
   DerivedColors,
@@ -137,21 +135,6 @@ export function getDividerColors(theme: EmotionTheme): DividerColors {
   }
 }
 
-export function getMetricColor(
-  theme: EmotionTheme,
-  color: MetricProto.MetricColor
-): string {
-  switch (color) {
-    case MetricProto.MetricColor.RED:
-      return theme.colors.redColor
-    case MetricProto.MetricColor.GREEN:
-      return theme.colors.greenColor
-    // this must be grey
-    default:
-      return theme.colors.grayColor
-  }
-}
-
 type MarkdownBgColors = {
   redbg: string
   orangebg: string
@@ -181,22 +164,6 @@ export function getMarkdownBgColors(theme: EmotionTheme): MarkdownBgColors {
     ),
     graybg: colors.grayBackgroundColor,
     primarybg: transparentize(colors.primary, lightTheme ? 0.9 : 0.7),
-  }
-}
-
-// Metric delta uses the same background colors as Markdown bg colors.
-export function getMetricBackgroundColor(
-  theme: EmotionTheme,
-  color: MetricProto.MetricColor
-): string {
-  switch (color) {
-    case MetricProto.MetricColor.RED:
-      return theme.colors.redBackgroundColor
-    case MetricProto.MetricColor.GREEN:
-      return theme.colors.greenBackgroundColor
-    // this must be grey
-    default:
-      return theme.colors.grayBackgroundColor
   }
 }
 
@@ -238,22 +205,6 @@ export function getMarkdownTextColors(
     purple: purple,
     gray: gray,
     primary: primary,
-  }
-}
-
-// Metric delta text uses the same text colors as Markdown.
-export function getMetricTextColor(
-  theme: EmotionTheme,
-  color: MetricProto.MetricColor
-): string {
-  switch (color) {
-    case MetricProto.MetricColor.RED:
-      return theme.colors.redTextColor
-    case MetricProto.MetricColor.GREEN:
-      return theme.colors.greenTextColor
-    // this must be grey
-    default:
-      return theme.colors.grayTextColor
   }
 }
 

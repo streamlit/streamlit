@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -29,7 +29,7 @@ from e2e_playwright.shared.app_utils import (
     get_expander,
 )
 
-TOTAL_BUTTONS = 29
+TOTAL_BUTTONS = 30
 
 
 def test_button_widget_rendering(
@@ -89,6 +89,10 @@ def test_button_widget_rendering(
     assert_snapshot(
         get_button(themed_app, "Shortcut Button"),
         name="st_button-shortcut_button",
+    )
+    assert_snapshot(
+        get_element_by_key(themed_app, "icon_right_material"),
+        name="st_button-icon_position_right_material",
     )
 
     # The rest is tested in one screenshot in the following test

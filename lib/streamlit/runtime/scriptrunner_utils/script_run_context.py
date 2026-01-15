@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,7 +18,6 @@ import collections
 import contextlib
 import contextvars
 import threading
-from collections import Counter
 from dataclasses import dataclass, field
 from typing import (
     TYPE_CHECKING,
@@ -51,7 +50,7 @@ if TYPE_CHECKING:
     from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 _LOGGER: Final = get_logger(__name__)
 
-UserInfo: TypeAlias = dict[str, str | bool | None]
+UserInfoType: TypeAlias = dict[str, str | bool | dict[str, str] | None]
 
 
 # If true, it indicates that we are in a cached function that disallows the usage of
@@ -82,7 +81,7 @@ class ScriptRunContext:
     session_state: SafeSessionState
     uploaded_file_mgr: UploadedFileManager
     main_script_path: str
-    user_info: UserInfo
+    user_info: UserInfoType
     fragment_storage: FragmentStorage
     pages_manager: PagesManager
 
@@ -92,7 +91,9 @@ class ScriptRunContext:
     gather_usage_stats: bool = False
     command_tracking_deactivated: bool = False
     tracked_commands: list[Command] = field(default_factory=list)
-    tracked_commands_counter: Counter[str] = field(default_factory=collections.Counter)
+    tracked_commands_counter: collections.Counter[str] = field(
+        default_factory=collections.Counter
+    )
     _has_script_started: bool = False
     widget_ids_this_run: set[str] = field(default_factory=set)
     widget_user_keys_this_run: set[str] = field(default_factory=set)

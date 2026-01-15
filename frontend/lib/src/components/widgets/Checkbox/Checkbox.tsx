@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,27 +14,26 @@
  * limitations under the License.
  */
 
-import React, { memo, ReactElement, useCallback } from "react"
+import { memo, ReactElement, useCallback } from "react"
 
 import {
   LABEL_PLACEMENT,
   STYLE_TYPE,
   Checkbox as UICheckbox,
 } from "baseui/checkbox"
-import { transparentize } from "color2k"
 
 import { Checkbox as CheckboxProto } from "@streamlit/protobuf"
 
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
 import { Placement } from "~lib/components/shared/Tooltip"
-import TooltipIcon from "~lib/components/shared/TooltipIcon"
-import { StyledWidgetLabelHelpInline } from "~lib/components/widgets/BaseWidget"
+import { WidgetLabelHelpIconInline } from "~lib/components/widgets/BaseWidget"
 import {
   useBasicWidgetState,
   ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { hasLightBackgroundColor } from "~lib/theme"
+import { getFocusBoxShadow } from "~lib/theme/utils"
 import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -130,10 +129,10 @@ function Checkbox({
               $checked: boolean
               $isHovered: boolean
             }) => {
-              let backgroundColor = colors.fadedText40
+              let backgroundColor = colors.borderColor
 
               if ($isHovered && !disabled) {
-                backgroundColor = colors.fadedText20
+                backgroundColor = colors.darkenedBgMix15
               }
 
               if ($checked && !disabled) {
@@ -168,7 +167,7 @@ function Checkbox({
               $checked: boolean
             }) => {
               const borderColor =
-                $checked && !disabled ? colors.primary : colors.fadedText40
+                $checked && !disabled ? colors.primary : colors.borderColor
 
               return {
                 outline: 0,
@@ -179,7 +178,7 @@ function Checkbox({
                 marginBottom: 0,
                 boxShadow:
                   $isFocusVisible && $checked
-                    ? `0 0 0 0.2rem ${transparentize(colors.primary, 0.5)}`
+                    ? getFocusBoxShadow(colors.primary)
                     : "",
                 // This is painfully verbose, but baseweb seems to internally
                 // use the long-hand version, which means we can't use the
@@ -219,12 +218,11 @@ function Checkbox({
             largerLabel
           />
           {element.help && (
-            <StyledWidgetLabelHelpInline color={color}>
-              <TooltipIcon
-                content={element.help}
-                placement={Placement.TOP_RIGHT}
-              />
-            </StyledWidgetLabelHelpInline>
+            <WidgetLabelHelpIconInline
+              content={element.help}
+              placement={Placement.TOP_RIGHT}
+              label={element.label}
+            />
           )}
         </StyledContent>
       </UICheckbox>

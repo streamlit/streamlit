@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -798,6 +798,7 @@ class ConfigTest(unittest.TestCase):
                 "server.sslCertFile",
                 "server.sslKeyFile",
                 "server.trustedUserHeaders",
+                "server.useStarlette",
                 "ui.hideTopBar",
             ]
         )
@@ -1616,7 +1617,7 @@ class ThemeInheritanceIntegrationTest(unittest.TestCase):
 
         # Use the same pattern as other tests in the repo
         with tempfile.NamedTemporaryFile(
-            mode="w", suffix=f"_{filename}", delete=False
+            encoding="utf-8", mode="w", suffix=f"_{filename}", delete=False
         ) as f:
             f.write(content)
             return f.name

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,12 +17,13 @@ from __future__ import annotations
 import os
 from typing import TYPE_CHECKING, TypeAlias
 
-import streamlit.watcher
 from streamlit import cli_util, config, env_util
-from streamlit.watcher.polling_path_watcher import PollingPathWatcher
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+
+    from streamlit.watcher.event_based_path_watcher import EventBasedPathWatcher
+    from streamlit.watcher.polling_path_watcher import PollingPathWatcher
 
 
 # local_sources_watcher.py caches the return value of
@@ -49,9 +50,7 @@ class NoOpPathWatcher:
 # implementation if its import failed (due to missing watchdog module),
 # so we can't reference it directly in this type.
 PathWatcherType: TypeAlias = (
-    type["streamlit.watcher.event_based_path_watcher.EventBasedPathWatcher"]
-    | type[PollingPathWatcher]
-    | type[NoOpPathWatcher]
+    type["EventBasedPathWatcher"] | type["PollingPathWatcher"] | type[NoOpPathWatcher]
 )
 
 
@@ -180,5 +179,7 @@ def get_path_watcher_class(watcher_type: str) -> PathWatcherType:
 
         return EventBasedPathWatcher
     if watcher_type in {"auto", "poll"}:
+        from streamlit.watcher.polling_path_watcher import PollingPathWatcher
+
         return PollingPathWatcher
     return NoOpPathWatcher

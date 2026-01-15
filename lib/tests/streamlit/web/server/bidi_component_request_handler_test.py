@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -179,7 +179,7 @@ class BidiComponentRequestHandlerAssetDirTest(tornado.testing.AsyncHTTPTestCase)
         self.assets_dir.mkdir(parents=True, exist_ok=True)
 
         self.js_file_path = self.assets_dir / "bundle.js"
-        with open(self.js_file_path, "w") as f:
+        with open(self.js_file_path, "w", encoding="utf-8") as f:
             f.write("console.log('served from asset_dir');")
 
         manifest = ComponentManifest(

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -85,7 +85,7 @@ elif st.session_state.selected_chart == "callback":
             str(st.session_state.selection_callback),
         )
 
-    selection = get_pydeck_chart(
+    get_pydeck_chart(
         "selection_callback", selection_mode="single-object", on_select=on_selection
     )
 

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -23,20 +23,22 @@ from setuptools.command.install import install
 
 THIS_DIRECTORY = Path(__file__).parent
 
-VERSION = "1.51.0"  # PEP-440
+VERSION = "1.53.0"  # PEP-440
 
 # IMPORTANT: We should try very hard *not* to add dependencies to Streamlit.
 # And if you do add one, make the required version as general as possible:
 # - Include relevant lower bound for any features we use from our dependencies
 # - Always include the lower bound as >= VERSION, to keep testing min versions easy
 # - And include an upper bound that's < NEXT_MAJOR_VERSION
+# NOTE: If you change the lower bound of a version, you will need to run
+# `make update-min-deps` and commit the changes to `min-constraints-gen.txt`.
 INSTALL_REQUIRES = [
     # Altair 5.4.0 and 5.4.1 have compatibility issues with narwhals library
     # that cause st.line_chart and other built-in charts to fail rendering.
     # See: https://github.com/streamlit/streamlit/issues/12064
     "altair>=4.0, <7, !=5.4.0, !=5.4.1",
     "blinker>=1.5.0, <2",
-    "cachetools>=4.0, <7",
+    "cachetools>=5.5, <7",
     "click>=7.0, <9",
     "numpy>=1.23, <3",
     # The "packaging" package isn't version-capped because they use calendar-based
@@ -57,7 +59,8 @@ INSTALL_REQUIRES = [
     # Starting from Python 3.11, Python has built in support for reading TOML files.
     # Let's make sure to remove this "toml" library when we stop supporting Python 3.10.
     "toml>=0.10.1, <2",
-    "typing-extensions>=4.4.0, <5",
+    # Starlette requires typing-extensions >= 4.10.
+    "typing-extensions>=4.10.0, <5",
     # Don't require watchdog on MacOS, since it'll fail without xcode tools.
     # Without watchdog, we fallback to a polling file watcher to check for app changes.
     "watchdog>=2.1.5, <7; platform_system != 'Darwin'",
@@ -85,6 +88,21 @@ EXTRA_REQUIRES = {
         "snowflake-snowpark-python[modin]>=1.17.0; python_version<'3.12'",
         "snowflake-connector-python>=3.3.0; python_version<'3.12'",
     ],
+    # Optional dependency required for Starlette integration:
+    "starlette": [
+        # ASGI web-framework:
+        "starlette>=0.40.0",
+        # ASGI server:
+        "uvicorn>=0.30.0",
+        # Required by starlette:
+        "anyio>=4.0.0",
+        # Required for file-upload support:
+        "python-multipart>=0.0.10",
+        # Required for websocket support:
+        "websockets>=12.0.0",
+        # Required for cookie signing:
+        "itsdangerous>=2.1.2",
+    ],
     # Optional dependency required for PDF rendering:
     "pdf": [
         "streamlit-pdf>=1.0.0",
@@ -111,6 +129,8 @@ EXTRA_REQUIRES = {
         "orjson>=3.5.0",
         # uvloop speeds up the event loop:
         "uvloop>=0.15.2; sys_platform != 'win32' and (sys_platform != 'cygwin' and platform_python_implementation != 'PyPy')",  # noqa: E501
+        # Faster http parsing for Starlette server:
+        "httptools>=0.6.3",
     ],
     # Install all optional dependencies:
     "all": [
@@ -126,7 +146,7 @@ class VerifyVersionCommand(install):
 
     description = "verify that the git tag matches our version"
 
-    def run(self):
+    def run(self) -> None:
         tag = os.getenv("TAG")
 
         if tag != VERSION:

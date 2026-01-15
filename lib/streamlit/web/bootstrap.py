@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import asyncio
+import mimetypes
 import os
 import signal
 import sys
@@ -123,17 +124,9 @@ def _fix_sys_argv(main_script_path: str, args: list[str]) -> None:
 
 
 def _on_server_start(server: Server) -> None:
-    _maybe_print_static_folder_warning(server.main_script_path)
+    prepare_streamlit_environment(server.main_script_path)
     _print_url(server.is_running_hello)
     report_watchdog_availability()
-
-    # Load secrets.toml if it exists. If the file doesn't exist, this
-    # function will return without raising an exception. We catch any parse
-    # errors and display them here.
-    try:
-        secrets.load_if_toml_exists()
-    except Exception:
-        _LOGGER.exception("Failed to load secrets.toml file")
 
     def maybe_open_browser() -> None:
         if config.get_option("server.headless"):
@@ -163,6 +156,55 @@ def _fix_pydeck_mapbox_api_warning() -> None:
 
     if "MAPBOX_API_KEY" not in os.environ:
         os.environ["MAPBOX_API_KEY"] = config.get_option("mapbox.token")
+
+
+def _initialize_mimetypes() -> None:
+    """Ensure common MIME types are correctly registered.
+
+    Some systems may have misconfigured /etc/mime.types, so we explicitly
+    register the types we need for serving web assets correctly.
+    """
+    mimetypes.add_type("text/html", ".html")
+    mimetypes.add_type("application/javascript", ".js")
+    mimetypes.add_type("application/javascript", ".mjs")
+    mimetypes.add_type("text/css", ".css")
+    mimetypes.add_type("image/webp", ".webp")
+
+
+def prepare_streamlit_environment(main_script_path: str) -> None:
+    """Prepare the Streamlit environment for running an app.
+
+    This function sets up the environment needed for Streamlit to run correctly.
+    It should be called before starting the runtime, whether using the CLI
+    (`streamlit run`) or an ASGI server (`uvicorn myapp:app`).
+
+    This function:
+    - Ensures common MIME types are correctly registered
+    - Sets the MAPBOX_API_KEY environment variable for PyDeck
+    - Loads secrets from secrets.toml if it exists
+    - Validates static folder configuration
+
+    Parameters
+    ----------
+    main_script_path
+        Path to the main Streamlit script.
+
+    Notes
+    -----
+    This function is automatically called by ``streamlit run``. When using
+    ``st.App`` with uvicorn directly, this is called during the ASGI lifespan
+    startup phase.
+    """
+    _initialize_mimetypes()
+    _fix_pydeck_mapbox_api_warning()
+
+    # Load secrets.toml if it exists
+    try:
+        secrets.load_if_toml_exists()
+    except Exception:
+        _LOGGER.exception("Failed to load secrets.toml file")
+
+    _maybe_print_static_folder_warning(main_script_path)
 
 
 def _maybe_print_static_folder_warning(main_script_path: str) -> None:
@@ -287,6 +329,53 @@ def _install_config_watchers(flag_options: dict[str, Any]) -> None:
             watch_file(filename, on_config_changed)
 
 
+def run_asgi_app(
+    main_script_path: str,
+    app_import_string: str,
+    args: list[str],
+    flag_options: dict[str, Any],
+) -> None:
+    """Run a Streamlit st.App with uvicorn.
+
+    This function is called when `streamlit run` detects an st.App instance
+    in the script. It sets up the process environment and starts uvicorn.
+
+    The App instance handles its own Streamlit-specific setup via its lifespan
+    (e.g., loading secrets, preparing runtime), while this function handles
+    the process-level setup that the CLI is responsible for.
+
+    Parameters
+    ----------
+    main_script_path
+        Path to the main Streamlit script containing the st.App.
+    app_import_string
+        Import string for uvicorn (e.g., "myapp:app").
+    args
+        Arguments to pass to the script (sys.argv).
+    flag_options
+        Config options from CLI flags.
+    """
+    from streamlit.web.server.starlette.starlette_server import UvicornRunner
+
+    # Process-level setup (CLI responsibility)
+    _fix_sys_path(main_script_path)
+    _fix_sys_argv(main_script_path, args)
+    _install_config_watchers(flag_options)
+
+    # Set server mode for metrics tracking (CLI-managed st.App)
+    config._server_mode = "starlette-app"
+
+    # Report watchdog availability for file watching
+    report_watchdog_availability()
+
+    # Run the ASGI app using UvicornRunner
+    # UvicornRunner handles: port retry, SSL, WebSocket config, signal handling
+    # The st.App's lifespan will call prepare_streamlit_environment()
+    # Note: URL is printed inside UvicornRunner after port is finalized
+    runner = UvicornRunner(app_import_string)
+    runner.run()
+
+
 def run(
     main_script_path: str,
     is_hello: bool,
@@ -303,8 +392,14 @@ def run(
     _fix_sys_path(main_script_path)
     _fix_tornado_crash()
     _fix_sys_argv(main_script_path, args)
-    _fix_pydeck_mapbox_api_warning()
     _install_config_watchers(flag_options)
+
+    # Set server mode for metrics tracking
+    # The Server class may use Starlette (via server.useStarlette config) or Tornado
+    if config.get_option("server.useStarlette"):
+        config._server_mode = "starlette-managed"
+    else:
+        config._server_mode = "tornado"
 
     # Create the server. It won't start running yet.
     server = Server(main_script_path, is_hello)

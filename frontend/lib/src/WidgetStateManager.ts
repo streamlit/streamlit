@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -212,7 +212,7 @@ export class WidgetStateManager {
    * backend only handles the *latest* message before rerunning the script,
    * which means earlier triggers can be lost. We fix this by batching.
    */
-  private pendingTriggerIds = new Set<string>()
+  private readonly pendingTriggerIds = new Set<string>()
 
   /** Promise resolvers that should run once the pending trigger batch has
    *  been flushed to the backend. */

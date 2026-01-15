@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -234,7 +234,7 @@ def is_plotly_chart(obj: object) -> TypeGuard[Figure | list[Any] | dict[str, Any
 
 def is_graphviz_chart(
     obj: object,
-) -> TypeGuard[graphviz.Graph | graphviz.Digraph]:
+) -> TypeGuard[graphviz.Graph | graphviz.Digraph | graphviz.Source]:
     """True if input looks like a GraphViz chart."""
     return (
         # In GraphViz < 0.18
@@ -329,6 +329,24 @@ def is_pydantic_model(obj: object) -> bool:
         return False
 
     return _is_type_instance(obj, "pydantic.main.BaseModel")
+
+
+def is_sequence_of_pydantic_models(obj: object) -> TypeGuard[Sequence[Any]]:
+    """True if obj is a non-empty list/tuple/set/frozenset of Pydantic model instances."""
+    if not isinstance(obj, (list, tuple, set, frozenset)) or len(obj) == 0:
+        return False
+    first_element = next(iter(obj))
+    return is_pydantic_model(first_element)
+
+
+def dump_pydantic_sequence(obj: Sequence[object]) -> list[dict[str, Any]]:
+    """Dump a sequence of Pydantic models to a list of dictionaries."""
+    first_element = next(iter(obj))
+    # Pydantic v2 uses model_dump(), v1 uses dict()
+    if has_callable_attr(first_element, "model_dump"):
+        # Use mode="json" to ensure proper serialization of types like Decimal
+        return [item.model_dump(mode="json") for item in obj]  # type: ignore
+    return [item.dict() for item in obj]  # type: ignore
 
 
 def _is_from_streamlit(obj: object) -> bool:

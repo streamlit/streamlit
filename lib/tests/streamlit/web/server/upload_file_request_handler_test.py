@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,7 +22,6 @@ from unittest.mock import MagicMock, patch
 import requests
 import tornado.testing
 import tornado.web
-import tornado.websocket
 
 from streamlit.logger import get_logger
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -97,6 +97,9 @@ export const StyledHeaderContent = styled.div(() => ({
 export const StyledHeaderLeftSection = styled.div(() => ({
   display: "flex",
   alignItems: "center",
+  // Prevent the logo area from shrinking when TopNav's overflow container expands.
+  // Without this, the logo would shrink due to its maxWidth: 100% style.
+  flexShrink: 0,
 }))
 
 export const StyledHeaderRightSection = styled.div(({ theme }) => ({

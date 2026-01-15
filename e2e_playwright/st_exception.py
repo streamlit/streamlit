@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -35,7 +35,7 @@ This exception contains Markdown, e.g. **bold text** or an emoji :wave: or :blue
 It also has a code block that you can scroll through:
 
 ```
-@st.cache(hash_funcs={_thread.lock: my_hash_func_that_is_some_riduculously_long_name})
+@st.cache(hash_funcs={_thread.lock: my_hash_func_that_is_some_ridiculously_long_name})
 def my_func(...):
     ...
 ```

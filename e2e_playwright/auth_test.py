@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@ from e2e_playwright.conftest import (
     find_available_port,
     wait_for_app_run,
 )
-from e2e_playwright.shared.app_utils import get_button, get_markdown
+from e2e_playwright.shared.app_utils import expect_markdown, get_button
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -35,6 +35,7 @@ AUTH_SECRETS_TEMPLATE = """
 [auth]
 redirect_uri = "http://localhost:{app_port}/oauth2callback"
 cookie_secret = "your_cookie_secret_here"
+expose_tokens = ["id", "access"]
 
 [auth.testprovider]
 client_id = "test-client-id"
@@ -89,12 +90,17 @@ def prepare_secrets_file(app_port: int, oidc_server_port: int):
 
 
 @pytest.fixture(scope="module")
-def app_server_extra_args(prepare_secrets_file: str) -> list[str]:
+def app_server_extra_args(
+    prepare_secrets_file: str, request: pytest.FixtureRequest
+) -> list[str]:
     """Fixture that returns extra arguments to pass to the Streamlit app server."""
-    return [
+    args = [
         "--secrets.files",
         prepare_secrets_file,
     ]
+    if request.config.getoption("--use-starlette"):
+        args.extend(["--server.useStarlette", "true"])
+    return args
 
 
 @pytest.mark.parametrize("fake_oidc_server", ["success"], indirect=True)
@@ -105,12 +111,13 @@ def test_login_successful(app: Page):
     button_element.click()
     app.wait_for_timeout(2_000)
 
-    text = get_markdown(app, "authtest@example.com")
-    expect(text).to_be_visible()
+    expect_markdown(app, "authtest@example.com")
     wait_for_app_run(app)
 
-    text = get_markdown(app, "John Doe")
-    expect(text).to_be_visible()
+    expect_markdown(app, "John Doe")
+    expect_markdown(app, "TOKENS AVAILABLE")
+    expect_markdown(app, "HAS ID TOKEN")
+    expect_markdown(app, "HAS ACCESS TOKEN")
 
 
 @pytest.mark.parametrize("fake_oidc_server", ["failure"], indirect=True)

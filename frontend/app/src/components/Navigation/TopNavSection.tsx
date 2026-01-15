@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { useState } from "react"
+import { Fragment, useState } from "react"
 
 import {
   KeyboardArrowDown,
@@ -95,7 +95,7 @@ const TopNavSection = ({
               const pageName = String(item.pageName || "")
 
               return (
-                <React.Fragment key={`${item.pageScriptHash}-${pageName}`}>
+                <Fragment key={`${item.pageScriptHash}-${pageName}`}>
                   {index === 0 && showSections && (
                     <StyledSectionName>{sectionName}</StyledSectionName>
                   )}
@@ -116,7 +116,7 @@ const TopNavSection = ({
                       {pageName}
                     </SidebarNavLink>
                   </StyledTopNavSidebarNavLinkContainer>
-                </React.Fragment>
+                </Fragment>
               )
             })
           })}

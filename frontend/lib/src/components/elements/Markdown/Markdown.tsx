@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -75,8 +75,10 @@ function Markdown({ element }: Readonly<MarkdownProps>): ReactElement {
     )
   } else {
     // For other markdown, render with inline help icon
-    // Append help directive to markdown source so it renders inline
-    const source = help ? `${body} :help[${help}]` : body
+    // Use :help[] as a marker where the help icon should appear.
+    // The actual help text is passed via helpText prop to avoid limitations
+    // with special characters in text directive labels.
+    const source = help ? `${body} :help[]` : body
 
     content = (
       <StyledLabelHelpWrapper isLatex={isLatex}>
@@ -84,6 +86,7 @@ function Markdown({ element }: Readonly<MarkdownProps>): ReactElement {
           isCaption={isCaption}
           source={source}
           allowHTML={allowHtml}
+          helpText={help}
         />
       </StyledLabelHelpWrapper>
     )

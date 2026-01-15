@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -60,6 +60,9 @@ DISALLOWED_MARKDOWN_FEATURES: dict[str, list[str]] = {
     "st_multiselect": DISALLOWED_FEATURES_IN_LABEL,
     "st_slider": DISALLOWED_FEATURES_IN_LABEL,
     "st_select_slider": DISALLOWED_FEATURES_IN_LABEL,
+    "st_select_slider_min_label": DISALLOWED_FEATURES_IN_LABEL,
+    "st_select_slider_max_label": DISALLOWED_FEATURES_IN_LABEL,
+    "st_select_slider_value": DISALLOWED_FEATURES_IN_LABEL,
     "st_text_input": DISALLOWED_FEATURES_IN_LABEL,
     "st_number_input": DISALLOWED_FEATURES_IN_LABEL,
     "st_text_area": DISALLOWED_FEATURES_IN_LABEL,
@@ -80,6 +83,8 @@ DISALLOWED_MARKDOWN_FEATURES: dict[str, list[str]] = {
     "st_expander": DISALLOWED_FEATURES_IN_LABEL,
     "st_tabs": DISALLOWED_FEATURES_IN_LABEL,
     "st_metric": DISALLOWED_FEATURES_IN_LABEL,
+    "st_metric_value": DISALLOWED_FEATURES_IN_LABEL,
+    "st_metric_delta": DISALLOWED_FEATURES_IN_LABEL,
     "st_image": DISALLOWED_FEATURES_IN_LABEL,
     "st_progress": DISALLOWED_FEATURES_IN_LABEL,
     "st_table": [],

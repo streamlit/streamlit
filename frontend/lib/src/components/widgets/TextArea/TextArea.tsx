@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { FC, memo, useCallback, useRef, useState } from "react"
+import { FC, memo, useCallback, useRef, useState } from "react"
 
 import { Textarea as UITextArea } from "baseui/textarea"
 import { uniqueId } from "lodash-es"
@@ -23,11 +23,9 @@ import { Element, TextArea as TextAreaProto } from "@streamlit/protobuf"
 
 import { getBorderColor } from "~lib/components/shared/Base/styled-components"
 import InputInstructions from "~lib/components/shared/InputInstructions/InputInstructions"
-import { Placement } from "~lib/components/shared/Tooltip"
-import TooltipIcon from "~lib/components/shared/TooltipIcon"
 import {
-  StyledWidgetLabelHelp,
   WidgetLabel,
+  WidgetLabelHelpIcon,
 } from "~lib/components/widgets/BaseWidget"
 import {
   useBasicWidgetState,
@@ -39,6 +37,7 @@ import useOnInputChange from "~lib/hooks/useOnInputChange"
 import useSubmitFormViaEnterKey from "~lib/hooks/useSubmitFormViaEnterKey"
 import { useTextInputAutoExpand } from "~lib/hooks/useTextInputAutoExpand"
 import useUpdateUiValue from "~lib/hooks/useUpdateUiValue"
+import { convertRemToPx } from "~lib/theme"
 import { isInForm, labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -207,7 +206,7 @@ const TextArea: FC<Props> = ({
 
   // Hide input instructions for small widget sizes.
   const shouldShowInstructions =
-    focused && width > theme.breakpoints.hideWidgetDetails
+    focused && width > convertRemToPx(theme.breakpoints.hideWidgetDetails)
 
   return (
     <StyledTextAreaContainer
@@ -224,12 +223,7 @@ const TextArea: FC<Props> = ({
         htmlFor={id}
       >
         {element.help && (
-          <StyledWidgetLabelHelp>
-            <TooltipIcon
-              content={element.help}
-              placement={Placement.TOP_RIGHT}
-            />
-          </StyledWidgetLabelHelp>
+          <WidgetLabelHelpIcon content={element.help} label={element.label} />
         )}
       </WidgetLabel>
 

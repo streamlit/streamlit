@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -342,3 +342,32 @@ if TYPE_CHECKING:
         slider("foo", max_value=_2020_02_10_18_00, value=(_2020_01_15_12_00,)),
         tuple[datetime, datetime],
     )
+
+    # Format parameter tests - numeric formats
+    # Printf-style format strings
+    assert_type(slider("foo", value=5, format="%d"), int)
+    assert_type(slider("foo", value=5.0, format="%.2f"), float)
+    # Predefined NumberFormat literals
+    assert_type(slider("foo", value=5, format="plain"), int)
+    assert_type(slider("foo", value=5, format="localized"), int)
+    assert_type(slider("foo", value=5, format="percent"), int)
+    assert_type(slider("foo", value=5, format="dollar"), int)
+    assert_type(slider("foo", value=5, format="euro"), int)
+    assert_type(slider("foo", value=5, format="yen"), int)
+    assert_type(slider("foo", value=5, format="compact"), int)
+    assert_type(slider("foo", value=5, format="scientific"), int)
+    assert_type(slider("foo", value=5, format="engineering"), int)
+    assert_type(slider("foo", value=5, format="accounting"), int)
+    assert_type(slider("foo", value=5, format="bytes"), int)
+
+    # Format parameter tests - datetime formats
+    # MomentJS format strings
+    assert_type(slider("foo", value=_2020_01_01_09_30, format="YYYY-MM-DD"), datetime)
+    assert_type(slider("foo", value=_2024_5_1, format="MMMM Do, YYYY"), date)
+    # Predefined DateTimeFormat literals
+    assert_type(slider("foo", value=_2020_01_01_09_30, format="localized"), datetime)
+    assert_type(slider("foo", value=_2020_01_01_09_30, format="distance"), datetime)
+    assert_type(slider("foo", value=_2020_01_01_09_30, format="calendar"), datetime)
+    assert_type(slider("foo", value=_2020_01_01_09_30, format="iso8601"), datetime)
+    assert_type(slider("foo", value=_2024_5_1, format="localized"), date)
+    assert_type(slider("foo", value=_0800, format="localized"), time)

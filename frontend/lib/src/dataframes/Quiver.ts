@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -113,7 +113,7 @@ export class Quiver {
   [immerable] = true
 
   /** Index & data column names (matrix of column names to support multi-level headers). */
-  private _columnNames: ColumnNames
+  private readonly _columnNames: ColumnNames
 
   /** Column type information for the (Pandas) index columns.
    *
@@ -145,7 +145,7 @@ export class Quiver {
   private readonly _styler?: PandasStylerData
 
   /** Number of bytes in the Arrow IPC bytes. */
-  private _num_bytes: number
+  private readonly _num_bytes: number
 
   constructor(element: IArrow) {
     const {

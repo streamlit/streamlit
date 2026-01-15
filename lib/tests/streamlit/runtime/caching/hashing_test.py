@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -214,7 +214,7 @@ class HashTest(unittest.TestCase):
         try:
             get_hash(Mock())
             get_hash(MagicMock())
-        except BaseException:
+        except Exception:
             self.fail("get_hash raised an exception")
 
     def test_list(self):
@@ -434,7 +434,7 @@ class HashTest(unittest.TestCase):
 
     @pytest.mark.require_integration
     def test_polars_series(self):
-        import polars as pl  # type: ignore[import-not-found]
+        import polars as pl
 
         series1 = pl.Series([1, 2])
         series2 = pl.Series([1, 3])
@@ -610,8 +610,8 @@ class HashTest(unittest.TestCase):
         temp1 = tempfile.NamedTemporaryFile()
         temp2 = tempfile.NamedTemporaryFile()
 
-        with open(__file__) as f:
-            with open(__file__) as g:
+        with open(__file__, encoding="utf-8") as f:
+            with open(__file__, encoding="utf-8") as g:
                 assert get_hash(f) == get_hash(g)
 
             assert get_hash(f) != get_hash(temp1)
@@ -620,7 +620,7 @@ class HashTest(unittest.TestCase):
         assert get_hash(temp1) != get_hash(temp2)
 
     def test_file_position(self):
-        with open(__file__) as f:
+        with open(__file__, encoding="utf-8") as f:
             h1 = get_hash(f)
             assert h1 == get_hash(f)
             f.readline()
