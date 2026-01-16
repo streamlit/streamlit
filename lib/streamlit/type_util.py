@@ -472,7 +472,7 @@ def async_generator_to_sync(
     try:
         # Iterate over the async generator until it raises StopAsyncIteration
         while True:
-            yield loop.run_until_complete(async_gen.__anext__())
+            yield loop.run_until_complete(anext(async_gen))
     except StopAsyncIteration:
         # The async generator has finished
         pass

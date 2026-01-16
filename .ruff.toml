@@ -115,7 +115,6 @@ ignore = [
   "FURB189", # Checks for subclassing of builtin types.
   "PLR1702", # Checks for functions with too many nested blocks.
   "FURB113", # Checks for repeated append calls that can be replaced by extend.
-  "PLC2801", # Checks for unnecessary dunder method calls.
 ]
 exclude = [
   # pympler is a vendored dependency that doesn't conform to our linting rules:
