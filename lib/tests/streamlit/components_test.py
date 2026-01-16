@@ -38,6 +38,7 @@ from streamlit.components.v1.component_registry import (
     _get_module_name,
 )
 from streamlit.components.v1.custom_component import CustomComponent
+from streamlit.dataframe_util import is_pyarrow_version_less_than
 from streamlit.errors import DuplicateWidgetID, StreamlitAPIException
 from streamlit.proto.Components_pb2 import ArrowTable as ArrowTableProto
 from streamlit.proto.Components_pb2 import SpecialArg
@@ -697,6 +698,10 @@ class AlternativeComponentRegistryTest(unittest.TestCase):
 class ComponentArrowTest(unittest.TestCase):
     """Test component_arrow utilities."""
 
+    @pytest.mark.skipif(
+        is_pyarrow_version_less_than("14.0.1"),
+        reason="arrow_proto_to_dataframe requires pyarrow >= 14.0.1",
+    )
     def test_arrow_proto_to_dataframe(self):
         """Test converting ArrowTable proto to pandas DataFrame."""
 
@@ -714,6 +719,10 @@ class ComponentArrowTest(unittest.TestCase):
         assert list(result.columns) == [("a",), ("b",)]
         assert result.shape == (3, 2)
 
+    @pytest.mark.skipif(
+        is_pyarrow_version_less_than("14.0.1"),
+        reason="arrow_proto_to_dataframe requires pyarrow >= 14.0.1",
+    )
     def test_arrow_proto_to_dataframe_with_empty_df(self):
         """Test converting empty DataFrame to proto and back."""
 
