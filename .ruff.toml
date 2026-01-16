@@ -102,7 +102,6 @@ ignore = [
   "PLC2701", # Checks for imports of private names.
   "PLR6201", # Checks for membership tests using a literal list or tuple.
   "PLR0917", # Checks for functions with too many positional arguments.
-  "RUF039",  # Checks for unraw regex patterns.
   "RUF067",  # Checks for non empty __init__ modules.
   "FURB101", # Checks for open and read calls that can be replaced by pathlib.
   "FURB103", # Checks for open and write calls that can be replaced by pathlib.

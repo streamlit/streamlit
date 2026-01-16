@@ -343,7 +343,7 @@ def test_markdown_heading_anchor_icon_is_keyboard_focusable_and_visible(app: Pag
     expect(link).to_have_css("opacity", "1")
 
     app.keyboard.press("Enter")
-    expect(app).to_have_url(re.compile(".*#bold-header1"))
+    expect(app).to_have_url(re.compile(r".*#bold-header1"))
 
 
 @pytest.mark.performance
