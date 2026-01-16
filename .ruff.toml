@@ -130,7 +130,7 @@ extend-safe-fixes = ["TC002", "TC003"]
   "S",
   "TRY",
   "NPY002",
-  "RUF029", # Allow async functions without await (intentional for testing async behavior)
+  "RUF029", # Allow async functions without await (intentional for testing async behavior).
 ]
 "lib/tests/**" = [
   "PD",
@@ -144,7 +144,7 @@ extend-safe-fixes = ["TC002", "TC003"]
   "ANN",
   "NPY002",
   "FURB118", # Allow all operators.
-  "RUF029",  # Allow async functions without await (test fixtures, mocks, ASGI callables)
+  "RUF029",  # Allow async functions without await (test fixtures, mocks, ASGI callables).
 ]
 "scripts/**" = ["T20", "INP", "PERF", "S", "TRY002"]
 
