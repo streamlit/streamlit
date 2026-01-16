@@ -226,6 +226,9 @@ def test_dynamic_radio_props(app: Page, assert_snapshot: ImageCompareFunction):
     3. Selection resets to default when selected value is removed from options
     4. Selection is preserved when the selected value exists in new options
 
+    Note: When using dynamic options with a key, the selection is preserved only
+    if the formatted value (after applying format_func) exists in the new options.
+
     Initial options: [apple, banana, mango, orange] with format_func=capitalize, index=0 (default: apple)
     Updated options: [mango, papaya, grape, apple] with format_func=capitalize, index=1 (default: papaya)
     """
