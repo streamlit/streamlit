@@ -326,6 +326,7 @@ class _FeedbackSerdeString:
             if 0 <= index < len(self.options_indices):
                 return self.options_indices[index]
         except ValueError:
+            # Invalid index string (not an integer) - fall through to default handling
             pass
 
         # Invalid value - return default
@@ -1185,9 +1186,6 @@ class ButtonGroupMixin:
             selection_mode,
         )
 
-        if selection_mode == "multi":
-            return validated_value
-
         return validated_value
 
     def _button_group(
@@ -1310,9 +1308,15 @@ class ButtonGroupMixin:
             value_type="string_array_value",
         )
 
-        if widget_state.value_changed:
-            serialized = serializer(widget_state.value)
-            proto.raw_values[:] = serialized
+        # Always serialize the current value to raw_values
+        serialized = serializer(widget_state.value)
+        proto.raw_values[:] = serialized
+
+        # Set setValue when value changed OR when we have a value.
+        # The latter ensures frontend maps to correct indices after dynamic option
+        # changes, where the string→index mapping changes but the widget ID stays
+        # the same (because options are in key_as_main_identity for whitelisting).
+        if widget_state.value_changed or serialized:
             proto.set_value = True
 
         if ctx:
