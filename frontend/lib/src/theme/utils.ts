@@ -36,6 +36,7 @@ import {
   EmotionTheme,
   lightTheme,
   ThemeConfig,
+  ThemeSelection,
   ThemeSpacing,
 } from "~lib/theme"
 import { LocalStore } from "~lib/util/storageUtils"
@@ -56,8 +57,6 @@ export const CUSTOM_THEME_NAME = "Custom Theme"
 export const CUSTOM_THEME_LIGHT_NAME = "Custom Theme Light"
 export const CUSTOM_THEME_DARK_NAME = "Custom Theme Dark"
 export const CUSTOM_THEME_AUTO_NAME = "Custom Theme Auto"
-
-type ThemeSelection = "System" | "Light" | "Dark"
 
 declare global {
   interface Window {
@@ -1584,11 +1583,12 @@ export const createSidebarTheme = (activeTheme: ThemeConfig): ThemeConfig => {
  * @param availableThemes - The list of currently available themes
  * @returns The best matching theme, or null if no suitable match found
  *
- * @examples
+ * @example
  * // When custom themes exist:
  * mapCachedThemeSelectionToAvailableTheme("Light", [customLight, customDark, customAuto])
  * // Returns customLight (CUSTOM_THEME_LIGHT_NAME)
  *
+ * @example
  * // When only preset themes:
  * mapCachedThemeSelectionToAvailableTheme("Light", [lightTheme, darkTheme])
  * // Returns lightTheme ("Light")

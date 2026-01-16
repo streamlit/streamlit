@@ -2513,9 +2513,7 @@ describe("App", () => {
         it("c) with 'Custom Theme' cached - preserves Custom Theme", () => {
           window.localStorage.setItem(
             LocalStore.ACTIVE_THEME,
-            JSON.stringify({
-              selection: "System",
-            })
+            JSON.stringify("System")
           )
 
           const props = getProps()
@@ -2550,9 +2548,7 @@ describe("App", () => {
         it("d) with 'Custom Theme Light' cached - switches to Custom Theme", () => {
           window.localStorage.setItem(
             LocalStore.ACTIVE_THEME,
-            JSON.stringify({
-              selection: "Light",
-            })
+            JSON.stringify("Light")
           )
 
           const props = getProps()
@@ -2647,9 +2643,7 @@ describe("App", () => {
         it("c) with 'Custom Theme' cached - switches to Custom Theme Auto", () => {
           window.localStorage.setItem(
             LocalStore.ACTIVE_THEME,
-            JSON.stringify({
-              selection: "System",
-            })
+            JSON.stringify("System")
           )
 
           const props = getProps()
