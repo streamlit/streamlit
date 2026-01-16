@@ -1177,11 +1177,15 @@ export const getThemeSelectionFromThemeConfig = (
     return "Dark"
   }
 
+  // Single custom theme ("Custom Theme") has no light/dark distinction,
+  // so we treat it as "System" for caching purposes. This ensures:
+  // 1. No false mapping to preset themes
+  // 2. Embed options can still override on subsequent visits
   if (themeConfig.name === CUSTOM_THEME_NAME) {
     return "System"
   }
 
-  return "System"
+  return "System" // This is reached for unrecognized theme names
 }
 
 const isThemeSelection = (value: unknown): value is ThemeSelection =>
@@ -1579,6 +1583,15 @@ export const createSidebarTheme = (activeTheme: ThemeConfig): ThemeConfig => {
  * @param cachedThemeSelection - The user's cached theme selection
  * @param availableThemes - The list of currently available themes
  * @returns The best matching theme, or null if no suitable match found
+ *
+ * @examples
+ * // When custom themes exist:
+ * mapCachedThemeSelectionToAvailableTheme("Light", [customLight, customDark, customAuto])
+ * // Returns customLight (CUSTOM_THEME_LIGHT_NAME)
+ *
+ * // When only preset themes:
+ * mapCachedThemeSelectionToAvailableTheme("Light", [lightTheme, darkTheme])
+ * // Returns lightTheme ("Light")
  */
 export const mapCachedThemeSelectionToAvailableTheme = (
   cachedThemeSelection: ThemeSelection | null,
