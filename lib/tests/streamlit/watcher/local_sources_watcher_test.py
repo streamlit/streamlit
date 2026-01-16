@@ -200,7 +200,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
         # Create a fresh lazy loading module to track __getattribute__ calls
         lazy_module = LAZY_LOADING_MODULE._LazyLoadingModule("TestLazyModule")
         # Reset the counter after module creation
-        object.__setattr__(lazy_module, "_getattribute_call_count", 0)
+        lazy_module.__dict__["_getattribute_call_count"] = 0
 
         sys.modules["LAZY_LOADING_MODULE"] = lazy_module
         fob.reset_mock()
@@ -208,7 +208,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
 
         # The key assertion: __getattribute__ should NOT have been triggered
         # by get_module_paths() when inspecting module attributes
-        call_count = object.__getattribute__(lazy_module, "_getattribute_call_count")
+        call_count = lazy_module.__dict__["_getattribute_call_count"]
         assert call_count == 0, (
             f"__getattribute__ was called {call_count} times. "
             "This would trigger lazy loading in packages like pulumi-aws."
@@ -680,11 +680,11 @@ class TestGetModulePathsWithLazyLoading:
     def test_does_not_trigger_getattribute_for_file(self):
         """Test get_module_paths doesn't trigger __getattribute__ for __file__."""
         lazy_module = LAZY_LOADING_MODULE._LazyLoadingModule("test")
-        object.__setattr__(lazy_module, "_getattribute_call_count", 0)
+        lazy_module.__dict__["_getattribute_call_count"] = 0
 
         local_sources_watcher.get_module_paths(lazy_module)
 
-        call_count = object.__getattribute__(lazy_module, "_getattribute_call_count")
+        call_count = lazy_module.__dict__["_getattribute_call_count"]
         assert call_count == 0
 
     def test_extracts_file_from_lazy_loading_module(self):

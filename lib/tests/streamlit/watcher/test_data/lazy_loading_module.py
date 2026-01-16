@@ -34,20 +34,23 @@ class _LazyLoadingModule(types.ModuleType):
 
     def __init__(self, name: str):
         super().__init__(name)
-        # Store the real __file__ in __dict__ directly
-        object.__setattr__(self, "__dict__", {"__file__": "/fake/path/module.py"})
+        # Store the real __file__ in __dict__ directly (update existing dict)
+        self.__dict__["__file__"] = "/fake/path/module.py"
         # Track how many times __getattribute__ is called
-        object.__setattr__(self, "_getattribute_call_count", 0)
+        self.__dict__["_getattribute_call_count"] = 0
 
     def __getattribute__(self, name: str):
         # Don't count internal dunder access needed for module functionality
         if name not in {"__class__", "__dict__", "_getattribute_call_count"}:
-            count = object.__getattribute__(self, "_getattribute_call_count")
-            object.__setattr__(self, "_getattribute_call_count", count + 1)
+            # Access count directly from __dict__ to avoid recursion
+            obj_dict = types.ModuleType.__getattribute__(self, "__dict__")
+            obj_dict["_getattribute_call_count"] = (
+                obj_dict.get("_getattribute_call_count", 0) + 1
+            )
 
         # Simulate lazy loading - in real modules like pulumi-aws,
         # this would trigger loading of submodules
-        return object.__getattribute__(self, name)
+        return types.ModuleType.__getattribute__(self, name)
 
 
 LazyLoadingModule = _LazyLoadingModule("LazyLoadingModule")
