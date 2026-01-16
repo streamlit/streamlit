@@ -187,8 +187,13 @@ def _is_likely_streamlit_component_package(
     bool
         True if the package might contain streamlit components, False otherwise.
     """
-    # Get package metadata
-    name = dist.name.lower()
+    dist_name = dist.name
+    if not isinstance(dist_name, str) or not dist_name:
+        # We do not expect a distribution to be missing its name, be defensive
+        # and fail closed to prevent runtime issues.
+        return False
+
+    name = dist_name.lower()
     summary = dist.metadata["Summary"].lower() if "Summary" in dist.metadata else ""
 
     # Filter 1: Package name suggests streamlit component
