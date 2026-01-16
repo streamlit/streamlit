@@ -40,10 +40,9 @@ explicit-preview-rules = false
 select = ["ALL"]
 ignore = [
   # Rules planned to be supported in the future:
-  "EM101",   # Checks for the use of string literals in exception constructors.
-  "EM102",   # Checks for the use of f-strings in exception constructors.
-  "TRY003",  # Checks for exception messages that are not defined in the exception class itself.
-  "FURB189", # Checks for subclassing of builtin types.
+  "EM101",  # Checks for the use of string literals in exception constructors.
+  "EM102",  # Checks for the use of f-strings in exception constructors.
+  "TRY003", # Checks for exception messages that are not defined in the exception class itself.
   # Ignored rule sets:
   "DTZ", # Checks for usage of unsafe naive datetime class.
   "PTH", # Enforces usage of pathlib.
@@ -145,6 +144,7 @@ extend-safe-fixes = ["TC002", "TC003"]
   "FURB118", # Allow all operators.
   "RUF029",  # Allow async functions without await (test fixtures, mocks, ASGI callables).
   "PLC2801", # Allow dunder calls for frozen dataclass testing.
+  "FURB189", # Allow subclassing of builtin types.
 ]
 "scripts/**" = ["T20", "INP", "PERF", "S", "TRY002"]
 

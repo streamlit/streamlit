@@ -141,7 +141,7 @@ def _looks_like_provider_section(value: dict[str, Any]) -> bool:
     return any(key in value for key in provider_keys)
 
 
-class _AuthlibConfig(dict[str, Any]):
+class _AuthlibConfig(dict[str, Any]):  # noqa: FURB189
     """Config adapter that exposes provider data via Authlib's flat lookup.
 
     Authlib expects a flat configuration dictionary (e.g. "GOOGLE_CLIENT_ID").
