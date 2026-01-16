@@ -749,7 +749,11 @@ class WriteWithStreamingOutputTest(DeltaGeneratorTestCase):
 
         output = StreamingOutput(["text1", "text2"])
         st.write(output)
-        # Should process the items
+
+        # Verify that the items were processed and rendered
+        el = self.get_delta_from_queue().new_element
+        # StreamingOutput with strings renders as markdown
+        assert el.markdown.body == "text1text2"
 
     def test_write_with_streaming_output_containing_callable(self):
         """Test st.write handles StreamingOutput with callable items."""
