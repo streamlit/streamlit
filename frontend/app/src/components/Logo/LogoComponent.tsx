@@ -32,7 +32,7 @@ import {
   NavigationContext,
 } from "@streamlit/lib"
 import { Logo } from "@streamlit/protobuf"
-import { IconSize } from "@streamlit/lib"
+import { IconSize } from "~lib/theme"
 
 const LOG = getLogger("LogoComponent")
 
