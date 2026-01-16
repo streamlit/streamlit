@@ -340,7 +340,6 @@ class RadioTest(DeltaGeneratorTestCase):
                 label_visibility="visible",
                 horizontal=False,
                 captions=["c1", "c2"],
-                # Whitelisted kwargs:
                 options=["a", "b"],
                 format_func=lambda x: x.capitalize(),
             )
@@ -361,41 +360,28 @@ class RadioTest(DeltaGeneratorTestCase):
                 label_visibility="hidden",
                 horizontal=True,
                 captions=["c1x", "c2x"],
-                # Whitelisted kwargs:
-                options=["a", "b"],
-                format_func=lambda x: x.capitalize(),
+                options=["a", "b", "c"],
+                format_func=lambda x: x.upper(),
             )
             c2 = self.get_delta_from_queue().new_element.radio
             id2 = c2.id
             assert id1 == id2
 
-    @parameterized.expand(
-        [
-            (
-                "options",
-                {"options": ["a", "b"], "format_func": str},
-                {"options": ["a", "b", "c"], "format_func": str},
-            ),
-            (
-                "format_func",
-                {"options": ["a", "b"], "format_func": str},
-                {"options": ["a", "b"], "format_func": str.upper},
-            ),
-        ]
-    )
-    def test_whitelisted_stable_key_kwargs(
-        self, _name: str, first_kwargs: dict, second_kwargs: dict
-    ) -> None:
-        """Test that the widget ID changes when a whitelisted kwarg changes even when the key is provided."""
+    def test_unstable_id_without_key(self) -> None:
+        """Test that the widget ID changes when options change without a key.
+
+        This verifies that without a stable key, changing options results in
+        a new widget ID since the identity is computed from the options.
+        """
         with patch(
             "streamlit.elements.lib.utils._register_element_id",
             return_value=MagicMock(),
         ):
-            st.radio(label="Label 1", key="radio_key2", **first_kwargs)
+            st.radio(label="Label 1", options=["a", "b"], format_func=str)
             c1 = self.get_delta_from_queue().new_element.radio
             id1 = c1.id
 
-            st.radio(label="Label 2", key="radio_key2", **second_kwargs)
+            st.radio(label="Label 1", options=["a", "b", "c"], format_func=str)
             c2 = self.get_delta_from_queue().new_element.radio
             id2 = c2.id
             assert id1 != id2
@@ -425,7 +411,12 @@ def test_radio_interaction():
 
 
 def test_radio_enum_coercion():
-    """Test E2E Enum Coercion on a radio."""
+    """Test E2E Enum Coercion on a radio.
+
+    With string-based widget values, enum options are naturally preserved
+    through string lookup, so enum coercion works correctly regardless of
+    the enumCoercion config setting.
+    """
 
     def script():
         from enum import Enum
@@ -451,13 +442,12 @@ def test_radio_enum_coercion():
         assert at.text[0].value == at.text[1].value, "Enum Class ID not the same"
         assert at.text[2].value == "True", "Not all enums found in class"
 
+    # With string-based values, enum values are naturally preserved through
+    # string lookup in the options, so this works with any enumCoercion setting
     with patch_config_options({"runner.enumCoercion": "nameOnly"}):
         test_enum()
-    with (
-        patch_config_options({"runner.enumCoercion": "off"}),
-        pytest.raises(AssertionError),
-    ):
-        test_enum()  # expect a failure with the config value off.
+    with patch_config_options({"runner.enumCoercion": "off"}):
+        test_enum()  # This now passes because string-based lookup preserves enum types
 
 
 def test_None_session_state_value_retained():
@@ -473,3 +463,115 @@ def test_None_session_state_value_retained():
     at = AppTest.from_function(script).run()
     at = at.button[0].click().run()
     assert at.radio[0].value is None
+
+
+def test_dynamic_options_with_key_retains_value():
+    """Test that changing options with a key retains the selected value if still valid."""
+
+    def script():
+        import streamlit as st
+
+        if "counter" not in st.session_state:
+            st.session_state["counter"] = 0
+
+        counter = st.session_state["counter"]
+
+        # First run: options are ["A", "B", "C"]
+        # Second run: options are ["A", "B", "D"] (C removed, D added)
+        if counter == 0:
+            options = ["A", "B", "C"]
+        else:
+            options = ["A", "B", "D"]
+
+        selected = st.radio("Select", options, key="dynamic_radio")
+        st.text(f"Selected: {selected}")
+        st.button("Next", on_click=lambda: st.session_state.__setitem__("counter", 1))
+
+    at = AppTest.from_function(script).run()
+
+    # Initially "A" is selected (index 0)
+    assert at.radio[0].value == "A"
+
+    # Select "B"
+    at = at.radio[0].set_value("B").run()
+    assert at.radio[0].value == "B"
+
+    # Click button to change options from ["A", "B", "C"] to ["A", "B", "D"]
+    # "B" should remain selected since it's still in the new options
+    at = at.button[0].click().run()
+    assert at.radio[0].value == "B"
+    assert "Selected: B" in at.text[0].value
+
+
+def test_dynamic_options_with_key_resets_invalid_value():
+    """Test that changing options resets value to default if selected value is removed."""
+
+    def script():
+        import streamlit as st
+
+        if "counter" not in st.session_state:
+            st.session_state["counter"] = 0
+
+        counter = st.session_state["counter"]
+
+        # First run: options are ["A", "B", "C"]
+        # Second run: options are ["D", "E", "F"] (all changed)
+        if counter == 0:
+            options = ["A", "B", "C"]
+        else:
+            options = ["D", "E", "F"]
+
+        selected = st.radio("Select", options, key="dynamic_radio")
+        st.text(f"Selected: {selected}")
+        st.button("Next", on_click=lambda: st.session_state.__setitem__("counter", 1))
+
+    at = AppTest.from_function(script).run()
+
+    # Initially "A" is selected (index 0)
+    assert at.radio[0].value == "A"
+
+    # Select "B"
+    at = at.radio[0].set_value("B").run()
+    assert at.radio[0].value == "B"
+
+    # Click button to change options from ["A", "B", "C"] to ["D", "E", "F"]
+    # "B" is no longer valid, so should reset to default (index 0 = "D")
+    at = at.button[0].click().run()
+    assert at.radio[0].value == "D"
+    assert "Selected: D" in at.text[0].value
+
+
+def test_dynamic_options_with_key_and_none_index():
+    """Test dynamic options with index=None (no default selection)."""
+
+    def script():
+        import streamlit as st
+
+        if "counter" not in st.session_state:
+            st.session_state["counter"] = 0
+
+        counter = st.session_state["counter"]
+
+        if counter == 0:
+            options = ["A", "B", "C"]
+        else:
+            options = ["D", "E", "F"]
+
+        selected = st.radio("Select", options, index=None, key="dynamic_radio")
+        st.text(f"Selected: {selected}")
+        st.button("Next", on_click=lambda: st.session_state.__setitem__("counter", 1))
+
+    at = AppTest.from_function(script).run()
+
+    # Initially no selection
+    assert at.radio[0].value is None
+
+    # Select "B"
+    at = at.radio[0].set_value("B").run()
+    assert at.radio[0].value == "B"
+
+    # Click button to change options from ["A", "B", "C"] to ["D", "E", "F"]
+    # "B" is no longer valid and index=None, so should reset to None
+    at = at.button[0].click().run()
+    assert at.radio[0].value is None
+    assert "Selected: None" in at.text[0].value
