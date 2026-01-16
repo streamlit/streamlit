@@ -124,18 +124,22 @@ export class ClearStaleNodeVisitor implements AppNodeVisitor<
 
   visitElementNode(node: ElementNode): AppNode | undefined {
     if (this.isFragmentRun) {
-      // If we're currently running a fragment, nodes unrelated to the fragment
-      // shouldn't be cleared. This can happen when,
-      //   1. This element doesn't correspond to a fragment at all.
-      //   2. This element is a fragment but is in no path that was modified.
-      //   3. This element belongs to a path that was modified, but it was modified in the same run.
+      // Clear stale elements that belong to the current fragment(s),
+      // regardless of whether we're inside a fragment block or not.
+      // This enables fragments to write widgets to outside containers
+      // without causing duplication on fragment reruns.
       if (
-        !node.fragmentId ||
-        !this.fragmentIdOfBlock ||
-        node.scriptRunId === this.currentScriptRunId
+        node.fragmentId &&
+        this.fragmentIdsThisRun.includes(node.fragmentId) &&
+        node.scriptRunId !== this.currentScriptRunId
       ) {
-        return node
+        return undefined
       }
+      // Preserve element if:
+      // 1. Element has no fragmentId (not created by a fragment), OR
+      // 2. Element belongs to a different fragment (not running this time), OR
+      // 3. Element is current (matches this script run ID)
+      return node
     }
     return node.scriptRunId === this.currentScriptRunId ? node : undefined
   }

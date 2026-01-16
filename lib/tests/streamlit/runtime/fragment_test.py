@@ -27,7 +27,6 @@ from streamlit.delta_generator_singletons import context_dg_stack
 from streamlit.errors import (
     FragmentHandledException,
     FragmentStorageKeyError,
-    StreamlitFragmentWidgetsNotAllowedOutsideError,
 )
 from streamlit.runtime.fragment import (
     MemoryFragmentStorage,
@@ -560,24 +559,25 @@ def get_test_tuples(
     ]
 
 
-class FragmentCannotWriteToOutsidePathTest(DeltaGeneratorTestCase):
+class FragmentWriteToOutsideContainerTest(DeltaGeneratorTestCase):
+    """Tests that fragments can now write widgets to outside containers.
+
+    This behavior was previously disallowed but is now supported via
+    element-level fragment clearing on the frontend.
+    """
+
     @parameterized.expand(
         get_test_tuples(outside_container_writing_apps, WIDGET_ELEMENTS)
     )
-    def test_write_element_outside_container_raises_exception_for_widgets(
+    def test_write_widget_outside_container_succeeds(
         self,
         _: str,  # the test name argument used by pytest
         _app: Callable[[Callable[[], DeltaGenerator]], None],
         _element_producer: ELEMENT_PRODUCER,
     ):
-        with pytest.raises(FragmentHandledException) as ex:
-            _app(_element_producer)
-
-        inner_exception = ex.value.__cause__ or ex.value.__context__
-
-        assert isinstance(
-            inner_exception, StreamlitFragmentWidgetsNotAllowedOutsideError
-        )
+        """Verify widgets can now be written to outside containers without exception."""
+        # This should not raise - fragments can now write widgets to outside containers
+        _app(_element_producer)
 
     @parameterized.expand(
         get_test_tuples(outside_container_writing_apps, NON_WIDGET_ELEMENTS)
