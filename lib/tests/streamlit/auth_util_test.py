@@ -670,3 +670,18 @@ class TestBuildLogoutUrl:
         )
         # URL-encoded colon and slashes
         assert "http%3A%2F%2Flocalhost%3A8501%2Foauth2callback" in result
+
+    def test_handles_existing_query_params(self) -> None:
+        """Test that existing query params in endpoint are preserved."""
+        from streamlit import auth_util
+
+        result = auth_util.build_logout_url(
+            end_session_endpoint="https://provider.com/logout?existing=value",
+            client_id="test-client-id",
+            post_logout_redirect_uri="https://myapp.com/oauth2callback",
+        )
+        assert "existing=value" in result
+        assert "client_id=test-client-id" in result
+        # Should use & not ? for additional params
+        assert "?existing=value" in result or "existing=value&" in result
+        assert result.count("?") == 1

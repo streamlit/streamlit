@@ -218,6 +218,8 @@ def build_logout_url(
     str
         The complete logout URL with query parameters.
     """
+    from urllib.parse import parse_qsl
+
     logout_params: dict[str, str] = {
         "client_id": client_id,
         "post_logout_redirect_uri": post_logout_redirect_uri,
@@ -226,7 +228,13 @@ def build_logout_url(
     if id_token:
         logout_params["id_token_hint"] = id_token
 
-    return f"{end_session_endpoint}?{urlencode(logout_params)}"
+    # Per OIDC spec, end_session_endpoint should be a clean URL without query params,
+    # but we handle existing params defensively for non-standard providers.
+    parsed = urlparse(end_session_endpoint)
+    existing_params = dict(parse_qsl(parsed.query))
+    merged_params = {**existing_params, **logout_params}
+    new_query = urlencode(merged_params)
+    return parsed._replace(query=new_query).geturl()
 
 
 def encode_provider_token(provider: str) -> str:
