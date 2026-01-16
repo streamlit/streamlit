@@ -23,7 +23,7 @@ import {
 import { PLACEMENT, TRIGGER_TYPE, Popover as UIPopover } from "baseui/popover"
 
 import { StreamlitEndpoints } from "@streamlit/connection"
-import { hasLightBackgroundColor, Icon, useEmotionTheme } from "@streamlit/lib"
+import { Icon, useEmotionTheme } from "@streamlit/lib"
 import { IAppPage } from "@streamlit/protobuf"
 import { isNullOrUndefined } from "@streamlit/utils"
 
@@ -61,7 +61,6 @@ const TopNavSection = ({
 }: TopNavSectionProps): React.ReactElement | null => {
   const [open, setOpen] = useState(false)
   const theme = useEmotionTheme()
-  const lightBackground = hasLightBackgroundColor(theme)
   const showSections = sections.length > 1
 
   if (
@@ -160,9 +159,7 @@ const TopNavSection = ({
             borderTopColor: theme.colors.borderColor,
             borderBottomColor: theme.colors.borderColor,
 
-            boxShadow: lightBackground
-              ? "0px 4px 16px rgba(0, 0, 0, 0.16)"
-              : "0px 4px 16px rgba(0, 0, 0, 0.7)",
+            boxShadow: theme.shadows.popover,
 
             [`@media (max-width: ${theme.breakpoints.sm})`]: {
               maxWidth: `calc(100% - ${theme.spacing.threeXL})`,

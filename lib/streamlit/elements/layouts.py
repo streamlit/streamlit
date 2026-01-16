@@ -1036,7 +1036,7 @@ class LayoutsMixin:
             width = "stretch" if use_container_width else "content"
 
         # Checks whether the entered button type is one of the allowed options
-        if type not in ["primary", "secondary", "tertiary"]:
+        if type not in {"primary", "secondary", "tertiary"}:
             raise StreamlitAPIException(
                 'The type argument to st.popover must be "primary", "secondary", or "tertiary". '
                 f'\nThe argument passed was "{type}".'

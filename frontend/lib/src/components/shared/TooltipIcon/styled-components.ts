@@ -16,8 +16,6 @@
 
 import styled from "@emotion/styled"
 
-import { getPrimaryFocusBoxShadow } from "~lib/theme/utils"
-
 export const StyledTooltipTriggerButton = styled.button(({ theme }) => ({
   background: "none",
   border: "none",
@@ -34,7 +32,7 @@ export const StyledTooltipTriggerButton = styled.button(({ theme }) => ({
     outline: "none",
   },
   "&:focus-visible": {
-    boxShadow: getPrimaryFocusBoxShadow(theme),
+    boxShadow: theme.shadows.focusRing,
     borderRadius: theme.radii.default,
   },
 }))
@@ -59,7 +57,7 @@ export const StyledTooltipIconWrapper =
     // button with its own Icon). Those triggers should keep their own styling.
     "& .stTooltipHoverTarget svg.icon": {
       stroke: theme.colors.fadedText60,
-      strokeWidth: 2.25,
+      strokeWidth: theme.sizes.defaultStrokeWidth,
     },
   }))
 

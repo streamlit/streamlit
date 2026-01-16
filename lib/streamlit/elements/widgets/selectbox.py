@@ -37,6 +37,7 @@ from streamlit.elements.lib.options_selector_utils import (
     create_mappings,
     index_,
     maybe_coerce_enum,
+    validate_and_sync_value_with_options,
 )
 from streamlit.elements.lib.policies import (
     check_widget_policies,
@@ -595,30 +596,17 @@ class SelectboxMixin:
         )
         widget_state = maybe_coerce_enum(widget_state, options, opt)
 
-        # Validate the current value against the new options.
-        # If the value is no longer valid (not in options), reset to default.
-        # This handles the case where options change dynamically and the
-        # previously selected value is no longer available.
-        current_value = widget_state.value
-        value_needs_reset = False
-
-        if current_value is not None and not accept_new_options:
-            # Check if current value is still in the new options
-            try:
-                index_(opt, current_value)
-            except ValueError:
-                # Value not in options - reset to default.
-                value_needs_reset = True
-                if index is not None and len(opt) > 0:
-                    current_value = opt[index]
-                else:
-                    current_value = None
-
-                # Update session_state so subsequent accesses in this run
-                # return the corrected value. Use reset_state_value to avoid
-                # the "cannot be modified after widget instantiated" error.
-                if key is not None:
-                    get_session_state().reset_state_value(key, current_value)
+        if accept_new_options:
+            current_value = widget_state.value
+            value_needs_reset = False
+        else:
+            # Validate the current value against the new options.
+            # If the value is no longer valid (not in options), reset to default.
+            # This handles the case where options change dynamically and the
+            # previously selected value is no longer available.
+            current_value, value_needs_reset = validate_and_sync_value_with_options(
+                widget_state.value, opt, index, key
+            )
 
         if value_needs_reset or widget_state.value_changed:
             serialized_value = serde.serialize(current_value)

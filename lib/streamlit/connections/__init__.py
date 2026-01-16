@@ -13,7 +13,10 @@
 # limitations under the License.
 
 from streamlit.connections.base_connection import BaseConnection
-from streamlit.connections.snowflake_connection import SnowflakeConnection
+from streamlit.connections.snowflake_connection import (
+    SnowflakeCallersRightsConnection,
+    SnowflakeConnection,
+)
 from streamlit.connections.snowpark_connection import SnowparkConnection
 from streamlit.connections.sql_connection import SQLConnection
 
@@ -23,6 +26,7 @@ __all__ = [
     "BaseConnection",
     "ExperimentalBaseConnection",
     "SQLConnection",
+    "SnowflakeCallersRightsConnection",
     "SnowflakeConnection",
     "SnowparkConnection",
 ]

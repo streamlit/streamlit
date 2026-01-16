@@ -289,7 +289,7 @@ def _determine_data_kind_via_inferred_type(
     if inferred_type == "bytes":
         return ColumnDataKind.BYTES
 
-    if inferred_type in ["floating", "mixed-integer-float"]:
+    if inferred_type in {"floating", "mixed-integer-float"}:
         return ColumnDataKind.FLOAT
 
     if inferred_type == "integer":
@@ -304,13 +304,13 @@ def _determine_data_kind_via_inferred_type(
     if inferred_type == "boolean":
         return ColumnDataKind.BOOLEAN
 
-    if inferred_type in ["datetime64", "datetime"]:
+    if inferred_type in {"datetime64", "datetime"}:
         return ColumnDataKind.DATETIME
 
     if inferred_type == "date":
         return ColumnDataKind.DATE
 
-    if inferred_type in ["timedelta64", "timedelta"]:
+    if inferred_type in {"timedelta64", "timedelta"}:
         return ColumnDataKind.TIMEDELTA
 
     if inferred_type == "time":
@@ -411,7 +411,7 @@ ColumnConfigMappingInput: TypeAlias = Mapping[
     # allowing int here leads mypy to complain about simple dict[str, ...]
     # as input -> which seems like a mypy bug.
     IndexIdentifierType | str,
-    ColumnConfig | None | str,
+    ColumnConfig | str | None,
 ]
 
 
@@ -499,7 +499,7 @@ def apply_data_specific_configs(
     # Pandas adds a range index as default to all datastructures
     # but for most of the non-pandas data objects it is unnecessary
     # to show this index to the user. Therefore, we will hide it as default.
-    if data_format in [
+    if data_format in {
         DataFormat.SET_OF_VALUES,
         DataFormat.TUPLE_OF_VALUES,
         DataFormat.LIST_OF_VALUES,
@@ -516,7 +516,7 @@ def apply_data_specific_configs(
         DataFormat.POLARS_LAZYFRAME,
         DataFormat.PYARROW_ARRAY,
         DataFormat.RAY_DATASET,
-    ]:
+    }:
         update_column_config(columns_config, INDEX_IDENTIFIER, {"hidden": True})
 
 

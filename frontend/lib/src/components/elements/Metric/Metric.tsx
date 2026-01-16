@@ -106,7 +106,7 @@ export function getMetricChartSpec(
           ...(chartType === MetricProto.ChartType.LINE && {
             type: "line",
             strokeCap: "round",
-            strokeWidth: 2,
+            strokeWidth: theme.sizes.metricStrokeWidth,
           }),
           ...(chartType === MetricProto.ChartType.BAR && {
             type: "bar",
@@ -121,7 +121,7 @@ export function getMetricChartSpec(
               // Controls the color of the line in area chart (main color)
               color: getMetricColor(theme, metricColor),
               opacity: 1,
-              strokeWidth: 2,
+              strokeWidth: theme.sizes.metricStrokeWidth,
               strokeCap: "round",
             },
           }),

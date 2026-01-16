@@ -424,7 +424,7 @@ class CacheResourceMessageReplayTest(DeltaGeneratorTestCase):
     ):
         """Test that it works with element replay if used as non-widget element."""
 
-        if element_name in ("toast", "spinner", "logo", "echo"):
+        if element_name in {"toast", "spinner", "logo", "echo"}:
             # These elements are not supported in the cache_resource API
             #   - toast only corresponds to the event dg
             #   - spinner is transient and not replayed

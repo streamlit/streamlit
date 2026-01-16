@@ -18,6 +18,10 @@ from e2e_playwright.shared.app_utils import (
     expect_no_exception,
     get_element_by_key,
 )
+from e2e_playwright.shared.input_utils import (
+    expect_global_hotkeys_not_fired,
+    type_common_characters_into_input,
+)
 
 
 def section(app: Page, heading_name: str) -> Locator:
@@ -132,18 +136,18 @@ def test_form_interactions_deferred_until_submit(app: Page) -> None:
     )
 
     # Initial state
-    expect(app.get_by_text("Runs: 1")).to_be_visible()
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
     expect(form.get_by_text("Form Text changes: 0")).to_be_visible()
     expect(form.get_by_text("Form Clicked count: 0")).to_be_visible()
 
     # Before submitting the form, interactions should NOT trigger a rerun.
     form.get_by_text("Set text (Form)").click()
-    expect(app.get_by_text("Runs: 1")).to_be_visible()
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
     expect(form.get_by_text("Form Text changes: 0")).to_be_visible()
 
     # Triggers are disallowed in forms for CCv2; this must be a no-op.
     form.get_by_text("Trigger click (Form)").click()
-    expect(app.get_by_text("Runs: 1")).to_be_visible()
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
     expect(form.get_by_text("Form Clicked count: 0")).to_be_visible()
 
     # Also the displayed state should still be empty before submit.
@@ -152,7 +156,7 @@ def test_form_interactions_deferred_until_submit(app: Page) -> None:
     # Submit the form and verify rerun + updates (only stateful changes apply).
     click_form_button(app, "Submit Form")
 
-    expect(app.get_by_text("Runs: 2")).to_be_visible()
+    expect(app.get_by_text("Runs: 2", exact=True)).to_be_visible()
     # Trigger callback remains unchanged due to no-op in form.
     expect(form.get_by_text("Form Text changes: 1")).to_be_visible()
     expect(form.get_by_text("Form Clicked count: 0")).to_be_visible()
@@ -168,7 +172,7 @@ def test_fragment_interactions_rerun_only_fragment(app: Page) -> None:
     fragment = section(app, "Fragment context (partial reruns and local counters)")
 
     # Initial state for fragments
-    expect(app.get_by_text("Runs: 1")).to_be_visible()
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
     expect(fragment.get_by_text("Fragment session state: {}"))
     expect(fragment.get_by_text("Fragment Text changes: 0")).to_be_visible()
     expect(fragment.get_by_text("Fragment Clicked count: 0")).to_be_visible()
@@ -182,12 +186,12 @@ def test_fragment_interactions_rerun_only_fragment(app: Page) -> None:
     )
     expect(fragment.get_by_text("Fragment Text changes: 1")).to_be_visible()
     # Assert Runs remains 1
-    expect(app.get_by_text("Runs: 1")).to_be_visible()
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
 
     fragment.get_by_text("Trigger click (Fragment)").click()
     # Trigger inside fragment updates fragment-local UI/state; full Runs remains 1.
     expect(fragment.get_by_text("Fragment Clicked count: 1")).to_be_visible()
-    expect(app.get_by_text("Runs: 1")).to_be_visible()
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
 
 
 def test_basic_initial_and_submission(app: Page) -> None:
@@ -227,6 +231,29 @@ def test_basic_initial_and_submission(app: Page) -> None:
     expect(session_state).to_contain_text("'range': '55'")
     expect(session_state).to_contain_text("'text': 'Updated'")
     expect(basic.get_by_text("Click count: 1")).to_be_visible()
+
+
+def test_typing_in_component_input_does_not_trigger_global_hotkeys(app: Page) -> None:
+    hotkey = section(app, "Global hotkey interface")
+
+    # This input is component-owned HTML <input>, not a Streamlit widget.
+    text_input = hotkey.get_by_label("Hotkey Text")
+    runs_text = hotkey.get_by_text("Hotkey runs: 1", exact=True)
+
+    hotkey.scroll_into_view_if_needed()
+    text_input.focus()
+
+    expect_global_hotkeys_not_fired(app, expected_runs=1, runs_locator=runs_text)
+
+    typed = type_common_characters_into_input(
+        text_input,
+        after_each=lambda _ch: expect_global_hotkeys_not_fired(
+            app,
+            expected_runs=1,
+            runs_locator=runs_text,
+        ),
+    )
+    expect(text_input).to_have_value(typed)
 
 
 def test_arrow_serialization_works(app: Page) -> None:

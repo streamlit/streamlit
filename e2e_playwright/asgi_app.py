@@ -12,13 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import streamlit as st
+"""E2E test for st.App running the mega_tester_app.py script."""
 
-set_query_params = st.button("Set current query params")
+from streamlit.starlette import App
 
-if set_query_params:
-    st.experimental_set_query_params(
-        show_map=True,
-        number_of_countries=2,
-        selected=["asia", "america"],
-    )
+# Create the ASGI app pointing to the mega_tester_app.py script
+app = App("mega_tester_app.py")

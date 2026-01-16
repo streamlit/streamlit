@@ -75,6 +75,7 @@ export const createEmotionColors = (
   const derivedColors = computeDerivedColors(genericColors)
   const defaultCategoricalColors = defaultCategoricalColorsArray(genericColors)
   const defaultSequentialColors = defaultSequentialColorsArray(genericColors)
+  const defaultDivergingColors = defaultDivergingColorsArray(genericColors)
 
   return {
     ...genericColors,
@@ -95,6 +96,7 @@ export const createEmotionColors = (
 
     chartCategoricalColors: defaultCategoricalColors,
     chartSequentialColors: defaultSequentialColors,
+    chartDivergingColors: defaultDivergingColors,
   }
 }
 
@@ -260,19 +262,18 @@ function getBlueArrayDesc(colors: GenericColors): string[] {
   ]
 }
 
-export function getDivergingColorsArray(theme: EmotionTheme): string[] {
-  const { colors } = theme
+function defaultDivergingColorsArray(genericColors: GenericColors): string[] {
   return [
-    colors.red100,
-    colors.red90,
-    colors.red70,
-    colors.red50,
-    colors.red30,
-    colors.blue30,
-    colors.blue50,
-    colors.blue70,
-    colors.blue90,
-    colors.blue100,
+    genericColors.red100,
+    genericColors.red90,
+    genericColors.red70,
+    genericColors.red50,
+    genericColors.red30,
+    genericColors.blue30,
+    genericColors.blue50,
+    genericColors.blue70,
+    genericColors.blue90,
+    genericColors.blue100,
   ]
 }
 

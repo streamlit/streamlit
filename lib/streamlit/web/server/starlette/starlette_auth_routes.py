@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# ruff: noqa: RUF029  # Async route handlers are idiomatic even without await
+
 """Starlette app authentication routes."""
 
 from __future__ import annotations
@@ -139,7 +141,7 @@ def _looks_like_provider_section(value: dict[str, Any]) -> bool:
     return any(key in value for key in provider_keys)
 
 
-class _AuthlibConfig(dict[str, Any]):
+class _AuthlibConfig(dict[str, Any]):  # noqa: FURB189
     """Config adapter that exposes provider data via Authlib's flat lookup.
 
     Authlib expects a flat configuration dictionary (e.g. "GOOGLE_CLIENT_ID").

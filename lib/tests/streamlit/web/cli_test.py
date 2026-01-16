@@ -34,7 +34,6 @@ from parameterized import parameterized
 from requests.adapters import HTTPAdapter, Retry
 from testfixtures import tempdir
 
-import streamlit
 import streamlit.web.bootstrap
 from streamlit import config
 from streamlit.config_option import ConfigOption
@@ -609,11 +608,12 @@ class CliTest(unittest.TestCase):
                 assert Path(tmpdir, "streamlit_app.py").exists()
 
                 # Check file contents
-                assert "streamlit" in Path(tmpdir, "requirements.txt").read_text()
-                assert (
-                    "import streamlit as st"
-                    in Path(tmpdir, "streamlit_app.py").read_text()
+                assert "streamlit" in Path(tmpdir, "requirements.txt").read_text(
+                    encoding="utf-8"
                 )
+                assert "import streamlit as st" in Path(
+                    tmpdir, "streamlit_app.py"
+                ).read_text(encoding="utf-8")
             finally:
                 os.chdir(orig_dir)
 
@@ -634,6 +634,62 @@ class CliTest(unittest.TestCase):
                 assert (project_dir / "streamlit_app.py").exists()
             finally:
                 os.chdir(orig_dir)
+
+    def test_run_detects_st_app_and_calls_asgi_bootstrap(self):
+        """Test that _main_run detects st.App and calls run_asgi_app."""
+        from streamlit.web.server.app_discovery import AppDiscoveryResult
+
+        mock_discovery_result = AppDiscoveryResult(
+            is_asgi_app=True,
+            app_name="app",
+            import_string="mymodule:app",
+        )
+
+        with (
+            patch("streamlit.url_util.is_url", return_value=False),
+            patch("pathlib.Path.exists", return_value=True),
+            patch("streamlit.web.cli.check_credentials"),
+            patch(
+                "streamlit.web.server.app_discovery.discover_asgi_app",
+                return_value=mock_discovery_result,
+            ),
+            patch("streamlit.web.bootstrap.run_asgi_app") as mock_run_asgi,
+            patch("streamlit.web.bootstrap.run") as mock_run,
+        ):
+            result = self.runner.invoke(cli, ["run", "mymodule.py"])
+
+        # Should call run_asgi_app, not run
+        mock_run_asgi.assert_called_once()
+        mock_run.assert_not_called()
+        assert result.exit_code == 0
+
+    def test_run_uses_regular_bootstrap_for_non_st_app(self):
+        """Test that _main_run uses regular bootstrap for non-st.App scripts."""
+        from streamlit.web.server.app_discovery import AppDiscoveryResult
+
+        mock_discovery_result = AppDiscoveryResult(
+            is_asgi_app=False,
+            app_name=None,
+            import_string=None,
+        )
+
+        with (
+            patch("streamlit.url_util.is_url", return_value=False),
+            patch("pathlib.Path.exists", return_value=True),
+            patch("streamlit.web.cli.check_credentials"),
+            patch(
+                "streamlit.web.server.app_discovery.discover_asgi_app",
+                return_value=mock_discovery_result,
+            ),
+            patch("streamlit.web.bootstrap.run_asgi_app") as mock_run_asgi,
+            patch("streamlit.web.bootstrap.run") as mock_run,
+        ):
+            result = self.runner.invoke(cli, ["run", "regular_script.py"])
+
+        # Should call run, not run_asgi_app
+        mock_run.assert_called_once()
+        mock_run_asgi.assert_not_called()
+        assert result.exit_code == 0
 
 
 class HTTPServerIntegrationTest(unittest.TestCase):

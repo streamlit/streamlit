@@ -26,6 +26,7 @@ from parameterized import parameterized
 
 from streamlit.connections import (
     BaseConnection,
+    SnowflakeCallersRightsConnection,
     SnowflakeConnection,
     SnowparkConnection,
     SQLConnection,
@@ -82,6 +83,7 @@ class ConnectionFactoryTest(unittest.TestCase):
     @parameterized.expand(
         [
             ("snowflake", SnowflakeConnection),
+            ("snowflake-callers-rights", SnowflakeCallersRightsConnection),
             ("snowpark", SnowparkConnection),
             ("sql", SQLConnection),
         ]

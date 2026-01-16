@@ -74,9 +74,9 @@ export const StyledSidebar = styled.section<StyledSidebarProps>(
       },
 
       [`@media (max-width: ${theme.breakpoints.md})`]: {
-        boxShadow: `-2rem 0 2rem 2rem ${
-          isCollapsed ? "transparent" : "#00000029"
-        }`,
+        boxShadow: isCollapsed
+          ? "-2rem 0 2rem 2rem transparent"
+          : theme.shadows.sidebar,
       },
 
       [`@media print`]: {

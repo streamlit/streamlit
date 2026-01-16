@@ -90,8 +90,6 @@ T = TypeVar("T")
 class InitialValue:
     """Used to represent the initial value of a widget."""
 
-    pass
-
 
 # TODO: This class serves as a fallback option for elements that have not
 # been implemented yet, as well as providing implementations of some
@@ -515,7 +513,7 @@ DateValue: TypeAlias = SingleDateValue | Sequence[SingleDateValue] | None
 class DateInput(Widget):
     """A representation of ``st.date_input``."""
 
-    _value: DateValue | None | InitialValue
+    _value: DateValue | InitialValue | None
     proto: DateInputProto = field(repr=False)
     label: str
     min: date
@@ -884,7 +882,7 @@ Number: TypeAlias = int | float
 class NumberInput(Widget):
     """A representation of ``st.number_input``."""
 
-    _value: Number | None | InitialValue
+    _value: Number | InitialValue | None
     proto: NumberInputProto = field(repr=False)
     label: str
     min: Number | None
@@ -945,7 +943,7 @@ class NumberInput(Widget):
 class Radio(Widget, Generic[T]):
     """A representation of ``st.radio``."""
 
-    _value: T | None | InitialValue
+    _value: T | InitialValue | None
 
     proto: RadioProto = field(repr=False)
     label: str
@@ -1004,7 +1002,7 @@ class Radio(Widget, Generic[T]):
 class Selectbox(Widget, Generic[T]):
     """A representation of ``st.selectbox``."""
 
-    _value: T | None | InitialValue
+    _value: T | InitialValue | None
 
     proto: SelectboxProto = field(repr=False)
     label: str
@@ -1224,7 +1222,7 @@ class Text(Element):
 class TextArea(Widget):
     """A representation of ``st.text_area``."""
 
-    _value: str | None | InitialValue
+    _value: str | InitialValue | None
 
     proto: TextAreaProto = field(repr=False)
     label: str
@@ -1276,7 +1274,7 @@ class TextArea(Widget):
 class TextInput(Widget):
     """A representation of ``st.text_input``."""
 
-    _value: str | None | InitialValue
+    _value: str | InitialValue | None
     proto: TextInputProto = field(repr=False)
     label: str
     max_chars: int
@@ -1332,7 +1330,7 @@ DateTimeWidgetValue: TypeAlias = datetime
 class TimeInput(Widget):
     """A representation of ``st.time_input``."""
 
-    _value: TimeValue | None | InitialValue
+    _value: TimeValue | InitialValue | None
     proto: TimeInputProto = field(repr=False)
     label: str
     step: int
@@ -1389,7 +1387,7 @@ class TimeInput(Widget):
 class DateTimeInput(Widget):
     """A representation of ``st.datetime_input``."""
 
-    _value: DateTimeWidgetValue | None | InitialValue
+    _value: DateTimeWidgetValue | InitialValue | None
     proto: DateTimeInputProto = field(repr=False)
     label: str
     format: str

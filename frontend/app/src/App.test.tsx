@@ -1791,7 +1791,7 @@ describe("App", () => {
     })
   })
 
-  // Using this to test the functionality provided through streamlit.experimental_set_query_params.
+  // Using this to test the functionality provided through st.query_params.
   // Please see https://github.com/streamlit/streamlit/issues/2887 for more context on this.
   describe("App.handlePageInfoChanged", () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.

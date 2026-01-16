@@ -28,7 +28,7 @@ from streamlit.components.v2.get_bidi_component_manager import (
 from streamlit.errors import StreamlitAPIException
 
 if TYPE_CHECKING:
-    from streamlit.components.v2.types import BidiComponentCallable
+    from streamlit.components.v2.types import ComponentRenderer
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -211,11 +211,11 @@ def component(
     css: str | None = None,
     js: str | None = None,
     isolate_styles: bool = True,
-) -> BidiComponentCallable:
+) -> ComponentRenderer:
     '''Register an ``st.components.v2`` component and return a callable to mount it.
 
-    Components may provide any combination of HTML, CSS, and JavaScript. If none
-    are provided, the component will render as an empty element without raising
+    Components can have any combination of HTML, CSS, and JavaScript. If none
+    are provided, the component renders as an empty element without raising
     an error.
 
     If your component is defined in an installed package, you can declare an
@@ -287,7 +287,7 @@ def component(
 
     Returns
     -------
-    BidiComponentCallable
+    ComponentRenderer
         The component's mounting command.
 
         This callable accepts the component parameters like ``key`` and

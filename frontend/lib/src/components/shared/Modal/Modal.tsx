@@ -144,15 +144,17 @@ export type StreamlitModalProps = Omit<ModalProps, "size"> & {
  * @param size the StreamlitModal size to be mapped
  * @param width the width of the modal if 'medium' size is selected
  * @param padding the padding added to the modal if 'medium' size is selected
+ * @param largeWidth the width of the modal if 'large' size is selected
  * @returns the Baseweb Modal compatible size
  */
 export function calculateModalSize(
   size: StreamlitModalProps["size"],
   width?: string,
-  padding?: string
+  padding?: string,
+  largeWidth?: string
 ): ModalProps["size"] {
-  if (size === "large") {
-    return "80rem"
+  if (size === "large" && largeWidth) {
+    return largeWidth
   }
   if (size === "medium" && width && padding) {
     // This is the same width incl. padding as the AppView container is using 704px (736px (= contentMaxWidth) - 32px padding).
@@ -199,7 +201,7 @@ function Modal(props: StreamlitModalProps): ReactElement {
     },
     Close: {
       style: {
-        top: `calc(${spacing.twoXL} + .375rem)`, // Trying to center the button on the available space.
+        top: `calc(${spacing.twoXL} + ${spacing.xs})`, // Trying to center the button on the available space.
         right: spacing.twoXL,
       },
     },
@@ -208,7 +210,8 @@ function Modal(props: StreamlitModalProps): ReactElement {
   const modalSize: ModalProps["size"] = calculateModalSize(
     props.size,
     sizes.contentMaxWidth,
-    spacing.lg
+    spacing.lg,
+    sizes.dialogLargeWidth
   )
   const mergedOverrides = merge(defaultOverrides, props.overrides)
   const overridenProps = { ...props, size: modalSize }

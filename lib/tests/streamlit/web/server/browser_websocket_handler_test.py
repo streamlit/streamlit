@@ -25,8 +25,10 @@ from tornado.httputil import HTTPHeaders
 from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime import Runtime, SessionClientDisconnectedError
-from streamlit.web.server.browser_websocket_handler import TornadoClientContext
-from streamlit.web.server.server import BrowserWebSocketHandler
+from streamlit.web.server.browser_websocket_handler import (
+    BrowserWebSocketHandler,
+    TornadoClientContext,
+)
 from tests.streamlit.web.server.server_test_case import ServerTestCase
 from tests.testutil import patch_config_options
 
@@ -228,6 +230,36 @@ class BrowserWebSocketHandlerTest(ServerTestCase):
             context2 = websocket_handler.client_context
 
             assert context1 is context2
+
+    @patch_config_options({"server.enableXsrfProtection": True})
+    @tornado.testing.gen_test
+    async def test_malformed_cookie_json_is_handled_gracefully(self):
+        """Test that malformed JSON in auth cookie doesn't crash the connection."""
+        with self._patch_app_session():
+            await self.server.start()
+
+            with (
+                patch.object(
+                    BrowserWebSocketHandler,
+                    "get_signed_cookie",
+                    return_value=b"not valid json {{{",
+                ),
+                patch.object(
+                    BrowserWebSocketHandler,
+                    "_validate_xsrf_token",
+                    return_value=True,
+                ),
+                patch.object(
+                    self.server._runtime, "connect_session"
+                ) as patched_connect_session,
+            ):
+                await self.ws_connect()
+
+                # Connection should succeed with empty user_info
+                patched_connect_session.assert_called_once()
+                call_kwargs = patched_connect_session.call_args.kwargs
+                # user_info should be empty since cookie parsing failed
+                assert call_kwargs["user_info"] == {}
 
 
 class TornadoClientContextTest(tornado.testing.AsyncTestCase):

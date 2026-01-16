@@ -592,10 +592,10 @@ def _get_positional_arg_name(func: Callable[..., Any], arg_index: int) -> str | 
     if arg_index >= len(params):
         return None
 
-    if params[arg_index].kind in (
+    if params[arg_index].kind in {
         inspect.Parameter.POSITIONAL_OR_KEYWORD,
         inspect.Parameter.POSITIONAL_ONLY,
-    ):
+    }:
         return params[arg_index].name
 
     return None

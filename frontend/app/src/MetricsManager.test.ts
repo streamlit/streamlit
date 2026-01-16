@@ -214,6 +214,7 @@ describe("metrics helpers", () => {
     browserName: RESULT.browser.name || "Unknown",
     browserVersion: RESULT.browser.version || "Unknown",
     deviceType: RESULT.device.type || "Unknown",
+    serverMode: "tornado",
   }
   it("buildEventProto populates expected fields - viewReport", async () => {
     const mm = getMetricsManager()
@@ -280,6 +281,7 @@ describe("metrics helpers", () => {
       PAGE_PROFILE_DATA.browserVersion
     )
     expect(pageProfileProto.deviceType).toEqual(PAGE_PROFILE_DATA.deviceType)
+    expect(pageProfileProto.serverMode).toEqual(PAGE_PROFILE_DATA.serverMode)
   })
 
   it("buildEventProto populates expected fields - menuClick", async () => {

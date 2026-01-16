@@ -31,7 +31,6 @@ import BaseButton, {
 import { DynamicIcon } from "~lib/components/shared/Icon"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { hasLightBackgroundColor } from "~lib/theme"
 
 import {
   StyledPopoverExpansionIcon,
@@ -56,7 +55,6 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   const isInSidebar = useContext(IsSidebarContext)
 
   const theme = useEmotionTheme()
-  const lightBackground = hasLightBackgroundColor(theme)
 
   // It would be nice to remove this since it uses a resize observer
   // and therefore has a performance overhead. However, this is needed
@@ -134,9 +132,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
               borderTopColor: theme.colors.borderColor,
               borderBottomColor: theme.colors.borderColor,
 
-              boxShadow: lightBackground
-                ? "0px 4px 16px rgba(0, 0, 0, 0.16)"
-                : "0px 4px 16px rgba(0, 0, 0, 0.7)",
+              boxShadow: theme.shadows.popover,
             }),
           },
         }}

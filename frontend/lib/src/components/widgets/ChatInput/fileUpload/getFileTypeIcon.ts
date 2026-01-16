@@ -78,7 +78,7 @@ const ARCHIVE_EXTENSIONS = new Set(["zip", "tar", "gz", "rar", "7z", "bz2"])
 /**
  * Extracts the file extension from a filename (case-insensitive).
  */
-function getFileExtension(filename: string): string {
+export function getFileExtension(filename: string): string {
   const lastDotIndex = filename.lastIndexOf(".")
   if (lastDotIndex === -1 || lastDotIndex === filename.length - 1) {
     return ""
@@ -122,4 +122,12 @@ export function getFileTypeIcon(filename: string): EmotionIcon {
 
   // Default fallback for unknown file types
   return InsertDriveFile
+}
+
+/**
+ * Checks if a filename corresponds to an image file based on its extension.
+ */
+export function isImageFile(filename: string): boolean {
+  const extension = getFileExtension(filename)
+  return IMAGE_EXTENSIONS.has(extension)
 }

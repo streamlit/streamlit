@@ -44,10 +44,8 @@ import {
   CUSTOM_THEME_NAME,
   getCachedTheme,
   getDefaultTheme,
-  getFocusBoxShadow,
   getHostSpecifiedTheme,
   getHostSpecifiedThemeOnly,
-  getPrimaryFocusBoxShadow,
   getSystemTheme,
   handleSectionInheritance,
   hasThemeSectionConfigs,
@@ -115,23 +113,45 @@ describe("Styling utils", () => {
     })
   })
 
-  describe("Focus ring helpers", () => {
-    it("creates a canonical focus-ring box-shadow with default parameters", () => {
-      expect(getFocusBoxShadow("blue")).toBe(
-        "0 0 0 0.2rem rgba(0, 0, 255, 0.5)"
-      )
+  // Note: Detailed shadow value tests are in getShadows.test.ts
+  // These tests verify theme integration only
+  describe("theme.shadows (integration)", () => {
+    it("light and dark themes have shadows with the same property keys", () => {
+      const lightKeys = Object.keys(lightTheme.emotion.shadows).sort()
+      const darkKeys = Object.keys(darkTheme.emotion.shadows).sort()
+
+      expect(lightKeys).toEqual(darkKeys)
     })
 
-    it("creates a canonical focus-ring box-shadow with custom parameters", () => {
-      expect(getFocusBoxShadow("#000", 0.8, "2px")).toBe(
-        "0 0 0 2px rgba(0, 0, 0, 0.2)"
-      )
+    it("all shadow values are valid CSS box-shadow strings", () => {
+      const themes = [lightTheme.emotion, darkTheme.emotion]
+
+      themes.forEach(theme => {
+        Object.values(theme.shadows).forEach(shadow => {
+          expect(typeof shadow).toBe("string")
+          expect(shadow.length).toBeGreaterThan(0)
+          expect(
+            shadow === "none" ||
+              shadow.includes("#") ||
+              shadow.includes("rgba(")
+          ).toBe(true)
+        })
+      })
     })
 
-    it("creates a primary focus ring using the theme primary color", () => {
-      expect(getPrimaryFocusBoxShadow(lightTheme.emotion)).toBe(
-        "0 0 0 0.2rem rgba(255, 75, 75, 0.5)"
+    it("custom themes compute focus ring shadows from custom primary color", () => {
+      const customTheme = createTheme(
+        "Custom",
+        new CustomThemeConfig({
+          primaryColor: "#00ff00", // green
+        })
       )
+
+      const { shadows } = customTheme.emotion
+
+      // Focus ring should use the custom primary color
+      expect(shadows.focusRing).toContain("rgba(0, 255, 0")
+      expect(shadows.focusRingOutline).toBe("0 0 0 1px #00ff00")
     })
   })
 })
@@ -2391,6 +2411,145 @@ describe("createEmotionTheme", () => {
       )
       expect(theme.colors.chartSequentialColors).toEqual(
         expectedSequentialColors
+      )
+    }
+  )
+
+  // Diverging chart colors
+  it.each([
+    // Test hex colors
+    [
+      [
+        "#ff0000",
+        "#ff3300",
+        "#ff6600",
+        "#ff9900",
+        "#ffcc00",
+        "#00ccff",
+        "#0099ff",
+        "#0066ff",
+        "#0033ff",
+        "#0000ff",
+      ],
+      [
+        "#ff0000",
+        "#ff3300",
+        "#ff6600",
+        "#ff9900",
+        "#ffcc00",
+        "#00ccff",
+        "#0099ff",
+        "#0066ff",
+        "#0033ff",
+        "#0000ff",
+      ],
+    ],
+    // Test rgb colors
+    [
+      [
+        "rgb(255, 0, 0)",
+        "rgb(255, 51, 0)",
+        "rgb(255, 102, 0)",
+        "rgb(255, 153, 0)",
+        "rgb(255, 204, 0)",
+        "rgb(0, 204, 255)",
+        "rgb(0, 153, 255)",
+        "rgb(0, 102, 255)",
+        "rgb(0, 51, 255)",
+        "rgb(0, 0, 255)",
+      ],
+      [
+        "rgb(255, 0, 0)",
+        "rgb(255, 51, 0)",
+        "rgb(255, 102, 0)",
+        "rgb(255, 153, 0)",
+        "rgb(255, 204, 0)",
+        "rgb(0, 204, 255)",
+        "rgb(0, 153, 255)",
+        "rgb(0, 102, 255)",
+        "rgb(0, 51, 255)",
+        "rgb(0, 0, 255)",
+      ],
+    ],
+  ])(
+    "correctly handles setting of diverging color config '%s'",
+    (chartDivergingColors, expectedDivergingColors) => {
+      const themeInput: Partial<CustomThemeConfig> = {
+        chartDivergingColors,
+      }
+
+      const theme = createEmotionTheme(themeInput)
+
+      expect(theme.colors.chartDivergingColors).toEqual(
+        expectedDivergingColors
+      )
+    }
+  )
+
+  it.each([
+    // Test invalid color values
+    [
+      [
+        "red",
+        "orange",
+        "yellow",
+        "green",
+        "blue",
+        "purple",
+        "pink",
+        "gray",
+        "black",
+        "invalid",
+      ],
+      [
+        "#7d353b",
+        "#bd4043",
+        "#ff4b4b",
+        "#ff8c8c",
+        "#ffc7c7",
+        "#a6dcff",
+        "#60b4ff",
+        "#1c83e1",
+        "#0054a3",
+        "#004280",
+      ],
+    ],
+    [
+      // When the array doesn't contain 10 colors, returns default colors
+      ["invalid"],
+      [
+        "#7d353b",
+        "#bd4043",
+        "#ff4b4b",
+        "#ff8c8c",
+        "#ffc7c7",
+        "#a6dcff",
+        "#60b4ff",
+        "#1c83e1",
+        "#0054a3",
+        "#004280",
+      ],
+    ],
+  ])(
+    "logs a warning and removes any invalid diverging color configs '%s'",
+    (chartDivergingColors, expectedDivergingColors) => {
+      const logWarningSpy = vi.spyOn(LOG, "warn")
+      const themeInput: Partial<CustomThemeConfig> = {
+        chartDivergingColors,
+      }
+
+      const theme = createEmotionTheme(themeInput)
+
+      // Error log from parseColor (invalid color)
+      expect(logWarningSpy).toHaveBeenCalledWith(
+        `Invalid color passed for chartDivergingColors in theme: "invalid"`
+      )
+      // Error log from validateChartColors (<10 colors)
+      expect(logWarningSpy).toHaveBeenCalledWith(
+        `Invalid chartDivergingColors: ${chartDivergingColors.toString()}. Falling back to default chartDivergingColors.`
+      )
+      expect(theme.colors.chartDivergingColors).toEqual(
+        expectedDivergingColors
       )
     }
   )

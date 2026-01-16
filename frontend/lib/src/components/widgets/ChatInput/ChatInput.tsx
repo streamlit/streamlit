@@ -20,17 +20,18 @@ import {
   memo,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
 } from "react"
 
+import { MicNone } from "@emotion-icons/material-outlined"
 import {
   ArrowUpward,
   Check,
   Close,
   ErrorOutline,
-  Mic,
 } from "@emotion-icons/material-rounded"
 import { Textarea as UITextArea } from "baseui/textarea"
 import { useDropzone } from "react-dropzone"
@@ -58,7 +59,7 @@ import { FileUploadClient } from "~lib/FileUploadClient"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useTextInputAutoExpand } from "~lib/hooks/useTextInputAutoExpand"
-import { EmotionTheme } from "~lib/theme"
+import { convertRemToPx, EmotionTheme } from "~lib/theme"
 import { FileSize, sizeConverter } from "~lib/util/FileHelper"
 import { isEnterKeyPressed } from "~lib/util/inputUtils"
 import {
@@ -74,23 +75,21 @@ import ChatUploadedFiles from "./fileUpload/ChatUploadedFiles"
 import { createDropHandler } from "./fileUpload/createDropHandler"
 import { createUploadFileHandler } from "./fileUpload/createFileUploadHandler"
 import {
-  StyledActionRow,
   StyledChatAudioWave,
   StyledChatInput,
   StyledChatInputContainer,
-  StyledContentArea,
+  StyledFilesArea,
   StyledInputInstructions,
+  StyledInputRow,
   StyledLeftCluster,
-  StyledPrimaryRegion,
   StyledRightCluster,
   StyledSendIconButton,
-  StyledSimpleRow,
+  StyledTextareaWrapper,
   StyledWaveformContainer,
 } from "./styled-components"
 
 /**
- * Creates the common UITextArea overrides configuration used by both
- * simple and extended chat input modes.
+ * Creates the UITextArea overrides configuration for the chat input.
  *
  * @param theme - The Emotion theme for accessing design tokens
  * @param autoExpand - Auto-expand configuration with height and maxHeight
@@ -98,7 +97,7 @@ import {
  */
 function createTextAreaOverrides(
   theme: EmotionTheme,
-  autoExpand: { height: string; maxHeight: string },
+  autoExpand: { height: string; maxHeight: string; isExtended: boolean },
   rootLayoutStyle: Record<string, string | number>
 ): React.ComponentProps<typeof UITextArea>["overrides"] {
   return {
@@ -127,13 +126,13 @@ function createTextAreaOverrides(
         "::placeholder": {
           color: theme.colors.fadedText60,
         },
-        height: autoExpand.height,
+        height: autoExpand.isExtended ? autoExpand.height : "auto",
         maxHeight: autoExpand.maxHeight,
         overflowY: "auto",
         paddingLeft: theme.spacing.none,
         paddingRight: theme.spacing.none,
-        paddingBottom: theme.spacing.sm,
-        paddingTop: theme.spacing.sm,
+        paddingBottom: theme.spacing.twoXS,
+        paddingTop: theme.spacing.twoXS,
         width: "100%",
       },
     },
@@ -185,8 +184,11 @@ function ChatInput({
   const [fileDragged, setFileDragged] = useState(false)
   const [audioUploading, setAudioUploading] = useState(false)
   const [recordingError, setRecordingError] = useState<string | null>(null)
+  const [isStacked, setIsStacked] = useState(false)
 
-  // Read acceptAudio from the element configuration
+  // Forces dropzone to remount when files are cleared
+  const [dropzoneResetCounter, setDropzoneResetCounter] = useState(0)
+
   const acceptAudio = element.acceptAudio ?? false
 
   // Cleanup: abort any in-progress uploads on unmount
@@ -200,8 +202,97 @@ function ChatInput({
 
   const autoExpand = useTextInputAutoExpand({
     textareaRef: chatInputRef,
-    dependencies: [placeholder],
+    dependencies: [placeholder, isStacked],
   })
+
+  // Cache font string and available width for text measurement
+  // These values only change on mount or resize, not on every keystroke
+  const fontStringRef = useRef<string>("")
+  const availableWidthRef = useRef<number>(0)
+
+  // Reusable canvas for text measurement - avoids creating new canvas on every keystroke
+  const measureCanvasRef = useRef<HTMLCanvasElement | null>(null)
+  const measureCtxRef = useRef<CanvasRenderingContext2D | null>(null)
+
+  // Helper to measure textarea dimensions and cache font/width values
+  const updateMeasurements = useCallback(
+    (textarea: HTMLTextAreaElement): void => {
+      const computedStyle = getComputedStyle(textarea)
+      fontStringRef.current = `${computedStyle.fontWeight} ${computedStyle.fontSize} ${computedStyle.fontFamily}`
+
+      const paddingLeft = parseFloat(computedStyle.paddingLeft) || 0
+      const paddingRight = parseFloat(computedStyle.paddingRight) || 0
+      availableWidthRef.current =
+        // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Safe: runs inside ResizeObserver callback or useLayoutEffect after paint
+        textarea.clientWidth - paddingLeft - paddingRight
+    },
+    []
+  )
+
+  // Measure textarea when it becomes visible (e.g., after recording ends)
+  // useLayoutEffect runs synchronously after DOM mutations, guaranteeing the ref exists
+  // This is more reliable than setTimeout which has no timing guarantees
+  useLayoutEffect(() => {
+    const textarea = chatInputRef.current
+    if (!textarea) {
+      return
+    }
+
+    // Measure immediately
+    updateMeasurements(textarea)
+
+    // Set up ResizeObserver for future resizes
+    const observer = new ResizeObserver(() => updateMeasurements(textarea))
+    observer.observe(textarea)
+
+    return () => observer.disconnect()
+  }, [updateMeasurements, isStacked])
+
+  // Manage stacked layout mode transitions
+  // Switch to stacked when text fills the available width
+  useEffect(() => {
+    if (value === "") {
+      setIsStacked(false)
+      return
+    }
+
+    if (isStacked) {
+      return
+    }
+
+    const textarea = chatInputRef.current
+    if (!textarea) {
+      return
+    }
+
+    // If measurements aren't cached yet, compute them now
+    if (availableWidthRef.current <= 0 || !fontStringRef.current) {
+      updateMeasurements(textarea)
+    }
+
+    // Still no measurements? Can't determine layout
+    if (availableWidthRef.current <= 0 || !fontStringRef.current) {
+      return
+    }
+
+    // Canvas measureText is cheap - doesn't force reflow
+    // Reuse canvas element to avoid GC churn on every keystroke
+    if (!measureCanvasRef.current) {
+      measureCanvasRef.current = document.createElement("canvas")
+      measureCtxRef.current = measureCanvasRef.current.getContext("2d")
+    }
+    const ctx = measureCtxRef.current
+    if (ctx) {
+      ctx.font = fontStringRef.current
+      const textWidth = ctx.measureText(value).width
+
+      // Switch to stacked when text width approaches available width
+      // Use a small buffer (10px) to trigger before text actually touches the edge
+      if (textWidth > availableWidthRef.current - 10) {
+        setIsStacked(true)
+      }
+    }
+  }, [value, isStacked, updateMeasurements])
 
   /**
    * @returns True if the user-specified state.value has not yet been synced to
@@ -258,10 +349,16 @@ function ChatInput({
           return prevFiles
         }
 
-        // Handle abort/deletion using shared helper
         deleteUploadedFile(file)
 
-        return prevFiles.filter(fileArg => fileArg.id !== fileId)
+        const newFiles = prevFiles.filter(fileArg => fileArg.id !== fileId)
+
+        // Reset dropzone when all files are cleared
+        if (newFiles.length === 0) {
+          setDropzoneResetCounter(c => c + 1)
+        }
+
+        return newFiles
       })
     },
     [deleteUploadedFile]
@@ -273,22 +370,19 @@ function ChatInput({
     ((acceptedFiles: File[], rejectedFiles: never[]) => void) | null
   >(null)
 
-  const handleRetry = useCallback(
-    (fileInfo: UploadFileInfo): void => {
-      if (!fileInfo.file || fileInfo.status.type !== "error") {
-        return
-      }
+  const handleRetry = useCallback((fileInfo: UploadFileInfo): void => {
+    if (!fileInfo.file || fileInfo.status.type !== "error") {
+      return
+    }
 
-      // Remove the failed file from state
-      setFiles(prevFiles => prevFiles.filter(f => f.id !== fileInfo.id))
+    // Remove the failed file from state
+    setFiles(prevFiles => prevFiles.filter(f => f.id !== fileInfo.id))
 
-      // Re-trigger the upload using the drop handler
-      if (dropHandlerRef.current) {
-        dropHandlerRef.current([fileInfo.file], [])
-      }
-    },
-    [] // No dependencies - uses ref for dropHandler
-  )
+    // Re-trigger the upload using the drop handler
+    if (dropHandlerRef.current) {
+      dropHandlerRef.current([fileInfo.file], [])
+    }
+  }, [])
 
   const createChatInputWidgetFilesValue =
     useCallback((): FileUploaderStateProto => {
@@ -316,7 +410,6 @@ function ChatInput({
     acceptMultipleFiles:
       acceptFile === AcceptFileValue.Multiple ||
       acceptFile === AcceptFileValue.Directory,
-    acceptDirectoryFiles: acceptFile === AcceptFileValue.Directory,
     maxFileSize: maxFileSize,
     uploadClient: uploadClient,
     uploadFile: createUploadFileHandler({
@@ -395,6 +488,9 @@ function ChatInput({
       acceptFile === AcceptFileValue.Directory,
     accept: getAccept(element.fileType),
     maxSize: maxFileSize,
+    // Disable the File System Access API to avoid browser-specific issues
+    // with drag-and-drop uploads (see issue #6176 and FileDropzone usage).
+    useFsAccessApi: false,
   })
 
   const submitChatInput = useCallback(
@@ -428,14 +524,22 @@ function ChatInput({
         { fromUi: true },
         fragmentId
       )
+
+      // Reset dropzone when files are cleared on submit
+      if (files.length > 0) {
+        setDropzoneResetCounter(c => c + 1)
+      }
+
       setFiles([])
       setValue("")
+      setIsStacked(false)
       autoExpand.clearScrollHeight()
     },
     [
       dirty,
       disabled,
       value,
+      files.length,
       createChatInputWidgetFilesValue,
       widgetMgr,
       element,
@@ -670,12 +774,11 @@ function ChatInput({
 
   const showDropzone = acceptFile !== AcceptFileValue.None && fileDragged
   const isRecording = controller.state === "recording"
-  // Simple mode: single-row layout when no file upload and no audio features
-  const isSimpleMode =
-    acceptFile === AcceptFileValue.None && !acceptAudio && !isRecording
 
   const showInstructions =
-    !isRecording && width > theme.breakpoints.hideWidgetDetails && maxChars > 0
+    !isRecording &&
+    width > convertRemToPx(theme.breakpoints.hideWidgetDetails) &&
+    maxChars > 0
 
   return (
     <StyledChatInputContainer
@@ -683,7 +786,7 @@ function ChatInput({
       data-testid="stChatInput"
       ref={elementRef}
     >
-      <StyledChatInput extended={autoExpand.isExtended || isRecording}>
+      <StyledChatInput>
         {/* Character count - positioned in top-right corner */}
         {showInstructions && (
           <StyledInputInstructions
@@ -701,175 +804,149 @@ function ChatInput({
           </StyledInputInstructions>
         )}
 
-        {isSimpleMode ? (
-          /* Simple mode: single-row layout with textarea and send button side by side */
-          <StyledSimpleRow>
-            <UITextArea
-              inputRef={chatInputRef}
-              value={value}
-              placeholder={placeholder}
-              onChange={handleChange}
-              onKeyDown={handleKeyDown}
-              aria-label={placeholder}
-              disabled={disabled}
-              rows={1}
-              aria-describedby={
-                showInstructions ? "stChatInputInstructions" : undefined
-              }
-              overrides={createTextAreaOverrides(theme, autoExpand, {
-                flex: 1,
-              })}
-            />
-            <StyledSendIconButton
-              onClick={handleSubmit}
-              disabled={!dirty || disabled}
-              data-testid="stChatInputSubmitButton"
-              aria-label="Send message"
-              primary
-              withVerticalOffset
-            >
-              <Icon content={ArrowUpward} size="lg" color="inherit" />
-            </StyledSendIconButton>
-          </StyledSimpleRow>
-        ) : (
-          /* Extended mode: two-row layout with content area and action row */
-          <>
-            <StyledContentArea>
-              {showDropzone && (
-                <ChatFileUploadDropzone
-                  getRootProps={getRootProps}
-                  getInputProps={getInputProps}
-                  acceptFile={acceptFile}
-                />
-              )}
-
-              {acceptFile !== AcceptFileValue.None && files.length > 0 && (
-                <ChatUploadedFiles
-                  items={[...files]}
-                  onDelete={deleteFile}
-                  onRetry={handleRetry}
-                />
-              )}
-
-              <StyledPrimaryRegion>
-                {/* Waveform - always mounted to ensure ref is available for initialization */}
-                <StyledWaveformContainer isRecording={isRecording}>
-                  <StyledChatAudioWave ref={waveformContainerRef} />
-                </StyledWaveformContainer>
-
-                {/* Textarea - only shown when not recording */}
-                {!isRecording && (
-                  <UITextArea
-                    inputRef={chatInputRef}
-                    value={value}
-                    placeholder={placeholder}
-                    onChange={handleChange}
-                    onKeyDown={handleKeyDown}
-                    aria-label={placeholder}
-                    disabled={disabled}
-                    rows={1}
-                    aria-describedby={
-                      showInstructions ? "stChatInputInstructions" : undefined
-                    }
-                    overrides={createTextAreaOverrides(theme, autoExpand, {
-                      width: "100%",
-                    })}
-                  />
-                )}
-              </StyledPrimaryRegion>
-            </StyledContentArea>
-
-            <StyledActionRow>
-              <StyledLeftCluster>
-                {acceptFile !== AcceptFileValue.None && !isRecording && (
-                  <ChatFileUploadButton
-                    getRootProps={getRootProps}
-                    getInputProps={getInputProps}
-                    acceptFile={acceptFile}
-                    disabled={disabled}
-                  />
-                )}
-              </StyledLeftCluster>
-
-              <StyledRightCluster>
-                {isRecording ? (
-                  <>
-                    {/* Cancel button */}
-                    <StyledSendIconButton
-                      onClick={handleRecordingCancel}
-                      disabled={disabled}
-                      data-testid="stChatInputCancelButton"
-                      aria-label="Cancel recording"
-                    >
-                      <Icon content={Close} size="lg" color="inherit" />
-                    </StyledSendIconButton>
-                    {/* Approve button */}
-                    <StyledSendIconButton
-                      onClick={handleRecordingApproveVoid}
-                      disabled={disabled || audioUploading}
-                      data-testid="stChatInputApproveButton"
-                      aria-label="Submit recording"
-                    >
-                      {audioUploading ? (
-                        <DynamicIcon size="lg" iconValue="spinner" />
-                      ) : (
-                        <Icon content={Check} size="lg" color="inherit" />
-                      )}
-                    </StyledSendIconButton>
-                  </>
-                ) : (
-                  <>
-                    {/* Mic button */}
-                    {acceptAudio && (
-                      <>
-                        {recordingError ? (
-                          <Tooltip
-                            content={recordingError}
-                            placement={Placement.TOP}
-                            error
-                          >
-                            <StyledSendIconButton
-                              onClick={handleMicClickVoid}
-                              disabled={disabled || audioUploading}
-                              hasError
-                              data-testid="stChatInputMicButton"
-                              aria-label="Start recording"
-                            >
-                              <Icon
-                                content={ErrorOutline}
-                                size="xl"
-                                color="inherit"
-                              />
-                            </StyledSendIconButton>
-                          </Tooltip>
-                        ) : (
-                          <StyledSendIconButton
-                            onClick={handleMicClickVoid}
-                            disabled={disabled || audioUploading}
-                            data-testid="stChatInputMicButton"
-                            aria-label="Start recording"
-                          >
-                            <Icon content={Mic} size="xl" color="inherit" />
-                          </StyledSendIconButton>
-                        )}
-                      </>
-                    )}
-                    {/* Send button */}
-                    <StyledSendIconButton
-                      onClick={handleSubmit}
-                      disabled={!dirty || disabled || audioUploading}
-                      data-testid="stChatInputSubmitButton"
-                      aria-label="Send message"
-                      primary
-                    >
-                      <Icon content={ArrowUpward} size="lg" color="inherit" />
-                    </StyledSendIconButton>
-                  </>
-                )}
-              </StyledRightCluster>
-            </StyledActionRow>
-          </>
+        {/* Dropzone overlay - shown when dragging files over */}
+        {showDropzone && (
+          <ChatFileUploadDropzone
+            getRootProps={getRootProps}
+            getInputProps={getInputProps}
+            acceptFile={acceptFile}
+          />
         )}
+
+        {/* Files area - shown above input row when files are uploaded */}
+        {acceptFile !== AcceptFileValue.None && files.length > 0 && (
+          <StyledFilesArea>
+            <ChatUploadedFiles
+              items={[...files]}
+              onDelete={deleteFile}
+              onRetry={handleRetry}
+            />
+          </StyledFilesArea>
+        )}
+
+        {/* Main row - uses flex-wrap and order to handle stacked/inline layouts
+            In stacked mode: textarea wraps to its own line above buttons via CSS order
+            In inline mode: textarea sits between left and right button clusters
+            When recording: waveform replaces textarea inline with cancel/approve buttons */}
+        <StyledInputRow isStacked={isStacked}>
+          <StyledLeftCluster>
+            {acceptFile !== AcceptFileValue.None && !isRecording && (
+              <ChatFileUploadButton
+                key={dropzoneResetCounter}
+                onDrop={dropHandler}
+                multiple={
+                  acceptFile === AcceptFileValue.Multiple ||
+                  acceptFile === AcceptFileValue.Directory
+                }
+                accept={getAccept(element.fileType)}
+                maxSize={maxFileSize}
+                acceptFile={acceptFile}
+                disabled={disabled}
+              />
+            )}
+          </StyledLeftCluster>
+
+          {/* Waveform - shown inline when recording, replaces textarea position */}
+          <StyledWaveformContainer isRecording={isRecording}>
+            <StyledChatAudioWave ref={waveformContainerRef} />
+          </StyledWaveformContainer>
+
+          {/* Textarea - always at this position in the tree to preserve focus on layout change.
+              StyledTextareaWrapper uses CSS (order, width) to visually move it above buttons when stacked */}
+          {!isRecording && (
+            <StyledTextareaWrapper isStacked={isStacked}>
+              <UITextArea
+                inputRef={chatInputRef}
+                value={value}
+                placeholder={placeholder}
+                onChange={handleChange}
+                onKeyDown={handleKeyDown}
+                aria-label={placeholder}
+                disabled={disabled}
+                rows={1}
+                aria-describedby={
+                  showInstructions ? "stChatInputInstructions" : undefined
+                }
+                overrides={createTextAreaOverrides(theme, autoExpand, {
+                  width: "100%",
+                })}
+              />
+            </StyledTextareaWrapper>
+          )}
+
+          <StyledRightCluster>
+            {isRecording ? (
+              <>
+                <StyledSendIconButton
+                  onClick={handleRecordingCancel}
+                  disabled={disabled}
+                  data-testid="stChatInputCancelButton"
+                  aria-label="Cancel recording"
+                >
+                  <Icon content={Close} size="lg" color="inherit" />
+                </StyledSendIconButton>
+                <StyledSendIconButton
+                  onClick={handleRecordingApproveVoid}
+                  disabled={disabled || audioUploading}
+                  data-testid="stChatInputApproveButton"
+                  aria-label="Submit recording"
+                >
+                  {audioUploading ? (
+                    <DynamicIcon size="lg" iconValue="spinner" />
+                  ) : (
+                    <Icon content={Check} size="lg" color="inherit" />
+                  )}
+                </StyledSendIconButton>
+              </>
+            ) : (
+              <>
+                {acceptAudio && (
+                  <>
+                    {recordingError ? (
+                      <Tooltip
+                        content={recordingError}
+                        placement={Placement.TOP}
+                        error
+                      >
+                        <StyledSendIconButton
+                          onClick={handleMicClickVoid}
+                          disabled={disabled || audioUploading}
+                          hasError
+                          data-testid="stChatInputMicButton"
+                          aria-label="Start recording"
+                        >
+                          <Icon
+                            content={ErrorOutline}
+                            size="xl"
+                            color="inherit"
+                          />
+                        </StyledSendIconButton>
+                      </Tooltip>
+                    ) : (
+                      <StyledSendIconButton
+                        onClick={handleMicClickVoid}
+                        disabled={disabled || audioUploading}
+                        data-testid="stChatInputMicButton"
+                        aria-label="Start recording"
+                      >
+                        <Icon content={MicNone} size="xl" color="inherit" />
+                      </StyledSendIconButton>
+                    )}
+                  </>
+                )}
+                <StyledSendIconButton
+                  onClick={handleSubmit}
+                  disabled={!dirty || disabled || audioUploading}
+                  data-testid="stChatInputSubmitButton"
+                  aria-label="Send message"
+                  primary
+                >
+                  <Icon content={ArrowUpward} size="lg" color="inherit" />
+                </StyledSendIconButton>
+              </>
+            )}
+          </StyledRightCluster>
+        </StyledInputRow>
       </StyledChatInput>
     </StyledChatInputContainer>
   )

@@ -466,7 +466,7 @@ def test_dynamic_date_input_props(app: Page, assert_snapshot: ImageCompareFuncti
     # new date input is visible:
     expect(dynamic_date_input).to_contain_text("Updated dynamic date input")
 
-    # Ensure the previously entered value remains visible
+    # Ensure the previously entered value remains visible (value is within new bounds)
     expect_prefixed_markdown(app, "Updated date input value:", "2020-01-02")
 
     dynamic_date_input.scroll_into_view_if_needed()
@@ -482,6 +482,24 @@ def test_dynamic_date_input_props(app: Page, assert_snapshot: ImageCompareFuncti
     wait_for_app_run(app)
 
     expect_prefixed_markdown(app, "Updated date input value:", "2020-01-03")
+
+    # Test dynamic min/max behavior when bounds change:
+    # Toggle back to initial bounds (2010-2030)
+    click_toggle(app, "Update date input props")
+    expect_prefixed_markdown(app, "Initial date input value:", "2020-01-03")
+
+    # Set value to 2028/01/01 which is valid in initial bounds (2010-2030)
+    input_field.type("2028/01/01")
+    input_field.press("Enter")
+    input_field.press("Escape")
+    wait_for_app_run(app)
+    expect_prefixed_markdown(app, "Initial date input value:", "2028-01-01")
+
+    # Toggle to updated bounds (2020-2025) - value 2028 is outside, should reset to default (2023-09-10)
+    click_toggle(app, "Update date input props")
+    expect_prefixed_markdown(app, "Updated date input value:", "2023-09-10")
+    # Anti-regression: ensure the old out-of-bounds value is not retained
+    expect(app.get_by_text("2028-01-01")).not_to_be_visible()
 
 
 def test_quick_select_feature_visibility(app: Page):
