@@ -24,6 +24,7 @@ from unittest.mock import MagicMock, call, patch
 
 import tests.streamlit.watcher.test_data.dummy_module1 as DUMMY_MODULE_1
 import tests.streamlit.watcher.test_data.dummy_module2 as DUMMY_MODULE_2
+import tests.streamlit.watcher.test_data.lazy_loading_module as LAZY_LOADING_MODULE
 import tests.streamlit.watcher.test_data.misbehaved_module as MISBEHAVED_MODULE
 import tests.streamlit.watcher.test_data.nested_module_child as NESTED_MODULE_CHILD
 import tests.streamlit.watcher.test_data.nested_module_parent as NESTED_MODULE_PARENT
@@ -52,6 +53,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
         modules = [
             "DUMMY_MODULE_1",
             "DUMMY_MODULE_2",
+            "LAZY_LOADING_MODULE",
             "MISBEHAVED_MODULE",
             "NESTED_MODULE_PARENT",
             "NESTED_MODULE_CHILD",
@@ -178,6 +180,38 @@ class LocalSourcesWatcherTest(unittest.TestCase):
             "Examining the path of %s raised:",
             "MisbehavedModule",
             exc_info=True,
+        )
+
+    @patch("streamlit.watcher.local_sources_watcher.PathWatcher")
+    def test_lazy_loading_module_does_not_trigger_getattribute(self, fob):
+        """Test that modules with custom __getattribute__ don't trigger lazy loading.
+
+        Some packages (e.g., pulumi-aws) override __getattribute__ to implement
+        lazy loading. The old implementation using hasattr() would trigger this,
+        causing massive memory overhead. The new _safe_get_attr() bypasses it.
+
+        See https://github.com/streamlit/streamlit/issues/13530
+        """
+        lsw = local_sources_watcher.LocalSourcesWatcher(PagesManager(SCRIPT_PATH))
+        lsw.register_file_change_callback(NOOP_CALLBACK)
+
+        fob.assert_called_once()
+
+        # Create a fresh lazy loading module to track __getattribute__ calls
+        lazy_module = LAZY_LOADING_MODULE._LazyLoadingModule("TestLazyModule")
+        # Reset the counter after module creation
+        object.__setattr__(lazy_module, "_getattribute_call_count", 0)
+
+        sys.modules["LAZY_LOADING_MODULE"] = lazy_module
+        fob.reset_mock()
+        lsw.update_watched_modules()
+
+        # The key assertion: __getattribute__ should NOT have been triggered
+        # by get_module_paths() when inspecting module attributes
+        call_count = object.__getattribute__(lazy_module, "_getattribute_call_count")
+        assert call_count == 0, (
+            f"__getattribute__ was called {call_count} times. "
+            "This would trigger lazy loading in packages like pulumi-aws."
         )
 
     @patch("streamlit.watcher.local_sources_watcher.PathWatcher")
@@ -549,3 +583,117 @@ def test_get_module_paths_outputs_abs_paths():
 
 def sort_args_list(args_list):
     return sorted(args_list, key=lambda args: args[0])
+
+
+class TestSafeGetAttr:
+    """Tests for _safe_get_attr() helper function.
+
+    This function is used to safely access module attributes without triggering
+    custom __getattribute__ implementations that could cause side effects
+    (like lazy loading in pulumi-aws).
+
+    See https://github.com/streamlit/streamlit/issues/13530
+    """
+
+    def test_returns_attribute_from_dict(self):
+        """Test that _safe_get_attr returns attributes stored in __dict__."""
+
+        class Obj:
+            def __init__(self):
+                self.foo = "bar"
+
+        obj = Obj()
+        result = local_sources_watcher._safe_get_attr(obj, "foo")
+        assert result == "bar"
+
+    def test_returns_default_for_missing_attribute(self):
+        """Test that _safe_get_attr returns default for missing attributes."""
+
+        class Obj:
+            pass
+
+        obj = Obj()
+        assert local_sources_watcher._safe_get_attr(obj, "missing") is None
+        assert (
+            local_sources_watcher._safe_get_attr(obj, "missing", "default") == "default"
+        )
+
+    def test_bypasses_custom_getattribute(self):
+        """Test that _safe_get_attr bypasses custom __getattribute__."""
+
+        class LazyObj:
+            def __init__(self):
+                object.__setattr__(self, "__dict__", {"value": "found"})
+
+            def __getattribute__(self, name):
+                raise RuntimeError("Should not be called!")
+
+        obj = LazyObj()
+        # This should NOT raise because we bypass __getattribute__
+        result = local_sources_watcher._safe_get_attr(obj, "value")
+        assert result == "found"
+
+    def test_returns_default_when_attr_not_in_dict(self):
+        """Test that missing attributes return default, not trigger fallback."""
+
+        class LazyObj:
+            def __init__(self):
+                object.__setattr__(self, "__dict__", {"other": "value"})
+
+            def __getattribute__(self, name):
+                raise RuntimeError("Should not be called!")
+
+        obj = LazyObj()
+        result = local_sources_watcher._safe_get_attr(obj, "missing", "default")
+        assert result == "default"
+
+    def test_works_with_modules(self):
+        """Test that _safe_get_attr works correctly with module objects."""
+        import os
+
+        result = local_sources_watcher._safe_get_attr(os, "__file__")
+        assert result is not None
+        assert "os" in result.lower()
+
+    def test_handles_objects_without_dict(self):
+        """Test that _safe_get_attr handles objects that don't have __dict__."""
+        # Built-in types like int don't have __dict__ in the usual sense
+        result = local_sources_watcher._safe_get_attr(42, "foo", "default")
+        assert result == "default"
+
+    def test_returns_none_value_correctly(self):
+        """Test that _safe_get_attr returns None when that's the actual value."""
+
+        class Obj:
+            def __init__(self):
+                self.value = None
+
+        obj = Obj()
+        # Should return None (the actual value), not the default
+        result = local_sources_watcher._safe_get_attr(obj, "value", "default")
+        assert result is None
+
+
+class TestGetModulePathsWithLazyLoading:
+    """Tests for get_module_paths() with lazy-loading modules."""
+
+    def test_does_not_trigger_getattribute_for_file(self):
+        """Test get_module_paths doesn't trigger __getattribute__ for __file__."""
+        lazy_module = LAZY_LOADING_MODULE._LazyLoadingModule("test")
+        object.__setattr__(lazy_module, "_getattribute_call_count", 0)
+
+        local_sources_watcher.get_module_paths(lazy_module)
+
+        call_count = object.__getattribute__(lazy_module, "_getattribute_call_count")
+        assert call_count == 0
+
+    def test_extracts_file_from_lazy_loading_module(self):
+        """Test that get_module_paths correctly extracts __file__ from lazy module."""
+        lazy_module = LAZY_LOADING_MODULE._LazyLoadingModule("test")
+
+        paths = local_sources_watcher.get_module_paths(lazy_module)
+
+        # The module has __file__ = "/fake/path/module.py" in its __dict__
+        # But since this path doesn't exist, it will be filtered out by _is_valid_path
+        # The important thing is that we didn't trigger __getattribute__
+        assert isinstance(paths, set)

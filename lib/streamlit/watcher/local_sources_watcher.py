@@ -260,6 +260,9 @@ def _safe_get_attr(obj: Any, attr: str, default: Any = None) -> Any:
 
 
 def get_module_paths(module: ModuleType) -> set[str]:
+    # Use _safe_get_attr instead of hasattr/getattr to avoid triggering
+    # custom __getattribute__ in modules like pulumi-aws that use lazy loading.
+    # See https://github.com/streamlit/streamlit/issues/13530
     paths_extractors: list[Callable[[ModuleType], list[str | None]]] = [
         # https://docs.python.org/3/reference/datamodel.html
         # __file__ is the pathname of the file from which the module was loaded
