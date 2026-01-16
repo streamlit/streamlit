@@ -146,10 +146,11 @@ if st.toggle("Update radio props"):
         args=("Updated radio arg",),
         kwargs={"param": "updated kwarg param"},
         captions=["🥭", "🍈", "🍇", "🍎"],
-        # format_func is not whitelisted. Changing format_func is allowed,
-        # but selected options will be unselected if their formatted label
-        # no longer matches (e.g., "Apple" vs "APPLE"). This is something
-        # we might be able to support with some additional refactorings.
+        # Changing format_func is allowed, but selection is based on the
+        # formatted string labels. If the formatted label changes (e.g.,
+        # "Apple" vs "APPLE"), previously selected options may become
+        # unselected. This is something we might be able to improve with
+        # additional refactorings.
         format_func=lambda x: x.capitalize(),
     )
     st.write("Updated radio value:", dr_value)

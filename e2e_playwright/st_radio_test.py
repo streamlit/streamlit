@@ -227,7 +227,7 @@ def test_dynamic_radio_props(app: Page, assert_snapshot: ImageCompareFunction):
     4. Selection is preserved when the selected value exists in new options
 
     Initial options: [apple, banana, mango, orange] with format_func=capitalize, index=0 (default: apple)
-    Updated options: [mango, papaya, grape, apple] with format_func=upper, index=1 (default: papaya)
+    Updated options: [mango, papaya, grape, apple] with format_func=capitalize, index=1 (default: papaya)
     """
     dynamic_radio = get_element_by_key(app, "dynamic_radio_with_key")
     expect(dynamic_radio).to_be_visible()
@@ -263,9 +263,9 @@ def test_dynamic_radio_props(app: Page, assert_snapshot: ImageCompareFunction):
 
     # --- Test 2: Selection PRESERVED when value exists in both option sets ---
     # Select "mango" - it exists in BOTH option sets at different indices:
-    # Initial: index 2 (displayed "Mango"), Updated: index 0 (displayed "MANGO")
+    # Initial: index 2 (displayed "Mango"), Updated: index 0 (displayed "Mango")
     # Neither is the default. This ensures we're testing true preservation.
-    select_radio_option(app, option="MANGO", label="Updated dynamic radio")
+    select_radio_option(app, option="Mango", label="Updated dynamic radio")
     expect_prefixed_markdown(app, "Updated radio value:", "mango")
 
     # Toggle back to initial options - "mango" exists in initial too
