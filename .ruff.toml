@@ -78,7 +78,6 @@ ignore = [
   "FURB152", # Checks for math constants that could use math module.
   "PD009",   # Checks for usage of pd.DataFrame.iat.
   "PGH003",  # Checks for blanket type ignore.
-  "PIE790",  # Checks for unnecessary pass statements.
   "PLC0415", # Enforces imports to be at the top-level of the file.
   "PLC1901", # Checks for comparisons to empty string.
   "PLC2701", # Checks for imports of private names.
@@ -145,6 +144,7 @@ extend-safe-fixes = ["TC002", "TC003"]
   "NPY002",
   "FURB118", # Allow all operators.
   "RUF029",  # Allow async functions without await (test fixtures, mocks, ASGI callables).
+  "PLC2801", # Allow dunder calls for frozen dataclass testing.
 ]
 "scripts/**" = ["T20", "INP", "PERF", "S", "TRY002"]
 

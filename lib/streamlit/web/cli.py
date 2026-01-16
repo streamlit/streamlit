@@ -331,7 +331,6 @@ def _main_run(
 @main.group("cache")
 def cache() -> None:
     """Manage the Streamlit cache."""
-    pass
 
 
 @cache.command("clear")
@@ -354,7 +353,6 @@ def cache_clear() -> None:
 @main.group("config")
 def config() -> None:
     """Manage Streamlit's config settings."""
-    pass
 
 
 @config.command("show")
@@ -393,7 +391,6 @@ def test() -> None:
 
     These commands are not included in the output of `streamlit help`.
     """
-    pass
 
 
 @test.command("prog_name")

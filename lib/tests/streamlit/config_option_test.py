@@ -69,7 +69,6 @@ class ConfigOptionTest(unittest.TestCase):
         @c
         def someRandomFunction():
             """Random docstring."""
-            pass
 
         assert c.description == "Random docstring."
         assert someRandomFunction._get_val_func == c._get_val_func

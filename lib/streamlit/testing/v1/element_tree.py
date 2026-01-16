@@ -90,8 +90,6 @@ T = TypeVar("T")
 class InitialValue:
     """Used to represent the initial value of a widget."""
 
-    pass
-
 
 # TODO: This class serves as a fallback option for elements that have not
 # been implemented yet, as well as providing implementations of some

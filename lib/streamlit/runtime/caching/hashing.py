@@ -653,5 +653,3 @@ class _CacheFuncHasher:
 
 class NoResult:
     """Placeholder class for return values when None is meaningful."""
-
-    pass

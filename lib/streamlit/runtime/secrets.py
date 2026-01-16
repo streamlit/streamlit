@@ -230,7 +230,6 @@ class Secrets(Mapping[str, Any]):
         """Left in place for compatibility with integrations until integration
         code can be updated.
         """
-        pass
 
     def _reset(self) -> None:
         """Clear the secrets dictionary and remove any secrets that were

@@ -22,13 +22,9 @@ from streamlit.util import repr_
 class ScriptControlException(BaseException):  # NOSONAR
     """Base exception for ScriptRunner."""
 
-    pass
-
 
 class StopException(ScriptControlException):
     """Silently stop the execution of the user's script."""
-
-    pass
 
 
 class RerunException(ScriptControlException):

@@ -667,7 +667,6 @@ class AlternativeComponentRegistryTest(unittest.TestCase):
     class AlternativeComponentRegistry(BaseComponentRegistry):
         def __init__(self):
             """Dummy implementation"""
-            pass
 
         def register_component(self, component: BaseCustomComponent) -> None:
             return None
