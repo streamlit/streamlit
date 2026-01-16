@@ -165,6 +165,13 @@ class LocalSourcesWatcherTest(unittest.TestCase):
     @patch("streamlit.watcher.local_sources_watcher._LOGGER")
     @patch("streamlit.watcher.local_sources_watcher.PathWatcher")
     def test_misbehaved_module(self, fob, patched_logger):
+        """Test that modules with problematic __spec__ properties are handled gracefully.
+
+        The MisbehavedModule has __spec__ as a property that raises an exception.
+        With _safe_get_attr(), we access __dict__ directly which bypasses the property,
+        so no exception is raised and no warning is logged. This is the desired behavior
+        as it prevents issues with modules that have unusual attribute implementations.
+        """
         lsw = local_sources_watcher.LocalSourcesWatcher(PagesManager(SCRIPT_PATH))
         lsw.register_file_change_callback(NOOP_CALLBACK)
 
@@ -176,12 +183,9 @@ class LocalSourcesWatcherTest(unittest.TestCase):
 
         fob.assert_called_once()  # Just __init__.py
 
-        # Check that the warning was called with the expected message
-        patched_logger.warning.assert_called_once_with(
-            "Examining the path of %s raised:",
-            "MisbehavedModule",
-            exc_info=True,
-        )
+        # With _safe_get_attr(), we bypass the problematic __spec__ property
+        # by accessing __dict__ directly, so no warning should be logged
+        patched_logger.warning.assert_not_called()
 
     @patch("streamlit.watcher.local_sources_watcher.PathWatcher")
     def test_lazy_loading_module_does_not_trigger_getattribute(self, fob):
