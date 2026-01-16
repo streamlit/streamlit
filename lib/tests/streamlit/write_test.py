@@ -652,13 +652,14 @@ class WriteStreamEdgeCasesTest(DeltaGeneratorTestCase):
     """Test edge cases for st.write_stream API."""
 
     def test_write_stream_with_async_generator(self):
-        """Test st.write_stream with an async generator."""
+        """Test st.write_stream with an async generator object (already called)."""
 
         async def async_stream():
             yield "async "
             yield "message"
 
-        result = st.write_stream(async_stream)
+        # Pass the generator object, not the function
+        result = st.write_stream(async_stream())
         assert result == "async message"
 
     def test_write_stream_with_async_generator_function(self):
@@ -668,6 +669,7 @@ class WriteStreamEdgeCasesTest(DeltaGeneratorTestCase):
             yield "async "
             yield "generator"
 
+        # Pass the function itself, not called - write_stream should handle this
         result = st.write_stream(async_gen_func)
         assert result == "async generator"
 
