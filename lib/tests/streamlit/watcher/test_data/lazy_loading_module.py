@@ -34,10 +34,10 @@ class _LazyLoadingModule(types.ModuleType):
 
     def __init__(self, name: str):
         super().__init__(name)
-        # Store the real __file__ in __dict__ directly (update existing dict)
-        self.__dict__["__file__"] = "/fake/path/module.py"
-        # Track how many times __getattribute__ is called
-        self.__dict__["_getattribute_call_count"] = 0
+        # Access __dict__ via parent class to avoid triggering our __getattribute__
+        obj_dict = types.ModuleType.__getattribute__(self, "__dict__")
+        obj_dict["__file__"] = "/fake/path/module.py"
+        obj_dict["_getattribute_call_count"] = 0
 
     def __getattribute__(self, name: str):
         # Don't count internal dunder access needed for module functionality

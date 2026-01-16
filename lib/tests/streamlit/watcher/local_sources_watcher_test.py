@@ -19,6 +19,7 @@ from __future__ import annotations
 import contextlib
 import os
 import sys
+import types
 import unittest
 from unittest.mock import MagicMock, call, patch
 
@@ -199,8 +200,10 @@ class LocalSourcesWatcherTest(unittest.TestCase):
 
         # Create a fresh lazy loading module to track __getattribute__ calls
         lazy_module = LAZY_LOADING_MODULE._LazyLoadingModule("TestLazyModule")
-        # Reset the counter after module creation
-        lazy_module.__dict__["_getattribute_call_count"] = 0
+        # Reset the counter after module creation (access __dict__ via parent to avoid
+        # triggering our custom __getattribute__)
+        obj_dict = types.ModuleType.__getattribute__(lazy_module, "__dict__")
+        obj_dict["_getattribute_call_count"] = 0
 
         sys.modules["LAZY_LOADING_MODULE"] = lazy_module
         fob.reset_mock()
@@ -208,7 +211,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
 
         # The key assertion: __getattribute__ should NOT have been triggered
         # by get_module_paths() when inspecting module attributes
-        call_count = lazy_module.__dict__["_getattribute_call_count"]
+        call_count = obj_dict["_getattribute_call_count"]
         assert call_count == 0, (
             f"__getattribute__ was called {call_count} times. "
             "This would trigger lazy loading in packages like pulumi-aws."
@@ -680,11 +683,12 @@ class TestGetModulePathsWithLazyLoading:
     def test_does_not_trigger_getattribute_for_file(self):
         """Test get_module_paths doesn't trigger __getattribute__ for __file__."""
         lazy_module = LAZY_LOADING_MODULE._LazyLoadingModule("test")
-        lazy_module.__dict__["_getattribute_call_count"] = 0
+        obj_dict = types.ModuleType.__getattribute__(lazy_module, "__dict__")
+        obj_dict["_getattribute_call_count"] = 0
 
         local_sources_watcher.get_module_paths(lazy_module)
 
-        call_count = lazy_module.__dict__["_getattribute_call_count"]
+        call_count = obj_dict["_getattribute_call_count"]
         assert call_count == 0
 
     def test_extracts_file_from_lazy_loading_module(self):
