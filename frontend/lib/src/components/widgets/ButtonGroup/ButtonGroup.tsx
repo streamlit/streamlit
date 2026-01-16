@@ -393,7 +393,6 @@ function getDefaultStateFromProto(
 }
 
 function getCurrStateFromProto(element: ButtonGroupProto): ButtonGroupValue {
-  // Use rawValues (string-based) instead of deprecated value field
   const rawValues = element.rawValues ?? []
   return stringsToIndices(rawValues, element.options, element.style)
 }

@@ -231,40 +231,39 @@ def _validate_button_group_value(
     options: Sequence[T],
     default_indices: list[int],
     selection_mode: Literal["single", "multi"],
-) -> tuple[T | list[T] | None, bool]:
+) -> T | list[T] | None:
     """Validate value against current options.
 
-    Returns (validated_value, needs_reset).
     For multi-select, filters out invalid values.
     For single-select, resets to default if value is invalid.
     """
     if selection_mode == "multi":
         # Multi-select: filter to only valid values
         if value is None or not isinstance(value, list) or len(value) == 0:
-            return [], False
+            return []
 
         if len(options) == 0:
-            return [], len(value) > 0
+            return []
 
         valid_values = [v for v in value if _index_safe(options, v) is not None]
-        needs_reset = len(valid_values) != len(value)
 
         # If all values were invalid, reset to default
-        if len(valid_values) == 0 and needs_reset:
+        if len(valid_values) == 0:
             if default_indices:
-                return [options[i] for i in default_indices if i < len(options)], True
-            return [], True
+                return [options[i] for i in default_indices if i < len(options)]
+            return []
 
-        return valid_values, needs_reset
+        return valid_values
+
     # Single-select: reset to default if invalid
     if value is None:
-        return None, False
+        return None
 
     if len(options) == 0:
-        return None, value is not None
+        return None
 
     if _index_safe(options, value) is not None:
-        return value, False
+        return value
 
     # Value not in options - reset to default
     if (
@@ -272,8 +271,8 @@ def _validate_button_group_value(
         and len(default_indices) > 0
         and default_indices[0] < len(options)
     ):
-        return options[default_indices[0]], True
-    return None, True
+        return options[default_indices[0]]
+    return None
 
 
 class _FeedbackSerdeString:
@@ -1179,14 +1178,12 @@ class ButtonGroupMixin:
         )
 
         # Validate the value against current options (handles dynamic option changes)
-        validated_value, _ = _validate_button_group_value(
+        return _validate_button_group_value(
             res.value,
             indexable_options,
             default_values,
             selection_mode,
         )
-
-        return validated_value
 
     def _button_group(
         self,
