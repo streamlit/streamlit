@@ -31,7 +31,7 @@ outside_container = st.container()
 def fragment_with_outside_widget():
     """Fragment that writes a button to an outside container."""
     outside_container.button("Outside Button", key="outside_btn")
-    st.write(f"Fragment UUID: {uuid4()}")
+    st.write(f"Basic fragment UUID: {uuid4()}")
 
 
 fragment_with_outside_widget()

@@ -31,7 +31,7 @@ def test_widget_in_outside_container_no_duplication(app: Page):
     expect(outside_btn).to_have_count(1)
 
     # Get initial UUIDs
-    fragment_uuid = app.get_by_text("Fragment UUID:").text_content()
+    fragment_uuid = app.get_by_text("Basic fragment UUID:").text_content()
     app_uuid = app.get_by_text("App UUID:").text_content()
 
     # Click the button to trigger fragment rerun
@@ -42,7 +42,7 @@ def test_widget_in_outside_container_no_duplication(app: Page):
     expect(app.get_by_role("button", name="Outside Button")).to_have_count(1)
 
     # Fragment UUID should have changed, app UUID should remain the same
-    expect(app.get_by_text("Fragment UUID:")).not_to_have_text(fragment_uuid)
+    expect(app.get_by_text("Basic fragment UUID:")).not_to_have_text(fragment_uuid)
     expect(app.get_by_text("App UUID:")).to_have_text(app_uuid)
 
     # Click again to verify no accumulation
@@ -120,14 +120,14 @@ def test_nested_container_widget(app: Page):
 def test_full_rerun_clears_fragment_elements(app: Page):
     """Verify that a full rerun properly handles fragment elements in outside containers."""
     # Get initial UUIDs
-    fragment_uuid = app.get_by_text("Fragment UUID:").text_content()
+    fragment_uuid = app.get_by_text("Basic fragment UUID:").text_content()
     app_uuid = app.get_by_text("App UUID:").text_content()
 
     # Trigger full rerun
     click_button(app, "Full Rerun")
 
     # Both UUIDs should change
-    expect(app.get_by_text("Fragment UUID:")).not_to_have_text(fragment_uuid)
+    expect(app.get_by_text("Basic fragment UUID:")).not_to_have_text(fragment_uuid)
     expect(app.get_by_text("App UUID:")).not_to_have_text(app_uuid)
 
     # No element duplication
