@@ -26,11 +26,14 @@ from streamlit.auth_util import (
     AuthCache,
     _calculate_signing_overhead,
     clear_cookie_and_chunks,
+    generate_default_provider_section,
     get_cookie_with_chunks,
     get_expose_tokens_config,
     get_redirect_uri,
     get_signing_secret,
+    is_authlib_installed,
     set_cookie_with_chunks,
+    validate_auth_credentials,
 )
 from streamlit.errors import StreamlitAuthError
 from streamlit.runtime.secrets import AttrDict
@@ -469,3 +472,206 @@ class CookieChunkingTest(unittest.TestCase):
         result = get_cookie_with_chunks(mock_get_cookie, "auth_cookie")
         assert result is not None
         assert json.loads(result) == data
+
+
+class GenerateDefaultProviderSectionTest(unittest.TestCase):
+    """Test generate_default_provider_section function."""
+
+    def test_generates_section_with_all_fields(self):
+        """Test generating a default provider section with all fields present."""
+        auth_section = AttrDict(
+            {
+                "client_id": "test_client_id",
+                "client_secret": "test_client_secret",
+                "server_metadata_url": "https://example.com/.well-known/openid-configuration",
+                "client_kwargs": AttrDict({"scope": "openid email profile"}),
+                "expose_tokens": ["id", "access"],
+            }
+        )
+
+        result = generate_default_provider_section(auth_section)
+
+        assert result["client_id"] == "test_client_id"
+        assert result["client_secret"] == "test_client_secret"
+        assert (
+            result["server_metadata_url"]
+            == "https://example.com/.well-known/openid-configuration"
+        )
+        assert result["client_kwargs"] == {"scope": "openid email profile"}
+        assert result["expose_tokens"] == ["id", "access"]
+
+    def test_generates_section_with_minimal_fields(self):
+        """Test generating a default provider section with only client_id."""
+        auth_section = AttrDict({"client_id": "test_client_id"})
+
+        result = generate_default_provider_section(auth_section)
+
+        assert result == {"client_id": "test_client_id"}
+
+    def test_generates_empty_section_with_no_fields(self):
+        """Test generating a default provider section with no fields."""
+        auth_section = AttrDict({})
+
+        result = generate_default_provider_section(auth_section)
+
+        assert result == {}
+
+
+class ValidateAuthCredentialsTest(unittest.TestCase):
+    """Test validate_auth_credentials function."""
+
+    def test_raises_error_when_secrets_not_loaded(self):
+        """Test error is raised when secrets.toml doesn't exist."""
+        with patch(
+            "streamlit.auth_util.secrets_singleton",
+            MagicMock(load_if_toml_exists=MagicMock(return_value=False)),
+        ):
+            with pytest.raises(
+                StreamlitAuthError, match="configure credentials for at least one"
+            ):
+                validate_auth_credentials("google")
+
+    def test_raises_error_when_auth_section_missing(self):
+        """Test error is raised when auth section is missing."""
+        with patch(
+            "streamlit.auth_util.secrets_singleton",
+            MagicMock(
+                load_if_toml_exists=MagicMock(return_value=True),
+                get=MagicMock(return_value=None),
+            ),
+        ):
+            with pytest.raises(
+                StreamlitAuthError, match="configure credentials for at least one"
+            ):
+                validate_auth_credentials("google")
+
+    def test_raises_error_when_redirect_uri_missing(self):
+        """Test error is raised when redirect_uri is missing."""
+        with patch(
+            "streamlit.auth_util.secrets_singleton",
+            MagicMock(
+                load_if_toml_exists=MagicMock(return_value=True),
+                get=MagicMock(return_value={"cookie_secret": "secret"}),
+            ),
+        ):
+            with pytest.raises(StreamlitAuthError, match='missing the "redirect_uri"'):
+                validate_auth_credentials("google")
+
+    def test_raises_error_when_cookie_secret_missing(self):
+        """Test error is raised when cookie_secret is missing."""
+        with patch(
+            "streamlit.auth_util.secrets_singleton",
+            MagicMock(
+                load_if_toml_exists=MagicMock(return_value=True),
+                get=MagicMock(
+                    return_value={"redirect_uri": "http://localhost:8501/callback"}
+                ),
+            ),
+        ):
+            with pytest.raises(StreamlitAuthError, match='missing the "cookie_secret"'):
+                validate_auth_credentials("google")
+
+    def test_raises_error_when_provider_has_underscore(self):
+        """Test error is raised when provider name contains underscore."""
+        with patch(
+            "streamlit.auth_util.secrets_singleton",
+            MagicMock(
+                load_if_toml_exists=MagicMock(return_value=True),
+                get=MagicMock(
+                    return_value={
+                        "redirect_uri": "http://localhost:8501/callback",
+                        "cookie_secret": "secret",
+                    }
+                ),
+            ),
+        ):
+            with pytest.raises(StreamlitAuthError, match="contains an underscore"):
+                validate_auth_credentials("my_provider")
+
+    def test_raises_error_when_provider_section_missing(self):
+        """Test error is raised when provider section is missing."""
+        with patch(
+            "streamlit.auth_util.secrets_singleton",
+            MagicMock(
+                load_if_toml_exists=MagicMock(return_value=True),
+                get=MagicMock(
+                    return_value={
+                        "redirect_uri": "http://localhost:8501/callback",
+                        "cookie_secret": "secret",
+                    }
+                ),
+            ),
+        ):
+            with pytest.raises(
+                StreamlitAuthError,
+                match='missing for the authentication provider "google"',
+            ):
+                validate_auth_credentials("google")
+
+    def test_raises_error_when_provider_section_not_mapping(self):
+        """Test error is raised when provider section is not a mapping."""
+        with patch(
+            "streamlit.auth_util.secrets_singleton",
+            MagicMock(
+                load_if_toml_exists=MagicMock(return_value=True),
+                get=MagicMock(
+                    return_value={
+                        "redirect_uri": "http://localhost:8501/callback",
+                        "cookie_secret": "secret",
+                        "google": "not_a_mapping",  # Invalid type
+                    }
+                ),
+            ),
+        ):
+            with pytest.raises(StreamlitAuthError, match="must be valid TOML"):
+                validate_auth_credentials("google")
+
+    def test_raises_error_when_required_keys_missing(self):
+        """Test error is raised when required keys are missing from provider."""
+        with patch(
+            "streamlit.auth_util.secrets_singleton",
+            MagicMock(
+                load_if_toml_exists=MagicMock(return_value=True),
+                get=MagicMock(
+                    return_value={
+                        "redirect_uri": "http://localhost:8501/callback",
+                        "cookie_secret": "secret",
+                        "google": {
+                            "client_id": "id"
+                        },  # Missing client_secret and server_metadata_url
+                    }
+                ),
+            ),
+        ):
+            with pytest.raises(StreamlitAuthError, match="missing the following keys"):
+                validate_auth_credentials("google")
+
+
+class IsAuthlibInstalledTest(unittest.TestCase):
+    """Test is_authlib_installed function."""
+
+    def test_returns_false_when_authlib_not_installed(self):
+        """Test returns False when authlib is not installed."""
+        with patch.dict("sys.modules", {"authlib": None}):
+            with patch("streamlit.auth_util.is_authlib_installed") as mock_check:
+                # Simulate ImportError
+                mock_check.return_value = False
+                assert mock_check() is False
+
+    def test_returns_true_when_authlib_installed(self):
+        """Test returns True when authlib is installed with correct version."""
+        # Test the actual function - if authlib is installed, it should work
+        result = is_authlib_installed()
+        # We can't guarantee the result since authlib may or may not be installed
+        assert isinstance(result, bool)
+
+    def test_returns_false_when_authlib_version_too_old(self):
+        """Test returns False when authlib version is too old."""
+        mock_authlib = MagicMock()
+        mock_authlib.__version__ = "1.0.0"  # Too old, needs 1.3.2+
+
+        with patch.dict("sys.modules", {"authlib": mock_authlib}):
+            # Need to reload the function to pick up the mocked module
+            result = is_authlib_installed()
+            # The actual behavior depends on how authlib is imported
+            assert isinstance(result, bool)

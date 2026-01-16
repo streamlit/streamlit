@@ -337,3 +337,86 @@ class TestSnowflakeCallersRightsConnection:
             mock_connector.connect.assert_called_once_with(
                 account="account_override", token="its_a_token", some_kwarg="some_value"
             )
+
+
+@pytest.mark.require_integration
+class SnowflakeConnectionSessionTest(unittest.TestCase):
+    """Test SnowflakeConnection.session() method."""
+
+    def tearDown(self) -> None:
+        st.cache_data.clear()
+
+    @patch(
+        "streamlit.connections.snowflake_connection.SnowflakeConnection._connect",
+        MagicMock(),
+    )
+    @patch("snowflake.snowpark.Session.builder", MagicMock())
+    def test_session_creates_snowpark_session(self):
+        """Test that session() creates a Snowpark session."""
+        from snowflake.snowpark import Session as SnowparkSession
+
+        mock_session = MagicMock(spec=SnowparkSession)
+        with patch("snowflake.snowpark.Session.builder.configs") as mock_configs:
+            mock_configs.return_value.create.return_value = mock_session
+
+            conn = SnowflakeConnection("my_snowflake_connection")
+            result = conn.session()
+
+            # Verify session was created
+            mock_configs.return_value.create.assert_called_once()
+            assert result == mock_session
+
+
+@pytest.mark.require_integration
+class SnowflakeConnectionWritePandasTest(unittest.TestCase):
+    """Test SnowflakeConnection.write_pandas() method."""
+
+    def tearDown(self) -> None:
+        st.cache_data.clear()
+
+    @patch(
+        "streamlit.connections.snowflake_connection.SnowflakeConnection._connect",
+        MagicMock(),
+    )
+    def test_write_pandas_calls_snowflake_write_pandas(self):
+        """Test that write_pandas() calls the Snowflake write_pandas function."""
+        import pandas as pd
+
+        df = pd.DataFrame({"col1": [1, 2, 3], "col2": ["a", "b", "c"]})
+
+        with patch(
+            "snowflake.connector.pandas_tools.write_pandas"
+        ) as mock_write_pandas:
+            mock_write_pandas.return_value = (True, 3, 3, [])
+
+            conn = SnowflakeConnection("my_snowflake_connection")
+            conn.write_pandas(df, "test_table")
+
+            # Verify write_pandas was called with correct args
+            mock_write_pandas.assert_called_once()
+            call_args = mock_write_pandas.call_args
+            assert call_args[0][0] == conn._instance  # Connection
+            # DataFrame is modified during the call, so we just check it was passed
+
+
+@pytest.mark.require_integration
+class SnowflakeConnectionCloseTest(unittest.TestCase):
+    """Test SnowflakeConnection.close() method."""
+
+    def tearDown(self) -> None:
+        st.cache_data.clear()
+
+    @patch(
+        "streamlit.connections.snowflake_connection.SnowflakeConnection._connect",
+        MagicMock(),
+    )
+    def test_close_closes_connection(self):
+        """Test that close() closes the underlying connection."""
+        conn = SnowflakeConnection("my_snowflake_connection")
+        mock_instance = conn._instance
+
+        # Reset the connection
+        conn.reset()
+
+        # Verify close was called on the old instance
+        mock_instance.close.assert_called_once()
