@@ -625,8 +625,6 @@ def test_dynamic_min_value_resets_value_when_below_new_min():
     at = at.run()
     # Now min_value=June 1, so March 1 is invalid and should reset to default (July 15)
     assert at.date_input[0].value == date(2024, 7, 15)
-    # Anti-regression: ensure it didn't keep the old invalid value
-    assert at.date_input[0].value != date(2024, 3, 1)
 
 
 def test_dynamic_max_value_resets_value_when_above_new_max():

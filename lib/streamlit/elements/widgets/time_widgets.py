@@ -501,10 +501,10 @@ def _validate_date_value(
         original value (if valid) or the default value (if reset was needed), and
         was_reset indicates whether a reset occurred.
     """
-    if current_value is None or not has_explicit_bounds:
-        return current_value, False
-
     value_needs_reset = False
+
+    if current_value is None or not has_explicit_bounds:
+        return current_value, value_needs_reset
 
     # For range inputs, current_value is a tuple; for single inputs, it's a date
     if (
@@ -529,7 +529,7 @@ def _validate_date_value(
         value_needs_reset = True
 
     if not value_needs_reset:
-        return current_value, False
+        return current_value, value_needs_reset
 
     # Reset to the default value from parsed_values
     if parsed_values.value is None or len(parsed_values.value) == 0:
