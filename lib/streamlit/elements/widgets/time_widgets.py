@@ -544,10 +544,10 @@ def _validate_datetime_value(
     parsed_values: _DateTimeInputValues,
     has_explicit_bounds: bool,
 ) -> tuple[datetime | None, bool]:
-    """Validate current datetime value against min/max bounds and reset if needed.
+    """Validate current datetime value against min/max bounds and determine if reset is needed.
 
     Only validates when has_explicit_bounds is True (user provided min_value or max_value).
-    This avoids incorrectly resetting values against computed default bounds.
+    This avoids incorrectly determining if reset is needed against computed default bounds.
 
     Parameters
     ----------
@@ -578,7 +578,7 @@ def _validate_datetime_value(
     if not value_needs_reset:
         return current_value, value_needs_reset
 
-    # Reset to the default value from parsed_values
+    # Needs reset to the default value from parsed_values
     return parsed_values.value, True
 
 
@@ -1175,9 +1175,9 @@ class TimeWidgetsMixin:
         element_id = compute_and_register_element_id(
             "date_time_input",
             user_key=key,
-            # Ensure stable ID when key is provided. Only format and step are whitelisted
-            # because they affect the selectable options and display format.
-            # min_value and max_value support dynamic changes.
+            # Format is whitelisted because of a bug in the BaseWeb date input component.
+            # Step is whitelisted because it invalidates the current selection.
+            # We might be able to unlock this as a follow-up.
             key_as_main_identity={"format", "step"},
             dg=self.dg,
             label=label,
@@ -1260,7 +1260,6 @@ class TimeWidgetsMixin:
             widget_state.value, datetime_values, has_explicit_bounds
         )
 
-        # Reset if needed.
         if value_needs_reset and key is not None:
             # Update session_state so subsequent accesses in this run
             # return the corrected value. Use reset_state_value to avoid
