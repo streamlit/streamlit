@@ -120,31 +120,31 @@ extend-safe-fixes = ["TC002", "TC003"]
 # Only add ignores for entire folders here. To ignore rules in individual
 # files, use the noqa ignore comment on top of the given file.
 "e2e_playwright/**" = [
-  "T20",
-  "B018",
-  "PD",
-  "PERF",
-  "N999",
-  "S",
-  "TRY",
-  "NPY002",
+  "B018",   # Allow useless expressions (e.g., for side effects in tests).
+  "N999",   # Allow invalid module names (test files use descriptive names).
+  "NPY002", # Allow legacy numpy random generation.
+  "PD",     # Ignore pandas-vet rules (test data manipulation patterns).
+  "PERF",   # Ignore performance rules (clarity over speed in tests).
   "RUF029", # Allow async functions without await (intentional for testing async behavior).
+  "S",      # Ignore bandit security rules (test code doesn't need security hardening).
+  "T20",    # Allow print statements (useful for test debugging).
+  "TRY",    # Ignore tryceratops rules (simpler exception handling in tests).
 ]
 "lib/tests/**" = [
-  "PD",
-  "D",
-  "INP",
-  "PERF",
-  "N",
-  "ARG",
-  "S",
-  "TRY",
-  "ANN",
-  "NPY002",
-  "FURB118", # Allow all operators.
+  "ANN",     # Ignore annotation rules (test functions don't need full typing).
+  "ARG",     # Allow unused arguments (common in test fixtures and mocks).
+  "D",       # Ignore docstring rules (tests are self-documenting via names).
+  "FURB118", # Allow all operators (tests may use operator module intentionally).
+  "FURB189", # Allow subclassing of builtin types (for test mocking).
+  "INP",     # Allow implicit namespace packages (test directories).
+  "N",       # Ignore naming conventions (test names can be descriptive/long).
+  "NPY002",  # Allow legacy numpy random generation.
+  "PD",      # Ignore pandas-vet rules (test data manipulation patterns).
+  "PERF",    # Ignore performance rules (clarity over speed in tests).
+  "PLC2801", # Allow dunder calls (e.g., object.__setattr__ for frozen dataclasses).
   "RUF029",  # Allow async functions without await (test fixtures, mocks, ASGI callables).
-  "PLC2801", # Allow dunder calls for frozen dataclass testing.
-  "FURB189", # Allow subclassing of builtin types.
+  "S",       # Ignore bandit security rules (test code doesn't need security hardening).
+  "TRY",     # Ignore tryceratops rules (simpler exception handling in tests).
 ]
 "scripts/**" = ["T20", "INP", "PERF", "S", "TRY002"]
 
