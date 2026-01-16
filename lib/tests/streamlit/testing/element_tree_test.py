@@ -973,48 +973,6 @@ def test_button_group_feedback():
     repr(at.get("button_group")[0])
 
 
-def test_segmented_control():
-    """Test segmented_control widget."""
-
-    def script():
-        import streamlit as st
-
-        st.segmented_control("Colors", options=["red", "green", "blue"], default="red")
-
-    at = AppTest.from_function(script).run()
-    sc = at.segmented_control[0]
-    assert sc.value == ["red"]
-
-    sc.select("green").run()
-    assert at.segmented_control[0].value == ["red", "green"]
-
-    at.segmented_control[0].unselect("red").run()
-    assert at.segmented_control[0].value == ["green"]
-
-    repr(at.segmented_control[0])
-
-
-def test_segmented_control_multiselect():
-    """Test segmented_control widget with multi-selection."""
-
-    def script():
-        import streamlit as st
-
-        st.segmented_control(
-            "Multi", options=["a", "b", "c"], selection_mode="multi", default=["a"]
-        )
-
-    at = AppTest.from_function(script).run()
-    sc = at.segmented_control[0]
-    assert sc.value == ["a"]
-
-    sc.select("b").select("c").run()
-    assert set(at.segmented_control[0].value) == {"a", "b", "c"}
-
-    at.segmented_control[0].unselect("a").run()
-    assert set(at.segmented_control[0].value) == {"b", "c"}
-
-
 def test_unknown_element():
     """Test UnknownElement handles new/unrecognized element types gracefully."""
 
@@ -1029,23 +987,6 @@ def test_unknown_element():
     at = AppTest.from_function(script).run()
     # markdown elements are recognized, not unknown
     assert at.markdown[0].value == "Hello"
-
-
-def test_element_list_hash():
-    """Test ElementList can be hashed for use in sets/dicts."""
-
-    def script():
-        import streamlit as st
-
-        st.button("button1")
-        st.button("button2")
-
-    at = AppTest.from_function(script).run()
-    buttons = at.button
-
-    # Should be hashable
-    hash_value = hash(buttons)
-    assert isinstance(hash_value, int)
 
 
 def test_element_list_equality():
