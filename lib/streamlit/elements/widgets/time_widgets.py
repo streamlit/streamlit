@@ -1173,19 +1173,27 @@ class TimeWidgetsMixin:
             query_param_key=query_param_key,
         )
 
+        # For query param binding, clamp out-of-bounds values silently
+        # (users shouldn't see errors for URL-provided values)
+        # Note: We only add clamping for query params - original datetime_input had
+        # no bounds validation after widget registration.
+        if (
+            query_param_key is not None
+            and widget_state.value_changed
+            and widget_state.value is not None
+        ):
+            is_below_min = widget_state.value < datetime_values.min
+            is_above_max = widget_state.value > datetime_values.max
+
+            if is_below_min or is_above_max:
+                clamped_value = (
+                    datetime_values.min if is_below_min else datetime_values.max
+                )
+                widget_state = widget_state._replace(value=clamped_value)
+                if key is not None:
+                    get_session_state().reset_state_value(key, clamped_value)
+
         if widget_state.value_changed:
-            # Validate min/max bounds for the updated value (e.g., from URL params)
-            if widget_state.value is not None:
-                if widget_state.value < datetime_values.min:
-                    raise StreamlitAPIException(
-                        f"The value `{widget_state.value}` is less than the `min_value` "
-                        f"of `{datetime_values.min}`."
-                    )
-                if widget_state.value > datetime_values.max:
-                    raise StreamlitAPIException(
-                        f"The value `{widget_state.value}` is greater than the `max_value` "
-                        f"of `{datetime_values.max}`."
-                    )
             date_time_input_proto.value[:] = serde.serialize(widget_state.value)
             date_time_input_proto.set_value = True
 
@@ -1632,26 +1640,36 @@ class TimeWidgetsMixin:
             query_param_key=query_param_key,
         )
 
-        # Always validate min/max bounds for URL-provided values
-        # (widget_state.value may differ from the original value parameter)
-        if widget_state.value:
-            # widget_state.value can be a single date or a tuple of dates
+        # For query param binding, clamp out-of-bounds values silently
+        # (users shouldn't see errors for URL-provided values)
+        # Note: We only add clamping for query params - original date_input had
+        # no bounds validation after widget registration.
+        if query_param_key is not None and widget_state.value:
+            # widget_state.value can be a single date, tuple of dates, or list of dates
+            is_sequence = isinstance(widget_state.value, (tuple, list))
             values_to_check = (
-                widget_state.value
-                if isinstance(widget_state.value, tuple)
-                else (widget_state.value,)
+                widget_state.value if is_sequence else (widget_state.value,)
             )
+
+            clamped_values = []
+            needs_clamping = False
             for date_val in values_to_check:
+                clamped_val = date_val
                 if date_val < parsed_values.min:
-                    raise StreamlitAPIException(
-                        f"The value `{date_val}` is less than the `min_value` "
-                        f"of `{parsed_values.min}`."
-                    )
-                if date_val > parsed_values.max:
-                    raise StreamlitAPIException(
-                        f"The value `{date_val}` is greater than the `max_value` "
-                        f"of `{parsed_values.max}`."
-                    )
+                    clamped_val = parsed_values.min
+                    needs_clamping = True
+                elif date_val > parsed_values.max:
+                    clamped_val = parsed_values.max
+                    needs_clamping = True
+                clamped_values.append(clamped_val)
+
+            # Update widget_state with clamped values if needed
+            # and update session state so it's consistent
+            if needs_clamping:
+                new_value = tuple(clamped_values) if is_sequence else clamped_values[0]
+                widget_state = widget_state._replace(value=new_value)
+                if key is not None:
+                    get_session_state().reset_state_value(key, new_value)
 
         if widget_state.value_changed:
             date_input_proto.value[:] = serde.serialize(widget_state.value)

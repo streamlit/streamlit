@@ -1018,23 +1018,53 @@ class SliderMixin:
             query_param_key=query_param_key,
         )
 
-        if widget_state.value_changed:
-            # Min/Max bounds checks when the value is updated.
-            serialized_values = serde.serialize(widget_state.value)
-            for serialized_value in serialized_values:
-                # Use the deserialized values for more readable error messages for dates/times
-                deserialized_value = serde.deserialize_single_value(serialized_value)
+        return_value = widget_state.value
 
-                if serialized_value < slider_proto.min:
-                    raise StreamlitValueBelowMinError(
-                        value=deserialized_value,
-                        min_value=serde.deserialize_single_value(slider_proto.min),
+        if widget_state.value_changed:
+            serialized_values = serde.serialize(widget_state.value)
+
+            # For query param binding, clamp out-of-bounds values silently
+            # (users shouldn't see errors for URL-provided values)
+            # For other cases, raise errors so developers catch bugs
+            if query_param_key is not None:
+                clamped_values = []
+                needs_clamping = False
+
+                for serialized_value in serialized_values:
+                    clamped_value = serialized_value
+                    if serialized_value < slider_proto.min:
+                        clamped_value = slider_proto.min
+                        needs_clamping = True
+                    elif serialized_value > slider_proto.max:
+                        clamped_value = slider_proto.max
+                        needs_clamping = True
+                    clamped_values.append(clamped_value)
+
+                # If we clamped, deserialize the clamped values for the return
+                # and update session state so it's consistent
+                if needs_clamping:
+                    return_value = serde.deserialize(clamped_values)
+                    if key is not None:
+                        get_session_state().reset_state_value(key, return_value)
+
+                serialized_values = clamped_values
+            else:
+                # Original bounds checking with errors for non-query-param cases
+                for serialized_value in serialized_values:
+                    deserialized_value = serde.deserialize_single_value(
+                        serialized_value
                     )
-                if serialized_value > slider_proto.max:
-                    raise StreamlitValueAboveMaxError(
-                        value=deserialized_value,
-                        max_value=serde.deserialize_single_value(slider_proto.max),
-                    )
+
+                    if serialized_value < slider_proto.min:
+                        raise StreamlitValueBelowMinError(
+                            value=deserialized_value,
+                            min_value=serde.deserialize_single_value(slider_proto.min),
+                        )
+                    if serialized_value > slider_proto.max:
+                        raise StreamlitValueAboveMaxError(
+                            value=deserialized_value,
+                            max_value=serde.deserialize_single_value(slider_proto.max),
+                        )
 
             slider_proto.value[:] = serialized_values
             slider_proto.set_value = True
@@ -1043,7 +1073,7 @@ class SliderMixin:
         layout_config = LayoutConfig(width=width)
 
         self.dg._enqueue("slider", slider_proto, layout_config=layout_config)
-        return cast("SliderReturn", widget_state.value)
+        return cast("SliderReturn", return_value)
 
     @property
     def dg(self) -> DeltaGenerator:

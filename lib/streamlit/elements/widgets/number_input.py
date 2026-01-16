@@ -649,20 +649,34 @@ class NumberInputMixin:
         )
 
         # Validate the current value against the new min/max bounds.
-        # If the value is no longer valid (outside bounds), reset to default.
         # This handles the case where min_value/max_value change dynamically and the
         # previously entered value is no longer within bounds.
         current_value = widget_state.value
-        value_needs_reset = False
+        value_needs_correction = False
 
         # Check if the current value is outside the new bounds.
         if current_value is not None and (
             (number_input_proto.has_min and current_value < number_input_proto.min)
             or (number_input_proto.has_max and current_value > number_input_proto.max)
         ):
-            # Value is outside new bounds - reset to default.
-            value_needs_reset = True
-            current_value = value
+            value_needs_correction = True
+
+            # For query param binding, clamp to nearest bound silently
+            # (users shouldn't see errors for URL-provided values)
+            if query_param_key is not None:
+                if (
+                    number_input_proto.has_min
+                    and current_value < number_input_proto.min
+                ):
+                    current_value = number_input_proto.min
+                elif (
+                    number_input_proto.has_max
+                    and current_value > number_input_proto.max
+                ):
+                    current_value = number_input_proto.max
+            else:
+                # For other cases, reset to default value
+                current_value = value
 
             # Update session_state so subsequent accesses in this run
             # return the corrected value. Use reset_state_value to avoid
@@ -670,7 +684,7 @@ class NumberInputMixin:
             if key is not None:
                 get_session_state().reset_state_value(key, current_value)
 
-        if value_needs_reset or widget_state.value_changed:
+        if value_needs_correction or widget_state.value_changed:
             if current_value is not None:
                 number_input_proto.value = current_value
             number_input_proto.set_value = True
