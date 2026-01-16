@@ -203,15 +203,20 @@ if st.toggle("Update pills props"):
         key="dynamic_pills_with_key",
         help="updated help",
         width=300,
-        default="banana",
+        default="papaya",
         on_change=lambda a, param: print(
             f"Updated pills - callback triggered: {a} {param}"
         ),
         args=("Updated pills arg",),
         kwargs={"param": "updated kwarg param"},
-        # Whitelisted args:
-        options=["apple", "banana", "orange"],
+        options=["mango", "papaya", "grape", "apple"],
+        # Whitelisted args (can change without resetting widget):
         selection_mode="single",
+        # Changing format_func is allowed, but selection is based on the
+        # formatted string labels. If the formatted label changes (e.g.,
+        # "Apple" vs "APPLE"), previously selected options may become
+        # unselected. This is something we might be able to improve with
+        # additional refactorings.
         format_func=lambda x: x.capitalize(),
     )
     st.write("Updated pills value:", dyn_val)
@@ -227,8 +232,8 @@ else:
         ),
         args=("Initial pills arg",),
         kwargs={"param": "initial kwarg param"},
-        # Whitelisted args:
-        options=["apple", "banana", "orange"],
+        options=["apple", "banana", "mango", "orange"],
+        # Whitelisted args (can change without resetting widget):
         selection_mode="single",
         format_func=lambda x: x.capitalize(),
     )

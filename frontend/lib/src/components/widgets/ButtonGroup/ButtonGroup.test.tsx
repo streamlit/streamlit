@@ -160,12 +160,13 @@ describe("ButtonGroup widget", () => {
 
   it("sets widget value on mount", () => {
     const props = getProps()
-    vi.spyOn(props.widgetMgr, "setIntArrayValue")
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
 
     render(<ButtonGroup {...props} />)
-    expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledWith(
+    // For borderless (feedback) style, values are indices as strings
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
       props.element,
-      props.element.default,
+      [String(defaultSelectedIndex)],
       {
         fromUi: false,
       },
@@ -187,49 +188,50 @@ describe("ButtonGroup widget", () => {
     it("onClick prop for single select", async () => {
       const user = userEvent.setup()
       const props = getProps()
-      vi.spyOn(props.widgetMgr, "setIntArrayValue")
+      vi.spyOn(props.widgetMgr, "setStringArrayValue")
 
       render(<ButtonGroup {...props} />)
 
       const buttons = getButtonGroupButtons()
       expect(buttons).toHaveLength(EXPECTED_BUTTONS_LENGTH)
-      expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledWith(
+      // For borderless (feedback) style, values are indices as strings
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
         props.element,
-        props.element.default,
+        [String(defaultSelectedIndex)],
         { fromUi: false },
         undefined
       )
-      expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledTimes(1)
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledTimes(1)
 
       // click element at index 1 to select it
       await user.click(buttons[1])
-      expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledWith(
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
         props.element,
-        [1],
+        ["1"],
         { fromUi: true },
         undefined
       )
-      expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledTimes(2)
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledTimes(2)
 
       // click element at index 0 to select it
       await user.click(getButtonGroupButtons()[0])
-      expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledWith(
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
         props.element,
-        [0],
+        ["0"],
         { fromUi: true },
         undefined
       )
-      expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledTimes(3)
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledTimes(3)
 
       // click on same button does deselect it
       await user.click(getButtonGroupButtons()[0])
-      expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledWith(
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
         props.element,
         [],
         { fromUi: true },
         undefined
       )
-      expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledTimes(4)
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledTimes(4)
     })
 
     it("onClick prop for multi select", async () => {
@@ -237,39 +239,40 @@ describe("ButtonGroup widget", () => {
       const props = getProps({
         clickMode: ButtonGroupProto.ClickMode.MULTI_SELECT,
       })
-      vi.spyOn(props.widgetMgr, "setIntArrayValue")
+      vi.spyOn(props.widgetMgr, "setStringArrayValue")
       render(<ButtonGroup {...props} />)
 
       const buttons = getButtonGroupButtons()
-      expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledWith(
+      // For borderless (feedback) style, values are indices as strings
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
         props.element,
-        props.element.default,
+        [String(defaultSelectedIndex)],
         { fromUi: false },
         undefined
       )
 
       await user.click(buttons[1])
-      expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledWith(
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
         props.element,
         // the 2 is default value
-        [2, 1],
+        ["2", "1"],
         { fromUi: true },
         undefined
       )
 
       await user.click(getButtonGroupButtons()[0])
-      expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledWith(
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
         props.element,
-        [2, 1, 0],
+        ["2", "1", "0"],
         { fromUi: true },
         undefined
       )
 
       // unselect the second button
       await user.click(getButtonGroupButtons()[1])
-      expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledWith(
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
         props.element,
-        [2, 0],
+        ["2", "0"],
         { fromUi: true },
         undefined
       )
@@ -283,21 +286,22 @@ describe("ButtonGroup widget", () => {
           fragmentId: "myFragmentId",
         }
       )
-      vi.spyOn(props.widgetMgr, "setIntArrayValue")
+      vi.spyOn(props.widgetMgr, "setStringArrayValue")
       render(<ButtonGroup {...props} />)
 
-      expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledWith(
+      // For borderless (feedback) style, values are indices as strings
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
         props.element,
-        props.element.default,
+        [String(defaultSelectedIndex)],
         { fromUi: false },
         "myFragmentId"
       )
 
       const button = getButtonGroupButtons()[0]
       await user.click(button)
-      expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledWith(
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
         props.element,
-        [0],
+        ["0"],
         { fromUi: true },
         "myFragmentId"
       )
@@ -316,17 +320,18 @@ describe("ButtonGroup widget", () => {
     })
 
     it("sets widget value on update", () => {
-      const props = getProps({ value: [3], setValue: true })
-      vi.spyOn(props.widgetMgr, "setIntArrayValue")
+      const props = getProps({ rawValues: ["3"], setValue: true })
+      vi.spyOn(props.widgetMgr, "setStringArrayValue")
 
       render(<ButtonGroup {...props} />)
       const buttons = getButtonGroupButtons()
       expectHighlightStyle(buttons[3])
       expectHighlightStyle(buttons[defaultSelectedIndex], false)
 
-      expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledWith(
+      // For borderless (feedback) style, values are indices as strings
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
         props.element,
-        props.element.default,
+        [String(defaultSelectedIndex)],
         {
           fromUi: false,
         },
@@ -531,7 +536,7 @@ describe("ButtonGroup widget", () => {
     })
     props.widgetMgr.setFormSubmitBehaviors("form", true)
 
-    vi.spyOn(props.widgetMgr, "setIntArrayValue")
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
 
     render(<ButtonGroup {...props} />)
 
@@ -554,9 +559,10 @@ describe("ButtonGroup widget", () => {
     expectHighlightStyle(buttons[0], false)
     expectHighlightStyle(buttons[1], false)
     expectHighlightStyle(buttons[2])
-    expect(props.widgetMgr.setIntArrayValue).toHaveBeenLastCalledWith(
+    // For borderless (feedback) style, values are indices as strings
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenLastCalledWith(
       props.element,
-      props.element.default,
+      [String(defaultSelectedIndex)],
       { fromUi: true },
       undefined
     )

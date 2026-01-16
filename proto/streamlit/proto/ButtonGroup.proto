@@ -45,8 +45,11 @@ message ButtonGroup {
   ClickMode click_mode = 5;
   string form_id = 6;
 
-  // value passed by the backend
-  repeated uint32 value = 7;
+  // value passed by the backend (DEPRECATED: use raw_values instead)
+  repeated uint32 value = 7 [deprecated = true];
+  // String-based values for dynamic options support (replaces index-based value field)
+  repeated string raw_values = 14;
+
   bool set_value = 8;
 
   enum SelectionVisualization {
@@ -66,5 +69,6 @@ message ButtonGroup {
   LabelVisibilityMessage label_visibility = 12;
   optional string help = 13;
 
-  // next id: 14
+
+  // next id: 15
 }

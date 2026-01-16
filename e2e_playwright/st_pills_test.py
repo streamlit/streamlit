@@ -254,11 +254,17 @@ def test_pills_width_examples(app: Page, assert_snapshot: ImageCompareFunction):
 
 
 def test_dynamic_pills_props(app: Page, assert_snapshot: ImageCompareFunction):
-    """Test that the pills can be updated dynamically while keeping the state."""
+    """Test that pills can be updated dynamically.
+
+    Options can be changed dynamically when a key is provided.
+    When using dynamic options with a key:
+    - The selection is preserved only if the formatted value exists in the new options.
+    - When the selected value is removed from options, it resets to the new default.
+    """
     dynamic_pills = get_element_by_key(app, "dynamic_pills_with_key")
     expect(dynamic_pills).to_be_visible()
 
-    # Initial state
+    # Initial state: options are [apple, banana, mango, orange], default is apple
     expect(dynamic_pills).to_contain_text("Initial dynamic pills")
     assert_snapshot(dynamic_pills, name="st_pills-dynamic_initial")
     expect_prefixed_markdown(app, "Initial pills value:", "apple")
@@ -266,20 +272,18 @@ def test_dynamic_pills_props(app: Page, assert_snapshot: ImageCompareFunction):
     # Check that the help tooltip is correct:
     expect_help_tooltip(app, dynamic_pills, "initial help")
 
-    # Click a selection and submit
-    get_pill_button(dynamic_pills, "banana").click()
+    # Select "banana" which only exists in initial options
+    get_pill_button(dynamic_pills, "Banana").click()
     wait_for_app_run(app)
-
     expect_prefixed_markdown(app, "Initial pills value:", "banana")
 
-    # Click the toggle to update the pills props
+    # Toggle to update options to [mango, papaya, grape, apple], default is papaya
+    # Since "banana" doesn't exist in new options, it should reset to default "papaya"
     click_toggle(app, "Update pills props")
 
-    # new pills is visible:
     expect(dynamic_pills).to_contain_text("Updated dynamic pills")
-
-    # Ensure the previously entered value remains visible
-    expect_prefixed_markdown(app, "Updated pills value:", "banana")
+    # "banana" was removed, so selection resets to new default "papaya"
+    expect_prefixed_markdown(app, "Updated pills value:", "papaya")
 
     dynamic_pills.scroll_into_view_if_needed()
     assert_snapshot(dynamic_pills, name="st_pills-dynamic_updated")
@@ -287,7 +291,13 @@ def test_dynamic_pills_props(app: Page, assert_snapshot: ImageCompareFunction):
     # Check that the help tooltip is correct:
     expect_help_tooltip(app, dynamic_pills, "updated help")
 
-    # Click a different value
-    get_pill_button(dynamic_pills, "orange").click()
+    # Now select "mango" which exists in both option sets
+    get_pill_button(dynamic_pills, "Mango").click()
     wait_for_app_run(app)
-    expect_prefixed_markdown(app, "Updated pills value:", "orange")
+    expect_prefixed_markdown(app, "Updated pills value:", "mango")
+
+    # Toggle back to initial options - "mango" should be preserved
+    click_toggle(app, "Update pills props")
+    expect(dynamic_pills).to_contain_text("Initial dynamic pills")
+    # "mango" exists in both sets, so selection is preserved
+    expect_prefixed_markdown(app, "Initial pills value:", "mango")

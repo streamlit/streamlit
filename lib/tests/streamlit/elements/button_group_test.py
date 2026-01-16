@@ -31,10 +31,10 @@ from streamlit.elements.widgets.button_group import (
     _STAR_ICON,
     _THUMB_ICONS,
     ButtonGroupMixin,
-    ButtonGroupSerde,
+    ButtonGroupSerdeString,
     SelectionMode,
-    _MultiSelectSerde,
-    _SingleSelectSerde,
+    _MultiSelectSerdeString,
+    _SingleSelectSerdeString,
     get_mapped_options,
 )
 from streamlit.errors import StreamlitAPIException
@@ -92,127 +92,186 @@ class TestGetMappedOptions:
             assert options_indices[index] == index
 
 
-class TestSingleSelectSerde:
+class TestSingleSelectSerdeString:
+    """Tests for the string-based single-select serde."""
+
+    def _make_serde(
+        self,
+        options: list[int],
+        default_values: list[int] | None = None,
+    ) -> _SingleSelectSerdeString[int]:
+        """Helper to create a serde with formatted options."""
+        formatted_options = [str(opt) for opt in options]
+        formatted_option_to_option_index = {
+            fmt: i for i, fmt in enumerate(formatted_options)
+        }
+        return _SingleSelectSerdeString(
+            options=options,
+            formatted_options=formatted_options,
+            formatted_option_to_option_index=formatted_option_to_option_index,
+            default_values=default_values or [],
+        )
+
     def test_serialize(self):
-        option_indices = [5, 6, 7]
-        serde = _SingleSelectSerde[int](option_indices)
+        """Test serializing a single value to a string list."""
+        options = [5, 6, 7]
+        serde = self._make_serde(options)
         res = serde.serialize(6)
-        assert res == [1]
+        assert res == ["6"]
 
-    def test_serialize_raise_option_does_not_exist(self):
-        option_indices = [5, 6, 7]
-        serde = _SingleSelectSerde[int](option_indices)
-
-        with pytest.raises(StreamlitAPIException):
-            serde.serialize(8)
+    def test_serialize_none(self):
+        """Test serializing None returns empty list."""
+        options = [5, 6, 7]
+        serde = self._make_serde(options)
+        res = serde.serialize(None)
+        assert res == []
 
     def test_deserialize(self):
-        option_indices = [5, 6, 7]
-        serde = _SingleSelectSerde[int](option_indices)
-        res = serde.deserialize([1])
+        """Test deserializing a string list to a single value."""
+        options = [5, 6, 7]
+        serde = self._make_serde(options)
+        res = serde.deserialize(["6"])
         assert res == 6
 
     def test_deserialize_with_default_value(self):
-        option_indices = [5, 6, 7]
-        serde = _SingleSelectSerde[int](option_indices, default_value=[2])
+        """Test deserializing None returns the default value."""
+        options = [5, 6, 7]
+        serde = self._make_serde(options, default_values=[2])
         res = serde.deserialize(None)
         assert res == 7
 
-    def test_deserialize_raise_indexerror(self):
-        option_indices = [5, 6, 7]
-        serde = _SingleSelectSerde[int](option_indices)
+    def test_deserialize_invalid_value_returns_none(self):
+        """Test deserializing an invalid value returns None."""
+        options = [5, 6, 7]
+        serde = self._make_serde(options)
+        res = serde.deserialize(["999"])
+        assert res is None
 
-        with pytest.raises(IndexError):
-            serde.deserialize([3])
 
+class TestMultiSelectSerdeString:
+    """Tests for the string-based multi-select serde."""
 
-class TestMultiSelectSerde:
+    def _make_serde(
+        self,
+        options: list[int],
+        default_values: list[int] | None = None,
+    ) -> _MultiSelectSerdeString[int]:
+        """Helper to create a serde with formatted options."""
+        formatted_options = [str(opt) for opt in options]
+        formatted_option_to_option_index = {
+            fmt: i for i, fmt in enumerate(formatted_options)
+        }
+        return _MultiSelectSerdeString(
+            options=options,
+            formatted_options=formatted_options,
+            formatted_option_to_option_index=formatted_option_to_option_index,
+            default_values=default_values or [],
+        )
+
     def test_serialize(self):
-        option_indices = [5, 6, 7]
-        serde = _MultiSelectSerde[int](option_indices)
+        """Test serializing multiple values to string list."""
+        options = [5, 6, 7]
+        serde = self._make_serde(options)
         res = serde.serialize([5, 7])
-        assert res == [0, 2]
+        assert res == ["5", "7"]
 
     def test_serialize_empty_list(self):
-        option_indices = [5, 6, 7]
-        serde = _MultiSelectSerde[int](option_indices)
+        """Test serializing empty list returns empty list."""
+        options = [5, 6, 7]
+        serde = self._make_serde(options)
         res = serde.serialize([])
         assert res == []
 
-    def test_serialize_raise_option_does_not_exist(self):
-        option_indices = [5, 6, 7]
-        serde = _MultiSelectSerde[int](option_indices)
-
-        with pytest.raises(StreamlitAPIException):
-            serde.serialize([5, 8])
-
     def test_deserialize(self):
-        option_indices = [5, 6, 7]
-        serde = _MultiSelectSerde[int](option_indices)
-        res = serde.deserialize([0, 2])
+        """Test deserializing string list to values."""
+        options = [5, 6, 7]
+        serde = self._make_serde(options)
+        res = serde.deserialize(["5", "7"])
         assert res == [5, 7]
 
     def test_deserialize_empty_list(self):
-        option_indices = [5, 6, 7]
-        serde = _MultiSelectSerde[int](option_indices)
+        """Test deserializing empty list returns empty list."""
+        options = [5, 6, 7]
+        serde = self._make_serde(options)
         res = serde.deserialize([])
         assert res == []
 
     def test_deserialize_with_default_value(self):
-        option_indices = [5, 6, 7]
-        serde = _MultiSelectSerde[int](option_indices, default_value=[0, 2])
+        """Test deserializing None returns default values."""
+        options = [5, 6, 7]
+        serde = self._make_serde(options, default_values=[0, 2])
         res = serde.deserialize(None)
         assert res == [5, 7]
 
-    def test_deserialize_raise_indexerror(self):
-        option_indices = [5, 6, 7]
-        serde = _MultiSelectSerde[int](option_indices)
+    def test_deserialize_invalid_value_skipped(self):
+        """Test deserializing filters out invalid values."""
+        options = [5, 6, 7]
+        serde = self._make_serde(options)
+        res = serde.deserialize(["5", "999", "7"])
+        assert res == [5, 7]
 
-        with pytest.raises(IndexError):
-            serde.deserialize([3])
 
+class TestButtonGroupSerdeString:
+    """Tests for the unified string-based serde."""
 
-class TestSingleOrMultiSelectSerde:
-    @parameterized.expand([("single",), ("multi",)])
-    def test_serialize(self, selection_mode: SelectionMode):
-        option_indices = [5, 6, 7]
-        serde = ButtonGroupSerde[int](option_indices, [], selection_mode)
-        res = serde.serialize(6)
-        assert res == [1]
+    def _make_serde(
+        self,
+        options: list[int],
+        default_values: list[int],
+        selection_mode: SelectionMode,
+    ) -> ButtonGroupSerdeString[int]:
+        """Helper to create a serde with formatted options."""
+        formatted_options = [str(opt) for opt in options]
+        formatted_option_to_option_index = {
+            fmt: i for i, fmt in enumerate(formatted_options)
+        }
+        return ButtonGroupSerdeString(
+            options=options,
+            formatted_options=formatted_options,
+            formatted_option_to_option_index=formatted_option_to_option_index,
+            default_values=default_values,
+            selection_mode=selection_mode,
+        )
 
-    @parameterized.expand([("single",), ("multi",)])
-    def test_serialize_raise_option_does_not_exist(self, selection_mode: SelectionMode):
-        option_indices = [5, 6, 7]
-        serde = ButtonGroupSerde[int](option_indices, [], selection_mode)
-
-        with pytest.raises(StreamlitAPIException):
-            serde.serialize(8)
+    @parameterized.expand([("single", 6, ["6"]), ("multi", [6], ["6"])])
+    def test_serialize(
+        self, selection_mode: SelectionMode, value: int | list[int], expected: list[str]
+    ):
+        """Test serializing a value to string list."""
+        options = [5, 6, 7]
+        serde = self._make_serde(options, [], selection_mode)
+        res = serde.serialize(value)
+        assert res == expected
 
     @parameterized.expand([("single", 6), ("multi", [6])])
     def test_deserialize(
         self, selection_mode: SelectionMode, expected: int | list[int]
     ):
-        option_indices = [5, 6, 7]
-        serde = ButtonGroupSerde[int](option_indices, [], selection_mode)
-        res = serde.deserialize([1])
+        """Test deserializing string list to value(s)."""
+        options = [5, 6, 7]
+        serde = self._make_serde(options, [], selection_mode)
+        res = serde.deserialize(["6"])
         assert res == expected
 
     @parameterized.expand([("single", 7), ("multi", [7])])
     def test_deserialize_with_default_value(
         self, selection_mode: SelectionMode, expected: list[int] | int
     ):
-        option_indices = [5, 6, 7]
-        serde = ButtonGroupSerde[int](option_indices, [2], selection_mode)
+        """Test deserializing None returns default value(s)."""
+        options = [5, 6, 7]
+        serde = self._make_serde(options, [2], selection_mode)
         res = serde.deserialize(None)
         assert res == expected
 
-    @parameterized.expand([("single",), ("multi",)])
-    def test_deserialize_raise_indexerror(self, selection_mode: SelectionMode):
-        option_indices = [5, 6, 7]
-        serde = ButtonGroupSerde[int](option_indices, [], selection_mode)
-
-        with pytest.raises(IndexError):
-            serde.deserialize([3])
+    @parameterized.expand([("single", None), ("multi", [])])
+    def test_deserialize_invalid_value(
+        self, selection_mode: SelectionMode, expected: list[int] | int | None
+    ):
+        """Test deserializing invalid values handles gracefully."""
+        options = [5, 6, 7]
+        serde = self._make_serde(options, [], selection_mode)
+        res = serde.deserialize(["999"])
+        assert res == expected
 
 
 class TestFeedbackCommand(DeltaGeneratorTestCase):
@@ -1046,15 +1105,14 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
     @parameterized.expand(
         [
             ("options", ["a", "b"], ["x", "y"]),
-            ("selection_mode", "single", "multi"),
             ("format_func", lambda x: x.capitalize(), lambda x: x.lower()),
         ]
     )
     def test_whitelisted_stable_key_kwargs_segmented_control(
         self, kwarg_name: str, value1: object, value2: object
     ):
-        """Test that the widget ID changes for segmented_control when a whitelisted kwarg changes even when the key
-        is provided.
+        """Test that the widget ID is STABLE for segmented_control when options
+        or format_func change (to support dynamic options).
         """
         with patch(
             "streamlit.elements.lib.utils._register_element_id",
@@ -1067,18 +1125,18 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
                 "selection_mode": "single",
             }
 
-            # Apply first value for the whitelisted kwarg
+            # Apply first value for the kwarg
             base_kwargs[kwarg_name] = value1
             st.segmented_control(**base_kwargs)  # type: ignore[arg-type]
             proto1 = self.get_delta_from_queue().new_element.button_group
             id1 = proto1.id
 
-            # Apply second value for the whitelisted kwarg
+            # Apply second value for the kwarg - ID should remain stable
             base_kwargs[kwarg_name] = value2
             st.segmented_control(**base_kwargs)  # type: ignore[arg-type]
             proto2 = self.get_delta_from_queue().new_element.button_group
             id2 = proto2.id
-            assert id1 != id2
+            assert id1 == id2
 
     def test_stable_id_with_key_feedback(self):
         """Test that the widget ID is stable for feedback when a stable key is provided."""
@@ -1196,15 +1254,14 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
     @parameterized.expand(
         [
             ("options", ["a", "b"], ["x", "y"]),
-            ("selection_mode", "single", "multi"),
             ("format_func", lambda x: x.capitalize(), lambda x: x.lower()),
         ]
     )
     def test_whitelisted_stable_key_kwargs_pills(
         self, kwarg_name: str, value1: object, value2: object
     ):
-        """Test that the widget ID changes for pills when a whitelisted kwarg changes even when the key
-        is provided.
+        """Test that the widget ID is STABLE for pills when options
+        or format_func change (to support dynamic options).
         """
         with patch(
             "streamlit.elements.lib.utils._register_element_id",
@@ -1217,15 +1274,15 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
                 "selection_mode": "single",
             }
 
-            # Apply first value for the whitelisted kwarg
+            # Apply first value for the kwarg
             base_kwargs[kwarg_name] = value1
             st.pills(**base_kwargs)  # type: ignore[arg-type]
             proto1 = self.get_delta_from_queue().new_element.button_group
             id1 = proto1.id
 
-            # Apply second value for the whitelisted kwarg
+            # Apply second value for the kwarg - ID should remain stable
             base_kwargs[kwarg_name] = value2
             st.pills(**base_kwargs)  # type: ignore[arg-type]
             proto2 = self.get_delta_from_queue().new_element.button_group
             id2 = proto2.id
-            assert id1 != id2
+            assert id1 == id2

@@ -244,11 +244,17 @@ def test_segmented_control_width_examples(
 def test_dynamic_segmented_control_props(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
-    """Test that the segmented control can be updated dynamically while keeping the state."""
+    """Test that segmented control can be updated dynamically.
+
+    Options can be changed dynamically when a key is provided.
+    When using dynamic options with a key:
+    - The selection is preserved only if the formatted value exists in the new options.
+    - When the selected value is removed from options, it resets to the new default.
+    """
     dynamic_segmented = get_element_by_key(app, "dynamic_segmented_control_with_key")
     expect(dynamic_segmented).to_be_visible()
 
-    # Initial state
+    # Initial state: options are [apple, banana, mango, orange], default is apple
     expect(dynamic_segmented).to_contain_text("Initial dynamic segmented control")
     assert_snapshot(dynamic_segmented, name="st_segmented_control-dynamic_initial")
     expect_prefixed_markdown(app, "Initial segmented control value:", "apple")
@@ -256,25 +262,30 @@ def test_dynamic_segmented_control_props(
     # Check that the help tooltip is correct:
     expect_help_tooltip(app, dynamic_segmented, "initial help")
 
-    # Click a value
-    get_segment_button(dynamic_segmented, "banana").click()
+    # Select "banana" which only exists in initial options
+    get_segment_button(dynamic_segmented, "Banana").click()
     wait_for_app_run(app)
     expect_prefixed_markdown(app, "Initial segmented control value:", "banana")
 
-    # Click the toggle to update the segmented control props
+    # Toggle to update options to [mango, papaya, grape, apple], default is papaya
+    # Since "banana" doesn't exist in new options, it should reset to default "papaya"
     click_toggle(app, "Update segmented control props")
 
-    # new segmented control is visible:
     expect(dynamic_segmented).to_contain_text("Updated dynamic segmented control")
-
-    # Ensure the previously entered value remains visible
-    expect_prefixed_markdown(app, "Updated segmented control value:", "banana")
+    # "banana" was removed, so selection resets to new default "papaya"
+    expect_prefixed_markdown(app, "Updated segmented control value:", "papaya")
 
     dynamic_segmented.scroll_into_view_if_needed()
     assert_snapshot(dynamic_segmented, name="st_segmented_control-dynamic_updated")
     expect_help_tooltip(app, dynamic_segmented, "updated help")
 
-    # Click a different value
-    get_segment_button(dynamic_segmented, "orange").click()
+    # Now select "mango" which exists in both option sets
+    get_segment_button(dynamic_segmented, "Mango").click()
     wait_for_app_run(app)
-    expect_prefixed_markdown(app, "Updated segmented control value:", "orange")
+    expect_prefixed_markdown(app, "Updated segmented control value:", "mango")
+
+    # Toggle back to initial options - "mango" should be preserved
+    click_toggle(app, "Update segmented control props")
+    expect(dynamic_segmented).to_contain_text("Initial dynamic segmented control")
+    # "mango" exists in both sets, so selection is preserved
+    expect_prefixed_markdown(app, "Initial segmented control value:", "mango")

@@ -227,15 +227,20 @@ if st.toggle("Update segmented control props"):
         key="dynamic_segmented_control_with_key",
         help="updated help",
         width=300,
-        default="banana",
+        default="papaya",
         on_change=lambda a, param: print(
             f"Updated segmented control - callback triggered: {a} {param}"
         ),
         args=("Updated segmented control arg",),
         kwargs={"param": "updated kwarg param"},
-        # Whitelisted args:
-        options=["apple", "banana", "orange"],
+        options=["mango", "papaya", "grape", "apple"],
+        # Whitelisted args (can change without resetting widget):
         selection_mode="single",
+        # Changing format_func is allowed, but selection is based on the
+        # formatted string labels. If the formatted label changes (e.g.,
+        # "Apple" vs "APPLE"), previously selected options may become
+        # unselected. This is something we might be able to improve with
+        # additional refactorings.
         format_func=lambda text: text.capitalize(),
     )
     st.write("Updated segmented control value:", dyn_val)
@@ -251,8 +256,8 @@ else:
         ),
         args=("Initial segmented control arg",),
         kwargs={"param": "initial kwarg param"},
-        # Whitelisted args:
-        options=["apple", "banana", "orange"],
+        options=["apple", "banana", "mango", "orange"],
+        # Whitelisted args (can change without resetting widget):
         selection_mode="single",
         format_func=lambda text: text.capitalize(),
     )

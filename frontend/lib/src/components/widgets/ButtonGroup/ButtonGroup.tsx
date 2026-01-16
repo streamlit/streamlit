@@ -61,6 +61,88 @@ export interface Props {
   widthConfig: streamlit.IWidthConfig | undefined | null
 }
 
+/**
+ * Convert a string value to an option index.
+ * For borderless (feedback), the string is the index itself.
+ * For pills/segmented_control, the string is the reconstructed formatted option.
+ */
+function stringToIndex(
+  value: string,
+  options: ButtonGroupProto.IOption[],
+  style: ButtonGroupProto.Style
+): number {
+  if (style === ButtonGroupProto.Style.BORDERLESS) {
+    // For feedback, the string is the index as a string
+    const index = parseInt(value, 10)
+    return isNaN(index) ? -1 : index
+  }
+  // For pills/segmented_control, match by reconstructed formatted option
+  return options.findIndex(opt => optionToFormattedString(opt) === value)
+}
+
+/**
+ * Reconstruct the full formatted option string from the proto option.
+ * The backend extracts icons from the formatted string, so we need to
+ * reconstruct it: "icon content" or just "icon" or just "content".
+ */
+function optionToFormattedString(option: ButtonGroupProto.IOption): string {
+  const icon = option.contentIcon ?? ""
+  const content = option.content ?? ""
+
+  if (icon && content) {
+    return `${icon} ${content}`
+  }
+  if (icon) {
+    return icon
+  }
+  return content
+}
+
+/**
+ * Convert an option index to a string value.
+ * For borderless (feedback), the string is the index itself.
+ * For pills/segmented_control, the string is the reconstructed formatted option.
+ */
+function indexToString(
+  index: number,
+  options: ButtonGroupProto.IOption[],
+  style: ButtonGroupProto.Style
+): string {
+  if (style === ButtonGroupProto.Style.BORDERLESS) {
+    // For feedback, use the index as a string
+    return index.toString()
+  }
+  // For pills/segmented_control, reconstruct the full formatted option string
+  const option = options[index]
+  return option ? optionToFormattedString(option) : index.toString()
+}
+
+/**
+ * Convert string values to indices for UI display.
+ */
+function stringsToIndices(
+  values: string[],
+  options: ButtonGroupProto.IOption[],
+  style: ButtonGroupProto.Style
+): number[] {
+  return values
+    .map(v => stringToIndex(v, options, style))
+    .filter(i => i >= 0 && i < options.length)
+}
+
+/**
+ * Convert indices to string values for storage.
+ */
+function indicesToStrings(
+  indices: number[],
+  options: ButtonGroupProto.IOption[],
+  style: ButtonGroupProto.Style
+): string[] {
+  return indices
+    .filter(i => i >= 0 && i < options.length)
+    .map(i => indexToString(i, options, style))
+}
+
 function handleMultiSelection(
   index: number,
   currentSelection: number[]
@@ -97,9 +179,15 @@ function syncWithWidgetManager(
   valueWithSource: ValueWithSource<ButtonGroupValue>,
   fragmentId?: string
 ): void {
-  widgetMgr.setIntArrayValue(
-    element,
+  // Convert indices to string values before syncing
+  const stringValues = indicesToStrings(
     valueWithSource.value,
+    element.options,
+    element.style
+  )
+  widgetMgr.setStringArrayValue(
+    element,
+    stringValues,
     { fromUi: valueWithSource.fromUi },
     fragmentId
   )
@@ -290,7 +378,12 @@ function getInitialValue(
   widgetMgr: WidgetStateManager,
   element: ButtonGroupProto
 ): ButtonGroupValue | undefined {
-  return widgetMgr.getIntArrayValue(element)
+  const stringValues = widgetMgr.getStringArrayValue(element)
+  if (stringValues === undefined) {
+    return undefined
+  }
+  // Convert string values to indices
+  return stringsToIndices(stringValues, element.options, element.style)
 }
 
 function getDefaultStateFromProto(
@@ -300,7 +393,9 @@ function getDefaultStateFromProto(
 }
 
 function getCurrStateFromProto(element: ButtonGroupProto): ButtonGroupValue {
-  return element.value ?? []
+  // Use rawValues (string-based) instead of deprecated value field
+  const rawValues = element.rawValues ?? []
+  return stringsToIndices(rawValues, element.options, element.style)
 }
 
 function ButtonGroup(props: Readonly<Props>): ReactElement {
