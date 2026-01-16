@@ -3318,15 +3318,26 @@ describe("createEmotionTheme", () => {
 
   // == Metric value font properties ==
 
-  it("uses metricValueFontSize when configured", () => {
-    const themeInput: Partial<CustomThemeConfig> = {
-      metricValueFontSize: 32,
+  it.each([
+    // Valid metricValueFontSize values: rem, px, or plain number (treated as px)
+    ["3rem", "3rem"],
+    ["3REM", "3rem"],
+    ["2.25rem", "2.25rem"],
+    ["48px", "48px"],
+    ["48PX", "48px"],
+    ["48", "48px"],
+  ])(
+    "correctly applies metricValueFontSize '%s'",
+    (metricValueFontSize, expectedFontSize) => {
+      const themeInput: Partial<CustomThemeConfig> = {
+        metricValueFontSize,
+      }
+
+      const theme = createEmotionTheme(themeInput)
+
+      expect(theme.metricValueFontSize).toBe(expectedFontSize)
     }
-
-    const theme = createEmotionTheme(themeInput)
-
-    expect(theme.metricValueFontSize).toBe(32)
-  })
+  )
 
   it("does not set metricValueFontSize if not configured", () => {
     const theme = createEmotionTheme({})
@@ -3334,15 +3345,69 @@ describe("createEmotionTheme", () => {
     expect(theme.metricValueFontSize).toBeUndefined()
   })
 
-  it.each([0, -10, -100])(
-    "does not set metricValueFontSize if value is not > 0: %s",
+  it.each([
+    // Invalid format values
+    "invalid",
+    "rem",
+    "px",
+    " ",
+  ])(
+    "logs a warning and does not set metricValueFontSize for invalid value '%s'",
     metricValueFontSize => {
+      const logWarningSpy = vi.spyOn(LOG, "warn")
       const themeInput: Partial<CustomThemeConfig> = {
         metricValueFontSize,
       }
 
       const theme = createEmotionTheme(themeInput)
 
+      expect(logWarningSpy).toHaveBeenCalledWith(
+        `Invalid size passed for metricValueFontSize in theme: ${metricValueFontSize}. Falling back to default metricValueFontSize.`
+      )
+      expect(theme.metricValueFontSize).toBeUndefined()
+    }
+  )
+
+  it.each([
+    // Zero with unit (caught by parseFontSize due to falsy 0)
+    "0px",
+    "0rem",
+  ])(
+    "logs a warning and does not set metricValueFontSize for zero value '%s'",
+    metricValueFontSize => {
+      const logWarningSpy = vi.spyOn(LOG, "warn")
+      const themeInput: Partial<CustomThemeConfig> = {
+        metricValueFontSize,
+      }
+
+      const theme = createEmotionTheme(themeInput)
+
+      expect(logWarningSpy).toHaveBeenCalledWith(
+        `Invalid size passed for metricValueFontSize in theme: ${metricValueFontSize}. Falling back to default metricValueFontSize.`
+      )
+      expect(theme.metricValueFontSize).toBeUndefined()
+    }
+  )
+
+  it.each([
+    // Zero without unit, negative values (caught by additional validation)
+    "0",
+    "-10",
+    "-10px",
+    "-10rem",
+  ])(
+    "logs a warning and does not set metricValueFontSize for zero/negative value '%s'",
+    metricValueFontSize => {
+      const logWarningSpy = vi.spyOn(LOG, "warn")
+      const themeInput: Partial<CustomThemeConfig> = {
+        metricValueFontSize,
+      }
+
+      const theme = createEmotionTheme(themeInput)
+
+      expect(logWarningSpy).toHaveBeenCalledWith(
+        `Invalid metricValueFontSize: ${metricValueFontSize} in theme. The metricValueFontSize must be greater than 0. Falling back to default metricValueFontSize.`
+      )
       expect(theme.metricValueFontSize).toBeUndefined()
     }
   )

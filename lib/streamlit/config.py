@@ -1895,11 +1895,14 @@ _create_theme_options(
     "metricValueFontSize",
     categories=["theme"],
     description="""
-        The font size (in pixels) for st.metric value text.
+        The font size for st.metric value text.
+
+        Font sizes can be specified in pixels or rem (e.g., "48px", "3rem").
+        If a number is provided without a unit, it will be treated as pixels.
 
         If this isn't set, the font size will be threeXL (2.25rem, approximately 36px).
     """,
-    type_=int,
+    type_=str,
 )
 
 _create_theme_options(

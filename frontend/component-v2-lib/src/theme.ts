@@ -110,7 +110,7 @@ export interface StreamlitTheme {
   grayTextColor: string
 
   // Metric value styling
-  metricValueFontSize: number | null
+  metricValueFontSize: string | null
   metricValueFontWeight: number | null
 }
 

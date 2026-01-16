@@ -217,7 +217,7 @@ message CustomThemeConfig {
   optional string gray_text_color = 58;
 
   // Metric value styling:
-  optional int32 metric_value_font_size = 64;
+  optional string metric_value_font_size = 64;
   optional int32 metric_value_font_weight = 65;
 
   // Theme sections:

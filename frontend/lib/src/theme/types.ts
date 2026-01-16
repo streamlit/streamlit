@@ -103,7 +103,7 @@ export interface EmotionTheme extends Omit<
 > {
   colors: EmotionThemeColors
   shadows: ThemeShadows
-  metricValueFontSize?: number
+  metricValueFontSize?: string
   metricValueFontWeight?: number
 }
 
