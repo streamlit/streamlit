@@ -176,6 +176,27 @@ class StPagesTest(DeltaGeneratorTestCase):
         # Provide an assertion to ensure no error
         assert True
 
+    def test_hidden_defaults_to_false(self):
+        """Test that hidden property defaults to False."""
+        page = st.Page("page.py")
+        assert page.hidden is False
+
+    def test_hidden_can_be_set_to_true(self):
+        """Test that hidden property can be set to True."""
+        page = st.Page("page.py", hidden=True)
+        assert page.hidden is True
+
+    def test_hidden_page_still_has_url_path(self):
+        """Test that a hidden page still has a valid url_path."""
+        page = st.Page("page.py", hidden=True)
+        assert page.url_path == "page"
+
+    def test_hidden_page_can_be_default(self):
+        """Test that a hidden page can also be the default page."""
+        page = st.Page("page.py", hidden=True, default=True)
+        assert page.hidden is True
+        assert page.url_path == ""
+
 
 # NOTE: This test needs to live outside of the StPagesTest class because the class-level
 # @patch mocking the return value of `is_file` takes precedence over the method level

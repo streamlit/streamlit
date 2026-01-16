@@ -387,9 +387,17 @@ def _navigation(
             msg.navigation.position = NavigationProto.Position.SIDEBAR
 
     msg.navigation.expanded = expanded
-    msg.navigation.sections[:] = nav_sections.keys()
+    # Filter out hidden pages from sections list, but only include sections that have visible pages
+    visible_sections = [
+        section for section in nav_sections.keys()
+        if any(not page._hidden for page in nav_sections[section])
+    ]
+    msg.navigation.sections[:] = visible_sections
     for section_header in nav_sections:
         for page in nav_sections[section_header]:
+            # Skip hidden pages from the navigation menu
+            if page._hidden:
+                continue
             p = msg.navigation.app_pages.add()
             p.page_script_hash = page._script_hash
             p.page_name = page.title
