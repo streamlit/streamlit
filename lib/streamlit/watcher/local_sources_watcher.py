@@ -238,13 +238,35 @@ class LocalSourcesWatcher:
         return {p for p in paths if not self._folder_black_list.is_blacklisted(p)}
 
 
+def _safe_get_attr(obj: Any, attr: str, default: Any = None) -> Any:
+    """Safely get an attribute without triggering custom __getattribute__.
+
+    Some modules like pulumi-aws override __getattribute__ to implement lazy loading,
+    which causes them to fully initialize when we use hasattr() or getattr().
+    This function bypasses that by accessing the attribute directly from __dict__.
+
+    See https://github.com/streamlit/streamlit/issues/13530
+    """
+    try:
+        # Access __dict__ directly to avoid triggering __getattribute__
+        obj_dict = object.__getattribute__(obj, "__dict__")  # noqa: PLC2801
+        if attr in obj_dict:
+            return obj_dict[attr]
+    except (AttributeError, TypeError):
+        pass
+
+    # Fallback to default if not found in __dict__
+    return default
+
+
 def get_module_paths(module: ModuleType) -> set[str]:
     paths_extractors: list[Callable[[ModuleType], list[str | None]]] = [
         # https://docs.python.org/3/reference/datamodel.html
         # __file__ is the pathname of the file from which the module was loaded
         # if it was loaded from a file.
-        # The __file__ attribute may be missing for certain types of modules
-        lambda m: [m.__file__] if hasattr(m, "__file__") else [],
+        # The __file__ attribute may be missing for certain types of modules.
+        # See https://github.com/streamlit/streamlit/issues/13530
+        lambda m: [f] if (f := _safe_get_attr(m, "__file__")) else [],
         # https://docs.python.org/3/reference/import.html#__spec__
         # The __spec__ attribute is set to the module spec that was used
         # when importing the module. one exception is __main__,
@@ -254,19 +276,19 @@ def get_module_paths(module: ModuleType) -> set[str]:
         # (or resource within a system) from which a module originates
         # ... It is up to the loader to decide on how to interpret
         # and use a module's origin, if at all.
-        lambda m: [m.__spec__.origin]
-        if hasattr(m, "__spec__") and m.__spec__ is not None
+        lambda m: [spec.origin]
+        if (spec := _safe_get_attr(m, "__spec__")) is not None
         else [],
         # https://www.python.org/dev/peps/pep-0420/
         # Handling of "namespace packages" in which the __path__ attribute
         # is a _NamespacePath object with a _path attribute containing
         # the various paths of the package.
-        lambda m: list(m.__path__._path)
-        if hasattr(m, "__path__")
+        lambda m: list(path._path)
+        if (path := _safe_get_attr(m, "__path__")) is not None
         # This check prevents issues with torch classes:
         # https://github.com/streamlit/streamlit/issues/10992
-        and type(m.__path__).__name__ == "_NamespacePath"
-        and hasattr(m.__path__, "_path")
+        and type(path).__name__ == "_NamespacePath"
+        and hasattr(path, "_path")
         else [],
     ]
 
