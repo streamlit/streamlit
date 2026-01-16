@@ -399,3 +399,11 @@ class UserInfoTokensTest(DeltaGeneratorTestCase):
             assert isinstance(tokens_prop, TokensProxy)
             assert isinstance(tokens_key, TokensProxy)
             assert tokens_prop.id == tokens_key.id
+
+    def test_user_refresh_method(self):
+        """Test that st.user.refresh() sends correct proto message."""
+        st.user.refresh()
+
+        c = self.get_message_from_queue().auth_redirect
+
+        assert c.url.startswith("/auth/refresh")

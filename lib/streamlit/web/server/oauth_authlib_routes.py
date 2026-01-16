@@ -17,7 +17,9 @@ import json
 from typing import Any, Final, cast
 from urllib.parse import urlencode, urlparse
 
+import requests
 import tornado.web
+from authlib import jose
 
 from streamlit.auth_util import (
     AuthCache,
@@ -340,3 +342,107 @@ class AuthCallbackHandler(AuthHandlerMixin, tornado.web.RequestHandler):
             redirect_uri_parsed.scheme + "://" + redirect_uri_parsed.netloc
         )
         return origin_from_redirect_uri
+
+
+class AuthRefreshHandler(AuthHandlerMixin, tornado.web.RequestHandler):
+    def get_new_tokens(
+        self, client: TornadoOAuth2App, refresh_token: str
+    ) -> dict[str, Any] | None:
+        try:
+            metadata = client.load_server_metadata()
+            token_endpoint = metadata.get("token_endpoint")
+            if not token_endpoint:
+                _LOGGER.error("No token endpoint available for refresh")
+                return None
+
+            refresh_data = {
+                "grant_type": "refresh_token",
+                "refresh_token": refresh_token,
+                "client_id": client.client_id,
+                "client_secret": client.client_secret,
+            }
+
+            response = requests.post(
+                token_endpoint,
+                data=refresh_data,
+                headers={"Content-Type": "application/x-www-form-urlencoded"},
+                timeout=10,
+            )
+
+            if response.status_code != 200:
+                _LOGGER.error(
+                    "Token refresh failed with status %i", response.status_code
+                )
+                return None
+
+            new_tokens = response.json()
+            new_tokens = {k: v for k, v in new_tokens.items() if k.endswith("_token")}
+            return new_tokens
+        except Exception:
+            _LOGGER.exception("Token refresh failed")
+            return None
+
+    def decode_id_token(
+        self, client: TornadoOAuth2App, id_token: str
+    ) -> dict[str, Any]:
+        jwks_uri = client.server_metadata.get("jwks_uri")
+        jwks = requests.get(jwks_uri, timeout=10).json()
+        return jose.jwt.decode(id_token, key=jwks)
+
+    def get(self) -> None:
+        """Handle token refresh requests."""
+        try:
+            user_cookie_value = self.get_signed_cookie(AUTH_COOKIE_NAME)
+            tokens_cookie_value = self.get_signed_cookie(TOKENS_COOKIE_NAME)
+        except AttributeError:  # Backward compatibility with Tornado < 6.3.0
+            user_cookie_value = self.get_secure_cookie(AUTH_COOKIE_NAME)
+            tokens_cookie_value = self.get_secure_cookie(TOKENS_COOKIE_NAME)
+
+        if not user_cookie_value or not tokens_cookie_value:
+            _LOGGER.error("Missing authentication cookies for token refresh")
+            self.redirect_to_base()
+            return
+
+        try:
+            current_user_info = json.loads(user_cookie_value)
+            current_tokens = json.loads(tokens_cookie_value)
+        except json.JSONDecodeError:
+            _LOGGER.exception("Invalid authentication cookies for token refresh")
+            self.redirect_to_base()
+            return
+
+        provider = current_user_info.get("provider")
+        if provider is None:
+            _LOGGER.error("Missing or invalid provider for token refresh")
+            self.redirect_to_base()
+            return
+        client, _ = create_oauth_client(provider)
+
+        refresh_token = current_tokens.get("refresh_token")
+        if not refresh_token:
+            _LOGGER.info("No refresh token found")
+            self.redirect_to_base()
+            return
+
+        new_tokens = self.get_new_tokens(client, refresh_token)
+        if not new_tokens:
+            _LOGGER.info("Refreshing tokens failed")
+            self.redirect_to_base()
+            return
+
+        updated_tokens = {**current_tokens, **new_tokens}
+        updated_user_info = current_user_info.copy()
+
+        if "id_token" in new_tokens:
+            try:
+                new_userinfo = self.decode_id_token(client, new_tokens["id_token"])
+                updated_user_info.update(new_userinfo)
+            except Exception:
+                _LOGGER.exception("Failed to decode id token")
+        else:
+            _LOGGER.info("No id token in new tokens")
+
+        self.set_auth_cookie(updated_user_info, updated_tokens)
+        _LOGGER.info("Successfully refreshed user tokens")
+
+        self.redirect_to_base()

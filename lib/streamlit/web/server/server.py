@@ -155,6 +155,7 @@ SCRIPT_HEALTH_CHECK_ENDPOINT: Final = (
 OAUTH2_CALLBACK_ENDPOINT: Final = "/oauth2callback"
 AUTH_LOGIN_ENDPOINT: Final = "/auth/login"
 AUTH_LOGOUT_ENDPOINT: Final = "/auth/logout"
+AUTH_REFRESH_ENDPOINT: Final = "/auth/refresh"
 
 
 class RetriesExceededError(Exception):
@@ -446,6 +447,7 @@ class Server:
                 AuthCallbackHandler,
                 AuthLoginHandler,
                 AuthLogoutHandler,
+                AuthRefreshHandler,
             )
 
             routes.extend(
@@ -463,6 +465,11 @@ class Server:
                     (
                         make_url_path_regex(base, AUTH_LOGOUT_ENDPOINT),
                         AuthLogoutHandler,
+                        {"base_url": base},
+                    ),
+                    (
+                        make_url_path_regex(base, AUTH_REFRESH_ENDPOINT),
+                        AuthRefreshHandler,
                         {"base_url": base},
                     ),
                 ]

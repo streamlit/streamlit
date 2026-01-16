@@ -50,6 +50,7 @@ _LOGGER: Final = logger.get_logger(__name__)
 
 AUTH_LOGIN_ENDPOINT: Final = "/auth/login"
 AUTH_LOGOUT_ENDPOINT: Final = "/auth/logout"
+AUTH_REFRESH_ENDPOINT: Final = "/auth/refresh"
 
 
 @gather_metrics("login")
@@ -701,6 +702,51 @@ class UserInfoProxy(Mapping[str, str | bool | TokensProxy | None]):
         """Access exposed tokens via a dict-like object."""
         user_info = _get_user_info()
         return TokensProxy(cast("dict[str, str]", user_info.get("tokens", {})))
+
+    def refresh(self) -> None:
+        """Refresh the current user's access token and user information.
+
+        This method attempts to refresh the user's OAuth access token and update
+        the user information stored in ``st.user``. It uses the refresh token
+        (if available) to obtain a new access token and updated user information
+        from the OAuth provider, then updates the authentication cookies.
+
+        This is meant to be used in the background, like when starting a new session.
+        For that reason, if no refresh token is available or the refresh fails,
+        nothing happens.
+
+        Examples
+        --------
+        **Example: Refresh on each session**
+
+        Refresh the current user's tokens and update user information:
+
+        >>> import streamlit as st
+        >>>
+        >>> if st.user.is_logged_in and not st.session_state.get("fresh_user"):
+        >>>     st.session_state["fresh_user"] = True
+        >>>     st.user.refresh()
+
+        .. Note::
+            - This command requires that the user is already logged in via ``st.login()``.
+            - The OAuth provider must support refresh tokens for this to work properly.
+            - Some providers may not return updated user information on token refresh.
+            - This command will update all tokens, including access tokens and refresh tokens.
+        """
+        context = _get_script_run_ctx()
+        if context is not None:
+            context.user_info.clear()
+            session_id = context.session_id
+
+            if runtime.exists():
+                instance = runtime.get_instance()
+                instance.clear_user_info_for_session(session_id)
+
+            base_path = config.get_option("server.baseUrlPath")
+
+            fwd_msg = ForwardMsg()
+            fwd_msg.auth_redirect.url = make_url_path(base_path, AUTH_REFRESH_ENDPOINT)
+            context.enqueue(fwd_msg)
 
 
 has_shown_experimental_user_warning = False

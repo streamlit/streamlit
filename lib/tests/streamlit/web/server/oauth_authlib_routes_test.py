@@ -29,6 +29,7 @@ from streamlit.web.server.oauth_authlib_routes import (
     AuthCallbackHandler,
     AuthLoginHandler,
     AuthLogoutHandler,
+    AuthRefreshHandler,
 )
 from streamlit.web.server.server_util import AUTH_COOKIE_NAME, TOKENS_COOKIE_NAME
 
@@ -429,3 +430,337 @@ class AuthCallbackHandlerTest(tornado.testing.AsyncHTTPTestCase):
 
         assert response.code == 302
         assert response.headers["Location"] == "/"
+
+
+@patch(
+    "streamlit.auth_util.secrets_singleton",
+    MagicMock(
+        load_if_toml_exists=MagicMock(return_value=True),
+        get=MagicMock(return_value=SECRETS_MOCK),
+    ),
+)
+class AuthRefreshHandlerTest(tornado.testing.AsyncHTTPTestCase):
+    def get_app(self):
+        return tornado.web.Application(
+            [
+                (
+                    r"/auth/refresh",
+                    AuthRefreshHandler,
+                    {"base_url": ""},
+                )
+            ],
+            cookie_secret="test_cookie_secret",
+        )
+
+    def _create_signed_cookies(
+        self, user_info: dict, tokens: dict
+    ) -> tornado.httputil.HTTPHeaders:
+        """Helper to create signed cookies for testing."""
+        import tornado.httputil
+        from tornado.web import create_signed_value
+
+        from streamlit.web.server.server_util import (
+            AUTH_COOKIE_NAME,
+            TOKENS_COOKIE_NAME,
+        )
+
+        user_cookie = create_signed_value(
+            "test_cookie_secret", AUTH_COOKIE_NAME, json.dumps(user_info)
+        ).decode("utf-8")
+
+        tokens_cookie = create_signed_value(
+            "test_cookie_secret", TOKENS_COOKIE_NAME, json.dumps(tokens)
+        ).decode("utf-8")
+
+        headers = tornado.httputil.HTTPHeaders()
+        headers.add(
+            "Cookie",
+            f"{AUTH_COOKIE_NAME}={user_cookie}; {TOKENS_COOKIE_NAME}={tokens_cookie}",
+        )
+
+        return headers
+
+    @patch("streamlit.web.server.oauth_authlib_routes.requests.post")
+    @patch(
+        "streamlit.web.server.oauth_authlib_routes.create_oauth_client",
+        return_value=(
+            MagicMock(
+                client_id="test_client_id",
+                client_secret="test_client_secret",
+                load_server_metadata=MagicMock(
+                    return_value={"token_endpoint": "https://provider.com/token"}
+                ),
+            ),
+            "",
+        ),
+    )
+    @patch.object(AuthRefreshHandler, "set_auth_cookie")
+    def test_refresh_success(
+        self, mock_set_auth_cookie, mock_create_oauth_client, mock_requests_post
+    ):
+        """Test successful token refresh."""
+        # Mock successful token refresh response
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "access_token": "new_access_token",
+            "refresh_token": "new_refresh_token",
+            "expires_in": 3600,
+        }
+        mock_requests_post.return_value = mock_response
+
+        # Create test cookies
+        user_info = {
+            "provider": "google",
+            "email": "test@example.com",
+            "origin": "http://localhost:8501",
+            "is_logged_in": True,
+        }
+        tokens = {
+            "access_token": "old_access_token",
+            "refresh_token": "old_refresh_token",
+        }
+
+        headers = self._create_signed_cookies(user_info, tokens)
+        response = self.fetch("/auth/refresh", headers=headers, follow_redirects=False)
+
+        # Verify response
+        assert response.code == 302
+        assert response.headers["Location"] == "/"
+
+        # Verify token refresh was called correctly
+        mock_requests_post.assert_called_once()
+        call_args = mock_requests_post.call_args
+        assert call_args[0][0] == "https://provider.com/token"
+        assert call_args[1]["data"]["grant_type"] == "refresh_token"
+        assert call_args[1]["data"]["refresh_token"] == "old_refresh_token"
+        assert call_args[1]["data"]["client_id"] == "test_client_id"
+        assert call_args[1]["data"]["client_secret"] == "test_client_secret"
+
+        # Verify auth cookie was set with updated tokens
+        mock_set_auth_cookie.assert_called_once()
+        updated_user_info, updated_tokens = mock_set_auth_cookie.call_args[0]
+        assert updated_user_info == user_info
+        assert updated_tokens["access_token"] == "new_access_token"
+        assert updated_tokens["refresh_token"] == "new_refresh_token"
+
+    def test_refresh_missing_cookies(self):
+        """Test refresh handler with missing authentication cookies."""
+        response = self.fetch("/auth/refresh", follow_redirects=False)
+        assert response.code == 302
+        assert response.headers["Location"] == "/"
+
+    def test_refresh_missing_refresh_token(self):
+        """Test refresh handler with missing refresh token."""
+        user_info = {
+            "provider": "google",
+            "email": "test@example.com",
+            "origin": "http://localhost:8501",
+            "is_logged_in": True,
+        }
+        tokens = {"access_token": "test_token"}  # Missing refresh_token
+
+        headers = self._create_signed_cookies(user_info, tokens)
+        response = self.fetch("/auth/refresh", headers=headers, follow_redirects=False)
+
+        assert response.code == 302
+        assert response.headers["Location"] == "/"
+
+    @patch("streamlit.web.server.oauth_authlib_routes.requests.post")
+    @patch(
+        "streamlit.web.server.oauth_authlib_routes.create_oauth_client",
+        return_value=(
+            MagicMock(
+                client_id="test_client_id",
+                client_secret="test_client_secret",
+                load_server_metadata=MagicMock(
+                    return_value={"token_endpoint": "https://provider.com/token"}
+                ),
+            ),
+            "",
+        ),
+    )
+    def test_refresh_token_endpoint_error(
+        self, mock_create_oauth_client, mock_requests_post
+    ):
+        """Test refresh handler when token endpoint returns error."""
+        mock_response = MagicMock()
+        mock_response.status_code = 400
+        mock_requests_post.return_value = mock_response
+
+        user_info = {
+            "provider": "google",
+            "email": "test@example.com",
+            "origin": "http://localhost:8501",
+            "is_logged_in": True,
+        }
+        tokens = {"access_token": "test_token", "refresh_token": "test_refresh"}
+
+        headers = self._create_signed_cookies(user_info, tokens)
+        response = self.fetch("/auth/refresh", headers=headers, follow_redirects=False)
+
+        assert response.code == 302
+        assert response.headers["Location"] == "/"
+
+    def test_refresh_invalid_json_cookies(self):
+        """Test refresh handler with invalid JSON in cookies."""
+        from tornado.web import create_signed_value
+
+        headers = tornado.httputil.HTTPHeaders()
+        invalid_user_cookie = create_signed_value(
+            "test_cookie_secret", AUTH_COOKIE_NAME, "invalid json"
+        ).decode("utf-8")
+        invalid_tokens_cookie = create_signed_value(
+            "test_cookie_secret", TOKENS_COOKIE_NAME, "invalid json"
+        ).decode("utf-8")
+
+        headers.add(
+            "Cookie",
+            f"{AUTH_COOKIE_NAME}={invalid_user_cookie}; {TOKENS_COOKIE_NAME}={invalid_tokens_cookie}",
+        )
+
+        response = self.fetch("/auth/refresh", headers=headers, follow_redirects=False)
+        assert response.code == 302
+        assert response.headers["Location"] == "/"
+
+    def test_refresh_missing_provider(self):
+        """Test refresh handler with missing provider in user info."""
+        user_info = {
+            "email": "test@example.com",
+            "origin": "http://localhost:8501",
+            "is_logged_in": True,
+            # Missing provider field
+        }
+        tokens = {"access_token": "test_token", "refresh_token": "test_refresh"}
+
+        headers = self._create_signed_cookies(user_info, tokens)
+        response = self.fetch("/auth/refresh", headers=headers, follow_redirects=False)
+
+        assert response.code == 302
+        assert response.headers["Location"] == "/"
+
+    @patch(
+        "streamlit.web.server.oauth_authlib_routes.create_oauth_client",
+        return_value=(
+            MagicMock(
+                load_server_metadata=MagicMock(return_value={})  # No token_endpoint
+            ),
+            "",
+        ),
+    )
+    def test_refresh_no_token_endpoint(self, mock_create_oauth_client):
+        """Test refresh handler when provider has no token endpoint."""
+        user_info = {
+            "provider": "google",
+            "email": "test@example.com",
+            "origin": "http://localhost:8501",
+            "is_logged_in": True,
+        }
+        tokens = {"access_token": "test_token", "refresh_token": "test_refresh"}
+
+        headers = self._create_signed_cookies(user_info, tokens)
+        response = self.fetch("/auth/refresh", headers=headers, follow_redirects=False)
+
+        assert response.code == 302
+        assert response.headers["Location"] == "/"
+
+    @patch("streamlit.web.server.oauth_authlib_routes.requests.post")
+    @patch(
+        "streamlit.web.server.oauth_authlib_routes.create_oauth_client",
+        return_value=(
+            MagicMock(
+                client_id="test_client_id",
+                client_secret="test_client_secret",
+                load_server_metadata=MagicMock(
+                    return_value={"token_endpoint": "https://provider.com/token"}
+                ),
+            ),
+            "",
+        ),
+    )
+    def test_refresh_network_exception(
+        self, mock_create_oauth_client, mock_requests_post
+    ):
+        """Test refresh handler when network request raises exception."""
+        mock_requests_post.side_effect = Exception("Network error")
+
+        user_info = {
+            "provider": "google",
+            "email": "test@example.com",
+            "origin": "http://localhost:8501",
+            "is_logged_in": True,
+        }
+        tokens = {"access_token": "test_token", "refresh_token": "test_refresh"}
+
+        headers = self._create_signed_cookies(user_info, tokens)
+        response = self.fetch("/auth/refresh", headers=headers, follow_redirects=False)
+
+        assert response.code == 302
+        assert response.headers["Location"] == "/"
+
+    @patch("streamlit.web.server.oauth_authlib_routes.requests.post")
+    @patch("streamlit.web.server.oauth_authlib_routes.requests.get")
+    @patch(
+        "streamlit.web.server.oauth_authlib_routes.create_oauth_client",
+        return_value=(
+            MagicMock(
+                client_id="test_client_id",
+                client_secret="test_client_secret",
+                load_server_metadata=MagicMock(
+                    return_value={"token_endpoint": "https://provider.com/token"}
+                ),
+                server_metadata={"jwks_uri": "https://provider.com/jwks"},
+            ),
+            "",
+        ),
+    )
+    @patch("streamlit.web.server.oauth_authlib_routes.jose.jwt.decode")
+    @patch.object(AuthRefreshHandler, "set_auth_cookie")
+    def test_refresh_id_token_decode_failure(
+        self,
+        mock_set_auth_cookie,
+        mock_jwt_decode,
+        mock_create_oauth_client,
+        mock_requests_get,
+        mock_requests_post,
+    ):
+        """Test refresh handler when ID token decoding fails."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "access_token": "new_access_token",
+            "refresh_token": "new_refresh_token",
+            "id_token": "new_id_token",
+        }
+        mock_requests_post.return_value = mock_response
+
+        mock_jwks_response = MagicMock()
+        mock_jwks_response.json.return_value = {"keys": []}
+        mock_requests_get.return_value = mock_jwks_response
+
+        mock_jwt_decode.side_effect = Exception("Invalid token")
+
+        user_info = {
+            "provider": "google",
+            "email": "test@example.com",
+            "origin": "http://localhost:8501",
+            "is_logged_in": True,
+        }
+        tokens = {"access_token": "old_token", "refresh_token": "old_refresh"}
+
+        headers = self._create_signed_cookies(user_info, tokens)
+        response = self.fetch("/auth/refresh", headers=headers, follow_redirects=False)
+
+        # Should still succeed even if ID token decoding fails
+        assert response.code == 302
+        assert response.headers["Location"] == "/"
+
+        # Verify auth cookie was set with tokens but unchanged user info
+        mock_set_auth_cookie.assert_called_once()
+        updated_user_info, updated_tokens = mock_set_auth_cookie.call_args[0]
+        assert (
+            updated_user_info == user_info
+        )  # Should be unchanged due to decode failure
+        assert updated_tokens["access_token"] == "new_access_token"
+        assert updated_tokens["refresh_token"] == "new_refresh_token"
+        assert updated_tokens["id_token"] == "new_id_token"
