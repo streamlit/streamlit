@@ -165,7 +165,7 @@ def get_used_snapshots() -> dict[str, tuple[set[str], set[str]]]:
 
     for test_file in test_files:
         try:
-            with open(test_file) as f:
+            with open(test_file, encoding="utf-8") as f:
                 content = f.read()
 
             test_name = os.path.basename(test_file).replace(".py", "")

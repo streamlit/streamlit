@@ -34,7 +34,7 @@ def test_displays_a_pyplot_figures(
 
     # pyplot graph assertion
     expect(themed_app.get_by_test_id("stImage").last.locator("img")).to_have_attribute(
-        "src", re.compile("localhost*")
+        "src", re.compile(r"localhost*")
     )
 
     pyplot_elements = themed_app.get_by_test_id("stImage").locator("img")

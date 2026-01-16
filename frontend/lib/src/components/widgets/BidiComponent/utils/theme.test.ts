@@ -78,6 +78,7 @@ describe("BidiComponent/utils/theme", () => {
       headingColor: "#111111",
       chartCategoricalColors: Array(10).fill("#000000"),
       chartSequentialColors: Array(10).fill("#111111"),
+      chartDivergingColors: Array(10).fill("#222222"),
       redColor: "#ff0000",
       orangeColor: "#ff8800",
       yellowColor: "#ffee00",
@@ -342,6 +343,7 @@ describe("BidiComponent/utils/theme", () => {
 
       chartCategoricalColors: null,
       chartSequentialColors: null,
+      chartDivergingColors: null,
 
       fontFaces: null,
       fontSizes: null,

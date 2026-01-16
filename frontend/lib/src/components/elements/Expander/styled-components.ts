@@ -17,7 +17,6 @@
 import styled from "@emotion/styled"
 
 import { STALE_STYLES, STALE_TRANSITION_PARAMS } from "~lib/theme"
-import { getPrimaryFocusBoxShadow } from "~lib/theme/utils"
 
 export interface StyledExpandableContainerProps {
   empty: boolean
@@ -86,7 +85,7 @@ export const StyledSummary = styled.summary<StyledSummaryProps>(
       outline: "none",
     },
     "&:focus-visible": {
-      boxShadow: getPrimaryFocusBoxShadow(theme),
+      boxShadow: theme.shadows.focusRing,
     },
     fontSize: "inherit",
     paddingLeft: theme.spacing.md,

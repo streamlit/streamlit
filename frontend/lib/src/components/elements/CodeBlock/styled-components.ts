@@ -274,6 +274,6 @@ export const StyledCopyButton = styled.button(({ theme }) => ({
 
   // Accessible focus ring when keyboard focusing the button
   "&:focus-visible": {
-    boxShadow: `0 0 0 0.2rem ${theme.colors.darkenedBgMix25}`,
+    boxShadow: theme.shadows.focusRingSubtle,
   },
 }))

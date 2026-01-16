@@ -200,6 +200,10 @@ class SelectSliderMixin:
             ``options`` is dataframe-like, the first column will be used. Each
             label will be cast to ``str`` internally by default.
 
+            Each item in the iterable can optionally contain GitHub-flavored
+            Markdown, subject to the same limitations described in the
+            ``label`` parameter.
+
         value : a supported type or a tuple/list of supported types or None
             The value of the slider when it first renders. If a tuple/list
             of two values is passed here, then a range slider with those lower

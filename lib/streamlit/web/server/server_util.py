@@ -82,7 +82,7 @@ def is_url_from_allowed_origins(url: str) -> bool:
         url_util.get_hostname(origin) for origin in allowlisted_origins()
     ]
 
-    allowed_domains: list[str | None | Callable[[], str | None]] = [
+    allowed_domains: list[str | Callable[[], str | None] | None] = [
         # Check localhost first.
         "localhost",
         "0.0.0.0",  # noqa: S104

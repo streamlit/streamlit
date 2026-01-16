@@ -31,6 +31,7 @@ the source code without executing it.
 from __future__ import annotations
 
 import ast
+import operator
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Final
 
@@ -404,7 +405,7 @@ def discover_asgi_app(
             )
 
     # Fall back to the first discovered app (by line number)
-    first_app = min(app_assignments.items(), key=lambda x: x[1])
+    first_app = min(app_assignments.items(), key=operator.itemgetter(1))
     _LOGGER.debug(
         "Found ASGI app at %s:%s (fallback, line %d)",
         module_str,

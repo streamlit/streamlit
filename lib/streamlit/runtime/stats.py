@@ -44,30 +44,24 @@ class Stat(Protocol):
     @property
     def family_name(self) -> str:
         """The name of the metric family (e.g. 'cache_memory_bytes')."""
-        pass
 
     @property
     def type(self) -> str:
         """The OpenMetrics type (e.g. 'gauge', 'counter')."""
-        pass
 
     @property
     def unit(self) -> str:
         """The unit of the metric (e.g. 'bytes')."""
-        pass
 
     @property
     def help(self) -> str:
         """A description of the metric."""
-        pass
 
     def to_metric_str(self) -> str:
         """Convert this stat to an OpenMetrics-formatted string."""
-        pass
 
     def marshall_metric_proto(self, metric: MetricProto) -> None:
         """Fill an OpenMetrics `Metric` protobuf object."""
-        pass
 
 
 # TODO(vdonato): Could we use GaugeStat below and get rid of this class?
@@ -274,7 +268,6 @@ class StatsProvider(Protocol):
         The StatsManager uses this property to determine which providers to call
         when specific metric families are requested.
         """
-        pass
 
     def get_stats(
         self, family_names: Sequence[str] | None = None
@@ -336,9 +329,7 @@ class StatsManager:
         """
         result: dict[str, Sequence[Stat]] = {}
 
-        families_to_query = (
-            family_names if family_names else list(self._providers_by_family.keys())
-        )
+        families_to_query = family_names or list(self._providers_by_family.keys())
 
         # Track which providers we've already queried to avoid duplicates.
         # The same provider may be registered for multiple families, and we call

@@ -58,9 +58,24 @@ def configure_custom_chart_colors():
             "#6a00a8",
         ]
     )
+    os.environ["STREAMLIT_THEME_CHART_DIVERGING_COLORS"] = json.dumps(
+        [
+            "#ff0000",
+            "#ff3366",
+            "#ff6699",
+            "#ff99cc",
+            "#ffccff",
+            "#cc99ff",
+            "#9966ff",
+            "#6633ff",
+            "#3300ff",
+            "#2F0A61",
+        ]
+    )
     yield
     del os.environ["STREAMLIT_THEME_CHART_CATEGORICAL_COLORS"]
     del os.environ["STREAMLIT_THEME_CHART_SEQUENTIAL_COLORS"]
+    del os.environ["STREAMLIT_THEME_CHART_DIVERGING_COLORS"]
 
 
 @pytest.mark.usefixtures("configure_custom_chart_colors")

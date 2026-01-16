@@ -263,7 +263,7 @@ def start_listening_tcp_socket(http_server: HTTPServer) -> None:
         except OSError as e:
             # EADDRINUSE: port in use by another process
             # EACCES: port reserved by system (common on Windows, see #13521)
-            if e.errno in (errno.EADDRINUSE, errno.EACCES):
+            if e.errno in {errno.EADDRINUSE, errno.EACCES}:
                 if server_port_is_manually_set():
                     _LOGGER.error("Port %s is not available", port)  # noqa: TRY400
                     sys.exit(1)
