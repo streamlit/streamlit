@@ -223,8 +223,8 @@ class ButtonMixin:
             - ``"spinner"``: Displays a spinner as an icon.
 
         icon_position : "left" or "right"
-            The position of the icon relative to the button label. Defaults to
-            ``"left"``.
+            The position of the icon relative to the button label. This
+            defaults to ``"left"``.
 
         disabled : bool
             An optional boolean that disables the button if set to ``True``.
@@ -539,8 +539,8 @@ class ButtonMixin:
             - ``"spinner"``: Displays a spinner as an icon.
 
         icon_position : "left" or "right"
-            The position of the icon relative to the button label. Defaults to
-            ``"left"``.
+            The position of the icon relative to the button label. This
+            defaults to ``"left"``.
 
         disabled : bool
             An optional boolean that disables the download button if set to
@@ -847,8 +847,8 @@ class ButtonMixin:
             - ``"spinner"``: Displays a spinner as an icon.
 
         icon_position : "left" or "right"
-            The position of the icon relative to the button label. Defaults to
-            ``"left"``.
+            The position of the icon relative to the button label. This
+            defaults to ``"left"``.
 
         disabled : bool
             An optional boolean that disables the link button if set to
@@ -990,7 +990,7 @@ class ButtonMixin:
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
         icon : str or None
-            An optional emoji or icon to display next to the button label. If
+            An optional emoji or icon to display next to the link label. If
             ``icon`` is ``None`` (default), the icon is inferred from the
             ``StreamlitPage`` object or no icon is displayed. If ``icon`` is a
             string, the following options are valid:
@@ -1010,8 +1010,8 @@ class ButtonMixin:
             - ``"spinner"``: Displays a spinner as an icon.
 
         icon_position : "left" or "right"
-            The position of the icon relative to the page link label. Defaults
-            to ``"left"``.
+            The position of the icon relative to the link label. This
+            defaults to ``"left"``.
 
         help : str or None
             A tooltip that gets displayed when the link is hovered over. If

@@ -21,10 +21,8 @@ import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import tornado.httpserver
 import tornado.testing
 import tornado.web
-import tornado.websocket
 
 from streamlit.web.server.routes import _DEFAULT_ALLOWED_MESSAGE_ORIGINS
 from streamlit.web.server.server import (

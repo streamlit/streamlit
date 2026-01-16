@@ -47,6 +47,7 @@ import {
 
 import { createBaseUiTheme } from "./createBaseUiTheme"
 import { computeDerivedColors, createEmotionColors } from "./getColors"
+import { createShadows } from "./getShadows"
 import { fonts } from "./primitives/typography"
 import { DerivedColors, EmotionThemeColors } from "./types"
 
@@ -704,6 +705,7 @@ export const createEmotionTheme = (
     // Since chart color configs passed as array, handle separate from parsedColors
     chartCategoricalColors,
     chartSequentialColors,
+    chartDivergingColors,
     // Metric value styling
     metricValueFontSize,
     metricValueFontWeight,
@@ -879,6 +881,27 @@ export const createEmotionTheme = (
     }
   }
 
+  if (
+    notNullOrUndefined(chartDivergingColors) &&
+    chartDivergingColors.length > 0
+  ) {
+    // Validate the diverging colors config
+    const validatedDivergingColors = validateChartColors(
+      "chartDivergingColors",
+      chartDivergingColors
+    )
+    // Set the validated colors, diverging colors should be an array of length 10
+    // Also checked on BE, but check here again in case one of the entries is not a valid color
+    if (validatedDivergingColors.length === 10) {
+      conditionalOverrides.colors.chartDivergingColors =
+        validatedDivergingColors
+    } else {
+      LOG.warn(
+        `Invalid chartDivergingColors: ${chartDivergingColors.toString()}. Falling back to default chartDivergingColors.`
+      )
+    }
+  }
+
   // Conditional Overrides - Radii
 
   if (notNullOrUndefined(baseRadius)) {
@@ -997,10 +1020,14 @@ export const createEmotionTheme = (
     fontsOverride.headingFont = parseFont(bodyFont, fonts.sansSerif)
   }
 
+  // Create shadows - auto-determines light/dark based on bgColor luminance
+  const shadows = createShadows(conditionalOverrides.colors)
+
   return {
     ...baseThemeConfig.emotion,
     genericFonts: fontsOverride,
     ...conditionalOverrides,
+    shadows,
     ...(metricValueFontSize && metricValueFontSize > 0
       ? { metricValueFontSize }
       : {}),
@@ -1282,28 +1309,6 @@ export function blend(color: string, background: string | undefined): string {
   const go = Math.round((a * g + ba * bg * (1 - a)) / ao)
   const bo = Math.round((a * b + ba * bb * (1 - a)) / ao)
   return toHex(`rgba(${ro}, ${go}, ${bo}, ${ao})`)
-}
-
-/**
- * Canonical focus ring used across Streamlit components for keyboard focus
- * (usually applied via `:focus-visible`).
- */
-export const getFocusBoxShadow = (
-  color: string,
-  /**
-   * The alpha value to use for the focus ring.
-   * Matches color2k.transparentize: 0 = unchanged, 1 = fully transparent.
-   */
-  alpha: number = 0.5,
-  width: string = "0.2rem"
-): string => {
-  return `0 0 0 ${width} ${transparentize(color, alpha)}`
-}
-
-export const getPrimaryFocusBoxShadow = (
-  theme: Pick<EmotionTheme, "colors">
-): string => {
-  return getFocusBoxShadow(theme.colors.primary)
 }
 
 /**

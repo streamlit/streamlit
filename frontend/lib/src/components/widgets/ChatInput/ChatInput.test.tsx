@@ -600,20 +600,22 @@ describe("ChatInput widget", () => {
       const fileNames = screen.getAllByTestId("stChatInputFileName")
       expect(fileNames).toHaveLength(2)
 
-      // Check that both files are present, regardless of order
-      const fileTexts = Array.from(fileNames).map(el => el.textContent)
-      expect(fileTexts).toContain("folder/file1.txt")
-      expect(fileTexts).toContain("folder/file2.txt")
+      // Check that both files are present using title attribute (full filename)
+      const fileTitles = Array.from(fileNames).map(el =>
+        el.getAttribute("title")
+      )
+      expect(fileTitles).toContain("folder/file1.txt")
+      expect(fileTitles).toContain("folder/file2.txt")
     })
 
     // Find and delete file1
     const deleteButtons = screen.getAllByTestId("stChatInputDeleteBtn")
     expect(deleteButtons).toHaveLength(2)
 
-    // Find which delete button corresponds to file1
+    // Find which delete button corresponds to file1 using title attribute
     const fileNames = screen.getAllByTestId("stChatInputFileName")
     const file1Index = Array.from(fileNames).findIndex(
-      el => el.textContent === "folder/file1.txt"
+      el => el.getAttribute("title") === "folder/file1.txt"
     )
 
     // Click the actual button inside the delete button wrapper for file1
@@ -621,11 +623,14 @@ describe("ChatInput widget", () => {
     expect(file1DeleteButton).toBeTruthy()
     await user.click(file1DeleteButton as HTMLButtonElement)
 
-    // Verify only file2 remains
+    // Verify only file2 remains (check title for full filename)
     await waitFor(() => {
       const remainingFileNames = screen.getAllByTestId("stChatInputFileName")
       expect(remainingFileNames).toHaveLength(1)
-      expect(remainingFileNames[0]).toHaveTextContent("folder/file2.txt")
+      expect(remainingFileNames[0]).toHaveAttribute(
+        "title",
+        "folder/file2.txt"
+      )
     })
 
     // Delete the remaining file

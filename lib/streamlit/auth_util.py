@@ -19,6 +19,7 @@ import re
 from collections.abc import Callable, Mapping
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Any, Final, TypedDict, cast
+from urllib.parse import urlparse
 
 from streamlit import config
 from streamlit.errors import StreamlitAuthError
@@ -92,8 +93,8 @@ def get_signing_secret() -> str:
 
 
 def get_secrets_auth_section() -> AttrDict:
-    auth_section = AttrDict({})
     """Get the 'auth' section of the secrets.toml."""
+    auth_section = AttrDict({})
     if secrets_singleton.load_if_toml_exists():
         auth_section = cast("AttrDict", secrets_singleton.get("auth", AttrDict({})))
 
@@ -123,6 +124,28 @@ def get_expose_tokens_config() -> list[str]:
         )
 
     return res
+
+
+def get_redirect_uri(auth_section: AttrDict) -> str | None:
+    """Get the redirect_uri from auth_section - filling in port number if needed."""
+
+    if "redirect_uri" not in auth_section:
+        return None
+
+    redirect_uri: str = auth_section["redirect_uri"]
+    if "{port}" in redirect_uri:
+        redirect_uri = redirect_uri.replace(
+            "{port}", str(config.get_option("server.port"))
+        )
+
+    try:
+        redirect_uri_parsed = urlparse(redirect_uri)
+    except ValueError:
+        raise StreamlitAuthError(
+            f"Invalid redirect_uri: {redirect_uri}. Please check your configuration."
+        )
+
+    return redirect_uri_parsed.geturl()
 
 
 def encode_provider_token(provider: str) -> str:
@@ -353,7 +376,7 @@ def get_cookie_with_chunks(
         chunk_name = f"{cookie_name}_{i + 1}"
         chunk_value = get_single_cookie_fn(chunk_name)
         if chunk_value is None:
-            _LOGGER.exception("Missing chunk %d for cookie '%s'", i + 1, cookie_name)
+            _LOGGER.error("Missing chunk %d for cookie '%s'", i + 1, cookie_name)
             return None
         chunks.append(chunk_value)
 

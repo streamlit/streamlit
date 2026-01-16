@@ -138,6 +138,7 @@ export const extractComponentsV2Theme = (
     font: theme.genericFonts.bodyFont,
     chartCategoricalColors: theme.colors.chartCategoricalColors,
     chartSequentialColors: theme.colors.chartSequentialColors,
+    chartDivergingColors: theme.colors.chartDivergingColors,
 
     headingColor: theme.colors.headingColor,
     borderColorLight: theme.colors.borderColorLight,

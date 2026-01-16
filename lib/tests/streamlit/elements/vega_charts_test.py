@@ -3407,3 +3407,166 @@ class VegaLiteAutosizeTest(DeltaGeneratorTestCase):
         # Layer charts (not nested inside vconcat) should use fit
         assert parsed_spec["autosize"]["type"] == "fit"
         assert parsed_spec["autosize"]["contains"] == "padding"
+
+
+class VegaChartsSelectionsStableIdTest(DeltaGeneratorTestCase):
+    """Tests for element ID stability when selections are enabled for Vega/Altair charts."""
+
+    @unittest.skipIf(
+        is_altair_version_less_than("5.0.0") is True,
+        "This test only runs if altair is >= 5.0.0",
+    )
+    def test_stable_id_with_key_and_selections_altair(self):
+        """Test that the element ID is stable when data changes but key and selection_mode remain the same.
+
+        When selections are enabled and a key is provided, the element ID should remain
+        stable across data changes to preserve selection state.
+        """
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            # First render with certain data
+            df1 = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+            point = alt.selection_point(name="my_selection")
+            chart1 = alt.Chart(df1).mark_bar().encode(x="a", y="b").add_params(point)
+            st.altair_chart(
+                chart1,
+                key="selectable_chart",
+                on_select="rerun",
+            )
+            c1 = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+            id1 = c1.id
+
+            # Second render with different data but same key and selection
+            df2 = pd.DataFrame({"x": [10, 20], "y": [30, 40], "z": [50, 60]})
+            chart2 = (
+                alt.Chart(df2)
+                .mark_point()
+                .encode(x="x", y="y", size="z")
+                .add_params(point)
+            )
+            st.altair_chart(
+                chart2,
+                key="selectable_chart",
+                on_select="rerun",
+            )
+            c2 = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+            id2 = c2.id
+
+            # ID should be stable since key and selection_mode are the same
+            assert id1 == id2
+
+    @unittest.skipIf(
+        is_altair_version_less_than("5.0.0") is True,
+        "This test only runs if altair is >= 5.0.0",
+    )
+    def test_stable_id_with_key_and_selections_vega_lite(self):
+        """Test that the element ID is stable for vega_lite_chart when data changes but key remains the same."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            # First render
+            df1 = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+            spec = {
+                "mark": "bar",
+                "encoding": {
+                    "x": {"field": "a", "type": "ordinal"},
+                    "y": {"field": "b", "type": "quantitative"},
+                },
+                "params": [{"name": "my_selection", "select": "point"}],
+            }
+            st.vega_lite_chart(
+                df1,
+                spec,
+                key="selectable_vega_chart",
+                on_select="rerun",
+            )
+            c1 = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+            id1 = c1.id
+
+            # Second render with different data but same key and selection mode
+            df2 = pd.DataFrame({"a": [10, 20, 30], "b": [40, 50, 60]})
+            st.vega_lite_chart(
+                df2,
+                spec,
+                key="selectable_vega_chart",
+                on_select="rerun",
+            )
+            c2 = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+            id2 = c2.id
+
+            # ID should be stable since key and selection_mode are the same
+            assert id1 == id2
+
+    @unittest.skipIf(
+        is_altair_version_less_than("5.0.0") is True,
+        "This test only runs if altair is >= 5.0.0",
+    )
+    def test_id_changes_when_selection_mode_changes(self):
+        """Test that changing selection_mode changes the ID even when a key is provided.
+
+        The selection_mode parameter is whitelisted, meaning changes to it should
+        result in a new element ID.
+        """
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            df = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+
+            # First render with point selection
+            point = alt.selection_point(name="my_point_selection")
+            chart1 = alt.Chart(df).mark_bar().encode(x="a", y="b").add_params(point)
+            st.altair_chart(
+                chart1,
+                key="changing_selection_chart",
+                on_select="rerun",
+                selection_mode="my_point_selection",
+            )
+            c1 = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+            id1 = c1.id
+
+            # Second render with interval selection (different selection mode)
+            interval = alt.selection_interval(name="my_interval_selection")
+            chart2 = alt.Chart(df).mark_bar().encode(x="a", y="b").add_params(interval)
+            st.altair_chart(
+                chart2,
+                key="changing_selection_chart",
+                on_select="rerun",
+                selection_mode="my_interval_selection",
+            )
+            c2 = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+            id2 = c2.id
+
+            # ID should change since selection_mode changed
+            assert id1 != id2
+
+    @unittest.skipIf(
+        is_altair_version_less_than("5.0.0") is True,
+        "This test only runs if altair is >= 5.0.0",
+    )
+    def test_id_changes_without_key(self):
+        """Test that changing data changes the ID when no key is provided."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            # First render
+            df1 = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+            point = alt.selection_point(name="my_selection")
+            chart1 = alt.Chart(df1).mark_bar().encode(x="a", y="b").add_params(point)
+            st.altair_chart(chart1, on_select="rerun")
+            c1 = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+            id1 = c1.id
+
+            # Second render with different data
+            df2 = pd.DataFrame({"x": [10, 20], "y": [30, 40]})
+            chart2 = alt.Chart(df2).mark_point().encode(x="x", y="y").add_params(point)
+            st.altair_chart(chart2, on_select="rerun")
+            c2 = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+            id2 = c2.id
+
+            # ID should change since no key is provided and data changed
+            assert id1 != id2

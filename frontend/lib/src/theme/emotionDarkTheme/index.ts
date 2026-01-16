@@ -16,14 +16,22 @@
 
 import emotionBaseTheme from "~lib/theme/emotionBaseTheme"
 import { createEmotionColors } from "~lib/theme/getColors"
+import { createShadows } from "~lib/theme/getShadows"
 
 import genericColors from "./themeColors"
+
+// Create colors (includes derived colors)
+const colors = createEmotionColors({
+  ...emotionBaseTheme.colors,
+  ...genericColors,
+})
+
+// Create shadows (dependent on colors/derived colors)
+const shadows = createShadows(colors)
 
 export default {
   ...emotionBaseTheme,
   inSidebar: false,
-  colors: createEmotionColors({
-    ...emotionBaseTheme.colors,
-    ...genericColors,
-  }),
+  colors,
+  shadows,
 }

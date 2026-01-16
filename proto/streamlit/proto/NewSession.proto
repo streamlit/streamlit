@@ -187,6 +187,7 @@ message CustomThemeConfig {
   optional string dataframe_header_background_color = 31;
   repeated string chart_categorical_colors = 33;
   repeated string chart_sequential_colors = 36;
+  repeated string chart_diverging_colors = 62;
 
   // Main color configs:
   optional string red_color = 38;
@@ -216,15 +217,15 @@ message CustomThemeConfig {
   optional string gray_text_color = 58;
 
   // Metric value styling:
-  optional int32 metric_value_font_size = 62;
-  optional int32 metric_value_font_weight = 63;
+  optional int32 metric_value_font_size = 64;
+  optional int32 metric_value_font_weight = 65;
 
   // Theme sections:
   optional CustomThemeConfig sidebar = 24;
   optional CustomThemeConfig light = 60;
   optional CustomThemeConfig dark = 61;
 
-  // Next ID: 64
+  // Next ID: 66
 }
 
 message FontFace {

@@ -108,11 +108,6 @@ class MetricMixin:
     ) -> DeltaGenerator:
         r"""Display a metric in big bold font, with an optional indicator of how the metric changed.
 
-        Tip: If you want to display a large number, it may be a good idea to
-        shorten it using packages like `millify <https://github.com/azaitsev/millify>`_
-        or `numerize <https://github.com/davidsa03/numerize>`_. E.g. ``1234`` can be
-        displayed as ``1.2k`` using ``st.metric("Short number", millify(1234))``.
-
         Parameters
         ----------
         label : str
@@ -135,35 +130,38 @@ class MetricMixin:
         value : int, float, decimal.Decimal, str, or None
             Value of the metric. ``None`` is rendered as a long dash.
 
-            The value can optionally contain GitHub-flavored Markdown,
-            including the Markdown directives described in the ``body``
-            parameter of ``st.markdown``.
+            The value can optionally contain GitHub-flavored Markdown, subject
+            to the same limitations described in the ``label`` parameter.
 
         delta : int, float, decimal.Decimal, str, or None
-            Indicator of how the metric changed, rendered with an arrow below
-            the metric. If delta is negative (int/float) or starts with a minus
-            sign (str), the arrow points down and the text is red; else the
-            arrow points up and the text is green. If None (default), no delta
-            indicator is shown.
+            Amount or indicator of change in the metric. An arrow is shown next
+            to the delta, oriented according to its sign:
 
-            The delta can optionally contain GitHub-flavored Markdown
-            including the Markdown directives described in the ``body``
-            parameter of ``st.markdown``.
+            - If the delta is ``None`` or an empty string, no arrow is shown.
+            - If the delta is a negative number or starts with a minus sign,
+              the arrow points down and the delta is red.
+            - Otherwise, the arrow points up and the delta is green.
+
+            You can modify the display, color, and orientation of the arrow
+            using the ``delta_color`` and ``delta_arrow`` parameters.
+
+            The delta can optionally contain GitHub-flavored Markdown, subject
+            to the same limitations described in the ``label`` parameter.
 
         delta_color : str
-            The color of the delta indicator. This can be one of the following:
+            The color of the delta and chart. This can be one of the following:
 
-            - ``"normal"`` (default): The delta indicator is green when
-                positive and red when negative.
-            - ``"inverse"``: The delta indicator is red when positive and
-                green when negative. This is useful when a negative change is
-                considered good, e.g. if cost decreased.
-            - ``"off"``: The delta indicator is shown in gray regardless of
-                its value.
-            - A named color from the basic palette: ``"red"``, ``"orange"``,
-                ``"yellow"``, ``"green"``, ``"blue"``, ``"violet"``,
-                ``"gray"``/``"grey"``, or ``"primary"``. The delta indicator
-                and chart uses that color regardless of its value.
+            - ``"normal"`` (default): The color is red when the delta is
+              negative and green otherwise.
+            - ``"inverse"``: The color is green when the delta is negative and
+              red otherwise. This is useful when a negative change is
+              considered good, like a decrease in cost.
+            - ``"off"``: The color is gray regardless of the delta.
+            - A named color from the basic palette: The chart and delta are the
+              specified color regardless of their value. This can be one of the
+              following: ``"red"``, ``"orange"``, ``"yellow"``, ``"green"``,
+              ``"blue"``, ``"violet"``, ``"gray"``/``"grey"``, or
+              ``"primary"``.
 
         help : str or None
             A tooltip that gets displayed next to the metric label. Streamlit
@@ -189,26 +187,26 @@ class MetricMixin:
             The height of the metric element. This can be one of the following:
 
             - ``"content"`` (default): The height of the element matches the
-                height of its content.
+              height of its content.
             - ``"stretch"``: The height of the element matches the height of
-                its content or the height of the parent container, whichever is
-                larger. If the element is not in a parent container, the height
-                of the element matches the height of its content.
+              its content or the height of the parent container, whichever is
+              larger. If the element is not in a parent container, the height
+              of the element matches the height of its content.
             - An integer specifying the height in pixels: The element has a
-                fixed height. If the content is larger than the specified
-                height, scrolling is enabled.
+              fixed height. If the content is larger than the specified
+              height, scrolling is enabled.
 
         width : "stretch", "content", or int
             The width of the metric element. This can be one of the following:
 
             - ``"stretch"`` (default): The width of the element matches the
-                width of the parent container.
+              width of the parent container.
             - ``"content"``: The width of the element matches the width of its
-                content, but doesn't exceed the width of the parent container.
+              content, but doesn't exceed the width of the parent container.
             - An integer specifying the width in pixels: The element has a
-                fixed width. If the specified width is greater than the width of
-                the parent container, the width of the element matches the width
-                of the parent container.
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the element matches the width
+              of the parent container.
 
         chart_data : Iterable or None
             A sequence of numeric values to display as a sparkline chart. If
@@ -217,6 +215,9 @@ class MetricMixin:
             ``set``. If the sequence is dataframe-like, the first column will
             be used. Each value will be cast to ``float`` internally by
             default.
+
+            The chart uses the color of the delta indicator, which can be
+            modified using the ``delta_color`` parameter.
 
         chart_type : "line", "bar", or "area"
             The type of sparkline chart to display. This can be one of the
@@ -231,18 +232,18 @@ class MetricMixin:
             one of the following strings:
 
             - ``"auto"`` (default): The arrow direction follows the sign of
-                ``delta``.
+              ``delta``.
             - ``"up"`` or ``"down"``: The arrow is forced to point in the
-                specified direction.
+              specified direction.
             - ``"off"``: No arrow is shown, but the delta value remains
-                visible.
+              visible.
 
         format : str or None
             A format string controlling how numbers are displayed for ``value``
             and ``delta``. The format is only applied if the value or delta is
-            numeric (int, float, or decimal.Decimal). If the value or delta is
-            a string with non-numeric characters, the format is ignored.
-            This can be one of the following values:
+            numeric. If the value or delta is a string with non-numeric
+            characters, the format is ignored. The format can be one of the
+            following values:
 
             - ``None`` (default): No formatting is applied.
             - ``"plain"``: Show the full number without any formatting (e.g. "1234.567").
@@ -257,8 +258,8 @@ class MetricMixin:
             - ``"scientific"``: Show the number in scientific notation (e.g. "1.235E3").
             - ``"engineering"``: Show the number in engineering notation (e.g. "1.235E3").
             - printf-style format string: Format the number with a printf
-            specifier, like ``"%d"`` to show a signed integer (e.g. "1234") or
-            ``"%.2f"`` to show a float with 2 decimal places.
+              specifier, like ``"%d"`` to show a signed integer (e.g. "1234") or
+              ``"%.2f"`` to show a float with 2 decimal places.
 
         Examples
         --------

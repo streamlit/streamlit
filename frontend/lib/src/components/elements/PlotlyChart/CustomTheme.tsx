@@ -22,7 +22,6 @@ import {
   EmotionTheme,
   getBlue80,
   getDecreasingRed,
-  getDivergingColorsArray,
   getGray30,
   getGray70,
   getGray90,
@@ -324,10 +323,9 @@ function replaceDivergingColors(
   const DIVERGING_7 = "#000028"
   const DIVERGING_8 = "#000029"
   const DIVERGING_9 = "#000030"
-  const DIVERGING_10 = "#000031"
 
   if (elementTheme === "streamlit") {
-    const divergingColors = getDivergingColorsArray(theme)
+    const divergingColors = theme.colors.chartDivergingColors
     spec = spec.replaceAll(DIVERGING_0, divergingColors[0])
     spec = spec.replaceAll(DIVERGING_1, divergingColors[1])
     spec = spec.replaceAll(DIVERGING_2, divergingColors[2])
@@ -338,20 +336,18 @@ function replaceDivergingColors(
     spec = spec.replaceAll(DIVERGING_7, divergingColors[7])
     spec = spec.replaceAll(DIVERGING_8, divergingColors[8])
     spec = spec.replaceAll(DIVERGING_9, divergingColors[9])
-    spec = spec.replaceAll(DIVERGING_10, divergingColors[10])
   } else {
-    // Default plotly colors
+    // Default plotly colors (PiYG scale)
     spec = spec.replaceAll(DIVERGING_0, "#8e0152")
     spec = spec.replaceAll(DIVERGING_1, "#c51b7d")
     spec = spec.replaceAll(DIVERGING_2, "#de77ae")
     spec = spec.replaceAll(DIVERGING_3, "#f1b6da")
     spec = spec.replaceAll(DIVERGING_4, "#fde0ef")
-    spec = spec.replaceAll(DIVERGING_5, "#f7f7f7")
-    spec = spec.replaceAll(DIVERGING_6, "#e6f5d0")
-    spec = spec.replaceAll(DIVERGING_7, "#b8e186")
-    spec = spec.replaceAll(DIVERGING_8, "#7fbc41")
-    spec = spec.replaceAll(DIVERGING_9, "#4d9221")
-    spec = spec.replaceAll(DIVERGING_10, "#276419")
+    spec = spec.replaceAll(DIVERGING_5, "#e6f5d0")
+    spec = spec.replaceAll(DIVERGING_6, "#b8e186")
+    spec = spec.replaceAll(DIVERGING_7, "#7fbc41")
+    spec = spec.replaceAll(DIVERGING_8, "#4d9221")
+    spec = spec.replaceAll(DIVERGING_9, "#276419")
   }
   return spec
 }

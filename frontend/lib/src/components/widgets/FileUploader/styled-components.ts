@@ -38,7 +38,8 @@ export const StyledFileDropzoneSection = styled.section<StyledFileDropzone>(
       outline: "none",
     },
     ":focus-visible": {
-      boxShadow: `0 0 0 1px ${theme.colors.primary}`,
+      // Solid 1px outline (no blur) for dropzone focus
+      boxShadow: theme.shadows.focusRingOutline,
     },
     cursor: isDisabled ? "not-allowed" : "pointer",
   })

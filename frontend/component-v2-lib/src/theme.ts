@@ -76,6 +76,7 @@ export interface StreamlitTheme {
   font: string
   chartCategoricalColors: string[]
   chartSequentialColors: string[]
+  chartDivergingColors: string[]
 
   // Computed
   headingColor: string

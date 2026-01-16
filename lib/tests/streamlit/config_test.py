@@ -78,6 +78,7 @@ class ConfigTest(unittest.TestCase):
             "showSidebarBorder",
             "chartCategoricalColors",
             "chartSequentialColors",
+            "chartDivergingColors",
         ]
 
         theme_config_options = [
@@ -994,6 +995,7 @@ class ConfigTest(unittest.TestCase):
             "headingFontWeights": None,
             "chartCategoricalColors": None,
             "chartSequentialColors": None,
+            "chartDivergingColors": None,
             "redColor": None,
             "orangeColor": None,
             "yellowColor": None,
@@ -1070,6 +1072,9 @@ class ConfigTest(unittest.TestCase):
         config._set_option(
             "theme.chartSequentialColors", ["#000000", "#111111", "#222222"], "test"
         )
+        config._set_option(
+            "theme.chartDivergingColors", ["#000000", "#111111", "#222222"], "test"
+        )
         config._set_option("theme.redColor", "red", "test")
         config._set_option("theme.orangeColor", "orange", "test")
         config._set_option("theme.yellowColor", "yellow", "test")
@@ -1136,6 +1141,7 @@ class ConfigTest(unittest.TestCase):
             "showSidebarBorder": True,
             "chartCategoricalColors": ["#000000", "#111111", "#222222"],
             "chartSequentialColors": ["#000000", "#111111", "#222222"],
+            "chartDivergingColors": ["#000000", "#111111", "#222222"],
             "redColor": "red",
             "orangeColor": "orange",
             "yellowColor": "yellow",
@@ -1625,7 +1631,7 @@ class ThemeInheritanceIntegrationTest(unittest.TestCase):
 
         # Use the same pattern as other tests in the repo
         with tempfile.NamedTemporaryFile(
-            mode="w", suffix=f"_{filename}", delete=False
+            encoding="utf-8", mode="w", suffix=f"_{filename}", delete=False
         ) as f:
             f.write(content)
             return f.name

@@ -56,6 +56,8 @@ def logo(
     `configuration option <https://docs.streamlit.io/develop/api-reference/configuration/config.toml>`_
     ``client.toolbarMode="minimal"``.
 
+    If a user clicks the logo, they are redirected to your app's home page.
+
     Parameters
     ----------
     image: Anything supported by st.image (except list)
