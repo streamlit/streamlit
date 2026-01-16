@@ -647,7 +647,7 @@ class ArrowMixin:
         """
         import pyarrow as pa
 
-        if on_select not in ["ignore", "rerun"] and not callable(on_select):
+        if on_select not in {"ignore", "rerun"} and not callable(on_select):
             raise StreamlitAPIException(
                 f"You have passed {on_select} to `on_select`. But only 'ignore', "
                 "'rerun', or a callable is supported."
@@ -745,7 +745,7 @@ class ArrowMixin:
             # Hide index column if row selections are activated and the dataframe has a range index.
             # The range index usually does not add a lot of value.
             is_selection_activated
-            and selection_mode in ["multi-row", "single-row"]
+            and selection_mode in {"multi-row", "single-row"}
             and has_range_index
         ):
             update_column_config(

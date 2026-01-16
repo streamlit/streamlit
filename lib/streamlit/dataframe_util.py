@@ -464,7 +464,7 @@ def _is_list_of_scalars(data: Iterable[Any]) -> bool:
 
     # Overview on all value that are interpreted as scalar:
     # https://pandas.pydata.org/docs/reference/api/pandas.api.types.is_scalar.html
-    return infer_dtype(data, skipna=True) not in ["mixed", "unknown-array"]
+    return infer_dtype(data, skipna=True) not in {"mixed", "unknown-array"}
 
 
 def _iterable_to_list(
@@ -1077,10 +1077,10 @@ def is_colum_type_arrow_incompatible(column: Series[Any] | Index[Any]) -> bool:
         # https://pandas.pydata.org/docs/reference/api/pandas.api.types.infer_dtype.html
         inferred_type = infer_dtype(column, skipna=True)
 
-        if inferred_type in [
+        if inferred_type in {
             "mixed-integer",
             "complex",
-        ]:
+        }:
             return True
         if inferred_type == "mixed":
             # This includes most of the more complex/custom types (objects, dicts,
@@ -1403,11 +1403,11 @@ def convert_pandas_df_to_data_format(
         return _unify_missing_values(df).to_dict(orient="list")
     if data_format == DataFormat.COLUMN_SERIES_MAPPING:
         return df.to_dict(orient="series")
-    if data_format in [
+    if data_format in {
         DataFormat.LIST_OF_VALUES,
         DataFormat.TUPLE_OF_VALUES,
         DataFormat.SET_OF_VALUES,
-    ]:
+    }:
         df = _unify_missing_values(df)
         return_list = []
         if len(df.columns) == 1:

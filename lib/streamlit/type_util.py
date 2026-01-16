@@ -268,7 +268,7 @@ def _is_probably_plotly_dict(obj: object) -> TypeGuard[dict[str, Any]]:
     if len(obj.keys()) == 0:
         return False
 
-    if any(k not in ["config", "data", "frames", "layout"] for k in obj):
+    if any(k not in {"config", "data", "frames", "layout"} for k in obj):
         return False
 
     if any(_is_plotly_obj(v) for v in obj.values()):

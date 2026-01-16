@@ -386,7 +386,7 @@ def _validate_pyproject_for_package(
             canonical_package = packaging_utils.canonicalize_name(package_name)
 
             # Check if project name matches either the distribution name or the package name
-            return canonical_project in (canonical_dist, canonical_package)
+            return canonical_project in {canonical_dist, canonical_package}
 
         # If we can't determine ownership, be conservative and reject it
         return False

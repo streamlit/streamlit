@@ -1086,7 +1086,7 @@ def wait_until(
             if timed_out():
                 raise TimeoutError(timeout_msg) from e
         else:
-            if result not in (None, True, False):
+            if result not in {None, True, False}:
                 raise ValueError(
                     "`wait_until` callback must return None, True or "
                     f"False, returned {result!r}"

@@ -40,9 +40,10 @@ explicit-preview-rules = false
 select = ["ALL"]
 ignore = [
   # Rules planned to be supported in the future:
-  "EM101",  # Checks for the use of string literals in exception constructors.
-  "EM102",  # Checks for the use of f-strings in exception constructors.
-  "TRY003", # Checks for exception messages that are not defined in the exception class itself.
+  "EM101",   # Checks for the use of string literals in exception constructors.
+  "EM102",   # Checks for the use of f-strings in exception constructors.
+  "TRY003",  # Checks for exception messages that are not defined in the exception class itself.
+  "FURB189", # Checks for subclassing of builtin types.
   # Ignored rule sets:
   "DTZ", # Checks for usage of unsafe naive datetime class.
   "PTH", # Enforces usage of pathlib.
@@ -100,7 +101,6 @@ ignore = [
   "PLR6301", # Checks for methods that do not use self.
   "PLC1901", # Checks for comparisons to empty string.
   "PLC2701", # Checks for imports of private names.
-  "PLR6201", # Checks for membership tests using a literal list or tuple.
   "PLR0917", # Checks for functions with too many positional arguments.
   "RUF067",  # Checks for non empty __init__ modules.
   "FURB101", # Checks for open and read calls that can be replaced by pathlib.
@@ -111,7 +111,6 @@ ignore = [
   "FURB152", # Checks for math constants that could use math module.
   "PLW3201", # Checks for bad dunder method names.
   "FURB118", # Checks for operators that can be replaced by operator module.
-  "FURB189", # Checks for subclassing of builtin types.
   "PLR1702", # Checks for functions with too many nested blocks.
   "FURB113", # Checks for repeated append calls that can be replaced by extend.
 ]

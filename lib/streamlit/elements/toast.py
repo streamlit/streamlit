@@ -151,7 +151,7 @@ class ToastMixin:
         toast_proto.body = clean_text(validate_text(body))
         toast_proto.icon = validate_icon_or_emoji(icon)
 
-        if duration in ["short", "long", "infinite"] or (
+        if duration in {"short", "long", "infinite"} or (
             isinstance(duration, int) and duration > 0
         ):
             if duration == "short":

@@ -238,11 +238,11 @@ def _parse_value(
         if column_data_kind == ColumnDataKind.TIMEDELTA:
             return pd.Timedelta(value)
 
-        if column_data_kind in [
+        if column_data_kind in {
             ColumnDataKind.DATETIME,
             ColumnDataKind.DATE,
             ColumnDataKind.TIME,
-        ]:
+        }:
             datetime_value = pd.Timestamp(value)
 
             if pd.isna(datetime_value):
@@ -481,7 +481,7 @@ def _is_supported_index(df_index: pd.Index[Any]) -> bool:
 
     return (
         type(df_index)
-        in [
+        in {
             pd.RangeIndex,
             pd.Index,
             pd.DatetimeIndex,
@@ -490,7 +490,7 @@ def _is_supported_index(df_index: pd.Index[Any]) -> bool:
             # pd.IntervalIndex,
             # Period type isn't editable currently:
             # pd.PeriodIndex,
-        ]
+        }
         # We need to check these index types without importing, since they are
         # deprecated and planned to be removed soon.
         or is_type(df_index, "pandas.core.indexes.numeric.Int64Index")
@@ -1029,7 +1029,7 @@ class DataEditorMixin:
             update_column_config(
                 column_config_mapping, INDEX_IDENTIFIER, {"required": True}
             )
-            if num_rows in ("dynamic", "add") and hide_index is True:
+            if num_rows in {"dynamic", "add"} and hide_index is True:
                 _LOGGER.warning(
                     "Setting `hide_index=True` in data editor with a non-range index will not have any effect "
                     "when `num_rows` is '%s'. It is required for the user to fill in index values for "
@@ -1038,7 +1038,7 @@ class DataEditorMixin:
                     num_rows,
                 )
 
-        if hide_index is None and has_range_index and num_rows in ("dynamic", "add"):
+        if hide_index is None and has_range_index and num_rows in {"dynamic", "add"}:
             # Temporary workaround:
             # We hide range indices if num_rows allows adding rows.
             # since the current way of handling this index during editing is a
