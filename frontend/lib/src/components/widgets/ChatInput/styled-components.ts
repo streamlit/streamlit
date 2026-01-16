@@ -15,84 +15,84 @@
  */
 import styled from "@emotion/styled"
 
-import { getPrimaryFocusBoxShadow } from "~lib/theme/utils"
-
 export const StyledChatInputContainer = styled.div({
   position: "relative",
   display: "flex",
   flexDirection: "column",
 })
 
-export interface StyledChatInputProps {
-  extended?: boolean
-}
+export const StyledChatInput = styled.div(({ theme }) => ({
+  backgroundColor: theme.colors.secondaryBg,
+  border: `${theme.sizes.borderWidth} solid`,
+  borderColor: theme.colors.widgetBorderColor ?? theme.colors.transparent,
+  position: "relative",
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "stretch",
+  flex: 1,
+  paddingTop: theme.spacing.md,
+  paddingBottom: theme.spacing.md,
+  paddingLeft: theme.spacing.lg,
+  paddingRight: theme.spacing.lg,
+  gap: theme.spacing.sm,
+  borderRadius: theme.radii.default,
+  boxSizing: "border-box",
 
-export const StyledChatInput = styled.div<StyledChatInputProps>(
-  ({ theme }) => ({
-    backgroundColor: theme.colors.secondaryBg,
-    border: `${theme.sizes.borderWidth} solid`,
-    borderColor: theme.colors.widgetBorderColor ?? theme.colors.transparent,
-    position: "relative",
+  ":focus-within": {
+    borderColor: theme.colors.primary,
+  },
+}))
+
+// Files area - wrapping container for file chips above the input row
+export const StyledFilesArea = styled.div(({ theme }) => ({
+  display: "flex",
+  flexWrap: "wrap",
+  gap: theme.spacing.sm,
+}))
+
+// Main input row - contains [left cluster] [textarea/waveform] [right cluster]
+// Uses flex-wrap to handle stacked mode: textarea wraps to its own line when stacked
+export const StyledInputRow = styled.div<{ isStacked?: boolean }>(
+  ({ theme, isStacked }) => ({
     display: "flex",
-    flexDirection: "column",
-    alignItems: "stretch",
-    flex: 1,
-    padding: theme.spacing.lg,
-    borderRadius: theme.radii.default,
-    boxSizing: "border-box",
-
-    ":focus-within": {
-      borderColor: theme.colors.primary,
-    },
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    width: "100%",
+    gap: theme.spacing.sm,
+    flexWrap: isStacked ? "wrap" : "nowrap",
   })
 )
 
-export const StyledContentArea = styled.div(({ theme }) => ({
-  position: "relative",
-  display: "flex",
-  flexDirection: "column",
-  gap: theme.spacing.sm,
-}))
+// Wrapper for textarea - adapts to inline or stacked layout
+// In stacked mode: order: -1 moves it above buttons, width: 100% makes it wrap to own line
+// In inline mode: flex: 1 makes it fill remaining space between button clusters
+export const StyledTextareaWrapper = styled.div<{ isStacked?: boolean }>(
+  ({ isStacked }) => ({
+    flex: isStacked ? "none" : 1,
+    width: isStacked ? "100%" : "auto",
+    order: isStacked ? -1 : 0,
+    display: "flex",
+    alignItems: "center",
+    minWidth: 0,
+  })
+)
 
-export const StyledPrimaryRegion = styled.div({
-  position: "relative",
-  display: "flex",
-  flexDirection: "column",
-})
-
-export const StyledActionRow = styled.div(({ theme }) => ({
-  display: "flex",
-  flexDirection: "row",
-  justifyContent: "space-between",
-  alignItems: "center",
-  width: "100%",
-  gap: theme.spacing.sm,
-}))
-
-// Single-row layout for simple mode (no file upload, no audio)
-export const StyledSimpleRow = styled.div(({ theme }) => ({
-  display: "flex",
-  flexDirection: "row",
-  alignItems: "flex-end",
-  width: "100%",
-  marginTop: "auto",
-  gap: theme.spacing.lg,
-}))
-
+// Left cluster - flex-shrink so it collapses when empty
 export const StyledLeftCluster = styled.div(({ theme }) => ({
   display: "flex",
   flexDirection: "row",
-  flex: "1 0 0",
+  flexShrink: 0,
   gap: theme.spacing.sm,
   alignItems: "center",
 }))
 
+// Right cluster - contains mic and send buttons
 export const StyledRightCluster = styled.div(({ theme }) => ({
   display: "flex",
   flexDirection: "row",
   gap: theme.spacing.sm,
   alignItems: "center",
-  position: "relative",
 }))
 
 export const StyledInputInstructions = styled.div(({ theme }) => ({
@@ -113,15 +113,12 @@ export const StyledInputInstructions = styled.div(({ theme }) => ({
 
 interface StyledSendIconButtonProps {
   disabled: boolean
-  extended?: boolean
   hasError?: boolean
   primary?: boolean
-  /** Applies vertical offset for alignment in simple mode layout */
-  withVerticalOffset?: boolean
 }
 
 export const StyledSendIconButton = styled.button<StyledSendIconButtonProps>(
-  ({ theme, disabled, hasError, primary, withVerticalOffset }) => {
+  ({ theme, disabled, hasError, primary }) => {
     if (primary) {
       return {
         border: "none",
@@ -134,9 +131,6 @@ export const StyledSendIconButton = styled.button<StyledSendIconButtonProps>(
         justifyContent: "center",
         lineHeight: theme.lineHeights.none,
         margin: theme.spacing.none,
-        marginBottom: withVerticalOffset
-          ? theme.sizes.chatInputButtonVerticalOffset
-          : undefined,
         padding: theme.spacing.xs,
         width: theme.sizes.chatInputPrimaryButtonSize,
         height: theme.sizes.chatInputPrimaryButtonSize,
@@ -150,7 +144,7 @@ export const StyledSendIconButton = styled.button<StyledSendIconButtonProps>(
           outline: "none",
         },
         "&:focus-visible": {
-          boxShadow: getPrimaryFocusBoxShadow(theme),
+          boxShadow: theme.shadows.focusRing,
         },
         "&:hover": {
           backgroundColor: disabled
@@ -185,7 +179,7 @@ export const StyledSendIconButton = styled.button<StyledSendIconButtonProps>(
         outline: "none",
       },
       "&:focus-visible": {
-        boxShadow: getPrimaryFocusBoxShadow(theme),
+        boxShadow: theme.shadows.focusRing,
       },
       "&:hover": {
         color: hasError ? theme.colors.redColor : theme.colors.bodyText,
@@ -222,7 +216,7 @@ export const StyledWaveformContainer =
 export const StyledChatAudioWave = styled.div(({ theme }) => ({
   position: "relative",
   width: "100%",
-  minHeight: theme.sizes.minElementHeight,
+  height: theme.sizes.chatInputPrimaryButtonSize,
   borderRadius: theme.radii.default,
   overflow: "hidden",
   "& > div": {

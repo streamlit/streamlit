@@ -262,6 +262,29 @@ describe("ChartColumn", () => {
     expect((mockCell3 as SparklineCellType).data?.values).toEqual([0, 0])
   })
 
+  it("handles uniform values without explicit y_min/y_max configuration", () => {
+    // This tests the fix for https://github.com/streamlit/streamlit/issues/13584
+    const mockColumn = getBarChartColumn()
+
+    // Uniform positive values should render with y_min=0 and y_max=value
+    const mockCell1 = mockColumn.getCell([4, 4, 4, 4])
+    expect(isErrorCell(mockCell1)).toEqual(false)
+    expect((mockCell1 as SparklineCellType).data?.values).toEqual([4, 4, 4, 4])
+    expect((mockCell1 as SparklineCellType).data?.yAxis).toEqual([0, 4])
+
+    // Uniform zero values should render with y_min=0 and y_max=1
+    const mockCell2 = mockColumn.getCell([0, 0, 0])
+    expect(isErrorCell(mockCell2)).toEqual(false)
+    expect((mockCell2 as SparklineCellType).data?.values).toEqual([0, 0, 0])
+    expect((mockCell2 as SparklineCellType).data?.yAxis).toEqual([0, 1])
+
+    // Uniform negative values should render with y_min=value and y_max=0
+    const mockCell3 = mockColumn.getCell([-5, -5, -5])
+    expect(isErrorCell(mockCell3)).toEqual(false)
+    expect((mockCell3 as SparklineCellType).data?.values).toEqual([-5, -5, -5])
+    expect((mockCell3 as SparklineCellType).data?.yAxis).toEqual([-5, 0])
+  })
+
   it("supports named color mapping and custom colors", () => {
     const blueColumn = getLineChartColumn({ color: "blue" })
     const blueCell = blueColumn.getCell([0, 1]) as SparklineCellType

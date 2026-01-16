@@ -52,9 +52,7 @@ class StatsRequestHandler(tornado.web.RequestHandler):
         # If no families are specified, all metrics are returned.
         # Example: /_stcore/metrics?families=session_events_total&families=active_sessions
         requested_families = self.get_arguments("families")
-        stats = self._manager.get_stats(
-            family_names=requested_families if requested_families else None
-        )
+        stats = self._manager.get_stats(family_names=requested_families or None)
         # If the request asked for protobuf output, we return a serialized
         # protobuf. Else we return text.
         if "application/x-protobuf" in self.request.headers.get_list("Accept"):

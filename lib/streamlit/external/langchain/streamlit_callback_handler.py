@@ -129,7 +129,7 @@ class LLMThoughtLabeler:
         input_str_len = min(MAX_TOOL_INPUT_STR_LENGTH, len(input_str))
         input_str = input_str[:input_str_len]
         if len(tool.input_str) > input_str_len:
-            input_str = input_str + "..."
+            input_str += "..."
         input_str = input_str.replace("\n", " ")
         return f"**{name}:** {input_str}"
 

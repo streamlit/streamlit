@@ -432,7 +432,7 @@ def test_csv_download_button(
     # button uses under-the-hood does not work. So we monkey-patch it to throw an error
     # and trigger our alternative download logic.
     if browser_name == "chromium":
-        if browser_type_launch_args.get("headless", False):
+        if browser_type_launch_args.get("headless"):
             click_enter_on_file_picker = True
         else:
             app.evaluate(

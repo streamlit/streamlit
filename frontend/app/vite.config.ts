@@ -113,7 +113,9 @@ export default defineConfig({
         changeOrigin: true,
         ws: true,
       },
-      "^.*/media/.*": {
+      // Use negative lookahead to avoid matching /static/media/* (Vite's font files)
+      // while still matching /media/* and /basepath/media/* (backend user uploads)
+      "^(?!.*/static/media).*/media/.*": {
         target: DEV_SERVER_BACKEND_URL,
         changeOrigin: true,
       },

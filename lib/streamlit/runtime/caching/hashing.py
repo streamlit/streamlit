@@ -25,7 +25,7 @@ import hashlib
 import inspect
 import io
 import os
-import pickle
+import pickle  # noqa: S403
 import sys
 import tempfile
 import threading
@@ -653,5 +653,3 @@ class _CacheFuncHasher:
 
 class NoResult:
     """Placeholder class for return values when None is meaningful."""
-
-    pass

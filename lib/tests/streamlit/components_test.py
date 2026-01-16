@@ -334,7 +334,7 @@ class ComponentRegistryTest(unittest.TestCase):
         test_path_2 = "/another/test/component/directory"
 
         def isdir(path):
-            return path in (test_path_1, test_path_2)
+            return path in {test_path_1, test_path_2}
 
         registry = ComponentRegistry.instance()
         with mock.patch(
@@ -667,7 +667,6 @@ class AlternativeComponentRegistryTest(unittest.TestCase):
     class AlternativeComponentRegistry(BaseComponentRegistry):
         def __init__(self):
             """Dummy implementation"""
-            pass
 
         def register_component(self, component: BaseCustomComponent) -> None:
             return None

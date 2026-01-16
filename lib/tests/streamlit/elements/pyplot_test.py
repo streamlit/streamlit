@@ -74,7 +74,7 @@ class PyplotTest(DeltaGeneratorTestCase):
         with patch.object(plt, "clf", wraps=plt.clf, autospec=True) as plt_clf:
             st.pyplot(clear_figure=clear_figure)
 
-            if clear_figure in (True, None):
+            if clear_figure in {True, None}:
                 plt_clf.assert_called_once()
             else:
                 plt_clf.assert_not_called()

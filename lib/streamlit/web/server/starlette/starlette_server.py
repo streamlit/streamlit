@@ -288,7 +288,7 @@ class UvicornServer:
                 last_exception = exc
                 # EADDRINUSE: port in use by another process
                 # EACCES: port reserved by system (common on Windows, see #13521)
-                if exc.errno in (errno.EADDRINUSE, errno.EACCES):
+                if exc.errno in {errno.EADDRINUSE, errno.EACCES}:
                     if _is_port_manually_set():
                         _LOGGER.error("Port %s is not available", port)  # noqa: TRY400
                         sys.exit(1)
@@ -476,7 +476,7 @@ class UvicornRunner:
             except OSError as exc:
                 # EADDRINUSE: port in use by another process
                 # EACCES: port reserved by system (common on Windows)
-                if exc.errno in (errno.EADDRINUSE, errno.EACCES):
+                if exc.errno in {errno.EADDRINUSE, errno.EACCES}:
                     if _is_port_manually_set():
                         _LOGGER.error("Port %s is not available", port)  # noqa: TRY400
                         sys.exit(1)

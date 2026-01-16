@@ -230,7 +230,7 @@ class DateInputTest(DeltaGeneratorTestCase):
         """Test a range set by session state."""
         date_range_input = [date(2024, 1, 15), date(2024, 1, 15) + timedelta(2)]
         state = st.session_state
-        state["date_range"] = date_range_input[:]
+        state["date_range"] = date_range_input.copy()
 
         date_range = st.date_input(
             "select a date range",

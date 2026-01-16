@@ -194,7 +194,7 @@ def _clean(txt: str) -> str:
 
     Preserves leading and trailing spaces, and does not modify spaces in between lines.
     """
-    return re.sub(" +", " ", txt)
+    return re.sub(r" +", " ", txt)
 
 
 def _clean_paragraphs(txt: str) -> list[str]:
@@ -741,7 +741,7 @@ def process_theme_inheritance(
     base_value = base_option.value
 
     # Check if it's a file path or URL (not just "light" or "dark")
-    if base_value in ("light", "dark"):
+    if base_value in {"light", "dark"}:
         return
 
     def _raise_invalid_nested_base() -> None:
@@ -756,7 +756,7 @@ def process_theme_inheritance(
 
         # Validate that theme.base of the referenced theme file doesn't reference another file
         theme_base = theme_file_content.get("theme", {}).get("base")
-        if theme_base and theme_base not in ("light", "dark"):
+        if theme_base and theme_base not in {"light", "dark"}:
             _raise_invalid_nested_base()
 
         # Get current theme options from main config.toml
@@ -777,10 +777,10 @@ def process_theme_inheritance(
                     opt_name.startswith("theme.")
                     and opt_name != "theme.base"
                     and opt_config.where_defined
-                    in (
+                    in {
                         "environment variable",
                         "command-line argument or environment variable",
-                    )
+                    }
                 ):
                     high_precedence_theme_options[opt_name] = {
                         "value": opt_config.value,
