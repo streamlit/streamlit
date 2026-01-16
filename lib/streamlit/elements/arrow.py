@@ -744,13 +744,18 @@ class ArrowMixin:
         elif (
             # Hide index column if row selections are activated and the dataframe has a range index.
             # The range index usually does not add a lot of value.
-            is_selection_activated
-            and selection_mode in {"multi-row", "single-row"}
-            and has_range_index
+            is_selection_activated and has_range_index
         ):
-            update_column_config(
-                column_config_mapping, INDEX_IDENTIFIER, {"hidden": True}
+            # Normalize selection_mode to a set to check for row selection modes
+            mode_set = (
+                {selection_mode}
+                if isinstance(selection_mode, str)
+                else set(selection_mode)
             )
+            if mode_set & {"multi-row", "single-row"}:
+                update_column_config(
+                    column_config_mapping, INDEX_IDENTIFIER, {"hidden": True}
+                )
 
         marshall_column_config(proto, column_config_mapping)
 
