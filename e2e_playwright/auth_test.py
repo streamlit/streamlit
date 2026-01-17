@@ -68,6 +68,7 @@ def wait_for_oidc_server_to_start(port: int, timeout: int = 60) -> bool:
             if response.status_code == 200:
                 return True
         except requests.RequestException:
+            # Connection errors are expected while the mock server is starting
             pass
         time.sleep(0.5)
     return False
