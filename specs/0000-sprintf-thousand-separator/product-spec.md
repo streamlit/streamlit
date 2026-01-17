@@ -114,7 +114,7 @@ thousand separator instead of a comma:
 
 **Unsupported specifiers:**
 
-The `,` and `_` flags are silently ignored for non-decimal formats (`%o`, `%x`, `%X`, `%b`)
+The `,` and `_` flags are silently ignored (not causing a syntax error) for non-decimal formats (`%o`, `%x`, `%X`, `%b`)
 and non-numeric format types (`%s`, `%c`, `%t`, `%T`). The flag is captured but has no effect.
 
 ### Affected Components
