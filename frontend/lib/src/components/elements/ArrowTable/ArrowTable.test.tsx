@@ -18,8 +18,9 @@ import { screen } from "@testing-library/react"
 
 import { Arrow as ArrowProto } from "@streamlit/protobuf"
 
+import { INDEX_IDENTIFIER } from "~lib/dataframes/constants"
 import { Quiver } from "~lib/dataframes/Quiver"
-import { EMPTY, UNICODE } from "~lib/mocks/arrow"
+import { EMPTY, NAMED_INDEX, UNICODE } from "~lib/mocks/arrow"
 import { render } from "~lib/test_util"
 
 import { ArrowTable, TableProps } from "./ArrowTable"
@@ -112,5 +113,120 @@ describe("st._arrow_table", () => {
     expect(tableCell).toBeTruthy()
     const cellStyle = getComputedStyle(tableCell)
     expect(cellStyle.borderBottomStyle).toBe("solid")
+  })
+
+  describe("index column visibility", () => {
+    it("renders index columns by default", () => {
+      const props: TableProps = {
+        element: ArrowProto.create({ borderMode: ArrowProto.BorderMode.ALL }),
+        data: new Quiver({ data: NAMED_INDEX }),
+      }
+
+      const { container } = render(<ArrowTable {...props} />)
+
+      // NAMED_INDEX has 1 index column + 2 data columns = 3 total columns
+      const headerRow = container.querySelector("thead tr")
+      expect(headerRow).toBeTruthy()
+      const headerCells = headerRow?.querySelectorAll("th")
+      expect(headerCells?.length).toBe(3)
+
+      // Check that the first header is the index column (named "INDEX")
+      const firstHeader = headerCells?.[0]
+      expect(firstHeader?.textContent).toContain("INDEX")
+
+      // Check data rows also have 3 columns
+      const dataRow = container.querySelector("tbody tr")
+      expect(dataRow).toBeTruthy()
+      const dataCells = dataRow?.querySelectorAll("th, td")
+      expect(dataCells?.length).toBe(3)
+
+      // First cell should be a th (index column)
+      const firstDataCell = dataCells?.[0]
+      expect(firstDataCell?.tagName).toBe("TH")
+    })
+
+    it("hides index columns when configured", () => {
+      const columnConfig = JSON.stringify({
+        [INDEX_IDENTIFIER]: { hidden: true },
+      })
+
+      const props: TableProps = {
+        element: ArrowProto.create({
+          borderMode: ArrowProto.BorderMode.ALL,
+          columns: columnConfig,
+        }),
+        data: new Quiver({ data: NAMED_INDEX }),
+      }
+
+      const { container } = render(<ArrowTable {...props} />)
+
+      // NAMED_INDEX has 1 index column (hidden) + 2 data columns = 2 visible columns
+      const headerRow = container.querySelector("thead tr")
+      expect(headerRow).toBeTruthy()
+      const headerCells = headerRow?.querySelectorAll("th")
+      expect(headerCells?.length).toBe(2)
+
+      // First header should be "c1" (first data column), not "INDEX"
+      const firstHeader = headerCells?.[0]
+      expect(firstHeader?.textContent).not.toContain("INDEX")
+      expect(firstHeader?.textContent).toContain("c1")
+
+      // Check data rows also have only 2 columns
+      const dataRow = container.querySelector("tbody tr")
+      expect(dataRow).toBeTruthy()
+      const dataCells = dataRow?.querySelectorAll("th, td")
+      expect(dataCells?.length).toBe(2)
+
+      // First cell should be a td (data column), not th (index column)
+      const firstDataCell = dataCells?.[0]
+      expect(firstDataCell?.tagName).toBe("TD")
+    })
+
+    it("shows index columns when explicitly set to visible", () => {
+      const columnConfig = JSON.stringify({
+        [INDEX_IDENTIFIER]: { hidden: false },
+      })
+
+      const props: TableProps = {
+        element: ArrowProto.create({
+          borderMode: ArrowProto.BorderMode.ALL,
+          columns: columnConfig,
+        }),
+        data: new Quiver({ data: NAMED_INDEX }),
+      }
+
+      const { container } = render(<ArrowTable {...props} />)
+
+      // NAMED_INDEX has 1 index column + 2 data columns = 3 total columns
+      const headerRow = container.querySelector("thead tr")
+      expect(headerRow).toBeTruthy()
+      const headerCells = headerRow?.querySelectorAll("th")
+      expect(headerCells?.length).toBe(3)
+
+      // Check that the first header is the index column (named "INDEX")
+      const firstHeader = headerCells?.[0]
+      expect(firstHeader?.textContent).toContain("INDEX")
+    })
+
+    it("handles empty table with hidden index configuration", () => {
+      const columnConfig = JSON.stringify({
+        [INDEX_IDENTIFIER]: { hidden: true },
+      })
+
+      const props: TableProps = {
+        element: ArrowProto.create({
+          borderMode: ArrowProto.BorderMode.ALL,
+          columns: columnConfig,
+        }),
+        data: new Quiver({ data: EMPTY }),
+      }
+
+      render(<ArrowTable {...props} />)
+
+      // Empty table should still render with "empty" cell
+      expect(
+        screen.getByTestId("stTableStyledEmptyTableCell")
+      ).toBeInTheDocument()
+    })
   })
 })

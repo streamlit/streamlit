@@ -16,11 +16,9 @@
 
 import { getLogger } from "loglevel"
 
-const LOG = getLogger("columnConfigUtils")
+import { INDEX_IDENTIFIER } from "~lib/dataframes/constants"
 
-// Using this ID for column config will apply the config to all index columns
-// This matches the identifier used in the backend and DataFrame component
-export const INDEX_IDENTIFIER = "_index"
+const LOG = getLogger("columnConfigUtils")
 
 /**
  * Configuration options for a column.

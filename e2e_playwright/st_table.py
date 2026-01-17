@@ -295,3 +295,63 @@ st.table(data_dict, border=False)
 
 st.subheader("Horizontal borders only (border='horizontal')")
 st.table(data_dict, border="horizontal")
+
+st.header("Hide Index Parameter")
+
+st.subheader("Default: Index visible")
+df_with_index = pd.DataFrame(
+    {
+        "Name": ["Max", "Lewis", "Charles"],
+        "Age": [28, 41, 28],
+    },
+    index=["D1", "D2", "D3"],
+)
+st.table(df_with_index)
+
+st.subheader("Hide index (hide_index=True)")
+st.table(df_with_index, hide_index=True)
+
+st.subheader("MultiIndex with hide_index=False (default)")
+multi_index_df = pd.DataFrame(
+    {
+        "Driver": ["Fernando", "Oscar", "Lance"],
+        "Position": [2, 6, 1],
+    },
+    index=pd.MultiIndex.from_tuples(
+        [("2023", "Jan"), ("2023", "Feb"), ("2024", "Jul")],
+        names=["Year", "Month"],
+    ),
+)
+st.table(multi_index_df)
+
+st.subheader("MultiIndex with hide_index=True")
+st.table(multi_index_df, hide_index=True)
+
+st.subheader("Pandas Styler with hide_index=False (default)")
+styled_df = pd.DataFrame(
+    {"Team": ["Ferrari", "Aston Martin", "Mercedes"], "Wins": [8, 3, 10]},
+    index=["Team 1", "Team 2", "Team 3"],
+)
+
+
+def color_negative_red(val: float | str) -> str:
+    if isinstance(val, (int, float)) and val < 3:
+        color = "red"
+    else:
+        color = "black"
+    return f"color: {color}"
+
+
+st.table(styled_df.style.map(color_negative_red))  # type: ignore[arg-type]
+
+st.subheader("Pandas Styler with hide_index=True")
+st.table(styled_df.style.map(color_negative_red), hide_index=True)  # type: ignore[arg-type]
+
+st.subheader("DataFrame without index (RangeIndex)")
+df_no_custom_index = pd.DataFrame(
+    {"Team": ["Ferrari", "Redbull", "McLaren"], "Rating": [6.2, 7.9, 8.1]}
+)
+st.table(df_no_custom_index)
+
+st.subheader("DataFrame without index (RangeIndex) with hide_index=True")
+st.table(df_no_custom_index, hide_index=True)

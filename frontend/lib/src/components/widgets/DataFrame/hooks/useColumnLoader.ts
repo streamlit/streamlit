@@ -36,22 +36,15 @@ import {
   getConfiguredWidth,
   shouldUseContainerWidth,
 } from "~lib/components/widgets/DataFrame/dimensionUtils"
+import {
+  COLUMN_POSITION_PREFIX,
+  COLUMN_WIDTH_MAPPING,
+  INDEX_IDENTIFIER,
+} from "~lib/dataframes/constants"
 import { Quiver } from "~lib/dataframes/Quiver"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { convertRemToPx } from "~lib/theme"
 import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
-
-// Using this ID for column config will apply the config to all index columns
-export const INDEX_IDENTIFIER = "_index"
-// Prefix used in the config column mapping when referring to a column via the numeric position
-export const COLUMN_POSITION_PREFIX = "_pos:"
-
-// Predefined column widths configurable by the user
-export const COLUMN_WIDTH_MAPPING = {
-  small: 75,
-  medium: 200,
-  large: 400,
-}
 
 const LOG = getLogger("useColumnLoader")
 

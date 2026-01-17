@@ -14,6 +14,7 @@
 
 """Arrow marshalling unit tests."""
 
+import json
 from unittest.mock import patch
 
 import numpy as np
@@ -27,6 +28,7 @@ from streamlit.dataframe_util import (
     convert_arrow_bytes_to_pandas_df,
     convert_arrow_table_to_arrow_bytes,
 )
+from streamlit.elements.lib.column_config_utils import INDEX_IDENTIFIER
 from streamlit.errors import StreamlitValueError
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -153,3 +155,76 @@ class ArrowTest(DeltaGeneratorTestCase):
             match=r"Invalid `border` value.*True, False, 'horizontal'",
         ):
             st.table(df, border="invalid")
+
+    @parameterized.expand(
+        [
+            (False, ""),
+            (True, json.dumps({INDEX_IDENTIFIER: {"hidden": True}})),
+        ]
+    )
+    def test_table_hide_index(self, hide_index, expected):
+        """Test that st.table `hide_index` parameter sets the expected index column
+        config for different inputs."""
+        df = mock_data_frame()
+        st.table(df, hide_index=hide_index)
+        proto = self.get_delta_from_queue().new_element.arrow_table
+        self.assertEqual(proto.columns, expected)
+
+        # Verify data is still present
+        pd.testing.assert_frame_equal(convert_arrow_bytes_to_pandas_df(proto.data), df)
+
+    def test_table_hide_index_with_styler(self):
+        """Test that hide_index works correctly with pandas Styler."""
+        df = mock_data_frame()
+        styler = df.style
+        styler.set_uuid("THE_FALL_OFF")
+
+        # Test hide_index=True with styler
+        st.table(styler, hide_index=True)
+        proto = self.get_delta_from_queue().new_element.arrow_table
+
+        expected_config = json.dumps({INDEX_IDENTIFIER: {"hidden": True}})
+        self.assertEqual(proto.columns, expected_config)
+        self.assertEqual(proto.styler.uuid, "THE_FALL_OFF")
+
+        # Test hide_index=False with styler
+        st.table(styler, hide_index=False)
+        proto = self.get_delta_from_queue().new_element.arrow_table
+
+        self.assertEqual(proto.columns, "")
+        self.assertEqual(proto.styler.uuid, "THE_FALL_OFF")
+
+    def test_table_hide_index_with_multiindex(self):
+        """Test that hide_index applies to all index columns in MultiIndex."""
+        df = pd.DataFrame(
+            {"MDL": [1, 2, 3], "TOS": [4, 5, 6]},
+            index=pd.MultiIndex.from_tuples(
+                [(1, "a"), (2, "b"), (3, "c")], names=["num", "letter"]
+            ),
+        )
+
+        # Test hide_index=True hides all index columns
+        st.table(df, hide_index=True)
+        proto = self.get_delta_from_queue().new_element.arrow_table
+
+        expected_config = json.dumps({INDEX_IDENTIFIER: {"hidden": True}})
+        self.assertEqual(proto.columns, expected_config)
+
+        # Verify both index columns are present in data but marked as hidden
+        result_df = convert_arrow_bytes_to_pandas_df(proto.data)
+        pd.testing.assert_frame_equal(result_df, df)
+
+    def test_table_hide_index_default_behavior(self):
+        """Test that hide_index=False is the default and shows the index."""
+        df = pd.DataFrame({"KOD": [1, 2, 3]}, index=["x", "y", "z"])
+
+        # Call st.table without hide_index parameter
+        st.table(df)
+        proto = self.get_delta_from_queue().new_element.arrow_table
+
+        # By default (hide_index=False), no index config should be set
+        self.assertEqual(proto.columns, "")
+
+        # Verify index is present in the data
+        result_df = convert_arrow_bytes_to_pandas_df(proto.data)
+        pd.testing.assert_frame_equal(result_df, df)

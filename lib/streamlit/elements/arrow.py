@@ -911,15 +911,16 @@ class ArrowMixin:
             height="content",
         )
 
-        column_config_mapping: ColumnConfigMapping = {}
-        update_column_config(
-            column_config_mapping, INDEX_IDENTIFIER, {"hidden": hide_index}
-        )
-
         proto = ArrowProto()
         marshall(proto, data, default_uuid)
         proto.border_mode = border_mode
-        marshall_column_config(proto, column_config_mapping)
+
+        if hide_index is True:
+            column_config_mapping: ColumnConfigMapping = {}
+            update_column_config(
+                column_config_mapping, INDEX_IDENTIFIER, {"hidden": hide_index}
+            )
+            marshall_column_config(proto, column_config_mapping)
 
         return self.dg._enqueue("arrow_table", proto, layout_config=layout_config)
 

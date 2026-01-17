@@ -20,9 +20,8 @@ import {
   BaseColumn,
   isMissingValueCell,
 } from "~lib/components/widgets/DataFrame/columns"
+import { INDEX_IDENTIFIER } from "~lib/dataframes/constants"
 import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
-
-import { INDEX_IDENTIFIER } from "./useColumnLoader"
 
 /**
  * Get the column name for a given column to use in the widget state.

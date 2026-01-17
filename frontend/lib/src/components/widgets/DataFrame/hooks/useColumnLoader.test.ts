@@ -30,17 +30,19 @@ import {
   TextColumn,
 } from "~lib/components/widgets/DataFrame/columns"
 import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
+import {
+  COLUMN_POSITION_PREFIX,
+  COLUMN_WIDTH_MAPPING,
+  INDEX_IDENTIFIER,
+} from "~lib/dataframes/constants"
 import { Quiver } from "~lib/dataframes/Quiver"
 import { UNICODE } from "~lib/mocks/arrow"
 
 import useColumnLoader, {
   applyColumnConfig,
-  COLUMN_POSITION_PREFIX,
-  COLUMN_WIDTH_MAPPING,
   ColumnConfigProps,
   getColumnConfig,
   getColumnType,
-  INDEX_IDENTIFIER,
 } from "./useColumnLoader"
 
 const MOCK_COLUMNS: BaseColumn[] = [
