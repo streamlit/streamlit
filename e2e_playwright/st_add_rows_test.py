@@ -50,3 +50,10 @@ def test_correctly_adds_rows_to_dataframe(
 def test_raises_an_exception_when_shapes_dont_match(app: Page):
     """Test that add_rows raises error for mismatched shapes (functional behavior)."""
     expect(app.get_by_test_id("stAlert")).to_be_visible()
+
+
+def test_shows_deprecation_warning_in_browser(app: Page):
+    """Test that add_rows shows a deprecation warning in the browser."""
+    alerts = app.get_by_test_id("stAlert")
+    # Check that at least one alert contains the deprecation message
+    expect(alerts.filter(has_text="add_rows` is deprecated")).to_have_count(10)
