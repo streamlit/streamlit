@@ -20,7 +20,7 @@
 # - Development dependency groups
 #
 # The streamlit package itself is defined in lib/pyproject.toml.
-# Test-specific configs are in lib/pytest.ini and e2e_playwright/pytest.ini.
+# Test-specific configs are in lib/pyproject.toml and e2e_playwright/pytest.ini.
 # =============================================================================
 
 [project]

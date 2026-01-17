@@ -166,14 +166,14 @@ python-format:
 .PHONY: python-tests
 # Run Python unit tests.
 python-tests:
-	uv run pytest -c lib/pytest.ini -v -l \
+	uv run pytest -c lib/pyproject.toml -v -l \
 		-m "not performance" \
 		lib/tests/
 
 .PHONY: python-performance-tests
 # Run Python performance tests.
 python-performance-tests:
-	uv run pytest -c lib/pytest.ini -v -l \
+	uv run pytest -c lib/pyproject.toml -v -l \
 		-m "performance" \
 		--benchmark-autosave \
 		--benchmark-storage file://.benchmarks/pytest \
@@ -182,7 +182,7 @@ python-performance-tests:
 .PHONY: python-integration-tests
 # Run Python integration tests. Requires `uv sync --group integration` to be run first.
 python-integration-tests:
-	uv run pytest -c lib/pytest.ini -v -l \
+	uv run pytest -c lib/pyproject.toml -v -l \
 		--require-integration \
 		lib/tests/
 

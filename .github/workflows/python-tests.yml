@@ -103,7 +103,7 @@ jobs:
         uses: actions/upload-artifact@v6
         with:
           name: coverage_data_${{ matrix.python_version }}
-          path: lib/${{ env.COVERAGE_FILE }}
+          path: ${{ env.COVERAGE_FILE }}
           include-hidden-files: true
           if-no-files-found: ignore
 
@@ -142,7 +142,7 @@ jobs:
         uses: actions/upload-artifact@v6
         with:
           name: coverage_data_integration
-          path: lib/${{ env.COVERAGE_FILE }}
+          path: ${{ env.COVERAGE_FILE }}
           include-hidden-files: true
           if-no-files-found: ignore
 
@@ -199,7 +199,7 @@ jobs:
         uses: actions/upload-artifact@v6
         with:
           name: coverage_data_min_deps
-          path: lib/${{ env.COVERAGE_FILE }}
+          path: ${{ env.COVERAGE_FILE }}
           include-hidden-files: true
           if-no-files-found: ignore
 
