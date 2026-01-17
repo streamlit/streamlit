@@ -31,7 +31,7 @@ import os
 import sys
 from pathlib import Path
 
-import tomllib
+import tomllib  # type: ignore[import-not-found]
 
 
 def get_package_version() -> str:
