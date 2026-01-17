@@ -58,6 +58,7 @@ dev = [
   "mypy-protobuf>=3.2",
   "semver>=3",
   "setuptools>=65.5.1",
+  "build",
   "twine",
   "wheel",
   "pytz",

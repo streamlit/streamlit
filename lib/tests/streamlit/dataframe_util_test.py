@@ -600,6 +600,12 @@ class DataframeUtilTest(unittest.TestCase):
         """
         import ray
 
+        # Explicitly initialize Ray with limited resources to prevent hangs in CI.
+        # Without this, ray.data.from_pandas() will auto-initialize Ray, which can
+        # hang indefinitely in resource-constrained CI environments.
+        if not ray.is_initialized():
+            ray.init(num_cpus=1, include_dashboard=False, ignore_reinit_error=True)
+
         df = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
         ray_dataset = ray.data.from_pandas(df)
 
