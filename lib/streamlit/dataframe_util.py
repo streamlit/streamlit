@@ -1072,8 +1072,10 @@ def is_colum_type_arrow_incompatible(column: Series[Any] | Index[Any]) -> bool:
         return True
 
     if column.dtype == "object":
-        # The dtype of mixed type columns is always object, the actual type of the column
-        # values can be determined via the infer_dtype function:
+        # The dtype of mixed type columns is always object. In pandas 3.0+, pure
+        # string columns use StringDtype instead of object, so they won't enter
+        # this block (and they're Arrow-compatible anyway). The actual type of
+        # object dtype column values can be determined via the infer_dtype function:
         # https://pandas.pydata.org/docs/reference/api/pandas.api.types.infer_dtype.html
         inferred_type = infer_dtype(column, skipna=True)
 

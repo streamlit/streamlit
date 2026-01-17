@@ -59,7 +59,7 @@ def highlight_max(s: Any, props: str = "") -> npt.NDArray[Any]:
 
 
 # Passing style values w/ all color formats to test css-style-string parsing robustness.
-styled_df = df.style.map(style_negative, props="color:#FF0000;").applymap(  # type: ignore[call-overload]
+styled_df = df.style.map(style_negative, props="color:#FF0000;").map(
     lambda v: "opacity: 20%;" if (v < 0.3) and (v > -0.3) else None
 )
 
