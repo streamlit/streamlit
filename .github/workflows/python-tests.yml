@@ -138,7 +138,7 @@ jobs:
           use_cached_venv: false
       - name: Install integration dependencies
         run: |
-          source venv/bin/activate
+          source .venv/bin/activate
           uv sync --group integration
       - name: Run Python integration tests
         run: make python-integration-tests
@@ -199,11 +199,11 @@ jobs:
           fi
       - name: Install min dependencies (force reinstall)
         run: |
-          source venv/bin/activate
+          source .venv/bin/activate
           uv pip install -r scripts/assets/min-constraints-gen.txt --force-reinstall
       - name: Make local modules visible
         run: |
-          source venv/bin/activate
+          source .venv/bin/activate
           uv pip install --editable ./lib --no-deps
       - name: Run Python Tests
         run: make python-tests

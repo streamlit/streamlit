@@ -53,7 +53,7 @@ jobs:
         uses: ./.github/actions/playwright_install
       - name: Install integration dependencies
         run: |
-          source venv/bin/activate
+          source .venv/bin/activate
           uv pip install polars
       - name: Run make frontend-with-profiler
         run: make frontend-with-profiler

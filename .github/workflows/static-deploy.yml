@@ -33,7 +33,7 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.STATIC_S3_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.STATIC_S3_SECRET_KEY }}
         run: |
-          source venv/bin/activate
+          source .venv/bin/activate
           # Install awscli via pip/uv:
           uv pip install awscli==1.37.6
 

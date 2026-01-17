@@ -78,13 +78,13 @@ runs:
       id: cache-virtualenv
       uses: actions/cache@v4
       with:
-        path: venv
-        key: v1-python-venv-${{ hashFiles('**/python_cache_key.md5') }}
+        path: .venv
+        key: v2-python-venv-${{ hashFiles('**/python_cache_key.md5') }}
     - if: steps.cache-virtualenv.outputs.cache-hit != 'true'
       name: Create Virtual Env
       run: |
-        python -m venv venv
-        source venv/bin/activate
+        python -m venv .venv
+        source .venv/bin/activate
         pip install --upgrade pip
         pip install uv
         # Do not install Playwright browsers in CI here; use the
@@ -98,7 +98,7 @@ runs:
         uv pip install --editable ./lib --no-deps
       shell: bash
     - name: Activate virtualenv
-      run: echo "${{ github.workspace }}/venv/bin" >> $GITHUB_PATH
+      run: echo "${{ github.workspace }}/.venv/bin" >> $GITHUB_PATH
       shell: bash
     - name: Show environment info
       run: |

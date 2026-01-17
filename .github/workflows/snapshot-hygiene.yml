@@ -56,7 +56,7 @@ jobs:
       - name: Check for orphaned snapshots
         id: check-snapshots
         run: |
-          source venv/bin/activate
+          source .venv/bin/activate
           set +e  # Don't exit immediately on error
           python scripts/snapshot_cleanup.py --ci > snapshot_output.txt 2>&1
           EXIT_CODE=$?

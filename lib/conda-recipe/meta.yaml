@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Load version from pyproject.toml
-{% set pyproject = load_file_data('pyproject.toml', from_recipe_dir=True) %}
+# Load version from pyproject.toml (one directory up from recipe dir)
+{% set pyproject = load_file_data('../pyproject.toml', from_recipe_dir=True) %}
 {% set version = pyproject.get('project', {}).get('version', '0.0.0') %}
 
 

@@ -34,10 +34,7 @@ from pathlib import Path
 if sys.version_info >= (3, 11):
     import tomllib
 else:
-    try:
-        import tomllib
-    except ImportError:
-        import tomli as tomllib  # type: ignore[import-not-found,no-redef]
+    import tomli as tomllib  # type: ignore[import-not-found]
 
 
 def get_package_version() -> str:
@@ -47,7 +44,8 @@ def get_package_version() -> str:
     with open(pyproject_path, "rb") as f:
         pyproject = tomllib.load(f)
 
-    return pyproject["project"]["version"]
+    version: str = pyproject["project"]["version"]
+    return version
 
 
 def main() -> None:

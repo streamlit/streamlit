@@ -61,7 +61,7 @@ jobs:
           fi
       - name: Run custom component playwright tests
         run: |
-          source venv/bin/activate
+          source .venv/bin/activate
           cd e2e_playwright
           echo "Installing custom components"
           uv pip install -r ./custom_components/components-e2e-requirements.txt

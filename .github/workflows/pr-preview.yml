@@ -205,7 +205,7 @@ jobs:
         # To create a consistent location for the release/demo whl file, we need a
         # stagnent version number (streamlit-11.11.11)
         run: |
-          source venv/bin/activate
+          source .venv/bin/activate
           # Install awscli via pip/uv:
           uv pip install awscli==1.37.6
 
