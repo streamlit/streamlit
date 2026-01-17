@@ -21,6 +21,7 @@ from typing import Any, Final, TypeVar, cast
 import streamlit
 from streamlit import config
 from streamlit.logger import get_logger
+from streamlit.util import calc_md5
 
 _LOGGER: Final = get_logger(__name__)
 
@@ -29,7 +30,7 @@ TObj = TypeVar("TObj", bound=object)
 
 # Set to track which deprecation warnings have been shown (by message hash)
 # when show_once=True is used
-_shown_warnings: set[int] = set()
+_shown_warnings: set[str] = set()
 
 
 def _error_details_in_browser_enabled() -> bool:
@@ -68,7 +69,7 @@ def show_deprecation_warning(
         script run.
     """
     if show_once:
-        message_hash = hash(message)
+        message_hash = calc_md5(message)
         if message_hash in _shown_warnings:
             return
         _shown_warnings.add(message_hash)
