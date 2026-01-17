@@ -448,14 +448,10 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
         self, patched_watch_file, patched_watch_dir, patched_get_config_options
     ):
         """Test watching when some config files exist and some don't."""
-
-        def exists_side_effect(path):
-            # Simulate: first config file exists, second doesn't
-            return "home" in path or path.endswith("0")
-
         call_count = [0]
 
         def custom_exists(path):
+            # First call returns True (file exists), second returns False
             result = call_count[0] == 0
             call_count[0] += 1
             return result
