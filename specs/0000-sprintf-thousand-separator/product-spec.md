@@ -140,17 +140,24 @@ Thousand separator support has been a long-standing feature request for sprintf-
 but the library hasn't been maintained for over 2 years. By vendoring the library, we can
 add this feature independently while also allowing us to maintain it ourselves. The implementation is only a single file with a couple hundred lines of code.
 
+## Future Enhancement: Python Format String Support
+
+As a potential follow-up, we could additionally support Python's native format string syntax
+(`{:,d}`, `{:.2f}`, etc.) alongside sprintf. Analysis shows this is **fully backwards compatible**
+since the two syntaxes use different delimiters (`%` vs `{}`).
+
+
+**See:** [follow-up-python-format-spec.md](./follow-up-python-format-spec.md) for the full analysis
+including syntax comparison tables, scope definition, and implementation approach.
+
+
 ## Checklist
 
-- [x] Will this work on all deployment platforms (e.g. [Streamlit Community Cloud](https://streamlit.io/cloud), [Streamlit in Snowflake](https://www.snowflake.com/en/product/features/streamlit-in-snowflake/), [Hugging Face Spaces](https://huggingface.co/spaces))?
-- [x] No breaking API changes?
-  - Using `,` or `_` after `%` previously caused an error, so existing format strings are unaffected
-- [x] No new dependencies?
-  - Vendors sprintf-js instead of using npm package; reduces external dependencies
-- [x] Metrics collected?
-- [x] Any security or legal implications?
-  - sprintf-js is BSD-3-Clause licensed; license file included in vendor directory
-- [x] Anything to keep in mind for docs?
-  - Document new `,` and `_` flags in a dedicated format string documentation
-  - Show examples for common use cases (currency, large numbers)
-- [x] Any other risks?
+| Item | ✅ or comment |
+|------|---------------|
+| Works on SiS, Cloud, etc? | ✅ Frontend-only change, works everywhere |
+| No breaking API changes | ✅ Using `,` or `_` after `%` previously caused an error |
+| No new dependencies | ✅ Vendors sprintf-js instead of npm package |
+| Metrics collected | ✅ |
+| Any security/legal impact? | ✅ sprintf-js is BSD-3-Clause; license included |
+| Any docs changes needed? | ✅ Document `,` and `_` flags with examples |
