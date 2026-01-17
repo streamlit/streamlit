@@ -38,7 +38,7 @@ def plotting_demo() -> None:
         chart.line_chart(data)
         status_text.text(f"{i}% complete")
         progress_bar.progress(i)
-        time.sleep(0.05)
+        time.sleep(0.02)
 
     progress_bar.empty()
 
@@ -53,8 +53,7 @@ st.title("Plotting demo")
 st.write(
     """
     This demo illustrates a combination of plotting and animation with
-    Streamlit. We're generating a bunch of random numbers in a loop for around
-    5 seconds. Enjoy!
+    Streamlit. We're generating a bunch of random numbers in a loop. Enjoy!
     """
 )
 plotting_demo()
