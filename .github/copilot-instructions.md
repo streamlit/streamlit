@@ -31,7 +31,7 @@
 ### Shell & Build Policy (AI Agents)
 
 - Prefer `make` targets for all dev tasks (tests, lint, format, builds).
-- Always use `uv run` to run any Python command (e.g. `uv run pytest`, `uv run ruff`, `uv run mypy`, etc.).
+- Always use `uv run` to run any Python command (e.g. `uv run streamlit`, `uv run pytest`, `uv run ruff`, `uv run mypy`, etc.).
 - For Python unit tests: `uv run pytest` commands are allowed and encouraged for running specific tests during development.
 - For E2E tests: `uv run pytest` commands targeting `e2e_playwright/` files are blocked by policy.
   Use `make run-e2e-test <filename>` instead.
