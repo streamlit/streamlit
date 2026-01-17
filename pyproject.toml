@@ -68,8 +68,6 @@ dev = [
   "types-cachetools",
   "types-Authlib",
   "pandas-stubs>=2.3.3.251219",
-  # Required for verify_version.py on Python < 3.11:
-  "tomli; python_version < '3.11'",
 ]
 
 # Test dependencies
@@ -408,3 +406,4 @@ exclude = [
 [tool.ty.rules]
 unresolved-import = "ignore"
 possibly-unresolved-reference = "error"
+unused-ignore-comment = "ignore"

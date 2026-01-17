@@ -31,10 +31,7 @@ import os
 import sys
 from pathlib import Path
 
-if sys.version_info >= (3, 11):
-    import tomllib
-else:
-    import tomli as tomllib
+import tomllib
 
 
 def get_package_version() -> str:
