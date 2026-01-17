@@ -29,15 +29,17 @@ def plotting_demo() -> None:
     data = np.random.randn(1, 1)  # noqa: NPY002
     chart.line_chart(data)
 
-    for i in range(1, 101):
+    for i in range(1, 51):
         # Generate new rows based on the last value (random walk)
         new_rows = data[-1, :] + np.random.randn(5, 1).cumsum(axis=0)  # noqa: NPY002
         # Append new rows to existing data
         data = np.concatenate([data, new_rows])
         # Update the chart with full data
         chart.line_chart(data)
-        status_text.text(f"{i}% complete")
-        progress_bar.progress(i)
+        # Scale progress to show 0-100% with 50 iterations
+        progress = i * 2
+        status_text.text(f"{progress}% complete")
+        progress_bar.progress(progress)
         time.sleep(0.01)
 
     progress_bar.empty()
