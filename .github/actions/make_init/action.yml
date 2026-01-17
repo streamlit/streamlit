@@ -29,6 +29,8 @@ runs:
         cache-python: true
         # Auto-create and activate .venv
         activate-environment: true
+        # Suppress errors when nothing to cache (e.g., Python restored from cache)
+        ignore-nothing-to-cache: true
         # Use GitHub token to avoid API rate limiting
         github-token: ${{ github.token }}
     - name: Enable and Prepare Latest Yarn
