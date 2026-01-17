@@ -31,6 +31,10 @@ requires-python = ">=3.10"
 # Empty dependencies - the actual package is installed via [tool.uv.sources]
 dependencies = []
 
+[tool.uv]
+# Minimum uv version required for this project
+required-version = ">=0.9.0"
+
 [tool.uv.sources]
 streamlit = { path = "lib", editable = true }
 

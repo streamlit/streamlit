@@ -29,6 +29,8 @@ runs:
         cache-python: true
         # Auto-create and activate .venv
         activate-environment: true
+        # Use GitHub token to avoid API rate limiting
+        github-token: ${{ github.token }}
     - name: Enable and Prepare Latest Yarn
       run: corepack enable
       shell: bash
