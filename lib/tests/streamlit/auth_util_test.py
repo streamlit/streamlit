@@ -513,6 +513,8 @@ class GenerateDefaultProviderSectionTest(unittest.TestCase):
         result = generate_default_provider_section(auth_section)
 
         assert result == {}
+
+
 class TestGetValidatedRedirectUri:
     """Tests for get_validated_redirect_uri function."""
 
