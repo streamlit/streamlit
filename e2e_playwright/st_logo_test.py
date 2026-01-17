@@ -147,9 +147,7 @@ def test_material_icon_logo(
     )
 
 
-def test_emoji_logo(
-    themed_app: Page, assert_snapshot: ImageCompareFunction
-) -> None:
+def test_emoji_logo(themed_app: Page, assert_snapshot: ImageCompareFunction) -> None:
     """Test that emojis render correctly as logos."""
     select_subtest(themed_app, "emoji_logo_subtest")
 
