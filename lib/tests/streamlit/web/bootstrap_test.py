@@ -410,6 +410,64 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
             },
         )
 
+    @patch("streamlit.config.get_config_options")
+    @patch("streamlit.web.bootstrap.watch_dir")
+    @patch("streamlit.web.bootstrap.watch_file")
+    def test_install_config_watcher_for_nonexistent_files(
+        self, patched_watch_file, patched_watch_dir, patched_get_config_options
+    ):
+        """Test that we watch directories for config files that don't exist."""
+        with patch("os.path.exists", return_value=False):
+            bootstrap._install_config_watchers(flag_options={"server_port": 8502})
+
+        # watch_file should not be called since no files exist
+        assert patched_watch_file.call_count == 0
+        # watch_dir should be called for each config file location
+        assert patched_watch_dir.call_count == 2
+
+        # Verify watch_dir was called with correct parameters
+        args, kwargs = patched_watch_dir.call_args_list[0]
+        assert kwargs["glob_pattern"] == "config.toml"
+        assert kwargs["allow_nonexistent"] is True
+
+        # Test that the callback triggers config reload
+        on_config_changed = args[1]
+        on_config_changed("/some/.streamlit/config.toml")
+
+        patched_get_config_options.assert_called_once_with(
+            force_reparse=True,
+            options_from_flags={
+                "server.port": 8502,
+            },
+        )
+
+    @patch("streamlit.config.get_config_options")
+    @patch("streamlit.web.bootstrap.watch_dir")
+    @patch("streamlit.web.bootstrap.watch_file")
+    def test_install_config_watcher_mixed_existing_and_nonexistent(
+        self, patched_watch_file, patched_watch_dir, patched_get_config_options
+    ):
+        """Test watching when some config files exist and some don't."""
+
+        def exists_side_effect(path):
+            # Simulate: first config file exists, second doesn't
+            return "home" in path or path.endswith("0")
+
+        call_count = [0]
+
+        def custom_exists(path):
+            result = call_count[0] == 0
+            call_count[0] += 1
+            return result
+
+        with patch("os.path.exists", side_effect=custom_exists):
+            bootstrap._install_config_watchers(flag_options={})
+
+        # First file exists -> watch_file called
+        assert patched_watch_file.call_count == 1
+        # Second file doesn't exist -> watch_dir called
+        assert patched_watch_dir.call_count == 1
+
 
 class BootstrapRunTest(IsolatedAsyncioTestCase):
     def tearDown(self):

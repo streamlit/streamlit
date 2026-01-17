@@ -23,7 +23,7 @@ from typing import Any, Final
 
 from streamlit import cli_util, config, env_util, file_util, net_util, secrets
 from streamlit.logger import get_logger
-from streamlit.watcher import report_watchdog_availability, watch_file
+from streamlit.watcher import report_watchdog_availability, watch_dir, watch_file
 from streamlit.web.server import Server, server_address_is_unix_socket, server_util
 
 _LOGGER: Final = get_logger(__name__)
@@ -326,7 +326,17 @@ def _install_config_watchers(flag_options: dict[str, Any]) -> None:
 
     for filename in config.get_config_files("config.toml"):
         if os.path.exists(filename):
+            # Watch existing file for modifications
             watch_file(filename, on_config_changed)
+        else:
+            # Watch parent directory for file creation
+            parent_dir = os.path.dirname(filename)
+            watch_dir(
+                parent_dir,
+                on_config_changed,
+                glob_pattern="config.toml",
+                allow_nonexistent=True,
+            )
 
 
 def run_asgi_app(
