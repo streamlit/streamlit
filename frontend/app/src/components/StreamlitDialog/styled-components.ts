@@ -129,12 +129,16 @@ export const StyledCopyTextContainer = styled.div(({ theme }) => ({
   alignItems: "center",
   gap: theme.spacing.twoXS,
   cursor: "pointer",
-  position: "relative",
-  whiteSpace: "nowrap",
-  flexShrink: 0,
+  width: "fit-content",
+  borderRadius: theme.radii.md,
 
-  "&:hover button": {
+  "&:hover button, &:focus-visible button": {
     opacity: 1,
+  },
+
+  "&:focus-visible": {
+    outline: `2px solid ${theme.colors.primary}`,
+    outlineOffset: "2px",
   },
 }))
 
@@ -152,14 +156,13 @@ export const StyledCopyTextButton = styled.button(({ theme }) => ({
   borderRadius: theme.radii.md,
   width: "auto",
   height: "auto",
-  minWidth: "1rem",
-  minHeight: "1rem",
+  minWidth: theme.spacing.lg,
+  minHeight: theme.spacing.lg,
 
-  "&:hover, &:focus": {
+  "&:hover, &:focus-visible": {
     opacity: 1,
     color: theme.colors.bodyText,
     backgroundColor: theme.colors.darkenedBgMix15,
-    outline: "none",
   },
 
   "&:active": {

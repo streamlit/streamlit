@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { memo, useCallback } from "react"
+import { memo, useCallback } from "react"
 
 import {
   DynamicIcon,
@@ -44,25 +44,45 @@ const CopyText: React.FC<Props> = ({
   isCaption = false,
   "data-testid": testId,
 }) => {
-  const { isCopied, copyToClipboard } = useCopyToClipboard()
+  const { isCopied, copyToClipboard, label } = useCopyToClipboard()
 
   const handleCopy = useCallback(() => {
     copyToClipboard(copyText || text)
   }, [copyToClipboard, copyText, text])
 
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault()
+        handleCopy()
+      }
+    },
+    [handleCopy]
+  )
+
   return (
-    <StyledCopyTextContainer data-testid={testId} onClick={handleCopy}>
+    <StyledCopyTextContainer
+      data-testid={testId}
+      onClick={handleCopy}
+      onKeyDown={handleKeyDown}
+      role="button"
+      tabIndex={0}
+      aria-label={label}
+    >
       <StreamlitMarkdown
         source={text}
         allowHTML={false}
         isCaption={isCaption}
       />
       <StyledCopyTextButton
+        type="button"
+        tabIndex={-1}
         onClick={(e: React.MouseEvent) => {
           e.stopPropagation() // Prevent double triggering
           handleCopy()
         }}
-        title="Copy text"
+        title={label}
+        aria-hidden="true"
         data-testid={testId ? `${testId}CopyButton` : "stCopyTextButton"}
       >
         <DynamicIcon

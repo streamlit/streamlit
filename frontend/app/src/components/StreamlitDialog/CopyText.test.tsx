@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-import React from "react"
-
 import { screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 import { vi } from "vitest"
@@ -27,12 +25,12 @@ import CopyText from "./CopyText"
 // Mock navigator.clipboard
 Object.assign(navigator, {
   clipboard: {
-    // eslint-disable-next-line no-restricted-properties -- This is fine in tests
     writeText: vi.fn(),
   },
 })
 
 describe("CopyText", () => {
+  // eslint-disable-next-line no-restricted-properties -- This is fine in tests
   const mockWriteText = vi.mocked(navigator.clipboard.writeText)
 
   beforeEach(() => {
@@ -51,22 +49,30 @@ describe("CopyText", () => {
     expect(screen.getByText("Caption text")).toBeVisible()
   })
 
-  it("renders copy button with correct accessibility attributes", () => {
+  it("renders container with correct accessibility attributes", () => {
     renderWithContexts(<CopyText text="Test text" data-testid="test" />, {})
 
-    const copyButton = screen.getByRole("button", {
-      name: "Copy text",
+    // Container has role="button" and is the primary interactive element
+    const container = screen.getByRole("button", {
+      name: "Copy to clipboard",
     })
-    expect(copyButton).toBeInTheDocument()
-    expect(copyButton).toHaveAttribute("title", "Copy text")
-    expect(copyButton).toHaveAttribute("data-testid", "testCopyButton")
+    expect(container).toBeVisible()
+    expect(container).toHaveAttribute("aria-label", "Copy to clipboard")
+    expect(container).toHaveAttribute("tabIndex", "0")
+    expect(container).toHaveAttribute("data-testid", "test")
+
+    // Inner button is hidden from accessibility tree but visible for mouse users
+    const iconButton = screen.getByTestId("testCopyButton")
+    expect(iconButton).toBeVisible()
+    expect(iconButton).toHaveAttribute("aria-hidden", "true")
+    expect(iconButton).toHaveAttribute("tabIndex", "-1")
   })
 
   it("uses default test id when none provided", () => {
     renderWithContexts(<CopyText text="Test text" />, {})
 
-    const copyButton = screen.getByTestId("stCopyTextButton")
-    expect(copyButton).toBeInTheDocument()
+    const iconButton = screen.getByTestId("stCopyTextButton")
+    expect(iconButton).toBeVisible()
   })
 
   it("copies text to clipboard when copy button is clicked", async () => {
@@ -76,7 +82,7 @@ describe("CopyText", () => {
     renderWithContexts(<CopyText text={testText} />, {})
 
     const copyButton = screen.getByRole("button", {
-      name: "Copy text",
+      name: "Copy to clipboard",
     })
     await userEvent.click(copyButton)
 
@@ -92,7 +98,7 @@ describe("CopyText", () => {
     )
 
     const copyButton = screen.getByRole("button", {
-      name: "Copy text",
+      name: "Copy to clipboard",
     })
     await userEvent.click(copyButton)
 
@@ -114,23 +120,48 @@ describe("CopyText", () => {
     expect(mockWriteText).toHaveBeenCalledWith(testText)
   })
 
+  it("copies text when pressing Enter on the container", async () => {
+    const testText = "Keyboard test"
+    mockWriteText.mockResolvedValue()
+
+    renderWithContexts(<CopyText text={testText} />, {})
+
+    const container = screen.getByRole("button", {
+      name: "Copy to clipboard",
+    })
+    container.focus()
+    await userEvent.keyboard("{Enter}")
+
+    expect(mockWriteText).toHaveBeenCalledWith(testText)
+  })
+
+  it("copies text when pressing Space on the container", async () => {
+    const testText = "Keyboard test"
+    mockWriteText.mockResolvedValue()
+
+    renderWithContexts(<CopyText text={testText} />, {})
+
+    const container = screen.getByRole("button", {
+      name: "Copy to clipboard",
+    })
+    container.focus()
+    await userEvent.keyboard(" ")
+
+    expect(mockWriteText).toHaveBeenCalledWith(testText)
+  })
+
   it("shows check icon feedback after successful copy", async () => {
     mockWriteText.mockResolvedValue()
 
     renderWithContexts(<CopyText text="Test text" />, {})
 
     const copyButton = screen.getByRole("button", {
-      name: "Copy text",
+      name: "Copy to clipboard",
     })
     await userEvent.click(copyButton)
 
-    // After copying, the button should still be accessible with same name
-    // (visual feedback is via icon change, not title change)
-    expect(
-      screen.getByRole("button", {
-        name: "Copy text",
-      })
-    ).toBeVisible()
+    // After copying, the button label changes to "Copied" for accessibility feedback
+    expect(screen.getByRole("button", { name: "Copied" })).toBeVisible()
   })
 
   it("reverts to copy icon after timeout", async () => {
@@ -140,18 +171,20 @@ describe("CopyText", () => {
     renderWithContexts(<CopyText text="Test text" />, {})
 
     const copyButton = screen.getByRole("button", {
-      name: "Copy text",
+      name: "Copy to clipboard",
     })
     await userEvent.click(copyButton)
 
     // Should show copied state initially
-    expect(copyButton).toBeVisible()
+    expect(screen.getByRole("button", { name: "Copied" })).toBeVisible()
 
     // Fast-forward time to trigger the timeout
     vi.advanceTimersByTime(2100) // Default timeout is 2000ms + buffer
 
     // Should revert back to copy state
-    expect(copyButton).toBeVisible()
+    expect(
+      screen.getByRole("button", { name: "Copy to clipboard" })
+    ).toBeVisible()
 
     vi.useRealTimers()
   })
@@ -163,12 +196,14 @@ describe("CopyText", () => {
     renderWithContexts(<CopyText text="Test text" />, {})
 
     const copyButton = screen.getByRole("button", {
-      name: "Copy text",
+      name: "Copy to clipboard",
     })
     await userEvent.click(copyButton)
 
-    // Should still show "Copy text" (not in copied state) when copy fails
-    expect(screen.getByRole("button", { name: "Copy text" })).toBeVisible()
+    // Should still show "Copy to clipboard" (not in copied state) when copy fails
+    expect(
+      screen.getByRole("button", { name: "Copy to clipboard" })
+    ).toBeVisible()
 
     consoleSpy.mockRestore()
   })

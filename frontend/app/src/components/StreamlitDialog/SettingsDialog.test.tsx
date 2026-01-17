@@ -40,7 +40,6 @@ import { Props, SettingsDialog } from "./SettingsDialog"
 // Mock navigator.clipboard
 Object.assign(navigator, {
   clipboard: {
-    // eslint-disable-next-line no-restricted-properties -- This is fine in tests
     writeText: vi.fn(),
   },
 })
@@ -90,6 +89,7 @@ const getProps = (extend?: Partial<Props>): Props => ({
 })
 
 describe("SettingsDialog", () => {
+  // eslint-disable-next-line no-restricted-properties -- This is fine in tests
   const mockWriteText = vi.mocked(navigator.clipboard.writeText)
 
   beforeEach(() => {
@@ -321,15 +321,18 @@ describe("SettingsDialog", () => {
       themeContext: themeContext,
     })
 
-    const copyButton = screen.getByRole("button", {
-      name: "Copy text",
+    // Container has role="button" and is the primary interactive element
+    const container = screen.getByRole("button", {
+      name: "Copy to clipboard",
     })
-    expect(copyButton).toBeInTheDocument()
-    expect(copyButton).toHaveAttribute("title", "Copy text")
-    expect(copyButton).toHaveAttribute(
-      "data-testid",
-      "stVersionInfoCopyButton"
-    )
+    expect(container).toBeVisible()
+    expect(container).toHaveAttribute("aria-label", "Copy to clipboard")
+    expect(container).toHaveAttribute("data-testid", "stVersionInfo")
+
+    // Inner icon button is visible but hidden from accessibility tree
+    const iconButton = screen.getByTestId("stVersionInfoCopyButton")
+    expect(iconButton).toBeVisible()
+    expect(iconButton).toHaveAttribute("aria-hidden", "true")
   })
 
   it("copies version to clipboard when copy button is clicked", async () => {
@@ -346,7 +349,7 @@ describe("SettingsDialog", () => {
     })
 
     const copyButton = screen.getByRole("button", {
-      name: "Copy text",
+      name: "Copy to clipboard",
     })
     await userEvent.click(copyButton)
 
@@ -385,16 +388,11 @@ describe("SettingsDialog", () => {
     })
 
     const copyButton = screen.getByRole("button", {
-      name: "Copy text",
+      name: "Copy to clipboard",
     })
     await userEvent.click(copyButton)
 
-    // After copying, the button should still be accessible with same name
-    // (visual feedback is via icon change, not title change)
-    expect(
-      screen.getByRole("button", {
-        name: "Copy text",
-      })
-    ).toBeVisible()
+    // After copying, the button label changes to "Copied" for accessibility feedback
+    expect(screen.getByRole("button", { name: "Copied" })).toBeVisible()
   })
 })
