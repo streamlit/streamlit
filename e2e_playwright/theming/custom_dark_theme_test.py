@@ -22,6 +22,17 @@ from playwright.sync_api import Page, expect
 from e2e_playwright.conftest import ImageCompareFunction
 from e2e_playwright.shared.app_utils import expect_no_skeletons
 
+# JavaScript to replace version with placeholder so snapshots don't change across versions.
+_MASK_VERSION_JS = """
+    const versionEl = document.querySelector('[data-testid="stVersionInfo"]');
+    if (versionEl) {
+        const textEl = versionEl.querySelector('p');
+        if (textEl) {
+            textEl.textContent = 'Made with Streamlit vX.XX.X';
+        }
+    }
+"""
+
 
 @pytest.fixture(scope="module")
 def browser_context_args(browser_context_args: dict[str, Any]) -> dict[str, Any]:
@@ -172,12 +183,13 @@ def test_custom_dark_theme_settings_dialog(
     expect(settings_dialog).to_be_visible()
     expect(settings_dialog).to_contain_text("Use system setting")
 
+    # Replace version with placeholder so snapshots don't change across versions.
+    app.evaluate(_MASK_VERSION_JS)
+
     assert_snapshot(
         settings_dialog.get_by_role("dialog"),
         name="custom_dark_theme_settings_dialog",
         image_threshold=0.0003,
-        # Hide version info so that snapshots don't change across versions.
-        style="[data-testid='stVersionInfo'] { display: none !important; }",
     )
 
     # Open the theme selector dropdown
