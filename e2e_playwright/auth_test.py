@@ -45,7 +45,7 @@ server_metadata_url = "http://localhost:{oidc_server_port}/.well-known/openid-co
 """
 
 
-def wait_for_oidc_server_to_start(port: int, timeout: int = 30) -> bool:
+def wait_for_oidc_server_to_start(port: int, timeout: int = 60) -> bool:
     """Wait for the OIDC mock server to start.
 
     Parameters
