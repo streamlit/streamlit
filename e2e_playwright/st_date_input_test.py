@@ -489,7 +489,7 @@ def test_dynamic_date_input_props(app: Page, assert_snapshot: ImageCompareFuncti
     expect_prefixed_markdown(app, "Initial date input value:", "2020-01-03")
 
     # Set value to 2028/01/01 which is valid in initial bounds (2010-2030)
-    input_field.fill("2028/01/01")
+    input_field.type("2028/01/01")
     input_field.press("Enter")
     input_field.press("Escape")
     wait_for_app_run(app)

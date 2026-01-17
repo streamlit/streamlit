@@ -20,6 +20,7 @@
     "testCoverage": "vitest run --coverage"
   },
   "resolutions": {
+    "@types/node": ">=24 <25",
     "d3-color": "^3.1.0",
     "dompurify": "^3.2.4",
     "prismjs": "^1.30.0",

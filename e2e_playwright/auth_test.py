@@ -103,16 +103,27 @@ def app_server_extra_args(
     return args
 
 
+def _click_and_wait_for_oauth_redirect(
+    app: Page, button_label: str, app_port: int
+) -> None:
+    """Click a button that triggers OAuth redirect and wait for navigation back to app.
+
+    OAuth login/logout triggers external redirects (app -> OIDC server -> app).
+    We wait for the URL to return to the app root instead of using a fixed timeout.
+    """
+    get_button(app, button_label).click()
+    # Wait for OAuth redirect chain to complete and return to app root
+    app.wait_for_url(f"http://localhost:{app_port}/")
+    wait_for_app_run(app)
+
+
 @pytest.mark.parametrize("fake_oidc_server", ["success"], indirect=True)
 @pytest.mark.usefixtures("fake_oidc_server", "prepare_secrets_file")
-def test_login_successful(app: Page):
+def test_login_successful(app: Page, app_port: int):
     """Test authentication flow with test provider."""
-    button_element = get_button(app, "TEST LOGIN")
-    button_element.click()
-    app.wait_for_timeout(2_000)
+    _click_and_wait_for_oauth_redirect(app, "TEST LOGIN", app_port)
 
     expect_markdown(app, "authtest@example.com")
-    wait_for_app_run(app)
 
     expect_markdown(app, "John Doe")
     expect_markdown(app, "TOKENS AVAILABLE")
@@ -122,12 +133,35 @@ def test_login_successful(app: Page):
 
 @pytest.mark.parametrize("fake_oidc_server", ["failure"], indirect=True)
 @pytest.mark.usefixtures("fake_oidc_server", "prepare_secrets_file")
-def test_login_failure(app: Page):
+def test_login_failure(app: Page, app_port: int):
     """Test authentication flow with error response from oidc server."""
-    button_element = get_button(app, "TEST LOGIN")
-    button_element.click()
-    app.wait_for_timeout(2_000)
-    wait_for_app_run(app)
+    _click_and_wait_for_oauth_redirect(app, "TEST LOGIN", app_port)
 
     text = app.get_by_test_id("stMarkdownContainer").filter(has_text="John Doe")
     expect(text).not_to_be_attached()
+
+
+@pytest.mark.parametrize("fake_oidc_server", ["success"], indirect=True)
+@pytest.mark.usefixtures("fake_oidc_server", "prepare_secrets_file")
+def test_logout_with_end_session_endpoint(app: Page, app_port: int):
+    """Test logout flow using OIDC end_session_endpoint.
+
+    This tests PR #12693: logout should redirect to provider's end_session_endpoint.
+    """
+    # First login
+    _click_and_wait_for_oauth_redirect(app, "TEST LOGIN", app_port)
+
+    # Verify we're logged in
+    expect_markdown(app, "YOU ARE LOGGED IN")
+    expect_markdown(app, "John Doe")
+
+    # Now logout (also goes through OIDC end_session_endpoint redirect)
+    _click_and_wait_for_oauth_redirect(app, "TEST LOGOUT", app_port)
+
+    # Verify we're logged out
+    expect_markdown(app, "NOT LOGGED IN")
+    # Verify the logged-in content is no longer visible
+    logged_in_text = app.get_by_test_id("stMarkdownContainer").filter(
+        has_text="YOU ARE LOGGED IN"
+    )
+    expect(logged_in_text).not_to_be_attached()

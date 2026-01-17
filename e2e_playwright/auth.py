@@ -32,3 +32,9 @@ if st.user.get("is_logged_in"):
             st.markdown("HAS ID TOKEN")
         if "access" in st.user.tokens:
             st.markdown("HAS ACCESS TOKEN")
+
+    logout_btn = st.button("TEST LOGOUT")
+    if logout_btn:
+        st.logout()
+else:
+    st.markdown("NOT LOGGED IN")
