@@ -33,7 +33,7 @@ from pathlib import Path
 
 # tomllib is available in Python 3.11+, use tomli as fallback for Python 3.10
 try:
-    import tomllib  # type: ignore[import-not-found]
+    import tomllib
 except ImportError:
     import tomli as tomllib
 

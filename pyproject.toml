@@ -396,6 +396,9 @@ module = [
   "authlib.*",
   "uvloop.*",
   "polars.*",
+  # tomllib is only available in Python 3.11+, tomli is the fallback for Python 3.10
+  "tomllib",
+  "tomli",
 ]
 ignore_missing_imports = true
 
