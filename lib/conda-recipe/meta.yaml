@@ -12,12 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-{% set package_data = load_setup_py_data() %}
+# Load version from pyproject.toml
+{% set pyproject = load_file_data('pyproject.toml', from_recipe_dir=True) %}
+{% set version = pyproject.get('project', {}).get('version', '0.0.0') %}
 
 
 package:
   name: streamlit
-  version: {{ package_data.get('version') }}
+  version: {{ version }}
 
 source:
   path: ..
@@ -27,9 +29,7 @@ build:
   noarch: python
   script: {{ PYTHON }} -m pip install . -vv
   entry_points:
-    {% for ep in package_data.get('entry_points').get('console_scripts') %}
-      - {{ ep }}
-    {% endfor %}
+    - streamlit = streamlit.web.cli:main
   script_env:
    - GIT_HASH
    - SNOWPARK_CONDA_BUILD
@@ -37,25 +37,39 @@ build:
 requirements:
   host:
     - pip
-    - setuptools
-    - python {{ package_data.get('python_requires') }}
+    - setuptools >=65.5.1
+    - python >=3.10,<3.15
   run:
-    {% for req in package_data.get('install_requires', []) %}
-      # Conda doesn't support the `platform_system` conditional that pip does.
-      # We may need to figure out how to avoid installing watchdog on MacOS
-      # by default in our conda distribution due to this.
-      {% if 'watchdog' in req %}
-        - watchdog
-      {% else %}
-        - {{ req }}
-      {% endif %}
-    {% endfor %}
-        # We need to specify Python as a runtime requirement here, otherwise
-        # conda may try to use the system python installation rather than the
-        # python installation of the conda environment. The weird indentation
-        # is required to match the indentation of the requirements added via
-        # templating above.
-        - python {{ package_data.get('python_requires') }}
+    - python >=3.10,<3.15
+    # Core dependencies - keep in sync with lib/pyproject.toml [project.dependencies]
+    # NOTE: The SNOWPARK_CONDA_BUILD build excludes gitpython, pydeck, and tornado.
+    # These are handled by the Snowpark build process separately.
+    - altair >=4.0,<7,!=5.4.0,!=5.4.1
+    - blinker >=1.5.0,<2
+    - cachetools >=5.5,<7
+    - click >=7.0,<9
+    {% if not environ.get('SNOWPARK_CONDA_BUILD') %}
+    - gitpython >=3.0.7,<4,!=3.1.19
+    {% endif %}
+    - numpy >=1.23,<3
+    - packaging >=20
+    - pandas >=1.4.0,<3
+    - pillow >=7.1.0,<13
+    {% if not environ.get('SNOWPARK_CONDA_BUILD') %}
+    - pydeck >=0.8.0b4,<1
+    {% endif %}
+    - protobuf >=3.20,<7
+    - pyarrow >=7.0
+    - requests >=2.27,<3
+    - tenacity >=8.1.0,<10
+    - toml >=0.10.1,<2
+    {% if not environ.get('SNOWPARK_CONDA_BUILD') %}
+    - tornado >=6.0.3,<7,!=6.5.0
+    {% endif %}
+    - typing-extensions >=4.10.0,<5
+    # Conda doesn't support the `platform_system` conditional that pip does.
+    # We exclude watchdog from all conda builds since it can fail without xcode on MacOS.
+    # - watchdog >=2.1.5,<7
 
 test:
   imports:

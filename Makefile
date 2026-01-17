@@ -50,7 +50,7 @@ all: init frontend
 .PHONY: all-dev
 # Install all dependencies and editable Streamlit, but do not build the frontend.
 all-dev: init
-	pre-commit install
+	uv run pre-commit install
 	@echo ""
 	@echo "    The frontend has *not* been rebuilt."
 	@echo "    If you need to make a wheel file, run:"
@@ -110,7 +110,7 @@ protobuf:
 	else \
 		echo "protoc version $${PROTOC_VERSION} is >= than $(MIN_PROTOC_VERSION)"; \
 	fi; \
-	protoc \
+	uv run protoc \
 		--proto_path=proto \
 		--python_out=lib \
 		--mypy_out=lib \
@@ -123,76 +123,76 @@ protobuf:
 .PHONY: python-init
 # Install Python dependencies and Streamlit in editable mode.
 python-init:
-	pip_args=("--editable" "./lib");\
-	if [ "${INSTALL_DEV_REQS}" = "true" ] ; then\
-		pip_args+=("--requirement" "lib/dev-requirements.txt"); \
-	fi;\
-	if [ "${INSTALL_TEST_REQS}" = "true" ] ; then\
-		pip_args+=("--requirement" "lib/test-requirements.txt"); \
-	fi;\
-	if command -v "uv" > /dev/null; then \
-		echo "Running command: uv pip install $${pip_args[@]}"; \
-		uv pip install $${pip_args[@]}; \
+	@# Check if uv is installed
+	@if ! command -v uv > /dev/null 2>&1; then \
+		echo "Installing uv..."; \
+		pip install uv; \
+	fi
+	@# Determine which dependency group to sync
+	@if [ "${INSTALL_DEV_REQS}" = "true" ] && [ "${INSTALL_TEST_REQS}" = "true" ]; then \
+		echo "Installing dev dependencies (includes test)..."; \
+		uv sync --group dev; \
+	elif [ "${INSTALL_DEV_REQS}" = "true" ]; then \
+		echo "Installing dev dependencies..."; \
+		uv sync --group dev; \
+	elif [ "${INSTALL_TEST_REQS}" = "true" ]; then \
+		echo "Installing test dependencies..."; \
+		uv sync --group test; \
 	else \
-		echo "Running command: pip install $${pip_args[@]}"; \
-		pip install $${pip_args[@]}; \
-	fi;\
-	if [ "${INSTALL_TEST_REQS}" = "true" ] && [ "${INSTALL_PLAYWRIGHT}" = "true" ] ; then\
-		python -m playwright install --with-deps; \
-	fi;
+		echo "Installing base dependencies..."; \
+		uv sync; \
+	fi
+	@# Install playwright if requested
+	@if [ "${INSTALL_TEST_REQS}" = "true" ] && [ "${INSTALL_PLAYWRIGHT}" = "true" ]; then \
+		uv run python -m playwright install --with-deps; \
+	fi
 
 .PHONY: python-lint
 # Lint and check formatting of Python files.
 python-lint:
 	# Checks if the formatting is correct:
-	ruff format --check
+	uv run ruff format --check
 	# Run linter:
-	ruff check
+	uv run ruff check
 
 .PHONY: python-format
 # Format Python files.
 python-format:
 	# Sort imports ( see https://docs.astral.sh/ruff/formatter/#sorting-imports )
-	ruff check --select I --fix
+	uv run ruff check --select I --fix
 	# Run code formatter
-	ruff format
+	uv run ruff format
 
 .PHONY: python-tests
 # Run Python unit tests.
 python-tests:
-	cd lib; \
-		PYTHONPATH=. \
-		pytest -v -l \
-			-m "not performance" \
-			tests/
+	uv run pytest -c lib/pytest.ini -v -l \
+		-m "not performance" \
+		lib/tests/
 
 .PHONY: python-performance-tests
 # Run Python performance tests.
 python-performance-tests:
-	cd lib; \
-		PYTHONPATH=. \
-		pytest -v -l \
-			-m "performance" \
-			--benchmark-autosave \
-			--benchmark-storage file://../.benchmarks/pytest \
-			tests/
+	uv run pytest -c lib/pytest.ini -v -l \
+		-m "performance" \
+		--benchmark-autosave \
+		--benchmark-storage file://.benchmarks/pytest \
+		lib/tests/
 
 .PHONY: python-integration-tests
-# Run Python integration tests. Requires `integration-requirements.txt` to be installed.
+# Run Python integration tests. Requires `uv sync --group integration` to be run first.
 python-integration-tests:
-	cd lib; \
-		PYTHONPATH=. \
-		pytest -v -l \
-			--require-integration \
-			tests/
+	uv run pytest -c lib/pytest.ini -v -l \
+		--require-integration \
+		lib/tests/
 
 .PHONY: python-types
 # Run the Python type checker.
 python-types:
 	# Run ty type checker:
-	ty check
-	# Run mypy type checker:
-	mypy --config-file=mypy.ini
+	uv run ty check
+	# Run mypy type checker (reads config from pyproject.toml):
+	uv run mypy
 
 
 .PHONY: frontend-init
@@ -280,22 +280,22 @@ update-frontend-typesync:
 .PHONY: update-snapshots
 # Update e2e playwright snapshots based on the latest completed CI run.
 update-snapshots:
-	python ./scripts/update_e2e_snapshots.py
+	uv run python ./scripts/update_e2e_snapshots.py
 
 .PHONY: update-snapshots-changed
 # Update e2e playwright snapshots of changed e2e files based on the latest completed CI run.
 update-snapshots-changed:
-	python ./scripts/update_e2e_snapshots.py --changed
+	uv run python ./scripts/update_e2e_snapshots.py --changed
 
 .PHONY: update-material-icons
 # Update material icons based on latest Google material symbol version.
 update-material-icons:
-	python ./scripts/update_material_icon_font_and_names.py
+	uv run python ./scripts/update_material_icon_font_and_names.py
 
 .PHONY: update-emojis
 # Update emojis based on latest emoji version.
 update-emojis:
-	python ./scripts/update_emojis.py
+	uv run python ./scripts/update_emojis.py
 
 .PHONY: update-notices
 # Update the notices file (licenses of frontend assets and dependencies).
@@ -314,14 +314,14 @@ update-notices:
 .PHONY: update-headers
 # Update all license headers.
 update-headers:
-	pre-commit run insert-license --all-files --hook-stage manual
-	pre-commit run license-headers --all-files --hook-stage manual
+	uv run pre-commit run insert-license --all-files --hook-stage manual
+	uv run pre-commit run license-headers --all-files --hook-stage manual
 
 .PHONY: update-min-deps
 # Update minimum dependency constraints file.
 update-min-deps:
 	INSTALL_DEV_REQS=false INSTALL_TEST_REQS=false make python-init >/dev/null
-	python scripts/get_min_versions.py >scripts/assets/min-constraints-gen.txt
+	uv run python scripts/get_min_versions.py >scripts/assets/min-constraints-gen.txt
 
 .PHONY: debug-e2e-test
 # Run a playwright e2e test in debug mode. Use it via `make debug-e2e-test st_command_test.py`.
@@ -335,7 +335,7 @@ debug-e2e-test:
 		echo "Using PYTEST_ADDOPTS=$$PYTEST_ADDOPTS"; \
 	fi
 	@TEST_SCRIPT=$$(echo $(filter-out $@,$(MAKECMDGOALS)) | sed 's|^e2e_playwright/||'); \
-	cd e2e_playwright && PWDEBUG=1 pytest $$TEST_SCRIPT --tracing on || ( \
+	cd e2e_playwright && PWDEBUG=1 uv run pytest $$TEST_SCRIPT --tracing on || ( \
 		echo "If you implemented changes in the frontend, make sure to call \`make frontend-fast\` to use the up-to-date frontend build in the test."; \
 		echo "You can find test-results in ./e2e_playwright/test-results"; \
 		exit 1 \
@@ -353,7 +353,7 @@ run-e2e-test:
 		echo "Using PYTEST_ADDOPTS=$$PYTEST_ADDOPTS"; \
 	fi
 	@TEST_SCRIPT=$$(echo $(filter-out $@,$(MAKECMDGOALS)) | sed 's|^e2e_playwright/||'); \
-	cd e2e_playwright && pytest $$TEST_SCRIPT --tracing retain-on-failure --reruns 0 || ( \
+	cd e2e_playwright && uv run pytest $$TEST_SCRIPT --tracing retain-on-failure --reruns 0 || ( \
 		echo "If you implemented changes in the frontend, make sure to call \`make frontend-fast\` to use the up-to-date frontend build in the test."; \
 		echo "You can find test-results in ./e2e_playwright/test-results"; \
 		exit 1 \
@@ -379,12 +379,12 @@ trace-e2e-test:
 	rm -rf e2e_playwright/test-results/traces; \
 	mkdir -p e2e_playwright/test-results/traces; \
 	echo "Running test with tracing: $$TEST_ARG"; \
-	(cd e2e_playwright && pytest $$TEST_ARG --tracing=on --output=test-results/traces || true); \
+	(cd e2e_playwright && uv run pytest $$TEST_ARG --tracing=on --output=test-results/traces || true); \
 	echo ""; \
 	echo "Launching trace viewer..."; \
 	TRACE_FILE=$$(find e2e_playwright/test-results/traces -name "trace.zip" -type f 2>/dev/null | head -n 1); \
 	if [[ -n "$$TRACE_FILE" ]]; then \
-		python -m playwright show-trace "$$TRACE_FILE"; \
+		uv run python -m playwright show-trace "$$TRACE_FILE"; \
 	else \
 		echo "No trace file found. Check e2e_playwright/test-results/traces/ directory."; \
 	fi
@@ -399,19 +399,19 @@ lighthouse-tests:
 # Run all e2e tests in bare mode.
 bare-execution-tests:
 	PYTHONPATH=. \
-	python3 scripts/run_bare_execution_tests.py
+	uv run python scripts/run_bare_execution_tests.py
 
 .PHONY: cli-smoke-tests
 # Run CLI smoke tests.
 cli-smoke-tests:
-	python3 scripts/cli_smoke_tests.py
+	uv run python scripts/cli_smoke_tests.py
 
 .PHONY: autofix
 # Autofix linting and formatting errors.
 autofix:
 	# Python fixes:
 	make python-format
-	ruff check --fix
+	uv run ruff check --fix
 	# JS fixes:
 	make frontend-init
 	make frontend-format
@@ -421,14 +421,18 @@ autofix:
 	# Other fixes:
 	make update-notices
 	# Run all pre-commit fixes but not fail if any of them don't work.
-	pre-commit run --all-files --hook-stage manual || true
+	uv run pre-commit run --all-files --hook-stage manual || true
 
 .PHONY: package
 # Create Python wheel files in `dist/`.
 package: init frontend
 	# Get rid of the old build and dist folders to make sure that we clean old js and css.
 	rm -rfv lib/build lib/dist
-	cd lib ; python3 setup.py bdist_wheel sdist
+	# Copy README.md to lib/ for the package build (pyproject.toml expects it there)
+	cp README.md lib/README.md
+	cd lib && uv build
+	# Clean up the copied README.md
+	rm -f lib/README.md
 
 .PHONY: conda-package
 # Create conda distribution files.

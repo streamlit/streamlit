@@ -37,11 +37,11 @@ from tests.streamlit.element_mocks import (
 
 
 def get_version() -> str | None:
-    """Get version by parsing out setup.py."""
+    """Get version by parsing out pyproject.toml."""
     dirname = os.path.dirname(__file__)
     base_dir = os.path.abspath(os.path.join(dirname, "../.."))
-    pattern = re.compile(r"(?:.*VERSION = \")(?P<version>.*)(?:\"  # PEP-440$)")
-    with open(os.path.join(base_dir, "setup.py"), encoding="utf-8") as f:
+    pattern = re.compile(r'^version = "(?P<version>.*)"$')
+    with open(os.path.join(base_dir, "pyproject.toml"), encoding="utf-8") as f:
         for line in f:
             m = pattern.match(line)
             if m:

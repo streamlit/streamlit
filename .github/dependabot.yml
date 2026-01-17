@@ -92,9 +92,9 @@ updates:
           # versions, it makes sense to keep these grouped together
           - "@swc/*"
 
-  # Keep python dependencies up to date
-  - package-ecosystem: "pip"
-    directory: "/lib"
+  # Keep python dependencies up to date (via uv)
+  - package-ecosystem: "uv"
+    directory: "/"
     schedule:
       interval: "daily"
     # Allow a limited number of update PRs at a time
