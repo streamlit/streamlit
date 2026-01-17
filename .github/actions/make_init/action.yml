@@ -76,7 +76,8 @@ runs:
     - if: inputs.use_cached_venv == 'true'
       name: Create Python environment cache key
       run: |
-        md5sum $(which python) > $GITHUB_WORKSPACE/python_cache_key.md5
+        # Use uv's managed Python for cache key (not system Python)
+        uv python find ${{ inputs.python_version }} | xargs md5sum > $GITHUB_WORKSPACE/python_cache_key.md5
         md5sum pyproject.toml >> $GITHUB_WORKSPACE/python_cache_key.md5
         md5sum lib/pyproject.toml >> $GITHUB_WORKSPACE/python_cache_key.md5
         md5sum Makefile >> $GITHUB_WORKSPACE/python_cache_key.md5
@@ -88,8 +89,21 @@ runs:
       uses: actions/cache@v4
       with:
         path: .venv
-        key: v3-python-venv-py${{ inputs.python_version }}-${{ hashFiles('**/python_cache_key.md5') }}
-    - if: steps.cache-virtualenv.outputs.cache-hit != 'true'
+        key: v2-python-venv-py${{ inputs.python_version }}-${{ hashFiles('**/python_cache_key.md5') }}
+    - name: Check if venv is valid
+      id: check-venv
+      if: steps.cache-virtualenv.outputs.cache-hit == 'true'
+      run: |
+        # Check if the cached venv has valid symlinks
+        if .venv/bin/python --version > /dev/null 2>&1; then
+          echo "valid=true" >> $GITHUB_OUTPUT
+        else
+          echo "::warning::Cached venv has broken symlinks, will recreate"
+          echo "valid=false" >> $GITHUB_OUTPUT
+          rm -rf .venv
+        fi
+      shell: bash
+    - if: steps.cache-virtualenv.outputs.cache-hit != 'true' || steps.check-venv.outputs.valid != 'true'
       name: Create Virtual Env
       run: |
         # Do not install Playwright browsers in CI here; use the
