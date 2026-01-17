@@ -2083,7 +2083,9 @@ export class App extends PureComponent<Props, State> {
       sessionInfo: this.sessionInfo,
       isServerConnected: this.isServerConnected(),
       settings: this.state.userSettings,
-      allowRunOnSave: this.state.allowRunOnSave,
+      allowRunOnSave:
+        this.state.allowRunOnSave &&
+        showDevelopmentOptions(this.state.isOwner, this.state.toolbarMode),
       onSave: this.saveSettings,
       onClose: () => {},
       animateModal,
