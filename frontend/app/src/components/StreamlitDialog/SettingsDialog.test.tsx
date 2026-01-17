@@ -36,6 +36,7 @@ import { Props, SettingsDialog } from "./SettingsDialog"
 // Mock navigator.clipboard
 Object.assign(navigator, {
   clipboard: {
+    // eslint-disable-next-line no-restricted-properties -- This is fine in tests
     writeText: vi.fn(),
   },
 })

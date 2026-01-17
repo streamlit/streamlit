@@ -39,6 +39,7 @@ import {
   UISelectbox,
 } from "@streamlit/lib"
 
+import CopyText from "./CopyText"
 import {
   StyledButtonContainer,
   StyledCheckbox,
@@ -47,7 +48,6 @@ import {
   StyledHeader,
   StyledLabel,
 } from "./styled-components"
-import CopyText from "./CopyText"
 import { UserSettings } from "./UserSettings"
 
 export interface Props {

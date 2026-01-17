@@ -27,6 +27,7 @@ import CopyText from "./CopyText"
 // Mock navigator.clipboard
 Object.assign(navigator, {
   clipboard: {
+    // eslint-disable-next-line no-restricted-properties -- This is fine in tests
     writeText: vi.fn(),
   },
 })

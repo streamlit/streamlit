@@ -16,18 +16,15 @@
 
 import React, { memo, useCallback } from "react"
 
-import { Check as CheckIcon, Copy as CopyIcon } from "react-feather"
-
 import {
+  DynamicIcon,
   StreamlitMarkdown,
   useCopyToClipboard,
-  convertRemToPx,
 } from "@streamlit/lib"
-import { useEmotionTheme } from "@streamlit/lib"
 
 import {
-  StyledCopyTextContainer,
   StyledCopyTextButton,
+  StyledCopyTextContainer,
 } from "./styled-components"
 
 interface Props {
@@ -47,17 +44,11 @@ const CopyText: React.FC<Props> = ({
   isCaption = false,
   "data-testid": testId,
 }) => {
-  const theme = useEmotionTheme()
   const { isCopied, copyToClipboard } = useCopyToClipboard()
 
   const handleCopy = useCallback(() => {
     copyToClipboard(copyText || text)
   }, [copyToClipboard, copyText, text])
-
-  // Match icon size to text size
-  const iconSize = isCaption
-    ? convertRemToPx(theme.fontSizes.sm)
-    : convertRemToPx(theme.fontSizes.md)
 
   return (
     <StyledCopyTextContainer data-testid={testId} onClick={handleCopy}>
@@ -74,11 +65,12 @@ const CopyText: React.FC<Props> = ({
         title="Copy text"
         data-testid={testId ? `${testId}CopyButton` : "stCopyTextButton"}
       >
-        {isCopied ? (
-          <CheckIcon size={iconSize} />
-        ) : (
-          <CopyIcon size={iconSize} />
-        )}
+        <DynamicIcon
+          iconValue={isCopied ? ":material/check:" : ":material/content_copy:"}
+          size="sm"
+          margin="0"
+          color="inherit"
+        />
       </StyledCopyTextButton>
     </StyledCopyTextContainer>
   )
