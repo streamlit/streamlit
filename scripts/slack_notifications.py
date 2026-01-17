@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,6 +21,41 @@ import os
 import sys
 
 import requests
+
+
+def _build_patch_cherry_pick_text(
+    *,
+    repo: str,
+    release_version: str,
+    commit_sha: str,
+    release_branch: str,
+    run_id: str | None,
+    header: str,
+    error_reason: str | None = None,
+) -> str:
+    """Build the text for a patch cherry-pick notification."""
+
+    lines = [
+        header,
+        f"- Version: {release_version}" if release_version else None,
+        (
+            f"- Commit: https://github.com/{repo}/commit/{commit_sha}"
+            if repo and commit_sha
+            else None
+        ),
+        (
+            f"- Branch: https://github.com/{repo}/tree/{release_branch}"
+            if repo and release_branch
+            else None
+        ),
+        (
+            f"- Run: https://github.com/{repo}/actions/runs/{run_id}"
+            if repo and run_id
+            else None
+        ),
+        (f"- Note: {error_reason}" if error_reason else None),
+    ]
+    return "\n".join([ln for ln in lines if ln])
 
 
 def send_notification() -> None:
@@ -71,17 +106,147 @@ def send_notification() -> None:
             }
 
     if workflow == "assets":
-        if message_key == "new_icons":
+        if message_key == "success":
+            pr_url = os.getenv("PR_URL", "")
             payload = {
-                "text": ":symbols: New Material Symbols available. Please run `make update-material-icons` "
-                "to update the material icons."
+                "text": ":symbols: New Material Symbols and/or Emojis available. Please review the PR - "
+                f"<{pr_url}|Link here>"
+            }
+        else:
+            payload = {
+                "text": ":fire: Assets update failed - "
+                f"<https://github.com/streamlit/streamlit/actions/runs/{run_id}|Link to run>"
             }
 
-        if message_key == "new_emojis":
+    # Browserslist DB update notifications
+    if workflow == "browserslist":
+        if message_key == "success":
+            pr_url = os.getenv("PR_URL", "")
             payload = {
-                "text": ":symbols: New emojis available. Please run `./scripts/update_emojis.py` "
-                "to update the emojis."
+                "text": ":earth_americas: Browserslist DB updated. Please review the PR - "
+                f"<{pr_url}|Link here>"
             }
+        else:
+            payload = {
+                "text": ":fire: Browserslist DB update failed - "
+                f"<https://github.com/streamlit/streamlit/actions/runs/{run_id}|Link to run>"
+            }
+
+    # OSS Release automation notifications
+    if workflow == "release_automation":
+        repo = os.getenv("REPO", os.getenv("GITHUB_REPOSITORY", ""))
+        release_version = os.getenv("RELEASE_VERSION", "")
+        release_branch = os.getenv("RELEASE_BRANCH", "")
+        commit_sha = os.getenv("CHERRY_PICK_SHA", "")
+
+        if message_key == "branch_created":
+            base_ref = os.getenv("RELEASE_BASE_REF", "")
+            lines = [
+                ":evergreen_tree: Release branch created",
+                f"- Version: {release_version}" if release_version else None,
+                (
+                    f"- Branch: https://github.com/{repo}/tree/{release_branch}"
+                    if repo and release_branch
+                    else None
+                ),
+                f"- Base ref: {base_ref}" if base_ref else None,
+                (
+                    f"- Run: https://github.com/{repo}/actions/runs/{run_id}"
+                    if repo and run_id
+                    else None
+                ),
+            ]
+            text = "\n".join([ln for ln in lines if ln])
+            payload = {"text": text}
+
+        elif message_key == "tag_pr_created":
+            pr_url = os.getenv("PR_URL", "")
+            tag_url = (
+                f"https://github.com/{repo}/tree/{release_version}"
+                if repo and release_version
+                else ""
+            )
+            lines = [
+                ":label: Release tag and PR created",
+                f"- Version: {release_version}" if release_version else None,
+                f"- Tag: {tag_url}" if tag_url else None,
+                f"- PR: {pr_url}" if pr_url else None,
+                (
+                    f"- Run: https://github.com/{repo}/actions/runs/{run_id}"
+                    if repo and run_id
+                    else None
+                ),
+            ]
+            text = "\n".join([ln for ln in lines if ln])
+            payload = {"text": text}
+
+        # OSS patch cherry-pick notifications
+        elif message_key == "cherry_pick_to_release_branch_success":
+            text = _build_patch_cherry_pick_text(
+                repo=repo,
+                release_version=release_version,
+                commit_sha=commit_sha,
+                release_branch=release_branch,
+                run_id=run_id,
+                header=":cherries: Cherry-pick succeeded",
+            )
+            payload = {"text": text}
+
+        elif message_key == "cherry_pick_to_release_branch_failed":
+            error_reason = os.getenv("ERROR_REASON", "")
+            text = _build_patch_cherry_pick_text(
+                repo=repo,
+                release_version=release_version,
+                commit_sha=commit_sha,
+                release_branch=release_branch,
+                run_id=run_id,
+                header=":x: Cherry-pick failed",
+                error_reason=error_reason or None,
+            )
+            payload = {"text": text}
+
+    if workflow == "npm_publish":
+        repo = os.getenv("REPO", os.getenv("GITHUB_REPOSITORY", ""))
+        run_id = os.getenv("RUN_ID")
+        package_name = os.getenv("PACKAGE_NAME", "")
+        package_version = os.getenv("PACKAGE_VERSION", "")
+        npm_link = (
+            f"https://www.npmjs.com/package/{package_name}/v/{package_version}"
+            if package_name and package_version
+            else None
+        )
+
+        if message_key == "success":
+            lines = [
+                ":package: npm publish succeeded",
+                f"- Package: {package_name}@{package_version}"
+                if package_name and package_version
+                else None,
+                (
+                    f"- Run: https://github.com/{repo}/actions/runs/{run_id}"
+                    if repo and run_id
+                    else None
+                ),
+                (f"- npm: {npm_link}" if npm_link else None),
+            ]
+            text = "\n".join([ln for ln in lines if ln])
+            payload = {"text": text}
+        else:
+            error_reason = os.getenv("ERROR_REASON", "")
+            lines = [
+                ":x: npm publish failed",
+                f"- Package: {package_name}@{package_version}"
+                if package_name and package_version
+                else None,
+                (
+                    f"- Run: https://github.com/{repo}/actions/runs/{run_id}"
+                    if repo and run_id
+                    else None
+                ),
+                (f"- Note: {error_reason}" if error_reason else None),
+            ]
+            text = "\n".join([ln for ln in lines if ln])
+            payload = {"text": text}
 
     if payload:
         response = requests.post(webhook, json=payload)

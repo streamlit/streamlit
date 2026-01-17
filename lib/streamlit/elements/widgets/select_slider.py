@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,14 +19,12 @@ from textwrap import dedent
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
     Generic,
+    TypeGuard,
     TypeVar,
     cast,
     overload,
 )
-
-from typing_extensions import TypeGuard
 
 from streamlit.dataframe_util import OptionSequence, convert_anything_to_list
 from streamlit.elements.lib.form_utils import current_form_id
@@ -61,7 +59,7 @@ from streamlit.runtime.state import (
 from streamlit.type_util import check_python_comparable
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Callable, Sequence
 
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.elements.lib.layout_utils import WidthWithoutContent
@@ -202,6 +200,10 @@ class SelectSliderMixin:
             ``options`` is dataframe-like, the first column will be used. Each
             label will be cast to ``str`` internally by default.
 
+            Each item in the iterable can optionally contain GitHub-flavored
+            Markdown, subject to the same limitations described in the
+            ``label`` parameter.
+
         value : a supported type or a tuple/list of supported types or None
             The value of the slider when it first renders. If a tuple/list
             of two values is passed here, then a range slider with those lower
@@ -263,6 +265,8 @@ class SelectSliderMixin:
         any value or tuple of any value
             The current value of the slider widget. The return type will match
             the data type of the value parameter.
+
+            This contains copies of the selected options, not the originals.
 
         Examples
         --------
@@ -377,6 +381,10 @@ class SelectSliderMixin:
         element_id = compute_and_register_element_id(
             "select_slider",
             user_key=key,
+            # Treat the provided key as the main identity; only include
+            # changes to the options (and implicitly their formatting) in the
+            # identity computation as those can invalidate the current value.
+            key_as_main_identity={"options", "format_func"},
             dg=self.dg,
             label=label,
             options=[str(format_func(option)) for option in opt],

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,7 +39,7 @@ export const useWindowDimensions = (): WindowDimensions => {
     const padding = convertRemToPx(theme.spacing.md)
     const paddingTop = convertRemToPx(theme.sizes.fullScreenHeaderHeight)
 
-    // eslint-disable-next-line no-restricted-properties -- The only expected usage of window.{innerWidth,innerHeight}
+    // eslint-disable-next-line no-restricted-properties, streamlit-custom/no-force-reflow-access -- The only expected usage of window.{innerWidth,innerHeight}
     const { innerWidth, innerHeight } = window
 
     return {
@@ -64,6 +64,7 @@ export const useWindowDimensions = (): WindowDimensions => {
 
   useLayoutEffect(() => {
     // Measure once on load, let resize handlers take over from there
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- TODO: Do not set state in effect
     updateWindowDimensions()
   }, [updateWindowDimensions])
 

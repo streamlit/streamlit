@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-import React from "react"
-
 import { screen, waitFor } from "@testing-library/react"
 
 import {
@@ -25,6 +23,7 @@ import {
 } from "@streamlit/protobuf"
 
 import { ElementNode } from "~lib/AppNode"
+import { ComponentRegistry } from "~lib/components/widgets/CustomComponent"
 import { FileUploadClient } from "~lib/FileUploadClient"
 import { mockEndpoints, mockSessionInfo } from "~lib/mocks/mocks"
 import { ScriptRunState } from "~lib/ScriptRunState"
@@ -82,6 +81,7 @@ function getProps(
       formsWithPendingRequestsChanged: () => {},
       requestFileURLs: vi.fn(),
     }),
+    componentRegistry: new ComponentRegistry(endpoints),
     ...props,
   }
 }
@@ -94,8 +94,10 @@ describe("ElementNodeRenderer Block Component", () => {
         node: createBalloonNode(scriptRunId),
       })
       renderWithContexts(<ElementNodeRenderer {...props} />, {
-        scriptRunState: ScriptRunState.RUNNING,
-        scriptRunId: "NEW_SCRIPT_ID",
+        scriptRunContext: {
+          scriptRunState: ScriptRunState.RUNNING,
+          scriptRunId: "NEW_SCRIPT_ID",
+        },
       })
 
       await waitFor(() =>
@@ -113,7 +115,7 @@ describe("ElementNodeRenderer Block Component", () => {
         node: createBalloonNode(scriptRunId),
       })
       renderWithContexts(<ElementNodeRenderer {...props} />, {
-        scriptRunId,
+        scriptRunContext: { scriptRunId },
       })
 
       await waitFor(() =>
@@ -134,8 +136,10 @@ describe("ElementNodeRenderer Block Component", () => {
         node: createSnowNode(scriptRunId),
       })
       renderWithContexts(<ElementNodeRenderer {...props} />, {
-        scriptRunState: ScriptRunState.RUNNING,
-        scriptRunId: "NEW_SCRIPT_ID",
+        scriptRunContext: {
+          scriptRunState: ScriptRunState.RUNNING,
+          scriptRunId: "NEW_SCRIPT_ID",
+        },
       })
 
       await waitFor(() =>
@@ -152,7 +156,7 @@ describe("ElementNodeRenderer Block Component", () => {
         node: createSnowNode(scriptRunId),
       })
       renderWithContexts(<ElementNodeRenderer {...props} />, {
-        scriptRunId,
+        scriptRunContext: { scriptRunId },
       })
 
       await waitFor(() =>

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -38,6 +38,7 @@ from streamlit.runtime.state.common import (
 )
 from streamlit.runtime.state.session_state import SessionState, WidgetMetadata
 from streamlit.runtime.state.widgets import (
+    register_widget,
     register_widget_from_metadata,
     user_key_from_element_id,
 )
@@ -318,7 +319,11 @@ class WidgetManagerTests(unittest.TestCase):
 class WidgetHelperTests(unittest.TestCase):
     def test_get_widget_with_generated_key(self):
         element_id = compute_and_register_element_id(
-            "button", label="the label", user_key="my_key", dg=None
+            "button",
+            label="the label",
+            user_key="my_key",
+            dg=None,
+            key_as_main_identity=False,
         )
         assert element_id.startswith(GENERATED_ELEMENT_ID_PREFIX)
 
@@ -356,7 +361,7 @@ class ComputeElementIdTests(DeltaGeneratorTestCase):
 
         # Add some kwargs that are passed to compute element ID
         # but don't appear in widget signatures.
-        for kwarg in ["user_key", "dg"]:
+        for kwarg in ["user_key", "dg", "key_as_main_identity"]:
             kwargs[kwarg] = ANY
 
         return kwargs
@@ -400,7 +405,7 @@ class ComputeElementIdTests(DeltaGeneratorTestCase):
         "in element ID calculation."
 
         # Some elements cannot be used in a form
-        if element_name not in ["button", "chat_input", "download_button"]:
+        if element_name not in {"button", "chat_input", "download_button"}:
             # For all other check that form_id is set:
             assert call_kwargs.get("form_id") == "", (
                 "form_id is expected to be included in element ID calculation."
@@ -594,10 +599,16 @@ class ComputeElementIdTests(DeltaGeneratorTestCase):
             match="There are multiple `button` elements with the same",
         ):
             compute_and_register_element_id(
-                element_type="button", user_key=None, dg=None
+                element_type="button",
+                user_key=None,
+                dg=None,
+                key_as_main_identity=False,
             )
             compute_and_register_element_id(
-                element_type="button", user_key=None, dg=None
+                element_type="button",
+                user_key=None,
+                dg=None,
+                key_as_main_identity=False,
             )
 
 
@@ -618,6 +629,21 @@ class RegisterWidgetsTest(DeltaGeneratorTestCase):
         assert widget_metadata_arg.value_type in get_args(ValueFieldName)
         # test that the value_type also maps to a protobuf field
         assert widget_metadata_arg.value_type in WidgetState.DESCRIPTOR.fields_by_name
+
+    def test_raises_exception_with_on_change_and_callbacks(self):
+        """Test that `register_widget` raises an exception when both `on_change`
+        and `callbacks` are provided.
+        """
+        with pytest.raises(errors.StreamlitAPIException):
+            register_widget(
+                "el_id",
+                deserializer=lambda x: x,
+                serializer=lambda x: x,
+                ctx=None,
+                on_change_handler=lambda: None,
+                callbacks={"change": lambda: None},
+                value_type="bool_value",
+            )
 
 
 @patch("streamlit.runtime.Runtime.exists", new=MagicMock(return_value=True))

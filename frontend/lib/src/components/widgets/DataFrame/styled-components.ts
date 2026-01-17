@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,8 @@ import styled from "@emotion/styled"
 
 export interface StyledResizableContainerProps {
   isInHorizontalLayout: boolean
+  minHeight: number
+  disableResize: boolean
 }
 
 /**
@@ -25,13 +27,15 @@ export interface StyledResizableContainerProps {
  */
 export const StyledResizableContainer =
   styled.div<StyledResizableContainerProps>(
-    ({ theme, isInHorizontalLayout }) => ({
+    ({ theme, disableResize, minHeight }) => ({
       position: "relative",
-      display: isInHorizontalLayout ? "flex" : "inline-block",
+      display: disableResize ? "flex" : "inline-block",
+      height: "100%",
 
       "& .stDataFrameGlideDataEditor": {
         height: "100%",
         minWidth: "100%",
+        minHeight: minHeight,
         borderRadius: theme.radii.default,
       },
 

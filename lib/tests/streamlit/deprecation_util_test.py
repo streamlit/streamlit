@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,6 +16,8 @@ from __future__ import annotations
 
 import unittest
 from unittest.mock import Mock, patch
+
+from parameterized import parameterized
 
 from streamlit.deprecation_util import (
     deprecate_func_name,
@@ -49,6 +51,80 @@ class DeprecationUtilTest(unittest.TestCase):
         # config.client.showErrorDetails=False: log, but DON'T show in browser
         with patch_config_options({"client.showErrorDetails": False}):
             show_deprecation_warning(message)
+            mock_logger.warning.assert_called_once_with(message)
+            mock_warning.assert_not_called()
+
+    @parameterized.expand(
+        [
+            ("full",),
+            (True,),
+            ("true",),
+            ("True",),
+        ]
+    )
+    @patch("streamlit.deprecation_util._LOGGER")
+    @patch("streamlit.warning")
+    def test_show_deprecation_warning_with_full_details(
+        self,
+        show_error_details_value: str | bool,
+        mock_warning: Mock,
+        mock_logger: Mock,
+    ):
+        """Test that deprecation warnings are shown in browser when showErrorDetails
+        is set to "full" or legacy True variations.
+        """
+        message = "This feature is deprecated."
+
+        with patch_config_options(
+            {"client.showErrorDetails": show_error_details_value}
+        ):
+            show_deprecation_warning(message)
+            mock_logger.warning.assert_called_once_with(message)
+            mock_warning.assert_called_once_with(message)
+
+    @parameterized.expand(
+        [
+            ("stacktrace",),
+            ("type",),
+            ("none",),
+            (False,),
+            ("false",),
+            ("False",),
+        ]
+    )
+    @patch("streamlit.deprecation_util._LOGGER")
+    @patch("streamlit.warning")
+    def test_show_deprecation_warning_with_reduced_details(
+        self,
+        show_error_details_value: str | bool,
+        mock_warning: Mock,
+        mock_logger: Mock,
+    ):
+        """Test that deprecation warnings are NOT shown in browser when showErrorDetails
+        is set to "stacktrace", "type", "none", or legacy False variations.
+        """
+        message = "This feature is deprecated."
+
+        with patch_config_options(
+            {"client.showErrorDetails": show_error_details_value}
+        ):
+            show_deprecation_warning(message)
+            mock_logger.warning.assert_called_once_with(message)
+            mock_warning.assert_not_called()
+
+    @patch("streamlit.deprecation_util._LOGGER")
+    @patch("streamlit.warning")
+    def test_show_deprecation_warning_respects_show_in_browser_parameter(
+        self, mock_warning: Mock, mock_logger: Mock
+    ):
+        """Test that show_in_browser=False always prevents browser warnings,
+        regardless of config setting.
+        """
+        message = "This feature is deprecated."
+
+        # Even with "full" setting, show_in_browser=False should suppress browser warning
+        with patch_config_options({"client.showErrorDetails": "full"}):
+            show_deprecation_warning(message, show_in_browser=False)
             mock_logger.warning.assert_called_once_with(message)
             mock_warning.assert_not_called()
 

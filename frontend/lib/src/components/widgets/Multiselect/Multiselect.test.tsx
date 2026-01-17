@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-import React from "react"
-
 import { act, screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
@@ -27,6 +25,7 @@ import {
 import { mockConvertRemToPx } from "~lib/mocks/mocks"
 import { render } from "~lib/test_util"
 import * as Utils from "~lib/theme/utils"
+import * as MobileUtil from "~lib/util/isMobile"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import Multiselect, { Props } from "./Multiselect"
@@ -507,5 +506,79 @@ describe("Multiselect widget", () => {
     expect(options[0]).toHaveTextContent("aa")
     expect(options[1]).toHaveTextContent("Aa")
     expect(options[2]).toHaveTextContent("aA")
+  })
+
+  describe("scroll position preservation", () => {
+    it("preserves scroll position when removing an item", async () => {
+      const user = userEvent.setup()
+      const options = Array.from({ length: 20 }, (_, i) => `Option ${i + 1}`)
+      const props = getProps({
+        default: options.map((_, i) => i),
+        options,
+      })
+      render(<Multiselect {...props} />)
+
+      const multiselect = screen.getByTestId("stMultiSelect")
+      const valueContainer = multiselect.querySelector(
+        '[data-baseweb="select"] > div > div:first-child'
+      )
+
+      expect(valueContainer).not.toBeNull()
+      if (valueContainer === null) {
+        return
+      }
+
+      Object.defineProperty(valueContainer, "scrollTop", {
+        writable: true,
+        configurable: true,
+        value: 100,
+      })
+      valueContainer.dispatchEvent(new Event("scroll", { bubbles: true }))
+
+      const deleteButtons = screen.getAllByTitle("Delete")
+      await user.click(deleteButtons[5])
+
+      expect(valueContainer.scrollTop).toBe(100)
+    })
+  })
+
+  describe("on mobile", () => {
+    beforeEach(() => {
+      vi.spyOn(MobileUtil, "isMobile").mockReturnValue(true)
+    })
+
+    it("allows typing when acceptNewOptions is true even with few options", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        acceptNewOptions: true,
+        options: ["a", "b", "c"],
+      })
+      vi.spyOn(props.widgetMgr, "setStringArrayValue")
+
+      render(<Multiselect {...props} />)
+      const selectboxInput = screen.getByRole("combobox")
+      await user.type(selectboxInput, "mobile new option")
+      await user.keyboard("{enter}")
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+        props.element,
+        ["a", "mobile new option"],
+        { fromUi: true },
+        undefined
+      )
+    })
+
+    it("keeps input readonly when acceptNewOptions is false and few options", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        acceptNewOptions: false,
+        options: ["a", "b", "c"],
+      })
+      render(<Multiselect {...props} />)
+      const input = screen.getByRole("combobox")
+      expect(input).toHaveAttribute("readonly")
+      await user.type(input, "should not type")
+      // No creatable option is shown, since typing is blocked
+      expect(screen.queryByText(/Add:/i)).not.toBeInTheDocument()
+    })
   })
 })

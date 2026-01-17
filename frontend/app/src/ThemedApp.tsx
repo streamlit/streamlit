@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,9 +14,8 @@
  * limitations under the License.
  */
 
-import React from "react"
-
 import FontFaceDeclaration from "@streamlit/app/src/components/FontFaceDeclaration"
+import FontSources from "@streamlit/app/src/components/FontSources"
 import {
   PortalProvider,
   RootStyleProvider,
@@ -33,7 +32,7 @@ export interface ThemedAppProps {
 const ThemedApp = ({
   streamlitExecutionStartedAt,
 }: ThemedAppProps): JSX.Element => {
-  const [themeManager, fontFaces] = useThemeManager()
+  const [themeManager, fontFaces, fontSources] = useThemeManager()
   const { activeTheme } = themeManager
 
   return (
@@ -44,6 +43,7 @@ const ThemedApp = ({
           {fontFaces.length > 0 && (
             <FontFaceDeclaration fontFaces={fontFaces} />
           )}
+          {fontSources && <FontSources fontSources={fontSources} />}
           <AppWithScreencast
             theme={themeManager}
             streamlitExecutionStartedAt={streamlitExecutionStartedAt}

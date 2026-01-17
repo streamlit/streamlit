@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -47,7 +47,9 @@ export const getTextAreaHeight = (
         ? 2
         : 30
     const innerHeight = outerElement.heightConfig.pixelHeight - labelAndPadding
-    height = `${innerHeight}px`
+    // Ensure innerHeight is never negative to avoid invalid CSS height values
+    const clampedHeight = Math.max(0, innerHeight)
+    height = `${clampedHeight}px`
   }
   return height
 }

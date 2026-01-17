@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,9 +16,12 @@ from __future__ import annotations
 
 import os.path
 import sys
+import types
 from io import StringIO
-from unittest import IsolatedAsyncioTestCase
+from unittest import IsolatedAsyncioTestCase, TestCase
 from unittest.mock import Mock, patch
+
+import pytest
 
 from streamlit import config
 from streamlit.runtime.runtime import Runtime
@@ -290,15 +293,6 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
         out = sys.stdout.getvalue()
         assert "Unix Socket: unix://mysocket.sock" in out
 
-    @patch("streamlit.web.bootstrap.GitRepo")
-    def test_print_old_git_warning(self, mock_git_repo):
-        mock_git_repo.return_value.is_valid.return_value = False
-        mock_git_repo.return_value.git_version = (1, 2, 3)
-
-        bootstrap._maybe_print_old_git_warning("main_script_path")
-        out = sys.stdout.getvalue()
-        assert "Streamlit requires Git 2.7.0 or later, but you have 1.2.3." in out
-
     @patch("streamlit.web.bootstrap.asyncio.get_running_loop", Mock())
     @patch("streamlit.web.bootstrap.secrets.load_if_toml_exists", Mock())
     @patch("streamlit.web.bootstrap._maybe_print_static_folder_warning")
@@ -384,18 +378,15 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
 
     @patch("streamlit.web.bootstrap.asyncio.get_running_loop", Mock())
     @patch("streamlit.web.bootstrap._maybe_print_static_folder_warning", Mock())
-    @patch("streamlit.web.bootstrap._LOGGER.error")
+    @patch("streamlit.web.bootstrap._LOGGER.exception")
     @patch("streamlit.web.bootstrap.secrets.load_if_toml_exists")
-    def test_log_secret_load_error(self, mock_load_secrets, mock_log_error):
+    def test_log_secret_load_error(self, mock_load_secrets, mock_log_exception):
         """If secrets throws an error on startup, we catch and log it."""
         mock_exception = Exception("Secrets exploded!")
         mock_load_secrets.side_effect = mock_exception
 
         bootstrap._on_server_start(Mock())
-        mock_log_error.assert_called_once_with(
-            "Failed to load secrets.toml file",
-            exc_info=True,
-        )
+        mock_log_exception.assert_called_once_with("Failed to load secrets.toml file")
 
     @patch("streamlit.config.get_config_options")
     @patch("streamlit.web.bootstrap.watch_file")
@@ -450,3 +441,106 @@ class BootstrapRunTest(IsolatedAsyncioTestCase):
 
         with testutil.patch_config_options({"server.headless": True}):
             bootstrap.run("", False, [], {}, stop_immediately_for_testing=True)
+
+
+class BootstrapUvloopTest(TestCase):
+    def test_installs_uvloop_when_available(self):
+        """uvloop is installed as the default policy when present."""
+        fake_uvloop = types.ModuleType("uvloop")
+        fake_uvloop.install = Mock()
+
+        with (
+            patch.object(bootstrap.env_util, "IS_WINDOWS", False),
+            patch.dict("sys.modules", {"uvloop": fake_uvloop}),
+        ):
+            bootstrap._maybe_install_uvloop(running_in_event_loop=False)
+
+        fake_uvloop.install.assert_called_once()
+
+    def test_skips_install_when_loop_running(self):
+        """uvloop installation is skipped if a loop is already running."""
+        fake_uvloop = types.ModuleType("uvloop")
+        fake_uvloop.install = Mock()
+
+        with (
+            patch.object(bootstrap.env_util, "IS_WINDOWS", False),
+            patch.dict("sys.modules", {"uvloop": fake_uvloop}),
+        ):
+            bootstrap._maybe_install_uvloop(running_in_event_loop=True)
+
+        fake_uvloop.install.assert_not_called()
+
+    def test_skips_install_on_windows(self):
+        """uvloop installation is skipped on Windows."""
+        fake_uvloop = types.ModuleType("uvloop")
+        fake_uvloop.install = Mock()
+
+        with (
+            patch.object(bootstrap.env_util, "IS_WINDOWS", True),
+            patch.dict("sys.modules", {"uvloop": fake_uvloop}),
+        ):
+            bootstrap._maybe_install_uvloop(running_in_event_loop=False)
+
+        fake_uvloop.install.assert_not_called()
+
+    def test_handles_missing_uvloop(self):
+        """Missing uvloop does not raise."""
+        with patch.object(bootstrap.env_util, "IS_WINDOWS", False):
+            with patch.dict("sys.modules", {"uvloop": None}):
+                bootstrap._maybe_install_uvloop(running_in_event_loop=False)
+
+
+class BootstrapAsgiTest(IsolatedAsyncioTestCase):
+    """Test bootstrap functions for ASGI app mode."""
+
+    @patch("streamlit.web.bootstrap.report_watchdog_availability")
+    @patch("streamlit.web.bootstrap._install_config_watchers")
+    @patch("streamlit.web.bootstrap._fix_sys_argv")
+    @patch("streamlit.web.bootstrap._fix_sys_path")
+    def test_run_asgi_app_calls_bootstrap_functions(
+        self,
+        mock_fix_sys_path,
+        mock_fix_sys_argv,
+        mock_install_watchers,
+        mock_report_watchdog,
+    ):
+        """Test that run_asgi_app calls the expected bootstrap functions."""
+        import uvicorn
+
+        with (
+            testutil.patch_config_options(
+                {"server.address": "localhost", "server.port": 8501}
+            ),
+            patch.object(uvicorn, "run") as mock_uvicorn_run,
+        ):
+            bootstrap.run_asgi_app(
+                main_script_path="/path/to/main.py",
+                app_import_string="myapp:app",
+                args=["--arg1", "value1"],
+                flag_options={"server_port": 8501},
+            )
+
+        # Verify process-level setup was called
+        mock_fix_sys_path.assert_called_once_with("/path/to/main.py")
+        mock_fix_sys_argv.assert_called_once_with(
+            "/path/to/main.py", ["--arg1", "value1"]
+        )
+        mock_install_watchers.assert_called_once_with({"server_port": 8501})
+        mock_report_watchdog.assert_called_once()
+
+        # Verify uvicorn.run was called with the app import string
+        mock_uvicorn_run.assert_called_once()
+        call_kwargs = mock_uvicorn_run.call_args
+        assert call_kwargs[0][0] == "myapp:app"
+
+    def test_run_asgi_app_raises_without_uvicorn(self):
+        """Test that run_asgi_app raises RuntimeError if uvicorn is not installed."""
+        with patch.dict("sys.modules", {"uvicorn": None}):
+            with pytest.raises(RuntimeError) as cm:
+                bootstrap.run_asgi_app(
+                    main_script_path="/path/to/main.py",
+                    app_import_string="myapp:app",
+                    args=[],
+                    flag_options={},
+                )
+            assert "uvicorn is required" in str(cm.value)

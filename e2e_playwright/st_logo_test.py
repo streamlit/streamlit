@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,10 +14,8 @@
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import (
-    ImageCompareFunction,
-    wait_for_app_run,
-)
+from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.shared.app_utils import select_selectbox_option
 
 
 def test_logo_no_sidebar(
@@ -39,6 +37,11 @@ def test_small_logo_w_sidebar(
     expect(themed_app.get_by_test_id("stSidebar")).to_be_visible()
     expect(themed_app.get_by_test_id("stSidebarHeader")).to_be_visible()
     expect(themed_app.get_by_test_id("stSidebarLogo")).to_be_visible()
+
+    # Ensure collapse button is shown:
+    themed_app.get_by_test_id("stSidebar").hover()
+    expect(themed_app.get_by_test_id("stSidebarCollapseButton")).to_be_visible()
+
     assert_snapshot(
         themed_app.get_by_test_id("stSidebarHeader"),
         name="logo-small_w_sidebar_expanded",
@@ -63,6 +66,11 @@ def test_medium_logo_w_sidebar(
     expect(themed_app.get_by_test_id("stSidebar")).to_be_visible()
     expect(themed_app.get_by_test_id("stSidebarLogo")).to_be_visible()
     expect(themed_app.get_by_test_id("stSidebarHeader")).to_be_visible()
+
+    # Ensure collapse button is shown:
+    themed_app.get_by_test_id("stSidebar").hover()
+    expect(themed_app.get_by_test_id("stSidebarCollapseButton")).to_be_visible()
+
     assert_snapshot(
         themed_app.get_by_test_id("stSidebarHeader"),
         name="logo-medium_w_sidebar_expanded",
@@ -87,6 +95,11 @@ def test_large_logo_w_sidebar(
     expect(themed_app.get_by_test_id("stSidebar")).to_be_visible()
     expect(themed_app.get_by_test_id("stSidebarHeader")).to_be_visible()
     expect(themed_app.get_by_test_id("stSidebarLogo")).to_be_visible()
+
+    # Ensure collapse button is shown:
+    themed_app.get_by_test_id("stSidebar").hover()
+    expect(themed_app.get_by_test_id("stSidebarCollapseButton")).to_be_visible()
+
     assert_snapshot(
         themed_app.get_by_test_id("stSidebarHeader"),
         name="logo-large_w_sidebar_expanded",
@@ -95,7 +108,6 @@ def test_large_logo_w_sidebar(
     themed_app.get_by_test_id("stSidebar").hover()
     themed_app.get_by_test_id("stSidebarCollapseButton").locator("button").click()
     expect(themed_app.get_by_test_id("stHeader")).to_be_visible()
-    expect(themed_app.get_by_test_id("stSidebarHeader")).to_be_visible()
     expect(themed_app.get_by_test_id("stHeaderLogo")).to_be_visible()
     assert_snapshot(
         themed_app.get_by_test_id("stHeader"),
@@ -111,11 +123,13 @@ def test_logo_w_sidebar_and_nav(
     expect(themed_app.get_by_test_id("stSidebar")).to_be_visible()
     expect(themed_app.get_by_test_id("stSidebarHeader")).to_be_visible()
     expect(themed_app.get_by_test_id("stSidebarLogo")).to_be_visible()
+
+    # Ensure collapse button is shown:
+    themed_app.get_by_test_id("stSidebar").hover()
+    expect(themed_app.get_by_test_id("stSidebarCollapseButton")).to_be_visible()
+
     assert_snapshot(themed_app.get_by_test_id("stSidebarHeader"), name="logo-navbar")
 
 
 def select_subtest(app: Page, name: str) -> None:
-    selectbox_input = app.get_by_test_id("stSelectbox").nth(0).locator("input")
-    selectbox_input.type(name)
-    selectbox_input.press("Enter")
-    wait_for_app_run(app)
+    select_selectbox_option(app, "Test to run", name)

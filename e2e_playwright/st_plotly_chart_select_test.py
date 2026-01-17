@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -65,7 +65,6 @@ def test_lasso_select_on_line_chart_displays_a_df(app: Page):
 
 # This test could be flaky because https://github.com/plotly/plotly.js/issues/6898
 # Only run on chromium.
-@pytest.mark.flaky(reruns=3)
 @pytest.mark.only_browser("chromium")
 def test_click_on_bar_chart_displays_a_df_and_double_click_resets_properly(
     app: Page, assert_snapshot: ImageCompareFunction
@@ -125,7 +124,6 @@ def test_box_select_on_stacked_bar_chart_displays_a_df(app: Page):
 @pytest.mark.only_browser(
     "chromium"
 )  # Flaky on WebKit and Firefox, but manually tested
-@pytest.mark.flaky(reruns=4)
 def test_lasso_select_on_histogram_chart_displays_a_df_and_resets_when_double_clicked(
     app: Page, assert_snapshot: ImageCompareFunction
 ):

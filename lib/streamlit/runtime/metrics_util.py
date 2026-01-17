@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,9 +21,9 @@ import sys
 import threading
 import time
 import uuid
-from collections.abc import Sized
+from collections.abc import Callable, Sized
 from functools import wraps
-from typing import Any, Callable, Final, TypeVar, cast, overload
+from typing import Any, Final, TypeVar, cast, overload
 
 from streamlit import config, file_util, util
 from streamlit.logger import get_logger
@@ -78,6 +78,7 @@ _ATTRIBUTIONS_TO_CHECK: Final = [
     "duckdb",
     "opensearchpy",
     "supabase",
+    "databricks",
     # Dataframe Libraries:
     "polars",
     "dask",
@@ -92,6 +93,7 @@ _ATTRIBUTIONS_TO_CHECK: Final = [
     "tables",
     "zarr",
     "datasets",
+    "daft",
     # ML & LLM Tools:
     "mistralai",
     "openai",
@@ -131,11 +133,62 @@ _ATTRIBUTIONS_TO_CHECK: Final = [
     "lightgbm",
     "catboost",
     "sklearn",
+    "pydantic_ai",
+    "datachain",
+    "docling",
+    "litserve",
+    "crawl4ai",
+    "baml_client",
+    "browser_use",
+    "crewai",
+    "unsloth",
+    "langgraph",
+    "dspy",
+    "ultralytics",
+    "instructor",
+    "ragas",
+    "swarm",
+    "faster_whisper",
+    "memori",
+    "autogen_agentchat",
+    "xai_sdk",
+    "agno",
+    "langfuse",
+    "smolagents",
+    "ollama",
+    "groq",
+    "together",
+    "ai21",
+    "marvin",
+    "outlines",
+    "guardrails",
+    "promptflow",
+    "semantic_router",
+    "mem0",
+    "aisuite",
+    "mlflow",
+    "optuna",
+    "keras",
+    "jax",
+    "shap",
+    "evidently",
+    "great_expectations",
+    "bentoml",
+    "modal",
+    "sagemaker",
+    "vertexai",
+    "tiktoken",
+    "sentence_transformers",
+    "spacy",
+    "nltk",
+    "onnxruntime",
+    "llama_api_client",
     # Workflow Tools:
     "prefect",
     "luigi",
     "airflow",
     "dagster",
+    "celery",
     # Vector Stores:
     "pgvector",
     "faiss",
@@ -148,11 +201,40 @@ _ATTRIBUTIONS_TO_CHECK: Final = [
     "lancedb",
     # Others:
     "snowflake",
+    "pydantic",
+    "fastapi",
+    "starlette",
+    "playwright",
+    "folium",
+    "geopandas",
+    "httpx",
+    "pyecharts",
+    "fastplotlib",
+    "pygfx",
+    "highcharts_core",
+    # Optional streamlit dependencies:
+    "seaborn",
+    "graphviz",
+    "matplotlib",
+    "uvloop",
+    "orjson",
+    "rich",
     "streamlit_extras",
     "streamlit_pydantic",
-    "pydantic",
+    "pygwalker",
+    "plotly",
+    "bokeh",
     "plost",
     "authlib",
+    # Document Processing:
+    "pypdf",
+    "pdfplumber",
+    "docx",
+    "openpyxl",
+    "xlsxwriter",
+    # Image/Vision:
+    "cv2",
+    "mediapipe",
 ]
 
 _ETC_MACHINE_ID_PATH = "/etc/machine-id"
@@ -169,11 +251,11 @@ def _get_machine_id_v3() -> str:
     """
 
     if os.path.isfile(_ETC_MACHINE_ID_PATH):
-        with open(_ETC_MACHINE_ID_PATH) as f:
+        with open(_ETC_MACHINE_ID_PATH, encoding="utf-8") as f:
             machine_id = f.read()
 
     elif os.path.isfile(_DBUS_MACHINE_ID_PATH):
-        with open(_DBUS_MACHINE_ID_PATH) as f:
+        with open(_DBUS_MACHINE_ID_PATH, encoding="utf-8") as f:
             machine_id = f.read()
 
     else:
@@ -226,7 +308,8 @@ class Installation:
             with cls._instance_lock:
                 if cls._instance is None:
                     cls._instance = Installation()
-        return cls._instance
+
+        return cls._instance  # ty: ignore[invalid-return-type]
 
     def __init__(self) -> None:
         self.installation_id_v3 = str(
@@ -297,7 +380,7 @@ def _get_command_telemetry(
         pos = i
         if is_method:
             # If func is a method, ignore the first argument (self)
-            i = i + 1  # noqa: PLW2901
+            i += 1  # noqa: PLW2901
 
         keyword = arg_keywords[i] if len(arg_keywords) > i else f"{i}"
         if keyword == "self":
@@ -330,6 +413,12 @@ def _get_command_telemetry(
         and self_arg.name
     ):
         name = f"component:{self_arg.name}"
+
+    if name == "_bidi_component" and len(args) > 1 and isinstance(args[1], str):
+        # Bound DeltaGenerator methods always receive `self` as args[0], so args[1]
+        # is the user-supplied component name.
+        component_name = args[1]
+        name = f"component_v2:{component_name}"
 
     return Command(name=name, args=arguments)
 
@@ -483,6 +572,10 @@ def create_page_profile_message(
     page_profile.prep_time = prep_time
 
     page_profile.headless = config.get_option("server.headless")
+
+    # Include the server mode for metrics tracking
+    if config._server_mode:
+        page_profile.server_mode = config._server_mode
 
     # Collect all config options that have been manually set
     config_options: set[str] = set()

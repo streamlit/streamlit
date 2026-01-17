@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import pytest
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
@@ -19,6 +20,7 @@ from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     expect_help_tooltip,
     get_expander,
+    get_text,
 )
 
 
@@ -51,8 +53,8 @@ def test_multiline_text(app: Page):
     multiline_text = app.get_by_test_id("stText").nth(3)
     expect(multiline_text).not_to_contain_text("\\n")
 
-    # check that the text is displayed as multiline with its div's height > width
-    bounding_box = multiline_text.locator("div").bounding_box()
+    # check that the text is displayed as multiline with its span's height > width
+    bounding_box = multiline_text.locator("span").first.bounding_box()
     assert bounding_box is not None
     assert bounding_box["height"] > bounding_box["width"]
 
@@ -87,3 +89,28 @@ def test_width_settings(app: Page, assert_snapshot: ImageCompareFunction):
     assert_snapshot(stretch_text, name="st_text-stretch-width")
     assert_snapshot(fixed_text, name="st_text-fixed-width")
     assert_snapshot(content_text, name="st_text-content-width")
+
+
+@pytest.mark.parametrize(
+    "alignment_value",
+    ["left", "center", "right", "justify"],
+)
+def test_text_text_alignment(
+    app: Page,
+    assert_snapshot: ImageCompareFunction,
+    alignment_value: str,
+):
+    """Test st.text with text alignment."""
+    text_map = {
+        "left": r"Left aligned text \(default\)",
+        "center": "Center aligned text",
+        "right": "Right aligned text",
+        "justify": "Justified text. This is a longer text to demonstrate justification.",
+    }
+
+    text_element = get_text(app, text_map[alignment_value])
+
+    expect(text_element).to_be_visible()
+    text_element.scroll_into_view_if_needed()
+
+    assert_snapshot(text_element, name=f"st_text-text_alignment_{alignment_value}")

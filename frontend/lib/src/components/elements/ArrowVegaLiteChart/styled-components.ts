@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,7 +31,7 @@ export const StyledVegaLiteChartTooltips = (
     border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
     backgroundColor: transparentize(theme.colors.bgColor, 0.05),
     fontSize: theme.fontSizes.twoSm,
-    boxShadow: "rgb(0 0 0 / 16%) 0px 1px 4px",
+    boxShadow: theme.shadows.tooltip,
     maxWidth: theme.sizes.maxChartTooltipWidth,
     padding: `${theme.spacing.xs} ${theme.spacing.md}`,
     borderRadius: theme.radii.default,
@@ -93,14 +93,14 @@ export const StyledVegaLiteChartTooltips = (
 
 interface StyledVegaLiteChartContainerProps {
   useContainerWidth: boolean
-  isFullScreen: boolean
+  useContainerHeight: boolean
 }
 
 export const StyledVegaLiteChartContainer =
   styled.div<StyledVegaLiteChartContainerProps>(
-    ({ theme, useContainerWidth, isFullScreen }) => ({
-      width: useContainerWidth || isFullScreen ? "100%" : "auto",
-      height: isFullScreen ? "100%" : "auto",
+    ({ theme, useContainerWidth, useContainerHeight }) => ({
+      width: useContainerWidth ? "100%" : "auto",
+      height: useContainerHeight ? "100%" : "auto",
       // These styles come from VegaLite Library
       "&.vega-embed": {
         position: "relative",
@@ -137,7 +137,7 @@ export const StyledVegaLiteChartContainer =
           right: 0,
           // Customize menu UI to look like the Streamlit menu:
           backgroundColor: theme.colors.bgColor,
-          boxShadow: "rgb(0 0 0 / 16%) 0px 4px 16px",
+          boxShadow: theme.shadows.popover,
           border: `${theme.sizes.borderWidth} solid ${theme.colors.fadedText10}`,
           animationDuration: "0.15s",
           animationName: "scale-in",

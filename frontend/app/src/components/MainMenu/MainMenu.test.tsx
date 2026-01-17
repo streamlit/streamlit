@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,12 +14,11 @@
  * limitations under the License.
  */
 
-import React from "react"
-
 import { screen, within } from "@testing-library/react"
 
 import { MetricsManager } from "@streamlit/app/src/MetricsManager"
-import { IMenuItem, mockSessionInfo, render } from "@streamlit/lib"
+import { IMenuItem, mockSessionInfo } from "@streamlit/lib"
+import { render } from "@streamlit/lib/testing"
 import { Config } from "@streamlit/protobuf"
 
 import MainMenu, { Props } from "./MainMenu"

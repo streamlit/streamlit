@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,13 +22,15 @@ from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_checkbox,
+    click_toggle,
     expect_help_tooltip,
+    expect_prefixed_markdown,
     expect_text,
     get_element_by_key,
     get_multiselect,
 )
 
-MULTISELECT_COUNT = 19
+MULTISELECT_COUNT = 20
 
 
 def _get_multiselect_input(locator: Locator | Page, label: str) -> Locator:
@@ -93,7 +95,7 @@ def test_multiselect_on_load(themed_app: Page, assert_snapshot: ImageCompareFunc
         name="st_multiselect-narrow_column",
     )
     assert_snapshot(
-        get_multiselect(themed_app, re.compile("^multiselect 13")),
+        get_multiselect(themed_app, re.compile(r"^multiselect 13")),
         name="st_multiselect-markdown_label",
     )
     assert_snapshot(
@@ -287,6 +289,69 @@ def test_custom_css_class_via_key(app: Page):
     expect(get_element_by_key(app, "multiselect 9")).to_be_visible()
 
 
+def test_dynamic_multiselect_props(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that the multiselect can be updated dynamically while keeping the state.
+
+    This tests that:
+    1. Options can be changed dynamically when a key is provided
+    2. Format function can be changed dynamically
+    3. Selection resets (filters invalid) when selected values are removed from options
+    4. Selection is preserved when the selected values exist in new options
+
+    Initial options: [apple, banana, mango, orange] with format_func=capitalize, default=['apple']
+    Updated options: [mango, papaya, grape, apple] with format_func=capitalize, default=[]
+    """
+    dynamic_ms = get_element_by_key(app, "dynamic_multiselect_with_key")
+    expect(dynamic_ms).to_be_visible()
+
+    # Initial state and selection
+    expect(dynamic_ms).to_contain_text("Initial dynamic multiselect")
+    expect_prefixed_markdown(app, "Initial multiselect value:", "['apple']")
+    assert_snapshot(dynamic_ms, name="st_multiselect-dynamic_initial")
+
+    # Check that the help tooltip is correct:
+    expect_help_tooltip(app, dynamic_ms, "initial help")
+
+    # --- Test 1: Selection RESETS when value is removed from options ---
+    # Select "banana" (only exists in initial options, NOT in updated)
+    select_for_multiselect(app, "Initial dynamic multiselect", "Banana", True)
+    expect_prefixed_markdown(app, "Initial multiselect value:", "['apple', 'banana']")
+
+    # Toggle to update props - options change from [apple, banana, mango, orange]
+    # to [mango, papaya, grape, apple]. "banana" is NOT in updated options.
+    click_toggle(app, "Update multiselect props")
+
+    # Updated multiselect is visible
+    expect(dynamic_ms).to_contain_text("Updated dynamic multiselect")
+
+    # Selection should filter out "banana" (not in updated options), keeping only "apple"
+    expect_prefixed_markdown(app, "Updated multiselect value:", "['apple']")
+
+    dynamic_ms.scroll_into_view_if_needed()
+    assert_snapshot(dynamic_ms, name="st_multiselect-dynamic_updated")
+
+    # Check that the help tooltip is correct:
+    expect_help_tooltip(app, dynamic_ms, "updated help")
+
+    # --- Test 2: Selection PRESERVED when value exists in both option sets ---
+    # Select "mango" - it exists in BOTH option sets at different indices:
+    # Initial: index 2 (displayed "Mango"), Updated: index 0 (displayed "Mango")
+    select_for_multiselect(app, "Updated dynamic multiselect", "Mango", True)
+    expect_prefixed_markdown(app, "Updated multiselect value:", "['apple', 'mango']")
+
+    # Toggle back to initial options - "mango" and "apple" exist in initial too
+    click_toggle(app, "Update multiselect props")
+    expect(dynamic_ms).to_contain_text("Initial dynamic multiselect")
+
+    # Selection should be PRESERVED since both "apple" and "mango" are in both option sets
+    expect_prefixed_markdown(app, "Initial multiselect value:", "['apple', 'mango']")
+
+    # Toggle again and check that the selection is preserved:
+    click_toggle(app, "Update multiselect props")
+    expect(dynamic_ms).to_contain_text("Updated dynamic multiselect")
+    expect_prefixed_markdown(app, "Updated multiselect value:", "['apple', 'mango']")
+
+
 def test_multiselect_accept_new_options(app: Page):
     """Should allow adding new options when accept_new_options is True and respect
     max_selections.
@@ -427,3 +492,28 @@ def test_multiselect_empty_options_disabled_when_no_accept_new(app: Page):
 
     # Verify the widget value remains empty
     expect_text(app, "value 3: []")
+
+
+def test_multiselect_preserves_scroll_position_on_remove(app: Page):
+    """Should preserve scroll position when removing an item from the multiselect."""
+    multiselect_elem = get_multiselect(app, "multiselect 17 - show maxHeight")
+
+    # Get the value container (scrollable area)
+    value_container = multiselect_elem.locator(
+        '[data-baseweb="select"] > div > div:first-child'
+    )
+
+    # Scroll to middle of the value container (not bottom, to avoid clamping issues
+    # when items are removed and scrollHeight decreases)
+    value_container.evaluate("el => { el.scrollTop = el.scrollHeight / 2; }")
+
+    # Get initial scroll position (should be > 0 since there are many items)
+    initial_scroll = value_container.evaluate("el => el.scrollTop")
+    assert initial_scroll > 0
+
+    # Remove an item by clicking its delete button
+    del_from_multiselect(app, "multiselect 17 - show maxHeight", "fifteen")
+
+    # Verify scroll position is preserved
+    final_scroll = value_container.evaluate("el => el.scrollTop")
+    assert final_scroll == initial_scroll

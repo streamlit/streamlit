@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,9 +21,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal, Union, cast
-
-from typing_extensions import TypeAlias
+from typing import TYPE_CHECKING, Literal, TypeAlias, cast
 
 from streamlit.deprecation_util import (
     make_deprecated_name_warning,
@@ -43,7 +41,7 @@ from streamlit.runtime.metrics_util import gather_metrics
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
-UseColumnWith: TypeAlias = Union[Literal["auto", "always", "never"], bool, None]
+UseColumnWith: TypeAlias = Literal["auto", "always", "never"] | bool | None
 
 
 class ImageMixin:
@@ -95,22 +93,31 @@ class ImageMixin:
             .. |st.markdown| replace:: ``st.markdown``
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
         width : "content", "stretch", or int
-            Image width. This can be one of the following:
+            The width of the image element. This can be one of the following:
 
-            - ``"content"`` (default): The image width is set to the image's
-              native width, up to the width of the parent container.
-            - ``"stretch"``: The image width is set to the width of the parent
+            - ``"content"`` (default): The width of the element matches the
+              width of its content, but doesn't exceed the width of the parent
               container.
-            - An integer specifying the width in pixels.
+            - ``"stretch"``: The width of the element matches the width of the
+              parent container.
+            - An integer specifying the width in pixels: The element has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the element matches the width
+              of the parent container.
 
-            When using an SVG image without a default width, you should declare
-            ``width`` or use ``width="stretch"``.
+            When using an SVG image without a default width, use ``"stretch"``
+            or an integer.
         use_column_width : "auto", "always", "never", or bool
             If "auto", set the image's width to its natural size,
             but do not exceed the width of the column.
             If "always" or True, set the image's width to the column width.
             If "never" or False, set the image's width to its natural size.
             Note: if set, `use_column_width` takes precedence over the `width` parameter.
+
+            .. deprecated::
+                ``use_column_width`` is deprecated and will be removed in a future
+                release. Please use the ``width`` parameter instead.
+
         clamp : bool
             Whether to clamp image pixel values to a valid range (0-255 per
             channel). This is only used for byte array images; the parameter is
@@ -138,15 +145,11 @@ class ImageMixin:
             ``use_container_width`` is ``True``, Streamlit sets the width of
             the image to match the width of the parent container.
 
-        .. deprecated::
-            ``use_container_width`` is deprecated and will be removed in a future
-            release. Please use the ``width`` parameter instead.
-            For ``use_container_width=True``, use ``width="stretch"``.
-            For ``use_container_width=False``, use ``width="content"``.
-
-        .. deprecated::
-            ``use_column_width`` is deprecated and will be removed in a future
-            release. Please use the ``width`` parameter instead.
+            .. deprecated::
+                ``use_container_width`` is deprecated and will be removed in a
+                future release. For ``use_container_width=True``, use
+                ``width="stretch"``. For ``use_container_width=False``, use
+                ``width="content"``.
 
         Example
         -------
@@ -168,7 +171,7 @@ class ImageMixin:
 
             show_deprecation_warning(
                 "The `use_column_width` parameter has been deprecated and will be removed "
-                "in a future release. Please utilize the `use_container_width` parameter instead."
+                "in a future release. Please utilize the `width` parameter instead."
             )
             if use_column_width in {"auto", "never"} or use_column_width is False:
                 width = "content"

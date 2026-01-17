@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -71,7 +71,6 @@ st.map(
     longitude="xlon",
     color="color",
     size="size",
-    use_container_width=False,
 )
 
 
@@ -79,4 +78,4 @@ st.map(
 ### Simple map with defined width and height
 """
 
-st.map(simple_map_df, width=200, height=250, use_container_width=False)
+st.map(simple_map_df, width=200, height=250)

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -593,7 +593,7 @@ def test_selectbox():
     assert sr6.selectbox[0].value == "male"
     assert sr6.selectbox[3].value == "Lisp"
 
-    with pytest.raises(ValueError, match="'invalid' is not in list"):
+    with pytest.raises(ValueError, match="not in list"):
         sr6.selectbox[0].select("invalid").run()
 
     with pytest.raises(IndexError):

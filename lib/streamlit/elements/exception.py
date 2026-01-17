@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import os
 import traceback
-from typing import TYPE_CHECKING, Callable, Final, TypeVar, cast
+from typing import TYPE_CHECKING, Final, TypeVar, cast
 
 from streamlit import config
 from streamlit.elements.lib.layout_utils import validate_width
@@ -31,6 +31,8 @@ from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.elements.lib.layout_utils import WidthWithoutContent
 
@@ -77,7 +79,7 @@ class ExceptionMixin:
         >>> e = RuntimeError("This is an exception of type RuntimeError")
         >>> st.exception(e)
 
-        .. output ::
+        .. output::
             https://doc-status-exception.streamlit.app/
             height: 220px
 
@@ -276,8 +278,10 @@ def _get_stack_trace_str_list(exception: BaseException) -> list[str]:
     # Format the extracted traceback and add it to the protobuf element.
     if extracted_traceback is None:
         trace_str_list = [
-            "Cannot extract the stack trace for this exception. "
-            "Try calling exception() within the `catch` block."
+            (
+                "Cannot extract the stack trace for this exception. "
+                "Try calling exception() within the `catch` block."
+            )
         ]
     else:
         internal_frames, external_frames = _split_internal_streamlit_frames(

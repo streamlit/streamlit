@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import zip from "lodash/zip"
+import { zip } from "lodash-es"
 
 import {
   FileUploaderState as FileUploaderStateProto,
@@ -42,12 +42,14 @@ export const uploadFiles = async ({
   widgetMgr,
   widgetInfo,
   fragmentId,
+  signal,
 }: {
   files: File[]
   uploadClient: FileUploadClient
   widgetMgr: WidgetStateManager
   widgetInfo: WidgetInfo
   fragmentId?: string
+  signal?: AbortSignal
 }): Promise<{
   successfulUploads: SuccessfulUpload[]
   failedUploads: FailedUpload[]
@@ -70,7 +72,7 @@ export const uploadFiles = async ({
 
   await Promise.all(
     filesWithUrls.map(async ([file, fileUrl]) => {
-      if (!file || !fileUrl || !fileUrl.uploadUrl || !fileUrl.fileId) {
+      if (!file || !fileUrl?.uploadUrl || !fileUrl.fileId) {
         return { file, fileUrl, error: new Error("No upload URL found") }
       }
 
@@ -78,7 +80,9 @@ export const uploadFiles = async ({
         await uploadClient.uploadFile(
           { id: fileUrl.fileId, formId: widgetInfo.formId || "" }, // TODO SEE IF DOWNSTREAM LOGIC CAN BE SIMPLIFIED
           fileUrl.uploadUrl,
-          file
+          file,
+          undefined, // onUploadProgress
+          signal
         )
         successfulUploads.push({ fileUrl, file })
       } catch (e) {

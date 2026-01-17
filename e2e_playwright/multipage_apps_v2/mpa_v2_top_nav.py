@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -57,6 +57,9 @@ test_sections = st.checkbox("Test Sections", key="test_sections")
 test_single_section = st.checkbox(
     "Test Single Section (3 pages)", key="test_single_section"
 )
+test_mixed_sections = st.checkbox(
+    "Test Mixed Empty/Named Sections", key="test_mixed_sections"
+)
 test_hidden = st.checkbox("Test Hidden Navigation", key="test_hidden")
 test_switching = st.checkbox("Test Navigation Switching", key="test_switching")
 test_sidebar = st.checkbox("Test Sidebar Content", key="test_sidebar")
@@ -112,6 +115,21 @@ elif test_single_section:
             st.Page(page1, title="Page 1", icon="🏠"),
             st.Page(page2, title="Page 2", icon="📊"),
             st.Page(page3, title="Page 3", icon="🔧"),
+        ],
+    }
+elif test_mixed_sections:
+    # Test mixed empty and named sections (issue #12243)
+    pages = {
+        "": [
+            st.Page(page1, title="Home", icon="🏠"),
+            st.Page(page2, title="Dashboard", icon="📊"),
+        ],
+        "Admin": [
+            st.Page(page3, title="Settings", icon="⚙️"),
+            st.Page(page4, title="Users", icon="👥"),
+        ],
+        "Reports": [
+            st.Page(page5, title="Analytics", icon="📈"),
         ],
     }
 else:

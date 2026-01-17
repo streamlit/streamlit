@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 
 import { useCallback, useContext, useEffect, useMemo, useState } from "react"
 
-import { LibContext } from "~lib/components/core/LibContext"
+import { ViewStateContext } from "~lib/components/core/ViewStateContext"
 import { useWindowDimensionsContext } from "~lib/components/shared/WindowDimensions/useWindowDimensionsContext"
 
 export type UseEscapeToCollapseArgs = {
@@ -33,7 +33,7 @@ export type UseFullscreenShape = {
 }
 
 export const useFullscreen = (): UseFullscreenShape => {
-  const { setFullScreen } = useContext(LibContext)
+  const { setFullScreen } = useContext(ViewStateContext)
   const [expanded, setExpanded] = useState(false)
   const { fullHeight, fullWidth } = useWindowDimensionsContext()
 
@@ -53,8 +53,6 @@ export const useFullscreen = (): UseFullscreenShape => {
   }, [setExpandedState])
 
   const zoomOut = useCallback(() => {
-    // TODO: Update to match React best practices
-    // eslint-disable-next-line react-hooks/react-compiler
     document.body.style.overflow = "unset"
     setExpandedState(false)
   }, [setExpandedState])

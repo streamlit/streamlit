@@ -1,0 +1,49 @@
+# Protobuf
+
+Protobuf messages are used for communication between the Streamlit backend and frontend via WebSocket connections.
+
+**Note**: Messages are "released" once shipped in any Streamlit version.
+
+## Protobuf Compatibility
+
+Always keep protobuf messages backwards compatible. New versions must work with older Streamlit versions.
+
+**Incompatible changes to avoid:**
+
+- Removing a field → Add `// DEPRECATED` comment and mark `[deprecated=true]`
+- Renaming a field → Deprecate old field, add new field with next available number
+- Changing field numbers → Keep all existing numbers unchanged
+- Adding/removing `optional` → Deprecate and create new field
+- Changing field types incompatibly → Use new field with compatible type
+
+**Compatible changes (safe to make):**
+
+- Adding new optional fields
+- Adding comments
+- Marking fields as deprecated
+- Modifying/removing unreleased fields
+
+## Compile Protobuf
+
+Changes requiring compilation:
+
+- Adding a field
+- **Unreleased messages only:** Modifying/removing fields
+
+Changes not requiring compilation:
+
+- Comments and `[deprecated=true]` notation
+
+Run this command to recompile the protobufs:
+
+```bash
+make protobuf
+```
+
+## Important Files
+
+- `ForwardMsg.proto`: Root message used to send information from the server to the frontend/browser.
+- `BackMsg.proto`: Root message sent from the browser to the server, e.g. script rerun requests.
+- `NewSession.proto`: First message that is sent to the browser on every rerun.
+- `Block.proto`: Contains all block types. A block is a layout container for elements (e.g. columns, tabs, popovers, etc.).
+- `Element.proto`: Contains all element types. An element is a UI component.

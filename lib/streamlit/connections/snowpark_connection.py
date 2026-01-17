@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -146,7 +146,7 @@ class SnowparkConnection(BaseConnection["Session"]):
         )
         def _query(sql: str) -> DataFrame:
             with self._lock:
-                return self._instance.sql(sql).to_pandas()
+                return self._instance.sql(sql).to_pandas()  # type: ignore
 
         # We modify our helper function's `__qualname__` here to work around default
         # `@st.cache_data` behavior. Otherwise, `.query()` being called with different

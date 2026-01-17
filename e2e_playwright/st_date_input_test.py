@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,17 +17,21 @@ from playwright.sync_api import Page, expect
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
+    click_toggle,
     expect_help_tooltip,
     expect_markdown,
+    expect_prefixed_markdown,
     get_date_input,
     get_element_by_key,
     reset_focus,
 )
 
+NUM_DATE_INPUTS = 18
+
 
 def test_date_input_rendering(themed_app: Page, assert_snapshot: ImageCompareFunction):
     """Test that st.date_input renders correctly via screenshots matching."""
-    expect(themed_app.get_by_test_id("stDateInput")).to_have_count(17)
+    expect(themed_app.get_by_test_id("stDateInput")).to_have_count(NUM_DATE_INPUTS)
 
     assert_snapshot(
         get_date_input(themed_app, "Single date"), name="st_date_input-single_date"
@@ -231,19 +235,19 @@ def test_calls_callback_on_change(app: Page):
     calendar.click()
     wait_for_app_run(app)
 
-    expect_markdown(app, "Value 12: 1970-01-02")
-    expect_markdown(app, "Date Input Changed: True")
+    expect_prefixed_markdown(app, "Value 12:", "1970-01-02")
+    expect_prefixed_markdown(app, "Date Input Changed:", "True")
 
     # Change different date input to trigger delta path change
     first_date_input_field = get_date_input(app, "Single date").locator("input")
     first_date_input_field.fill("1971/01/03")
     wait_for_app_run(app)
 
-    expect_markdown(app, "Value 1: 1971-01-03")
+    expect_prefixed_markdown(app, "Value 1:", "1971-01-03")
 
     # Test if value is still correct after delta path change
-    expect_markdown(app, "Value 12: 1970-01-02")
-    expect_markdown(app, "Date Input Changed: False")
+    expect_prefixed_markdown(app, "Value 12:", "1970-01-02")
+    expect_prefixed_markdown(app, "Date Input Changed:", "False")
 
 
 def test_single_date_calendar_picker_rendering(
@@ -432,6 +436,70 @@ def test_check_top_level_class(app: Page):
 def test_custom_css_class_via_key(app: Page):
     """Test that the element can have a custom css class via the key argument."""
     expect(get_element_by_key(app, "date_input_12")).to_be_visible()
+
+
+def test_dynamic_date_input_props(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that the date input can be updated dynamically while keeping the state."""
+    dynamic_date_input = get_element_by_key(app, "dynamic_date_input_with_key")
+    expect(dynamic_date_input).to_be_visible()
+
+    expect(dynamic_date_input).to_contain_text("Initial dynamic date input")
+    expect_prefixed_markdown(app, "Initial date input value:", "2020-01-01")
+    assert_snapshot(dynamic_date_input, name="st_date_input-dynamic_initial")
+
+    # Check that the help tooltip is correct:
+    expect_help_tooltip(app, dynamic_date_input, "initial help")
+
+    # Type something and submit (select same date via typing)
+    input_field = dynamic_date_input.locator("input")
+    input_field.type("2020/01/02", delay=50)
+    input_field.press("Enter")
+    input_field.press("Escape")
+    wait_for_app_run(app)
+    expect(app.locator('[data-baseweb="calendar"]')).not_to_be_visible()
+
+    expect_prefixed_markdown(app, "Initial date input value:", "2020-01-02")
+
+    # Click the toggle to update the date input props
+    click_toggle(app, "Update date input props")
+
+    # new date input is visible:
+    expect(dynamic_date_input).to_contain_text("Updated dynamic date input")
+
+    # Ensure the previously entered value remains visible (value is within new bounds)
+    expect_prefixed_markdown(app, "Updated date input value:", "2020-01-02")
+
+    dynamic_date_input.scroll_into_view_if_needed()
+    assert_snapshot(dynamic_date_input, name="st_date_input-dynamic_updated")
+
+    # Check that the help tooltip is correct:
+    expect_help_tooltip(app, dynamic_date_input, "updated help")
+
+    # Type something different and submit
+    input_field.type("2020/01/03")
+    input_field.press("Enter")
+    input_field.press("Escape")
+    wait_for_app_run(app)
+
+    expect_prefixed_markdown(app, "Updated date input value:", "2020-01-03")
+
+    # Test dynamic min/max behavior when bounds change:
+    # Toggle back to initial bounds (2010-2030)
+    click_toggle(app, "Update date input props")
+    expect_prefixed_markdown(app, "Initial date input value:", "2020-01-03")
+
+    # Set value to 2028/01/01 which is valid in initial bounds (2010-2030)
+    input_field.type("2028/01/01")
+    input_field.press("Enter")
+    input_field.press("Escape")
+    wait_for_app_run(app)
+    expect_prefixed_markdown(app, "Initial date input value:", "2028-01-01")
+
+    # Toggle to updated bounds (2020-2025) - value 2028 is outside, should reset to default (2023-09-10)
+    click_toggle(app, "Update date input props")
+    expect_prefixed_markdown(app, "Updated date input value:", "2023-09-10")
+    # Anti-regression: ensure the old out-of-bounds value is not retained
+    expect(app.get_by_text("2028-01-01")).not_to_be_visible()
 
 
 def test_quick_select_feature_visibility(app: Page):

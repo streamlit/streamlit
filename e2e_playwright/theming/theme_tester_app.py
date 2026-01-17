@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -157,7 +157,7 @@ def run_theme_tester_app():
         st.markdown(
             "## Welcome\n"
             ":rainbow-background[:rainbow[Hello World]] :material/waving_hand: **This** "
-            "`is` [Streamlit](https://streamlit.io).",
+            "`is some code text in` [Streamlit](https://streamlit.io).",
             help="Tooltip",
         )
         st.success("Wohooo!")

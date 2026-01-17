@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, {
+import {
   memo,
   ReactElement,
   useCallback,
@@ -32,14 +32,14 @@ import moment from "moment"
 import { DateInput as DateInputProto } from "@streamlit/protobuf"
 
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
-import { LibContext } from "~lib/components/core/LibContext"
+import { LibConfigContext } from "~lib/components/core/LibConfigContext"
+import { getBorderColor } from "~lib/components/shared/Base/styled-components"
 import Icon from "~lib/components/shared/Icon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
 import Tooltip, { Placement } from "~lib/components/shared/Tooltip"
-import TooltipIcon from "~lib/components/shared/TooltipIcon"
 import {
-  StyledWidgetLabelHelp,
   WidgetLabel,
+  WidgetLabelHelpIcon,
 } from "~lib/components/widgets/BaseWidget"
 import {
   useBasicWidgetState,
@@ -113,9 +113,10 @@ function DateInput({
   const [isEmpty, setIsEmpty] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const { colors, fontSizes, lineHeights, spacing, sizes } = useEmotionTheme()
+  const { colors, fontSizes, fontWeights, lineHeights, spacing, sizes } =
+    useEmotionTheme()
 
-  const { locale } = useContext(LibContext)
+  const { locale } = useContext(LibConfigContext)
   const loadedLocale = useIntlLocale(locale)
 
   const minDate = useMemo(
@@ -252,12 +253,7 @@ function DateInput({
         )}
       >
         {element.help && (
-          <StyledWidgetLabelHelp>
-            <TooltipIcon
-              content={element.help}
-              placement={Placement.TOP_RIGHT}
-            />
-          </StyledWidgetLabelHelp>
+          <WidgetLabelHelpIcon content={element.help} label={element.label} />
         )}
       </WidgetLabel>
       <UIDatePicker
@@ -282,7 +278,7 @@ function DateInput({
               overrides: {
                 Body: {
                   style: {
-                    marginTop: theme.spacing.px,
+                    marginTop: spacing.px,
                   },
                 },
               },
@@ -397,26 +393,32 @@ function DateInput({
                 EndEnhancer: {
                   style: {
                     // Match text color with st.error in light and dark mode
-                    color: hasLightBackgroundColor(theme)
-                      ? colors.red100
-                      : colors.red20,
+                    color: colors.redTextColor,
                     backgroundColor: colors.transparent,
                   },
                 },
                 Root: {
-                  style: {
-                    // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
-                    borderLeftWidth: sizes.borderWidth,
-                    borderRightWidth: sizes.borderWidth,
-                    borderTopWidth: sizes.borderWidth,
-                    borderBottomWidth: sizes.borderWidth,
-                    paddingRight: spacing.twoXS,
+                  style: ({ $isFocused }: { $isFocused: boolean }) => {
+                    const borderColor = getBorderColor(colors, $isFocused)
+                    return {
+                      // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
+                      borderLeftWidth: sizes.borderWidth,
+                      borderRightWidth: sizes.borderWidth,
+                      borderTopWidth: sizes.borderWidth,
+                      borderBottomWidth: sizes.borderWidth,
+                      paddingRight: spacing.twoXS,
 
-                    // Baseweb has an error prop for the input, but its coloring doesn't reconcile
-                    // with our dark theme - we handle error state coloring manually here
-                    ...(error && {
-                      backgroundColor: colors.dangerBg,
-                    }),
+                      borderTopColor: borderColor,
+                      borderRightColor: borderColor,
+                      borderBottomColor: borderColor,
+                      borderLeftColor: borderColor,
+
+                      // Baseweb has an error prop for the input, but its coloring doesn't reconcile
+                      // with our dark theme - we handle error state coloring manually here
+                      ...(error && {
+                        backgroundColor: colors.redBackgroundColor,
+                      }),
+                    }
                   },
                 },
                 ClearIcon: {
@@ -424,7 +426,7 @@ function DateInput({
                     overrides: {
                       Svg: {
                         style: {
-                          color: colors.darkGray,
+                          color: colors.grayTextColor,
                           // setting this width and height makes the clear-icon align with dropdown arrows of other input fields
                           padding: spacing.threeXS,
                           height: sizes.clearIconSize,
@@ -445,7 +447,7 @@ function DateInput({
                 },
                 Input: {
                   style: {
-                    fontWeight: theme.fontWeights.normal,
+                    fontWeight: fontWeights.normal,
                     // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
                     paddingRight: spacing.sm,
                     paddingLeft: spacing.md,
@@ -454,14 +456,12 @@ function DateInput({
                     lineHeight: lineHeights.inputWidget,
 
                     "::placeholder": {
-                      color: theme.colors.fadedText60,
+                      color: colors.fadedText60,
                     },
 
                     // Change input value text color in error state - matches st.error in light and dark mode
                     ...(error && {
-                      color: hasLightBackgroundColor(theme)
-                        ? colors.red100
-                        : colors.red20,
+                      color: colors.redTextColor,
                     }),
                   },
                   props: {
@@ -476,12 +476,12 @@ function DateInput({
               overrides: {
                 ControlContainer: {
                   style: {
-                    height: theme.sizes.minElementHeight,
+                    height: sizes.minElementHeight,
                     // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
-                    borderLeftWidth: theme.sizes.borderWidth,
-                    borderRightWidth: theme.sizes.borderWidth,
-                    borderTopWidth: theme.sizes.borderWidth,
-                    borderBottomWidth: theme.sizes.borderWidth,
+                    borderLeftWidth: sizes.borderWidth,
+                    borderRightWidth: sizes.borderWidth,
+                    borderTopWidth: sizes.borderWidth,
+                    borderBottomWidth: sizes.borderWidth,
                   },
                 },
               },

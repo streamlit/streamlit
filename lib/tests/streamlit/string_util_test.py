@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,8 +14,11 @@
 
 from __future__ import annotations
 
+import decimal
 import unittest
+from fractions import Fraction
 
+import numpy as np
 import pytest
 from parameterized import parameterized
 
@@ -149,3 +152,49 @@ class StringUtilTest(unittest.TestCase):
             string_util.validate_material_icon(icon_name)
 
         assert "not a valid Material icon." in str(e.value)
+
+    @parameterized.expand(
+        [
+            (1, "1"),
+            (1.0, "1.0"),
+            (decimal.Decimal("1.0"), "1.0"),
+            (Fraction(1, 1), "1"),
+            (np.int16(1), "1"),
+            (np.float16(1.0), "1.0"),
+            (np.float32(1.0), "1.0"),
+            (np.float64(1.0), "1.0"),
+            (np.int32(1), "1"),
+            (np.int64(1), "1"),
+        ]
+    )
+    def test_from_number(self, value: object, expected: str):
+        """Test that from_number returns correct string representations for numeric types."""
+        assert string_util.from_number(value) == expected
+
+    def test_from_number_invalid_object_exception(self):
+        """Test that from_number raises TypeError for invalid objects."""
+        with pytest.raises(TypeError):
+            string_util.from_number(None)
+
+    @parameterized.expand(
+        [
+            (None, ""),
+            ("spinner", "spinner"),
+            ("😃", "😃"),
+            (":material/thumb_up:", ":material/thumb_up:"),
+        ]
+    )
+    def test_validate_icon_or_emoji(self, icon, expected):
+        """Test streamlit.string_util.validate_icon_or_emoji."""
+        assert string_util.validate_icon_or_emoji(icon) == expected
+
+    @parameterized.expand(
+        [
+            ("invalid"),
+            (":material/invalid:"),
+        ]
+    )
+    def test_validate_icon_or_emoji_raises(self, icon):
+        """Test that validate_icon_or_emoji raises StreamlitAPIException on invalid inputs."""
+        with pytest.raises(StreamlitAPIException):
+            string_util.validate_icon_or_emoji(icon)

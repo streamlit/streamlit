@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -58,6 +58,7 @@ export function mockEndpoints(
     sendClientErrorToHost: vi.fn(),
     checkSourceUrlResponse: vi.fn(),
     buildComponentURL: vi.fn(),
+    buildBidiComponentURL: vi.fn(),
     buildMediaURL: vi.fn(),
     buildDownloadUrl: vi.fn(),
     buildFileUploadURL: vi.fn(),

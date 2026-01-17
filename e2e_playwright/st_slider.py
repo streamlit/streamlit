@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from datetime import date, time
+from datetime import date, datetime, time
 
 import streamlit as st
 from streamlit import runtime
@@ -66,11 +66,11 @@ w4 = st.slider("Label 4", 10000, 25000, 10000, disabled=True)
 st.write("Value 4:", w4)
 
 # Slider 8
-w5 = st.slider("Label 5", 0, 100, 25, 1, label_visibility="hidden")
+w5 = st.slider("Label 5", 0, 100, 25, 1, label_visibility="hidden", key="slider_5")
 st.write("Value 5:", w5)
 
 # Slider 9
-w6 = st.slider("Label 6", 0, 100, 36, label_visibility="collapsed")
+w6 = st.slider("Label 6", 0, 100, 36, label_visibility="collapsed", key="slider_6")
 st.write("Value 6:", w6)
 
 # Slider 10
@@ -160,7 +160,7 @@ st.slider(
     "Label 14 - Overlapping near the left",
     min_value=1e6 + 0,
     max_value=1e6 + 100,
-    value=(1e6 + 10, 1e6 + 14),
+    value=(1e6 + 6, 1e6 + 10),
 )
 
 # Slider 18
@@ -176,7 +176,7 @@ st.slider(
     "Label 16 - Overlapping near the right",
     min_value=1e6 + 0,
     max_value=1e6 + 100,
-    value=(1e6 + 86, 1e6 + 90),
+    value=(1e6 + 88, 1e6 + 92),
 )
 
 # Slider 20
@@ -194,3 +194,60 @@ st.slider(
 
 st.slider("Label 19 - Width 300px", min_value=0, max_value=100, width=300)
 st.slider("Label 20 - Width Stretch", min_value=0, max_value=100, width="stretch")
+
+# Slider with predefined number format
+st.slider(
+    "Slider with compact format",
+    min_value=0,
+    max_value=1000000,
+    value=500000,
+    format="compact",
+)
+
+# Slider with predefined datetime format
+st.slider(
+    "Slider with localized date format",
+    min_value=datetime(2020, 1, 1),
+    max_value=datetime(2025, 12, 31),
+    value=datetime(2023, 6, 15),
+    format="localized",
+)
+
+if st.toggle("Update slider props"):
+    dyn_value = st.slider(
+        "Updated dynamic slider",
+        value=42,
+        width=300,
+        help="updated help",
+        format="%d€",
+        key="dynamic_slider_with_key",
+        on_change=lambda a, param: print(
+            f"Updated slider - callback triggered: {a} {param}"
+        ),
+        args=("Updated slider arg",),
+        kwargs={"param": "updated kwarg param"},
+        # min_value, max_value, and step are not yet supported for dynamic changes
+        # keeping it at the same value:
+        min_value=0,
+        max_value=100,
+        step=1,
+    )
+    st.write("Updated slider value:", dyn_value)
+else:
+    dyn_value = st.slider(
+        "Initial dynamic slider",
+        value=25,
+        width="stretch",
+        help="initial help",
+        format="%0.2f",
+        key="dynamic_slider_with_key",
+        on_change=lambda a, param: print(
+            f"Initial slider - callback triggered: {a} {param}"
+        ),
+        args=("Initial slider arg",),
+        kwargs={"param": "initial kwarg param"},
+        min_value=0,
+        max_value=100,
+        step=1,
+    )
+    st.write("Initial slider value:", dyn_value)

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,14 +15,13 @@
  */
 
 import styled from "@emotion/styled"
-import { transparentize } from "color2k"
 
 import { Metric as MetricProto } from "@streamlit/protobuf"
 
 import { StyledWidgetLabel } from "~lib/components/widgets/BaseWidget/styled-components"
-import { EmotionTheme } from "~lib/theme"
-import { hasLightBackgroundColor } from "~lib/theme/getColors"
 import { LabelVisibilityOptions } from "~lib/util/utils"
+
+import { getMetricBackgroundColor, getMetricTextColor } from "./metricColors"
 
 export interface StyledMetricContainerProps {
   showBorder: boolean
@@ -98,55 +97,14 @@ export const StyledMetricValueText = styled.div(({ theme }) => ({
 
 export interface StyledMetricDeltaTextProps {
   metricColor: MetricProto.MetricColor
-}
-
-export const getMetricColor = (
-  theme: EmotionTheme,
-  color: MetricProto.MetricColor
-): string => {
-  switch (color) {
-    case MetricProto.MetricColor.RED:
-      return theme.colors.metricNegativeDeltaColor
-    case MetricProto.MetricColor.GREEN:
-      return theme.colors.metricPositiveDeltaColor
-    // this must be grey
-    default:
-      return theme.colors.metricNeutralDeltaColor
-  }
-}
-
-// Delta uses the same background colors as background colored Markdown text.
-// TODO: We should refactor this and probably move it somewhere else (e.g. getColors.ts)
-// when we work on text/background colors for advanced theming.
-const getMetricBackgroundColor = (
-  theme: EmotionTheme,
-  color: MetricProto.MetricColor
-): string => {
-  const lightTheme = hasLightBackgroundColor(theme)
-
-  switch (color) {
-    case MetricProto.MetricColor.RED:
-      return transparentize(
-        theme.colors[lightTheme ? "red80" : "red60"],
-        lightTheme ? 0.9 : 0.7
-      )
-    case MetricProto.MetricColor.GREEN:
-      return transparentize(
-        theme.colors[lightTheme ? "green70" : "green60"],
-        lightTheme ? 0.9 : 0.7
-      )
-    // this must be grey
-    default:
-      return transparentize(
-        theme.colors[lightTheme ? "gray70" : "gray50"],
-        lightTheme ? 0.9 : 0.7
-      )
-  }
+  showArrow: boolean
 }
 
 export const StyledMetricDeltaText = styled.div<StyledMetricDeltaTextProps>(
-  ({ theme, metricColor }) => ({
-    color: getMetricColor(theme, metricColor),
+  ({ theme, metricColor, showArrow }) => ({
+    // Uses text colors
+    color: getMetricTextColor(theme, metricColor),
+    // Uses same color as shaded bg of area chart (bg color)
     backgroundColor: getMetricBackgroundColor(theme, metricColor),
     fontSize: theme.fontSizes.sm,
     display: "inline-flex",
@@ -154,10 +112,13 @@ export const StyledMetricDeltaText = styled.div<StyledMetricDeltaTextProps>(
     alignItems: "center",
     fontWeight: theme.fontWeights.normal,
     borderRadius: theme.radii.full,
-    // Using only twoXS (4px) on the left side because the arrow icon has an additional
-    // 2px padding. Note that this should be adjusted in case we change the arrow icon
-    // or don't show it (right now it's always shown).
-    padding: `${theme.spacing.threeXS} ${theme.spacing.xs} ${theme.spacing.threeXS} ${theme.spacing.twoXS}`,
     maxWidth: "100%",
+    padding: `${theme.spacing.threeXS} ${theme.spacing.xs} ${theme.spacing.threeXS} ${theme.spacing.xs}`,
+    ...(showArrow && {
+      // Using only twoXS (4px) on the left side because the arrow icon has an additional
+      // 2px padding. Note that this should be adjusted in case we change the arrow icon
+      // or if the arrow is not shown (controlled by the showArrow prop).
+      paddingLeft: theme.spacing.twoXS,
+    }),
   })
 )

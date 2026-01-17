@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,47 +14,47 @@
  * limitations under the License.
  */
 
-import React from "react"
-
 import { screen } from "@testing-library/react"
 
 import {
+  createSidebarTheme,
   emotionLightTheme,
   mockEndpoints,
-  render,
   ThemeConfig,
 } from "@streamlit/lib"
+import { renderWithContexts } from "@streamlit/lib/testing"
 import { CustomThemeConfig } from "@streamlit/protobuf"
 
 import { SidebarProps } from "./Sidebar"
-import ThemedSidebar, { createSidebarTheme } from "./ThemedSidebar"
+import ThemedSidebar from "./ThemedSidebar"
 
 function getProps(props: Partial<SidebarProps> = {}): SidebarProps {
   return {
     endpoints: mockEndpoints(),
     hasElements: true,
-    appPages: [],
-    navSections: [],
-    onPageChange: vi.fn(),
-    currentPageScriptHash: "",
-    hideSidebarNav: false,
-    expandSidebarNav: false,
     isCollapsed: false,
     onToggleCollapse: vi.fn(),
-    appLogo: null,
+    widgetsDisabled: false,
     ...props,
   }
 }
 
+// Helper to render ThemedSidebar with default context values
+function renderThemedSidebar(
+  props: Partial<SidebarProps> = {}
+): ReturnType<typeof renderWithContexts> {
+  return renderWithContexts(<ThemedSidebar {...getProps(props)} />)
+}
+
 describe("ThemedSidebar Component", () => {
   it("should render without crashing", () => {
-    render(<ThemedSidebar {...getProps()} />)
+    renderThemedSidebar()
 
     expect(screen.getByTestId("stSidebar")).toBeInTheDocument()
   })
 
   it("should switch bgColor and secondaryBgColor", () => {
-    render(<ThemedSidebar {...getProps()} />)
+    renderThemedSidebar()
 
     expect(screen.getByTestId("stSidebar")).toHaveStyle({
       backgroundColor: emotionLightTheme.colors.secondaryBg,

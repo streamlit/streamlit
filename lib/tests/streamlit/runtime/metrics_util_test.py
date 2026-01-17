@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ import contextlib
 import datetime
 import unittest
 from collections import Counter
-from typing import Any, Callable
+from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock, mock_open, patch
 
 import pandas as pd
@@ -33,6 +33,9 @@ from streamlit.runtime.scriptrunner import get_script_run_ctx, magic_funcs
 from streamlit.testing.v1.util import patch_config_options
 from streamlit.web.server import websocket_headers
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 MAC = "mac"
 UUID = "uuid"
@@ -216,6 +219,33 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
             == 'k: "disabled"\nt: "bool"\nm: "val:True"'
         )
 
+    def test_get_command_telemetry_custom_component_v2(self):
+        """Test getting command telemetry for Custom Components v2 via _get_command_telemetry."""
+
+        def fake_bidi_component(
+            self, component_name: str, **_kwargs: Any
+        ) -> None:  # pragma: no cover - never executed
+            del self, component_name, _kwargs
+
+        fake_bidi_component.__module__ = "streamlit.components.v2.bidi_component"
+
+        # Test with a Custom Components v2 call
+        command_metadata = metrics_util._get_command_telemetry(
+            fake_bidi_component,
+            "_bidi_component",
+            MagicMock(name="delta_generator_instance"),
+            "my_custom_component",
+            key="test",
+        )
+
+        assert command_metadata.name == "component_v2:my_custom_component"
+        assert len(command_metadata.args) == 2
+        assert (
+            str(command_metadata.args[0]).strip()
+            == 'k: "component_name"\nt: "str"\nm: "len:19"\np: 1'
+        )
+        assert str(command_metadata.args[1]).strip() == 'k: "key"\nt: "str"\nm: "len:4"'
+
     def test_create_page_profile_message(self):
         """Test creating the page profile message via create_page_profile_message."""
         forward_msg = metrics_util.create_page_profile_message(
@@ -372,8 +402,10 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
             # (It's possible for multiple tracked commands to be issued as
             # the result of a single API call.)
             assert api_name in [cmd.name for cmd in ctx.tracked_commands], (
-                f"When executing `st.{api_name}()`, we expect the string "
-                f'"{api_name}" to be in the list of tracked commands.',
+                (
+                    f"When executing `st.{api_name}()`, we expect the string "
+                    f'"{api_name}" to be in the list of tracked commands.'
+                ),
             )
 
     def test_column_config_commands(self):
@@ -410,8 +442,10 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
             assert f"column_config.{api_name}" in [
                 cmd.name for cmd in ctx.tracked_commands
             ], (
-                f"When executing `st.{api_name}()`, we expect the string "
-                f'"{api_name}" to be in the list of tracked commands.',
+                (
+                    f"When executing `st.{api_name}()`, we expect the string "
+                    f'"{api_name}" to be in the list of tracked commands.'
+                ),
             )
 
     def test_command_tracking_limits(self):

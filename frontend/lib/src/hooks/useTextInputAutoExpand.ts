@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -76,6 +76,7 @@ const initializeHeightGuidance = (
   heightGuidance: RefObject<HeightGuidance>
 ): void => {
   if (textareaRef.current && heightGuidance.current) {
+    // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
     const { offsetHeight } = textareaRef.current
     heightGuidance.current.minHeight = offsetHeight
     heightGuidance.current.maxHeight = offsetHeight * MAX_VISIBLE_NUM_LINES
@@ -132,7 +133,10 @@ export const useTextInputAutoExpand = ({
   dependencies = [],
 }: UseTextInputAutoExpandOptions): UseTextInputAutoExpandResult => {
   const theme = useEmotionTheme()
-  const heightGuidance = useRef<HeightGuidance>({ minHeight: 0, maxHeight: 0 })
+  const heightGuidanceRef = useRef<HeightGuidance>({
+    minHeight: 0,
+    maxHeight: 0,
+  })
 
   const [scrollHeight, setScrollHeight] = useState(0)
   const [isExtended, setIsExtended] = useState(false)
@@ -148,13 +152,13 @@ export const useTextInputAutoExpand = ({
   // Initialize height guidance
   useLayoutEffect(() => {
     if (textareaRef.current) {
-      initializeHeightGuidance(textareaRef, heightGuidance)
+      initializeHeightGuidance(textareaRef, heightGuidanceRef)
     }
   }, [textareaRef])
 
   // Update extended state when scroll height changes
   useLayoutEffect(() => {
-    const { minHeight } = heightGuidance.current
+    const { minHeight } = heightGuidanceRef.current
     setIsExtended(calculateIsExtended(scrollHeight, minHeight, textareaRef))
   }, [scrollHeight, textareaRef])
 
@@ -163,7 +167,7 @@ export const useTextInputAutoExpand = ({
     updateScrollHeight()
   }, [textareaRef, updateScrollHeight, ...dependencies]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const { maxHeight: maxHeightValue } = heightGuidance.current
+  const { maxHeight: maxHeightValue } = heightGuidanceRef.current
 
   // Calculate height values using theme default
   const defaultHeight = theme.sizes.minElementHeight
@@ -172,6 +176,7 @@ export const useTextInputAutoExpand = ({
     scrollHeight,
     defaultHeight
   )
+  // eslint-disable-next-line react-hooks/refs -- TODO: Do not access ref during render
   const calculatedMaxHeight = calculateMaxHeight(maxHeightValue)
 
   return {

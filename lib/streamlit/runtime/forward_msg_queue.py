@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,9 +14,12 @@
 
 from __future__ import annotations
 
-from typing import Any, Callable
+from typing import TYPE_CHECKING, Any
 
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 class ForwardMsgQueue:
@@ -134,6 +137,7 @@ class ForwardMsgQueue:
                     "script_finished",
                     "session_status_changed",
                     "parent_message",
+                    "page_info_changed",
                 }
                 or (
                     # preserve all messages if this is a fragment rerun and...
@@ -184,7 +188,7 @@ def _is_composable_message(msg: ForwardMsg) -> bool:
     # operation can raise errors, and we don't have a good way of handling
     # those errors in the message queue.
     delta_type = msg.delta.WhichOneof("type")
-    return delta_type not in {"add_rows", "arrow_add_rows"}
+    return delta_type not in {"add_rows", "arrow_add_rows", "new_transient"}
 
 
 def _maybe_compose_delta_msgs(

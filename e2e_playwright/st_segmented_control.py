@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -32,15 +32,7 @@ with st.sidebar:
     )
 
 st.header("Multi Select - Segmented Control", anchor="multi-select-segmented-control")
-if st.checkbox("Set default values", value=False):
-    st.session_state.default_segmented_control_options = [
-        "Foobar",
-        "🧰 General widgets",
-    ]
-else:
-    st.session_state.default_segmented_control_options = []
 
-default = st.session_state.default_segmented_control_options
 
 s1 = st.segmented_control(
     "Select some options",
@@ -54,14 +46,15 @@ s1 = st.segmented_control(
         "🌇 Images",
         "🎥 Video",
         "📝 Text",
-        "This is a very long text 📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝"
-        ", yes, long long long long text"
-        ", yes, long long long long text"
-        ", yes, long long long long text",
+        (
+            "This is a very long text 📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝"
+            ", yes, long long long long text"
+            ", yes, long long long long text"
+            ", yes, long long long long text"
+        ),
     ],
     key="segmented_control_multi_selection",
     selection_mode="multi",
-    default=default,
     help="You can choose multiple options",
 )
 st.write(f"Multi selection: {s1}")
@@ -202,3 +195,65 @@ if "runs" not in st.session_state:
     st.session_state.runs = 0
 st.session_state.runs += 1
 st.write("Runs:", st.session_state.runs)
+
+if st.checkbox("Set default values", value=False):
+    st.session_state.default_segmented_control_options = [
+        "🧰 General widgets",
+        "🎥 Video",
+    ]
+else:
+    st.session_state.default_segmented_control_options = []
+
+# The test will only work if this doesn't use a user-specified key:
+val = st.segmented_control(
+    "Segmented control with default options",
+    [
+        "🧰 General widgets",
+        "📊 Charts",
+        "🌇 Images",
+        "🎥 Video",
+        "📝 Text",
+    ],
+    selection_mode="multi",
+    default=st.session_state.default_segmented_control_options,
+)
+st.write("Segmented control with default options:", str(val))
+
+st.markdown("Dynamic segmented control:")
+
+if st.toggle("Update segmented control props"):
+    dyn_val = st.segmented_control(
+        "Updated dynamic segmented control",
+        key="dynamic_segmented_control_with_key",
+        help="updated help",
+        width=300,
+        default="banana",
+        on_change=lambda a, param: print(
+            f"Updated segmented control - callback triggered: {a} {param}"
+        ),
+        args=("Updated segmented control arg",),
+        kwargs={"param": "updated kwarg param"},
+        # Whitelisted args:
+        options=["apple", "banana", "orange"],
+        selection_mode="single",
+        format_func=lambda text: text.capitalize(),
+    )
+    st.write("Updated segmented control value:", dyn_val)
+else:
+    dyn_val = st.segmented_control(
+        "Initial dynamic segmented control",
+        key="dynamic_segmented_control_with_key",
+        help="initial help",
+        width="content",
+        default="apple",
+        on_change=lambda a, param: print(
+            f"Initial segmented control - callback triggered: {a} {param}"
+        ),
+        args=("Initial segmented control arg",),
+        kwargs={"param": "initial kwarg param"},
+        # Whitelisted args:
+        options=["apple", "banana", "orange"],
+        selection_mode="single",
+        format_func=lambda text: text.capitalize(),
+    )
+    st.write("Initial segmented control value:", dyn_val)

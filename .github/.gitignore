@@ -1,0 +1,11 @@
+# Ignore all instructions
+instructions/*
+# Only track certain rules so that we don't track a user's local rules
+# You can add more rules to this list as needed!
+!instructions/python.instructions.md
+!instructions/python_tests.instructions.md
+!instructions/python_lib.instructions.md
+!instructions/protobuf.instructions.md
+!instructions/typescript.instructions.md
+!instructions/typescript_tests.instructions.md
+!instructions/e2e_playwright.instructions.md

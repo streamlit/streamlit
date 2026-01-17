@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,7 +18,9 @@ from __future__ import annotations
 
 import os
 import sys
-from typing import TYPE_CHECKING, Any, Callable, Final, TypeVar
+from collections.abc import Callable
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, Final, TypeVar
 
 # We cannot lazy-load click here because its used via decorators.
 import click
@@ -195,27 +197,26 @@ def main_hello(**kwargs: Any) -> None:
 
 @main.command("run")
 @configurator_options
-@click.argument("target", required=True, envvar="STREAMLIT_RUN_TARGET")
+@click.argument("target", default="streamlit_app.py", envvar="STREAMLIT_RUN_TARGET")
 @click.argument("args", nargs=-1)
 def main_run(target: str, args: list[str] | None = None, **kwargs: Any) -> None:
     """Run a Python script, piping stderr to Streamlit.
 
-    The script can be local or it can be an url. In the latter case, Streamlit
-    will download the script to a temporary file and runs this file.
+    If omitted, the target script will be assumed to be "streamlit_app.py".
 
+    Otherwise, the target script should be one of the following:
+    - The path to a local Python file.
+    - The path to a local folder where "streamlit_app.py" can be found.
+    - A URL pointing to a Python file. In this case Streamlit will download the
+      file to a temporary file and run it.
+
+    To pass command-line arguments to the script, add " -- " before them. For example:
+
+        $ streamlit run my_app.py -- --my_arg1=123 my_arg2
+                                   ↑
+                                   Your CLI args start after this.
     """
     from streamlit import url_util
-
-    _, extension = os.path.splitext(target)
-    if extension[1:] not in ACCEPTED_FILE_EXTENSIONS:
-        if extension[1:] == "":
-            raise click.BadArgumentUsage(
-                "Streamlit requires raw Python (.py) files, but the provided file has no extension.\n"
-                "For more information, please see https://docs.streamlit.io"
-            )
-        raise click.BadArgumentUsage(
-            f"Streamlit requires raw Python (.py) files, not {extension}.\nFor more information, please see https://docs.streamlit.io"
-        )
 
     if url_util.is_url(target):
         from streamlit.temporary_directory import TemporaryDirectory
@@ -223,22 +224,50 @@ def main_run(target: str, args: list[str] | None = None, **kwargs: Any) -> None:
         with TemporaryDirectory() as temp_dir:
             from urllib.parse import urlparse
 
-            path = urlparse(target).path
+            url_subpath = urlparse(target).path
+
+            _check_extension_or_raise(url_subpath)
+
             main_script_path = os.path.join(
-                temp_dir, path.strip("/").rsplit("/", 1)[-1]
+                temp_dir, url_subpath.strip("/").rsplit("/", 1)[-1]
             )
             # if this is a GitHub/Gist blob url, convert to a raw URL first.
-            target = url_util.process_gitblob_url(target)
-            _download_remote(main_script_path, target)
+            url = url_util.process_gitblob_url(target)
+            _download_remote(main_script_path, url)
             _main_run(main_script_path, args, flag_options=kwargs)
+
     else:
-        if not os.path.exists(target):
-            raise click.BadParameter(f"File does not exist: {target}")
-        _main_run(target, args, flag_options=kwargs)
+        path = Path(target)
+
+        if path.is_dir():
+            path /= "streamlit_app.py"
+
+        path_str = str(path)
+        _check_extension_or_raise(path_str)
+
+        if not path.exists():
+            raise click.BadParameter(f"File does not exist: {path}")
+
+        _main_run(path_str, args, flag_options=kwargs)
+
+
+def _check_extension_or_raise(path_str: str) -> None:
+    _, extension = os.path.splitext(path_str)
+
+    if extension[1:] not in ACCEPTED_FILE_EXTENSIONS:
+        if extension[1:] == "":
+            raise click.BadArgumentUsage(
+                "Streamlit requires raw Python (.py) files, but the provided file has no extension.\n"
+                "For more information, please see https://docs.streamlit.io"
+            )
+        raise click.BadArgumentUsage(
+            f"Streamlit requires raw Python (.py) files, not {extension}.\n"
+            "For more information, please see https://docs.streamlit.io"
+        )
 
 
 def _get_command_line_as_string() -> str | None:
-    import subprocess
+    import subprocess  # noqa: S404
 
     parent = click.get_current_context().parent
     if parent is None:
@@ -263,7 +292,8 @@ def _main_run(
     # Set the main script path to use it for config & secret files
     # While its a bit suboptimal, we need to store this into a module-level
     # variable before we load the config options via `load_config_options`
-    _config._main_script_path = os.path.abspath(file)
+    main_script_path = os.path.abspath(file)
+    _config._main_script_path = main_script_path
 
     bootstrap.load_config_options(flag_options=flag_options or {})
     if args is None:
@@ -272,11 +302,27 @@ def _main_run(
     if flag_options is None:
         flag_options = {}
 
-    is_hello = _get_command_line_as_string() == "streamlit hello"
-
     check_credentials()
 
-    bootstrap.run(file, is_hello, args, flag_options)
+    # Check if the script contains an ASGI app instance (st.App, FastAPI, Starlette).
+    # This intentionally supports non-Streamlit ASGI frameworks to enable `streamlit run`
+    # as a unified entry point for projects that combine Streamlit with other frameworks.
+    from streamlit.web.server.app_discovery import discover_asgi_app
+
+    discovery_result = discover_asgi_app(Path(main_script_path))
+
+    if discovery_result.is_asgi_app:
+        # Run as ASGI app with uvicorn
+        bootstrap.run_asgi_app(
+            main_script_path,
+            discovery_result.import_string,  # type: ignore[arg-type]
+            args,
+            flag_options,
+        )
+    else:
+        # Run as traditional Streamlit app
+        is_hello = _get_command_line_as_string() == "streamlit hello"
+        bootstrap.run(main_script_path, is_hello, args, flag_options)
 
 
 # SUBCOMMAND cache
@@ -285,7 +331,6 @@ def _main_run(
 @main.group("cache")
 def cache() -> None:
     """Manage the Streamlit cache."""
-    pass
 
 
 @cache.command("clear")
@@ -308,7 +353,6 @@ def cache_clear() -> None:
 @main.group("config")
 def config() -> None:
     """Manage Streamlit's config settings."""
-    pass
 
 
 @config.command("show")
@@ -347,7 +391,6 @@ def test() -> None:
 
     These commands are not included in the output of `streamlit help`.
     """
-    pass
 
 
 @test.command("prog_name")

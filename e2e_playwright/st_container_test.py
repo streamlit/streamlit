@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -123,6 +123,10 @@ def test_dimensions_are_correctly_applied(
     stretch_width_container = get_element_by_key(app, "container_with_stretch_width")
     stretch_width_container.scroll_into_view_if_needed()
     assert_snapshot(stretch_width_container, name="st_container-stretch_width")
+
+    content_width_container = get_element_by_key(app, "container_with_content_width")
+    content_width_container.scroll_into_view_if_needed()
+    assert_snapshot(content_width_container, name="st_container-content_width")
 
     stretch_height_container = get_element_by_key(
         app, "container_with_stretch_height_container_inside"

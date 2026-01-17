@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -219,7 +219,7 @@ def test_set_is_embedded_context_field_embed_true(iframed_app: IframedPage):
 
 
 def test_set_is_embedded_context_field_embed_false(iframed_app: IframedPage):
-    frame_locator, toolbar_buttons = _load_html_and_get_locators(iframed_app)
+    frame_locator, _ = _load_html_and_get_locators(iframed_app)
 
     # Check that the context option is set correctly to False
     expect_prefixed_markdown(frame_locator, "Is app embedded:", "False")

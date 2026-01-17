@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,10 +16,10 @@
 
 import { useContext } from "react"
 
-import { LibContext, useWindowDimensionsContext } from "@streamlit/lib"
+import { ThemeContext, useWindowDimensionsContext } from "@streamlit/lib"
 
 export const useViewportSize = (): { isMobile: boolean } => {
-  const { activeTheme } = useContext(LibContext)
+  const { activeTheme } = useContext(ThemeContext)
   const { innerWidth } = useWindowDimensionsContext()
 
   const breakpoint = parseInt(activeTheme.emotion.breakpoints.md, 10)

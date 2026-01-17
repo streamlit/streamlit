@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+from collections import defaultdict
 from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any, TypeVar
 
@@ -46,7 +47,7 @@ def marshall_styler(proto: ArrowProto, styler: Styler, default_uuid: str) -> Non
     """
     import pandas as pd
 
-    styler_data_df: pd.DataFrame = styler.data
+    styler_data_df: pd.DataFrame = styler.data  # type: ignore[attr-defined]
     if styler_data_df.size > int(pd.options.styler.render.max_elements):
         raise StreamlitAPIException(
             f"The dataframe has `{styler_data_df.size}` cells, but the maximum number "
@@ -61,9 +62,9 @@ def marshall_styler(proto: ArrowProto, styler: Styler, default_uuid: str) -> Non
 
     # We're using protected members of pandas.Styler to get styles,
     # which is not ideal and could break if the interface changes.
-    styler._compute()
+    styler._compute()  # type: ignore
 
-    pandas_styles = styler._translate(False, False)
+    pandas_styles = styler._translate(False, False)  # type: ignore
 
     _marshall_caption(proto, styler)
     _marshall_styles(proto, styler, pandas_styles)
@@ -85,10 +86,10 @@ def _marshall_uuid(proto: ArrowProto, styler: Styler, default_uuid: str) -> None
         If pandas.Styler uuid is not provided, this value will be used.
 
     """
-    if styler.uuid is None:
+    if styler.uuid is None:  # type: ignore[attr-defined]
         styler.set_uuid(default_uuid)
 
-    proto.styler.uuid = str(styler.uuid)
+    proto.styler.uuid = str(styler.uuid)  # type: ignore[attr-defined]
 
 
 def _marshall_caption(proto: ArrowProto, styler: Styler) -> None:
@@ -103,8 +104,8 @@ def _marshall_caption(proto: ArrowProto, styler: Styler) -> None:
         Helps style a DataFrame or Series according to the data with HTML and CSS.
 
     """
-    if styler.caption is not None:
-        proto.styler.caption = styler.caption
+    if styler.caption is not None:  # type: ignore[attr-defined]
+        proto.styler.caption = styler.caption  # type: ignore[attr-defined]
 
 
 def _marshall_styles(
@@ -133,7 +134,10 @@ def _marshall_styles(
             # styles in "table_styles" have a space
             # between the uuid and selector.
             rule = _pandas_style_to_css(
-                "table_styles", style, styler.uuid, separator=" "
+                "table_styles",
+                style,
+                styler.uuid,  # type: ignore[attr-defined]
+                separator=" ",
             )
             css_rules.append(rule)
 
@@ -141,7 +145,12 @@ def _marshall_styles(
         cellstyle = styles["cellstyle"]
         cellstyle = _trim_pandas_styles(cellstyle)
         for style in cellstyle:
-            rule = _pandas_style_to_css("cell_style", style, styler.uuid, separator="_")
+            rule = _pandas_style_to_css(
+                "cell_style",
+                style,
+                styler.uuid,  # type: ignore[attr-defined]
+                separator="_",
+            )
             css_rules.append(rule)
 
     if len(css_rules) > 0:
@@ -258,21 +267,36 @@ def _use_display_values(df: DataFrame, styles: Mapping[str, Any]) -> DataFrame:
     # If values in a column are not of the same type, Arrow
     # serialization would fail. Thus, we need to cast all values
     # of the dataframe to strings before assigning them display values.
-    new_df = df.astype(str)
 
+    new_df = df.astype(str)
     cell_selector_regex = re.compile(r"row(\d+)_col(\d+)")
-    if "body" in styles:
-        rows = styles["body"]
-        for row in rows:
-            for cell in row:
-                if "id" in cell and (match := cell_selector_regex.match(cell["id"])):
-                    r, c = map(int, match.groups())
-                    # Check if the display value is an Enum type. Enum values need to be
-                    # converted to their `.value` attribute to ensure proper serialization
-                    # and display logic.
-                    if isinstance(cell["display_value"], Enum):
-                        new_df.iloc[r, c] = str(cell["display_value"].value)
-                    else:
-                        new_df.iloc[r, c] = str(cell["display_value"])
+    # Outer key = column index; inner key = row index -> target string value
+    updates_by_col: defaultdict[int, dict[int, str]] = defaultdict(dict)
+    for row in styles.get("body", []):
+        for cell in row:
+            cell_id = cell.get("id")
+            if not cell_id:
+                continue
+            match = cell_selector_regex.match(cell_id)
+            if not match:
+                continue
+            row_idx, col_idx = map(int, match.groups())
+            display_value = cell.get("display_value")
+
+            str_value = (
+                str(display_value.value)
+                # Check if the display value is an Enum type. Enum values need to be
+                # converted to their `.value` attribute to ensure proper serialization
+                # and display logic.
+                if isinstance(display_value, Enum)
+                else str(display_value)
+            )
+            updates_by_col[col_idx][row_idx] = str_value
+
+    for col_idx, values_by_row in updates_by_col.items():
+        row_indices = list(values_by_row.keys())
+        values = list(values_by_row.values())
+        # Batch-assign updates for this column using iloc for performance.
+        new_df.iloc[row_indices, col_idx] = values
 
     return new_df

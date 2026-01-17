@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import json
 import unittest
 from copy import deepcopy
 from datetime import date, datetime, timedelta
@@ -28,6 +29,7 @@ from hypothesis import strategies as hst
 
 import streamlit as st
 import tests.streamlit.runtime.state.strategies as stst
+from streamlit.components.v2.bidi_component.main import _make_trigger_id
 from streamlit.errors import (
     StreamlitAPIException,
     UnserializableSessionStateError,
@@ -36,15 +38,15 @@ from streamlit.proto.Common_pb2 import FileURLs as FileURLsProto
 from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 from streamlit.runtime.state import SessionState, get_session_state
-from streamlit.runtime.state.common import GENERATED_ELEMENT_ID_PREFIX
+from streamlit.runtime.state.common import GENERATED_ELEMENT_ID_PREFIX, WidgetMetadata
 from streamlit.runtime.state.session_state import (
     KeyIdMapper,
     Serialized,
     Value,
-    WidgetMetadata,
     WStates,
     _is_stale_widget,
 )
+from streamlit.runtime.stats import CACHE_MEMORY_FAMILY
 from streamlit.runtime.uploaded_file_manager import UploadedFile, UploadedFileRec
 from streamlit.testing.v1.app_test import AppTest
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -74,8 +76,8 @@ class WStateTests(unittest.TestCase):
         wstates.set_widget_metadata(
             WidgetMetadata(
                 id="widget_id_1",
-                deserializer=lambda x: str(x),
-                serializer=lambda x: int(x),
+                deserializer=str,
+                serializer=int,
                 value_type="int_value",
             )
         )
@@ -235,8 +237,8 @@ class WStateTests(unittest.TestCase):
     def test_call_callback(self):
         metadata = WidgetMetadata(
             id="widget_id_1",
-            deserializer=lambda x: str(x),
-            serializer=lambda x: int(x),
+            deserializer=str,
+            serializer=int,
             value_type="int_value",
             callback=MagicMock(),
             callback_args=(1,),
@@ -410,6 +412,47 @@ def test_callbacks_with_rerun():
     assert at.session_state["message"] == "ran callback"
     warning = at.warning[0]
     assert "no-op" in warning.value
+
+
+def test_fragment_callback_flag_resets_on_rerun_exception() -> None:
+    """Ensure fragment callback context flag is cleared on RerunException.
+
+    This guards against leaving `ctx.in_fragment_callback` stuck to True if
+    a callback raises, which could contaminate subsequent runs.
+    """
+    from streamlit.runtime.scriptrunner import RerunException
+
+    ss = SessionState()
+    wid = "w-frag"
+
+    # A callback that raises RerunException
+    def cb() -> None:
+        raise RerunException(None)
+
+    meta = WidgetMetadata(
+        id=wid,
+        deserializer=lambda v: v,
+        serializer=lambda v: v,
+        value_type="int_value",
+        callbacks={"change": cb},
+        fragment_id="frag-1",
+    )
+
+    ss._set_widget_metadata(meta)
+    ss._old_state[wid] = 1
+    ss._new_widget_state.set_from_value(wid, 2)  # ensure _widget_changed is True
+
+    mock_ctx = MagicMock()
+    mock_ctx.in_fragment_callback = False
+
+    with patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=mock_ctx,
+    ):
+        # Callbacks internally catch RerunException and log a warning.
+        ss._call_callbacks()
+
+    assert mock_ctx.in_fragment_callback is False
 
 
 def test_updates():
@@ -830,16 +873,16 @@ class SessionStateMethodTests(unittest.TestCase):
         wstates.set_widget_metadata(
             WidgetMetadata(
                 id=existing_widget_key,
-                deserializer=lambda x: str(x),
-                serializer=lambda x: bool(x),
+                deserializer=str,
+                serializer=bool,
                 value_type="bool_value",
             )
         )
         wstates.set_widget_metadata(
             WidgetMetadata(
                 id=generated_widget_key,
-                deserializer=lambda x: str(x),
-                serializer=lambda x: bool(x),
+                deserializer=str,
+                serializer=bool,
                 value_type="bool_value",
             )
         )
@@ -966,8 +1009,8 @@ class IsStaleWidgetTests(unittest.TestCase):
     def test_is_stale_widget_active_id(self):
         metadata = WidgetMetadata(
             id="widget_id_1",
-            deserializer=lambda x: str(x),
-            serializer=lambda x: int(x),
+            deserializer=str,
+            serializer=int,
             value_type="int_value",
         )
         assert not _is_stale_widget(metadata, {"widget_id_1"}, {})
@@ -975,8 +1018,8 @@ class IsStaleWidgetTests(unittest.TestCase):
     def test_is_stale_widget_unrelated_fragment(self):
         metadata = WidgetMetadata(
             id="widget_id_1",
-            deserializer=lambda x: str(x),
-            serializer=lambda x: int(x),
+            deserializer=str,
+            serializer=int,
             value_type="int_value",
             fragment_id="my_fragment",
         )
@@ -985,8 +1028,8 @@ class IsStaleWidgetTests(unittest.TestCase):
     def test_is_stale_widget_actually_stale_fragment(self):
         metadata = WidgetMetadata(
             id="widget_id_1",
-            deserializer=lambda x: str(x),
-            serializer=lambda x: int(x),
+            deserializer=str,
+            serializer=int,
             value_type="int_value",
             fragment_id="my_fragment",
         )
@@ -995,8 +1038,8 @@ class IsStaleWidgetTests(unittest.TestCase):
     def test_is_stale_widget_actually_stale_no_fragment(self):
         metadata = WidgetMetadata(
             id="widget_id_1",
-            deserializer=lambda x: str(x),
-            serializer=lambda x: int(x),
+            deserializer=str,
+            serializer=int,
             value_type="int_value",
             fragment_id="my_fragment",
         )
@@ -1009,7 +1052,7 @@ class SessionStateStatProviderTests(DeltaGeneratorTestCase):
         #  we don't care about actual byte values, but rather that our
         #  SessionState isn't getting unexpectedly massive.
         state = _raw_session_state()
-        stat = state.get_stats()[0]
+        stat = state.get_stats()[CACHE_MEMORY_FAMILY][0]
         assert stat.category_name == "st_session_state"
 
         # The expected size of the session state in bytes.
@@ -1020,21 +1063,21 @@ class SessionStateStatProviderTests(DeltaGeneratorTestCase):
         assert init_size < expected_session_state_size_bytes
 
         state["foo"] = 2
-        new_size = state.get_stats()[0].byte_length
+        new_size = state.get_stats()[CACHE_MEMORY_FAMILY][0].byte_length
         assert new_size > init_size
         assert new_size < expected_session_state_size_bytes
 
         state["foo"] = 1
-        new_size_2 = state.get_stats()[0].byte_length
+        new_size_2 = state.get_stats()[CACHE_MEMORY_FAMILY][0].byte_length
         assert new_size_2 == new_size
 
         st.checkbox("checkbox", key="checkbox")
-        new_size_3 = state.get_stats()[0].byte_length
+        new_size_3 = state.get_stats()[CACHE_MEMORY_FAMILY][0].byte_length
         assert new_size_3 > new_size_2
         assert new_size_3 - new_size_2 < expected_session_state_size_bytes
 
         state._compact_state()
-        new_size_4 = state.get_stats()[0].byte_length
+        new_size_4 = state.get_stats()[CACHE_MEMORY_FAMILY][0].byte_length
         assert new_size_4 <= new_size_3
 
 
@@ -1102,3 +1145,285 @@ class KeyIdMapperTest(unittest.TestCase):
         assert key_id_mapper.get_key_from_id("wid2") == "key2"
         assert key_id_mapper.get_id_from_key("key") == "wid3"
         assert key_id_mapper.get_key_from_id("wid") == "key"
+
+
+# region Multiple callbacks
+
+
+def test_per_key_callbacks_only_fire_for_changed_keys() -> None:
+    """Test that per-key callbacks only fire for changed keys."""
+    calls: list[str] = []
+
+    def cb_a() -> None:
+        calls.append("a")
+
+    def cb_b() -> None:
+        calls.append("b")
+
+    ss = SessionState()
+    wid = "w-json"
+    meta = WidgetMetadata(
+        id=wid,
+        deserializer=lambda v: v,
+        serializer=lambda v: v,
+        value_type="json_value",
+        callbacks={"a": cb_a, "b": cb_b},
+    )
+
+    # Register metadata
+    ss._set_widget_metadata(meta)
+
+    # Old state: {value: {a:1, b:2}}
+    ss._old_state[wid] = {"value": {"a": 1, "b": 2}}
+    # New state: {value: {a:1, b:3}}
+    ss._new_widget_state.set_from_value(wid, {"value": {"a": 1, "b": 3}})
+
+    ss._call_callbacks()
+    assert calls == ["b"]
+
+
+def test_json_trigger_aggregator_routes_to_named_callback() -> None:
+    """Test that JSON trigger values are routed to the correct named callback.
+
+    This test verifies that for widgets using `json_trigger_value`, the
+    `event` field in the JSON payload is used to look up and execute the
+    corresponding callback from the `callbacks` dictionary.
+    """
+    called: list[str] = []
+
+    def cb_click() -> None:
+        called.append("click")
+
+    def cb_submit() -> None:
+        called.append("submit")
+
+    ss = SessionState()
+    wid = "w-trig"
+    meta = WidgetMetadata(
+        id=wid,
+        # Convert JSON string from proto into a dict
+        deserializer=lambda s: json.loads(s) if s else None,
+        serializer=lambda v: v,
+        value_type="json_trigger_value",
+        callbacks={"click": cb_click, "submit": cb_submit},
+    )
+
+    ss._set_widget_metadata(meta)
+
+    # Emulate serialized proto received from frontend
+    ws = WidgetStateProto(id=wid)
+    ws.json_trigger_value = json.dumps({"event": "submit"})
+    ss._new_widget_state.set_widget_from_proto(ws)
+
+    ss._call_callbacks()
+    assert called == ["submit"]
+
+
+def _dummy_serializer(x):
+    return x
+
+
+def _dummy_deserializer(x):
+    return x
+
+
+def test_json_trigger_value_gets_reset():
+    """Ensure json_trigger_value fields are cleared to None after _reset_triggers."""
+    ss = SessionState()
+
+    widget_id = "comp__event"
+
+    meta = WidgetMetadata(
+        id=widget_id,
+        deserializer=_dummy_deserializer,
+        serializer=_dummy_serializer,
+        value_type="json_trigger_value",
+        callbacks=None,
+        callback_args=None,
+        callback_kwargs=None,
+        fragment_id=None,
+    )
+
+    # Register metadata and set initial trigger payload
+    ss._set_widget_metadata(meta)
+    payload = {"clicked": True}
+    ss._new_widget_state[widget_id] = Value(json.dumps(payload))
+    ss._old_state[widget_id] = payload
+
+    # Act
+    ss._reset_triggers()
+
+    # Assert: value should now be None in both new and old state mappings
+    # `_reset_triggers()` sets the new state to `Value(None)`
+    new_value = ss._new_widget_state.states[widget_id]
+    assert isinstance(new_value, Value)
+    assert new_value.value is None
+    assert ss._old_state[widget_id] is None
+
+
+# endregion Multiple callbacks
+
+
+def test_filtered_state_excludes_trigger_widgets() -> None:
+    """Test that filtered_state excludes trigger widgets from session state.
+
+    Trigger widgets should not appear when users access st.session_state,
+    even though they exist internally for handling events.
+    """
+
+    session_state = SessionState()
+
+    # Create some regular session state entries
+    session_state["regular_key"] = "regular_value"
+    session_state["user_counter"] = 42
+
+    # Simulate trigger widgets being registered (this would normally happen
+    # through the bidi_component registration process)
+    component_id = "my_component_123"
+    click_trigger_id = _make_trigger_id(component_id, "click")
+    change_trigger_id = _make_trigger_id(component_id, "change")
+
+    # Add trigger widgets to internal widget state
+    session_state._new_widget_state.states[click_trigger_id] = Value(True)
+    session_state._new_widget_state.states[change_trigger_id] = Value(None)
+
+    # Add metadata for the trigger widgets
+    click_metadata = WidgetMetadata(
+        id=click_trigger_id,
+        deserializer=lambda x: x or False,
+        serializer=lambda x: x,
+        value_type="json_trigger_value",
+    )
+    change_metadata = WidgetMetadata(
+        id=change_trigger_id,
+        deserializer=lambda x: x,
+        serializer=lambda x: x,
+        value_type="json_trigger_value",
+    )
+
+    session_state._new_widget_state.widget_metadata[click_trigger_id] = click_metadata
+    session_state._new_widget_state.widget_metadata[change_trigger_id] = change_metadata
+
+    # Get filtered state (what users see via st.session_state)
+    filtered = session_state.filtered_state
+
+    # Regular keys should be present
+    assert "regular_key" in filtered
+    assert "user_counter" in filtered
+    assert filtered["regular_key"] == "regular_value"
+    assert filtered["user_counter"] == 42
+
+    # Trigger widgets should be filtered out
+    assert click_trigger_id not in filtered
+    assert change_trigger_id not in filtered
+
+    # Verify the trigger widgets still exist internally
+    assert click_trigger_id in session_state._new_widget_state.states
+    assert change_trigger_id in session_state._new_widget_state.states
+
+
+def test_filtered_state_includes_keyed_widgets() -> None:
+    """Test that filtered_state includes regular keyed widgets.
+
+    Regular widgets with user keys should still appear in session state,
+    even after adding trigger widget filtering.
+    """
+    session_state = SessionState()
+
+    # Create a regular widget with a user key
+    widget_id = "$$ID-my_button-my_key"
+    user_key = "my_key"
+
+    # Set up key mapping
+    session_state._key_id_mapper[user_key] = widget_id
+
+    # Add widget state
+    session_state._new_widget_state.states[widget_id] = Value(False)
+
+    # Add metadata
+    metadata = WidgetMetadata(
+        id=widget_id,
+        deserializer=lambda x: x or False,
+        serializer=lambda x: x,
+        value_type="bool_value",
+    )
+    session_state._new_widget_state.widget_metadata[widget_id] = metadata
+
+    # Get filtered state
+    filtered = session_state.filtered_state
+
+    # The widget should appear under its user key
+    assert user_key in filtered
+    assert filtered[user_key] is False
+
+
+def test_filtered_state_excludes_internal_keyed_widgets() -> None:
+    """Test that filtered_state excludes keyed widgets that are internal.
+
+    If a trigger widget somehow had a user key, it should still be
+    filtered out because it has the internal key prefix.
+    """
+    session_state = SessionState()
+
+    # Create a trigger widget that hypothetically has a user key
+    component_id = "my_component_123"
+    trigger_id = _make_trigger_id(component_id, "click")
+    user_key = "trigger_key"  # This shouldn't happen in practice
+
+    # Set up key mapping
+    session_state._key_id_mapper[user_key] = trigger_id
+
+    # Add widget state
+    session_state._new_widget_state.states[trigger_id] = Value(True)
+
+    # Add metadata
+    metadata = WidgetMetadata(
+        id=trigger_id,
+        deserializer=lambda x: x or False,
+        serializer=lambda x: x,
+        value_type="json_trigger_value",
+    )
+    session_state._new_widget_state.widget_metadata[trigger_id] = metadata
+
+    # Get filtered state
+    filtered = session_state.filtered_state
+
+    # The trigger widget should be filtered out even if it has a user key
+    assert user_key not in filtered
+    assert trigger_id not in filtered
+
+
+def test_session_state_iteration_excludes_trigger_widgets() -> None:
+    """Test that iterating over session state excludes trigger widgets.
+
+    When users iterate over st.session_state, trigger widgets should
+    not appear in the iteration.
+    """
+    session_state = SessionState()
+
+    # Add regular session state
+    session_state["regular_key"] = "value"
+
+    # Add trigger widget
+    component_id = "my_component_123"
+    trigger_id = _make_trigger_id(component_id, "click")
+    session_state._new_widget_state.states[trigger_id] = Value(True)
+
+    # Add metadata for trigger widget
+    metadata = WidgetMetadata(
+        id=trigger_id,
+        deserializer=lambda x: x or False,
+        serializer=lambda x: x,
+        value_type="json_trigger_value",
+    )
+    session_state._new_widget_state.widget_metadata[trigger_id] = metadata
+
+    # Get all keys that would be visible to users
+    visible_keys = list(session_state.filtered_state.keys())
+
+    # Only regular keys should be visible
+    assert "regular_key" in visible_keys
+    assert trigger_id not in visible_keys
+    assert (
+        len([k for k in visible_keys if k.startswith("$$STREAMLIT_INTERNAL_KEY")]) == 0
+    )

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ from abc import abstractmethod
 from typing import TYPE_CHECKING, NamedTuple, Protocol
 
 from streamlit import util
-from streamlit.runtime.stats import CacheStatsProvider
+from streamlit.runtime.stats import StatsProvider
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -89,7 +89,7 @@ class UploadedFile(io.BytesIO):
         return util.repr_(self)
 
 
-class UploadedFileManager(CacheStatsProvider, Protocol):
+class UploadedFileManager(StatsProvider, Protocol):
     """UploadedFileManager protocol, that should be implemented by the concrete
     uploaded file managers.
 

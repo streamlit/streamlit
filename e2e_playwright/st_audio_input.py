@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -136,6 +136,33 @@ def track_runs() -> None:
     st.write("Runs:", st.session_state.runs)
 
 
+# Sample Rate Tests
+def render_sample_rate_audio_inputs() -> None:
+    """Tests audio input with different sample rate configurations."""
+    st.header("Sample Rate Tests")
+
+    # Test default sample rate (16000 Hz)
+    audio_default = st.audio_input(
+        "Default Sample Rate (16 kHz)", key="sample_rate_default"
+    )
+    if audio_default:
+        st.write("Default rate recorded")
+
+    # Test explicit 48 kHz
+    audio_48k = st.audio_input(
+        "High Quality (48 kHz)", sample_rate=48000, key="sample_rate_48k"
+    )
+    if audio_48k:
+        st.write("48 kHz recorded")
+
+    # Test browser default (None)
+    audio_browser = st.audio_input(
+        "Browser Default", sample_rate=None, key="sample_rate_browser"
+    )
+    if audio_browser:
+        st.write("Browser default recorded")
+
+
 # Direct function calls to render the app
 st.title("Audio Input Test App")
 
@@ -145,6 +172,7 @@ test_fragment()  # Fragment function call
 render_special_audio_inputs()
 render_callback_audio_input()
 render_remount_test()
+render_sample_rate_audio_inputs()  # Sample rate tests
 track_runs()
 
 # Audio input with stretch width
@@ -152,3 +180,32 @@ st.audio_input("Width Stretch", width="stretch")
 
 # Audio input with fixed pixel width
 st.audio_input("Width 300px", width=300)
+
+if st.toggle("Update audio input props"):
+    dyn_val = st.audio_input(
+        "Updated dynamic audio input",
+        key="dynamic_audio_input_key",
+        sample_rate=44100,
+        help="updated help",
+        width=300,
+        on_change=lambda a, param: print(
+            f"Updated audio input - callback triggered: {a} {param}"
+        ),
+        args=("Updated audio input arg",),
+        kwargs={"param": "updated audio input kwarg param"},
+    )
+    st.write("Updated audio input value:", bool(dyn_val))
+else:
+    dyn_val = st.audio_input(
+        "Initial dynamic audio input",
+        key="dynamic_audio_input_key",
+        sample_rate=16000,
+        help="initial help",
+        width="stretch",
+        on_change=lambda a, param: print(
+            f"Initial audio input - callback triggered: {a} {param}"
+        ),
+        args=("Initial audio input arg",),
+        kwargs={"param": "initial audio input kwarg param"},
+    )
+    st.write("Initial audio input value:", bool(dyn_val))

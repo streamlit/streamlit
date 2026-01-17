@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -56,8 +56,7 @@ export const useScrollbarGutterSize = (): number => {
     // We want this to recalculate when the devicePixelRatio has changed.
     // This doesn't ensure that its recalculated whenever window.devicePixelRatio
     // changes, but that seems like good enough for now.
-    // eslint-disable-next-line react-hooks/react-compiler
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
   }, [devicePixelRatio])
   return scrollbarGutterWidth
 }

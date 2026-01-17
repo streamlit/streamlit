@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,8 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-import React from "react"
 
 import { render } from "~lib/test_util"
 
@@ -72,5 +70,16 @@ describe("CustomCodeTag Element", () => {
     expect(
       baseElement.querySelector("pre code .token.string")?.innerHTML
     ).toBe('"Hello"')
+  })
+
+  it.each([
+    [null, ""],
+    [undefined, ""],
+    ["null", "null"],
+    ["undefined", "undefined"],
+  ])("renders children '%s' as '%s'", (children, expected) => {
+    const props = getStreamlitSyntaxHighlighterProps({ children })
+    const { baseElement } = render(<StreamlitSyntaxHighlighter {...props} />)
+    expect(baseElement.querySelector("pre code")).toHaveTextContent(expected)
   })
 })

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { memo, useCallback, useRef } from "react"
+import { memo, useCallback, useRef } from "react"
 
 import { Check as CheckIcon, Copy as CopyIcon } from "react-feather"
 
@@ -32,7 +32,7 @@ const CopyButton: React.FC<Props> = ({ text }) => {
   const theme = useEmotionTheme()
   const buttonRef = useRef<HTMLButtonElement>(null)
 
-  const { isCopied, copyToClipboard } = useCopyToClipboard()
+  const { isCopied, copyToClipboard, label } = useCopyToClipboard()
 
   const handleCopy = useCallback(() => {
     copyToClipboard(text)
@@ -41,7 +41,9 @@ const CopyButton: React.FC<Props> = ({ text }) => {
   return (
     <StyledCopyButton
       data-testid="stCodeCopyButton"
-      title="Copy to clipboard"
+      title={label}
+      aria-label={label}
+      type="button"
       ref={buttonRef}
       onClick={handleCopy}
     >

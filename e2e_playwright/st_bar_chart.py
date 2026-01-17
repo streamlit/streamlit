@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -64,7 +64,7 @@ st.bar_chart(df)
 st.bar_chart(df, x="a")
 st.bar_chart(df, y="a")
 st.bar_chart(df, y=["a", "b"])
-st.bar_chart(df, x="a", y="b", height=500, width=300, use_container_width=False)
+st.bar_chart(df, x="a", y="b", height=500, width=300)
 st.bar_chart(df, x="b", y="a")
 st.bar_chart(df, x="a", y=["b", "c"])
 st.bar_chart(utc_df)
@@ -81,8 +81,21 @@ st.bar_chart(source, x="variety", y="yield", color="site", stack="normalize")
 st.bar_chart(source, x="variety", y="yield", color="site", stack="center")
 st.bar_chart(source, x="variety", y="yield", color="site", stack="layered")
 
+# Sort behavior tests
+st.bar_chart(df, x="a", y="b", sort=False)  # no sort
+st.bar_chart(df, x="a", y="b", sort=True)  # automatic sort
+st.bar_chart(df, x="a", y="b", sort="a")  # sort by categories, ascending
+st.bar_chart(df, x="a", y="b", sort="-a")  # sort by categories, descending
+st.bar_chart(df, x="a", y="b", sort="b")  # sort by values, ascending
+st.bar_chart(df, x="a", y="b", sort="-b")  # sort by values, descending
+st.bar_chart(df, x="a", y="b", sort="c")  # sort by other column
+st.bar_chart(
+    df, x="b", y="a", sort="b", horizontal=True
+)  # horizontal, sort by categories
+st.bar_chart(df, x="b", y="a", sort="a", horizontal=True)  # horizontal, sort by values
+
 # Test that add_rows maintains original styling params:
-# color, width, height, use_container_width, horizontal, stack
+# color, width, height, horizontal, stack
 bar_data = pd.DataFrame({"Bar 1": [], "Bar 2": []})
 
 empty_bar = st.bar_chart(
@@ -93,7 +106,6 @@ empty_bar = st.bar_chart(
     height=300,
     stack=False,
     horizontal=True,
-    use_container_width=False,
 )
 
 if st.button("Add data to Bar Chart"):

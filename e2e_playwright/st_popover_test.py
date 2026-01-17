@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -29,7 +29,7 @@ def test_popover_button_rendering(
 ):
     """Test that the popover buttons are correctly rendered via screenshot matching."""
     popover_elements = themed_app.get_by_test_id("stPopover")
-    expect(popover_elements).to_have_count(12)
+    expect(popover_elements).to_have_count(14)
 
     assert_snapshot(
         get_popover(themed_app, "popover 5 (in sidebar)"), name="st_popover-sidebar"
@@ -54,6 +54,14 @@ def test_popover_button_rendering(
     assert_snapshot(
         get_popover(themed_app, "popover 8 (material icon)"),
         name="st_popover-material_icon",
+    )
+    assert_snapshot(
+        get_popover(themed_app, "popover 18 (primary)"),
+        name="st_popover-primary",
+    )
+    assert_snapshot(
+        get_popover(themed_app, "popover 19 (tertiary)"),
+        name="st_popover-tertiary",
     )
 
 

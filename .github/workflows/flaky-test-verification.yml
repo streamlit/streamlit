@@ -1,0 +1,114 @@
+name: Flaky Test Verification
+
+on:
+  pull_request:
+    types: [labeled]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: PR number to verify
+        required: false
+        type: string
+      runs:
+        description: Number of times to run changed-files E2E
+        required: false
+        default: "25"
+        type: string
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  verify:
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' && github.event.action == 'labeled' && github.event.label.name == 'flaky-verify')
+    # ubuntu-latest (4 cores) is sufficient for this lightweight coordination job.
+    # The actual E2E test execution happens in the called workflow (playwright-changed-files.yml)
+    # which uses ubuntu-latest-8-cores.
+    runs-on: ubuntu-latest
+    outputs:
+      runs: ${{ steps.compute.outputs.runs }}
+      pr-number: ${{ steps.compute.outputs.pr_number }}
+      base_ref: ${{ steps.compute.outputs.base_ref }}
+      matrix: ${{ steps.compute.outputs.matrix }}
+    steps:
+      - name: Remove flaky-verify label
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/labels/flaky-verify \
+            --method DELETE || true
+
+      - name: Compute inputs and matrix
+        id: compute
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Resolve runs
+          runs_input="${{ inputs.runs }}"
+          if [[ -z "$runs_input" ]]; then
+            runs_input="25"
+          fi
+          if [[ ! "$runs_input" =~ ^[1-9][0-9]*$ ]]; then
+            echo "::error::runs must be a positive integer (>= 1), got: $runs_input"
+            exit 1
+          fi
+          echo "runs=$runs_input" >> "$GITHUB_OUTPUT"
+
+          # Resolve PR number from input or event
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            if [[ -n "${{ inputs.pr_number }}" ]]; then
+              pr_number="${{ inputs.pr_number }}"
+            else
+              echo "::error::No PR number provided. When using workflow_dispatch, the pr_number input is required."
+              exit 1
+            fi
+          elif [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            pr_number="${{ github.event.pull_request.number }}"
+          else
+            echo "::error::Unsupported event type: ${{ github.event_name }}"
+            exit 1
+          fi
+
+          # Validate pr_number is a positive integer
+          if [[ ! "$pr_number" =~ ^[1-9][0-9]*$ ]]; then
+            echo "::error::PR number must be a positive integer (>= 1), got: $pr_number"
+            exit 1
+          fi
+          echo "pr_number=$pr_number" >> "$GITHUB_OUTPUT"
+
+          # Get base ref/SHA for the PR
+          # Use base SHA for comparison since Graphite uses special base refs like "graphite-base/12922"
+          base_sha=$(gh api repos/streamlit/streamlit/pulls/$pr_number --jq '.base.sha')
+          if [[ -z "$base_sha" ]]; then
+            echo "::error::Failed to retrieve base SHA for PR #$pr_number"
+            exit 1
+          fi
+          echo "base_ref=$base_sha" >> "$GITHUB_OUTPUT"
+
+          # Build JSON array for matrix
+          json="["
+          for i in $(seq 1 "$runs_input"); do
+            if [[ $i -gt 1 ]]; then json+=", "; fi
+            json+="$i"
+          done
+          json+="]"
+          echo "matrix=$json" >> "$GITHUB_OUTPUT"
+
+  e2e-changed-files-matrix:
+    needs: verify
+    if: needs.verify.outputs.pr-number != ''
+    strategy:
+      fail-fast: false
+      matrix:
+        iteration: ${{ fromJson(needs.verify.outputs.matrix) }}
+    uses: ./.github/workflows/playwright-changed-files.yml
+    with:
+      ref: refs/pull/${{ needs.verify.outputs.pr-number }}/head
+      base_ref: ${{ needs.verify.outputs.base_ref }}
+      iteration: ${{ matrix.iteration }}
+    secrets: inherit

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { memo, ReactElement, useEffect, useMemo, useRef } from "react"
+import { memo, ReactElement, useEffect, useMemo, useRef } from "react"
 
 import { getLogger } from "loglevel"
 
@@ -265,19 +265,18 @@ function Video({
       crossOrigin={crossOrigin}
       onError={handleVideoError}
     >
-      {subtitles &&
-        subtitles.map((subtitle: ISubtitleTrack, idx: number) => (
-          <track
-            // TODO: Update to match React best practices
-            // eslint-disable-next-line @eslint-react/no-array-index-key
-            key={idx}
-            kind="captions"
-            src={endpoints.buildMediaURL(`${subtitle.url}`)}
-            label={`${subtitle.label}`}
-            default={idx === 0}
-            data-testid="stVideoSubtitle"
-          />
-        ))}
+      {subtitles?.map((subtitle: ISubtitleTrack, idx: number) => (
+        <track
+          // TODO: Update to match React best practices
+          // eslint-disable-next-line @eslint-react/no-array-index-key
+          key={idx}
+          kind="captions"
+          src={endpoints.buildMediaURL(`${subtitle.url}`)}
+          label={`${subtitle.label}`}
+          default={idx === 0}
+          data-testid="stVideoSubtitle"
+        />
+      ))}
     </video>
   )
 }

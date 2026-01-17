@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -185,7 +185,7 @@ class RadioTest(DeltaGeneratorTestCase):
 
     def test_inside_column(self):
         """Test that it works correctly inside of a column."""
-        col1, col2 = st.columns(2)
+        col1, _col2 = st.columns(2)
 
         with col1:
             st.radio("foo", ["bar", "baz"])
@@ -251,7 +251,7 @@ class RadioTest(DeltaGeneratorTestCase):
         st.cache_data(lambda: st.radio("the label", ["option 1", "option 2"]))()
 
         # The widget itself is still created, so we need to go back one element more:
-        el = self.get_delta_from_queue(-2).new_element.exception
+        el = self.get_delta_from_queue(-3).new_element.exception
         assert el.type == "CachedWidgetWarning"
         assert el.is_warning
 
@@ -285,19 +285,19 @@ class RadioTest(DeltaGeneratorTestCase):
         test_cases = [
             (
                 "invalid",
-                "Invalid width value: 'invalid'. Width must be either an integer (pixels), 'stretch', or 'content'.",
+                "Width must be either a positive integer (pixels), 'stretch', or 'content'.",
             ),
             (
                 -100,
-                "Invalid width value: -100. Width must be either an integer (pixels), 'stretch', or 'content'.",
+                "Width must be either a positive integer (pixels), 'stretch', or 'content'.",
             ),
             (
                 0,
-                "Invalid width value: 0. Width must be either an integer (pixels), 'stretch', or 'content'.",
+                "Width must be either a positive integer (pixels), 'stretch', or 'content'.",
             ),
             (
                 100.5,
-                "Invalid width value: 100.5. Width must be either an integer (pixels), 'stretch', or 'content'.",
+                "Width must be either a positive integer (pixels), 'stretch', or 'content'.",
             ),
         ]
 
@@ -306,7 +306,7 @@ class RadioTest(DeltaGeneratorTestCase):
                 with pytest.raises(StreamlitAPIException) as exc:
                     st.radio("test label", ["option 1", "option 2"], width=width_value)
 
-                assert str(exc.value) == expected_error_message
+                assert expected_error_message in str(exc.value)
 
     def test_radio_default_width(self):
         """Test that st.radio defaults to content width."""
@@ -319,6 +319,86 @@ class RadioTest(DeltaGeneratorTestCase):
             == WidthConfigFields.USE_CONTENT.value
         )
         assert el.width_config.use_content is True
+
+    def test_stable_id_with_key(self):
+        """Test that the widget ID is stable when a stable key is provided."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            # First render with certain params
+            st.radio(
+                label="Label 1",
+                key="radio_key",
+                index=0,
+                help="Help 1",
+                disabled=False,
+                width="content",
+                on_change=lambda: None,
+                args=("arg1", "arg2"),
+                kwargs={"kwarg1": "kwarg1"},
+                label_visibility="visible",
+                horizontal=False,
+                captions=["c1", "c2"],
+                # Whitelisted kwargs:
+                options=["a", "b"],
+                format_func=lambda x: x.capitalize(),
+            )
+            c1 = self.get_delta_from_queue().new_element.radio
+            id1 = c1.id
+
+            # Second render with different non-whitelisted params but same key
+            st.radio(
+                label="Label 2",
+                key="radio_key",
+                index=1,
+                help="Help 2",
+                disabled=True,
+                width="stretch",
+                on_change=lambda: None,
+                args=("arg_1", "arg_2"),
+                kwargs={"kwarg_1": "kwarg_1"},
+                label_visibility="hidden",
+                horizontal=True,
+                captions=["c1x", "c2x"],
+                # Whitelisted kwargs:
+                options=["a", "b"],
+                format_func=lambda x: x.capitalize(),
+            )
+            c2 = self.get_delta_from_queue().new_element.radio
+            id2 = c2.id
+            assert id1 == id2
+
+    @parameterized.expand(
+        [
+            (
+                "options",
+                {"options": ["a", "b"], "format_func": str},
+                {"options": ["a", "b", "c"], "format_func": str},
+            ),
+            (
+                "format_func",
+                {"options": ["a", "b"], "format_func": str},
+                {"options": ["a", "b"], "format_func": str.upper},
+            ),
+        ]
+    )
+    def test_whitelisted_stable_key_kwargs(
+        self, _name: str, first_kwargs: dict, second_kwargs: dict
+    ) -> None:
+        """Test that the widget ID changes when a whitelisted kwarg changes even when the key is provided."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            st.radio(label="Label 1", key="radio_key2", **first_kwargs)
+            c1 = self.get_delta_from_queue().new_element.radio
+            id1 = c1.id
+
+            st.radio(label="Label 2", key="radio_key2", **second_kwargs)
+            c2 = self.get_delta_from_queue().new_element.radio
+            id2 = c2.id
+            assert id1 != id2
 
 
 def test_radio_interaction():

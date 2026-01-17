@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,6 +27,11 @@ export const StyledColorPicker = styled.div<StyledColorPickerProps>(
     flexDirection: "column",
     alignItems: "flex-start",
     cursor: disabled ? "not-allowed" : "default",
+    // Enforce minimum width to prevent shrinking below the color block's
+    // intrinsic size. The color block uses theme.sizes.minElementHeight (40px)
+    // for both its width and height, so we use the same value here to keep
+    // them in sync.
+    minWidth: theme.sizes.minElementHeight,
   })
 )
 

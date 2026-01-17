@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -67,3 +67,7 @@ if st.toggle("Show custom component"):
     test_component = components.declare_component("test_component", url=url)
 
     test_component(key="component_1")
+
+st.markdown("### Zero dimension tests")
+components.html("<p>Zero width and height HTML</p>", width=0, height=0)
+components.iframe(data_url, width=0, height=0)

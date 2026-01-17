@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,14 +36,14 @@ export const StyledMessage = styled.span<StyledMessageProps>(
             opacity: 1,
             content: '"•"',
             animation: "none",
-            color: theme.colors.gray,
+            color: theme.colors.grayTextColor,
             margin: `0 ${theme.spacing.twoXS}`,
           },
         }
       : {}),
     ...(shouldBlink
       ? {
-          color: theme.colors.red,
+          color: theme.colors.redTextColor,
           animationName: `${blink}`,
           animationDuration: "0.5s",
           animationIterationCount: 5,

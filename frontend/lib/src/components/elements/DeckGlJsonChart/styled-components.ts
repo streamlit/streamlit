@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,15 +18,17 @@ import styled from "@emotion/styled"
 
 import { hasLightBackgroundColor } from "~lib/theme"
 
-export interface StyledDeckGlChartProps {
-  height: number | string
+interface StyledDeckGlChartProps {
+  isStretchHeight?: boolean
 }
 
 export const StyledDeckGlChart = styled.div<StyledDeckGlChartProps>(
-  ({ height }) => ({
+  ({ isStretchHeight }) => ({
     position: "relative",
-    height,
+    height: "100%",
     width: "100%",
+    // Minimum height is not used when pixel height is provided by user so we don't restrict users from setting small heights.
+    ...(isStretchHeight && { minHeight: "6.25rem" }),
   })
 )
 

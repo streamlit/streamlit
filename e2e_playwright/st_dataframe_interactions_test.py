@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,7 +20,10 @@ import pytest
 from playwright.sync_api import FrameLocator, Locator, Page, Route, expect
 
 from e2e_playwright.conftest import IframedPage, ImageCompareFunction, wait_for_app_run
-from e2e_playwright.shared.app_utils import expect_prefixed_markdown, get_element_by_key
+from e2e_playwright.shared.app_utils import (
+    expect_prefixed_markdown,
+    get_element_by_key,
+)
 from e2e_playwright.shared.dataframe_utils import (
     calc_middle_cell_position,
     click_on_cell,
@@ -376,9 +379,7 @@ def _test_csv_download(
     download_csv_toolbar_button = dataframe_toolbar.get_by_test_id(
         "stElementToolbarButton"
     ).get_by_label("Download as CSV")
-
-    # Check that the toolbar is currently not visible:
-    expect(dataframe_toolbar).to_have_css("opacity", "0")
+    expect(download_csv_toolbar_button).to_be_visible()
 
     # Activate toolbar:
     dataframe_element.scroll_into_view_if_needed()
@@ -431,7 +432,7 @@ def test_csv_download_button(
     # button uses under-the-hood does not work. So we monkey-patch it to throw an error
     # and trigger our alternative download logic.
     if browser_name == "chromium":
-        if browser_type_launch_args.get("headless", False):
+        if browser_type_launch_args.get("headless"):
             click_enter_on_file_picker = True
         else:
             app.evaluate(
@@ -442,7 +443,7 @@ def test_csv_download_button(
     _test_csv_download(app, app.locator("body"), click_enter_on_file_picker)
 
 
-@pytest.mark.flaky(reruns=4)
+@pytest.mark.flaky(reruns=3)
 def test_csv_download_button_in_iframe(iframed_app: IframedPage):
     """Test that the csv download button works in an iframe.
 
@@ -457,6 +458,7 @@ def test_csv_download_button_in_iframe(iframed_app: IframedPage):
     _test_csv_download(page, frame_locator)
 
 
+@pytest.mark.flaky(reruns=3)
 def test_csv_download_button_in_iframe_with_new_tab_host_config(
     iframed_app: IframedPage,
 ):

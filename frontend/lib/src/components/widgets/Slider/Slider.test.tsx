@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,9 +14,8 @@
  * limitations under the License.
  */
 
-import React from "react"
-
-import { act, fireEvent, screen } from "@testing-library/react"
+import { act, fireEvent, screen, waitFor } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 
 import {
   LabelVisibilityMessage as LabelVisibilityMessageProto,
@@ -227,6 +226,48 @@ describe("Slider widget", () => {
       )
 
       expect(slider).toHaveAttribute("aria-valuenow", "5")
+    })
+  })
+
+  describe("Tick bar visibility", () => {
+    it("is hidden by default and becomes visible on hover", async () => {
+      const props = getProps()
+      render(<Slider {...props} />)
+
+      const tickBar = screen.getByTestId("stSliderTickBar")
+      expect(tickBar).toHaveStyle("opacity: var(--slider-focused, 0)")
+
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+      const sliderContainer = screen.getByTestId("stSlider")
+      await user.hover(sliderContainer)
+      // Use waitFor since the tickbar has an animation:
+      await waitFor(() => expect(tickBar).toBeVisible())
+
+      await user.unhover(sliderContainer)
+      await waitFor(() =>
+        expect(tickBar).toHaveStyle("opacity: var(--slider-focused, 0)")
+      )
+    })
+
+    it("becomes visible while dragging via keyboard and hides after release", async () => {
+      const props = getProps()
+      render(<Slider {...props} />)
+
+      const tickBar = screen.getByTestId("stSliderTickBar")
+      const slider = screen.getByRole("slider")
+
+      expect(tickBar).toHaveStyle("opacity: var(--slider-focused, 0)")
+
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+      slider.focus()
+      await user.keyboard("{ArrowRight>}")
+      // Use waitFor since the tickbar has an animation:
+      await waitFor(() => expect(tickBar).toBeVisible())
+
+      await user.keyboard("{/ArrowRight}")
+      await waitFor(() =>
+        expect(tickBar).toHaveStyle("opacity: var(--slider-focused, 0)")
+      )
     })
   })
 

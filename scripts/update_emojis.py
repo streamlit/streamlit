@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import os
 import re
+import sys
 
 from emoji.unicode_codes import EMOJI_DATA
 
@@ -37,14 +38,18 @@ emoji_unicodes = set(EMOJI_DATA.keys())
 print(f"Existing emoji collection: {len(ALL_EMOJIS)}")
 print(f"New emoji collection:  {len(emoji_unicodes)}")
 
+if len(ALL_EMOJIS) == len(emoji_unicodes):
+    print("No new emojis to add. Exiting.")
+    sys.exit(0)
+
 generated_code = f"""### EMOJIS START ###
 ALL_EMOJIS = {{{", ".join([f'"{emoji}"' for emoji in sorted(emoji_unicodes)])}}}
 ### EMOJIS END ###"""
 
-with open(EMOJIS_SCRIPT_PATH) as file:
+with open(EMOJIS_SCRIPT_PATH, encoding="utf-8") as file:
     script_content = file.read()
 
 updated_script_content = re.sub(EMOJI_SET_REGEX, generated_code, script_content)
 
-with open(EMOJIS_SCRIPT_PATH, "w") as file:
+with open(EMOJIS_SCRIPT_PATH, "w", encoding="utf-8") as file:
     file.write(updated_script_content)

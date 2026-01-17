@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -65,6 +65,13 @@ export interface StreamlitEndpoints {
    * @param path The path of the component resource to fetch, e.g. "index.html".
    */
   buildComponentURL(componentName: string, path: string): string
+
+  /**
+   * Return a URL to fetch data for the given bidirectional component.
+   * @param componentName The registered name of the component.
+   * @param path The path of the component resource to fetch, e.g. "script.js".
+   */
+  buildBidiComponentURL(componentName: string, path: string): string
 
   /**
    * Construct a URL for a media file.

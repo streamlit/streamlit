@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,6 +11,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+from __future__ import annotations
+
+import numpy as np
+import numpy.typing as npt
+import pandas as pd
 
 import streamlit as st
 
@@ -157,3 +163,22 @@ with st.container(
     st.html('<div style="background:lightblue;">One</div>', width="content")
     st.html('<div style="background:lightblue;">Two</div>', width="content")
     st.html('<div style="background:lightblue;">Three</div>', width="content")
+
+with st.container(
+    horizontal_alignment="center",
+    key="container-horizontal-centered-elements",
+    border=True,
+):
+    df = pd.DataFrame(
+        {
+            "x": list(range(3)),
+            "y": [i * i for i in range(3)],
+        }
+    )
+    img: npt.NDArray[np.int64] = np.repeat(0, 2500).reshape(50, 50)
+    st.image(img)
+    st.dataframe(
+        df,
+        width="content",
+    )
+    st.bar_chart(df, x="x", y="y", width="content")

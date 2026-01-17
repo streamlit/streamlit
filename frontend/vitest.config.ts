@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,10 +14,15 @@
  * limitations under the License.
  */
 
-import { coverageConfigDefaults, defineConfig } from "vitest/config"
+import {
+    configDefaults,
+    coverageConfigDefaults,
+    defineConfig,
+} from "vitest/config"
 
 export default defineConfig({
   test: {
+    globals: true,
     // Include all packages that have a vite.config.ts file
     projects: ["*/vite.config.ts"],
 
@@ -25,8 +30,24 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       reporter: ["text-summary", "json-summary", "html"],
-      include: ["*/src/**/*"],
-      exclude: ["lib/src/vendor/**", ...coverageConfigDefaults.exclude],
+      include: ["*/src/**/*.{js,jsx,ts,tsx}"],
+      exclude: [
+        "**/*.d.ts",
+        "**/vitest.setup.ts",
+        "lib/src/vendor/**",
+        "eslint-plugin-streamlit-custom/src/**",
+        "**/src/assets/**",
+        "**/dist/**",
+        "**/protobuf/**",
+        "**/*.interface.ts",
+        ...coverageConfigDefaults.exclude,
+      ],
     },
+    exclude: [
+      ...configDefaults.exclude,
+      "**/dist/**",
+      "**/.{idea,git,cache,output,temp}/**",
+      "**/{karma,rollup,webpack,vite,vitest,jest,ava,babel,nyc,cypress,tsup,build,eslint,prettier}.config.*",
+    ],
   },
 })

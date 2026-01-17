@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ import {
   OptionalThemeColors,
   RequiredThemeColors,
 } from "./emotionBaseTheme/themeColors"
+import { ThemeShadows } from "./getShadows"
 import { PrimitiveColors } from "./primitives"
 
 /**
@@ -72,12 +73,10 @@ export type DerivedColors = {
  * Extra colors added by createEmotionColors (related to custom theming)
  */
 export type SpecialEmotionColors = {
+  link: string
+
   codeTextColor: string
   codeBackgroundColor: string
-
-  metricPositiveDeltaColor: string
-  metricNegativeDeltaColor: string
-  metricNeutralDeltaColor: string
 
   borderColor: string
   borderColorLight: string
@@ -92,17 +91,25 @@ export type SpecialEmotionColors = {
   // Chart colors (these are arrays of colors)
   chartCategoricalColors: string[]
   chartSequentialColors: string[]
+  chartDivergingColors: string[]
 }
 
 /**
- * Complete emotion theme type with explicitly typed colors
+ * Complete emotion theme type with explicitly typed colors and shadows
  */
-export interface EmotionTheme extends Omit<typeof emotionBaseTheme, "colors"> {
+export interface EmotionTheme extends Omit<
+  typeof emotionBaseTheme,
+  "colors" | "shadows"
+> {
   colors: EmotionThemeColors
+  shadows: ThemeShadows
 }
 
 export type ThemeConfig = {
   name: string
+  // Display name is used in custom themes for SettingsDialog theme selector
+  // Allows custom themes to still show as "Light", "Dark", or "Use System Setting"
+  displayName?: string
   emotion: EmotionTheme
   // For use with Baseweb's ThemeProvider. This is required in order for us to
   // create separate themes for in the children. Currently required to accommodate

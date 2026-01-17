@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -25,18 +25,17 @@ import hashlib
 import inspect
 import io
 import os
-import pickle
+import pickle  # noqa: S403
 import sys
 import tempfile
 import threading
 import uuid
 import weakref
+from collections.abc import Callable
 from enum import Enum
 from re import Pattern
 from types import MappingProxyType
-from typing import TYPE_CHECKING, Any, Callable, Final, Union, cast
-
-from typing_extensions import TypeAlias
+from typing import TYPE_CHECKING, Any, Final, TypeAlias, cast
 
 from streamlit import logger, type_util, util
 from streamlit.errors import StreamlitAPIException
@@ -59,7 +58,7 @@ _PANDAS_SAMPLE_SIZE: Final = 10_000
 _NP_SIZE_LARGE: Final = 500_000
 _NP_SAMPLE_SIZE: Final = 100_000
 
-HashFuncsDict: TypeAlias = dict[Union[str, type[Any]], Callable[[Any], Any]]
+HashFuncsDict: TypeAlias = dict[str | type[Any], Callable[[Any], Any]]
 
 # Arbitrary item to denote where we found a cycle in a hashed object.
 # This allows us to hash self-referencing lists, dictionaries, etc.
@@ -419,7 +418,7 @@ class _CacheFuncHasher:
         if type_util.is_type(obj, "pandas.core.series.Series"):
             from pandas.util import hash_pandas_object
 
-            series_obj: pd.Series = cast("pd.Series", obj)
+            series_obj = cast("pd.Series[Any]", obj)
             self.update(h, series_obj.size)
             self.update(h, series_obj.dtype.name)
 
@@ -466,7 +465,7 @@ class _CacheFuncHasher:
                 return b"%s" % pickle.dumps(df_obj, pickle.HIGHEST_PROTOCOL)
 
         elif type_util.is_type(obj, "polars.series.series.Series"):
-            import polars as pl  # type: ignore[import-not-found]
+            import polars as pl
 
             obj = cast("pl.Series", obj)
             self.update(h, str(obj.dtype).encode())
@@ -654,5 +653,3 @@ class _CacheFuncHasher:
 
 class NoResult:
     """Placeholder class for return values when None is meaningful."""
-
-    pass

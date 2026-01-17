@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,11 +20,13 @@ cycle between streamlit.delta_generator and some elements.
 from __future__ import annotations
 
 from contextvars import ContextVar, Token
-from typing import TYPE_CHECKING, Callable, Generic, TypeVar
+from typing import TYPE_CHECKING, Generic, TypeVar
 
 from streamlit.proto.RootContainer_pb2 import RootContainer as _RootContainer
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.elements.lib.dialog import Dialog
     from streamlit.elements.lib.mutable_status_container import StatusContainer
@@ -143,28 +145,28 @@ class ContextVarWithLazyDefault(Generic[_T]):
         self._default = default
         self._context_var: ContextVar[_T] | None = None
 
-    def _init_context_var(self) -> None:
-        self._context_var = ContextVar(self._name, default=self._default())  # noqa: B039
+    def _ensure_context_var(self) -> ContextVar[_T]:
+        if self._context_var is None:
+            self._context_var = ContextVar(self._name, default=self._default())  # noqa: B039
+        return self._context_var
 
     def get(self) -> _T:
-        if self._context_var is None:
-            self._init_context_var()
-        return self._context_var.get()  # type: ignore[union-attr]
+        return self._ensure_context_var().get()
 
     def set(self, value: _T) -> Token[_T]:
-        if self._context_var is None:
-            self._init_context_var()
-        return self._context_var.set(value)  # type: ignore[union-attr]
+        return self._ensure_context_var().set(value)
 
     def reset(self, token: Token[_T]) -> None:
-        if self._context_var is None:
-            self._init_context_var()
-        self._context_var.reset(token)  # type: ignore[union-attr]
+        self._ensure_context_var().reset(token)
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, ContextVarWithLazyDefault):
+            return NotImplemented
+        # Two wrappers are equal only if they're the same object
+        return self is other
 
     def __hash__(self) -> int:
-        if self._context_var is None:
-            self._init_context_var()
-        return self._context_var.__hash__()
+        return self._ensure_context_var().__hash__()
 
 
 # we don't use the default factory here because `main_dg` is not initialized when this

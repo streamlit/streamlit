@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { Children, forwardRef, ReactElement } from "react"
+import { Children, forwardRef, ReactElement } from "react"
 
 import {
   type OptionListProps,
@@ -68,7 +68,7 @@ const VirtualDropdown = forwardRef<any, any>((props, ref) => {
   // eslint-disable-next-line @eslint-react/no-children-to-array
   const children = Children.toArray(props.children) as ReactElement[]
 
-  if (!children[0] || !children[0].props.item) {
+  if (!children[0]?.props.item) {
     const childrenProps = children[0] ? children[0].props : {}
     return (
       <StyledList

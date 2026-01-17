@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING
 
 from typing_extensions import assert_type
 
@@ -37,12 +37,12 @@ if TYPE_CHECKING:
     assert_type(date_input("foo", value="2024-01-01"), date)
 
     # Should return date or None if value is None:
-    assert_type(date_input("foo", value=None), Union[date, None])
+    assert_type(date_input("foo", value=None), date | None)
     assert_type(
         date_input(
             "foo", value=None, min_value=date(2024, 1, 1), max_value=date(2024, 1, 31)
         ),
-        Union[date, None],
+        date | None,
     )
 
     # Date range input with different sequence types
@@ -73,6 +73,31 @@ if TYPE_CHECKING:
             date(2024, 1, 1),
             min_value=date(2022, 1, 1),
             max_value=date(2024, 12, 31),
+        ),
+        date,
+    )
+    assert_type(
+        date_input(
+            "foo",
+            date(2024, 1, 1),
+            min_value=date(2022, 1, 1),
+            max_value="today",
+        ),
+        date,
+    )
+    assert_type(
+        date_input(
+            "foo",
+            "today",
+            min_value="today",
+            max_value=date(2050, 12, 31),
+        ),
+        date,
+    )
+    assert_type(
+        date_input(
+            "foo",
+            max_value="today",
         ),
         date,
     )

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-if __name__ not in ("__main__", "__mp_main__"):
+if __name__ not in {"__main__", "__mp_main__"}:
     raise SystemExit(
         "This file is intended to be executed as an executable program. You cannot use "
         f"it as a module.To run this script, run the ./{__file__} command"
@@ -61,6 +61,7 @@ IGNORE_PATTERN = re.compile(
     r"|^frontend/(\.dockerignore|\.eslintrc.js|\.prettierignore)$"
     r"|^frontend/\.yarn"  # Exclude everything in the .yarn folder
     r"|^component-lib/\.yarn"
+    r"|^frontend/component-v2-lib/\.yarn"  # Exclude everything in the .yarn folder
     r"|(\.dockerignore|MANIFEST\.in|mypy\.ini)$"
     r"|^.*-requirements\.txt$"
     r"|min-constraints-gen\.txt"
@@ -96,7 +97,7 @@ def main() -> None:
             continue
 
         try:
-            file_content = filepath.read_text()
+            file_content = filepath.read_text(encoding="utf-8")
             if LICENSE_TEXT not in file_content:
                 print("Found file without license header", fileloc)
                 invalid_files_count += 1

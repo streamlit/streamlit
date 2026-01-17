@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -268,9 +268,83 @@ class SliderTest(DeltaGeneratorTestCase):
         st.cache_data(lambda: st.select_slider("the label", ["option 1", "option 2"]))()
 
         # The widget itself is still created, so we need to go back one element more:
-        el = self.get_delta_from_queue(-2).new_element.exception
+        el = self.get_delta_from_queue(-3).new_element.exception
         assert el.type == "CachedWidgetWarning"
         assert el.is_warning
+
+    def test_stable_id_with_key_non_whitelisted_params(self):
+        """Changing non-whitelisted params should not change the ID when key is provided."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            st.select_slider(
+                label="Label 1",
+                key="select_slider_key3",
+                value="green",
+                help="Help 1",
+                disabled=False,
+                width="stretch",
+                on_change=lambda: None,
+                args=("arg1", "arg2"),
+                kwargs={"kwarg1": "kwarg1"},
+                label_visibility="visible",
+                # Whitelisted kwargs
+                options=["red", "green", "blue"],
+                format_func=lambda x: x.capitalize(),
+            )
+            c1 = self.get_delta_from_queue().new_element.slider
+            id1 = c1.id
+
+            st.select_slider(
+                label="Label 2",
+                key="select_slider_key3",
+                value="red",
+                help="Help 2",
+                disabled=True,
+                width=300,
+                on_change=lambda: None,
+                args=("arg_1", "arg_2"),
+                kwargs={"kwarg_1": "kwarg_1"},
+                label_visibility="hidden",
+                # Whitelisted kwargs
+                format_func=lambda x: x.capitalize(),
+                options=["red", "green", "blue"],
+            )
+            c2 = self.get_delta_from_queue().new_element.slider
+            id2 = c2.id
+            assert id1 == id2
+
+    @parameterized.expand(
+        [
+            ("options", ["a", "bb"], ["a", "bb", "c"]),
+            ("format_func", lambda x: x.lower(), lambda x: x.upper()),
+        ]
+    )
+    def test_whitelisted_stable_key_kwargs(
+        self, kwarg_name: str, value1: object, value2: object
+    ):
+        """Changing whitelisted kwargs should change the ID even when a key is provided."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            base_kwargs = {
+                "label": "Label",
+                "key": "select_slider_key",
+                "options": ["a", "b", "c", "d"],
+            }
+            base_kwargs[kwarg_name] = value1
+
+            st.select_slider(**base_kwargs)
+            c1 = self.get_delta_from_queue().new_element.slider
+            id1 = c1.id
+
+            base_kwargs[kwarg_name] = value2
+            st.select_slider(**base_kwargs)
+            c2 = self.get_delta_from_queue().new_element.slider
+            id2 = c2.id
+            assert id1 != id2
 
 
 def test_select_slider_enum_coercion():

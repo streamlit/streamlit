@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,16 +15,22 @@
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
+    click_toggle,
     expect_help_tooltip,
     expect_markdown,
+    expect_prefixed_markdown,
     get_element_by_key,
     get_text_input,
 )
+from e2e_playwright.shared.input_utils import (
+    expect_global_hotkeys_not_fired,
+    type_common_characters_into_input,
+)
 
-TEXT_INPUT_ELEMENTS = 18
+TEXT_INPUT_ELEMENTS = 19
 
 
 def test_text_input_widget_rendering(
@@ -117,6 +123,27 @@ def test_text_input_has_correct_initial_values(app: Page):
     expect_markdown(app, "text input 12 (value from state) - value: xyz")
     expect_markdown(app, "text input 13 (value from form) - value:")
     expect_markdown(app, "Rerun counter: 1")
+
+
+def test_text_input_typing_common_characters_does_not_trigger_global_hotkeys(
+    app: Page,
+) -> None:
+    """Typing into st.text_input must not trigger global hotkeys (e.g. c/r)."""
+    text_input_field = (
+        get_text_input(app, "text input 1 (default)").locator("input").first
+    )
+    rerun_counter = app.get_by_text("Rerun counter: 1", exact=True)
+
+    expect_global_hotkeys_not_fired(app, expected_runs=1, runs_locator=rerun_counter)
+    typed = type_common_characters_into_input(
+        text_input_field,
+        after_each=lambda _ch: expect_global_hotkeys_not_fired(
+            app,
+            expected_runs=1,
+            runs_locator=rerun_counter,
+        ),
+    )
+    expect(text_input_field).to_have_value(typed)
 
 
 def test_text_input_shows_instructions_when_dirty(
@@ -248,25 +275,30 @@ def test_text_input_shows_state_value(app: Page):
 def test_calls_callback_on_change(app: Page):
     """Test that it correctly calls the callback on change."""
     text_input_field = get_element_by_key(app, "text_input_9").locator("input").first
+    expect(text_input_field).to_be_visible()
 
     text_input_field.fill("hello world")
     text_input_field.press("Enter")
+    wait_for_app_run(app)
 
-    expect_markdown(app, "value 9: hello world")
-    expect_markdown(app, "text input changed: True")
+    expect_prefixed_markdown(app, "value 9:", "hello world")
+    expect_prefixed_markdown(app, "text input changed:", "True")
 
-    # Change differentwidget to trigger delta path change
+    # Change different widget to trigger delta path change
     first_text_input_field = (
         get_text_input(app, "text input 1 (default)").locator("input").first
     )
+    expect(first_text_input_field).to_be_visible()
+
     first_text_input_field.fill("hello world")
     first_text_input_field.press("Enter")
+    wait_for_app_run(app)
 
-    expect_markdown(app, "value 1: hello world")
+    expect_prefixed_markdown(app, "value 1:", "hello world")
 
     # Test if value is still correct after delta path change
-    expect_markdown(app, "value 9: hello world")
-    expect_markdown(app, "text input changed: False")
+    expect_prefixed_markdown(app, "value 9:", "hello world")
+    expect_prefixed_markdown(app, "text input changed:", "False")
 
 
 def test_text_input_in_form_with_submit_by_enter(app: Page):
@@ -293,3 +325,47 @@ def test_check_top_level_class(app: Page):
 def test_custom_css_class_via_key(app: Page):
     """Test that the element can have a custom css class via the key argument."""
     expect(get_element_by_key(app, "text_input_9")).to_be_visible()
+
+
+def test_dynamic_text_input_props(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that the text input can be updated dynamically while keeping the state."""
+    dynamic_text_input = get_element_by_key(app, "dynamic_text_input_with_key")
+    expect(dynamic_text_input).to_be_visible()
+
+    expect(dynamic_text_input).to_contain_text("Initial dynamic text input")
+
+    expect_prefixed_markdown(app, "Initial text input value:", "initial")
+    assert_snapshot(dynamic_text_input, name="st_text_input-dynamic_initial")
+
+    # Check that the help tooltip is correct:
+    expect_help_tooltip(app, dynamic_text_input, "initial help")
+
+    # Type something and submit
+    input_field = dynamic_text_input.locator("input").first
+    input_field.fill("foo")
+    input_field.press("Enter")
+    wait_for_app_run(app)
+
+    expect_prefixed_markdown(app, "Initial text input value:", "foo")
+
+    # Click the toggle to update the text input props
+    click_toggle(app, "Update text input props")
+
+    # new text input is visible:
+    expect(dynamic_text_input).to_contain_text("Updated dynamic text input")
+
+    # Ensure the previously entered value remains visible
+    expect_prefixed_markdown(app, "Updated text input value:", "foo")
+
+    dynamic_text_input.scroll_into_view_if_needed()
+    assert_snapshot(dynamic_text_input, name="st_text_input-dynamic_updated")
+
+    # Check that the help tooltip is correct:
+    expect_help_tooltip(app, dynamic_text_input, "updated help")
+
+    # Type something different and submit
+    input_field.fill("bar")
+    input_field.press("Enter")
+    wait_for_app_run(app)
+
+    expect_prefixed_markdown(app, "Updated text input value:", "bar")

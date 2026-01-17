@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,13 +23,13 @@ import { EmotionTheme } from "@streamlit/lib"
 
 const recordingIndicatorPulse = (theme: EmotionTheme): Keyframes => keyframes`
 0% {
-  box-shadow: 0 0 ${theme.spacing.twoXS} ${theme.colors.red};
+  box-shadow: 0 0 ${theme.spacing.twoXS} ${theme.colors.redTextColor};
 }
 50% {
-  box-shadow: 0 0 ${theme.spacing.sm} ${theme.spacing.twoXS} ${theme.colors.red};
+  box-shadow: 0 0 ${theme.spacing.sm} ${theme.spacing.twoXS} ${theme.colors.redTextColor};
 }
 100% {
-  box-shadow: 0 0 ${theme.spacing.twoXS} ${theme.colors.red};
+  box-shadow: 0 0 ${theme.spacing.twoXS} ${theme.colors.redTextColor};
 }`
 
 export const StyledRecordingIndicator = styled.div(({ theme }) => ({
@@ -38,9 +38,9 @@ export const StyledRecordingIndicator = styled.div(({ theme }) => ({
   right: theme.spacing.sm,
   width: theme.spacing.sm,
   height: theme.spacing.sm,
-  backgroundColor: theme.colors.red,
+  backgroundColor: theme.colors.redTextColor,
   borderRadius: theme.radii.full,
-  boxShadow: `0 0 ${theme.spacing.twoXS} ${theme.colors.red}`,
+  boxShadow: `0 0 ${theme.spacing.twoXS} ${theme.colors.redTextColor}`,
   animation: `${recordingIndicatorPulse(theme)} 2s linear infinite`,
 }))
 
@@ -62,7 +62,9 @@ export interface ItemStyleProps {
 export const StyledMenuItemShortcut = styled.span<ItemProps>(
   ({ isRecording, theme }) => {
     return {
-      color: isRecording ? theme.colors.red : theme.colors.fadedText60,
+      color: isRecording
+        ? theme.colors.redTextColor
+        : theme.colors.fadedText60,
       fontSize: theme.fontSizes.sm,
       marginTop: theme.spacing.twoXS,
       fontVariant: "small-caps",
@@ -87,7 +89,7 @@ export const StyledMenuItem = styled.ul<ItemProps>(
         }
 
     const recordingStyles = isRecording && {
-      color: theme.colors.red,
+      color: theme.colors.redTextColor,
       fontWeight: theme.fontWeights.bold,
     }
 
@@ -160,8 +162,6 @@ export const StyledDevItem = styled.li<ItemStyleProps>(
 export const StyledMenuItemLabel = styled.span(({ theme }) => ({
   marginRight: theme.spacing.md,
   flexGrow: 1,
-  // We do not want to change the font for this based on theme.
-  fontFamily: theme.fonts.sansSerif,
 }))
 
 export const StyledMenuContainer = styled.div(({ theme }) => ({

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 from e2e_playwright.shared.app_utils import check_top_level_class, get_button
 
 
@@ -40,6 +40,106 @@ def test_spinner_time(app: Page):
     app.wait_for_timeout(200)
     updated_text = app.get_by_test_id("stSpinner").text_content()
     assert initial_text != updated_text
+
+
+def test_double_spinner(app: Page):
+    """Test that nested spinners appear in the correct order."""
+    get_button(app, "Run double spinner").click()
+
+    spinners = app.get_by_test_id("stSpinner")
+    expect(spinners).to_have_count(2)
+    expect(spinners.nth(0)).to_have_text("Loading...")
+    expect(spinners.nth(1)).to_have_text("Also loading...")
+
+
+def test_spinner_on_markdown(app: Page):
+    """Test that running a spinner on a locked cursor (st.markdown) updates correctly."""
+    get_button(app, "Run markdown updated with spinner").click()
+
+    spinners = app.get_by_test_id("stSpinner")
+    expect(spinners).to_have_count(1)
+    expect(spinners.nth(0)).to_have_text("something")
+    # Expect markdown to still be visible
+    markdown_elements = app.get_by_test_id("stMarkdown")
+    expect(markdown_elements).to_have_count(1)
+    expect(markdown_elements.nth(0)).to_have_text("Some Text")
+
+    wait_for_app_run(app)
+
+    expect(app.get_by_test_id("stSpinner")).to_have_count(0)
+    # markdown remains visible
+    markdown_elements = app.get_by_test_id("stMarkdown")
+    expect(markdown_elements).to_have_count(1)
+    expect(markdown_elements.nth(0)).to_have_text("Some Text")
+
+
+def test_spinner_in_empty_block(app: Page):
+    """Test that running a spinner in a st.empty block updates correctly."""
+    get_button(app, "Run spinner in with st.empty block").click()
+
+    spinners = app.get_by_test_id("stSpinner")
+    expect(spinners).to_have_count(1)
+    expect(spinners.nth(0)).to_have_text("spinner in empty block")
+    # Expect empty block to still be visible
+    empty_elements = app.get_by_test_id("stEmpty")
+    expect(empty_elements).to_have_count(1)
+
+    wait_for_app_run(app)
+
+    expect(app.get_by_test_id("stSpinner")).to_have_count(0)
+    # empty block is cleared (and replaced with markdown)
+    empty_elements = app.get_by_test_id("stEmpty")
+    expect(empty_elements).to_have_count(0)
+
+    markdown_elements = app.get_by_test_id("stMarkdown")
+    expect(markdown_elements).to_have_count(1)
+    expect(markdown_elements.nth(0)).to_have_text("Some More Text")
+
+
+def test_spinner_in_fragment(app: Page):
+    """Test that running a spinner in a fragment updates correctly."""
+    get_button(app, "Run spinner in fragment").click()
+
+    spinners = app.get_by_test_id("stSpinner")
+    expect(spinners).to_have_count(1)
+    expect(spinners.nth(0)).to_have_text("Loading...")
+
+    wait_for_app_run(app)
+
+    expect(app.get_by_test_id("stSpinner")).to_have_count(0)
+    expect(app.get_by_text("Run fragment")).to_be_visible()
+
+    get_button(app, "Run fragment").click()
+    expect(app.get_by_test_id("stSpinner")).to_have_count(1)
+    expect(app.get_by_test_id("stSpinner").nth(0)).to_have_text("Loading...")
+
+    wait_for_app_run(app)
+
+    expect(app.get_by_test_id("stSpinner")).to_have_count(0)
+    expect(app.get_by_text("Run fragment")).to_be_visible()
+
+
+def test_spinner_before_fragment(app: Page):
+    """Test that running a spinner before a fragment does not make the spinner re-appear."""
+    get_button(app, "Run spinner before fragment").click()
+
+    spinners = app.get_by_test_id("stSpinner")
+    expect(spinners).to_have_count(1)
+    expect(spinners.nth(0)).to_have_text("Loading...")
+
+    wait_for_app_run(app)
+
+    expect(app.get_by_test_id("stSpinner")).to_have_count(0)
+    expect(app.get_by_text("Run fragment")).to_be_visible()
+
+    get_button(app, "Run fragment").click()
+    # spinners eventually disappear, so we shorten the timeout
+    expect(app.get_by_test_id("stSpinner")).to_have_count(0, timeout=1000)
+
+    wait_for_app_run(app)
+
+    expect(app.get_by_test_id("stSpinner")).to_have_count(0)
+    expect(app.get_by_text("Run fragment")).to_be_visible()
 
 
 def test_spinner_width_content(app: Page):

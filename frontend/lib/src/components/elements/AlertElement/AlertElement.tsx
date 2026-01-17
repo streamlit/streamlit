@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-import React, { memo, ReactElement } from "react"
+import { memo, ReactElement } from "react"
 
 import AlertContainer, { Kind } from "~lib/components/shared/AlertContainer"
 import { DynamicIcon } from "~lib/components/shared/Icon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 
-import { StyledAlertContent } from "./styled-components"
+import { StyledAlertContent, StyledAlertIcon } from "./styled-components"
 
 export interface AlertElementProps {
   body: string
@@ -50,11 +50,13 @@ function AlertElement({
       <AlertContainer kind={kind}>
         <StyledAlertContent>
           {icon && (
-            <DynamicIcon
-              iconValue={icon}
-              size="lg"
-              testid="stAlertDynamicIcon"
-            />
+            <StyledAlertIcon>
+              <DynamicIcon
+                iconValue={icon}
+                size="lg"
+                testid="stAlertDynamicIcon"
+              />
+            </StyledAlertIcon>
           )}
 
           <StreamlitMarkdown

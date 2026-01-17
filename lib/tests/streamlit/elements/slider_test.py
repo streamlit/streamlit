@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -270,7 +270,7 @@ class SliderTest(DeltaGeneratorTestCase):
 
     def test_inside_column(self):
         """Test that it works correctly inside of a column."""
-        col1, col2 = st.columns(2)
+        col1, _col2 = st.columns(2)
 
         with col1:
             st.slider("foo")
@@ -305,12 +305,76 @@ class SliderTest(DeltaGeneratorTestCase):
             == "Unsupported label_visibility option 'wrong_value'. Valid values are 'visible', 'hidden' or 'collapsed'."
         )
 
+    def test_format_none(self):
+        """Test that slider works with default format=None."""
+        st.slider("the label", value=5)
+
+        c = self.get_delta_from_queue().new_element.slider
+        assert c.label == "the label"
+        assert c.format == "%d"  # Default format for integers
+
+    @parameterized.expand(
+        [
+            # Predefined numeric formats
+            ("plain", "plain"),
+            ("localized", "localized"),
+            ("percent", "percent"),
+            ("dollar", "dollar"),
+            ("euro", "euro"),
+            ("yen", "yen"),
+            ("accounting", "accounting"),
+            ("compact", "compact"),
+            ("scientific", "scientific"),
+            ("engineering", "engineering"),
+            ("bytes", "bytes"),
+            # Printf-style format strings
+            ("%d", "%d"),
+            ("%.2f", "%.2f"),
+            ("$%d", "$%d"),
+        ]
+    )
+    def test_format_numeric_values(self, format_value: str, expected_proto_value: str):
+        """Test that slider can be called with valid numeric format values."""
+        st.slider(
+            "the label", min_value=0.0, max_value=100.0, value=50.0, format=format_value
+        )
+
+        c = self.get_delta_from_queue().new_element.slider
+        assert c.label == "the label"
+        assert c.format == expected_proto_value
+
+    @parameterized.expand(
+        [
+            # Predefined datetime formats
+            ("localized", "localized"),
+            ("distance", "distance"),
+            ("calendar", "calendar"),
+            ("iso8601", "iso8601"),
+            # MomentJS format strings
+            ("YYYY-MM-DD", "YYYY-MM-DD"),
+            ("ddd ha", "ddd ha"),
+        ]
+    )
+    def test_format_datetime_values(self, format_value: str, expected_proto_value: str):
+        """Test that slider can be called with valid datetime format values."""
+        st.slider(
+            "the label",
+            min_value=datetime(2020, 1, 1),
+            max_value=datetime(2020, 12, 31),
+            value=datetime(2020, 6, 15),
+            format=format_value,
+        )
+
+        c = self.get_delta_from_queue().new_element.slider
+        assert c.label == "the label"
+        assert c.format == expected_proto_value
+
     def test_shows_cached_widget_replay_warning(self):
         """Test that a warning is shown when this widget is used inside a cached function."""
         st.cache_data(lambda: st.slider("the label"))()
 
         # The widget itself is still created, so we need to go back one element more:
-        el = self.get_delta_from_queue(-2).new_element.exception
+        el = self.get_delta_from_queue(-3).new_element.exception
         assert el.type == "CachedWidgetWarning"
         assert el.is_warning
 
@@ -411,3 +475,86 @@ def test_id_stability():
     s2 = at.slider[0]
 
     assert s1.id == s2.id
+
+
+class SliderStableIdTest(DeltaGeneratorTestCase):
+    def test_stable_id_with_key(self):
+        """Test that the widget ID is stable when a stable key is provided, unless whitelisted kwargs change."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            st.slider(
+                label="Label 1",
+                key="slider_key",
+                value=5,
+                format="%0.2f",
+                help="help 1",
+                width="stretch",
+                on_change=lambda: None,
+                args=("arg1", "arg2"),
+                kwargs={"kwarg1": "kwarg1"},
+                label_visibility="visible",
+                disabled=False,
+                # Whitelisted kwargs
+                min_value=0,
+                max_value=10,
+                step=1,
+            )
+            c1 = self.get_delta_from_queue().new_element.slider
+            id1 = c1.id
+
+            st.slider(
+                label="Label 2",
+                key="slider_key",
+                value=7,
+                format="%d",
+                help="help 2",
+                width=300,
+                on_change=lambda: None,
+                args=("arg_1", "arg_2"),
+                kwargs={"kwarg_1": "kwarg_1"},
+                label_visibility="hidden",
+                disabled=True,
+                # Whitelisted kwargs
+                min_value=0,
+                max_value=10,
+                step=1,
+            )
+            c2 = self.get_delta_from_queue().new_element.slider
+            id2 = c2.id
+            assert id1 == id2
+
+    @parameterized.expand(
+        [
+            ("min_value", 0, 1),
+            ("max_value", 10, 20),
+            ("step", 1, 2),
+        ]
+    )
+    def test_whitelisted_stable_key_kwargs(
+        self, kwarg_name: str, value1: object, value2: object
+    ):
+        """Changing whitelisted kwargs should change the ID even when a key is provided."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            base_kwargs = {
+                "label": "Label",
+                "key": "slider_key2",
+                "min_value": 0,
+                "max_value": 10,
+                "value": 5,
+                "step": 1,
+            }
+            base_kwargs[kwarg_name] = value1
+            st.slider(**base_kwargs)
+            c1 = self.get_delta_from_queue().new_element.slider
+            id1 = c1.id
+
+            base_kwargs[kwarg_name] = value2
+            st.slider(**base_kwargs)
+            c2 = self.get_delta_from_queue().new_element.slider
+            id2 = c2.id
+            assert id1 != id2

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -31,10 +31,11 @@ from PIL import Image
 
 import streamlit as st
 from streamlit import type_util
-from streamlit.elements import write
 from streamlit.error_util import handle_uncaught_app_exception
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import NoSessionContext, StreamlitAPIException
+from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.state import QueryParamsProxy, SessionStateProxy
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.data_test_cases import (
     SHARED_TEST_CASES,
     CaseMetadata,
@@ -410,24 +411,18 @@ class StreamlitWriteTest(unittest.TestCase):
             with pytest.raises(Exception, match="some exception"):
                 st.write("some text")
 
-    def test_unknown_arguments(self):
-        """Test st.write that raises an exception."""
-        with self.assertLogs(write._LOGGER) as logs:
-            st.write("some text", unknown_keyword_arg=123)
-
-        assert (
-            'Invalid arguments were passed to "st.write" function.'
-            in logs.records[0].msg
-        )
-
     def test_spinner(self):
         """Test st.spinner."""
-        # TODO(armando): Test that the message is actually passed to
-        # message.warning
-        with patch("streamlit.delta_generator.DeltaGenerator.empty") as e:
-            with st.spinner("some message"):
-                time.sleep(0.15)
-            e.assert_called_once_with()
+        with patch("streamlit.delta_generator.DeltaGenerator._transient") as t:
+            t.return_value = (ForwardMsg, ForwardMsg)
+            try:
+                with st.spinner("some message"):
+                    time.sleep(0.15)
+            except NoSessionContext:
+                # This happens on the clear call, so we can safely ignore it.
+                pass
+            # Spinner now uses _transient instead of empty
+            t.assert_called()
 
     def test_sidebar(self):
         """Test st.write in the sidebar."""
@@ -606,6 +601,27 @@ class StreamlitStreamTest(unittest.TestCase):
                     "Text under dataframe",
                 ]
             )
+
+
+class StWriteStreamTest(DeltaGeneratorTestCase):
+    """Test st.write_stream API."""
+
+    def test_st_write_stream_cursor(self):
+        deltas = []
+
+        def stream():
+            yield "message 1, "
+            deltas.append(self.get_delta_from_queue())
+            yield "message 2"
+            deltas.append(self.get_delta_from_queue())
+
+        st.write_stream(stream, cursor="!!!")
+
+        el = deltas[0].new_element
+        assert el.markdown.body == "message 1,"
+
+        el = deltas[1].new_element
+        assert el.markdown.body == "message 1, message 2!!!"
 
 
 def make_is_type_mock(true_type_matchers):

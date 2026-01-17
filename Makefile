@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,6 +18,13 @@ SHELL=/bin/bash
 
 INSTALL_DEV_REQS ?= true
 INSTALL_TEST_REQS ?= true
+INSTALL_PLAYWRIGHT ?= true
+# Flags:
+#  - INSTALL_DEV_REQS: install dev requirements (default: true)
+#  - INSTALL_TEST_REQS: install test requirements (default: true)
+#  - INSTALL_PLAYWRIGHT: install Playwright browsers during python-init (default: true)
+#    CI uses a dedicated action to install browsers and typically sets this to false.
+#    Local dev can opt out when not needed: `INSTALL_PLAYWRIGHT=false make init`
 PYTHON_VERSION := $(shell python --version | cut -d " " -f 2 | cut -d "." -f 1-2)
 MIN_PROTOC_VERSION = 3.20
 
@@ -34,7 +41,7 @@ help:
 	@# Magic line used to create self-documenting makefiles.
 	@# Note that this means the documenting comment just before the command (but after the .PHONY) must be all one line, and should begin with a capital letter and end with a period.
 	@# See https://stackoverflow.com/a/35730928
-	@awk '/^#/{c=substr($$0,3);next}c&&/^[[:alpha:]][[:alnum:]_-]+:/{print substr($$1,1,index($$1,":")),c}1{c=0}' Makefile | column -s: -t
+	@awk '/^#/{c=substr($$0,3);next}c&&/^[[:alpha:]][[:alnum:]_-]+:/{print substr($$1,1,index($$1,":")-1) ";" c}1{c=0}' Makefile | column -s';' -t
 
 .PHONY: all
 # Install all dependencies, build frontend, and install editable Streamlit.
@@ -71,17 +78,15 @@ clean:
 	rm -rf lib/streamlit/static
 	rm -f lib/Pipfile.lock
 	rm -rf frontend/app/build
-	rm -rf frontend/node_modules
+	find . -name node_modules -type d -prune -exec rm -rf {} \; || true
 	rm -rf frontend/app/performance/lighthouse/reports
-	rm -rf frontend/app/node_modules
-	rm -rf frontend/lib/node_modules
-	rm -rf frontend/connection/node_modules
 	rm -rf frontend/test_results
-	rm -f frontend/protobuf/src/proto.js
-	rm -f frontend/protobuf/src/proto.d.ts
+	rm -f frontend/protobuf/proto.js
+	rm -f frontend/protobuf/proto.d.ts
 	rm -rf frontend/public/reports
 	rm -rf frontend/lib/dist
 	rm -rf frontend/connection/dist
+	rm -rf frontend/component-v2-lib/dist
 	rm -rf ~/.cache/pre-commit
 	rm -rf e2e_playwright/test-results
 	rm -rf e2e_playwright/performance-results
@@ -132,7 +137,7 @@ python-init:
 		echo "Running command: pip install $${pip_args[@]}"; \
 		pip install $${pip_args[@]}; \
 	fi;\
-	if [ "${INSTALL_TEST_REQS}" = "true" ] ; then\
+	if [ "${INSTALL_TEST_REQS}" = "true" ] && [ "${INSTALL_PLAYWRIGHT}" = "true" ] ; then\
 		python -m playwright install --with-deps; \
 	fi;
 
@@ -206,7 +211,7 @@ frontend-init:
 .PHONY: frontend
 # Build the frontend.
 frontend:
-	cd frontend/ ; yarn workspaces foreach --all --topological run build
+	cd frontend/ ; yarn workspaces foreach --all --topological --parallel run build
 	rsync -av --delete --delete-excluded --exclude=reports \
 		frontend/app/build/ lib/streamlit/static/
 	# Move manifest.json to a location that can actually be served by the Tornado
@@ -217,7 +222,7 @@ frontend:
 # Build the frontend with the profiler enabled.
 frontend-with-profiler:
 	# Build frontend dependent libraries (excluding app and lib):
-	cd frontend/ ; yarn workspaces foreach --all --exclude @streamlit/app --exclude @streamlit/lib --topological run build
+	cd frontend/ ; yarn workspaces foreach --all --exclude @streamlit/app --exclude @streamlit/lib --topological --parallel run build
 	# Build the app with the profiler enabled:
 	cd frontend/ ; yarn workspace @streamlit/app buildWithProfiler
 	rsync -av --delete --delete-excluded --exclude=reports \
@@ -226,7 +231,7 @@ frontend-with-profiler:
 .PHONY: frontend-fast
 # Build the frontend (as fast as possible).
 frontend-fast:
-	cd frontend/ ; yarn workspaces foreach --recursive --topological --from @streamlit/app --exclude @streamlit/lib run build
+	cd frontend/ ; yarn workspaces foreach --recursive --topological --parallel --from @streamlit/app --exclude @streamlit/lib run build
 	rsync -av --delete --delete-excluded --exclude=reports \
 		frontend/app/build/ lib/streamlit/static/
 
@@ -238,19 +243,18 @@ frontend-dev:
 .PHONY: frontend-lint
 # Lint and check formatting of frontend files.
 frontend-lint:
-	cd frontend/ ; yarn workspaces foreach --all run formatCheck
-	cd frontend/ ; yarn workspaces foreach --all run lint
+	cd frontend/ ; yarn workspaces foreach --all --parallel run formatCheck
+	cd frontend/ ; yarn workspaces foreach --all --parallel run lint
 
 .PHONY: frontend-types
 # Run the frontend type checker.
 frontend-types:
-	cd frontend/ ; yarn workspaces foreach --all --exclude @streamlit/lib --exclude @streamlit/app run typecheck
-	cd frontend/ ; yarn workspaces foreach --all run typecheck
+	cd frontend/ ; yarn workspaces foreach --all --parallel run typecheck
 
 .PHONY: frontend-format
 # Format frontend files.
 frontend-format:
-	cd frontend/ ; yarn workspaces foreach --all run format
+	cd frontend/ ; yarn workspaces foreach --all --parallel run format
 
 .PHONY: frontend-tests
 # Run frontend unit tests and generate coverage report.
@@ -288,6 +292,11 @@ update-snapshots-changed:
 update-material-icons:
 	python ./scripts/update_material_icon_font_and_names.py
 
+.PHONY: update-emojis
+# Update emojis based on latest emoji version.
+update-emojis:
+	python ./scripts/update_emojis.py
+
 .PHONY: update-notices
 # Update the notices file (licenses of frontend assets and dependencies).
 update-notices:
@@ -299,7 +308,6 @@ update-notices:
 	./scripts/append_license.sh frontend/app/src/assets/fonts/Source_Serif/Source-Serif.LICENSE
 	./scripts/append_license.sh frontend/app/src/assets/img/Material-Icons.LICENSE
 	./scripts/append_license.sh frontend/app/src/assets/img/Open-Iconic.LICENSE
-	./scripts/append_license.sh frontend/lib/src/vendor/bokeh/bokeh-LICENSE.txt
 	./scripts/append_license.sh frontend/lib/src/vendor/react-bootstrap-LICENSE.txt
 	./scripts/append_license.sh frontend/lib/src/vendor/fzy.js/fzyjs-LICENSE.txt
 
@@ -323,6 +331,9 @@ debug-e2e-test:
 		exit 1; \
 	fi
 	@echo "Running test: $(filter-out $@,$(MAKECMDGOALS)) in debug mode."
+	@if [[ -n "$$PYTEST_ADDOPTS" ]]; then \
+		echo "Using PYTEST_ADDOPTS=$$PYTEST_ADDOPTS"; \
+	fi
 	@TEST_SCRIPT=$$(echo $(filter-out $@,$(MAKECMDGOALS)) | sed 's|^e2e_playwright/||'); \
 	cd e2e_playwright && PWDEBUG=1 pytest $$TEST_SCRIPT --tracing on || ( \
 		echo "If you implemented changes in the frontend, make sure to call \`make frontend-fast\` to use the up-to-date frontend build in the test."; \
@@ -338,12 +349,45 @@ run-e2e-test:
 		exit 1; \
 	fi
 	@echo "Running test: $(filter-out $@,$(MAKECMDGOALS))"
+	@if [[ -n "$$PYTEST_ADDOPTS" ]]; then \
+		echo "Using PYTEST_ADDOPTS=$$PYTEST_ADDOPTS"; \
+	fi
 	@TEST_SCRIPT=$$(echo $(filter-out $@,$(MAKECMDGOALS)) | sed 's|^e2e_playwright/||'); \
 	cd e2e_playwright && pytest $$TEST_SCRIPT --tracing retain-on-failure --reruns 0 || ( \
 		echo "If you implemented changes in the frontend, make sure to call \`make frontend-fast\` to use the up-to-date frontend build in the test."; \
 		echo "You can find test-results in ./e2e_playwright/test-results"; \
 		exit 1 \
 	)
+
+.PHONY: trace-e2e-test
+# Run e2e test with tracing and view it. Use via `make trace-e2e-test <test_file.py>::<test_func>`.
+trace-e2e-test:
+	@if [[ -z "$(filter-out $@,$(MAKECMDGOALS))" ]]; then \
+		echo "Error: Please specify a single test to run"; \
+		echo "Usage: make trace-e2e-test <test_file.py>::<test_function>"; \
+		echo "Example: make trace-e2e-test st_audio_input_test.py::test_audio_input_renders"; \
+		exit 1; \
+	fi
+	@TEST_ARG=$$(echo $(filter-out $@,$(MAKECMDGOALS)) | sed 's|^e2e_playwright/||'); \
+	if [[ ! "$$TEST_ARG" == *"::"* ]]; then \
+		echo "Error: You must specify a single test function, not an entire test file"; \
+		echo "Usage: make trace-e2e-test <test_file.py>::<test_function>"; \
+		echo "Example: make trace-e2e-test st_audio_input_test.py::test_audio_input_renders"; \
+		exit 1; \
+	fi; \
+	echo "Clearing previous traces..."; \
+	rm -rf e2e_playwright/test-results/traces; \
+	mkdir -p e2e_playwright/test-results/traces; \
+	echo "Running test with tracing: $$TEST_ARG"; \
+	(cd e2e_playwright && pytest $$TEST_ARG --tracing=on --output=test-results/traces || true); \
+	echo ""; \
+	echo "Launching trace viewer..."; \
+	TRACE_FILE=$$(find e2e_playwright/test-results/traces -name "trace.zip" -type f 2>/dev/null | head -n 1); \
+	if [[ -n "$$TRACE_FILE" ]]; then \
+		python -m playwright show-trace "$$TRACE_FILE"; \
+	else \
+		echo "No trace file found. Check e2e_playwright/test-results/traces/ directory."; \
+	fi
 
 .PHONY: lighthouse-tests
 # Run Lighthouse performance tests.
@@ -371,7 +415,9 @@ autofix:
 	# JS fixes:
 	make frontend-init
 	make frontend-format
-	cd frontend/ ; yarn workspaces foreach --all run lint --fix
+	cd frontend/ ; yarn workspaces foreach --all --parallel run lint --fix
+	# Dedupe yarn.lock
+	cd frontend ; yarn dedupe
 	# Other fixes:
 	make update-notices
 	# Run all pre-commit fixes but not fail if any of them don't work.

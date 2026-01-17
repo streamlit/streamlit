@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, ReactNode } from "react"
+import { ReactElement, ReactNode } from "react"
 
 import { DialogType } from "@streamlit/app/src/components/StreamlitDialog/constants"
 import {
@@ -25,17 +25,14 @@ import {
   ModalFooter,
   ModalHeader,
   SessionInfo,
+  StreamlitErrorCodeBlock,
   StreamlitMarkdown,
-  StreamlitSyntaxHighlighter,
 } from "@streamlit/lib"
 import { IException } from "@streamlit/protobuf"
 
 import { DeployDialog, DeployDialogProps } from "./DeployDialog"
 import { SettingsDialog, Props as SettingsDialogProps } from "./SettingsDialog"
 import { StyledDeployErrorContent } from "./styled-components"
-import ThemeCreatorDialog, {
-  Props as ThemeCreatorDialogProps,
-} from "./ThemeCreatorDialog"
 
 export type PlainEventHandler = () => void
 
@@ -44,16 +41,11 @@ interface SettingsProps extends SettingsDialogProps {
   sessionInfo: SessionInfo
 }
 
-interface ThemeCreatorProps extends ThemeCreatorDialogProps {
-  type: DialogType.THEME_CREATOR
-}
-
 export type DialogProps =
   | AboutProps
   | ClearCacheProps
   | SettingsProps
   | ScriptCompileErrorProps
-  | ThemeCreatorProps
   | WarningProps
   | DeployErrorProps
   | DeployDialogProps
@@ -69,8 +61,6 @@ export function StreamlitDialog(dialogProps: DialogProps): ReactNode {
       return <SettingsDialog {...dialogProps} />
     case DialogType.SCRIPT_COMPILE_ERROR:
       return <ScriptCompileErrorDialog {...dialogProps} />
-    case DialogType.THEME_CREATOR:
-      return <ThemeCreatorDialog {...dialogProps} />
     case DialogType.WARNING:
     case DialogType.CONNECTION_ERROR:
       return <WarningDialog {...dialogProps} />
@@ -172,9 +162,9 @@ function ScriptCompileErrorDialog(
     <Modal isOpen onClose={props.onClose} size="auto" autoFocus={false}>
       <ModalHeader>Script execution error</ModalHeader>
       <ModalBody>
-        <StreamlitSyntaxHighlighter showLineNumbers={false} wrapLines={false}>
+        <StreamlitErrorCodeBlock>
           {props.exception?.message ? props.exception.message : "No message"}
-        </StreamlitSyntaxHighlighter>
+        </StreamlitErrorCodeBlock>
       </ModalBody>
       <ModalFooter>
         <ModalButton kind={BaseButtonKind.SECONDARY} onClick={props.onClose}>

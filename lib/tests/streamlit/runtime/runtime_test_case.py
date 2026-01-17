@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import asyncio
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING
 from unittest import IsolatedAsyncioTestCase, mock
 
 from streamlit.components.lib.local_component_registry import LocalComponentRegistry
@@ -35,6 +35,8 @@ from streamlit.runtime.session_manager import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
     from streamlit.runtime.script_data import ScriptData
     from streamlit.runtime.scriptrunner.script_cache import ScriptCache

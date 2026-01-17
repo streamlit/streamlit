@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING
 
 from typing_extensions import assert_type
 
@@ -73,10 +73,10 @@ if TYPE_CHECKING:
     # number_input("foo", value="min", step=1, max_value=5.0)  # noqa: ERA001
 
     # Check value=none
-    assert_type(number_input("foo", step=5, value=None), Union[int, None])
-    assert_type(number_input("foo", min_value=5, value=None), Union[int, None])
-    assert_type(number_input("foo", max_value=5, value=None), Union[int, None])
-    assert_type(number_input("foo", value=None), Union[float, None])
+    assert_type(number_input("foo", step=5, value=None), int | None)
+    assert_type(number_input("foo", min_value=5, value=None), int | None)
+    assert_type(number_input("foo", max_value=5, value=None), int | None)
+    assert_type(number_input("foo", value=None), float | None)
     # Same deal about mixing and matching ints and floats applies here too.
     # number_input("foo", max_value=5, value=None, step=5.0)  # noqa: ERA001
 

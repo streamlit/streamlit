@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -239,7 +239,7 @@ class DeclareComponentTest(unittest.TestCase):
         """Test that declare_component raises RuntimeError if inspect.currentframe returns None."""
         mock_currentframe.return_value = None
         with pytest.raises(
-            RuntimeError, match="current_frame is None. This should never happen."
+            RuntimeError, match=r"current_frame is None. This should never happen."
         ):
             components.declare_component("test_component", url="http://example.com")
 
@@ -252,7 +252,7 @@ class DeclareComponentTest(unittest.TestCase):
         mock_frame.f_back = None
         mock_currentframe.return_value = mock_frame
         with pytest.raises(
-            RuntimeError, match="caller_frame is None. This should never happen."
+            RuntimeError, match=r"caller_frame is None. This should never happen."
         ):
             components.declare_component("test_component", url="http://example.com")
 
@@ -263,7 +263,7 @@ class DeclareComponentTest(unittest.TestCase):
         """Test that declare_component raises RuntimeError if inspect.getmodule returns None."""
         mock_getmodule.return_value = None
         with pytest.raises(
-            RuntimeError, match="module is None. This should never happen."
+            RuntimeError, match=r"module is None. This should never happen."
         ):
             components.declare_component("test_component", url="http://example.com")
 
@@ -334,7 +334,7 @@ class ComponentRegistryTest(unittest.TestCase):
         test_path_2 = "/another/test/component/directory"
 
         def isdir(path):
-            return path in (test_path_1, test_path_2)
+            return path in {test_path_1, test_path_2}
 
         registry = ComponentRegistry.instance()
         with mock.patch(
@@ -452,7 +452,7 @@ class InvokeComponentTest(DeltaGeneratorTestCase):
         self.assertJSONEqual({"key": None, "default": None}, proto.json_args)
 
     def test_widget_id_with_key(self):
-        """UNLIKE OTHER WIDGET TYPES, a component with a user-supplied `key` will have a stable widget ID
+        """A component with a user-supplied `key` will have a stable widget ID
         even when the component's other parameters change.
 
         This is important because a component's iframe gets unmounted and remounted - wiping all its
@@ -667,7 +667,6 @@ class AlternativeComponentRegistryTest(unittest.TestCase):
     class AlternativeComponentRegistry(BaseComponentRegistry):
         def __init__(self):
             """Dummy implementation"""
-            pass
 
         def register_component(self, component: BaseCustomComponent) -> None:
             return None

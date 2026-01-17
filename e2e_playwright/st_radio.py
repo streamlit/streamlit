@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -49,13 +49,19 @@ st.write("value 4:", v4)
 v5 = st.radio("radio 5 (horizontal)", options, horizontal=True)
 st.write("value 5:", v5)
 
-v6 = st.radio("radio 6 (options from dataframe)", pd.DataFrame({"foo": list(options)}))
+v6: str = st.radio(
+    "radio 6 (options from dataframe)", pd.DataFrame({"foo": list(options)})
+)
 st.write("value 6:", v6)
 
-v7 = st.radio("radio 7 (hidden label)", options, label_visibility="hidden")
+v7 = st.radio(
+    "radio 7 (hidden label)", options, label_visibility="hidden", key="radio_7"
+)
 st.write("value 7:", v7)
 
-v8 = st.radio("radio 8 (collapsed label)", options, label_visibility="collapsed")
+v8 = st.radio(
+    "radio 8 (collapsed label)", options, label_visibility="collapsed", key="radio_8"
+)
 st.write("value 8:", v8)
 
 v9 = st.radio("radio 9 (markdown options)", options=markdown_options)
@@ -122,3 +128,40 @@ st.radio(
     ["Choice 1", "Choice 2", "Choice 3"],
     width=200,
 )
+
+if st.toggle("Update radio props"):
+    dr_value = st.radio(
+        "Updated dynamic radio",
+        key="dynamic_radio_with_key",
+        help="updated help",
+        width=300,
+        horizontal=True,
+        on_change=lambda a, param: print(
+            f"Updated radio - callback triggered: {a} {param}"
+        ),
+        args=("Updated radio arg",),
+        kwargs={"param": "updated kwarg param"},
+        captions=["🍎", "🍌", "🍊"],
+        # Whitelisted kwargs:
+        options=["apple", "banana", "orange"],
+        format_func=lambda x: x.capitalize(),
+    )
+    st.write("Updated radio value:", dr_value)
+else:
+    dr_value = st.radio(
+        "Initial dynamic radio",
+        key="dynamic_radio_with_key",
+        help="initial help",
+        width="content",
+        horizontal=False,
+        on_change=lambda a, param: print(
+            f"Initial radio - callback triggered: {a} {param}"
+        ),
+        args=("Initial radio arg",),
+        kwargs={"param": "initial kwarg param"},
+        captions=["🍎 Apple", "🍌 Banana", "🍊 Orange"],
+        # Whitelisted kwargs:
+        options=["apple", "banana", "orange"],
+        format_func=lambda x: x.capitalize(),
+    )
+    st.write("Initial radio value:", dr_value)

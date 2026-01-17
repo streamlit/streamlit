@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -112,7 +112,7 @@ export const StyledBaseButton = styled.button<RequiredBaseButtonProps>(
         // When focus-visible (e.g. if the button was focused via keyboard navigation)
         // we use the hover style of the respective button type (see below) and
         // additionally show a colored focus ring
-        boxShadow: `0 0 0 0.2rem ${transparentize(theme.colors.primary, 0.5)}`,
+        boxShadow: theme.shadows.focusRing,
       },
       ...getSizeStyle(size, theme),
     }
@@ -206,9 +206,9 @@ export const StyledGhostButton = styled(
     backgroundColor: theme.colors.transparent,
   },
   "&:disabled, &:disabled:hover, &:disabled:active": {
-    backgroundColor: theme.colors.lightGray,
+    backgroundColor: theme.colors.gray30,
     borderColor: theme.colors.transparent,
-    color: theme.colors.gray,
+    color: theme.colors.gray60,
   },
 }))
 
@@ -261,9 +261,9 @@ const StyledButtonGroupBaseButton = styled(
       backgroundColor: theme.colors.darkenedBgMix15,
     },
     "&:disabled, &:disabled:hover, &:disabled:active": {
-      color: theme.colors.fadedText20,
       borderColor: theme.colors.borderColor,
-      backgroundColor: theme.colors.bgColor,
+      backgroundColor: theme.colors.transparent,
+      color: theme.colors.fadedText40,
       cursor: "not-allowed",
     },
 
@@ -300,6 +300,12 @@ export const StyledPillsButtonActive = styled(
       backgroundColor: transparentize(theme.colors.primary, 0.8),
       borderColor: theme.colors.primary,
       color: theme.colors.primary,
+    },
+    "&:disabled, &:disabled:hover, &:disabled:active": {
+      borderColor: theme.colors.borderColor,
+      backgroundColor: theme.colors.fadedText05,
+      color: theme.colors.fadedText40,
+      cursor: "not-allowed",
     },
   }
 })
@@ -342,6 +348,12 @@ export const StyledSegmentedControlButtonActive = styled(
     "&:hover, &:focus-visible": {
       backgroundColor: transparentize(theme.colors.primary, 0.8),
     },
+    "&:disabled, &:disabled:hover, &:disabled:active": {
+      borderColor: theme.colors.borderColor,
+      backgroundColor: theme.colors.fadedText05,
+      color: theme.colors.fadedText40,
+      cursor: "not-allowed",
+    },
   }
 })
 
@@ -365,7 +377,7 @@ export const StyledHeaderButton = styled(
       outline: "none",
     },
     "&:focus-visible": {
-      boxShadow: `0 0 0 0.2rem ${transparentize(theme.colors.gray90, 0.8)}`,
+      boxShadow: theme.shadows.focusRingMuted,
     },
     "&:hover": {
       backgroundColor: theme.colors.darkenedBgMix15,
@@ -374,9 +386,9 @@ export const StyledHeaderButton = styled(
       backgroundColor: theme.colors.darkenedBgMix25,
     },
     "&:disabled, &:disabled:hover, &:disabled:active": {
-      backgroundColor: theme.colors.lightGray,
+      backgroundColor: theme.colors.gray30,
       borderColor: theme.colors.transparent,
-      color: theme.colors.gray,
+      color: theme.colors.gray60,
     },
   }
 })
@@ -495,9 +507,9 @@ export const StyledElementToolbarButton = styled(
       backgroundColor: theme.colors.darkenedBgMix25,
     },
     "&:disabled, &:disabled:hover, &:disabled:active": {
-      backgroundColor: theme.colors.lightGray,
+      backgroundColor: theme.colors.gray30,
       borderColor: theme.colors.transparent,
-      color: theme.colors.gray,
+      color: theme.colors.gray60,
     },
   }
 })
@@ -507,3 +519,30 @@ export const StyledButtonGroup = styled.div<{ containerWidth: boolean }>(
     width: containerWidth ? "100%" : "auto",
   })
 )
+
+export const StyledButtonLabel = styled.div(() => ({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  width: "100%",
+}))
+
+export const StyledButtonMainLabel = styled.span(({ theme }) => ({
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: theme.spacing.sm,
+  minWidth: 0,
+}))
+
+export const StyledButtonShortcut = styled.kbd(({ theme }) => ({
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  whiteSpace: "nowrap",
+  fontSize: theme.fontSizes.sm,
+  opacity: 0.6,
+  fontFamily: "inherit",
+  lineHeight: theme.lineHeights.tight,
+  letterSpacing: "0.01em",
+}))

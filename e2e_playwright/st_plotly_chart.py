@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -42,11 +42,9 @@ st.plotly_chart(fig_bubble, theme=None)
 
 # Bubble Chart
 # Tests Discrete coloring with streamlit theme
-# uses container width when use_container_width flag is True
 fig_bubble.update_layout(height=300, width=300)
 st.plotly_chart(
     fig_bubble,
-    use_container_width=True,
     theme="streamlit",
     # Also test custom toolbar modification:
     config={"modeBarButtonsToRemove": ["zoom"], "modeBarButtonsToAdd": ["drawline"]},
@@ -132,8 +130,8 @@ fig_waterfall = go.Figure(
 fig_waterfall.update_layout(
     title="Profit and loss statement 2018", height=300, width=300, showlegend=True
 )
-# uses figure height and width when use_container_width is False
-st.plotly_chart(fig_waterfall, use_container_width=False, theme="streamlit")
+# uses figure height and width when width is "content"
+st.plotly_chart(fig_waterfall, width="content", theme="streamlit")
 
 # Ternary Chart
 df = px.data.election()
@@ -223,8 +221,18 @@ df = px.data.tips()
 fig = px.density_heatmap(df, x="total_bill", y="tip")
 st.plotly_chart(fig, theme="streamlit")
 
-df = pd.read_csv(
-    "https://raw.githubusercontent.com/plotly/datasets/master/finance-charts-apple.csv"
+# Generate synthetic time series data for range selector testing
+# Using deterministic data for consistent snapshots
+date_range = pd.date_range(start="2015-02-17", end="2017-08-24", freq="D")
+# Create deterministic stock-like price movements using sine wave
+t = np.arange(len(date_range))
+aapl_high = 100 + 20 * np.sin(t / 30) + t / 10
+
+df = pd.DataFrame(
+    {
+        "Date": date_range,
+        "AAPL.High": aapl_high,
+    }
 )
 
 fig = px.line(
@@ -253,17 +261,3 @@ fig.update_layout(
     title_font_size=30,
 )
 st.plotly_chart(fig, theme="streamlit")
-
-data = pd.DataFrame((100, 120, 104, 102, 203, 102), columns=["some_col"])
-
-fig = px.line(data, height=100, width=300)
-fig.update_xaxes(visible=False, fixedrange=True)
-fig.update_yaxes(visible=False, fixedrange=True)
-fig.update_layout(annotations=[], overwrite=True)
-fig.update_layout(showlegend=False, margin={"t": 10, "l": 10, "b": 10, "r": 10})
-
-# uses figure height and width when use_container_width is False
-st.plotly_chart(fig, use_container_width=False, theme=None)
-
-# uses container width when use_container_width flag is True
-st.plotly_chart(fig, use_container_width=True, theme=None)

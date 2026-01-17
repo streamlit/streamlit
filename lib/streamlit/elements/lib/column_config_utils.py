@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,9 +18,7 @@ import copy
 import json
 from collections.abc import Mapping
 from enum import Enum
-from typing import TYPE_CHECKING, Final, Literal, Union
-
-from typing_extensions import TypeAlias
+from typing import TYPE_CHECKING, Any, Final, Literal, TypeAlias
 
 from streamlit.dataframe_util import DataFormat
 from streamlit.elements.lib.column_types import ColumnConfig, ColumnType
@@ -210,7 +208,7 @@ def _determine_data_kind_via_arrow(field: pa.Field) -> ColumnDataKind:
 
 
 def _determine_data_kind_via_pandas_dtype(
-    column: Series | Index,
+    column: Series[Any] | Index[Any],
 ) -> ColumnDataKind:
     """Determine the data kind by using the pandas dtype.
 
@@ -264,7 +262,7 @@ def _determine_data_kind_via_pandas_dtype(
 
 
 def _determine_data_kind_via_inferred_type(
-    column: Series | Index,
+    column: Series[Any] | Index[Any],
 ) -> ColumnDataKind:
     """Determine the data kind by inferring it from the underlying data.
 
@@ -291,7 +289,7 @@ def _determine_data_kind_via_inferred_type(
     if inferred_type == "bytes":
         return ColumnDataKind.BYTES
 
-    if inferred_type in ["floating", "mixed-integer-float"]:
+    if inferred_type in {"floating", "mixed-integer-float"}:
         return ColumnDataKind.FLOAT
 
     if inferred_type == "integer":
@@ -306,13 +304,13 @@ def _determine_data_kind_via_inferred_type(
     if inferred_type == "boolean":
         return ColumnDataKind.BOOLEAN
 
-    if inferred_type in ["datetime64", "datetime"]:
+    if inferred_type in {"datetime64", "datetime"}:
         return ColumnDataKind.DATETIME
 
     if inferred_type == "date":
         return ColumnDataKind.DATE
 
-    if inferred_type in ["timedelta64", "timedelta"]:
+    if inferred_type in {"timedelta64", "timedelta"}:
         return ColumnDataKind.TIMEDELTA
 
     if inferred_type == "time":
@@ -333,7 +331,7 @@ def _determine_data_kind_via_inferred_type(
 
 
 def _determine_data_kind(
-    column: Series | Index, field: pa.Field | None = None
+    column: Series[Any] | Index[Any], field: pa.Field | None = None
 ) -> ColumnDataKind:
     """Determine the data kind of a column.
 
@@ -397,7 +395,8 @@ def determine_dataframe_schema(
 
     # Add types for all columns:
     for i, column in enumerate(data_df.items()):
-        column_name, column_data = column
+        column_name = str(column[0])
+        column_data = column[1]
         dataframe_schema[column_name] = _determine_data_kind(
             column_data, arrow_schema.field(i)
         )
@@ -405,16 +404,14 @@ def determine_dataframe_schema(
 
 
 # A mapping of column names/IDs to column configs.
-ColumnConfigMapping: TypeAlias = dict[
-    Union[IndexIdentifierType, str, int], ColumnConfig
-]
+ColumnConfigMapping: TypeAlias = dict[IndexIdentifierType | str | int, ColumnConfig]
 ColumnConfigMappingInput: TypeAlias = Mapping[
     # TODO(lukasmasuch): This should also use int here to
     # correctly type the support for positional index. However,
     # allowing int here leads mypy to complain about simple dict[str, ...]
     # as input -> which seems like a mypy bug.
-    Union[IndexIdentifierType, str],
-    Union[ColumnConfig, None, str],
+    IndexIdentifierType | str,
+    ColumnConfig | str | None,
 ]
 
 
@@ -502,7 +499,7 @@ def apply_data_specific_configs(
     # Pandas adds a range index as default to all datastructures
     # but for most of the non-pandas data objects it is unnecessary
     # to show this index to the user. Therefore, we will hide it as default.
-    if data_format in [
+    if data_format in {
         DataFormat.SET_OF_VALUES,
         DataFormat.TUPLE_OF_VALUES,
         DataFormat.LIST_OF_VALUES,
@@ -519,7 +516,7 @@ def apply_data_specific_configs(
         DataFormat.POLARS_LAZYFRAME,
         DataFormat.PYARROW_ARRAY,
         DataFormat.RAY_DATASET,
-    ]:
+    }:
         update_column_config(columns_config, INDEX_IDENTIFIER, {"hidden": True})
 
 

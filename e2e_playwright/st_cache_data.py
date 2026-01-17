@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -93,7 +93,7 @@ if st.checkbox("Show code", True):
 
 @st.cache_data
 def image():
-    img: npt.NDArray[np.int_] = np.repeat(0, 10000).reshape(100, 100)
+    img: npt.NDArray[np.int64] = np.repeat(0, 10000).reshape(100, 100)
     st.image(img, caption="A black square", width=200)
 
 

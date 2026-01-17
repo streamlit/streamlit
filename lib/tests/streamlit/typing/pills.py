@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING
 
 from typing_extensions import assert_type
 
@@ -27,19 +27,19 @@ if TYPE_CHECKING:
     options: list[int] = [1, 2, 3]
     assert_type(
         pills("foo", options),
-        Union[int, None],
+        int | None,
     )
     assert_type(
         pills("foo", options, default=1),
-        Union[int, None],
+        int | None,
     )
     assert_type(
         pills("foo", options, selection_mode="single"),
-        Union[int, None],
+        int | None,
     )
     assert_type(
         pills("foo", options, selection_mode="single", default=1),
-        Union[int, None],
+        int | None,
     )
     assert_type(
         pills("foo", options, selection_mode="multi"),

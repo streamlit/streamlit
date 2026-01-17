@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,13 +14,15 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Callable, Final
+from typing import TYPE_CHECKING, Final
 
 from playwright.sync_api import FrameLocator, Locator, expect
 
 from e2e_playwright.conftest import IframedPageAttrs, wait_for_app_run
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from e2e_playwright.conftest import IframedPage, ImageCompareFunction
 
 from pathlib import Path

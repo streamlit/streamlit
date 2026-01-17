@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ from enum import Enum
 from typing import TYPE_CHECKING, Final, NamedTuple
 
 from streamlit.components.lib.local_component_registry import LocalComponentRegistry
+from streamlit.components.v2.component_manager import BidiComponentManager
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.app_session import AppSession
@@ -48,7 +49,10 @@ from streamlit.runtime.state import (
     SCRIPT_RUN_WITHOUT_ERRORS_KEY,
     SessionStateStatProvider,
 )
-from streamlit.runtime.stats import StatsManager
+from streamlit.runtime.stats import (
+    StatsManager,
+    StatsProvider,
+)
 from streamlit.runtime.websocket_session_manager import WebsocketSessionManager
 
 if TYPE_CHECKING:
@@ -58,6 +62,7 @@ if TYPE_CHECKING:
     from streamlit.proto.BackMsg_pb2 import BackMsg
     from streamlit.runtime.caching.storage import CacheStorageManager
     from streamlit.runtime.media_file_storage import MediaFileStorage
+    from streamlit.runtime.scriptrunner_utils.script_run_context import UserInfoType
     from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 
 # Wait for the script run result for 60s and if no result is available give up
@@ -99,6 +104,11 @@ class RuntimeConfig:
     # The ComponentRegistry instance to use.
     component_registry: BaseComponentRegistry = field(
         default_factory=LocalComponentRegistry
+    )
+
+    # The BidiComponentManager instance to use for v2 components.
+    bidi_component_registry: BidiComponentManager = field(
+        default_factory=BidiComponentManager
     )
 
     # The SessionManager class to be used.
@@ -201,10 +211,14 @@ class Runtime:
 
         # Initialize managers
         self._component_registry = config.component_registry
+        self._bidi_component_registry = config.bidi_component_registry
         self._uploaded_file_mgr = config.uploaded_file_manager
         self._media_file_mgr = MediaFileManager(storage=config.media_file_storage)
         self._cache_storage_manager = config.cache_storage_manager
         self._script_cache = ScriptCache()
+
+        # Discover and register components for CCv2 from installed packages
+        self._bidi_component_registry.discover_and_register_components()
 
         self._session_mgr = config.session_manager_class(
             session_storage=config.session_storage,
@@ -216,8 +230,16 @@ class Runtime:
         self._stats_mgr = StatsManager()
         self._stats_mgr.register_provider(get_data_cache_stats_provider())
         self._stats_mgr.register_provider(get_resource_cache_stats_provider())
-        self._stats_mgr.register_provider(self._uploaded_file_mgr)
+        if self._uploaded_file_mgr is not None:
+            self._stats_mgr.register_provider(self._uploaded_file_mgr)
+        # Register media file storage for stats if it implements StatsProvider
+        if isinstance(config.media_file_storage, StatsProvider):
+            self._stats_mgr.register_provider(config.media_file_storage)
         self._stats_mgr.register_provider(SessionStateStatProvider(self._session_mgr))
+
+        # Register session manager for session event metrics if it implements StatsProvider
+        if isinstance(self._session_mgr, StatsProvider):
+            self._stats_mgr.register_provider(self._session_mgr)
 
     @property
     def state(self) -> RuntimeState:
@@ -226,6 +248,10 @@ class Runtime:
     @property
     def component_registry(self) -> BaseComponentRegistry:
         return self._component_registry
+
+    @property
+    def bidi_component_registry(self) -> BidiComponentManager:
+        return self._bidi_component_registry
 
     @property
     def uploaded_file_mgr(self) -> UploadedFileManager:
@@ -319,7 +345,7 @@ class Runtime:
         async_objs = self._get_async_objs()
 
         def stop_on_eventloop() -> None:
-            if self._state in (RuntimeState.STOPPING, RuntimeState.STOPPED):
+            if self._state in {RuntimeState.STOPPING, RuntimeState.STOPPED}:
                 return
 
             _LOGGER.debug("Runtime stopping...")
@@ -340,7 +366,7 @@ class Runtime:
     def connect_session(
         self,
         client: SessionClient,
-        user_info: dict[str, str | bool | None],
+        user_info: UserInfoType,
         existing_session_id: str | None = None,
         session_id_override: str | None = None,
     ) -> str:
@@ -385,7 +411,7 @@ class Runtime:
                 "This should never happen."
             )
 
-        if self._state in (RuntimeState.STOPPING, RuntimeState.STOPPED):
+        if self._state in {RuntimeState.STOPPING, RuntimeState.STOPPED}:
             raise RuntimeStoppedError(f"Can't connect_session (state={self._state})")
 
         session_id = self._session_mgr.connect_session(
@@ -403,7 +429,7 @@ class Runtime:
     def create_session(
         self,
         client: SessionClient,
-        user_info: dict[str, str | bool | None],
+        user_info: UserInfoType,
         existing_session_id: str | None = None,
         session_id_override: str | None = None,
     ) -> str:
@@ -484,7 +510,7 @@ class Runtime:
         -----
         Threading: UNSAFE. Must be called on the eventloop thread.
         """
-        if self._state in (RuntimeState.STOPPING, RuntimeState.STOPPED):
+        if self._state in {RuntimeState.STOPPING, RuntimeState.STOPPED}:
             raise RuntimeStoppedError(f"Can't handle_backmsg (state={self._state})")
 
         session_info = self._session_mgr.get_active_session_info(session_id)
@@ -512,7 +538,7 @@ class Runtime:
         -----
         Threading: UNSAFE. Must be called on the eventloop thread.
         """
-        if self._state in (RuntimeState.STOPPING, RuntimeState.STOPPED):
+        if self._state in {RuntimeState.STOPPING, RuntimeState.STOPPED}:
             raise RuntimeStoppedError(
                 f"Can't handle_backmsg_deserialization_exception (state={self._state})"
             )
@@ -529,11 +555,11 @@ class Runtime:
 
     @property
     async def is_ready_for_browser_connection(self) -> tuple[bool, str]:
-        if self._state not in (
+        if self._state not in {
             RuntimeState.INITIAL,
             RuntimeState.STOPPING,
             RuntimeState.STOPPED,
-        ):
+        }:
             return True, "ok"
 
         return False, "unavailable"

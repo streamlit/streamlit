@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -99,7 +99,6 @@ class IframeMixin:
             scrolling=scrolling,
             tab_index=tab_index,
         )
-        # When no width is specified, we want the iframe to stretch to fill the container.
         layout_config = LayoutConfig(
             width=width if width is not None else "stretch",
             height=height if height is not None else 150,
@@ -184,7 +183,6 @@ class IframeMixin:
             scrolling=scrolling,
             tab_index=tab_index,
         )
-        # When no width is specified, we want the html to stretch to fill the container.
         layout_config = LayoutConfig(
             width=width if width is not None else "stretch",
             height=height if height is not None else 150,

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,7 +38,8 @@ export const StyledFileDropzoneSection = styled.section<StyledFileDropzone>(
       outline: "none",
     },
     ":focus-visible": {
-      boxShadow: `0 0 0 1px ${theme.colors.primary}`,
+      // Solid 1px outline (no blur) for dropzone focus
+      boxShadow: theme.shadows.focusRingOutline,
     },
     cursor: isDisabled ? "not-allowed" : "pointer",
   })
@@ -149,7 +150,7 @@ export const StyledFileIcon = styled.div<{ disabled?: boolean }>(
 )
 
 export const StyledFileError = styled.small(({ theme }) => ({
-  color: theme.colors.red,
+  color: theme.colors.redTextColor,
   fontSize: theme.fontSizes.sm,
   height: theme.fontSizes.sm,
   lineHeight: theme.fontSizes.sm,

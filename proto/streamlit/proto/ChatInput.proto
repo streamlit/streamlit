@@ -1,5 +1,5 @@
 /**!
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -47,4 +47,11 @@ message ChatInput {
 
   // Max file size allowed by server config
   int32 max_upload_size_mb = 11;
+
+  // Whether to show audio recording button
+  bool accept_audio = 12;
+
+  // Sample rate for audio recording in Hz (e.g., 16000, 48000)
+  // If not set, uses browser default
+  optional int32 audio_sample_rate = 13;
 }

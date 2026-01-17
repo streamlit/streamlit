@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,6 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from __future__ import annotations
+
 from unittest.mock import MagicMock, patch
 
 import plotly.express as px
@@ -78,23 +80,6 @@ class PyDeckTest(DeltaGeneratorTestCase):
         assert not el.plotly_chart.HasField("url")
         assert el.plotly_chart.spec != ""
         assert el.plotly_chart.config != ""
-        assert el.plotly_chart.use_container_width
-
-    def test_st_plotly_chart_use_container_width_true(self):
-        """Test st.plotly_chart."""
-        import plotly.graph_objs as go
-
-        trace0 = go.Scatter(x=[1, 2, 3, 4], y=[10, 15, 13, 17])
-
-        data = [trace0]
-
-        st.plotly_chart(data, use_container_width=True)
-
-        el = self.get_delta_from_queue().new_element
-        assert not el.plotly_chart.HasField("url")
-        assert el.plotly_chart.spec != ""
-        assert el.plotly_chart.config != ""
-        assert el.plotly_chart.use_container_width
 
     def test_works_with_element_replay(self):
         """Test that element replay works for plotly if used as non-widget element."""
@@ -103,7 +88,7 @@ class PyDeckTest(DeltaGeneratorTestCase):
         trace0 = go.Scatter(x=[1, 2, 3, 4], y=[10, 15, 13, 17])
         data = [trace0]
 
-        @st.cache_data
+        @st.cache_data(show_spinner=False)
         def cache_element():
             st.plotly_chart(data)
 
@@ -225,7 +210,7 @@ class PyDeckTest(DeltaGeneratorTestCase):
         st.cache_data(lambda: st.plotly_chart(data, on_select="rerun"))()
 
         # The widget itself is still created, so we need to go back one element more:
-        el = self.get_delta_from_queue(-2).new_element.exception
+        el = self.get_delta_from_queue(-3).new_element.exception
         assert el.type == "CachedWidgetWarning"
         assert el.is_warning
 
@@ -264,7 +249,22 @@ class PyDeckTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitAPIException):
             st.plotly_chart(data, on_select="rerun", selection_mode=["invalid", "box"])
 
-    def test_show_deprecation_warning_for_sharing(self):
+    def test_plotly_config(self):
+        """Test st.plotly_chart config dict parameter."""
+        import plotly.graph_objs as go
+
+        trace0 = go.Scatter(x=[1, 2, 3, 4], y=[10, 15, 13, 17])
+        data = [trace0]
+
+        config = {"displayModeBar": False, "responsive": True}
+        st.plotly_chart(data, config=config)
+
+        el = self.get_delta_from_queue().new_element
+        assert el.plotly_chart.config != ""
+        assert '"displayModeBar": false' in el.plotly_chart.config
+        assert '"responsive": true' in el.plotly_chart.config
+
+    def test_show_deprecation_warning_for_kwargs(self):
         import plotly.graph_objs as go
 
         trace0 = go.Scatter(x=[1, 2, 3, 4], y=[10, 15, 13, 17])
@@ -274,6 +274,378 @@ class PyDeckTest(DeltaGeneratorTestCase):
         # Get the second to last element, which should be deprecation warning
         el = self.get_delta_from_queue(-2).new_element
         assert (
-            "has been deprecated and will be removed in a future release"
+            "have been deprecated and will be removed in a future release"
             in el.alert.body
         )
+
+
+class PlotlyChartWidthTest(DeltaGeneratorTestCase):
+    """Test plotly_chart width parameter functionality."""
+
+    @parameterized.expand(
+        [
+            # width, expected_width_spec, expected_width_value
+            ("stretch", "use_stretch", True),
+            ("content", "pixel_width", 700),  # Content width resolves to 700px default
+            (500, "pixel_width", 500),
+        ]
+    )
+    def test_plotly_chart_width_combinations(
+        self,
+        width: str | int,
+        expected_width_spec: str,
+        expected_width_value: bool | int,
+    ):
+        """Test plotly chart with various width combinations."""
+        import plotly.graph_objs as go
+
+        trace0 = go.Scatter(x=[1, 2, 3, 4], y=[10, 15, 13, 17])
+        data = [trace0]
+
+        st.plotly_chart(data, width=width)
+
+        delta = self.get_delta_from_queue()
+        el = delta.new_element
+
+        # Check width_config on the element
+        assert el.width_config.WhichOneof("width_spec") == expected_width_spec
+        assert getattr(el.width_config, expected_width_spec) == expected_width_value
+
+    @parameterized.expand(
+        [
+            # use_container_width, width, expected_width_spec, expected_width_value
+            (True, None, "use_stretch", True),  # use_container_width=True -> stretch
+            (
+                False,
+                None,
+                "pixel_width",
+                700,
+            ),  # use_container_width=False, no width -> default 700
+            (
+                True,
+                500,
+                "use_stretch",
+                True,
+            ),  # use_container_width overrides width -> stretch
+            (
+                True,
+                "content",
+                "use_stretch",
+                True,
+            ),  # use_container_width overrides width -> stretch
+            (
+                False,
+                "content",
+                "pixel_width",
+                700,
+            ),  # content width resolves to 700px default when no figure width
+            (
+                False,
+                500,
+                "pixel_width",
+                500,
+            ),  # integer width -> pixel width
+        ]
+    )
+    @patch("streamlit.elements.plotly_chart.show_deprecation_warning")
+    def test_use_container_width_deprecation(
+        self,
+        use_container_width: bool,
+        width: str | int | None,
+        expected_width_spec: str,
+        expected_width_value: bool | int,
+        mock_show_warning,
+    ):
+        """Test deprecation warning and translation logic."""
+        import plotly.graph_objs as go
+
+        trace0 = go.Scatter(x=[1, 2, 3, 4], y=[10, 15, 13, 17])
+        data = [trace0]
+
+        kwargs = {"use_container_width": use_container_width}
+        if width is not None:
+            kwargs["width"] = width
+
+        st.plotly_chart(data, **kwargs)
+
+        # Check that deprecation warning was called
+        mock_show_warning.assert_called_once()
+
+        delta = self.get_delta_from_queue()
+        el = delta.new_element
+
+        # Check width_config reflects the expected width (NOT deprecated proto fields)
+        assert el.width_config.WhichOneof("width_spec") == expected_width_spec
+        assert getattr(el.width_config, expected_width_spec) == expected_width_value
+
+    @parameterized.expand(
+        [
+            ("width", "invalid_width"),
+            ("width", 0),  # width must be positive
+            ("width", -100),  # negative width
+        ]
+    )
+    def test_width_validation_errors(self, param_name: str, invalid_value: str | int):
+        """Test that invalid width values raise validation errors."""
+        import plotly.graph_objs as go
+
+        trace0 = go.Scatter(x=[1, 2, 3, 4], y=[10, 15, 13, 17])
+        data = [trace0]
+
+        with pytest.raises(StreamlitAPIException):
+            st.plotly_chart(data, width=invalid_value)
+
+    def test_width_parameter_with_selections(self):
+        """Test width parameter works correctly with selections activated."""
+        import plotly.graph_objs as go
+
+        trace0 = go.Scatter(x=[1, 2, 3, 4], y=[10, 15, 13, 17])
+        data = [trace0]
+
+        st.plotly_chart(data, width="content", on_select="rerun", key="test_key")
+
+        delta = self.get_delta_from_queue()
+        el = delta.new_element
+        assert el.width_config.WhichOneof("width_spec") == "pixel_width"
+        assert el.width_config.pixel_width == 700  # Content width defaults to 700px
+        assert len(el.plotly_chart.selection_mode) > 0  # Selections are activated
+
+    def test_width_defaults_to_stretch(self):
+        """Test that width parameter defaults to stretch when not provided."""
+        import plotly.graph_objs as go
+
+        trace0 = go.Scatter(x=[1, 2, 3, 4], y=[10, 15, 13, 17])
+        data = [trace0]
+
+        st.plotly_chart(data)
+
+        delta = self.get_delta_from_queue()
+        el = delta.new_element
+        assert el.width_config.WhichOneof("width_spec") == "use_stretch"
+        assert el.width_config.use_stretch
+
+    @parameterized.expand([(500, 500), (10, 10), (None, 700)])
+    def test_content_width_behavior(
+        self, figure_width: int | None, expected_width: int
+    ):
+        """Test that content width resolves figure layout width correctly."""
+        import plotly.graph_objs as go
+
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=[1, 2, 3, 4], y=[10, 15, 13, 17]))
+
+        if figure_width is not None:
+            fig.update_layout(width=figure_width, height=300)
+
+        st.plotly_chart(fig, width="content")
+
+        delta = self.get_delta_from_queue()
+        el = delta.new_element
+        assert el.width_config.WhichOneof("width_spec") == "pixel_width"
+        assert el.width_config.pixel_width == expected_width
+
+    def test_content_width_with_various_data_types(self):
+        """Test content width handling with different plotly-accepted data types."""
+        import plotly.graph_objs as go
+
+        with self.subTest("matplotlib_figure"):
+            import matplotlib.pyplot as plt
+
+            # Create a matplotlib figure
+            fig, ax = plt.subplots(figsize=(8, 6))  # 8 inches * 100 dpi = 800px width
+            ax.plot([1, 2, 3, 4], [10, 15, 13, 17])
+            ax.set_title("Matplotlib Figure")
+
+            st.plotly_chart(fig, width="content")
+            plt.close(fig)  # Clean up
+
+            delta = self.get_delta_from_queue()
+            el = delta.new_element
+            assert el.width_config.WhichOneof("width_spec") == "pixel_width"
+            # Matplotlib figures get converted, may not preserve exact width
+            # but should still resolve to a reasonable value
+            assert el.width_config.pixel_width >= 100
+
+        with self.subTest("data_list"):
+            # Create plotly data as a list (no explicit width in layout)
+            data = [go.Scatter(x=[1, 2, 3, 4], y=[10, 15, 13, 17])]
+            st.plotly_chart(data, width="content")
+
+            delta = self.get_delta_from_queue()
+            el = delta.new_element
+            assert el.width_config.WhichOneof("width_spec") == "pixel_width"
+            # No explicit width, should default to 700
+            assert el.width_config.pixel_width == 700
+
+        with self.subTest("data_dict"):
+            # Create plotly data as a dictionary (no explicit width)
+            data_dict = {
+                "data": [{"x": [1, 2, 3, 4], "y": [10, 15, 13, 17], "type": "scatter"}],
+                "layout": {"title": "Dict Data"},
+            }
+            st.plotly_chart(data_dict, width="content")
+
+            delta = self.get_delta_from_queue()
+            el = delta.new_element
+            assert el.width_config.WhichOneof("width_spec") == "pixel_width"
+            # No explicit width, should default to 700
+            assert el.width_config.pixel_width == 700
+
+        with self.subTest("plotly_figure_with_width"):
+            # Create plotly figure with explicit width
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(x=[1, 2, 3, 4], y=[10, 15, 13, 17]))
+            fig.update_layout(width=600, height=400, title="Figure with Width")
+            st.plotly_chart(fig, width="content")
+
+            delta = self.get_delta_from_queue()
+            el = delta.new_element
+            assert el.width_config.WhichOneof("width_spec") == "pixel_width"
+            # Should use the explicit width from the figure
+            assert el.width_config.pixel_width == 600
+
+
+class PlotlyChartHeightTest(DeltaGeneratorTestCase):
+    """Test plotly_chart height parameter functionality."""
+
+    @parameterized.expand(
+        [
+            # height, expected_height_spec, expected_height_value
+            (
+                "content",
+                "pixel_height",
+                450,
+            ),  # Content height resolves to 450px default
+            ("stretch", "use_stretch", True),
+            (300, "pixel_height", 300),
+        ]
+    )
+    def test_plotly_chart_height_combinations(
+        self,
+        height: str | int,
+        expected_height_spec: str,
+        expected_height_value: bool | int,
+    ):
+        """Test plotly chart with various height combinations."""
+        import plotly.graph_objs as go
+
+        trace0 = go.Scatter(x=[1, 2, 3, 4], y=[10, 15, 13, 17])
+        data = [trace0]
+
+        st.plotly_chart(data, height=height)
+
+        delta = self.get_delta_from_queue()
+        el = delta.new_element
+
+        assert el.height_config.WhichOneof("height_spec") == expected_height_spec
+        assert getattr(el.height_config, expected_height_spec) == expected_height_value
+
+    @parameterized.expand(
+        [
+            ("height", "invalid_height"),
+            ("height", 0),  # height must be positive
+            ("height", -100),  # negative height
+        ]
+    )
+    def test_height_validation_errors(self, param_name: str, invalid_value: str | int):
+        """Test that invalid height values raise validation errors."""
+        import plotly.graph_objs as go
+
+        trace0 = go.Scatter(x=[1, 2, 3, 4], y=[10, 15, 13, 17])
+        data = [trace0]
+
+        with pytest.raises(StreamlitAPIException):
+            st.plotly_chart(data, height=invalid_value)
+
+    def test_content_height_with_various_data_types(self):
+        """Test content height handling with different plotly-accepted data types."""
+        import plotly.graph_objs as go
+
+        with self.subTest("matplotlib_figure"):
+            import matplotlib.pyplot as plt
+
+            # Create a matplotlib figure
+            fig, ax = plt.subplots(figsize=(8, 6))  # 6 inches * 100 dpi = 600px height
+            ax.plot([1, 2, 3, 4], [10, 15, 13, 17])
+            ax.set_title("Matplotlib Figure")
+
+            st.plotly_chart(fig, height="content")
+            plt.close(fig)  # Clean up
+
+            delta = self.get_delta_from_queue()
+            el = delta.new_element
+            assert el.height_config.WhichOneof("height_spec") == "pixel_height"
+            # Matplotlib figures get converted, may not preserve exact height
+            # but should still resolve to a reasonable value
+            assert el.height_config.pixel_height >= 100
+
+        with self.subTest("data_list"):
+            # Create plotly data as a list (no explicit height in layout)
+            data = [go.Scatter(x=[1, 2, 3, 4], y=[10, 15, 13, 17])]
+            st.plotly_chart(data, height="content")
+
+            delta = self.get_delta_from_queue()
+            el = delta.new_element
+            assert el.height_config.WhichOneof("height_spec") == "pixel_height"
+            # No explicit height, should default to 450
+            assert el.height_config.pixel_height == 450
+
+        with self.subTest("data_dict"):
+            # Create plotly data as a dictionary (no explicit height)
+            data_dict = {
+                "data": [{"x": [1, 2, 3, 4], "y": [10, 15, 13, 17], "type": "scatter"}],
+                "layout": {"title": "Dict Data"},
+            }
+            st.plotly_chart(data_dict, height="content")
+
+            delta = self.get_delta_from_queue()
+            el = delta.new_element
+            assert el.height_config.WhichOneof("height_spec") == "pixel_height"
+            # No explicit height, should default to 450
+            assert el.height_config.pixel_height == 450
+
+        with self.subTest("plotly_figure_with_height_350"):
+            # Create plotly figure with explicit height
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(x=[1, 2, 3, 4], y=[10, 15, 13, 17]))
+            fig.update_layout(width=600, height=350, title="Figure with Height")
+            st.plotly_chart(fig, height="content")
+
+            delta = self.get_delta_from_queue()
+            el = delta.new_element
+            assert el.height_config.WhichOneof("height_spec") == "pixel_height"
+            # Should use the explicit height from the figure
+            assert el.height_config.pixel_height == 350
+
+        with self.subTest("plotly_figure_with_height_50"):
+            # Create plotly figure with small explicit height to test content resolution
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(x=[1, 2, 3, 4], y=[10, 15, 13, 17]))
+            fig.update_layout(width=600, height=50)
+            st.plotly_chart(fig, height="content")
+
+            delta = self.get_delta_from_queue()
+            el = delta.new_element
+            assert el.height_config.WhichOneof("height_spec") == "pixel_height"
+            # Should use the explicit height from the figure
+            assert el.height_config.pixel_height == 50
+
+        with self.subTest("height_with_selections"):
+            # Test that height parameter works correctly with selections activated
+            trace0 = go.Scatter(x=[1, 2, 3, 4], y=[10, 15, 13, 17])
+            data = [trace0]
+
+            st.plotly_chart(
+                data,
+                height="content",
+                on_select="rerun",
+                key="test_key_height_selections",
+            )
+
+            delta = self.get_delta_from_queue()
+            el = delta.new_element
+            assert el.height_config.WhichOneof("height_spec") == "pixel_height"
+            assert (
+                el.height_config.pixel_height == 450
+            )  # Content height defaults to 450px
+            assert len(el.plotly_chart.selection_mode) > 0  # Selections are activated

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,13 +19,13 @@ import { NewSession } from "@streamlit/protobuf"
 import { mockSessionInfoProps } from "./mocks/mocks"
 import { SessionInfo } from "./SessionInfo"
 
-test("Throws an error when used before initialization", () => {
+it("Throws an error when used before initialization", () => {
   const sessionInfo = new SessionInfo()
   expect(() => sessionInfo.current).toThrow()
 })
 
 describe("SessionInfo.setCurrent", () => {
-  test("copies props to `current`", () => {
+  it("copies props to `current`", () => {
     const sessionInfo = new SessionInfo()
     sessionInfo.setCurrent(mockSessionInfoProps())
 
@@ -33,7 +33,7 @@ describe("SessionInfo.setCurrent", () => {
     expect(sessionInfo.current).toEqual(mockSessionInfoProps())
   })
 
-  test("copies previous props to `last`", () => {
+  it("copies previous props to `last`", () => {
     const sessionInfo = new SessionInfo()
     sessionInfo.setCurrent(mockSessionInfoProps())
     expect(sessionInfo.last).toBeUndefined()
@@ -47,7 +47,7 @@ describe("SessionInfo.setCurrent", () => {
 })
 
 describe("SessionInfo.isHello", () => {
-  test("is true only when `isHello` is true in current SessionInfo", () => {
+  it("is true only when `isHello` is true in current SessionInfo", () => {
     const sessionInfo = new SessionInfo()
     expect(sessionInfo.isHello).toBe(false)
 
@@ -59,7 +59,7 @@ describe("SessionInfo.isHello", () => {
   })
 })
 
-test("Props can be initialized from a protobuf", () => {
+it("Props can be initialized from a protobuf", () => {
   const MESSAGE = new NewSession({
     config: {
       gatherUsageStats: false,

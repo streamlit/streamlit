@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from authlib.integrations.base_client import (
     BaseApp,
@@ -32,6 +32,8 @@ from authlib.integrations.requests_client import (
 from streamlit.web.server.authlib_tornado_integration import TornadoIntegration
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     import tornado.web
 
     from streamlit.auth_util import AuthCache
@@ -81,11 +83,20 @@ class TornadoOAuth2App(OAuth2Mixin, OpenIDMixin, BaseApp):
             "state": request_handler.get_argument("state"),
         }
 
-        session = None
+        # Authlib 1.6.6+ always writes state to session even when cache is available.
+        # We also override state access to use the cache instead of session in `TornadoIntegration`.
+        session: dict[str, Any] = {}
 
         claims_options = kwargs.pop("claims_options", None)
         state_data = self.framework.get_state_data(session, params.get("state"))
         self.framework.clear_state_data(session, params.get("state"))
+
+        if not state_data:
+            raise OAuthError(
+                error="invalid_state",
+                description="OAuth state not found or expired. Please try logging in again.",
+            )
+
         params = self._format_state_params(state_data, params)  # type: ignore[attr-defined]
         token = self.fetch_access_token(**params, **kwargs)
 
@@ -98,11 +109,13 @@ class TornadoOAuth2App(OAuth2Mixin, OpenIDMixin, BaseApp):
 
     def _save_authorize_data(self, **kwargs: Any) -> None:
         """Authlib underlying uses the concept of "session" to store state data.
-        In Tornado, we don't have a session, so we use the framework's cache option.
+        In Tornado, we don't have a session, so we use an empty dict as a placeholder.
+        We also override state access to use the cache instead of session in `TornadoIntegration`.
+        Authlib 1.6.6+ always writes state to session even when cache is available.
         """
         state = kwargs.pop("state", None)
         if state:
-            session = None
+            session: dict[str, Any] = {}
             self.framework.set_state_data(session, state, kwargs)
         else:
             raise RuntimeError("Missing state value")

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -59,7 +59,7 @@ class TextInputTest(DeltaGeneratorTestCase):
         arg_values = ["some str", 123, {}, SomeObj()]
         proto_values = ["some str", "123", "{}", ".*SomeObj.*"]
 
-        for arg_value, proto_value in zip(arg_values, proto_values):
+        for arg_value, proto_value in zip(arg_values, proto_values, strict=False):
             st.text_input("the label", arg_value)
 
             c = self.get_delta_from_queue().new_element.text_input
@@ -81,7 +81,7 @@ class TextInputTest(DeltaGeneratorTestCase):
         # Test valid input types.
         type_strings = ["default", "password"]
         type_values = [TextInput.DEFAULT, TextInput.PASSWORD]
-        for type_string, type_value in zip(type_strings, type_values):
+        for type_string, type_value in zip(type_strings, type_values, strict=False):
             st.text_input("label", type=type_string)
 
             c = self.get_delta_from_queue().new_element.text_input
@@ -144,7 +144,7 @@ class TextInputTest(DeltaGeneratorTestCase):
 
     def test_inside_column(self):
         """Test that it works correctly inside of a column."""
-        col1, col2, col3 = st.columns([2.5, 1.5, 0.5])
+        col1, _col2, _col3 = st.columns([2.5, 1.5, 0.5])
 
         with col1:
             st.text_input("foo")
@@ -248,9 +248,88 @@ class TextInputTest(DeltaGeneratorTestCase):
         st.cache_data(lambda: st.text_input("the label"))()
 
         # The widget itself is still created, so we need to go back one element more:
-        el = self.get_delta_from_queue(-2).new_element.exception
+        el = self.get_delta_from_queue(-3).new_element.exception
         assert el.type == "CachedWidgetWarning"
         assert el.is_warning
+
+    def test_stable_id_with_key(self):
+        """Test that the widget ID is stable when a stable key is provided."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            # First render with certain params
+            st.text_input(
+                label="Label 1",
+                key="text_input_key",
+                value="abc",
+                help="Help 1",
+                disabled=False,
+                width="stretch",
+                on_change=lambda: None,
+                args=("arg1", "arg2"),
+                kwargs={"kwarg1": "kwarg1"},
+                label_visibility="visible",
+                placeholder="placeholder 1",
+                max_chars=50,
+                type="default",
+                autocomplete="auto1",
+                icon=":material/search:",
+            )
+            c1 = self.get_delta_from_queue().new_element.text_input
+            id1 = c1.id
+
+            # Second render with different params but same key (keep max_chars the same)
+            st.text_input(
+                label="Label 2",
+                key="text_input_key",
+                value="def",
+                help="Help 2",
+                disabled=True,
+                width=200,
+                on_change=lambda: None,
+                args=("arg_1", "arg_2"),
+                kwargs={"kwarg_1": "kwarg_1"},
+                label_visibility="hidden",
+                placeholder="placeholder 2",
+                max_chars=50,
+                type="password",
+                autocomplete="auto2",
+                icon="🔎",
+            )
+            c2 = self.get_delta_from_queue().new_element.text_input
+            id2 = c2.id
+            assert id1 == id2
+
+    @parameterized.expand(
+        [
+            ("max_chars", 100, 200),
+        ]
+    )
+    def test_whitelisted_stable_key_kwargs(
+        self, kwarg_name: str, value1: object, value2: object
+    ):
+        """Test that the widget ID changes when a whitelisted kwarg changes even when the key is provided."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            st.text_input(
+                label="Label 1",
+                key="text_input_key",
+                **{kwarg_name: value1},
+            )
+            c1 = self.get_delta_from_queue().new_element.text_input
+            id1 = c1.id
+
+            st.text_input(
+                label="Label 2",
+                key="text_input_key",
+                **{kwarg_name: value2},
+            )
+            c2 = self.get_delta_from_queue().new_element.text_input
+            id2 = c2.id
+            assert id1 != id2
 
 
 class SomeObj:

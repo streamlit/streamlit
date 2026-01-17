@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,3 +31,4 @@ export { default as useRowHover } from "./useRowHover"
 export { default as useSelectionHandler } from "./useSelectionHandler"
 export { default as useTableSizer } from "./useTableSizer"
 export { default as useTooltips } from "./useTooltips"
+export { default as useWidgetState } from "./useWidgetState"

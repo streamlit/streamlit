@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, {
+import {
   ChangeEvent,
   FC,
   memo,
@@ -27,21 +27,19 @@ import React, {
 
 import { MetricsManager } from "@streamlit/app/src/MetricsManager"
 import {
-  BaseButton,
-  BaseButtonKind,
-  LibContext,
+  CUSTOM_THEME_NAME,
   Modal,
   ModalBody,
   ModalHeader,
   SessionInfo,
   StreamlitMarkdown,
   ThemeConfig,
+  ThemeContext,
   UISelectbox,
 } from "@streamlit/lib"
 
 import CopyText from "./CopyText"
 import {
-  StyledButtonContainer,
   StyledCheckbox,
   StyledDialogBody,
   StyledFullRow,
@@ -56,23 +54,9 @@ export interface Props {
   onSave: (settings: UserSettings) => void
   settings: UserSettings
   allowRunOnSave: boolean
-  developerMode: boolean
-  openThemeCreator: () => void
   animateModal: boolean
   metricsMgr: MetricsManager
   sessionInfo: SessionInfo
-}
-
-const ThemeCreatorButton: FC<Pick<Props, "openThemeCreator">> = ({
-  openThemeCreator,
-}) => {
-  return (
-    <StyledButtonContainer data-testid="edit-theme">
-      <BaseButton onClick={openThemeCreator} kind={BaseButtonKind.SECONDARY}>
-        Edit active theme
-      </BaseButton>
-    </StyledButtonContainer>
-  )
 }
 
 /**
@@ -84,15 +68,14 @@ export const SettingsDialog: FC<Props> = memo(function SettingsDialog({
   onSave,
   settings,
   allowRunOnSave,
-  developerMode,
-  openThemeCreator,
   animateModal,
   metricsMgr,
   sessionInfo,
 }) {
-  const libContext = useContext(LibContext)
-  const activeSettings = useRef(settings)
-  const isFirstRun = useRef(true)
+  const { activeTheme, availableThemes, setTheme } = useContext(ThemeContext)
+
+  const activeSettingsRef = useRef(settings)
+  const isFirstRunRef = useRef(true)
   const [state, setState] = useState<UserSettings>({ ...settings })
 
   const changeSingleSetting = useCallback(
@@ -103,13 +86,13 @@ export const SettingsDialog: FC<Props> = memo(function SettingsDialog({
   )
 
   useEffect(() => {
-    if (isFirstRun.current) {
-      isFirstRun.current = false
+    if (isFirstRunRef.current) {
+      isFirstRunRef.current = false
       return
     }
 
-    activeSettings.current = state
-    onSave(activeSettings.current)
+    activeSettingsRef.current = state
+    onSave(activeSettingsRef.current)
   }, [onSave, state])
 
   const handleCheckboxChange = useCallback(
@@ -121,24 +104,35 @@ export const SettingsDialog: FC<Props> = memo(function SettingsDialog({
 
   const handleThemeChange = useCallback(
     (themeName: string | null): void => {
+      // The themeName from selector will always be Light, Dark, or Use System Setting
+      // These are the names for default themes, and the display names for custom themes
       let newTheme = undefined
       if (themeName) {
-        newTheme = libContext.availableThemes.find(
-          (theme: ThemeConfig) => theme.name === themeName
+        newTheme = availableThemes.find((theme: ThemeConfig) =>
+          theme.name.startsWith("Custom Theme")
+            ? theme.displayName === themeName
+            : theme.name === themeName
         )
       }
       if (newTheme === undefined) {
-        newTheme = libContext.availableThemes[0]
+        newTheme = availableThemes[0]
       }
 
       metricsMgr.enqueue("menuClick", {
         label: "changeTheme",
       })
 
-      libContext.setTheme(newTheme)
+      setTheme(newTheme)
     },
-    [libContext, metricsMgr]
+    [setTheme, metricsMgr, availableThemes]
   )
+
+  const getAvailableThemeChoices = useCallback(() => {
+    return availableThemes.map(theme => {
+      // Custom themes have a display name, default themes just use their name
+      return theme.displayName ?? theme.name
+    })
+  }, [availableThemes])
 
   return (
     <Modal animate={animateModal} isOpen onClose={onClose}>
@@ -184,22 +178,17 @@ export const SettingsDialog: FC<Props> = memo(function SettingsDialog({
             />
           </StyledFullRow>
 
-          {!!libContext.availableThemes.length && (
+          {!!availableThemes.length && (
             <StyledFullRow>
-              <StyledLabel>Choose app theme, colors and fonts</StyledLabel>
+              <StyledLabel>Choose app theme</StyledLabel>
               <UISelectbox
-                options={libContext.availableThemes.map(
-                  (theme: ThemeConfig) => theme.name
-                )}
-                disabled={false}
+                options={getAvailableThemeChoices()}
+                disabled={activeTheme.name === CUSTOM_THEME_NAME}
                 onChange={handleThemeChange}
-                value={libContext.activeTheme.name}
+                value={activeTheme.displayName ?? activeTheme.name}
                 placeholder=""
                 acceptNewOptions={false}
               />
-              {developerMode && (
-                <ThemeCreatorButton openThemeCreator={openThemeCreator} />
-              )}
             </StyledFullRow>
           )}
 

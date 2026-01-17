@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -63,7 +63,7 @@ st.scatter_chart(df)
 st.scatter_chart(df, x="a")
 st.scatter_chart(df, y="a")
 st.scatter_chart(df, y=["a", "b"])
-st.scatter_chart(df, x="a", y="b", height=500, width=300, use_container_width=False)
+st.scatter_chart(df, x="a", y="b", height=500, width=300)
 st.scatter_chart(df, x="b", y="a")
 st.scatter_chart(df, x="a", y=["b", "c"])
 st.scatter_chart(utc_df)
@@ -88,7 +88,6 @@ empty_scatter = st.scatter_chart(
     color=["#800080", "#0000FF"],  # Purple and Blue
     width=600,
     height=300,
-    use_container_width=False,
 )
 
 if st.button("Add data to Scatter Chart"):

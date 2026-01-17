@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -106,3 +106,72 @@ st.number_input(
     max_value=100,
     width="stretch",
 )
+
+st.markdown("Dynamic number input:")
+
+if st.toggle("Update number input props"):
+    dyn_val = st.number_input(
+        "Updated dynamic number input",
+        value=15,
+        width=300,
+        help="updated help",
+        format="%0.2f",
+        placeholder="Updated placeholder",
+        icon=":material/looks_two:",
+        key="dynamic_number_input_with_key",
+        on_change=lambda a, param: print(
+            f"Updated text input - callback triggered: {a} {param}"
+        ),
+        args=("Updated text arg",),
+        kwargs={"param": "updated kwarg param"},
+        min_value=10,
+        max_value=50,
+        step=5,
+    )
+    st.write("Updated number input value:", dyn_val)
+else:
+    dyn_val = st.number_input(
+        "Initial dynamic number input",
+        value=5,
+        width="stretch",
+        help="initial help",
+        format="%d",
+        placeholder="Initial placeholder",
+        icon=":material/looks_one:",
+        key="dynamic_number_input_with_key",
+        on_change=lambda a, param: print(
+            f"Initial text input - callback triggered: {a} {param}"
+        ),
+        args=("Initial text arg",),
+        kwargs={"param": "initial kwarg param"},
+        min_value=0,
+        max_value=100,
+        step=1,
+    )
+    st.write("Initial number input value:", dyn_val)
+
+# Test very small step values that JavaScript represents in scientific notation (1e-7)
+# This input starts at 0 for testing increment
+v18 = st.number_input(
+    "number input 18 (small step increment)",
+    value=0.0,
+    min_value=0.0,
+    max_value=0.001,
+    step=0.0000001,
+    format="%0.7f",
+    key="number_input_18",
+)
+# Format explicitly to avoid Python's scientific notation (e.g., 1e-07)
+st.write(f"number input 18 (small step increment) - value: {v18:.7f}")
+
+# This input starts at 0.0000005 for testing decrement
+v19 = st.number_input(
+    "number input 19 (small step decrement)",
+    value=0.0000005,
+    min_value=0.0,
+    max_value=0.001,
+    step=0.0000001,
+    format="%0.7f",
+    key="number_input_19",
+)
+st.write(f"number input 19 (small step decrement) - value: {v19:.7f}")

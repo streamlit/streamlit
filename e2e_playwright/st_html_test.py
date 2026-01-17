@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,13 +15,16 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
-from e2e_playwright.shared.app_utils import check_top_level_class, get_expander
+from e2e_playwright.shared.app_utils import (
+    check_top_level_class,
+    get_expander,
+)
 
 # Each st.html call generates a stHtml frontend element.
 # If the html content is only style tags, it will generate the stHtml element
 # in the event container. If the html content is a mix of style tags and other tags,
 # it will generate the stHtml element with both style/other tags in the main container.
-ST_HTML_ELEMENTS = 10
+ST_HTML_ELEMENTS = 12
 
 
 def test_html_in_line_styles(themed_app: Page, assert_snapshot: ImageCompareFunction):
@@ -111,13 +114,13 @@ def test_html_in_main_container(app: Page):
     # in the main container and are visible
     main_container = app.get_by_test_id("stMain")
     other_html_elements = main_container.get_by_test_id("stHtml")
-    expect(other_html_elements).to_have_count(8)
+    expect(other_html_elements).to_have_count(10)
 
     # Check that the remaining stHtml elements are in the main container
     # and are visible
     main_container = app.get_by_test_id("stMain")
     other_html_elements = main_container.get_by_test_id("stHtml")
-    expect(other_html_elements).to_have_count(8)
+    expect(other_html_elements).to_have_count(10)
     expect(other_html_elements.nth(0)).to_be_visible()
     expect(other_html_elements.nth(1)).to_be_visible()
     expect(other_html_elements.nth(2)).to_be_visible()
@@ -192,3 +195,42 @@ def test_html_width_examples(app: Page, assert_snapshot: ImageCompareFunction):
     assert_snapshot(main_html_elements.nth(5), name="st_html-width_content")
     assert_snapshot(main_html_elements.nth(6), name="st_html-width_stretch")
     assert_snapshot(main_html_elements.nth(7), name="st_html-width_300px")
+
+
+def test_html_executes_javascript_when_allowed(app: Page) -> None:
+    """Test that JavaScript executes in st.html when
+    `unsafe_allow_javascript=True` is set.
+
+    This test verifies that when the `unsafe_allow_javascript` option is
+    enabled, JavaScript code within st.html is executed, and that the expected
+    side effects occur.
+    """
+    el = app.locator("#x")
+    expect(el).to_have_text("OK")
+
+    ran = app.evaluate("() => window.__st_html_flag__")
+    assert ran == "ran"
+
+
+def test_html_nested_lists_have_indentation(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that nested lists display proper indentation (issue #13426).
+
+    Verifies that ul/ol elements inside st.html have padding restored
+    to display nested list indentation correctly.
+    """
+    main_list = app.locator("#nested-list-test")
+    expect(main_list).to_be_visible()
+
+    # Verify the nested lists exist
+    outer_items = main_list.locator("> li")
+    expect(outer_items).to_have_count(2)
+
+    # Check nested ul elements exist (inside the li items)
+    nested_list = main_list.locator("ul")
+    expect(nested_list).to_have_count(2)
+
+    # Get the parent stHtml container for snapshot
+    html_container = main_list.locator("..")
+    assert_snapshot(html_container, name="st_html-nested_lists")

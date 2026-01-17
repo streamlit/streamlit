@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -46,7 +46,7 @@ class PageHelperFunctionTests(unittest.TestCase):
     def test_page_sort_key_error(self):
         with pytest.raises(
             ValueError,
-            match="/foo/bar/baz.rs is not a Python file. This should never happen.",
+            match=r"/foo/bar/baz.rs is not a Python file. This should never happen.",
         ):
             source_util.page_sort_key(Path("/foo/bar/baz.rs"))
 

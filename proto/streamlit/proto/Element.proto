@@ -1,5 +1,5 @@
 /**!
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,6 +36,7 @@ import "streamlit/proto/Code.proto";
 import "streamlit/proto/ColorPicker.proto";
 import "streamlit/proto/DataFrame.proto";
 import "streamlit/proto/DateInput.proto";
+import "streamlit/proto/DateTimeInput.proto";
 import "streamlit/proto/DeckGlJsonChart.proto";
 import "streamlit/proto/DocString.proto";
 import "streamlit/proto/Empty.proto";
@@ -62,6 +63,7 @@ import "streamlit/proto/Radio.proto";
 import "streamlit/proto/Selectbox.proto";
 import "streamlit/proto/Skeleton.proto";
 import "streamlit/proto/Slider.proto";
+import "streamlit/proto/Space.proto";
 import "streamlit/proto/Text.proto";
 import "streamlit/proto/TextArea.proto";
 import "streamlit/proto/TextInput.proto";
@@ -70,8 +72,10 @@ import "streamlit/proto/Toast.proto";
 import "streamlit/proto/VegaLiteChart.proto";
 import "streamlit/proto/Video.proto";
 import "streamlit/proto/Heading.proto";
+import "streamlit/proto/BidiComponent.proto";
 import "streamlit/proto/HeightConfig.proto";
 import "streamlit/proto/WidthConfig.proto";
+import "streamlit/proto/TextAlignmentConfig.proto";
 
 // An element which can be displayed on the screen.
 message Element {
@@ -79,6 +83,7 @@ message Element {
   // Layout configuration for elements
   optional streamlit.HeightConfig height_config = 57;
   optional streamlit.WidthConfig width_config = 58;
+  optional streamlit.TextAlignmentConfig text_alignment_config = 61;
 
   // An element can be one of the following element types.
   oneof type {
@@ -89,6 +94,7 @@ message Element {
     Audio audio = 13;
     AudioInput audio_input = 56;
     Balloons balloons = 12;
+    BidiComponent bidi_component = 59;
     BokehChart bokeh_chart = 17;
     Button button = 19;
     ButtonGroup button_group = 55;
@@ -127,18 +133,20 @@ message Element {
     Skeleton skeleton = 52;
     Slider slider = 21;
     Snow snow = 46;
+    Space space = 60;
     Spinner spinner = 44;
     Text text = 1;
     TextArea text_area = 22;
     TextInput text_input = 24;
     TimeInput time_input = 26;
+    DateTimeInput date_time_input = 62;
     Toast toast = 50;
     // DEPRECATED: This element is deprecated and unused:
     VegaLiteChart vega_lite_chart = 10;
     Video video = 14;
     Heading heading = 47;
     Code code = 48;
-    // Next ID: 59
+    // Next ID: 63
   }
 
   reserved 9;

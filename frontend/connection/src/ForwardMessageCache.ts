@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -158,7 +158,7 @@ export class ForwardMsgCache {
       return
     }
 
-    if (!msg.metadata || !msg.metadata.cacheable) {
+    if (!msg.metadata?.cacheable) {
       // Don't cache messages that the server hasn't marked as cacheable.
       return
     }

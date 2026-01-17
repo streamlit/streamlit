@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,8 +14,12 @@
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import wait_for_app_run
-from e2e_playwright.shared.app_utils import click_button, expect_markdown
+from e2e_playwright.shared.app_utils import (
+    click_button,
+    expect_markdown,
+    expect_prefixed_markdown,
+    select_selectbox_option,
+)
 
 
 def _expect_initial_reruns_finished(app: Page):
@@ -25,7 +29,7 @@ def _expect_initial_reruns_finished(app: Page):
 
 
 def _expect_initial_reruns_count_text(app: Page):
-    expect_markdown(app, "app run count: 4")
+    expect_prefixed_markdown(app, "app run count:", "4")
 
 
 def test_st_rerun_restarts_the_session_when_invoked(app: Page):
@@ -57,18 +61,15 @@ def test_rerun_works_in_try_except_block(app: Page):
     click_button(app, "rerun try_fragment")
     # the rerun in the try-block worked as expected, so the session_state count
     # incremented
-    expect_markdown(app, "app run count: 5")
+    expect_prefixed_markdown(app, "app run count:", "5")
 
 
 def test_state_retained_on_app_scoped_rerun(app: Page):
     # Sanity check 1
-    expect_markdown(app, "selectbox selection: None")
+    expect_prefixed_markdown(app, "selectbox selection:", "None")
 
     # Click on the selectbox and select the first option.
-    app.get_by_test_id("stSelectbox").first.locator("input").click()
-    selection_dropdown = app.locator('[data-baseweb="popover"]').first
-    selection_dropdown.locator("li").first.click()
-    wait_for_app_run(app)
+    select_selectbox_option(app, "i should retain my state", "a")
 
     # Sanity check 2
     expect_markdown(app, "selectbox selection: a")

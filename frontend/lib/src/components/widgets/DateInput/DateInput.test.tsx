@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,8 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-import React from "react"
 
 import {
   act,
@@ -424,7 +422,9 @@ describe("DateInput widget", () => {
       it("renders expected week day ordering", async () => {
         const user = userEvent.setup()
         const props = getProps()
-        renderWithContexts(<DateInput {...props} />, { locale })
+        renderWithContexts(<DateInput {...props} />, {
+          libConfigContext: { locale },
+        })
 
         await user.click(await screen.findByLabelText("Select a date."))
 
@@ -438,7 +438,9 @@ describe("DateInput widget", () => {
       it("renders expected week day ordering", async () => {
         const user = userEvent.setup()
         const props = getProps()
-        renderWithContexts(<DateInput {...props} />, { locale })
+        renderWithContexts(<DateInput {...props} />, {
+          libConfigContext: { locale },
+        })
 
         await user.click(await screen.findByLabelText("Select a date."))
 
@@ -452,7 +454,9 @@ describe("DateInput widget", () => {
       it("renders expected week day ordering", async () => {
         const user = userEvent.setup()
         const props = getProps()
-        renderWithContexts(<DateInput {...props} />, { locale })
+        renderWithContexts(<DateInput {...props} />, {
+          libConfigContext: { locale },
+        })
 
         await user.click(await screen.findByLabelText("Select a date."))
 
@@ -466,7 +470,9 @@ describe("DateInput widget", () => {
       it("falls back to en-US locale", async () => {
         const user = userEvent.setup()
         const props = getProps()
-        renderWithContexts(<DateInput {...props} />, { locale })
+        renderWithContexts(<DateInput {...props} />, {
+          libConfigContext: { locale },
+        })
 
         await user.click(await screen.findByLabelText("Select a date."))
 

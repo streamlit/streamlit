@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -172,3 +172,48 @@ st.multiselect(
     default=many_options[0:28],
     width="stretch",
 )
+
+if st.toggle("Update multiselect props"):
+    ms_value = st.multiselect(
+        "Updated dynamic multiselect",
+        default=[],
+        width=300,
+        help="updated help",
+        key="dynamic_multiselect_with_key",
+        on_change=lambda a, param: print(
+            f"Updated multiselect - callback triggered: {a} {param}"
+        ),
+        args=("Updated ms arg",),
+        kwargs={"param": "updated kwarg param"},
+        placeholder="updated placeholder",
+        options=["mango", "papaya", "grape", "apple"],
+        # Whitelisted kwargs (keep stable):
+        max_selections=3,
+        accept_new_options=False,
+        # format_func is not whitelisted. Changing format_func is allowed,
+        # but selected options will be unselected if their formatted label
+        # no longer matches (e.g., "Apple" vs "APPLE"). This is something
+        # we might be able to support with some additional refactorings.
+        format_func=lambda x: x.capitalize(),
+    )
+    st.write("Updated multiselect value:", str(ms_value))
+else:
+    sms_value = st.multiselect(
+        "Initial dynamic multiselect",
+        default=["apple"],
+        width="stretch",
+        help="initial help",
+        key="dynamic_multiselect_with_key",
+        on_change=lambda a, param: print(
+            f"Initial multiselect - callback triggered: {a} {param}"
+        ),
+        args=("Initial ms arg",),
+        kwargs={"param": "initial kwarg param"},
+        placeholder="initial placeholder",
+        options=["apple", "banana", "mango", "orange"],
+        # Whitelisted kwargs (keep stable):
+        max_selections=3,
+        accept_new_options=False,
+        format_func=lambda x: x.capitalize(),
+    )
+    st.write("Initial multiselect value:", str(sms_value))

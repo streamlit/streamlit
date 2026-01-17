@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,7 +17,6 @@
 from __future__ import annotations
 
 import os
-import subprocess
 from typing import Any
 
 from streamlit import env_util, errors
@@ -60,7 +59,9 @@ def _open_browser_with_webbrowser(url: str) -> None:
 
 def _open_browser_with_command(command: str, url: str) -> None:
     cmd_line = [command, url]
-    with open(os.devnull, "w") as devnull:
+    with open(os.devnull, "w", encoding="utf-8") as devnull:
+        import subprocess  # noqa: S404
+
         subprocess.Popen(cmd_line, stdout=devnull, stderr=subprocess.STDOUT)  # noqa: S603
 
 

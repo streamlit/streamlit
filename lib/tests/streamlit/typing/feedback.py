@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal, Union
+from typing import TYPE_CHECKING, Literal
 
 from typing_extensions import assert_type
 
@@ -24,7 +24,7 @@ if TYPE_CHECKING:
 
     feedback = ButtonGroupMixin().feedback
 
-    assert_type(feedback(), Union[None, Literal[0, 1]])
-    assert_type(feedback("thumbs"), Union[None, Literal[0, 1]])
-    assert_type(feedback("faces"), Union[None, Literal[0, 1, 2, 3, 4]])
-    assert_type(feedback("stars"), Union[None, Literal[0, 1, 2, 3, 4]])
+    assert_type(feedback(), Literal[0, 1] | None)
+    assert_type(feedback("thumbs"), Literal[0, 1] | None)
+    assert_type(feedback("faces"), Literal[0, 1, 2, 3, 4] | None)
+    assert_type(feedback("stars"), Literal[0, 1, 2, 3, 4] | None)

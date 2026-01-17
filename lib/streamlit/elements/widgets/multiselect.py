@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,7 +19,6 @@ from textwrap import dedent
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
     Generic,
     Literal,
     TypeVar,
@@ -39,6 +38,7 @@ from streamlit.elements.lib.options_selector_utils import (
     create_mappings,
     get_default_indices,
     maybe_coerce_enum_sequence,
+    validate_and_sync_multiselect_value_with_options,
 )
 from streamlit.elements.lib.policies import (
     check_widget_policies,
@@ -64,7 +64,7 @@ from streamlit.type_util import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Callable, Sequence
 
     from streamlit.dataframe_util import OptionSequence
     from streamlit.delta_generator import DeltaGenerator
@@ -247,7 +247,7 @@ class MultiSelectMixin:
         placeholder: str | None = None,
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
-        accept_new_options: Literal[False, True] | bool = False,
+        accept_new_options: bool = False,
         width: WidthWithoutContent = "stretch",
     ) -> list[T] | list[T | str]:
         r"""Display a multiselect widget.
@@ -370,7 +370,9 @@ class MultiSelectMixin:
         Returns
         -------
         list
-            A list with the selected options
+            A list of the selected options.
+
+            The list contains copies of the selected options, not the originals.
 
         Examples
         --------
@@ -492,6 +494,10 @@ class MultiSelectMixin:
         element_id = compute_and_register_element_id(
             widget_name,
             user_key=key,
+            key_as_main_identity={
+                "max_selections",
+                "accept_new_options",
+            },
             dg=self.dg,
             label=label,
             options=formatted_options,
@@ -543,8 +549,23 @@ class MultiSelectMixin:
             widget_state, options, indexable_options
         )
 
-        if widget_state.value_changed:
-            proto.raw_values[:] = serde.serialize(widget_state.value)
+        if accept_new_options:
+            # accept_new_options is True, so we keep the user-entered values.
+            current_values = widget_state.value
+            value_needs_reset = False
+        else:
+            # Validate the current values against the new options.
+            # If values are no longer valid (not in options), filter them out.
+            # This handles the case where options change dynamically and the
+            # previously selected values are no longer available.
+            current_values, value_needs_reset = (
+                validate_and_sync_multiselect_value_with_options(
+                    widget_state.value, indexable_options, key
+                )
+            )
+
+        if value_needs_reset or widget_state.value_changed:
+            proto.raw_values[:] = serde.serialize(current_values)
             proto.set_value = True
 
         validate_width(width)
@@ -555,7 +576,7 @@ class MultiSelectMixin:
 
         self.dg._enqueue(widget_name, proto, layout_config=layout_config)
 
-        return widget_state.value
+        return current_values
 
     @property
     def dg(self) -> DeltaGenerator:

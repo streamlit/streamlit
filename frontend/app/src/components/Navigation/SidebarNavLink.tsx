@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,9 +14,8 @@
  * limitations under the License.
  */
 
-import React, { MouseEvent, ReactElement } from "react"
+import { MouseEvent, ReactElement } from "react"
 
-import { useAppContext } from "@streamlit/app/src/components/StreamlitContextProvider"
 import { DynamicIcon, isMaterialIcon, useEmotionTheme } from "@streamlit/lib"
 
 import {
@@ -32,7 +31,9 @@ export interface SidebarNavLinkProps {
   icon: string | undefined | null
   onClick: (e: MouseEvent) => void
   isTopNav?: boolean
+  isInDropdown?: boolean
   children: string
+  widgetsDisabled: boolean
 }
 
 const SidebarNavLink = ({
@@ -41,14 +42,24 @@ const SidebarNavLink = ({
   icon,
   onClick,
   isTopNav,
+  isInDropdown,
   children,
+  widgetsDisabled,
 }: SidebarNavLinkProps): ReactElement => {
   const theme = useEmotionTheme()
   // If connection state not connected, or host has disabled inputs,
   // disable sidebar nav links
-  const { widgetsDisabled: disableSidebarNavLinks } = useAppContext()
+  const disableSidebarNavLinks = widgetsDisabled
 
-  const navLinkTestId = isTopNav ? "stTopNavLink" : "stSidebarNavLink"
+  // Determine the appropriate test ID based on context
+  let navLinkTestId: string
+  if (isTopNav && isInDropdown) {
+    navLinkTestId = "stTopNavDropdownLink"
+  } else if (isTopNav) {
+    navLinkTestId = "stTopNavLink"
+  } else {
+    navLinkTestId = "stSidebarNavLink"
+  }
   const navLinkContainerTestId = isTopNav
     ? "stTopNavLinkContainer"
     : "stSidebarNavLinkContainer"

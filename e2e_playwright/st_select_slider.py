@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -72,6 +72,7 @@ w6 = st.select_slider(
     "Label 6 (hidden visibility)",
     options=["red", "orange", "yellow", "green", "blue", "indigo", "violet"],
     label_visibility="hidden",
+    key="select_slider_hidden",
 )
 
 st.write("Value 6:", w6)
@@ -81,6 +82,7 @@ w7 = st.select_slider(
     "Label 7 (collapsed visibility)",
     options=["red", "orange", "yellow", "green", "blue", "indigo", "violet"],
     label_visibility="collapsed",
+    key="select_slider_collapsed",
 )
 
 st.write("Value 7:", w7)
@@ -151,3 +153,61 @@ if "runs" not in st.session_state:
     st.session_state.runs = 0
 st.session_state.runs += 1
 st.write("Runs:", st.session_state.runs)
+
+# Markdown text trick to fix firefox sub-pixel flakiness:
+st.write("Dynamic select slider state:")
+
+if st.toggle("Update select slider props"):
+    dyn_val = st.select_slider(
+        "Updated dynamic select slider",
+        value="blue",
+        width=300,
+        help="updated help",
+        key="dynamic_select_slider_with_key",
+        on_change=lambda a, param: print(
+            f"Updated select slider - callback triggered: {a} {param}"
+        ),
+        args=("Updated select arg",),
+        kwargs={"param": "updated kwarg param"},
+        # options are not yet supported for dynamic changes
+        # keeping it at the same value:
+        options=["red", "orange", "yellow", "green", "blue"],
+    )
+    st.write("Updated select slider value:", dyn_val)
+else:
+    dyn_val = st.select_slider(
+        "Initial dynamic select slider",
+        value="orange",
+        width="stretch",
+        help="initial help",
+        key="dynamic_select_slider_with_key",
+        on_change=lambda a, param: print(
+            f"Initial select slider - callback triggered: {a} {param}"
+        ),
+        args=("Initial select arg",),
+        kwargs={"param": "initial kwarg param"},
+        # options are not yet supported for dynamic changes
+        # keeping it at the same value:
+        options=["red", "orange", "yellow", "green", "blue"],
+    )
+    st.write("Initial select slider value:", dyn_val)
+
+
+MARKDOWN_SELECT_SLIDER_OPTIONS = [
+    "~~Strikethrough~~",
+    "*Italics*",
+    "**Bold**",
+    "`Inline code`",
+    ":material/check: Icon option",
+    ":orange-background[Highlighted text]",
+    ":green[Success text]",
+    "[Docs](https://streamlit.io)",
+]
+
+markdown_select_slider_value = st.select_slider(
+    "Label 15 - Markdown in options",
+    options=MARKDOWN_SELECT_SLIDER_OPTIONS,
+    value=MARKDOWN_SELECT_SLIDER_OPTIONS[0],
+    key="markdown_options_select_slider",
+)
+st.write("Markdown option selection:", markdown_select_slider_value)

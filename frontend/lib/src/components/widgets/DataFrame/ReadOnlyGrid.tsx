@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-import React from "react"
-
 import { Arrow, Arrow as ArrowProto, streamlit } from "@streamlit/protobuf"
 
 import { Quiver } from "~lib/dataframes/Quiver"
@@ -25,6 +23,7 @@ import DataFrame from "./DataFrame"
 interface ReadOnlyGridProps {
   data: Quiver
   height?: number
+  width?: streamlit.IWidthConfig
   customToolbarActions?: React.ReactNode[]
 }
 
@@ -44,6 +43,7 @@ interface ReadOnlyGridProps {
 export const ReadOnlyGrid = ({
   data,
   height,
+  width,
   customToolbarActions,
 }: ReadOnlyGridProps): React.ReactElement => {
   return (
@@ -74,7 +74,7 @@ export const ReadOnlyGrid = ({
       fragmentId={undefined}
       disableFullscreenMode={true}
       customToolbarActions={customToolbarActions}
-      widthConfig={new streamlit.WidthConfig({ useStretch: true })}
+      widthConfig={width ?? new streamlit.WidthConfig({ useStretch: true })}
       heightConfig={
         height
           ? new streamlit.HeightConfig({ pixelHeight: height })

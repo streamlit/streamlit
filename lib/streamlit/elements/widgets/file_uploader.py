@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,9 +16,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import TYPE_CHECKING, Literal, Union, cast, overload
-
-from typing_extensions import TypeAlias
+from typing import TYPE_CHECKING, Literal, TypeAlias, cast, overload
 
 from streamlit import config
 from streamlit.elements.lib.file_uploader_utils import (
@@ -42,6 +40,7 @@ from streamlit.elements.lib.utils import (
     get_label_visibility_proto_value,
     to_key,
 )
+from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Common_pb2 import FileUploaderState as FileUploaderStateProto
 from streamlit.proto.Common_pb2 import UploadedFileInfo as UploadedFileInfoProto
 from streamlit.proto.FileUploader_pb2 import FileUploader as FileUploaderProto
@@ -60,18 +59,15 @@ if TYPE_CHECKING:
 
     from streamlit.delta_generator import DeltaGenerator
 
-SomeUploadedFiles: TypeAlias = Union[
-    UploadedFile,
-    DeletedFile,
-    list[Union[UploadedFile, DeletedFile]],
-    None,
-]
+SomeUploadedFiles: TypeAlias = (
+    UploadedFile | DeletedFile | list[UploadedFile | DeletedFile] | None
+)
 
 # Type alias for accept_multiple_files parameter.
 # If True, multiple files can be uploaded.
 # If False, only a single file can be uploaded.
 # If set to the literal "directory", users can upload an entire directory (folder) of files.
-AcceptMultipleFiles: TypeAlias = Union[bool, Literal["directory"]]
+AcceptMultipleFiles: TypeAlias = bool | Literal["directory"]
 
 
 def _get_upload_files(
@@ -181,6 +177,7 @@ class FileUploaderMixin:
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,
+        max_upload_size: int | None = None,
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
@@ -200,6 +197,7 @@ class FileUploaderMixin:
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,
+        max_upload_size: int | None = None,
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
@@ -224,6 +222,7 @@ class FileUploaderMixin:
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
+        max_upload_size: int | None = None,
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
@@ -243,6 +242,7 @@ class FileUploaderMixin:
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
+        max_upload_size: int | None = None,
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
@@ -260,14 +260,18 @@ class FileUploaderMixin:
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
+        max_upload_size: int | None = None,
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
     ) -> UploadedFile | list[UploadedFile] | None:
         r"""Display a file uploader widget.
+
         By default, uploaded files are limited to 200 MB each. You can
-        configure this using the ``server.maxUploadSize`` config option. For
-        more information on how to set config options, see |config.toml|_.
+        configure this globally using the ``server.maxUploadSize`` configuration
+        option. For more information on how to set configuration options, see
+        |config.toml|_. Additionally, you can set a per-widget limit using the
+        ``max_upload_size`` parameter.
 
         .. |config.toml| replace:: ``config.toml``
         .. _config.toml: https://docs.streamlit.io/develop/api-reference/configuration/config.toml
@@ -296,7 +300,7 @@ class FileUploaderMixin:
             .. |st.markdown| replace:: ``st.markdown``
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
-        type : str or list of str or None
+        type : str, list of str, or None
             The allowed file extension(s) for uploaded files. This can be one
             of the following types:
 
@@ -313,20 +317,27 @@ class FileUploaderMixin:
                 or type extensions. The correct handling of uploaded files is
                 part of the app developer's responsibility.
 
-        accept_multiple_files : bool or str
+        max_upload_size : int or None
+            The maximum allowed size of each uploaded file in megabytes.
+
+            If this is ``None`` (default), the maximum file size is set by the
+            ``server.maxUploadSize`` configuration option in your
+            ``config.toml`` file. If this is an integer, it must be positive
+            and will override the ``server.maxUploadSize`` configuration option.
+
+        accept_multiple_files : bool or "directory"
             Whether to accept more than one file in a submission. This can be one
             of the following values:
 
             - ``False`` (default): The user can only submit one file at a time.
-            - ``True``: The user can upload multiple files at the same time,
-              in which case the return value will be a list of files.
-            - ``"directory"``: The user can upload an entire directory (all
-              files within the directory), in which case the return value will
-              be a list of files preserving the directory structure.
+            - ``True``: The user can upload multiple files at the same time.
+            - ``"directory"``: The user can select a directory to upload all
+              files in the directory and its subdirectories. If ``type`` is
+              set, only files matching those type(s) will be uploaded.
 
-            When the widget is configured to accept directories, the accepted file
-            types can be configured with the ``type`` parameter to filter files
-            within the directory.
+            When this is ``True`` or ``"directory"``, the return value will be
+            a list and a user can additively select files if they click the
+            browse button on the widget multiple times.
 
         key : str or int
             An optional string or integer to use as the unique key for the widget.
@@ -376,19 +387,19 @@ class FileUploaderMixin:
         Returns
         -------
         None, UploadedFile, or list of UploadedFile
-            - If accept_multiple_files is False, returns either None or
-              an UploadedFile object.
-            - If accept_multiple_files is True, returns a list with the
-              uploaded files as UploadedFile objects. If no files were
-              uploaded, returns an empty list.
+            - If accept_multiple_files is ``False``, returns either ``None`` or
+              an ``UploadedFile`` object.
+            - If accept_multiple_files is ``True`` or ``"directory"``, returns
+              a list with the uploaded files as ``UploadedFile`` objects. If no
+              files were uploaded, returns an empty list.
 
-            The UploadedFile class is a subclass of BytesIO, and therefore is
-            "file-like". This means you can pass an instance of it anywhere a
-            file is expected.
+            The ``UploadedFile`` class is a subclass of ``BytesIO``, and
+            therefore is "file-like". This means you can pass an instance of it
+            anywhere a file is expected.
 
         Examples
         --------
-        Insert a file uploader that accepts a single file at a time:
+        **Example 1: Accept a single file at a time**
 
         >>> import streamlit as st
         >>> import pandas as pd
@@ -412,31 +423,34 @@ class FileUploaderMixin:
         ...     dataframe = pd.read_csv(uploaded_file)
         ...     st.write(dataframe)
 
-        Insert a file uploader that accepts multiple files at a time:
+        **Example 2: Accept multiple files at a time**
 
+        >>> import pandas as pd
         >>> import streamlit as st
         >>>
         >>> uploaded_files = st.file_uploader(
-        ...     "Choose a CSV file", accept_multiple_files=True
+        ...     "Upload data", accept_multiple_files=True, type="csv"
         ... )
         >>> for uploaded_file in uploaded_files:
-        ...     bytes_data = uploaded_file.read()
-        ...     st.write("filename:", uploaded_file.name)
-        ...     st.write(bytes_data)
-
-        Insert a file uploader that accepts an entire directory:
-
-        >>> import streamlit as st
-        >>>
-        >>> uploaded_files = st.file_uploader(
-        ...     "Choose a directory", accept_multiple_files="directory"
-        ... )
-        >>> for uploaded_file in uploaded_files:
-        ...     st.write("filename:", uploaded_file.name)
-        ...     st.write("file size:", uploaded_file.size)
+        ...     df = pd.read_csv(uploaded_file)
+        ...     st.write(df)
 
         .. output::
            https://doc-file-uploader.streamlit.app/
+           height: 375px
+
+        **Example 3: Accept an entire directory**
+
+        >>> import streamlit as st
+        >>>
+        >>> uploaded_files = st.file_uploader(
+        ...     "Upload images", accept_multiple_files="directory", type=["jpg", "png"]
+        ... )
+        >>> for uploaded_file in uploaded_files:
+        ...     st.image(uploaded_file)
+
+        .. output::
+           https://doc-file-uploader-directory.streamlit.app/
            height: 375px
 
         """
@@ -444,6 +458,7 @@ class FileUploaderMixin:
         return self._file_uploader(
             label=label,
             type=type,
+            max_upload_size=max_upload_size,
             accept_multiple_files=accept_multiple_files,
             key=key,
             help=help,
@@ -467,12 +482,23 @@ class FileUploaderMixin:
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
+        max_upload_size: int | None = None,
         label_visibility: LabelVisibility = "visible",
         disabled: bool = False,
         ctx: ScriptRunContext | None = None,
         width: WidthWithoutContent = "stretch",
     ) -> UploadedFile | list[UploadedFile] | None:
         key = to_key(key)
+
+        # Validate max_upload_size early to provide a clear error message
+        if max_upload_size is not None and (
+            not isinstance(max_upload_size, int) or max_upload_size <= 0
+        ):
+            raise StreamlitAPIException(
+                "The `max_upload_size` parameter must be a positive integer "
+                "representing the maximum file size in megabytes, or None "
+                "to fall back to the `server.maxUploadSize` configuration option."
+            )
 
         check_widget_policies(
             self.dg,
@@ -486,6 +512,12 @@ class FileUploaderMixin:
         element_id = compute_and_register_element_id(
             "file_uploader",
             user_key=key,
+            max_upload_size=max_upload_size,
+            # Treat the provided key as the main identity; only include changes
+            # to the type, accept_multiple_files, and max_upload_size parameters
+            # in the identity computation as those can invalidate the current
+            # value
+            key_as_main_identity={"type", "accept_multiple_files", "max_upload_size"},
             dg=self.dg,
             label=label,
             type=type,
@@ -502,9 +534,13 @@ class FileUploaderMixin:
         file_uploader_proto.type[:] = (
             normalized_type if normalized_type is not None else []
         )
-        file_uploader_proto.max_upload_size_mb = config.get_option(
-            "server.maxUploadSize"
-        )
+        if max_upload_size is not None:
+            file_uploader_proto.max_upload_size_mb = max_upload_size
+        else:
+            file_uploader_proto.max_upload_size_mb = config.get_option(
+                "server.maxUploadSize"
+            )
+
         # Handle directory uploads - they should enable multiple files and set the directory flag
         is_directory_upload = accept_multiple_files == "directory"
         file_uploader_proto.multiple_files = (

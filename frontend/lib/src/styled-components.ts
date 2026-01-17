@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,8 @@
  */
 
 import styled from "@emotion/styled"
+
+import { hasLightBackgroundColor } from "@streamlit/lib"
 
 export const StyledApp = styled.div(({ theme }) => ({
   position: "absolute",
@@ -44,4 +46,20 @@ export const StyledDataFrameOverlay = styled.div(({ theme }) => ({
   left: 0,
   zIndex: theme.zIndices.tablePortal,
   lineHeight: "100%",
+  ...(!hasLightBackgroundColor(theme) && {
+    "& input[type='date'], & input[type='time'], & input[type='datetime-local']":
+      {
+        "&::-webkit-calendar-picker-indicator": {
+          filter: "brightness(0) invert(1)",
+          opacity: 1,
+        },
+      },
+  }),
+}))
+
+export const StyledErrorMessage = styled.small(({ theme }) => ({
+  color: theme.colors.redTextColor,
+  fontSize: theme.fontSizes.sm,
+  marginTop: theme.spacing.twoXS,
+  display: "block",
 }))

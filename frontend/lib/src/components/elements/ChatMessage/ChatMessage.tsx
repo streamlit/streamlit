@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,13 +14,11 @@
  * limitations under the License.
  */
 
-import React, { memo, ReactElement } from "react"
-
-import { Face, SmartToy } from "@emotion-icons/material-outlined"
+import { memo, ReactElement } from "react"
 
 import { Block as BlockProto } from "@streamlit/protobuf"
 
-import Icon, { DynamicIcon } from "~lib/components/shared/Icon"
+import { DynamicIcon } from "~lib/components/shared/Icon"
 import { useCrossOriginAttribute } from "~lib/hooks/useCrossOriginAttribute"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
@@ -49,6 +47,9 @@ function ChatMessageAvatar(
 
   if (avatar) {
     switch (avatarType) {
+      case undefined:
+        // Fall through to default avatar
+        break
       case BlockProto.ChatMessage.AvatarType.IMAGE:
         return (
           <StyledAvatarImage
@@ -64,18 +65,18 @@ function ChatMessageAvatar(
           return (
             <StyledAvatarIcon
               data-testid="stChatMessageAvatarUser"
-              background={theme.colors.red60}
+              background={theme.colors.redColor}
             >
-              <Icon content={Face} size="lg" />
+              <DynamicIcon size="lg" iconValue=":material/face:" />
             </StyledAvatarIcon>
           )
         } else if (avatar === "assistant") {
           return (
             <StyledAvatarIcon
               data-testid="stChatMessageAvatarAssistant"
-              background={theme.colors.orange60}
+              background={theme.colors.orangeColor}
             >
-              <Icon content={SmartToy} size="lg" />
+              <DynamicIcon size="lg" iconValue=":material/smart_toy:" />
             </StyledAvatarIcon>
           )
         } else if (avatar.startsWith(":material")) {

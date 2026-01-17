@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-import React from "react"
-
 import { screen } from "@testing-library/react"
 import { graphviz } from "d3-graphviz"
 import { Mock, MockInstance } from "vitest"
@@ -27,20 +25,35 @@ import { render } from "~lib/test_util"
 
 import GraphVizChart, { GraphVizChartProps, LOG } from "./GraphVizChart"
 
-vi.mock("d3-graphviz", () => ({
-  graphviz: vi.fn().mockReturnValue({
-    zoom: () => ({
-      fit: () => ({
-        scale: () => ({
-          engine: () => ({
-            renderDot: () => ({
-              on: vi.fn(),
-            }),
-          }),
-        }),
+interface MockGraphvizChain {
+  zoom: () => MockGraphvizChain
+  width: () => MockGraphvizChain
+  height: () => MockGraphvizChain
+  fit: () => MockGraphvizChain
+  scale: () => MockGraphvizChain
+  engine: () => MockGraphvizChain
+  renderDot: Mock
+}
+
+const createChainableMethods = (renderDotImpl?: Mock): MockGraphvizChain => {
+  const chainable = {
+    zoom: () => chainable,
+    width: () => chainable,
+    height: () => chainable,
+    fit: () => chainable,
+    scale: () => chainable,
+    engine: () => chainable,
+    renderDot:
+      renderDotImpl ||
+      vi.fn().mockReturnValue({
+        on: vi.fn(),
       }),
-    }),
-  }),
+  }
+  return chainable
+}
+
+vi.mock("d3-graphviz", () => ({
+  graphviz: vi.fn(() => createChainableMethods()),
 }))
 
 const getProps = (
@@ -94,17 +107,7 @@ describe("GraphVizChart Element", () => {
     })
 
     // Modify the graphviz mock to use the mockRenderDot
-    ;(graphviz as Mock).mockReturnValue({
-      zoom: () => ({
-        fit: () => ({
-          scale: () => ({
-            engine: () => ({
-              renderDot: mockRenderDot,
-            }),
-          }),
-        }),
-      }),
-    })
+    ;(graphviz as Mock).mockReturnValue(createChainableMethods(mockRenderDot))
 
     const props = getProps({
       spec: "crash",

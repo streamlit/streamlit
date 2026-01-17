@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ import { SparklineCellType } from "@glideapps/glide-data-grid-cells"
 import { Field, Float64, List } from "apache-arrow"
 
 import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
+import { mockTheme } from "~lib/mocks/mockTheme"
 
 import {
   AREA_CHART_TYPE,
@@ -61,28 +62,37 @@ const CHART_COLUMN_TEMPLATE = {
 function getLineChartColumn(
   params?: ChartColumnParams
 ): ReturnType<typeof LineChartColumn> {
-  return LineChartColumn({
-    ...CHART_COLUMN_TEMPLATE,
-    columnTypeOptions: params,
-  } as BaseColumnProps)
+  return LineChartColumn(
+    {
+      ...CHART_COLUMN_TEMPLATE,
+      columnTypeOptions: params,
+    } as BaseColumnProps,
+    mockTheme.emotion
+  )
 }
 
 function getBarChartColumn(
   params?: ChartColumnParams
 ): ReturnType<typeof BarChartColumn> {
-  return BarChartColumn({
-    ...CHART_COLUMN_TEMPLATE,
-    columnTypeOptions: params,
-  } as BaseColumnProps)
+  return BarChartColumn(
+    {
+      ...CHART_COLUMN_TEMPLATE,
+      columnTypeOptions: params,
+    } as BaseColumnProps,
+    mockTheme.emotion
+  )
 }
 
 function getAreaChartColumn(
   params?: ChartColumnParams
 ): ReturnType<typeof AreaChartColumn> {
-  return AreaChartColumn({
-    ...CHART_COLUMN_TEMPLATE,
-    columnTypeOptions: params,
-  } as BaseColumnProps)
+  return AreaChartColumn(
+    {
+      ...CHART_COLUMN_TEMPLATE,
+      columnTypeOptions: params,
+    } as BaseColumnProps,
+    mockTheme.emotion
+  )
 }
 
 describe("ChartColumn", () => {
@@ -250,6 +260,68 @@ describe("ChartColumn", () => {
     const mockCell3 = mockColumn.getCell([-1, -1])
     // All values should be normalized to 0:
     expect((mockCell3 as SparklineCellType).data?.values).toEqual([0, 0])
+  })
+
+  it("handles uniform values without explicit y_min/y_max configuration", () => {
+    // This tests the fix for https://github.com/streamlit/streamlit/issues/13584
+    const mockColumn = getBarChartColumn()
+
+    // Uniform positive values should render with y_min=0 and y_max=value
+    const mockCell1 = mockColumn.getCell([4, 4, 4, 4])
+    expect(isErrorCell(mockCell1)).toEqual(false)
+    expect((mockCell1 as SparklineCellType).data?.values).toEqual([4, 4, 4, 4])
+    expect((mockCell1 as SparklineCellType).data?.yAxis).toEqual([0, 4])
+
+    // Uniform zero values should render with y_min=0 and y_max=1
+    const mockCell2 = mockColumn.getCell([0, 0, 0])
+    expect(isErrorCell(mockCell2)).toEqual(false)
+    expect((mockCell2 as SparklineCellType).data?.values).toEqual([0, 0, 0])
+    expect((mockCell2 as SparklineCellType).data?.yAxis).toEqual([0, 1])
+
+    // Uniform negative values should render with y_min=value and y_max=0
+    const mockCell3 = mockColumn.getCell([-5, -5, -5])
+    expect(isErrorCell(mockCell3)).toEqual(false)
+    expect((mockCell3 as SparklineCellType).data?.values).toEqual([-5, -5, -5])
+    expect((mockCell3 as SparklineCellType).data?.yAxis).toEqual([-5, 0])
+  })
+
+  it("supports named color mapping and custom colors", () => {
+    const blueColumn = getLineChartColumn({ color: "blue" })
+    const blueCell = blueColumn.getCell([0, 1]) as SparklineCellType
+    expect(blueCell.data?.color).toEqual(mockTheme.emotion.colors.blueColor)
+
+    const greyColumn = getBarChartColumn({ color: "grey" })
+    const greyCell = greyColumn.getCell([0, 1]) as SparklineCellType
+    expect(greyCell.data?.color).toEqual(mockTheme.emotion.colors.grayColor)
+
+    const customColor = "#123456"
+    const customColumn = getAreaChartColumn({ color: customColor })
+    const customCell = customColumn.getCell([0, 1]) as SparklineCellType
+    expect(customCell.data?.color).toEqual(customColor)
+  })
+
+  it("applies auto color based on trend", () => {
+    // auto: default is green; red if trend down
+    const autoUp = getLineChartColumn({ color: "auto" })
+    const cellUp = autoUp.getCell([0, 1]) as SparklineCellType
+    expect(cellUp.data?.color).toEqual(mockTheme.emotion.colors.greenColor)
+
+    const autoDown = getLineChartColumn({ color: "auto" })
+    const cellDown = autoDown.getCell([1, 0]) as SparklineCellType
+    expect(cellDown.data?.color).toEqual(mockTheme.emotion.colors.redColor)
+  })
+
+  it("applies auto-inverse color based on trend", () => {
+    // auto-inverse: default is green; red if trend up
+    const autoInvDown = getBarChartColumn({ color: "auto-inverse" })
+    const cellInvDown = autoInvDown.getCell([1, 0]) as SparklineCellType
+    expect(cellInvDown.data?.color).toEqual(
+      mockTheme.emotion.colors.greenColor
+    )
+
+    const autoInvUp = getBarChartColumn({ color: "auto-inverse" })
+    const cellInvUp = autoInvUp.getCell([0, 1]) as SparklineCellType
+    expect(cellInvUp.data?.color).toEqual(mockTheme.emotion.colors.redColor)
   })
 
   it.each([

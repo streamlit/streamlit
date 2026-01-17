@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -77,3 +77,9 @@ with st.container(border=True, key="test_columns", height=160):
 
 with st.expander("Output"):
     st.markdown(text)
+
+with st.popover("popover 18 (primary)", type="primary"):
+    st.markdown("Dummy content")
+
+with st.popover("popover 19 (tertiary)", type="tertiary"):
+    st.markdown("Dummy content")

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,6 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+# ruff: noqa: RUF027 - We allow template strings in localizable exception messages instead of f-strings.
 
 from __future__ import annotations
 
@@ -32,13 +34,18 @@ class Error(Exception):
     code.
     """
 
-    pass
-
 
 class CustomComponentError(Error):
     """Exceptions thrown in the custom components code path."""
 
-    pass
+
+class StreamlitComponentRegistryError(Error):
+    """Exceptions raised while discovering or registering Streamlit components.
+
+    These errors occur during Streamlit startup when scanning installed
+    distributions for component metadata and registering them with the component
+    registry.
+    """
 
 
 class DeprecationError(Error):
@@ -50,15 +57,11 @@ class FragmentStorageKeyError(Error, KeyError):
     operation.
     """
 
-    pass
-
 
 class FragmentHandledException(Exception):  # noqa: N818
     """An exception that is raised by the fragment
     when it has handled the exception itself.
     """
-
-    pass
 
 
 class NoStaticFiles(Error):  # noqa: N818
@@ -76,13 +79,9 @@ class MarkdownFormattedException(Error):  # noqa: N818
     nicely formatted on the frontend.
     """
 
-    pass
-
 
 class StreamlitMaxRetriesError(Error):
     """An exception raised when a file or folder cannot be accessed after multiple retries."""
-
-    pass
 
 
 class StreamlitAPIException(MarkdownFormattedException):
@@ -196,8 +195,8 @@ class StreamlitInvalidSidebarStateError(LocalizableStreamlitException):
 
     def __init__(self, initial_sidebar_state: str) -> None:
         super().__init__(
-            '`initial_sidebar_state` must be `"auto"` or `"expanded"` or '
-            '`"collapsed"` (got `"{initial_sidebar_state}"`)',
+            '`initial_sidebar_state` must be `"auto"`, `"expanded"`, `"collapsed"`, '
+            'or a positive integer for width in pixels (got `"{initial_sidebar_state}"`)',
             initial_sidebar_state=initial_sidebar_state,
         )
 
@@ -254,7 +253,9 @@ class StreamlitInvalidColumnGapError(LocalizableStreamlitException):
 
     def __init__(self, gap: str, element_type: str) -> None:
         super().__init__(
-            'The `gap` argument to `{element_type}` must be `"small"`, `"medium"`, `"large"`, or `"none"`. \n'
+            'The `gap` argument to `{element_type}` must be `"xxsmall"`, '
+            '`"xsmall"`, `"small"`, `"medium"`, `"large"`, `"xlarge"`, '
+            '`"xxlarge"`, or `"none"`. \n'
             "The argument passed was {gap}.",
             gap=gap,
             element_type=element_type,
@@ -271,6 +272,17 @@ class StreamlitInvalidHorizontalAlignmentError(LocalizableStreamlitException):
             "The argument passed was {horizontal_alignment}.",
             horizontal_alignment=horizontal_alignment,
             element_type=element_type,
+        )
+
+
+class StreamlitInvalidTextAlignmentError(LocalizableStreamlitException):
+    """Exception raised when an invalid text_alignment value is provided."""
+
+    def __init__(self, text_alignment: Any) -> None:
+        super().__init__(
+            'Invalid text_alignment value: "{text_alignment}". '
+            'Valid values are: `"left"`, `"center"`, `"right"`, or `"justify"`.',
+            text_alignment=text_alignment,
         )
 
 
@@ -399,6 +411,17 @@ class StreamlitMissingPageLabelError(LocalizableStreamlitException):
         )
 
 
+class StreamlitQueryParamDictValueError(LocalizableStreamlitException):
+    """Exception raised when a query param value is a dictionary."""
+
+    def __init__(self, key: str) -> None:
+        super().__init__(
+            "Query param value for `{key}` cannot be set to a dictionary. "
+            "Provide a string or iterable of strings instead.",
+            key=key,
+        )
+
+
 class StreamlitPageNotFoundError(LocalizableStreamlitException):
     """Exception raised the linked page can not be found."""
 
@@ -425,6 +448,55 @@ class StreamlitPageNotFoundError(LocalizableStreamlitException):
             message,
             page=page,
             directory=directory,
+        )
+
+
+# Bidirectional Components
+class BidiComponentInvalidIdError(LocalizableStreamlitException):
+    """Exception raised when an invalid ID component is provided."""
+
+    def __init__(self, part: str, delimiter: str) -> None:
+        super().__init__(
+            "The `{part}` of a bidirectional component's ID must not contain "
+            "the delimiter sequence `{delimiter}`.",
+            part=part,
+            delimiter=delimiter,
+        )
+
+
+class BidiComponentInvalidCallbackNameError(LocalizableStreamlitException):
+    """Exception raised when a callback with an invalid name is provided."""
+
+    def __init__(self, callback_name: str) -> None:
+        super().__init__(
+            "The callback name `'{callback_name}'` is not allowed. "
+            "Callback names must follow the pattern `on_{{event_name}}_change` "
+            "where `event_name` is not empty.",
+            callback_name=callback_name,
+        )
+
+
+class BidiComponentInvalidDefaultKeyError(LocalizableStreamlitException):
+    """Exception raised when an invalid key is provided in the default dict."""
+
+    def __init__(self, state_key: str, available_keys: list[str]) -> None:
+        super().__init__(
+            "Key `'{state_key}'` in `default` is not a valid state name. "
+            "Valid state names are those with corresponding `on_{{state_name}}_change` "
+            "callbacks. Available state names: `{available_keys}`",
+            state_key=state_key,
+            available_keys=available_keys or "none",
+        )
+
+
+class BidiComponentUnserializableDataError(LocalizableStreamlitException):
+    """Exception raised when data provided to a bidirectional component cannot be serialized."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            "The `data` provided to the bidirectional component could not be serialized. "
+            "Please ensure the data is JSON-serializable, or is a supported data structure "
+            "like a pandas DataFrame."
         )
 
 
@@ -493,9 +565,9 @@ class StreamlitInvalidWidthError(LocalizableStreamlitException):
     """Exception raised when an invalid width value is provided."""
 
     def __init__(self, width: Any, allow_content: bool = False) -> None:
-        valid_values = "an integer (pixels) or 'stretch'"
+        valid_values = "a positive integer (pixels) or 'stretch'"
         if allow_content:
-            valid_values = "an integer (pixels), 'stretch', or 'content'"
+            valid_values = "a positive integer (pixels), 'stretch', or 'content'"
 
         super().__init__(
             "Invalid width value: {width}. Width must be either {valid_values}.",
@@ -508,14 +580,25 @@ class StreamlitInvalidHeightError(LocalizableStreamlitException):
     """Exception raised when an invalid height value is provided."""
 
     def __init__(self, height: Any, allow_content: bool = False) -> None:
-        valid_values = "an integer (pixels) or 'stretch'"
+        valid_values = "a positive integer (pixels) or 'stretch'"
         if allow_content:
-            valid_values = "an integer (pixels), 'stretch', or 'content'"
+            valid_values = "a positive integer (pixels), 'stretch', or 'content'"
 
         super().__init__(
             "Invalid height value: {height}. Height must be either {valid_values}.",
             height=repr(height),
             valid_values=valid_values,
+        )
+
+
+class StreamlitInvalidSizeError(LocalizableStreamlitException):
+    """Exception raised when an invalid size value is provided."""
+
+    def __init__(self, size: Any) -> None:
+        super().__init__(
+            "Invalid size value: {size}. Size must be either a positive integer (pixels), "
+            "'stretch', 'small', 'medium', or 'large'.",
+            size=repr(size),
         )
 
 
@@ -527,4 +610,36 @@ class StreamlitValueError(LocalizableStreamlitException):
             "Invalid `{parameter}` value. Supported values: {valid_values}.",
             parameter=parameter,
             valid_values=", ".join(valid_values),
+        )
+
+
+# config
+class StreamlitInvalidThemeError(LocalizableStreamlitException):
+    """Exception raised for general theme errors."""
+
+    def __init__(self, message: str) -> None:
+        super().__init__(
+            message,
+        )
+
+
+class StreamlitInvalidThemeOptionError(LocalizableStreamlitException):
+    """Exception raised when an invalid theme config option is provided."""
+
+    def __init__(self, message: str) -> None:
+        super().__init__(
+            message,
+        )
+
+
+class StreamlitInvalidThemeSectionError(LocalizableStreamlitException):
+    """Exception raised when an invalid theme section is provided."""
+
+    def __init__(self, option_name: str, file_path_or_url: str = "config.toml") -> None:
+        super().__init__(
+            "Invalid theme section: `{option_name}` found in {file_path_or_url}. "
+            "Valid sections are: `theme`, `theme.light`, `theme.dark`, `theme.sidebar`, `theme.light.sidebar`, "
+            "and `theme.dark.sidebar`.",
+            option_name=option_name,
+            file_path_or_url=file_path_or_url,
         )

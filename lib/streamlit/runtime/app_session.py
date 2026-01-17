@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ import os
 import sys
 import uuid
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Callable, Final
+from typing import TYPE_CHECKING, Any, Final
 
 from google.protobuf.json_format import ParseDict
 
@@ -45,14 +45,20 @@ from streamlit.runtime.metrics_util import Installation
 from streamlit.runtime.pages_manager import PagesManager
 from streamlit.runtime.scriptrunner import RerunData, ScriptRunner, ScriptRunnerEvent
 from streamlit.runtime.secrets import secrets_singleton
+from streamlit.runtime.theme_util import parse_fonts_with_source
 from streamlit.string_util import to_snake_case
 from streamlit.version import STREAMLIT_VERSION_STRING
 from streamlit.watcher import LocalSourcesWatcher
 
 if TYPE_CHECKING:
-    from streamlit.proto.BackMsg_pb2 import BackMsg
+    from collections.abc import Callable
+
+    from google.protobuf.internal.containers import RepeatedScalarFieldContainer
+
+    from streamlit.proto.BackMsg_pb2 import BackMsg, DeferredFileRequest
     from streamlit.runtime.script_data import ScriptData
     from streamlit.runtime.scriptrunner.script_cache import ScriptCache
+    from streamlit.runtime.scriptrunner_utils.script_run_context import UserInfoType
     from streamlit.runtime.state import SessionState
     from streamlit.runtime.uploaded_file_manager import UploadedFileManager
     from streamlit.source_util import PageHash, PageInfo
@@ -89,7 +95,7 @@ class AppSession:
         uploaded_file_manager: UploadedFileManager,
         script_cache: ScriptCache,
         message_enqueued_callback: Callable[[], None] | None,
-        user_info: dict[str, str | bool | None],
+        user_info: UserInfoType,
         session_id_override: str | None = None,
     ) -> None:
         """Initialize the AppSession.
@@ -217,6 +223,15 @@ class AppSession:
         self._stop_config_listener = None
         self._stop_pages_listener = None
 
+    def clear_session_caches(self) -> None:
+        """Clears session-level caches for this session.
+
+        This should be called when a session is disconnected or shut down, since this
+        ensures memory is freed up and resource release hooks are called.
+        """
+        caching.clear_session_data_cache(self.id)
+        caching.clear_session_resource_cache(self.id)
+
     def flush_browser_queue(self) -> list[ForwardMsg]:
         """Clear the forward message queue and return the messages it contained.
 
@@ -260,6 +275,9 @@ class AppSession:
             # generally already done so by the time we get here.
             self.disconnect_file_watchers()
 
+            # Clear any session caches. This ensures shutdown hooks are called.
+            self.clear_session_caches()
+
     def _enqueue_forward_msg(self, msg: ForwardMsg) -> None:
         """Enqueue a new ForwardMsg to our browser queue.
 
@@ -301,6 +319,15 @@ class AppSession:
                 self._handle_stop_script_request()
             elif msg_type == "file_urls_request":
                 self._handle_file_urls_request(msg.file_urls_request)
+            elif msg_type == "deferred_file_request":
+                # Execute deferred callable in a separate thread to avoid blocking
+                # the main event loop. Use create_task to run the async handler.
+                # Store task reference to prevent garbage collection.
+                task = asyncio.create_task(
+                    self._handle_deferred_file_request(msg.deferred_file_request)
+                )
+                # Add task name for better debugging
+                task.set_name(f"deferred_file_{msg.deferred_file_request.file_id}")
             else:
                 _LOGGER.warning('No handler for "%s"', msg_type)
 
@@ -389,7 +416,7 @@ class AppSession:
                 widget_states=client_state.widget_states,
                 page_script_hash=client_state.page_script_hash,
                 page_name=client_state.page_name,
-                fragment_id=fragment_id if fragment_id else None,
+                fragment_id=fragment_id or None,
                 is_auto_rerun=client_state.is_auto_rerun,
                 cached_message_hashes=set(client_state.cached_message_hashes),
                 context_info=client_state.context_info,
@@ -678,9 +705,10 @@ class AppSession:
                 )
 
             if self._state == AppSessionState.SHUTDOWN_REQUESTED:
-                # Only clear media files if the script is done running AND the
-                # session is actually shutting down.
+                # Only clear media files and session caches if the script is done
+                # running AND the session is actually shutting down.
                 runtime.get_instance().media_file_mgr.clear_session_refs(self.id)
+                self.clear_session_caches()
 
             self._client_state = client_state
             self._scriptrunner = None
@@ -735,10 +763,34 @@ class AppSession:
             msg.new_session, pages or self._pages_manager.get_pages()
         )
         _populate_config_msg(msg.new_session.config)
+
+        # Handles theme sections
+        # [theme] configs
         _populate_theme_msg(msg.new_session.custom_theme)
+        # [theme.light] configs
+        _populate_theme_msg(
+            msg.new_session.custom_theme.light,
+            f"theme.{config.CustomThemeCategories.LIGHT.value}",
+        )
+        # [theme.dark] configs
+        _populate_theme_msg(
+            msg.new_session.custom_theme.dark,
+            f"theme.{config.CustomThemeCategories.DARK.value}",
+        )
+        # [theme.sidebar] configs
         _populate_theme_msg(
             msg.new_session.custom_theme.sidebar,
             f"theme.{config.CustomThemeCategories.SIDEBAR.value}",
+        )
+        # [theme.light.sidebar] configs
+        _populate_theme_msg(
+            msg.new_session.custom_theme.light.sidebar,
+            f"theme.{config.CustomThemeCategories.LIGHT_SIDEBAR.value}",
+        )
+        # [theme.dark.sidebar] configs
+        _populate_theme_msg(
+            msg.new_session.custom_theme.dark.sidebar,
+            f"theme.{config.CustomThemeCategories.DARK_SIDEBAR.value}",
         )
 
         # Immutable session data. We send this every time a new session is
@@ -810,6 +862,12 @@ class AppSession:
             else:
                 msg.git_info_changed.state = GitInfo.GitStates.DEFAULT
 
+            _LOGGER.debug(
+                "Git information found. Name: %s, Branch: %s, Module: %s",
+                repository_name,
+                branch,
+                module,
+            )
             self._enqueue_forward_msg(msg)
         except Exception as ex:
             # Users may never even install Git in the first place, so this
@@ -853,7 +911,6 @@ class AppSession:
         The actual handler here is a noop
 
         """
-        pass
 
     def _handle_set_run_on_save_request(self, new_value: bool) -> None:
         """Change our run_on_save flag to the given value.
@@ -888,6 +945,34 @@ class AppSession:
             )
 
         self._enqueue_forward_msg(msg)
+
+    async def _handle_deferred_file_request(self, request: DeferredFileRequest) -> None:
+        """Handle a deferred_file_request BackMsg sent by the client.
+
+        Execute the deferred callable in a separate thread and send the URL back
+        to the frontend. This prevents blocking the main event loop if the callable
+        is slow.
+        """
+        response = ForwardMsg()
+        response.deferred_file_response.file_id = request.file_id
+
+        try:
+            # Execute the deferred callable in a separate thread to avoid blocking
+            # the main event loop. This is critical for shared apps where a slow
+            # callable could freeze all sessions.
+            url = await asyncio.to_thread(
+                runtime.get_instance().media_file_mgr.execute_deferred,
+                request.file_id,
+            )
+            response.deferred_file_response.url = url
+        except Exception as e:
+            # Send error response if callable execution fails
+            _LOGGER.exception(
+                "Error executing deferred callable for file_id %s", request.file_id
+            )
+            response.deferred_file_response.error_msg = str(e)
+
+        self._enqueue_forward_msg(response)
 
     def _populate_app_pages(
         self, msg: NewSession, pages: dict[PageHash, PageInfo]
@@ -932,6 +1017,65 @@ def _populate_config_msg(msg: Config) -> None:
     msg.toolbar_mode = _get_toolbar_mode()
 
 
+def _parse_and_populate_chart_colors(
+    theme_opts: dict[str, Any],
+    config_key: str,
+    msg_field: RepeatedScalarFieldContainer[str],
+    required_length: int | None = None,
+) -> None:
+    """Parse and populate chart colors from theme config to protobuf message field.
+
+    Parameters
+    ----------
+    theme_opts
+        Dictionary of theme options from config.get_options_for_section.
+    config_key
+        The key in theme_opts to look for (e.g., "chartCategoricalColors").
+    msg_field
+        The protobuf repeated string field to append colors to.
+    required_length
+        If provided, log an error if the colors array doesn't have this exact length.
+    """
+    colors = theme_opts.get(config_key)
+
+    # If colors was configured via config.toml, it's already a list of strings.
+    # However, if it was provided via env variable or via CLI arg,
+    # it's a JSON string that needs to be parsed.
+    if isinstance(colors, str):
+        try:
+            colors = json.loads(colors)
+        except json.JSONDecodeError as e:
+            _LOGGER.warning(
+                "Failed to parse the theme.%s config option: %s.",
+                config_key,
+                colors,
+                exc_info=e,
+            )
+            colors = None
+
+    if colors is not None:
+        # Check required length if specified
+        if required_length is not None and len(colors) != required_length:
+            _LOGGER.error(
+                "Config theme.%s should have %s color values, "
+                "but got %s. Defaulting to Streamlit's default colors.",
+                config_key,
+                required_length,
+                len(colors),
+            )
+            return  # Don't populate invalid data; let frontend use defaults
+        for color in colors:
+            try:
+                msg_field.append(color)
+            except Exception as e:  # noqa: PERF203
+                _LOGGER.warning(
+                    "Failed to parse the theme.%s config option: %s.",
+                    config_key,
+                    color,
+                    exc_info=e,
+                )
+
+
 def _populate_theme_msg(msg: CustomThemeConfig, section: str = "theme") -> None:
     theme_opts = config.get_options_for_section(section)
     if all(val is None for val in theme_opts.values()):
@@ -946,10 +1090,13 @@ def _populate_theme_msg(msg: CustomThemeConfig, section: str = "theme") -> None:
                 "base",
                 "font",
                 "fontFaces",
+                "codeFont",
+                "headingFont",
                 "headingFontSizes",
                 "headingFontWeights",
                 "chartCategoricalColors",
                 "chartSequentialColors",
+                "chartDivergingColors",
             }
             and option_val is not None
         ):
@@ -975,11 +1122,15 @@ def _populate_theme_msg(msg: CustomThemeConfig, section: str = "theme") -> None:
         else:
             msg.base = base_map[base]
 
-    # Since the font field uses the deprecated enum, we need to put the font
-    # config into the body_font field instead:
-    body_font = theme_opts.get("font", None)
-    if body_font:
-        msg.body_font = body_font
+    # Handle font, codeFont, and headingFont config options and if they are
+    # specified with a source URL
+    msg = parse_fonts_with_source(
+        msg,
+        theme_opts.get("font", None),
+        theme_opts.get("codeFont", None),
+        theme_opts.get("headingFont", None),
+        section,
+    )
 
     font_faces = theme_opts.get("fontFaces", None)
     # If fontFaces was configured via config.toml, it's already a parsed list of
@@ -1090,64 +1241,22 @@ def _populate_theme_msg(msg: CustomThemeConfig, section: str = "theme") -> None:
                     exc_info=e,
                 )
 
-    chart_categorical_colors = theme_opts.get("chartCategoricalColors", None)
-    # If chartCategoricalColors was configured via config.toml, it's already a list of
-    # strings. However, if it was provided via env variable or via CLI arg,
-    # it's a json string that needs to be parsed.
-    if isinstance(chart_categorical_colors, str):
-        try:
-            chart_categorical_colors = json.loads(chart_categorical_colors)
-        except json.JSONDecodeError as e:
-            _LOGGER.warning(
-                "Failed to parse the theme.chartCategoricalColors config option: %s.",
-                chart_categorical_colors,
-                exc_info=e,
-            )
-            chart_categorical_colors = None
-
-    if chart_categorical_colors is not None:
-        for color in chart_categorical_colors:
-            try:
-                msg.chart_categorical_colors.append(color)
-            except Exception as e:  # noqa: PERF203
-                _LOGGER.warning(
-                    "Failed to parse the theme.chartCategoricalColors config option: %s.",
-                    color,
-                    exc_info=e,
-                )
-
-    chart_sequential_colors = theme_opts.get("chartSequentialColors", None)
-    # If chartSequentialColors was configured via config.toml, it's already a list of
-    # strings. However, if it was provided via env variable or via CLI arg,
-    # it's a json string that needs to be parsed.
-    if isinstance(chart_sequential_colors, str):
-        try:
-            chart_sequential_colors = json.loads(chart_sequential_colors)
-        except json.JSONDecodeError as e:
-            _LOGGER.warning(
-                "Failed to parse the theme.chartSequentialColors config option: %s.",
-                chart_sequential_colors,
-                exc_info=e,
-            )
-            chart_sequential_colors = None
-
-    if chart_sequential_colors is not None:
-        # Check that the list has 10 color values
-        if len(chart_sequential_colors) != 10:
-            _LOGGER.error(
-                "Config theme.chartSequentialColors should have 10 color values, "
-                "but got %s. Defaulting to Streamlit's default colors.",
-                len(chart_sequential_colors),
-            )
-        for color in chart_sequential_colors:
-            try:
-                msg.chart_sequential_colors.append(color)
-            except Exception as e:  # noqa: PERF203
-                _LOGGER.warning(
-                    "Failed to parse the theme.chartSequentialColors config option: %s.",
-                    color,
-                    exc_info=e,
-                )
+    # Handle chart color configurations
+    _parse_and_populate_chart_colors(
+        theme_opts, "chartCategoricalColors", msg.chart_categorical_colors
+    )
+    _parse_and_populate_chart_colors(
+        theme_opts,
+        "chartSequentialColors",
+        msg.chart_sequential_colors,
+        required_length=10,
+    )
+    _parse_and_populate_chart_colors(
+        theme_opts,
+        "chartDivergingColors",
+        msg.chart_diverging_colors,
+        required_length=10,
+    )
 
 
 def _populate_user_info_msg(msg: UserInfo) -> None:

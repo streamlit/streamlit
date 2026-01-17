@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,9 +14,8 @@
  * limitations under the License.
  */
 
-import React, { memo, ReactElement, useContext, useState } from "react"
+import { memo, ReactElement, useContext, useState } from "react"
 
-import { ExpandLess, ExpandMore } from "@emotion-icons/material-outlined"
 import { PLACEMENT, TRIGGER_TYPE, Popover as UIPopover } from "baseui/popover"
 
 import { Block as BlockProto } from "@streamlit/protobuf"
@@ -29,12 +28,14 @@ import BaseButton, {
   BaseButtonTooltip,
   DynamicButtonLabel,
 } from "~lib/components/shared/BaseButton"
-import { StyledIcon } from "~lib/components/shared/Icon"
+import { DynamicIcon } from "~lib/components/shared/Icon"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { hasLightBackgroundColor } from "~lib/theme"
 
-import { StyledPopoverButtonIcon } from "./styled-components"
+import {
+  StyledPopoverExpansionIcon,
+  StyledPopoverLabelContainer,
+} from "./styled-components"
 
 export interface PopoverProps {
   element: BlockProto.Popover
@@ -54,13 +55,19 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   const isInSidebar = useContext(IsSidebarContext)
 
   const theme = useEmotionTheme()
-  const lightBackground = hasLightBackgroundColor(theme)
 
   // It would be nice to remove this since it uses a resize observer
   // and therefore has a performance overhead. However, this is needed
   // to link the width of the button to the popover width. I think we
   // can remove the need for this as part of the BaseWeb migration.
   const { width: calculatedWidth, elementRef } = useCalculatedDimensions()
+
+  let kind = BaseButtonKind.SECONDARY
+  if (element.type === "primary") {
+    kind = BaseButtonKind.PRIMARY
+  } else if (element.type === "tertiary") {
+    kind = BaseButtonKind.TERTIARY
+  }
 
   return (
     <Box data-testid="stPopover" className="stPopover" ref={elementRef}>
@@ -125,9 +132,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
               borderTopColor: theme.colors.borderColor,
               borderBottomColor: theme.colors.borderColor,
 
-              boxShadow: lightBackground
-                ? "0px 4px 16px rgba(0, 0, 0, 0.16)"
-                : "0px 4px 16px rgba(0, 0, 0, 0.7)",
+              boxShadow: theme.shadows.popover,
             }),
           },
         }}
@@ -138,23 +143,28 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
           <BaseButtonTooltip help={element.help} containerWidth={true}>
             <BaseButton
               data-testid="stPopoverButton"
-              kind={BaseButtonKind.SECONDARY}
+              kind={kind}
               size={BaseButtonSize.SMALL}
               disabled={empty || element.disabled}
               containerWidth={true}
               onClick={() => setOpen(!open)}
             >
-              <DynamicButtonLabel icon={element.icon} label={element.label} />
-              <StyledPopoverButtonIcon>
-                <StyledIcon
-                  as={open ? ExpandLess : ExpandMore}
-                  color="inherit"
-                  aria-hidden="true"
-                  size="lg"
-                  margin={theme.spacing.none}
-                  padding={theme.spacing.none}
+              <StyledPopoverLabelContainer>
+                <DynamicButtonLabel
+                  icon={element.icon}
+                  label={element.label}
                 />
-              </StyledPopoverButtonIcon>
+                <StyledPopoverExpansionIcon>
+                  <DynamicIcon
+                    iconValue={
+                      open
+                        ? ":material/expand_less:"
+                        : ":material/expand_more:"
+                    }
+                    size="lg"
+                  />
+                </StyledPopoverExpansionIcon>
+              </StyledPopoverLabelContainer>
             </BaseButton>
           </BaseButtonTooltip>
         </div>

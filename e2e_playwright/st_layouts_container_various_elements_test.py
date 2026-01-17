@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,9 +15,11 @@
 import pytest
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
-from e2e_playwright.shared.app_utils import get_element_by_key
+from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.shared.app_utils import get_element_by_key, select_selectbox_option
+from e2e_playwright.shared.react18_utils import wait_for_react_stability
 
+# Container keys that should be tested (excluding map cases which need special handling)
 CONTAINER_KEYS = [
     "layout-dashboard-example",
     "layout-horizontal-form",
@@ -30,13 +32,24 @@ CONTAINER_KEYS = [
     "layout-horizontal-tabs",
     "layout-horizontal-content-width",
     "layout-horizontal-text-area",
-    # Don't expand this one, doesn't work well with the snapshot.
-    "layout-horizontal-expander-dataframe-content-width-large",
+    "layout-vertical-stretch-height",
+    "layout-vertical-content-width-container-with-various-elements",
+    "layout-vertical-content-width-container-with-stretch-width-dataframes",
+    "layout-vertical-content-width-container-with-content-width-dataframes",
+    "layout-horizontal-content-width-container-with-metrics-dataframes-line-charts",
+    "narrow-fixed-width-container-with-dataframe",
 ]
 
+# Container keys that have expanders to test
 CONTAINER_KEYS_WITH_EXPANDERS = [
     "layout-horizontal-expander-dataframe",
     "layout-horizontal-expander-dataframe-content-width",
+]
+
+# Container keys with maps that need special handling
+MAP_CONTAINER_KEYS = [
+    "layout-horizontal-map",
+    "layout-vertical-content-width-container-with-map",
 ]
 
 
@@ -44,52 +57,60 @@ def test_layouts_container_various_elements(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Snapshot test for each top-level container in st_layouts_container_various_elements.py."""
-    wait_for_app_run(app)
+    for container_key in CONTAINER_KEYS:
+        select_selectbox_option(app, "Select container case", container_key)
+        app.wait_for_timeout(500)
+        wait_for_react_stability(app)
 
-    for key in CONTAINER_KEYS:
-        locator = get_element_by_key(app, key)
-        assert_snapshot(locator, name=f"st_layouts_container_various_elements-{key}")
+        locator = get_element_by_key(app, container_key)
+        expect(locator).to_be_visible()
+        assert_snapshot(
+            locator, name=f"st_layouts_container_various_elements-{container_key}"
+        )
 
 
 # Firefox seems to be failing but can't reproduce locally and video produces an empty page for firefox
 @pytest.mark.skip_browser("firefox")
 def test_layouts_container_with_map(app: Page, assert_snapshot: ImageCompareFunction):
-    """Snapshot test for the container with map in st_layouts_container_various_elements.py."""
-    wait_for_app_run(app)
+    """Snapshot test for containers with maps in st_layouts_container_various_elements.py."""
+    for container_key in MAP_CONTAINER_KEYS:
+        select_selectbox_option(app, "Select container case", container_key)
 
-    # Wait for map elements to load
-    map_elements = app.get_by_test_id("stDeckGlJsonChart")
-    expect(map_elements).to_have_count(1, timeout=15000)
-    # The map assets can take more time to load, add an extra timeout
-    # to prevent flakiness.
-    app.wait_for_timeout(10000)
+        # Wait for map elements to load
+        map_element = app.get_by_test_id("stDeckGlJsonChart")
+        expect(map_element).to_be_visible(timeout=15000)
+        # The map assets can take more time to load, add an extra timeout
+        # to prevent flakiness.
+        app.wait_for_timeout(5000)
 
-    locator = get_element_by_key(app, "layout-horizontal-map")
-    # Use higher pixel threshold for containers with maps due to their flakiness
-    assert_snapshot(
-        locator,
-        name="st_layouts_container_various_elements-layout-horizontal-map",
-        pixel_threshold=1.0,
-    )
+        locator = get_element_by_key(app, container_key)
+        expect(locator).to_be_visible()
+        # Use higher pixel threshold for containers with maps due to their flakiness
+        assert_snapshot(
+            locator,
+            name=f"st_layouts_container_various_elements-{container_key}",
+            pixel_threshold=1.0,
+        )
 
 
+@pytest.mark.flaky(reruns=3)
 def test_layouts_container_expanders(app: Page, assert_snapshot: ImageCompareFunction):
     """Test expander functionality in containers that contain expanders."""
-    wait_for_app_run(app)
-    expect(app.get_by_test_id("stExpander")).to_have_count(3)
-
     for container_key in CONTAINER_KEYS_WITH_EXPANDERS:
+        select_selectbox_option(app, "Select container case", container_key)
+
         container = get_element_by_key(app, container_key)
         expect(container).to_be_visible()
 
-        # Get the first (and only) expander in this container
-        container_expanders = container.get_by_test_id("stExpander")
-        expander = container_expanders.first
+        # Get the expander in this container
+        expander = container.get_by_test_id("stExpander")
+        expect(expander).to_be_visible()
         expander.click()
+        # Wait for the expander to open
+        expect(expander.get_by_test_id("stExpanderDetails")).to_be_visible()
 
-        # Wait for charts to load.
-        wait_for_app_run(app)
-        app.wait_for_timeout(500)
+        # Additional timeout to avoid flakiness with rendering
+        app.wait_for_timeout(1000)
 
         assert_snapshot(
             container,

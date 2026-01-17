@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,15 +14,16 @@
  * limitations under the License.
  */
 
-import React, { FC } from "react"
+import { FC } from "react"
 
-import { act, render, renderHook, screen } from "@testing-library/react"
+import { act, renderHook, screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
 import Form from "~lib/components/widgets/Form"
 import { RootStyleProvider } from "~lib/RootStyleProvider"
+import { renderWithContexts } from "~lib/test_util"
 import { getDefaultTheme } from "~lib/theme"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import { createFormsData, WidgetStateManager } from "~lib/WidgetStateManager"
 
 import useWidgetManagerElementState from "./useWidgetManagerElementState"
 
@@ -105,10 +106,8 @@ describe("useWidgetManagerElementState hook", () => {
             formId={formId}
             clearOnSubmit={true}
             enterToSubmit={false}
-            hasSubmitButton={true}
             widgetMgr={widgetMgr}
             border={false}
-            scriptNotRunning={true}
           >
             <input
               aria-label={testInputAriaLabel}
@@ -121,7 +120,9 @@ describe("useWidgetManagerElementState hook", () => {
       )
     }
 
-    render(<TestComponent />)
+    renderWithContexts(<TestComponent />, {
+      formsContext: { formsData: createFormsData() },
+    })
 
     // verify default value
     const inputElement: HTMLInputElement =

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { ComponentType, ReactElement, useEffect, useState } from "react"
+import { ComponentType, ReactElement, useEffect, useState } from "react"
 
 import hoistNonReactStatics from "hoist-non-react-statics"
 
@@ -54,6 +54,7 @@ const withPagination = (
 
     useEffect(() => {
       if (prevItems && prevItems.length !== items.length) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- TODO: Do not set state in effect
         updateTotalPages(calculateNumPages(items, pageSize))
       }
       if (prevItems && prevItems.length < items.length) {
