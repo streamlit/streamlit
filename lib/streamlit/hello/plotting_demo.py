@@ -38,7 +38,7 @@ def plotting_demo() -> None:
         chart.line_chart(data)
         status_text.text(f"{i}% complete")
         progress_bar.progress(i)
-        time.sleep(0.02)
+        time.sleep(0.01)
 
     progress_bar.empty()
 
