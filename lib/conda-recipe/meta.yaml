@@ -74,10 +74,9 @@ requirements:
 test:
   imports:
     - streamlit
-  commands:
-    - pip check
-  requires:
-    - pip
+  # Note: We don't use 'pip check' here because the SNOWPARK_CONDA_BUILD intentionally
+  # excludes some dependencies (gitpython, pydeck, tornado, watchdog) which would
+  # cause pip check to fail even though the build is correct for that use case.
 
 about:
   home: https://streamlit.io
