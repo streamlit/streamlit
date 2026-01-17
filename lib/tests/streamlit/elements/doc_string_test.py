@@ -64,7 +64,7 @@ class StHelpAPITest(DeltaGeneratorTestCase):
         assert el.name == "os.chdir"
         assert el.type == "builtin_function_or_method"
         assert el.doc_string.startswith("Change the current working directory")
-        assert el.value in ["posix.chdir(path)", "nt.chdir(path)"]
+        assert el.value in {"posix.chdir(path)", "nt.chdir(path)"}
 
     def test_st_help_with_available_conditional_members(self):
         """Test st.help with conditional members available"""

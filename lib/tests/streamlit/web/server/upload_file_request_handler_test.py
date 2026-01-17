@@ -22,7 +22,6 @@ from unittest.mock import MagicMock, patch
 import requests
 import tornado.testing
 import tornado.web
-import tornado.websocket
 
 from streamlit.logger import get_logger
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager

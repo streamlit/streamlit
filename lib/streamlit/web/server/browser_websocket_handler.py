@@ -247,9 +247,9 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
                 # See the NOTE in the docstring of the `select_subprotocol` method above
                 # for a detailed explanation of why this is done.
                 existing_session_id = ws_protocols[2]
-        except KeyError:
+        except (KeyError, json.JSONDecodeError):
             # Just let existing_session_id=None if we run into any error while trying to
-            # extract it from the Sec-Websocket-Protocol header.
+            # extract it from the Sec-Websocket-Protocol header or parsing cookie JSON.
             pass
 
         # Map in any user-configured headers. Note that these override anything coming

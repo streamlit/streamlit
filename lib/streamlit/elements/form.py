@@ -341,8 +341,8 @@ class FormMixin:
             - ``"spinner"``: Displays a spinner as an icon.
 
         icon_position : "left" or "right"
-            The position of the icon relative to the button label. Defaults to
-            ``"left"``.
+            The position of the icon relative to the button label. This
+            defaults to ``"left"``.
 
         disabled : bool
             Whether to disable the button. If this is ``False`` (default), the
@@ -413,7 +413,7 @@ class FormMixin:
             width = "stretch" if use_container_width else "content"
 
         # Checks whether the entered button type is one of the allowed options
-        if type not in ["primary", "secondary", "tertiary"]:
+        if type not in {"primary", "secondary", "tertiary"}:
             raise StreamlitAPIException(
                 'The type argument to st.form_submit_button must be "primary", "secondary", or "tertiary". \n'
                 f'The argument passed was "{type}".'

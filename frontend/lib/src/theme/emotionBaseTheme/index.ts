@@ -15,6 +15,7 @@
  */
 
 import { createEmotionColors } from "~lib/theme/getColors"
+import { createShadows } from "~lib/theme/getShadows"
 import {
   breakpoints,
   fonts,
@@ -31,12 +32,18 @@ import {
 
 import genericColors from "./themeColors"
 
+// Create colors (includes derived colors)
+const colors = createEmotionColors(genericColors)
+
+// Create shadows (dependent on colors/derived colors)
+const shadows = createShadows(colors)
+
 export default {
   inSidebar: false,
   showSidebarBorder: false,
   linkUnderline: true,
   breakpoints,
-  colors: createEmotionColors(genericColors),
+  colors,
   fonts,
   fontSizes,
   fontWeights,
@@ -44,6 +51,7 @@ export default {
   iconSizes,
   lineHeights,
   radii,
+  shadows,
   sizes,
   spacing,
   zIndices,

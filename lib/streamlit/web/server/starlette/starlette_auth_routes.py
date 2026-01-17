@@ -12,19 +12,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# ruff: noqa: RUF029  # Async route handlers are idiomatic even without await
+
 """Starlette app authentication routes."""
 
 from __future__ import annotations
 
+import json
 import time
 from typing import TYPE_CHECKING, Any, Final, cast
-from urllib.parse import urlparse
 
 from streamlit.auth_util import (
+    build_logout_url,
     clear_cookie_and_chunks,
     decode_provider_token,
     generate_default_provider_section,
+    get_cookie_with_chunks,
+    get_origin_from_redirect_uri,
+    get_redirect_uri,
     get_secrets_auth_section,
+    get_validated_redirect_uri,
     set_cookie_with_chunks,
 )
 from streamlit.errors import StreamlitAuthError
@@ -139,7 +146,7 @@ def _looks_like_provider_section(value: dict[str, Any]) -> bool:
     return any(key in value for key in provider_keys)
 
 
-class _AuthlibConfig(dict[str, Any]):
+class _AuthlibConfig(dict[str, Any]):  # noqa: FURB189
     """Config adapter that exposes provider data via Authlib's flat lookup.
 
     Authlib expects a flat configuration dictionary (e.g. "GOOGLE_CLIENT_ID").
@@ -307,7 +314,7 @@ def _create_oauth_client(provider: str) -> tuple[Any, str]:
 
     auth_section = get_secrets_auth_section()
     if auth_section:
-        redirect_uri = auth_section.get("redirect_uri", "/")
+        redirect_uri = get_redirect_uri(auth_section) or "/"
         config = auth_section.to_dict()
     else:
         config = {}
@@ -385,20 +392,80 @@ def _get_provider_by_state(state_code_from_url: str | None) -> str | None:
 
 def _get_origin_from_secrets() -> str | None:
     """Extract the origin from the redirect URI in the secrets."""
+    return get_origin_from_redirect_uri()
 
-    redirect_uri = None
-    auth_section = get_secrets_auth_section()
-    if auth_section:
-        redirect_uri = auth_section.get("redirect_uri", None)
 
-    if not redirect_uri:
+def _get_cookie_value_from_request(request: Request, cookie_name: str) -> bytes | None:
+    """Get a signed cookie value from the request, handling chunked cookies."""
+
+    def get_single_cookie(name: str) -> bytes | None:
+        return _get_signed_cookie_from_request(request, name)
+
+    return get_cookie_with_chunks(get_single_cookie, cookie_name)
+
+
+def _get_provider_logout_url(request: Request) -> str | None:
+    """Get the OAuth provider's logout URL from OIDC metadata.
+
+    Returns the end_session_endpoint URL with proper parameters for OIDC logout,
+    or None if the provider doesn't support it or required data is unavailable.
+
+    This function returns None (rather than raising exceptions) to allow graceful
+    fallback to a simple base URL redirect when OIDC logout isn't possible.
+    """
+    cookie_value = _get_cookie_value_from_request(request, USER_COOKIE_NAME)
+
+    if not cookie_value:
         return None
 
-    redirect_uri_parsed = urlparse(redirect_uri)
-    origin_from_redirect_uri: str = (
-        redirect_uri_parsed.scheme + "://" + redirect_uri_parsed.netloc
-    )
-    return origin_from_redirect_uri
+    try:
+        user_info = json.loads(cookie_value)
+        provider = user_info.get("provider")
+        if not provider:
+            return None
+
+        client, _ = _create_oauth_client(provider)
+
+        # Load OIDC metadata - Authlib's Starlette client uses async methods
+        # but load_server_metadata is synchronous in both implementations
+        metadata = client.load_server_metadata()
+        end_session_endpoint = metadata.get("end_session_endpoint")
+
+        if not end_session_endpoint:
+            _LOGGER.info("No end_session_endpoint found for provider %s", provider)
+            return None
+
+        # Use redirect_uri (i.e. /oauth2callback) for post_logout_redirect_uri
+        # This is safer than redirecting to root as some providers seem to
+        # require URL to be in a whitelist - /oauth2callback should be whitelisted
+        redirect_uri = get_validated_redirect_uri()
+        if redirect_uri is None:
+            _LOGGER.info("Redirect url could not be determined")
+            return None
+
+        # Get id_token_hint from tokens cookie if available
+        id_token: str | None = None
+        tokens_cookie_value = _get_cookie_value_from_request(
+            request, TOKENS_COOKIE_NAME
+        )
+        if tokens_cookie_value:
+            try:
+                tokens = json.loads(tokens_cookie_value)
+                id_token = tokens.get("id_token")
+            except (json.JSONDecodeError, TypeError):
+                _LOGGER.exception("Error, invalid tokens cookie value.")
+                return None
+
+        return build_logout_url(
+            end_session_endpoint=end_session_endpoint,
+            client_id=client.client_id,
+            post_logout_redirect_uri=redirect_uri,
+            id_token=id_token,
+        )
+
+    except Exception as e:
+        _LOGGER.warning("Failed to get provider logout URL: %s", e)
+        return None
 
 
 async def _auth_login(request: Request, base_url: str) -> Response:
@@ -421,9 +488,20 @@ async def _auth_login(request: Request, base_url: str) -> Response:
 
 
 async def _auth_logout(request: Request, base_url: str) -> Response:
-    """Logout the user by clearing the auth cookie and redirecting to the base URL."""
+    """Logout the user by clearing the auth cookie and redirecting.
 
-    response = await _redirect_to_base(base_url)
+    If the OAuth provider supports end_session_endpoint, redirects there for
+    proper OIDC logout. Otherwise, redirects to the base URL.
+    """
+    from starlette.responses import RedirectResponse
+
+    provider_logout_url = _get_provider_logout_url(request)
+
+    if provider_logout_url:
+        response = RedirectResponse(provider_logout_url, status_code=302)
+    else:
+        response = await _redirect_to_base(base_url)
+
     _clear_auth_cookie(response, request)
     return response
 
@@ -471,7 +549,7 @@ async def _auth_callback(request: Request, base_url: str) -> Response:
 
     response = await _redirect_to_base(base_url)
 
-    cookie_value = dict(user, origin=origin, is_logged_in=True)
+    cookie_value = dict(user, origin=origin, is_logged_in=True, provider=provider)
     tokens = {k: token[k] for k in ["id_token", "access_token"] if k in token}
     if user:
         await _set_auth_cookie(response, cookie_value, tokens)

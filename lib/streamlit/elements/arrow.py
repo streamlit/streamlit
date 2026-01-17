@@ -648,7 +648,7 @@ class ArrowMixin:
         """
         import pyarrow as pa
 
-        if on_select not in ["ignore", "rerun"] and not callable(on_select):
+        if on_select not in {"ignore", "rerun"} and not callable(on_select):
             raise StreamlitAPIException(
                 f"You have passed {on_select} to `on_select`. But only 'ignore', "
                 "'rerun', or a callable is supported."
@@ -745,13 +745,18 @@ class ArrowMixin:
         elif (
             # Hide index column if row selections are activated and the dataframe has a range index.
             # The range index usually does not add a lot of value.
-            is_selection_activated
-            and selection_mode in ["multi-row", "single-row"]
-            and has_range_index
+            is_selection_activated and has_range_index
         ):
-            update_column_config(
-                column_config_mapping, INDEX_IDENTIFIER, {"hidden": True}
+            # Normalize selection_mode to a set to check for row selection modes
+            mode_set = (
+                {selection_mode}
+                if isinstance(selection_mode, str)
+                else set(selection_mode)
             )
+            if mode_set & {"multi-row", "single-row"}:
+                update_column_config(
+                    column_config_mapping, INDEX_IDENTIFIER, {"hidden": True}
+                )
 
         marshall_column_config(proto, column_config_mapping)
 
@@ -772,7 +777,11 @@ class ArrowMixin:
             proto.id = compute_and_register_element_id(
                 "dataframe",
                 user_key=key,
-                key_as_main_identity=False,
+                # There are some edge cases where selections can become orphaned when the data changes
+                # - e.g. when rows get removed. The frontend can handle this without errors,
+                # but it might be a nice enhancement to automatically reset the backend & frontend
+                # selection state in this case.
+                key_as_main_identity={"selection_mode", "is_selection_activated"},
                 dg=self.dg,
                 data=proto.data,
                 width=width,

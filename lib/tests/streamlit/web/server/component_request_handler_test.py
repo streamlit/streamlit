@@ -262,7 +262,7 @@ class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
                 return BytesIO(payload)
             from io import TextIOWrapper
 
-            return TextIOWrapper(str(payload, encoding=encoding))
+            return TextIOWrapper(str(payload, encoding=encoding), encoding="utf-8")
 
         with mock.patch(MOCK_IS_DIR_PATH):
             declare_component("test", path=PATH)

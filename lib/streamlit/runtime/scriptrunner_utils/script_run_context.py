@@ -28,7 +28,6 @@ from urllib import parse
 
 from streamlit.errors import (
     NoSessionContext,
-    StreamlitAPIException,
 )
 from streamlit.logger import get_logger
 from streamlit.runtime.forward_msg_cache import (
@@ -108,10 +107,6 @@ class ScriptRunContext:
     _active_script_hash: str = ""
     # we allow only one dialog to be open at the same time
     has_dialog_opened: bool = False
-
-    # TODO(willhuang1997): Remove this variable when experimental query params are removed
-    _experimental_query_params_used = False
-    _production_query_params_used = False
 
     @property
     def page_script_hash(self) -> str:
@@ -201,22 +196,6 @@ class ScriptRunContext:
 
         # Pass the message up to our associated ScriptRunner.
         self._enqueue(msg_to_send)
-
-    def ensure_single_query_api_used(self) -> None:
-        if self._experimental_query_params_used and self._production_query_params_used:
-            raise StreamlitAPIException(
-                "Using `st.query_params` together with either `st.experimental_get_query_params` "
-                "or `st.experimental_set_query_params` is not supported. Please "
-                " convert your app to only use `st.query_params`"
-            )
-
-    def mark_experimental_query_params_used(self) -> None:
-        self._experimental_query_params_used = True
-        self.ensure_single_query_api_used()
-
-    def mark_production_query_params_used(self) -> None:
-        self._production_query_params_used = True
-        self.ensure_single_query_api_used()
 
 
 SCRIPT_RUN_CONTEXT_ATTR_NAME: Final = "streamlit_script_run_ctx"

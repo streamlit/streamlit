@@ -19,7 +19,7 @@ import sys
 import textwrap
 from pathlib import Path
 
-if __name__ not in ("__main__", "__mp_main__"):
+if __name__ not in {"__main__", "__mp_main__"}:
     raise SystemExit(
         "This file is intended to be executed as an executable program. You cannot use "
         "it as a module.To run this script, run the ./{__file__} command"
@@ -61,7 +61,7 @@ def display_usage() -> None:
 
 
 def parse_args() -> tuple[str, list[str]]:
-    if len(sys.argv) == 2 and sys.argv[1] in ("-h", "--help"):
+    if len(sys.argv) == 2 and sys.argv[1] in {"-h", "--help"}:
         display_usage()
         sys.exit(0)
     if len(sys.argv) < 3:

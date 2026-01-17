@@ -315,3 +315,59 @@ if "runs" not in st.session_state:
     st.session_state.runs = 0
 st.session_state.runs += 1
 st.write("Runs:", st.session_state.runs)
+
+# SELECTION PERSISTENCE WITH DATA CHANGES (key_as_main_identity feature)
+st.header("Selection persistence with data changes:")
+
+# Initialize update counter in session state
+if "chart_data_update_count" not in st.session_state:
+    st.session_state.chart_data_update_count = 0
+
+
+def increment_chart_data():
+    st.session_state.chart_data_update_count += 1
+
+
+# Create dynamic data based on update count
+# Use a fixed base but add the update count to values so data clearly changes
+persistent_df = pd.DataFrame(
+    {
+        "category": ["A", "B", "C", "D", "E"],
+        "value": [
+            10 + st.session_state.chart_data_update_count * 5,
+            25 + st.session_state.chart_data_update_count * 5,
+            15 + st.session_state.chart_data_update_count * 5,
+            30 + st.session_state.chart_data_update_count * 5,
+            20 + st.session_state.chart_data_update_count * 5,
+        ],
+    }
+)
+
+point_persistent = alt.selection_point(name="persistent_selection")
+persistent_chart = (
+    alt.Chart(persistent_df)
+    .mark_bar()
+    .encode(
+        x=alt.X("category:N"),
+        y=alt.Y("value:Q"),
+        fillOpacity=alt.condition(point_persistent, alt.value(1), alt.value(0.3)),
+        tooltip=alt.value(None),
+    )
+    .add_params(point_persistent)
+)
+
+# Don't use container width so the chart has a predictable size for clicking
+selection = st.altair_chart(
+    persistent_chart,
+    on_select="rerun",
+    key="persistent_selection_chart",
+    width="content",
+)
+st.write("Persistent selection:", str(selection))
+st.write("Chart data update count:", st.session_state.chart_data_update_count)
+
+st.button(
+    "Update chart data",
+    key="update_chart_data_btn",
+    on_click=increment_chart_data,
+)

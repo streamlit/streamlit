@@ -405,7 +405,7 @@ class ComputeElementIdTests(DeltaGeneratorTestCase):
         "in element ID calculation."
 
         # Some elements cannot be used in a form
-        if element_name not in ["button", "chat_input", "download_button"]:
+        if element_name not in {"button", "chat_input", "download_button"}:
             # For all other check that form_id is set:
             assert call_kwargs.get("form_id") == "", (
                 "form_id is expected to be included in element ID calculation."

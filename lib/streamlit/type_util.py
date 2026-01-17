@@ -268,7 +268,7 @@ def _is_probably_plotly_dict(obj: object) -> TypeGuard[dict[str, Any]]:
     if len(obj.keys()) == 0:
         return False
 
-    if any(k not in ["config", "data", "frames", "layout"] for k in obj):
+    if any(k not in {"config", "data", "frames", "layout"} for k in obj):
         return False
 
     if any(_is_plotly_obj(v) for v in obj.values()):
@@ -472,7 +472,7 @@ def async_generator_to_sync(
     try:
         # Iterate over the async generator until it raises StopAsyncIteration
         while True:
-            yield loop.run_until_complete(async_gen.__anext__())
+            yield loop.run_until_complete(anext(async_gen))
     except StopAsyncIteration:
         # The async generator has finished
         pass

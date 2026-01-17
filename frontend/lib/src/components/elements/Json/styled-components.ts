@@ -16,8 +16,6 @@
 
 import styled from "@emotion/styled"
 
-import { getPrimaryFocusBoxShadow } from "~lib/theme/utils"
-
 export const StyledJsonWrapper = styled.div(({ theme }) => ({
   overflowY: "auto",
   position: "relative",
@@ -64,7 +62,7 @@ export const StyledCopyButton = styled.button(({ theme }) => ({
     outline: "none",
   },
   "&:focus-visible": {
-    boxShadow: getPrimaryFocusBoxShadow(theme),
+    boxShadow: theme.shadows.focusRing,
   },
 }))
 

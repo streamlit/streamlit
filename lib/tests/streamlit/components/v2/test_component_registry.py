@@ -319,15 +319,15 @@ def temp_test_files() -> dict:
 
     # Create test files
     js_path = os.path.join(temp_dir.name, "index.js")
-    with open(js_path, "w") as f:
+    with open(js_path, "w", encoding="utf-8") as f:
         f.write("console.log('test');")
 
     html_path = os.path.join(temp_dir.name, "index.html")
-    with open(html_path, "w") as f:
+    with open(html_path, "w", encoding="utf-8") as f:
         f.write("<div>Test</div>")
 
     css_path = os.path.join(temp_dir.name, "styles.css")
-    with open(css_path, "w") as f:
+    with open(css_path, "w", encoding="utf-8") as f:
         f.write("div { color: blue; }")
 
     yield {
@@ -348,7 +348,7 @@ def temp_manager_setup() -> dict:
 
     # Create test files
     js_path = os.path.join(temp_dir.name, "index.js")
-    with open(js_path, "w") as f:
+    with open(js_path, "w", encoding="utf-8") as f:
         f.write("console.log('test');")
 
     yield {
@@ -759,7 +759,7 @@ def test_resolve_glob_pattern_direct() -> None:
 
         # Create test file
         test_file = os.path.join(temp_dir, "test-pattern.js")
-        with open(test_file, "w") as f:
+        with open(test_file, "w", encoding="utf-8") as f:
             f.write("console.log('test');")
 
         # Test successful resolution
@@ -773,7 +773,7 @@ def test_resolve_glob_pattern_direct() -> None:
 
         # Test multiple matches
         duplicate_file = os.path.join(temp_dir, "test-duplicate.js")
-        with open(duplicate_file, "w") as f:
+        with open(duplicate_file, "w", encoding="utf-8") as f:
             f.write("console.log('duplicate');")
 
         with pytest.raises(StreamlitComponentRegistryError) as exc_info:
