@@ -216,3 +216,4 @@ class DeltaGeneratorAddRowsTest(DeltaGeneratorTestCase):
         args = mock_show_deprecation_warning.call_args
         assert "`add_rows` is deprecated" in args[0][0]
         assert args[1]["show_in_browser"]
+        assert args[1]["show_once"]
