@@ -41,103 +41,105 @@ streamlit = { path = "lib", editable = true }
 [dependency-groups]
 # Development dependencies - includes test group
 dev = [
-    { include-group = "test" },
-    "streamlit",
-    "pre-commit",
-    # We fix ty to a version since its still in beta and likely breaks our CI on updates:
-    "ty==0.0.11",
-    # We fix ruff to a version to be in sync with the pre-commit hook:
-    "ruff==0.14.11",
-    # We are pinning the upper version to not break our CI on updates,
-    # and have dependabot handle the updates instead.
-    "mypy>=1.16.1,<1.20",
-    "mypy-protobuf>=3.2",
-    "semver>=3",
-    "setuptools>=65.5.1",
-    "twine",
-    "wheel",
-    "pytz",
-    # Used for updating emojis via: scripts/update_emojis.py
-    "emoji",
-    # mypy type stubs
-    "types-protobuf",
-    "types-pytz",
-    "types-requests",
-    "types-setuptools",
-    "types-toml",
-    "types-cachetools",
-    "types-Authlib",
-    "pandas-stubs>=2.3.3.251219",
+  { include-group = "test" },
+  "streamlit",
+  "pre-commit",
+  # We fix ty to a version since its still in beta and likely breaks our CI on updates:
+  "ty==0.0.11",
+  # We fix ruff to a version to be in sync with the pre-commit hook:
+  "ruff==0.14.11",
+  # We are pinning the upper version to not break our CI on updates,
+  # and have dependabot handle the updates instead.
+  "mypy>=1.16.1,<1.20",
+  "mypy-protobuf>=3.2",
+  "semver>=3",
+  "setuptools>=65.5.1",
+  "twine",
+  "wheel",
+  "pytz",
+  # Used for updating emojis via: scripts/update_emojis.py
+  "emoji",
+  # mypy type stubs
+  "types-protobuf",
+  "types-pytz",
+  "types-requests",
+  "types-setuptools",
+  "types-toml",
+  "types-cachetools",
+  "types-Authlib",
+  "pandas-stubs>=2.3.3.251219",
+  # Required for verify_version.py on Python < 3.11:
+  "tomli; python_version < '3.11'",
 ]
 
 # Test dependencies
 test = [
-    "streamlit",
-    # Testing infrastructure dependencies:
-    "pytest>=8.3.5",
-    "pytest-cov",
-    "hypothesis>=6.17.4",
-    "parameterized",
-    "requests-mock",
-    "testfixtures",
-    # Packages used to test things users may do with Streamlit:
-    "Authlib>=1.3.2",
-    "graphviz>=0.17",
-    "matplotlib>=3.3.4",
-    "plotly>=5.3.1",
-    "seaborn>=0.11.2",
-    "watchdog>=2.1.5",
-    "streamlit-pdf>=1.0.0",
-    # Optional dependency for better performance:
-    "uvloop>=0.15.2; sys_platform != 'win32'",
-    # Optional dependency used for improved exception formatting:
-    "rich>=10.14.0",
-    # Used by vega-lite / altair e2e tests:
-    "vega_datasets",
-    # Required for Starlette support:
-    "starlette>=0.40.0",
-    "uvicorn>=0.30.0",
-    "python-multipart>=0.0.10",
-    "websockets>=12.0.0",
-    "itsdangerous>=2.1.2",
-    # Only for unit tests:
-    "httpx>=0.24.1",
-    # Playwright and E2E test dependencies:
-    # We pin playwright to a minor version to avoid new browser versions breaking our CI.
-    "playwright==1.57.*",
-    "pytest-playwright>=0.3.3",
-    "pixelmatch>=0.3.0",
-    "pytest-xdist>=3.6.1",
-    # pytest-rerunfailures 16.0 is breaking our CI:
-    # https://github.com/pytest-dev/pytest-rerunfailures/issues/302
-    "pytest-rerunfailures>=15.0,!=16.0",
-    "pytest-github-actions-annotate-failures",
-    "pytest-benchmark>=5.1.0",
-    "pytest-repeat>=0.9.3",
-    "pytest-timeout>=2.3.1",
+  "streamlit",
+  # Testing infrastructure dependencies:
+  "pytest>=8.3.5",
+  "pytest-cov",
+  "hypothesis>=6.17.4",
+  "parameterized",
+  "requests-mock",
+  "testfixtures",
+  # Packages used to test things users may do with Streamlit:
+  "Authlib>=1.3.2",
+  "graphviz>=0.17",
+  "matplotlib>=3.3.4",
+  "plotly>=5.3.1",
+  "seaborn>=0.11.2",
+  "watchdog>=2.1.5",
+  "streamlit-pdf>=1.0.0",
+  # Optional dependency for better performance:
+  "uvloop>=0.15.2; sys_platform != 'win32'",
+  # Optional dependency used for improved exception formatting:
+  "rich>=10.14.0",
+  # Used by vega-lite / altair e2e tests:
+  "vega_datasets",
+  # Required for Starlette support:
+  "starlette>=0.40.0",
+  "uvicorn>=0.30.0",
+  "python-multipart>=0.0.10",
+  "websockets>=12.0.0",
+  "itsdangerous>=2.1.2",
+  # Only for unit tests:
+  "httpx>=0.24.1",
+  # Playwright and E2E test dependencies:
+  # We pin playwright to a minor version to avoid new browser versions breaking our CI.
+  "playwright==1.57.*",
+  "pytest-playwright>=0.3.3",
+  "pixelmatch>=0.3.0",
+  "pytest-xdist>=3.6.1",
+  # pytest-rerunfailures 16.0 is breaking our CI:
+  # https://github.com/pytest-dev/pytest-rerunfailures/issues/302
+  "pytest-rerunfailures>=15.0,!=16.0",
+  "pytest-github-actions-annotate-failures",
+  "pytest-benchmark>=5.1.0",
+  "pytest-repeat>=0.9.3",
+  "pytest-timeout>=2.3.1",
 ]
 
 # Integration test dependencies
 integration = [
-    "streamlit",
-    # Snowflake dependencies:
-    "snowflake-snowpark-python[modin]>=1.17.0",
-    "snowflake-connector-python>=3.3.0",
-    # Required for testing the langchain integration:
-    "langchain>=0.2.0,<0.4",
-    "langchain-community>=0.2.0,<0.4",
-    # Additional dataframe formats for testing:
-    "polars",
-    "xarray",
-    "dask",
-    "ray",
-    "duckdb",
-    # Used for testing of st.connection:
-    "sqlalchemy[mypy]>=2.0.0",
-    # Used by audio test:
-    "scipy>=1.7.3",
-    # Used to ensure pydantic is supported:
-    "pydantic>=2.0.0",
+  "streamlit",
+  # Snowflake dependencies:
+  "snowflake-snowpark-python[modin]>=1.17.0",
+  "snowflake-connector-python>=3.3.0",
+  # Required for testing the langchain integration:
+  "langchain>=0.2.0,<0.4",
+  "langchain-community>=0.2.0,<0.4",
+  # Additional dataframe formats for testing:
+  "polars",
+  "xarray",
+  "dask",
+  "ray",
+  "duckdb",
+  # Used for testing of st.connection:
+  "sqlalchemy[mypy]>=2.0.0",
+  # Used by audio test:
+  "scipy>=1.7.3",
+  # Used to ensure pydantic is supported:
+  "pydantic>=2.0.0",
 ]
 
 # =============================================================================
@@ -149,18 +151,18 @@ integration = [
 target-version = "py310"
 line-length = 88
 extend-exclude = [
-    # Autogenerated files:
-    "lib/streamlit/proto",
-    "lib/streamlit/emojis.py",
-    "lib/streamlit/material_icon_names.py",
-    # File with an expected compilation error:
-    "e2e_playwright/compilation_error_dialog.py",
-    # Ignore frontend directory:
-    "frontend/**",
+  # Autogenerated files:
+  "lib/streamlit/proto",
+  "lib/streamlit/emojis.py",
+  "lib/streamlit/material_icon_names.py",
+  # File with an expected compilation error:
+  "e2e_playwright/compilation_error_dialog.py",
+  # Ignore frontend directory:
+  "frontend/**",
 ]
 exclude = [
-    # pympler is a vendored dependency that doesn't conform to our linting rules:
-    "lib/streamlit/vendor/**",
+  # pympler is a vendored dependency that doesn't conform to our linting rules:
+  "lib/streamlit/vendor/**",
 ]
 
 [tool.ruff.format]
@@ -175,76 +177,76 @@ explicit-preview-rules = false
 # or that are not relevant for our codebase.
 select = ["ALL"]
 ignore = [
-    # Rules planned to be supported in the future:
-    "EM101",  # Checks for the use of string literals in exception constructors.
-    "EM102",  # Checks for the use of f-strings in exception constructors.
-    "TRY003", # Checks for exception messages that are not defined in the exception class itself.
-    # Ignored rule sets:
-    "DTZ", # Checks for usage of unsafe naive datetime class.
-    "PTH", # Enforces usage of pathlib.
-    "C90", # Checks for McCabe complexity.
-    "FBT", # Forbids boolean positional arguments.
-    "SLF", # Checks unexpected for private member access.
-    "BLE", # Checks for blind except statements.
-    "CPY", # Checks for copyright statement.
-    "DOC", # Checks for correct docstring format.
-    # Ignored rules:
-    "A002",    # Checks if function argument shadows a Python builtin.
-    "ANN401",  # Checks that `any` is not used as an annotation.
-    "B904",    # Checks for raise statements in exception handlers that lack a from clause.
-    "COM812",  # Checks for absence of trailing commas. Not recommended with formatter.
-    "COM819",  # Checks for presence of prohibited trailing commas. Not recommended with formatter.
-    "D100",    # Checks for missing docstring in public module.
-    "D101",    # Checks for missing docstring in public class.
-    "D102",    # Checks for missing docstring in public method.
-    "D103",    # Checks for missing docstring in public function.
-    "D104",    # Checks for missing docstring in public package.
-    "D105",    # Checks for missing docstring in magic method.
-    "D106",    # Checks for missing docstring in public nested class.
-    "D107",    # Checks for missing docstring in __init__.
-    "D202",    # Checks for no-blank line after docstring.
-    "D205",    # Checks for missing blank line after docstring summary.
-    "D401",    # Checks for docstring to start with imperative mood.
-    "E266",    # Checks for multiple leading hashes in block comments.
-    "FIX002",  # Checks todo comments (which we want to allow).
-    "FURB101", # Checks for open and read calls that can be replaced by pathlib.
-    "FURB103", # Checks for open and write calls that can be replaced by pathlib.
-    "FURB113", # Checks for repeated append calls that can be replaced by extend.
-    "FURB152", # Checks for math constants that could use math module.
-    "PD009",   # Checks for usage of pd.DataFrame.iat.
-    "PGH003",  # Checks for blanket type ignore.
-    "PLC0415", # Enforces imports to be at the top-level of the file.
-    "PLC1901", # Checks for comparisons to empty string.
-    "PLC2701", # Checks for imports of private names.
-    "PLR0904", # Checks for classes with too many public methods.
-    "PLR0911", # Checks for functions with too many return statements.
-    "PLR0912", # Checks for functions with too many branches.
-    "PLR0913", # Checks for functions with too many arguments.
-    "PLR0914", # Checks for functions with too many local variables.
-    "PLR0915", # Checks for functions with too many statements.
-    "PLR0916", # Checks for too many boolean expressions in if statements.
-    "PLR0917", # Checks for functions with too many positional arguments.
-    "PLR1702", # Checks for functions with too many nested blocks.
-    "PLR2004", # Checks for numerical values that could be put into a constant.
-    "PLR6301", # Checks for methods that do not use self.
-    "PLW0108", # Checks for lambdas that can be replaced by existing functions.
-    "PLW3201", # Checks for bad dunder method names.
-    "PT012",   # Checks for pytest.raises context managers with multiple statements.
-    "PT019",   # Checks for tests that should use @pytest.mark.usefixtures (incompatible with unittest.patch)
-    "PYI041",  # Checks for parameter annotations that contain redundant unions between builtin numeric types (e.g., int | float).
-    "PYI051",  # Checks for redundant unions between a Literal and a builtin supertype of that Literal.
-    "RET504",  # Checks for assignments that immediately precede a return of the assigned variable (too opinionated).
-    "RSE102",  # Checks for unnecessary parentheses on raised exceptions.
-    "RUF052",  # Checks for dummy variables that are used.
-    "RUF067",  # Checks for non empty __init__ modules.
-    "SIM105",  # Enforces use of contextlib.suppress.
-    "SIM108",  # Enforces ternary operators instead of if-else.
-    "SIM115",  # Enforces context manager for opening files.
-    "SIM117",  # Enforces single with statement with multiple contexts.
-    "SIM905",  # Enforces list instead of st.split.
-    "TD002",   # Checks for missing author in TODO comment.
-    "TD003",   # Checks for missing issue link in TODO comment.
-    "TRY300",  # Checks for return statements in try blocks.
+  # Rules planned to be supported in the future:
+  "EM101",  # Checks for the use of string literals in exception constructors.
+  "EM102",  # Checks for the use of f-strings in exception constructors.
+  "TRY003", # Checks for exception messages that are not defined in the exception class itself.
+  # Ignored rule sets:
+  "DTZ", # Checks for usage of unsafe naive datetime class.
+  "PTH", # Enforces usage of pathlib.
+  "C90", # Checks for McCabe complexity.
+  "FBT", # Forbids boolean positional arguments.
+  "SLF", # Checks unexpected for private member access.
+  "BLE", # Checks for blind except statements.
+  "CPY", # Checks for copyright statement.
+  "DOC", # Checks for correct docstring format.
+  # Ignored rules:
+  "A002",    # Checks if function argument shadows a Python builtin.
+  "ANN401",  # Checks that `any` is not used as an annotation.
+  "B904",    # Checks for raise statements in exception handlers that lack a from clause.
+  "COM812",  # Checks for absence of trailing commas. Not recommended with formatter.
+  "COM819",  # Checks for presence of prohibited trailing commas. Not recommended with formatter.
+  "D100",    # Checks for missing docstring in public module.
+  "D101",    # Checks for missing docstring in public class.
+  "D102",    # Checks for missing docstring in public method.
+  "D103",    # Checks for missing docstring in public function.
+  "D104",    # Checks for missing docstring in public package.
+  "D105",    # Checks for missing docstring in magic method.
+  "D106",    # Checks for missing docstring in public nested class.
+  "D107",    # Checks for missing docstring in __init__.
+  "D202",    # Checks for no-blank line after docstring.
+  "D205",    # Checks for missing blank line after docstring summary.
+  "D401",    # Checks for docstring to start with imperative mood.
+  "E266",    # Checks for multiple leading hashes in block comments.
+  "FIX002",  # Checks todo comments (which we want to allow).
+  "FURB101", # Checks for open and read calls that can be replaced by pathlib.
+  "FURB103", # Checks for open and write calls that can be replaced by pathlib.
+  "FURB113", # Checks for repeated append calls that can be replaced by extend.
+  "FURB152", # Checks for math constants that could use math module.
+  "PD009",   # Checks for usage of pd.DataFrame.iat.
+  "PGH003",  # Checks for blanket type ignore.
+  "PLC0415", # Enforces imports to be at the top-level of the file.
+  "PLC1901", # Checks for comparisons to empty string.
+  "PLC2701", # Checks for imports of private names.
+  "PLR0904", # Checks for classes with too many public methods.
+  "PLR0911", # Checks for functions with too many return statements.
+  "PLR0912", # Checks for functions with too many branches.
+  "PLR0913", # Checks for functions with too many arguments.
+  "PLR0914", # Checks for functions with too many local variables.
+  "PLR0915", # Checks for functions with too many statements.
+  "PLR0916", # Checks for too many boolean expressions in if statements.
+  "PLR0917", # Checks for functions with too many positional arguments.
+  "PLR1702", # Checks for functions with too many nested blocks.
+  "PLR2004", # Checks for numerical values that could be put into a constant.
+  "PLR6301", # Checks for methods that do not use self.
+  "PLW0108", # Checks for lambdas that can be replaced by existing functions.
+  "PLW3201", # Checks for bad dunder method names.
+  "PT012",   # Checks for pytest.raises context managers with multiple statements.
+  "PT019",   # Checks for tests that should use @pytest.mark.usefixtures (incompatible with unittest.patch)
+  "PYI041",  # Checks for parameter annotations that contain redundant unions between builtin numeric types (e.g., int | float).
+  "PYI051",  # Checks for redundant unions between a Literal and a builtin supertype of that Literal.
+  "RET504",  # Checks for assignments that immediately precede a return of the assigned variable (too opinionated).
+  "RSE102",  # Checks for unnecessary parentheses on raised exceptions.
+  "RUF052",  # Checks for dummy variables that are used.
+  "RUF067",  # Checks for non empty __init__ modules.
+  "SIM105",  # Enforces use of contextlib.suppress.
+  "SIM108",  # Enforces ternary operators instead of if-else.
+  "SIM115",  # Enforces context manager for opening files.
+  "SIM117",  # Enforces single with statement with multiple contexts.
+  "SIM905",  # Enforces list instead of st.split.
+  "TD002",   # Checks for missing author in TODO comment.
+  "TD003",   # Checks for missing issue link in TODO comment.
+  "TRY300",  # Checks for return statements in try blocks.
 ]
 extend-safe-fixes = ["TC002", "TC003"]
 
@@ -252,31 +254,31 @@ extend-safe-fixes = ["TC002", "TC003"]
 # Only add ignores for entire folders here. To ignore rules in individual
 # files, use the noqa ignore comment on top of the given file.
 "e2e_playwright/**" = [
-    "B018",   # Allow useless expressions (e.g., for side effects in tests).
-    "N999",   # Allow invalid module names (test files use descriptive names).
-    "NPY002", # Allow legacy numpy random generation.
-    "PD",     # Ignore pandas-vet rules (test data manipulation patterns).
-    "PERF",   # Ignore performance rules (clarity over speed in tests).
-    "RUF029", # Allow async functions without await (intentional for testing async behavior).
-    "S",      # Ignore bandit security rules (test code doesn't need security hardening).
-    "T20",    # Allow print statements (useful for test debugging).
-    "TRY",    # Ignore tryceratops rules (simpler exception handling in tests).
+  "B018",   # Allow useless expressions (e.g., for side effects in tests).
+  "N999",   # Allow invalid module names (test files use descriptive names).
+  "NPY002", # Allow legacy numpy random generation.
+  "PD",     # Ignore pandas-vet rules (test data manipulation patterns).
+  "PERF",   # Ignore performance rules (clarity over speed in tests).
+  "RUF029", # Allow async functions without await (intentional for testing async behavior).
+  "S",      # Ignore bandit security rules (test code doesn't need security hardening).
+  "T20",    # Allow print statements (useful for test debugging).
+  "TRY",    # Ignore tryceratops rules (simpler exception handling in tests).
 ]
 "lib/tests/**" = [
-    "ANN",     # Ignore annotation rules (test functions don't need full typing).
-    "ARG",     # Allow unused arguments (common in test fixtures and mocks).
-    "D",       # Ignore docstring rules (tests are self-documenting via names).
-    "FURB118", # Allow all operators (tests may use operator module intentionally).
-    "FURB189", # Allow subclassing of builtin types (for test mocking).
-    "INP",     # Allow implicit namespace packages (test directories).
-    "N",       # Ignore naming conventions (test names can be descriptive/long).
-    "NPY002",  # Allow legacy numpy random generation.
-    "PD",      # Ignore pandas-vet rules (test data manipulation patterns).
-    "PERF",    # Ignore performance rules (clarity over speed in tests).
-    "PLC2801", # Allow dunder calls (e.g., object.__setattr__ for frozen dataclasses).
-    "RUF029",  # Allow async functions without await (test fixtures, mocks, ASGI callables).
-    "S",       # Ignore bandit security rules (test code doesn't need security hardening).
-    "TRY",     # Ignore tryceratops rules (simpler exception handling in tests).
+  "ANN",     # Ignore annotation rules (test functions don't need full typing).
+  "ARG",     # Allow unused arguments (common in test fixtures and mocks).
+  "D",       # Ignore docstring rules (tests are self-documenting via names).
+  "FURB118", # Allow all operators (tests may use operator module intentionally).
+  "FURB189", # Allow subclassing of builtin types (for test mocking).
+  "INP",     # Allow implicit namespace packages (test directories).
+  "N",       # Ignore naming conventions (test names can be descriptive/long).
+  "NPY002",  # Allow legacy numpy random generation.
+  "PD",      # Ignore pandas-vet rules (test data manipulation patterns).
+  "PERF",    # Ignore performance rules (clarity over speed in tests).
+  "PLC2801", # Allow dunder calls (e.g., object.__setattr__ for frozen dataclasses).
+  "RUF029",  # Allow async functions without await (test fixtures, mocks, ASGI callables).
+  "S",       # Ignore bandit security rules (test code doesn't need security hardening).
+  "TRY",     # Ignore tryceratops rules (simpler exception handling in tests).
 ]
 "scripts/**" = ["T20", "INP", "PERF", "S", "TRY002"]
 
@@ -316,10 +318,15 @@ suppress-none-returning = true
 python_version = "3.10"
 cache_dir = ".mypy_cache"
 incremental = true
-files = ["lib/streamlit/", "lib/tests/streamlit/typing/", "scripts/", "e2e_playwright/"]
+files = [
+  "lib/streamlit/",
+  "lib/tests/streamlit/typing/",
+  "scripts/",
+  "e2e_playwright/",
+]
 exclude = [
-    # The compilation error test file breaks mypy because of the syntax error.
-    "^e2e_playwright/compilation_error_dialog\\.py$",
+  # The compilation error test file breaks mypy because of the syntax error.
+  "^e2e_playwright/compilation_error_dialog\\.py$",
 ]
 
 # Strict mode settings:
@@ -369,7 +376,18 @@ module = "tests.streamlit.typing.*"
 ignore_errors = false
 
 [[tool.mypy.overrides]]
-module = ["shared.*", "vega_datasets.*", "sympy.*", "plotly.*", "pydeck.*", "pyarrow.*", "graphviz.*", "authlib.*", "uvloop.*", "polars.*"]
+module = [
+  "shared.*",
+  "vega_datasets.*",
+  "sympy.*",
+  "plotly.*",
+  "pydeck.*",
+  "pyarrow.*",
+  "graphviz.*",
+  "authlib.*",
+  "uvloop.*",
+  "polars.*",
+]
 ignore_missing_imports = true
 
 # =============================================================================
@@ -383,8 +401,8 @@ root = ["./lib/streamlit"]
 [tool.ty.src]
 include = ["lib/streamlit", "e2e_playwright", "scripts"]
 exclude = [
-    "e2e_playwright/compilation_error_dialog.py",
-    "lib/streamlit/vendor/**",
+  "e2e_playwright/compilation_error_dialog.py",
+  "lib/streamlit/vendor/**",
 ]
 
 [tool.ty.rules]

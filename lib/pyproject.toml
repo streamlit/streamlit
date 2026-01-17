@@ -32,6 +32,7 @@ classifiers = [
     "Environment :: Web Environment",
     "Intended Audience :: Developers",
     "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -171,6 +172,7 @@ streamlit = ["py.typed", "hello/**/*.py"]
 # Used by pytest-cov when running tests. Paths are relative to lib/.
 
 [tool.coverage.run]
+source = ["streamlit"]
 omit = [
     "streamlit/proto/*",
     "streamlit/vendor/*",

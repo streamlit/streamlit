@@ -50,7 +50,7 @@ def _get_ruff_version_from_pyproject(repo_root: str) -> str | None:
             for line in f:
                 stripped_line = line.strip()
                 # Match ruff version in dependency groups: "ruff==0.14.11",
-                match = re.match(r'^"ruff==([0-9]+\.[0-9]+\.[0-9]+)"', stripped_line)
+                match = re.match(r'^"ruff==([0-9]+\.[0-9]+\.[0-9]+)",?', stripped_line)
                 if match:
                     return match.group(1)
     except FileNotFoundError:
