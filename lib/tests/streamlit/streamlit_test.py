@@ -25,7 +25,7 @@ import unittest
 
 # tomllib is available in Python 3.11+, use tomli as fallback for Python 3.10
 try:
-    import tomllib
+    import tomllib  # type: ignore[import-not-found]
 except ImportError:
     import tomli as tomllib
 
