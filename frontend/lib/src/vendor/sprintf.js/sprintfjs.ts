@@ -359,14 +359,3 @@ function sprintfParse(fmt: string): ParseTree {
 export function sprintf(fmt: string, ...args: unknown[]): string {
   return sprintfFormat(sprintfParse(fmt), [fmt, ...args])
 }
-
-/**
- * Format a string using printf-style format specifiers with an array of arguments.
- *
- * @param fmt - The format string
- * @param argv - Array of values to substitute into the format string
- * @returns The formatted string
- */
-export function vsprintf(fmt: string, argv: unknown[]): string {
-  return sprintf(fmt, ...argv)
-}

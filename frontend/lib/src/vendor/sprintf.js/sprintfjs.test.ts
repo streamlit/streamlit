@@ -6,7 +6,7 @@
 
 import { describe, expect, it } from "vitest"
 
-import { sprintf, vsprintf } from "./sprintfjs.js"
+import { sprintf } from "./sprintfjs.js"
 
 describe("sprintf", () => {
   const pi = 3.141592653589793
@@ -402,18 +402,8 @@ describe("sprintf", () => {
       // Redefine object properties to ensure they don't affect the cache
       sprintf("hasOwnProperty")
       sprintf("constructor")
-      expect(() => vsprintf("%s", ["caching..."])).not.toThrow()
-      expect(() => vsprintf("%s", ["crash?"])).not.toThrow()
+      expect(() => sprintf("%s", "caching...")).not.toThrow()
+      expect(() => sprintf("%s", "crash?")).not.toThrow()
     })
-  })
-})
-
-describe("vsprintf", () => {
-  it("formats with array of arguments", () => {
-    expect(vsprintf("%d + %d = %d", [1, 2, 3])).toBe("1 + 2 = 3")
-  })
-
-  it("supports thousand separator", () => {
-    expect(vsprintf("%,d", [1234567])).toBe("1,234,567")
   })
 })
