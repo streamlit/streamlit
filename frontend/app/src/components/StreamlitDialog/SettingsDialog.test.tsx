@@ -315,9 +315,11 @@ describe("SettingsDialog", () => {
     const props = getProps({
       sessionInfo: mockSessionInfo({ streamlitVersion: "1.28.1" }),
     })
-    const context = getContext()
+    const themeContext = getThemeContext()
 
-    renderWithContexts(<SettingsDialog {...props} />, context)
+    renderWithContexts(<SettingsDialog {...props} />, {
+      themeContext: themeContext,
+    })
 
     const copyButton = screen.getByRole("button", {
       name: "Copy text",
@@ -337,9 +339,11 @@ describe("SettingsDialog", () => {
     const props = getProps({
       sessionInfo: mockSessionInfo({ streamlitVersion: testVersion }),
     })
-    const context = getContext()
+    const themeContext = getThemeContext()
 
-    renderWithContexts(<SettingsDialog {...props} />, context)
+    renderWithContexts(<SettingsDialog {...props} />, {
+      themeContext: themeContext,
+    })
 
     const copyButton = screen.getByRole("button", {
       name: "Copy text",
@@ -356,9 +360,11 @@ describe("SettingsDialog", () => {
     const props = getProps({
       sessionInfo: mockSessionInfo({ streamlitVersion: testVersion }),
     })
-    const context = getContext()
+    const themeContext = getThemeContext()
 
-    renderWithContexts(<SettingsDialog {...props} />, context)
+    renderWithContexts(<SettingsDialog {...props} />, {
+      themeContext: themeContext,
+    })
 
     const versionContainer = screen.getByTestId("stVersionInfo")
     await userEvent.click(versionContainer)
@@ -372,9 +378,11 @@ describe("SettingsDialog", () => {
     const props = getProps({
       sessionInfo: mockSessionInfo({ streamlitVersion: "1.28.1" }),
     })
-    const context = getContext()
+    const themeContext = getThemeContext()
 
-    renderWithContexts(<SettingsDialog {...props} />, context)
+    renderWithContexts(<SettingsDialog {...props} />, {
+      themeContext: themeContext,
+    })
 
     const copyButton = screen.getByRole("button", {
       name: "Copy text",

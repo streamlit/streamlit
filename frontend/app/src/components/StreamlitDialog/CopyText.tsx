@@ -68,7 +68,6 @@ const CopyText: React.FC<Props> = ({
         <DynamicIcon
           iconValue={isCopied ? ":material/check:" : ":material/content_copy:"}
           size="sm"
-          margin="0"
           color="inherit"
         />
       </StyledCopyTextButton>

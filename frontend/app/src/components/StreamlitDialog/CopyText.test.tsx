@@ -20,7 +20,7 @@ import { screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 import { vi } from "vitest"
 
-import { renderWithContexts } from "@streamlit/lib"
+import { renderWithContexts } from "@streamlit/lib/testing"
 
 import CopyText from "./CopyText"
 
