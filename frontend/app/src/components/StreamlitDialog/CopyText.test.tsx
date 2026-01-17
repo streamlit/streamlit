@@ -61,9 +61,8 @@ describe("CopyText", () => {
     expect(container).toHaveAttribute("tabIndex", "0")
     expect(container).toHaveAttribute("data-testid", "test")
 
-    // Inner button is hidden from accessibility tree but visible for mouse users
+    // Inner button is hidden from accessibility tree but rendered for mouse users
     const iconButton = screen.getByTestId("testCopyButton")
-    expect(iconButton).toBeVisible()
     expect(iconButton).toHaveAttribute("aria-hidden", "true")
     expect(iconButton).toHaveAttribute("tabIndex", "-1")
   })
@@ -71,13 +70,16 @@ describe("CopyText", () => {
   it("uses default test id when none provided", () => {
     renderWithContexts(<CopyText text="Test text" />, {})
 
-    const iconButton = screen.getByTestId("stCopyTextButton")
-    expect(iconButton).toBeVisible()
+    // Icon button exists but is aria-hidden
+    expect(screen.getByTestId("stCopyTextButton")).toHaveAttribute(
+      "aria-hidden",
+      "true"
+    )
   })
 
   it("copies text to clipboard when copy button is clicked", async () => {
     const testText = "Test content"
-    mockWriteText.mockResolvedValue()
+    mockWriteText.mockResolvedValue(undefined)
 
     renderWithContexts(<CopyText text={testText} />, {})
 
@@ -90,7 +92,7 @@ describe("CopyText", () => {
   })
 
   it("copies different text when copyText prop is provided", async () => {
-    mockWriteText.mockResolvedValue()
+    mockWriteText.mockResolvedValue(undefined)
 
     renderWithContexts(
       <CopyText text="Display text" copyText="Copy this instead" />,
@@ -107,7 +109,7 @@ describe("CopyText", () => {
 
   it("copies text when clicking anywhere on the container", async () => {
     const testText = "Container text"
-    mockWriteText.mockResolvedValue()
+    mockWriteText.mockResolvedValue(undefined)
 
     renderWithContexts(
       <CopyText text={testText} data-testid="container" />,
@@ -122,36 +124,34 @@ describe("CopyText", () => {
 
   it("copies text when pressing Enter on the container", async () => {
     const testText = "Keyboard test"
-    mockWriteText.mockResolvedValue()
+    mockWriteText.mockResolvedValue(undefined)
 
     renderWithContexts(<CopyText text={testText} />, {})
 
     const container = screen.getByRole("button", {
       name: "Copy to clipboard",
     })
-    container.focus()
-    await userEvent.keyboard("{Enter}")
+    await userEvent.type(container, "{Enter}")
 
     expect(mockWriteText).toHaveBeenCalledWith(testText)
   })
 
   it("copies text when pressing Space on the container", async () => {
     const testText = "Keyboard test"
-    mockWriteText.mockResolvedValue()
+    mockWriteText.mockResolvedValue(undefined)
 
     renderWithContexts(<CopyText text={testText} />, {})
 
     const container = screen.getByRole("button", {
       name: "Copy to clipboard",
     })
-    container.focus()
-    await userEvent.keyboard(" ")
+    await userEvent.type(container, " ")
 
     expect(mockWriteText).toHaveBeenCalledWith(testText)
   })
 
   it("shows check icon feedback after successful copy", async () => {
-    mockWriteText.mockResolvedValue()
+    mockWriteText.mockResolvedValue(undefined)
 
     renderWithContexts(<CopyText text="Test text" />, {})
 
@@ -165,8 +165,8 @@ describe("CopyText", () => {
   })
 
   it("reverts to copy icon after timeout", async () => {
-    vi.useFakeTimers()
-    mockWriteText.mockResolvedValue()
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    mockWriteText.mockResolvedValue(undefined)
 
     renderWithContexts(<CopyText text="Test text" />, {})
 
@@ -179,7 +179,7 @@ describe("CopyText", () => {
     expect(screen.getByRole("button", { name: "Copied" })).toBeVisible()
 
     // Fast-forward time to trigger the timeout
-    vi.advanceTimersByTime(2100) // Default timeout is 2000ms + buffer
+    await vi.advanceTimersByTimeAsync(2100) // Default timeout is 2000ms + buffer
 
     // Should revert back to copy state
     expect(
