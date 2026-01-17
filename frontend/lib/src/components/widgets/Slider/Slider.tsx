@@ -50,7 +50,6 @@ import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { formatMoment, MomentKind } from "~lib/util/formatMoment"
 import { formatNumber } from "~lib/util/formatNumber"
 import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
-import { sprintf } from "~lib/vendor/sprintf.js/sprintfjs.js"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {

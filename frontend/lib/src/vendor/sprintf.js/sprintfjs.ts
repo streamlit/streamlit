@@ -10,6 +10,8 @@
  *   This mirrors Python's format mini-language: f"{x:,}" or f"{x:_}"
  */
 
+import { isNullOrUndefined } from "@streamlit/utils"
+
 interface Placeholder {
   placeholder: string
   param_no?: string
@@ -94,14 +96,14 @@ function sprintfFormat(parseTree: ParseTree, argv: unknown[]): string {
       continue
     }
 
-    const ph = node as Placeholder
+    const ph = node
     let arg: unknown
 
     if (ph.keys) {
       // keyword argument
       arg = argv[cursor]
       for (let k = 0; k < ph.keys.length; k++) {
-        if (arg == null) {
+        if (isNullOrUndefined(arg)) {
           throw new Error(
             `[sprintf] Cannot access property "${ph.keys[k]}" of undefined value "${ph.keys[k - 1]}"`
           )
