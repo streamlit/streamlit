@@ -469,3 +469,219 @@ class CookieChunkingTest(unittest.TestCase):
         result = get_cookie_with_chunks(mock_get_cookie, "auth_cookie")
         assert result is not None
         assert json.loads(result) == data
+
+
+class TestGetValidatedRedirectUri:
+    """Tests for get_validated_redirect_uri function."""
+
+    def test_returns_none_when_no_auth_section(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test that None is returned when no auth section exists."""
+        from streamlit import auth_util
+
+        monkeypatch.setattr(
+            auth_util,
+            "get_secrets_auth_section",
+            lambda: None,
+        )
+        assert auth_util.get_validated_redirect_uri() is None
+
+    def test_returns_none_when_no_redirect_uri(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test that None is returned when redirect_uri is missing."""
+        from streamlit import auth_util
+
+        monkeypatch.setattr(
+            auth_util,
+            "get_secrets_auth_section",
+            lambda: AttrDict({}),
+        )
+        assert auth_util.get_validated_redirect_uri() is None
+
+    def test_returns_none_when_not_oauth2callback(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test that None is returned when redirect_uri doesn't end with /oauth2callback."""
+        from streamlit import auth_util
+
+        monkeypatch.setattr(
+            auth_util,
+            "get_secrets_auth_section",
+            lambda: AttrDict({"redirect_uri": "http://localhost:8501/callback"}),
+        )
+        # get_validated_redirect_uri checks suffix
+        assert auth_util.get_validated_redirect_uri() is None
+
+    def test_returns_uri_with_oauth2callback(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test that redirect URI is returned when it ends with /oauth2callback."""
+        from streamlit import auth_util
+
+        monkeypatch.setattr(
+            auth_util,
+            "get_secrets_auth_section",
+            lambda: AttrDict({"redirect_uri": "http://localhost:8501/oauth2callback"}),
+        )
+        assert (
+            auth_util.get_validated_redirect_uri()
+            == "http://localhost:8501/oauth2callback"
+        )
+
+    @patch(
+        "streamlit.auth_util.config",
+        MagicMock(
+            get_option=MagicMock(return_value=9999),
+        ),
+    )
+    def test_substitutes_port_placeholder(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test that {port} placeholder is substituted in redirect_uri (PR #12251)."""
+        from streamlit import auth_util
+
+        monkeypatch.setattr(
+            auth_util,
+            "get_secrets_auth_section",
+            lambda: AttrDict(
+                {"redirect_uri": "http://localhost:{port}/oauth2callback"}
+            ),
+        )
+        assert (
+            auth_util.get_validated_redirect_uri()
+            == "http://localhost:9999/oauth2callback"
+        )
+
+
+class TestGetOriginFromRedirectUri:
+    """Tests for get_origin_from_redirect_uri function."""
+
+    def test_returns_none_when_no_auth_section(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test that None is returned when no auth section exists."""
+        from streamlit import auth_util
+
+        monkeypatch.setattr(
+            auth_util,
+            "get_secrets_auth_section",
+            lambda: None,
+        )
+        assert auth_util.get_origin_from_redirect_uri() is None
+
+    def test_returns_none_when_no_redirect_uri(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test that None is returned when redirect_uri is missing."""
+        from streamlit import auth_util
+
+        monkeypatch.setattr(
+            auth_util,
+            "get_secrets_auth_section",
+            lambda: AttrDict({}),
+        )
+        assert auth_util.get_origin_from_redirect_uri() is None
+
+    def test_extracts_origin_correctly(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Test that origin is correctly extracted from redirect_uri."""
+        from streamlit import auth_util
+
+        monkeypatch.setattr(
+            auth_util,
+            "get_secrets_auth_section",
+            lambda: AttrDict({"redirect_uri": "https://example.com/oauth2callback"}),
+        )
+        assert auth_util.get_origin_from_redirect_uri() == "https://example.com"
+
+    def test_handles_localhost_with_port(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Test that localhost URIs with port are handled correctly."""
+        from streamlit import auth_util
+
+        monkeypatch.setattr(
+            auth_util,
+            "get_secrets_auth_section",
+            lambda: AttrDict({"redirect_uri": "http://localhost:8501/oauth2callback"}),
+        )
+        assert auth_util.get_origin_from_redirect_uri() == "http://localhost:8501"
+
+    @patch(
+        "streamlit.auth_util.config",
+        MagicMock(
+            get_option=MagicMock(return_value=7777),
+        ),
+    )
+    def test_substitutes_port_placeholder_in_origin(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test that {port} placeholder is substituted when extracting origin (PR #12251)."""
+        from streamlit import auth_util
+
+        monkeypatch.setattr(
+            auth_util,
+            "get_secrets_auth_section",
+            lambda: AttrDict(
+                {"redirect_uri": "http://localhost:{port}/oauth2callback"}
+            ),
+        )
+        assert auth_util.get_origin_from_redirect_uri() == "http://localhost:7777"
+
+
+class TestBuildLogoutUrl:
+    """Tests for build_logout_url function."""
+
+    def test_builds_basic_logout_url(self) -> None:
+        """Test that basic logout URL is built correctly."""
+        from streamlit import auth_util
+
+        result = auth_util.build_logout_url(
+            end_session_endpoint="https://provider.com/logout",
+            client_id="test-client-id",
+            post_logout_redirect_uri="https://myapp.com/oauth2callback",
+        )
+        assert "https://provider.com/logout" in result
+        assert "client_id=test-client-id" in result
+        assert "post_logout_redirect_uri" in result
+        assert "myapp.com" in result
+        # id_token_hint should NOT be present when not provided
+        assert "id_token_hint" not in result
+
+    def test_includes_id_token_hint_when_provided(self) -> None:
+        """Test that id_token_hint is included when provided."""
+        from streamlit import auth_util
+
+        result = auth_util.build_logout_url(
+            end_session_endpoint="https://provider.com/logout",
+            client_id="test-client-id",
+            post_logout_redirect_uri="https://myapp.com/oauth2callback",
+            id_token="eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9",
+        )
+        assert "id_token_hint=eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9" in result
+
+    def test_url_encodes_parameters(self) -> None:
+        """Test that parameters are properly URL encoded."""
+        from streamlit import auth_util
+
+        result = auth_util.build_logout_url(
+            end_session_endpoint="https://provider.com/logout",
+            client_id="test-client-id",
+            post_logout_redirect_uri="http://localhost:8501/oauth2callback",
+        )
+        # URL-encoded colon and slashes
+        assert "http%3A%2F%2Flocalhost%3A8501%2Foauth2callback" in result
+
+    def test_handles_existing_query_params(self) -> None:
+        """Test that existing query params in endpoint are preserved."""
+        from streamlit import auth_util
+
+        result = auth_util.build_logout_url(
+            end_session_endpoint="https://provider.com/logout?existing=value",
+            client_id="test-client-id",
+            post_logout_redirect_uri="https://myapp.com/oauth2callback",
+        )
+        assert "existing=value" in result
+        assert "client_id=test-client-id" in result
+        # Should use & not ? for additional params
+        assert "?existing=value" in result or "existing=value&" in result
+        assert result.count("?") == 1
