@@ -170,3 +170,34 @@ class LogoTest(DeltaGeneratorTestCase):
         """Test that invalid material icons raise an error."""
         with pytest.raises(StreamlitAPIException):
             st.logo(":material/not_a_real_icon_name:")
+
+    def test_invalid_material_icon_in_icon_image(self):
+        """Test that invalid material icons in icon_image raise an error."""
+        streamlit = Image.open(
+            str(pathlib.Path(__file__).parent / "full-streamlit.png")
+        )
+        with pytest.raises(StreamlitAPIException):
+            st.logo(streamlit, icon_image=":material/not_a_real_icon_name:")
+
+    def test_emoji_as_icon_image(self):
+        """Test that emoji can be used as icon_image."""
+        streamlit = Image.open(
+            str(pathlib.Path(__file__).parent / "full-streamlit.png")
+        )
+        st.logo(streamlit, icon_image="🏠")
+
+        c = self.get_message_from_queue().logo
+        assert c.image.startswith(MEDIA_ENDPOINT)
+        assert c.image_type == 0  # IMAGE
+        assert c.icon_image == "🏠"
+        assert c.icon_image_type == 1  # EMOJI
+
+    def test_empty_string_raises_error(self):
+        """Test that empty string raises an error."""
+        with pytest.raises(StreamlitAPIException):
+            st.logo("")
+
+    def test_plain_text_raises_error(self):
+        """Test that plain text (not emoji, not icon) raises an error."""
+        with pytest.raises(StreamlitAPIException):
+            st.logo("hello")
