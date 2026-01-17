@@ -22,7 +22,6 @@ import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
 import { sprintf } from "~lib/vendor/sprintf.js/sprintfjs.js"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-
 const LOG = getLogger("NumberInput")
 
 /**
