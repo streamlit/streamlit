@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -66,7 +66,7 @@ def _is_watchdog_available() -> bool:
 
 def report_watchdog_availability() -> None:
     if (
-        config.get_option("server.fileWatcherType") not in ["poll", "none"]
+        config.get_option("server.fileWatcherType") not in {"poll", "none"}
         and not _is_watchdog_available()
     ):
         msg = "\n  $ xcode-select --install" if env_util.IS_DARWIN else ""

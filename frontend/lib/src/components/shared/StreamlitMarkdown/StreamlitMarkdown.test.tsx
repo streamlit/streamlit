@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import React, { ReactElement } from "react"
+import { ReactElement } from "react"
 
-import { cleanup, screen } from "@testing-library/react"
+import { cleanup, screen, within } from "@testing-library/react"
 import { transparentize } from "color2k"
 import ReactMarkdown from "react-markdown"
 
@@ -35,8 +35,20 @@ import StreamlitMarkdown, {
   CustomCodeTagProps,
   CustomMediaTag,
   CustomPreTag,
+  HeadingWithActionElements,
   LinkWithTargetBlank,
 } from "./StreamlitMarkdown"
+
+// Mock StreamlitConfig using global mock state (see vitest.setup.ts)
+vi.mock("@streamlit/utils", async () => {
+  const actual = await vi.importActual("@streamlit/utils")
+  return {
+    ...actual,
+    get StreamlitConfig() {
+      return globalThis.__mockStreamlitConfig
+    },
+  }
+})
 
 // Fixture Generator
 const getMarkdownElement = (body: string): ReactElement => {
@@ -411,6 +423,62 @@ describe("StreamlitMarkdown", () => {
     ).not.toBeInTheDocument()
   })
 
+  it("uses aria-labelledby when help is present in the sidebar (no anchor id)", () => {
+    render(
+      <IsSidebarContext.Provider value={true}>
+        <IsDialogContext.Provider value={false}>
+          <HeadingWithActionElements tag="h2" help="Help text">
+            Hello
+          </HeadingWithActionElements>
+        </IsDialogContext.Provider>
+      </IsSidebarContext.Provider>
+    )
+
+    const heading = screen.getByRole("heading", { name: "Hello" })
+    expect(heading).toHaveAttribute("aria-labelledby")
+    expect(heading).not.toHaveAttribute("id")
+
+    const labelId = heading.getAttribute("aria-labelledby")
+    expect(labelId).toBeTruthy()
+    expect(within(heading).getByText("Hello")).toHaveAttribute("id", labelId)
+  })
+
+  it("uses aria-labelledby when the anchor icon is present (non-sidebar)", () => {
+    render(
+      <IsSidebarContext.Provider value={false}>
+        <IsDialogContext.Provider value={false}>
+          <HeadingWithActionElements tag="h2" anchor="my-anchor">
+            Hello
+          </HeadingWithActionElements>
+        </IsDialogContext.Provider>
+      </IsSidebarContext.Provider>
+    )
+
+    const heading = screen.getByRole("heading", { name: "Hello" })
+    expect(heading).toHaveAttribute("id", "my-anchor")
+    expect(heading).toHaveAttribute("aria-labelledby")
+
+    const labelId = heading.getAttribute("aria-labelledby")
+    expect(labelId).toBeTruthy()
+    expect(within(heading).getByText("Hello")).toHaveAttribute("id", labelId)
+  })
+
+  it("does not use aria-labelledby when no action elements are present", () => {
+    render(
+      <IsSidebarContext.Provider value={false}>
+        <IsDialogContext.Provider value={false}>
+          <HeadingWithActionElements tag="h2" anchor="my-anchor" hideAnchor>
+            Hello
+          </HeadingWithActionElements>
+        </IsDialogContext.Provider>
+      </IsSidebarContext.Provider>
+    )
+
+    const heading = screen.getByRole("heading", { name: "Hello" })
+    expect(heading).toHaveAttribute("id", "my-anchor")
+    expect(heading).not.toHaveAttribute("aria-labelledby")
+  })
+
   it("propagates header attributes to custom header", async () => {
     const source = '<h1 data-test="lol">alsdkjhflaf</h1>'
     render(<StreamlitMarkdown source={source} allowHTML />)
@@ -677,6 +745,15 @@ describe("StreamlitMarkdown", () => {
     expect(markdown).toBeInTheDocument()
   })
 
+  it("converts unsupported text directives to plain text", () => {
+    // Text directives use the syntax :name[content]
+    // Unsupported ones should render as :name (prefix only, content lost)
+    const source = `test :unknown[content] end`
+    render(<StreamlitMarkdown source={source} allowHTML={false} />)
+    const markdown = screen.getByText("test :unknown end")
+    expect(markdown).toBeVisible()
+  })
+
   it("properly adds background colors", () => {
     backgroundColorMapping.forEach(function (style, color) {
       const source = `:${color}-background[text]`
@@ -825,7 +902,7 @@ describe("CustomMediaTag", () => {
     { resourceCrossOriginMode: "use-credentials" },
     { resourceCrossOriginMode: undefined },
   ] as const)(
-    "should render img element without crossOrigin attribute when window.__streamlit?.BACKEND_BASE_URL is not set",
+    "should render img element without crossOrigin attribute when StreamlitConfig.BACKEND_BASE_URL is not set",
     ({ resourceCrossOriginMode }) => {
       renderWithContexts(<CustomMediaTag node={mockNode} {...mockProps} />, {
         libConfigContext: {
@@ -842,16 +919,13 @@ describe("CustomMediaTag", () => {
   )
 
   describe("with BACKEND_BASE_URL set", () => {
-    const originalStreamlit = window.__streamlit
-
     beforeEach(() => {
-      window.__streamlit = {
-        BACKEND_BASE_URL: "https://backend.example.com:8080/app",
-      }
+      globalThis.__mockStreamlitConfig.BACKEND_BASE_URL =
+        "https://backend.example.com:8080/app"
     })
 
     afterEach(() => {
-      window.__streamlit = originalStreamlit
+      globalThis.__mockStreamlitConfig = {}
     })
 
     it.each([

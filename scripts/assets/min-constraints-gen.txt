@@ -1,6 +1,6 @@
 altair==4.0
 blinker==1.5.0
-cachetools==4.0
+cachetools==5.5
 click==7.0
 gitpython==3.0.7
 numpy==1.23
@@ -14,5 +14,5 @@ requests==2.27
 tenacity==8.1.0
 toml==0.10.1
 tornado==6.0.3
-typing-extensions==4.4.0
+typing-extensions==4.10.0
 watchdog==2.1.5

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,9 +33,9 @@ import { AppNodeVisitor } from "./AppNodeVisitor.interface"
  * // filteredNode will be undefined if the node should be filtered out
  * ```
  */
-export class FilterMainScriptElementsVisitor
-  implements AppNodeVisitor<AppNode | undefined>
-{
+export class FilterMainScriptElementsVisitor implements AppNodeVisitor<
+  AppNode | undefined
+> {
   private readonly mainScriptHash: string
 
   constructor(mainScriptHash: string) {

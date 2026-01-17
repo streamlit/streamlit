@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ import {
   OptionalThemeColors,
   RequiredThemeColors,
 } from "./emotionBaseTheme/themeColors"
+import { ThemeShadows } from "./getShadows"
 import { PrimitiveColors } from "./primitives"
 
 /**
@@ -90,13 +91,18 @@ export type SpecialEmotionColors = {
   // Chart colors (these are arrays of colors)
   chartCategoricalColors: string[]
   chartSequentialColors: string[]
+  chartDivergingColors: string[]
 }
 
 /**
- * Complete emotion theme type with explicitly typed colors
+ * Complete emotion theme type with explicitly typed colors and shadows
  */
-export interface EmotionTheme extends Omit<typeof emotionBaseTheme, "colors"> {
+export interface EmotionTheme extends Omit<
+  typeof emotionBaseTheme,
+  "colors" | "shadows"
+> {
   colors: EmotionThemeColors
+  shadows: ThemeShadows
 }
 
 export type ThemeConfig = {

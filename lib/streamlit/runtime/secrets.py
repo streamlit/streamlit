@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -230,7 +230,6 @@ class Secrets(Mapping[str, Any]):
         """Left in place for compatibility with integrations until integration
         code can be updated.
         """
-        pass
 
     def _reset(self) -> None:
         """Clear the secrets dictionary and remove any secrets that were
@@ -260,9 +259,9 @@ class Secrets(Mapping[str, Any]):
             # the default config for secrets contains two paths. It's likely one of will not have secrets file.
             return {}, False
 
-        try:
-            import toml
+        import toml
 
+        try:
             secrets.update(toml.loads(secrets_file_str))
         except (TypeError, toml.TomlDecodeError) as ex:
             msg = (
@@ -308,7 +307,7 @@ class Secrets(Mapping[str, Any]):
                 if os.path.isdir(file_path):
                     continue
 
-                with open(file_path) as f:
+                with open(file_path, encoding="utf-8") as f:
                     sub_secrets[filename] = f.read().strip()
                     found_secrets_file = True
 
@@ -396,7 +395,7 @@ class Secrets(Mapping[str, Any]):
         is a string, int, or float.
         """
         value_type = type(v)
-        if value_type in (str, int, float):
+        if value_type in {str, int, float}:
             os.environ[k] = str(v)
 
     @staticmethod
@@ -405,7 +404,7 @@ class Secrets(Mapping[str, Any]):
         is a string, int, or float.
         """
         value_type = type(v)
-        if value_type in (str, int, float) and os.environ.get(k) == v:
+        if value_type in {str, int, float} and os.environ.get(k) == v:
             del os.environ[k]
 
     def _maybe_install_file_watchers(self) -> None:

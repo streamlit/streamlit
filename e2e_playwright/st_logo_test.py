@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,10 +14,8 @@
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import (
-    ImageCompareFunction,
-    wait_for_app_run,
-)
+from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.shared.app_utils import select_selectbox_option
 
 
 def test_logo_no_sidebar(
@@ -134,7 +132,4 @@ def test_logo_w_sidebar_and_nav(
 
 
 def select_subtest(app: Page, name: str) -> None:
-    selectbox_input = app.get_by_test_id("stSelectbox").nth(0).locator("input")
-    selectbox_input.type(name)
-    selectbox_input.press("Enter")
-    wait_for_app_run(app)
+    select_selectbox_option(app, "Test to run", name)

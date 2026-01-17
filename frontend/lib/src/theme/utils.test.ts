@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -45,14 +45,17 @@ import {
   getCachedTheme,
   getDefaultTheme,
   getHostSpecifiedTheme,
+  getHostSpecifiedThemeOnly,
   getSystemTheme,
   handleSectionInheritance,
   hasThemeSectionConfigs,
   isColor,
   isPresetTheme,
+  mapCachedThemeToAvailableTheme,
   parseFont,
   removeCachedTheme,
   setCachedTheme,
+  sortThemeInputKeys,
   toThemeInput,
 } from "./utils"
 
@@ -107,6 +110,48 @@ describe("Styling utils", () => {
       expect(computeSpacingStyle("xs  0  px  lg", lightTheme.emotion)).toEqual(
         "0.375rem 0 1px 1rem"
       )
+    })
+  })
+
+  // Note: Detailed shadow value tests are in getShadows.test.ts
+  // These tests verify theme integration only
+  describe("theme.shadows (integration)", () => {
+    it("light and dark themes have shadows with the same property keys", () => {
+      const lightKeys = Object.keys(lightTheme.emotion.shadows).sort()
+      const darkKeys = Object.keys(darkTheme.emotion.shadows).sort()
+
+      expect(lightKeys).toEqual(darkKeys)
+    })
+
+    it("all shadow values are valid CSS box-shadow strings", () => {
+      const themes = [lightTheme.emotion, darkTheme.emotion]
+
+      themes.forEach(theme => {
+        Object.values(theme.shadows).forEach(shadow => {
+          expect(typeof shadow).toBe("string")
+          expect(shadow.length).toBeGreaterThan(0)
+          expect(
+            shadow === "none" ||
+              shadow.includes("#") ||
+              shadow.includes("rgba(")
+          ).toBe(true)
+        })
+      })
+    })
+
+    it("custom themes compute focus ring shadows from custom primary color", () => {
+      const customTheme = createTheme(
+        "Custom",
+        new CustomThemeConfig({
+          primaryColor: "#00ff00", // green
+        })
+      )
+
+      const { shadows } = customTheme.emotion
+
+      // Focus ring should use the custom primary color
+      expect(shadows.focusRing).toContain("rgba(0, 255, 0")
+      expect(shadows.focusRingOutline).toBe("0 0 0 1px #00ff00")
     })
   })
 })
@@ -289,6 +334,116 @@ describe("Cached theme helpers", () => {
           bodyFont: 'Roboto, "Source Sans", sans-serif',
         },
       })
+    })
+  })
+
+  describe("mapCachedThemeToAvailableTheme", () => {
+    it("returns null when no cached theme provided", () => {
+      const result = mapCachedThemeToAvailableTheme(null, [lightTheme])
+      expect(result).toBe(null)
+    })
+
+    it("returns exact match when cached theme exists in available themes", () => {
+      const customTheme = createTheme(CUSTOM_THEME_NAME, {
+        primaryColor: "blue",
+      })
+      const result = mapCachedThemeToAvailableTheme(customTheme, [
+        lightTheme,
+        customTheme,
+      ])
+      expect(result).toBe(customTheme)
+    })
+
+    it("maps preset Light to Custom Theme Light when custom light/dark themes available", () => {
+      const customLight = createTheme(CUSTOM_THEME_LIGHT_NAME, {
+        primaryColor: "lightblue",
+      })
+      const customDark = createTheme(CUSTOM_THEME_DARK_NAME, {
+        primaryColor: "darkblue",
+      })
+      const customAuto = createAutoTheme()
+
+      const result = mapCachedThemeToAvailableTheme(lightTheme, [
+        customLight,
+        customDark,
+        customAuto,
+      ])
+
+      expect(result).toBe(customLight)
+      expect(result?.name).toBe(CUSTOM_THEME_LIGHT_NAME)
+    })
+
+    it("maps preset Dark to Custom Theme Dark when custom light/dark themes available", () => {
+      const customLight = createTheme(CUSTOM_THEME_LIGHT_NAME, {
+        primaryColor: "lightblue",
+      })
+      const customDark = createTheme(CUSTOM_THEME_DARK_NAME, {
+        primaryColor: "darkblue",
+      })
+      const customAuto = createAutoTheme()
+
+      const result = mapCachedThemeToAvailableTheme(darkTheme, [
+        customLight,
+        customDark,
+        customAuto,
+      ])
+
+      expect(result).toBe(customDark)
+      expect(result?.name).toBe(CUSTOM_THEME_DARK_NAME)
+    })
+
+    it("maps Custom Theme Light to preset Light when custom themes removed", () => {
+      const customLight = createTheme(CUSTOM_THEME_LIGHT_NAME, {
+        primaryColor: "lightblue",
+      })
+
+      const result = mapCachedThemeToAvailableTheme(customLight, [
+        lightTheme,
+        darkTheme,
+      ])
+
+      expect(result).toBe(lightTheme)
+      expect(result?.name).toBe("Light")
+    })
+
+    it("maps Custom Theme Dark to preset Dark when custom themes removed", () => {
+      const customDark = createTheme(CUSTOM_THEME_DARK_NAME, {
+        primaryColor: "darkblue",
+      })
+
+      const result = mapCachedThemeToAvailableTheme(customDark, [
+        lightTheme,
+        darkTheme,
+      ])
+
+      expect(result).toBe(darkTheme)
+      expect(result?.name).toBe("Dark")
+    })
+
+    it("returns null when cached preset theme with single custom theme", () => {
+      const customTheme = createTheme(CUSTOM_THEME_NAME, {
+        primaryColor: "blue",
+      })
+
+      const result = mapCachedThemeToAvailableTheme(lightTheme, [customTheme])
+
+      // Don't map preset to single custom theme - let default logic handle it
+      expect(result).toBe(null)
+    })
+
+    it("returns null when no suitable match found", () => {
+      const customLight = createTheme(CUSTOM_THEME_LIGHT_NAME, {
+        primaryColor: "lightblue",
+      })
+      const customSingle = createTheme(CUSTOM_THEME_NAME, {
+        primaryColor: "blue",
+      })
+
+      const result = mapCachedThemeToAvailableTheme(customLight, [
+        customSingle,
+      ])
+
+      expect(result).toBe(null)
     })
   })
 })
@@ -487,6 +642,52 @@ describe("getHostSpecifiedTheme", () => {
   })
 })
 
+describe("getHostSpecifiedThemeOnly", () => {
+  let windowSpy: MockInstance
+
+  afterEach(() => {
+    windowSpy.mockRestore()
+    window.localStorage.clear()
+  })
+
+  it("returns null when there is no theme in query params", () => {
+    windowSpy = mockWindow()
+    const theme = getHostSpecifiedThemeOnly()
+
+    expect(theme).toBeNull()
+  })
+
+  it("returns light theme when embed_options=light_theme", () => {
+    windowSpy = mockWindow(
+      windowLocationSearch("?embed=true&embed_options=light_theme")
+    )
+    const theme = getHostSpecifiedThemeOnly()
+
+    expect(theme).not.toBeNull()
+    expect(theme?.name).toBe("Light")
+    expect(theme?.emotion.colors).toEqual(lightTheme.emotion.colors)
+  })
+
+  it("returns dark theme when embed_options=dark_theme", () => {
+    windowSpy = mockWindow(
+      windowLocationSearch("?embed=true&embed_options=dark_theme")
+    )
+    const theme = getHostSpecifiedThemeOnly()
+
+    expect(theme).not.toBeNull()
+    expect(theme?.name).toBe("Dark")
+    expect(theme?.emotion.colors).toEqual(darkTheme.emotion.colors)
+  })
+
+  it("ignores system theme preference when no query params", () => {
+    windowSpy = mockWindow(windowMatchMedia("dark"))
+    const theme = getHostSpecifiedThemeOnly()
+
+    // Should return null, NOT the dark theme based on system preference
+    expect(theme).toBeNull()
+  })
+})
+
 describe("getDefaultTheme", () => {
   let windowSpy: MockInstance
 
@@ -555,6 +756,38 @@ describe("getDefaultTheme", () => {
     expect(defaultTheme.name).toBe("Light")
     // Also verify that the theme is our lightTheme.
     expect(defaultTheme.emotion.colors).toEqual(lightTheme.emotion.colors)
+  })
+
+  it("restores Custom Theme Light with displayName from cache", () => {
+    windowSpy = mockWindow()
+
+    // Create a custom light theme and cache it
+    const customLightTheme: ThemeConfig = {
+      ...createTheme(CUSTOM_THEME_LIGHT_NAME, { primaryColor: "blue" }),
+      displayName: "Light",
+    }
+    setCachedTheme(customLightTheme)
+
+    const defaultTheme = getDefaultTheme()
+
+    expect(defaultTheme.name).toBe(CUSTOM_THEME_LIGHT_NAME)
+    expect(defaultTheme.displayName).toBe("Light")
+  })
+
+  it("restores Custom Theme Dark with displayName from cache", () => {
+    windowSpy = mockWindow()
+
+    // Create a custom dark theme and cache it
+    const customDarkTheme: ThemeConfig = {
+      ...createTheme(CUSTOM_THEME_DARK_NAME, { primaryColor: "red" }),
+      displayName: "Dark",
+    }
+    setCachedTheme(customDarkTheme)
+
+    const defaultTheme = getDefaultTheme()
+
+    expect(defaultTheme.name).toBe(CUSTOM_THEME_DARK_NAME)
+    expect(defaultTheme.displayName).toBe("Dark")
   })
 })
 
@@ -2182,6 +2415,145 @@ describe("createEmotionTheme", () => {
     }
   )
 
+  // Diverging chart colors
+  it.each([
+    // Test hex colors
+    [
+      [
+        "#ff0000",
+        "#ff3300",
+        "#ff6600",
+        "#ff9900",
+        "#ffcc00",
+        "#00ccff",
+        "#0099ff",
+        "#0066ff",
+        "#0033ff",
+        "#0000ff",
+      ],
+      [
+        "#ff0000",
+        "#ff3300",
+        "#ff6600",
+        "#ff9900",
+        "#ffcc00",
+        "#00ccff",
+        "#0099ff",
+        "#0066ff",
+        "#0033ff",
+        "#0000ff",
+      ],
+    ],
+    // Test rgb colors
+    [
+      [
+        "rgb(255, 0, 0)",
+        "rgb(255, 51, 0)",
+        "rgb(255, 102, 0)",
+        "rgb(255, 153, 0)",
+        "rgb(255, 204, 0)",
+        "rgb(0, 204, 255)",
+        "rgb(0, 153, 255)",
+        "rgb(0, 102, 255)",
+        "rgb(0, 51, 255)",
+        "rgb(0, 0, 255)",
+      ],
+      [
+        "rgb(255, 0, 0)",
+        "rgb(255, 51, 0)",
+        "rgb(255, 102, 0)",
+        "rgb(255, 153, 0)",
+        "rgb(255, 204, 0)",
+        "rgb(0, 204, 255)",
+        "rgb(0, 153, 255)",
+        "rgb(0, 102, 255)",
+        "rgb(0, 51, 255)",
+        "rgb(0, 0, 255)",
+      ],
+    ],
+  ])(
+    "correctly handles setting of diverging color config '%s'",
+    (chartDivergingColors, expectedDivergingColors) => {
+      const themeInput: Partial<CustomThemeConfig> = {
+        chartDivergingColors,
+      }
+
+      const theme = createEmotionTheme(themeInput)
+
+      expect(theme.colors.chartDivergingColors).toEqual(
+        expectedDivergingColors
+      )
+    }
+  )
+
+  it.each([
+    // Test invalid color values
+    [
+      [
+        "red",
+        "orange",
+        "yellow",
+        "green",
+        "blue",
+        "purple",
+        "pink",
+        "gray",
+        "black",
+        "invalid",
+      ],
+      [
+        "#7d353b",
+        "#bd4043",
+        "#ff4b4b",
+        "#ff8c8c",
+        "#ffc7c7",
+        "#a6dcff",
+        "#60b4ff",
+        "#1c83e1",
+        "#0054a3",
+        "#004280",
+      ],
+    ],
+    [
+      // When the array doesn't contain 10 colors, returns default colors
+      ["invalid"],
+      [
+        "#7d353b",
+        "#bd4043",
+        "#ff4b4b",
+        "#ff8c8c",
+        "#ffc7c7",
+        "#a6dcff",
+        "#60b4ff",
+        "#1c83e1",
+        "#0054a3",
+        "#004280",
+      ],
+    ],
+  ])(
+    "logs a warning and removes any invalid diverging color configs '%s'",
+    (chartDivergingColors, expectedDivergingColors) => {
+      const logWarningSpy = vi.spyOn(LOG, "warn")
+      const themeInput: Partial<CustomThemeConfig> = {
+        chartDivergingColors,
+      }
+
+      const theme = createEmotionTheme(themeInput)
+
+      // Error log from parseColor (invalid color)
+      expect(logWarningSpy).toHaveBeenCalledWith(
+        `Invalid color passed for chartDivergingColors in theme: "invalid"`
+      )
+      // Error log from validateChartColors (<10 colors)
+      expect(logWarningSpy).toHaveBeenCalledWith(
+        `Invalid chartDivergingColors: ${chartDivergingColors.toString()}. Falling back to default chartDivergingColors.`
+      )
+      expect(theme.colors.chartDivergingColors).toEqual(
+        expectedDivergingColors
+      )
+    }
+  )
+
   // == Theme radii properties ==
 
   it("adapts the radii theme props if baseRadius is provided", () => {
@@ -3211,6 +3583,186 @@ describe("Font weight configuration coverage", () => {
         defaultFontWeights[typedKey]
       )
     })
+  })
+})
+
+describe("sortThemeInputKeys", () => {
+  it("sorts basic theme input keys", () => {
+    const themeInput = new CustomThemeConfig({
+      primaryColor: "blue",
+      light: {
+        primaryColor: "red",
+      },
+    })
+    const sorted = sortThemeInputKeys(themeInput)
+
+    // sortThemeInputKeys should produce consistent JSON regardless of key order
+    const sorted2 = sortThemeInputKeys(themeInput)
+    expect(JSON.stringify(sorted)).toBe(JSON.stringify(sorted2))
+
+    // Verify the primary keys we care about are sorted
+    const keys = Object.keys(sorted as Record<string, unknown>)
+    const lightIndex = keys.indexOf("light")
+    const primaryColorIndex = keys.indexOf("primaryColor")
+
+    // 'light' should come before 'primaryColor' alphabetically
+    expect(lightIndex).toBeLessThan(primaryColorIndex)
+  })
+
+  it("handles deeply nested objects", () => {
+    const input = {
+      z: "last",
+      a: "first",
+      nested: {
+        z: "nested-last",
+        a: "nested-first",
+        deep: {
+          z: "deep-last",
+          a: "deep-first",
+        },
+      },
+    }
+    const sorted = sortThemeInputKeys(input) as Record<string, unknown>
+    const keys = Object.keys(sorted)
+    expect(keys[0]).toBe("a")
+    expect(keys[1]).toBe("nested")
+    expect(keys[2]).toBe("z")
+
+    const nested = sorted.nested as Record<string, unknown>
+    const nestedKeys = Object.keys(nested)
+    expect(nestedKeys[0]).toBe("a")
+    expect(nestedKeys[1]).toBe("deep")
+    expect(nestedKeys[2]).toBe("z")
+
+    const deep = nested.deep as Record<string, unknown>
+    const deepKeys = Object.keys(deep)
+    expect(deepKeys[0]).toBe("a")
+    expect(deepKeys[1]).toBe("z")
+  })
+
+  it("handles arrays of objects", () => {
+    const input = {
+      colors: [
+        { z: 1, a: 2 },
+        { z: 3, a: 4 },
+      ],
+    }
+    const sorted = sortThemeInputKeys(input) as {
+      colors: Array<Record<string, number>>
+    }
+    expect(Object.keys(sorted.colors[0])).toEqual(["a", "z"])
+    expect(Object.keys(sorted.colors[1])).toEqual(["a", "z"])
+    expect(sorted.colors[0]).toEqual({ a: 2, z: 1 })
+    expect(sorted.colors[1]).toEqual({ a: 4, z: 3 })
+  })
+
+  it("handles null and undefined values", () => {
+    const input = { b: null, a: undefined, c: "value" }
+    const sorted = sortThemeInputKeys(input)
+    expect(sorted).toEqual({ a: undefined, b: null, c: "value" })
+    // Verify order
+    const keys = Object.keys(sorted as Record<string, unknown>)
+    expect(keys).toEqual(["a", "b", "c"])
+  })
+
+  it("handles mixed types", () => {
+    const input = {
+      string: "text",
+      number: 42,
+      boolean: true,
+      array: [1, 2, 3],
+      object: { b: 2, a: 1 },
+      nullValue: null,
+    }
+    const sorted = sortThemeInputKeys(input) as Record<string, unknown>
+    const keys = Object.keys(sorted)
+    expect(keys).toEqual([
+      "array",
+      "boolean",
+      "nullValue",
+      "number",
+      "object",
+      "string",
+    ])
+    // Verify nested object is also sorted
+    const nestedObj = sorted.object as Record<string, number>
+    expect(Object.keys(nestedObj)).toEqual(["a", "b"])
+  })
+
+  it("produces consistent hashes for same content with different key orders", () => {
+    const input1 = { z: 1, y: 2, x: { c: 3, b: 4, a: 5 } }
+    const input2 = { x: { a: 5, b: 4, c: 3 }, y: 2, z: 1 }
+
+    const sorted1 = JSON.stringify(sortThemeInputKeys(input1))
+    const sorted2 = JSON.stringify(sortThemeInputKeys(input2))
+
+    expect(sorted1).toBe(sorted2)
+  })
+
+  it("handles empty objects and arrays", () => {
+    const input = {
+      emptyObject: {},
+      emptyArray: [],
+      nested: {
+        alsoEmpty: {},
+      },
+    }
+    const sorted = sortThemeInputKeys(input)
+    expect(sorted).toEqual({
+      emptyArray: [],
+      emptyObject: {},
+      nested: {
+        alsoEmpty: {},
+      },
+    })
+  })
+
+  it("handles arrays of primitives", () => {
+    const input = {
+      numbers: [3, 1, 2],
+      strings: ["c", "a", "b"],
+      mixed: [3, "a", null, true],
+    }
+    const sorted = sortThemeInputKeys(input) as typeof input
+    // Arrays should maintain their order (only objects within arrays get sorted)
+    expect(sorted.numbers).toEqual([3, 1, 2])
+    expect(sorted.strings).toEqual(["c", "a", "b"])
+    expect(sorted.mixed).toEqual([3, "a", null, true])
+  })
+
+  it("handles complex nested theme config structure", () => {
+    const input = new CustomThemeConfig({
+      primaryColor: "blue",
+      backgroundColor: "white",
+      sidebar: {
+        backgroundColor: "gray",
+        primaryColor: "red",
+      },
+      light: {
+        primaryColor: "lightblue",
+        sidebar: {
+          backgroundColor: "lightgray",
+        },
+      },
+      dark: {
+        primaryColor: "darkblue",
+        backgroundColor: "black",
+      },
+    })
+
+    const sorted = sortThemeInputKeys(input)
+    const sortedStr = JSON.stringify(sorted)
+
+    // Verify the JSON representation contains all properties
+    expect(sortedStr).toContain("backgroundColor")
+    expect(sortedStr).toContain("primaryColor")
+    expect(sortedStr).toContain("sidebar")
+    expect(sortedStr).toContain("light")
+    expect(sortedStr).toContain("dark")
+
+    // Verify consistent serialization
+    const sorted2 = sortThemeInputKeys(input)
+    expect(JSON.stringify(sorted)).toBe(JSON.stringify(sorted2))
   })
 })
 

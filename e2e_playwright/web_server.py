@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -48,7 +48,9 @@ st.download_button(
     key="test_download",
 )
 
-# Display session info
+# Display session info.
+# Setting session state here also ensures cache_memory_bytes metrics are available
+# for the metrics endpoint tests to verify filtering works correctly.
 st.subheader("Session Info")
 if "counter" not in st.session_state:
     st.session_state.counter = 0

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,8 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-import React from "react"
 
 import { screen } from "@testing-library/react"
 import { vi } from "vitest"
@@ -70,6 +68,32 @@ describe("DynamicButtonLabel", () => {
 
     const icon = screen.getByTestId("stIconMaterial")
     expect(icon).toHaveTextContent("thumb_up")
+  })
+
+  it("positions the icon to the left by default", () => {
+    const { container } = render(<DynamicButtonLabel {...getProps()} />)
+    const wrapper = container.firstElementChild as HTMLElement
+    expect(wrapper).toBeDefined()
+    const mainLabel = wrapper.querySelector('[data-has-shortcut="false"]')
+    expect(mainLabel).toBeDefined()
+    expect(mainLabel?.firstElementChild).not.toHaveAttribute(
+      "data-testid",
+      "stMarkdownContainer"
+    )
+  })
+
+  it("renders the icon to the right when requested", () => {
+    const { container } = render(
+      <DynamicButtonLabel {...getProps({ iconPosition: "right" })} />
+    )
+    const wrapper = container.firstElementChild as HTMLElement
+    expect(wrapper).toBeDefined()
+    const mainLabel = wrapper.querySelector('[data-has-shortcut="false"]')
+    expect(mainLabel).toBeDefined()
+    expect(mainLabel?.firstElementChild).toHaveAttribute(
+      "data-testid",
+      "stMarkdownContainer"
+    )
   })
 
   it("renders shortcut text when provided", () => {

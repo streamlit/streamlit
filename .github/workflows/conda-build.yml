@@ -47,6 +47,9 @@ jobs:
           curl -sO "https://repo.anaconda.com/miniconda/${MINICONDA_RELEASE}.sh"
           bash "${MINICONDA_RELEASE}.sh" -b
           conda install conda-build
+      - name: Fix apt mirrors
+        if: ${{ runner.os == 'Linux' }}
+        uses: ./.github/actions/apt_mirror_fix
       - name: Build Snowpark Conda Package - Fast
         timeout-minutes: 120
         run: |

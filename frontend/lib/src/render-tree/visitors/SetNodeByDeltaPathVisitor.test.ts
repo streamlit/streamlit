@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -493,9 +493,10 @@ describe("SetNodeByDeltaPathVisitor", () => {
       expect(result.deltaMsgReceivedAt).toBe(1234567890)
 
       // Check that nested block properties are preserved except scriptRunId
-      const nestedResult = GetNodeByDeltaPathVisitor.getNodeAtPath(result, [
-        1,
-      ]) as BlockNode
+      const nestedResult = GetNodeByDeltaPathVisitor.getNodeAtPath(
+        result,
+        [1]
+      ) as BlockNode
       expect(nestedResult.activeScriptHash).toBe("nested_script")
       expect(nestedResult.scriptRunId).toBe("update_run_id")
       expect(nestedResult.fragmentId).toBe("nested_fragment")

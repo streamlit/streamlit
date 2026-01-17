@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,31 +19,63 @@ import json
 from typing import TYPE_CHECKING, Any, Final
 from urllib.parse import urlparse
 
-import tornado.concurrent
-import tornado.locks
-import tornado.netutil
-import tornado.web
 import tornado.websocket
 from tornado.escape import utf8
 from tornado.websocket import WebSocketHandler
 
 from streamlit import config
+from streamlit.auth_util import get_cookie_with_chunks, get_expose_tokens_config
 from streamlit.logger import get_logger
 from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.runtime import Runtime, SessionClient, SessionClientDisconnectedError
 from streamlit.runtime.runtime_util import serialize_forward_msg
+from streamlit.runtime.session_manager import ClientContext
 from streamlit.web.server.server_util import (
     AUTH_COOKIE_NAME,
+    TOKENS_COOKIE_NAME,
     is_url_from_allowed_origins,
     is_xsrf_enabled,
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Awaitable
+    from collections.abc import Awaitable, Iterable, Mapping
+
+    from tornado.httputil import HTTPServerRequest
 
     from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 
 _LOGGER: Final = get_logger(__name__)
+
+
+class TornadoClientContext(ClientContext):
+    """Tornado-specific implementation of ClientContext.
+
+    Captures headers, cookies, and client info from the initial WebSocket handshake.
+    Values are cached at construction time since they represent the initial request
+    context and should not change during the connection lifetime.
+    """
+
+    def __init__(self, tornado_request: HTTPServerRequest) -> None:
+        self._headers: list[tuple[str, str]] = list(tornado_request.headers.get_all())
+        self._cookies: dict[str, str] = {
+            k: m.value for k, m in tornado_request.cookies.items()
+        }
+        self._remote_ip: str | None = tornado_request.remote_ip
+
+    @property
+    def headers(self) -> Iterable[tuple[str, str]]:
+        """All headers as (name, value) tuples."""
+        return self._headers
+
+    @property
+    def cookies(self) -> Mapping[str, str]:
+        """Cookies as a name-to-value mapping."""
+        return self._cookies
+
+    @property
+    def remote_ip(self) -> str | None:
+        """The client's remote IP address."""
+        return self._remote_ip
 
 
 class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
@@ -60,6 +92,9 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
         if is_xsrf_enabled():
             _ = self.xsrf_token
 
+        # Do this once instead of on every open
+        self.expose_tokens = get_expose_tokens_config()
+
     def get_signed_cookie(
         self,
         name: str,
@@ -67,15 +102,25 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
         max_age_days: float = 31,
         min_version: int | None = None,
     ) -> bytes | None:
-        """Get a signed cookie from the request. Added for compatibility with
-        Tornado < 6.3.0.
+        """Get a signed cookie from the request, reconstructing from chunks if needed.
+
+        Added for compatibility with Tornado < 6.3.0. Also handles chunked cookies
+        automatically.
 
         See release notes: https://www.tornadoweb.org/en/stable/releases/v6.3.0.html#deprecation-notices
         """
-        try:
-            return super().get_signed_cookie(name, value, max_age_days, min_version)
-        except AttributeError:
-            return super().get_secure_cookie(name, value, max_age_days, min_version)
+
+        def get_single_cookie(cookie_name: str) -> bytes | None:
+            try:
+                return super(BrowserWebSocketHandler, self).get_signed_cookie(
+                    cookie_name, value, max_age_days, min_version
+                )
+            except AttributeError:
+                return super(BrowserWebSocketHandler, self).get_secure_cookie(
+                    cookie_name, value, max_age_days, min_version
+                )
+
+        return get_cookie_with_chunks(get_single_cookie, name)
 
     def check_origin(self, origin: str) -> bool:
         """Set up CORS."""
@@ -128,6 +173,19 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
         except tornado.websocket.WebSocketClosedError as e:
             raise SessionClientDisconnectedError from e
 
+    @property
+    def client_context(self) -> ClientContext:
+        """Return the client's connection context.
+
+        The context is cached on first access to avoid repeatedly
+        constructing a new TornadoClientContext instance.
+        """
+        context = getattr(self, "_client_context", None)
+        if context is None:
+            context = TornadoClientContext(self.request)
+            self._client_context = context
+        return context
+
     def select_subprotocol(self, subprotocols: list[str]) -> str | None:
         """Return the first subprotocol in the given list.
 
@@ -155,7 +213,7 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
         return None
 
     def open(self, *args: Any, **kwargs: Any) -> Awaitable[None] | None:
-        user_info: dict[str, str | bool | None] = {}
+        user_info: dict[str, dict[str, str] | str | bool | None] = {}
 
         existing_session_id = None
         try:
@@ -171,13 +229,27 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
                 if self._validate_xsrf_token(csrf_protocol_value):
                     user_info.update(self._parse_user_cookie(raw_cookie_value))
 
+                    # Also read in tokens if token cookie exists
+                    raw_token_cookie_value = self.get_signed_cookie(TOKENS_COOKIE_NAME)
+                    if raw_token_cookie_value:
+                        all_tokens = json.loads(raw_token_cookie_value)
+
+                        # Filter tokens based on expose_tokens configuration
+                        filtered_tokens: dict[str, str] = {}
+                        for token_type in self.expose_tokens:
+                            token_key = f"{token_type}_token"
+                            if token_key in all_tokens:
+                                filtered_tokens[token_type] = all_tokens[token_key]
+
+                        user_info["tokens"] = filtered_tokens
+
             if len(ws_protocols) >= 3:
                 # See the NOTE in the docstring of the `select_subprotocol` method above
                 # for a detailed explanation of why this is done.
                 existing_session_id = ws_protocols[2]
-        except KeyError:
+        except (KeyError, json.JSONDecodeError):
             # Just let existing_session_id=None if we run into any error while trying to
-            # extract it from the Sec-Websocket-Protocol header.
+            # extract it from the Sec-Websocket-Protocol header or parsing cookie JSON.
             pass
 
         # Map in any user-configured headers. Note that these override anything coming
@@ -220,12 +292,12 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
             return {}
         return None
 
-    def on_message(self, payload: str | bytes) -> None:
+    def on_message(self, message: str | bytes) -> None:
         if not self._session_id:
             return
 
         try:
-            if isinstance(payload, str):
+            if isinstance(message, str):
                 # Sanity check. (The frontend should only be sending us bytes;
                 # Protobuf.ParseFromString does not accept str input.)
                 raise TypeError(  # noqa: TRY301
@@ -234,7 +306,7 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
                 )
 
             msg = BackMsg()
-            msg.ParseFromString(payload)
+            msg.ParseFromString(message)
             _LOGGER.debug("Received the following back message:\n%s", msg)
 
         except Exception as ex:
@@ -266,3 +338,4 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
         else:
             # AppSession handles all other BackMsg types.
             self._runtime.handle_backmsg(self._session_id, msg)
+        return

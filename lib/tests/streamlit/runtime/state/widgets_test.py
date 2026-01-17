@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -405,7 +405,7 @@ class ComputeElementIdTests(DeltaGeneratorTestCase):
         "in element ID calculation."
 
         # Some elements cannot be used in a form
-        if element_name not in ["button", "chat_input", "download_button"]:
+        if element_name not in {"button", "chat_input", "download_button"}:
             # For all other check that form_id is set:
             assert call_kwargs.get("form_id") == "", (
                 "form_id is expected to be included in element ID calculation."

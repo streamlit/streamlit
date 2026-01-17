@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -122,7 +122,7 @@ function useColumnSort(
       if (direction === "auto") {
         // Toggle from asc -> desc -> remove
         sortDirection = "asc"
-        if (sort && sort.column.id === clickedColumn.id) {
+        if (sort?.column.id === clickedColumn.id) {
           // The clicked column is already sorted
           if (sort.direction === "asc") {
             // Sort column descending

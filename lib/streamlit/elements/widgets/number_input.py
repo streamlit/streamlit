@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -452,9 +452,7 @@ class NumberInputMixin:
         element_id = compute_and_register_element_id(
             "number_input",
             user_key=key,
-            # Ensure stable ID when key is provided; explicitly whitelist parameters
-            # that might invalidate the current widget state.
-            key_as_main_identity={"min_value", "max_value", "step"},
+            key_as_main_identity=True,
             dg=self.dg,
             label=label,
             min_value=min_value,
@@ -514,7 +512,7 @@ class NumberInputMixin:
         number_format = ("%d" if int_value else "%0.2f") if format is None else format
 
         # Warn user if they format an int type as a float or vice versa.
-        if number_format in ["%d", "%u", "%i"] and float_value:
+        if number_format in {"%d", "%u", "%i"} and float_value:
             import streamlit as st
 
             st.warning(
@@ -630,26 +628,31 @@ class NumberInputMixin:
             value_type="double_value",
         )
 
-        if widget_state.value_changed:
-            if widget_state.value is not None:
-                # Min/Max bounds checks when the value is updated.
-                if (
-                    number_input_proto.has_min
-                    and widget_state.value < number_input_proto.min
-                ):
-                    raise StreamlitValueBelowMinError(
-                        value=widget_state.value, min_value=number_input_proto.min
-                    )
+        # Validate the current value against the new min/max bounds.
+        # If the value is no longer valid (outside bounds), reset to default.
+        # This handles the case where min_value/max_value change dynamically and the
+        # previously entered value is no longer within bounds.
+        current_value = widget_state.value
+        value_needs_reset = False
 
-                if (
-                    number_input_proto.has_max
-                    and widget_state.value > number_input_proto.max
-                ):
-                    raise StreamlitValueAboveMaxError(
-                        value=widget_state.value, max_value=number_input_proto.max
-                    )
+        # Check if the current value is outside the new bounds.
+        if current_value is not None and (
+            (number_input_proto.has_min and current_value < number_input_proto.min)
+            or (number_input_proto.has_max and current_value > number_input_proto.max)
+        ):
+            # Value is outside new bounds - reset to default.
+            value_needs_reset = True
+            current_value = value
 
-                number_input_proto.value = widget_state.value
+            # Update session_state so subsequent accesses in this run
+            # return the corrected value. Use reset_state_value to avoid
+            # the "cannot be modified after widget instantiated" error.
+            if key is not None:
+                get_session_state().reset_state_value(key, current_value)
+
+        if value_needs_reset or widget_state.value_changed:
+            if current_value is not None:
+                number_input_proto.value = current_value
             number_input_proto.set_value = True
 
         validate_width(width)
@@ -658,7 +661,7 @@ class NumberInputMixin:
         self.dg._enqueue(
             "number_input", number_input_proto, layout_config=layout_config
         )
-        return widget_state.value
+        return current_value
 
     @property
     def dg(self) -> DeltaGenerator:

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-import React from "react"
-
 import { screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
@@ -23,6 +21,17 @@ import { render, renderWithContexts } from "@streamlit/lib/testing"
 import { Logo as LogoProto } from "@streamlit/protobuf"
 
 import LogoComponent from "./LogoComponent"
+
+// Mock StreamlitConfig using global mock state (see vitest.setup.ts)
+vi.mock("@streamlit/utils", async () => {
+  const actual = await vi.importActual("@streamlit/utils")
+  return {
+    ...actual,
+    get StreamlitConfig() {
+      return globalThis.__mockStreamlitConfig
+    },
+  }
+})
 
 const mockEndpoints = {
   setStaticConfigUrl: vi.fn(),
@@ -350,15 +359,13 @@ describe("LogoComponent", () => {
 
   describe("crossOrigin attribute", () => {
     afterEach(() => {
-      // Clean up window.__streamlit after each test
-      if (window.__streamlit) {
-        delete window.__streamlit.BACKEND_BASE_URL
-      }
+      globalThis.__mockStreamlitConfig = {}
     })
 
     it("sets crossOrigin for relative URLs when BACKEND_BASE_URL is set", () => {
-      window.__streamlit = window.__streamlit || {}
-      window.__streamlit.BACKEND_BASE_URL = "http://localhost:8501"
+      // Setup StreamlitConfig.BACKEND_BASE_URL
+      globalThis.__mockStreamlitConfig.BACKEND_BASE_URL =
+        "http://localhost:8501"
 
       const logoWithRelativeUrl = LogoProto.create({
         image: "/media/logo.png",
@@ -408,8 +415,8 @@ describe("LogoComponent", () => {
     })
 
     it("sets crossOrigin attribute for backend URLs when configured", () => {
-      window.__streamlit = window.__streamlit || {}
-      window.__streamlit.BACKEND_BASE_URL = "http://localhost:8501"
+      globalThis.__mockStreamlitConfig.BACKEND_BASE_URL =
+        "http://localhost:8501"
 
       const logoWithBackendUrl = LogoProto.create({
         image: "http://localhost:8501/media/logo.png",
@@ -458,8 +465,8 @@ describe("LogoComponent", () => {
     })
 
     it("does not set crossOrigin attribute for external URLs", () => {
-      window.__streamlit = window.__streamlit || {}
-      window.__streamlit.BACKEND_BASE_URL = "http://localhost:8501"
+      globalThis.__mockStreamlitConfig.BACKEND_BASE_URL =
+        "http://localhost:8501"
 
       renderWithContexts(
         <LogoComponent
@@ -488,10 +495,9 @@ describe("LogoComponent", () => {
     ])(
       "does not set crossOrigin attribute when resourceCrossOriginMode is undefined ($description)",
       ({ backendBaseUrl }) => {
-        // Setup window.__streamlit.BACKEND_BASE_URL if specified
+        // Setup StreamlitConfig.BACKEND_BASE_URL if specified
         if (backendBaseUrl) {
-          window.__streamlit = window.__streamlit || {}
-          window.__streamlit.BACKEND_BASE_URL = backendBaseUrl
+          globalThis.__mockStreamlitConfig.BACKEND_BASE_URL = backendBaseUrl
         }
 
         const logoWithRelativeUrl = LogoProto.create({
@@ -517,8 +523,8 @@ describe("LogoComponent", () => {
     )
 
     it("works with use-credentials mode", () => {
-      window.__streamlit = window.__streamlit || {}
-      window.__streamlit.BACKEND_BASE_URL = "http://localhost:8501"
+      globalThis.__mockStreamlitConfig.BACKEND_BASE_URL =
+        "http://localhost:8501"
 
       const logoWithRelativeUrl = LogoProto.create({
         image: "/media/logo.png",
