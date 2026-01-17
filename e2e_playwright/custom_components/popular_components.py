@@ -213,7 +213,7 @@ def use_bokeh():
     # Render in Streamlit
     streamlit_bokeh(
         bokeh_figure,
-        use_container_width=True,
+        width="stretch",
         theme="streamlit",
         key="my_unique_key",
     )
