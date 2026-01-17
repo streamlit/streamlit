@@ -133,12 +133,9 @@ function generateTableHeader(
         // eslint-disable-next-line @eslint-react/no-array-index-key
         <tr key={rowIndex}>
           {headerRow
-            .filter((_, colIndex) => {
-              if (hideIndex && colIndex < numIndexColumns) {
-                return false
-              }
-              return true
-            })
+            .filter(
+              (_, colIndex) => !(hideIndex && colIndex < numIndexColumns)
+            )
             .map((header, displayIndex) => {
               // Calculate the actual column index (accounting for filtered index columns):
               const colIndex = hideIndex
@@ -187,12 +184,7 @@ function generateTableRow(
   return (
     <tr key={rowIndex}>
       {range(columns)
-        .filter((columnIndex: number) => {
-          if (hideIndex && columnIndex < numIndexColumns) {
-            return false
-          }
-          return true
-        })
+        .filter((_, colIndex) => !(hideIndex && colIndex < numIndexColumns))
         .map((columnIndex: number) =>
           generateTableCell(table, rowIndex, columnIndex, borderMode)
         )}
