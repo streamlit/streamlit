@@ -124,6 +124,7 @@ test = [
 
 # Integration test dependencies
 integration = [
+  { include-group = "test" },
   "streamlit",
   # Snowflake dependencies:
   "snowflake-snowpark-python[modin]>=1.17.0",
@@ -135,7 +136,10 @@ integration = [
   "polars",
   "xarray",
   "dask",
-  "ray",
+  # Pin Ray to avoid initialization hangs in CI. Ray versions can have different
+  # initialization behaviors, and newer versions are prone to hanging during
+  # resource detection in CI environments.
+  "ray>=2.9.0,<2.44",
   "duckdb",
   # Used for testing of st.connection:
   "sqlalchemy[mypy]>=2.0.0",
