@@ -122,7 +122,7 @@ If there isn't an obvious fix for the flakiness and the flakiness does not indic
 
     ```bash
     cd e2e_playwright
-    pytest name_of_the_test.py -s --video on --slowmo 500
+    uv run pytest name_of_the_test.py -s --video on --slowmo 500
     ```
 
 - The [`--headed` flag](https://playwright.dev/docs/running-tests#run-tests-in-headed-mode) can be used to watch the test being executed, as a browser window will be opened. There you can also open the DevTools to inspect elements etc. In order to follow what's going on more easily, you can combine it with the `--slowmo` flag.
