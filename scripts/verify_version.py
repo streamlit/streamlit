@@ -31,6 +31,7 @@ import os
 import sys
 from pathlib import Path
 
+# This is available in Python 3.11+ but mypy is configured to use 3.10 as minimum for checks
 import tomllib  # type: ignore[import-not-found]
 
 
