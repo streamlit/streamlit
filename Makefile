@@ -321,6 +321,8 @@ update-headers:
 # Update minimum dependency constraints file.
 update-min-deps:
 	INSTALL_DEV_REQS=false INSTALL_TEST_REQS=false make python-init >/dev/null
+	# Install streamlit in editable mode (needed by get_min_versions.py)
+	uv pip install --editable ./lib --no-deps
 	uv run python scripts/get_min_versions.py >scripts/assets/min-constraints-gen.txt
 
 .PHONY: debug-e2e-test
