@@ -31,8 +31,11 @@ import os
 import sys
 from pathlib import Path
 
-# This is available in Python 3.11+ but mypy is configured to use 3.10 as minimum for checks
-import tomllib  # type: ignore[import-not-found]
+# tomllib is available in Python 3.11+, use tomli as fallback for Python 3.10
+try:
+    import tomllib
+except ImportError:
+    import tomli as tomllib  # type: ignore[import-not-found,no-redef]
 
 
 def get_package_version() -> str:

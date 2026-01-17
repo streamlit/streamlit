@@ -85,6 +85,8 @@ test = [
   "parameterized",
   "requests-mock",
   "testfixtures",
+  # tomli is the backport of tomllib for Python <3.11:
+  "tomli>=2.0.0; python_version < '3.11'",
   # Packages used to test things users may do with Streamlit:
   "Authlib>=1.3.2",
   "graphviz>=0.17",
