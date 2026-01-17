@@ -18,13 +18,17 @@ runs:
   using: composite
   steps:
     # Install uv and Python using the official astral-sh/setup-uv action.
-    # This handles both uv installation and Python version management.
+    # This handles uv installation, Python version management, and venv activation.
     - name: Install uv and Python ${{ inputs.python_version }}
       uses: astral-sh/setup-uv@v7
       with:
         python-version: ${{ inputs.python_version }}
         enable-cache: ${{ inputs.use_cached_venv }}
         cache-suffix: py${{ inputs.python_version }}
+        # Cache Python installations to prevent broken symlinks in cached venvs
+        cache-python: true
+        # Auto-create and activate .venv
+        activate-environment: true
     - name: Enable and Prepare Latest Yarn
       run: corepack enable
       shell: bash
@@ -76,8 +80,9 @@ runs:
     - if: inputs.use_cached_venv == 'true'
       name: Create Python environment cache key
       run: |
-        # Use uv's managed Python for cache key (not system Python)
-        uv python find ${{ inputs.python_version }} | xargs md5sum > $GITHUB_WORKSPACE/python_cache_key.md5
+        # Create cache key from Python version, config files, and date
+        # (Python binary is now cached by setup-uv with cache-python: true)
+        echo "${{ inputs.python_version }}" > $GITHUB_WORKSPACE/python_cache_key.md5
         md5sum pyproject.toml >> $GITHUB_WORKSPACE/python_cache_key.md5
         md5sum lib/pyproject.toml >> $GITHUB_WORKSPACE/python_cache_key.md5
         md5sum Makefile >> $GITHUB_WORKSPACE/python_cache_key.md5
@@ -116,9 +121,7 @@ runs:
         # from pypi:
         uv pip install --editable ./lib --no-deps
       shell: bash
-    - name: Activate virtualenv
-      run: echo "${{ github.workspace }}/.venv/bin" >> $GITHUB_PATH
-      shell: bash
+    # Note: venv is auto-activated by setup-uv with activate-environment: true
     - name: Show environment info
       run: |
         echo "Show environment info"
