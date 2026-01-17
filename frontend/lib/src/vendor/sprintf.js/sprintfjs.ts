@@ -26,15 +26,12 @@ interface Placeholder {
 type ParseTree = Array<string | Placeholder>
 
 const re = {
-  not_string: /[^s]/,
-  not_bool: /[^t]/,
   not_type: /[^T]/,
   not_primitive: /[^v]/,
   number: /[diefg]/,
   decimal_number: /[diefgu]/, // Types that support thousand separators
   numeric_arg: /[bcdiefguxX]/,
   json: /[j]/,
-  not_json: /[^j]/,
   text: /^[^\x25]+/,
   modulo: /^\x25{2}/,
   // Added (,|_)? capture group for thousand separator flag after alignment flag
