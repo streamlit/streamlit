@@ -50,16 +50,12 @@ st.header("Pandas Styler: Background and font styling")
 df = pd.DataFrame(np.random.randn(20, 4), columns=["A", "B", "C", "D"])
 
 
-def style_negative(v: float, props: str = "") -> str | None:
-    return props if v < 0 else None
-
-
 def highlight_max(s: Any, props: str = "") -> npt.NDArray[Any]:
     return np.where(s == np.nanmax(s.values), props, "")
 
 
 # Passing style values w/ all color formats to test css-style-string parsing robustness.
-styled_df = df.style.map(style_negative, props="color:#FF0000;").map(
+styled_df = df.style.map(lambda v: "color:#FF0000;" if v < 0 else None).map(
     lambda v: "opacity: 20%;" if (v < 0.3) and (v > -0.3) else None
 )
 
