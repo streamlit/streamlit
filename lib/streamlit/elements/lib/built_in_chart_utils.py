@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -136,7 +136,7 @@ def maybe_raise_stack_warning(
     stack: bool | ChartStackType | None, command: str | None, docs_link: str
 ) -> None:
     # Check that the stack parameter is valid, raise more informative error if not
-    if stack not in (None, True, False, "normalize", "center", "layered"):
+    if stack not in {None, True, False, "normalize", "center", "layered"}:
         raise StreamlitAPIException(
             f"Invalid value for stack parameter: {stack}. Stack must be one of True, "
             'False, "normalize", "center", "layered" or None. See documentation '
@@ -425,13 +425,13 @@ def _infer_vegalite_type(
     # requires Pandas 1.3.
     typ = infer_dtype(data)
 
-    if typ in [
+    if typ in {
         "floating",
         "mixed-integer-float",
         "integer",
         "mixed-integer",
         "complex",
-    ]:
+    }:
         return "quantitative"
 
     if typ == "categorical" and data.cat.ordered:
@@ -442,9 +442,9 @@ def _infer_vegalite_type(
         # Altair already extracts the correct sort order somewhere else.
         # More info about the issue here: https://github.com/streamlit/streamlit/issues/7776
         return "ordinal"
-    if typ in ["string", "bytes", "categorical", "boolean", "mixed", "unicode"]:
+    if typ in {"string", "bytes", "categorical", "boolean", "mixed", "unicode"}:
         return "nominal"
-    if typ in [
+    if typ in {
         "datetime",
         "datetime64",
         "timedelta",
@@ -452,7 +452,7 @@ def _infer_vegalite_type(
         "date",
         "time",
         "period",
-    ]:
+    }:
         return "temporal"
     # STREAMLIT MOD: I commented this out since Streamlit doesn't use warnings.warn.
     # > warnings.warn(
@@ -667,7 +667,7 @@ def _drop_unused_columns(df: pd.DataFrame, *column_names: str | None) -> pd.Data
         seen.add(x)
         keep.append(x)
 
-    return df[keep]  # ty: ignore[invalid-return-type]
+    return df[keep]
 
 
 def _maybe_convert_color_column_in_place(
@@ -679,10 +679,10 @@ def _maybe_convert_color_column_in_place(
 
     first_color_datum = df[color_column].iat[0]
 
-    if is_hex_color_like(first_color_datum):
+    if is_hex_color_like(first_color_datum):  # type: ignore[arg-type]
         # Hex is already CSS-valid.
         pass
-    elif is_color_tuple_like(first_color_datum):
+    elif is_color_tuple_like(first_color_datum):  # type: ignore[arg-type]
         # Tuples need to be converted to CSS-valid.
         df.loc[:, color_column] = df[color_column].apply(to_css_color)
     else:
@@ -847,7 +847,7 @@ def _maybe_melt(
     sort_column: str | None,
 ) -> tuple[pd.DataFrame, str | None, str | None]:
     """If multiple columns are set for y, melt the dataframe into long format."""
-    y_column: str | None
+    y_column: str | None = None
 
     if len(y_column_list) == 0:
         y_column = None
@@ -913,7 +913,7 @@ def _get_axis_encodings(
     _update_encoding_with_stack(stack, stack_encoding)
 
     # Handle sorting - only relevant for bar charts
-    if chart_type in (ChartType.VERTICAL_BAR, ChartType.HORIZONTAL_BAR):
+    if chart_type in {ChartType.VERTICAL_BAR, ChartType.HORIZONTAL_BAR}:
         _update_encoding_with_sort(sort_from_user, sort_encoding)
 
     return x_encoding, y_encoding
@@ -1119,7 +1119,7 @@ def _get_color_encoding(
 
         # If the 0th element in the color column looks like a color, we'll use the color
         # column's values as the colors in our chart.
-        elif len(df[color_column]) and is_color_like(df[color_column].iat[0]):
+        elif len(df[color_column]) and is_color_like(df[color_column].iat[0]):  # type: ignore[arg-type]
             color_range = [to_css_color(c) for c in df[color_column].unique()]
             color_enc["scale"] = alt.Scale(range=color_range)
             # Don't show the color legend, because it will just show text with the

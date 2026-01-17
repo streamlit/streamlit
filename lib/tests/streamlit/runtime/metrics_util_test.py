@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -402,8 +402,10 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
             # (It's possible for multiple tracked commands to be issued as
             # the result of a single API call.)
             assert api_name in [cmd.name for cmd in ctx.tracked_commands], (
-                f"When executing `st.{api_name}()`, we expect the string "
-                f'"{api_name}" to be in the list of tracked commands.',
+                (
+                    f"When executing `st.{api_name}()`, we expect the string "
+                    f'"{api_name}" to be in the list of tracked commands.'
+                ),
             )
 
     def test_column_config_commands(self):
@@ -440,8 +442,10 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
             assert f"column_config.{api_name}" in [
                 cmd.name for cmd in ctx.tracked_commands
             ], (
-                f"When executing `st.{api_name}()`, we expect the string "
-                f'"{api_name}" to be in the list of tracked commands.',
+                (
+                    f"When executing `st.{api_name}()`, we expect the string "
+                    f'"{api_name}" to be in the list of tracked commands.'
+                ),
             )
 
     def test_command_tracking_limits(self):

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -55,21 +55,29 @@ export class UploadFileInfo {
   public readonly id: number
 
   /**
+   * The original File object. Stored for retry functionality when uploads fail.
+   * Optional because some existing code paths may not provide it.
+   */
+  public readonly file?: File
+
+  /**
    * Create a clone of this UploadFileInfo with the given status.
    */
   public setStatus(status: FileStatus): UploadFileInfo {
-    return new UploadFileInfo(this.name, this.size, this.id, status)
+    return new UploadFileInfo(this.name, this.size, this.id, status, this.file)
   }
 
   public constructor(
     name: string,
     size: number,
     id: number,
-    status: FileStatus
+    status: FileStatus,
+    file?: File
   ) {
     this.name = name
     this.size = size
     this.id = id
     this.status = status
+    this.file = file
   }
 }

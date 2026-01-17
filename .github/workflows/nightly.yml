@@ -168,6 +168,9 @@ jobs:
         run: |
           cd lib
           python setup.py verify
+      - name: Fix apt mirrors
+        if: ${{ runner.os == 'Linux' }}
+        uses: ./.github/actions/apt_mirror_fix
       - name: Build Package
         timeout-minutes: 120
         run: |

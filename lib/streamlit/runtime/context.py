@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@ from __future__ import annotations
 from collections.abc import Iterable, Iterator, Mapping
 from functools import lru_cache
 from types import MappingProxyType
-from typing import TYPE_CHECKING, Any, Literal, cast
+from typing import TYPE_CHECKING, Any, Literal
 
 from streamlit import runtime
 from streamlit.runtime.context_util import maybe_add_page_path, maybe_trim_page_path
@@ -28,11 +28,18 @@ from streamlit.util import AttributeDictionary
 if TYPE_CHECKING:
     from http.cookies import Morsel
 
-    from tornado.httputil import HTTPHeaders, HTTPServerRequest
-    from tornado.web import RequestHandler
+    from tornado.httputil import HTTPHeaders
+
+    from streamlit.runtime.session_manager import ClientContext
 
 
-def _get_request() -> HTTPServerRequest | None:
+def _get_client_context() -> ClientContext | None:
+    """Get the ClientContext for the current session.
+
+    Returns the client context from the session client if available,
+    or None if not available (e.g., no active session or the session
+    client doesn't provide a client context).
+    """
     ctx = get_script_run_ctx()
     if ctx is None:
         return None
@@ -41,17 +48,7 @@ def _get_request() -> HTTPServerRequest | None:
     if session_client is None:
         return None
 
-    # We return websocket request only if session_client is an instance of
-    # BrowserWebSocketHandler (which is True for the Streamlit open-source
-    # implementation). For any other implementation, we return None.
-    # We are not using `type_util.is_type` here to avoid circular import.
-    if (
-        f"{type(session_client).__module__}.{type(session_client).__qualname__}"
-        != "streamlit.web.server.browser_websocket_handler.BrowserWebSocketHandler"
-    ):
-        return None
-
-    return cast("RequestHandler", session_client).request
+    return session_client.client_context
 
 
 @lru_cache
@@ -195,12 +192,12 @@ class ContextProxy:
         """
         # We have a docstring in line above as one-liner, to have a correct docstring
         # in the st.write(st,context) call.
-        session_client_request = _get_request()
+        client_context = _get_client_context()
 
-        if session_client_request is None:
+        if client_context is None:
             return StreamlitHeaders({})
 
-        return StreamlitHeaders.from_tornado_headers(session_client_request.headers)
+        return StreamlitHeaders(client_context.headers)
 
     @property
     @gather_metrics("context.cookies")
@@ -228,13 +225,12 @@ class ContextProxy:
         """
         # We have a docstring in line above as one-liner, to have a correct docstring
         # in the st.write(st,context) call.
-        session_client_request = _get_request()
+        client_context = _get_client_context()
 
-        if session_client_request is None:
+        if client_context is None:
             return StreamlitCookies({})
 
-        cookies = session_client_request.cookies
-        return StreamlitCookies.from_tornado_cookies(cookies)
+        return StreamlitCookies(client_context.cookies)
 
     @property
     @gather_metrics("context.theme")
@@ -399,11 +395,7 @@ class ContextProxy:
         This should not be used for security measures because it can easily be
         spoofed. When a user accesses the app through ``localhost``, the IP
         address is ``None``. Otherwise, the IP address is determined from the
-        |remote_ip|_ attribute of the Tornado request object and may be an
-        IPv4 or IPv6 address.
-
-        .. |remote_ip| replace:: ``remote_ip``
-        .. _remote_ip: https://www.tornadoweb.org/en/stable/httputil.html#tornado.httputil.HTTPServerRequest.remote_ip
+        WebSocket connection and may be an IPv4 or IPv6 address.
 
         Example
         -------
@@ -421,9 +413,9 @@ class ContextProxy:
         >>> else:
         >>>     st.error("This should not happen.")
         """
-        session_client_request = _get_request()
-        if session_client_request is not None:
-            remote_ip = session_client_request.remote_ip
+        client_context = _get_client_context()
+        if client_context is not None:
+            remote_ip = client_context.remote_ip
             if remote_ip in {"::1", "127.0.0.1"}:
                 return None
             return remote_ip

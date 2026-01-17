@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,6 +22,10 @@ authoring wrappers/utilities around `st.components.v2.component`.
 The goal is to keep the public argument surface documented in one place and
 reusable across both the user-facing factory in `components/v2/__init__.py`
 and the internal implementation in `components/v2/bidi_component/main.py`.
+
+Component definitions may provide any combination of HTML, CSS, and
+JavaScript. If none are supplied, the component renders as an empty
+placeholder without raising an error.
 """
 
 from __future__ import annotations
@@ -41,7 +45,7 @@ BidiComponentDefaults = dict[str, Any] | None
 ComponentIsolateStyles = bool
 
 
-class BidiComponentCallable(Protocol):
+class ComponentRenderer(Protocol):
     '''Signature of the mounting command returned by ``st.components.v2.component``.
 
     This callable mounts a bidirectional component in a Streamlit app and
@@ -65,8 +69,8 @@ class BidiComponentCallable(Protocol):
         .. note::
             If you want to access this key in your component's frontend, you
             must pass it explicitly within the ``data`` parameter. The ``key``
-            parameter in ``BidiComponentCallable`` is not the same as the
-            ``key`` property in ``ComponentArgs`` in the component's frontend
+            parameter in ``ComponentRenderer`` is not the same as the
+            ``key`` property in ``FrontendRendererArgs`` in the component's frontend
             code.
 
             The frontend key is automatically generated to be unique among all
@@ -136,14 +140,6 @@ class BidiComponentCallable(Protocol):
 
         You are responsible for ensuring the component's inner HTML content is
         responsive to the ``<div>`` wrapper.
-
-    isolate_styles : bool
-        Whether to sandbox the component styles in a shadow root. If this is
-        ``True`` (default), the component's HTML is mounted inside a shadow DOM
-        and, in your component's JavaScript, ``parentElement`` returns a
-        ``ShadowRoot``. If this is ``False``, the component's HTML is mounted
-        directly into the app's DOM tree, and ``parentElement`` returns a
-        regular ``HTMLElement``.
 
     **callbacks : Callable or None
         Callbacks with the naming pattern ``on_<key>_change`` for each state and
@@ -251,11 +247,12 @@ class BidiComponentCallable(Protocol):
 
     **Example 2: Add Tailwind CSS to a component**
 
-    You can use the ``isolate_styles`` parameter to disable shadow DOM
-    isolation and apply global styles like Tailwind CSS to your component. The
-    following example creates a simple button styled with Tailwind CSS. This
-    example also demonstrates using different keys to mount multiple instances
-    of the same component in one app.
+    You can use the ``isolate_styles`` parameter in
+    ``st.components.v2.component`` to disable shadow DOM isolation and apply
+    global styles like Tailwind CSS to your component. The following example
+    creates a simple button styled with Tailwind CSS. This example also
+    demonstrates using different keys to mount multiple instances of the same
+    component in one app.
 
     .. code-block:: python
 
@@ -285,15 +282,12 @@ class BidiComponentCallable(Protocol):
             "my_tailwind_button",
             html=HTML,
             js=JS,
+            isolate_styles=False,
         )
-        result_1 = my_component(
-            isolate_styles=False, on_clicked_change=lambda: None, key="one"
-        )
+        result_1 = my_component(on_clicked_change=lambda: None, key="one")
         result_1
 
-        result_2 = my_component(
-            isolate_styles=False, on_clicked_change=lambda: None, key="two"
-        )
+        result_2 = my_component(on_clicked_change=lambda: None, key="two")
         result_2
 
     .. output::
@@ -310,15 +304,14 @@ class BidiComponentCallable(Protocol):
         default: BidiComponentDefaults = None,
         width: Width = "stretch",
         height: Height = "content",
-        isolate_styles: ComponentIsolateStyles = True,
         **on_callbacks: WidgetCallback | None,
     ) -> BidiComponentResult: ...
 
 
 __all__ = [
-    "BidiComponentCallable",
     "BidiComponentData",
     "BidiComponentDefaults",
     "BidiComponentKey",
     "ComponentIsolateStyles",
+    "ComponentRenderer",
 ]

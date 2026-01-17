@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, {
+import {
   forwardRef,
   memo,
   ReactElement,
@@ -40,10 +40,9 @@ import BaseButton, {
 } from "~lib/components/shared/BaseButton"
 import { StyledButtonGroup } from "~lib/components/shared/BaseButton/styled-components"
 import { Placement } from "~lib/components/shared/Tooltip"
-import TooltipIcon from "~lib/components/shared/TooltipIcon"
 import {
-  StyledWidgetLabelHelpInline,
   WidgetLabel,
+  WidgetLabelHelpIconInline,
 } from "~lib/components/widgets/BaseWidget"
 import {
   useBasicWidgetState,
@@ -381,9 +380,11 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
         )}
       >
         {help && (
-          <StyledWidgetLabelHelpInline>
-            <TooltipIcon content={help} placement={Placement.TOP} />
-          </StyledWidgetLabelHelpInline>
+          <WidgetLabelHelpIconInline
+            content={help}
+            placement={Placement.TOP}
+            label={label}
+          />
         )}
       </WidgetLabel>
       <BasewebButtonGroup

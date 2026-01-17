@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ import platform
 import re
 from typing import Literal, cast
 
+from playwright.sync_api import Error as PlaywrightError
 from playwright.sync_api import Frame, FrameLocator, Locator, Page, expect
 
 from e2e_playwright.conftest import wait_for_app_loaded, wait_for_app_run
@@ -1003,6 +1004,58 @@ def reset_focus(locator: Locator | Page) -> None:
     page.get_by_test_id("stApp").click(position={"x": 0, "y": 0}, force=True)
 
 
+def tab_until_focused(page: Page, locator: Locator, max_tabs: int = 50) -> None:
+    """Tab through the page until the given locator is focused.
+
+    This is a small utility to make keyboard navigation tests resilient.
+    Hard-coding an exact number of <Tab> presses tends to be brittle because tab
+    order can change when unrelated UI gains/removes focusable elements.
+
+    Notes
+    -----
+    This helper assumes the page already has a reasonable starting focus state
+    (for example, by clicking in the app first or calling `reset_focus()`). If
+    nothing in the document is focused, initial <Tab> behavior can vary and the
+    test may become flaky.
+
+    Parameters
+    ----------
+    page : Page
+        The Playwright page to send Tab key presses to.
+
+    locator : Locator
+        The locator of the element that should eventually receive focus.
+
+    max_tabs : int
+        The maximum number of Tab presses before failing the test.
+    """
+    expect(locator).to_be_attached()
+
+    consecutive_eval_errors = 0
+    for _ in range(max_tabs):
+        page.keyboard.press("Tab")
+        try:
+            if locator.evaluate("el => el.matches(':focus')"):
+                return
+            consecutive_eval_errors = 0
+        except PlaywrightError:
+            # Locator may detach during rerenders triggered by focus/hover changes.
+            # Keep tabbing until things stabilize (bounded by max_tabs).
+            consecutive_eval_errors += 1
+            # If the locator stays detached for several iterations, it's likely
+            # not a transient re-render anymore. Fail fast with a clearer error.
+            if consecutive_eval_errors >= 5:
+                raise AssertionError(
+                    "Locator became detached repeatedly while tabbing to focus. "
+                    "Ensure the element is present and stable in the DOM."
+                )
+
+    raise AssertionError(
+        "Element did not receive focus after tabbing. "
+        f"Attempted {max_tabs} Tab presses."
+    )
+
+
 def expect_script_state(
     page: Page,
     state: Literal[
@@ -1350,7 +1403,7 @@ def get_segment_button(locator: Locator, text: str) -> Locator:
         The segment button.
     """
     return locator.get_by_test_id(
-        re.compile("stBaseButton-segmented_control(Active)?")
+        re.compile(r"stBaseButton-segmented_control(Active)?")
     ).filter(has_text=text)
 
 

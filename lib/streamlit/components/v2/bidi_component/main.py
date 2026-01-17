@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -50,7 +50,6 @@ from streamlit.errors import (
     BidiComponentInvalidCallbackNameError,
     BidiComponentInvalidDefaultKeyError,
     BidiComponentInvalidIdError,
-    BidiComponentMissingContentError,
     BidiComponentUnserializableDataError,
 )
 from streamlit.proto.ArrowData_pb2 import ArrowData as ArrowDataProto
@@ -349,13 +348,6 @@ class BidiComponentMixin:
         if component_def is None:
             raise ValueError(f"Component '{component_name}' is not registered")
 
-        # Validate that the component has the required content
-        has_js = bool(component_def.js_content or component_def.js_url)
-        has_html = bool(component_def.html_content)
-
-        if not has_js and not has_html:
-            raise BidiComponentMissingContentError(component_name)
-
         # ------------------------------------------------------------------
         # 1. Parse user-supplied callbacks
         # ------------------------------------------------------------------
@@ -488,7 +480,7 @@ class BidiComponentMixin:
             deserializer=serde.deserialize,
             serializer=serde.serialize,
             ctx=ctx,
-            callbacks=callbacks_by_event if callbacks_by_event else None,
+            callbacks=callbacks_by_event or None,
             value_type="json_value",
             presenter=presenter,
         )
@@ -503,7 +495,7 @@ class BidiComponentMixin:
             deserializer=deserialize_trigger_list,  # always returns list or None
             serializer=lambda v: json.dumps(v),  # send dict as JSON
             ctx=ctx,
-            callbacks=callbacks_by_event if callbacks_by_event else None,
+            callbacks=callbacks_by_event or None,
             value_type="json_trigger_value",
         )
 

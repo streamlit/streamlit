@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,7 +42,29 @@ export const objectToCssCustomProperties = (
       return
     }
 
-    result[propertyName] = String(value)
+    if (value === undefined || value === null) {
+      // Use CSS-wide keyword `unset` so that any property consuming this
+      // variable reverts to its initial/inherited value instead of getting the
+      // literal strings "undefined" or "null".
+      result[propertyName] = "unset"
+      return
+    }
+
+    if (Array.isArray(value)) {
+      result[propertyName] = value.join(",")
+      return
+    }
+
+    if (typeof value === "number" || typeof value === "string") {
+      result[propertyName] = String(value)
+      return
+    }
+
+    // Fallback for unexpected value types; use `unset` rather than relying on
+    // Object's default stringification ('[object Object]').
+    // This is a defensive fallback to avoid unexpected behavior. We don't
+    // expect this to be reached in practice.
+    result[propertyName] = "unset"
   })
 
   return result as StreamlitThemeCssProperties
@@ -116,12 +138,25 @@ export const extractComponentsV2Theme = (
     font: theme.genericFonts.bodyFont,
     chartCategoricalColors: theme.colors.chartCategoricalColors,
     chartSequentialColors: theme.colors.chartSequentialColors,
+    chartDivergingColors: theme.colors.chartDivergingColors,
 
     headingColor: theme.colors.headingColor,
     borderColorLight: theme.colors.borderColorLight,
     codeTextColor: theme.colors.codeTextColor,
 
-    widgetBorderColor: theme.colors.widgetBorderColor,
+    /**
+     * Computed effective border color for widget elements.
+     *
+     * This value is derived from theme configuration:
+     * - When showWidgetBorder=false: undefined from theme (fallback to
+     *   transparent here)
+     * - When showWidgetBorder=true: uses theme's borderColor
+     * - Legacy: uses deprecated widgetBorderColor config if explicitly set
+     *
+     * Note: This is NOT the deprecated widgetBorderColor theme config input.
+     * This is the computed OUTPUT that custom components should use.
+     */
+    widgetBorderColor: theme.colors.widgetBorderColor || "transparent",
 
     redColor: theme.colors.redColor,
     orangeColor: theme.colors.orangeColor,

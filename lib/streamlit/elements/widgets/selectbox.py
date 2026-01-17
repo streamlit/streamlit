@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -37,6 +37,7 @@ from streamlit.elements.lib.options_selector_utils import (
     create_mappings,
     index_,
     maybe_coerce_enum,
+    validate_and_sync_value_with_options,
 )
 from streamlit.elements.lib.policies import (
     check_widget_policies,
@@ -543,11 +544,9 @@ class SelectboxMixin:
             "selectbox",
             user_key=key,
             # Treat the provided key as the main identity. Only include
-            # the options and accept_new_options in the identity computation
-            # as those can invalidate the current selection.
-            # Changes to format_func also invalidate the current selection,
-            # but this is already handled via the `options` parameter below:
-            key_as_main_identity={"options", "accept_new_options"},
+            # accept_new_options in the identity computation as it
+            # can invalidate the current selection and complex to support.
+            key_as_main_identity={"accept_new_options"},
             dg=self.dg,
             label=label,
             options=formatted_options,
@@ -597,8 +596,20 @@ class SelectboxMixin:
         )
         widget_state = maybe_coerce_enum(widget_state, options, opt)
 
-        if widget_state.value_changed:
-            serialized_value = serde.serialize(widget_state.value)
+        if accept_new_options:
+            current_value = widget_state.value
+            value_needs_reset = False
+        else:
+            # Validate the current value against the new options.
+            # If the value is no longer valid (not in options), reset to default.
+            # This handles the case where options change dynamically and the
+            # previously selected value is no longer available.
+            current_value, value_needs_reset = validate_and_sync_value_with_options(
+                widget_state.value, opt, index, key
+            )
+
+        if value_needs_reset or widget_state.value_changed:
+            serialized_value = serde.serialize(current_value)
             if serialized_value is not None:
                 selectbox_proto.raw_value = serialized_value
             selectbox_proto.set_value = True
@@ -609,7 +620,7 @@ class SelectboxMixin:
         if ctx:
             save_for_app_testing(ctx, element_id, format_func)
         self.dg._enqueue("selectbox", selectbox_proto, layout_config=layout_config)
-        return widget_state.value
+        return current_value
 
     @property
     def dg(self) -> DeltaGenerator:

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,19 +14,36 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+import json
+import re
+from collections.abc import Callable, Mapping
 from datetime import datetime, timedelta, timezone
-from typing import TYPE_CHECKING, Any, TypedDict, cast
+from typing import TYPE_CHECKING, Any, Final, TypedDict, cast
+from urllib.parse import urlencode, urlparse
 
 from streamlit import config
 from streamlit.errors import StreamlitAuthError
+from streamlit.logger import get_logger
 from streamlit.runtime.secrets import AttrDict, secrets_singleton
+
+_LOGGER: Final = get_logger(__name__)
 
 if TYPE_CHECKING:
 
     class ProviderTokenPayload(TypedDict):
         provider: str
         exp: int
+
+
+MAX_COOKIE_BYTES: Final = 4096
+# Cookie attributes added by Tornado: "; Path=/; HttpOnly"
+COOKIE_ATTRIBUTES: Final = "; Path=/; HttpOnly"
+COOKIE_ATTR_SIZE: Final = len(COOKIE_ATTRIBUTES)
+# Safety buffer for signing overhead to account for edge cases, rounding, and potential
+# variations in signing implementations (e.g., longer timestamps after year 2286)
+SIGNING_OVERHEAD_SAFETY_BUFFER: Final = 50
+# Base64 encoding of 1 byte = 4 bytes, so overhead = total - 4
+SINGLE_BYTE_BASE64_SIZE: Final = 4
 
 
 class AuthCache:
@@ -76,12 +93,148 @@ def get_signing_secret() -> str:
 
 
 def get_secrets_auth_section() -> AttrDict:
-    auth_section = AttrDict({})
     """Get the 'auth' section of the secrets.toml."""
+    auth_section = AttrDict({})
     if secrets_singleton.load_if_toml_exists():
-        auth_section = cast("AttrDict", secrets_singleton.get("auth"))
+        auth_section = cast("AttrDict", secrets_singleton.get("auth", AttrDict({})))
 
     return auth_section
+
+
+def get_expose_tokens_config() -> list[str]:
+    """Get the expose_tokens configuration from secrets.toml.
+
+    Returns a list of token types to expose. Accepts both string and list formats:
+    - expose_tokens = "id" -> ["id"]
+    - expose_tokens = ["id", "access"] -> ["id", "access"]
+    """
+    auth_section = get_secrets_auth_section()
+    expose_tokens = auth_section.get("expose_tokens")
+
+    if isinstance(expose_tokens, str):
+        res = [expose_tokens]
+    elif isinstance(expose_tokens, list):
+        res = [str(token) for token in expose_tokens]
+    else:
+        return []
+
+    if set(res) - {"id", "access"}:
+        raise StreamlitAuthError(
+            "Invalid expose_tokens configuration. Only 'id' and 'access' are allowed."
+        )
+
+    return res
+
+
+def get_redirect_uri(auth_section: AttrDict) -> str | None:
+    """Get the redirect_uri from auth_section - filling in port number if needed."""
+
+    if "redirect_uri" not in auth_section:
+        return None
+
+    redirect_uri: str = auth_section["redirect_uri"]
+    if "{port}" in redirect_uri:
+        redirect_uri = redirect_uri.replace(
+            "{port}", str(config.get_option("server.port"))
+        )
+
+    try:
+        redirect_uri_parsed = urlparse(redirect_uri)
+    except ValueError:
+        raise StreamlitAuthError(
+            f"Invalid redirect_uri: {redirect_uri}. Please check your configuration."
+        )
+
+    return redirect_uri_parsed.geturl()
+
+
+def get_validated_redirect_uri() -> str | None:
+    """Get the redirect_uri from secrets, validating it ends with /oauth2callback.
+
+    This is used for logout flows where we need a validated redirect URI
+    that matches the OAuth callback path.
+
+    Returns
+    -------
+    str | None
+        The validated redirect URI, or None if not configured or invalid.
+    """
+    auth_section = get_secrets_auth_section()
+    if not auth_section:
+        return None
+
+    redirect_uri = get_redirect_uri(auth_section)
+    if not redirect_uri:
+        return None
+
+    if not redirect_uri.endswith("/oauth2callback"):
+        _LOGGER.warning("Redirect URI does not end with /oauth2callback")
+        return None
+
+    return redirect_uri
+
+
+def get_origin_from_redirect_uri() -> str | None:
+    """Extract the origin (scheme + host) from the configured redirect_uri.
+
+    Returns
+    -------
+    str | None
+        The origin in format "scheme://host:port", or None if not configured.
+    """
+    auth_section = get_secrets_auth_section()
+    if not auth_section:
+        return None
+
+    redirect_uri = get_redirect_uri(auth_section)
+    if not redirect_uri:
+        return None
+
+    redirect_uri_parsed = urlparse(redirect_uri)
+    return f"{redirect_uri_parsed.scheme}://{redirect_uri_parsed.netloc}"
+
+
+def build_logout_url(
+    end_session_endpoint: str,
+    client_id: str,
+    post_logout_redirect_uri: str,
+    id_token: str | None = None,
+) -> str:
+    """Build an OIDC logout URL with the required parameters.
+
+    Parameters
+    ----------
+    end_session_endpoint
+        The OIDC provider's end_session_endpoint URL.
+    client_id
+        The OAuth client ID.
+    post_logout_redirect_uri
+        The URI to redirect to after logout.
+    id_token
+        Optional ID token to include as id_token_hint for the logout request.
+
+    Returns
+    -------
+    str
+        The complete logout URL with query parameters.
+    """
+    from urllib.parse import parse_qsl
+
+    logout_params: dict[str, str] = {
+        "client_id": client_id,
+        "post_logout_redirect_uri": post_logout_redirect_uri,
+    }
+
+    if id_token:
+        logout_params["id_token_hint"] = id_token
+
+    # Per OIDC spec, end_session_endpoint should be a clean URL without query params,
+    # but we handle existing params defensively for non-standard providers.
+    parsed = urlparse(end_session_endpoint)
+    existing_params = dict(parse_qsl(parsed.query))
+    merged_params = {**existing_params, **logout_params}
+    new_query = urlencode(merged_params)
+    return parsed._replace(query=new_query).geturl()
 
 
 def encode_provider_token(provider: str) -> str:
@@ -141,7 +294,218 @@ def generate_default_provider_section(auth_section: AttrDict) -> dict[str, Any]:
         default_provider_section["client_kwargs"] = cast(
             "AttrDict", auth_section.get("client_kwargs", AttrDict({}))
         ).to_dict()
+    if auth_section.get("expose_tokens"):
+        default_provider_section["expose_tokens"] = auth_section.get("expose_tokens")
     return default_provider_section
+
+
+def set_cookie_with_chunks(
+    set_single_cookie_fn: Callable[[str, str], None],
+    create_signed_value_fn: Callable[[str, str], bytes],
+    cookie_name: str,
+    value: dict[str, Any],
+) -> None:
+    """Set a cookie, splitting into multiple cookies if necessary.
+
+    Args:
+        set_single_cookie_fn: Function to set a single cookie (cookie_name, value)
+        create_signed_value_fn: Function to create a signed cookie value (cookie_name, value)
+        cookie_name: Name of the cookie
+        value: Dictionary value to serialize and store
+    """
+    serialized_cookie_value = json.dumps(value)
+
+    # Calculate actual cookie size using the provided signing function
+    signed_value = create_signed_value_fn(cookie_name, serialized_cookie_value)
+
+    # Cookie format: "name=value" + COOKIE_ATTRIBUTES
+    actual_cookie_size = len(cookie_name) + 1 + len(signed_value) + COOKIE_ATTR_SIZE
+
+    # Check if cookie needs to be split
+    if actual_cookie_size > MAX_COOKIE_BYTES:
+        _LOGGER.debug(
+            "Cookie size (%d bytes) exceeds browser limit. Splitting into multiple cookies.",
+            actual_cookie_size,
+        )
+        _set_split_cookie(
+            set_single_cookie_fn,
+            create_signed_value_fn,
+            cookie_name,
+            serialized_cookie_value,
+        )
+    else:
+        set_single_cookie_fn(cookie_name, serialized_cookie_value)
+
+
+def _calculate_signing_overhead(
+    create_signed_value_fn: Callable[[str, str], bytes],
+    cookie_name: str,
+) -> int:
+    """Calculate the server's signing overhead by measuring the size difference.
+
+    This empirically measures the overhead added by the signing function (e.g., Tornado's
+    create_signed_value) by signing a minimal test value and computing the difference.
+
+    Args:
+        create_signed_value_fn: Function to create a signed cookie value
+        cookie_name: Name of the cookie (affects overhead due to length prefix)
+
+    Returns
+    -------
+        The number of bytes added by signing (excluding the base64-encoded value)
+    """
+    test_value = "x"  # Minimal test value (1 byte)
+    signed = create_signed_value_fn(cookie_name, test_value)
+    return len(signed) - SINGLE_BYTE_BASE64_SIZE
+
+
+def _set_split_cookie(
+    set_single_cookie_fn: Callable[[str, str], None],
+    create_signed_value_fn: Callable[[str, str], bytes],
+    cookie_name: str,
+    value: str,
+) -> None:
+    """Split a large cookie value into multiple smaller cookies.
+
+    The main cookie always exists and either contains the whole value or the chunk count.
+    Additional chunks are stored as cookie_name_1, cookie_name_2, etc.
+
+    Args:
+        set_single_cookie_fn: Function to set a single cookie (cookie_name, value)
+        create_signed_value_fn: Function to create a signed cookie value
+        cookie_name: Name of the cookie
+        value: Serialized string value to split and store
+    """
+    # Calculate overhead empirically from the actual signing function, plus safety buffer
+    signing_overhead = (
+        _calculate_signing_overhead(create_signed_value_fn, cookie_name)
+        + SIGNING_OVERHEAD_SAFETY_BUFFER
+    )
+
+    # Available space for the signed value:
+    # MAX_COOKIE_BYTES - cookie_name - "=" (1 byte) - cookie attributes
+    available_for_signed_value = (
+        MAX_COOKIE_BYTES - len(cookie_name) - 1 - COOKIE_ATTR_SIZE
+    )
+
+    # Space available for the base64-encoded value (after subtracting signing overhead)
+    available_for_base64_value = available_for_signed_value - signing_overhead
+
+    # If there is not enough space for the base64-encoded value, raise an error.
+    # We need at least 4 bytes for a minimal base64-encoded value.
+    if available_for_base64_value < SINGLE_BYTE_BASE64_SIZE:
+        raise StreamlitAuthError("Not enough space available for the signed value.")
+
+    # Convert from base64 space to raw value space (base64 has 4/3 expansion ratio)
+    chunk_size = (available_for_base64_value * 3) // 4
+    chunks = []
+    for i in range(0, len(value), chunk_size):
+        chunk = value[i : i + chunk_size]
+        chunks.append(chunk)
+
+    if len(chunks) == 1:
+        set_single_cookie_fn(cookie_name, chunks[0])
+        return
+
+    # Store count in the main cookie
+    set_single_cookie_fn(cookie_name, f"chunks-{len(chunks)}")
+
+    # Store remaining chunks as cookie_name_1, cookie_name_2, etc.
+    for i in range(len(chunks)):
+        chunk_name = f"{cookie_name}_{i + 1}"
+        set_single_cookie_fn(chunk_name, chunks[i])
+
+    _LOGGER.info(
+        "Split cookie '%s' into %d chunks",
+        cookie_name,
+        len(chunks),
+    )
+
+
+_chunks_regex = re.compile(rb"chunks-(\d+)")
+
+
+def get_cookie_with_chunks(
+    get_single_cookie_fn: Callable[[str], bytes | None],
+    cookie_name: str,
+) -> bytes | None:
+    """Get a cookie, reconstructing from chunks if it was split.
+
+    If a count cookie exists, the main cookie contains the first chunk,
+    and additional chunks are in cookie_name_1, cookie_name_2, etc.
+    If no count cookie exists, the main cookie contains the entire value.
+
+    Args:
+        get_single_cookie_fn: Function to get a single cookie (cookie_name) -> bytes | None
+        cookie_name: Name of the cookie
+
+    Returns
+    -------
+        Cookie value as bytes, or None if not found
+    """
+    cookie_value = get_single_cookie_fn(cookie_name)
+    if cookie_value is None:
+        return cookie_value
+
+    match = _chunks_regex.match(cookie_value)
+    if match is None:
+        return cookie_value
+
+    # Parse chunk count
+    try:
+        chunk_count = int(match.group(1))
+    except (ValueError, TypeError):
+        _LOGGER.exception("Invalid chunk count for cookie '%s'", cookie_name)
+        return None
+
+    # Reconstruct the original value from chunks
+    chunks = []
+
+    for i in range(chunk_count):
+        chunk_name = f"{cookie_name}_{i + 1}"
+        chunk_value = get_single_cookie_fn(chunk_name)
+        if chunk_value is None:
+            _LOGGER.error("Missing chunk %d for cookie '%s'", i + 1, cookie_name)
+            return None
+        chunks.append(chunk_value)
+
+    reconstructed_value = b"".join(chunks)
+    return reconstructed_value
+
+
+def clear_cookie_and_chunks(
+    get_single_cookie_fn: Callable[[str], bytes | None],
+    clear_single_cookie_fn: Callable[[str], None],
+    cookie_name: str,
+) -> None:
+    """Clear a cookie and any associated chunk cookies.
+
+    The main cookie always exists. If there are chunks, also clear
+    cookie_name_1, cookie_name_2, etc., and the count cookie.
+
+    Args:
+        get_single_cookie_fn: Function to get a single cookie (cookie_name) -> bytes | None
+        clear_single_cookie_fn: Function to clear a single cookie (cookie_name)
+        cookie_name: Name of the cookie
+    """
+    cookie_value = get_single_cookie_fn(cookie_name)
+    clear_single_cookie_fn(cookie_name)
+    if cookie_value is None:
+        return
+
+    match = _chunks_regex.match(cookie_value)
+    if match is None:
+        return
+
+    try:
+        chunk_count = int(match.group(1))
+        # Clear additional chunk cookies (starting from 1, since main cookie is chunk 0)
+        for i in range(1, chunk_count + 1):
+            clear_single_cookie_fn(f"{cookie_name}_{i}")
+    except (ValueError, TypeError):
+        # If count is invalid, but we already cleared the main cookie
+        # so we can ignore it
+        pass
 
 
 def validate_auth_credentials(provider: str) -> None:

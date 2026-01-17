@@ -183,18 +183,6 @@ jobs:
         uses: ./.github/actions/make_init
         with:
           use_cached_venv: false
-      - name: Install min dependencies (force reinstall)
-        run: |
-          source venv/bin/activate
-          uv pip install -r scripts/assets/min-constraints-gen.txt --force-reinstall
-      - name: Make local modules visible
-        run: |
-          source venv/bin/activate
-          uv pip install --editable ./lib --no-deps
-      - name: Run Python Tests
-        run: make python-tests
-      - name: CLI Smoke Tests
-        run: make cli-smoke-tests
       - name: Validate min-constraints-gen
         run: |
           make update-min-deps
@@ -209,6 +197,18 @@ jobs:
           else
             echo "min constraints file is up to date."
           fi
+      - name: Install min dependencies (force reinstall)
+        run: |
+          source venv/bin/activate
+          uv pip install -r scripts/assets/min-constraints-gen.txt --force-reinstall
+      - name: Make local modules visible
+        run: |
+          source venv/bin/activate
+          uv pip install --editable ./lib --no-deps
+      - name: Run Python Tests
+        run: make python-tests
+      - name: CLI Smoke Tests
+        run: make cli-smoke-tests
       - name: Upload coverage data
         uses: actions/upload-artifact@v6
         with:

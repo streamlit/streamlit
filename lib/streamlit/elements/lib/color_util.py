@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -245,7 +245,7 @@ def _float_formatter(component: float, color: MaybeColor) -> float:
     Anything too small will become 0.0, and anything too large will become 1.0.
     """
     if isinstance(component, int):
-        component = component / 255.0
+        component /= 255.0
 
     if isinstance(component, float):
         return min(1.0, max(component, 0.0))

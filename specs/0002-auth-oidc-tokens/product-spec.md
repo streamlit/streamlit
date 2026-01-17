@@ -11,7 +11,6 @@ status: Approved
 Expose the ID and access tokens from the OIDC login in `st.user` if the new
 `expose_tokens` option is set.
 
-
 ## Problem
 
 Streamlit’s `st.login()` authentication mechanism currently enables user identity verification but does not provide access to the user’s tokens returned from the Identity Provider (IdP). Many enterprise and API-integrated Streamlit applications need access to the **access token** (to call APIs on behalf of the user) and occasionally the **ID token**. This feature provides a **configurable, secure way to expose selected tokens** to the developer through a new dictionary interface: `st.user.tokens`.
@@ -34,7 +33,6 @@ By default, **no tokens are exposed**, ensuring backward compatibility and secur
 | Automatic access token refresh            | Will be implemented in a follow-up feature |
 | Exposing `refresh` token                  | High security risk; deferred               |
 | UI-based user-consent for token retrieval | May be implemented later; design needed    |
-
 
 ## Proposal
 
@@ -121,7 +119,6 @@ if st.user:
 
 - No UI indication of token exposure; developers assume responsibility
 
-
 ### Acceptance Criteria
 
 | Requirement                                                             | Must Have | Status |
@@ -145,7 +142,6 @@ Add to **Authentication Guide**:
 2. Example: Calling Microsoft Graph using `access`
 
 3. Warning Box: _Exposing tokens grants app the ability to act on behalf of user_
-
 
 ## Checklist
 

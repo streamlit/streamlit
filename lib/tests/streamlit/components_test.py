@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -334,7 +334,7 @@ class ComponentRegistryTest(unittest.TestCase):
         test_path_2 = "/another/test/component/directory"
 
         def isdir(path):
-            return path in (test_path_1, test_path_2)
+            return path in {test_path_1, test_path_2}
 
         registry = ComponentRegistry.instance()
         with mock.patch(
@@ -667,7 +667,6 @@ class AlternativeComponentRegistryTest(unittest.TestCase):
     class AlternativeComponentRegistry(BaseComponentRegistry):
         def __init__(self):
             """Dummy implementation"""
-            pass
 
         def register_component(self, component: BaseCustomComponent) -> None:
             return None

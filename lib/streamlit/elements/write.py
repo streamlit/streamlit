@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -56,7 +56,7 @@ HELP_TYPES: Final[tuple[type[Any], ...]] = (
 )
 
 
-class StreamingOutput(list[Any]):
+class StreamingOutput(list[Any]):  # noqa: FURB189
     pass
 
 
@@ -178,8 +178,7 @@ class WriteMixin:
 
         def flush_stream_response() -> None:
             """Write the full response to the app."""
-            nonlocal streamed_response
-            nonlocal stream_container
+            nonlocal streamed_response, stream_container
 
             if streamed_response and stream_container:
                 # Replace the stream_container element the full response
