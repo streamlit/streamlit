@@ -125,7 +125,6 @@ runs:
         # from pypi:
         uv pip install --editable ./lib --no-deps
       shell: bash
-    # Note: venv is auto-activated by setup-uv with activate-environment: true
     - name: Show environment info
       run: |
         echo "Show environment info"
