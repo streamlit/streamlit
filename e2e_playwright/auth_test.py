@@ -60,6 +60,7 @@ def wait_for_oidc_server_to_start(port: int, timeout: int = 60) -> bool:
     bool
         True if the server started successfully, False otherwise.
     """
+    print(f"Waiting for OIDC server to start on port {port}...")
     start_time = time.time()
     url = f"http://localhost:{port}/.well-known/openid-configuration"
     while time.time() - start_time < timeout:
