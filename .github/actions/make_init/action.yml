@@ -88,7 +88,7 @@ runs:
       uses: actions/cache@v4
       with:
         path: .venv
-        key: v2-python-venv-${{ hashFiles('**/python_cache_key.md5') }}
+        key: v3-python-venv-py${{ inputs.python_version }}-${{ hashFiles('**/python_cache_key.md5') }}
     - if: steps.cache-virtualenv.outputs.cache-hit != 'true'
       name: Create Virtual Env
       run: |
