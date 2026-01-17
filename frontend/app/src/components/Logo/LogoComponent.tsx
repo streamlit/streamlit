@@ -28,11 +28,11 @@ import { StreamlitEndpoints } from "@streamlit/connection"
 import {
   DynamicIcon,
   getCrossOriginAttribute,
+  IconSize,
   LibConfigContext,
   NavigationContext,
 } from "@streamlit/lib"
 import { Logo } from "@streamlit/protobuf"
-import { IconSize } from "~lib/theme"
 
 const LOG = getLogger("LogoComponent")
 
