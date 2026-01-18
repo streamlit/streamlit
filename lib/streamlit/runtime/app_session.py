@@ -995,22 +995,20 @@ def _get_toolbar_mode() -> Config.ToolbarMode.ValueType:
 
 def _get_show_error_links() -> Config.ShowErrorLinks.ValueType:
     config_key = "client.showErrorLinks"
+    allowed_values = ["auto", "true", "false"]
+    value_to_enum = {
+        "auto": Config.ShowErrorLinks.SHOW_ERROR_LINKS_AUTO,
+        "true": Config.ShowErrorLinks.SHOW_ERROR_LINKS_TRUE,
+        "false": Config.ShowErrorLinks.SHOW_ERROR_LINKS_FALSE,
+    }
     config_value = config.get_option(config_key)
-    enum_name = f"SHOW_ERROR_LINKS_{config_value.upper()}"
-    enum_value: Config.ShowErrorLinks.ValueType | None = getattr(
-        Config.ShowErrorLinks, enum_name, None
-    )
-    if enum_value is None:
-        allowed_values = ", ".join(
-            k.replace("SHOW_ERROR_LINKS_", "").lower()
-            for k in Config.ShowErrorLinks.keys()  # noqa: SIM118
-        )
+    if config_value not in allowed_values:
         raise ValueError(
             f"Config {config_key!r} expects to have one of "
-            f"the following values: {allowed_values}. "
+            f"the following values: {', '.join(allowed_values)}. "
             f"Current value: {config_value}"
         )
-    return enum_value
+    return value_to_enum[config_value]
 
 
 def _populate_config_msg(msg: Config) -> None:

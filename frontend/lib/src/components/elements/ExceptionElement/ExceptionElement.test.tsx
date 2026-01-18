@@ -78,7 +78,7 @@ describe("ExceptionElement Element", () => {
     expect(screen.getByText("RuntimeError")).toBeInTheDocument()
   })
 
-  describe("Should render exception links for localhost", () => {
+  describe("Exception links visibility", () => {
     let originalLocation: Location
     let windowSpy: MockInstance
 
@@ -91,48 +91,42 @@ describe("ExceptionElement Element", () => {
       windowSpy.mockRestore()
     })
 
-    it("should render exception links for localhost", () => {
-      windowSpy.mockReturnValue({ ...originalLocation, hostname: "localhost" })
-      render(<ExceptionElement {...getProps()} />)
-
+    it.each([
+      ["localhost", undefined],
+      ["localhost", Config.ShowErrorLinks.SHOW_ERROR_LINKS_AUTO],
+      ["localhost", Config.ShowErrorLinks.SHOW_ERROR_LINKS_TRUE],
+      ["foo.com", Config.ShowErrorLinks.SHOW_ERROR_LINKS_TRUE],
+    ])("shows links: hostname=%s, config=%s", (hostname, showErrorLinks) => {
+      windowSpy.mockReturnValue({ ...originalLocation, hostname })
+      if (showErrorLinks === undefined) {
+        render(<ExceptionElement {...getProps()} />)
+      } else {
+        renderWithContexts(<ExceptionElement {...getProps()} />, {
+          libConfigContext: { showErrorLinks },
+        })
+      }
       expect(screen.getByText("Copy")).toBeInTheDocument()
       expect(screen.getByText("Ask Google")).toBeInTheDocument()
       expect(screen.getByText("Ask ChatGPT")).toBeInTheDocument()
     })
 
-    it("should not render exception links for localhost", () => {
-      windowSpy.mockReturnValue({ ...originalLocation, hostname: "foo.com" })
-      render(<ExceptionElement {...getProps()} />)
-
+    it.each([
+      ["foo.com", undefined],
+      ["foo.com", Config.ShowErrorLinks.SHOW_ERROR_LINKS_AUTO],
+      ["localhost", Config.ShowErrorLinks.SHOW_ERROR_LINKS_FALSE],
+      ["foo.com", Config.ShowErrorLinks.SHOW_ERROR_LINKS_FALSE],
+    ])("hides links: hostname=%s, config=%s", (hostname, showErrorLinks) => {
+      windowSpy.mockReturnValue({ ...originalLocation, hostname })
+      if (showErrorLinks === undefined) {
+        render(<ExceptionElement {...getProps()} />)
+      } else {
+        renderWithContexts(<ExceptionElement {...getProps()} />, {
+          libConfigContext: { showErrorLinks },
+        })
+      }
       expect(screen.queryByText("Copy")).not.toBeInTheDocument()
       expect(screen.queryByText("Ask Google")).not.toBeInTheDocument()
       expect(screen.queryByText("Ask ChatGPT")).not.toBeInTheDocument()
-    })
-
-    it("should not render exception links when showErrorLinks is false", () => {
-      windowSpy.mockReturnValue({ ...originalLocation, hostname: "localhost" })
-      renderWithContexts(<ExceptionElement {...getProps()} />, {
-        libConfigContext: {
-          showErrorLinks: Config.ShowErrorLinks.SHOW_ERROR_LINKS_FALSE,
-        },
-      })
-
-      expect(screen.queryByText("Copy")).not.toBeInTheDocument()
-      expect(screen.queryByText("Ask Google")).not.toBeInTheDocument()
-      expect(screen.queryByText("Ask ChatGPT")).not.toBeInTheDocument()
-    })
-
-    it("should render exception links when showErrorLinks is true on non-localhost", () => {
-      windowSpy.mockReturnValue({ ...originalLocation, hostname: "foo.com" })
-      renderWithContexts(<ExceptionElement {...getProps()} />, {
-        libConfigContext: {
-          showErrorLinks: Config.ShowErrorLinks.SHOW_ERROR_LINKS_TRUE,
-        },
-      })
-
-      expect(screen.getByText("Copy")).toBeInTheDocument()
-      expect(screen.getByText("Ask Google")).toBeInTheDocument()
-      expect(screen.getByText("Ask ChatGPT")).toBeInTheDocument()
     })
   })
 })
