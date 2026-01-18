@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,9 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import streamlit as st
+from streamlit.web.server.starlette.starlette_app import App, create_starlette_app
+from streamlit.web.server.starlette.starlette_server import UvicornRunner, UvicornServer
 
-st.query_params.y = 1.23
-
-# Should throw an error after both apis are used
-params = st.experimental_get_query_params()
+__all__ = [
+    "App",
+    "UvicornRunner",
+    "UvicornServer",
+    "create_starlette_app",
+]

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,10 +17,7 @@
 import { Theme } from "@emotion/react"
 import styled from "@emotion/styled"
 
-import {
-  getPrimaryFocusBoxShadow,
-  roundFontSizeToNearestEighth,
-} from "~lib/theme/utils"
+import { roundFontSizeToNearestEighth } from "~lib/theme/utils"
 
 export interface StyledStreamlitMarkdownProps {
   isCaption: boolean
@@ -45,16 +42,16 @@ function sharedMarkdownStyle(theme: Theme): any {
       "&:focus": {
         outline: "none",
         // Fallback for environments without :focus-visible support:
-        boxShadow: getPrimaryFocusBoxShadow(theme),
+        boxShadow: theme.shadows.focusRing,
         borderRadius: theme.radii.default,
       },
       // In browsers that support :focus-visible, avoid showing the focus ring on
       // mouse focus (while still keeping the fallback behavior in others).
       "&:focus:not(:focus-visible)": {
-        boxShadow: "none",
+        boxShadow: theme.shadows.none,
       },
       "&:focus-visible": {
-        boxShadow: getPrimaryFocusBoxShadow(theme),
+        boxShadow: theme.shadows.focusRing,
         borderRadius: theme.radii.default,
       },
     },
@@ -372,7 +369,7 @@ export const StyledLinkIcon = styled.a(({ theme }) => ({
   svg: {
     // same color as the tooltip-icon
     stroke: theme.colors.fadedText60,
-    strokeWidth: 2.25,
+    strokeWidth: theme.sizes.defaultStrokeWidth,
   },
 
   "&:hover svg": {

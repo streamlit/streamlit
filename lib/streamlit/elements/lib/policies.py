@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -188,7 +188,7 @@ def maybe_raise_label_warnings(label: str | None, label_visibility: str | None) 
             "if needed.",
             stack_info=True,
         )
-    if label_visibility not in ("visible", "hidden", "collapsed"):
+    if label_visibility not in {"visible", "hidden", "collapsed"}:
         raise errors.StreamlitAPIException(
             f"Unsupported label_visibility option '{label_visibility}'. "
             f"Valid values are 'visible', 'hidden' or 'collapsed'."

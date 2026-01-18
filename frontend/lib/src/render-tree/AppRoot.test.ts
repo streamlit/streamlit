@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -983,6 +983,80 @@ describe("AppRoot", () => {
         GetNodeByDeltaPathVisitor.getNodeAtPath(clearedRoot.main, [0])
       ).toBeTextNode("current_element")
       expect(clearedRoot.getElements().size).toBe(1)
+    })
+  })
+
+  describe("AppRoot.clearTransientNodes", () => {
+    it("clears transient nodes by replacing them with their anchor", () => {
+      // Since we can't easily construct a TransientNode with an anchor via applyDelta
+      // (as applyDelta uses newTransient which sets anchor to undefined),
+      // we'll test that the visitor is called.
+      //
+      // Note: The actual clearing logic (TransientNode -> Anchor) is tested in ClearTransientNodesVisitor.test.ts.
+      // Here we verify that AppRoot delegates to the visitor.
+
+      const delta = makeProto(DeltaProto, {
+        newTransient: {
+          elements: [{ text: { body: "transientElement!" } }],
+        },
+      })
+      // This applies delta at [0, 0], which corresponds to text("1") in ROOT.
+      // SetNodeByDeltaPathVisitor will set text("1") as the anchor for the new TransientNode.
+      const rootWithTransient = ROOT.applyDelta(
+        "session_id",
+        delta,
+        forwardMsgMetadata([0, 0])
+      )
+
+      // Verify we have a transient node
+      const transientNode = GetNodeByDeltaPathVisitor.getNodeAtPath(
+        rootWithTransient.main,
+        [0]
+      )
+      expect(transientNode).toBeInstanceOf(TransientNode)
+
+      // Clear it. Since it has an anchor (text("1")), it should revert to that anchor.
+      const clearedRoot = rootWithTransient.clearTransientNodes()
+
+      const clearedNode = GetNodeByDeltaPathVisitor.getNodeAtPath(
+        clearedRoot.main,
+        [0]
+      )
+      expect(clearedNode).toBeTextNode("1")
+    })
+
+    it("respects fragmentIdsThisRun when clearing", () => {
+      // Create a block with a fragmentId
+      const delta = makeProto(DeltaProto, {
+        addBlock: { vertical: {}, allowEmpty: true },
+        fragmentId: "my_fragment",
+      })
+      const transientDelta = makeProto(DeltaProto, {
+        newTransient: {
+          elements: [{ text: { body: "transient!" } }],
+        },
+      })
+
+      // Use path [0, 2] which corresponds to an empty BlockNode in ROOT.
+      // This ensures no anchor is created.
+      const root = ROOT.applyDelta(
+        "session_id",
+        delta,
+        forwardMsgMetadata([0, 2])
+      ).applyDelta("session_id", transientDelta, forwardMsgMetadata([0, 2, 0]))
+
+      // 1. Clear with UNRELATED fragment ID -> Should NOT clear
+      let clearedRoot = root.clearTransientNodes(["other_fragment"])
+      let node = GetNodeByDeltaPathVisitor.getNodeAtPath(
+        clearedRoot.main,
+        [2, 0]
+      )
+      expect(node).toBeInstanceOf(TransientNode)
+
+      // 2. Clear with MATCHING fragment ID -> Should clear
+      clearedRoot = root.clearTransientNodes(["my_fragment"])
+      node = GetNodeByDeltaPathVisitor.getNodeAtPath(clearedRoot.main, [2, 0])
+      expect(node).toBeUndefined()
     })
   })
 

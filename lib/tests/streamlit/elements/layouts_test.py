@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -1008,7 +1008,6 @@ class DialogTest(DeltaGeneratorTestCase):
 
         with dialog:
             """No content so that 'get_delta_from_queue' returns the dialog."""
-            pass
 
         dialog_block = self.get_delta_from_queue()
         assert dialog_block.add_block.dialog.title == DialogTest.title
@@ -1202,7 +1201,6 @@ class DialogTest(DeltaGeneratorTestCase):
 
         with dialog:
             """No content so that 'get_delta_from_queue' returns the dialog."""
-            pass
 
         dialog_block = self.get_delta_from_queue()
         assert dialog_block.add_block.dialog.title == DialogTest.title

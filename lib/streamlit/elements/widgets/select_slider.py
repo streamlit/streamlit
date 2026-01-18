@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -199,6 +199,10 @@ class SelectSliderMixin:
             ``list``, ``set``, or anything supported by ``st.dataframe``. If
             ``options`` is dataframe-like, the first column will be used. Each
             label will be cast to ``str`` internally by default.
+
+            Each item in the iterable can optionally contain GitHub-flavored
+            Markdown, subject to the same limitations described in the
+            ``label`` parameter.
 
         value : a supported type or a tuple/list of supported types or None
             The value of the slider when it first renders. If a tuple/list

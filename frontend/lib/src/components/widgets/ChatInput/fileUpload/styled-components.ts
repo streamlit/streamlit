@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -108,10 +108,11 @@ export const StyledChatUploadedFileIconContainer =
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
-      borderRadius: theme.radii.md,
+      borderRadius: theme.radii.default,
       width: theme.sizes.chatInputFileIconSize,
       height: theme.sizes.chatInputFileIconSize,
       flexShrink: 0,
+      overflow: "hidden",
       ...(fileStatus === "uploaded" && {
         backgroundColor: theme.colors.bodyText,
         color: theme.colors.bgColor,
@@ -126,6 +127,12 @@ export const StyledChatUploadedFileIconContainer =
       }),
     })
   )
+
+export const StyledChatUploadedFileImagePreview = styled.img({
+  width: "100%",
+  height: "100%",
+  objectFit: "cover",
+})
 
 export interface StyledChatUploadedFileStatusProps {
   fileStatus: FileStatus
@@ -147,42 +154,58 @@ export const StyledChatUploadedFileSize = styled.div(({ theme }) => ({
   fontSize: theme.fontSizes.sm,
 }))
 
-export const StyledChatUploadedFileError = styled.div(({ theme }) => ({
-  color: theme.colors.redTextColor,
-  fontSize: theme.fontSizes.sm,
-}))
+export interface StyledChatUploadedFileDeleteButtonProps {
+  isError?: boolean
+}
 
-export const StyledChatUploadedFileDeleteButton = styled.small(
-  ({ theme }) => ({
-    position: "absolute",
-    top: theme.spacing.twoXS,
-    right: theme.spacing.twoXS,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    lineHeight: 0,
-    // Circular background for the X button
-    "& button": {
+export const StyledChatUploadedFileDeleteButton =
+  styled.small<StyledChatUploadedFileDeleteButtonProps>(
+    ({ theme, isError }) => ({
+      position: "absolute",
+      top: theme.spacing.twoXS,
+      right: theme.spacing.twoXS,
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
-      width: "fit-content",
-      height: "fit-content",
-      minHeight: "unset",
-      minWidth: "unset",
-      maxHeight: "unset",
-      maxWidth: "unset",
-      borderRadius: "50%",
-      backgroundColor: "transparent",
-      color: theme.colors.fadedText20,
-      padding: 0,
-      overflow: "hidden",
-      boxSizing: "border-box",
       lineHeight: 0,
-      "&:hover": {
+      // Circular background for the X button
+      "& button": {
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        width: "fit-content",
+        height: "fit-content",
+        minHeight: "unset",
+        minWidth: "unset",
+        maxHeight: "unset",
+        maxWidth: "unset",
+        borderRadius: "50%",
         backgroundColor: "transparent",
-        color: theme.colors.fadedText40,
+        color: isError ? theme.colors.redTextColor : theme.colors.fadedText60,
+        padding: 0,
+        overflow: "hidden",
+        boxSizing: "border-box",
+        lineHeight: 0,
+        "&:hover": {
+          backgroundColor: "transparent",
+          color: isError ? theme.colors.redColor : theme.colors.bodyText,
+        },
       },
-    },
-  })
-)
+    })
+  )
+
+/* eslint-disable streamlit-custom/no-hardcoded-theme-values */
+// Visually hidden but accessible to screen readers
+// Uses standard CSS visually-hidden pattern (hardcoded values required)
+export const StyledVisuallyHidden = styled.span({
+  position: "absolute",
+  width: "1px",
+  height: "1px",
+  padding: 0,
+  margin: "-1px",
+  overflow: "hidden",
+  clip: "rect(0, 0, 0, 0)",
+  whiteSpace: "nowrap",
+  border: 0,
+})
+/* eslint-enable streamlit-custom/no-hardcoded-theme-values */

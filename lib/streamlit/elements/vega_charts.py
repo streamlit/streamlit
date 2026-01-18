@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -2282,14 +2282,14 @@ class VegaChartsMixin:
 
         See the `vega_lite_chart` method docstring for more information.
         """
-        if theme not in ["streamlit", None]:
+        if theme not in {"streamlit", None}:
             raise StreamlitAPIException(
                 f'You set theme="{theme}" while Streamlit charts only support '
                 "theme=”streamlit” or theme=None to fallback to the default "
                 "library theme."
             )
 
-        if on_select not in ["ignore", "rerun"] and not callable(on_select):
+        if on_select not in {"ignore", "rerun"} and not callable(on_select):
             raise StreamlitAPIException(
                 f"You have passed {on_select} to `on_select`. But only 'ignore', "
                 "'rerun', or a callable is supported."
@@ -2404,7 +2404,10 @@ class VegaChartsMixin:
             vega_lite_proto.id = compute_and_register_element_id(
                 "arrow_vega_lite_chart",
                 user_key=key,
-                key_as_main_identity=False,
+                # There are some edge cases where selections can become orphaned when the data changes.
+                #  The frontend can handle this without errors, but it might be a nice enhancement
+                # to automatically reset the backend & frontend selection state in this case.
+                key_as_main_identity={"selection_mode"},
                 dg=self.dg,
                 vega_lite_spec=vega_lite_proto.spec,
                 # The data is either in vega_lite_proto.data.data

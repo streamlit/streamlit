@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-floating-promises */
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,10 +38,12 @@ import {
   mockEndpoints,
 } from "@streamlit/connection"
 import {
+  CachedTheme,
   CUSTOM_THEME_AUTO_NAME,
   CUSTOM_THEME_DARK_NAME,
   CUSTOM_THEME_LIGHT_NAME,
   CUSTOM_THEME_NAME,
+  darkTheme,
   FileUploadClient,
   getDefaultTheme,
   getHostSpecifiedTheme,
@@ -812,7 +814,7 @@ describe("App", () => {
       const props = getProps()
       window.localStorage.setItem(
         LocalStore.ACTIVE_THEME,
-        JSON.stringify({ name: lightTheme.name })
+        JSON.stringify("Light")
       )
       renderApp(props)
 
@@ -845,7 +847,7 @@ describe("App", () => {
     it("sets the custom theme again if a custom theme is already active", () => {
       window.localStorage.setItem(
         LocalStore.ACTIVE_THEME,
-        JSON.stringify({ name: CUSTOM_THEME_NAME, themeInput: {} })
+        JSON.stringify("System")
       )
       const props = getProps()
       props.theme.activeTheme = {
@@ -1789,7 +1791,7 @@ describe("App", () => {
     })
   })
 
-  // Using this to test the functionality provided through streamlit.experimental_set_query_params.
+  // Using this to test the functionality provided through st.query_params.
   // Please see https://github.com/streamlit/streamlit/issues/2887 for more context on this.
   describe("App.handlePageInfoChanged", () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
@@ -2378,7 +2380,7 @@ describe("App", () => {
         it("b) with 'Light' preset cached - preserves Light theme", () => {
           window.localStorage.setItem(
             LocalStore.ACTIVE_THEME,
-            JSON.stringify({ name: "Light" })
+            JSON.stringify("Light")
           )
 
           const props = getProps()
@@ -2400,10 +2402,7 @@ describe("App", () => {
         it("c) with 'Custom Theme' cached - resets to default", () => {
           window.localStorage.setItem(
             LocalStore.ACTIVE_THEME,
-            JSON.stringify({
-              name: CUSTOM_THEME_NAME,
-              themeInput: { primaryColor: "blue" },
-            })
+            JSON.stringify("System")
           )
 
           const props = getProps()
@@ -2432,11 +2431,7 @@ describe("App", () => {
         it("d) with 'Custom Theme Light' cached - resets to default", () => {
           window.localStorage.setItem(
             LocalStore.ACTIVE_THEME,
-            JSON.stringify({
-              name: CUSTOM_THEME_LIGHT_NAME,
-              displayName: "Light",
-              themeInput: { primaryColor: "lightblue" },
-            })
+            JSON.stringify("Light")
           )
 
           const props = getProps()
@@ -2489,7 +2484,7 @@ describe("App", () => {
         it("b) with 'Light' preset cached - preserves Light theme", () => {
           window.localStorage.setItem(
             LocalStore.ACTIVE_THEME,
-            JSON.stringify({ name: "Light" })
+            JSON.stringify("Light")
           )
 
           const props = getProps()
@@ -2518,10 +2513,7 @@ describe("App", () => {
         it("c) with 'Custom Theme' cached - preserves Custom Theme", () => {
           window.localStorage.setItem(
             LocalStore.ACTIVE_THEME,
-            JSON.stringify({
-              name: CUSTOM_THEME_NAME,
-              themeInput: { primaryColor: "blue" },
-            })
+            JSON.stringify("System")
           )
 
           const props = getProps()
@@ -2556,11 +2548,7 @@ describe("App", () => {
         it("d) with 'Custom Theme Light' cached - switches to Custom Theme", () => {
           window.localStorage.setItem(
             LocalStore.ACTIVE_THEME,
-            JSON.stringify({
-              name: CUSTOM_THEME_LIGHT_NAME,
-              displayName: "Light",
-              themeInput: { primaryColor: "lightblue" },
-            })
+            JSON.stringify("Light")
           )
 
           const props = getProps()
@@ -2621,7 +2609,7 @@ describe("App", () => {
         it("b) with 'Light' preset cached - preserves Light theme", () => {
           window.localStorage.setItem(
             LocalStore.ACTIVE_THEME,
-            JSON.stringify({ name: "Light" })
+            JSON.stringify("Light")
           )
 
           const props = getProps()
@@ -2655,10 +2643,7 @@ describe("App", () => {
         it("c) with 'Custom Theme' cached - switches to Custom Theme Auto", () => {
           window.localStorage.setItem(
             LocalStore.ACTIVE_THEME,
-            JSON.stringify({
-              name: CUSTOM_THEME_NAME,
-              themeInput: { primaryColor: "blue" },
-            })
+            JSON.stringify("System")
           )
 
           const props = getProps()
@@ -2695,11 +2680,7 @@ describe("App", () => {
         it("d) with 'Custom Theme Light' cached - preserves Custom Theme Light", () => {
           window.localStorage.setItem(
             LocalStore.ACTIVE_THEME,
-            JSON.stringify({
-              name: CUSTOM_THEME_LIGHT_NAME,
-              displayName: "Light",
-              themeInput: { primaryColor: "lightblue" },
-            })
+            JSON.stringify("Light")
           )
 
           const props = getProps()
@@ -2737,6 +2718,159 @@ describe("App", () => {
           window.localStorage.removeItem(LocalStore.ACTIVE_THEME)
         })
       })
+    })
+  })
+
+  describe("embed_options with custom themes", () => {
+    let prevWindowLocation: Location
+
+    beforeEach(() => {
+      window.localStorage.clear()
+      prevWindowLocation = window.location
+    })
+
+    afterEach(() => {
+      Object.defineProperty(window, "location", {
+        value: prevWindowLocation,
+        writable: true,
+        configurable: true,
+      })
+    })
+
+    const setLocationSearch = (search: string): void => {
+      Object.defineProperty(window, "location", {
+        value: {
+          ...prevWindowLocation,
+          search,
+          href: `http://localhost/${search}`,
+        },
+        writable: true,
+        configurable: true,
+      })
+    }
+
+    const customTheme = new CustomThemeConfig({
+      primaryColor: "blue",
+      light: {
+        backgroundColor: "white",
+      },
+      dark: {
+        backgroundColor: "black",
+      },
+    })
+    const cachedLightTheme: CachedTheme = "Light"
+    const cachedDarkTheme: CachedTheme = "Dark"
+
+    it("respects embed_options=light_theme over cached dark preference", () => {
+      // Set cached theme to dark
+      window.localStorage.setItem(
+        LocalStore.ACTIVE_THEME,
+        JSON.stringify(cachedDarkTheme)
+      )
+
+      // Mock query params with light_theme
+      setLocationSearch("?embed=true&embed_options=light_theme")
+
+      const props = getProps()
+      renderApp(props)
+
+      // Send custom theme config with light and dark sections
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        customTheme,
+      })
+
+      // Should apply Custom Theme Light (from embed_options), not Dark (from cache)
+      expect(props.theme.setTheme).toHaveBeenCalled()
+      const appliedTheme = vi.mocked(props.theme.setTheme).mock.calls[0][0]
+      expect(appliedTheme.name).toBe(CUSTOM_THEME_LIGHT_NAME)
+      expect(appliedTheme.emotion.colors.bgColor).toBe("white")
+    })
+
+    it("respects embed_options=dark_theme over cached light preference", () => {
+      // Set cached theme to light
+      window.localStorage.setItem(
+        LocalStore.ACTIVE_THEME,
+        JSON.stringify(cachedLightTheme)
+      )
+
+      // Mock query params with dark_theme
+      setLocationSearch("?embed=true&embed_options=dark_theme")
+
+      const props = getProps()
+      renderApp(props)
+
+      // Send custom theme config with light and dark sections
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        customTheme,
+      })
+
+      // Should apply Custom Theme Dark (from embed_options), not Light (from cache)
+      expect(props.theme.setTheme).toHaveBeenCalled()
+      const appliedTheme = vi.mocked(props.theme.setTheme).mock.calls[0][0]
+      expect(appliedTheme.name).toBe(CUSTOM_THEME_DARK_NAME)
+      expect(appliedTheme.emotion.colors.bgColor).toBe("black")
+    })
+
+    it("falls back to cached preference when no embed_options", () => {
+      // Set cached theme to dark
+      window.localStorage.setItem(
+        LocalStore.ACTIVE_THEME,
+        JSON.stringify(cachedDarkTheme)
+      )
+
+      // No query params
+      setLocationSearch("")
+
+      const props = getProps()
+      renderApp(props)
+
+      // Send custom theme config
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        customTheme,
+      })
+
+      // Should apply cached Custom Theme Dark
+      expect(props.theme.setTheme).toHaveBeenCalled()
+      const appliedTheme = vi.mocked(props.theme.setTheme).mock.calls[0][0]
+      expect(appliedTheme.name).toBe(CUSTOM_THEME_DARK_NAME)
+    })
+
+    it("maps embed_options to preset theme when custom theme removed", () => {
+      // Mock query params with dark_theme
+      setLocationSearch("?embed=true&embed_options=dark_theme")
+
+      const props = getProps()
+      props.theme.activeTheme = {
+        name: CUSTOM_THEME_DARK_NAME,
+        displayName: "Dark",
+        emotion: { ...darkTheme.emotion },
+        basewebTheme: darkTheme.basewebTheme,
+        primitives: darkTheme.primitives,
+        themeInput: customTheme,
+      }
+      renderApp(props)
+
+      // First send custom theme
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        customTheme,
+      })
+
+      vi.mocked(props.theme.setTheme).mockClear()
+
+      // Then remove custom theme (send null)
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        customTheme: null,
+      })
+
+      // Should apply preset Dark theme (respecting embed_options)
+      expect(props.theme.setTheme).toHaveBeenCalled()
+      const appliedTheme = vi.mocked(props.theme.setTheme).mock.calls[0][0]
+      expect(appliedTheme.name).toBe("Dark")
     })
   })
 

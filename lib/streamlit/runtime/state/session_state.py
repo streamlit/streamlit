@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import json
-import pickle
+import pickle  # noqa: S403
 from collections.abc import Iterator, KeysView, Mapping, MutableMapping, Sequence
 from copy import deepcopy
 from dataclasses import dataclass, field, replace

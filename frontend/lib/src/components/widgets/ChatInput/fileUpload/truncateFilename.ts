@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,16 +14,16 @@
  * limitations under the License.
  */
 
-const DEFAULT_MAX_LENGTH = 36
+const DEFAULT_MAX_LENGTH = 20
 
 /**
  * Truncates a filename using middle truncation, preserving the file extension.
  *
  * @param filename - The filename to truncate
- * @param maxLength - Maximum length of the result (default: 36)
+ * @param maxLength - Maximum length of the result (default: 16)
  *
  * @example
- * truncateFilename("very-long-filename.pdf") // "very-lon...name.pdf"
+ * truncateFilename("very-long-filename.pdf") // "very-...me.pdf"
  * truncateFilename("short.txt") // "short.txt"
  * truncateFilename("long-name.txt", 20) // "long-...e.txt"
  */

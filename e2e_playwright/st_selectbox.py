@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -39,7 +39,7 @@ more_options = [
     "e2e/scripts/st_info.py",
     "e2e/scripts/st_echo.py",
     "e2e/scripts/st_json.py",
-    "e2e/scripts/st_experimental_get_query_params.py",
+    "e2e/scripts/st_query_params.py",
     "e2e/scripts/st_markdown.py",
     "e2e/scripts/st_color_picker.py",
     "e2e/scripts/st_expander.py",

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -62,6 +62,20 @@ _config_options: dict[str, ConfigOption] | None = None
 # resolve config and secret files relative to the main script:
 _main_script_path: str | None = None
 
+# Stores the server mode for metrics tracking.
+# Possible values:
+# - "tornado": Traditional Tornado server
+# - "starlette-managed": Starlette server via server.useStarlette config
+# - "starlette-app": st.App started via streamlit run
+# - "asgi-server": st.App with external ASGI server (uvicorn, gunicorn, etc.)
+# - "asgi-mounted": st.App mounted on another ASGI framework (FastAPI, Starlette)
+_server_mode: (
+    Literal[
+        "tornado", "starlette-managed", "starlette-app", "asgi-server", "asgi-mounted"
+    ]
+    | None
+) = None
+
 # Indicates that a config option was defined by the user.
 _USER_DEFINED: Final = "<user defined>"
 
@@ -85,11 +99,11 @@ class ShowErrorDetailsConfigOptions(str, Enum):
 
     @staticmethod
     def is_true_variation(val: str | bool) -> bool:
-        return val in ["true", "True", True]
+        return val in {"true", "True", True}
 
     @staticmethod
     def is_false_variation(val: str | bool) -> bool:
-        return val in ["false", "False", False]
+        return val in {"false", "False", False}
 
         # Config options can be set from several places including the command-line and
         # the user's script. Legacy config options (true/false) will have type string
@@ -1014,6 +1028,16 @@ _create_option(
     visibility="hidden",
 )
 
+_create_option(
+    "server.useStarlette",
+    description="""
+        Enable the experimental Starlette-based server implementation instead of
+        Tornado. This is an experimental feature and may be removed in the future.
+    """,
+    default_val=False,
+    type_=bool,
+)
+
 # Config Section: Browser #
 
 _create_section("browser", "Configuration of non-UI browser options.")
@@ -1064,9 +1088,11 @@ def _browser_server_port() -> int:
 
 
 _SSL_PRODUCTION_WARNING = [
-    "DO NOT USE THIS OPTION IN A PRODUCTION ENVIRONMENT. It has not gone through "
-    "security audits or performance tests. For a production environment, we "
-    "recommend performing SSL termination through a load balancer or reverse proxy."
+    (
+        "DO NOT USE THIS OPTION IN A PRODUCTION ENVIRONMENT. It has not gone through "
+        "security audits or performance tests. For a production environment, we "
+        "recommend performing SSL termination through a load balancer or reverse proxy."
+    )
 ]
 
 _create_option(
@@ -2266,6 +2292,35 @@ _create_theme_options(
     """,
 )
 
+_create_theme_options(
+    "chartDivergingColors",
+    categories=["theme"],
+    description="""
+        An array of ten colors to use for diverging chart data.
+
+        The ten colors create a diverging color scale, typically used for data
+        with a meaningful midpoint. These colors apply to Plotly, Altair, and
+        Vega-Lite charts.
+
+        Invalid color strings are skipped. If there are not exactly ten
+        valid colors specified, Streamlit uses a default set of colors.
+
+        The default colors are:
+        [
+            "#7d353b", #red100
+            "#bd4043", #red90
+            "#ff4b4b", #red70
+            "#ff8c8c", #red50
+            "#ffc7c7", #red30
+            "#a6dcff", #blue30
+            "#60b4ff", #blue50
+            "#1c83e1", #blue70
+            "#0054a3", #blue90
+            "#004280", #blue100
+        ]
+    """,
+)
+
 # Config Section: Secrets #
 
 _create_section("secrets", "Secrets configuration.")
@@ -2334,10 +2389,10 @@ def is_manually_set(option_name: str) -> bool:
         True if the option has been set by the user.
 
     """
-    return get_where_defined(option_name) not in (
+    return get_where_defined(option_name) not in {
         ConfigOption.DEFAULT_DEFINITION,
         ConfigOption.STREAMLIT_DEFINITION,
-    )
+    }
 
 
 def show_config() -> None:
@@ -2420,19 +2475,19 @@ def _is_valid_theme_section(section_path: str) -> bool:
 
     # theme.sidebar/light/dark is valid (2 parts: "theme" + section)
     if len(parts) == 2:
-        return parts[1] in [
+        return parts[1] in {
             CustomThemeCategories.SIDEBAR.value,
             CustomThemeCategories.LIGHT.value,
             CustomThemeCategories.DARK.value,
-        ]
+        }
 
     # theme.light.sidebar/theme.dark.sidebar are the only valid 3-part patterns
     if len(parts) == 3:
         # Only allow light/dark as the middle level, with sidebar as the final level
-        if parts[1] in [
+        if parts[1] in {
             CustomThemeCategories.LIGHT.value,
             CustomThemeCategories.DARK.value,
-        ]:
+        }:
             return parts[2] == CustomThemeCategories.SIDEBAR.value
         # sidebar cannot have nested sections (theme.sidebar.light/dark)
         return False
@@ -2504,11 +2559,11 @@ def _update_config_with_toml(raw_toml: str, where_defined: str) -> None:
         for name, value in section_data.items():
             option_name = f"{section_path}.{name}"
             # Only check for nested sections when we're already in a theme section
-            if section_path.startswith("theme") and name in [
+            if section_path.startswith("theme") and name in {
                 CustomThemeCategories.SIDEBAR.value,
                 CustomThemeCategories.LIGHT.value,
                 CustomThemeCategories.DARK.value,
-            ]:
+            }:
                 # Validate the theme section before processing
                 if not _is_valid_theme_section(option_name):
                     raise StreamlitInvalidThemeSectionError(

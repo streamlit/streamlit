@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,6 @@
 import styled from "@emotion/styled"
 
 import { STALE_STYLES, STALE_TRANSITION_PARAMS } from "~lib/theme"
-import { getPrimaryFocusBoxShadow } from "~lib/theme/utils"
 
 export interface StyledExpandableContainerProps {
   empty: boolean
@@ -86,7 +85,7 @@ export const StyledSummary = styled.summary<StyledSummaryProps>(
       outline: "none",
     },
     "&:focus-visible": {
-      boxShadow: getPrimaryFocusBoxShadow(theme),
+      boxShadow: theme.shadows.focusRing,
     },
     fontSize: "inherit",
     paddingLeft: theme.spacing.md,

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,7 +33,6 @@ import {
 } from "~lib/hooks/useBasicWidgetState"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { hasLightBackgroundColor } from "~lib/theme"
-import { getFocusBoxShadow } from "~lib/theme/utils"
 import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -129,10 +128,10 @@ function Checkbox({
               $checked: boolean
               $isHovered: boolean
             }) => {
-              let backgroundColor = colors.fadedText40
+              let backgroundColor = colors.borderColor
 
               if ($isHovered && !disabled) {
-                backgroundColor = colors.fadedText20
+                backgroundColor = colors.darkenedBgMix15
               }
 
               if ($checked && !disabled) {
@@ -167,7 +166,7 @@ function Checkbox({
               $checked: boolean
             }) => {
               const borderColor =
-                $checked && !disabled ? colors.primary : colors.fadedText40
+                $checked && !disabled ? colors.primary : colors.borderColor
 
               return {
                 outline: 0,
@@ -177,9 +176,7 @@ function Checkbox({
                 marginLeft: 0,
                 marginBottom: 0,
                 boxShadow:
-                  $isFocusVisible && $checked
-                    ? getFocusBoxShadow(colors.primary)
-                    : "",
+                  $isFocusVisible && $checked ? theme.shadows.focusRing : "",
                 // This is painfully verbose, but baseweb seems to internally
                 // use the long-hand version, which means we can't use the
                 // shorthand names here as if we do we'll end up with warn

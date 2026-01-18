@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,6 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+# ruff: noqa: RUF027 - We allow template strings in localizable exception messages instead of f-strings.
 
 from __future__ import annotations
 
@@ -32,13 +34,9 @@ class Error(Exception):
     code.
     """
 
-    pass
-
 
 class CustomComponentError(Error):
     """Exceptions thrown in the custom components code path."""
-
-    pass
 
 
 class StreamlitComponentRegistryError(Error):
@@ -48,8 +46,6 @@ class StreamlitComponentRegistryError(Error):
     distributions for component metadata and registering them with the component
     registry.
     """
-
-    pass
 
 
 class DeprecationError(Error):
@@ -61,15 +57,11 @@ class FragmentStorageKeyError(Error, KeyError):
     operation.
     """
 
-    pass
-
 
 class FragmentHandledException(Exception):  # noqa: N818
     """An exception that is raised by the fragment
     when it has handled the exception itself.
     """
-
-    pass
 
 
 class NoStaticFiles(Error):  # noqa: N818
@@ -87,13 +79,9 @@ class MarkdownFormattedException(Error):  # noqa: N818
     nicely formatted on the frontend.
     """
 
-    pass
-
 
 class StreamlitMaxRetriesError(Error):
     """An exception raised when a file or folder cannot be accessed after multiple retries."""
-
-    pass
 
 
 class StreamlitAPIException(MarkdownFormattedException):
@@ -265,7 +253,9 @@ class StreamlitInvalidColumnGapError(LocalizableStreamlitException):
 
     def __init__(self, gap: str, element_type: str) -> None:
         super().__init__(
-            'The `gap` argument to `{element_type}` must be `"small"`, `"medium"`, `"large"`, or `"none"`. \n'
+            'The `gap` argument to `{element_type}` must be `"xxsmall"`, '
+            '`"xsmall"`, `"small"`, `"medium"`, `"large"`, `"xlarge"`, '
+            '`"xxlarge"`, or `"none"`. \n'
             "The argument passed was {gap}.",
             gap=gap,
             element_type=element_type,
@@ -471,18 +461,6 @@ class BidiComponentInvalidIdError(LocalizableStreamlitException):
             "the delimiter sequence `{delimiter}`.",
             part=part,
             delimiter=delimiter,
-        )
-
-
-class BidiComponentMissingContentError(LocalizableStreamlitException):
-    """Exception raised when a component is missing required content."""
-
-    def __init__(self, component_name: str) -> None:
-        super().__init__(
-            "Component `{component_name}` must have either JavaScript content "
-            "(`js_content` or `js_url`) or HTML content (`html_content`), or both. "
-            "Please ensure the component definition includes at least one of these.",
-            component_name=component_name,
         )
 
 

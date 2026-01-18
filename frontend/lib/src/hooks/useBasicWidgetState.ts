@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -161,6 +161,13 @@ export interface UseBasicWidgetStateArgs<
 
 /**
  * A React hook that makes the simplest kinds of widgets very easy to implement.
+ *
+ * This hook handles the standard widget state management pattern, including:
+ * - Initializing from WidgetStateManager or default values
+ * - Responding to setValue updates from session_state
+ * - Handling form clearing for clear_on_submit forms
+ *
+ * Examples: TextInput, NumberInput, Checkbox, Slider, etc.
  */
 export function useBasicWidgetState<
   T, // Type of the value stored in WidgetStateManager.

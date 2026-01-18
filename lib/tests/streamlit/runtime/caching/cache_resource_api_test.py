@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -424,7 +424,7 @@ class CacheResourceMessageReplayTest(DeltaGeneratorTestCase):
     ):
         """Test that it works with element replay if used as non-widget element."""
 
-        if element_name in ("toast", "spinner", "logo", "echo"):
+        if element_name in {"toast", "spinner", "logo", "echo"}:
             # These elements are not supported in the cache_resource API
             #   - toast only corresponds to the event dg
             #   - spinner is transient and not replayed

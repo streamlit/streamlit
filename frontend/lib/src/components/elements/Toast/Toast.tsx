@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -72,9 +72,7 @@ function generateToastOverrides(theme: EmotionTheme): ToastOverrides {
         filter: lightBackground ? "brightness(0.98)" : "brightness(1.2)",
         color: theme.colors.bodyText,
         // Take standard BaseWeb shadow and adjust for dark backgrounds
-        boxShadow: lightBackground
-          ? "0px 4px 16px rgba(0, 0, 0, 0.16)"
-          : "0px 4px 16px rgba(0, 0, 0, 0.7)",
+        boxShadow: theme.shadows.popover,
       },
     },
     CloseIcon: {

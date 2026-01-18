@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -106,7 +106,7 @@ export function getMetricChartSpec(
           ...(chartType === MetricProto.ChartType.LINE && {
             type: "line",
             strokeCap: "round",
-            strokeWidth: 2,
+            strokeWidth: theme.sizes.metricStrokeWidth,
           }),
           ...(chartType === MetricProto.ChartType.BAR && {
             type: "bar",
@@ -121,7 +121,7 @@ export function getMetricChartSpec(
               // Controls the color of the line in area chart (main color)
               color: getMetricColor(theme, metricColor),
               opacity: 1,
-              strokeWidth: 2,
+              strokeWidth: theme.sizes.metricStrokeWidth,
               strokeCap: "round",
             },
           }),

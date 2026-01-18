@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -223,7 +223,7 @@ def _process_avatar_input(
             AvatarType.ICON,
             (
                 "assistant"
-                if avatar in [PresetNames.AI, PresetNames.ASSISTANT]
+                if avatar in {PresetNames.AI, PresetNames.ASSISTANT}
                 else "user"
             ),
         )
@@ -633,16 +633,12 @@ class ChatMixin:
             ``None`` (default), there will be no maximum.
 
         max_upload_size : int or None
-            The maximum allowed size of each uploaded file for this chat input,
-            in megabytes.
+            The maximum allowed size of each uploaded file in megabytes.
 
-            When set to a positive integer, this per-widget limit takes
-            precedence over the global ``server.maxUploadSize`` configuration
-            option.
-
-            When this is ``None`` (default), the chat input falls back to
-            ``server.maxUploadSize`` for its file size limit. For more
-            information on how to set config options, see |config.toml|_.
+            If this is ``None`` (default), the maximum file size is set by the
+            ``server.maxUploadSize`` configuration option in your
+            ``config.toml`` file. If this is an integer, it must be positive
+            and will override the ``server.maxUploadSize`` configuration option.
 
         accept_file : bool, "multiple", or "directory"
             Whether the chat input should accept files. This can be one of the

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,7 +12,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import streamlit as st
+"""Starlette integration for Streamlit.
 
-query_params = st.experimental_get_query_params()
-st.write(str(query_params))
+This module provides the ASGI-compatible App class for running Streamlit
+applications with any ASGI server (uvicorn, hypercorn, etc.).
+
+Example
+-------
+>>> from streamlit.starlette import App
+>>> app = App("main.py")
+
+Run with uvicorn:
+
+.. code-block:: bash
+
+    uvicorn myapp:app --host 0.0.0.0 --port 8501
+"""
+
+from streamlit.web.server.starlette.starlette_app import App
+
+__all__ = ["App"]

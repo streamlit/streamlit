@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,13 +14,14 @@
  * limitations under the License.
  */
 
-import { FC, memo, useCallback } from "react"
+import { FC, memo, useCallback, useId } from "react"
 
 import { ErrorOutline } from "@emotion-icons/material-outlined"
 import { Cancel } from "@emotion-icons/material-rounded"
 
 import BaseButton, { BaseButtonKind } from "~lib/components/shared/BaseButton"
 import Icon, { DynamicIcon } from "~lib/components/shared/Icon"
+import Tooltip, { Placement } from "~lib/components/shared/Tooltip"
 import { UploadFileInfo } from "~lib/components/widgets/FileUploader/UploadFileInfo"
 import { assertNever } from "~lib/util/assertNever"
 import { FileSize, getSizeDisplay } from "~lib/util/FileHelper"
@@ -29,13 +30,15 @@ import { getFileTypeIcon } from "./getFileTypeIcon"
 import {
   StyledChatUploadedFile,
   StyledChatUploadedFileDeleteButton,
-  StyledChatUploadedFileError,
   StyledChatUploadedFileIconContainer,
+  StyledChatUploadedFileImagePreview,
   StyledChatUploadedFileInfo,
   StyledChatUploadedFileName,
   StyledChatUploadedFileSize,
+  StyledVisuallyHidden,
 } from "./styled-components"
 import { truncateFilename } from "./truncateFilename"
+import { useImagePreview } from "./useImagePreview"
 
 export interface Props {
   fileInfo: UploadFileInfo
@@ -45,10 +48,12 @@ export interface Props {
 
 export interface ChatUploadedFileIconProps {
   fileInfo: UploadFileInfo
+  imagePreviewUrl: string | null
 }
 
 export const ChatUploadedFileIcon: FC<ChatUploadedFileIconProps> = ({
   fileInfo,
+  imagePreviewUrl,
 }) => {
   const { type } = fileInfo.status
 
@@ -70,6 +75,15 @@ export const ChatUploadedFileIcon: FC<ChatUploadedFileIconProps> = ({
         />
       )
     case "uploaded":
+      if (imagePreviewUrl) {
+        return (
+          <StyledChatUploadedFileImagePreview
+            src={imagePreviewUrl}
+            alt={fileInfo.name}
+            data-testid="stChatInputFileImagePreview"
+          />
+        )
+      }
       return <Icon content={getFileTypeIcon(fileInfo.name)} size="lg" />
     default:
       assertNever(type)
@@ -87,6 +101,12 @@ const ChatUploadedFile = ({
   const isUploading = statusType === "uploading"
   const canRetry =
     isError && onRetry !== undefined && fileInfo.file !== undefined
+
+  // Generate unique ID for aria-describedby linking
+  const errorId = useId()
+
+  // Create image preview URL for image files
+  const imagePreviewUrl = useImagePreview(fileInfo.file, fileInfo.name)
 
   // Extract error message once to avoid duplication
   const errorMessage =
@@ -124,12 +144,13 @@ const ChatUploadedFile = ({
     : `Remove ${fileInfo.name}`
 
   // Determine aria-label for the file chip
+  // Keep aria-label stable (name + size) regardless of error state to avoid
+  // double-announcing errors - screen readers get error info via aria-invalid
+  // and the visually hidden error message linked by aria-describedby
   const sizeDisplay = getSizeDisplay(fileInfo.size, FileSize.Byte)
-  const chipAriaLabel = isError
-    ? `${fileInfo.name}, ${errorMessage}`
-    : `${fileInfo.name}, ${sizeDisplay}`
+  const chipAriaLabel = `${fileInfo.name}, ${sizeDisplay}`
 
-  return (
+  const fileChip = (
     <StyledChatUploadedFile
       className="stChatInputFile"
       data-testid="stChatInputFile"
@@ -141,9 +162,14 @@ const ChatUploadedFile = ({
       role={canRetry ? "button" : undefined}
       tabIndex={canRetry ? 0 : undefined}
       aria-label={chipAriaLabel}
+      aria-invalid={isError || undefined}
+      aria-describedby={isError ? errorId : undefined}
     >
       <StyledChatUploadedFileIconContainer fileStatus={statusType}>
-        <ChatUploadedFileIcon fileInfo={fileInfo} />
+        <ChatUploadedFileIcon
+          fileInfo={fileInfo}
+          imagePreviewUrl={imagePreviewUrl}
+        />
       </StyledChatUploadedFileIconContainer>
       <StyledChatUploadedFileInfo>
         <StyledChatUploadedFileName
@@ -154,17 +180,14 @@ const ChatUploadedFile = ({
         >
           {truncateFilename(fileInfo.name)}
         </StyledChatUploadedFileName>
-        {isError ? (
-          <StyledChatUploadedFileError data-testid="stChatInputFileError">
-            {errorMessage}
-          </StyledChatUploadedFileError>
-        ) : (
-          <StyledChatUploadedFileSize>
-            {getSizeDisplay(fileInfo.size, FileSize.Byte)}
-          </StyledChatUploadedFileSize>
-        )}
+        <StyledChatUploadedFileSize>
+          {getSizeDisplay(fileInfo.size, FileSize.Byte)}
+        </StyledChatUploadedFileSize>
       </StyledChatUploadedFileInfo>
-      <StyledChatUploadedFileDeleteButton data-testid="stChatInputDeleteBtn">
+      <StyledChatUploadedFileDeleteButton
+        data-testid="stChatInputDeleteBtn"
+        isError={isError}
+      >
         <BaseButton
           onClick={handleDeleteClick}
           kind={BaseButtonKind.MINIMAL}
@@ -173,8 +196,30 @@ const ChatUploadedFile = ({
           <Icon content={Cancel} size="md" />
         </BaseButton>
       </StyledChatUploadedFileDeleteButton>
+      {/*
+        Accessibility: Error messages are shown in a tooltip on hover, but tooltips
+        are portals rendered outside this component and use accessibilityType="tooltip",
+        which assistive tech treats as supplementary info. To meet WCAG 3.3.1 (Error
+        Identification), we include a visually hidden element with role="alert" that
+        screen readers announce immediately, linked via aria-describedby above.
+      */}
+      {isError && (
+        <StyledVisuallyHidden id={errorId} role="alert">
+          Error: {errorMessage}
+        </StyledVisuallyHidden>
+      )}
     </StyledChatUploadedFile>
   )
+
+  if (isError) {
+    return (
+      <Tooltip content={errorMessage} placement={Placement.TOP} error>
+        {fileChip}
+      </Tooltip>
+    )
+  }
+
+  return fileChip
 }
 
 export default memo(ChatUploadedFile)

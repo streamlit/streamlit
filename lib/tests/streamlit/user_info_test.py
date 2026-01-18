@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -316,6 +316,13 @@ class TestTokensProxy:
             proxy.id = "modified"
         with pytest.raises(StreamlitAPIException):
             proxy["id"] = "modified"
+
+    def test_tokens_proxy_to_dict(self):
+        """Test that tokens can be converted to a dictionary."""
+        proxy = TokensProxy({"id": "test", "access": "test"})
+        assert proxy.to_dict() == {"id": "test", "access": "test"}
+        proxy.to_dict()["id"] = "modified"
+        assert proxy.to_dict() == {"id": "test", "access": "test"}
 
 
 class UserInfoTokensTest(DeltaGeneratorTestCase):

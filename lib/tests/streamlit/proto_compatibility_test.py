@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -133,6 +133,7 @@ FD = FieldDescriptor
                 ("show_sidebar_border", FD.LABEL_OPTIONAL, FD.TYPE_BOOL),
                 ("chart_categorical_colors", FD.LABEL_REPEATED, FD.TYPE_STRING),
                 ("chart_sequential_colors", FD.LABEL_REPEATED, FD.TYPE_STRING),
+                ("chart_diverging_colors", FD.LABEL_REPEATED, FD.TYPE_STRING),
                 ("red_color", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("orange_color", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("yellow_color", FD.LABEL_OPTIONAL, FD.TYPE_STRING),

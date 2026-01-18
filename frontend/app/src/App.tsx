@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -62,6 +62,7 @@ import {
   AppRoot,
   CircularBuffer,
   ComponentRegistry,
+  createAutoTheme,
   createCustomThemes,
   createFormsData,
   createPresetThemes,
@@ -74,12 +75,11 @@ import {
   FileUploadClient,
   FormsData,
   generateUID,
-  getCachedTheme,
   getElementId,
   getEmbeddingIdClassName,
-  getHostSpecifiedTheme,
   getIFrameEnclosingApp,
   getLocaleLanguage,
+  getPreferredTheme,
   getQueryString,
   getScreencastTimestamp,
   getTimezone,
@@ -99,7 +99,6 @@ import {
   isToolbarDisplayed,
   IToolbarItem,
   lightTheme,
-  mapCachedThemeToAvailableTheme,
   mark,
   measure,
   notUndefined,
@@ -1369,9 +1368,11 @@ export class App extends PureComponent<Props, State> {
       appHash === newSessionHash &&
       prevPageScriptHash === newPageScriptHash
     ) {
-      this.setState({
+      this.setState(prevState => ({
+        // Clear the transient nodes before executing everything else.
+        elements: prevState.elements.clearTransientNodes(fragmentIdsThisRun),
         scriptRunId,
-      })
+      }))
     } else {
       this.clearAppState(
         newSessionHash,
@@ -1476,14 +1477,7 @@ export class App extends PureComponent<Props, State> {
       // Add the new custom themes to the theme manager and remove the preset themes
       this.props.theme.addThemes(customThemes, { keepPresetThemes: false })
 
-      const userPreference = getCachedTheme()
-      // Map the user's cached preference to the best matching theme from the new custom themes
-      // - Applies full server config while preserving user's light/dark selection
-      const mappedTheme = mapCachedThemeToAvailableTheme(
-        userPreference,
-        customThemes
-      )
-
+      const mappedTheme = getPreferredTheme(customThemes)
       if (mappedTheme) {
         // User has a mappable preference - apply the full server config
         // while preserving their light/dark selection
@@ -1511,22 +1505,15 @@ export class App extends PureComponent<Props, State> {
       this.props.theme.addThemes([])
 
       if (usingCustomTheme) {
-        const userPreference = getCachedTheme()
         const presetThemes = [lightTheme, darkTheme]
-        // Try to map custom theme preference back to preset themes
-        // e.g., "Custom Theme Light" → "Light", "Custom Theme Dark" → "Dark"
-        const mappedTheme = mapCachedThemeToAvailableTheme(
-          userPreference,
-          presetThemes
-        )
+        const mappedTheme = getPreferredTheme(presetThemes)
 
         if (mappedTheme) {
           // User had a custom theme preference that maps to a preset - preserve their choice
           this.setAndSendTheme(mappedTheme)
         } else {
-          // Reset to the auto theme taking into account any host preferences
-          // aka embed query params.
-          this.setAndSendTheme(getHostSpecifiedTheme())
+          // Reset to the auto theme
+          this.setAndSendTheme(createAutoTheme())
         }
       }
     }
@@ -2080,7 +2067,9 @@ export class App extends PureComponent<Props, State> {
       sessionInfo: this.sessionInfo,
       isServerConnected: this.isServerConnected(),
       settings: this.state.userSettings,
-      allowRunOnSave: this.state.allowRunOnSave,
+      allowRunOnSave:
+        this.state.allowRunOnSave &&
+        showDevelopmentOptions(this.state.isOwner, this.state.toolbarMode),
       onSave: this.saveSettings,
       onClose: () => {},
       animateModal,
