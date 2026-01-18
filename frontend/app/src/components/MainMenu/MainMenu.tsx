@@ -18,6 +18,7 @@ import { memo, ReactElement } from "react"
 
 import { MoreVert } from "@emotion-icons/material-rounded"
 import { Checkbox, STYLE_TYPE } from "baseui/checkbox"
+import { CheckboxOverrides } from "baseui/checkbox/types"
 import { PLACEMENT, StatefulPopover } from "baseui/popover"
 
 import { MetricsManager } from "@streamlit/app/src/MetricsManager"
@@ -138,212 +139,167 @@ const MenuItemRow = ({
   )
 }
 
+interface CommonMenuItemsProps {
+  menuItems: PageConfig.IMenuItems | null | undefined
+  hostMenuItems: IMenuItem[]
+  sendMessageToHost: (message: IGuestToHostMessage) => void
+  aboutCallback: () => void
+  closeMenu: () => void
+  metricsMgr: MetricsManager
+}
+
+/**
+ * Builds menu items common to both minimal and standard modes:
+ * Report a bug, Get help, Host menu items, and About.
+ */
+const buildCommonMenuItems = ({
+  menuItems,
+  hostMenuItems,
+  sendMessageToHost,
+  aboutCallback,
+  closeMenu,
+  metricsMgr,
+}: CommonMenuItemsProps): ReactElement[] => {
+  const items: ReactElement[] = []
+
+  // Report a bug
+  if (menuItems?.reportABugUrl && !menuItems?.hideReportABug) {
+    items.push(
+      <MenuItemRow
+        key="report"
+        item={{
+          label: "Report a bug",
+          onClick: getOpenInWindowCallback(menuItems.reportABugUrl),
+        }}
+        closeMenu={closeMenu}
+        metricsMgr={metricsMgr}
+      />
+    )
+  }
+
+  // Get help
+  if (menuItems?.getHelpUrl && !menuItems?.hideGetHelp) {
+    items.push(
+      <MenuItemRow
+        key="community"
+        item={{
+          label: "Get help",
+          onClick: getOpenInWindowCallback(menuItems.getHelpUrl),
+        }}
+        closeMenu={closeMenu}
+        metricsMgr={metricsMgr}
+      />
+    )
+  }
+
+  // Host menu items
+  hostMenuItems.forEach(hostItem => {
+    if (hostItem.type === "separator") return
+    if (hostItem.key === "reportBug" && menuItems?.hideGetHelp) return
+    if (hostItem.key === "about" && menuItems?.aboutSectionMd !== "") return
+
+    items.push(
+      <MenuItemRow
+        key={`host-${hostItem.key}`}
+        item={{
+          label: hostItem.label,
+          onClick: () =>
+            sendMessageToHost({
+              type: "MENU_ITEM_CALLBACK",
+              key: hostItem.key,
+            }),
+        }}
+        closeMenu={closeMenu}
+        metricsMgr={metricsMgr}
+      />
+    )
+  })
+
+  // About
+  if (menuItems?.aboutSectionMd) {
+    items.push(
+      <MenuItemRow
+        key="about"
+        item={{
+          label: "About",
+          onClick: aboutCallback,
+        }}
+        closeMenu={closeMenu}
+        metricsMgr={metricsMgr}
+      />
+    )
+  }
+
+  return items
+}
+
+/**
+ * Creates BaseUI Checkbox overrides for the auto-rerun toggle switch.
+ */
+const getToggleOverrides = (
+  theme: ReturnType<typeof useEmotionTheme>,
+  lightTheme: boolean
+): CheckboxOverrides => ({
+  Root: {
+    style: {
+      marginTop: 0,
+      marginBottom: 0,
+    },
+  },
+  Toggle: {
+    style: ({ $checked }: { $checked: boolean }) => {
+      const backgroundColor = lightTheme
+        ? theme.colors.bgColor
+        : theme.colors.bodyText
+      return {
+        width: `calc(${theme.sizes.checkbox} - ${theme.spacing.twoXS})`,
+        height: `calc(${theme.sizes.checkbox} - ${theme.spacing.twoXS})`,
+        transform: $checked ? `translateX(${theme.sizes.checkbox})` : "",
+        backgroundColor,
+        boxShadow: "",
+      }
+    },
+  },
+  ToggleTrack: {
+    style: ({
+      $checked,
+      $isHovered,
+    }: {
+      $checked: boolean
+      $isHovered: boolean
+    }) => {
+      let backgroundColor = theme.colors.borderColor
+      if ($isHovered) {
+        backgroundColor = theme.colors.darkenedBgMix15
+      }
+      if ($checked) {
+        backgroundColor = theme.colors.primary
+      }
+      return {
+        marginRight: 0,
+        marginLeft: 0,
+        marginBottom: 0,
+        marginTop: 0,
+        paddingLeft: theme.spacing.threeXS,
+        paddingRight: theme.spacing.threeXS,
+        width: `calc(2 * ${theme.sizes.checkbox})`,
+        minWidth: `calc(2 * ${theme.sizes.checkbox})`,
+        height: theme.sizes.checkbox,
+        minHeight: theme.sizes.checkbox,
+        borderBottomLeftRadius: theme.radii.full,
+        borderTopLeftRadius: theme.radii.full,
+        borderBottomRightRadius: theme.radii.full,
+        borderTopRightRadius: theme.radii.full,
+        backgroundColor,
+      }
+    },
+  },
+})
+
 function MainMenu(props: Readonly<Props>): ReactElement {
   const isServerDisconnected = !props.isServerConnected
   const theme = useEmotionTheme()
   const lightTheme = hasLightBackgroundColor(theme)
-
-  // Build menu items based on mode
-  const buildMenuItems = (closeMenu: () => void): ReactElement[] => {
-    const items: ReactElement[] = []
-
-    // For minimal mode, only show configured items
-    if (props.toolbarMode === Config.ToolbarMode.MINIMAL) {
-      if (props.menuItems?.reportABugUrl && !props.menuItems?.hideReportABug) {
-        items.push(
-          <MenuItemRow
-            key="report"
-            item={{
-              label: "Report a bug",
-              onClick: getOpenInWindowCallback(props.menuItems.reportABugUrl),
-            }}
-            closeMenu={closeMenu}
-            metricsMgr={props.metricsMgr}
-          />
-        )
-      }
-      if (props.menuItems?.getHelpUrl && !props.menuItems?.hideGetHelp) {
-        items.push(
-          <MenuItemRow
-            key="community"
-            item={{
-              label: "Get help",
-              onClick: getOpenInWindowCallback(props.menuItems.getHelpUrl),
-            }}
-            closeMenu={closeMenu}
-            metricsMgr={props.metricsMgr}
-          />
-        )
-      }
-      // Host menu items
-      props.hostMenuItems.forEach(hostItem => {
-        if (hostItem.type === "separator") return
-        if (hostItem.key === "reportBug" && props.menuItems?.hideGetHelp)
-          return
-        if (hostItem.key === "about" && props.menuItems?.aboutSectionMd !== "")
-          return
-
-        items.push(
-          <MenuItemRow
-            key={`host-${hostItem.key}`}
-            item={{
-              label: hostItem.label,
-              onClick: () =>
-                props.sendMessageToHost({
-                  type: "MENU_ITEM_CALLBACK",
-                  key: hostItem.key,
-                }),
-            }}
-            closeMenu={closeMenu}
-            metricsMgr={props.metricsMgr}
-          />
-        )
-      })
-      if (props.menuItems?.aboutSectionMd) {
-        items.push(
-          <MenuItemRow
-            key="about"
-            item={{
-              label: "About",
-              onClick: props.aboutCallback,
-            }}
-            closeMenu={closeMenu}
-            metricsMgr={props.metricsMgr}
-          />
-        )
-      }
-      return items
-    }
-
-    // Standard menu order: Rerun, Clear cache (dev), Print, Record screen
-    // Rerun
-    items.push(
-      <MenuItemRow
-        key="rerun"
-        item={{
-          label: "Rerun",
-          onClick: props.quickRerunCallback,
-          disabled: isServerDisconnected,
-        }}
-        closeMenu={closeMenu}
-        metricsMgr={props.metricsMgr}
-      />
-    )
-
-    // Clear cache (only in development mode)
-    if (props.developmentMode) {
-      items.push(
-        <MenuItemRow
-          key="clearCache"
-          item={{
-            label: "Clear cache",
-            onClick: props.clearCacheCallback,
-            disabled: isServerDisconnected,
-          }}
-          closeMenu={closeMenu}
-          metricsMgr={props.metricsMgr}
-        />
-      )
-    }
-
-    // Print
-    items.push(
-      <MenuItemRow
-        key="print"
-        item={{
-          label: "Print",
-          onClick: props.printCallback,
-        }}
-        closeMenu={closeMenu}
-        metricsMgr={props.metricsMgr}
-      />
-    )
-
-    // Record screen (if supported)
-    if (ScreenCastRecorder.isSupportedBrowser()) {
-      items.push(
-        <MenuItemRow
-          key="recordScreencast"
-          item={{
-            label:
-              SCREENCAST_LABEL[props.screenCastState] || "Record a screencast",
-            onClick: props.screencastCallback,
-            isRecording: Boolean(SCREENCAST_LABEL[props.screenCastState]),
-          }}
-          closeMenu={closeMenu}
-          metricsMgr={props.metricsMgr}
-        />
-      )
-    }
-
-    // Optional configured items
-    if (props.menuItems?.reportABugUrl && !props.menuItems?.hideReportABug) {
-      items.push(
-        <MenuItemRow
-          key="report"
-          item={{
-            label: "Report a bug",
-            onClick: getOpenInWindowCallback(props.menuItems.reportABugUrl),
-          }}
-          closeMenu={closeMenu}
-          metricsMgr={props.metricsMgr}
-        />
-      )
-    }
-    if (props.menuItems?.getHelpUrl && !props.menuItems?.hideGetHelp) {
-      items.push(
-        <MenuItemRow
-          key="community"
-          item={{
-            label: "Get help",
-            onClick: getOpenInWindowCallback(props.menuItems.getHelpUrl),
-          }}
-          closeMenu={closeMenu}
-          metricsMgr={props.metricsMgr}
-        />
-      )
-    }
-
-    // Host menu items
-    props.hostMenuItems.forEach(hostItem => {
-      if (hostItem.type === "separator") return
-      if (hostItem.key === "reportBug" && props.menuItems?.hideGetHelp) return
-      if (hostItem.key === "about" && props.menuItems?.aboutSectionMd !== "")
-        return
-
-      items.push(
-        <MenuItemRow
-          key={`host-${hostItem.key}`}
-          item={{
-            label: hostItem.label,
-            onClick: () =>
-              props.sendMessageToHost({
-                type: "MENU_ITEM_CALLBACK",
-                key: hostItem.key,
-              }),
-          }}
-          closeMenu={closeMenu}
-          metricsMgr={props.metricsMgr}
-        />
-      )
-    })
-
-    if (props.menuItems?.aboutSectionMd) {
-      items.push(
-        <MenuItemRow
-          key="about"
-          item={{
-            label: "About",
-            onClick: props.aboutCallback,
-          }}
-          closeMenu={closeMenu}
-          metricsMgr={props.metricsMgr}
-        />
-      )
-    }
-
-    return items
-  }
 
   // Check if menu should be shown at all in minimal mode
   if (props.toolbarMode === Config.ToolbarMode.MINIMAL) {
@@ -362,14 +318,23 @@ function MainMenu(props: Readonly<Props>): ReactElement {
       focusLock
       placement={PLACEMENT.bottomRight}
       content={({ close }) => {
-        // For minimal mode, use the buildMenuItems approach
+        // Build common menu items shared between modes
+        const commonMenuItems = buildCommonMenuItems({
+          menuItems: props.menuItems,
+          hostMenuItems: props.hostMenuItems,
+          sendMessageToHost: props.sendMessageToHost,
+          aboutCallback: props.aboutCallback,
+          closeMenu: close,
+          metricsMgr: props.metricsMgr,
+        })
+
+        // For minimal mode, only show common items
         if (props.toolbarMode === Config.ToolbarMode.MINIMAL) {
-          const menuItems = buildMenuItems(close)
           return (
             <StyledMenuContainer>
               <ThemeSwitcher metricsMgr={props.metricsMgr} />
-              {menuItems.length > 0 && <StyledMenuDivider />}
-              {menuItems}
+              {commonMenuItems.length > 0 && <StyledMenuDivider />}
+              {commonMenuItems}
               <StyledMenuDivider />
               <StyledVersionFooter data-testid="stMainMenuVersion">
                 Made with Streamlit v
@@ -379,11 +344,11 @@ function MainMenu(props: Readonly<Props>): ReactElement {
           )
         }
 
-        // Standard menu - render explicitly with dividers around Clear cache
-        const afterClearCacheItems: ReactElement[] = []
+        // Standard menu - build standard-only items (Print, Record screen)
+        const standardOnlyItems: ReactElement[] = []
 
         // Print
-        afterClearCacheItems.push(
+        standardOnlyItems.push(
           <MenuItemRow
             key="print"
             item={{
@@ -397,7 +362,7 @@ function MainMenu(props: Readonly<Props>): ReactElement {
 
         // Record screen (if supported)
         if (ScreenCastRecorder.isSupportedBrowser()) {
-          afterClearCacheItems.push(
+          standardOnlyItems.push(
             <MenuItemRow
               key="recordScreencast"
               item={{
@@ -412,80 +377,8 @@ function MainMenu(props: Readonly<Props>): ReactElement {
           )
         }
 
-        // Optional configured items
-        if (
-          props.menuItems?.reportABugUrl &&
-          !props.menuItems?.hideReportABug
-        ) {
-          afterClearCacheItems.push(
-            <MenuItemRow
-              key="report"
-              item={{
-                label: "Report a bug",
-                onClick: getOpenInWindowCallback(
-                  props.menuItems.reportABugUrl
-                ),
-              }}
-              closeMenu={close}
-              metricsMgr={props.metricsMgr}
-            />
-          )
-        }
-        if (props.menuItems?.getHelpUrl && !props.menuItems?.hideGetHelp) {
-          afterClearCacheItems.push(
-            <MenuItemRow
-              key="community"
-              item={{
-                label: "Get help",
-                onClick: getOpenInWindowCallback(props.menuItems.getHelpUrl),
-              }}
-              closeMenu={close}
-              metricsMgr={props.metricsMgr}
-            />
-          )
-        }
-
-        // Host menu items
-        props.hostMenuItems.forEach(hostItem => {
-          if (hostItem.type === "separator") return
-          if (hostItem.key === "reportBug" && props.menuItems?.hideGetHelp)
-            return
-          if (
-            hostItem.key === "about" &&
-            props.menuItems?.aboutSectionMd !== ""
-          )
-            return
-
-          afterClearCacheItems.push(
-            <MenuItemRow
-              key={`host-${hostItem.key}`}
-              item={{
-                label: hostItem.label,
-                onClick: () =>
-                  props.sendMessageToHost({
-                    type: "MENU_ITEM_CALLBACK",
-                    key: hostItem.key,
-                  }),
-              }}
-              closeMenu={close}
-              metricsMgr={props.metricsMgr}
-            />
-          )
-        })
-
-        if (props.menuItems?.aboutSectionMd) {
-          afterClearCacheItems.push(
-            <MenuItemRow
-              key="about"
-              item={{
-                label: "About",
-                onClick: props.aboutCallback,
-              }}
-              closeMenu={close}
-              metricsMgr={props.metricsMgr}
-            />
-          )
-        }
+        // Combine standard-only items with common items
+        const afterClearCacheItems = [...standardOnlyItems, ...commonMenuItems]
 
         return (
           <StyledMenuContainer>
@@ -515,64 +408,7 @@ function MainMenu(props: Readonly<Props>): ReactElement {
                 checked={props.runOnSave}
                 checkmarkType={STYLE_TYPE.toggle}
                 onChange={() => {}}
-                overrides={{
-                  Root: {
-                    style: {
-                      marginTop: 0,
-                      marginBottom: 0,
-                    },
-                  },
-                  Toggle: {
-                    style: ({ $checked }: { $checked: boolean }) => {
-                      const backgroundColor = lightTheme
-                        ? theme.colors.bgColor
-                        : theme.colors.bodyText
-                      return {
-                        width: `calc(${theme.sizes.checkbox} - ${theme.spacing.twoXS})`,
-                        height: `calc(${theme.sizes.checkbox} - ${theme.spacing.twoXS})`,
-                        transform: $checked
-                          ? `translateX(${theme.sizes.checkbox})`
-                          : "",
-                        backgroundColor,
-                        boxShadow: "",
-                      }
-                    },
-                  },
-                  ToggleTrack: {
-                    style: ({
-                      $checked,
-                      $isHovered,
-                    }: {
-                      $checked: boolean
-                      $isHovered: boolean
-                    }) => {
-                      let backgroundColor = theme.colors.borderColor
-                      if ($isHovered) {
-                        backgroundColor = theme.colors.darkenedBgMix15
-                      }
-                      if ($checked) {
-                        backgroundColor = theme.colors.primary
-                      }
-                      return {
-                        marginRight: 0,
-                        marginLeft: 0,
-                        marginBottom: 0,
-                        marginTop: 0,
-                        paddingLeft: theme.spacing.threeXS,
-                        paddingRight: theme.spacing.threeXS,
-                        width: `calc(2 * ${theme.sizes.checkbox})`,
-                        minWidth: `calc(2 * ${theme.sizes.checkbox})`,
-                        height: theme.sizes.checkbox,
-                        minHeight: theme.sizes.checkbox,
-                        borderBottomLeftRadius: theme.radii.full,
-                        borderTopLeftRadius: theme.radii.full,
-                        borderBottomRightRadius: theme.radii.full,
-                        borderTopRightRadius: theme.radii.full,
-                        backgroundColor,
-                      }
-                    },
-                  },
-                }}
+                overrides={getToggleOverrides(theme, lightTheme)}
               />
             </StyledToggleRow>
             {props.developmentMode && (
