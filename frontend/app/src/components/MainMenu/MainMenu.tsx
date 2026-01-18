@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-import { forwardRef, memo, MouseEvent, ReactElement } from "react"
+import { memo, ReactElement } from "react"
 
 import { MoreVert } from "@emotion-icons/material-rounded"
-import { StatefulMenu } from "baseui/menu"
+import { Checkbox, STYLE_TYPE } from "baseui/checkbox"
 import { PLACEMENT, StatefulPopover } from "baseui/popover"
 
 import { MetricsManager } from "@streamlit/app/src/MetricsManager"
@@ -25,27 +25,26 @@ import ScreenCastRecorder from "@streamlit/app/src/util/ScreenCastRecorder"
 import {
   BaseButton,
   BaseButtonKind,
-  convertRemToPx,
-  EmotionTheme,
+  hasLightBackgroundColor,
   Icon,
   IGuestToHostMessage,
   IMenuItem,
+  SessionInfo,
   useEmotionTheme,
 } from "@streamlit/lib"
 import { Config, PageConfig } from "@streamlit/protobuf"
-import { notNullOrUndefined } from "@streamlit/utils"
 
 import {
-  StyledCoreItem,
-  StyledDevItem,
   StyledMainMenuContainer,
   StyledMenuContainer,
   StyledMenuDivider,
-  StyledMenuItem,
-  StyledMenuItemLabel,
-  StyledMenuItemShortcut,
+  StyledMenuItemRow,
   StyledRecordingIndicator,
+  StyledToggleLabel,
+  StyledToggleRow,
+  StyledVersionFooter,
 } from "./styled-components"
+import ThemeSwitcher from "./ThemeSwitcher"
 
 const SCREENCAST_LABEL: { [s: string]: string } = {
   COUNTDOWN: "Cancel screencast",
@@ -64,9 +63,6 @@ export interface Props {
 
   /** Show the screen recording dialog. */
   screencastCallback: () => void
-
-  /** Show the Settings dialog. */
-  settingsCallback: () => void
 
   /** Show the About dialog. */
   aboutCallback: () => void
@@ -87,400 +83,521 @@ export interface Props {
   toolbarMode: Config.ToolbarMode
 
   metricsMgr: MetricsManager
+
+  /** Whether auto-rerun on save is enabled. */
+  runOnSave: boolean
+
+  /** Callback to toggle auto-rerun on save. */
+  onRunOnSaveChange: (runOnSave: boolean) => void
+
+  /** Whether auto-rerun toggle is allowed (developer mode). */
+  allowRunOnSave: boolean
+
+  /** Session info for version display. */
+  sessionInfo: SessionInfo
 }
 
 const getOpenInWindowCallback = (url: string) => (): void => {
   window.open(url, "_blank")
 }
 
-export interface MenuItemProps {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  item: any
-  "aria-selected": boolean
-  onClick: (e: MouseEvent<HTMLLIElement>) => void
-  onMouseEnter: (e: MouseEvent<HTMLLIElement>) => void
-  $disabled: boolean
-  $isHighlighted: boolean
+interface MenuItemConfig {
+  label: string
+  onClick: () => void
+  disabled?: boolean
+  isRecording?: boolean
 }
 
-export interface SubMenuProps {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  menuItems: any[]
+interface MenuItemRowProps {
+  item: MenuItemConfig
   closeMenu: () => void
-  isDevMenu: boolean
   metricsMgr: MetricsManager
 }
 
-// BaseWeb provides a very basic list item (or option) for its dropdown
-// menus. We want to customize it to our liking. We want to support:
-//  * Shortcuts
-//  * Red coloring for the stop recording
-//  * Dividers (There's no special MenuListItem divider, so items have
-//    a hasDividerAbove property to add the border properly.
-// Unfortunately, because we are overriding the component, we need to
-// implement some of the built in-features, namely:
-//  * A11y for selected and disabled
-//  * $disabled field (BaseWeb does not use CSS :disabled here)
-//  * $isHighlighted field (BaseWeb does not use CSS :hover here)
-//  * creating a forward ref to add properties to the DOM element.
-function buildMenuItemComponent(
-  StyledMenuItemType: typeof StyledCoreItem,
-  metricsMgr: MetricsManager
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-): any {
-  const MenuItem = forwardRef<HTMLLIElement, MenuItemProps>(
-    (
-      {
-        item,
-        "aria-selected": ariaSelected,
-        onClick,
-        onMouseEnter,
-        $disabled,
-        $isHighlighted,
-      },
-      ref
-    ) => {
-      const {
-        label,
-        shortcut,
-        hasDividerAbove,
-        styleProps,
-        noHighlight,
-        interactions,
-      } = item
-      const itemProps = {
-        isDisabled: $disabled,
-        isRecording: Boolean(item.stopRecordingIndicator),
-      }
-      const itemStyleProps = {
-        isHighlighted: !noHighlight && $isHighlighted,
-        styleProps,
-      }
-      const interactiveProps =
-        interactions ||
-        ($disabled
-          ? {}
-          : {
-              onClick: (e: MouseEvent<HTMLLIElement>) => {
-                metricsMgr.enqueue("menuClick", {
-                  label,
-                })
-                onClick(e)
-              },
-              onMouseEnter,
-            })
-
-      return (
-        <>
-          {hasDividerAbove && (
-            <StyledMenuDivider data-testid="stMainMenuDivider" />
-          )}
-          <StyledMenuItem
-            ref={ref}
-            role="option"
-            aria-selected={ariaSelected}
-            aria-disabled={$disabled}
-            {...itemProps}
-            {...interactiveProps}
-          >
-            <StyledMenuItemType {...itemStyleProps}>
-              <StyledMenuItemLabel {...itemProps}>{label}</StyledMenuItemLabel>
-              {shortcut && (
-                <StyledMenuItemShortcut {...itemProps}>
-                  {shortcut}
-                </StyledMenuItemShortcut>
-              )}
-            </StyledMenuItemType>
-          </StyledMenuItem>
-        </>
-      )
-    }
-  )
-  MenuItem.displayName = "MenuItem"
-  return MenuItem
-}
-
-const SubMenu = (props: SubMenuProps): ReactElement => {
-  const { colors, sizes, spacing } = useEmotionTheme()
-  const StyledMenuItemType = props.isDevMenu ? StyledDevItem : StyledCoreItem
+const MenuItemRow = ({
+  item,
+  closeMenu,
+  metricsMgr,
+}: MenuItemRowProps): ReactElement => {
+  const handleClick = (): void => {
+    if (item.disabled) return
+    metricsMgr.enqueue("menuClick", { label: item.label })
+    item.onClick()
+    closeMenu()
+  }
 
   return (
-    <StatefulMenu
-      items={props.menuItems}
-      onItemSelect={({ item }) => {
-        item.onClick()
-        props.closeMenu()
-      }}
-      overrides={{
-        Option: buildMenuItemComponent(StyledMenuItemType, props.metricsMgr),
-        List: {
-          props: {
-            "data-testid": "stMainMenuList",
-          },
-          style: {
-            backgroundColor: "inherit",
-
-            borderBottomRadius: 0,
-            borderTopRadius: 0,
-            borderLeftRadius: 0,
-            borderRightRadius: 0,
-
-            paddingBottom: spacing.sm,
-            paddingTop: spacing.sm,
-
-            ":focus": {
-              outline: "none",
-            },
-            border: `${sizes.borderWidth} solid ${colors.borderColor}`,
-          },
-        },
-      }}
-    />
+    <StyledMenuItemRow
+      onClick={handleClick}
+      isDisabled={item.disabled}
+      isRecording={item.isRecording}
+      data-testid={`stMainMenuItem-${item.label.replace(/\s+/g, "")}`}
+    >
+      {item.label}
+    </StyledMenuItemRow>
   )
-}
-
-function getDevMenuItems(
-  theme: EmotionTheme,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  coreDevMenuItems: Record<string, any>
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-): any[] {
-  const devMenuItems = []
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  const preferredDevMenuOrder: any[] = [
-    coreDevMenuItems.developerOptions,
-    coreDevMenuItems.clearCache,
-  ]
-
-  let devLastMenuItem = null
-
-  for (const devMenuItem of preferredDevMenuOrder) {
-    if (devMenuItem) {
-      if (devMenuItem !== coreDevMenuItems.DIVIDER) {
-        if (devLastMenuItem === coreDevMenuItems.DIVIDER) {
-          devMenuItems.push({ ...devMenuItem, hasDividerAbove: true })
-        } else {
-          devMenuItems.push(devMenuItem)
-        }
-      }
-
-      devLastMenuItem = devMenuItem
-    }
-  }
-
-  if (notNullOrUndefined(devLastMenuItem)) {
-    devLastMenuItem.styleProps = {
-      margin: `0 0 -${theme.spacing.sm} 0`,
-      padding: `${theme.spacing.twoXS} ${theme.spacing.none} ${theme.spacing.twoXS} ${theme.spacing.twoXL}`,
-    }
-  }
-  return devMenuItems
-}
-
-function getPreferredMenuOrder(
-  props: Props,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  hostMenuItems: any[],
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  coreMenuItems: Record<string, any>
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-): any[] {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  let preferredMenuOrder: any[]
-  if (props.toolbarMode == Config.ToolbarMode.MINIMAL) {
-    // If toolbar mode == minimal then show only host menu items if any.
-    preferredMenuOrder = [
-      coreMenuItems.report,
-      coreMenuItems.community,
-      coreMenuItems.DIVIDER,
-      ...(hostMenuItems.length > 0 ? hostMenuItems : [coreMenuItems.DIVIDER]),
-      coreMenuItems.about,
-    ]
-
-    preferredMenuOrder = preferredMenuOrder.filter(d => d)
-    // If the first or last item is a divider, delete it, because
-    // we don't want to start/end the menu with it.
-    // TODO(sfc-gh-kbregula): We should use Array#at when supported by
-    //  browsers or transpilers.
-    //  See: https://github.com/tc39/proposal-relative-indexing-method
-    while (
-      preferredMenuOrder.length > 0 &&
-      preferredMenuOrder[0] == coreMenuItems.DIVIDER
-    ) {
-      preferredMenuOrder.shift()
-    }
-    while (
-      preferredMenuOrder.length > 0 &&
-      preferredMenuOrder.at(preferredMenuOrder.length - 1) ==
-        coreMenuItems.DIVIDER
-    ) {
-      preferredMenuOrder.pop()
-    }
-    return preferredMenuOrder
-  }
-  return [
-    coreMenuItems.rerun,
-    coreMenuItems.settings,
-    coreMenuItems.DIVIDER,
-    coreMenuItems.print,
-    ...(ScreenCastRecorder.isSupportedBrowser()
-      ? [coreMenuItems.recordScreencast]
-      : []),
-    coreMenuItems.DIVIDER,
-    coreMenuItems.report,
-    coreMenuItems.community,
-    ...(hostMenuItems.length > 0 ? hostMenuItems : [coreMenuItems.DIVIDER]),
-    coreMenuItems.about,
-  ]
 }
 
 function MainMenu(props: Readonly<Props>): ReactElement {
-  const theme = useEmotionTheme()
-
   const isServerDisconnected = !props.isServerConnected
+  const theme = useEmotionTheme()
+  const lightTheme = hasLightBackgroundColor(theme)
 
-  const coreMenuItems = {
-    DIVIDER: { isDivider: true },
-    rerun: {
-      disabled: isServerDisconnected,
-      onClick: props.quickRerunCallback,
-      label: "Rerun",
-      shortcut: "r",
-    },
-    print: { onClick: props.printCallback, label: "Print" },
-    recordScreencast: {
-      onClick: props.screencastCallback,
-      label: SCREENCAST_LABEL[props.screenCastState] || "Record a screencast",
-      shortcut: SCREENCAST_LABEL[props.screenCastState] ? "esc" : "",
-      stopRecordingIndicator: Boolean(SCREENCAST_LABEL[props.screenCastState]),
-    },
-    saveSnapshot: {
-      disabled: isServerDisconnected,
-      label: "Save a snapshot",
-    },
-    ...(!props.menuItems?.hideGetHelp &&
-      props.menuItems?.getHelpUrl && {
-        community: {
-          onClick: getOpenInWindowCallback(props.menuItems?.getHelpUrl),
-          label: "Get help",
-        },
-      }),
-    ...(!props.menuItems?.hideReportABug &&
-      props.menuItems?.reportABugUrl && {
-        report: {
-          onClick: getOpenInWindowCallback(props.menuItems?.reportABugUrl),
-          label: "Report a bug",
-        },
-      }),
-    settings: { onClick: props.settingsCallback, label: "Settings" },
-    ...(props.menuItems?.aboutSectionMd && {
-      about: { onClick: props.aboutCallback, label: "About" },
-    }),
-  }
+  // Build menu items based on mode
+  const buildMenuItems = (closeMenu: () => void): ReactElement[] => {
+    const items: ReactElement[] = []
 
-  const coreDevMenuItems = {
-    DIVIDER: { isDivider: true },
-    developerOptions: {
-      label: "Developer options",
-      noHighlight: true,
-      interactions: {},
-      styleProps: {
-        fontSize: convertRemToPx(theme.fontSizes.twoSm),
-        margin: `-${theme.spacing.sm} 0 0 0`,
-        padding: `${theme.spacing.twoXS} ${theme.spacing.none} ${theme.spacing.twoXS} ${theme.spacing.twoXL}`,
-        pointerEvents: "none",
-      },
-    },
-    clearCache: {
-      disabled: isServerDisconnected,
-      onClick: props.clearCacheCallback,
-      label: "Clear cache",
-      shortcut: "c",
-    },
-  }
-
-  const hostMenuItems = props.hostMenuItems.map(item => {
-    if (item.type === "separator") {
-      return coreMenuItems.DIVIDER
-    }
-
-    if (item.key === "reportBug" && props.menuItems?.hideGetHelp) {
-      return null
-    }
-
-    if (item.key === "about" && props.menuItems?.aboutSectionMd !== "") {
-      return null
-    }
-
-    return {
-      onClick: () =>
-        props.sendMessageToHost({
-          type: "MENU_ITEM_CALLBACK",
-          key: item.key,
-        }),
-      label: item.label,
-    }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  }, [] as any[])
-
-  const preferredMenuOrder = getPreferredMenuOrder(
-    props,
-    hostMenuItems,
-    coreMenuItems
-  )
-
-  // Remove empty entries, and add dividers into menu options as needed.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  const menuItems: any[] = []
-  let lastMenuItem = null
-  for (const menuItem of preferredMenuOrder) {
-    if (menuItem) {
-      if (menuItem !== coreMenuItems.DIVIDER) {
-        if (lastMenuItem === coreMenuItems.DIVIDER) {
-          menuItems.push({ ...menuItem, hasDividerAbove: true })
-        } else {
-          menuItems.push(menuItem)
-        }
+    // For minimal mode, only show configured items
+    if (props.toolbarMode === Config.ToolbarMode.MINIMAL) {
+      if (props.menuItems?.reportABugUrl && !props.menuItems?.hideReportABug) {
+        items.push(
+          <MenuItemRow
+            key="report"
+            item={{
+              label: "Report a bug",
+              onClick: getOpenInWindowCallback(props.menuItems.reportABugUrl),
+            }}
+            closeMenu={closeMenu}
+            metricsMgr={props.metricsMgr}
+          />
+        )
       }
+      if (props.menuItems?.getHelpUrl && !props.menuItems?.hideGetHelp) {
+        items.push(
+          <MenuItemRow
+            key="community"
+            item={{
+              label: "Get help",
+              onClick: getOpenInWindowCallback(props.menuItems.getHelpUrl),
+            }}
+            closeMenu={closeMenu}
+            metricsMgr={props.metricsMgr}
+          />
+        )
+      }
+      // Host menu items
+      props.hostMenuItems.forEach(hostItem => {
+        if (hostItem.type === "separator") return
+        if (hostItem.key === "reportBug" && props.menuItems?.hideGetHelp)
+          return
+        if (hostItem.key === "about" && props.menuItems?.aboutSectionMd !== "")
+          return
 
-      lastMenuItem = menuItem
+        items.push(
+          <MenuItemRow
+            key={`host-${hostItem.key}`}
+            item={{
+              label: hostItem.label,
+              onClick: () =>
+                props.sendMessageToHost({
+                  type: "MENU_ITEM_CALLBACK",
+                  key: hostItem.key,
+                }),
+            }}
+            closeMenu={closeMenu}
+            metricsMgr={props.metricsMgr}
+          />
+        )
+      })
+      if (props.menuItems?.aboutSectionMd) {
+        items.push(
+          <MenuItemRow
+            key="about"
+            item={{
+              label: "About",
+              onClick: props.aboutCallback,
+            }}
+            closeMenu={closeMenu}
+            metricsMgr={props.metricsMgr}
+          />
+        )
+      }
+      return items
     }
+
+    // Standard menu order: Rerun, Clear cache (dev), Print, Record screen
+    // Rerun
+    items.push(
+      <MenuItemRow
+        key="rerun"
+        item={{
+          label: "Rerun",
+          onClick: props.quickRerunCallback,
+          disabled: isServerDisconnected,
+        }}
+        closeMenu={closeMenu}
+        metricsMgr={props.metricsMgr}
+      />
+    )
+
+    // Clear cache (only in development mode)
+    if (props.developmentMode) {
+      items.push(
+        <MenuItemRow
+          key="clearCache"
+          item={{
+            label: "Clear cache",
+            onClick: props.clearCacheCallback,
+            disabled: isServerDisconnected,
+          }}
+          closeMenu={closeMenu}
+          metricsMgr={props.metricsMgr}
+        />
+      )
+    }
+
+    // Print
+    items.push(
+      <MenuItemRow
+        key="print"
+        item={{
+          label: "Print",
+          onClick: props.printCallback,
+        }}
+        closeMenu={closeMenu}
+        metricsMgr={props.metricsMgr}
+      />
+    )
+
+    // Record screen (if supported)
+    if (ScreenCastRecorder.isSupportedBrowser()) {
+      items.push(
+        <MenuItemRow
+          key="recordScreencast"
+          item={{
+            label: SCREENCAST_LABEL[props.screenCastState] || "Record screen",
+            onClick: props.screencastCallback,
+            isRecording: Boolean(SCREENCAST_LABEL[props.screenCastState]),
+          }}
+          closeMenu={closeMenu}
+          metricsMgr={props.metricsMgr}
+        />
+      )
+    }
+
+    // Optional configured items
+    if (props.menuItems?.reportABugUrl && !props.menuItems?.hideReportABug) {
+      items.push(
+        <MenuItemRow
+          key="report"
+          item={{
+            label: "Report a bug",
+            onClick: getOpenInWindowCallback(props.menuItems.reportABugUrl),
+          }}
+          closeMenu={closeMenu}
+          metricsMgr={props.metricsMgr}
+        />
+      )
+    }
+    if (props.menuItems?.getHelpUrl && !props.menuItems?.hideGetHelp) {
+      items.push(
+        <MenuItemRow
+          key="community"
+          item={{
+            label: "Get help",
+            onClick: getOpenInWindowCallback(props.menuItems.getHelpUrl),
+          }}
+          closeMenu={closeMenu}
+          metricsMgr={props.metricsMgr}
+        />
+      )
+    }
+
+    // Host menu items
+    props.hostMenuItems.forEach(hostItem => {
+      if (hostItem.type === "separator") return
+      if (hostItem.key === "reportBug" && props.menuItems?.hideGetHelp) return
+      if (hostItem.key === "about" && props.menuItems?.aboutSectionMd !== "")
+        return
+
+      items.push(
+        <MenuItemRow
+          key={`host-${hostItem.key}`}
+          item={{
+            label: hostItem.label,
+            onClick: () =>
+              props.sendMessageToHost({
+                type: "MENU_ITEM_CALLBACK",
+                key: hostItem.key,
+              }),
+          }}
+          closeMenu={closeMenu}
+          metricsMgr={props.metricsMgr}
+        />
+      )
+    })
+
+    if (props.menuItems?.aboutSectionMd) {
+      items.push(
+        <MenuItemRow
+          key="about"
+          item={{
+            label: "About",
+            onClick: props.aboutCallback,
+          }}
+          closeMenu={closeMenu}
+          metricsMgr={props.metricsMgr}
+        />
+      )
+    }
+
+    return items
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  const devMenuItems: any[] = props.developmentMode
-    ? getDevMenuItems(theme, coreDevMenuItems)
-    : []
-
-  if (menuItems.length == 0 && devMenuItems.length == 0) {
-    // Don't show an empty menu.
-    return <></>
+  // Check if menu should be shown at all in minimal mode
+  if (props.toolbarMode === Config.ToolbarMode.MINIMAL) {
+    const hasContent =
+      props.hostMenuItems.length > 0 ||
+      props.menuItems?.aboutSectionMd ||
+      (props.menuItems?.getHelpUrl && !props.menuItems?.hideGetHelp) ||
+      (props.menuItems?.reportABugUrl && !props.menuItems?.hideReportABug)
+    if (!hasContent) {
+      return <></>
+    }
   }
 
   return (
     <StatefulPopover
       focusLock
       placement={PLACEMENT.bottomRight}
-      content={({ close }) => (
-        <StyledMenuContainer>
-          {menuItems.length != 0 && (
-            <SubMenu
-              menuItems={menuItems}
+      content={({ close }) => {
+        // For minimal mode, use the buildMenuItems approach
+        if (props.toolbarMode === Config.ToolbarMode.MINIMAL) {
+          const menuItems = buildMenuItems(close)
+          return (
+            <StyledMenuContainer>
+              <ThemeSwitcher metricsMgr={props.metricsMgr} />
+              {menuItems.length > 0 && <StyledMenuDivider />}
+              {menuItems}
+              <StyledMenuDivider />
+              <StyledVersionFooter data-testid="stMainMenuVersion">
+                Made with Streamlit v
+                {props.sessionInfo.current.streamlitVersion}
+              </StyledVersionFooter>
+            </StyledMenuContainer>
+          )
+        }
+
+        // Standard menu - render explicitly with dividers around Clear cache
+        const afterClearCacheItems: ReactElement[] = []
+
+        // Print
+        afterClearCacheItems.push(
+          <MenuItemRow
+            key="print"
+            item={{
+              label: "Print",
+              onClick: props.printCallback,
+            }}
+            closeMenu={close}
+            metricsMgr={props.metricsMgr}
+          />
+        )
+
+        // Record screen (if supported)
+        if (ScreenCastRecorder.isSupportedBrowser()) {
+          afterClearCacheItems.push(
+            <MenuItemRow
+              key="recordScreencast"
+              item={{
+                label:
+                  SCREENCAST_LABEL[props.screenCastState] || "Record screen",
+                onClick: props.screencastCallback,
+                isRecording: Boolean(SCREENCAST_LABEL[props.screenCastState]),
+              }}
               closeMenu={close}
-              isDevMenu={false}
               metricsMgr={props.metricsMgr}
             />
-          )}
-          {devMenuItems.length != 0 && (
-            <SubMenu
-              menuItems={devMenuItems}
+          )
+        }
+
+        // Optional configured items
+        if (
+          props.menuItems?.reportABugUrl &&
+          !props.menuItems?.hideReportABug
+        ) {
+          afterClearCacheItems.push(
+            <MenuItemRow
+              key="report"
+              item={{
+                label: "Report a bug",
+                onClick: getOpenInWindowCallback(
+                  props.menuItems.reportABugUrl
+                ),
+              }}
               closeMenu={close}
-              isDevMenu={true}
               metricsMgr={props.metricsMgr}
             />
-          )}
-        </StyledMenuContainer>
-      )}
+          )
+        }
+        if (props.menuItems?.getHelpUrl && !props.menuItems?.hideGetHelp) {
+          afterClearCacheItems.push(
+            <MenuItemRow
+              key="community"
+              item={{
+                label: "Get help",
+                onClick: getOpenInWindowCallback(props.menuItems.getHelpUrl),
+              }}
+              closeMenu={close}
+              metricsMgr={props.metricsMgr}
+            />
+          )
+        }
+
+        // Host menu items
+        props.hostMenuItems.forEach(hostItem => {
+          if (hostItem.type === "separator") return
+          if (hostItem.key === "reportBug" && props.menuItems?.hideGetHelp)
+            return
+          if (
+            hostItem.key === "about" &&
+            props.menuItems?.aboutSectionMd !== ""
+          )
+            return
+
+          afterClearCacheItems.push(
+            <MenuItemRow
+              key={`host-${hostItem.key}`}
+              item={{
+                label: hostItem.label,
+                onClick: () =>
+                  props.sendMessageToHost({
+                    type: "MENU_ITEM_CALLBACK",
+                    key: hostItem.key,
+                  }),
+              }}
+              closeMenu={close}
+              metricsMgr={props.metricsMgr}
+            />
+          )
+        })
+
+        if (props.menuItems?.aboutSectionMd) {
+          afterClearCacheItems.push(
+            <MenuItemRow
+              key="about"
+              item={{
+                label: "About",
+                onClick: props.aboutCallback,
+              }}
+              closeMenu={close}
+              metricsMgr={props.metricsMgr}
+            />
+          )
+        }
+
+        return (
+          <StyledMenuContainer>
+            <ThemeSwitcher metricsMgr={props.metricsMgr} />
+            <StyledMenuDivider />
+            <MenuItemRow
+              key="rerun"
+              item={{
+                label: "Rerun",
+                onClick: props.quickRerunCallback,
+                disabled: isServerDisconnected,
+              }}
+              closeMenu={close}
+              metricsMgr={props.metricsMgr}
+            />
+            <StyledToggleRow
+              onClick={() => {
+                props.metricsMgr.enqueue("menuClick", {
+                  label: "autoRerun",
+                })
+                props.onRunOnSaveChange(!props.runOnSave)
+              }}
+              data-testid="stMainMenuAutoRerun"
+            >
+              <StyledToggleLabel>Auto rerun</StyledToggleLabel>
+              <Checkbox
+                checked={props.runOnSave}
+                checkmarkType={STYLE_TYPE.toggle}
+                onChange={() => {}}
+                overrides={{
+                  Root: {
+                    style: {
+                      marginTop: 0,
+                      marginBottom: 0,
+                    },
+                  },
+                  Toggle: {
+                    style: ({ $checked }: { $checked: boolean }) => {
+                      const backgroundColor = lightTheme
+                        ? theme.colors.bgColor
+                        : theme.colors.bodyText
+                      return {
+                        width: `calc(${theme.sizes.checkbox} - ${theme.spacing.twoXS})`,
+                        height: `calc(${theme.sizes.checkbox} - ${theme.spacing.twoXS})`,
+                        transform: $checked
+                          ? `translateX(${theme.sizes.checkbox})`
+                          : "",
+                        backgroundColor,
+                        boxShadow: "",
+                      }
+                    },
+                  },
+                  ToggleTrack: {
+                    style: ({
+                      $checked,
+                      $isHovered,
+                    }: {
+                      $checked: boolean
+                      $isHovered: boolean
+                    }) => {
+                      let backgroundColor = theme.colors.borderColor
+                      if ($isHovered) {
+                        backgroundColor = theme.colors.darkenedBgMix15
+                      }
+                      if ($checked) {
+                        backgroundColor = theme.colors.primary
+                      }
+                      return {
+                        marginRight: 0,
+                        marginLeft: 0,
+                        marginBottom: 0,
+                        marginTop: 0,
+                        paddingLeft: theme.spacing.threeXS,
+                        paddingRight: theme.spacing.threeXS,
+                        width: `calc(2 * ${theme.sizes.checkbox})`,
+                        minWidth: `calc(2 * ${theme.sizes.checkbox})`,
+                        height: theme.sizes.checkbox,
+                        minHeight: theme.sizes.checkbox,
+                        borderBottomLeftRadius: theme.radii.full,
+                        borderTopLeftRadius: theme.radii.full,
+                        borderBottomRightRadius: theme.radii.full,
+                        borderTopRightRadius: theme.radii.full,
+                        backgroundColor,
+                      }
+                    },
+                  },
+                }}
+              />
+            </StyledToggleRow>
+            {props.developmentMode && (
+              <>
+                <StyledMenuDivider />
+                <MenuItemRow
+                  key="clearCache"
+                  item={{
+                    label: "Clear cache",
+                    onClick: props.clearCacheCallback,
+                    disabled: isServerDisconnected,
+                  }}
+                  closeMenu={close}
+                  metricsMgr={props.metricsMgr}
+                />
+                <StyledMenuDivider />
+              </>
+            )}
+            {afterClearCacheItems}
+            <StyledMenuDivider />
+            <StyledVersionFooter data-testid="stMainMenuVersion">
+              Made with Streamlit v{props.sessionInfo.current.streamlitVersion}
+            </StyledVersionFooter>
+          </StyledMenuContainer>
+        )
+      }}
       overrides={{
         Body: {
           props: {

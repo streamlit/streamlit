@@ -4859,13 +4859,6 @@ describe("App", () => {
               type: "option",
             },
             {
-              label: "Settings",
-              type: "option",
-            },
-            {
-              type: "separator",
-            },
-            {
               label: "Print",
               type: "option",
             },
@@ -4886,18 +4879,8 @@ describe("App", () => {
               type: "option",
             },
             {
-              label: "Settings",
-              type: "option",
-            },
-            {
-              type: "separator",
-            },
-            {
               label: "Print",
               type: "option",
-            },
-            {
-              type: "separator",
             },
             {
               label: "Fork this App",

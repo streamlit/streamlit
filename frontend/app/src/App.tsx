@@ -2513,7 +2513,6 @@ export class App extends PureComponent<Props, State> {
                       isServerConnected={this.isServerConnected()}
                       quickRerunCallback={this.rerunScript}
                       clearCacheCallback={this.openClearCacheDialog}
-                      settingsCallback={this.settingsCallback}
                       aboutCallback={this.aboutCallback}
                       printCallback={this.printCallback}
                       screencastCallback={this.screencastCallback}
@@ -2526,6 +2525,21 @@ export class App extends PureComponent<Props, State> {
                       menuItems={menuItems}
                       metricsMgr={this.metricsMgr}
                       toolbarMode={this.state.toolbarMode}
+                      runOnSave={this.state.userSettings.runOnSave}
+                      onRunOnSaveChange={(runOnSave: boolean) => {
+                        this.saveSettings({
+                          ...this.state.userSettings,
+                          runOnSave,
+                        })
+                      }}
+                      allowRunOnSave={
+                        allowRunOnSave &&
+                        showDevelopmentOptions(
+                          this.state.isOwner,
+                          this.state.toolbarMode
+                        )
+                      }
+                      sessionInfo={this.sessionInfo}
                     />
                   )}
                 </>

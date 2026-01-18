@@ -44,9 +44,13 @@ export const StyledRecordingIndicator = styled.div(({ theme }) => ({
   animation: `${recordingIndicatorPulse(theme)} 2s linear infinite`,
 }))
 
+// Menu divider with small horizontal margins
 export const StyledMenuDivider = styled.div(({ theme }) => ({
   borderTop: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
-  margin: `${theme.spacing.sm} ${theme.spacing.none}`,
+  marginTop: theme.spacing.twoXS,
+  marginBottom: theme.spacing.twoXS,
+  width: `calc(100% - ${theme.spacing.twoXS} - ${theme.spacing.twoXS})`,
+  alignSelf: "center",
 }))
 
 export interface ItemProps {
@@ -164,27 +168,17 @@ export const StyledMenuItemLabel = styled.span(({ theme }) => ({
   flexGrow: 1,
 }))
 
+// Main menu container with proper padding
 export const StyledMenuContainer = styled.div(({ theme }) => ({
-  // We start by adding border radius to all menus
-  ul: {
-    borderRadius: theme.radii.default,
-  },
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "flex-start",
+  paddingTop: theme.spacing.sm,
+  paddingLeft: theme.spacing.sm,
+  paddingRight: theme.spacing.sm,
+  paddingBottom: theme.spacing.xs,
+  gap: theme.spacing.threeXS,
 
-  // This selects the standard menu only if there's another menu below.
-  // We use this to override the bottom border radius on the last item if the developer options menu is visible.
-  "& > ul[role=listbox]:not(:last-child)": {
-    borderBottomLeftRadius: 0,
-    borderBottomRightRadius: 0,
-  },
-
-  // This selects the developer options menu, if it exists.
-  // We use this to override the top border radius.
-  "ul[role=listbox] ~ ul[role=listbox]": {
-    borderTopLeftRadius: 0,
-    borderTopRightRadius: 0,
-    boxShadow: "none",
-    borderTop: "none",
-  },
   "@media print": {
     display: "none",
   },
@@ -193,3 +187,77 @@ export const StyledMenuContainer = styled.div(({ theme }) => ({
 export const StyledMainMenuContainer = styled.span({
   lineHeight: "initial",
 })
+
+// Toggle row for menu items with a switch (like Auto rerun)
+export interface StyledToggleRowProps {
+  isHighlighted?: boolean
+}
+
+export const StyledToggleRow = styled.div<StyledToggleRowProps>(
+  ({ theme, isHighlighted }) => ({
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    width: "100%",
+    padding: `${theme.spacing.twoXS} ${theme.spacing.sm}`,
+    borderRadius: theme.radii.default,
+    cursor: "pointer",
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.bodyText,
+    backgroundColor: isHighlighted
+      ? theme.colors.darkenedBgMix15
+      : theme.colors.transparent,
+
+    "&:hover": {
+      backgroundColor: theme.colors.darkenedBgMix15,
+    },
+  })
+)
+
+export const StyledToggleLabel = styled.span({
+  flexGrow: 1,
+})
+
+// Version footer at the bottom of the menu
+export const StyledVersionFooter = styled.div(({ theme }) => ({
+  width: "100%",
+  paddingLeft: theme.spacing.sm,
+  paddingRight: theme.spacing.sm,
+  fontSize: theme.fontSizes.sm,
+  color: theme.colors.fadedText60,
+  lineHeight: theme.lineHeights.menuItem,
+}))
+
+// Menu item row for click actions
+export interface StyledMenuItemRowProps {
+  isDisabled?: boolean
+  isRecording?: boolean
+}
+
+export const StyledMenuItemRow = styled.div<StyledMenuItemRowProps>(
+  ({ theme, isDisabled, isRecording }) => ({
+    display: "flex",
+    alignItems: "center",
+    width: "100%",
+    padding: `${theme.spacing.threeXS} ${theme.spacing.sm}`,
+    borderRadius: theme.radii.default,
+    cursor: isDisabled ? "not-allowed" : "pointer",
+    fontSize: theme.fontSizes.sm,
+    color: isDisabled
+      ? theme.colors.fadedText60
+      : isRecording
+        ? theme.colors.redTextColor
+        : theme.colors.bodyText,
+    fontWeight: isRecording
+      ? theme.fontWeights.bold
+      : theme.fontWeights.normal,
+    backgroundColor: theme.colors.transparent,
+    lineHeight: theme.lineHeights.menuItem,
+
+    "&:hover": {
+      backgroundColor: isDisabled
+        ? theme.colors.transparent
+        : theme.colors.darkenedBgMix15,
+    },
+  })
+)
