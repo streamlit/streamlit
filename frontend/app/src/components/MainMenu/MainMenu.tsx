@@ -265,7 +265,8 @@ function MainMenu(props: Readonly<Props>): ReactElement {
         <MenuItemRow
           key="recordScreencast"
           item={{
-            label: SCREENCAST_LABEL[props.screenCastState] || "Record screen",
+            label:
+              SCREENCAST_LABEL[props.screenCastState] || "Record a screencast",
             onClick: props.screencastCallback,
             isRecording: Boolean(SCREENCAST_LABEL[props.screenCastState]),
           }}
@@ -603,6 +604,10 @@ function MainMenu(props: Readonly<Props>): ReactElement {
           props: {
             "data-testid": "stMainMenuPopover",
             className: "stMainMenuPopover",
+          },
+          style: {
+            // Testing a dark theme box shadow
+            boxShadow: theme.shadows.popover,
           },
         },
       }}

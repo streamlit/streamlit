@@ -52,7 +52,9 @@ const StyledThemeSwitcherContainer = styled.div(({ theme }) => ({
   display: "flex",
   width: "100%",
   gap: theme.spacing.threeXS, // 2px gap between options
-  paddingBottom: theme.spacing.xs,
+  paddingLeft: theme.spacing.sm,
+  paddingRight: theme.spacing.sm,
+  paddingBottom: theme.spacing.twoXS,
 }))
 
 interface StyledThemeButtonProps {
@@ -77,8 +79,9 @@ const StyledThemeButton = styled.button<StyledThemeButtonProps>(
     cursor: "pointer",
     fontSize: theme.fontSizes.sm,
     fontWeight: theme.fontWeights.normal,
-    lineHeight: theme.lineHeights.tight,
+    lineHeight: theme.lineHeights.none,
     transition: "all 150ms ease-out",
+    minWidth: theme.sizes.themeSelectionButtonWidth,
 
     "&:hover": {
       backgroundColor: isActive
@@ -179,7 +182,7 @@ function ThemeSwitcher({
           data-testid={`stThemeSwitcher-${option.label}`}
         >
           <StyledIconWrapper>
-            <DynamicIcon iconValue={option.icon} size="xl" />
+            <DynamicIcon iconValue={option.icon} size="lg" />
           </StyledIconWrapper>
           {option.label}
         </StyledThemeButton>

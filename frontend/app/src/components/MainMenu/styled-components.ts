@@ -44,13 +44,12 @@ export const StyledRecordingIndicator = styled.div(({ theme }) => ({
   animation: `${recordingIndicatorPulse(theme)} 2s linear infinite`,
 }))
 
-// Menu divider with small horizontal margins
+// Menu divider with horizontal margins
 export const StyledMenuDivider = styled.div(({ theme }) => ({
-  borderTop: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
-  marginTop: theme.spacing.twoXS,
-  marginBottom: theme.spacing.twoXS,
-  width: `calc(100% - ${theme.spacing.twoXS} - ${theme.spacing.twoXS})`,
-  alignSelf: "center",
+  borderTop: `${theme.sizes.menuBorderWidth} solid ${theme.colors.borderColor}`,
+  marginLeft: theme.spacing.sm,
+  marginRight: theme.spacing.sm,
+  width: `calc(100% - ${theme.spacing.sm} - ${theme.spacing.sm})`,
 }))
 
 export interface ItemProps {
@@ -174,10 +173,8 @@ export const StyledMenuContainer = styled.div(({ theme }) => ({
   flexDirection: "column",
   alignItems: "flex-start",
   paddingTop: theme.spacing.sm,
-  paddingLeft: theme.spacing.sm,
-  paddingRight: theme.spacing.sm,
   paddingBottom: theme.spacing.xs,
-  gap: theme.spacing.threeXS,
+  gap: theme.spacing.twoXS,
 
   "@media print": {
     display: "none",
@@ -199,8 +196,7 @@ export const StyledToggleRow = styled.div<StyledToggleRowProps>(
     alignItems: "center",
     justifyContent: "space-between",
     width: "100%",
-    padding: `${theme.spacing.twoXS} ${theme.spacing.sm}`,
-    borderRadius: theme.radii.default,
+    padding: `${theme.spacing.threeXS} ${theme.spacing.lg}`,
     cursor: "pointer",
     fontSize: theme.fontSizes.sm,
     color: theme.colors.bodyText,
@@ -221,9 +217,9 @@ export const StyledToggleLabel = styled.span({
 // Version footer at the bottom of the menu
 export const StyledVersionFooter = styled.div(({ theme }) => ({
   width: "100%",
-  paddingLeft: theme.spacing.sm,
-  paddingRight: theme.spacing.sm,
-  fontSize: theme.fontSizes.sm,
+  paddingLeft: theme.spacing.lg,
+  paddingRight: theme.spacing.lg,
+  fontSize: theme.fontSizes.twoSm,
   color: theme.colors.fadedText60,
   lineHeight: theme.lineHeights.menuItem,
 }))
@@ -239,8 +235,7 @@ export const StyledMenuItemRow = styled.div<StyledMenuItemRowProps>(
     display: "flex",
     alignItems: "center",
     width: "100%",
-    padding: `${theme.spacing.threeXS} ${theme.spacing.sm}`,
-    borderRadius: theme.radii.default,
+    padding: `${theme.spacing.threeXS} ${theme.spacing.lg}`,
     cursor: isDisabled ? "not-allowed" : "pointer",
     fontSize: theme.fontSizes.sm,
     color: isDisabled
@@ -252,7 +247,7 @@ export const StyledMenuItemRow = styled.div<StyledMenuItemRowProps>(
       ? theme.fontWeights.bold
       : theme.fontWeights.normal,
     backgroundColor: theme.colors.transparent,
-    lineHeight: theme.lineHeights.menuItem,
+    lineHeight: theme.lineHeights.menuRow,
 
     "&:hover": {
       backgroundColor: isDisabled

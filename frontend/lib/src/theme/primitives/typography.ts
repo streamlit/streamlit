@@ -81,5 +81,6 @@ export const lineHeights = {
   inputWidget: 1.4,
   small: 1.5,
   base: 1.6,
+  menuRow: 1.7,
   menuItem: 2,
 }

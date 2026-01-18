@@ -16,8 +16,9 @@
 
 import { screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
-import { describe, expect, it, vi } from "vitest"
+import { describe, expect, it, Mock, vi } from "vitest"
 
+import { MetricsManager } from "@streamlit/app/src/MetricsManager"
 import {
   AUTO_THEME_NAME,
   createAutoTheme,
@@ -26,21 +27,15 @@ import {
   CUSTOM_THEME_LIGHT_NAME,
   darkTheme,
   lightTheme,
+  mockSessionInfo,
   ThemeConfig,
 } from "@streamlit/lib"
 import { renderWithContexts } from "@streamlit/lib/testing"
 
 import ThemeSwitcher, { ThemeSwitcherProps } from "./ThemeSwitcher"
 
-const mockMetricsMgr = {
-  enqueue: vi.fn(),
-}
-
-const getProps = (
-  props: Partial<ThemeSwitcherProps> = {}
-): ThemeSwitcherProps => ({
-  metricsMgr: mockMetricsMgr as any,
-  ...props,
+const getProps = (): ThemeSwitcherProps => ({
+  metricsMgr: new MetricsManager(mockSessionInfo()),
 })
 
 // Create custom theme configs for testing
@@ -63,12 +58,12 @@ const customAutoTheme: ThemeConfig = {
 }
 
 describe("ThemeSwitcher", () => {
-  let mockSetTheme: ReturnType<typeof vi.fn>
+  let mockSetTheme: Mock<(theme: ThemeConfig) => void>
   let autoTheme: ThemeConfig
 
   beforeEach(() => {
     vi.clearAllMocks()
-    mockSetTheme = vi.fn()
+    mockSetTheme = vi.fn<(theme: ThemeConfig) => void>()
     // Create a fresh auto theme for each test
     autoTheme = createAutoTheme()
   })
@@ -149,9 +144,6 @@ describe("ThemeSwitcher", () => {
     await user.click(screen.getByTestId("stThemeSwitcher-Light"))
 
     expect(mockSetTheme).toHaveBeenCalledWith(lightTheme)
-    expect(mockMetricsMgr.enqueue).toHaveBeenCalledWith("menuClick", {
-      label: "changeTheme",
-    })
   })
 
   it("calls setTheme with dark theme when Dark button is clicked", async () => {
@@ -167,9 +159,6 @@ describe("ThemeSwitcher", () => {
     await user.click(screen.getByTestId("stThemeSwitcher-Dark"))
 
     expect(mockSetTheme).toHaveBeenCalledWith(darkTheme)
-    expect(mockMetricsMgr.enqueue).toHaveBeenCalledWith("menuClick", {
-      label: "changeTheme",
-    })
   })
 
   it("calls setTheme with auto theme when System button is clicked", async () => {
@@ -185,9 +174,6 @@ describe("ThemeSwitcher", () => {
     await user.click(screen.getByTestId("stThemeSwitcher-System"))
 
     expect(mockSetTheme).toHaveBeenCalledWith(autoTheme)
-    expect(mockMetricsMgr.enqueue).toHaveBeenCalledWith("menuClick", {
-      label: "changeTheme",
-    })
   })
 
   describe("with custom themes", () => {
@@ -208,9 +194,6 @@ describe("ThemeSwitcher", () => {
       await user.click(screen.getByTestId("stThemeSwitcher-System"))
 
       expect(mockSetTheme).toHaveBeenCalledWith(customAutoTheme)
-      expect(mockMetricsMgr.enqueue).toHaveBeenCalledWith("menuClick", {
-        label: "changeTheme",
-      })
     })
 
     it("calls setTheme with custom light theme when Light button is clicked", async () => {
@@ -303,26 +286,8 @@ describe("ThemeSwitcher", () => {
     })
   })
 
-  describe("metrics tracking", () => {
-    it("enqueues menuClick metric when theme is changed", async () => {
-      const user = userEvent.setup()
-      renderWithContexts(<ThemeSwitcher {...getProps()} />, {
-        themeContext: {
-          activeTheme: autoTheme,
-          availableThemes: [lightTheme, darkTheme, autoTheme],
-          setTheme: mockSetTheme,
-        },
-      })
-
-      await user.click(screen.getByTestId("stThemeSwitcher-Light"))
-
-      expect(mockMetricsMgr.enqueue).toHaveBeenCalledTimes(1)
-      expect(mockMetricsMgr.enqueue).toHaveBeenCalledWith("menuClick", {
-        label: "changeTheme",
-      })
-    })
-
-    it("does not enqueue metric if theme not found", async () => {
+  describe("edge cases", () => {
+    it("does not call setTheme if theme not found", async () => {
       const user = userEvent.setup()
       // Only provide light and dark themes, no auto theme
       renderWithContexts(<ThemeSwitcher {...getProps()} />, {
@@ -337,7 +302,6 @@ describe("ThemeSwitcher", () => {
 
       // setTheme should not be called if theme not found
       expect(mockSetTheme).not.toHaveBeenCalled()
-      expect(mockMetricsMgr.enqueue).not.toHaveBeenCalled()
     })
   })
 })

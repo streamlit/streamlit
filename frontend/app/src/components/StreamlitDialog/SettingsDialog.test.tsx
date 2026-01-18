@@ -39,7 +39,7 @@ import { Props, SettingsDialog } from "./SettingsDialog"
 const mockSetTheme = vi.fn()
 
 export const autoCustomTheme: ThemeConfig = {
-  name: "Use system setting",
+  name: "System",
   emotion: lightTheme.emotion,
   basewebTheme: lightTheme.basewebTheme,
   primitives: lightTheme.primitives,

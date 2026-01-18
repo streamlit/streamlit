@@ -52,7 +52,7 @@ import { createShadows } from "./getShadows"
 import { fonts } from "./primitives/typography"
 import { DerivedColors, EmotionThemeColors } from "./types"
 
-export const AUTO_THEME_NAME = "Use system setting"
+export const AUTO_THEME_NAME = "System"
 export const CUSTOM_THEME_NAME = "Custom Theme"
 export const CUSTOM_THEME_LIGHT_NAME = "Custom Theme Light"
 export const CUSTOM_THEME_DARK_NAME = "Custom Theme Dark"

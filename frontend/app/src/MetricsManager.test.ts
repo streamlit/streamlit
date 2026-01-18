@@ -209,7 +209,7 @@ describe("metrics helpers", () => {
     sessionId: "mockSessionId",
     pythonVersion: "7.7.7",
     pageScriptHash: "mockPageScriptHash",
-    activeTheme: "Use system setting",
+    activeTheme: "System",
     totalLoadTime: 100,
     browserName: RESULT.browser.name || "Unknown",
     browserVersion: RESULT.browser.version || "Unknown",
