@@ -576,3 +576,53 @@ def test_dynamic_bounds_preserves_valid_value():
     at = at.run()
     # Value should be preserved because it's still within the new bounds
     assert at.datetime_input[0].value == datetime(2024, 5, 15, 12, 0)
+
+
+def test_dynamic_bounds_preserves_user_set_valid_value():
+    """Test that a user-set value (different from default) is preserved when still valid after bound changes."""
+
+    def script():
+        from datetime import datetime
+
+        import streamlit as st
+
+        if "update_bounds" not in st.session_state:
+            st.session_state["update_bounds"] = False
+
+        if st.session_state["update_bounds"]:
+            # New bounds: Apr 1 to Sep 30 - July 1 is still valid
+            value = st.datetime_input(
+                "datetime",
+                min_value=datetime(2024, 4, 1, 0, 0),
+                max_value=datetime(2024, 9, 30, 23, 59),
+                key="datetime",
+                value=datetime(2024, 5, 15, 12, 0),
+            )
+        else:
+            value = st.datetime_input(
+                "datetime",
+                min_value=datetime(2024, 1, 1, 0, 0),
+                max_value=datetime(2024, 12, 31, 23, 59),
+                key="datetime",
+                value=datetime(2024, 5, 15, 12, 0),
+            )
+        st.write(f"value: {value}")
+
+        if st.button("Toggle bounds"):
+            st.session_state["update_bounds"] = not st.session_state["update_bounds"]
+
+    at = AppTest.from_function(script).run()
+    assert at.datetime_input[0].value == datetime(2024, 5, 15, 12, 0)
+
+    # Set value to July 1 (different from default May 15, valid in both bound ranges)
+    at = at.datetime_input[0].set_value(datetime(2024, 7, 1, 10, 0)).run()
+    assert at.datetime_input[0].value == datetime(2024, 7, 1, 10, 0)
+
+    # Toggle bounds - the click updates session_state["update_bounds"] to True
+    at = at.button[0].click().run()
+    # AppTest requires an additional run to process the widget with the new bounds
+    at = at.run()
+    # User-set value (July 1) should be preserved, not reset to default (May 15)
+    assert at.datetime_input[0].value == datetime(2024, 7, 1, 10, 0)
+    # Ensure it's not reset to the default value
+    assert at.datetime_input[0].value != datetime(2024, 5, 15, 12, 0)

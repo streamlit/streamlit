@@ -566,20 +566,13 @@ def _validate_datetime_value(
         original value (if valid) or the default value (if reset was needed), and
         was_reset indicates whether a reset occurred.
     """
-    value_needs_reset = False
-
     if current_value is None or not has_explicit_bounds:
-        return current_value, value_needs_reset
+        return current_value, False
 
-    # Check if current value is outside bounds
     if current_value < parsed_values.min or current_value > parsed_values.max:
-        value_needs_reset = True
+        return parsed_values.value, True
 
-    if not value_needs_reset:
-        return current_value, value_needs_reset
-
-    # Needs reset to the default value from parsed_values
-    return parsed_values.value, True
+    return current_value, False
 
 
 @dataclass
