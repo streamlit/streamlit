@@ -18,7 +18,7 @@ import { screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
 import { MetricsManager } from "@streamlit/app/src/MetricsManager"
-import { IMenuItem, mockSessionInfo } from "@streamlit/lib"
+import { IMenuItem, mockSessionInfo, SessionInfo } from "@streamlit/lib"
 import { render } from "@streamlit/lib/testing"
 import { Config } from "@streamlit/protobuf"
 
@@ -59,7 +59,7 @@ describe("MainMenu", () => {
     expect(screen.getByTestId("stMainMenu")).toBeInTheDocument()
   })
 
-  it("should render host menu items", () => {
+  it("should render host menu items", async () => {
     const items: IMenuItem[] = [
       {
         type: "separator",
@@ -82,7 +82,7 @@ describe("MainMenu", () => {
       hostMenuItems: items,
     })
     render(<MainMenu {...props} />)
-    openMenu(screen)
+    await openMenu(screen)
 
     expect(screen.getByTestId("stMainMenuItem-Rerun")).toBeVisible()
     expect(screen.getByTestId("stMainMenuAutoRerun")).toBeVisible()
@@ -92,10 +92,10 @@ describe("MainMenu", () => {
     expect(screen.getByTestId("stMainMenuItem-Reportbugwithapp")).toBeVisible()
   })
 
-  it("should render core set of menu elements in developer mode", () => {
+  it("should render core set of menu elements in developer mode", async () => {
     const props = getProps()
     render(<MainMenu {...props} />)
-    openMenu(screen)
+    await openMenu(screen)
 
     expect(screen.getByTestId("stMainMenuItem-Rerun")).toBeVisible()
     expect(screen.getByTestId("stMainMenuAutoRerun")).toBeVisible()
@@ -104,7 +104,7 @@ describe("MainMenu", () => {
     expect(screen.getByTestId("stMainMenuVersion")).toBeVisible()
   })
 
-  it("should not render configurable elements when hidden", () => {
+  it("should not render configurable elements when hidden", async () => {
     const menuItems = {
       hideGetHelp: true,
       hideReportABug: true,
@@ -112,7 +112,7 @@ describe("MainMenu", () => {
     }
     const props = getProps({ menuItems })
     render(<MainMenu {...props} />)
-    openMenu(screen)
+    await openMenu(screen)
 
     expect(
       screen.queryByTestId("stMainMenuItem-Gethelp")
@@ -125,7 +125,7 @@ describe("MainMenu", () => {
     ).not.toBeInTheDocument()
   })
 
-  it("should not render report a bug when hidden", () => {
+  it("should not render report a bug when hidden", async () => {
     const menuItems = {
       getHelpUrl: "testing",
       hideGetHelp: false,
@@ -134,7 +134,7 @@ describe("MainMenu", () => {
     }
     const props = getProps({ menuItems })
     render(<MainMenu {...props} />)
-    openMenu(screen)
+    await openMenu(screen)
 
     expect(
       screen.queryByTestId("stMainMenuItem-Reportabug")
@@ -144,7 +144,7 @@ describe("MainMenu", () => {
     ).not.toBeInTheDocument()
   })
 
-  it("should render report a bug when URL is provided", () => {
+  it("should render report a bug when URL is provided", async () => {
     const menuItems = {
       reportABugUrl: "testing",
       hideGetHelp: false,
@@ -153,7 +153,7 @@ describe("MainMenu", () => {
     }
     const props = getProps({ menuItems })
     render(<MainMenu {...props} />)
-    openMenu(screen)
+    await openMenu(screen)
 
     expect(screen.getByTestId("stMainMenuItem-Reportabug")).toBeVisible()
     expect(
@@ -161,10 +161,10 @@ describe("MainMenu", () => {
     ).not.toBeInTheDocument()
   })
 
-  it("should not render Clear cache when developmentMode is false", () => {
+  it("should not render Clear cache when developmentMode is false", async () => {
     const props = getProps({ developmentMode: false })
     render(<MainMenu {...props} />)
-    openMenu(screen)
+    await openMenu(screen)
 
     expect(screen.getByTestId("stMainMenuItem-Rerun")).toBeVisible()
     expect(screen.getByTestId("stMainMenuItem-Print")).toBeVisible()
@@ -178,7 +178,7 @@ describe("MainMenu", () => {
     [Config.ToolbarMode.DEVELOPER],
     [Config.ToolbarMode.VIEWER],
     [Config.ToolbarMode.MINIMAL],
-  ])("should render host menu items if available[%s]", toolbarMode => {
+  ])("should render host menu items if available[%s]", async toolbarMode => {
     const props = getProps({
       toolbarMode,
       hostMenuItems: [
@@ -186,7 +186,7 @@ describe("MainMenu", () => {
       ],
     })
     const view = render(<MainMenu {...props} />)
-    openMenu(screen)
+    await openMenu(screen)
 
     const menuStructure = getMenuStructure(view)
     const flatMenuItems = menuStructure.flat()
@@ -196,7 +196,7 @@ describe("MainMenu", () => {
     })
   })
 
-  it("should hide main menu when toolbarMode is Minimal and no host items", () => {
+  it("should render theme switcher when toolbarMode is Minimal and no host items", async () => {
     const props = getProps({
       developmentMode: false,
       toolbarMode: Config.ToolbarMode.MINIMAL,
@@ -205,10 +205,13 @@ describe("MainMenu", () => {
 
     render(<MainMenu {...props} />)
 
-    expect(screen.queryByTestId("stMainMenuButton")).toBeNull()
+    await openMenu(screen)
+
+    expect(screen.getByTestId("stMainMenuButton")).toBeVisible()
+    expect(screen.getByTestId("stThemeSwitcher")).toBeVisible()
   })
 
-  it("should render host menu items in minimal mode", () => {
+  it("should render host menu items in minimal mode", async () => {
     const props = getProps({
       developmentMode: false,
       toolbarMode: Config.ToolbarMode.MINIMAL,
@@ -221,7 +224,7 @@ describe("MainMenu", () => {
       ],
     })
     const view = render(<MainMenu {...props} />)
-    openMenu(screen)
+    await openMenu(screen)
 
     const menuStructure = getMenuStructure(view)
     expect(menuStructure).toEqual([
@@ -276,7 +279,7 @@ describe("MainMenu", () => {
     ],
   ])(
     "should render custom items in minimal mode[%s]",
-    (menuItems, expectedMenuItems) => {
+    async (menuItems, expectedMenuItems) => {
       const allMenuItems = {
         getHelpUrl: "https://www.extremelycoolapp.com/help",
         reportABugUrl: "https://www.extremelycoolapp.com/bug",
@@ -291,14 +294,14 @@ describe("MainMenu", () => {
       })
 
       const view = render(<MainMenu {...props} />)
-      openMenu(screen)
+      await openMenu(screen)
 
       const menuStructure = getMenuStructure(view)
       expect(menuStructure).toEqual([expectedMenuItems])
     }
   )
 
-  it("should render host menu items and custom items in minimal mode", () => {
+  it("should render host menu items and custom items in minimal mode", async () => {
     const props = getProps({
       developmentMode: false,
       toolbarMode: Config.ToolbarMode.MINIMAL,
@@ -316,7 +319,7 @@ describe("MainMenu", () => {
       },
     })
     const view = render(<MainMenu {...props} />)
-    openMenu(screen)
+    await openMenu(screen)
 
     const menuStructure = getMenuStructure(view)
     expect(menuStructure).toEqual([
@@ -341,32 +344,42 @@ describe("MainMenu", () => {
     ])
   })
 
-  it("should show Auto rerun toggle when allowed", () => {
+  it("should show Auto rerun toggle when allowed", async () => {
     const props = getProps({ runOnSave: false })
     render(<MainMenu {...props} />)
-    openMenu(screen)
+    await openMenu(screen)
 
     const autoRerunToggle = screen.getByLabelText("Auto rerun")
     expect(autoRerunToggle).toBeVisible()
   })
 
-  it("should not show Auto rerun toggle when not allowed", () => {
+  it("should not show Auto rerun toggle when not allowed", async () => {
     const props = getProps({ allowRunOnSave: false })
     render(<MainMenu {...props} />)
-    openMenu(screen)
+    await openMenu(screen)
 
     expect(screen.queryByLabelText("Auto rerun")).not.toBeInTheDocument()
   })
 
-  it("should disable Auto rerun toggle when disconnected", () => {
+  it("should disable Auto rerun toggle when disconnected", async () => {
     const props = getProps({
       isServerConnected: false,
     })
     render(<MainMenu {...props} />)
-    openMenu(screen)
+    await openMenu(screen)
 
     const autoRerunToggle = screen.getByLabelText("Auto rerun")
     expect(autoRerunToggle).toBeDisabled()
+  })
+
+  it("should disable rerun when disconnected", async () => {
+    const props = getProps({
+      isServerConnected: false,
+    })
+    render(<MainMenu {...props} />)
+    await openMenu(screen)
+
+    expect(screen.getByTestId("stMainMenuItem-Rerun")).toBeDisabled()
   })
 
   it("should call onRunOnSaveChange when Auto rerun is toggled", async () => {
@@ -374,20 +387,29 @@ describe("MainMenu", () => {
     const props = getProps({ runOnSave: false, onRunOnSaveChange })
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     render(<MainMenu {...props} />)
-    openMenu(screen)
+    await openMenu(screen)
 
     await user.click(screen.getByLabelText("Auto rerun"))
 
     expect(onRunOnSaveChange).toHaveBeenCalledWith(true)
   })
 
-  it("should display version footer", () => {
+  it("should display version footer", async () => {
     const props = getProps()
     render(<MainMenu {...props} />)
-    openMenu(screen)
+    await openMenu(screen)
 
     const versionFooter = screen.getByTestId("stMainMenuVersion")
     expect(versionFooter).toBeVisible()
     expect(versionFooter.textContent).toContain("Made with Streamlit v")
+  })
+
+  it("should hide version footer when session info is not set", async () => {
+    const sessionInfo = new SessionInfo()
+    const props = getProps({ sessionInfo })
+    render(<MainMenu {...props} />)
+    await openMenu(screen)
+
+    expect(screen.queryByTestId("stMainMenuVersion")).not.toBeInTheDocument()
   })
 })

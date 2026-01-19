@@ -325,18 +325,6 @@ function MainMenu(props: Readonly<Props>): ReactElement {
   const theme = useEmotionTheme()
   const lightTheme = hasLightBackgroundColor(theme)
 
-  if (props.toolbarMode === Config.ToolbarMode.MINIMAL) {
-    const hasContent =
-      props.hostMenuItems.length > 0 ||
-      props.menuItems?.aboutSectionMd ||
-      (props.menuItems?.getHelpUrl && !props.menuItems?.hideGetHelp) ||
-      (props.menuItems?.reportABugUrl && !props.menuItems?.hideReportABug)
-
-    if (!hasContent) {
-      return <></>
-    }
-  }
-
   return (
     <StatefulPopover
       focusLock
@@ -358,13 +346,19 @@ function MainMenu(props: Readonly<Props>): ReactElement {
         if (props.toolbarMode === Config.ToolbarMode.MINIMAL) {
           return (
             <StyledMenuContainer role="menu" data-testid="stMainMenuContent">
-              <ThemeSwitcher metricsMgr={props.metricsMgr} />
+              <ThemeSwitcher
+                key="theme-switcher"
+                metricsMgr={props.metricsMgr}
+              />
               {commonMenuItems.length > 0 && renderDivider("divider-minimal")}
               {commonMenuItems}
               {props.sessionInfo.isSet && (
                 <>
                   {renderDivider("divider-minimal-footer")}
-                  <StyledVersionFooter data-testid="stMainMenuVersion">
+                  <StyledVersionFooter
+                    key="version-footer-minimal"
+                    data-testid="stMainMenuVersion"
+                  >
                     Made with Streamlit v
                     {props.sessionInfo.current.streamlitVersion}
                   </StyledVersionFooter>
@@ -391,7 +385,9 @@ function MainMenu(props: Readonly<Props>): ReactElement {
           }
         }
 
-        addSection(<ThemeSwitcher metricsMgr={props.metricsMgr} />)
+        addSection(
+          <ThemeSwitcher key="theme-switcher" metricsMgr={props.metricsMgr} />
+        )
 
         const rerunItems: ReactElement[] = [
           <MenuItemRow
@@ -485,7 +481,10 @@ function MainMenu(props: Readonly<Props>): ReactElement {
 
         if (props.sessionInfo.isSet) {
           addSection(
-            <StyledVersionFooter data-testid="stMainMenuVersion">
+            <StyledVersionFooter
+              key="version-footer"
+              data-testid="stMainMenuVersion"
+            >
               Made with Streamlit v{props.sessionInfo.current.streamlitVersion}
             </StyledVersionFooter>
           )

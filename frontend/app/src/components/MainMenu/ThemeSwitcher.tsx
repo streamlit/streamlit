@@ -16,9 +16,6 @@
 
 import { memo, ReactElement, useCallback, useContext } from "react"
 
-import styled from "@emotion/styled"
-import { transparentize } from "color2k"
-
 import { MetricsManager } from "@streamlit/app/src/MetricsManager"
 import {
   AUTO_THEME_NAME,
@@ -34,6 +31,12 @@ import {
   ThemeContext,
 } from "@streamlit/lib"
 
+import {
+  StyledIconWrapper,
+  StyledThemeButton,
+  StyledThemeSwitcherContainer,
+} from "./styled-components"
+
 type ThemeSelection = "System" | "Light" | "Dark"
 
 interface ThemeOptionConfig {
@@ -46,65 +49,6 @@ const THEME_OPTIONS: ThemeOptionConfig[] = [
   { label: "Light", icon: ":material/light_mode:" },
   { label: "Dark", icon: ":material/dark_mode:" },
 ]
-
-const StyledThemeSwitcherContainer = styled.div(({ theme }) => ({
-  display: "flex",
-  width: "100%",
-  gap: theme.spacing.threeXS,
-  paddingLeft: theme.spacing.sm,
-  paddingRight: theme.spacing.sm,
-  paddingBottom: theme.spacing.twoXS,
-}))
-
-interface StyledThemeButtonProps {
-  isActive: boolean
-  isDisabled: boolean
-}
-
-const StyledThemeButton = styled.button<StyledThemeButtonProps>(
-  ({ theme, isActive, isDisabled }) => ({
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: theme.spacing.twoXS,
-    flex: 1,
-    padding: `0.375rem ${theme.spacing.sm}`,
-    border: "none",
-    borderRadius: theme.radii.default,
-    backgroundColor: isActive
-      ? transparentize(theme.colors.primary, 0.9)
-      : theme.colors.transparent,
-    color: isActive ? theme.colors.primary : theme.colors.bodyText,
-    cursor: isDisabled ? "not-allowed" : "pointer",
-    fontSize: theme.fontSizes.sm,
-    fontWeight: theme.fontWeights.normal,
-    lineHeight: theme.lineHeights.none,
-    transition: "all 150ms ease-out",
-    minWidth: theme.sizes.themeSelectionButtonWidth,
-    opacity: isDisabled ? 0.6 : 1,
-
-    "&:hover": {
-      backgroundColor: isDisabled
-        ? theme.colors.transparent
-        : isActive
-          ? transparentize(theme.colors.primary, 0.85)
-          : theme.colors.darkenedBgMix15,
-    },
-    "&:focus-visible": {
-      outline: "none",
-      boxShadow: theme.shadows.focusRing,
-      zIndex: theme.zIndices.priority,
-    },
-  })
-)
-
-const StyledIconWrapper = styled.span(({ theme }) => ({
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  fontSize: theme.fontSizes.xl,
-}))
 
 export interface ThemeSwitcherProps {
   metricsMgr: MetricsManager

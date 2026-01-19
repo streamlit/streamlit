@@ -14,11 +14,27 @@
  * limitations under the License.
  */
 
-import { fireEvent, RenderResult, Screen } from "@testing-library/react"
+import { act, RenderResult, Screen } from "@testing-library/react"
+import { userEvent } from "@testing-library/user-event"
 
-export function openMenu(screen: Screen): void {
-  fireEvent.click(screen.getByTestId("stMainMenuButton"))
-  vi.runOnlyPendingTimers()
+export async function openMenu(screen: Screen): Promise<void> {
+  const isUsingFakeTimers = (() => {
+    try {
+      vi.getTimerCount()
+      return true
+    } catch {
+      return false
+    }
+  })()
+  const user = userEvent.setup(
+    isUsingFakeTimers ? { advanceTimers: vi.advanceTimersByTime } : undefined
+  )
+  await act(async () => {
+    await user.click(screen.getByTestId("stMainMenuButton"))
+    if (isUsingFakeTimers) {
+      vi.runOnlyPendingTimers()
+    }
+  })
   expect(screen.getByTestId("stMainMenuPopover")).toBeDefined()
 }
 

@@ -262,6 +262,22 @@ describe("ThemeSwitcher", () => {
     expect(screen.getByTestId("stThemeSwitcher-Dark")).toBeDisabled()
   })
 
+  it("does not call setTheme when Light/Dark are disabled", async () => {
+    const user = userEvent.setup()
+    renderWithContexts(<ThemeSwitcher {...getProps()} />, {
+      themeContext: {
+        activeTheme: singleCustomTheme,
+        availableThemes: [singleCustomTheme],
+        setTheme: mockSetTheme,
+      },
+    })
+
+    await user.click(screen.getByTestId("stThemeSwitcher-Light"))
+    await user.click(screen.getByTestId("stThemeSwitcher-Dark"))
+
+    expect(mockSetTheme).not.toHaveBeenCalled()
+  })
+
   it("does not call setTheme if theme not found", async () => {
     const user = userEvent.setup()
     renderWithContexts(<ThemeSwitcher {...getProps()} />, {

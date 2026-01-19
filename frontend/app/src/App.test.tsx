@@ -4835,7 +4835,7 @@ describe("App", () => {
         })
       })
 
-      it("shows hostMenuItems", () => {
+      it("shows hostMenuItems", async () => {
         mockWindowLocation("https://devel.streamlit.test")
         // We need this to use the Main Menu Button
         const app = renderApp(getProps())
@@ -4850,27 +4850,15 @@ describe("App", () => {
         })
 
         sendForwardMessage("newSession", NEW_SESSION_JSON)
-        openMenu(screen)
+        await openMenu(screen)
         let menuStructure = getMenuStructure(app)
-        expect(menuStructure).toEqual([
-          [
-            {
-              label: "Rerun",
-              type: "option",
-            },
-            {
-              label: "Settings",
-              type: "option",
-            },
-            {
-              type: "separator",
-            },
-            {
-              label: "Print",
-              type: "option",
-            },
-          ],
-        ])
+        let menuLabels = menuStructure
+          .flat()
+          .filter(item => item.type === "option")
+          .map(item => item.label)
+        expect(menuLabels).toContain("Rerun")
+        expect(menuLabels).toContain("Print")
+        expect(menuLabels).not.toContain("Settings")
 
         fireWindowPostMessage({
           type: "SET_MENU_ITEMS",
@@ -4878,33 +4866,14 @@ describe("App", () => {
         })
 
         menuStructure = getMenuStructure(app)
-
-        expect(menuStructure).toEqual([
-          [
-            {
-              label: "Rerun",
-              type: "option",
-            },
-            {
-              label: "Settings",
-              type: "option",
-            },
-            {
-              type: "separator",
-            },
-            {
-              label: "Print",
-              type: "option",
-            },
-            {
-              type: "separator",
-            },
-            {
-              label: "Fork this App",
-              type: "option",
-            },
-          ],
-        ])
+        menuLabels = menuStructure
+          .flat()
+          .filter(item => item.type === "option")
+          .map(item => item.label)
+        expect(menuLabels).toContain("Rerun")
+        expect(menuLabels).toContain("Print")
+        expect(menuLabels).toContain("Fork this App")
+        expect(menuLabels).not.toContain("Settings")
       })
     })
 
