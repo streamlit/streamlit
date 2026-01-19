@@ -125,6 +125,43 @@ if exp.open:
         expensive_operation()
 ```
 
+#### Potential Future Extension: Direct State Updates via `.update()`
+
+Similar to `st.status`, which provides a `.update()` method to modify its state after creation, we could extend `st.tabs` and `st.expander` with similar functionality. This would allow updating the open state imperatively within the same script run, without requiring session state manipulation or reruns.
+
+**Potential API for `st.expander`:**
+
+```python
+import time
+import streamlit as st
+
+# Create expander
+exp = st.expander("Processing status", expanded=False)
+
+with exp:
+    data = load_expensive_data()
+    exp.update(expanded=True)
+    st.dataframe(data)
+```
+
+**Potential API for `st.tabs`:**
+
+```python
+import streamlit as st
+
+tabs = st.tabs(["Input", "Results"])
+
+with tabs[0]:
+    if st.button("Run Analysis"):
+        results = run_analysis()
+        st.session_state.results = results
+        tabs.update(active="Results")
+
+with tabs[1]:
+    if "results" in st.session_state:
+        st.write(st.session_state.results)
+```
+
 ### Parameters
 
 #### New parameter: `on_change`
@@ -223,11 +260,6 @@ if tabs[0].open:  # Developer must add this check
    - Real-world example: Multiple database queries in tabs
    - Only active tab's query executes
    - Shows 70-80% performance improvement by simulating expensive database queries
-
-3. **Multi-Step Wizard:** [`e2e_playwright/dynamic_containers/wizard_pipeline_app_option1b.py`](https://github.com/streamlit/streamlit/pull/13277/files#diff-wizard_pipeline_app_option1b.py)
-   - Sequential workflow with Next/Back buttons
-   - Programmatic navigation between steps
-   - Demonstrates validation and conditional logic
 
 ---
 
