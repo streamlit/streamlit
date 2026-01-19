@@ -28,6 +28,9 @@ export const sizes = {
   // Used for checkboxes, radio, and toggles:
   checkbox: "1rem",
   borderWidth: "1px",
+  // Main menu sizes
+  menuBorderWidth: "0.5px",
+  themeSelectionButtonWidth: "3.6rem",
   // Used for checkboxes/toggle
   smallElementHeight: "1.5rem",
   // min height used for most input widgets

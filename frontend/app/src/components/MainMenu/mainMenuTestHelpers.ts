@@ -17,27 +17,50 @@
 import { fireEvent, RenderResult, Screen } from "@testing-library/react"
 
 export function openMenu(screen: Screen): void {
-  fireEvent.click(screen.getByRole("button"))
-  // Each SubMenu is a listbox, so need to use findAllByRole (findByRole throws error if multiple matches)
+  fireEvent.click(screen.getByTestId("stMainMenuButton"))
   vi.runOnlyPendingTimers()
-  const menu = screen.getAllByRole("listbox")
-  expect(menu).toBeDefined()
+  expect(screen.getByTestId("stMainMenuPopover")).toBeDefined()
 }
 
 export function getMenuStructure(
   renderResult: RenderResult
 ): ({ type: "separator" } | { type: "option"; label: string })[][] {
-  return Array.from(
-    renderResult.baseElement.querySelectorAll('[role="listbox"]')
-  ).map(listBoxElement => {
-    return Array.from(
-      listBoxElement.querySelectorAll(
-        '[role=option] span:first-of-type, [data-testid="stMainMenuDivider"]'
-      )
-    ).map(d =>
-      d.getAttribute("data-testid") == "stMainMenuDivider"
-        ? { type: "separator" }
-        : { type: "option", label: d.textContent }
+  const container = renderResult.baseElement.querySelector(
+    '[data-testid="stMainMenuContent"]'
+  )
+  if (!container) {
+    return []
+  }
+
+  const elements = Array.from(
+    container.querySelectorAll(
+      '[data-testid^="stMainMenuItem-"], [data-testid="stMainMenuDivider"]'
     )
+  )
+
+  const sections: (
+    | { type: "separator" }
+    | { type: "option"; label: string }
+  )[][] = []
+  let currentSection: (
+    | { type: "separator" }
+    | { type: "option"; label: string }
+  )[] = []
+
+  elements.forEach(element => {
+    if (element.getAttribute("data-testid") === "stMainMenuDivider") {
+      if (currentSection.length > 0) {
+        sections.push(currentSection)
+        currentSection = []
+      }
+      return
+    }
+    currentSection.push({ type: "option", label: element.textContent || "" })
   })
+
+  if (currentSection.length > 0) {
+    sections.push(currentSection)
+  }
+
+  return sections
 }

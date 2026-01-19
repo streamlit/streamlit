@@ -14,7 +14,8 @@
  * limitations under the License.
  */
 
-import { screen, within } from "@testing-library/react"
+import { screen } from "@testing-library/react"
+import { userEvent } from "@testing-library/user-event"
 
 import { MetricsManager } from "@streamlit/app/src/MetricsManager"
 import { IMenuItem, mockSessionInfo } from "@streamlit/lib"
@@ -34,11 +35,14 @@ const getProps = (extend?: Partial<Props>): Props => ({
   screencastCallback: vi.fn(),
   screenCastState: "",
   sendMessageToHost: vi.fn(),
-  settingsCallback: vi.fn(),
   menuItems: {},
   developmentMode: true,
   metricsMgr: new MetricsManager(mockSessionInfo()),
   toolbarMode: Config.ToolbarMode.AUTO,
+  runOnSave: false,
+  onRunOnSaveChange: vi.fn(),
+  allowRunOnSave: true,
+  sessionInfo: mockSessionInfo(),
   ...extend,
 })
 
@@ -80,44 +84,27 @@ describe("MainMenu", () => {
     render(<MainMenu {...props} />)
     openMenu(screen)
 
-    const menuOptions = screen.getAllByRole("option")
-
-    const expectedLabels = [
-      "Rerun",
-      "Settings",
-      "Print",
-      "View app source",
-      "Report bug with app",
-      "Developer options",
-      "Clear cache",
-    ]
-
-    expectedLabels.forEach((label, index) => {
-      expect(menuOptions[index]).toHaveTextContent(label)
-    })
+    expect(screen.getByTestId("stMainMenuItem-Rerun")).toBeVisible()
+    expect(screen.getByTestId("stMainMenuAutoRerun")).toBeVisible()
+    expect(screen.getByTestId("stMainMenuItem-Clearcache")).toBeVisible()
+    expect(screen.getByTestId("stMainMenuItem-Print")).toBeVisible()
+    expect(screen.getByTestId("stMainMenuItem-Viewappsource")).toBeVisible()
+    expect(screen.getByTestId("stMainMenuItem-Reportbugwithapp")).toBeVisible()
   })
 
-  it("should render core set of menu elements", () => {
+  it("should render core set of menu elements in developer mode", () => {
     const props = getProps()
     render(<MainMenu {...props} />)
     openMenu(screen)
 
-    const menuOptions = screen.getAllByRole("option")
-
-    const expectedLabels = [
-      "Rerun",
-      "Settings",
-      "Print",
-      "Developer options",
-      "Clear cache",
-    ]
-
-    expectedLabels.forEach((label, index) => {
-      expect(menuOptions[index]).toHaveTextContent(label)
-    })
+    expect(screen.getByTestId("stMainMenuItem-Rerun")).toBeVisible()
+    expect(screen.getByTestId("stMainMenuAutoRerun")).toBeVisible()
+    expect(screen.getByTestId("stMainMenuItem-Clearcache")).toBeVisible()
+    expect(screen.getByTestId("stMainMenuItem-Print")).toBeVisible()
+    expect(screen.getByTestId("stMainMenuVersion")).toBeVisible()
   })
 
-  it("should not render set of configurable elements", () => {
+  it("should not render configurable elements when hidden", () => {
     const menuItems = {
       hideGetHelp: true,
       hideReportABug: true,
@@ -127,19 +114,18 @@ describe("MainMenu", () => {
     render(<MainMenu {...props} />)
     openMenu(screen)
 
-    // first SubMenu (menu items, not dev menu items)
-    const coreMenu = screen.getAllByTestId("stMainMenuList")[0]
-
-    const coreMenuOptions = within(coreMenu).getAllByRole("option")
-    expect(coreMenuOptions).toHaveLength(3)
-
-    const expectedLabels = ["Rerun", "Settings", "Print"]
-    coreMenuOptions.forEach((option, index) => {
-      expect(option).toHaveTextContent(expectedLabels[index])
-    })
+    expect(
+      screen.queryByTestId("stMainMenuItem-Gethelp")
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByTestId("stMainMenuItem-Reportabug")
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByTestId("stMainMenuItem-About")
+    ).not.toBeInTheDocument()
   })
 
-  it("should not render report a bug in core menu", () => {
+  it("should not render report a bug when hidden", () => {
     const menuItems = {
       getHelpUrl: "testing",
       hideGetHelp: false,
@@ -150,11 +136,15 @@ describe("MainMenu", () => {
     render(<MainMenu {...props} />)
     openMenu(screen)
 
-    expect(screen.queryByRole("option", { name: "Report a bug" })).toBeNull()
-    expect(screen.queryByRole("option", { name: "About" })).toBeNull()
+    expect(
+      screen.queryByTestId("stMainMenuItem-Reportabug")
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByTestId("stMainMenuItem-About")
+    ).not.toBeInTheDocument()
   })
 
-  it("should render report a bug in core menu", () => {
+  it("should render report a bug when URL is provided", () => {
     const menuItems = {
       reportABugUrl: "testing",
       hideGetHelp: false,
@@ -165,29 +155,22 @@ describe("MainMenu", () => {
     render(<MainMenu {...props} />)
     openMenu(screen)
 
-    const reportOption = screen.getByRole("option", {
-      name: "Report a bug",
-    })
-    expect(reportOption).toBeDefined()
-    expect(screen.queryByRole("option", { name: "About" })).toBeNull()
+    expect(screen.getByTestId("stMainMenuItem-Reportabug")).toBeVisible()
+    expect(
+      screen.queryByTestId("stMainMenuItem-About")
+    ).not.toBeInTheDocument()
   })
 
-  it("should not render dev menu when developmentMode is false", () => {
+  it("should not render Clear cache when developmentMode is false", () => {
     const props = getProps({ developmentMode: false })
     render(<MainMenu {...props} />)
     openMenu(screen)
 
-    const subMenus = screen.getAllByTestId("stMainMenuList")
-    // Make sure there is only one SubMenu (no dev menu)
-    expect(subMenus).toHaveLength(1)
-
-    const coreMenuOptions = within(subMenus[0]).getAllByRole("option")
-    expect(coreMenuOptions).toHaveLength(3)
-
-    const expectedLabels = ["Rerun", "Settings", "Print"]
-    coreMenuOptions.forEach((option, index) => {
-      expect(option).toHaveTextContent(expectedLabels[index])
-    })
+    expect(screen.getByTestId("stMainMenuItem-Rerun")).toBeVisible()
+    expect(screen.getByTestId("stMainMenuItem-Print")).toBeVisible()
+    expect(
+      screen.queryByTestId("stMainMenuItem-Clearcache")
+    ).not.toBeInTheDocument()
   })
 
   it.each([
@@ -206,7 +189,8 @@ describe("MainMenu", () => {
     openMenu(screen)
 
     const menuStructure = getMenuStructure(view)
-    expect(menuStructure[0]).toContainEqual({
+    const flatMenuItems = menuStructure.flat()
+    expect(flatMenuItems).toContainEqual({
       type: "option",
       label: "Host menu item",
     })
@@ -221,10 +205,10 @@ describe("MainMenu", () => {
 
     render(<MainMenu {...props} />)
 
-    expect(screen.queryByRole("button")).toBeNull()
+    expect(screen.queryByTestId("stMainMenuButton")).toBeNull()
   })
 
-  it("should skip divider from host menu items if it is at the beginning and end", () => {
+  it("should render host menu items in minimal mode", () => {
     const props = getProps({
       developmentMode: false,
       toolbarMode: Config.ToolbarMode.MINIMAL,
@@ -256,9 +240,6 @@ describe("MainMenu", () => {
         {
           label: "Get help",
           type: "option",
-        },
-        {
-          type: "separator",
         },
         {
           label: "About",
@@ -349,14 +330,8 @@ describe("MainMenu", () => {
           type: "option",
         },
         {
-          type: "separator",
-        },
-        {
           label: "View all apps",
           type: "option",
-        },
-        {
-          type: "separator",
         },
         {
           label: "About",
@@ -364,5 +339,55 @@ describe("MainMenu", () => {
         },
       ],
     ])
+  })
+
+  it("should show Auto rerun toggle when allowed", () => {
+    const props = getProps({ runOnSave: false })
+    render(<MainMenu {...props} />)
+    openMenu(screen)
+
+    const autoRerunToggle = screen.getByLabelText("Auto rerun")
+    expect(autoRerunToggle).toBeVisible()
+  })
+
+  it("should not show Auto rerun toggle when not allowed", () => {
+    const props = getProps({ allowRunOnSave: false })
+    render(<MainMenu {...props} />)
+    openMenu(screen)
+
+    expect(screen.queryByLabelText("Auto rerun")).not.toBeInTheDocument()
+  })
+
+  it("should disable Auto rerun toggle when disconnected", () => {
+    const props = getProps({
+      isServerConnected: false,
+    })
+    render(<MainMenu {...props} />)
+    openMenu(screen)
+
+    const autoRerunToggle = screen.getByLabelText("Auto rerun")
+    expect(autoRerunToggle).toBeDisabled()
+  })
+
+  it("should call onRunOnSaveChange when Auto rerun is toggled", async () => {
+    const onRunOnSaveChange = vi.fn()
+    const props = getProps({ runOnSave: false, onRunOnSaveChange })
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    render(<MainMenu {...props} />)
+    openMenu(screen)
+
+    await user.click(screen.getByLabelText("Auto rerun"))
+
+    expect(onRunOnSaveChange).toHaveBeenCalledWith(true)
+  })
+
+  it("should display version footer", () => {
+    const props = getProps()
+    render(<MainMenu {...props} />)
+    openMenu(screen)
+
+    const versionFooter = screen.getByTestId("stMainMenuVersion")
+    expect(versionFooter).toBeVisible()
+    expect(versionFooter.textContent).toContain("Made with Streamlit v")
   })
 })
