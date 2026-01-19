@@ -19,7 +19,7 @@
     "typesync": "typesync"
   },
   "devDependencies": {
-    "@typescript-eslint/rule-tester": "^8.52.0",
+    "@typescript-eslint/rule-tester": "^8.53.0",
     "@typescript-eslint/types": "^8.52.0",
     "@typescript-eslint/utils": "^8.52.0",
     "@vitest/coverage-v8": "^4.0.16",
