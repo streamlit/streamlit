@@ -112,17 +112,32 @@ if tabs[0].open:
 **For `st.expander`:**
 
 ```python
-exp = st.expander("Show details", on_change="rerun", key="details")
+# Auto-expand expander when warnings are detected
+exp = st.expander("⚠️ Warnings", on_change="rerun", key="warnings", expanded=False)
 
-# Control whether expander is open
-def open_details():
-    st.session_state.details = True
-
-st.button("Show Details", on_click=open_details)
+# Auto-expand if warnings are found
+warnings = check_data_quality()
+if warnings and not st.session_state.get("warnings", False):
+    st.session_state.warnings = True  # Auto-expand
 
 if exp.open:
     with exp:
-        expensive_operation()
+        display_warnings(warnings)
+```
+
+**For `st.popover`:**
+
+```python
+# Auto-open popover when validation fails
+pop = st.popover("⚠️ Validation Errors", on_change="rerun", key="errors")
+
+# Check for errors and auto-open popover if needed
+if has_validation_errors() and not st.session_state.get("errors", False):
+    st.session_state.errors = True
+
+if pop.open:
+    with pop:
+        show_error_details()
 ```
 
 #### Potential Future Extension: Direct State Updates via `.update()`
@@ -160,6 +175,25 @@ with tabs[0]:
 with tabs[1]:
     if "results" in st.session_state:
         st.write(st.session_state.results)
+```
+
+**Potential API for `st.popover`:**
+
+```python
+import streamlit as st
+
+# Create popover that auto-closes after form submission
+pop = st.popover("Filter Options")
+
+with pop:
+    filter_value = st.selectbox("Select filter", ["All", "Active", "Archived"])
+    if st.button("Apply Filters"):
+        st.session_state.current_filter = filter_value
+        pop.update(open=False)  # Auto-close after applying
+
+# Display filtered data based on selection
+if "current_filter" in st.session_state:
+    st.write(f"Showing: {st.session_state.current_filter}")
 ```
 
 ### Parameters
