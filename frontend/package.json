@@ -38,9 +38,9 @@
   ],
   "packageManager": "yarn@4.5.3",
   "devDependencies": {
-    "@vitest/coverage-v8": "^4.0.16",
+    "@vitest/coverage-v8": "^4.0.17",
     "concurrently": "^9.2.1",
     "jiti": "^2.6.1",
-    "vitest": "^4.0.16"
+    "vitest": "^4.0.17"
   }
 }
