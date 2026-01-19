@@ -14,7 +14,14 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useEffect, useRef, useState } from "react"
+import React, {
+  memo,
+  ReactElement,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react"
 
 import { Block as BlockProto } from "@streamlit/protobuf"
 
@@ -83,25 +90,141 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
   fragmentId,
   children,
 }): ReactElement => {
-  const { label, expanded: initialExpanded } = element
-  const [expanded, setExpanded] = useState<boolean>(initialExpanded || false)
+  const { label, expanded: backendExpandedState } = element
+  const [expanded, setExpanded] = useState<boolean>(
+    backendExpandedState || false
+  )
   const [isHovered, setIsHovered] = useState(false)
+  const [isWaitingForBackend, setIsWaitingForBackend] = useState(false)
   const detailsRef = useRef<HTMLDetailsElement>(null)
   const summaryRef = useRef<HTMLElement>(null)
   const animationRef = useRef<Animation | null>(null)
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const contentRef = useRef<HTMLDivElement>(null)
 
+  // Track previous backend state to detect changes
+  const prevBackendStateRef = useRef<boolean>(backendExpandedState || false)
+
+  const onAnimationFinish = useCallback((open: boolean): void => {
+    if (!detailsRef.current) {
+      return
+    }
+
+    detailsRef.current.open = open
+    animationRef.current = null
+    detailsRef.current.style.height = ""
+    detailsRef.current.style.overflow = ""
+  }, [])
+
+  const toggleAnimation = useCallback(
+    (
+      detailsEl: HTMLDetailsElement,
+      startHeight: number,
+      endHeight: number
+    ): void => {
+      const isOpen = endHeight > startHeight
+
+      if (animationRef.current) {
+        animationRef.current.cancel()
+
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current)
+          timeoutRef.current = null
+        }
+      }
+
+      const animation = detailsEl.animate(
+        {
+          height: [`${startHeight}px`, `${endHeight}px`],
+        },
+        {
+          duration: 500,
+          easing: "cubic-bezier(0.23, 1, 0.32, 1)",
+        }
+      )
+
+      animation.addEventListener("finish", () => onAnimationFinish(isOpen))
+      animationRef.current = animation
+    },
+    [onAnimationFinish]
+  )
+
   useEffect(() => {
     // Only apply the expanded state if it was actually set in the proto.
-    if (notNullOrUndefined(initialExpanded)) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- TODO: Do not set state in effect
-      setExpanded(initialExpanded)
+    if (notNullOrUndefined(backendExpandedState)) {
+      // Detect if backend state changed
+      const stateChanged = backendExpandedState !== prevBackendStateRef.current
 
-      // We manage the open attribute via the detailsRef and not with React state
-      if (detailsRef.current) {
-        detailsRef.current.open = initialExpanded
+      if (stateChanged) {
+        // Backend state changed! Update local state
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- Synchronizing with backend state
+        setExpanded(backendExpandedState)
+        // Clear loading state since backend has responded
+        setIsWaitingForBackend(false)
+
+        // Start animation based on backend state change
+        if (detailsRef.current && summaryRef.current) {
+          const detailsEl = detailsRef.current
+          const summaryEl = summaryRef.current
+
+          detailsEl.style.overflow = "hidden"
+          // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
+          const detailsHeight = detailsEl.getBoundingClientRect().height
+          // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
+          const summaryHeight = summaryEl.getBoundingClientRect().height
+
+          if (backendExpandedState) {
+            // Backend says expand - animate open
+            detailsEl.style.height = `${detailsHeight}px`
+            detailsEl.open = true
+
+            window.requestAnimationFrame(() => {
+              // For expansion animations, we rely on the rendered width and height
+              // of the children content. However, in Safari, the children are not
+              // rendered because Safari doesn't paint elements that are not visible
+              // (in this case, the details element is not visible because it's
+              // not open). This operation produces inconsistent heights to animate.
+              // To work around this, we force a repaint by animating a tiny bit
+              // and animate the rest of it later.
+              toggleAnimation(
+                detailsEl,
+                detailsHeight,
+                summaryHeight + 2 * BORDER_SIZE + 5 // Arbitrary size of 5px
+              )
+
+              timeoutRef.current = setTimeout(() => {
+                if (!contentRef.current) {
+                  return
+                }
+
+                const contentHeight =
+                  // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
+                  contentRef.current.getBoundingClientRect().height
+                toggleAnimation(
+                  detailsEl,
+                  detailsHeight,
+                  summaryHeight + contentHeight + 2 * BORDER_SIZE
+                )
+              }, 100)
+            })
+          } else {
+            // Backend says collapse - animate closed
+            toggleAnimation(
+              detailsEl,
+              detailsHeight,
+              summaryHeight + 2 * BORDER_SIZE
+            )
+          }
+        }
+      } else {
+        // State didn't change from backend, just sync DOM
+        if (detailsRef.current) {
+          detailsRef.current.open = backendExpandedState
+        }
       }
+
+      // Update previous state tracker
+      prevBackendStateRef.current = backendExpandedState
     }
 
     // Having `label` in the dependency array here is necessary because
@@ -112,115 +235,120 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
     //
     // By adding `label` as a dependency, we ensure that we reset the
     // expander's `expanded` state in this edge case.
-  }, [label, initialExpanded])
 
-  const onAnimationFinish = (open: boolean): void => {
-    if (!detailsRef.current) {
-      return
-    }
-
-    detailsRef.current.open = open
-    animationRef.current = null
-    detailsRef.current.style.height = ""
-    detailsRef.current.style.overflow = ""
-  }
-
-  const toggleAnimation = (
-    detailsEl: HTMLDetailsElement,
-    startHeight: number,
-    endHeight: number
-  ): void => {
-    const isOpen = endHeight > startHeight
-
-    if (animationRef.current) {
-      animationRef.current.cancel()
-
+    // Cleanup function
+    return () => {
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current)
-        timeoutRef.current = null
       }
     }
+  }, [label, backendExpandedState, toggleAnimation])
 
-    const animation = detailsEl.animate(
-      {
-        height: [`${startHeight}px`, `${endHeight}px`],
-      },
-      {
-        duration: 500,
-        easing: "cubic-bezier(0.23, 1, 0.32, 1)",
+  // Handle content arriving after expander is already expanded
+  // This happens when content takes time to compute on the backend
+  useEffect(() => {
+    if (
+      expanded &&
+      contentRef.current &&
+      detailsRef.current &&
+      summaryRef.current
+    ) {
+      const detailsEl = detailsRef.current
+
+      // Get current height
+      // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
+      const currentHeight = detailsEl.getBoundingClientRect().height
+
+      // Get new content height
+      // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
+      const contentHeight = contentRef.current.getBoundingClientRect().height
+      // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
+      const summaryHeight = summaryRef.current.getBoundingClientRect().height
+      const targetHeight = summaryHeight + contentHeight + 2 * BORDER_SIZE
+
+      // If height difference is significant, animate to new height
+      if (Math.abs(currentHeight - targetHeight) > 5) {
+        detailsEl.style.overflow = "hidden"
+        toggleAnimation(detailsEl, currentHeight, targetHeight)
       }
-    )
-
-    animation.addEventListener("finish", () => onAnimationFinish(isOpen))
-    animationRef.current = animation
-  }
+    }
+  }, [children, expanded, toggleAnimation])
 
   const toggle = (e: React.MouseEvent<HTMLDetailsElement>): void => {
     e.preventDefault()
 
     const newExpanded = !expanded
-    setExpanded(newExpanded)
 
-    // Send state update to backend if widgetMgr and blockId are available
-    if (widgetMgr && blockId) {
+    // Check if this is a widget (has widgetMgr and blockId)
+    const isWidget = widgetMgr && blockId
+
+    if (isWidget) {
+      // Widget mode (on_change="rerun"): Send to backend and wait for response
+      // Don't update local state or start animation here
+      // The animation will be triggered in useEffect when backend state changes
+      setIsWaitingForBackend(true)
       widgetMgr.setBoolValue(
         { id: blockId },
         newExpanded,
         { fromUi: true },
         fragmentId
       )
-    }
+    } else {
+      // Non-widget mode (on_change="ignore"): Animate immediately
+      // Backend won't send updated state, so handle locally
+      setExpanded(newExpanded)
 
-    const detailsEl = detailsRef.current
-    if (!detailsEl || !summaryRef.current) {
-      return
-    }
+      const detailsEl = detailsRef.current
+      if (!detailsEl || !summaryRef.current) {
+        return
+      }
 
-    detailsEl.style.overflow = "hidden"
-    // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
-    const detailsHeight = detailsEl.getBoundingClientRect().height
-    // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
-    const summaryHeight = summaryRef.current.getBoundingClientRect().height
+      detailsEl.style.overflow = "hidden"
+      // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
+      const detailsHeight = detailsEl.getBoundingClientRect().height
+      // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
+      const summaryHeight = summaryRef.current.getBoundingClientRect().height
 
-    if (newExpanded) {
-      detailsEl.style.height = `${detailsHeight}px`
-      detailsEl.open = true
+      if (newExpanded) {
+        detailsEl.style.height = `${detailsHeight}px`
+        detailsEl.open = true
 
-      window.requestAnimationFrame(() => {
-        // For expansion animations, we rely on the rendered width and height
-        // of the children content. However, in Safari, the children are not
-        // rendered because Safari doesn't paint elements that are not visible
-        // (in this case, the details element is not visible because it's
-        // not open). This operation produces inconsistent heights to animate.
-        // To work around this, we force a repaint by animating a tiny bit
-        // and animate the rest of it later.
-        toggleAnimation(
-          detailsEl,
-          detailsHeight,
-          summaryHeight + 2 * BORDER_SIZE + 5 // Arbitrary size of 5px
-        )
-
-        timeoutRef.current = setTimeout(() => {
-          if (!contentRef.current) {
-            return
-          }
-
-          const contentHeight =
-            // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
-            contentRef.current.getBoundingClientRect().height
+        window.requestAnimationFrame(() => {
+          // For expansion animations, we rely on the rendered width and height
+          // of the children content. However, in Safari, the children are not
+          // rendered because Safari doesn't paint elements that are not visible
+          // (in this case, the details element is not visible because it's
+          // not open). This operation produces inconsistent heights to animate.
+          // To work around this, we force a repaint by animating a tiny bit
+          // and animate the rest of it later.
           toggleAnimation(
             detailsEl,
             detailsHeight,
-            summaryHeight + contentHeight + 2 * BORDER_SIZE
+            summaryHeight + 2 * BORDER_SIZE + 5 // Arbitrary size of 5px
           )
-        }, 100)
-      })
-    } else {
-      toggleAnimation(
-        detailsEl,
-        detailsHeight,
-        summaryHeight + 2 * BORDER_SIZE
-      )
+
+          timeoutRef.current = setTimeout(() => {
+            if (!contentRef.current) {
+              return
+            }
+
+            const contentHeight =
+              // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
+              contentRef.current.getBoundingClientRect().height
+            toggleAnimation(
+              detailsEl,
+              detailsHeight,
+              summaryHeight + contentHeight + 2 * BORDER_SIZE
+            )
+          }, 100)
+        })
+      } else {
+        toggleAnimation(
+          detailsEl,
+          detailsHeight,
+          summaryHeight + 2 * BORDER_SIZE
+        )
+      }
     }
   }
 
@@ -235,6 +363,7 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
   // Determine which icon to show
   const showChevron = !element.icon || isHovered
   const showUserIcon = element.icon && !isHovered
+  const showSpinner = isWaitingForBackend
 
   return (
     <StyledExpandableContainer className="stExpander" data-testid="stExpander">
@@ -251,7 +380,8 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
           expanded={expanded}
         >
           <StyledSummaryHeading>
-            {showChevron && (
+            {showSpinner && <DynamicIcon iconValue="spinner" size="lg" />}
+            {!showSpinner && showChevron && (
               <DynamicIcon
                 iconValue={
                   expanded
@@ -261,7 +391,9 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
                 size="lg"
               />
             )}
-            {showUserIcon && <ExpanderIcon icon={element.icon} />}
+            {!showSpinner && showUserIcon && (
+              <ExpanderIcon icon={element.icon} />
+            )}
 
             <StyledSummaryLabelWrapper>
               <StreamlitMarkdown
