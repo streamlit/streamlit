@@ -196,7 +196,7 @@ describe("MainMenu", () => {
     })
   })
 
-  it("should render theme switcher when toolbarMode is Minimal and no host items", async () => {
+  it("should hide main menu when toolbarMode is Minimal and no host items", () => {
     const props = getProps({
       developmentMode: false,
       toolbarMode: Config.ToolbarMode.MINIMAL,
@@ -205,10 +205,7 @@ describe("MainMenu", () => {
 
     render(<MainMenu {...props} />)
 
-    await openMenu(screen)
-
-    expect(screen.getByTestId("stMainMenuButton")).toBeVisible()
-    expect(screen.getByTestId("stThemeSwitcher")).toBeVisible()
+    expect(screen.queryByTestId("stMainMenuButton")).toBeNull()
   })
 
   it("should render host menu items in minimal mode", async () => {

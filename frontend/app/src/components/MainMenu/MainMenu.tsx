@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement } from "react"
+import { Fragment, isValidElement, memo, ReactElement } from "react"
 
 import { MoreVert } from "@emotion-icons/material-rounded"
 import { Checkbox, LABEL_PLACEMENT, STYLE_TYPE } from "baseui/checkbox"
@@ -34,6 +34,7 @@ import {
   useEmotionTheme,
 } from "@streamlit/lib"
 import { Config, PageConfig } from "@streamlit/protobuf"
+import { notNullOrUndefined } from "@streamlit/utils"
 
 import {
   StyledMainMenuContainer,
@@ -325,6 +326,18 @@ function MainMenu(props: Readonly<Props>): ReactElement {
   const theme = useEmotionTheme()
   const lightTheme = hasLightBackgroundColor(theme)
 
+  if (props.toolbarMode === Config.ToolbarMode.MINIMAL) {
+    const hasContent =
+      props.hostMenuItems.length > 0 ||
+      props.menuItems?.aboutSectionMd ||
+      (props.menuItems?.getHelpUrl && !props.menuItems?.hideGetHelp) ||
+      (props.menuItems?.reportABugUrl && !props.menuItems?.hideReportABug)
+
+    if (!hasContent) {
+      return <></>
+    }
+  }
+
   return (
     <StatefulPopover
       focusLock
@@ -370,18 +383,53 @@ function MainMenu(props: Readonly<Props>): ReactElement {
 
         const contentSections: ReactElement[] = []
         let dividerCount = 0
+        let sectionIndex = 0
+        let elementKeyCounter = 0
+        const getElementKey = (element: ReactElement): string | null => {
+          if (!isValidElement(element)) {
+            return null
+          }
+          const elementProps = element.props as {
+            "data-testid"?: string
+            item?: { label?: string }
+          }
+          if (notNullOrUndefined(element.key)) {
+            return String(element.key)
+          }
+          const dataTestId = elementProps?.["data-testid"]
+          if (notNullOrUndefined(dataTestId)) {
+            return String(dataTestId)
+          }
+          const label = elementProps?.item?.label
+          if (notNullOrUndefined(label)) {
+            return `label-${label}`
+          }
+          return null
+        }
         const addSection = (section: ReactElement | ReactElement[]): void => {
           if (Array.isArray(section) ? section.length === 0 : !section) {
             return
           }
+          const sectionKey = `section-${sectionIndex}`
+          sectionIndex += 1
           if (contentSections.length > 0) {
             contentSections.push(renderDivider(`divider-${dividerCount}`))
             dividerCount += 1
           }
           if (Array.isArray(section)) {
-            contentSections.push(...section)
+            contentSections.push(
+              ...section.map(item => {
+                const itemKey =
+                  getElementKey(item) ??
+                  `${sectionKey}-item-${elementKeyCounter++}`
+                return <Fragment key={itemKey}>{item}</Fragment>
+              })
+            )
           } else {
-            contentSections.push(section)
+            const elementKey = getElementKey(section) ?? sectionKey
+            contentSections.push(
+              <Fragment key={elementKey}>{section}</Fragment>
+            )
           }
         }
 
