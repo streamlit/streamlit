@@ -14,7 +14,7 @@ Enable `st.tabs`, `st.expander`, and `st.popover` to execute content lazily (onl
 
 ### Current Behavior
 
-Currently, `st.tabs` and `st.expander` always execute their content, even when not visible:
+Currently, `st.tabs`, `st.expander`, and `st.popover` always execute their content, even when not visible:
 
 ```python
 tab1, tab2, tab3 = st.tabs(["Data", "Charts", "ML Model"])
@@ -127,7 +127,7 @@ if exp.open:
 
 #### Potential Future Extension: Direct State Updates via `.update()`
 
-Similar to `st.status`, which provides a `.update()` method to modify its state after creation, we could extend `st.tabs` and `st.expander` with similar functionality. This would allow updating the open state imperatively within the same script run, without requiring session state manipulation or reruns.
+Similar to `st.status`, which provides a `.update()` method to modify its state after creation, we could extend `st.tabs`, `st.expander`, and `st.popover` with similar functionality. This would allow updating the open state imperatively within the same script run, without requiring session state manipulation or reruns.
 
 **Potential API for `st.expander`:**
 
@@ -174,21 +174,21 @@ with tabs[1]:
   - `callback`: _(Future addition for API consistency with widgets)_ Function to call before rerun
     - Note: Callbacks are intended for side effects (like updating other state), not for defining content. Content should be defined inline with `if .open:` checks. Users can wrap content in `@st.fragment` explicitly where needed for performance optimization.
 
-#### New parameter: `key` (for tabs)
+#### New parameter: `key`
 
 - **Type:** `str | None`
 - **Default:** `None`
 - **Purpose:** Required if using `on_change` with callback, makes state accessible via `st.session_state[key]`
-- **State value:** `str` (label of active tab) for tabs, `bool` for expander
+- **State value:** `str` (label of active tab) for tabs, `bool` for expander and popover
 
 #### New attribute: `.open` (on DeltaGenerator)
 
-Each returned `DeltaGenerator` (tab or expander) has a new `.open` property:
+Each returned `DeltaGenerator` (tab, expander, or popover) has a new `.open` property:
 
 - **Type:** `bool | None`
 - **Returns:**
-  - `True` if tab is active or expander is expanded
-  - `False` if tab is not active or expander is collapsed
+  - `True` if tab is active, expander is expanded, or popover is open
+  - `False` if tab is not active, expander is collapsed, or popover is closed
   - `None` if `on_change` is `"ignore"` (state not tracked) OR if called on non-tab/expander/popover elements
 
 **Implementation:** The property is added to the `DeltaGenerator` class and checks `st.session_state[widget_id]` to determine current state.
@@ -221,7 +221,7 @@ button.open  # Always None (not a tab/expander/popover)
 1. Element registers as a widget (tracks state in session_state)
 2. `.open` attribute returns current state (`True`/`False`)
 3. User must explicitly check `.open` to get lazy execution
-4. Switching tabs/toggling expander triggers app rerun (if `on_change="rerun"` or callback)
+4. Switching tabs/toggling expander/opening popover triggers app rerun (if `on_change="rerun"` or callback)
 
 **When `on_change` is `"ignore"` (default):**
 
@@ -239,7 +239,7 @@ if tabs[0].open:  # Developer must add this check
         expensive_code()  # Only runs when check is True
 ```
 
-**Why opt-in is important:** When `on_change` is set, tabs/expander register as widgets, which means they:
+**Why opt-in is important:** When `on_change` is set, tabs/expander/popover register as widgets, which means they:
 
 - ❌ Cannot be used inside `@st.cache_data` decorated functions
 - ❌ Cannot be used inside `@st.fragment` (fragments can't contain widgets that write outside their scope)
@@ -251,7 +251,7 @@ if tabs[0].open:  # Developer must add this check
 
 1. **Lazy Execution Demo:** [`e2e_playwright/dynamic_containers/dynamic_expander_test.py`](https://github.com/streamlit/streamlit/pull/13277/files#diff-dynamic_expander_test.py)
 
-   - Shows tabs and expander with `on_change="rerun"`
+   - Shows tabs, expander, and popover with `on_change="rerun"`
    - Demonstrates `.open` attribute usage
    - Programmatic control via session state
 
@@ -397,7 +397,7 @@ show_expander()
 
 - ❌ **Unclear how this works for `st.tabs`** with multiple functions
 - ❌ Should content automatically be a fragment? If so, inherits all fragment limitations (see Option 2)
-- ❌ Creates two ways to use `st.expander`/`st.tabs` - confusing for users
+- ❌ Creates two ways to use `st.expander`/`st.tabs`/`st.popover` - confusing for users
 - ❌ Not incrementally adoptable - requires refactoring to functions
 - ❌ Less flexible than context manager pattern
 
