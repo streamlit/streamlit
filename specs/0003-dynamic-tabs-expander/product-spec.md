@@ -195,7 +195,7 @@ Each returned `DeltaGenerator` (tab or expander) has a new `.open` property:
 
 **For tabs specifically:** Session state stores the active tab's **label** (as a string), and `.open` checks if this tab's label matches the stored value.
 
-**Important caveat:** Since `.open` is added to `DeltaGenerator` (which is shared by all Streamlit elements), all elements will have this property. For elements that are not tabs/expanders/popovers, `.open` will always return `None`. This is an acceptable API trade-off for implementation simplicity.
+**Implementation Note:** We will investigate creating dedicated `DeltaGenerator` subclasses for these elements (e.g., `ExpanderContainer`, `TabContainer`, `PopoverContainer`) similar to what we do for `Dialog` and `StatusContainer`. This would keep the `.open` property and potential future `.update()` method scoped only to the appropriate container types, providing better type safety and API clarity. The alternative approach of adding `.open` to the base `DeltaGenerator` class would make the property available on all Streamlit elements (returning `None` for non-applicable elements), which is less ideal from an API design perspective.
 
 **Usage:**
 
