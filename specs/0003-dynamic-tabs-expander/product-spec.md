@@ -239,11 +239,11 @@ if tabs[0].open:  # Developer must add this check
         expensive_code()  # Only runs when check is True
 ```
 
-**Why opt-in is important:** When `on_change` is set, tabs/expander/popover register as widgets, which means they:
+**Why opt-in is important:** When `on_change` is set, tabs/expander/popover register as widgets, which means:
 
-- ❌ Cannot be used inside `@st.cache_data` decorated functions
-- ❌ Cannot be used inside `@st.fragment` (fragments can't contain widgets that write outside their scope)
-- This is why `on_change="ignore"` is the default - to avoid breaking existing apps that use tabs in these contexts
+- ❌ They cannot be created inside `@st.cache_data` decorated functions (widgets are not allowed in cached functions)
+- ❌ They cannot be created in external containers from inside a `@st.fragment` (fragments can't create widgets in external containers)
+- This is why `on_change="ignore"` is the default - to avoid breaking existing apps that use tabs/expander/popover in these contexts
 
 ### Examples
 
