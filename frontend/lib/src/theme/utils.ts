@@ -1465,23 +1465,16 @@ export const createCustomThemes = (
   // When light or dark theme section configs are set, need to create a custom theme for each
   if (hasLightConfigs || hasDarkConfigs) {
     const lightThemeInput = handleSectionInheritance(themeInput, "light")
-    const lightTheme = {
-      ...createTheme(CUSTOM_THEME_LIGHT_NAME, lightThemeInput),
-      displayName: "Light",
-    }
+    const lightTheme = createTheme(CUSTOM_THEME_LIGHT_NAME, lightThemeInput)
 
     const darkThemeInput = handleSectionInheritance(themeInput, "dark")
-    const darkTheme = {
-      ...createTheme(CUSTOM_THEME_DARK_NAME, darkThemeInput),
-      displayName: "Dark",
-    }
+    const darkTheme = createTheme(CUSTOM_THEME_DARK_NAME, darkThemeInput)
 
     // Also add an auto custom theme based on the system preference
     const autoCustomTheme =
       getSystemThemePreference() === "dark" ? darkTheme : lightTheme
     const autoTheme = {
       ...autoCustomTheme,
-      displayName: AUTO_THEME_NAME,
       name: CUSTOM_THEME_AUTO_NAME,
     }
     // Return light, dark, and auto custom themes

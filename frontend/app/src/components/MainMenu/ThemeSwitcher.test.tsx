@@ -20,7 +20,6 @@ import { describe, expect, it, Mock, vi } from "vitest"
 
 import { MetricsManager } from "@streamlit/app/src/MetricsManager"
 import {
-  AUTO_THEME_NAME,
   createAutoTheme,
   CUSTOM_THEME_AUTO_NAME,
   CUSTOM_THEME_DARK_NAME,
@@ -42,25 +41,21 @@ const getProps = (): ThemeSwitcherProps => ({
 const customLightTheme: ThemeConfig = {
   ...lightTheme,
   name: CUSTOM_THEME_LIGHT_NAME,
-  displayName: "Light",
 }
 
 const customDarkTheme: ThemeConfig = {
   ...darkTheme,
   name: CUSTOM_THEME_DARK_NAME,
-  displayName: "Dark",
 }
 
 const customAutoTheme: ThemeConfig = {
   ...createAutoTheme(),
   name: CUSTOM_THEME_AUTO_NAME,
-  displayName: AUTO_THEME_NAME,
 }
 
 const singleCustomTheme: ThemeConfig = {
   ...lightTheme,
   name: CUSTOM_THEME_NAME,
-  displayName: CUSTOM_THEME_NAME,
 }
 
 describe("ThemeSwitcher", () => {

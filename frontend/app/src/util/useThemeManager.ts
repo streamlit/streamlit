@@ -53,12 +53,11 @@ const getSystemCustomTheme = (
 
 /**
  * Creates an auto-switching custom theme from a base theme.
- * The returned theme will have CUSTOM_THEME_AUTO_NAME but display as "Use system setting".
+ * The returned theme will have CUSTOM_THEME_AUTO_NAME.
  */
 const createAutoCustomTheme = (baseTheme: ThemeConfig): ThemeConfig => ({
   ...baseTheme,
   name: CUSTOM_THEME_AUTO_NAME,
-  displayName: AUTO_THEME_NAME,
 })
 
 export interface ThemeManager {

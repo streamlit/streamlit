@@ -2437,7 +2437,6 @@ describe("App", () => {
           const props = getProps()
           props.theme.activeTheme = {
             name: CUSTOM_THEME_LIGHT_NAME,
-            displayName: "Light",
             emotion: { ...lightTheme.emotion },
             basewebTheme: lightTheme.basewebTheme,
             primitives: lightTheme.primitives,
@@ -2554,7 +2553,6 @@ describe("App", () => {
           const props = getProps()
           props.theme.activeTheme = {
             name: CUSTOM_THEME_LIGHT_NAME,
-            displayName: "Light",
             emotion: { ...lightTheme.emotion },
             basewebTheme: lightTheme.basewebTheme,
             primitives: lightTheme.primitives,
@@ -2633,7 +2631,6 @@ describe("App", () => {
           expect(props.theme.setTheme).toHaveBeenCalledWith(
             expect.objectContaining({
               name: CUSTOM_THEME_LIGHT_NAME,
-              displayName: "Light",
             })
           )
 
@@ -2686,7 +2683,6 @@ describe("App", () => {
           const props = getProps()
           props.theme.activeTheme = {
             name: CUSTOM_THEME_LIGHT_NAME,
-            displayName: "Light",
             emotion: { ...lightTheme.emotion },
             basewebTheme: lightTheme.basewebTheme,
             primitives: lightTheme.primitives,
@@ -2711,7 +2707,6 @@ describe("App", () => {
           expect(props.theme.setTheme).toHaveBeenCalledWith(
             expect.objectContaining({
               name: CUSTOM_THEME_LIGHT_NAME,
-              displayName: "Light",
             })
           )
 
@@ -2845,7 +2840,6 @@ describe("App", () => {
       const props = getProps()
       props.theme.activeTheme = {
         name: CUSTOM_THEME_DARK_NAME,
-        displayName: "Dark",
         emotion: { ...darkTheme.emotion },
         basewebTheme: darkTheme.basewebTheme,
         primitives: darkTheme.primitives,

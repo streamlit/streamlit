@@ -107,9 +107,6 @@ export interface EmotionTheme extends Omit<
 
 export type ThemeConfig = {
   name: string
-  // Display name is used in custom themes for menu theme switcher
-  // Allows custom themes to still show as "Light", "Dark", or "System"
-  displayName?: string
   emotion: EmotionTheme
   // For use with Baseweb's ThemeProvider. This is required in order for us to
   // create separate themes for in the children. Currently required to accommodate

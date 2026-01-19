@@ -171,18 +171,15 @@ describe("useThemeManager", () => {
     const { result } = renderHook(() => useThemeManager())
     const [themeManager] = result.current
 
-    const customLight = {
-      ...createTheme(CUSTOM_THEME_LIGHT_NAME, { primaryColor: "lightblue" }),
-      displayName: "Light",
-    }
-    const customDark = {
-      ...createTheme(CUSTOM_THEME_DARK_NAME, { primaryColor: "darkblue" }),
-      displayName: "Dark",
-    }
+    const customLight = createTheme(CUSTOM_THEME_LIGHT_NAME, {
+      primaryColor: "lightblue",
+    })
+    const customDark = createTheme(CUSTOM_THEME_DARK_NAME, {
+      primaryColor: "darkblue",
+    })
     const customAuto = {
       ...customLight,
       name: CUSTOM_THEME_AUTO_NAME,
-      displayName: AUTO_THEME_NAME,
     }
 
     act(() => {
@@ -243,18 +240,15 @@ describe("useThemeManager", () => {
     const { result } = renderHook(() => useThemeManager())
     const [themeManager] = result.current
 
-    const customLight = {
-      ...createTheme(CUSTOM_THEME_LIGHT_NAME, { primaryColor: "lightblue" }),
-      displayName: "Light",
-    }
-    const customDark = {
-      ...createTheme(CUSTOM_THEME_DARK_NAME, { primaryColor: "darkblue" }),
-      displayName: "Dark",
-    }
+    const customLight = createTheme(CUSTOM_THEME_LIGHT_NAME, {
+      primaryColor: "lightblue",
+    })
+    const customDark = createTheme(CUSTOM_THEME_DARK_NAME, {
+      primaryColor: "darkblue",
+    })
     const customAuto = {
       ...customLight,
       name: CUSTOM_THEME_AUTO_NAME,
-      displayName: AUTO_THEME_NAME,
     }
 
     act(() => {
