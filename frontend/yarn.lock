@@ -3268,7 +3268,7 @@ __metadata:
     lodash-es: "npm:^4.17.22"
     loglevel: "npm:^1.9.2"
     moment: "npm:^2.29.4"
-    prettier: "npm:^3.7.4"
+    prettier: "npm:^3.8.0"
     prop-types: "npm:^15.7.2"
     rc-overflow: "npm:^1.5.0"
     re-resizable: "npm:^6.11.2"
@@ -3305,7 +3305,7 @@ __metadata:
   resolution: "@streamlit/component-v2-lib@workspace:component-v2-lib"
   dependencies:
     eslint: "npm:^9.39.2"
-    prettier: "npm:^3.7.4"
+    prettier: "npm:^3.8.0"
     typescript: "npm:^5.9.3"
     typesync: "npm:^0.14.3"
     vite: "npm:^7.3.1"
@@ -3328,7 +3328,7 @@ __metadata:
     eslint: "npm:^9.39.2"
     lodash-es: "npm:^4.17.22"
     loglevel: "npm:^1.9.2"
-    prettier: "npm:^3.7.4"
+    prettier: "npm:^3.8.0"
     typesync: "npm:^0.14.3"
     vite: "npm:^7.3.1"
     vite-plugin-dts: "npm:^4.5.4"
@@ -3426,7 +3426,7 @@ __metadata:
     numbro: "npm:^2.5.0"
     plotly.js: "npm:^3.3.1"
     postinstall-postinstall: "npm:^2.1.0"
-    prettier: "npm:^3.7.4"
+    prettier: "npm:^3.8.0"
     protobufjs: "npm:^8.0.0"
     query-string: "npm:^9.3.1"
     re-resizable: "npm:^6.11.2"
@@ -3500,7 +3500,7 @@ __metadata:
   dependencies:
     "@types/eslint": "npm:^9.6.1"
     eslint: "npm:^9.39.2"
-    prettier: "npm:^3.7.4"
+    prettier: "npm:^3.8.0"
     typesync: "npm:^0.14.3"
     vite: "npm:^7.3.1"
     vite-plugin-dts: "npm:^4.5.4"
@@ -9388,7 +9388,7 @@ __metadata:
     "@typescript-eslint/utils": "npm:^8.52.0"
     "@vitest/coverage-v8": "npm:^4.0.17"
     eslint: "npm:^9.39.2"
-    prettier: "npm:^3.7.4"
+    prettier: "npm:^3.8.0"
     typescript: "npm:^5.9.3"
     typesync: "npm:^0.14.3"
     vitest: "npm:^4.0.17"
@@ -14602,12 +14602,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"prettier@npm:^3.7.4":
-  version: 3.7.4
-  resolution: "prettier@npm:3.7.4"
+"prettier@npm:^3.8.0":
+  version: 3.8.0
+  resolution: "prettier@npm:3.8.0"
   bin:
     prettier: bin/prettier.cjs
-  checksum: 10c0/9675d2cd08eacb1faf1d1a2dbfe24bfab6a912b059fc9defdb380a408893d88213e794a40a2700bd29b140eb3172e0b07c852853f6e22f16f3374659a1a13389
+  checksum: 10c0/8926e9c9941a293b76c2d799089d038e9f6d84fb37702fc370bedd03b3c70d7fcf507e2e3c4f151f222d81820a3b74cac5e692c955cfafe34dd0d02616ce8327
   languageName: node
   linkType: hard
 
