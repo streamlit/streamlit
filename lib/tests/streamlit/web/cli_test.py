@@ -818,7 +818,9 @@ class CloudDeployTest(unittest.TestCase):
         """Test cloud deploy shows error when not in a GitHub repo."""
         with patch("streamlit.cli_util.open_browser") as mock_open_browser:
             with patch("streamlit.git_util.GitRepo.get_repo_info", return_value=None):
-                result = self.runner.invoke(cli, ["cloud", "deploy"])
+                with patch("pathlib.Path.is_dir", return_value=False):
+                    with patch("pathlib.Path.exists", return_value=True):
+                        result = self.runner.invoke(cli, ["cloud", "deploy"])
 
         assert result.exit_code != 0
         mock_open_browser.assert_not_called()
