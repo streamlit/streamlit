@@ -166,6 +166,8 @@ class ScriptRunContext:
         parsed_query_params = parse.parse_qs(query_string, keep_blank_values=True)
         with self.session_state.query_params() as qp:
             qp.clear_with_no_forward_msg()
+            # Store initial query params for widget binding seeding
+            qp.set_initial_query_params(query_string)
             for key, val in parsed_query_params.items():
                 if len(val) == 0:
                     qp.set_with_no_forward_msg(key, val="")

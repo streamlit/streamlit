@@ -45,7 +45,7 @@ from streamlit.runtime.state.common import (
     is_keyed_element_id,
 )
 from streamlit.runtime.state.presentation import apply_presenter
-from streamlit.runtime.state.query_params import QueryParams
+from streamlit.runtime.state.query_params import QueryParams, parse_url_param
 from streamlit.runtime.stats import (
     CACHE_MEMORY_FAMILY,
     CacheStat,
@@ -910,9 +910,20 @@ class SessionState:
             # If the widget has a user_key, update its user_key:widget_id mapping
             self._set_key_widget_mapping(widget_id, user_key)
 
-        if widget_id not in self and (user_key is None or user_key not in self):
+        # Handle query param binding
+        url_value_seeded = False
+        if metadata.bind == "query-params" and user_key is not None:
+            url_value_seeded = self._handle_query_param_binding(
+                metadata, user_key, widget_id
+            )
+
+        if (
+            widget_id not in self
+            and (user_key is None or user_key not in self)
+            and not url_value_seeded
+        ):
             # This is the first time the widget is registered, so we save its
-            # value in widget state.
+            # value in widget state (unless we already seeded from URL).
             deserializer = metadata.deserializer
             initial_widget_value = deepcopy(deserializer(None))
             self._new_widget_state.set_from_value(widget_id, initial_widget_value)
@@ -930,6 +941,62 @@ class SessionState:
         )
 
         return RegisterWidgetResult(widget_value, widget_value_changed)
+
+    def _handle_query_param_binding(
+        self, metadata: WidgetMetadata[T], user_key: str, widget_id: str
+    ) -> bool:
+        """Handle query param binding for a widget.
+
+        Parameters
+        ----------
+        metadata : WidgetMetadata[T]
+            The widget metadata.
+        user_key : str
+            The user-provided key for the widget.
+        widget_id : str
+            The unique widget ID.
+
+        Returns
+        -------
+        bool
+            True if the widget's value was seeded from URL, False otherwise.
+        """
+        # Get the script hash for MPA support
+        ctx = get_script_run_ctx()
+        script_hash = ""
+        if ctx is not None:
+            script_hash = ctx.active_script_hash
+
+        # Register the widget binding
+        self.query_params.bind_widget(
+            param_key=user_key,
+            widget_id=widget_id,
+            value_type=metadata.value_type,
+            script_hash=script_hash,
+        )
+
+        # Try to seed session state from URL value
+        url_value = self.query_params.get_initial_value(user_key)
+        if url_value is not None:
+            try:
+                # Parse the URL value based on widget's value type
+                parsed_value = parse_url_param(url_value, metadata.value_type)
+                # Use the widget's deserializer to convert to the proper value format
+                # This is important for widgets like select_slider where the URL contains
+                # indices but the widget stores the actual option values
+                deserialized_value = metadata.deserializer(parsed_value)
+                # Store in widget state
+                self._new_widget_state.set_from_value(widget_id, deserialized_value)
+                # Also store in session state by user_key so widget_value_changed is True
+                # This ensures the frontend is notified of the URL-seeded value
+                self._new_session_state[user_key] = deserialized_value
+                return True
+            except (ValueError, TypeError, IndexError):
+                # Invalid URL value - widget will use its default
+                # The frontend will sync the corrected value back to URL
+                pass
+
+        return False
 
     def __contains__(self, key: str) -> bool:
         try:

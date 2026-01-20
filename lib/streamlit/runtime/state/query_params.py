@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable, Iterator, Mapping, MutableMapping
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Final, cast
+from typing import TYPE_CHECKING, Any, Final, cast
 from urllib import parse
 
 from streamlit.errors import StreamlitAPIException, StreamlitQueryParamDictValueError
@@ -37,14 +37,89 @@ EMBED_QUERY_PARAMS_KEYS: Final[list[str]] = [
     EMBED_OPTIONS_QUERY_PARAM,
 ]
 
+# Protected parameters that cannot be bound to widgets
+PROTECTED_QUERY_PARAMS: Final[frozenset[str]] = frozenset(
+    [EMBED_QUERY_PARAM, EMBED_OPTIONS_QUERY_PARAM]
+)
+
+
+@dataclass
+class WidgetBinding:
+    """Represents a binding between a widget and a query parameter."""
+
+    widget_id: str
+    param_key: str
+    value_type: str  # e.g., "bool_value", "string_value", etc.
+    script_hash: str  # For MPA: identifies main vs page script
+
+
+def parse_url_param(value: str | list[str], value_type: str) -> Any:
+    """Convert URL param to Python value based on WidgetState value type.
+
+    Parameters
+    ----------
+    value : str | list[str]
+        The URL parameter value(s).
+    value_type : str
+        The WidgetState value type (e.g., "bool_value", "string_value").
+
+    Returns
+    -------
+    Any
+        The parsed Python value appropriate for the widget type.
+
+    Raises
+    ------
+    ValueError
+        If the value cannot be parsed for the given type.
+    """
+    # For single-value types, get the last value if it's a list
+    val = value[-1] if isinstance(value, list) else value
+
+    match value_type:
+        case "bool_value":
+            lower_val = val.lower()
+            if lower_val == "true":
+                return True
+            if lower_val == "false":
+                return False
+            raise ValueError(f"Invalid boolean value: {val}")
+        case "int_value":
+            return int(val)
+        case "double_value":
+            return float(val)
+        case "string_value":
+            return val
+        case "string_array_value":
+            # For repeated params or comma-separated values
+            return list(value) if isinstance(value, list) else [value]
+        case "double_array_value":
+            # Comma-separated floats (e.g., slider ranges)
+            return [float(x) for x in val.split(",")]
+        case "int_array_value":
+            # Comma-separated ints
+            return [int(x) for x in val.split(",")]
+        case _:
+            # Unknown type, return as-is
+            return val
+
 
 @dataclass
 class QueryParams(MutableMapping[str, str]):
     """A lightweight wrapper of a dict that sends forwardMsgs when state changes.
     It stores str keys with str and List[str] values.
+
+    Also manages widget bindings to query parameters for the bind="query-params" feature.
     """
 
     _query_params: dict[str, list[str] | str] = field(default_factory=dict)
+
+    # Widget binding registries
+    _bindings_by_param: dict[str, WidgetBinding] = field(default_factory=dict)
+    _bindings_by_widget: dict[str, WidgetBinding] = field(default_factory=dict)
+
+    # Store initial query params from URL at page load for seeding session state
+    _initial_query_params: dict[str, list[str]] = field(default_factory=dict)
 
     def __iter__(self) -> Iterator[str]:
         return iter(
@@ -74,6 +149,12 @@ class QueryParams(MutableMapping[str, str]):
             raise KeyError(missing_key_error_message(key))
 
     def __setitem__(self, key: str, value: str | Iterable[str]) -> None:
+        # Prevent direct manipulation of bound query params
+        if self.is_bound(key):
+            raise StreamlitAPIException(
+                f"Cannot directly set query parameter '{key}' - "
+                f"it is bound to a widget. Modify the widget value instead."
+            )
         self._set_item_internal(key, value)
         self._send_query_param_msg()
 
@@ -174,6 +255,150 @@ class QueryParams(MutableMapping[str, str]):
             for key, value in self._query_params.items()
             if key.lower() in EMBED_QUERY_PARAMS_KEYS and preserve_embed
         }
+
+    # ========== Widget Binding Methods ==========
+
+    def bind_widget(
+        self,
+        param_key: str,
+        widget_id: str,
+        value_type: str,
+        script_hash: str,
+    ) -> None:
+        """Register a widget binding to a query parameter.
+
+        Parameters
+        ----------
+        param_key : str
+            The query parameter key (same as the widget's user key).
+        widget_id : str
+            The unique widget ID.
+        value_type : str
+            The WidgetState value type (e.g., "bool_value", "string_value").
+        script_hash : str
+            The script hash for MPA support.
+
+        Raises
+        ------
+        StreamlitAPIException
+            If the parameter is protected (embed, embed_options).
+        """
+        if param_key.lower() in PROTECTED_QUERY_PARAMS:
+            raise StreamlitAPIException(
+                f"Cannot bind to protected query parameter '{param_key}'. "
+                f"Protected parameters: {', '.join(PROTECTED_QUERY_PARAMS)}"
+            )
+
+        binding = WidgetBinding(
+            widget_id=widget_id,
+            param_key=param_key,
+            value_type=value_type,
+            script_hash=script_hash,
+        )
+        self._bindings_by_param[param_key] = binding
+        self._bindings_by_widget[widget_id] = binding
+
+    def unbind_widget(self, widget_id: str) -> None:
+        """Remove a widget binding.
+
+        Parameters
+        ----------
+        widget_id : str
+            The unique widget ID.
+        """
+        binding = self._bindings_by_widget.pop(widget_id, None)
+        if binding:
+            self._bindings_by_param.pop(binding.param_key, None)
+
+    def is_bound(self, param_key: str) -> bool:
+        """Check if a query parameter is bound to a widget.
+
+        Parameters
+        ----------
+        param_key : str
+            The query parameter key.
+
+        Returns
+        -------
+        bool
+            True if the parameter is bound to a widget.
+        """
+        return param_key in self._bindings_by_param
+
+    def get_binding_for_widget(self, widget_id: str) -> WidgetBinding | None:
+        """Get the binding for a widget.
+
+        Parameters
+        ----------
+        widget_id : str
+            The unique widget ID.
+
+        Returns
+        -------
+        WidgetBinding | None
+            The binding if found, None otherwise.
+        """
+        return self._bindings_by_widget.get(widget_id)
+
+    def get_binding_for_param(self, param_key: str) -> WidgetBinding | None:
+        """Get the binding for a query parameter.
+
+        Parameters
+        ----------
+        param_key : str
+            The query parameter key.
+
+        Returns
+        -------
+        WidgetBinding | None
+            The binding if found, None otherwise.
+        """
+        return self._bindings_by_param.get(param_key)
+
+    def set_initial_query_params(self, query_string: str) -> None:
+        """Store the initial query params from the URL for session state seeding.
+
+        Parameters
+        ----------
+        query_string : str
+            The URL query string (without the leading '?').
+        """
+        parsed = parse.parse_qs(query_string, keep_blank_values=True)
+        self._initial_query_params = parsed
+
+    def get_initial_value(self, param_key: str) -> str | list[str] | None:
+        """Get the initial URL value for a query parameter.
+
+        This is used for seeding session state on initial page load.
+
+        Parameters
+        ----------
+        param_key : str
+            The query parameter key.
+
+        Returns
+        -------
+        str | list[str] | None
+            The initial value(s) if present, None otherwise.
+        """
+        values = self._initial_query_params.get(param_key)
+        if values is None:
+            return None
+        if len(values) == 1:
+            return values[0]
+        return values
+
+    def remove_stale_bindings(self, active_widget_ids: set[str]) -> None:
+        """Remove bindings for widgets that are no longer active.
+
+        Parameters
+        ----------
+        active_widget_ids : set[str]
+            Set of widget IDs that are currently active/rendered.
+        """
+        stale_widget_ids = set(self._bindings_by_widget.keys()) - active_widget_ids
+        for widget_id in stale_widget_ids:
+            self.unbind_widget(widget_id)
 
 
 def missing_key_error_message(key: str) -> str:
