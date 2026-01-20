@@ -80,7 +80,7 @@ base = (
     )
 )
 chart_interval = base.add_params(interval)
-# Set use_container_width=True for all charts so that the width is not dependent on Vega-lib updates.
+# Set width="stretch" for all charts so that the width is not dependent on Vega-lib updates.
 st.altair_chart(chart_interval, on_select="rerun", key="scatter_interval")
 if (
     "scatter_interval" in st.session_state
@@ -158,7 +158,7 @@ bar_graph_interval = (
 
 st.subheader("Bar chart with selection_interval")
 st.altair_chart(
-    bar_graph_interval, on_select="rerun", key="bar_interval", use_container_width=True
+    bar_graph_interval, on_select="rerun", key="bar_interval", width="stretch"
 )
 if (
     "bar_interval" in st.session_state
