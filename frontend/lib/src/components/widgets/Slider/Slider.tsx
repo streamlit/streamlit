@@ -160,6 +160,25 @@ function Slider({
     setUiValue(value)
   }, [value])
 
+  // Query param binding registration
+  const queryParamKey = element.queryParamKey
+  const widgetId = element.id
+  const defaultValue = element.default
+  useEffect(() => {
+    if (queryParamKey) {
+      widgetMgr.registerQueryParamBinding(
+        widgetId,
+        queryParamKey,
+        "double_array_value",
+        defaultValue,
+        "comma" // Sliders use comma-separated values for ranges
+      )
+      return () => {
+        widgetMgr.unregisterQueryParamBinding(widgetId)
+      }
+    }
+  }, [widgetMgr, widgetId, queryParamKey, defaultValue])
+
   const handleFinalChange = useCallback(
     ({ value: valueArg }: { value: number[] }): void => {
       setValueWithSource({ value: valueArg, fromUi: true })

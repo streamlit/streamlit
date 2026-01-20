@@ -52,6 +52,7 @@ from streamlit.proto.TimeInput_pb2 import TimeInput as TimeInputProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import (
+    BindOption,
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
@@ -619,6 +620,7 @@ class TimeWidgetsMixin:
         label_visibility: LabelVisibility = "visible",
         step: int | timedelta = timedelta(minutes=DEFAULT_STEP_MINUTES),
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> time:
         pass
 
@@ -637,6 +639,7 @@ class TimeWidgetsMixin:
         label_visibility: LabelVisibility = "visible",
         step: int | timedelta = timedelta(minutes=DEFAULT_STEP_MINUTES),
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> time | None:
         pass
 
@@ -655,6 +658,7 @@ class TimeWidgetsMixin:
         label_visibility: LabelVisibility = "visible",
         step: int | timedelta = timedelta(minutes=DEFAULT_STEP_MINUTES),
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> time | None:
         r"""Display a time input widget.
 
@@ -792,6 +796,7 @@ class TimeWidgetsMixin:
             step=step,
             width=width,
             ctx=ctx,
+            bind=bind,
         )
 
     def _time_input(
@@ -809,6 +814,7 @@ class TimeWidgetsMixin:
         step: int | timedelta = timedelta(minutes=DEFAULT_STEP_MINUTES),
         width: WidthWithoutContent = "stretch",
         ctx: ScriptRunContext | None = None,
+        bind: BindOption = None,
     ) -> time | None:
         key = to_key(key)
 
@@ -867,6 +873,10 @@ class TimeWidgetsMixin:
         if help is not None:
             time_input_proto.help = dedent(help)
 
+        # Set query param key if bound
+        if bind == "query-params" and key is not None:
+            time_input_proto.query_param_key = str(key)
+
         serde = TimeInputSerde(parsed_time)
         widget_state = register_widget(
             time_input_proto.id,
@@ -877,6 +887,7 @@ class TimeWidgetsMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="string_value",
+            bind=bind,
         )
 
         if widget_state.value_changed:
@@ -1288,6 +1299,7 @@ class TimeWidgetsMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> date: ...
 
     @overload
@@ -1307,6 +1319,7 @@ class TimeWidgetsMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> date | None: ...
 
     @overload
@@ -1328,6 +1341,7 @@ class TimeWidgetsMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> DateWidgetRangeReturn: ...
 
     @gather_metrics("date_input")
@@ -1347,6 +1361,7 @@ class TimeWidgetsMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> DateWidgetReturn:
         r"""Display a date input widget.
 
@@ -1538,6 +1553,7 @@ class TimeWidgetsMixin:
             format=format,
             width=width,
             ctx=ctx,
+            bind=bind,
         )
 
     def _date_input(
@@ -1557,6 +1573,7 @@ class TimeWidgetsMixin:
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
         ctx: ScriptRunContext | None = None,
+        bind: BindOption = None,
     ) -> DateWidgetReturn:
         key = to_key(key)
 
@@ -1670,6 +1687,10 @@ class TimeWidgetsMixin:
         if help is not None:
             date_input_proto.help = dedent(help)
 
+        # Set query param key if bound
+        if bind == "query-params" and key is not None:
+            date_input_proto.query_param_key = str(key)
+
         serde = DateInputSerde(parsed_values)
 
         widget_state = register_widget(
@@ -1681,6 +1702,7 @@ class TimeWidgetsMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="string_array_value",
+            bind=bind,
         )
 
         # Validate the current value against the new min/max bounds.

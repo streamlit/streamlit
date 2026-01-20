@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useCallback, useContext } from "react"
+import { memo, ReactElement, useCallback, useContext, useEffect } from "react"
 
 import { ChevronDown } from "baseui/icon"
 import { StyledClearIcon } from "baseui/input/styled-components"
@@ -69,6 +69,25 @@ function TimeInput({
     widgetMgr,
     fragmentId,
   })
+
+  // Query param binding registration
+  const queryParamKey = element.queryParamKey
+  const widgetId = element.id
+  const defaultValue = element.default
+  useEffect(() => {
+    if (queryParamKey) {
+      widgetMgr.registerQueryParamBinding(
+        widgetId,
+        queryParamKey,
+        "string_value",
+        defaultValue
+      )
+      return () => {
+        widgetMgr.unregisterQueryParamBinding(widgetId)
+      }
+    }
+  }, [widgetMgr, widgetId, queryParamKey, defaultValue])
+
   const isInSidebar = useContext(IsSidebarContext)
 
   const clearable = isNullOrUndefined(element.default) && !disabled

@@ -32,4 +32,6 @@ message TimeInput {
   bool disabled = 8;
   LabelVisibilityMessage label_visibility = 9;
   int64 step = 10;
+  // If set, widget value is bound to this query parameter key
+  optional string query_param_key = 11;
 }

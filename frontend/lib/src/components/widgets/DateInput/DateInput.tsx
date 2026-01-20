@@ -19,6 +19,7 @@ import {
   ReactElement,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
 } from "react"
@@ -109,6 +110,25 @@ function DateInput({
     widgetMgr,
     fragmentId,
   })
+
+  // Query param binding registration
+  const queryParamKey = element.queryParamKey
+  const widgetId = element.id
+  const defaultValue = element.default
+  useEffect(() => {
+    if (queryParamKey) {
+      widgetMgr.registerQueryParamBinding(
+        widgetId,
+        queryParamKey,
+        "string_array_value",
+        defaultValue,
+        "comma" // DateInput uses comma-separated for ranges
+      )
+      return () => {
+        widgetMgr.unregisterQueryParamBinding(widgetId)
+      }
+    }
+  }, [widgetMgr, widgetId, queryParamKey, defaultValue])
 
   const [isEmpty, setIsEmpty] = useState(false)
   const [error, setError] = useState<string | null>(null)

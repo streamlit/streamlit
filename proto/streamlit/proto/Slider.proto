@@ -57,4 +57,6 @@ message Slider {
   bool disabled = 15;
   LabelVisibilityMessage label_visibility = 16;
   Type type = 17;
+  // If set, widget value is bound to this query parameter key
+  optional string query_param_key = 18;
 }
