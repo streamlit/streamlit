@@ -204,6 +204,7 @@ class CheckboxMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
+        bind: BindOption = None,
     ) -> bool:
         r"""Display a toggle widget.
 
@@ -312,7 +313,7 @@ class CheckboxMixin:
             disabled=disabled,
             label_visibility=label_visibility,
             type=CheckboxProto.StyleType.TOGGLE,
-            bind=None,
+            bind=bind,
             ctx=ctx,
             width=width,
         )
