@@ -185,6 +185,7 @@ class CheckboxMixin:
             disabled=disabled,
             label_visibility=label_visibility,
             type=CheckboxProto.StyleType.DEFAULT,
+            bind=bind,
             ctx=ctx,
             width=width,
         )
@@ -311,6 +312,7 @@ class CheckboxMixin:
             disabled=disabled,
             label_visibility=label_visibility,
             type=CheckboxProto.StyleType.TOGGLE,
+            bind=None,
             ctx=ctx,
             width=width,
         )
@@ -328,6 +330,7 @@ class CheckboxMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         type: CheckboxProto.StyleType.ValueType = CheckboxProto.StyleType.DEFAULT,
+        bind: BindOption = None,
         ctx: ScriptRunContext | None = None,
         width: Width = "content",
     ) -> bool:

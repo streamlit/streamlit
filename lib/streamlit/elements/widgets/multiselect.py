@@ -446,6 +446,7 @@ class MultiSelectMixin:
             label_visibility=label_visibility,
             accept_new_options=accept_new_options,
             width=width,
+            bind=bind,
             ctx=ctx,
         )
 
@@ -467,6 +468,7 @@ class MultiSelectMixin:
         label_visibility: LabelVisibility = "visible",
         accept_new_options: bool = False,
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
         ctx: ScriptRunContext | None = None,
     ) -> list[T] | list[T | str]:
         key = to_key(key)

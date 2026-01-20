@@ -187,6 +187,7 @@ class ColorPickerMixin:
             disabled=disabled,
             label_visibility=label_visibility,
             width=width,
+            bind=bind,
             ctx=ctx,
         )
 
@@ -203,6 +204,7 @@ class ColorPickerMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
+        bind: BindOption = None,
         ctx: ScriptRunContext | None = None,
     ) -> str:
         key = to_key(key)

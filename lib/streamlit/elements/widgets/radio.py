@@ -334,6 +334,7 @@ class RadioMixin:
             horizontal=horizontal,
             captions=captions,
             label_visibility=label_visibility,
+            bind=bind,
             ctx=ctx,
             width=width,
         )
@@ -354,7 +355,8 @@ class RadioMixin:
         horizontal: bool = False,
         label_visibility: LabelVisibility = "visible",
         captions: Sequence[str] | None = None,
-        ctx: ScriptRunContext | None,
+        bind: BindOption = None,
+        ctx: ScriptRunContext | None = None,
         width: Width = "content",
     ) -> T | None:
         key = to_key(key)

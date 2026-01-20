@@ -422,6 +422,7 @@ class NumberInputMixin:
             label_visibility=label_visibility,
             icon=icon,
             width=width,
+            bind=bind,
             ctx=ctx,
         )
 
@@ -444,6 +445,7 @@ class NumberInputMixin:
         label_visibility: LabelVisibility = "visible",
         icon: str | None = None,
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
         ctx: ScriptRunContext | None = None,
     ) -> Number | None:
         key = to_key(key)

@@ -491,6 +491,7 @@ class SelectboxMixin:
             label_visibility=label_visibility,
             accept_new_options=accept_new_options,
             width=width,
+            bind=bind,
             ctx=ctx,
         )
 
@@ -511,6 +512,7 @@ class SelectboxMixin:
         label_visibility: LabelVisibility = "visible",
         accept_new_options: bool = False,
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
         ctx: ScriptRunContext | None = None,
     ) -> T | str | None:
         key = to_key(key)

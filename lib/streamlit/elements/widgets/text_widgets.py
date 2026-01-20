@@ -293,6 +293,7 @@ class TextWidgetsMixin:
             label_visibility=label_visibility,
             icon=icon,
             width=width,
+            bind=bind,
             ctx=ctx,
         )
 
@@ -314,6 +315,7 @@ class TextWidgetsMixin:
         label_visibility: LabelVisibility = "visible",
         icon: str | None = None,
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
         ctx: ScriptRunContext | None = None,
     ) -> str | None:
         key = to_key(key)
@@ -619,6 +621,7 @@ class TextWidgetsMixin:
             disabled=disabled,
             label_visibility=label_visibility,
             width=width,
+            bind=bind,
             ctx=ctx,
         )
 
@@ -638,6 +641,7 @@ class TextWidgetsMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
         ctx: ScriptRunContext | None = None,
     ) -> str | None:
         key = to_key(key)
