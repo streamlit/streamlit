@@ -321,19 +321,29 @@ def validate_and_sync_value_with_options(
     if current_value is None:
         return current_value, False
 
-    # Check if current value is still in the new options using format_func comparison.
-    # We use format_func instead of index_() with == because widget values are
-    # deepcopied, and for custom classes without __eq__, the deepcopied instances
-    # would fail identity comparison.
-    try:
-        formatted_value = format_func(current_value)
-    except Exception:
-        # format_func failed - value is invalid
-        formatted_value = None
+    # For Enum values, use the original index_() approach which uses == comparison.
+    # This correctly handles enum class identity - enums from different classes
+    # (e.g., after script rerun) should NOT be considered equal, which is important
+    # for enum coercion to work correctly when coercion is disabled.
+    if isinstance(current_value, Enum):
+        try:
+            index_(opt, current_value)
+            return current_value, False
+        except ValueError:
+            pass  # Fall through to reset logic below
+    else:
+        # For non-Enum values, use format_func comparison. This handles custom objects
+        # without __eq__ where widget values are deepcopied and the deepcopied instances
+        # would fail identity comparison with ==.
+        try:
+            formatted_value = format_func(current_value)
+        except Exception:
+            # format_func failed - value is invalid
+            formatted_value = None
 
-    formatted_options_set = {format_func(o) for o in opt}
-    if formatted_value is not None and formatted_value in formatted_options_set:
-        return current_value, False
+        formatted_options_set = {format_func(o) for o in opt}
+        if formatted_value is not None and formatted_value in formatted_options_set:
+            return current_value, False
 
     # Value not in options - reset to default
     if default_index is not None and len(opt) > 0:
