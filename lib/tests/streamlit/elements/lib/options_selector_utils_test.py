@@ -513,6 +513,35 @@ class TestValidateAndSyncValueWithOptions(unittest.TestCase):
         assert value == expected_value
         assert needs_reset is expected_needs_reset
 
+    def test_custom_objects_without_eq_using_format_func(self):
+        """Test that custom objects without __eq__ work with format_func validation."""
+        from copy import deepcopy
+
+        # Custom class without __eq__ implementation
+        class MyOption:  # noqa: B903
+            def __init__(self, value: str):
+                self.value = value
+
+        def format_func(x):
+            return x.value
+
+        original_options = [MyOption("a"), MyOption("b"), MyOption("c")]
+        deepcopied_value = deepcopy(original_options[1])
+
+        # Without the fix, this would reset because deepcopy creates new instances
+        # and == falls back to identity comparison for objects without __eq__
+        value, needs_reset = validate_and_sync_value_with_options(
+            deepcopied_value,
+            original_options,
+            0,
+            None,
+            format_func=format_func,
+        )
+
+        # Value should be valid since format_func output matches
+        assert value is deepcopied_value
+        assert needs_reset is False
+
 
 class TestValidateAndSyncMultiselectValueWithOptions(unittest.TestCase):
     """Test class for validate_and_sync_multiselect_value_with_options utility function."""

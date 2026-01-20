@@ -35,7 +35,6 @@ from streamlit.elements.lib.layout_utils import (
 )
 from streamlit.elements.lib.options_selector_utils import (
     create_mappings,
-    index_,
     maybe_coerce_enum,
     validate_and_sync_value_with_options,
 )
@@ -79,6 +78,7 @@ class SelectboxSerde(Generic[T]):
     formatted_options: list[str]
     formatted_option_to_option_index: dict[str, int]
     default_option_index: int | None
+    format_func: Callable[[Any], str]
 
     def __init__(
         self,
@@ -87,6 +87,7 @@ class SelectboxSerde(Generic[T]):
         formatted_options: list[str],
         formatted_option_to_option_index: dict[str, int],
         default_option_index: int | None = None,
+        format_func: Callable[[Any], str] = str,
     ) -> None:
         """Initialize the SelectboxSerde.
 
@@ -108,12 +109,18 @@ class SelectboxSerde(Generic[T]):
         default_option_index : int or None, optional
             The index of the default option to use when no selection is made.
             If None, no default option is selected.
+        format_func : Callable[[Any], str], optional
+            Function to format options for comparison. Used to compare values by their
+            string representation instead of using == directly. This is necessary because
+            widget values are deepcopied, and for custom classes without __eq__, the
+            deepcopied instances would fail identity comparison.
         """
 
         self.options = options
         self.formatted_options = formatted_options
         self.formatted_option_to_option_index = formatted_option_to_option_index
         self.default_option_index = default_option_index
+        self.format_func = format_func
 
     def serialize(self, v: T | str | None) -> str | None:
         if v is None:
@@ -121,16 +128,21 @@ class SelectboxSerde(Generic[T]):
         if len(self.options) == 0:
             return ""
 
-        # we don't check for isinstance(v, str) because this could lead to wrong
-        # results if v is a string that is part of the options itself as it would
-        # skip formatting in that case
+        # Use format_func to find the formatted option instead of using
+        # index_(self.options, v) which relies on == comparison. This is necessary
+        # because widget values are deepcopied, and for custom classes without
+        # __eq__, the deepcopied instances would fail identity comparison.
         try:
-            option_index = index_(self.options, v)
-            return self.formatted_options[option_index]
-        except ValueError:
-            # we know that v is a string, otherwise it would have been found in the
-            # options
+            formatted_value = self.format_func(v)
+        except Exception:
+            # format_func failed (e.g., v is a string but format_func expects
+            # an object with specific attributes). Treat v as a raw string.
             return cast("str", v)
+
+        if formatted_value in self.formatted_option_to_option_index:
+            return formatted_value
+        # Value not found in options - return as raw string
+        return cast("str", v)
 
     def deserialize(self, ui_value: str | None) -> T | str | None:
         # check if the option is pointing to a generic option type T,
@@ -583,6 +595,7 @@ class SelectboxMixin:
             formatted_options=formatted_options,
             formatted_option_to_option_index=formatted_option_to_option_index,
             default_option_index=index,
+            format_func=format_func,
         )
         widget_state = register_widget(
             selectbox_proto.id,
@@ -605,7 +618,7 @@ class SelectboxMixin:
             # This handles the case where options change dynamically and the
             # previously selected value is no longer available.
             current_value, value_needs_reset = validate_and_sync_value_with_options(
-                widget_state.value, opt, index, key
+                widget_state.value, opt, index, key, format_func
             )
 
         if value_needs_reset or widget_state.value_changed:

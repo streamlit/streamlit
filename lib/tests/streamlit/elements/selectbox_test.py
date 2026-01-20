@@ -648,6 +648,7 @@ class TestSelectboxSerde:
             options,
             formatted_options=formatted_options,
             formatted_option_to_option_index=formatted_option_to_option_index,
+            format_func=format_func,
         )
 
         res = serde.serialize("Option A")
@@ -777,3 +778,38 @@ class TestSelectboxSerde:
 
         res = serde.deserialize("TestEnum.B")
         assert res == TestEnum.B
+
+    def test_serialize_deepcopied_custom_objects(self):
+        """Test that serialize works with deepcopied custom objects without __eq__.
+
+        This tests the fix for https://github.com/streamlit/streamlit/issues/13646
+        where custom objects without __eq__ would fail serialization after deepcopy
+        because the old implementation used index_() which relies on ==.
+        """
+        from copy import deepcopy
+
+        # Custom class without __eq__ implementation
+        class MyOption:  # noqa: B903
+            def __init__(self, value: str):
+                self.value = value
+
+        def format_func(x):
+            return x.value
+
+        options = [MyOption("a"), MyOption("b"), MyOption("c")]
+        formatted_options, formatted_option_to_option_index = create_mappings(
+            options, format_func
+        )
+        serde = SelectboxSerde(
+            options,
+            formatted_options=formatted_options,
+            formatted_option_to_option_index=formatted_option_to_option_index,
+            format_func=format_func,
+        )
+
+        # Simulate deepcopied value (what happens after register_widget)
+        deepcopied_value = deepcopy(options[0])
+
+        # This should work correctly using format_func comparison
+        res = serde.serialize(deepcopied_value)
+        assert res == "a"
