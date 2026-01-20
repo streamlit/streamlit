@@ -186,10 +186,19 @@ const Sidebar: React.FC<SidebarProps> = ({
     const handleClickOutside = (event: MouseEvent): void => {
       if (sidebarRef && window) {
         const { current } = sidebarRef
+        const target = event.target as Node | null
+        const mainAppContainer = document.querySelector(
+          '[data-testid="stApp"]'
+        )
 
+        // Only collapse if click is outside the sidebar but inside the main app.
+        // This excludes clicks on portaled elements (dropdowns, modals, etc.)
+        // since they render outside the main app container.
         if (
           current &&
-          !current.contains(event.target as Node | null) &&
+          target &&
+          !current.contains(target) &&
+          mainAppContainer?.contains(target) &&
           innerWidth <= mediumBreakpointPx &&
           !isCollapsed
         ) {
