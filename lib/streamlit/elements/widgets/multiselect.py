@@ -82,6 +82,7 @@ class MultiSelectSerde(Generic[T]):
     formatted_options: list[str]
     formatted_option_to_option_index: dict[str, int]
     default_options_indices: list[int]
+    format_func: Callable[[Any], str]
 
     def __init__(
         self,
@@ -90,6 +91,7 @@ class MultiSelectSerde(Generic[T]):
         formatted_options: list[str],
         formatted_option_to_option_index: dict[str, int],
         default_options_indices: list[int] | None = None,
+        format_func: Callable[[Any], str] = str,
     ) -> None:
         """Initialize the MultiSelectSerde.
 
@@ -111,23 +113,40 @@ class MultiSelectSerde(Generic[T]):
         default_option_index : int or None, optional
             The index of the default option to use when no selection is made.
             If None, no default option is selected.
+        format_func : Callable[[Any], str], optional
+            Function to format options for comparison. Used to compare values by their
+            string representation instead of using == directly. This is necessary because
+            widget values are deepcopied, and for custom classes without __eq__, the
+            deepcopied instances would fail identity comparison.
         """
 
         self.options = options
         self.formatted_options = formatted_options
         self.formatted_option_to_option_index = formatted_option_to_option_index
         self.default_options_indices = default_options_indices or []
+        self.format_func = format_func
 
     def serialize(self, value: list[T | str] | list[T]) -> list[str]:
         converted_value = convert_anything_to_list(value)
         values: list[str] = []
         for v in converted_value:
+            # Use format_func to find the formatted option instead of using
+            # self.options.index(v) which relies on == comparison. This is necessary
+            # because widget values are deepcopied, and for custom classes without
+            # __eq__, the deepcopied instances would fail identity comparison.
             try:
-                option_index = self.options.index(v)
-                values.append(self.formatted_options[option_index])
-            except ValueError:  # noqa: PERF203
-                # at this point we know that v is a string, otherwise
-                # it would have been found in the options
+                formatted_value = self.format_func(v)
+            except Exception:
+                # format_func failed (e.g., v is a string but format_func expects
+                # an object with specific attributes). Treat v as a raw string.
+                values.append(cast("str", v))
+                continue
+
+            if formatted_value in self.formatted_option_to_option_index:
+                values.append(formatted_value)
+            else:
+                # Value not found in options - it's likely a user-entered string
+                # (when accept_new_options=True) or an invalid value
                 values.append(cast("str", v))
         return values
 
@@ -530,6 +549,7 @@ class MultiSelectMixin:
             formatted_options=formatted_options,
             formatted_option_to_option_index=formatted_option_to_option_index,
             default_options_indices=default_values,
+            format_func=format_func,
         )
 
         widget_state = register_widget(
