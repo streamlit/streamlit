@@ -560,7 +560,7 @@ class MultiSelectMixin:
             # previously selected values are no longer available.
             current_values, value_needs_reset = (
                 validate_and_sync_multiselect_value_with_options(
-                    widget_state.value, indexable_options, key
+                    widget_state.value, indexable_options, key, format_func
                 )
             )
 

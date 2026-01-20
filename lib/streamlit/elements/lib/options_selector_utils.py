@@ -339,6 +339,7 @@ def validate_and_sync_multiselect_value_with_options(
     current_values: list[T] | list[T | str],
     opt: Sequence[T],
     key: str | int | None,
+    format_func: Callable[[Any], str] = str,
 ) -> tuple[list[T] | list[T | str], bool]:
     """Validate multiselect values against options, syncing session state if needed.
 
@@ -356,6 +357,11 @@ def validate_and_sync_multiselect_value_with_options(
         The sequence of valid options.
     key
         The widget key for session state updates.
+    format_func
+        Function to format options for comparison. Used to compare values by their
+        string representation instead of using == directly. This is necessary because
+        widget values are deepcopied, and for custom classes without __eq__, the
+        deepcopied instances would fail identity comparison.
 
     Returns
     -------
@@ -365,13 +371,26 @@ def validate_and_sync_multiselect_value_with_options(
     if not current_values:
         return current_values, False
 
+    # Create a set of formatted options for O(1) lookup.
+    # We use format_func to compare values by their string representation
+    # instead of using == directly. This is necessary because widget values
+    # are deepcopied, and for custom classes without __eq__, the deepcopied
+    # instances would fail identity comparison.
+    formatted_options_set = {format_func(o) for o in opt}
+
     valid_values: list[T | str] = []
     for value in current_values:
         try:
-            index_(opt, value)
+            formatted_value = format_func(value)
+        except Exception:  # noqa: S112
+            # format_func failed on this value (e.g., a string value from a previous
+            # session when format_func expects an object with specific attributes).
+            # In this case, the value is definitely not valid since the current options
+            # can be formatted successfully.
+            continue
+
+        if formatted_value in formatted_options_set:
             valid_values.append(value)
-        except ValueError:  # noqa: PERF203
-            pass
 
     if len(valid_values) == len(current_values):
         return current_values, False
