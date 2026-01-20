@@ -408,7 +408,10 @@ def cloud_deploy(target: str = "streamlit_app.py") -> None:
     else:
         # User specified a file path
         if not path.exists():
-            click.echo(f"Warning: File does not exist: {path}")
+            raise click.ClickException(
+                f"File does not exist: {path}\n"
+                "Specify your main script with: streamlit cloud deploy <your_script.py>"
+            )
         has_specific_script = True
         script_path = path
 

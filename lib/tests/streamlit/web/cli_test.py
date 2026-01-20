@@ -867,25 +867,19 @@ class CloudDeployTest(unittest.TestCase):
         assert "https://share.streamlit.io/deploy" in url
         assert "mainModule=app%2Fmain.py" in url
 
-    def test_cloud_deploy_nonexistent_file_shows_warning(self):
-        """Test cloud deploy shows warning when specified file doesn't exist."""
+    def test_cloud_deploy_nonexistent_file_shows_error(self):
+        """Test cloud deploy shows error when specified file doesn't exist."""
         with patch("streamlit.cli_util.open_browser") as mock_open_browser:
-            with patch(
-                "streamlit.git_util.GitRepo.get_repo_info",
-                return_value=("owner/repo", "main", "nonexistent.py"),
-            ):
-                with patch("pathlib.Path.is_dir", return_value=False):
-                    with patch("pathlib.Path.exists", return_value=False):
-                        result = self.runner.invoke(
-                            cli, ["cloud", "deploy", "nonexistent.py"]
-                        )
+            with patch("pathlib.Path.is_dir", return_value=False):
+                with patch("pathlib.Path.exists", return_value=False):
+                    result = self.runner.invoke(
+                        cli, ["cloud", "deploy", "nonexistent.py"]
+                    )
 
-        assert result.exit_code == 0
-        assert "Warning: File does not exist" in result.output
-        # Should still open browser with the specified module
-        mock_open_browser.assert_called_once()
-        url = mock_open_browser.call_args[0][0]
-        assert "mainModule=nonexistent.py" in url
+        assert result.exit_code != 0
+        assert "File does not exist: nonexistent.py" in result.output
+        assert "streamlit cloud deploy <your_script.py>" in result.output
+        mock_open_browser.assert_not_called()
 
     def test_cloud_deploy_output_messages(self):
         """Test cloud deploy outputs the correct information."""
