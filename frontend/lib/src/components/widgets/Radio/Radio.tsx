@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useCallback } from "react"
+import { memo, ReactElement, useCallback, useEffect } from "react"
 
 import { Radio as RadioProto } from "@streamlit/protobuf"
 
@@ -53,6 +53,25 @@ function Radio({
     widgetMgr,
     fragmentId,
   })
+
+  // Query param binding registration
+  // Note: Radio uses int_value internally (index), URL will show index
+  const queryParamKey = element.queryParamKey
+  const widgetId = element.id
+  const defaultValue = element.default
+  useEffect(() => {
+    if (queryParamKey) {
+      widgetMgr.registerQueryParamBinding(
+        widgetId,
+        queryParamKey,
+        "int_value",
+        defaultValue
+      )
+      return () => {
+        widgetMgr.unregisterQueryParamBinding(widgetId)
+      }
+    }
+  }, [widgetMgr, widgetId, queryParamKey, defaultValue])
 
   const onChange = useCallback(
     (selectedIndex: number): void => {

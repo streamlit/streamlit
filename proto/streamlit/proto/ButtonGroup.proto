@@ -65,6 +65,8 @@ message ButtonGroup {
   string label = 11;
   LabelVisibilityMessage label_visibility = 12;
   optional string help = 13;
+  // If set, widget value is bound to this query parameter key
+  optional string query_param_key = 14;
 
-  // next id: 14
+  // next id: 15
 }

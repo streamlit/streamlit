@@ -45,6 +45,7 @@ from streamlit.proto.Radio_pb2 import Radio as RadioProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import (
+    BindOption,
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
@@ -105,6 +106,7 @@ class RadioMixin:
         captions: Sequence[str] | None = None,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
+        bind: BindOption = None,
     ) -> None: ...
 
     @overload
@@ -125,6 +127,7 @@ class RadioMixin:
         captions: Sequence[str] | None = None,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
+        bind: BindOption = None,
     ) -> T: ...
 
     @overload
@@ -145,6 +148,7 @@ class RadioMixin:
         captions: Sequence[str] | None = None,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
+        bind: BindOption = None,
     ) -> T | None: ...
 
     @gather_metrics("radio")
@@ -165,6 +169,7 @@ class RadioMixin:
         captions: Sequence[str] | None = None,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
+        bind: BindOption = None,
     ) -> T | None:
         r"""Display a radio button widget.
 
@@ -429,6 +434,10 @@ class RadioMixin:
         if help is not None:
             radio_proto.help = dedent(help)
 
+        # Set query param key if bound
+        if bind == "query-params" and key is not None:
+            radio_proto.query_param_key = str(key)
+
         serde = RadioSerde(opt, index)
 
         widget_state = register_widget(
@@ -440,6 +449,7 @@ class RadioMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="int_value",
+            bind=bind,
         )
         widget_state = maybe_coerce_enum(widget_state, options, opt)
 

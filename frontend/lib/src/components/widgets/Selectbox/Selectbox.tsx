@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { FC, memo, useCallback } from "react"
+import { FC, memo, useCallback, useEffect } from "react"
 
 import { Selectbox as SelectboxProto } from "@streamlit/protobuf"
 
@@ -100,6 +100,30 @@ const Selectbox: FC<Props> = ({
     widgetMgr,
     fragmentId,
   })
+
+  // Query param binding registration
+  const queryParamKey = element.queryParamKey
+  const widgetId = element.id
+  const defaultIdx = element.default
+  const firstOption = element.options[0] ?? null
+  useEffect(() => {
+    if (queryParamKey) {
+      // Default value is the option string at defaultIdx, or null
+      const defaultValue =
+        defaultIdx !== null && defaultIdx !== undefined
+          ? element.options[defaultIdx]
+          : null
+      widgetMgr.registerQueryParamBinding(
+        widgetId,
+        queryParamKey,
+        "string_value",
+        defaultValue
+      )
+      return () => {
+        widgetMgr.unregisterQueryParamBinding(widgetId)
+      }
+    }
+  }, [widgetMgr, widgetId, queryParamKey, defaultIdx, firstOption])
 
   const onChange = useCallback(
     (valueArg: SelectboxValue) => {

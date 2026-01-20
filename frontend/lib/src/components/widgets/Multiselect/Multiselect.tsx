@@ -19,6 +19,7 @@ import {
   memo,
   useCallback,
   useContext,
+  useEffect,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -115,6 +116,28 @@ const Multiselect: FC<Props> = props => {
     widgetMgr,
     fragmentId,
   })
+
+  // Query param binding registration
+  const queryParamKey = element.queryParamKey
+  const widgetId = element.id
+  const defaultIndices = element.default
+  const firstOption = element.options[0] ?? null
+  useEffect(() => {
+    if (queryParamKey) {
+      // Get default values as formatted option strings
+      const defaultOptions = defaultIndices.map(idx => element.options[idx])
+      widgetMgr.registerQueryParamBinding(
+        widgetId,
+        queryParamKey,
+        "string_array_value",
+        defaultOptions,
+        "repeated" // Multiselect uses repeated params: ?tags=a&tags=b
+      )
+      return () => {
+        widgetMgr.unregisterQueryParamBinding(widgetId)
+      }
+    }
+  }, [widgetMgr, widgetId, queryParamKey, defaultIndices, firstOption])
 
   const overMaxSelections =
     element.maxSelections > 0 && value.length >= element.maxSelections

@@ -58,7 +58,7 @@ from streamlit.errors import (
 from streamlit.proto.MultiSelect_pb2 import MultiSelect as MultiSelectProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
-from streamlit.runtime.state import register_widget
+from streamlit.runtime.state import BindOption, register_widget
 from streamlit.type_util import (
     is_iterable,
 )
@@ -186,6 +186,7 @@ class MultiSelectMixin:
         label_visibility: LabelVisibility = "visible",
         accept_new_options: Literal[False] = False,
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> list[T]: ...
 
     @overload
@@ -207,6 +208,7 @@ class MultiSelectMixin:
         label_visibility: LabelVisibility = "visible",
         accept_new_options: Literal[True] = True,
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> list[T | str]: ...
 
     @overload
@@ -228,6 +230,7 @@ class MultiSelectMixin:
         label_visibility: LabelVisibility = "visible",
         accept_new_options: bool = False,
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> list[T] | list[T | str]: ...
 
     @gather_metrics("multiselect")
@@ -249,6 +252,7 @@ class MultiSelectMixin:
         label_visibility: LabelVisibility = "visible",
         accept_new_options: bool = False,
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> list[T] | list[T | str]:
         r"""Display a multiselect widget.
         The multiselect widget starts as empty.
@@ -525,6 +529,10 @@ class MultiSelectMixin:
             proto.help = dedent(help)
         proto.accept_new_options = accept_new_options
 
+        # Set query param key if bound
+        if bind == "query-params" and key is not None:
+            proto.query_param_key = str(key)
+
         serde = MultiSelectSerde(
             indexable_options,
             formatted_options=formatted_options,
@@ -541,6 +549,7 @@ class MultiSelectMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="string_array_value",
+            bind=bind,
         )
 
         _check_max_selections(widget_state.value, max_selections)

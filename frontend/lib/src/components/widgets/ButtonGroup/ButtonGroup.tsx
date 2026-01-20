@@ -20,6 +20,7 @@ import {
   ReactElement,
   Ref,
   useCallback,
+  useEffect,
   useMemo,
 } from "react"
 
@@ -328,6 +329,25 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
     widgetMgr,
     fragmentId,
   })
+
+  // Query param binding registration
+  const queryParamKey = element.queryParamKey
+  const widgetId = element.id
+  const defaultValue = element.default
+  useEffect(() => {
+    if (queryParamKey) {
+      widgetMgr.registerQueryParamBinding(
+        widgetId,
+        queryParamKey,
+        "int_array_value",
+        defaultValue,
+        "comma" // ButtonGroup uses comma-separated indices
+      )
+      return () => {
+        widgetMgr.unregisterQueryParamBinding(widgetId)
+      }
+    }
+  }, [widgetMgr, widgetId, queryParamKey, defaultValue])
 
   const containerWidth = shouldWidthStretch(widthConfig)
 

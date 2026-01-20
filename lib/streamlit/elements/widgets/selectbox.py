@@ -56,6 +56,7 @@ from streamlit.proto.Selectbox_pb2 import Selectbox as SelectboxProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import (
+    BindOption,
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
@@ -165,6 +166,7 @@ class SelectboxMixin:
         label_visibility: LabelVisibility = "visible",
         accept_new_options: Literal[False] = False,
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> None: ...  # Returns None if options is empty and accept_new_options is False
 
     @overload
@@ -185,6 +187,7 @@ class SelectboxMixin:
         label_visibility: LabelVisibility = "visible",
         accept_new_options: Literal[False] = False,
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> T: ...
 
     @overload
@@ -205,6 +208,7 @@ class SelectboxMixin:
         label_visibility: LabelVisibility = "visible",
         accept_new_options: Literal[True] = True,
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> T | str: ...
 
     @overload
@@ -225,6 +229,7 @@ class SelectboxMixin:
         label_visibility: LabelVisibility = "visible",
         accept_new_options: Literal[False] = False,
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> T | None: ...
 
     @overload
@@ -245,6 +250,7 @@ class SelectboxMixin:
         label_visibility: LabelVisibility = "visible",
         accept_new_options: Literal[True] = True,
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> T | str | None: ...
 
     @overload
@@ -265,6 +271,7 @@ class SelectboxMixin:
         label_visibility: LabelVisibility = "visible",
         accept_new_options: bool = False,
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> T | str | None: ...
 
     @gather_metrics("selectbox")
@@ -285,6 +292,7 @@ class SelectboxMixin:
         label_visibility: LabelVisibility = "visible",
         accept_new_options: bool = False,
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> T | str | None:
         r"""Display a select widget.
 
@@ -578,6 +586,10 @@ class SelectboxMixin:
         if help is not None:
             selectbox_proto.help = dedent(help)
 
+        # Set query param key if bound
+        if bind == "query-params" and key is not None:
+            selectbox_proto.query_param_key = str(key)
+
         serde = SelectboxSerde(
             opt,
             formatted_options=formatted_options,
@@ -593,6 +605,7 @@ class SelectboxMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="string_value",
+            bind=bind,
         )
         widget_state = maybe_coerce_enum(widget_state, options, opt)
 
