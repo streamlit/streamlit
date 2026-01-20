@@ -135,6 +135,8 @@ class BaseSnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
             ),
             wait=wait_fixed(1),
         )
+        # `params` must be an explicit parameter (not captured from closure) so that
+        # `@st.cache_data` includes it in the cache key.
         def _query(sql: str, params: Any = None) -> DataFrame:
             cur = self._instance.cursor()
             cur.execute(sql, params=params, **kwargs)

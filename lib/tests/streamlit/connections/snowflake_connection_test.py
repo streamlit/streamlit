@@ -122,6 +122,13 @@ class SnowflakeConnectionTest(unittest.TestCase):
         # Should have been called twice (once for each unique params value)
         assert conn._instance.cursor.call_count == 2
         assert mock_cursor.execute.call_count == 2
+        # Verify execute was called with the correct params
+        mock_cursor.execute.assert_any_call(
+            "SELECT * FROM t WHERE status = ?", params=["active"]
+        )
+        mock_cursor.execute.assert_any_call(
+            "SELECT * FROM t WHERE status = ?", params=["inactive"]
+        )
 
     @patch(
         "streamlit.connections.snowflake_connection.SnowflakeConnection._connect",
