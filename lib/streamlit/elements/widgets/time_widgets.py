@@ -1128,6 +1128,7 @@ class TimeWidgetsMixin:
             disabled=disabled,
             label_visibility=label_visibility,
             width=width,
+            bind=bind,
             ctx=ctx,
         )
 
@@ -1148,6 +1149,7 @@ class TimeWidgetsMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
         ctx: ScriptRunContext | None = None,
     ) -> datetime | None:
         key = to_key(key)
@@ -1245,6 +1247,10 @@ class TimeWidgetsMixin:
         if help is not None:
             date_time_input_proto.help = dedent(help)
 
+        # Set query param key if bound
+        if bind == "query-params" and key is not None:
+            date_time_input_proto.query_param_key = str(key)
+
         serde = DateTimeInputSerde(
             value=default_value_for_proto,
             min=datetime_values.min,
@@ -1259,6 +1265,7 @@ class TimeWidgetsMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="string_array_value",
+            bind=bind,
         )
 
         # Validate the current value against the new min/max bounds.

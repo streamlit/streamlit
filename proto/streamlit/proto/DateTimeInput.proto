@@ -36,4 +36,6 @@ message DateTimeInput {
   string format = 12;
   int64 step = 13;
   bool is_range = 14;
+  // If set, widget value is bound to this query parameter key
+  optional string query_param_key = 15;
 }

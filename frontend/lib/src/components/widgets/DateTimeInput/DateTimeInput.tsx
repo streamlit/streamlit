@@ -19,6 +19,7 @@ import {
   ReactElement,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -85,6 +86,26 @@ function DateTimeInput({
     fragmentId,
   })
 
+  // Query param binding registration
+  const queryParamKey = element.queryParamKey
+  const widgetId = element.id
+  const defaultValue =
+    element.default && element.default.length > 0 ? element.default[0] : null
+  useEffect(() => {
+    if (queryParamKey) {
+      widgetMgr.registerQueryParamBinding(
+        widgetId,
+        queryParamKey,
+        "string_array_value",
+        defaultValue,
+        "comma"
+      )
+      return () => {
+        widgetMgr.unregisterQueryParamBinding(widgetId)
+      }
+    }
+  }, [widgetMgr, widgetId, queryParamKey, defaultValue])
+
   const { locale } = useContext(LibConfigContext)
   const loadedLocale = useIntlLocale(locale)
 
@@ -143,9 +164,9 @@ function DateTimeInput({
 
   const placeholder = `${element.format}, HH:MM`
 
-  const defaultValue =
+  const defaultValueStr =
     element.default && element.default.length > 0 ? element.default[0] : ""
-  const clearable = defaultValue.length === 0 && !disabled
+  const clearable = defaultValueStr.length === 0 && !disabled
 
   const error = useMemo(() => {
     if (!pendingDate) {
