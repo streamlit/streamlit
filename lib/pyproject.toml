@@ -172,6 +172,8 @@ streamlit = ["py.typed", "hello/**/*.py"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# Required for pytest-asyncio to use function-scoped event loops by default
+asyncio_default_fixture_loop_scope = "function"
 markers = [
   "slow: marks tests as slow",
   "require_integration: marks tests that require integration dependencies",
