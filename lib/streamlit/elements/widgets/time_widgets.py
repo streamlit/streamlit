@@ -539,6 +539,42 @@ def _validate_date_value(
     return cast("DateWidgetReturn", tuple(parsed_values.value)), True
 
 
+def _validate_datetime_value(
+    current_value: datetime | None,
+    parsed_values: _DateTimeInputValues,
+    has_explicit_bounds: bool,
+) -> tuple[datetime | None, bool]:
+    """Validate current datetime value against min/max bounds and determine if reset is needed.
+
+    Only validates when has_explicit_bounds is True (user provided min_value or max_value).
+    This avoids incorrectly determining if reset is needed against computed default bounds.
+
+    Parameters
+    ----------
+    current_value : datetime | None
+        The current value of the datetime input widget.
+    parsed_values : _DateTimeInputValues
+        Parsed configuration containing min, max, and default value.
+    has_explicit_bounds : bool
+        Whether the user explicitly provided min_value or max_value. If False, validation
+        is skipped to avoid resetting against computed default bounds.
+
+    Returns
+    -------
+    tuple[datetime | None, bool]
+        A tuple of (validated_value, was_reset) where validated_value is either the
+        original value (if valid) or the default value (if reset was needed), and
+        was_reset indicates whether a reset occurred.
+    """
+    if current_value is None or not has_explicit_bounds:
+        return current_value, False
+
+    if current_value < parsed_values.min or current_value > parsed_values.max:
+        return parsed_values.value, True
+
+    return current_value, False
+
+
 @dataclass
 class DateInputSerde:
     value: _DateInputValues
@@ -1132,9 +1168,10 @@ class TimeWidgetsMixin:
         element_id = compute_and_register_element_id(
             "date_time_input",
             user_key=key,
-            # Ensure stable IDs when the key is provided; whitelist parameters that
-            # affect the selectable range or formatting.
-            key_as_main_identity={"min_value", "max_value", "format", "step"},
+            # Format is whitelisted because of a bug in the BaseWeb date input component.
+            # Step is whitelisted because it invalidates the current selection.
+            # We might be able to unlock this as a follow-up.
+            key_as_main_identity={"format", "step"},
             dg=self.dg,
             label=label,
             value=value_for_id,
@@ -1145,7 +1182,9 @@ class TimeWidgetsMixin:
             step=step,
             width=width,
         )
-        del value
+        # Track if user explicitly set bounds (before del)
+        has_explicit_bounds = min_value is not None or max_value is not None
+        del value, min_value, max_value
 
         if not bool(ALLOWED_DATE_FORMATS.match(format)):
             raise StreamlitAPIException(
@@ -1208,8 +1247,20 @@ class TimeWidgetsMixin:
             value_type="string_array_value",
         )
 
-        if widget_state.value_changed:
-            date_time_input_proto.value[:] = serde.serialize(widget_state.value)
+        # Validate the current value against the new min/max bounds.
+        # Only validate when user explicitly provided min_value or max_value.
+        current_value, value_needs_reset = _validate_datetime_value(
+            widget_state.value, datetime_values, has_explicit_bounds
+        )
+
+        if value_needs_reset and key is not None:
+            # Update session_state so subsequent accesses in this run
+            # return the corrected value. Use reset_state_value to avoid
+            # the "cannot be modified after widget instantiated" error.
+            get_session_state().reset_state_value(key, current_value)
+
+        if value_needs_reset or widget_state.value_changed:
+            date_time_input_proto.value[:] = serde.serialize(current_value)
             date_time_input_proto.set_value = True
 
         validate_width(width)
@@ -1218,7 +1269,7 @@ class TimeWidgetsMixin:
         self.dg._enqueue(
             "date_time_input", date_time_input_proto, layout_config=layout_config
         )
-        return widget_state.value
+        return current_value
 
     @overload
     def date_input(

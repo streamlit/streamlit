@@ -153,7 +153,7 @@ jobs:
           [List of up to 3 related issues with links and brief explanations. If no related issues found, state that.]
 
           ---
-          *This is an automated triage comment. Please verify the suggested labels and related issues.*
+          *This is an automated triage comment using \`${{ env.MODEL }}\`. Please verify the suggested labels and related issues.*
           <output-end>
 
           # Important Notes:

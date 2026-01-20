@@ -158,7 +158,7 @@ jobs:
           **[APPROVED / CHANGES REQUESTED]**: [One sentence summary of the overall assessment.]
 
           ---
-          *This is an automated AI review. Please verify the feedback and use your judgment.*
+          *This is an automated AI review using \`${{ env.MODEL }}\`. Please verify the feedback and use your judgment.*
           <output-end>
 
           Do NOT run linting, tests, or build commands, this will be done by the CI system (the dev environment is not setup). Focus only on code review.

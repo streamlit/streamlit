@@ -436,3 +436,193 @@ def test_session_state_takes_precedence():
     at = AppTest.from_function(script).run()
     widget = at.datetime_input[0]
     assert widget.value == datetime(2024, 12, 25, 10, 0)
+
+
+def test_dynamic_min_value_resets_value_when_below_new_min():
+    """Test that value resets to default when dynamically changing min_value makes current value invalid."""
+
+    def script():
+        from datetime import datetime
+
+        import streamlit as st
+
+        if "update_bounds" not in st.session_state:
+            st.session_state["update_bounds"] = False
+
+        if st.session_state["update_bounds"]:
+            # New min_value makes the previous value invalid
+            value = st.datetime_input(
+                "datetime",
+                min_value=datetime(2024, 6, 1, 0, 0),
+                max_value=datetime(2024, 12, 31, 23, 59),
+                key="datetime",
+                value=datetime(2024, 7, 15, 12, 0),
+            )
+        else:
+            value = st.datetime_input(
+                "datetime",
+                min_value=datetime(2024, 1, 1, 0, 0),
+                max_value=datetime(2024, 12, 31, 23, 59),
+                key="datetime",
+                value=datetime(2024, 5, 15, 12, 0),
+            )
+        st.write(f"value: {value}")
+
+        if st.button("Toggle bounds"):
+            st.session_state["update_bounds"] = not st.session_state["update_bounds"]
+
+    at = AppTest.from_function(script).run()
+    assert at.datetime_input[0].value == datetime(2024, 5, 15, 12, 0)
+
+    # Set value to March 1 (valid with min_value=Jan 1)
+    at = at.datetime_input[0].set_value(datetime(2024, 3, 1, 10, 0)).run()
+    assert at.datetime_input[0].value == datetime(2024, 3, 1, 10, 0)
+
+    # Toggle bounds - the click updates session_state["update_bounds"] to True
+    at = at.button[0].click().run()
+    # AppTest requires an additional run to process the widget with the new bounds
+    at = at.run()
+    # Now min_value=June 1, so March 1 is invalid and should reset to default (July 15)
+    assert at.datetime_input[0].value == datetime(2024, 7, 15, 12, 0)
+
+
+def test_dynamic_max_value_resets_value_when_above_new_max():
+    """Test that value resets to default when dynamically changing max_value makes current value invalid."""
+
+    def script():
+        from datetime import datetime
+
+        import streamlit as st
+
+        if "update_bounds" not in st.session_state:
+            st.session_state["update_bounds"] = False
+
+        if st.session_state["update_bounds"]:
+            # New max_value makes the previous value invalid
+            value = st.datetime_input(
+                "datetime",
+                min_value=datetime(2024, 1, 1, 0, 0),
+                max_value=datetime(2024, 6, 30, 23, 59),
+                key="datetime",
+                value=datetime(2024, 3, 15, 12, 0),
+            )
+        else:
+            value = st.datetime_input(
+                "datetime",
+                min_value=datetime(2024, 1, 1, 0, 0),
+                max_value=datetime(2024, 12, 31, 23, 59),
+                key="datetime",
+                value=datetime(2024, 5, 15, 12, 0),
+            )
+        st.write(f"value: {value}")
+
+        if st.button("Toggle bounds"):
+            st.session_state["update_bounds"] = not st.session_state["update_bounds"]
+
+    at = AppTest.from_function(script).run()
+    assert at.datetime_input[0].value == datetime(2024, 5, 15, 12, 0)
+
+    # Set value to October 1 (valid with max_value=Dec 31)
+    at = at.datetime_input[0].set_value(datetime(2024, 10, 1, 14, 0)).run()
+    assert at.datetime_input[0].value == datetime(2024, 10, 1, 14, 0)
+
+    # Toggle bounds - the click updates session_state["update_bounds"] to True
+    at = at.button[0].click().run()
+    # AppTest requires an additional run to process the widget with the new bounds
+    at = at.run()
+    # Now max_value=June 30, so October 1 is invalid and should reset to default (March 15)
+    assert at.datetime_input[0].value == datetime(2024, 3, 15, 12, 0)
+
+
+def test_dynamic_bounds_preserves_valid_value():
+    """Test that value is preserved when it remains valid after bound changes."""
+
+    def script():
+        from datetime import datetime
+
+        import streamlit as st
+
+        if "update_bounds" not in st.session_state:
+            st.session_state["update_bounds"] = False
+
+        if st.session_state["update_bounds"]:
+            # Changing bounds but May 15 is still valid (between Apr 1 and Sep 30)
+            value = st.datetime_input(
+                "datetime",
+                min_value=datetime(2024, 4, 1, 0, 0),
+                max_value=datetime(2024, 9, 30, 23, 59),
+                key="datetime",
+                value=datetime(2024, 5, 15, 12, 0),
+            )
+        else:
+            value = st.datetime_input(
+                "datetime",
+                min_value=datetime(2024, 1, 1, 0, 0),
+                max_value=datetime(2024, 12, 31, 23, 59),
+                key="datetime",
+                value=datetime(2024, 5, 15, 12, 0),
+            )
+        st.write(f"value: {value}")
+
+        if st.button("Toggle bounds"):
+            st.session_state["update_bounds"] = not st.session_state["update_bounds"]
+
+    at = AppTest.from_function(script).run()
+    assert at.datetime_input[0].value == datetime(2024, 5, 15, 12, 0)
+
+    # Toggle bounds - the click updates session_state["update_bounds"] to True
+    at = at.button[0].click().run()
+    # AppTest requires an additional run to process the widget with the new bounds
+    at = at.run()
+    # Value should be preserved because it's still within the new bounds
+    assert at.datetime_input[0].value == datetime(2024, 5, 15, 12, 0)
+
+
+def test_dynamic_bounds_preserves_user_set_valid_value():
+    """Test that a user-set value (different from default) is preserved when still valid after bound changes."""
+
+    def script():
+        from datetime import datetime
+
+        import streamlit as st
+
+        if "update_bounds" not in st.session_state:
+            st.session_state["update_bounds"] = False
+
+        if st.session_state["update_bounds"]:
+            # New bounds: Apr 1 to Sep 30 - July 1 is still valid
+            value = st.datetime_input(
+                "datetime",
+                min_value=datetime(2024, 4, 1, 0, 0),
+                max_value=datetime(2024, 9, 30, 23, 59),
+                key="datetime",
+                value=datetime(2024, 5, 15, 12, 0),
+            )
+        else:
+            value = st.datetime_input(
+                "datetime",
+                min_value=datetime(2024, 1, 1, 0, 0),
+                max_value=datetime(2024, 12, 31, 23, 59),
+                key="datetime",
+                value=datetime(2024, 5, 15, 12, 0),
+            )
+        st.write(f"value: {value}")
+
+        if st.button("Toggle bounds"):
+            st.session_state["update_bounds"] = not st.session_state["update_bounds"]
+
+    at = AppTest.from_function(script).run()
+    assert at.datetime_input[0].value == datetime(2024, 5, 15, 12, 0)
+
+    # Set value to July 1 (different from default May 15, valid in both bound ranges)
+    at = at.datetime_input[0].set_value(datetime(2024, 7, 1, 10, 0)).run()
+    assert at.datetime_input[0].value == datetime(2024, 7, 1, 10, 0)
+
+    # Toggle bounds - the click updates session_state["update_bounds"] to True
+    at = at.button[0].click().run()
+    # AppTest requires an additional run to process the widget with the new bounds
+    at = at.run()
+    # User-set value (July 1) should be preserved, not reset to default (May 15)
+    assert at.datetime_input[0].value == datetime(2024, 7, 1, 10, 0)
+    # Ensure it's not reset to the default value
+    assert at.datetime_input[0].value != datetime(2024, 5, 15, 12, 0)
