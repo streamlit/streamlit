@@ -815,14 +815,17 @@ class CloudDeployTest(unittest.TestCase):
         assert "mainModule=streamlit_app.py" in url
 
     def test_cloud_deploy_without_git_repo(self):
-        """Test cloud deploy opens generic cloud URL when not in a repo."""
+        """Test cloud deploy shows error when not in a GitHub repo."""
         with patch("streamlit.cli_util.open_browser") as mock_open_browser:
             with patch("streamlit.git_util.GitRepo.get_repo_info", return_value=None):
                 result = self.runner.invoke(cli, ["cloud", "deploy"])
 
-        assert result.exit_code == 0
-        mock_open_browser.assert_called_once_with("https://streamlit.io/cloud")
-        assert "No GitHub repository detected" in result.output
+        assert result.exit_code != 0
+        mock_open_browser.assert_not_called()
+        assert (
+            "Deploying to Community Cloud requires the code to be pushed to GitHub"
+            in result.output
+        )
 
     def test_cloud_deploy_directory_without_streamlit_app(self):
         """Test cloud deploy omits mainModule when no streamlit_app.py exists in directory."""

@@ -368,7 +368,6 @@ def config_show(**kwargs: Any) -> None:
 # SUBCOMMAND cloud
 
 DEPLOY_URL: Final = "https://share.streamlit.io/deploy"
-STREAMLIT_CLOUD_URL: Final = "https://streamlit.io/cloud"
 
 
 @main.group("cloud")
@@ -441,15 +440,12 @@ def cloud_deploy(target: str = "streamlit_app.py") -> None:
             click.echo(f"  Main script: {module}")
         else:
             click.echo("  Main script: (not specified - please select on Cloud page)")
-    else:
-        deploy_url = STREAMLIT_CLOUD_URL
-        click.echo("Opening Streamlit Community Cloud...")
-        click.echo(
-            "  (No GitHub repository detected. "
-            "Make sure your code is pushed to GitHub to deploy.)"
-        )
 
-    cli_util.open_browser(deploy_url)
+        cli_util.open_browser(deploy_url)
+    else:
+        raise click.ClickException(
+            "Deploying to Community Cloud requires the code to be pushed to GitHub."
+        )
 
 
 # SUBCOMMAND activate
