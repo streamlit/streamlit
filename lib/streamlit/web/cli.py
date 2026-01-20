@@ -367,7 +367,7 @@ def config_show(**kwargs: Any) -> None:
 
 # SUBCOMMAND cloud
 
-DEPLOY_URL: Final = "https://share.streamlit.io/deploy"
+_DEPLOY_URL: Final = "https://share.streamlit.io/deploy"
 
 
 @main.group("cloud")
@@ -377,7 +377,7 @@ def cloud() -> None:
 
 @cloud.command("deploy")
 @click.argument("target", default="streamlit_app.py", envvar="STREAMLIT_RUN_TARGET")
-def cloud_deploy(target: str = "streamlit_app.py") -> None:
+def cloud_deploy(target: str) -> None:
     """Open the browser to deploy to Streamlit Community Cloud.
 
     If the current directory (or TARGET) is inside a GitHub repository,
@@ -434,7 +434,7 @@ def cloud_deploy(target: str = "streamlit_app.py") -> None:
         if has_specific_script:
             params["mainModule"] = module
 
-        deploy_url = f"{DEPLOY_URL}?{urlencode(params)}"
+        deploy_url = f"{_DEPLOY_URL}?{urlencode(params)}"
 
         click.echo("Opening Streamlit Community Cloud deploy page...")
         click.echo(f"  Repository: {repository}")
