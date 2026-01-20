@@ -900,7 +900,7 @@ class CloudDeployTest(unittest.TestCase):
         assert "Opening Streamlit Community Cloud deploy page" in result.output
         assert "Repository: myorg/myrepo" in result.output
         assert "Branch: feature-branch" in result.output
-        assert "Main module: src/app.py" in result.output
+        assert "Main script: src/app.py" in result.output
 
     def test_cloud_deploy_removes_git_suffix(self):
         """Test cloud deploy removes .git suffix from repository name."""

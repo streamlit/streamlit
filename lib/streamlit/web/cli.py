@@ -377,18 +377,17 @@ def cloud() -> None:
 
 
 @cloud.command("deploy")
-@click.argument("target", default=".", required=False)
-def cloud_deploy(target: str = ".") -> None:
+@click.argument("target", default="streamlit_app.py", envvar="STREAMLIT_RUN_TARGET")
+def cloud_deploy(target: str = "streamlit_app.py") -> None:
     """Open the browser to deploy to Streamlit Community Cloud.
 
     If the current directory (or TARGET) is inside a GitHub repository,
     the deploy page will be pre-filled with the repository, branch, and
-    main module information.
+    main script information.
 
     TARGET can be:
-    - A path to a Python file (e.g., streamlit_app.py)
+    - A path to a Python file (default: streamlit_app.py)
     - A path to a directory containing streamlit_app.py
-    - Omitted to use the current directory
     """
     from urllib.parse import urlencode
 
@@ -397,12 +396,12 @@ def cloud_deploy(target: str = ".") -> None:
 
     path = Path(target)
 
-    # Determine the script path and whether we have a specific module to prefill
-    has_specific_module = False
+    # Determine the script path and whether we have a specific script to prefill
+    has_specific_script = False
     if path.is_dir():
         script_path = path / "streamlit_app.py"
         if script_path.exists():
-            has_specific_module = True
+            has_specific_script = True
         else:
             # No streamlit_app.py found, use directory for git info
             # but don't prefill mainModule so user can specify it on Cloud page
@@ -411,7 +410,7 @@ def cloud_deploy(target: str = ".") -> None:
         # User specified a file path
         if not path.exists():
             click.echo(f"Warning: File does not exist: {path}")
-        has_specific_module = True
+        has_specific_script = True
         script_path = path
 
     script_path = script_path.resolve()
@@ -430,7 +429,7 @@ def cloud_deploy(target: str = ".") -> None:
             "branch": branch,
         }
         # Only include mainModule if we have a specific script file
-        if has_specific_module:
+        if has_specific_script:
             params["mainModule"] = module
 
         deploy_url = f"{DEPLOY_URL}?{urlencode(params)}"
@@ -438,10 +437,10 @@ def cloud_deploy(target: str = ".") -> None:
         click.echo("Opening Streamlit Community Cloud deploy page...")
         click.echo(f"  Repository: {repository}")
         click.echo(f"  Branch: {branch}")
-        if has_specific_module:
-            click.echo(f"  Main module: {module}")
+        if has_specific_script:
+            click.echo(f"  Main script: {module}")
         else:
-            click.echo("  Main module: (not specified - please select on Cloud page)")
+            click.echo("  Main script: (not specified - please select on Cloud page)")
     else:
         deploy_url = STREAMLIT_CLOUD_URL
         click.echo("Opening Streamlit Community Cloud...")
