@@ -104,17 +104,34 @@ class _MultiSelectSerde(Generic[T]):
     """
 
     options: Sequence[T]
+    formatted_options: list[str] = field(default_factory=list)
     default_value: list[int] = field(default_factory=list)
 
     def serialize(self, value: list[T]) -> list[int]:
         indices = check_and_convert_to_indices(self.options, value)
         return indices if indices is not None else []
 
-    def deserialize(self, ui_value: list[int] | None) -> list[T]:
-        current_value: list[int] = (
-            ui_value if ui_value is not None else self.default_value
-        )
-        return [self.options[i] for i in current_value]
+    def deserialize(self, ui_value: list[int | str] | None) -> list[T]:
+        if ui_value is None:
+            current_value = self.default_value
+        else:
+            # Convert any string values to indices
+            current_value: list[int] = []
+            for v in ui_value:
+                if isinstance(v, int):
+                    current_value.append(v)
+                elif isinstance(v, str):
+                    # Try to find the string in formatted options
+                    try:
+                        idx = self.formatted_options.index(v)
+                        current_value.append(idx)
+                    except ValueError:
+                        # Try to parse as int (backwards compatibility)
+                        try:
+                            current_value.append(int(v))
+                        except ValueError:
+                            pass  # Skip invalid values
+        return [self.options[i] for i in current_value if i < len(self.options)]
 
 
 class _SingleSelectSerde(Generic[T]):
@@ -133,18 +150,21 @@ class _SingleSelectSerde(Generic[T]):
     def __init__(
         self,
         option_indices: Sequence[T],
+        formatted_options: list[str] | None = None,
         default_value: list[int] | None = None,
     ) -> None:
         # see docstring about why we use MultiSelectSerde here
         self.multiselect_serde: _MultiSelectSerde[T] = _MultiSelectSerde(
-            option_indices, default_value if default_value is not None else []
+            option_indices,
+            formatted_options if formatted_options is not None else [],
+            default_value if default_value is not None else [],
         )
 
     def serialize(self, value: T | None) -> list[int]:
         _value = [value] if value is not None else []
         return self.multiselect_serde.serialize(_value)
 
-    def deserialize(self, ui_value: list[int] | None) -> T | None:
+    def deserialize(self, ui_value: list[int | str] | None) -> T | None:
         deserialized = self.multiselect_serde.deserialize(ui_value)
 
         if len(deserialized) == 0:
@@ -168,20 +188,22 @@ class ButtonGroupSerde(Generic[T]):
         options: Sequence[T],
         default_values: list[int],
         type: Literal["single", "multi"],
+        formatted_options: list[str] | None = None,
     ) -> None:
         self.options = options
         self.default_values = default_values
         self.type = type
+        self.formatted_options = formatted_options if formatted_options is not None else []
         self.serde: _SingleSelectSerde[T] | _MultiSelectSerde[T] = (
-            _SingleSelectSerde(options, default_value=default_values)
+            _SingleSelectSerde(options, self.formatted_options, default_value=default_values)
             if type == "single"
-            else _MultiSelectSerde(options, default_values)
+            else _MultiSelectSerde(options, self.formatted_options, default_values)
         )
 
     def serialize(self, value: T | list[T] | None) -> list[int]:
         return self.serde.serialize(cast("Any", value))
 
-    def deserialize(self, ui_value: list[int] | None) -> list[T] | T | None:
+    def deserialize(self, ui_value: list[int | str] | None) -> list[T] | T | None:
         return self.serde.deserialize(ui_value)
 
 
@@ -996,8 +1018,14 @@ class ButtonGroupMixin:
         indexable_options = convert_to_sequence_and_check_comparable(options)
         default_values = get_default_indices(indexable_options, default)
 
+        # Compute formatted option strings for URL binding support
+        formatted_options = [
+            (format_func(opt) if format_func else str(opt))
+            for opt in indexable_options
+        ]
+
         serde: ButtonGroupSerde[V] = ButtonGroupSerde[V](
-            indexable_options, default_values, selection_mode
+            indexable_options, default_values, selection_mode, formatted_options
         )
 
         res = self._button_group(

@@ -67,6 +67,7 @@ T = TypeVar("T")
 @dataclass
 class RadioSerde(Generic[T]):
     options: Sequence[T]
+    formatted_options: list[str]
     index: int | None
 
     def serialize(self, v: object) -> int | None:
@@ -75,13 +76,29 @@ class RadioSerde(Generic[T]):
 
         return 0 if len(self.options) == 0 else index_(self.options, v)
 
-    def deserialize(self, ui_value: int | None) -> T | None:
-        idx = ui_value if ui_value is not None else self.index
+    def deserialize(self, ui_value: int | str | None) -> T | None:
+        idx: int | None = None
+
+        if ui_value is None:
+            idx = self.index
+        elif isinstance(ui_value, int):
+            idx = ui_value
+        elif isinstance(ui_value, str):
+            # URL value is a formatted option string - find its index
+            try:
+                idx = self.formatted_options.index(ui_value)
+            except ValueError:
+                # Not found - try to parse as int (backwards compatibility)
+                try:
+                    idx = int(ui_value)
+                except ValueError:
+                    idx = self.index  # Fallback to default
 
         return (
             self.options[idx]
             if idx is not None
             and len(self.options) > 0
+            and idx < len(self.options)
             and self.options[idx] is not None
             else None
         )
@@ -422,7 +439,8 @@ class RadioMixin:
         radio_proto.label = label
         if index is not None:
             radio_proto.default = index
-        radio_proto.options[:] = [str(format_func(option)) for option in opt]
+        formatted_options = [str(format_func(option)) for option in opt]
+        radio_proto.options[:] = formatted_options
         radio_proto.form_id = current_form_id(self.dg)
         radio_proto.horizontal = horizontal
         radio_proto.disabled = disabled
@@ -440,7 +458,7 @@ class RadioMixin:
         if bind == "query-params" and key is not None:
             radio_proto.query_param_key = str(key)
 
-        serde = RadioSerde(opt, index)
+        serde = RadioSerde(opt, formatted_options, index)
 
         widget_state = register_widget(
             radio_proto.id,

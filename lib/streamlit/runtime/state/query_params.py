@@ -85,7 +85,12 @@ def parse_url_param(value: str | list[str], value_type: str) -> Any:
                 return False
             raise ValueError(f"Invalid boolean value: {val}")
         case "int_value":
-            return int(val)
+            # Try to parse as int, but return string if it fails
+            # This allows deserializers to handle human-readable option values
+            try:
+                return int(val)
+            except ValueError:
+                return val  # Return as string for deserializer to handle
         case "double_value":
             return float(val)
         case "string_value":
@@ -97,8 +102,16 @@ def parse_url_param(value: str | list[str], value_type: str) -> Any:
             # Comma-separated floats (e.g., slider ranges)
             return [float(x) for x in val.split(",")]
         case "int_array_value":
-            # Comma-separated ints
-            return [int(x) for x in val.split(",")]
+            # Comma-separated values - try to parse as ints, keep strings if that fails
+            # This allows deserializers to handle human-readable option values
+            parts = val.split(",")
+            result: list[int | str] = []
+            for part in parts:
+                try:
+                    result.append(int(part))
+                except ValueError:
+                    result.append(part)  # Keep as string
+            return result
         case _:
             # Unknown type, return as-is
             return val
