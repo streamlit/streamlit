@@ -397,13 +397,21 @@ def cloud_deploy(target: str = ".") -> None:
 
     path = Path(target)
 
-    # Determine the script path
+    # Determine the script path and whether we have a specific module to prefill
+    has_specific_module = False
     if path.is_dir():
         script_path = path / "streamlit_app.py"
-        if not script_path.exists():
-            # If no streamlit_app.py, just use the directory for git info
+        if script_path.exists():
+            has_specific_module = True
+        else:
+            # No streamlit_app.py found, use directory for git info
+            # but don't prefill mainModule so user can specify it on Cloud page
             script_path = path
     else:
+        # User specified a file path
+        if not path.exists():
+            click.echo(f"Warning: File does not exist: {path}")
+        has_specific_module = True
         script_path = path
 
     script_path = script_path.resolve()
@@ -417,17 +425,23 @@ def cloud_deploy(target: str = ".") -> None:
         # Remove .git suffix if present (matching DeployDialog behavior)
         repository = repository.removesuffix(".git")
 
-        params = {
+        params: dict[str, str] = {
             "repository": repository,
             "branch": branch,
-            "mainModule": module,
         }
+        # Only include mainModule if we have a specific script file
+        if has_specific_module:
+            params["mainModule"] = module
+
         deploy_url = f"{DEPLOY_URL}?{urlencode(params)}"
 
         click.echo("Opening Streamlit Community Cloud deploy page...")
         click.echo(f"  Repository: {repository}")
         click.echo(f"  Branch: {branch}")
-        click.echo(f"  Main module: {module}")
+        if has_specific_module:
+            click.echo(f"  Main module: {module}")
+        else:
+            click.echo("  Main module: (not specified - please select on Cloud page)")
     else:
         deploy_url = STREAMLIT_CLOUD_URL
         click.echo("Opening Streamlit Community Cloud...")
