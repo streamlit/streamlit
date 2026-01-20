@@ -43,6 +43,7 @@ from streamlit.proto.TextInput_pb2 import TextInput as TextInputProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import (
+    BindOption,
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
@@ -143,6 +144,7 @@ class TextWidgetsMixin:
         label_visibility: LabelVisibility = "visible",
         icon: str | None = None,
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> str | None:
         r"""Display a single-line text input widget.
 
@@ -387,6 +389,10 @@ class TextWidgetsMixin:
             autocomplete = "new-password" if type == "password" else ""
         text_input_proto.autocomplete = autocomplete
 
+        # Set query param key if bound
+        if bind == "query-params" and key is not None:
+            text_input_proto.query_param_key = str(key)
+
         serde = TextInputSerde(value)
 
         widget_state = register_widget(
@@ -398,6 +404,7 @@ class TextWidgetsMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="string_value",
+            bind=bind,
         )
 
         if widget_state.value_changed:
@@ -468,6 +475,7 @@ class TextWidgetsMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> str | None:
         r"""Display a multi-line text input widget.
 
@@ -684,6 +692,10 @@ class TextWidgetsMixin:
         if placeholder is not None:
             text_area_proto.placeholder = str(placeholder)
 
+        # Set query param key if bound
+        if bind == "query-params" and key is not None:
+            text_area_proto.query_param_key = str(key)
+
         serde = TextAreaSerde(value)
         widget_state = register_widget(
             text_area_proto.id,
@@ -694,6 +706,7 @@ class TextWidgetsMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="string_value",
+            bind=bind,
         )
 
         if widget_state.value_changed:

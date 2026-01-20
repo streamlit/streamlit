@@ -221,6 +221,24 @@ const NumberInput: React.FC<Props> = ({
     }
   }, [])
 
+  // Query param binding registration
+  const queryParamKey = element.queryParamKey
+  const widgetId = element.id
+  const defaultValueForBinding = elementDefault
+  useEffect(() => {
+    if (queryParamKey) {
+      widgetMgr.registerQueryParamBinding(
+        widgetId,
+        queryParamKey,
+        "double_value",
+        defaultValueForBinding
+      )
+      return () => {
+        widgetMgr.unregisterQueryParamBinding(widgetId)
+      }
+    }
+  }, [widgetMgr, widgetId, queryParamKey, defaultValueForBinding])
+
   const clearable = isNullOrUndefined(element.default) && !disabled
 
   const handleChange = useCallback(

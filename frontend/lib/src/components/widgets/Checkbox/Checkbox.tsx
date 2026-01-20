@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useCallback } from "react"
+import { memo, ReactElement, useCallback, useEffect } from "react"
 
 import {
   LABEL_PLACEMENT,
@@ -63,6 +63,24 @@ function Checkbox({
     widgetMgr,
     fragmentId,
   })
+
+  // Query param binding registration
+  const queryParamKey = element.queryParamKey
+  const widgetId = element.id
+  const defaultValue = element.default
+  useEffect(() => {
+    if (queryParamKey) {
+      widgetMgr.registerQueryParamBinding(
+        widgetId,
+        queryParamKey,
+        "bool_value",
+        defaultValue
+      )
+      return () => {
+        widgetMgr.unregisterQueryParamBinding(widgetId)
+      }
+    }
+  }, [widgetMgr, widgetId, queryParamKey, defaultValue])
 
   const onChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>): void => {

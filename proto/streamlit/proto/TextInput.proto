@@ -44,4 +44,6 @@ message TextInput {
   bool disabled = 12;
   LabelVisibilityMessage label_visibility = 13;
   string icon = 14;
+  // If set, widget value is bound to this query parameter key
+  optional string query_param_key = 15;
 }

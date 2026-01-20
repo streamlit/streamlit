@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useCallback, useState } from "react"
+import { memo, ReactElement, useCallback, useEffect, useState } from "react"
 
 import { Input as UIInput } from "baseui/input"
 import { uniqueId } from "lodash-es"
@@ -91,6 +91,24 @@ function TextInput({
   })
 
   useUpdateUiValue(value, uiValue, setUiValue, dirty)
+
+  // Query param binding registration
+  const queryParamKey = element.queryParamKey
+  const widgetId = element.id
+  const defaultValue = element.default ?? null
+  useEffect(() => {
+    if (queryParamKey) {
+      widgetMgr.registerQueryParamBinding(
+        widgetId,
+        queryParamKey,
+        "string_value",
+        defaultValue
+      )
+      return () => {
+        widgetMgr.unregisterQueryParamBinding(widgetId)
+      }
+    }
+  }, [widgetMgr, widgetId, queryParamKey, defaultValue])
 
   /**
    * Whether the input is currently focused.

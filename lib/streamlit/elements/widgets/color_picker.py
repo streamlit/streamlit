@@ -41,6 +41,7 @@ from streamlit.proto.ColorPicker_pb2 import ColorPicker as ColorPickerProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import (
+    BindOption,
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
@@ -77,6 +78,7 @@ class ColorPickerMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
+        bind: BindOption = None,
     ) -> str:
         r"""Display a color picker widget.
 
@@ -267,6 +269,10 @@ like '#00FFAA' or '#000'.
         if help is not None:
             color_picker_proto.help = dedent(help)
 
+        # Set query param key if bound
+        if bind == "query-params" and key is not None:
+            color_picker_proto.query_param_key = str(key)
+
         serde = ColorPickerSerde(value)
 
         widget_state = register_widget(
@@ -278,6 +284,7 @@ like '#00FFAA' or '#000'.
             serializer=serde.serialize,
             ctx=ctx,
             value_type="string_value",
+            bind=bind,
         )
 
         if widget_state.value_changed:

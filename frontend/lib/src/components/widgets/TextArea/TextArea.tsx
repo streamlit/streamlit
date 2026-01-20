@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { FC, memo, useCallback, useRef, useState } from "react"
+import { FC, memo, useCallback, useEffect, useRef, useState } from "react"
 
 import { Textarea as UITextArea } from "baseui/textarea"
 import { uniqueId } from "lodash-es"
@@ -145,6 +145,24 @@ const TextArea: FC<Props> = ({
   })
 
   useUpdateUiValue(value, uiValue, setUiValue, dirty)
+
+  // Query param binding registration
+  const queryParamKey = element.queryParamKey
+  const widgetId = element.id
+  const defaultValue = element.default ?? null
+  useEffect(() => {
+    if (queryParamKey) {
+      widgetMgr.registerQueryParamBinding(
+        widgetId,
+        queryParamKey,
+        "string_value",
+        defaultValue
+      )
+      return () => {
+        widgetMgr.unregisterQueryParamBinding(widgetId)
+      }
+    }
+  }, [widgetMgr, widgetId, queryParamKey, defaultValue])
 
   const theme = useEmotionTheme()
 
