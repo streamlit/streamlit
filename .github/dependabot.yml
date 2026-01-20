@@ -53,6 +53,9 @@ updates:
       - dependency-name: "react-window"
         # This requires us to update baseui, since that has a dependency on react-window v1.
         versions: [">=2.0.0"]
+      - dependency-name: "@types/node"
+        # Our types should match the version of node we're using as defined in `.nvmrc`
+        versions: [">=25.0.0"]
 
     groups:
       deck-gl:
