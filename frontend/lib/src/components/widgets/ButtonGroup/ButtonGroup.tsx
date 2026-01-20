@@ -334,6 +334,11 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
   const queryParamKey = element.queryParamKey
   const widgetId = element.id
   const defaultValue = element.default
+  // Extract option content strings for human-readable URLs
+  const optionStrings = useMemo(
+    () => options.map(opt => opt.content),
+    [options]
+  )
   useEffect(() => {
     if (queryParamKey) {
       widgetMgr.registerQueryParamBinding(
@@ -341,13 +346,14 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
         queryParamKey,
         "int_array_value",
         defaultValue,
-        "comma" // ButtonGroup uses comma-separated indices
+        "comma",
+        optionStrings // Pass options for index-to-string conversion
       )
       return () => {
         widgetMgr.unregisterQueryParamBinding(widgetId)
       }
     }
-  }, [widgetMgr, widgetId, queryParamKey, defaultValue])
+  }, [widgetMgr, widgetId, queryParamKey, defaultValue, optionStrings])
 
   const containerWidth = shouldWidthStretch(widthConfig)
 

@@ -54,8 +54,10 @@ function Radio({
     fragmentId,
   })
 
+  const { horizontal, options, captions, label, labelVisibility, help } =
+    element
+
   // Query param binding registration
-  // Note: Radio uses int_value internally (index), URL will show index
   const queryParamKey = element.queryParamKey
   const widgetId = element.id
   const defaultValue = element.default
@@ -65,13 +67,15 @@ function Radio({
         widgetId,
         queryParamKey,
         "int_value",
-        defaultValue
+        defaultValue,
+        undefined, // no urlFormat for single values
+        options // Pass options for index-to-string conversion
       )
       return () => {
         widgetMgr.unregisterQueryParamBinding(widgetId)
       }
     }
-  }, [widgetMgr, widgetId, queryParamKey, defaultValue])
+  }, [widgetMgr, widgetId, queryParamKey, defaultValue, options])
 
   const onChange = useCallback(
     (selectedIndex: number): void => {
@@ -79,9 +83,6 @@ function Radio({
     },
     [setValueWithSource]
   )
-
-  const { horizontal, options, captions, label, labelVisibility, help } =
-    element
 
   return (
     <UIRadio

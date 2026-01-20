@@ -55,6 +55,7 @@ export interface QueryParamBinding {
   valueType: string // e.g., "bool_value", "string_value", etc.
   defaultValue: unknown
   urlFormat?: "comma" | "repeated" // How to serialize arrays
+  options?: string[] // For index-based widgets, the formatted option strings
 }
 
 /**
@@ -497,7 +498,13 @@ export class WidgetStateManager {
 
     // Sync to URL if bound and from UI
     if (source.fromUi && value !== null) {
-      this.syncToUrlIfBound(widget.id, String(value))
+      const binding = this.boundWidgets.get(widget.id)
+      // If binding has options, convert index to option string for human-readable URLs
+      if (binding?.options && binding.options[value] !== undefined) {
+        this.syncToUrlIfBound(widget.id, binding.options[value])
+      } else {
+        this.syncToUrlIfBound(widget.id, String(value))
+      }
     }
   }
 
@@ -647,10 +654,20 @@ export class WidgetStateManager {
 
     // Sync to URL if bound and from UI
     if (source.fromUi) {
-      this.syncCommaArrayToUrlIfBound(
-        widget.id,
-        value.map(v => String(v))
-      )
+      const binding = this.boundWidgets.get(widget.id)
+      // If binding has options, convert indices to option strings for human-readable URLs
+      if (binding?.options) {
+        const optionStrings = value
+          .map(idx => binding.options?.[idx])
+          .filter((s): s is string => s !== undefined)
+        this.syncCommaArrayToUrlIfBound(widget.id, optionStrings)
+      } else {
+        // Fallback to index values
+        this.syncCommaArrayToUrlIfBound(
+          widget.id,
+          value.map(v => String(v))
+        )
+      }
     }
   }
 
@@ -659,19 +676,22 @@ export class WidgetStateManager {
   /**
    * Register a widget's binding to a URL query parameter.
    * Called by widget components on mount when they have a queryParamKey.
+   * @param options - For index-based widgets (radio, pills, etc.), the formatted option strings
    */
   public registerQueryParamBinding(
     widgetId: string,
     paramKey: string,
     valueType: string,
     defaultValue: unknown,
-    urlFormat?: "comma" | "repeated"
+    urlFormat?: "comma" | "repeated",
+    options?: string[]
   ): void {
     this.boundWidgets.set(widgetId, {
       paramKey,
       valueType,
       defaultValue,
       urlFormat,
+      options,
     })
     this.paramKeyToWidgetId.set(paramKey, widgetId)
   }
