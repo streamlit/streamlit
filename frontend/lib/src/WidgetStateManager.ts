@@ -769,13 +769,21 @@ export class WidgetStateManager {
 
   /**
    * Check if a value equals the widget's default value.
+   * Handles type coercion since URL values are always strings.
    */
   private isDefaultValue(value: unknown, binding: QueryParamBinding): boolean {
-    return JSON.stringify(value) === JSON.stringify(binding.defaultValue)
+    const defaultValue = binding.defaultValue
+    // Handle null/undefined
+    if (defaultValue === null || defaultValue === undefined) {
+      return value === null || value === undefined || value === ""
+    }
+    // Convert both to string for comparison (handles bool/number/string)
+    return String(value) === String(defaultValue)
   }
 
   /**
    * Check if an array value equals the widget's default array value.
+   * Handles type coercion since URL values are always strings.
    */
   private isDefaultArrayValue(
     values: string[],
@@ -783,9 +791,16 @@ export class WidgetStateManager {
   ): boolean {
     const defaultValue = binding.defaultValue
     if (!Array.isArray(defaultValue)) {
-      return values.length === 0
+      // Default is not an array - check if values are empty or match single default
+      if (values.length === 0) return true
+      if (values.length === 1 && defaultValue !== null) {
+        return String(values[0]) === String(defaultValue)
+      }
+      return false
     }
-    return JSON.stringify(values) === JSON.stringify(defaultValue)
+    // Both are arrays - compare element by element as strings
+    if (values.length !== defaultValue.length) return false
+    return values.every((v, i) => String(v) === String(defaultValue[i]))
   }
 
   // ========== End Query Param Binding Methods ==========
