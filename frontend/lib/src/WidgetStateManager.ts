@@ -697,13 +697,17 @@ export class WidgetStateManager {
   }
 
   /**
-   * Unregister a widget's binding and clear the URL parameter.
+   * Unregister a widget's binding.
    * Called by widget components on unmount.
+   * Note: We do NOT clear the URL parameter here because:
+   * 1. In React strict mode, components mount/unmount multiple times
+   * 2. During Streamlit re-runs, widgets are recreated
+   * 3. The URL should persist for deep-linking purposes
+   * URL params are only cleared when the value changes to the default.
    */
   public unregisterQueryParamBinding(widgetId: string): void {
     const binding = this.boundWidgets.get(widgetId)
     if (binding) {
-      this.clearUrlParam(binding.paramKey)
       this.paramKeyToWidgetId.delete(binding.paramKey)
       this.boundWidgets.delete(widgetId)
     }
