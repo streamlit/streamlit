@@ -787,3 +787,87 @@ class HTTPServerIntegrationTest(unittest.TestCase):
                     response.raise_for_status()
             finally:
                 proc.kill()
+
+
+class CloudDeployTest(unittest.TestCase):
+    """Tests for the cloud deploy command."""
+
+    def setUp(self):
+        self.runner = CliRunner()
+
+    def test_cloud_deploy_with_git_repo(self):
+        """Test cloud deploy opens browser with prefilled git info when in a repo."""
+        with patch("streamlit.cli_util.open_browser") as mock_open_browser:
+            with patch(
+                "streamlit.git_util.GitRepo.get_repo_info",
+                return_value=("owner/repo", "main", "streamlit_app.py"),
+            ):
+                with patch("streamlit.git_util.GitRepo.is_valid", return_value=True):
+                    result = self.runner.invoke(cli, ["cloud", "deploy"])
+
+        assert result.exit_code == 0
+        mock_open_browser.assert_called_once()
+        url = mock_open_browser.call_args[0][0]
+        assert "https://share.streamlit.io/deploy" in url
+        assert "repository=owner%2Frepo" in url
+        assert "branch=main" in url
+        assert "mainModule=streamlit_app.py" in url
+
+    def test_cloud_deploy_without_git_repo(self):
+        """Test cloud deploy opens generic cloud URL when not in a repo."""
+        with patch("streamlit.cli_util.open_browser") as mock_open_browser:
+            with patch("streamlit.git_util.GitRepo.get_repo_info", return_value=None):
+                result = self.runner.invoke(cli, ["cloud", "deploy"])
+
+        assert result.exit_code == 0
+        mock_open_browser.assert_called_once_with("https://streamlit.io/cloud")
+        assert "No GitHub repository detected" in result.output
+
+    def test_cloud_deploy_with_target_path(self):
+        """Test cloud deploy with an explicit target path."""
+        with patch("streamlit.cli_util.open_browser") as mock_open_browser:
+            with patch(
+                "streamlit.git_util.GitRepo.get_repo_info",
+                return_value=("owner/repo", "develop", "app/main.py"),
+            ):
+                with patch("streamlit.git_util.GitRepo.is_valid", return_value=True):
+                    with patch("pathlib.Path.is_dir", return_value=False):
+                        result = self.runner.invoke(
+                            cli, ["cloud", "deploy", "app/main.py"]
+                        )
+
+        assert result.exit_code == 0
+        mock_open_browser.assert_called_once()
+        url = mock_open_browser.call_args[0][0]
+        assert "https://share.streamlit.io/deploy" in url
+
+    def test_cloud_deploy_output_messages(self):
+        """Test cloud deploy outputs the correct information."""
+        with patch("streamlit.cli_util.open_browser"):
+            with patch(
+                "streamlit.git_util.GitRepo.get_repo_info",
+                return_value=("myorg/myrepo", "feature-branch", "src/app.py"),
+            ):
+                with patch("streamlit.git_util.GitRepo.is_valid", return_value=True):
+                    result = self.runner.invoke(cli, ["cloud", "deploy"])
+
+        assert "Opening Streamlit Community Cloud deploy page" in result.output
+        assert "Repository: myorg/myrepo" in result.output
+        assert "Branch: feature-branch" in result.output
+        assert "Main module: src/app.py" in result.output
+
+    def test_cloud_deploy_removes_git_suffix(self):
+        """Test cloud deploy removes .git suffix from repository name."""
+        with patch("streamlit.cli_util.open_browser") as mock_open_browser:
+            with patch(
+                "streamlit.git_util.GitRepo.get_repo_info",
+                return_value=("owner/repo.git", "main", "app.py"),
+            ):
+                with patch("streamlit.git_util.GitRepo.is_valid", return_value=True):
+                    result = self.runner.invoke(cli, ["cloud", "deploy"])
+
+        assert result.exit_code == 0
+        url = mock_open_browser.call_args[0][0]
+        # Should have owner/repo without .git suffix
+        assert "repository=owner%2Frepo" in url
+        assert ".git" not in url

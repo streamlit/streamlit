@@ -365,6 +365,80 @@ def config_show(**kwargs: Any) -> None:
     _config.show_config()
 
 
+# SUBCOMMAND cloud
+
+DEPLOY_URL: Final = "https://share.streamlit.io/deploy"
+STREAMLIT_CLOUD_URL: Final = "https://streamlit.io/cloud"
+
+
+@main.group("cloud")
+def cloud() -> None:
+    """Manage Streamlit Community Cloud deployments."""
+
+
+@cloud.command("deploy")
+@click.argument("target", default=".", required=False)
+def cloud_deploy(target: str = ".") -> None:
+    """Open the browser to deploy to Streamlit Community Cloud.
+
+    If the current directory (or TARGET) is inside a GitHub repository,
+    the deploy page will be pre-filled with the repository, branch, and
+    main module information.
+
+    TARGET can be:
+    - A path to a Python file (e.g., streamlit_app.py)
+    - A path to a directory containing streamlit_app.py
+    - Omitted to use the current directory
+    """
+    from urllib.parse import urlencode
+
+    from streamlit import cli_util
+    from streamlit.git_util import GitRepo
+
+    path = Path(target)
+
+    # Determine the script path
+    if path.is_dir():
+        script_path = path / "streamlit_app.py"
+        if not script_path.exists():
+            # If no streamlit_app.py, just use the directory for git info
+            script_path = path
+    else:
+        script_path = path
+
+    script_path = script_path.resolve()
+
+    # Try to get git repository information
+    repo = GitRepo(str(script_path))
+    repo_info = repo.get_repo_info()
+
+    if repo_info:
+        repository, branch, module = repo_info
+        # Remove .git suffix if present (matching DeployDialog behavior)
+        repository = repository.removesuffix(".git")
+
+        params = {
+            "repository": repository,
+            "branch": branch,
+            "mainModule": module,
+        }
+        deploy_url = f"{DEPLOY_URL}?{urlencode(params)}"
+
+        click.echo("Opening Streamlit Community Cloud deploy page...")
+        click.echo(f"  Repository: {repository}")
+        click.echo(f"  Branch: {branch}")
+        click.echo(f"  Main module: {module}")
+    else:
+        deploy_url = STREAMLIT_CLOUD_URL
+        click.echo("Opening Streamlit Community Cloud...")
+        click.echo(
+            "  (No GitHub repository detected. "
+            "Make sure your code is pushed to GitHub to deploy.)"
+        )
+
+    cli_util.open_browser(deploy_url)
+
+
 # SUBCOMMAND activate
 
 
