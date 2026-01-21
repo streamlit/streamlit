@@ -387,7 +387,7 @@ class DateInputTest(DeltaGeneratorTestCase):
             "streamlit.elements.lib.utils._register_element_id",
             return_value=MagicMock(),
         ):
-            # First render with certain params (keep whitelisted kwargs stable)
+            # First render with certain params (keep format stable as it's whitelisted)
             st.date_input(
                 label="Label 1",
                 key="date_input_key",
@@ -399,15 +399,15 @@ class DateInputTest(DeltaGeneratorTestCase):
                 args=("arg1", "arg2"),
                 kwargs={"kwarg1": "kwarg1"},
                 label_visibility="visible",
-                # Whitelisted kwargs:
                 min_value=date(2010, 1, 1),
                 max_value=date(2030, 1, 1),
+                # Whitelisted kwargs:
                 format="YYYY/MM/DD",
             )
             c1 = self.get_delta_from_queue().new_element.date_input
             id1 = c1.id
 
-            # Second render with different non-whitelisted params but same key
+            # Second render with different params including min/max (dynamic changes supported)
             st.date_input(
                 label="Label 2",
                 key="date_input_key",
@@ -419,80 +419,126 @@ class DateInputTest(DeltaGeneratorTestCase):
                 args=("arg_1", "arg_2"),
                 kwargs={"kwarg_1": "kwarg_1"},
                 label_visibility="hidden",
-                # Keep whitelisted the same to ensure ID stability
-                min_value=date(2010, 1, 1),
-                max_value=date(2030, 1, 1),
+                min_value=date(2015, 1, 1),
+                max_value=date(2025, 1, 1),
+                # Whitelisted kwargs:
                 format="YYYY/MM/DD",
             )
             c2 = self.get_delta_from_queue().new_element.date_input
             id2 = c2.id
             assert id1 == id2
 
-    @parameterized.expand(
-        [
-            ("min_value", date(2010, 1, 1), date(2011, 1, 1)),
-            ("max_value", date(2030, 1, 1), date(2031, 1, 1)),
-        ]
-    )
-    def test_whitelisted_stable_key_kwargs_single(self, kwarg_name, value1, value2):
-        """Test that the widget ID changes for single mode when a whitelisted kwarg changes even
-        when the key is provided."""
+    def test_whitelisted_stable_key_kwargs_single(self):
+        """Test that the widget ID changes for single mode when format changes even
+        when the key is provided. min_value and max_value are not whitelisted since
+        they support dynamic changes."""
         with patch(
             "streamlit.elements.lib.utils._register_element_id",
             return_value=MagicMock(),
         ):
-            base_kwargs = {
-                "label": "Label",
-                "key": "date_input_key_1",
-                "value": date(2020, 1, 1),
-                "min_value": date(2010, 1, 1),
-                "max_value": date(2030, 1, 1),
-            }
-            base_kwargs[kwarg_name] = value1
-
-            st.date_input(**base_kwargs)
+            # Test that format change causes ID to change
+            st.date_input(
+                label="Label",
+                key="date_input_key_1",
+                value=date(2020, 1, 1),
+                min_value=date(2010, 1, 1),
+                max_value=date(2030, 1, 1),
+                format="YYYY/MM/DD",
+            )
             c1 = self.get_delta_from_queue().new_element.date_input
             id1 = c1.id
 
-            base_kwargs[kwarg_name] = value2
-            st.date_input(**base_kwargs)
+            st.date_input(
+                label="Label",
+                key="date_input_key_1",
+                value=date(2020, 1, 1),
+                min_value=date(2010, 1, 1),
+                max_value=date(2030, 1, 1),
+                format="DD/MM/YYYY",  # Changed format
+            )
             c2 = self.get_delta_from_queue().new_element.date_input
             id2 = c2.id
             assert id1 != id2
 
-    @parameterized.expand(
-        [
-            ("min_value", date(2009, 7, 6), date(2010, 7, 6)),
-            ("max_value", date(2029, 7, 8), date(2030, 7, 8)),
-            ("format", "YYYY/MM/DD", "DD/MM/YYYY"),
-        ]
-    )
-    def test_whitelisted_stable_key_kwargs_range(self, kwarg_name, value1, value2):
-        """Test that the widget ID changes for range mode when a whitelisted kwarg changes
-        even when the key is provided."""
+            # Verify min_value/max_value changes do NOT cause ID to change
+            st.date_input(
+                label="Label",
+                key="date_input_key_2",
+                value=date(2020, 1, 1),
+                min_value=date(2010, 1, 1),
+                max_value=date(2030, 1, 1),
+                format="YYYY/MM/DD",
+            )
+            c3 = self.get_delta_from_queue().new_element.date_input
+            id3 = c3.id
+
+            st.date_input(
+                label="Label",
+                key="date_input_key_2",
+                value=date(2020, 1, 1),
+                min_value=date(2015, 1, 1),  # Changed min_value
+                max_value=date(2025, 1, 1),  # Changed max_value
+                format="YYYY/MM/DD",
+            )
+            c4 = self.get_delta_from_queue().new_element.date_input
+            id4 = c4.id
+            assert id3 == id4  # ID should NOT change when min/max changes
+
+    def test_whitelisted_stable_key_kwargs_range(self):
+        """Test that the widget ID changes for range mode when format changes
+        even when the key is provided. min_value and max_value are not whitelisted
+        since they support dynamic changes."""
         with patch(
             "streamlit.elements.lib.utils._register_element_id",
             return_value=MagicMock(),
         ):
-            base_kwargs = {
-                "label": "Label",
-                "key": "date_input_key_2",
-                "value": (date(2019, 7, 6), date(2019, 7, 8)),
-                "min_value": date(2009, 7, 6),
-                "max_value": date(2029, 7, 8),
-                "format": "YYYY/MM/DD",
-            }
-            base_kwargs[kwarg_name] = value1
-
-            st.date_input(**base_kwargs)
+            # Test that format change causes ID to change
+            st.date_input(
+                label="Label",
+                key="date_input_key_range_1",
+                value=(date(2019, 7, 6), date(2019, 7, 8)),
+                min_value=date(2009, 7, 6),
+                max_value=date(2029, 7, 8),
+                format="YYYY/MM/DD",
+            )
             c1 = self.get_delta_from_queue().new_element.date_input
             id1 = c1.id
 
-            base_kwargs[kwarg_name] = value2
-            st.date_input(**base_kwargs)
+            st.date_input(
+                label="Label",
+                key="date_input_key_range_1",
+                value=(date(2019, 7, 6), date(2019, 7, 8)),
+                min_value=date(2009, 7, 6),
+                max_value=date(2029, 7, 8),
+                format="DD/MM/YYYY",  # Changed format
+            )
             c2 = self.get_delta_from_queue().new_element.date_input
             id2 = c2.id
             assert id1 != id2
+
+            # Verify min_value/max_value changes do NOT cause ID to change
+            st.date_input(
+                label="Label",
+                key="date_input_key_range_2",
+                value=(date(2019, 7, 6), date(2019, 7, 8)),
+                min_value=date(2009, 7, 6),
+                max_value=date(2029, 7, 8),
+                format="YYYY/MM/DD",
+            )
+            c3 = self.get_delta_from_queue().new_element.date_input
+            id3 = c3.id
+
+            st.date_input(
+                label="Label",
+                key="date_input_key_range_2",
+                value=(date(2019, 7, 6), date(2019, 7, 8)),
+                min_value=date(2015, 7, 6),  # Changed min_value
+                max_value=date(2025, 7, 8),  # Changed max_value
+                format="YYYY/MM/DD",
+            )
+            c4 = self.get_delta_from_queue().new_element.date_input
+            id4 = c4.id
+            assert id3 == id4  # ID should NOT change when min/max changes
 
 
 def test_date_input_interaction():
@@ -531,3 +577,269 @@ def test_None_session_state_value_retained():
     at = AppTest.from_function(script).run()
     at = at.button[0].click().run()
     assert at.date_input[0].value is None
+
+
+def test_dynamic_min_value_resets_value_when_below_new_min():
+    """Test that value resets to default when dynamically changing min_value makes current value invalid."""
+
+    def script():
+        import datetime
+
+        import streamlit as st
+
+        if "update_bounds" not in st.session_state:
+            st.session_state["update_bounds"] = False
+
+        if st.session_state["update_bounds"]:
+            # New min_value makes the previous value invalid
+            value = st.date_input(
+                "date",
+                min_value=datetime.date(2024, 6, 1),
+                max_value=datetime.date(2024, 12, 31),
+                key="date",
+                value=datetime.date(2024, 7, 15),
+            )
+        else:
+            value = st.date_input(
+                "date",
+                min_value=datetime.date(2024, 1, 1),
+                max_value=datetime.date(2024, 12, 31),
+                key="date",
+                value=datetime.date(2024, 5, 15),
+            )
+        st.write(f"value: {value}")
+
+        if st.button("Toggle bounds"):
+            st.session_state["update_bounds"] = not st.session_state["update_bounds"]
+
+    at = AppTest.from_function(script).run()
+    assert at.date_input[0].value == date(2024, 5, 15)
+
+    # Set value to March 1 (valid with min_value=Jan 1)
+    at = at.date_input[0].set_value(date(2024, 3, 1)).run()
+    assert at.date_input[0].value == date(2024, 3, 1)
+
+    # Toggle bounds - the click updates session_state["update_bounds"] to True
+    at = at.button[0].click().run()
+    # AppTest requires an additional run to process the widget with the new bounds
+    at = at.run()
+    # Now min_value=June 1, so March 1 is invalid and should reset to default (July 15)
+    assert at.date_input[0].value == date(2024, 7, 15)
+
+
+def test_dynamic_max_value_resets_value_when_above_new_max():
+    """Test that value resets to default when dynamically changing max_value makes current value invalid."""
+
+    def script():
+        import datetime
+
+        import streamlit as st
+
+        if "update_bounds" not in st.session_state:
+            st.session_state["update_bounds"] = False
+
+        if st.session_state["update_bounds"]:
+            # New max_value makes the previous value invalid
+            value = st.date_input(
+                "date",
+                min_value=datetime.date(2024, 1, 1),
+                max_value=datetime.date(2024, 6, 30),
+                key="date",
+                value=datetime.date(2024, 3, 15),
+            )
+        else:
+            value = st.date_input(
+                "date",
+                min_value=datetime.date(2024, 1, 1),
+                max_value=datetime.date(2024, 12, 31),
+                key="date",
+                value=datetime.date(2024, 5, 15),
+            )
+        st.write(f"value: {value}")
+
+        if st.button("Toggle bounds"):
+            st.session_state["update_bounds"] = not st.session_state["update_bounds"]
+
+    at = AppTest.from_function(script).run()
+    assert at.date_input[0].value == date(2024, 5, 15)
+
+    # Set value to October 1 (valid with max_value=Dec 31)
+    at = at.date_input[0].set_value(date(2024, 10, 1)).run()
+    assert at.date_input[0].value == date(2024, 10, 1)
+
+    # Toggle bounds - the click updates session_state["update_bounds"] to True
+    at = at.button[0].click().run()
+    # AppTest requires an additional run to process the widget with the new bounds
+    at = at.run()
+    # Now max_value=June 30, so October 1 is invalid and should reset to default (March 15)
+    assert at.date_input[0].value == date(2024, 3, 15)
+
+
+def test_dynamic_bounds_preserves_valid_value():
+    """Test that value is preserved when it remains valid after bound changes."""
+
+    def script():
+        import datetime
+
+        import streamlit as st
+
+        if "update_bounds" not in st.session_state:
+            st.session_state["update_bounds"] = False
+
+        if st.session_state["update_bounds"]:
+            # Changing bounds but May 15 is still valid (between Apr 1 and Sep 30)
+            value = st.date_input(
+                "date",
+                min_value=datetime.date(2024, 4, 1),
+                max_value=datetime.date(2024, 9, 30),
+                key="date",
+                value=datetime.date(2024, 5, 15),
+            )
+        else:
+            value = st.date_input(
+                "date",
+                min_value=datetime.date(2024, 1, 1),
+                max_value=datetime.date(2024, 12, 31),
+                key="date",
+                value=datetime.date(2024, 5, 15),
+            )
+        st.write(f"value: {value}")
+
+        if st.button("Toggle bounds"):
+            st.session_state["update_bounds"] = not st.session_state["update_bounds"]
+
+    at = AppTest.from_function(script).run()
+    assert at.date_input[0].value == date(2024, 5, 15)
+
+    # Toggle bounds - the click updates session_state["update_bounds"] to True
+    at = at.button[0].click().run()
+    # AppTest requires an additional run to process the widget with the new bounds
+    at = at.run()
+    # Value should be preserved because it's still within the new bounds
+    assert at.date_input[0].value == date(2024, 5, 15)
+
+
+def test_dynamic_bounds_with_range_resets_when_start_below_min():
+    """Test that range date input resets when start date becomes invalid."""
+
+    def script():
+        import datetime
+
+        import streamlit as st
+
+        if "update_bounds" not in st.session_state:
+            st.session_state["update_bounds"] = False
+
+        if st.session_state["update_bounds"]:
+            # New min_value makes the start date of the previous range invalid
+            value = st.date_input(
+                "date",
+                min_value=datetime.date(2024, 6, 1),
+                max_value=datetime.date(2024, 12, 31),
+                key="date",
+                value=(datetime.date(2024, 7, 1), datetime.date(2024, 8, 1)),
+            )
+        else:
+            value = st.date_input(
+                "date",
+                min_value=datetime.date(2024, 1, 1),
+                max_value=datetime.date(2024, 12, 31),
+                key="date",
+                value=(datetime.date(2024, 5, 1), datetime.date(2024, 6, 1)),
+            )
+        st.write(f"value: {value}")
+
+        if st.button("Toggle bounds"):
+            st.session_state["update_bounds"] = not st.session_state["update_bounds"]
+
+    at = AppTest.from_function(script).run()
+    assert at.date_input[0].value == (date(2024, 5, 1), date(2024, 6, 1))
+
+    # Set value to a range starting Feb 1 (valid with min_value=Jan 1)
+    at = at.date_input[0].set_value((date(2024, 2, 1), date(2024, 3, 1))).run()
+    assert at.date_input[0].value == (date(2024, 2, 1), date(2024, 3, 1))
+
+    # Toggle bounds - the click updates session_state["update_bounds"] to True
+    at = at.button[0].click().run()
+    # AppTest requires an additional run to process the widget with the new bounds
+    at = at.run()
+    # Now min_value=June 1, so Feb 1 - Mar 1 range is invalid and should reset
+    assert at.date_input[0].value == (date(2024, 7, 1), date(2024, 8, 1))
+
+
+def test_dynamic_bounds_with_range_resets_when_end_above_max():
+    """Test that range date input resets when end date becomes invalid."""
+
+    def script():
+        import datetime
+
+        import streamlit as st
+
+        if "update_bounds" not in st.session_state:
+            st.session_state["update_bounds"] = False
+
+        if st.session_state["update_bounds"]:
+            # New max_value makes the end date of the previous range invalid
+            value = st.date_input(
+                "date",
+                min_value=datetime.date(2024, 1, 1),
+                max_value=datetime.date(2024, 6, 30),
+                key="date",
+                value=(datetime.date(2024, 3, 1), datetime.date(2024, 4, 1)),
+            )
+        else:
+            value = st.date_input(
+                "date",
+                min_value=datetime.date(2024, 1, 1),
+                max_value=datetime.date(2024, 12, 31),
+                key="date",
+                value=(datetime.date(2024, 5, 1), datetime.date(2024, 6, 1)),
+            )
+        st.write(f"value: {value}")
+
+        if st.button("Toggle bounds"):
+            st.session_state["update_bounds"] = not st.session_state["update_bounds"]
+
+    at = AppTest.from_function(script).run()
+    assert at.date_input[0].value == (date(2024, 5, 1), date(2024, 6, 1))
+
+    # Set value to a range ending Nov 1 (valid with max_value=Dec 31)
+    at = at.date_input[0].set_value((date(2024, 9, 1), date(2024, 11, 1))).run()
+    assert at.date_input[0].value == (date(2024, 9, 1), date(2024, 11, 1))
+
+    # Toggle bounds - the click updates session_state["update_bounds"] to True
+    at = at.button[0].click().run()
+    # AppTest requires an additional run to process the widget with the new bounds
+    at = at.run()
+    # Now max_value=June 30, so Sep 1 - Nov 1 range is invalid and should reset
+    assert at.date_input[0].value == (date(2024, 3, 1), date(2024, 4, 1))
+
+
+def test_session_state_value_out_of_range_resets_to_default():
+    """Test that out of range session_state values reset to default.
+
+    When session_state is set to a value outside min/max bounds, the widget
+    should reset to its default value (similar to dynamic options in selectbox).
+    This supports dynamic min/max value changes.
+    """
+    # Value below min - should reset to default
+    st.session_state.date_input_below_min = date(2024, 1, 1)
+    result = st.date_input(
+        "date_input",
+        min_value=date(2024, 6, 1),
+        max_value=date(2024, 12, 31),
+        key="date_input_below_min",
+        value=date(2024, 7, 15),
+    )
+    assert result == date(2024, 7, 15)  # Reset to default value
+
+    # Value above max - should reset to default
+    st.session_state.date_input_above_max = date(2024, 12, 15)
+    result = st.date_input(
+        "date_input",
+        min_value=date(2024, 1, 1),
+        max_value=date(2024, 6, 30),
+        key="date_input_above_max",
+        value=date(2024, 3, 15),
+    )
+    assert result == date(2024, 3, 15)  # Reset to default value

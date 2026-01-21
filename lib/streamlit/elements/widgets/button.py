@@ -356,7 +356,7 @@ class ButtonMixin:
             width = "stretch" if use_container_width else "content"
 
         # Checks whether the entered button type is one of the allowed options
-        if type not in ["primary", "secondary", "tertiary"]:
+        if type not in {"primary", "secondary", "tertiary"}:
             raise StreamlitAPIException(
                 'The type argument to st.button must be "primary", "secondary", or "tertiary". '
                 f'\nThe argument passed was "{type}".'
@@ -736,7 +736,7 @@ class ButtonMixin:
         if use_container_width is not None:
             width = "stretch" if use_container_width else "content"
 
-        if type not in ["primary", "secondary", "tertiary"]:
+        if type not in {"primary", "secondary", "tertiary"}:
             raise StreamlitAPIException(
                 'The type argument to st.download_button must be "primary", "secondary", or "tertiary". \n'
                 f'The argument passed was "{type}".'
@@ -915,7 +915,7 @@ class ButtonMixin:
 
         """
         # Checks whether the entered button type is one of the allowed options - either "primary" or "secondary"
-        if type not in ["primary", "secondary", "tertiary"]:
+        if type not in {"primary", "secondary", "tertiary"}:
             raise StreamlitAPIException(
                 'The type argument to st.link_button must be "primary", "secondary", or "tertiary". '
                 f'\nThe argument passed was "{type}".'

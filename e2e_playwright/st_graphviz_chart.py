@@ -106,7 +106,7 @@ digraph Dot {
   A -> B -> C -> D -> {F}
 }
 """
-st.graphviz_chart(horizontal_flow_chart, use_container_width=True)
+st.graphviz_chart(horizontal_flow_chart, width="stretch")
 
 st.subheader("Width Parameters")
 

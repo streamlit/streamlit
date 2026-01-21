@@ -40,8 +40,6 @@ if TYPE_CHECKING:
 class MarshallComponentException(StreamlitAPIException):
     """Class for exceptions generated during custom component marshalling."""
 
-    pass
-
 
 class CustomComponent(BaseCustomComponent):
     """A Custom Component declaration."""

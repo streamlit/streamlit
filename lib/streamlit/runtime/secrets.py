@@ -230,7 +230,6 @@ class Secrets(Mapping[str, Any]):
         """Left in place for compatibility with integrations until integration
         code can be updated.
         """
-        pass
 
     def _reset(self) -> None:
         """Clear the secrets dictionary and remove any secrets that were
@@ -396,7 +395,7 @@ class Secrets(Mapping[str, Any]):
         is a string, int, or float.
         """
         value_type = type(v)
-        if value_type in (str, int, float):
+        if value_type in {str, int, float}:
             os.environ[k] = str(v)
 
     @staticmethod
@@ -405,7 +404,7 @@ class Secrets(Mapping[str, Any]):
         is a string, int, or float.
         """
         value_type = type(v)
-        if value_type in (str, int, float) and os.environ.get(k) == v:
+        if value_type in {str, int, float} and os.environ.get(k) == v:
             del os.environ[k]
 
     def _maybe_install_file_watchers(self) -> None:

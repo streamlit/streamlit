@@ -53,13 +53,11 @@ ignore = [
   "CPY", # Checks for copyright statement.
   "DOC", # Checks for correct docstring format.
   # Ignored rules:
+  "A002",    # Checks if function argument shadows a Python builtin.
+  "ANN401",  # Checks that `any` is not used as an annotation.
   "B904",    # Checks for raise statements in exception handlers that lack a from clause.
-  "PYI041",  # Checks for parameter annotations that contain redundant unions between builtin numeric types (e.g., int | float).
-  "PYI051",  # Checks for redundant unions between a Literal and a builtin supertype of that Literal.
-  "PD009",   # Checks for usage of pd.DataFrame.iat.
-  "PIE790",  # Checks for unnecessary pass statements.
-  "TD003",   # Checks for missing issue link in TODO comment.
-  "TD002",   # Checks for missing author in TODO comment.
+  "COM812",  # Checks for absence of trailing commas. Not recommended with formatter.
+  "COM819",  # Checks for presence of prohibited trailing commas. Not recommended with formatter.
   "D100",    # Checks for missing docstring in public module.
   "D101",    # Checks for missing docstring in public class.
   "D102",    # Checks for missing docstring in public method.
@@ -68,12 +66,20 @@ ignore = [
   "D105",    # Checks for missing docstring in magic method.
   "D106",    # Checks for missing docstring in public nested class.
   "D107",    # Checks for missing docstring in __init__.
+  "D202",    # Checks for no-blank line after docstring.
   "D205",    # Checks for missing blank line after docstring summary.
   "D401",    # Checks for docstring to start with imperative mood.
-  "D202",    # Checks for no-blank line after docstring.
+  "E266",    # Checks for multiple leading hashes in block comments.
   "FIX002",  # Checks todo comments (which we want to allow).
+  "FURB101", # Checks for open and read calls that can be replaced by pathlib.
+  "FURB103", # Checks for open and write calls that can be replaced by pathlib.
+  "FURB113", # Checks for repeated append calls that can be replaced by extend.
+  "FURB152", # Checks for math constants that could use math module.
+  "PD009",   # Checks for usage of pd.DataFrame.iat.
   "PGH003",  # Checks for blanket type ignore.
-  "PLR2004", # Checks for numerical values that could be put into a constant.
+  "PLC0415", # Enforces imports to be at the top-level of the file.
+  "PLC1901", # Checks for comparisons to empty string.
+  "PLC2701", # Checks for imports of private names.
   "PLR0904", # Checks for classes with too many public methods.
   "PLR0911", # Checks for functions with too many return statements.
   "PLR0912", # Checks for functions with too many branches.
@@ -81,48 +87,28 @@ ignore = [
   "PLR0914", # Checks for functions with too many local variables.
   "PLR0915", # Checks for functions with too many statements.
   "PLR0916", # Checks for too many boolean expressions in if statements.
-  "A002",    # Checks if function argument shadows a Python builtin.
-  "TRY300",  # Checks for return statements in try blocks.
-  "ANN401",  # Checks that `any` is not used as an annotation.
+  "PLR0917", # Checks for functions with too many positional arguments.
+  "PLR1702", # Checks for functions with too many nested blocks.
+  "PLR2004", # Checks for numerical values that could be put into a constant.
+  "PLR6301", # Checks for methods that do not use self.
+  "PLW0108", # Checks for lambdas that can be replaced by existing functions.
+  "PLW3201", # Checks for bad dunder method names.
+  "PT012",   # Checks for pytest.raises context managers with multiple statements.
+  "PT019",   # Checks for tests that should use @pytest.mark.usefixtures (incompatible with unittest.patch)
+  "PYI041",  # Checks for parameter annotations that contain redundant unions between builtin numeric types (e.g., int | float).
+  "PYI051",  # Checks for redundant unions between a Literal and a builtin supertype of that Literal.
+  "RET504",  # Checks for assignments that immediately precede a return of the assigned variable (too opinionated).
+  "RSE102",  # Checks for unnecessary parentheses on raised exceptions.
+  "RUF052",  # Checks for dummy variables that are used.
+  "RUF067",  # Checks for non empty __init__ modules.
   "SIM105",  # Enforces use of contextlib.suppress.
   "SIM108",  # Enforces ternary operators instead of if-else.
   "SIM115",  # Enforces context manager for opening files.
   "SIM117",  # Enforces single with statement with multiple contexts.
   "SIM905",  # Enforces list instead of st.split.
-  "COM812",  # Checks for absence of trailing commas. Not recommended with formatter.
-  "COM819",  # Checks for presence of prohibited trailing commas. Not recommended with formatter.
-  "RSE102",  # Checks for unnecessary parentheses on raised exceptions.
-  "RET504",  # Checks for assignments that immediately precede a return of the assigned variable (too opinionated).
-  "PT012",   # Checks for pytest.raises context managers with multiple statements.
-  "PT019",   # Checks for tests that should use @pytest.mark.usefixtures (incompatible with unittest.patch)
-  "PLC0415", # Enforces imports to be at the top-level of the file.
-  # Ignored preview rules:
-  "PLR6301",  # Checks for methods that do not use self.
-  "PLC1901",  # Checks for comparisons to empty string.
-  "PLC2701",  # Checks for imports of private names.
-  "PLR6201",  # Checks for membership tests using a literal list or tuple.
-  "PLR0917",  # Checks for functions with too many positional arguments.
-  "RUF039",   # Checks for unraw regex patterns.
-  "RUF029",   # Checks for async functions with no await statements.
-  "RUF067",   # Checks for non empty __init__ modules.
-  "FURB101",  # Checks for open and read calls that can be replaced by pathlib.
-  "RUF036",   # Checks for None not at the end of union types.
-  "FURB103",  # Checks for open and write calls that can be replaced by pathlib.
-  "E266",     # Checks for multiple leading hashes in block comments.
-  "PLW0108",  # Checks for lambdas that can be replaced by existing functions.
-  "RUF052",   # Checks for dummy variables that are used.
-  "FURB152",  # Checks for math constants that could use math module.
-  "PLW3201",  # Checks for bad dunder method names.
-  "FURB118",  # Checks for operators that can be replaced by operator module.
-  "FURB189",  # Checks for subclassing of builtin types.
-  "ISC004",   # Checks for implicit string concatenation in collection literals.
-  "PLR1702",  # Checks for functions with too many nested blocks.
-  "ASYNC240", # Checks for blocking path methods in async functions.
-  "FURB113",  # Checks for repeated append calls that can be replaced by extend.
-  "PLC2801",  # Checks for unnecessary dunder method calls.
-  "PLR6104",  # Checks for assignments that can be replaced with augmented assignment.
-  "S403",     # Checks for suspicious pickle imports.
-  "S404",     # Checks for suspicious subprocess imports.
+  "TD002",   # Checks for missing author in TODO comment.
+  "TD003",   # Checks for missing issue link in TODO comment.
+  "TRY300",  # Checks for return statements in try blocks.
 ]
 exclude = [
   # pympler is a vendored dependency that doesn't conform to our linting rules:
@@ -134,26 +120,31 @@ extend-safe-fixes = ["TC002", "TC003"]
 # Only add ignores for entire folders here. To ignore rules in individual
 # files, use the noqa ignore comment on top of the given file.
 "e2e_playwright/**" = [
-  "T20",
-  "B018",
-  "PD",
-  "PERF",
-  "N999",
-  "S",
-  "TRY",
-  "NPY002",
+  "B018",   # Allow useless expressions (e.g., for side effects in tests).
+  "N999",   # Allow invalid module names (test files use descriptive names).
+  "NPY002", # Allow legacy numpy random generation.
+  "PD",     # Ignore pandas-vet rules (test data manipulation patterns).
+  "PERF",   # Ignore performance rules (clarity over speed in tests).
+  "RUF029", # Allow async functions without await (intentional for testing async behavior).
+  "S",      # Ignore bandit security rules (test code doesn't need security hardening).
+  "T20",    # Allow print statements (useful for test debugging).
+  "TRY",    # Ignore tryceratops rules (simpler exception handling in tests).
 ]
 "lib/tests/**" = [
-  "PD",
-  "D",
-  "INP",
-  "PERF",
-  "N",
-  "ARG",
-  "S",
-  "TRY",
-  "ANN",
-  "NPY002",
+  "ANN",     # Ignore annotation rules (test functions don't need full typing).
+  "ARG",     # Allow unused arguments (common in test fixtures and mocks).
+  "D",       # Ignore docstring rules (tests are self-documenting via names).
+  "FURB118", # Allow all operators (tests may use operator module intentionally).
+  "FURB189", # Allow subclassing of builtin types (for test mocking).
+  "INP",     # Allow implicit namespace packages (test directories).
+  "N",       # Ignore naming conventions (test names can be descriptive/long).
+  "NPY002",  # Allow legacy numpy random generation.
+  "PD",      # Ignore pandas-vet rules (test data manipulation patterns).
+  "PERF",    # Ignore performance rules (clarity over speed in tests).
+  "PLC2801", # Allow dunder calls (e.g., object.__setattr__ for frozen dataclasses).
+  "RUF029",  # Allow async functions without await (test fixtures, mocks, ASGI callables).
+  "S",       # Ignore bandit security rules (test code doesn't need security hardening).
+  "TRY",     # Ignore tryceratops rules (simpler exception handling in tests).
 ]
 "scripts/**" = ["T20", "INP", "PERF", "S", "TRY002"]
 

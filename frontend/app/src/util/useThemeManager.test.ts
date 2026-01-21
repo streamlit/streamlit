@@ -19,10 +19,15 @@ import { act, renderHook } from "@testing-library/react"
 import {
   AUTO_THEME_NAME,
   createPresetThemes,
+  createTheme,
+  CUSTOM_THEME_AUTO_NAME,
+  CUSTOM_THEME_DARK_NAME,
+  CUSTOM_THEME_LIGHT_NAME,
   CUSTOM_THEME_NAME,
   darkTheme,
+  lightTheme,
   LocalStore,
-  setCachedTheme,
+  setCachedThemeSelection,
   ThemeConfig,
 } from "@streamlit/lib"
 
@@ -95,10 +100,10 @@ describe("useThemeManager", () => {
       window.localStorage.getItem(LocalStore.ACTIVE_THEME) || ""
     )
 
-    expect(updatedLocalStorage.name).toBe("Dark")
+    expect(updatedLocalStorage).toBe("Dark")
   })
 
-  it("does not save Auto theme", () => {
+  it("saves Auto selection", () => {
     const { result } = renderHook(() => useThemeManager())
     const [themeManager] = result.current
 
@@ -115,11 +120,11 @@ describe("useThemeManager", () => {
       })
     })
 
-    const updatedLocalStorage = window.localStorage.getItem(
-      LocalStore.ACTIVE_THEME
+    const updatedLocalStorage = JSON.parse(
+      window.localStorage.getItem(LocalStore.ACTIVE_THEME) || ""
     )
 
-    expect(updatedLocalStorage).toBe(null)
+    expect(updatedLocalStorage).toBe("System")
   })
 
   it("updates availableThemes", () => {
@@ -140,8 +145,224 @@ describe("useThemeManager", () => {
     expect(newThemes.length).toBe(initialThemes.length + 1)
   })
 
+  it("recalibrates custom auto theme on system preference change", () => {
+    let mediaChangeHandler: ((event: MediaQueryListEvent) => void) | undefined
+    let prefersDark = false
+
+    Object.defineProperty(window, "matchMedia", {
+      writable: true,
+      value: vi.fn().mockImplementation(query => ({
+        matches: prefersDark,
+        media: query,
+        onchange: null,
+        addListener: vi.fn(), // deprecated
+        removeListener: vi.fn(), // deprecated
+        addEventListener: (
+          _event: string,
+          handler: (e: MediaQueryListEvent) => void
+        ) => {
+          mediaChangeHandler = handler
+        },
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      })),
+    })
+
+    const { result } = renderHook(() => useThemeManager())
+    const [themeManager] = result.current
+
+    const customLight = {
+      ...createTheme(CUSTOM_THEME_LIGHT_NAME, { primaryColor: "lightblue" }),
+      displayName: "Light",
+    }
+    const customDark = {
+      ...createTheme(CUSTOM_THEME_DARK_NAME, { primaryColor: "darkblue" }),
+      displayName: "Dark",
+    }
+    const customAuto = {
+      ...customLight,
+      name: CUSTOM_THEME_AUTO_NAME,
+      displayName: AUTO_THEME_NAME,
+    }
+
+    act(() => {
+      themeManager.addThemes([customLight, customDark, customAuto], {
+        keepPresetThemes: false,
+      })
+      themeManager.setTheme(customAuto)
+    })
+
+    const initialSelection = JSON.parse(
+      window.localStorage.getItem(LocalStore.ACTIVE_THEME) || ""
+    )
+    expect(initialSelection).toBe("System")
+
+    prefersDark = true
+    act(() => {
+      mediaChangeHandler?.({ matches: true } as MediaQueryListEvent)
+    })
+
+    expect(result.current[0].activeTheme.name).toBe(CUSTOM_THEME_AUTO_NAME)
+    expect(result.current[0].activeTheme.emotion.colors.primary).toBe(
+      customDark.emotion.colors.primary
+    )
+    expect(
+      JSON.parse(window.localStorage.getItem(LocalStore.ACTIVE_THEME) || "")
+    ).toBe("System")
+
+    prefersDark = false
+    act(() => {
+      mediaChangeHandler?.({ matches: false } as MediaQueryListEvent)
+    })
+
+    expect(result.current[0].activeTheme.name).toBe(CUSTOM_THEME_AUTO_NAME)
+    expect(result.current[0].activeTheme.emotion.colors.primary).toBe(
+      customLight.emotion.colors.primary
+    )
+    expect(
+      JSON.parse(window.localStorage.getItem(LocalStore.ACTIVE_THEME) || "")
+    ).toBe("System")
+  })
+
+  it("recalculates custom auto when user switches back to System", () => {
+    const prefersDark = false
+    Object.defineProperty(window, "matchMedia", {
+      writable: true,
+      value: vi.fn().mockImplementation(query => ({
+        matches: prefersDark,
+        media: query,
+        onchange: null,
+        addListener: vi.fn(), // deprecated
+        removeListener: vi.fn(), // deprecated
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      })),
+    })
+
+    const { result } = renderHook(() => useThemeManager())
+    const [themeManager] = result.current
+
+    const customLight = {
+      ...createTheme(CUSTOM_THEME_LIGHT_NAME, { primaryColor: "lightblue" }),
+      displayName: "Light",
+    }
+    const customDark = {
+      ...createTheme(CUSTOM_THEME_DARK_NAME, { primaryColor: "darkblue" }),
+      displayName: "Dark",
+    }
+    const customAuto = {
+      ...customLight,
+      name: CUSTOM_THEME_AUTO_NAME,
+      displayName: AUTO_THEME_NAME,
+    }
+
+    act(() => {
+      themeManager.addThemes([customLight, customDark, customAuto], {
+        keepPresetThemes: false,
+      })
+      themeManager.setTheme(customDark)
+      themeManager.setTheme(customAuto)
+    })
+
+    expect(result.current[0].activeTheme.name).toBe(CUSTOM_THEME_AUTO_NAME)
+    expect(result.current[0].activeTheme.emotion.colors.primary).toBe(
+      customLight.emotion.colors.primary
+    )
+    expect(
+      JSON.parse(window.localStorage.getItem(LocalStore.ACTIVE_THEME) || "")
+    ).toBe("System")
+  })
+
+  it("recalculates preset auto when user switches back to System", () => {
+    const { result } = renderHook(() => useThemeManager())
+    const [themeManager] = result.current
+
+    act(() => {
+      themeManager.setTheme(darkTheme)
+    })
+
+    act(() => {
+      themeManager.setTheme({
+        ...darkTheme,
+        name: AUTO_THEME_NAME,
+      })
+    })
+
+    const [themeManager2] = result.current
+    expect(themeManager2.activeTheme.name).toBe(AUTO_THEME_NAME)
+    expect(
+      JSON.parse(window.localStorage.getItem(LocalStore.ACTIVE_THEME) || "")
+    ).toBe("System")
+  })
+
+  it("recalibrates preset auto on system preference change", () => {
+    let mediaChangeHandler: ((event: MediaQueryListEvent) => void) | undefined
+    let prefersDark = false
+
+    Object.defineProperty(window, "matchMedia", {
+      writable: true,
+      value: vi.fn().mockImplementation(query => ({
+        matches: prefersDark,
+        media: query,
+        onchange: null,
+        addListener: vi.fn(), // deprecated
+        removeListener: vi.fn(), // deprecated
+        addEventListener: (
+          _event: string,
+          handler: (e: MediaQueryListEvent) => void
+        ) => {
+          mediaChangeHandler = handler
+        },
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      })),
+    })
+
+    const { result } = renderHook(() => useThemeManager())
+    const [themeManager] = result.current
+
+    act(() => {
+      themeManager.setTheme({
+        ...darkTheme,
+        name: AUTO_THEME_NAME,
+      })
+    })
+
+    expect(result.current[0].activeTheme.name).toBe(AUTO_THEME_NAME)
+    expect(
+      JSON.parse(window.localStorage.getItem(LocalStore.ACTIVE_THEME) || "")
+    ).toBe("System")
+
+    prefersDark = true
+    act(() => {
+      mediaChangeHandler?.({ matches: true } as MediaQueryListEvent)
+    })
+
+    expect(result.current[0].activeTheme.name).toBe(AUTO_THEME_NAME)
+    expect(result.current[0].activeTheme.emotion.colors.primary).toBe(
+      darkTheme.emotion.colors.primary
+    )
+    expect(
+      JSON.parse(window.localStorage.getItem(LocalStore.ACTIVE_THEME) || "")
+    ).toBe("System")
+
+    prefersDark = false
+    act(() => {
+      mediaChangeHandler?.({ matches: false } as MediaQueryListEvent)
+    })
+
+    expect(result.current[0].activeTheme.name).toBe(AUTO_THEME_NAME)
+    expect(result.current[0].activeTheme.emotion.colors.primary).toBe(
+      lightTheme.emotion.colors.primary
+    )
+    expect(
+      JSON.parse(window.localStorage.getItem(LocalStore.ACTIVE_THEME) || "")
+    ).toBe("System")
+  })
+
   it("sets the cached theme as the default theme if one is set", () => {
-    setCachedTheme(darkTheme)
+    setCachedThemeSelection(darkTheme)
 
     const { result } = renderHook(() => useThemeManager())
     const [themeManager] = result.current
@@ -149,20 +370,6 @@ describe("useThemeManager", () => {
 
     expect(activeTheme.name).toBe(darkTheme.name)
     expect(availableThemes.length).toBe(createPresetThemes().length)
-  })
-
-  it("includes a custom theme as an available theme if one is cached", () => {
-    setCachedTheme({
-      ...darkTheme,
-      name: CUSTOM_THEME_NAME,
-    })
-
-    const { result } = renderHook(() => useThemeManager())
-    const [themeManager] = result.current
-    const { activeTheme, availableThemes } = themeManager
-
-    expect(activeTheme.name).toBe(CUSTOM_THEME_NAME)
-    expect(availableThemes.length).toBe(createPresetThemes().length + 1)
   })
 
   it("handles custom theme sent from Host", () => {
@@ -279,8 +486,7 @@ describe("useThemeManager", () => {
         window.localStorage.getItem(LocalStore.ACTIVE_THEME) || ""
       )
 
-      expect(savedTheme.name).toBe(CUSTOM_THEME_NAME)
-      expect(savedTheme.themeInput).toBeDefined()
+      expect(savedTheme).toBe("System")
     })
 
     it("replaces the current theme completely", () => {

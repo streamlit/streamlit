@@ -911,7 +911,6 @@ class AppSession:
         The actual handler here is a noop
 
         """
-        pass
 
     def _handle_set_run_on_save_request(self, new_value: bool) -> None:
         """Change our run_on_save flag to the given value.

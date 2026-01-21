@@ -412,6 +412,31 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.arrow_data_frame
         assert "hidden" not in proto.columns
 
+    def test_combined_selection_modes_auto_hides_range_index(self):
+        """Test that RangeIndex is auto-hidden when row selection is combined with other modes.
+
+        When selection_mode is a list containing a row-selection mode (e.g.,
+        ["multi-row", "multi-column"]), the RangeIndex should still be auto-hidden.
+        """
+        df = pd.DataFrame([[1, 2], [3, 4]], columns=["col1", "col2"])
+
+        st.dataframe(
+            df, on_select="rerun", selection_mode=["multi-row", "multi-column"]
+        )
+
+        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        assert proto.columns == json.dumps({INDEX_IDENTIFIER: {"hidden": True}})
+
+    def test_column_only_selection_does_not_hide_range_index(self):
+        """Test that RangeIndex is not hidden when only column selection is enabled."""
+        df = pd.DataFrame([[1, 2], [3, 4]], columns=["col1", "col2"])
+
+        st.dataframe(df, on_select="rerun", selection_mode="multi-column")
+
+        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        # Index should not be hidden when only column selection is active
+        assert proto.columns == "{}"
+
     def test_use_right_display_values(self):
         """Test that _use_display_values gets correct value for "display_value" instead of the original one."""
 

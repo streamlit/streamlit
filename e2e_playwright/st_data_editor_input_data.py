@@ -54,4 +54,4 @@ for i, test_case in enumerate(TEST_CASES):
         width="content",
     )
     if show_return_data:
-        st.dataframe(return_df_fixed, use_container_width=False)
+        st.dataframe(return_df_fixed, width="content")

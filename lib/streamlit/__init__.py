@@ -111,7 +111,6 @@ from streamlit.runtime.state import (
 )
 from streamlit.user_info import (
     UserInfoProxy as _UserInfoProxy,
-    DeprecatedUserInfoProxy as _DeprecatedUserInfoProxy,
     login as _login,
     logout as _logout,
 )
@@ -274,9 +273,6 @@ logout = _logout
 
 # User
 user = _UserInfoProxy()
-
-# Experimental APIs
-experimental_user = _DeprecatedUserInfoProxy()
 
 # make it possible to call streamlit.components.v1.html etc. by importing it here
 # import in the very end to avoid partially-initialized module import errors, because

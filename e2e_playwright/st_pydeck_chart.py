@@ -106,7 +106,7 @@ def invalid_prop_subtest():
         tooltip={"text": "weight: {weight}"},
     )
 
-    st.pydeck_chart(deck, use_container_width=True)
+    st.pydeck_chart(deck, width="stretch")
 
 
 def map_styles_subtest():
