@@ -228,7 +228,12 @@ const StyledMenuWrapper: FC<CustomMenuProps> = props => {
   }
   return (
     <StyledPortalWrap>
-      <CustomMenu className={"click-outside-ignore"} {...props} />
+      <CustomMenu
+        {...props}
+        className={[props.className, "click-outside-ignore"]
+          .filter(Boolean)
+          .join(" ")}
+      />
     </StyledPortalWrap>
   )
 }
