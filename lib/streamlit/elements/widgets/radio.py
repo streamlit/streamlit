@@ -98,7 +98,7 @@ class RadioSerde(Generic[T]):
         if v is None:
             return None
         if len(self.options) == 0:
-            return ""
+            return None
 
         # Use format_func to find the formatted option instead of using
         # index_(self.options, v) which relies on == comparison. This is necessary
@@ -117,10 +117,14 @@ class RadioSerde(Generic[T]):
         return cast("str", v)
 
     def deserialize(self, ui_value: str | None) -> T | str | None:
+        # If no options, there's no valid value - return None
+        if len(self.options) == 0:
+            return None
+
         if ui_value is None:
             return (
                 self.options[self.default_option_index]
-                if self.default_option_index is not None and len(self.options) > 0
+                if self.default_option_index is not None
                 else None
             )
 
