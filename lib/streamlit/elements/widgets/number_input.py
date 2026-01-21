@@ -70,6 +70,8 @@ FloatOrNone = TypeVar("FloatOrNone", float, None)
 class NumberInputSerde:
     value: Number | None
     data_type: int
+    min_value: Number | None = None
+    max_value: Number | None = None
 
     def serialize(self, v: Number | None) -> Number | None:
         return v
@@ -77,8 +79,16 @@ class NumberInputSerde:
     def deserialize(self, ui_value: Number | None) -> Number | None:
         val: Number | None = ui_value if ui_value is not None else self.value
 
-        if val is not None and self.data_type == NumberInputProto.INT:
-            val = int(val)
+        if val is not None:
+            # Convert to int if needed
+            if self.data_type == NumberInputProto.INT:
+                val = int(val)
+
+            # Clamp to min/max bounds for URL-seeded values
+            if self.min_value is not None and val < self.min_value:
+                val = self.min_value
+            if self.max_value is not None and val > self.max_value:
+                val = self.max_value
 
         return val
 
@@ -629,7 +639,7 @@ class NumberInputMixin:
         if bind == "query-params" and key is not None:
             number_input_proto.query_param_key = str(key)
 
-        serde = NumberInputSerde(value, data_type)
+        serde = NumberInputSerde(value, data_type, min_value, max_value)
         widget_state = register_widget(
             number_input_proto.id,
             on_change_handler=on_change,

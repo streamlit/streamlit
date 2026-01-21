@@ -172,6 +172,8 @@ class SliderSerde:
     data_type: int
     single_value: bool
     orig_tz: tzinfo | None
+    min_value: float | None = None
+    max_value: float | None = None
 
     def deserialize_single_value(self, value: float) -> SliderScalar:
         if self.data_type == SliderProto.INT:
@@ -188,11 +190,30 @@ class SliderSerde:
             )
         return value
 
+    def _is_valid_value_list(self, ui_value: list[float] | None) -> bool:
+        """Check if ui_value is a valid non-empty list without NaN values."""
+        import math
+
+        if ui_value is None or len(ui_value) == 0:
+            return False
+        # Check for NaN values which indicate uninitialized/invalid state
+        return not any(math.isnan(v) for v in ui_value)
+
+    def _clamp_value(self, value: float) -> float:
+        """Clamp a value to the min/max bounds."""
+        if self.min_value is not None and value < self.min_value:
+            return self.min_value
+        if self.max_value is not None and value > self.max_value:
+            return self.max_value
+        return value
+
     def deserialize(self, ui_value: list[float] | None) -> Any:
-        if ui_value is not None:
-            val = ui_value
+        val: list[float]
+        if ui_value is not None and self._is_valid_value_list(ui_value):
+            # Clamp values to min/max bounds
+            val = [self._clamp_value(v) for v in ui_value]
         else:
-            # Widget has not been used; fallback to the original value,
+            # Widget has not been used, empty list, or NaN values; fallback to original
             val = self.value
 
         # The widget always returns a float array, so fix the return type if necessary
@@ -1004,6 +1025,8 @@ class SliderMixin:
             data_type,
             single_value,
             orig_tz,
+            min_value,  # For clamping URL-seeded values
+            max_value,  # For clamping URL-seeded values
         )
 
         widget_state = register_widget(
