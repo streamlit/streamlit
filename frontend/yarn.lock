@@ -3438,6 +3438,7 @@ __metadata:
     react-markdown: "npm:^10.1.0"
     react-plotly.js: "npm:^2.6.0"
     react-responsive-carousel: "npm:^3.2.23"
+    react-select: "npm:^5.10.1"
     react-syntax-highlighter: "npm:^16.1.0"
     react-webcam: "npm:7.2.0"
     react-window: "npm:^1.8.11"
