@@ -141,7 +141,9 @@ class MultiSelectSerde(Generic[T]):
                 option_index = self.formatted_options.index(v)
                 values.append(self.options[option_index])
             except ValueError:  # noqa: PERF203
-                values.append(v)
+                # Filter out invalid options (don't include values not in options list)
+                # This handles URL-seeded values that may contain stale/invalid options
+                pass
         return values
 
 
@@ -552,6 +554,7 @@ class MultiSelectMixin:
             ctx=ctx,
             value_type="string_array_value",
             bind=bind,
+            formatted_options=formatted_options,
         )
 
         _check_max_selections(widget_state.value, max_selections)

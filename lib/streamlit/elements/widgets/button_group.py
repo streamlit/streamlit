@@ -193,9 +193,13 @@ class ButtonGroupSerde(Generic[T]):
         self.options = options
         self.default_values = default_values
         self.type = type
-        self.formatted_options = formatted_options if formatted_options is not None else []
+        self.formatted_options = (
+            formatted_options if formatted_options is not None else []
+        )
         self.serde: _SingleSelectSerde[T] | _MultiSelectSerde[T] = (
-            _SingleSelectSerde(options, self.formatted_options, default_value=default_values)
+            _SingleSelectSerde(
+                options, self.formatted_options, default_value=default_values
+            )
             if type == "single"
             else _MultiSelectSerde(options, self.formatted_options, default_values)
         )
@@ -1020,8 +1024,7 @@ class ButtonGroupMixin:
 
         # Compute formatted option strings for URL binding support
         formatted_options = [
-            (format_func(opt) if format_func else str(opt))
-            for opt in indexable_options
+            (format_func(opt) if format_func else str(opt)) for opt in indexable_options
         ]
 
         serde: ButtonGroupSerde[V] = ButtonGroupSerde[V](
@@ -1176,6 +1179,7 @@ class ButtonGroupMixin:
             ctx=ctx,
             value_type="int_array_value",
             bind=bind,
+            formatted_options=list(formatted_options),
         )
 
         if widget_state.value_changed:

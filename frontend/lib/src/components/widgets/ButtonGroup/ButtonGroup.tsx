@@ -334,9 +334,16 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
   const queryParamKey = element.queryParamKey
   const widgetId = element.id
   const defaultValue = element.default
-  // Extract option content strings for human-readable URLs
+  // Extract formatted option strings for URL binding
+  // Must include icon to match backend's formatted_options
   const optionStrings = useMemo(
-    () => options.map(opt => opt.content),
+    () =>
+      options.map(opt => {
+        const icon = opt.contentIcon ?? ""
+        const content = opt.content ?? ""
+        // Format: "icon content" to match backend's formatted_options
+        return icon ? `${icon} ${content}` : content
+      }),
     [options]
   )
   useEffect(() => {

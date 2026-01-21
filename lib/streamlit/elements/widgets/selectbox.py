@@ -144,7 +144,10 @@ class SelectboxSerde(Generic[T]):
             )
 
         option_index = self.formatted_option_to_option_index.get(ui_value)
-        return self.options[option_index] if option_index is not None else ui_value
+        if option_index is not None:
+            return self.options[option_index]
+        # Invalid option - raise ValueError so URL binding knows to clear it
+        raise ValueError(f"Invalid option: {ui_value!r}")
 
 
 class SelectboxMixin:
@@ -608,6 +611,7 @@ class SelectboxMixin:
             ctx=ctx,
             value_type="string_value",
             bind=bind,
+            formatted_options=formatted_options,
         )
         widget_state = maybe_coerce_enum(widget_state, options, opt)
 

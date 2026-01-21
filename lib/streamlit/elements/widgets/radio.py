@@ -92,7 +92,8 @@ class RadioSerde(Generic[T]):
                 try:
                     idx = int(ui_value)
                 except ValueError:
-                    idx = self.index  # Fallback to default
+                    # Invalid option - raise error so URL can be cleared
+                    raise ValueError(f"Invalid option: {ui_value!r}")
 
         return (
             self.options[idx]
@@ -470,6 +471,7 @@ class RadioMixin:
             ctx=ctx,
             value_type="int_value",
             bind=bind,
+            formatted_options=formatted_options,
         )
         widget_state = maybe_coerce_enum(widget_state, options, opt)
 
