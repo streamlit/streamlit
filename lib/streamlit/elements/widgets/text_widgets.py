@@ -61,9 +61,14 @@ if TYPE_CHECKING:
 @dataclass
 class TextInputSerde:
     value: str | None
+    max_chars: int | None = None
 
     def deserialize(self, ui_value: str | None) -> str | None:
-        return ui_value if ui_value is not None else self.value
+        val = ui_value if ui_value is not None else self.value
+        # Truncate to max_chars if specified (for URL-seeded values)
+        if val is not None and self.max_chars is not None and len(val) > self.max_chars:
+            val = val[: self.max_chars]
+        return val
 
     def serialize(self, v: str | None) -> str | None:
         return v
@@ -72,9 +77,14 @@ class TextInputSerde:
 @dataclass
 class TextAreaSerde:
     value: str | None
+    max_chars: int | None = None
 
     def deserialize(self, ui_value: str | None) -> str | None:
-        return ui_value if ui_value is not None else self.value
+        val = ui_value if ui_value is not None else self.value
+        # Truncate to max_chars if specified (for URL-seeded values)
+        if val is not None and self.max_chars is not None and len(val) > self.max_chars:
+            val = val[: self.max_chars]
+        return val
 
     def serialize(self, v: str | None) -> str | None:
         return v
@@ -395,7 +405,7 @@ class TextWidgetsMixin:
         if bind == "query-params" and key is not None:
             text_input_proto.query_param_key = str(key)
 
-        serde = TextInputSerde(value)
+        serde = TextInputSerde(value, max_chars)
 
         widget_state = register_widget(
             text_input_proto.id,
@@ -700,7 +710,7 @@ class TextWidgetsMixin:
         if bind == "query-params" and key is not None:
             text_area_proto.query_param_key = str(key)
 
-        serde = TextAreaSerde(value)
+        serde = TextAreaSerde(value, max_chars)
         widget_state = register_widget(
             text_area_proto.id,
             on_change_handler=on_change,
