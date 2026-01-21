@@ -301,7 +301,8 @@ if tabs[0].open:  # Developer must add this check
 
 Several alternative API designs were evaluated before selecting the proposed approach:
 
-### Boolean Evaluation of Delta Generator
+<details>
+<summary>Boolean Evaluation of Delta Generator</summary>
 
 **Approach:** Make the delta generator itself evaluate to `True` when open/active.
 
@@ -334,9 +335,10 @@ elif tab2:
 
 **Why not selected:** The implicit truthiness check feels too magical and could lead to confusion about what's actually being evaluated.
 
----
+</details>
 
-### Session State Value
+<details>
+<summary>Session State Value</summary>
 
 **Approach:** Use session state exclusively to track open/closed state.
 
@@ -366,9 +368,10 @@ if st.session_state.exp:
 
 **Why not selected:** Too verbose and requires extra boilerplate (keys) for a common use case.
 
----
+</details>
 
-### Function Argument
+<details>
+<summary>Function Argument</summary>
 
 **Approach:** Pass functions as arguments that get called only when the tab/expander is visible.
 
@@ -408,9 +411,10 @@ st.tabs({"A": show_tab_a, "B": show_tab_b})
 
 **Why not selected:** Would require refactoring existing code, and auto-fragmentation (the main performance benefit) is impractical due to common usage patterns that fragments don't support. Without auto-fragmentation, it offers no performance advantage over the selected approach.
 
----
+</details>
 
-### Function Decorator
+<details>
+<summary>Function Decorator</summary>
 
 **Approach:** Use a decorator pattern similar to `@st.fragment` and `@st.dialog`.
 
@@ -437,7 +441,7 @@ show_expander()
 
 **Why not selected:** Doesn't scale well to multi-tab scenarios, would create confusing dual APIs for the same elements, and inherits fragment limitations if auto-fragmented.
 
----
+</details>
 
 ## Design Rationale
 
