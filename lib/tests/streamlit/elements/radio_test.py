@@ -465,7 +465,7 @@ def test_None_session_state_value_retained():
     assert at.radio[0].value is None
 
 
-def test_dynamic_options_with_key_retains_value():
+def test_dynamic_options_with_key_retains_value() -> None:
     """Test that changing options with a key retains the selected value if still valid."""
 
     def script():
@@ -503,7 +503,7 @@ def test_dynamic_options_with_key_retains_value():
     assert "Selected: B" in at.text[0].value
 
 
-def test_dynamic_options_with_key_resets_invalid_value():
+def test_dynamic_options_with_key_resets_invalid_value() -> None:
     """Test that changing options resets value to default if selected value is removed."""
 
     def script():
@@ -541,7 +541,7 @@ def test_dynamic_options_with_key_resets_invalid_value():
     assert "Selected: D" in at.text[0].value
 
 
-def test_dynamic_options_with_key_and_none_index():
+def test_dynamic_options_with_key_and_none_index() -> None:
     """Test dynamic options with index=None (no default selection)."""
 
     def script():
@@ -577,7 +577,7 @@ def test_dynamic_options_with_key_and_none_index():
     assert "Selected: None" in at.text[0].value
 
 
-def test_dynamic_format_func_preserves_value():
+def test_dynamic_format_func_preserves_value() -> None:
     """Test that changing format_func preserves value if underlying option still exists."""
 
     def script():
@@ -622,7 +622,7 @@ def test_dynamic_format_func_preserves_value():
     assert "Selected: B" in at.text[0].value
 
 
-def test_custom_objects_without_eq():
+def test_custom_objects_without_eq() -> None:
     """Test that custom class objects without __eq__ work with format_func.
 
     This tests the fix for issue #13646 where custom objects without __eq__

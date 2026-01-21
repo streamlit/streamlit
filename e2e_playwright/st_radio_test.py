@@ -257,6 +257,8 @@ def test_dynamic_radio_props(app: Page, assert_snapshot: ImageCompareFunction):
 
     # Selection should RESET to "papaya" (default at index=1) since "banana" is not in updated options
     expect_prefixed_markdown(app, "Updated radio value:", "papaya")
+    # Negative assertion: ensure "banana" is NOT selected after toggle (regression check)
+    expect(dynamic_radio).not_to_contain_text("Banana")
 
     dynamic_radio.scroll_into_view_if_needed()
     assert_snapshot(dynamic_radio, name="st_radio-dynamic_updated")
