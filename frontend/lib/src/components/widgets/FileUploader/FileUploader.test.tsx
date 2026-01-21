@@ -969,3 +969,187 @@ describe("FileUploader widget tests", () => {
     })
   })
 })
+
+describe("FileUploader Android resilience", () => {
+  beforeEach(() => {
+    vi.spyOn(UseResizeObserver, "useResizeObserver").mockReturnValue({
+      elementRef: { current: null },
+      values: [250],
+    })
+  })
+
+  it("shows error for zero-size files (Android picker issue)", async () => {
+    const props = getProps({ multipleFiles: true })
+    render(<FileUploader {...props} />)
+
+    const fileDropZone = screen.getByTestId("stFileUploaderDropzone")
+
+    // Simulate a zero-size file (common Android picker issue)
+    const zeroSizeFile = new File([], "empty.jpg", {
+      type: "image/jpeg",
+      lastModified: 0,
+    })
+    const normalFile = new File(["content"], "normal.txt", {
+      type: "text/plain",
+      lastModified: 0,
+    })
+
+    fireEvent.drop(fileDropZone, {
+      dataTransfer: {
+        types: ["Files"],
+        files: [zeroSizeFile, normalFile],
+        items: [zeroSizeFile, normalFile].map(file => ({
+          kind: "file",
+          type: file.type,
+          getAsFile: () => file,
+        })),
+      },
+    })
+
+    await waitFor(() => {
+      const fileElements = screen.getAllByTestId("stFileUploaderFile")
+      expect(fileElements.length).toBe(2)
+    })
+
+    // One file should be uploaded, one should have an error
+    await waitFor(() =>
+      expect(props.uploadClient.uploadFile).toHaveBeenCalledTimes(1)
+    )
+
+    const errorMessages = screen.getAllByTestId(
+      "stFileUploaderFileErrorMessage"
+    )
+    expect(errorMessages.length).toBe(1)
+    expect(errorMessages[0].textContent).toContain("empty")
+  })
+
+  it("filters out duplicate files", async () => {
+    const props = getProps({ multipleFiles: true })
+    vi.spyOn(props.widgetMgr, "setFileUploaderStateValue")
+    render(<FileUploader {...props} />)
+
+    const fileDropZone = screen.getByTestId("stFileUploaderDropzone")
+
+    // Simulate duplicate files (same name and size)
+    const file1 = new File(["content"], "duplicate.txt", {
+      type: "text/plain",
+      lastModified: 0,
+    })
+    const file2 = new File(["content"], "duplicate.txt", {
+      type: "text/plain",
+      lastModified: 0,
+    })
+    const file3 = new File(["other"], "unique.txt", {
+      type: "text/plain",
+      lastModified: 0,
+    })
+
+    fireEvent.drop(fileDropZone, {
+      dataTransfer: {
+        types: ["Files"],
+        files: [file1, file2, file3],
+        items: [file1, file2, file3].map(file => ({
+          kind: "file",
+          type: file.type,
+          getAsFile: () => file,
+        })),
+      },
+    })
+
+    await waitFor(() => {
+      // Should show 3 files: 2 unique uploads + 1 duplicate error
+      const fileElements = screen.getAllByTestId("stFileUploaderFile")
+      expect(fileElements.length).toBe(3)
+    })
+
+    // Should only upload 2 unique files
+    await waitFor(() =>
+      expect(props.uploadClient.uploadFile).toHaveBeenCalledTimes(2)
+    )
+
+    // One should have duplicate error
+    const errorMessages = screen.getAllByTestId(
+      "stFileUploaderFileErrorMessage"
+    )
+    expect(errorMessages.length).toBe(1)
+    expect(errorMessages[0].textContent).toContain("Duplicate")
+  })
+
+  it("handles empty change event gracefully", async () => {
+    const props = getProps({ multipleFiles: true })
+    render(<FileUploader {...props} />)
+
+    const fileDropZone = screen.getByTestId("stFileUploaderDropzone")
+
+    // Simulate empty drop (user cancelled)
+    fireEvent.drop(fileDropZone, {
+      dataTransfer: {
+        types: ["Files"],
+        files: [],
+        items: [],
+      },
+    })
+
+    // No uploads should happen
+    await waitFor(() => {
+      expect(props.uploadClient.uploadFile).not.toHaveBeenCalled()
+    })
+
+    // No file elements should be shown
+    expect(screen.queryByTestId("stFileUploaderFile")).not.toBeInTheDocument()
+  })
+
+  it(
+    "handles mixed valid and invalid files correctly",
+    async () => {
+      const props = getProps({ multipleFiles: true })
+      render(<FileUploader {...props} />)
+
+      const fileDropZone = screen.getByTestId("stFileUploaderDropzone")
+
+      // Mix of valid files, zero-size, and duplicates
+      const validFile1 = new File(["content1"], "file1.txt", {
+        type: "text/plain",
+      })
+      const validFile2 = new File(["content2"], "file2.txt", {
+        type: "text/plain",
+      })
+      const zeroSizeFile = new File([], "empty.txt", { type: "text/plain" })
+      const duplicateFile = new File(["content1"], "file1.txt", {
+        type: "text/plain",
+      })
+
+      fireEvent.drop(fileDropZone, {
+        dataTransfer: {
+          types: ["Files"],
+          files: [validFile1, validFile2, zeroSizeFile, duplicateFile],
+          items: [validFile1, validFile2, zeroSizeFile, duplicateFile].map(
+            file => ({
+              kind: "file",
+              type: file.type,
+              getAsFile: () => file,
+            })
+          ),
+        },
+      })
+
+      // Wait for all files to be processed and verify in single waitFor
+      await waitFor(
+        () => {
+          // Should show all 4 files (2 valid uploads + 2 errors)
+          const fileElements = screen.getAllByTestId("stFileUploaderFile")
+          expect(fileElements.length).toBe(4)
+          // Should only upload 2 valid files
+          expect(props.uploadClient.uploadFile).toHaveBeenCalledTimes(2)
+          // Should have 2 errors (zero-size and duplicate)
+          const errorMessages = screen.getAllByTestId(
+            "stFileUploaderFileErrorMessage"
+          )
+          expect(errorMessages.length).toBe(2)
+        },
+        { timeout: 10000 }
+      )
+    },
+    15000
+  )
+})

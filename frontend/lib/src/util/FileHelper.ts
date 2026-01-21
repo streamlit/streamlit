@@ -119,6 +119,12 @@ const getErrorMessage = (
       return `File size is too small.`
     case "too-many-files":
       return "Only one file is allowed."
+    case "file-zero-size":
+      return "File appears to be empty or could not be read. This may be a file picker issue on your device."
+    case "file-read-error":
+      return "Could not read file. Please try selecting the file again or use a different file picker."
+    case "file-duplicate":
+      return "Duplicate file ignored."
     default:
       return "Unexpected error. Please try again."
   }

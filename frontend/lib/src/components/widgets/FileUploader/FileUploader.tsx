@@ -47,7 +47,9 @@ import {
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import FileDropzone from "./FileDropzone"
+import { getValidationErrorMessage, validateFiles } from "./fileValidation"
 import { StyledFileUploader } from "./styled-components"
+import { logFileSelection, logUploadResults } from "./uploadDiagnostics"
 import UploadedFiles from "./UploadedFiles"
 import { UploadedStatus, UploadFileInfo } from "./UploadFileInfo"
 
@@ -495,11 +497,48 @@ const FileUploader = ({
       let acceptedFiles = [...acceptedFilesParam]
       let rejectedFiles = [...rejectedFilesParam]
 
+      // Log file selection for diagnostics (when enabled)
+      logFileSelection(multipleFiles, acceptedFiles)
+
       if (isDirectoryUpload && acceptedFiles.length > 0) {
         const { accepted, rejected } = filterDirectoryFiles(acceptedFiles)
         acceptedFiles = accepted
         rejectedFiles = [...rejectedFiles, ...rejected]
       }
+
+      // Validate files for Android picker issues (zero-size, duplicates)
+      const validation = validateFiles(acceptedFiles)
+
+      // Add invalid files (e.g., zero-size) to rejected with appropriate error
+      validation.invalid.forEach(({ file, error }) => {
+        rejectedFiles.push({
+          file,
+          errors: [
+            {
+              code: error,
+              message: getValidationErrorMessage(
+                error as Parameters<typeof getValidationErrorMessage>[0]
+              ),
+            },
+          ],
+        })
+      })
+
+      // Add duplicate files to rejected
+      validation.duplicates.forEach(file => {
+        rejectedFiles.push({
+          file,
+          errors: [
+            {
+              code: "file-duplicate",
+              message: "Duplicate file ignored.",
+            },
+          ],
+        })
+      })
+
+      // Use only validated files
+      acceptedFiles = validation.valid
 
       if (
         !multipleFiles &&
@@ -517,6 +556,13 @@ const FileUploader = ({
           rejectedFiles.splice(firstFileIndex, 1)
         }
       }
+
+      // Track upload results for diagnostics
+      const uploadResultsTracker: Array<{
+        name: string
+        success: boolean
+        error?: string
+      }> = []
 
       uploadClient
         .fetchFileURLs(acceptedFiles)
@@ -542,6 +588,16 @@ const FileUploader = ({
           )
         })
         .catch((errorMessage: string) => {
+          // Log the batch failure
+          acceptedFiles.forEach(f => {
+            uploadResultsTracker.push({
+              name: f.name,
+              success: false,
+              error: errorMessage,
+            })
+          })
+          logUploadResults(uploadResultsTracker)
+
           addFiles(
             acceptedFiles.map(
               f =>
