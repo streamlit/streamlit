@@ -49,13 +49,15 @@ const getStateFromWidgetMgr = (
 const getDefaultStateFromProto = (
   element: ColorPickerProto
 ): ColorPickerValue => {
-  return element.default ?? null
+  // Default to a sensible color if proto default is not set
+  return element.default || "#000000"
 }
 
 const getCurrStateFromProto = (
   element: ColorPickerProto
 ): ColorPickerValue => {
-  return element.value ?? null
+  // Return the current value, falling back to default if not set
+  return element.value || element.default || "#000000"
 }
 
 const updateWidgetMgrState = (

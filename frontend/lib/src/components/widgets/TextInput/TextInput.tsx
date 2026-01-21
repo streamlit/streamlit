@@ -272,8 +272,10 @@ function TextInput({
 function getStateFromWidgetMgr(
   widgetMgr: WidgetStateManager,
   element: TextInputProto
-): string | null {
-  return widgetMgr.getStringValue(element) ?? null
+): string | null | undefined {
+  // Return undefined if no state in widget manager - this allows
+  // getDefaultState to run and check setValue for URL-seeded values
+  return widgetMgr.getStringValue(element)
 }
 
 function getDefaultStateFromProto(element: TextInputProto): string | null {

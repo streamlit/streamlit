@@ -164,6 +164,9 @@ function Slider({
   const queryParamKey = element.queryParamKey
   const widgetId = element.id
   const defaultValue = element.default
+  // For select_slider, pass options so URLs use human-readable strings
+  const sliderOptions =
+    element.options.length > 0 ? [...element.options] : undefined
   useEffect(() => {
     if (queryParamKey) {
       widgetMgr.registerQueryParamBinding(
@@ -171,12 +174,14 @@ function Slider({
         queryParamKey,
         "double_array_value",
         defaultValue,
-        "comma" // Sliders use comma-separated values for ranges
+        "comma", // Sliders use comma-separated values for ranges
+        sliderOptions // For select_slider: converts indices to option strings
       )
       return () => {
         widgetMgr.unregisterQueryParamBinding(widgetId)
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [widgetMgr, widgetId, queryParamKey, defaultValue])
 
   const handleFinalChange = useCallback(

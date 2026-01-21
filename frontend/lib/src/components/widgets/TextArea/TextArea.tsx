@@ -59,7 +59,9 @@ const getStateFromWidgetMgr = (
   widgetMgr: WidgetStateManager,
   element: TextAreaProto
 ): TextAreaValue | undefined => {
-  return widgetMgr.getStringValue(element) ?? element.default ?? null
+  // Return undefined if no state in widget manager - this allows
+  // getDefaultState to run and check setValue for URL-seeded values
+  return widgetMgr.getStringValue(element)
 }
 
 const getDefaultStateFromProto = (element: TextAreaProto): TextAreaValue => {
