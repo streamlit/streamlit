@@ -628,7 +628,7 @@ class GetUploadFilesTest(DeltaGeneratorTestCase):
     def test_get_upload_files_returns_empty_for_none(self):
         """Test _get_upload_files returns empty list for None input."""
         result = _get_upload_files(None)
-        assert result == []
+        assert len(result) == 0
 
     def test_get_upload_files_returns_empty_no_ctx(self):
         """Test _get_upload_files returns empty list when no script context."""
@@ -639,7 +639,7 @@ class GetUploadFilesTest(DeltaGeneratorTestCase):
             return_value=None,
         ):
             result = _get_upload_files(proto)
-            assert result == []
+            assert len(result) == 0
 
     def test_get_upload_files_returns_empty_for_empty_file_info(self):
         """Test _get_upload_files returns empty list when no file info."""
@@ -647,4 +647,4 @@ class GetUploadFilesTest(DeltaGeneratorTestCase):
         # No files added to uploaded_file_info
 
         result = _get_upload_files(proto)
-        assert result == []
+        assert len(result) == 0

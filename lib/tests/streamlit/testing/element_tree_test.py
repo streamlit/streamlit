@@ -970,7 +970,8 @@ def test_button_group_feedback():
     # The feedback element does not have a select/unselect but we can test it exists
     assert len(at.get("button_group")) == 2
 
-    repr(at.get("button_group")[0])
+    result = repr(at.get("button_group")[0])
+    assert "ButtonGroup" in result
 
 
 def test_unknown_element():

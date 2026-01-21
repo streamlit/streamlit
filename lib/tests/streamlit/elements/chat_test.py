@@ -951,7 +951,8 @@ class PopUploadFilesTest(DeltaGeneratorTestCase):
     def test_pop_upload_files_returns_empty_list_for_none(self):
         """Test _pop_upload_files returns empty list when files_value is None."""
         result = _pop_upload_files(None)
-        assert result == []
+        assert isinstance(result, list)
+        assert len(result) == 0
 
     def test_pop_upload_files_returns_empty_list_no_ctx(self):
         """Test _pop_upload_files returns empty list when no script context."""
@@ -961,7 +962,7 @@ class PopUploadFilesTest(DeltaGeneratorTestCase):
             "streamlit.elements.widgets.chat.get_script_run_ctx", return_value=None
         ):
             result = _pop_upload_files(proto)
-            assert result == []
+            assert len(result) == 0
 
     def test_pop_audio_file_returns_none_for_none(self):
         """Test _pop_audio_file returns None when audio_file_info is None."""

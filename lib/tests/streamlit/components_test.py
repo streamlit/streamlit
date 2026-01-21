@@ -772,10 +772,16 @@ class ComponentArrowTest(unittest.TestCase):
         assert len(proto.data) > 0
         assert len(proto.columns) > 0
 
-    def test_maybe_tuple_to_list(self):
-        """Test _maybe_tuple_to_list utility function."""
 
-        assert _maybe_tuple_to_list((1, 2, 3)) == [1, 2, 3]
-        assert _maybe_tuple_to_list([1, 2, 3]) == [1, 2, 3]
-        assert _maybe_tuple_to_list("string") == "string"
-        assert _maybe_tuple_to_list(123) == 123
+@pytest.mark.parametrize(
+    ("input_value", "expected"),
+    [
+        ((1, 2, 3), [1, 2, 3]),
+        ([1, 2, 3], [1, 2, 3]),
+        ("string", "string"),
+        (123, 123),
+    ],
+)
+def test_maybe_tuple_to_list(input_value, expected):
+    """Test _maybe_tuple_to_list utility function."""
+    assert _maybe_tuple_to_list(input_value) == expected

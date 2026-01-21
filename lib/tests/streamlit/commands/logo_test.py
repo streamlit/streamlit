@@ -136,6 +136,7 @@ class LogoTest(DeltaGeneratorTestCase):
             st.logo("not_a_valid_image_path_that_does_not_exist.xyz")
 
         assert "image passed to st.logo is invalid" in str(exc.value)
+        assert "documentation" in str(exc.value)
 
     def test_invalid_icon_image_raises_exception(self):
         """Test that invalid icon_image input raises StreamlitAPIException."""
@@ -146,3 +147,4 @@ class LogoTest(DeltaGeneratorTestCase):
             st.logo(streamlit, icon_image="not_a_valid_icon_path.xyz")
 
         assert "icon_image passed to st.logo is invalid" in str(exc.value)
+        assert "documentation" in str(exc.value)

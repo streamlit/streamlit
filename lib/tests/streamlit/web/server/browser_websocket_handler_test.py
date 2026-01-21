@@ -410,7 +410,7 @@ class ParseUserCookieTest(tornado.testing.AsyncTestCase):
         result = BrowserWebSocketHandler._parse_user_cookie(handler, cookie_value)
 
         # Should return empty dict due to origin mismatch
-        assert result == {}
+        assert len(result) == 0
 
     def test_parse_user_cookie_handles_https_origin(self) -> None:
         """Test that HTTPS origins are handled correctly."""
