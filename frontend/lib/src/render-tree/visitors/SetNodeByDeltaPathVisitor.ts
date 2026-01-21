@@ -59,27 +59,27 @@ export class SetNodeByDeltaPathVisitor implements AppNodeVisitor<AppNode> {
   }
 
   visitTransientNode(node: TransientNode): AppNode {
-    const [, ...remainingPath] = this.deltaPath
-
-    // If we need to drill down, we will travel through the anchor.
-    if (remainingPath.length > 0) {
-      if (node.anchor) {
-        return node.anchor.accept(
-          new SetNodeByDeltaPathVisitor(
-            remainingPath,
-            this.nodeToSet,
-            this.scriptRunId
-          )
-        )
-      }
-
-      throw new Error("TransientNode has no anchor to set node at")
+    // If the path is empty, we're replacing this transient node.
+    // Let the node decide how to best replace the transient node.
+    // This is especially important for transient nodes to reconcile themselves.
+    if (this.deltaPath.length === 0) {
+      return this.nodeToSet.replaceTransientNodeWithSelf(node)
     }
 
-    // At this point, we know the nodeToSet is to replace the transient node
-    // so we let the node decide how to best replace the transient node
-    // This is especially important for transient nodes to reconcile themselves
-    return this.nodeToSet.replaceTransientNodeWithSelf(node)
+    // TransientNode is transparent in the delta path hierarchy - it doesn't
+    // consume an index from the path. We drill through to the anchor and
+    // preserve the transient wrapper around the modified anchor.
+    if (node.anchor) {
+      const newAnchor = node.anchor.accept(this)
+      return new TransientNode(
+        node.scriptRunId,
+        newAnchor,
+        node.transientNodes,
+        node.deltaMsgReceivedAt
+      )
+    }
+
+    throw new Error("TransientNode has no anchor to set node at")
   }
 
   visitBlockNode(node: BlockNode): AppNode {
