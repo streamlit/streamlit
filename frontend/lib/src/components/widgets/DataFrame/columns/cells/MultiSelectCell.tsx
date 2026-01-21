@@ -255,140 +255,140 @@ const Editor: ReturnType<ProvideEditorCallback<MultiSelectCell>> = p => {
   // All components: https://react-select.com/components
   const colorStyles: StylesConfig<SelectOption, true> = useMemo(
     () => ({
-    control: (base, state) => ({
-      ...base,
-      border: 0,
-      boxShadow: "none",
-      backgroundColor: theme.bgCell,
-      // Allow interaction (e.g. wheel scrolling) even when the select is disabled
-      pointerEvents: state.isDisabled ? "auto" : base.pointerEvents,
-      cursor: state.isDisabled ? "default" : base.cursor,
-    }),
-    valueContainer: base => ({
-      ...base,
-      // Keep default wrapping so multiple chips can move to new lines
-      flexWrap: base.flexWrap ?? "wrap",
-      overflowX: "auto",
-      overflowY: "hidden",
-    }),
-    menu: styles => ({
-      ...styles,
-      backgroundColor: theme.bgCell,
-    }),
-    option: (styles, state) => {
-      return {
+      control: (base, state) => ({
+        ...base,
+        border: 0,
+        boxShadow: "none",
+        backgroundColor: theme.bgCell,
+        // Allow interaction (e.g. wheel scrolling) even when the select is disabled
+        pointerEvents: state.isDisabled ? "auto" : base.pointerEvents,
+        cursor: state.isDisabled ? "default" : base.cursor,
+      }),
+      valueContainer: base => ({
+        ...base,
+        // Keep default wrapping so multiple chips can move to new lines
+        flexWrap: base.flexWrap ?? "wrap",
+        overflowX: "auto",
+        overflowY: "hidden",
+      }),
+      menu: styles => ({
         ...styles,
-        fontSize: theme.editorFontSize,
-        fontFamily: theme.fontFamily,
-        color: theme.textDark,
-        ...(state.isFocused
-          ? { backgroundColor: theme.accentLight, cursor: "pointer" }
-          : {}),
-        ":active": {
-          ...styles[":active"],
-          color: theme.accentFg,
-          backgroundColor: theme.accentColor,
-        },
-      }
-    },
-    input: (styles, { isDisabled }) => {
-      if (isDisabled) {
+        backgroundColor: theme.bgCell,
+      }),
+      option: (styles, state) => {
         return {
-          display: "none",
-        }
-      }
-      return {
-        ...styles,
-        fontSize: theme.editorFontSize,
-        fontFamily: theme.fontFamily,
-        color: theme.textDark,
-      }
-    },
-    placeholder: styles => {
-      return {
-        ...styles,
-        fontSize: theme.editorFontSize,
-        fontFamily: theme.fontFamily,
-        color: theme.textLight,
-      }
-    },
-    noOptionsMessage: styles => {
-      return {
-        ...styles,
-        fontSize: theme.editorFontSize,
-        fontFamily: theme.fontFamily,
-        color: theme.textLight,
-      }
-    },
-    clearIndicator: styles => {
-      return {
-        ...styles,
-        color: theme.textLight,
-        ":hover": {
+          ...styles,
+          fontSize: theme.editorFontSize,
+          fontFamily: theme.fontFamily,
           color: theme.textDark,
-          cursor: "pointer",
-        },
-      }
-    },
-    multiValue: (styles, { data }) => {
-      return {
-        ...styles,
-        backgroundColor: data.color ?? theme.bgBubble,
-        borderRadius: `${theme.roundingRadius ?? theme.bubbleHeight / 2}px`,
-        flexShrink: 0,
-        whiteSpace: "nowrap",
-      }
-    },
-    multiValueLabel: (styles, { data, isDisabled }) => {
-      return {
-        ...styles,
-        paddingRight: isDisabled ? theme.bubblePadding : 0,
-        paddingLeft: theme.bubblePadding,
-        paddingTop: 0,
-        paddingBottom: 0,
-        color: data.color
-          ? // If a color is set for this option,
-            // we use it to determine the text color.
-            getLuminance(data.color) > 0.5
-            ? "black"
-            : "white"
-          : theme.textBubble,
-        fontSize: theme.editorFontSize,
-        fontFamily: theme.fontFamily,
-        justifyContent: "center",
-        alignItems: "center",
-        display: "flex",
-        height: theme.bubbleHeight,
-        whiteSpace: "nowrap",
-      }
-    },
-    multiValueRemove: (styles, { data, isDisabled, isFocused }) => {
-      if (isDisabled) {
-        return {
-          display: "none",
+          ...(state.isFocused
+            ? { backgroundColor: theme.accentLight, cursor: "pointer" }
+            : {}),
+          ":active": {
+            ...styles[":active"],
+            color: theme.accentFg,
+            backgroundColor: theme.accentColor,
+          },
         }
-      }
-      return {
-        ...styles,
-        color: data.color
-          ? // If a color is set for this option,
-            // we use it to determine the text color.
-            getLuminance(data.color) > 0.5
-            ? "black"
-            : "white"
-          : theme.textBubble,
-        backgroundColor: undefined,
-        borderRadius: isFocused
-          ? `${theme.roundingRadius ?? theme.bubbleHeight / 2}px`
-          : undefined,
-        ":hover": {
-          cursor: "pointer",
-        },
-      }
-    },
-  }),
-  [theme]
-)
+      },
+      input: (styles, { isDisabled }) => {
+        if (isDisabled) {
+          return {
+            display: "none",
+          }
+        }
+        return {
+          ...styles,
+          fontSize: theme.editorFontSize,
+          fontFamily: theme.fontFamily,
+          color: theme.textDark,
+        }
+      },
+      placeholder: styles => {
+        return {
+          ...styles,
+          fontSize: theme.editorFontSize,
+          fontFamily: theme.fontFamily,
+          color: theme.textLight,
+        }
+      },
+      noOptionsMessage: styles => {
+        return {
+          ...styles,
+          fontSize: theme.editorFontSize,
+          fontFamily: theme.fontFamily,
+          color: theme.textLight,
+        }
+      },
+      clearIndicator: styles => {
+        return {
+          ...styles,
+          color: theme.textLight,
+          ":hover": {
+            color: theme.textDark,
+            cursor: "pointer",
+          },
+        }
+      },
+      multiValue: (styles, { data }) => {
+        return {
+          ...styles,
+          backgroundColor: data.color ?? theme.bgBubble,
+          borderRadius: `${theme.roundingRadius ?? theme.bubbleHeight / 2}px`,
+          flexShrink: 0,
+          whiteSpace: "nowrap",
+        }
+      },
+      multiValueLabel: (styles, { data, isDisabled }) => {
+        return {
+          ...styles,
+          paddingRight: isDisabled ? theme.bubblePadding : 0,
+          paddingLeft: theme.bubblePadding,
+          paddingTop: 0,
+          paddingBottom: 0,
+          color: data.color
+            ? // If a color is set for this option,
+              // we use it to determine the text color.
+              getLuminance(data.color) > 0.5
+              ? "black"
+              : "white"
+            : theme.textBubble,
+          fontSize: theme.editorFontSize,
+          fontFamily: theme.fontFamily,
+          justifyContent: "center",
+          alignItems: "center",
+          display: "flex",
+          height: theme.bubbleHeight,
+          whiteSpace: "nowrap",
+        }
+      },
+      multiValueRemove: (styles, { data, isDisabled, isFocused }) => {
+        if (isDisabled) {
+          return {
+            display: "none",
+          }
+        }
+        return {
+          ...styles,
+          color: data.color
+            ? // If a color is set for this option,
+              // we use it to determine the text color.
+              getLuminance(data.color) > 0.5
+              ? "black"
+              : "white"
+            : theme.textBubble,
+          backgroundColor: undefined,
+          borderRadius: isFocused
+            ? `${theme.roundingRadius ?? theme.bubbleHeight / 2}px`
+            : undefined,
+          ":hover": {
+            cursor: "pointer",
+          },
+        }
+      },
+    }),
+    [theme]
+  )
 
   // This is used to submit the values to the grid.
   const submitValues = useCallback(
