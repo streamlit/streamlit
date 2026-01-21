@@ -90,7 +90,7 @@ if pop.open:  # Only when popover is open
 
 #### Programmatic Control via Session State
 
-When a `key` is provided, the element's state can be controlled programmatically via `st.session_state`:
+When a `key` is provided and on_change is "rerun" or a callback, the element's state can be controlled programmatically via `st.session_state`:
 
 **For `st.tabs`:**
 
