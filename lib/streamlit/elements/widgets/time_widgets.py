@@ -436,16 +436,41 @@ class DateTimeInputSerde:
     min: datetime
     max: datetime
 
+    def _parse_datetime(self, value: str) -> datetime:
+        """Parse a datetime string, supporting multiple formats."""
+        # Try formats in order of preference
+        formats = [
+            _DATETIME_UI_FORMAT,  # "1999/01/15, 12:00"
+            "%Y-%m-%dT%H:%M:%S",  # ISO 8601 with seconds
+            "%Y-%m-%dT%H:%M",  # ISO 8601 without seconds
+            "%Y-%m-%d %H:%M:%S",  # ISO-like with space
+            "%Y-%m-%d %H:%M",  # ISO-like with space, no seconds
+            "%Y/%m/%d %H:%M",  # Slash with space separator
+            "%Y-%m-%d",  # Date only (ISO)
+            "%Y/%m/%d",  # Date only (slash)
+        ]
+        for fmt in formats:
+            try:
+                return datetime.strptime(value, fmt)
+            except ValueError:  # noqa: PERF203
+                continue
+        # If all formats fail, raise ValueError
+        raise ValueError(f"Unable to parse datetime: {value}")
+
     def deserialize(self, ui_value: list[str] | None) -> datetime | None:
         if ui_value is not None and len(ui_value) > 0:
-            deserialized = _normalize_datetime_value(
-                datetime.strptime(ui_value[0], _DATETIME_UI_FORMAT)
-            )
-            # Validate against min/max bounds
-            # If the value is out of bounds, return the previous valid value
-            if deserialized < self.min or deserialized > self.max:
+            try:
+                deserialized = _normalize_datetime_value(
+                    self._parse_datetime(ui_value[0])
+                )
+                # Validate against min/max bounds
+                # If the value is out of bounds, return the previous valid value
+                if deserialized < self.min or deserialized > self.max:
+                    return self.value
+                return deserialized
+            except ValueError:
+                # Could not parse the datetime string
                 return self.value
-            return deserialized
         return self.value
 
     def serialize(self, v: datetime | None) -> list[str]:
@@ -580,12 +605,29 @@ def _validate_datetime_value(
 class DateInputSerde:
     value: _DateInputValues
 
+    def _parse_date(self, value: str) -> date:
+        """Parse a date string, supporting multiple formats."""
+        # Try formats in order of preference
+        formats = [
+            "%Y/%m/%d",  # Internal format (slash-based)
+            "%Y-%m-%d",  # ISO 8601 format (for URL params)
+        ]
+        for fmt in formats:
+            try:
+                return datetime.strptime(value, fmt).date()
+            except ValueError:  # noqa: PERF203
+                continue
+        # If all formats fail, raise ValueError
+        raise ValueError(f"Unable to parse date: {value}")
+
     def deserialize(self, ui_value: Any) -> DateWidgetReturn:
         return_value: Sequence[date] | None
         if ui_value is not None:
-            return_value = tuple(
-                datetime.strptime(v, "%Y/%m/%d").date() for v in ui_value
-            )
+            try:
+                return_value = tuple(self._parse_date(v) for v in ui_value)
+            except ValueError:
+                # Invalid date format, use default
+                return_value = self.value.value
         else:
             return_value = self.value.value
 

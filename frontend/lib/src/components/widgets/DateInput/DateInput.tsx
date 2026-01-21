@@ -63,12 +63,16 @@ export interface Props {
   fragmentId?: string
 }
 
-// Date format for communication (protobuf) support
+// Date format for communication (protobuf) support - internal uses slashes
 const DATE_FORMAT = "YYYY/MM/DD"
+// Date formats to try when parsing (supports both internal and ISO URL format)
+const DATE_FORMATS = ["YYYY/MM/DD", "YYYY-MM-DD"]
 
 /** Convert an array of strings to an array of dates. */
 function stringsToDates(strings: string[]): Date[] {
-  return strings.map(val => new Date(val))
+  // Use moment with multiple formats for flexible parsing
+  // This supports both internal format (YYYY/MM/DD) and ISO URL format (YYYY-MM-DD)
+  return strings.map(val => moment(val, DATE_FORMATS).toDate())
 }
 
 /** Convert an array of dates to an array of strings. */
@@ -521,14 +525,14 @@ function DateInput({
 function getStateFromWidgetMgr(
   widgetMgr: WidgetStateManager,
   element: DateInputProto
-): Date[] {
+): Date[] | undefined {
   // If WidgetStateManager knew a value for this widget, initialize to that.
-  // Otherwise, use the default value from the widget protobuf.
+  // Return undefined if no stored value to let getDefaultState handle setValue case.
   const storedValue = widgetMgr.getStringArrayValue(element)
-  const stringArray =
-    storedValue !== undefined ? storedValue : element.default || []
-
-  return stringsToDates(stringArray)
+  if (storedValue !== undefined) {
+    return stringsToDates(storedValue)
+  }
+  return undefined
 }
 
 function getDefaultStateFromProto(element: DateInputProto): Date[] {
