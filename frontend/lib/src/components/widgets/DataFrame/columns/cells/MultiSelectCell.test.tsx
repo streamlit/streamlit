@@ -14,18 +14,13 @@
  * limitations under the License.
  */
 
-import React from "react"
-
 import { GridCellKind } from "@glideapps/glide-data-grid"
 import {
   cleanup,
-  findByText,
   fireEvent,
-  getByRole,
-  getByText,
-  queryByRole,
-  queryByText,
   render,
+  screen,
+  within,
 } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
@@ -308,7 +303,7 @@ describe("onPaste", () => {
   testCases.forEach(({ input, cellProps, expected }) => {
     it(`should correctly handle pasting "${input}"`, () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Testing onPaste with various input types
-      const result = renderer.onPaste!(input, cellProps as any)
+      const result = renderer.onPaste?.(input, cellProps as any)
       expect(result).toEqual(expected)
     })
   })
@@ -318,22 +313,27 @@ const keyDownEvent = {
   key: "ArrowDown",
 }
 
+// Using fireEvent instead of userEvent for react-select keyboard navigation
+// because userEvent has compatibility issues with react-select's event handling
 async function selectOption(
   container: HTMLElement,
   optionText: string
 ): Promise<void> {
-  const inputElement = getByRole(container, "combobox")
+  const inputElement = within(container).getByRole("combobox")
+  // eslint-disable-next-line testing-library/prefer-user-event -- react-select requires fireEvent for keyboard navigation
   fireEvent.keyDown(inputElement, keyDownEvent)
-  const listBox = getByRole(container, "listbox")
-  await findByText(listBox, optionText)
-  fireEvent.click(getByText(listBox, optionText))
+  const listBox = within(container).getByRole("listbox")
+  await within(listBox).findByText(optionText)
+  // eslint-disable-next-line testing-library/prefer-user-event -- react-select requires fireEvent for click
+  fireEvent.click(within(listBox).getByText(optionText))
 }
 
 function hasOption(container: HTMLElement, optionText: string): boolean {
-  const inputElement = getByRole(container, "combobox")
+  const inputElement = within(container).getByRole("combobox")
+  // eslint-disable-next-line testing-library/prefer-user-event -- react-select requires fireEvent for keyboard navigation
   fireEvent.keyDown(inputElement, keyDownEvent)
-  const listBox = getByRole(container, "listbox")
-  return queryByText(listBox, optionText) !== null
+  const listBox = within(container).getByRole("listbox")
+  return within(listBox).queryByText(optionText) !== null
 }
 
 describe("Multi Select Editor", () => {
@@ -358,7 +358,7 @@ describe("Multi Select Editor", () => {
     }
   }
 
-  it("renders into the dom with correct value", async () => {
+  it("renders into the dom with correct value", () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Testing provideEditor
     const Editor = (renderer.provideEditor as any)?.({
       ...getMockCell(),
@@ -369,7 +369,7 @@ describe("Multi Select Editor", () => {
     }
 
     const mockCellOnChange = vi.fn()
-    const result = render(
+    render(
       <Editor
         isHighlighted={false}
         value={getMockCell()}
@@ -377,7 +377,7 @@ describe("Multi Select Editor", () => {
       />
     )
     // Check if the element is actually there
-    const cellEditor = result.getByTestId("multi-select-cell")
+    const cellEditor = screen.getByTestId("multi-select-cell")
     expect(cellEditor).toBeDefined()
 
     const input = cellEditor.getElementsByClassName("gdg-multi-select")[0]
@@ -396,7 +396,7 @@ describe("Multi Select Editor", () => {
     }
 
     const mockCellOnChange = vi.fn()
-    const result = render(
+    render(
       <Editor
         isHighlighted={false}
         value={mockCell}
@@ -404,7 +404,7 @@ describe("Multi Select Editor", () => {
       />
     )
     // Check if the element is actually there
-    const cellEditor = result.getByTestId("multi-select-cell")
+    const cellEditor = screen.getByTestId("multi-select-cell")
     expect(cellEditor).toBeDefined()
 
     await selectOption(cellEditor, "Option 1")
@@ -428,7 +428,7 @@ describe("Multi Select Editor", () => {
     expect(hasOption(cellEditor, "Option 2")).toBeFalsy()
   })
 
-  it("is disabled if readonly", async () => {
+  it("is disabled if readonly", () => {
     const mockCell = getMockCell({ readonly: true })
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Testing provideEditor
     const Editor = (renderer.provideEditor as any)?.({
@@ -440,7 +440,7 @@ describe("Multi Select Editor", () => {
     }
 
     const mockCellOnChange = vi.fn()
-    const result = render(
+    render(
       <Editor
         isHighlighted={false}
         value={mockCell}
@@ -448,10 +448,10 @@ describe("Multi Select Editor", () => {
       />
     )
     // Check if the element is actually there
-    const cellEditor = result.getByTestId("multi-select-cell")
+    const cellEditor = screen.getByTestId("multi-select-cell")
     expect(cellEditor).toBeDefined()
     // Combo box should not be accessible:
-    expect(queryByRole(cellEditor, "combobox")).toBeNull()
+    expect(screen.queryByRole("combobox")).toBeNull()
   })
 
   it("allowDuplicates allows to select values multiple times", async () => {
@@ -467,7 +467,7 @@ describe("Multi Select Editor", () => {
     }
 
     const mockCellOnChange = vi.fn()
-    const result = render(
+    render(
       <Editor
         isHighlighted={false}
         value={mockCell}
@@ -475,7 +475,7 @@ describe("Multi Select Editor", () => {
       />
     )
     // Check if the element is actually there
-    const cellEditor = result.getByTestId("multi-select-cell")
+    const cellEditor = screen.getByTestId("multi-select-cell")
     expect(cellEditor).toBeDefined()
 
     await selectOption(cellEditor, "Option 1")
@@ -500,7 +500,7 @@ describe("Multi Select Editor", () => {
     })
   })
 
-  it("allows text selection in pill labels (onMouseDown does not prevent default)", async () => {
+  it("allows text selection in pill labels (onMouseDown does not prevent default)", () => {
     const mockCell = getMockCell({
       data: {
         kind: "multi-select-cell",
@@ -521,17 +521,18 @@ describe("Multi Select Editor", () => {
     }
 
     const mockCellOnChange = vi.fn()
-    const result = render(
+    render(
       <Editor
         isHighlighted={false}
         value={mockCell}
         onChange={mockCellOnChange}
       />
     )
-    const cellEditor = result.getByTestId("multi-select-cell")
+    // Verify the component renders
+    expect(screen.getByTestId("multi-select-cell")).toBeDefined()
 
     // Find the pill labels (MultiValueLabel components render with the label text)
-    const pillLabel = getByText(cellEditor, "Option 1")
+    const pillLabel = screen.getByText("Option 1")
     expect(pillLabel).toBeDefined()
 
     // Simulate mousedown on the pill label - it should not prevent default (allowing text selection)
@@ -550,7 +551,7 @@ describe("Multi Select Editor", () => {
     expect(mockCellOnChange).not.toHaveBeenCalled()
   })
 
-  it("still allows removing pills via the remove button after text selection enhancement", async () => {
+  it("still allows removing pills via the remove button after text selection enhancement", () => {
     const mockCell = getMockCell({
       data: {
         kind: "multi-select-cell",
@@ -571,17 +572,18 @@ describe("Multi Select Editor", () => {
     }
 
     const mockCellOnChange = vi.fn()
-    const result = render(
+    render(
       <Editor
         isHighlighted={false}
         value={mockCell}
         onChange={mockCellOnChange}
       />
     )
-    const cellEditor = result.getByTestId("multi-select-cell")
+    // Verify the component renders
+    expect(screen.getByTestId("multi-select-cell")).toBeDefined()
 
     // Find the pill label first
-    const pillLabel = getByText(cellEditor, "Option 1")
+    const pillLabel = screen.getByText("Option 1")
     expect(pillLabel).toBeDefined()
 
     // The remove button is a sibling of the label within the multi-value container
@@ -595,8 +597,11 @@ describe("Multi Select Editor", () => {
       multiValueContainer?.querySelector("svg")?.parentElement
     expect(removeButton).not.toBeNull()
 
-    // Click the remove button
-    fireEvent.click(removeButton!)
+    // Click the remove button - using fireEvent for react-select compatibility
+    if (removeButton) {
+      // eslint-disable-next-line testing-library/prefer-user-event -- react-select requires fireEvent for click
+      fireEvent.click(removeButton)
+    }
 
     // The onChange should have been called to remove the value
     expect(mockCellOnChange).toHaveBeenCalledTimes(1)

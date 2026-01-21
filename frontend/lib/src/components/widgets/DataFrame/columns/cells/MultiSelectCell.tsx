@@ -14,7 +14,15 @@
  * limitations under the License.
  */
 
-import React, { useCallback, useMemo, useState } from "react"
+import type {
+  ComponentPropsWithoutRef,
+  FC,
+  KeyboardEvent,
+  KeyboardEventHandler,
+  MouseEvent,
+  TouchEvent,
+} from "react"
+import { useCallback, useMemo, useState } from "react"
 
 import styled from "@emotion/styled"
 import {
@@ -36,6 +44,8 @@ import Select, {
   type StylesConfig,
 } from "react-select"
 import CreatableSelect from "react-select/creatable"
+
+import { isNullOrUndefined } from "@streamlit/utils"
 
 export type SelectOption = { value: string; label?: string; color?: string }
 
@@ -61,7 +71,8 @@ all underlying values are unique. */
 const VALUE_PREFIX = "__value"
 const VALUE_PREFIX_REGEX = new RegExp(`^${VALUE_PREFIX}\\d+__`)
 
-const Wrap = styled.div`
+// eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values -- Uses glide-data-grid CSS variables
+const StyledWrap = styled.div`
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -73,7 +84,8 @@ const Wrap = styled.div`
   }
 `
 
-const PortalWrap = styled.div`
+// eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values -- Uses glide-data-grid CSS variables
+const StyledPortalWrap = styled.div`
   font-family: var(--gdg-font-family);
   font-size: var(--gdg-editor-font-size);
   color: var(--gdg-text-dark);
@@ -98,7 +110,7 @@ export const prepareOptions = (
       return { value: option, label: option, color: undefined }
     }
 
-    if (option == null) {
+    if (isNullOrUndefined(option)) {
       return { value: "", label: "", color: undefined }
     }
 
@@ -144,9 +156,9 @@ export const resolveValues = (
   })
 }
 
-interface CustomMenuProps extends MenuProps<SelectOption, true> {}
+type CustomMenuProps = MenuProps<SelectOption, true>
 
-const CustomMenu: React.FC<CustomMenuProps> = p => {
+const CustomMenu: FC<CustomMenuProps> = p => {
   const { Menu } = components
   const { children, ...rest } = p
   return <Menu {...rest}>{children}</Menu>
@@ -165,26 +177,26 @@ const CustomMenu: React.FC<CustomMenuProps> = p => {
  *
  * Note on type assertions: react-select's MultiValueGenericProps.innerProps type is
  * { className?: string }, but the underlying div element accepts all standard div props.
- * The type assertion to React.ComponentPropsWithoutRef<"div"> is necessary to add
+ * The type assertion to ComponentPropsWithoutRef<"div"> is necessary to add
  * event handlers that the actual DOM element supports.
  */
-const SelectableMultiValueLabel: React.FC<
+const SelectableMultiValueLabel: FC<
   MultiValueGenericProps<SelectOption, true>
 > = props => {
   // Cast innerProps to the full div props type since react-select's types are overly restrictive
   // (they only type { className?: string } but the div accepts all standard props)
   const existingInnerProps = props.innerProps as
-    | React.ComponentPropsWithoutRef<"div">
+    | ComponentPropsWithoutRef<"div">
     | undefined
 
-  const enhancedInnerProps: React.ComponentPropsWithoutRef<"div"> = {
+  const enhancedInnerProps: ComponentPropsWithoutRef<"div"> = {
     ...existingInnerProps,
     // Allow text selection by stopping propagation but not preventing default
-    onMouseDown: (e: React.MouseEvent<HTMLDivElement>) => {
+    onMouseDown: (e: MouseEvent<HTMLDivElement>) => {
       e.stopPropagation() // Prevents react-select from treating it as a control click
       existingInnerProps?.onMouseDown?.(e)
     },
-    onTouchEnd: (e: React.TouchEvent<HTMLDivElement>) => {
+    onTouchEnd: (e: TouchEvent<HTMLDivElement>) => {
       e.stopPropagation()
       existingInnerProps?.onTouchEnd?.(e)
     },
@@ -200,14 +212,29 @@ const SelectableMultiValueLabel: React.FC<
 
 export type MultiSelectCell = CustomCell<MultiSelectCellProps>
 
+// Module-level components to avoid nested component definitions inside the Editor.
+// These are used by react-select's components prop.
+const NullDropdownIndicator = (): null => null
+const NullIndicatorSeparator = (): null => null
+
+// Reads menuDisabled from selectProps which is passed by react-select.
+const StyledMenuWrapper: FC<CustomMenuProps> = props => {
+  // Access custom props passed via the Select component
+  const menuDisabled = (
+    props.selectProps as { menuDisabled?: boolean } | undefined
+  )?.menuDisabled
+  if (menuDisabled) {
+    return null
+  }
+  return (
+    <StyledPortalWrap>
+      <CustomMenu className={"click-outside-ignore"} {...props} />
+    </StyledPortalWrap>
+  )
+}
+
 const Editor: ReturnType<ProvideEditorCallback<MultiSelectCell>> = p => {
-  const {
-    value: cell,
-    initialValue,
-    onChange,
-    onFinishedEditing,
-    portalElementRef,
-  } = p
+  const { value: cell, initialValue, onChange, onFinishedEditing } = p
   const {
     options: optionsIn,
     values: valuesIn,
@@ -220,6 +247,14 @@ const Editor: ReturnType<ProvideEditorCallback<MultiSelectCell>> = p => {
   const [menuOpen, setMenuOpen] = useState(true)
   const [inputValue, setInputValue] = useState(initialValue ?? "")
 
+  // Use document.getElementById for the portal target.
+  // The portalElementRef from glide-data-grid is not used here to avoid
+  // accessing refs during render, which violates React best practices.
+  // The "portal" element is the standard fallback used by glide-data-grid.
+  const [portalTarget] = useState<HTMLElement | null>(() =>
+    document.getElementById("portal")
+  )
+
   const options = useMemo(() => {
     return prepareOptions(optionsIn ?? [])
   }, [optionsIn])
@@ -229,7 +264,7 @@ const Editor: ReturnType<ProvideEditorCallback<MultiSelectCell>> = p => {
   // Prevent the grid from handling the keydown as long as the menu is open:
   // This allows usage of enter without triggering the grid to finish editing.
   const onKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
+    (e: KeyboardEvent) => {
       if (menuOpen) {
         e.stopPropagation()
       }
@@ -412,7 +447,7 @@ const Editor: ReturnType<ProvideEditorCallback<MultiSelectCell>> = p => {
     [cell, onChange, allowDuplicates]
   )
 
-  const handleKeyDown: React.KeyboardEventHandler = event => {
+  const handleKeyDown: KeyboardEventHandler = event => {
     switch (event.key) {
       case "Enter":
       case "Tab":
@@ -435,23 +470,15 @@ const Editor: ReturnType<ProvideEditorCallback<MultiSelectCell>> = p => {
   }
 
   // Memoized components object for react-select
+  // Uses module-level components to avoid nested component definitions
   const selectComponents = useMemo(
     () => ({
-      DropdownIndicator: () => null,
-      IndicatorSeparator: () => null,
+      DropdownIndicator: NullDropdownIndicator,
+      IndicatorSeparator: NullIndicatorSeparator,
       MultiValueLabel: SelectableMultiValueLabel,
-      Menu: (props: CustomMenuProps) => {
-        if (menuDisabled) {
-          return null
-        }
-        return (
-          <PortalWrap>
-            <CustomMenu className={"click-outside-ignore"} {...props} />
-          </PortalWrap>
-        )
-      },
+      Menu: StyledMenuWrapper,
     }),
-    [menuDisabled]
+    []
   )
 
   // onChange handler for react-select
@@ -467,7 +494,7 @@ const Editor: ReturnType<ProvideEditorCallback<MultiSelectCell>> = p => {
 
   const SelectComponent = allowCreation ? CreatableSelect : Select
   return (
-    <Wrap onKeyDown={onKeyDown} data-testid={"multi-select-cell"}>
+    <StyledWrap onKeyDown={onKeyDown} data-testid={"multi-select-cell"}>
       <SelectComponent
         className="gdg-multi-select"
         isMulti={true}
@@ -485,9 +512,7 @@ const Editor: ReturnType<ProvideEditorCallback<MultiSelectCell>> = p => {
         value={resolveValues(value, options, allowDuplicates)}
         onKeyDown={cell.readonly ? undefined : handleKeyDown}
         menuPlacement={"auto"}
-        menuPortalTarget={
-          portalElementRef?.current ?? document.getElementById("portal")
-        }
+        menuPortalTarget={portalTarget}
         autoFocus={true}
         openMenuOnFocus={true}
         openMenuOnClick={true}
@@ -497,8 +522,10 @@ const Editor: ReturnType<ProvideEditorCallback<MultiSelectCell>> = p => {
         styles={colorStyles}
         components={selectComponents}
         onChange={handleChange}
+        // Custom prop for StyledMenuWrapper to read via selectProps
+        menuDisabled={menuDisabled}
       />
-    </Wrap>
+    </StyledWrap>
   )
 }
 
@@ -506,7 +533,7 @@ const renderer: CustomRenderer<MultiSelectCell> = {
   kind: GridCellKind.Custom,
 
   isMatch: (c): c is MultiSelectCell =>
-    (c.data as any).kind === "multi-select-cell",
+    (c.data as { kind?: string }).kind === "multi-select-cell",
   draw: (args, cell) => {
     const { ctx, theme, rect, highlighted } = args
     const { values, options: optionsIn } = cell.data
