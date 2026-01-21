@@ -33,7 +33,7 @@
     "@streamlit/protobuf": "workspace:^",
     "@streamlit/utils": "workspace:^",
     "axios": "^1.13.2",
-    "lodash-es": "^4.17.22",
+    "lodash-es": "^4.17.23",
     "loglevel": "^1.9.2"
   },
   "devDependencies": {
