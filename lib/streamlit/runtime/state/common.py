@@ -154,6 +154,11 @@ class WidgetMetadata(Generic[T]):
     # Optional binding for the widget's value to external state (e.g. query params)
     bind: BindOption = None
 
+    # Optional formatted options for widgets that use format_func (e.g., pills,
+    # segmented_control, radio, selectbox). Used for URL auto-correction to
+    # convert indices back to human-readable strings.
+    formatted_options: list[str] | None = None
+
     def __repr__(self) -> str:
         return util.repr_(self)
 

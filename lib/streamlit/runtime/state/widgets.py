@@ -49,6 +49,7 @@ def register_widget(
     value_type: ValueFieldName,
     presenter: WidgetValuePresenter | None = None,
     bind: BindOption = None,
+    formatted_options: list[str] | None = None,
 ) -> RegisterWidgetResult[T]:
     """Register a widget with Streamlit, and return its current value.
     NOTE: This function should be called after the proto has been filled.
@@ -139,6 +140,7 @@ def register_widget(
         fragment_id=ctx.current_fragment_id if ctx else None,
         presenter=presenter,
         bind=bind,
+        formatted_options=formatted_options,
     )
     return register_widget_from_metadata(metadata, ctx)
 

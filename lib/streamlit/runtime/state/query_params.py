@@ -99,19 +99,27 @@ def parse_url_param(value: str | list[str], value_type: str) -> Any:
             # For repeated params or comma-separated values
             return list(value) if isinstance(value, list) else [value]
         case "double_array_value":
-            # Comma-separated floats (e.g., slider ranges)
-            return [float(x) for x in val.split(",")]
+            # Comma-separated values - try to parse as floats, keep strings if that fails
+            # This allows deserializers to handle human-readable option values (select_slider)
+            parts = val.split(",")
+            result_double: list[float | str] = []
+            for part in parts:
+                try:
+                    result_double.append(float(part))
+                except ValueError:  # noqa: PERF203
+                    result_double.append(part)  # Keep as string for select_slider
+            return result_double
         case "int_array_value":
             # Comma-separated values - try to parse as ints, keep strings if that fails
             # This allows deserializers to handle human-readable option values
             parts = val.split(",")
-            result: list[int | str] = []
+            result_int: list[int | str] = []
             for part in parts:
                 try:
-                    result.append(int(part))
-                except ValueError:
-                    result.append(part)  # Keep as string
-            return result
+                    result_int.append(int(part))
+                except ValueError:  # noqa: PERF203
+                    result_int.append(part)  # Keep as string
+            return result_int
         case _:
             # Unknown type, return as-is
             return val
@@ -177,6 +185,12 @@ class QueryParams(MutableMapping[str, str]):
     def __delitem__(self, key: str) -> None:
         if key.lower() in EMBED_QUERY_PARAMS_KEYS:
             raise KeyError(missing_key_error_message(key))
+        # Prevent direct deletion of bound query params
+        if self.is_bound(key):
+            raise StreamlitAPIException(
+                f"Cannot directly delete query parameter '{key}' - "
+                f"it is bound to a widget. Modify the widget value instead."
+            )
         try:
             del self._query_params[key]
             self._send_query_param_msg()
@@ -192,13 +206,34 @@ class QueryParams(MutableMapping[str, str]):
     ) -> None:
         # This overrides the `update` provided by MutableMapping
         # to ensure only one one ForwardMsg is sent.
+        # Check all keys for bound params before making any changes
+        keys_to_update: list[str] = []
+        other_as_list: list[tuple[str, str | Iterable[str]]] | None = None
         if hasattr(other, "keys") and hasattr(other, "__getitem__"):
-            other = cast("SupportsKeysAndGetItem[str, str | Iterable[str]]", other)
-            for key in other.keys():  # noqa: SIM118
-                self._set_item_internal(key, other[key])
+            other_dict = cast("SupportsKeysAndGetItem[str, str | Iterable[str]]", other)
+            keys_to_update.extend(other_dict.keys())
         else:
-            for key, value in other:
+            # other is an iterable of tuples - consume into list for later use
+            other_as_list = list(other)
+            keys_to_update.extend(key for key, _ in other_as_list)
+        keys_to_update.extend(kwds.keys())
+
+        # Check for bound params
+        for key in keys_to_update:
+            if self.is_bound(key):
+                raise StreamlitAPIException(
+                    f"Cannot directly set query parameter '{key}' - "
+                    f"it is bound to a widget. Modify the widget value instead."
+                )
+
+        # Now apply the updates
+        if other_as_list is not None:
+            for key, value in other_as_list:
                 self._set_item_internal(key, value)
+        elif hasattr(other, "keys") and hasattr(other, "__getitem__"):
+            other_dict = cast("SupportsKeysAndGetItem[str, str | Iterable[str]]", other)
+            for key in other_dict.keys():  # noqa: SIM118
+                self._set_item_internal(key, other_dict[key])
         for key, value in kwds.items():
             self._set_item_internal(key, value)
         self._send_query_param_msg()
@@ -234,6 +269,14 @@ class QueryParams(MutableMapping[str, str]):
         ctx.enqueue(msg)
 
     def clear(self) -> None:
+        # Check if any bound params exist
+        bound_params = [key for key in self._query_params if self.is_bound(key)]
+        if bound_params:
+            raise StreamlitAPIException(
+                f"Cannot clear query parameters - the following are bound to widgets: "
+                f"{', '.join(repr(k) for k in bound_params)}. "
+                f"Modify the widget values instead, or remove the bind parameter."
+            )
         self.clear_with_no_forward_msg(preserve_embed=True)
         self._send_query_param_msg()
 
@@ -401,17 +444,101 @@ class QueryParams(MutableMapping[str, str]):
             return values[0]
         return values
 
-    def remove_stale_bindings(self, active_widget_ids: set[str]) -> None:
-        """Remove bindings for widgets that are no longer active.
+    def _set_corrected_value(self, param_key: str, value: Any, value_type: str) -> None:
+        """Set a corrected value for a query parameter.
+
+        This is called when URL auto-correction is needed (e.g., after clamping
+        a value to min/max bounds). It updates both the internal query params
+        and sends a forward message to update the frontend URL.
+
+        Parameters
+        ----------
+        param_key : str
+            The query parameter key.
+        value : Any
+            The corrected value to set.
+        value_type : str
+            The WidgetState value type (e.g., "double_value", "int_value").
+        """
+
+        def format_number(v: Any) -> str:
+            """Format a number, using integer format if value is a whole number."""
+            if isinstance(v, float) and v == int(v):
+                return str(int(v))
+            return str(v)
+
+        # Convert the value to a string representation for the URL
+        if value_type == "double_array_value":
+            # For slider ranges, join with comma
+            if isinstance(value, (list, tuple)):
+                str_value = ",".join(format_number(v) for v in value)
+            else:
+                str_value = format_number(value)
+        elif value_type in {"string_array_value", "int_array_value"}:
+            if isinstance(value, (list, tuple)):
+                # Store as list for repeated params
+                self._query_params[param_key] = [str(v) for v in value]
+                self._send_query_param_msg()
+                return
+            str_value = str(value)
+        else:
+            str_value = str(value)
+
+        self._query_params[param_key] = str_value
+        self._send_query_param_msg()
+
+    def remove_stale_bindings(
+        self,
+        active_widget_ids: set[str],
+        fragment_ids_this_run: list[str] | None = None,
+        widget_metadata: dict[str, Any] | None = None,
+    ) -> None:
+        """Remove bindings and URL params for widgets that are no longer active.
+
+        This cleans up query params for conditional widgets that have been unmounted.
+        For MPA page navigation, the frontend (App.tsx) preserves query params in
+        its state, so those params are re-sent in the next rerun request.
+
+        For fragment runs, widgets outside the running fragment(s) are preserved.
 
         Parameters
         ----------
         active_widget_ids : set[str]
             Set of widget IDs that are currently active/rendered.
+        fragment_ids_this_run : list[str] | None
+            List of fragment IDs being run, or None for full script runs.
+        widget_metadata : dict[str, Any] | None
+            Widget metadata dict to check fragment IDs.
         """
-        stale_widget_ids = set(self._bindings_by_widget.keys()) - active_widget_ids
+        stale_widget_ids = []
+        for widget_id in self._bindings_by_widget:
+            if widget_id in active_widget_ids:
+                # Widget is active in this run - keep it
+                continue
+
+            # For fragment runs, preserve widgets that aren't part of the running fragments
+            if fragment_ids_this_run and widget_metadata:
+                metadata = widget_metadata.get(widget_id)
+                if metadata and metadata.fragment_id not in fragment_ids_this_run:
+                    # Widget belongs to a different fragment or main script - keep it
+                    continue
+
+            stale_widget_ids.append(widget_id)
+
+        params_removed = False
         for widget_id in stale_widget_ids:
+            binding = self._bindings_by_widget.get(widget_id)
+            if binding:
+                param_key = binding.param_key
+                # Remove the query param from the URL
+                if param_key in self._query_params:
+                    del self._query_params[param_key]
+                    params_removed = True
             self.unbind_widget(widget_id)
+
+        # Send forward message to update frontend URL if we removed any params
+        if params_removed:
+            self._send_query_param_msg()
 
 
 def missing_key_error_message(key: str) -> str:
