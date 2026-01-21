@@ -160,7 +160,7 @@ exp = st.expander("Processing status", expanded=False)
 
 with exp:
     data = load_expensive_data()
-    exp.update(expanded=True)
+    exp.update(open=True)
     st.dataframe(data)
 ```
 
@@ -175,12 +175,14 @@ with tabs[0]:
     if st.button("Run Analysis"):
         results = run_analysis()
         st.session_state.results = results
-        tabs.update(active="Results")
+        tabs[0].update(open=True)
 
 with tabs[1]:
     if "results" in st.session_state:
         st.write(st.session_state.results)
 ```
+
+**Note:** `st.tabs` currently returns a Sequence of DeltaGenerator, so the proposal here is update the individual tab to be active. If we wanted to do tabs.update(active="Results") we would need to change the return value of `st.tabs` while also preserving the Sequence functionality (e.g. `tab1, tab2 = st.tabs(["one", "two"])`).
 
 **Potential API for `st.popover`:**
 
@@ -200,6 +202,8 @@ with pop:
 if "current_filter" in st.session_state:
     st.write(f"Showing: {st.session_state.current_filter}")
 ```
+
+**Alternative naming:** Ideally, the `.update()` method would use the same parameter names as the initial state parameters for each element. However, since `st.expander` uses `expanded` and `st.tabs` uses `default` (and `st.popover` doesn't currently have an initial state parameter), matching initial state parameters would create inconsistency across three dimensions: (1) between elements (expander vs tabs vs popover), (2) between operations (setting initial state vs checking state via `.open` vs updating state via `.update()`), and (3) semantically (`expanded` doesn't naturally fit `st.tabs` where "active" or "selected" is more intuitive, and `default` is awkward for runtime updates). Therefore, we chose `open` as a unified parameter name. This provides consistency for both the `.open` property and `.update()` method across all three elements. The trade-off is that initial state parameters remain element-specific (`expanded` for expander, `default` for tabs), but these are already established in the existing API.
 
 ### Parameters
 
