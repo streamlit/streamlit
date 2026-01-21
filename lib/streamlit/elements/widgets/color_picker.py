@@ -52,6 +52,23 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
 
+def _is_valid_hex_color(color: str) -> bool:
+    """Check if a string is a valid hex color.
+
+    Accepts formats: #RGB, #RRGGBB, RGB, RRGGBB (with or without # prefix).
+    """
+    import re
+
+    return bool(re.match(r"^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$", color))
+
+
+def _normalize_hex_color(color: str) -> str:
+    """Normalize a hex color to include the # prefix."""
+    if not color.startswith("#"):
+        return f"#{color}"
+    return color
+
+
 @dataclass
 class ColorPickerSerde:
     value: str
@@ -60,7 +77,14 @@ class ColorPickerSerde:
         return str(v)
 
     def deserialize(self, ui_value: str | None) -> str:
-        return str(ui_value if ui_value is not None else self.value)
+        # None or empty string means use default
+        if ui_value is None or ui_value == "":
+            return self.value
+        # Validate hex color format for URL-seeded values
+        if not _is_valid_hex_color(ui_value):
+            raise ValueError(f"Invalid hex color: {ui_value}")
+        # Normalize to include # prefix (allows URL params without #)
+        return _normalize_hex_color(ui_value)
 
 
 class ColorPickerMixin:
