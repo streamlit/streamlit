@@ -206,7 +206,7 @@ if "current_filter" in st.session_state:
   - `"ignore"`: Current behavior, always execute all content, no state tracking
   - `"rerun"`: Trigger full app rerun when tab changes/expander toggles, enables state tracking
   - `callback`: _(Future addition for API consistency with widgets)_ Function to call before rerun
-    - Note: Callbacks are intended for side effects (like updating other state), not for defining content. Content should be defined inline with `if .open:` checks. Users can wrap content in `@st.fragment` explicitly where needed for performance optimization.
+    - Note: elements defined in the callbacks will render top-level consistent with other widgets that already support callbacks.
 
 #### New parameter: `key`
 
