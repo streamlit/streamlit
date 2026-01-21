@@ -37,6 +37,11 @@ This ensures instant visibility when tabs are switched, but significantly slows 
 - [#6004](https://github.com/streamlit/streamlit/issues/6004) - Dynamic tabs (230 👍)
 - [#2399](https://github.com/streamlit/streamlit/issues/2399) - st.expander expanded/collapsed state (93 👍)
 
+**Related - Addressed by programmatic control:**
+
+- [#6370](https://github.com/streamlit/streamlit/issues/6370) - Can't close st.expander after users open it themselves
+- [#8265](https://github.com/streamlit/streamlit/issues/8265) - [Coming soon] Add open/close parameter to st.popover
+
 **Related (but not directly addressed by lazy execution):**
 
 - [#8239](https://github.com/streamlit/streamlit/issues/8239) - st.tabs & expander frontend state/mount handling (79 👍) - addresses broader state management issues
