@@ -86,7 +86,7 @@ if st.button("Run spinner with 300px width"):
 # Regression test for issue #13658: container elements in spinner context
 if st.button("Run spinner with container"):
     with st.spinner("Running..."):
-        time.sleep(0.1)  # Small delay to trigger spinner rendering
+        time.sleep(2)  # Small delay to trigger spinner rendering
         cols = st.container().columns(2)
         cols[0].write("Column 1")
         cols[1].write("Column 2")
