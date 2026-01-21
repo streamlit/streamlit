@@ -69,7 +69,20 @@ def _get_abs_folder_path(path: str) -> str:
 
 
 class EventBasedPathWatcher:
-    """Watches a single path on disk using watchdog."""
+    """Watches a single path on disk using watchdog.
+
+    Behavior differs based on whether watching a file or directory:
+
+    **File watching:** Detects content changes via MD5 hash comparison. The
+    callback receives the file path and is invoked when content changes. With
+    allow_nonexistent=True, also detects file creation.
+
+    **Directory watching:** Detects any file activity within the directory
+    (creation, deletion, modification). The callback receives the actual
+    changed file path (not the directory). Note that glob_pattern only affects
+    the initial state hash, not which events trigger callbacks - all file
+    events in the directory invoke the callback.
+    """
 
     @staticmethod
     def close_all() -> None:
@@ -91,13 +104,16 @@ class EventBasedPathWatcher:
         Parameters
         ----------
         path : str
-            The path to watch.
+            The path to watch (file or directory).
         on_changed : Callable[[str], None]
-            Callback to call when the path changes.
+            Callback invoked when changes are detected. For files, receives
+            the file path. For directories, receives the path of the actual
+            changed file within the directory.
         glob_pattern : str or None
-            A glob pattern to filter the files in a directory that should be
-            watched. Only relevant when creating an EventBasedPathWatcher on a
-            directory.
+            A glob pattern for initial state detection when watching a
+            directory (e.g., "*.py"). Note: This does NOT filter which file
+            events trigger the callback - all file events in the directory
+            will invoke the callback regardless of this pattern.
         allow_nonexistent : bool
             If True, the watcher will not raise an exception if the path does
             not exist. This can be used to watch for the creation of a file or
@@ -387,12 +403,9 @@ class _FolderEventHandler(events.FileSystemEventHandler):
 
         # To prevent a race condition, we hold a lock while accessing
         # _watched_paths.
-        watched_path: str | None = None
         with self._lock:
             # First check if the exact path is being watched
             changed_path_info = self._watched_paths.get(abs_changed_path, None)
-            if changed_path_info is not None:
-                watched_path = abs_changed_path
 
             # If the exact path isn't found, check if it's inside any watched
             # directories. This is necessary for the folder watching feature to
@@ -405,7 +418,6 @@ class _FolderEventHandler(events.FileSystemEventHandler):
                     try:
                         if os.path.commonpath([path, abs_changed_path]) == path:
                             changed_path_info = info
-                            watched_path = path  # Track the watched directory path
                             break
                     except ValueError as ex:
                         # On Windows, os.path.commonpath raises ValueError when paths
@@ -420,7 +432,7 @@ class _FolderEventHandler(events.FileSystemEventHandler):
                         continue
 
         # If we still haven't found a matching path, ignore this event
-        if changed_path_info is None or watched_path is None:
+        if changed_path_info is None:
             _LOGGER.debug(
                 "Ignoring changed path %s.\nWatched_paths: %s",
                 abs_changed_path,
@@ -443,21 +455,18 @@ class _FolderEventHandler(events.FileSystemEventHandler):
                 return
 
             changed_path_info.modification_time = modification_time
-            # Use watched_path for MD5 calculation so that glob_pattern filtering
-            # works correctly when watching directories. For individual file watches,
-            # watched_path == abs_changed_path, so behavior is unchanged.
             new_md5 = util.calc_md5_with_blocking_retries(
-                watched_path,
+                abs_changed_path,
                 glob_pattern=changed_path_info.glob_pattern,
                 allow_nonexistent=changed_path_info.allow_nonexistent,
             )
             if new_md5 == changed_path_info.md5:
-                _LOGGER.debug("File/dir MD5 did not change: %s", watched_path)
+                _LOGGER.debug("File/dir MD5 did not change: %s", abs_changed_path)
                 return
 
-            _LOGGER.debug("File/dir MD5 changed: %s", watched_path)
+            _LOGGER.debug("File/dir MD5 changed: %s", abs_changed_path)
             changed_path_info.md5 = new_md5
-            changed_path_info.on_changed.send(watched_path)
+            changed_path_info.on_changed.send(abs_changed_path)
         except StreamlitMaxRetriesError as ex:
             _LOGGER.debug(
                 "Ignoring file change. Failed to calculate MD5 for path %s",

@@ -518,14 +518,18 @@ class EventBasedPathWatcherTest(unittest.TestCase):
         ro.close()
 
     @mock.patch("os.path.isdir")
-    def test_glob_pattern_filters_file_events_in_directory(self, mock_is_dir):
-        """Test that glob_pattern filtering works for file events inside directories.
+    @mock.patch("os.path.exists")
+    def test_detects_file_creation_in_watched_directory(self, mock_exists, mock_is_dir):
+        """Test that file creation inside a watched directory triggers callback.
 
-        When watching a directory with a glob_pattern, only files matching the
-        pattern should trigger the callback. This is important for use cases like
-        watching .streamlit/ for config.toml but ignoring secrets.toml changes.
+        When watching a directory, file events inside the directory should:
+        1. Trigger the callback with the actual file path (not directory path)
+        2. Calculate MD5 on the actual file (to detect content changes)
         """
         watched_dir = "/app/.streamlit"
+
+        # Directory exists
+        mock_exists.return_value = True
         mock_is_dir.side_effect = lambda p: p == watched_dir
 
         cb = mock.Mock()
@@ -533,13 +537,13 @@ class EventBasedPathWatcherTest(unittest.TestCase):
         # Initial setup
         self.mock_util.path_modification_time = lambda *args: 101.0
         self.mock_util.calc_md5_with_blocking_retries = mock.Mock(
-            return_value="initial"
+            return_value="initial_hash"
         )
 
         ro = event_based_path_watcher.EventBasedPathWatcher(
             watched_dir,
             cb,
-            glob_pattern="config.toml",
+            glob_pattern="*.toml",
             allow_nonexistent=True,
         )
 
@@ -548,107 +552,25 @@ class EventBasedPathWatcherTest(unittest.TestCase):
 
         cb.assert_not_called()
 
-        # Simulate a secrets.toml file event (should NOT trigger callback)
-        # The MD5 should be calculated on the watched directory, not the file,
-        # so the glob_pattern will filter it out.
+        # Simulate config.toml being created
         self.mock_util.path_modification_time = lambda *args: 102.0
-        # MD5 doesn't change because secrets.toml isn't included in glob
         self.mock_util.calc_md5_with_blocking_retries = mock.Mock(
-            return_value="initial"
+            return_value="file_content_hash"
         )
 
-        ev = events.FileSystemEvent(f"{watched_dir}/secrets.toml")
+        config_file_path = f"{watched_dir}/config.toml"
+        ev = events.FileSystemEvent(config_file_path)
         ev.event_type = events.EVENT_TYPE_CREATED
         folder_handler.on_created(ev)
 
-        # Verify calc_md5 was called with the DIRECTORY path, not the file path
+        # Verify calc_md5 was called with the FILE path (not directory)
+        # This ensures file content changes are detected
         call_args = self.mock_util.calc_md5_with_blocking_retries.call_args
-        assert call_args[0][0] == watched_dir  # First positional arg is the path
-        assert call_args[1]["glob_pattern"] == "config.toml"
+        assert call_args[0][0] == config_file_path
 
-        # Callback should NOT be triggered (MD5 unchanged)
-        cb.assert_not_called()
-
-        # Now simulate a config.toml file event (should trigger callback)
-        self.mock_util.path_modification_time = lambda *args: 103.0
-        # MD5 changes because config.toml IS included in glob
-        self.mock_util.calc_md5_with_blocking_retries = mock.Mock(
-            return_value="changed"
-        )
-
-        ev = events.FileSystemEvent(f"{watched_dir}/config.toml")
-        ev.event_type = events.EVENT_TYPE_CREATED
-        folder_handler.on_created(ev)
-
-        # Verify calc_md5 was called with the DIRECTORY path
-        call_args = self.mock_util.calc_md5_with_blocking_retries.call_args
-        assert call_args[0][0] == watched_dir
-
-        # Callback SHOULD be triggered (MD5 changed)
-        cb.assert_called_once()
-
-        ro.close()
-
-    @mock.patch("os.path.isdir")
-    @mock.patch("os.path.exists")
-    def test_detects_file_creation_in_nonexistent_directory(
-        self, mock_exists, mock_is_dir
-    ):
-        """Test that file creation is detected when directory initially doesn't exist.
-
-        This tests the scenario where:
-        1. .streamlit/ directory doesn't exist at startup
-        2. User creates .streamlit/config.toml
-        3. The watcher should detect the creation and trigger callback
-        """
-        watched_dir = "/app/.streamlit"
-
-        # Initially directory doesn't exist
-        mock_exists.return_value = False
-        mock_is_dir.return_value = False
-
-        cb = mock.Mock()
-
-        # Initial MD5 when path doesn't exist (uses path string as content)
-        self.mock_util.path_modification_time = lambda *args: 0.0
-        self.mock_util.calc_md5_with_blocking_retries = mock.Mock(
-            return_value="nonexistent_hash"
-        )
-
-        ro = event_based_path_watcher.EventBasedPathWatcher(
-            watched_dir,
-            cb,
-            glob_pattern="config.toml",
-            allow_nonexistent=True,
-        )
-
-        fo = event_based_path_watcher._MultiPathWatcher.get_singleton()
-        folder_handler = fo._observer.schedule.call_args[0][0]
-
-        cb.assert_not_called()
-
-        # Now simulate config.toml being created (directory now exists)
-        mock_exists.return_value = True
-        mock_is_dir.side_effect = lambda p: p == watched_dir
-
-        self.mock_util.path_modification_time = lambda *args: 101.0
-        # MD5 changes because directory now exists with config.toml
-        self.mock_util.calc_md5_with_blocking_retries = mock.Mock(
-            return_value="dir_with_config_hash"
-        )
-
-        ev = events.FileSystemEvent(f"{watched_dir}/config.toml")
-        ev.event_type = events.EVENT_TYPE_CREATED
-        folder_handler.on_created(ev)
-
-        # Verify calc_md5 was called with the DIRECTORY path
-        call_args = self.mock_util.calc_md5_with_blocking_retries.call_args
-        assert call_args[0][0] == watched_dir
-        assert call_args[1]["glob_pattern"] == "config.toml"
-        assert call_args[1]["allow_nonexistent"] is True
-
-        # Callback SHOULD be triggered (MD5 changed from nonexistent to existing)
-        cb.assert_called_once()
+        # Callback should receive the actual file path (not directory)
+        # This is important for path-specific filtering like _is_in_ignored_directory
+        cb.assert_called_once_with(config_file_path)
 
         ro.close()
 
