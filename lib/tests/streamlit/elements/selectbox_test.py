@@ -623,7 +623,12 @@ class TestSelectboxSerde:
         assert res is None
 
     def test_serialize_empty_options(self):
-        """Test that serializing with empty options returns None, not empty string."""
+        """Test serializing with empty options.
+
+        Even with empty options, serialize should return the formatted value
+        (not None or empty string) because accept_new_options=True allows
+        user-entered values even when the options list is empty.
+        """
         options = []
         formatted_options, formatted_option_to_option_index = create_mappings(options)
         serde = SelectboxSerde(
@@ -632,10 +637,12 @@ class TestSelectboxSerde:
             formatted_option_to_option_index=formatted_option_to_option_index,
         )
 
+        # With default format_func (str), "something" should serialize to "something"
         res = serde.serialize("something")
-        assert res is None
-        # Should not return empty string which would cause issues in session state
+        assert res == "something"
+        # Should not return empty string or None
         assert res != ""
+        assert res is not None
 
     def test_serialize_with_format_func(self):
         options = ["Option A", "Option B", "Option C"]
@@ -728,10 +735,11 @@ class TestSelectboxSerde:
         assert res is None
 
     def test_deserialize_empty_options_with_string_value(self):
-        """Test that deserializing empty string with empty options returns None.
+        """Test deserializing a string value with empty options.
 
-        This tests the fix for session state getting "" instead of None
-        when options are empty.
+        When accept_new_options=True, users can enter custom values even
+        when options is empty. The serde should return these user-entered
+        values as-is.
         """
         options = []
         formatted_options, formatted_option_to_option_index = create_mappings(options)
@@ -741,11 +749,13 @@ class TestSelectboxSerde:
             formatted_option_to_option_index=formatted_option_to_option_index,
         )
 
-        # If serialize returned "" (the old behavior), deserialize should still return None
+        # User-entered values should be returned as-is (supports accept_new_options=True)
+        res = serde.deserialize("user_entered_value")
+        assert res == "user_entered_value"
+
+        # Even empty string is a valid user input when accept_new_options=True
         res = serde.deserialize("")
-        assert res is None
-        # Should not return empty string which would cause issues in session state
-        assert res != ""
+        assert res == ""
 
     def test_deserialize_complex_options(self):
         # Test with more complex option types

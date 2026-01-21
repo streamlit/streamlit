@@ -125,8 +125,9 @@ class SelectboxSerde(Generic[T]):
     def serialize(self, v: T | str | None) -> str | None:
         if v is None:
             return None
-        if len(self.options) == 0:
-            return None
+        # Note: We don't short-circuit for empty options here because
+        # accept_new_options=True allows user-entered values even with no options.
+        # The normal flow below handles this correctly.
 
         # Use format_func to find the formatted option instead of using
         # index_(self.options, v) which relies on == comparison. This is necessary
@@ -149,16 +150,16 @@ class SelectboxSerde(Generic[T]):
         return formatted_value
 
     def deserialize(self, ui_value: str | None) -> T | str | None:
-        # If no options, there's no valid value - return None
-        if len(self.options) == 0:
-            return None
+        # Note: We don't short-circuit for empty options here because
+        # accept_new_options=True allows user-entered values even with no options.
+        # The normal flow below handles this: ui_value not in options -> return ui_value.
 
         # Check if the option is pointing to a generic option type T,
         # otherwise return the option itself.
         if ui_value is None:
             return (
                 self.options[self.default_option_index]
-                if self.default_option_index is not None
+                if self.default_option_index is not None and len(self.options) > 0
                 else None
             )
 
