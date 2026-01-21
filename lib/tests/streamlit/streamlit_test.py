@@ -57,7 +57,6 @@ NON_ELEMENT_COMMANDS: set[str] = {
     "cache_resource",
     "connection",
     "context",
-    "experimental_user",
     "fragment",
     "get_option",
     "login",

@@ -611,6 +611,9 @@ def _melt_data(
 
     y_series = melted_df[new_y_column_name]
     if (
+        # After melting columns of different dtypes, the result has object dtype.
+        # In pandas 3.0+, melting columns with the same StringDtype keeps StringDtype,
+        # so this check correctly identifies only truly mixed-type scenarios.
         y_series.dtype == "object"
         and "mixed" in infer_dtype(y_series)
         and len(y_series.unique()) > 100

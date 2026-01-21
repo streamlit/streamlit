@@ -19,6 +19,7 @@ from tempfile import NamedTemporaryFile
 from typing import TYPE_CHECKING
 
 import pytest
+import requests
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import (
@@ -42,6 +43,36 @@ client_id = "test-client-id"
 client_secret = "test-client-secret"
 server_metadata_url = "http://localhost:{oidc_server_port}/.well-known/openid-configuration"
 """
+
+
+def wait_for_oidc_server_to_start(port: int, timeout: int = 60) -> bool:
+    """Wait for the OIDC mock server to start.
+
+    Parameters
+    ----------
+    port : int
+        The port on which the OIDC server is running.
+    timeout : int
+        The number of seconds to wait for the server to start.
+
+    Returns
+    -------
+    bool
+        True if the server started successfully, False otherwise.
+    """
+    print(f"Waiting for OIDC server to start on port {port}...")
+    start_time = time.time()
+    url = f"http://localhost:{port}/.well-known/openid-configuration"
+    while time.time() - start_time < timeout:
+        try:
+            response = requests.get(url, timeout=1)
+            if response.status_code == 200:
+                return True
+        except requests.RequestException:
+            # Connection errors are expected while the mock server is starting
+            pass
+        time.sleep(0.5)
+    return False
 
 
 @pytest.fixture(scope="module")
@@ -70,7 +101,11 @@ def fake_oidc_server(
     )
 
     oidc_server_proc.start()
-    time.sleep(1)
+    if not wait_for_oidc_server_to_start(oidc_server_port):
+        oidc_server_proc.terminate()
+        raise RuntimeError(
+            f"OIDC mock server failed to start on port {oidc_server_port}"
+        )
     yield oidc_server_proc
     oidc_server_stdout = oidc_server_proc.terminate()
     print(oidc_server_stdout, flush=True)
