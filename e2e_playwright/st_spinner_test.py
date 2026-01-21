@@ -192,3 +192,23 @@ def test_spinner_width_300px_snapshot(app: Page, assert_snapshot: ImageCompareFu
     spinner_element = app.get_by_test_id("stSpinner")
     expect(spinner_element).to_be_visible()
     assert_snapshot(spinner_element, name="st_spinner-width_300px")
+
+
+def test_spinner_with_container_elements(app: Page):
+    """Test that container elements (columns) can be created inside a spinner context.
+
+    Regression test for issue #13658: App crash when creating container elements
+    (st.columns, st.tabs) inside a container within a st.spinner context.
+    """
+    get_button(app, "Run spinner with container").click()
+
+    # The spinner should appear first
+    expect(app.get_by_test_id("stSpinner")).to_be_visible()
+
+    # Wait for the app to finish running
+    wait_for_app_run(app)
+
+    # After the spinner completes, the columns should be visible with their content
+    expect(app.get_by_test_id("stSpinner")).to_have_count(0)
+    expect(app.get_by_text("Column 1")).to_be_visible()
+    expect(app.get_by_text("Column 2")).to_be_visible()
