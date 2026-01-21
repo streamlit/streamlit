@@ -253,6 +253,12 @@ export class WidgetStateManager {
    */
   private paramKeyToWidgetId = new Map<string, string>()
 
+  /**
+   * Callback to notify App.tsx when query params change.
+   * This keeps App's queryParams state in sync with the URL.
+   */
+  private onQueryParamsChange?: (queryString: string) => void
+
   constructor(props: Props) {
     this.props = props
     this.formsData = createFormsData()
@@ -613,17 +619,35 @@ export class WidgetStateManager {
     source: Source,
     fragmentId: string | undefined
   ): void {
+    // Filter out invalid values (NaN, undefined, null) before storing
+    const validValue = value.filter(
+      v => v !== undefined && v !== null && !Number.isNaN(v)
+    )
+    // Only update if we have valid values
+    if (validValue.length === 0) {
+      return
+    }
     this.createWidgetState(widget, source).doubleArrayValue = new DoubleArray({
-      data: value,
+      data: validValue,
     })
     this.onWidgetValueChanged(widget.formId, source, fragmentId)
 
     // Sync to URL if bound and from UI (comma-separated for ranges)
     if (source.fromUi) {
-      this.syncCommaArrayToUrlIfBound(
-        widget.id,
-        value.map(v => String(v))
-      )
+      const binding = this.boundWidgets.get(widget.id)
+      // For select_slider: convert indices to option strings for human-readable URLs
+      if (binding?.options && binding.options.length > 0) {
+        const optionStrings = validValue.map(
+          idx => binding.options?.[idx] ?? String(idx)
+        )
+        this.syncCommaArrayToUrlIfBound(widget.id, optionStrings)
+      } else {
+        // Regular slider: use numeric values
+        this.syncCommaArrayToUrlIfBound(
+          widget.id,
+          validValue.map(v => String(v))
+        )
+      }
     }
   }
 
@@ -721,6 +745,27 @@ export class WidgetStateManager {
   }
 
   /**
+   * Set a callback to be notified when query params change.
+   * This is called by App.tsx to keep its queryParams state in sync.
+   */
+  public setQueryParamsChangeHandler(
+    handler: (queryString: string) => void
+  ): void {
+    this.onQueryParamsChange = handler
+  }
+
+  /**
+   * Notify App.tsx of query param changes so it can update its state.
+   * This is necessary for page navigation to preserve query params.
+   */
+  private notifyQueryParamsChange(): void {
+    if (this.onQueryParamsChange) {
+      const url = new URL(window.location.href)
+      this.onQueryParamsChange(url.searchParams.toString())
+    }
+  }
+
+  /**
    * Sync a scalar value to URL if the widget is bound.
    */
   private syncToUrlIfBound(widgetId: string, value: string): void {
@@ -736,25 +781,39 @@ export class WidgetStateManager {
     const url = new URL(window.location.href)
     url.searchParams.set(binding.paramKey, value)
     window.history.replaceState({}, "", url.toString())
+    this.notifyQueryParamsChange()
   }
 
   /**
    * Sync a comma-separated array value to URL if the widget is bound.
    * Used for slider ranges and date ranges.
    */
-  private syncCommaArrayToUrlIfBound(widgetId: string, values: string[]): void {
+  private syncCommaArrayToUrlIfBound(
+    widgetId: string,
+    values: string[]
+  ): void {
     const binding = this.boundWidgets.get(widgetId)
     if (!binding) return
 
+    // Filter out invalid values like "undefined", "NaN", empty strings
+    const validValues = values.filter(
+      v => v !== "" && v !== "undefined" && v !== "NaN" && v !== "null"
+    )
+    if (validValues.length === 0) {
+      this.clearUrlParam(binding.paramKey)
+      return
+    }
+
     // Don't sync default values to URL
-    if (this.isDefaultArrayValue(values, binding)) {
+    if (this.isDefaultArrayValue(validValues, binding)) {
       this.clearUrlParam(binding.paramKey)
       return
     }
 
     const url = new URL(window.location.href)
-    url.searchParams.set(binding.paramKey, values.join(","))
+    url.searchParams.set(binding.paramKey, validValues.join(","))
     window.history.replaceState({}, "", url.toString())
+    this.notifyQueryParamsChange()
   }
 
   /**
@@ -774,12 +833,14 @@ export class WidgetStateManager {
     // Don't sync empty or default values
     if (values.length === 0 || this.isDefaultArrayValue(values, binding)) {
       window.history.replaceState({}, "", url.toString())
+      this.notifyQueryParamsChange()
       return
     }
 
     // Repeated params: ?tags=a&tags=b
     values.forEach(v => url.searchParams.append(binding.paramKey, v))
     window.history.replaceState({}, "", url.toString())
+    this.notifyQueryParamsChange()
   }
 
   /**
@@ -789,6 +850,7 @@ export class WidgetStateManager {
     const url = new URL(window.location.href)
     url.searchParams.delete(paramKey)
     window.history.replaceState({}, "", url.toString())
+    this.notifyQueryParamsChange()
   }
 
   /**

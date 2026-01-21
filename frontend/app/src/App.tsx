@@ -340,7 +340,8 @@ export class App extends PureComponent<Props, State> {
       hostHideSidebarNav: false,
       sidebarChevronDownshift: 0,
       pageLinkBaseUrl: "",
-      queryParams: "",
+      // Initialize with actual URL query params so the first rerun includes them
+      queryParams: window.location.search.replace(/^\?/, ""),
       deployedAppMetadata: {},
       libConfig: {},
       appConfig: {},
@@ -356,6 +357,13 @@ export class App extends PureComponent<Props, State> {
       sendRerunBackMsg: this.sendRerunBackMsg,
       formsDataChanged: formsData => this.setState({ formsData }),
     })
+
+    // Wire up query param change handler for widget-to-URL sync.
+    // This keeps App's queryParams state in sync with the URL so that
+    // page navigation preserves query params from bound widgets.
+    this.widgetMgr.setQueryParamsChangeHandler(
+      this.handleQueryParamsFromWidget
+    )
 
     this.hostCommunicationMgr = new HostCommunicationManager({
       streamlitExecutionStartedAt: props.streamlitExecutionStartedAt,
@@ -1080,6 +1088,21 @@ export class App extends PureComponent<Props, State> {
         }
       })
     }
+  }
+
+  /**
+   * Handle query parameter changes originating from widget value changes.
+   * This is called by WidgetStateManager when a widget bound to a query param
+   * updates its value. This keeps App's queryParams state in sync with the URL
+   * so that page navigation preserves bound widget query params.
+   */
+  handleQueryParamsFromWidget = (queryString: string): void => {
+    this.setState({ queryParams: queryString })
+
+    this.hostCommunicationMgr.sendMessageToHost({
+      type: "SET_QUERY_PARAM",
+      queryParams: queryString ? `?${queryString}` : "",
+    })
   }
 
   handlePageInfoChanged = (pageInfo: PageInfo): void => {
@@ -1877,19 +1900,31 @@ export class App extends PureComponent<Props, State> {
       // The user specified exactly which page to run. We can simply use this
       // value in the BackMsg we send to the server.
       if (pageScriptHash !== currentPageScriptHash && !preserveQueryParams) {
-        // Clear non-embed query parameters within a page change while we wait
-        // for the server to send updated query params (if any).
-        // Skip clearing if preserveQueryParams is true (e.g., browser back/forward
-        // navigation where query params from the URL should be preserved).
-        const preservedQueryParams = preserveEmbedQueryParams()
-
-        queryString = getQueryString(queryStringOverride, preservedQueryParams)
-
-        this.setState({ queryParams: queryString })
-        this.hostCommunicationMgr.sendMessageToHost({
-          type: "SET_QUERY_PARAM",
-          queryParams: queryString,
-        })
+        // For page navigation, preserve query params from bound widgets.
+        // Previously we cleared all non-embed params, but with query param binding,
+        // we want to preserve params that were set by widgets (especially from
+        // the entry file in MPA v2 apps).
+        //
+        // If queryStringOverride is provided, use it. Otherwise, preserve
+        // the current state.queryParams (which includes bound widget params).
+        // Only fall back to embed params if neither is available.
+        const currentParams = this.state.queryParams
+        if (!queryStringOverride && currentParams) {
+          // Preserve bound widget params from state
+          queryString = currentParams
+        } else {
+          // Fall back to embed params only
+          const preservedQueryParams = preserveEmbedQueryParams()
+          queryString = getQueryString(
+            queryStringOverride,
+            preservedQueryParams
+          )
+          this.setState({ queryParams: queryString })
+          this.hostCommunicationMgr.sendMessageToHost({
+            type: "SET_QUERY_PARAM",
+            queryParams: queryString,
+          })
+        }
       }
     } else if (currentPageScriptHash) {
       // The user didn't specify which page to run, which happens when they
