@@ -250,7 +250,7 @@ button.open  # Always None (not a tab/expander/popover)
 
 ### Behavior
 
-**When `on_change` is set:**
+**When `on_change` is `"rerun"`:**
 
 1. Element registers as a widget (tracks state in session_state)
 2. `.open` attribute returns current state (`True`/`False`)
