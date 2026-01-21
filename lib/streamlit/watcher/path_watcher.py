@@ -137,8 +137,12 @@ def watch_file(
     path: str,
     on_file_changed: Callable[[str], None],
     watcher_type: str | None = None,
+    *,  # keyword-only arguments:
+    allow_nonexistent: bool = False,
 ) -> bool:
-    return _watch_path(path, on_file_changed, watcher_type)
+    return _watch_path(
+        path, on_file_changed, watcher_type, allow_nonexistent=allow_nonexistent
+    )
 
 
 def watch_dir(
