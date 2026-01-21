@@ -28,7 +28,6 @@ from streamlit.elements.lib.layout_utils import (
 )
 from streamlit.elements.lib.options_selector_utils import (
     create_mappings,
-    index_,
     maybe_coerce_enum,
     validate_and_sync_value_with_options,
 )
@@ -78,6 +77,7 @@ class RadioSerde(Generic[T]):
     formatted_options: list[str]
     formatted_option_to_option_index: dict[str, int]
     default_option_index: int | None
+    format_func: Callable[[Any], str]
 
     def __init__(
         self,
@@ -86,11 +86,13 @@ class RadioSerde(Generic[T]):
         formatted_options: list[str],
         formatted_option_to_option_index: dict[str, int],
         default_option_index: int | None = None,
+        format_func: Callable[[Any], str] = str,
     ) -> None:
         self.options = options
         self.formatted_options = formatted_options
         self.formatted_option_to_option_index = formatted_option_to_option_index
         self.default_option_index = default_option_index
+        self.format_func = format_func
 
     def serialize(self, v: T | str | None) -> str | None:
         if v is None:
@@ -98,12 +100,21 @@ class RadioSerde(Generic[T]):
         if len(self.options) == 0:
             return ""
 
+        # Use format_func to find the formatted option instead of using
+        # index_(self.options, v) which relies on == comparison. This is necessary
+        # because widget values are deepcopied, and for custom classes without
+        # __eq__, the deepcopied instances would fail identity comparison.
         try:
-            option_index = index_(self.options, v)
-            return self.formatted_options[option_index]
-        except ValueError:
-            # Value is a string that's not in options (shouldn't happen for radio)
+            formatted_value = self.format_func(v)
+        except Exception:
+            # format_func failed (e.g., v is a string but format_func expects
+            # an object with specific attributes). Treat v as a raw string.
             return cast("str", v)
+
+        if formatted_value in self.formatted_option_to_option_index:
+            return formatted_value
+        # Value not found in options - return as raw string
+        return cast("str", v)
 
     def deserialize(self, ui_value: str | None) -> T | str | None:
         if ui_value is None:
@@ -464,6 +475,7 @@ class RadioMixin:
             formatted_options=formatted_options,
             formatted_option_to_option_index=formatted_option_to_option_index,
             default_option_index=index,
+            format_func=format_func,
         )
 
         widget_state = register_widget(

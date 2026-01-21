@@ -575,3 +575,103 @@ def test_dynamic_options_with_key_and_none_index():
     at = at.button[0].click().run()
     assert at.radio[0].value is None
     assert "Selected: None" in at.text[0].value
+
+
+def test_dynamic_format_func_preserves_value():
+    """Test that changing format_func preserves value if underlying option still exists."""
+
+    def script():
+        import streamlit as st
+
+        if "counter" not in st.session_state:
+            st.session_state["counter"] = 0
+
+        counter = st.session_state["counter"]
+
+        # First run: format_func=str.upper -> displays "A", "B", "C"
+        # Second run: format_func=str.lower -> displays "a", "b", "c"
+        # The formatted display changes, but underlying options remain the same.
+        if counter == 0:
+            format_func = str.upper
+        else:
+            format_func = str.lower
+
+        options = ["A", "B", "C"]
+        selected = st.radio(
+            "Select", options, format_func=format_func, key="dynamic_radio"
+        )
+        st.text(f"Selected: {selected}")
+        st.button("Next", on_click=lambda: st.session_state.__setitem__("counter", 1))
+
+    at = AppTest.from_function(script).run()
+
+    # Initially "A" is selected (index 0), displayed as "A"
+    assert at.radio[0].value == "A"
+
+    # Select "B" (displayed as "B")
+    at = at.radio[0].set_value("B").run()
+    assert at.radio[0].value == "B"
+
+    # Click button to change format_func from upper to lower
+    # The value "B" should be preserved because the underlying option "B"
+    # still exists in the options list, even though its display changes to "b".
+    at = at.button[0].click().run()
+    assert at.radio[0].value == "B"
+    # Verify it didn't reset to the default "A"
+    assert at.radio[0].value != "A"
+    assert "Selected: B" in at.text[0].value
+
+
+def test_custom_objects_without_eq():
+    """Test that custom class objects without __eq__ work with format_func.
+
+    This tests the fix for issue #13646 where custom objects without __eq__
+    would have their selections cleared after script reruns because the
+    serialization used == comparison after deepcopy created new instances.
+    """
+
+    def script():
+        import streamlit as st
+
+        # Custom class without __eq__ implementation - uses identity comparison
+        # Must be defined inside script() because AppTest.from_function() runs in isolation
+        class CustomOption:  # noqa: B903
+            def __init__(self, value: str, label: str):
+                self.value = value
+                self.label = label
+
+        # Create new option instances on each run (simulating the behavior
+        # that triggers the bug - each rerun creates new object instances)
+        options = [
+            CustomOption("opt_a", "Option A"),
+            CustomOption("opt_b", "Option B"),
+            CustomOption("opt_c", "Option C"),
+        ]
+
+        selected = st.radio(
+            "Select",
+            options,
+            format_func=lambda x: x.label,
+            key="custom_radio",
+        )
+        st.text(f"Selected: {selected.value if selected else None}")
+        st.button("Rerun")
+
+    at = AppTest.from_function(script).run()
+
+    # Initially "opt_a" is selected (index 0) - value is the CustomOption object
+    assert at.radio[0].value.value == "opt_a"
+    assert "Selected: opt_a" in at.text[0].value
+
+    # Click button to trigger a rerun - this creates new CustomOption instances
+    # Without the fix, the selection would be cleared because the deepcopied
+    # value wouldn't match any option (identity comparison using == fails for
+    # objects without __eq__, so it falls back to `is` comparison which fails)
+    at = at.button[0].click().run()
+
+    # After rerun, the selection should still be the first option
+    # The fix uses format_func comparison instead of == comparison
+    assert at.radio[0].value.value == "opt_a"
+    # Verify it didn't reset to None or become invalid
+    assert at.radio[0].value is not None
+    assert "Selected: opt_a" in at.text[0].value
