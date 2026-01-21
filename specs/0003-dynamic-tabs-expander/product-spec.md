@@ -221,7 +221,7 @@ if "current_filter" in st.session_state:
 
 - **Type:** `str | None`
 - **Default:** `None`
-- **Purpose:** Required if using `on_change` with callback, makes state accessible via `st.session_state[key]`
+- **Purpose:** Makes state accessible via `st.session_state[key]` for programmatic control. Not required for callbacks to work (widgets auto-generate internal IDs), but needed to access/control state programmatically.
 - **State value:** `str` (label of active tab) for tabs, `bool` for expander and popover
 
 #### New attribute: `.open` (on DeltaGenerator)
