@@ -138,16 +138,20 @@ class MultiSelectSerde(Generic[T]):
                 formatted_value = self.format_func(v)
             except Exception:
                 # format_func failed (e.g., v is a string but format_func expects
-                # an object with specific attributes). Treat v as a raw string.
-                values.append(cast("str", v))
+                # an object with specific attributes). Use str(v) to ensure we append
+                # a proper string, not the original object. This handles both cases:
+                # - v is already a string -> str(v) returns it unchanged
+                # - v is a custom object -> str(v) gives its string representation
+                values.append(str(v))
                 continue
 
             if formatted_value in self.formatted_option_to_option_index:
                 values.append(formatted_value)
             else:
                 # Value not found in options - it's likely a user-entered string
-                # (when accept_new_options=True) or an invalid value
-                values.append(cast("str", v))
+                # (when accept_new_options=True) or an invalid value. Use the
+                # formatted string (not the original object) for type consistency.
+                values.append(formatted_value)
         return values
 
     def deserialize(self, ui_value: list[str] | None) -> list[T | str] | list[T]:

@@ -634,8 +634,10 @@ class TestMultiSelectSerde:
             format_func=format_func,
         )
 
+        # "A" is not in options but format_func succeeds, so it returns formatted value
+        # "Option C" is in options, so it also returns formatted value
         res = serde.serialize(["A", "Option C"])
-        assert res == ["A", "Format: Option C"]
+        assert res == ["Format: A", "Format: Option C"]
 
     def test_deserialize(self):
         options = ["Option A", "Option B", "Option C"]

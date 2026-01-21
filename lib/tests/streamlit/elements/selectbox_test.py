@@ -623,6 +623,7 @@ class TestSelectboxSerde:
         assert res is None
 
     def test_serialize_empty_options(self):
+        """Test that serializing with empty options returns None, not empty string."""
         options = []
         formatted_options, formatted_option_to_option_index = create_mappings(options)
         serde = SelectboxSerde(
@@ -632,7 +633,9 @@ class TestSelectboxSerde:
         )
 
         res = serde.serialize("something")
-        assert res == ""
+        assert res is None
+        # Should not return empty string which would cause issues in session state
+        assert res != ""
 
     def test_serialize_with_format_func(self):
         options = ["Option A", "Option B", "Option C"]
@@ -654,8 +657,10 @@ class TestSelectboxSerde:
         res = serde.serialize("Option A")
         assert res == "Format: Option A"
 
+        # When a value is not found in options but format_func succeeds,
+        # return the formatted value (not the original) for type consistency
         res = serde.serialize("Option D")
-        assert res == "Option D"
+        assert res == "Format: Option D"
 
     def test_deserialize(self):
         options = ["Option A", "Option B", "Option C"]
@@ -708,6 +713,7 @@ class TestSelectboxSerde:
         assert res == "Option C"
 
     def test_deserialize_empty_options_with_default_index(self):
+        """Test that deserializing with empty options returns None even with default index."""
         options = []
         formatted_options, formatted_option_to_option_index = create_mappings(options)
         default_index = 0
@@ -720,6 +726,26 @@ class TestSelectboxSerde:
 
         res = serde.deserialize(None)
         assert res is None
+
+    def test_deserialize_empty_options_with_string_value(self):
+        """Test that deserializing empty string with empty options returns None.
+
+        This tests the fix for session state getting "" instead of None
+        when options are empty.
+        """
+        options = []
+        formatted_options, formatted_option_to_option_index = create_mappings(options)
+        serde = SelectboxSerde(
+            options,
+            formatted_options=formatted_options,
+            formatted_option_to_option_index=formatted_option_to_option_index,
+        )
+
+        # If serialize returned "" (the old behavior), deserialize should still return None
+        res = serde.deserialize("")
+        assert res is None
+        # Should not return empty string which would cause issues in session state
+        assert res != ""
 
     def test_deserialize_complex_options(self):
         # Test with more complex option types
