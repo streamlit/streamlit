@@ -349,6 +349,7 @@ class BaseSnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
         """Closes the underlying Snowflake connection."""
         if self._raw_instance is not None:
             self._raw_instance.close()
+            self._raw_instance = None
 
 
 class SnowflakeConnection(BaseSnowflakeConnection):

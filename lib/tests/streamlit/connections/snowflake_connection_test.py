@@ -228,6 +228,58 @@ class SnowflakeConnectionTest(unittest.TestCase):
         assert conn._connect.call_count == 1
 
 
+class TestSnowflakeConnectionClose:
+    """Tests for SnowflakeConnection.close() method (no integration required)."""
+
+    def test_close_resets_raw_instance(self) -> None:
+        """Tests that close() closes the connection and resets _raw_instance.
+
+        After close() is called, the next access to _instance should create a new
+        connection, not return the closed one.
+        """
+        mock_connection = MagicMock()
+        second_mock_connection = MagicMock()
+
+        with patch(
+            "streamlit.connections.snowflake_connection.SnowflakeConnection._connect"
+        ) as mock_connect:
+            mock_connect.side_effect = [mock_connection, second_mock_connection]
+
+            conn = SnowflakeConnection("my_snowflake_connection")
+
+            # First access creates the connection
+            assert conn._instance is mock_connection
+            mock_connect.assert_called_once()
+
+            # Close the connection
+            conn.close()
+            mock_connection.close.assert_called_once()
+
+            # _raw_instance should be None after close
+            assert conn._raw_instance is None
+
+            # Next access to _instance should create a new connection
+            assert conn._instance is second_mock_connection
+            assert mock_connect.call_count == 2
+
+    def test_close_is_noop_when_not_connected(self) -> None:
+        """Tests that close() doesn't fail when _raw_instance is None."""
+        with patch(
+            "streamlit.connections.snowflake_connection.SnowflakeConnection._connect"
+        ) as mock_connect:
+            mock_connect.return_value = MagicMock()
+
+            conn = SnowflakeConnection("my_snowflake_connection")
+            # Reset the connection to simulate it not being connected
+            conn._raw_instance = None
+
+            # close() should not raise when _raw_instance is None
+            conn.close()
+
+            # _raw_instance should still be None
+            assert conn._raw_instance is None
+
+
 class TestSnowflakeCallersRightsConnection:
     def test_get_connection_params_errors_on_missing_env(self):
         """Tests that _get_connection_params handles missing environment variables."""
