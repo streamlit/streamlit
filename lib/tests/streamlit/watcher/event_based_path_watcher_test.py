@@ -519,7 +519,9 @@ class EventBasedPathWatcherTest(unittest.TestCase):
 
     @mock.patch("os.path.isdir")
     @mock.patch("os.path.exists")
-    def test_detects_file_creation_in_watched_directory(self, mock_exists, mock_is_dir):
+    def test_detects_file_creation_in_watched_directory(
+        self, mock_exists: mock.Mock, mock_is_dir: mock.Mock
+    ) -> None:
         """Test that file creation inside a watched directory triggers callback.
 
         When watching a directory, file events inside the directory should:
@@ -577,8 +579,8 @@ class EventBasedPathWatcherTest(unittest.TestCase):
     @mock.patch("os.path.isdir")
     @mock.patch("os.path.exists")
     def test_detects_file_creation_and_modification_with_allow_nonexistent(
-        self, mock_exists, mock_is_dir
-    ):
+        self, mock_exists: mock.Mock, mock_is_dir: mock.Mock
+    ) -> None:
         """Test watching a nonexistent file detects both creation and modification.
 
         This tests the scenario where:

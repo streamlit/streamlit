@@ -244,7 +244,9 @@ class PollingPathWatcherTest(unittest.TestCase):
         assert callback1.call_count == 1
         assert callback2.call_count == 2
 
-    def test_detects_file_creation_and_modification_with_allow_nonexistent(self):
+    def test_detects_file_creation_and_modification_with_allow_nonexistent(
+        self,
+    ) -> None:
         """Test watching a nonexistent file detects both creation and modification.
 
         This tests the scenario where:

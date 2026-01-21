@@ -156,6 +156,9 @@ def watch_file(
         Optional watcher type ('watchdog', 'poll', 'auto', or 'none').
     allow_nonexistent
         If True, watch for file creation even if the file doesn't exist yet.
+        Note: The file's parent directory must exist for watching to work.
+        If the parent directory doesn't exist, the watcher silently skips
+        watching (the file can't be created without its parent directory).
 
     Returns
     -------

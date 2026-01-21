@@ -117,7 +117,9 @@ class EventBasedPathWatcher:
         allow_nonexistent : bool
             If True, the watcher will not raise an exception if the path does
             not exist. This can be used to watch for the creation of a file or
-            directory at a given path.
+            directory at a given path. Note: The parent directory of the path
+            must exist for watching to work. If the parent doesn't exist, the
+            watcher is silently skipped.
         """
         self._path = os.path.realpath(path)
         self._on_changed = on_changed
@@ -205,6 +207,18 @@ class _MultiPathWatcher:
                         folder_handler, folder_path, recursive=True
                     )
                     self._folder_handlers[folder_path] = folder_handler
+                except FileNotFoundError:
+                    # This happens when watching a non-existent file whose parent
+                    # directory also doesn't exist (e.g., .streamlit/config.toml
+                    # when .streamlit/ hasn't been created yet). This is expected
+                    # and not an error - we just can't watch until the directory
+                    # is created.
+                    _LOGGER.debug(
+                        "Cannot watch path %s: directory %s does not exist",
+                        path,
+                        folder_path,
+                    )
+                    return
                 except Exception as ex:
                     _LOGGER.warning(
                         "Failed to schedule watch observer for path %s",
