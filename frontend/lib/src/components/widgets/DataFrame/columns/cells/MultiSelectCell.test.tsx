@@ -58,7 +58,7 @@ describe("prepareOptions", () => {
     {
       input: [null, { value: "value3" }],
       expected: [
-        { value: null, label: "", color: undefined },
+        { value: "", label: "", color: undefined },
         { value: "value3", label: "value3", color: undefined },
       ],
     },
@@ -69,17 +69,17 @@ describe("prepareOptions", () => {
     {
       input: [undefined, null],
       expected: [
-        { value: undefined, label: "", color: undefined },
-        { value: null, label: "", color: undefined },
+        { value: "", label: "", color: undefined },
+        { value: "", label: "", color: undefined },
       ],
     },
     {
       input: ["option4", null, { value: "value4" }, undefined],
       expected: [
         { value: "option4", label: "option4", color: undefined },
-        { value: null, label: "", color: undefined },
+        { value: "", label: "", color: undefined },
         { value: "value4", label: "value4", color: undefined },
-        { value: undefined, label: "", color: undefined },
+        { value: "", label: "", color: undefined },
       ],
     },
     {
@@ -318,7 +318,7 @@ const keyDownEvent = {
   key: "ArrowDown",
 }
 
-export async function selectOption(
+async function selectOption(
   container: HTMLElement,
   optionText: string
 ): Promise<void> {
@@ -329,10 +329,7 @@ export async function selectOption(
   fireEvent.click(getByText(listBox, optionText))
 }
 
-export function hasOption(
-  container: HTMLElement,
-  optionText: string
-): boolean {
+function hasOption(container: HTMLElement, optionText: string): boolean {
   const inputElement = getByRole(container, "combobox")
   fireEvent.keyDown(inputElement, keyDownEvent)
   const listBox = getByRole(container, "listbox")

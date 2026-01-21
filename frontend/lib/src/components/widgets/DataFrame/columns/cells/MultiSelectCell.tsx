@@ -79,7 +79,7 @@ const PortalWrap = styled.div`
   color: var(--gdg-text-dark);
 
   > div {
-    border-radius: 4px;
+    border-radius: 0.25rem;
     border: 1px solid var(--gdg-border-color);
   }
 `
@@ -94,12 +94,12 @@ export const prepareOptions = (
   options: readonly (string | SelectOption)[]
 ): { value: string; label?: string; color?: string }[] => {
   return options.map(option => {
-    if (
-      typeof option === "string" ||
-      option === null ||
-      option === undefined
-    ) {
-      return { value: option, label: option ?? "", color: undefined }
+    if (typeof option === "string") {
+      return { value: option, label: option, color: undefined }
+    }
+
+    if (option == null) {
+      return { value: "", label: "", color: undefined }
     }
 
     return {
@@ -237,9 +237,24 @@ const Editor: ReturnType<ProvideEditorCallback<MultiSelectCell>> = p => {
     [menuOpen]
   )
 
+  // Menu open/close handlers
+  const handleMenuOpen = useCallback(() => setMenuOpen(true), [])
+  const handleMenuClose = useCallback(() => setMenuOpen(false), [])
+
+  // No options message handler
+  const noOptionsMessage = useCallback(
+    (input: { inputValue: string }) => {
+      return allowCreation && allowDuplicates && input.inputValue
+        ? `Create "${input.inputValue}"`
+        : undefined
+    },
+    [allowCreation, allowDuplicates]
+  )
+
   // Apply styles to the react-select component.
   // All components: https://react-select.com/components
-  const colorStyles: StylesConfig<SelectOption, true> = {
+  const colorStyles: StylesConfig<SelectOption, true> = useMemo(
+    () => ({
     control: (base, state) => ({
       ...base,
       border: 0,
@@ -371,7 +386,9 @@ const Editor: ReturnType<ProvideEditorCallback<MultiSelectCell>> = p => {
         },
       }
     },
-  }
+  }),
+  [theme]
+)
 
   // This is used to submit the values to the grid.
   const submitValues = useCallback(
@@ -417,6 +434,37 @@ const Editor: ReturnType<ProvideEditorCallback<MultiSelectCell>> = p => {
     }
   }
 
+  // Memoized components object for react-select
+  const selectComponents = useMemo(
+    () => ({
+      DropdownIndicator: () => null,
+      IndicatorSeparator: () => null,
+      MultiValueLabel: SelectableMultiValueLabel,
+      Menu: (props: CustomMenuProps) => {
+        if (menuDisabled) {
+          return null
+        }
+        return (
+          <PortalWrap>
+            <CustomMenu className={"click-outside-ignore"} {...props} />
+          </PortalWrap>
+        )
+      },
+    }),
+    [menuDisabled]
+  )
+
+  // onChange handler for react-select
+  const handleChange = useCallback(
+    (e: readonly SelectOption[] | null) => {
+      if (e === null || !Array.isArray(e)) {
+        return
+      }
+      submitValues(e.map((x: SelectOption) => x.value))
+    },
+    [submitValues]
+  )
+
   const SelectComponent = allowCreation ? CreatableSelect : Select
   return (
     <Wrap onKeyDown={onKeyDown} data-testid={"multi-select-cell"}>
@@ -430,14 +478,10 @@ const Editor: ReturnType<ProvideEditorCallback<MultiSelectCell>> = p => {
         onInputChange={setInputValue}
         options={options}
         placeholder={cell.readonly ? "" : allowCreation ? "Add..." : undefined}
-        noOptionsMessage={input => {
-          return allowCreation && allowDuplicates && input.inputValue
-            ? `Create "${input.inputValue}"`
-            : undefined
-        }}
+        noOptionsMessage={noOptionsMessage}
         menuIsOpen={cell.readonly ? false : menuOpen}
-        onMenuOpen={() => setMenuOpen(true)}
-        onMenuClose={() => setMenuOpen(false)}
+        onMenuOpen={handleMenuOpen}
+        onMenuClose={handleMenuClose}
         value={resolveValues(value, options, allowDuplicates)}
         onKeyDown={cell.readonly ? undefined : handleKeyDown}
         menuPlacement={"auto"}
@@ -451,27 +495,8 @@ const Editor: ReturnType<ProvideEditorCallback<MultiSelectCell>> = p => {
         backspaceRemovesValue={true}
         escapeClearsValue={false}
         styles={colorStyles}
-        components={{
-          DropdownIndicator: () => null,
-          IndicatorSeparator: () => null,
-          MultiValueLabel: SelectableMultiValueLabel,
-          Menu: props => {
-            if (menuDisabled) {
-              return null
-            }
-            return (
-              <PortalWrap>
-                <CustomMenu className={"click-outside-ignore"} {...props} />
-              </PortalWrap>
-            )
-          },
-        }}
-        onChange={async e => {
-          if (e === null || !Array.isArray(e)) {
-            return
-          }
-          submitValues(e.map((x: SelectOption) => x.value))
-        }}
+        components={selectComponents}
+        onChange={handleChange}
       />
     </Wrap>
   )
