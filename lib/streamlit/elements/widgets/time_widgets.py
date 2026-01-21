@@ -620,11 +620,21 @@ class DateInputSerde:
         # If all formats fail, raise ValueError
         raise ValueError(f"Unable to parse date: {value}")
 
+    def _clamp_date(self, d: date) -> date:
+        """Clamp a date to the min/max bounds."""
+        if d < self.value.min:
+            return self.value.min
+        if d > self.value.max:
+            return self.value.max
+        return d
+
     def deserialize(self, ui_value: Any) -> DateWidgetReturn:
         return_value: Sequence[date] | None
         if ui_value is not None:
             try:
-                return_value = tuple(self._parse_date(v) for v in ui_value)
+                parsed_dates = tuple(self._parse_date(v) for v in ui_value)
+                # Clamp parsed dates to min/max bounds (for URL-seeded values)
+                return_value = tuple(self._clamp_date(d) for d in parsed_dates)
             except ValueError:
                 # Invalid date format, use default
                 return_value = self.value.value
