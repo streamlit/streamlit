@@ -61,34 +61,34 @@ with col1:
         "Add Tab 3",
         on_click=on_click_1,
         disabled=st.session_state.add_tab,
-        use_container_width=True,
+        width="stretch",
     )
 with col2:
     remove_1 = st.button(
         "Remove Tab 1",
         on_click=on_click_2,
         disabled=st.session_state.remove_1,
-        use_container_width=True,
+        width="stretch",
     )
 with col3:
     remove_2 = st.button(
         "Remove Tab 2",
         on_click=on_click_3,
         disabled=st.session_state.remove_2,
-        use_container_width=True,
+        width="stretch",
     )
 with col4:
     change_some = st.button(
         "Change Tab 1 & 3",
         on_click=on_click_4,
         disabled=st.session_state.change,
-        use_container_width=True,
+        width="stretch",
     )
     change = st.button(
         "Change All Tabs",
         on_click=on_click_5,
         disabled=st.session_state.change,
-        use_container_width=True,
+        width="stretch",
     )
 with col5:
     st.button("**Reset Tabs**", on_click=reset)

@@ -20,10 +20,15 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
+from streamlit.elements.widgets.camera_input import CameraInputSerde
 from streamlit.errors import StreamlitAPIException, StreamlitInvalidWidthError
 from streamlit.proto.Common_pb2 import FileURLs as FileURLsProto
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
-from streamlit.runtime.uploaded_file_manager import UploadedFile, UploadedFileRec
+from streamlit.runtime.uploaded_file_manager import (
+    DeletedFile,
+    UploadedFile,
+    UploadedFileRec,
+)
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
 
@@ -177,3 +182,45 @@ class CameraInputWidthTest(DeltaGeneratorTestCase):
             c2 = self.get_delta_from_queue().new_element.camera_input
             id2 = c2.id
             assert id1 == id2
+
+
+class CameraInputSerdeTest(DeltaGeneratorTestCase):
+    """Test CameraInputSerde serialization and deserialization."""
+
+    def test_serialize_with_uploaded_file(self):
+        """Test serialization of a captured camera image."""
+        serde = CameraInputSerde()
+
+        # Create a mock uploaded file
+        rec = UploadedFileRec("file123", "snapshot.jpg", "image/jpeg", b"image_data")
+        file_urls = FileURLsProto(
+            file_id="file123", delete_url="delete_url", upload_url="upload_url"
+        )
+        uploaded_file = UploadedFile(rec, file_urls)
+
+        # Serialize the file
+        result = serde.serialize(uploaded_file)
+
+        # Verify the serialized proto
+        assert len(result.uploaded_file_info) == 1
+        file_info = result.uploaded_file_info[0]
+        assert file_info.file_id == "file123"
+        assert file_info.name == "snapshot.jpg"
+        assert file_info.size == len(b"image_data")
+
+    def test_serialize_with_none(self):
+        """Test serialization when no image is captured."""
+        serde = CameraInputSerde()
+        result = serde.serialize(None)
+
+        # Should return empty state
+        assert len(result.uploaded_file_info) == 0
+
+    def test_serialize_with_deleted_file(self):
+        """Test serialization with a deleted file."""
+        serde = CameraInputSerde()
+        deleted = DeletedFile("file123")
+        result = serde.serialize(deleted)
+
+        # Should return empty state for deleted file
+        assert len(result.uploaded_file_info) == 0

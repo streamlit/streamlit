@@ -1046,7 +1046,7 @@ def rerun_app(page: Page) -> None:
 
 
 def wait_until(
-    page: Page, fn: Callable[[], None | bool], timeout: int = 5000, interval: int = 100
+    page: Page, fn: Callable[[], bool | None], timeout: int = 5000, interval: int = 100
 ) -> None:
     """Run a test function in a loop until it evaluates to True
     or times out.
@@ -1086,7 +1086,7 @@ def wait_until(
             if timed_out():
                 raise TimeoutError(timeout_msg) from e
         else:
-            if result not in (None, True, False):
+            if result not in {None, True, False}:
                 raise ValueError(
                     "`wait_until` callback must return None, True or "
                     f"False, returned {result!r}"

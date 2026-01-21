@@ -223,7 +223,7 @@ def _process_avatar_input(
             AvatarType.ICON,
             (
                 "assistant"
-                if avatar in [PresetNames.AI, PresetNames.ASSISTANT]
+                if avatar in {PresetNames.AI, PresetNames.ASSISTANT}
                 else "user"
             ),
         )

@@ -99,7 +99,7 @@ def _create_connection(
     )
 
     scope = connection_class.scope()
-    if scope not in ("global", "session"):
+    if scope not in {"global", "session"}:
         raise StreamlitAPIException(
             f"Connection class {connection_class} has scope '{scope}'. Valid values "
             "are 'global' or 'session'."

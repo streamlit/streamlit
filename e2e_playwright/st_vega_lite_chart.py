@@ -84,7 +84,7 @@ st.vega_lite_chart(
             "y": {"field": "b", "type": "quantitative"},
         },
     },
-    use_container_width=True,
+    width="stretch",
 )
 
 st.write("Using a top-level `df` and keywords as a spec:")
@@ -96,7 +96,7 @@ st.vega_lite_chart(
     x_type="ordinal",
     y_field="b",
     y_type="quantitative",
-    use_container_width=True,
+    width="stretch",
 )
 
 st.write("Putting the `df` inside the spec, as a `dataset`:")
@@ -111,7 +111,7 @@ st.vega_lite_chart(
             "y": {"field": "b", "type": "quantitative"},
         },
     },
-    use_container_width=True,
+    width="stretch",
 )
 
 st.write("Putting the `df` inside the spec, as inline `data`:")
@@ -125,7 +125,7 @@ st.vega_lite_chart(
             "y": {"field": "b", "type": "quantitative"},
         },
     },
-    use_container_width=True,
+    width="stretch",
 )
 
 st.write("Putting the `df` inside the spec, as inline `data` (different notation):")
@@ -144,10 +144,10 @@ st.vega_lite_chart(
 df = pd.DataFrame(data, columns=["a", "b", "c"])
 
 st.write("Show streamlit theme:")
-st.vega_lite_chart(df, spec, use_container_width=True, theme="streamlit")
+st.vega_lite_chart(df, spec, width="stretch", theme="streamlit")
 
 st.write("Show default theme:")
-st.vega_lite_chart(df, spec, use_container_width=True, theme=None)
+st.vega_lite_chart(df, spec, width="stretch", theme=None)
 
 st.write("Show custom colors:")
 st.vega_lite_chart(
@@ -160,7 +160,7 @@ st.vega_lite_chart(
         },
         "config": {"background": "purple", "axis": {"labelColor": "blue"}},
     },
-    use_container_width=True,
+    width="stretch",
 )
 
 spec = {
@@ -172,7 +172,7 @@ spec = {
 }
 
 # empty chart
-st.vega_lite_chart(spec, use_container_width=True)
+st.vega_lite_chart(spec, width="stretch")
 
 data1 = {"VALUE": [420, 380, 390], "DATE": [50, 60, 70]}
 df_data = pd.DataFrame(data1)
@@ -218,6 +218,6 @@ st.vega_lite_chart(
             },
         ],
     },
-    use_container_width=True,
+    width="stretch",
     theme="streamlit",
 )

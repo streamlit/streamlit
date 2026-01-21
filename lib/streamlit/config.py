@@ -99,11 +99,11 @@ class ShowErrorDetailsConfigOptions(str, Enum):
 
     @staticmethod
     def is_true_variation(val: str | bool) -> bool:
-        return val in ["true", "True", True]
+        return val in {"true", "True", True}
 
     @staticmethod
     def is_false_variation(val: str | bool) -> bool:
-        return val in ["false", "False", False]
+        return val in {"false", "False", False}
 
         # Config options can be set from several places including the command-line and
         # the user's script. Legacy config options (true/false) will have type string
@@ -1077,9 +1077,11 @@ def _browser_server_port() -> int:
 
 
 _SSL_PRODUCTION_WARNING = [
-    "DO NOT USE THIS OPTION IN A PRODUCTION ENVIRONMENT. It has not gone through "
-    "security audits or performance tests. For a production environment, we "
-    "recommend performing SSL termination through a load balancer or reverse proxy."
+    (
+        "DO NOT USE THIS OPTION IN A PRODUCTION ENVIRONMENT. It has not gone through "
+        "security audits or performance tests. For a production environment, we "
+        "recommend performing SSL termination through a load balancer or reverse proxy."
+    )
 ]
 
 _create_option(
@@ -2376,10 +2378,10 @@ def is_manually_set(option_name: str) -> bool:
         True if the option has been set by the user.
 
     """
-    return get_where_defined(option_name) not in (
+    return get_where_defined(option_name) not in {
         ConfigOption.DEFAULT_DEFINITION,
         ConfigOption.STREAMLIT_DEFINITION,
-    )
+    }
 
 
 def show_config() -> None:
@@ -2462,19 +2464,19 @@ def _is_valid_theme_section(section_path: str) -> bool:
 
     # theme.sidebar/light/dark is valid (2 parts: "theme" + section)
     if len(parts) == 2:
-        return parts[1] in [
+        return parts[1] in {
             CustomThemeCategories.SIDEBAR.value,
             CustomThemeCategories.LIGHT.value,
             CustomThemeCategories.DARK.value,
-        ]
+        }
 
     # theme.light.sidebar/theme.dark.sidebar are the only valid 3-part patterns
     if len(parts) == 3:
         # Only allow light/dark as the middle level, with sidebar as the final level
-        if parts[1] in [
+        if parts[1] in {
             CustomThemeCategories.LIGHT.value,
             CustomThemeCategories.DARK.value,
-        ]:
+        }:
             return parts[2] == CustomThemeCategories.SIDEBAR.value
         # sidebar cannot have nested sections (theme.sidebar.light/dark)
         return False
@@ -2546,11 +2548,11 @@ def _update_config_with_toml(raw_toml: str, where_defined: str) -> None:
         for name, value in section_data.items():
             option_name = f"{section_path}.{name}"
             # Only check for nested sections when we're already in a theme section
-            if section_path.startswith("theme") and name in [
+            if section_path.startswith("theme") and name in {
                 CustomThemeCategories.SIDEBAR.value,
                 CustomThemeCategories.LIGHT.value,
                 CustomThemeCategories.DARK.value,
-            ]:
+            }:
                 # Validate the theme section before processing
                 if not _is_valid_theme_section(option_name):
                     raise StreamlitInvalidThemeSectionError(

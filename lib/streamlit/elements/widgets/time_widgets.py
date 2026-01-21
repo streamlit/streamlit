@@ -473,6 +473,109 @@ class TimeInputSerde:
         return time.strftime(v, "%H:%M")
 
 
+def _validate_date_value(
+    current_value: DateWidgetReturn,
+    parsed_values: _DateInputValues,
+    has_explicit_bounds: bool,
+) -> tuple[DateWidgetReturn, bool]:
+    """Validate current value against min/max bounds and reset if needed.
+
+    Only validates when has_explicit_bounds is True (user provided min_value or max_value).
+    This avoids incorrectly resetting values against computed default bounds.
+
+    Parameters
+    ----------
+    current_value : DateWidgetReturn
+        The current value of the date input widget. Can be a single date, a tuple of
+        dates (for range mode), or None.
+    parsed_values : _DateInputValues
+        Parsed configuration containing min, max, default value, and whether the widget
+        is in range mode.
+    has_explicit_bounds : bool
+        Whether the user explicitly provided min_value or max_value. If False, validation
+        is skipped to avoid resetting against computed default bounds.
+
+    Returns
+    -------
+    tuple[DateWidgetReturn, bool]
+        A tuple of (validated_value, was_reset) where validated_value is either the
+        original value (if valid) or the default value (if reset was needed), and
+        was_reset indicates whether a reset occurred.
+    """
+    value_needs_reset = False
+
+    if current_value is None or not has_explicit_bounds:
+        return current_value, value_needs_reset
+
+    # For range inputs, current_value is a tuple; for single inputs, it's a date
+    if (
+        parsed_values.is_range
+        and isinstance(current_value, tuple)
+        and len(current_value) > 0
+    ):
+        # For range mode, check if any date in the tuple is outside bounds.
+        # Cast to tuple[date, ...] to satisfy the type checker after the length check.
+        non_empty_value = cast("tuple[date, ...]", current_value)
+        start_date = non_empty_value[0]
+        end_date = non_empty_value[-1] if len(non_empty_value) > 1 else start_date
+        if start_date < parsed_values.min or end_date > parsed_values.max:
+            value_needs_reset = True
+    elif not parsed_values.is_range and isinstance(current_value, date):
+        # For single date mode
+        if current_value < parsed_values.min or current_value > parsed_values.max:
+            value_needs_reset = True
+    else:
+        # Type mismatch: widget mode doesn't match current value type (e.g., range mode
+        # with a single date value or single mode with a tuple). Reset to match the mode.
+        value_needs_reset = True
+
+    if not value_needs_reset:
+        return current_value, value_needs_reset
+
+    # Reset to the default value from parsed_values
+    if parsed_values.value is None or len(parsed_values.value) == 0:
+        return (() if parsed_values.is_range else None), True
+    if not parsed_values.is_range:
+        return parsed_values.value[0], True
+    return cast("DateWidgetReturn", tuple(parsed_values.value)), True
+
+
+def _validate_datetime_value(
+    current_value: datetime | None,
+    parsed_values: _DateTimeInputValues,
+    has_explicit_bounds: bool,
+) -> tuple[datetime | None, bool]:
+    """Validate current datetime value against min/max bounds and determine if reset is needed.
+
+    Only validates when has_explicit_bounds is True (user provided min_value or max_value).
+    This avoids incorrectly determining if reset is needed against computed default bounds.
+
+    Parameters
+    ----------
+    current_value : datetime | None
+        The current value of the datetime input widget.
+    parsed_values : _DateTimeInputValues
+        Parsed configuration containing min, max, and default value.
+    has_explicit_bounds : bool
+        Whether the user explicitly provided min_value or max_value. If False, validation
+        is skipped to avoid resetting against computed default bounds.
+
+    Returns
+    -------
+    tuple[datetime | None, bool]
+        A tuple of (validated_value, was_reset) where validated_value is either the
+        original value (if valid) or the default value (if reset was needed), and
+        was_reset indicates whether a reset occurred.
+    """
+    if current_value is None or not has_explicit_bounds:
+        return current_value, False
+
+    if current_value < parsed_values.min or current_value > parsed_values.max:
+        return parsed_values.value, True
+
+    return current_value, False
+
+
 @dataclass
 class DateInputSerde:
     value: _DateInputValues
@@ -1084,9 +1187,10 @@ class TimeWidgetsMixin:
         element_id = compute_and_register_element_id(
             "date_time_input",
             user_key=key,
-            # Ensure stable IDs when the key is provided; whitelist parameters that
-            # affect the selectable range or formatting.
-            key_as_main_identity={"min_value", "max_value", "format", "step"},
+            # Format is whitelisted because of a bug in the BaseWeb date input component.
+            # Step is whitelisted because it invalidates the current selection.
+            # We might be able to unlock this as a follow-up.
+            key_as_main_identity={"format", "step"},
             dg=self.dg,
             label=label,
             value=value_for_id,
@@ -1097,7 +1201,9 @@ class TimeWidgetsMixin:
             step=step,
             width=width,
         )
-        del value
+        # Track if user explicitly set bounds (before del)
+        has_explicit_bounds = min_value is not None or max_value is not None
+        del value, min_value, max_value
 
         if not bool(ALLOWED_DATE_FORMATS.match(format)):
             raise StreamlitAPIException(
@@ -1173,10 +1279,11 @@ class TimeWidgetsMixin:
             query_param_key=query_param_key,
         )
 
+        current_value = widget_state.value
+        value_needs_update = widget_state.value_changed
+
         # For query param binding, clamp out-of-bounds values silently
         # (users shouldn't see errors for URL-provided values)
-        # Note: We only add clamping for query params - original datetime_input had
-        # no bounds validation after widget registration.
         if (
             query_param_key is not None
             and widget_state.value_changed
@@ -1186,15 +1293,29 @@ class TimeWidgetsMixin:
             is_above_max = widget_state.value > datetime_values.max
 
             if is_below_min or is_above_max:
-                clamped_value = (
+                current_value = (
                     datetime_values.min if is_below_min else datetime_values.max
                 )
-                widget_state = widget_state._replace(value=clamped_value)
                 if key is not None:
-                    get_session_state().reset_state_value(key, clamped_value)
+                    get_session_state().reset_state_value(key, current_value)
+        else:
+            # For non-query-param widgets: validate current value against min/max bounds.
+            # Only validate when user explicitly provided min_value or max_value.
+            # This allows dynamically changing bounds to reset out-of-bounds values.
+            current_value, value_needs_reset = _validate_datetime_value(
+                widget_state.value, datetime_values, has_explicit_bounds
+            )
 
-        if widget_state.value_changed:
-            date_time_input_proto.value[:] = serde.serialize(widget_state.value)
+            if value_needs_reset:
+                value_needs_update = True
+                if key is not None:
+                    # Update session_state so subsequent accesses in this run
+                    # return the corrected value. Use reset_state_value to avoid
+                    # the "cannot be modified after widget instantiated" error.
+                    get_session_state().reset_state_value(key, current_value)
+
+        if value_needs_update:
+            date_time_input_proto.value[:] = serde.serialize(current_value)
             date_time_input_proto.set_value = True
 
         validate_width(width)
@@ -1203,7 +1324,7 @@ class TimeWidgetsMixin:
         self.dg._enqueue(
             "date_time_input", date_time_input_proto, layout_config=layout_config
         )
-        return widget_state.value
+        return current_value
 
     @overload
     def date_input(
@@ -1522,7 +1643,7 @@ class TimeWidgetsMixin:
         parsed_min_date = parse_date_deterministic_for_id(min_value)
         parsed_max_date = parse_date_deterministic_for_id(max_value)
 
-        parsed: str | None | list[str | None]
+        parsed: str | list[str | None] | None
         if value == "today":
             parsed = None
         elif isinstance(value, Sequence):
@@ -1535,12 +1656,10 @@ class TimeWidgetsMixin:
         element_id = compute_and_register_element_id(
             "date_input",
             user_key=key,
-            # Ensure stable ID when key is provided; explicitly whitelist parameters
-            # that might invalidate the current widget state.
-            # format should be supported. However, there is a bug in baseweb where
-            # changing the format dynamically leads to a wrongly formatted date.
-            # So, we whitelist it for now until we migrate this away from baseweb.
-            key_as_main_identity={"min_value", "max_value", "format"},
+            # Ensure stable ID when key is provided. Only format is whitelisted because
+            # there is a bug in baseweb where changing the format dynamically leads to
+            # a wrongly formatted date. min_value and max_value support dynamic changes.
+            key_as_main_identity={"format"},
             dg=self.dg,
             label=label,
             value=parsed,
@@ -1584,6 +1703,8 @@ class TimeWidgetsMixin:
                     max_value=max_value,
                 )
 
+        # Track if user explicitly set bounds (before del)
+        has_explicit_bounds = min_value is not None or max_value is not None
         del value, min_value, max_value
 
         date_input_proto = DateInputProto()
@@ -1640,10 +1761,11 @@ class TimeWidgetsMixin:
             query_param_key=query_param_key,
         )
 
+        current_value = widget_state.value
+        value_needs_update = widget_state.value_changed
+
         # For query param binding, clamp out-of-bounds values silently
         # (users shouldn't see errors for URL-provided values)
-        # Note: We only add clamping for query params - original date_input had
-        # no bounds validation after widget registration.
         if query_param_key is not None and widget_state.value:
             # widget_state.value can be a single date, tuple of dates, or list of dates
             is_sequence = isinstance(widget_state.value, (tuple, list))
@@ -1663,23 +1785,39 @@ class TimeWidgetsMixin:
                     needs_clamping = True
                 clamped_values.append(clamped_val)
 
-            # Update widget_state with clamped values if needed
+            # Update current_value with clamped values if needed
             # and update session state so it's consistent
             if needs_clamping:
-                new_value = tuple(clamped_values) if is_sequence else clamped_values[0]
-                widget_state = widget_state._replace(value=new_value)
+                current_value = (
+                    tuple(clamped_values) if is_sequence else clamped_values[0]
+                )
                 if key is not None:
-                    get_session_state().reset_state_value(key, new_value)
+                    get_session_state().reset_state_value(key, current_value)
+        else:
+            # For non-query-param widgets: validate current value against min/max bounds.
+            # Only validate when user explicitly provided min_value or max_value.
+            # This allows dynamically changing bounds to reset out-of-bounds values.
+            current_value, value_needs_reset = _validate_date_value(
+                widget_state.value, parsed_values, has_explicit_bounds
+            )
 
-        if widget_state.value_changed:
-            date_input_proto.value[:] = serde.serialize(widget_state.value)
+            if value_needs_reset:
+                value_needs_update = True
+                if key is not None:
+                    # Update session_state so subsequent accesses in this run
+                    # return the corrected value. Use reset_state_value to avoid
+                    # the "cannot be modified after widget instantiated" error.
+                    get_session_state().reset_state_value(key, current_value)
+
+        if value_needs_update:
+            date_input_proto.value[:] = serde.serialize(current_value)
             date_input_proto.set_value = True
 
         validate_width(width)
         layout_config = LayoutConfig(width=width)
 
         self.dg._enqueue("date_input", date_input_proto, layout_config=layout_config)
-        return widget_state.value
+        return current_value
 
     @property
     def dg(self) -> DeltaGenerator:

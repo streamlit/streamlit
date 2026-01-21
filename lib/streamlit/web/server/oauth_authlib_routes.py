@@ -15,18 +15,20 @@ from __future__ import annotations
 
 import json
 from typing import Any, Final, cast
-from urllib.parse import urlencode, urlparse
 
 import tornado.web
 
 from streamlit.auth_util import (
     AuthCache,
+    build_logout_url,
     clear_cookie_and_chunks,
     decode_provider_token,
     generate_default_provider_section,
     get_cookie_with_chunks,
+    get_origin_from_redirect_uri,
     get_redirect_uri,
     get_secrets_auth_section,
+    get_validated_redirect_uri,
     set_cookie_with_chunks,
 )
 from streamlit.errors import StreamlitAuthError
@@ -179,21 +181,6 @@ class AuthLogoutHandler(AuthHandlerMixin, tornado.web.RequestHandler):
         else:
             self.redirect_to_base()
 
-    def _get_redirect_uri(self) -> str | None:
-        auth_section = get_secrets_auth_section()
-        if not auth_section:
-            return None
-
-        redirect_uri = get_redirect_uri(auth_section)
-        if not redirect_uri:
-            return None
-
-        if not redirect_uri.endswith("/oauth2callback"):
-            _LOGGER.warning("Redirect URI does not end with /oauth2callback")
-            return None
-
-        return redirect_uri
-
     def _get_provider_logout_url(self) -> str | None:
         """Get the OAuth provider's logout URL from OIDC metadata."""
         cookie_value = get_cookie_with_chunks(self._get_signed_cookie, AUTH_COOKIE_NAME)
@@ -219,17 +206,13 @@ class AuthLogoutHandler(AuthHandlerMixin, tornado.web.RequestHandler):
             # Use redirect_uri (i.e. /oauth2callback) for post_logout_redirect_uri
             # This is safer than redirecting to root as some providers seem to
             # require url to be in a whitelist /oauth2callback should be whitelisted
-            redirect_uri = self._get_redirect_uri()
+            redirect_uri = get_validated_redirect_uri()
             if redirect_uri is None:
                 _LOGGER.info("Redirect url could not be determined")
                 return None
 
-            logout_params = {
-                "client_id": client.client_id,
-                "post_logout_redirect_uri": redirect_uri,
-            }
-
-            # Add id_token_hint to logout params if it is available
+            # Get id_token_hint from tokens cookie if available
+            id_token: str | None = None
             tokens_cookie_value = get_cookie_with_chunks(
                 self._get_signed_cookie, TOKENS_COOKIE_NAME
             )
@@ -237,15 +220,16 @@ class AuthLogoutHandler(AuthHandlerMixin, tornado.web.RequestHandler):
                 try:
                     tokens = json.loads(tokens_cookie_value)
                     id_token = tokens.get("id_token")
-                    if id_token:
-                        logout_params["id_token_hint"] = id_token
                 except (json.JSONDecodeError, TypeError):
-                    _LOGGER.exception(
-                        "Error, invalid tokens cookie value.",
-                    )
+                    _LOGGER.exception("Error, invalid tokens cookie value.")
                     return None
 
-            return f"{end_session_endpoint}?{urlencode(logout_params)}"
+            return build_logout_url(
+                end_session_endpoint=end_session_endpoint,
+                client_id=client.client_id,
+                post_logout_redirect_uri=redirect_uri,
+                id_token=id_token,
+            )
 
         except Exception as e:
             _LOGGER.warning("Failed to get provider logout URL: %s", e)
@@ -327,16 +311,4 @@ class AuthCallbackHandler(AuthHandlerMixin, tornado.web.RequestHandler):
         return provider
 
     def _get_origin_from_secrets(self) -> str | None:
-        redirect_uri = None
-        auth_section = get_secrets_auth_section()
-        if auth_section:
-            redirect_uri = get_redirect_uri(auth_section)
-
-        if not redirect_uri:
-            return None
-
-        redirect_uri_parsed = urlparse(redirect_uri)
-        origin_from_redirect_uri: str = (
-            redirect_uri_parsed.scheme + "://" + redirect_uri_parsed.netloc
-        )
-        return origin_from_redirect_uri
+        return get_origin_from_redirect_uri()
