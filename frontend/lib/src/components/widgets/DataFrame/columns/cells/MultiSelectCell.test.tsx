@@ -16,6 +16,7 @@
 
 import React from "react"
 
+import { GridCellKind } from "@glideapps/glide-data-grid"
 import {
   cleanup,
   findByText,
@@ -26,7 +27,6 @@ import {
   queryByText,
   render,
 } from "@testing-library/react"
-import { GridCellKind } from "@glideapps/glide-data-grid"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import renderer, {
@@ -594,7 +594,8 @@ describe("Multi Select Editor", () => {
 
     // Find the remove button (it's the element with the SVG/X icon, typically the last child or has a specific role)
     // react-select's remove button contains an SVG with a path
-    const removeButton = multiValueContainer?.querySelector("svg")?.parentElement
+    const removeButton =
+      multiValueContainer?.querySelector("svg")?.parentElement
     expect(removeButton).not.toBeNull()
 
     // Click the remove button

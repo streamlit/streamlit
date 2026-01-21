@@ -20,8 +20,8 @@ import styled from "@emotion/styled"
 import {
   type CustomCell,
   type CustomRenderer,
-  getMiddleCenterBias,
   getLuminance,
+  getMiddleCenterBias,
   GridCellKind,
   measureTextCached,
   type ProvideEditorCallback,
@@ -94,7 +94,11 @@ export const prepareOptions = (
   options: readonly (string | SelectOption)[]
 ): { value: string; label?: string; color?: string }[] => {
   return options.map(option => {
-    if (typeof option === "string" || option === null || option === undefined) {
+    if (
+      typeof option === "string" ||
+      option === null ||
+      option === undefined
+    ) {
       return { value: option, label: option ?? "", color: undefined }
     }
 
@@ -425,9 +429,7 @@ const Editor: ReturnType<ProvideEditorCallback<MultiSelectCell>> = p => {
         inputValue={inputValue}
         onInputChange={setInputValue}
         options={options}
-        placeholder={
-          cell.readonly ? "" : allowCreation ? "Add..." : undefined
-        }
+        placeholder={cell.readonly ? "" : allowCreation ? "Add..." : undefined}
         noOptionsMessage={input => {
           return allowCreation && allowDuplicates && input.inputValue
             ? `Create "${input.inputValue}"`
@@ -477,8 +479,9 @@ const Editor: ReturnType<ProvideEditorCallback<MultiSelectCell>> = p => {
 
 const renderer: CustomRenderer<MultiSelectCell> = {
   kind: GridCellKind.Custom,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Needed for type guard
-  isMatch: (c): c is MultiSelectCell => (c.data as any).kind === "multi-select-cell",
+
+  isMatch: (c): c is MultiSelectCell =>
+    (c.data as any).kind === "multi-select-cell",
   draw: (args, cell) => {
     const { ctx, theme, rect, highlighted } = args
     const { values, options: optionsIn } = cell.data
@@ -514,7 +517,8 @@ const renderer: CustomRenderer<MultiSelectCell> = {
     for (const value of values) {
       const matchedOption = options.find(t => t.value === value)
       const color =
-        matchedOption?.color ?? (highlighted ? theme.bgBubbleSelected : theme.bgBubble)
+        matchedOption?.color ??
+        (highlighted ? theme.bgBubbleSelected : theme.bgBubble)
       const displayText = matchedOption?.label ?? value
       const metrics = measureTextCached(displayText, ctx)
       const width = metrics.width + theme.bubblePadding * 2
@@ -608,7 +612,7 @@ const renderer: CustomRenderer<MultiSelectCell> = {
     }),
   }),
   onPaste: (val: string, cell: MultiSelectCellProps) => {
-    if (!val || !val.trim()) {
+    if (!val?.trim()) {
       // Empty values should result in empty strings
       return {
         ...cell,
