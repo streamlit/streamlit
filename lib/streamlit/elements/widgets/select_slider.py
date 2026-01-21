@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from textwrap import dedent
 from typing import (
     TYPE_CHECKING,
@@ -78,19 +78,59 @@ class SelectSliderSerde(Generic[T]):
     options: Sequence[T]
     value: list[int]
     is_range_value: bool
+    formatted_options: list[str] = field(default_factory=list)
 
     def serialize(self, v: object) -> list[int]:
         return self._as_index_list(v)
 
-    def deserialize(self, ui_value: list[int] | None) -> T | tuple[T, T]:
+    def deserialize(self, ui_value: list[int | float | str] | None) -> T | tuple[T, T]:
+        indices: list[int]
         if not ui_value:
             # Widget has not been used; fallback to the original value,
-            ui_value = self.value
+            indices = self.value
+        else:
+            # Convert values to indices - handle both numeric indices and string option values
+            indices = []
+            had_string_values = False
+            for x in ui_value:
+                if isinstance(x, str):
+                    had_string_values = True
+                    # URL-seeded value: try to find the option by formatted string
+                    try:
+                        idx = self.formatted_options.index(x)
+                        indices.append(idx)
+                    except ValueError:
+                        # Try to parse as float (backwards compatibility)
+                        try:
+                            indices.append(int(float(x)))
+                        except ValueError:
+                            # Invalid value - will be handled below
+                            pass
+                else:
+                    # Numeric index from frontend
+                    indices.append(int(x))
+
+            if not indices:
+                # No valid indices found
+                if had_string_values:
+                    # URL had string values but none were valid - raise error
+                    raise ValueError(f"No valid options found in: {ui_value!r}")
+                # No values provided - use default
+                indices = self.value
+            elif self.is_range_value and len(indices) != 2 and had_string_values:
+                # Range slider from URL needs exactly 2 valid values
+                raise ValueError(
+                    f"Range select_slider requires exactly 2 valid options, "
+                    f"got {len(indices)}: {ui_value!r}"
+                )
+
+        # Filter valid indices
+        valid_indices = [idx for idx in indices if idx < len(self.options)]
 
         # The widget always returns floats, so convert to ints before indexing
         return_value: tuple[T, T] = cast(
             "tuple[T, T]",
-            tuple(self.options[int(x)] for x in ui_value),
+            tuple(self.options[idx] for idx in valid_indices),
         )
 
         # If the original value was a list/tuple, so will be the output (and vice versa)
@@ -425,7 +465,11 @@ class SelectSliderMixin:
         validate_width(width)
         layout_config = LayoutConfig(width=width)
 
-        serde = SelectSliderSerde(opt, slider_value, _is_range_value(value))
+        # Create serde with formatted options for URL string matching
+        formatted_options = [str(format_func(option)) for option in opt]
+        serde = SelectSliderSerde(
+            opt, slider_value, _is_range_value(value), formatted_options
+        )
 
         widget_state = register_widget(
             slider_proto.id,
@@ -437,6 +481,7 @@ class SelectSliderMixin:
             ctx=ctx,
             value_type="double_array_value",
             bind=bind,
+            formatted_options=formatted_options,
         )
         if isinstance(widget_state.value, tuple):
             widget_state = maybe_coerce_enum_sequence(
