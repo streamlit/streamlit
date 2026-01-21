@@ -14,6 +14,15 @@
  * limitations under the License.
  */
 
+/**
+ * Custom MultiSelectCell implementation using react-select.
+ *
+ * NOTE: This is a custom implementation that replaces glide-data-grid's built-in
+ * multi-select cell. We should consider switching back to glide-data-grid's
+ * native implementation once the release process is fixed and includes
+ * the fix.
+ */
+
 import type {
   ComponentPropsWithoutRef,
   FC,
