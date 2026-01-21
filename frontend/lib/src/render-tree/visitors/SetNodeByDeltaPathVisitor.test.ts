@@ -518,8 +518,12 @@ describe("SetNodeByDeltaPathVisitor", () => {
       expect(result).toBeInstanceOf(TransientNode)
       expect(result.transientNodes).toEqual(t.transientNodes)
       // The anchor should be updated
+      expect(result.anchor).toBeDefined()
       expect(
-        GetNodeByDeltaPathVisitor.getNodeAtPath(result.anchor!, [0])
+        GetNodeByDeltaPathVisitor.getNodeAtPath(
+          result.anchor as BlockNode,
+          [0]
+        )
       ).toBeTextNode("new_child")
     })
 
