@@ -12,9 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import io
+
+import pytest
 from parameterized import parameterized
 
 from streamlit.elements.lib.subtitle_utils import (
+    _handle_bytes_data,
+    _handle_stream_data,
     _is_srt,
     _srt_to_vtt,
     process_subtitle_data,
@@ -114,3 +119,70 @@ class SubtitleUtilsTest(DeltaGeneratorTestCase):
         assert media_file is not None
         assert media_file.content == _srt_to_vtt(SRT_DATA_EN.strip())
         assert media_file.mimetype == "text/vtt"
+
+    def test_srt_to_vtt_with_invalid_type_raises_error(self):
+        """Test _srt_to_vtt raises TypeError for invalid input type."""
+        with pytest.raises(TypeError) as exc:
+            _srt_to_vtt(12345)  # type: ignore[arg-type]
+
+        assert "Input must be a string or a bytes stream" in str(exc.value)
+
+    def test_srt_to_vtt_with_invalid_utf8_bytes(self):
+        """Test _srt_to_vtt raises ValueError for non-UTF-8 bytes."""
+        # Invalid UTF-8 byte sequence
+        invalid_bytes = b"\x80\x81\x82"
+
+        with pytest.raises(
+            ValueError, match="Could not decode the input stream as UTF-8"
+        ):
+            _srt_to_vtt(invalid_bytes)
+
+    def test_handle_stream_data_with_srt(self):
+        """Test _handle_stream_data converts SRT stream to VTT."""
+        srt_stream = io.BytesIO(SRT_DATA_EN.encode("utf-8"))
+        result = _handle_stream_data(srt_stream)
+
+        assert result == VTT_DATA_EN
+
+    def test_handle_stream_data_with_vtt(self):
+        """Test _handle_stream_data returns VTT stream unchanged."""
+        vtt_content = b"WEBVTT\n\n00:00:00.000 --> 00:00:05.000\nHello World"
+        vtt_stream = io.BytesIO(vtt_content)
+        result = _handle_stream_data(vtt_stream)
+
+        assert result == vtt_content
+
+    def test_handle_bytes_data_with_srt(self):
+        """Test _handle_bytes_data converts SRT bytes to VTT."""
+        result = _handle_bytes_data(SRT_DATA_EN.encode("utf-8"))
+        assert result == VTT_DATA_EN
+
+    def test_handle_bytes_data_with_vtt(self):
+        """Test _handle_bytes_data returns VTT bytes unchanged."""
+        vtt_content = b"WEBVTT\n\n00:00:00.000 --> 00:00:05.000\nHello World"
+        result = _handle_bytes_data(vtt_content)
+        assert result == vtt_content
+
+    def test_process_subtitle_data_with_bytes(self):
+        """Test process_subtitle_data with bytes input."""
+        url = process_subtitle_data("[0, 0]", SRT_DATA_EN.encode("utf-8"), "English")
+        file_id = url.split("/")[-1].split(".")[0]
+        media_file = self.media_file_storage.get_file(file_id)
+        assert media_file is not None
+        assert media_file.mimetype == "text/vtt"
+
+    def test_process_subtitle_data_with_stream(self):
+        """Test process_subtitle_data with BytesIO stream input."""
+        stream = io.BytesIO(SRT_DATA_EN.encode("utf-8"))
+        url = process_subtitle_data("[0, 0]", stream, "English")
+        file_id = url.split("/")[-1].split(".")[0]
+        media_file = self.media_file_storage.get_file(file_id)
+        assert media_file is not None
+        assert media_file.mimetype == "text/vtt"
+
+    def test_process_subtitle_data_with_invalid_type_raises_error(self):
+        """Test process_subtitle_data raises TypeError for invalid input type."""
+        with pytest.raises(TypeError) as exc:
+            process_subtitle_data("[0, 0]", 12345, "Test")  # type: ignore[arg-type]
+
+        assert "Invalid binary data format for subtitle" in str(exc.value)

@@ -21,14 +21,30 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit import config
-from streamlit.elements.widgets.chat import ChatInputValue
+from streamlit.elements.widgets.chat import (
+    ChatInputSerde,
+    ChatInputValue,
+    _pop_audio_file,
+    _pop_upload_files,
+)
 from streamlit.errors import (
     StreamlitAPIException,
     StreamlitInvalidWidthError,
 )
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.ChatInput_pb2 import ChatInput
-from streamlit.proto.Common_pb2 import FileURLs as FileURLsProto
+from streamlit.proto.Common_pb2 import (
+    ChatInputValue as ChatInputValueProto,
+)
+from streamlit.proto.Common_pb2 import (
+    FileUploaderState as FileUploaderStateProto,
+)
+from streamlit.proto.Common_pb2 import (
+    FileURLs as FileURLsProto,
+)
+from streamlit.proto.Common_pb2 import (
+    UploadedFileInfo as UploadedFileInfoProto,
+)
 from streamlit.proto.RootContainer_pb2 import RootContainer as RootContainerProto
 from streamlit.runtime.uploaded_file_manager import (
     UploadedFile,
@@ -842,3 +858,124 @@ class ChatTest(DeltaGeneratorTestCase):
         # Verify to_dict matches expected keys
         as_dict = return_val.to_dict()
         assert set(as_dict.keys()) == expected_keys
+
+
+class ChatInputValueDictTest(DeltaGeneratorTestCase):
+    """Test ChatInputValue dict-like interface methods."""
+
+    def test_chat_input_value_setitem(self):
+        """Test __setitem__ sets value in ChatInputValue."""
+        value = ChatInputValue(
+            text="original",
+            files=[],
+            audio=None,
+            _include_files=True,
+            _include_audio=True,
+        )
+        value["text"] = "modified"
+        assert value.text == "modified"
+
+    def test_chat_input_value_setitem_invalid_key(self):
+        """Test __setitem__ raises KeyError for invalid keys."""
+        value = ChatInputValue(text="test", files=[], _include_files=False)
+        with pytest.raises(KeyError):
+            value["files"] = []
+
+    def test_chat_input_value_delitem(self):
+        """Test __delitem__ removes attribute from ChatInputValue."""
+        value = ChatInputValue(
+            text="test", files=[], audio=None, _include_files=True, _include_audio=True
+        )
+        del value["text"]
+        with pytest.raises(AttributeError):
+            _ = value.text
+
+    def test_chat_input_value_delitem_invalid_key(self):
+        """Test __delitem__ raises KeyError for invalid keys."""
+        value = ChatInputValue(text="test", files=[], _include_files=False)
+        with pytest.raises(KeyError):
+            del value["files"]
+
+    def test_chat_input_value_delitem_nonexistent_attr(self):
+        """Test __delitem__ raises KeyError when attribute doesn't exist."""
+        value = ChatInputValue(
+            text="test", files=[], audio=None, _include_files=True, _include_audio=True
+        )
+        # First delete the text attribute
+        del value["text"]
+        # Trying to delete it again should raise KeyError
+        with pytest.raises(KeyError):
+            del value["text"]
+
+
+class ChatInputSerdeTest(DeltaGeneratorTestCase):
+    """Test ChatInputSerde serialization."""
+
+    def test_serialize_returns_proto_with_data(self):
+        """Test serialize creates ChatInputValueProto with data."""
+        serde = ChatInputSerde(accept_files=False, accept_audio=False)
+        result = serde.serialize("test message")
+
+        assert isinstance(result, ChatInputValueProto)
+        assert result.data == "test message"
+
+    def test_serialize_with_none(self):
+        """Test serialize handles None value - field is not set."""
+        serde = ChatInputSerde(accept_files=False, accept_audio=False)
+        result = serde.serialize(None)
+
+        # When None is passed, the data field should not be set in the proto
+        assert not result.HasField("data")
+
+    def test_deserialize_returns_none_for_no_data(self):
+        """Test deserialize returns None when no data field."""
+        serde = ChatInputSerde(accept_files=False, accept_audio=False)
+        result = serde.deserialize(None)
+
+        assert result is None
+
+    def test_deserialize_returns_string_when_no_files_or_audio(self):
+        """Test deserialize returns string when accept_files and accept_audio are False."""
+        serde = ChatInputSerde(accept_files=False, accept_audio=False)
+        proto = ChatInputValueProto()
+        proto.data = "test message"
+
+        result = serde.deserialize(proto)
+
+        assert result == "test message"
+
+
+class PopUploadFilesTest(DeltaGeneratorTestCase):
+    """Test _pop_upload_files and _pop_audio_file functions."""
+
+    def test_pop_upload_files_returns_empty_list_for_none(self):
+        """Test _pop_upload_files returns empty list when files_value is None."""
+        result = _pop_upload_files(None)
+        assert isinstance(result, list)
+        assert len(result) == 0
+
+    def test_pop_upload_files_returns_empty_list_no_ctx(self):
+        """Test _pop_upload_files returns empty list when no script context."""
+        proto = FileUploaderStateProto()
+
+        with patch(
+            "streamlit.elements.widgets.chat.get_script_run_ctx", return_value=None
+        ):
+            result = _pop_upload_files(proto)
+            assert len(result) == 0
+
+    def test_pop_audio_file_returns_none_for_none(self):
+        """Test _pop_audio_file returns None when audio_file_info is None."""
+        result = _pop_audio_file(None)
+        assert result is None
+
+    def test_pop_audio_file_returns_none_no_ctx(self):
+        """Test _pop_audio_file returns None when no script context."""
+        proto = UploadedFileInfoProto()
+        proto.file_id = "audio123"
+
+        with patch(
+            "streamlit.elements.widgets.chat.get_script_run_ctx", return_value=None
+        ):
+            result = _pop_audio_file(proto)
+            assert result is None
