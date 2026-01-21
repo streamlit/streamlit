@@ -523,7 +523,7 @@ const Editor: ReturnType<ProvideEditorCallback<MultiSelectCell>> = p => {
         components={selectComponents}
         onChange={handleChange}
         // Custom prop for StyledMenuWrapper to read via selectProps
-        menuDisabled={menuDisabled}
+        {...({ menuDisabled } as Record<string, unknown>)}
       />
     </StyledWrap>
   )
