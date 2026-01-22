@@ -870,6 +870,8 @@ class SessionState:
 
         # Remove query param bindings and URL params for stale widgets.
         # For fragment runs, preserve widgets outside the running fragment(s).
+        # Note: For MPA page transitions, filter_params_for_page() is called
+        # BEFORE this in script_runner.py, so bindings are already filtered.
         self.query_params.remove_stale_bindings(
             active_widget_ids,
             ctx.fragment_ids_this_run,

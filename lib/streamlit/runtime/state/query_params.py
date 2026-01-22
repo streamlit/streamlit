@@ -487,6 +487,62 @@ class QueryParams(MutableMapping[str, str]):
         self._query_params[param_key] = str_value
         self._send_query_param_msg()
 
+    def populate_from_query_string(
+        self,
+        query_string: str,
+        valid_script_hashes: set[str] | None = None,
+    ) -> None:
+        """Populate query params from a URL query string.
+
+        Clears current params and repopulates from the URL. When valid_script_hashes
+        is provided (for MPA page transitions), filters out params bound to other pages.
+
+        Parameters
+        ----------
+        query_string : str
+            The raw query string from the URL (e.g., "foo=bar&baz=qux").
+        valid_script_hashes : set[str] | None
+            If provided, only keep params that are:
+            - Unbound (no widget binding)
+            - Bound to a widget with script_hash in this set
+            Params bound to other pages are filtered out.
+            If None, all params are kept (no filtering).
+        """
+        parsed_query_params = parse.parse_qs(query_string, keep_blank_values=True)
+
+        self.clear_with_no_forward_msg()
+        stale_widget_ids: list[str] = []
+
+        for key, val in parsed_query_params.items():
+            binding = self._bindings_by_param.get(key)
+            should_keep = True
+
+            # If filtering is enabled, check if this param should be filtered out
+            if (
+                valid_script_hashes is not None
+                and binding is not None
+                and binding.script_hash not in valid_script_hashes
+            ):
+                # Binding from a different page - filter it out
+                stale_widget_ids.append(binding.widget_id)
+                should_keep = False
+
+            if should_keep:
+                if len(val) == 0:
+                    self.set_with_no_forward_msg(key, val="")
+                elif len(val) == 1:
+                    self.set_with_no_forward_msg(key, val=val[-1])
+                else:
+                    self.set_with_no_forward_msg(key, val)
+
+        # Clean up bindings for widgets from other pages
+        for widget_id in stale_widget_ids:
+            self.unbind_widget(widget_id)
+
+        # Update frontend URL if we filtered out any params
+        if stale_widget_ids:
+            self._send_query_param_msg()
+
     def remove_stale_bindings(
         self,
         active_widget_ids: set[str],
@@ -496,10 +552,10 @@ class QueryParams(MutableMapping[str, str]):
         """Remove bindings and URL params for widgets that are no longer active.
 
         This cleans up query params for conditional widgets that have been unmounted.
-        For MPA page navigation, the frontend (App.tsx) preserves query params in
-        its state, so those params are re-sent in the next rerun request.
-
         For fragment runs, widgets outside the running fragment(s) are preserved.
+
+        Note: Page-based cleanup for MPA navigation is handled separately via
+        populate_from_query_string() which is called before the script runs.
 
         Parameters
         ----------
