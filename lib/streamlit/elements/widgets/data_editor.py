@@ -1132,6 +1132,9 @@ class DataEditorMixin:
         # legitimately, so we keep the default behavior until those modes are
         # explicitly supported with proper reconciliation logic.
         use_schema_hash_identity = key is not None and num_rows == "fixed"
+
+        data_hash = calc_md5(arrow_bytes)
+
         element_id = compute_and_register_element_id(
             "data_editor",
             user_key=key,
@@ -1139,7 +1142,7 @@ class DataEditorMixin:
             dg=self.dg,
             schema_hash=schema_hash,
             # Keep data in kwargs for backward compatibility when no key is provided
-            data=arrow_bytes,
+            data=data_hash,
             width=width,
             height=height,
             use_container_width=use_container_width,
@@ -1192,6 +1195,9 @@ class DataEditorMixin:
             marshall_styler(proto, data, styler_uuid)
 
         proto.data = arrow_bytes
+        # Use the datahash of the data content to detect changes in the frontend.
+        # This is used to reset the editing state when the underlying data changes.
+        proto.data_hash = data_hash
 
         marshall_column_config(proto, column_config_mapping)
 

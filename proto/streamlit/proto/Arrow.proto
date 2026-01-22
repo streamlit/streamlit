@@ -51,6 +51,9 @@ message Arrow {
   BorderMode border_mode = 14;
   // Placeholder string used when rendering missing values (e.g. nulls, NaNs).
   optional string placeholder = 15;
+  // Hash of the data content, used to detect when underlying data changes.
+  // This is computed from the serialized Arrow bytes on the backend.
+  string data_hash = 16;
 
   // Available editing modes:
   enum EditingMode {

@@ -271,7 +271,7 @@ function DataFrame({
     fragmentId,
     originalNumRows,
     originalColumns,
-    dataHash: data.hash,
+    dataHash: element.dataHash,
   })
 
   const { getCellContent: getOriginalCellContent } = useDataLoader(
