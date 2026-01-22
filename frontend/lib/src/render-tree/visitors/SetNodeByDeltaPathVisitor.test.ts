@@ -229,6 +229,51 @@ describe("SetNodeByDeltaPathVisitor", () => {
       expect(result).toBe(nodeToSet)
     })
 
+    it("wraps block node as anchor when setting TransientNode without anchor", () => {
+      const originalBlock = block([text("child1"), text("child2")])
+      const transientNode = new TransientNode(
+        "run_id",
+        undefined, // No anchor provided
+        [text("spinner")],
+        123
+      )
+      const visitor = new SetNodeByDeltaPathVisitor(
+        [],
+        transientNode,
+        "run_id"
+      )
+
+      const result = visitor.visitBlockNode(originalBlock) as TransientNode
+
+      // Should wrap originalBlock as the anchor
+      expect(result).toBeInstanceOf(TransientNode)
+      expect(result.anchor).toBe(originalBlock)
+      expect(result.transientNodes).toEqual(transientNode.transientNodes)
+      expect(result.deltaMsgReceivedAt).toBe(transientNode.deltaMsgReceivedAt)
+    })
+
+    it("does not modify TransientNode when it already has an anchor", () => {
+      const originalBlock = block([text("original")])
+      const existingAnchor = text("existing_anchor")
+      const transientNode = new TransientNode(
+        "run_id",
+        existingAnchor, // Already has an anchor
+        [text("spinner")],
+        123
+      )
+      const visitor = new SetNodeByDeltaPathVisitor(
+        [],
+        transientNode,
+        "run_id"
+      )
+
+      const result = visitor.visitBlockNode(originalBlock)
+
+      // Should return the TransientNode as-is since it already has an anchor
+      expect(result).toBe(transientNode)
+      expect((result as TransientNode).anchor).toBe(existingAnchor)
+    })
+
     it("inserts TransientNode before child when anchors do not match", () => {
       const childA = text("A")
       const childB = text("B")

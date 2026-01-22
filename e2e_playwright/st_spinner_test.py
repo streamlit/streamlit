@@ -212,3 +212,24 @@ def test_spinner_with_container_elements(app: Page):
     expect(app.get_by_test_id("stSpinner")).to_have_count(0)
     expect(app.get_by_text("Column 1")).to_be_visible()
     expect(app.get_by_text("Column 2")).to_be_visible()
+
+
+def test_spinner_with_delayed_container_write(app: Page):
+    """Test that writing to a container after a delay inside spinner context works.
+
+    This tests the scenario where a container is created inside a spinner,
+    exists empty when the spinner first renders, and then content is added.
+    The fix ensures the TransientNode properly captures the BlockNode as its
+    anchor when replacing it.
+    """
+    get_button(app, "Run spinner with delayed container write").click()
+
+    # The spinner should appear while processing
+    expect(app.get_by_test_id("stSpinner")).to_be_visible()
+
+    # Wait for the app to finish running
+    wait_for_app_run(app)
+
+    # After the spinner completes, the container content should be visible
+    expect(app.get_by_test_id("stSpinner")).to_have_count(0)
+    expect(app.get_by_text("Hello World")).to_be_visible()
