@@ -1049,6 +1049,7 @@ class ButtonGroupMixin:
             label_visibility=label_visibility,
             width=width,
             bind=bind,
+            formatted_options_strings=formatted_options,
         )
 
         if selection_mode == "multi":
@@ -1081,6 +1082,7 @@ class ButtonGroupMixin:
         help: str | None = None,
         width: Width = "content",
         bind: BindOption = None,
+        formatted_options_strings: list[str] | None = None,
     ) -> RegisterWidgetResult[T]:
         _maybe_raise_selection_mode_warning(selection_mode)
 
@@ -1179,7 +1181,12 @@ class ButtonGroupMixin:
             ctx=ctx,
             value_type="int_array_value",
             bind=bind,
-            formatted_options=list(formatted_options),
+            # Use string formatted_options for URL binding, not proto Options
+            formatted_options=(
+                formatted_options_strings
+                if formatted_options_strings is not None
+                else [str(opt) for opt in formatted_options]
+            ),
         )
 
         if widget_state.value_changed:

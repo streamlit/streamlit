@@ -457,20 +457,22 @@ class DateTimeInputSerde:
         # If all formats fail, raise ValueError
         raise ValueError(f"Unable to parse datetime: {value}")
 
+    def _clamp_datetime(self, dt: datetime) -> datetime:
+        """Clamp a datetime to the min/max bounds."""
+        if dt < self.min:
+            return self.min
+        if dt > self.max:
+            return self.max
+        return dt
+
     def deserialize(self, ui_value: list[str] | None) -> datetime | None:
         if ui_value is not None and len(ui_value) > 0:
-            try:
-                deserialized = _normalize_datetime_value(
-                    self._parse_datetime(ui_value[0])
-                )
-                # Validate against min/max bounds
-                # If the value is out of bounds, return the previous valid value
-                if deserialized < self.min or deserialized > self.max:
-                    return self.value
-                return deserialized
-            except ValueError:
-                # Could not parse the datetime string
-                return self.value
+            # Let ValueError propagate for invalid datetime formats.
+            # This allows _handle_query_param_binding to catch it and clear
+            # invalid URL params instead of resetting to default.
+            deserialized = _normalize_datetime_value(self._parse_datetime(ui_value[0]))
+            # Clamp to min/max bounds (for URL-seeded values)
+            return self._clamp_datetime(deserialized)
         return self.value
 
     def serialize(self, v: datetime | None) -> list[str]:
@@ -482,13 +484,82 @@ class DateTimeInputSerde:
 @dataclass
 class TimeInputSerde:
     value: time | None
+    step: int  # Step in seconds
+
+    def _get_max_time(self) -> time:
+        """Get the maximum selectable time based on the step.
+
+        E.g., with step=900 (15 min), max is 23:45.
+        """
+        seconds_in_day = 24 * 60 * 60  # 86400
+        max_seconds = (seconds_in_day - 1) // self.step * self.step
+        max_hours = max_seconds // 3600
+        max_minutes = (max_seconds % 3600) // 60
+        return time(max_hours, max_minutes)
+
+    def _snap_to_step(self, t: time) -> time:
+        """Snap a time to the nearest valid step and clamp to max."""
+        # Convert to seconds from midnight
+        total_seconds = t.hour * 3600 + t.minute * 60 + t.second
+        # Round to nearest step
+        snapped_seconds = round(total_seconds / self.step) * self.step
+        # Clamp to max (can't exceed 23:xx based on step)
+        max_time = self._get_max_time()
+        max_seconds = max_time.hour * 3600 + max_time.minute * 60
+        snapped_seconds = min(snapped_seconds, max_seconds)
+        # Convert back to time
+        hours = snapped_seconds // 3600
+        minutes = (snapped_seconds % 3600) // 60
+        return time(hours, minutes)
+
+    def _parse_and_snap_time(self, value: str) -> time:
+        """Parse a time string, snapping to valid step and clamping to bounds.
+
+        In-bounds values are snapped to nearest step.
+        Out-of-bounds values are clamped to min (00:00) or max (based on step).
+        Raises ValueError for truly unparseable strings.
+        """
+        max_time = self._get_max_time()
+
+        # Try standard parsing first
+        try:
+            parsed = datetime.strptime(value, "%H:%M").time()
+            return self._snap_to_step(parsed)
+        except ValueError:
+            pass
+
+        # Try to extract hours and minutes - may be out of bounds
+        try:
+            parts = value.split(":")
+            if len(parts) >= 2:
+                hours = int(parts[0])
+                minutes = int(parts[1])
+
+                # Out of bounds high → clamp to max (consistent with date_input)
+                if hours > 23 or (hours == 23 and minutes > max_time.minute):
+                    return max_time
+
+                # Out of bounds low → clamp to min
+                if hours < 0 or (hours == 0 and minutes < 0):
+                    return time(0, 0)
+
+                # In bounds but minutes out of range → clamp minutes, then snap
+                minutes = max(0, min(59, minutes))
+                parsed = time(hours, minutes)
+                return self._snap_to_step(parsed)
+        except (ValueError, IndexError):
+            pass
+
+        # Truly unparseable
+        raise ValueError(f"Unable to parse time: {value}")
 
     def deserialize(self, ui_value: str | None) -> time | None:
-        return (
-            datetime.strptime(ui_value, "%H:%M").time()
-            if ui_value is not None
-            else self.value
-        )
+        if ui_value is not None:
+            # Let ValueError propagate for truly invalid formats.
+            # This allows _handle_query_param_binding to catch it and clear
+            # invalid URL params.
+            return self._parse_and_snap_time(ui_value)
+        return self.value
 
     def serialize(self, v: datetime | time | None) -> str | None:
         if v is None:
@@ -631,13 +702,12 @@ class DateInputSerde:
     def deserialize(self, ui_value: Any) -> DateWidgetReturn:
         return_value: Sequence[date] | None
         if ui_value is not None:
-            try:
-                parsed_dates = tuple(self._parse_date(v) for v in ui_value)
-                # Clamp parsed dates to min/max bounds (for URL-seeded values)
-                return_value = tuple(self._clamp_date(d) for d in parsed_dates)
-            except ValueError:
-                # Invalid date format, use default
-                return_value = self.value.value
+            # Let ValueError propagate for invalid date formats.
+            # This allows _handle_query_param_binding to catch it and clear
+            # invalid URL params instead of correcting them to the default.
+            parsed_dates = tuple(self._parse_date(v) for v in ui_value)
+            # Clamp parsed dates to min/max bounds (for URL-seeded values)
+            return_value = tuple(self._clamp_date(d) for d in parsed_dates)
         else:
             return_value = self.value.value
 
@@ -929,7 +999,7 @@ class TimeWidgetsMixin:
         if bind == "query-params" and key is not None:
             time_input_proto.query_param_key = str(key)
 
-        serde = TimeInputSerde(parsed_time)
+        serde = TimeInputSerde(parsed_time, step)
         widget_state = register_widget(
             time_input_proto.id,
             on_change_handler=on_change,
