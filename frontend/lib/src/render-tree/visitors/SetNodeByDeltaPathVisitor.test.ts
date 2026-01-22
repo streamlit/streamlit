@@ -505,37 +505,80 @@ describe("SetNodeByDeltaPathVisitor", () => {
   })
 
   describe("visitTransientNode", () => {
-    it("drills through anchor when remaining path exists", () => {
+    it("drills through anchor without consuming path index and preserves transient wrapper", () => {
+      // TransientNode is transparent in delta path - it doesn't consume an index
       const inner = block([text("child")])
       const t = new TransientNode("run", inner, [text("t1")], 1)
       const nodeToSet = text("new_child")
-      const visitor = new SetNodeByDeltaPathVisitor([0, 0], nodeToSet, "run")
+      // Path [0] should pass through to anchor and set child at index 0
+      const visitor = new SetNodeByDeltaPathVisitor([0], nodeToSet, "run")
 
-      const result = visitor.visitTransientNode(t) as BlockNode
+      const result = visitor.visitTransientNode(t) as TransientNode
+      // Should preserve TransientNode wrapper
+      expect(result).toBeInstanceOf(TransientNode)
+      expect(result.transientNodes).toEqual(t.transientNodes)
+      // The anchor should be updated
+      expect(result.anchor).toBeDefined()
       expect(
-        GetNodeByDeltaPathVisitor.getNodeAtPath(result, [0])
+        GetNodeByDeltaPathVisitor.getNodeAtPath(
+          result.anchor as BlockNode,
+          [0]
+        )
       ).toBeTextNode("new_child")
     })
 
     it("throws when drilling required but no anchor exists", () => {
       const t = new TransientNode("run", undefined, [text("t1")], 1)
       const nodeToSet = text("x")
-      // Use a path with a remaining segment after the first index to force drill
-      const visitor = new SetNodeByDeltaPathVisitor([0, 1], nodeToSet, "run")
+      // Any non-empty path should require drilling through anchor
+      const visitor = new SetNodeByDeltaPathVisitor([0], nodeToSet, "run")
       expect(() => visitor.visitTransientNode(t)).toThrow(
         "TransientNode has no anchor to set node at"
       )
     })
 
-    it("delegates to nodeToSet.replaceTransientNodeWithSelf when path consumed", () => {
+    it("delegates to nodeToSet.replaceTransientNodeWithSelf when path is empty", () => {
       const t = new TransientNode("run", text("anchor"), [text("t1")], 5)
       const nodeToSet = new BlockNode("hash", [])
       const spy = vi.spyOn(nodeToSet, "replaceTransientNodeWithSelf")
-      const visitor = new SetNodeByDeltaPathVisitor([0], nodeToSet, "run")
+      // Empty path means we're replacing the TransientNode itself
+      const visitor = new SetNodeByDeltaPathVisitor([], nodeToSet, "run")
 
-      // Path consumed after slicing in visitTransientNode; this should call replaceTransientNodeWithSelf
       visitor.visitTransientNode(t)
       expect(spy).toHaveBeenCalledWith(t)
+    })
+
+    it("preserves transient nodes when setting deep inside anchor", () => {
+      // Scenario: TransientNode wraps a container, and we're adding children inside
+      const container = block([])
+      const transientElements = [text("spinner")]
+      const t = new TransientNode("run", container, transientElements, 1)
+
+      // Add first child at path [0] (inside container)
+      const column0 = block([text("col0")])
+      const visitor1 = new SetNodeByDeltaPathVisitor([0], column0, "run")
+      const result1 = visitor1.visitTransientNode(t) as TransientNode
+
+      // TransientNode should be preserved
+      expect(result1).toBeInstanceOf(TransientNode)
+      expect(result1.transientNodes).toEqual(transientElements)
+
+      // Container (anchor) should have the new child
+      const updatedContainer = result1.anchor as BlockNode
+      expect(updatedContainer.children).toHaveLength(1)
+
+      // Add second child at path [1]
+      const column1 = block([text("col1")])
+      const visitor2 = new SetNodeByDeltaPathVisitor([1], column1, "run")
+      const result2 = visitor2.visitTransientNode(result1) as TransientNode
+
+      // TransientNode should still be preserved
+      expect(result2).toBeInstanceOf(TransientNode)
+      expect(result2.transientNodes).toEqual(transientElements)
+
+      // Container should now have two children
+      const finalContainer = result2.anchor as BlockNode
+      expect(finalContainer.children).toHaveLength(2)
     })
   })
 

@@ -516,3 +516,135 @@ class EventBasedPathWatcherTest(unittest.TestCase):
         cb.assert_not_called()
 
         ro.close()
+
+    @mock.patch("os.path.isdir")
+    @mock.patch("os.path.exists")
+    def test_detects_file_creation_in_watched_directory(
+        self, mock_exists: mock.Mock, mock_is_dir: mock.Mock
+    ) -> None:
+        """Test that file creation inside a watched directory triggers callback.
+
+        When watching a directory, file events inside the directory should:
+        1. Trigger the callback with the actual file path (not directory path)
+        2. Calculate MD5 on the actual file (to detect content changes)
+        """
+        watched_dir = "/app/.streamlit"
+
+        # Directory exists
+        mock_exists.return_value = True
+        mock_is_dir.side_effect = lambda p: p == watched_dir
+
+        cb = mock.Mock()
+
+        # Initial setup
+        self.mock_util.path_modification_time = lambda *args: 101.0
+        self.mock_util.calc_md5_with_blocking_retries = mock.Mock(
+            return_value="initial_hash"
+        )
+
+        ro = event_based_path_watcher.EventBasedPathWatcher(
+            watched_dir,
+            cb,
+            glob_pattern="*.toml",
+            allow_nonexistent=True,
+        )
+
+        fo = event_based_path_watcher._MultiPathWatcher.get_singleton()
+        folder_handler = fo._observer.schedule.call_args[0][0]
+
+        cb.assert_not_called()
+
+        # Simulate config.toml being created
+        self.mock_util.path_modification_time = lambda *args: 102.0
+        self.mock_util.calc_md5_with_blocking_retries = mock.Mock(
+            return_value="file_content_hash"
+        )
+
+        config_file_path = f"{watched_dir}/config.toml"
+        ev = events.FileSystemEvent(config_file_path)
+        ev.event_type = events.EVENT_TYPE_CREATED
+        folder_handler.on_created(ev)
+
+        # Verify calc_md5 was called with the FILE path (not directory)
+        # This ensures file content changes are detected
+        call_args = self.mock_util.calc_md5_with_blocking_retries.call_args
+        assert call_args[0][0] == config_file_path
+
+        # Callback should receive the actual file path (not directory)
+        # This is important for path-specific filtering like _is_in_ignored_directory
+        cb.assert_called_once_with(config_file_path)
+
+        ro.close()
+
+    @mock.patch("os.path.isdir")
+    @mock.patch("os.path.exists")
+    def test_detects_file_creation_and_modification_with_allow_nonexistent(
+        self, mock_exists: mock.Mock, mock_is_dir: mock.Mock
+    ) -> None:
+        """Test watching a nonexistent file detects both creation and modification.
+
+        This tests the scenario where:
+        1. config.toml doesn't exist at startup
+        2. User creates config.toml → callback triggered
+        3. User modifies config.toml → callback triggered again
+
+        This is the fix for the bug where watching a directory with glob_pattern
+        would not detect file content changes (only file list changes).
+        """
+        watched_file = "/app/.streamlit/config.toml"
+
+        # Initially file doesn't exist
+        mock_exists.return_value = False
+        mock_is_dir.return_value = False
+
+        cb = mock.Mock()
+
+        # Initial MD5 when file doesn't exist (uses path string as content)
+        self.mock_util.path_modification_time = lambda *args: 0.0
+        self.mock_util.calc_md5_with_blocking_retries = mock.Mock(
+            return_value="nonexistent_hash"
+        )
+
+        ro = event_based_path_watcher.EventBasedPathWatcher(
+            watched_file,
+            cb,
+            allow_nonexistent=True,
+        )
+
+        fo = event_based_path_watcher._MultiPathWatcher.get_singleton()
+        folder_handler = fo._observer.schedule.call_args[0][0]
+
+        cb.assert_not_called()
+
+        # Step 1: Simulate file being created
+        mock_exists.return_value = True
+        mock_is_dir.return_value = False
+
+        self.mock_util.path_modification_time = lambda *args: 101.0
+        # MD5 changes because file now exists with content
+        self.mock_util.calc_md5_with_blocking_retries = mock.Mock(
+            return_value="initial_content_hash"
+        )
+
+        ev = events.FileSystemEvent(watched_file)
+        ev.event_type = events.EVENT_TYPE_CREATED
+        folder_handler.on_created(ev)
+
+        # Callback SHOULD be triggered (file was created)
+        assert cb.call_count == 1
+
+        # Step 2: Simulate file being modified
+        self.mock_util.path_modification_time = lambda *args: 102.0
+        # MD5 changes because file content changed
+        self.mock_util.calc_md5_with_blocking_retries = mock.Mock(
+            return_value="modified_content_hash"
+        )
+
+        ev = events.FileSystemEvent(watched_file)
+        ev.event_type = events.EVENT_TYPE_MODIFIED
+        folder_handler.on_modified(ev)
+
+        # Callback SHOULD be triggered again (file was modified)
+        assert cb.call_count == 2
+
+        ro.close()

@@ -26,6 +26,7 @@ from streamlit.auth_util import (
     AuthCache,
     _calculate_signing_overhead,
     clear_cookie_and_chunks,
+    generate_default_provider_section,
     get_cookie_with_chunks,
     get_expose_tokens_config,
     get_redirect_uri,
@@ -469,6 +470,49 @@ class CookieChunkingTest(unittest.TestCase):
         result = get_cookie_with_chunks(mock_get_cookie, "auth_cookie")
         assert result is not None
         assert json.loads(result) == data
+
+
+class GenerateDefaultProviderSectionTest(unittest.TestCase):
+    """Test generate_default_provider_section function."""
+
+    def test_generates_section_with_all_fields(self):
+        """Test generating a default provider section with all fields present."""
+        auth_section = AttrDict(
+            {
+                "client_id": "test_client_id",
+                "client_secret": "test_client_secret",
+                "server_metadata_url": "https://example.com/.well-known/openid-configuration",
+                "client_kwargs": AttrDict({"scope": "openid email profile"}),
+                "expose_tokens": ["id", "access"],
+            }
+        )
+
+        result = generate_default_provider_section(auth_section)
+
+        assert result["client_id"] == "test_client_id"
+        assert result["client_secret"] == "test_client_secret"
+        assert (
+            result["server_metadata_url"]
+            == "https://example.com/.well-known/openid-configuration"
+        )
+        assert result["client_kwargs"] == {"scope": "openid email profile"}
+        assert result["expose_tokens"] == ["id", "access"]
+
+    def test_generates_section_with_minimal_fields(self):
+        """Test generating a default provider section with only client_id."""
+        auth_section = AttrDict({"client_id": "test_client_id"})
+
+        result = generate_default_provider_section(auth_section)
+
+        assert result == {"client_id": "test_client_id"}
+
+    def test_generates_empty_section_with_no_fields(self):
+        """Test generating a default provider section with no fields."""
+        auth_section = AttrDict({})
+
+        result = generate_default_provider_section(auth_section)
+
+        assert result == {}
 
 
 class TestGetValidatedRedirectUri:

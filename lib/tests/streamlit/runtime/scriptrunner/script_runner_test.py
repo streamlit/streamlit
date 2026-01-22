@@ -460,7 +460,7 @@ class ScriptRunnerTest(AsyncTestCase):
         w2_id = scriptrunner.get_widget_id("text_area", "text_area")
         _create_widget(w2_id, states).string_value = "matey!"
         w3_id = scriptrunner.get_widget_id("radio", "radio")
-        _create_widget(w3_id, states).int_value = 2
+        _create_widget(w3_id, states).string_value = "2"
         w4_id = scriptrunner.get_widget_id("button", "button")
         _create_widget(w4_id, states).trigger_value = True
 
@@ -545,7 +545,7 @@ class ScriptRunnerTest(AsyncTestCase):
         w2_id = scriptrunner.get_widget_id("text_area", "text_area")
         _create_widget(w2_id, states).string_value = "matey!"
         w3_id = scriptrunner.get_widget_id("radio", "radio")
-        _create_widget(w3_id, states).int_value = 2
+        _create_widget(w3_id, states).string_value = "2"
         w4_id = scriptrunner.get_widget_id("button", "button")
         _create_widget(w4_id, states).trigger_value = True
 
@@ -733,7 +733,7 @@ class ScriptRunnerTest(AsyncTestCase):
             w2_id = scriptrunner.get_widget_id("text_area", "text_area")
             _create_widget(w2_id, states).string_value = "matey!"
             w3_id = scriptrunner.get_widget_id("radio", "radio")
-            _create_widget(w3_id, states).int_value = 2
+            _create_widget(w3_id, states).string_value = "2"
             w4_id = scriptrunner.get_widget_id("button", "button")
             _create_widget(w4_id, states).trigger_value = True
 
@@ -976,7 +976,7 @@ class ScriptRunnerTest(AsyncTestCase):
         scriptrunner.join()
         self._assert_no_exceptions(scriptrunner)
 
-        # Build several runners. Each will set a different int value for
+        # Build several runners. Each will set a different string value for
         # its radio button.
         runners = []
         for ii in range(3):
@@ -984,7 +984,7 @@ class ScriptRunnerTest(AsyncTestCase):
             runners.append(runner)
 
             states = WidgetStates()
-            _create_widget(radio_widget_id, states).int_value = ii
+            _create_widget(radio_widget_id, states).string_value = str(ii)
             runner.request_rerun(RerunData(widget_states=states))
 
         # Start the runners and wait a beat.

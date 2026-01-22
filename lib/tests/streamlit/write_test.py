@@ -31,6 +31,7 @@ from PIL import Image
 
 import streamlit as st
 from streamlit import type_util
+from streamlit.elements.write import StreamingOutput
 from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.errors import NoSessionContext, StreamlitAPIException
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
@@ -645,3 +646,126 @@ def make_is_type_mock(true_type_matchers):
         return any(type_matcher in true_type_matchers for type_matcher in type_matchers)
 
     return new_is_type
+
+
+class WriteStreamEdgeCasesTest(DeltaGeneratorTestCase):
+    """Test edge cases for st.write_stream API."""
+
+    def test_write_stream_with_async_generator(self):
+        """Test st.write_stream with an async generator object (already called)."""
+
+        async def async_stream():
+            yield "async "
+            yield "message"
+
+        # Pass the generator object, not the function
+        result = st.write_stream(async_stream())
+        assert result == "async message"
+
+    def test_write_stream_with_async_generator_function(self):
+        """Test st.write_stream with an async generator function (not called)."""
+
+        async def async_gen_func():
+            yield "async "
+            yield "generator"
+
+        # Pass the function itself, not called - write_stream should handle this
+        result = st.write_stream(async_gen_func)
+        assert result == "async generator"
+
+    def test_write_stream_with_empty_stream(self):
+        """Test st.write_stream with an empty generator returns empty string."""
+
+        def empty_stream():
+            return
+            yield  # Make this a generator
+
+        result = st.write_stream(empty_stream)
+        assert result == ""
+
+    def test_write_stream_with_generator_function(self):
+        """Test st.write_stream with a generator function (not called)."""
+
+        def gen_func():
+            yield "gen "
+            yield "func"
+
+        result = st.write_stream(gen_func)
+        assert result == "gen func"
+
+    def test_write_stream_with_non_iterable_raises_exception(self):
+        """Test st.write_stream raises error for non-iterable input."""
+
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.write_stream(12345)
+
+        assert "cannot be iterated" in str(exc.value)
+
+    def test_write_stream_with_dataframe_raises_exception(self):
+        """Test st.write_stream raises error for dataframe input."""
+
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.write_stream(pd.DataFrame({"a": [1, 2, 3]}))
+
+        assert "expects a generator or stream-like object" in str(exc.value)
+
+    def test_write_stream_with_string_raises_exception(self):
+        """Test st.write_stream raises error for string input."""
+
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.write_stream("test string")
+
+        assert "expects a generator or stream-like object" in str(exc.value)
+
+    def test_write_stream_with_callable_chunks(self):
+        """Test st.write_stream handles callable chunks."""
+
+        def test_stream():
+            yield "text before "
+            yield lambda: st.markdown("callable output")
+            yield "text after"
+
+        with patch("streamlit.delta_generator.DeltaGenerator.markdown") as mock_md:
+            st.write_stream(test_stream)
+            # Callable should have been called
+            assert mock_md.call_count >= 1
+
+    def test_write_stream_with_empty_string_chunks(self):
+        """Test st.write_stream ignores empty string chunks."""
+
+        def test_stream():
+            yield ""
+            yield "text"
+            yield ""
+            yield " more"
+
+        result = st.write_stream(test_stream)
+        assert result == "text more"
+
+
+class WriteWithStreamingOutputTest(DeltaGeneratorTestCase):
+    """Test st.write with StreamingOutput."""
+
+    def test_write_with_streaming_output_containing_strings(self):
+        """Test st.write handles StreamingOutput with strings."""
+
+        output = StreamingOutput(["text1", "text2"])
+        st.write(output)
+
+        # StreamingOutput calls write() on each item separately, creating multiple elements
+        deltas = self.get_all_deltas_from_queue()
+        assert len(deltas) == 2
+        assert deltas[0].new_element.markdown.body == "text1"
+        assert deltas[1].new_element.markdown.body == "text2"
+
+    def test_write_with_streaming_output_containing_callable(self):
+        """Test st.write handles StreamingOutput with callable items."""
+
+        called = []
+
+        def my_callable():
+            called.append(True)
+
+        output = StreamingOutput([my_callable, "text"])
+        st.write(output)
+        assert len(called) == 1

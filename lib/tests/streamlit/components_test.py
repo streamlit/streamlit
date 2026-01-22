@@ -32,12 +32,15 @@ import streamlit.components.v1 as components
 from streamlit.components.lib.local_component_registry import LocalComponentRegistry
 from streamlit.components.types.base_component_registry import BaseComponentRegistry
 from streamlit.components.v1 import component_arrow
+from streamlit.components.v1.component_arrow import _maybe_tuple_to_list
 from streamlit.components.v1.component_registry import (
     ComponentRegistry,
     _get_module_name,
 )
 from streamlit.components.v1.custom_component import CustomComponent
+from streamlit.dataframe_util import is_pyarrow_version_less_than
 from streamlit.errors import DuplicateWidgetID, StreamlitAPIException
+from streamlit.proto.Components_pb2 import ArrowTable as ArrowTableProto
 from streamlit.proto.Components_pb2 import SpecialArg
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
 from streamlit.runtime import Runtime, RuntimeConfig
@@ -690,3 +693,95 @@ class AlternativeComponentRegistryTest(unittest.TestCase):
         assert isinstance(
             registry, AlternativeComponentRegistryTest.AlternativeComponentRegistry
         )
+
+
+class ComponentArrowTest(unittest.TestCase):
+    """Test component_arrow utilities."""
+
+    @pytest.mark.skipif(
+        is_pyarrow_version_less_than("14.0.1"),
+        reason="arrow_proto_to_dataframe requires pyarrow >= 14.0.1",
+    )
+    def test_arrow_proto_to_dataframe(self):
+        """Test converting ArrowTable proto to pandas DataFrame."""
+
+        # Create a test DataFrame
+        df = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+
+        # Marshal it to proto
+        proto = ArrowTableProto()
+        component_arrow.marshall(proto, df)
+
+        # Convert back to DataFrame
+        result = component_arrow.arrow_proto_to_dataframe(proto)
+
+        # Verify the roundtrip
+        assert list(result.columns) == [("a",), ("b",)]
+        assert result.shape == (3, 2)
+
+    @pytest.mark.skipif(
+        is_pyarrow_version_less_than("14.0.1"),
+        reason="arrow_proto_to_dataframe requires pyarrow >= 14.0.1",
+    )
+    def test_arrow_proto_to_dataframe_with_empty_df(self):
+        """Test converting empty DataFrame to proto and back."""
+
+        # Create an empty DataFrame
+        df = pd.DataFrame()
+
+        # Marshal it to proto
+        proto = ArrowTableProto()
+        component_arrow.marshall(proto, df)
+
+        # Convert back to DataFrame
+        result = component_arrow.arrow_proto_to_dataframe(proto)
+
+        # Verify empty result
+        assert result.empty
+
+    def test_marshall_with_tuple_index(self):
+        """Test marshalling DataFrame with tuple index."""
+
+        # Create DataFrame with tuple index
+        df = pd.DataFrame(
+            {"a": [1, 2]}, index=pd.MultiIndex.from_tuples([(0, "x"), (1, "y")])
+        )
+
+        # Marshal it to proto
+        proto = ArrowTableProto()
+        component_arrow.marshall(proto, df)
+
+        # Verify proto has data
+        assert len(proto.data) > 0
+        assert len(proto.index) > 0
+
+    def test_marshall_with_tuple_columns(self):
+        """Test marshalling DataFrame with tuple columns."""
+
+        # Create DataFrame with multi-level columns
+        df = pd.DataFrame(
+            [[1, 2], [3, 4]],
+            columns=pd.MultiIndex.from_tuples([("a", "x"), ("b", "y")]),
+        )
+
+        # Marshal it to proto
+        proto = ArrowTableProto()
+        component_arrow.marshall(proto, df)
+
+        # Verify proto has data
+        assert len(proto.data) > 0
+        assert len(proto.columns) > 0
+
+
+@pytest.mark.parametrize(
+    ("input_value", "expected"),
+    [
+        ((1, 2, 3), [1, 2, 3]),
+        ([1, 2, 3], [1, 2, 3]),
+        ("string", "string"),
+        (123, 123),
+    ],
+)
+def test_maybe_tuple_to_list(input_value, expected):
+    """Test _maybe_tuple_to_list utility function."""
+    assert _maybe_tuple_to_list(input_value) == expected

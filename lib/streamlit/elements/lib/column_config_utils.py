@@ -255,7 +255,9 @@ def _determine_data_kind_via_pandas_dtype(
     if pd.api.types.is_object_dtype(
         column_dtype
     ) is False and pd.api.types.is_string_dtype(column_dtype):
-        # The is_string_dtype
+        # This handles pandas 3.0+ StringDtype (and PyArrow-backed string types).
+        # We exclude object dtype here because object columns with string values
+        # are handled via _determine_data_kind_via_inferred_type in the caller.
         return ColumnDataKind.STRING
 
     return ColumnDataKind.UNKNOWN

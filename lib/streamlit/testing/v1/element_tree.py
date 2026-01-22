@@ -993,8 +993,8 @@ class Radio(Widget, Generic[T]):
         """
         ws = WidgetState()
         ws.id = self.id
-        if self.index is not None:
-            ws.int_value = self.index
+        if self.index is not None and len(self.options) > 0:
+            ws.string_value = self.options[self.index]
         return ws
 
 

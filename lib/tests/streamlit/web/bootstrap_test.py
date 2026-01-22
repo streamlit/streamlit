@@ -391,11 +391,18 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
     @patch("streamlit.config.get_config_options")
     @patch("streamlit.web.bootstrap.watch_file")
     def test_install_config_watcher(
-        self, patched_watch_file, patched_get_config_options
-    ):
-        with patch("os.path.exists", return_value=True):
-            bootstrap._install_config_watchers(flag_options={"server_port": 8502})
+        self, patched_watch_file: Mock, patched_get_config_options: Mock
+    ) -> None:
+        """Test that config watchers are installed for all config file locations."""
+        bootstrap._install_config_watchers(flag_options={"server_port": 8502})
+
+        # watch_file should be called for each config file location (2 locations)
         assert patched_watch_file.call_count == 2
+
+        # Verify watch_file was called with poll watcher and allow_nonexistent=True
+        _args, kwargs = patched_watch_file.call_args_list[0]
+        assert kwargs["watcher_type"] == "poll"
+        assert kwargs["allow_nonexistent"] is True
 
         args, _kwargs = patched_watch_file.call_args_list[0]
         on_config_changed = args[1]
