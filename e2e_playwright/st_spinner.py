@@ -90,3 +90,10 @@ if st.button("Run spinner with container"):
         cols = st.container().columns(2)
         cols[0].write("Column 1")
         cols[1].write("Column 2")
+
+# Regression test for transient node replacing block node
+if st.button("Run spinner with delayed container write"):
+    with st.spinner("Processing..."):
+        container = st.container()
+        time.sleep(2)  # Container exists but is empty when spinner renders
+        container.write("Hello World")

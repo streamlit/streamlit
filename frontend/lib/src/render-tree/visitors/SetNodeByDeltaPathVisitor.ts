@@ -48,7 +48,7 @@ export class SetNodeByDeltaPathVisitor implements AppNodeVisitor<AppNode> {
     // we have an opportunity to set the anchor.
     if (this.nodeToSet instanceof TransientNode && !this.nodeToSet.anchor) {
       return new TransientNode(
-        this.scriptRunId,
+        this.nodeToSet.scriptRunId,
         node,
         this.nodeToSet.transientNodes,
         this.nodeToSet.deltaMsgReceivedAt
@@ -84,6 +84,19 @@ export class SetNodeByDeltaPathVisitor implements AppNodeVisitor<AppNode> {
 
   visitBlockNode(node: BlockNode): AppNode {
     if (this.deltaPath.length === 0) {
+      // When replacing a BlockNode with a TransientNode that has no anchor,
+      // capture the current BlockNode as the anchor. This preserves the original
+      // block structure so it can be restored when transient elements are cleared.
+      // This mirrors the analogous behavior in visitElementNode.
+      if (this.nodeToSet instanceof TransientNode && !this.nodeToSet.anchor) {
+        return new TransientNode(
+          this.nodeToSet.scriptRunId,
+          node,
+          this.nodeToSet.transientNodes,
+          this.nodeToSet.deltaMsgReceivedAt
+        )
+      }
+
       return this.nodeToSet
     }
 
