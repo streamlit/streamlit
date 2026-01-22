@@ -48,7 +48,7 @@ export class SetNodeByDeltaPathVisitor implements AppNodeVisitor<AppNode> {
     // we have an opportunity to set the anchor.
     if (this.nodeToSet instanceof TransientNode && !this.nodeToSet.anchor) {
       return new TransientNode(
-        this.scriptRunId,
+        this.nodeToSet.scriptRunId,
         node,
         this.nodeToSet.transientNodes,
         this.nodeToSet.deltaMsgReceivedAt
