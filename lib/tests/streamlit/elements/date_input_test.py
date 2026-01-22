@@ -850,43 +850,81 @@ def test_datetime_session_state_value_with_date_bounds():
 
     When a datetime.datetime is stored in session_state and compared against
     date min/max bounds, it should not raise a TypeError. The datetime value
-    should be handled correctly during bounds validation.
+    should be normalized to date (as documented for st.date_input).
     """
 
     def script():
-        import datetime
+        from datetime import date, datetime
 
         import streamlit as st
 
         # Test with datetime value in session state and date min_value
         # This should not raise TypeError when comparing datetime with date bounds
-        st.session_state.datetime_date_bounds_test = datetime.datetime(
-            2024, 7, 15, 12, 30, 0
-        )
-        result = st.date_input(
+        st.session_state.datetime_date_bounds_test = datetime(2024, 7, 15, 12, 30, 0)
+        st.date_input(
             "datetime_test",
-            min_value=datetime.date(2024, 1, 1),
-            max_value=datetime.date(2024, 12, 31),
+            min_value=date(2024, 1, 1),
+            max_value=date(2024, 12, 31),
             key="datetime_date_bounds_test",
         )
-        st.write(f"result1: {result}")
 
         # Test with datetime value outside date bounds - should reset
-        st.session_state.datetime_out_of_bounds_test = datetime.datetime(
-            2024, 12, 15, 10, 0, 0
-        )
-        result2 = st.date_input(
+        st.session_state.datetime_out_of_bounds_test = datetime(2024, 12, 15, 10, 0, 0)
+        st.date_input(
             "datetime_test_2",
-            min_value=datetime.date(2024, 1, 1),
-            max_value=datetime.date(2024, 6, 30),
+            min_value=date(2024, 1, 1),
+            max_value=date(2024, 6, 30),
             key="datetime_out_of_bounds_test",
-            value=datetime.date(2024, 3, 15),
+            value=date(2024, 3, 15),
         )
-        st.write(f"result2: {result2}")
 
     at = AppTest.from_function(script).run()
-    # The datetime is preserved when it's within bounds (no TypeError raised)
-    # date_input preserves datetime type when stored in session_state
-    assert at.date_input[0].value == datetime(2024, 7, 15, 12, 30, 0)
+    # datetime is normalized to date (st.date_input returns date objects)
+    assert at.date_input[0].value == date(2024, 7, 15)
     # Should reset to default since datetime is above max_value
     assert at.date_input[1].value == date(2024, 3, 15)
+
+
+def test_datetime_session_state_range_value_with_date_bounds():
+    """Test that datetime range values in session_state work with date bounds.
+
+    When a tuple of datetime.datetime values is stored in session_state for a
+    range date_input, it should not raise a TypeError. The datetime values
+    should be normalized to dates.
+    """
+
+    def script():
+        from datetime import date, datetime
+
+        import streamlit as st
+
+        # Test with datetime tuple in session state for range mode
+        st.session_state.datetime_range_test = (
+            datetime(2024, 3, 15, 10, 0, 0),
+            datetime(2024, 6, 15, 14, 30, 0),
+        )
+        st.date_input(
+            "datetime_range",
+            min_value=date(2024, 1, 1),
+            max_value=date(2024, 12, 31),
+            key="datetime_range_test",
+        )
+
+        # Test with datetime range outside bounds - should reset
+        st.session_state.datetime_range_out_of_bounds = (
+            datetime(2024, 5, 1, 9, 0, 0),
+            datetime(2024, 11, 15, 17, 0, 0),
+        )
+        st.date_input(
+            "datetime_range_2",
+            min_value=date(2024, 1, 1),
+            max_value=date(2024, 6, 30),
+            key="datetime_range_out_of_bounds",
+            value=(date(2024, 2, 1), date(2024, 3, 1)),
+        )
+
+    at = AppTest.from_function(script).run()
+    # datetime tuple is normalized to date tuple
+    assert at.date_input[0].value == (date(2024, 3, 15), date(2024, 6, 15))
+    # Should reset to default since end date is above max_value
+    assert at.date_input[1].value == (date(2024, 2, 1), date(2024, 3, 1))

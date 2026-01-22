@@ -506,8 +506,10 @@ def _validate_date_value(
     if current_value is None or not has_explicit_bounds:
         return current_value, value_needs_reset
 
-    # Helper to convert datetime to date for comparison (datetime is a subclass of date,
-    # so isinstance checks pass, but comparing datetime with date raises TypeError).
+    # Helper to convert datetime to date. datetime is a subclass of date, so isinstance
+    # checks pass, but comparing datetime with date raises TypeError. Additionally,
+    # st.date_input is documented to return date objects, so we normalize any datetime
+    # values from session_state to date.
     def _to_date(v: date) -> date:
         return v.date() if isinstance(v, datetime) else v
 
