@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -25,7 +25,7 @@ import hashlib
 import inspect
 import io
 import os
-import pickle
+import pickle  # noqa: S403
 import sys
 import tempfile
 import threading
@@ -465,7 +465,7 @@ class _CacheFuncHasher:
                 return b"%s" % pickle.dumps(df_obj, pickle.HIGHEST_PROTOCOL)
 
         elif type_util.is_type(obj, "polars.series.series.Series"):
-            import polars as pl  # type: ignore[import-not-found]
+            import polars as pl
 
             obj = cast("pl.Series", obj)
             self.update(h, str(obj.dtype).encode())
@@ -653,5 +653,3 @@ class _CacheFuncHasher:
 
 class NoResult:
     """Placeholder class for return values when None is meaningful."""
-
-    pass

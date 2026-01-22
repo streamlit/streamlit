@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -152,8 +152,7 @@ export function getDataArray(
   // If the dataframe is multi-index, the remaining index columns will be ignored.
   const firstIndexColumnType = quiverData.columnTypes[0] ?? undefined
   const hasSupportedIndex =
-    firstIndexColumnType &&
-    firstIndexColumnType.type === DataFrameCellType.INDEX &&
+    firstIndexColumnType?.type === DataFrameCellType.INDEX &&
     (isNumericType(firstIndexColumnType) ||
       isDatetimeType(firstIndexColumnType) ||
       isDateType(firstIndexColumnType))

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 
 import { BaseButtonProps as BaseButtonPropsT } from "./BaseButton"
 
-export { DynamicButtonLabel } from "./DynamicButtonLabel"
-export { default, BaseButtonKind, BaseButtonSize } from "./BaseButton"
+export { BaseButtonKind, BaseButtonSize, default } from "./BaseButton"
 export { BaseButtonTooltip as BaseButtonTooltip } from "./BaseButtonTooltip"
+export { DynamicButtonLabel } from "./DynamicButtonLabel"
 export type BaseButtonProps = BaseButtonPropsT

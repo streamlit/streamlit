@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -41,7 +41,7 @@ class QueryParamsMethodTests(DeltaGeneratorTestCase):
 
     def test__iter__doesnt_include_embed_keys(self):
         self.query_params._query_params = QUERY_PARAMS_DICT_WITH_EMBED_KEY
-        for key in self.query_params.__iter__():
+        for key in iter(self.query_params):
             if key in {"embed", "embed_options"}:
                 raise KeyError("Cannot iterate through embed or embed_options key")
 

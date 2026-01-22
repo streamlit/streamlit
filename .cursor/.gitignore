@@ -4,6 +4,7 @@ commands/*
 # You can add more commands to this list as needed!
 !commands/py-docstring-fix.md
 !commands/py-parameterize-test.md
+!commands/pr-create.md
 
 # Ignore all rules
 rules/*

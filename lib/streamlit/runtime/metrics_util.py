@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -251,11 +251,11 @@ def _get_machine_id_v3() -> str:
     """
 
     if os.path.isfile(_ETC_MACHINE_ID_PATH):
-        with open(_ETC_MACHINE_ID_PATH) as f:
+        with open(_ETC_MACHINE_ID_PATH, encoding="utf-8") as f:
             machine_id = f.read()
 
     elif os.path.isfile(_DBUS_MACHINE_ID_PATH):
-        with open(_DBUS_MACHINE_ID_PATH) as f:
+        with open(_DBUS_MACHINE_ID_PATH, encoding="utf-8") as f:
             machine_id = f.read()
 
     else:
@@ -308,7 +308,8 @@ class Installation:
             with cls._instance_lock:
                 if cls._instance is None:
                     cls._instance = Installation()
-        return cls._instance
+
+        return cls._instance  # ty: ignore[invalid-return-type]
 
     def __init__(self) -> None:
         self.installation_id_v3 = str(
@@ -379,7 +380,7 @@ def _get_command_telemetry(
         pos = i
         if is_method:
             # If func is a method, ignore the first argument (self)
-            i = i + 1  # noqa: PLW2901
+            i += 1  # noqa: PLW2901
 
         keyword = arg_keywords[i] if len(arg_keywords) > i else f"{i}"
         if keyword == "self":
@@ -571,6 +572,10 @@ def create_page_profile_message(
     page_profile.prep_time = prep_time
 
     page_profile.headless = config.get_option("server.headless")
+
+    # Include the server mode for metrics tracking
+    if config._server_mode:
+        page_profile.server_mode = config._server_mode
 
     # Collect all config options that have been manually set
     config_options: set[str] = set()

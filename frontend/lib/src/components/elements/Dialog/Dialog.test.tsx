@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,8 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-import React from "react"
 
 import { screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
@@ -79,6 +77,30 @@ describe("Dialog container", () => {
     )
 
     expect(() => screen.getByText("test")).toThrow()
+  })
+
+  it("renders an icon when provided", () => {
+    const props = getProps({ icon: "🎉" })
+    render(
+      <Dialog {...props}>
+        <div>test</div>
+      </Dialog>
+    )
+
+    const icon = screen.getByTestId("stDialogIcon")
+    expect(icon).toBeVisible()
+    expect(icon).toHaveTextContent("🎉")
+  })
+
+  it("does not render an icon when not provided", () => {
+    const props = getProps()
+    render(
+      <Dialog {...props}>
+        <div>test</div>
+      </Dialog>
+    )
+
+    expect(screen.queryByTestId("stDialogIcon")).not.toBeInTheDocument()
   })
 
   it("should close when dismissible", async () => {

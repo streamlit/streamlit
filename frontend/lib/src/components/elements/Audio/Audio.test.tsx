@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-import React from "react"
-
 import { fireEvent, screen } from "@testing-library/react"
 
 import { Audio as AudioProto } from "@streamlit/protobuf"
@@ -25,6 +23,17 @@ import { render, renderWithContexts } from "~lib/test_util"
 import { WidgetStateManager as ElementStateManager } from "~lib/WidgetStateManager"
 
 import Audio, { AudioProps } from "./Audio"
+
+// Mock StreamlitConfig using global mock state (see vitest.setup.ts)
+vi.mock("@streamlit/utils", async () => {
+  const actual = await vi.importActual("@streamlit/utils")
+  return {
+    ...actual,
+    get StreamlitConfig() {
+      return globalThis.__mockStreamlitConfig
+    },
+  }
+})
 
 describe("Audio Element", () => {
   const buildMediaURL = vi.fn().mockReturnValue("https://mock.media.url")
@@ -152,7 +161,7 @@ describe("Audio Element", () => {
       { resourceCrossOriginMode: "use-credentials" },
       { resourceCrossOriginMode: undefined },
     ] as const)(
-      "don't set crossOrigin attribute when window.__streamlit?.BACKEND_BASE_URL is not set",
+      "don't set crossOrigin attribute when StreamlitConfig.BACKEND_BASE_URL is not set",
       ({ resourceCrossOriginMode }) => {
         const props = getProps()
         renderWithContexts(<Audio {...props} />, {
@@ -166,16 +175,13 @@ describe("Audio Element", () => {
     )
 
     describe("with BACKEND_BASE_URL set", () => {
-      const originalStreamlit = window.__streamlit
-
       beforeEach(() => {
-        window.__streamlit = {
-          BACKEND_BASE_URL: "https://backend.example.com:8080/app",
-        }
+        globalThis.__mockStreamlitConfig.BACKEND_BASE_URL =
+          "https://backend.example.com:8080/app"
       })
 
       afterEach(() => {
-        window.__streamlit = originalStreamlit
+        globalThis.__mockStreamlitConfig = {}
       })
 
       it.each([

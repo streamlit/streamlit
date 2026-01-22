@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -41,12 +41,14 @@ from typing import (
 from streamlit import config, errors, logger, string_util
 from streamlit.type_util import (
     CustomDict,
+    dump_pydantic_sequence,
     has_callable_attr,
     is_custom_dict,
     is_dataclass_instance,
     is_list_like,
     is_namedtuple,
     is_pydantic_model,
+    is_sequence_of_pydantic_models,
     is_type,
     is_version_less_than,
 )
@@ -462,7 +464,7 @@ def _is_list_of_scalars(data: Iterable[Any]) -> bool:
 
     # Overview on all value that are interpreted as scalar:
     # https://pandas.pydata.org/docs/reference/api/pandas.api.types.is_scalar.html
-    return infer_dtype(data, skipna=True) not in ["mixed", "unknown-array"]
+    return infer_dtype(data, skipna=True) not in {"mixed", "unknown-array"}
 
 
 def _iterable_to_list(
@@ -703,6 +705,14 @@ def convert_anything_to_pandas_df(
     if is_snowpark_row_list(data):
         return pd.DataFrame([row.as_dict() for row in data])
 
+    if is_sequence_of_pydantic_models(data):
+        # Try to convert pydantic models to DataFrame. If some elements are not
+        # pydantic models (mixed sequence), fall through to pandas' native handling.
+        try:
+            return pd.DataFrame(dump_pydantic_sequence(data))
+        except AttributeError:
+            pass
+
     if has_callable_attr(data, "to_pandas"):
         return pd.DataFrame(data.to_pandas())
 
@@ -939,12 +949,12 @@ def convert_anything_to_list(obj: OptionSequence[V_co]) -> list[V_co]:
         return [member.value if isinstance(member, str) else member for member in obj]  # type: ignore
 
     if isinstance(obj, Mapping):
-        return list(obj.keys())
+        return cast("list[V_co]", list(obj.keys()))
 
     if is_list_like(obj) and not is_snowpark_row_list(obj):
         # This also ensures that the sequence is copied to prevent
         # potential mutations to the original object.
-        return list(obj)
+        return list(cast("Iterable[V_co]", obj))
 
     # Fallback to our DataFrame conversion logic:
     try:
@@ -1046,9 +1056,7 @@ def is_colum_type_arrow_incompatible(column: Series[Any] | Index[Any]) -> bool:
     """
     from pandas.api.types import infer_dtype, is_dict_like, is_list_like
 
-    if column.dtype.kind in [
-        "c",  # complex64, complex128, complex256
-    ]:
+    if column.dtype.kind == "c":  # complex64, complex128, complex256
         return True
 
     if str(column.dtype) in {
@@ -1064,15 +1072,17 @@ def is_colum_type_arrow_incompatible(column: Series[Any] | Index[Any]) -> bool:
         return True
 
     if column.dtype == "object":
-        # The dtype of mixed type columns is always object, the actual type of the column
-        # values can be determined via the infer_dtype function:
+        # The dtype of mixed type columns is always object. In pandas 3.0+, pure
+        # string columns use StringDtype instead of object, so they won't enter
+        # this block (and they're Arrow-compatible anyway). The actual type of
+        # object dtype column values can be determined via the infer_dtype function:
         # https://pandas.pydata.org/docs/reference/api/pandas.api.types.infer_dtype.html
         inferred_type = infer_dtype(column, skipna=True)
 
-        if inferred_type in [
+        if inferred_type in {
             "mixed-integer",
             "complex",
-        ]:
+        }:
             return True
         if inferred_type == "mixed":
             # This includes most of the more complex/custom types (objects, dicts,
@@ -1084,7 +1094,7 @@ def is_colum_type_arrow_incompatible(column: Series[Any] | Index[Any]) -> bool:
                 return True
 
             # Get the first value to check if it is a supported list-like type.
-            first_value = cast("DataFrameGenericAlias[Any]", column).iloc[0]
+            first_value = cast("DataFrameGenericAlias[Any]", column).iloc[0]  # type: ignore[index]
 
             if (  # noqa: SIM103
                 not is_list_like(first_value)
@@ -1242,7 +1252,7 @@ def determine_data_format(input_data: Any) -> DataFormat:
         # This should always contain at least one element,
         # otherwise the values type from infer_dtype would have been empty
         first_element = next(iter(input_data))
-        if isinstance(first_element, dict):
+        if isinstance(first_element, dict) or is_pydantic_model(first_element):
             return DataFormat.LIST_OF_RECORDS
         if isinstance(first_element, (list, tuple, set, frozenset)):
             return DataFormat.LIST_OF_ROWS
@@ -1369,7 +1379,7 @@ def convert_pandas_df_to_data_format(
     if data_format == DataFormat.PANDAS_SERIES:
         return _pandas_df_to_series(df)
     if data_format in {DataFormat.POLARS_DATAFRAME, DataFormat.POLARS_LAZYFRAME}:
-        import polars as pl  # type: ignore[import-not-found]
+        import polars as pl
 
         return pl.from_pandas(df)
     if data_format == DataFormat.POLARS_SERIES:
@@ -1395,11 +1405,11 @@ def convert_pandas_df_to_data_format(
         return _unify_missing_values(df).to_dict(orient="list")
     if data_format == DataFormat.COLUMN_SERIES_MAPPING:
         return df.to_dict(orient="series")
-    if data_format in [
+    if data_format in {
         DataFormat.LIST_OF_VALUES,
         DataFormat.TUPLE_OF_VALUES,
         DataFormat.SET_OF_VALUES,
-    ]:
+    }:
         df = _unify_missing_values(df)
         return_list = []
         if len(df.columns) == 1:

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,11 +19,11 @@
 import { ComponentProps as ComponentProps_ } from "./StreamlitReact";
 import { RenderData as RenderData_, Theme as Theme_ } from "./streamlit";
 
-export {
-  StreamlitComponentBase,
-  withStreamlitConnection,
-} from "./StreamlitReact";
 export { ArrowTable } from "./ArrowTable";
+export {
+    StreamlitComponentBase,
+    withStreamlitConnection
+} from "./StreamlitReact";
 export { Streamlit } from "./streamlit";
 export type ComponentProps = ComponentProps_;
 export type RenderData<ArgType = any> = RenderData_<ArgType>;

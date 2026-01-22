@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,20 +16,46 @@ from __future__ import annotations
 
 from abc import abstractmethod
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Protocol, cast
+from typing import TYPE_CHECKING, Protocol, cast, runtime_checkable
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Iterable, Mapping
 
     from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
     from streamlit.runtime.app_session import AppSession
     from streamlit.runtime.script_data import ScriptData
     from streamlit.runtime.scriptrunner.script_cache import ScriptCache
+    from streamlit.runtime.scriptrunner_utils.script_run_context import UserInfoType
     from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 
 
 class SessionClientDisconnectedError(Exception):
     """Raised by operations on a disconnected SessionClient."""
+
+
+@runtime_checkable
+class ClientContext(Protocol):
+    """Framework-agnostic context for the client WebSocket connection.
+
+    This protocol abstracts away framework-specific request types (Tornado/Starlette)
+    to provide a consistent interface for accessing headers, cookies, and client info
+    from the initial WebSocket handshake.
+    """
+
+    @property
+    def headers(self) -> Iterable[tuple[str, str]]:
+        """All headers as (name, value) tuples. Headers may be repeated."""
+        ...
+
+    @property
+    def cookies(self) -> Mapping[str, str]:
+        """Cookies as a name-to-value mapping."""
+        ...
+
+    @property
+    def remote_ip(self) -> str | None:
+        """The remote IP address of the client, or None if unavailable."""
+        ...
 
 
 class SessionClient(Protocol):
@@ -43,6 +69,14 @@ class SessionClient(Protocol):
         SessionClientDisconnectedError.
         """
         raise NotImplementedError
+
+    @property
+    def client_context(self) -> ClientContext | None:
+        """The client's connection context (headers, cookies, IP).
+
+        Returns None if request context information is not available.
+        """
+        return None
 
 
 @dataclass
@@ -155,7 +189,7 @@ class SessionStorage(Protocol):
         raise NotImplementedError
 
     @abstractmethod
-    def list(self) -> list[SessionInfo]:
+    def list(self) -> list[SessionInfo]:  # ty: ignore[invalid-type-form]
         """List all sessions tracked by this SessionStorage.
 
         Returns
@@ -238,7 +272,7 @@ class SessionManager(Protocol):
         self,
         client: SessionClient,
         script_data: ScriptData,
-        user_info: dict[str, str | bool | None],
+        user_info: UserInfoType,
         existing_session_id: str | None = None,
         session_id_override: str | None = None,
     ) -> str:

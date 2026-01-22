@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,6 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+// Mock StreamlitConfig using global mock state (see vitest.setup.ts)
+vi.mock("@streamlit/utils", async () => {
+  const actual = await vi.importActual("@streamlit/utils")
+  return {
+    ...actual,
+    get StreamlitConfig() {
+      return globalThis.__mockStreamlitConfig
+    },
+  }
+})
 
 import axios, { AxiosHeaders } from "axios"
 import MockAdapter from "axios-mock-adapter"
@@ -136,8 +147,7 @@ describe("DefaultStreamlitEndpoints", () => {
     })
 
     beforeEach(() => {
-      // Reset window.__streamlit before each test
-      window.__streamlit = undefined
+      globalThis.__mockStreamlitConfig = {}
     })
 
     it("builds URL correctly for streamlit-served media when DOWNLOAD_ASSETS_BASE_URL is not set", () => {
@@ -148,9 +158,8 @@ describe("DefaultStreamlitEndpoints", () => {
     })
 
     it("builds URL correctly when DOWNLOAD_ASSETS_BASE_URL is set", () => {
-      window.__streamlit = {
-        DOWNLOAD_ASSETS_BASE_URL: "https://downloads.example.com/assets",
-      }
+      globalThis.__mockStreamlitConfig.DOWNLOAD_ASSETS_BASE_URL =
+        "https://downloads.example.com/assets"
       const url = endpoints.buildDownloadUrl("/media/1234567890.pdf")
       expect(url).toBe(
         "https://downloads.example.com/assets/media/1234567890.pdf"
