@@ -1123,14 +1123,17 @@ class DataEditorMixin:
         # as close as possible to how it used to be.
         ctx = get_script_run_ctx()
 
-        # When a user provides a key, they're signaling intent for a persistent
-        # widget identity. We use schema_hash as the main identity component.
-        # This keeps the widget ID stable when only data values change,
-        # allowing editing state to persist across reruns.
+        # When a user provides a key and num_rows="fixed", we use schema_hash
+        # as the main identity component. This keeps the widget ID stable when
+        # only data values change, allowing editing state to persist across reruns.
+        # For other num_rows modes (dynamic/add/delete), row count can change
+        # legitimately, so we keep the default behavior until those modes are
+        # explicitly supported with proper reconciliation logic.
+        use_schema_hash_identity = key is not None and num_rows == "fixed"
         element_id = compute_and_register_element_id(
             "data_editor",
             user_key=key,
-            key_as_main_identity={"schema_hash"} if key else False,
+            key_as_main_identity={"schema_hash"} if use_schema_hash_identity else False,
             dg=self.dg,
             schema_hash=schema_hash,
             # Keep data in kwargs for backward compatibility when no key is provided

@@ -32,9 +32,11 @@ if "df_feedback" not in st.session_state:
     st.session_state.df_feedback = pd.DataFrame({"In": [0, 1, 2], "Out": [0, 0, 0]})
 
 # The key is crucial here - it ensures stable widget identity
+# Explicitly set num_rows="fixed" to test the fixed mode behavior
 st.session_state.df_feedback = st.data_editor(
     st.session_state.df_feedback,
     key="feedback_editor",
+    num_rows="fixed",
     width="content",
     hide_index=True,
 )
@@ -59,6 +61,7 @@ if "df_simple" not in st.session_state:
 st.session_state.df_simple = st.data_editor(
     st.session_state.df_simple,
     key="simple_editor",
+    num_rows="fixed",
     width="content",
     hide_index=True,
 )
