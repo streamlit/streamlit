@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useCallback, useEffect } from "react"
+import { memo, ReactElement, useCallback, useEffect, useMemo } from "react"
 
 import { Radio as RadioProto } from "@streamlit/protobuf"
 
@@ -23,7 +23,11 @@ import {
   useBasicWidgetState,
   ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
-import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
+import {
+  isNullOrUndefined,
+  labelVisibilityProtoValueToEnum,
+  notNullOrUndefined,
+} from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 export interface Props {
@@ -33,7 +37,12 @@ export interface Props {
   fragmentId?: string
 }
 
-type RadioValue = number | null | undefined
+/**
+ * The value specified by the user via the UI. If the user didn't touch this
+ * widget's UI, the default value is used. We use string values (formatted
+ * option strings) for robust handling of dynamic option changes.
+ */
+type RadioValue = string | null
 
 function Radio({
   disabled,
@@ -66,10 +75,10 @@ function Radio({
       widgetMgr.registerQueryParamBinding(
         widgetId,
         queryParamKey,
-        "int_value",
-        defaultValue,
+        "string_value",
+        notNullOrUndefined(defaultValue) ? options[defaultValue] : undefined,
         undefined, // no urlFormat for single values
-        options // Pass options for index-to-string conversion
+        options // Pass options for string matching
       )
       return () => {
         widgetMgr.unregisterQueryParamBinding(widgetId)
@@ -79,10 +88,21 @@ function Radio({
 
   const onChange = useCallback(
     (selectedIndex: number): void => {
-      setValueWithSource({ value: selectedIndex, fromUi: true })
+      // Convert index to string option value
+      const selectedValue = options[selectedIndex] ?? null
+      setValueWithSource({ value: selectedValue, fromUi: true })
     },
-    [setValueWithSource]
+    [setValueWithSource, options]
   )
+
+  // Convert string value back to index for UIRadio
+  const selectedIndex = useMemo((): number | null => {
+    if (value === null) {
+      return null
+    }
+    const index = options.indexOf(value)
+    return index >= 0 ? index : null
+  }, [value, options])
 
   return (
     <UIRadio
@@ -93,7 +113,7 @@ function Radio({
       disabled={disabled}
       horizontal={horizontal}
       labelVisibility={labelVisibilityProtoValueToEnum(labelVisibility?.value)}
-      value={value ?? null}
+      value={selectedIndex}
       help={help}
     />
   )
@@ -102,16 +122,19 @@ function Radio({
 function getStateFromWidgetMgr(
   widgetMgr: WidgetStateManager,
   element: RadioProto
-): RadioValue {
-  return widgetMgr.getIntValue(element)
+): RadioValue | undefined {
+  return widgetMgr.getStringValue(element)
 }
 
 function getDefaultStateFromProto(element: RadioProto): RadioValue {
-  return element.default ?? null
+  if (element.options.length === 0 || isNullOrUndefined(element.default)) {
+    return null
+  }
+  return element.options[element.default]
 }
 
 function getCurrStateFromProto(element: RadioProto): RadioValue {
-  return element.value ?? null
+  return element.rawValue ?? null
 }
 
 function updateWidgetMgrState(
@@ -120,9 +143,9 @@ function updateWidgetMgrState(
   vws: ValueWithSource<RadioValue>,
   fragmentId?: string
 ): void {
-  widgetMgr.setIntValue(
+  widgetMgr.setStringValue(
     element,
-    vws.value ?? null,
+    vws.value,
     { fromUi: vws.fromUi },
     fragmentId
   )

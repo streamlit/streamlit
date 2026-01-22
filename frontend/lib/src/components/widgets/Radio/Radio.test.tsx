@@ -57,25 +57,26 @@ describe("Radio widget", () => {
 
   it("sets widget value on mount", () => {
     const props = getProps()
-    vi.spyOn(props.widgetMgr, "setIntValue")
+    vi.spyOn(props.widgetMgr, "setStringValue")
     render(<Radio {...props} />)
 
-    expect(props.widgetMgr.setIntValue).toHaveBeenCalledWith(
+    // Widget uses string values - the default option string at index 0 is "a"
+    expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
       props.element,
-      props.element.default,
+      "a",
       { fromUi: false },
       undefined
     )
   })
 
-  it("can pass fragmentId to setIntValue", () => {
+  it("can pass fragmentId to setStringValue", () => {
     const props = getProps(undefined, { fragmentId: "myFragmentId" })
-    vi.spyOn(props.widgetMgr, "setIntValue")
+    vi.spyOn(props.widgetMgr, "setStringValue")
     render(<Radio {...props} />)
 
-    expect(props.widgetMgr.setIntValue).toHaveBeenCalledWith(
+    expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
       props.element,
-      props.element.default,
+      "a",
       { fromUi: false },
       "myFragmentId"
     )
@@ -166,16 +167,17 @@ describe("Radio widget", () => {
   it("sets the widget value when an option is selected", async () => {
     const user = userEvent.setup()
     const props = getProps()
-    vi.spyOn(props.widgetMgr, "setIntValue")
+    vi.spyOn(props.widgetMgr, "setStringValue")
     render(<Radio {...props} />)
     const radioOptions = screen.getAllByRole("radio")
     const secondOption = radioOptions[1]
 
     await user.click(secondOption)
 
-    expect(props.widgetMgr.setIntValue).toHaveBeenLastCalledWith(
+    // Widget uses string values - selecting index 1 sends option "b"
+    expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
       props.element,
-      1,
+      "b",
       { fromUi: true },
       undefined
     )
@@ -188,7 +190,7 @@ describe("Radio widget", () => {
     const props = getProps({ formId: "form" })
     props.widgetMgr.setFormSubmitBehaviors("form", true)
 
-    vi.spyOn(props.widgetMgr, "setIntValue")
+    vi.spyOn(props.widgetMgr, "setStringValue")
     render(<Radio {...props} />)
 
     const radioOptions = screen.getAllByRole("radio")
@@ -198,9 +200,9 @@ describe("Radio widget", () => {
     await user.click(secondOption)
     expect(secondOption).toBeChecked()
 
-    expect(props.widgetMgr.setIntValue).toHaveBeenLastCalledWith(
+    expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
       props.element,
-      1,
+      "b",
       { fromUi: true },
       undefined
     )
@@ -215,9 +217,10 @@ describe("Radio widget", () => {
     const defaultValue = radioOptions[props.element.default]
     expect(defaultValue).toBeChecked()
 
-    expect(props.widgetMgr.setIntValue).toHaveBeenLastCalledWith(
+    // Reset sends the default option string "a"
+    expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
       props.element,
-      props.element.default,
+      "a",
       {
         fromUi: true,
       },
