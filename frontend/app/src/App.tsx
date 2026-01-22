@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { PureComponent, ReactNode } from "react"
+import { createRef, PureComponent, ReactNode } from "react"
 
 import classNames from "classnames"
 import { enableMapSet, enablePatches } from "immer"
@@ -264,6 +264,12 @@ export class App extends PureComponent<Props, State> {
   private readonly componentRegistry: ComponentRegistry
 
   private readonly embeddingId: string = generateUID()
+
+  /**
+   * Ref to the root app container element.
+   * Used by components like Sidebar to detect clicks inside/outside the app.
+   */
+  private readonly appRootRef = createRef<HTMLDivElement>()
 
   // Listener registry for deferred file responses: fileId -> set of listeners
   private readonly deferredFileListeners = new Map<
@@ -2423,6 +2429,7 @@ export class App extends PureComponent<Props, State> {
       <StreamlitContextProvider
         initialSidebarState={initialSidebarState}
         initialSidebarWidth={this.state.initialSidebarWidth}
+        appRootRef={this.appRootRef}
         pageLinkBaseUrl={pageLinkBaseUrl}
         currentPageScriptHash={currentPageScriptHash}
         onPageChange={this.onPageChange}
@@ -2458,6 +2465,7 @@ export class App extends PureComponent<Props, State> {
           onKeyUp={this.handleKeyUp}
         >
           <StyledApp
+            ref={this.appRootRef}
             className={outerDivClass}
             data-testid="stApp"
             data-test-script-state={

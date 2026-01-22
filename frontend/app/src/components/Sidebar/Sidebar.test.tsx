@@ -14,10 +14,11 @@
  * limitations under the License.
  */
 
-import { ReactElement } from "react"
+import { ReactElement, useMemo, useRef } from "react"
 
 import {
   fireEvent,
+  render,
   RenderResult,
   screen,
   within,
@@ -26,10 +27,14 @@ import userEvent from "@testing-library/user-event"
 
 import {
   mockEndpoints,
+  mockTheme,
+  NavigationContext,
   NavigationContextProps,
+  SidebarConfigContext,
   SidebarConfigContextProps,
+  ThemeProvider,
+  WindowDimensionsProvider,
 } from "@streamlit/lib"
-import { renderWithContexts } from "@streamlit/lib/testing"
 import { Logo, PageConfig } from "@streamlit/protobuf"
 
 import Sidebar, { SidebarProps } from "./Sidebar"
@@ -65,20 +70,62 @@ const mockEndpointProp = mockEndpoints({
   sendClientErrorToHost,
 })
 
-// Wrapper component to access AppContext values
-function SidebarWrapper(props: Partial<SidebarProps> = {}): ReactElement {
+// Wrapper component that sets up all required context providers
+function SidebarWrapper({
+  props = {},
+  sidebarConfigContext = {},
+  navigationContext = {},
+}: {
+  props?: Partial<SidebarProps>
+  sidebarConfigContext?: Partial<SidebarConfigContextProps>
+  navigationContext?: Partial<NavigationContextProps>
+}): ReactElement {
+  const appRootRef = useRef<HTMLDivElement>(null)
+
+  const sidebarConfigContextValues = useMemo<SidebarConfigContextProps>(
+    () => ({
+      initialSidebarState: PageConfig.SidebarState.AUTO,
+      appLogo: null,
+      sidebarChevronDownshift: 0,
+      expandSidebarNav: false,
+      hideSidebarNav: false,
+      appRootRef,
+      ...sidebarConfigContext,
+    }),
+    [sidebarConfigContext, appRootRef]
+  )
+
+  const navigationContextValues = useMemo<NavigationContextProps>(
+    () => ({
+      pageLinkBaseUrl: "",
+      currentPageScriptHash: "",
+      onPageChange: vi.fn(),
+      navSections: [],
+      appPages: [],
+      ...navigationContext,
+    }),
+    [navigationContext]
+  )
+
   return (
-    <div data-testid="stApp">
-      <Sidebar
-        endpoints={mockEndpointProp}
-        hasElements
-        // Defaulted props for Sidebar itself
-        isCollapsed={false}
-        onToggleCollapse={vi.fn()}
-        widgetsDisabled={false}
-        {...props}
-      />
-    </div>
+    <ThemeProvider theme={mockTheme.emotion}>
+      <WindowDimensionsProvider>
+        <SidebarConfigContext.Provider value={sidebarConfigContextValues}>
+          <NavigationContext.Provider value={navigationContextValues}>
+            <div data-testid="stApp" ref={appRootRef}>
+              <Sidebar
+                endpoints={mockEndpointProp}
+                hasElements
+                isCollapsed={false}
+                onToggleCollapse={vi.fn()}
+                widgetsDisabled={false}
+                {...props}
+              />
+            </div>
+          </NavigationContext.Provider>
+        </SidebarConfigContext.Provider>
+      </WindowDimensionsProvider>
+    </ThemeProvider>
   )
 }
 
@@ -89,43 +136,13 @@ function renderSidebar(
     navigationContext?: Partial<NavigationContextProps>
   }
 ): RenderResult {
-  const navigationContextValues = getNavigationContextOutput(
-    options?.navigationContext || {}
+  return render(
+    <SidebarWrapper
+      props={props}
+      sidebarConfigContext={options?.sidebarConfigContext}
+      navigationContext={options?.navigationContext}
+    />
   )
-  const sidebarConfigContextValues = getSidebarConfigContextOutput(
-    options?.sidebarConfigContext || {}
-  )
-  return renderWithContexts(<SidebarWrapper {...props} />, {
-    sidebarConfigContext: sidebarConfigContextValues,
-    navigationContext: navigationContextValues,
-  })
-}
-
-function getSidebarConfigContextOutput(
-  context: Partial<SidebarConfigContextProps> = {}
-): SidebarConfigContextProps {
-  return {
-    initialSidebarState: PageConfig.SidebarState.AUTO,
-    appLogo: null,
-    sidebarChevronDownshift: 0,
-    expandSidebarNav: false,
-    hideSidebarNav: false,
-    ...context,
-  }
-}
-
-// Helper function to create mock navigation context with overrides
-function getNavigationContextOutput(
-  context: Partial<NavigationContextProps> = {}
-): NavigationContextProps {
-  return {
-    pageLinkBaseUrl: "",
-    currentPageScriptHash: "",
-    onPageChange: vi.fn(),
-    navSections: [],
-    appPages: [],
-    ...context,
-  }
 }
 
 // Test data constants
@@ -667,6 +684,11 @@ describe("Sidebar Component", () => {
 
       expect(mockOnToggleCollapse).not.toHaveBeenCalled()
     })
+
+    // Note: The positive case (sidebar DOES collapse when clicking outside sidebar but
+    // inside main app on mobile) is tested via e2e tests because properly mocking the
+    // viewport width and theme breakpoints in unit tests is complex. The important
+    // behavior (NOT collapsing on portaled elements) is validated by the tests below.
 
     it("does not collapse sidebar when clicking outside the main app container (portaled elements)", () => {
       const mockOnToggleCollapse = vi.fn()

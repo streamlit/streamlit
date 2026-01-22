@@ -36,3 +36,5 @@ with st.sidebar:
     st.header("hello world")
     st.markdown("hello world")
     st.bar_chart(pd.DataFrame(data, columns=["a", "b", "c"]))
+    # Selectbox for testing portal behavior on mobile
+    st.selectbox("Select an option", ["Option 1", "Option 2", "Option 3"])

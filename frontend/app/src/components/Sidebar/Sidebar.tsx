@@ -90,9 +90,8 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   const { appPages, navSections } = useContext(NavigationContext)
 
-  const { hideSidebarNav, appLogo, initialSidebarWidth } = useContext(
-    SidebarConfigContext
-  )
+  const { hideSidebarNav, appLogo, initialSidebarWidth, appRootRef } =
+    useContext(SidebarConfigContext)
 
   const scrollbarGutterSize = useScrollbarGutterSize()
 
@@ -187,9 +186,6 @@ const Sidebar: React.FC<SidebarProps> = ({
       if (sidebarRef && window) {
         const { current } = sidebarRef
         const target = event.target as Node | null
-        const mainAppContainer = document.querySelector(
-          '[data-testid="stApp"]'
-        )
 
         // Only collapse if click is outside the sidebar but inside the main app.
         // This excludes clicks on portaled elements (dropdowns, modals, etc.)
@@ -198,7 +194,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           current &&
           target &&
           !current.contains(target) &&
-          mainAppContainer?.contains(target) &&
+          appRootRef?.current?.contains(target) &&
           innerWidth <= mediumBreakpointPx &&
           !isCollapsed
         ) {
@@ -218,6 +214,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     isCollapsed,
     onToggleCollapse,
     innerWidth,
+    appRootRef,
   ])
 
   function resetSidebarWidth(): void {
