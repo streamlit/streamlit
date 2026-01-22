@@ -68,6 +68,11 @@ def test_data_editor_preserves_edit_in_session_state_feedback_loop(app: Page) ->
     # This is the key test - previously this would show 3 (edit lost) on first try
     expect_prefixed_markdown(app, "Sum of In column:", "8")
 
+    # Verify the computed "Out" column was updated correctly (5^2 = 25)
+    # This is a "must NOT happen" check: Out[0] must NOT be 0 (old computed value)
+    # It must be 25 (the square of the edited In[0] value of 5)
+    expect_prefixed_markdown(app, "Out[0] value:", "25")
+
 
 def test_data_editor_simple_edit_persists(app: Page) -> None:
     """Test that simple edits persist without a computed column (baseline test)."""

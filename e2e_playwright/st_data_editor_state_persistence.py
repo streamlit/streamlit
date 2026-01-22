@@ -51,6 +51,10 @@ st.dataframe(st.session_state.df_feedback, key="feedback_display")
 in_sum = st.session_state.df_feedback["In"].sum()
 st.markdown(f"Sum of In column: `{in_sum}`")
 
+# Show the first "Out" value to verify computed column is updated correctly
+out_first = st.session_state.df_feedback["Out"].iloc[0]
+st.markdown(f"Out[0] value: `{out_first}`")
+
 
 # Test 2: Simple edit without computed column (baseline)
 st.subheader("Simple Edit (No Computed Column)")

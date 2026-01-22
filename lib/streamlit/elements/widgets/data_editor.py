@@ -492,9 +492,11 @@ def _compute_schema_hash(
     str
         MD5 hash of the schema components.
     """
-    # Build schema components list
-    components: list[str] = [f"col:{col}" for col in df.columns]
-    components.extend(f"type:{field.name}:{field.type}" for field in arrow_schema)
+    # Build schema components list from the Arrow schema so that
+    # each column's name and type are captured in a single pass.
+    components: list[str] = [
+        f"col:{field.name}:type:{field.type}" for field in arrow_schema
+    ]
     components.append(f"index:{type(df.index).__name__}")
 
     # Include row count - editing state uses positional indices,

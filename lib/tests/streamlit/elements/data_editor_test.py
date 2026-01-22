@@ -47,6 +47,7 @@ from streamlit.elements.widgets.data_editor import (
     _apply_row_deletions,
     _check_column_names,
     _check_type_compatibilities,
+    _compute_schema_hash,
     _parse_value,
 )
 from streamlit.errors import StreamlitAPIException
@@ -599,6 +600,89 @@ class DataEditorUtilTest(unittest.TestCase):
         expected_col2_values = [f"value_{i}" for i in range(8)]
         assert df["col1"].tolist() == expected_col1_values
         assert df["col2"].tolist() == expected_col2_values
+
+
+class ComputeSchemaHashTest(unittest.TestCase):
+    """Tests for the _compute_schema_hash function."""
+
+    def test_hash_stable_when_only_values_change(self):
+        """Hash should be stable when only cell values change."""
+        df1 = pd.DataFrame({"A": [1, 2, 3], "B": [4, 5, 6]})
+        df2 = pd.DataFrame({"A": [10, 20, 30], "B": [40, 50, 60]})
+
+        hash1 = _compute_schema_hash(df1, _get_arrow_schema(df1))
+        hash2 = _compute_schema_hash(df2, _get_arrow_schema(df2))
+
+        assert hash1 == hash2, "Hash should be stable when only values change"
+
+    def test_hash_changes_when_column_added(self):
+        """Hash should change when a column is added."""
+        df1 = pd.DataFrame({"A": [1, 2, 3]})
+        df2 = pd.DataFrame({"A": [1, 2, 3], "B": [4, 5, 6]})
+
+        hash1 = _compute_schema_hash(df1, _get_arrow_schema(df1))
+        hash2 = _compute_schema_hash(df2, _get_arrow_schema(df2))
+
+        assert hash1 != hash2, "Hash should change when column is added"
+
+    def test_hash_changes_when_column_removed(self):
+        """Hash should change when a column is removed."""
+        df1 = pd.DataFrame({"A": [1, 2, 3], "B": [4, 5, 6]})
+        df2 = pd.DataFrame({"A": [1, 2, 3]})
+
+        hash1 = _compute_schema_hash(df1, _get_arrow_schema(df1))
+        hash2 = _compute_schema_hash(df2, _get_arrow_schema(df2))
+
+        assert hash1 != hash2, "Hash should change when column is removed"
+
+    def test_hash_changes_when_column_reordered(self):
+        """Hash should change when column order changes."""
+        df1 = pd.DataFrame({"A": [1, 2, 3], "B": [4, 5, 6]})
+        df2 = pd.DataFrame({"B": [4, 5, 6], "A": [1, 2, 3]})
+
+        hash1 = _compute_schema_hash(df1, _get_arrow_schema(df1))
+        hash2 = _compute_schema_hash(df2, _get_arrow_schema(df2))
+
+        assert hash1 != hash2, "Hash should change when columns are reordered"
+
+    def test_hash_changes_when_column_type_changes(self):
+        """Hash should change when column type changes."""
+        df1 = pd.DataFrame({"A": [1, 2, 3]})
+        df2 = pd.DataFrame({"A": ["1", "2", "3"]})
+
+        hash1 = _compute_schema_hash(df1, _get_arrow_schema(df1))
+        hash2 = _compute_schema_hash(df2, _get_arrow_schema(df2))
+
+        assert hash1 != hash2, "Hash should change when column type changes"
+
+    def test_hash_changes_when_row_count_changes(self):
+        """Hash should change when row count changes."""
+        df1 = pd.DataFrame({"A": [1, 2, 3]})
+        df2 = pd.DataFrame({"A": [1, 2, 3, 4]})
+
+        hash1 = _compute_schema_hash(df1, _get_arrow_schema(df1))
+        hash2 = _compute_schema_hash(df2, _get_arrow_schema(df2))
+
+        assert hash1 != hash2, "Hash should change when row count changes"
+
+    def test_hash_changes_when_index_type_changes(self):
+        """Hash should change when index type changes."""
+        df1 = pd.DataFrame({"A": [1, 2, 3]})  # Default RangeIndex
+        df2 = pd.DataFrame({"A": [1, 2, 3]}, index=pd.Index([10, 20, 30]))  # Int64Index
+
+        hash1 = _compute_schema_hash(df1, _get_arrow_schema(df1))
+        hash2 = _compute_schema_hash(df2, _get_arrow_schema(df2))
+
+        assert hash1 != hash2, "Hash should change when index type changes"
+
+    def test_hash_deterministic(self):
+        """Hash should be deterministic for the same input."""
+        df = pd.DataFrame({"A": [1, 2, 3], "B": ["x", "y", "z"]})
+
+        hash1 = _compute_schema_hash(df, _get_arrow_schema(df))
+        hash2 = _compute_schema_hash(df, _get_arrow_schema(df))
+
+        assert hash1 == hash2, "Hash should be deterministic"
 
 
 class DataEditorTest(DeltaGeneratorTestCase):
