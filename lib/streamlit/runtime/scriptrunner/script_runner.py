@@ -532,6 +532,7 @@ class ScriptRunner:
                 # For MPA page transitions: filter query params BEFORE cleanup.
                 # This uses existing bindings to remove params from other pages,
                 # ensuring st.query_params is accurate when the new page runs.
+                # (st.query_params in user code will reflect the correct params for the new page)
                 main_script_hash = self._pages_manager.main_script_hash
                 valid_script_hashes = {main_script_hash, page_script_hash}
                 with self._session_state.query_params() as qp:

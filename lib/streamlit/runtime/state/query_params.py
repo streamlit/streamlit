@@ -312,8 +312,6 @@ class QueryParams(MutableMapping[str, str]):
             if key.lower() in EMBED_QUERY_PARAMS_KEYS and preserve_embed
         }
 
-    # ========== Widget Binding Methods ==========
-
     def bind_widget(
         self,
         param_key: str,
@@ -381,21 +379,6 @@ class QueryParams(MutableMapping[str, str]):
         """
         return param_key in self._bindings_by_param
 
-    def get_binding_for_widget(self, widget_id: str) -> WidgetBinding | None:
-        """Get the binding for a widget.
-
-        Parameters
-        ----------
-        widget_id : str
-            The unique widget ID.
-
-        Returns
-        -------
-        WidgetBinding | None
-            The binding if found, None otherwise.
-        """
-        return self._bindings_by_widget.get(widget_id)
-
     def get_binding_for_param(self, param_key: str) -> WidgetBinding | None:
         """Get the binding for a query parameter.
 
@@ -410,6 +393,21 @@ class QueryParams(MutableMapping[str, str]):
             The binding if found, None otherwise.
         """
         return self._bindings_by_param.get(param_key)
+
+    def get_binding_for_widget(self, widget_id: str) -> WidgetBinding | None:
+        """Get the binding for a widget.
+
+        Parameters
+        ----------
+        widget_id : str
+            The unique widget ID.
+
+        Returns
+        -------
+        WidgetBinding | None
+            The binding if found, None otherwise.
+        """
+        return self._bindings_by_widget.get(widget_id)
 
     def set_initial_query_params(self, query_string: str) -> None:
         """Store the initial query params from the URL for session state seeding.
