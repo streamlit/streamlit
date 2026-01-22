@@ -48,6 +48,17 @@ export interface WidgetInfo {
 }
 
 /**
+ * Binding information for a widget that syncs to URL query parameters.
+ */
+export interface QueryParamBinding {
+  paramKey: string
+  valueType: string // e.g., "bool_value", "string_value", etc.
+  defaultValue: unknown
+  urlFormat?: "comma" | "repeated" // How to serialize arrays
+  options?: string[] // For index-based widgets, the formatted option strings
+}
+
+/**
  * Immutable structure that exposes public data about all the forms in the app.
  * WidgetStateManager produces new instances of this type when forms data
  * changes.
@@ -230,6 +241,23 @@ export class WidgetStateManager {
    * conflicting calls happen in the same macrotask.
    */
   private hasFragmentIdConflict = false
+
+  /**
+   * Registry of widgets bound to URL query parameters.
+   * Maps widgetId -> QueryParamBinding
+   */
+  private readonly boundWidgets = new Map<string, QueryParamBinding>()
+
+  /**
+   * Reverse lookup: paramKey -> widgetId
+   */
+  private readonly paramKeyToWidgetId = new Map<string, string>()
+
+  /**
+   * Callback to notify App.tsx when query params change.
+   * This keeps App's queryParams state in sync with the URL.
+   */
+  private onQueryParamsChange?: (queryString: string) => void
 
   constructor(props: Props) {
     this.props = props
@@ -449,6 +477,11 @@ export class WidgetStateManager {
   ): void {
     this.createWidgetState(widget, source).boolValue = value
     this.onWidgetValueChanged(widget.formId, source, fragmentId)
+
+    // Sync to URL if bound and from UI
+    if (source.fromUi) {
+      this.syncToUrlIfBound(widget.id, String(value))
+    }
   }
 
   public getIntValue(widget: WidgetInfo): number | undefined {
@@ -468,6 +501,18 @@ export class WidgetStateManager {
   ): void {
     this.createWidgetState(widget, source).intValue = value
     this.onWidgetValueChanged(widget.formId, source, fragmentId)
+
+    // Sync to URL if bound and from UI
+    if (source.fromUi && value !== null) {
+      const binding = this.boundWidgets.get(widget.id)
+      // If binding has options, convert index to option string for human-readable URLs
+      const optionValue = binding?.options?.[value]
+      if (optionValue !== undefined) {
+        this.syncToUrlIfBound(widget.id, optionValue)
+      } else {
+        this.syncToUrlIfBound(widget.id, String(value))
+      }
+    }
   }
 
   public getDoubleValue(widget: WidgetInfo): number | undefined {
@@ -487,6 +532,11 @@ export class WidgetStateManager {
   ): void {
     this.createWidgetState(widget, source).doubleValue = value
     this.onWidgetValueChanged(widget.formId, source, fragmentId)
+
+    // Sync to URL if bound and from UI
+    if (source.fromUi && value !== null) {
+      this.syncToUrlIfBound(widget.id, String(value))
+    }
   }
 
   public getStringValue(widget: WidgetInfo): string | undefined {
@@ -506,6 +556,11 @@ export class WidgetStateManager {
   ): void {
     this.createWidgetState(widget, source).stringValue = value
     this.onWidgetValueChanged(widget.formId, source, fragmentId)
+
+    // Sync to URL if bound and from UI
+    if (source.fromUi && value !== null) {
+      this.syncToUrlIfBound(widget.id, value)
+    }
   }
 
   public setStringArrayValue(
@@ -518,6 +573,17 @@ export class WidgetStateManager {
       data: value,
     })
     this.onWidgetValueChanged(widget.formId, source, fragmentId)
+
+    // Sync to URL if bound and from UI
+    if (source.fromUi) {
+      const binding = this.boundWidgets.get(widget.id)
+      if (binding?.urlFormat === "comma") {
+        this.syncCommaArrayToUrlIfBound(widget.id, value)
+      } else {
+        // Default to repeated params for string arrays
+        this.syncRepeatedArrayToUrlIfBound(widget.id, value)
+      }
+    }
   }
 
   public getStringArrayValue(widget: WidgetInfo): string[] | undefined {
@@ -554,10 +620,36 @@ export class WidgetStateManager {
     source: Source,
     fragmentId: string | undefined
   ): void {
+    // Filter out invalid values (NaN, undefined, null) before storing
+    const validValue = value.filter(
+      v => v !== undefined && v !== null && !Number.isNaN(v)
+    )
+    // Only update if we have valid values
+    if (validValue.length === 0) {
+      return
+    }
     this.createWidgetState(widget, source).doubleArrayValue = new DoubleArray({
-      data: value,
+      data: validValue,
     })
     this.onWidgetValueChanged(widget.formId, source, fragmentId)
+
+    // Sync to URL if bound and from UI (repeated params for consistency)
+    if (source.fromUi) {
+      const binding = this.boundWidgets.get(widget.id)
+      // For select_slider: convert indices to option strings for human-readable URLs
+      if (binding?.options && binding.options.length > 0) {
+        const optionStrings = validValue.map(
+          idx => binding.options?.[idx] ?? String(idx)
+        )
+        this.syncRepeatedArrayToUrlIfBound(widget.id, optionStrings)
+      } else {
+        // Regular slider: use numeric values
+        this.syncRepeatedArrayToUrlIfBound(
+          widget.id,
+          validValue.map(v => String(v))
+        )
+      }
+    }
   }
 
   public getIntArrayValue(widget: WidgetInfo): number[] | undefined {
@@ -584,6 +676,242 @@ export class WidgetStateManager {
       data: value,
     })
     this.onWidgetValueChanged(widget.formId, source, fragmentId)
+
+    // Sync to URL if bound and from UI (repeated params for consistency)
+    if (source.fromUi) {
+      const binding = this.boundWidgets.get(widget.id)
+      // If binding has options, convert indices to option strings for human-readable URLs
+      if (binding?.options) {
+        const optionStrings = value
+          .map(idx => binding.options?.[idx])
+          .filter((s): s is string => s !== undefined)
+        this.syncRepeatedArrayToUrlIfBound(widget.id, optionStrings)
+      } else {
+        // Fallback to index values
+        this.syncRepeatedArrayToUrlIfBound(
+          widget.id,
+          value.map(v => String(v))
+        )
+      }
+    }
+  }
+
+  // Query Param Binding Methods
+
+  /**
+   * Register a widget's binding to a URL query parameter.
+   * Called by widget components on mount when they have a queryParamKey.
+   * @param options - For index-based widgets (radio, pills, etc.), the formatted option strings
+   */
+  public registerQueryParamBinding(
+    widgetId: string,
+    paramKey: string,
+    valueType: string,
+    defaultValue: unknown,
+    urlFormat?: "comma" | "repeated",
+    options?: string[]
+  ): void {
+    this.boundWidgets.set(widgetId, {
+      paramKey,
+      valueType,
+      defaultValue,
+      urlFormat,
+      options,
+    })
+    this.paramKeyToWidgetId.set(paramKey, widgetId)
+  }
+
+  /**
+   * Unregister a widget's binding.
+   * Called by widget components on unmount.
+   * Note: We do NOT clear the URL parameter here because:
+   * 1. In React strict mode, components mount/unmount multiple times
+   * 2. During Streamlit re-runs, widgets are recreated
+   * 3. The URL should persist for deep-linking purposes
+   * URL params are only cleared when the value changes to the default.
+   */
+  public unregisterQueryParamBinding(widgetId: string): void {
+    const binding = this.boundWidgets.get(widgetId)
+    if (binding) {
+      this.paramKeyToWidgetId.delete(binding.paramKey)
+      this.boundWidgets.delete(widgetId)
+    }
+  }
+
+  /**
+   * Check if a widget has a query param binding.
+   */
+  public hasQueryParamBinding(widgetId: string): boolean {
+    return this.boundWidgets.has(widgetId)
+  }
+
+  /**
+   * Set a callback to be notified when query params change.
+   * This is called by App.tsx to keep its queryParams state in sync.
+   */
+  public setQueryParamsChangeHandler(
+    handler: (queryString: string) => void
+  ): void {
+    this.onQueryParamsChange = handler
+  }
+
+  /**
+   * Notify App.tsx of query param changes so it can update its state.
+   * This is necessary for page navigation to preserve query params.
+   */
+  private notifyQueryParamsChange(): void {
+    if (this.onQueryParamsChange) {
+      const url = new URL(window.location.href)
+      this.onQueryParamsChange(url.searchParams.toString())
+    }
+  }
+
+  /**
+   * Sync a scalar value to URL if the widget is bound.
+   */
+  private syncToUrlIfBound(widgetId: string, value: string): void {
+    const binding = this.boundWidgets.get(widgetId)
+    if (!binding) return
+
+    // Don't sync default values to URL (keep URLs clean)
+    if (this.isDefaultValue(value, binding)) {
+      this.clearUrlParam(binding.paramKey)
+      return
+    }
+
+    const url = new URL(window.location.href)
+    url.searchParams.set(binding.paramKey, value)
+    window.history.replaceState({}, "", url.toString())
+    this.notifyQueryParamsChange()
+  }
+
+  /**
+   * Sync a comma-separated array value to URL if the widget is bound.
+   * Only used when urlFormat is explicitly set to "comma".
+   */
+  private syncCommaArrayToUrlIfBound(
+    widgetId: string,
+    values: string[]
+  ): void {
+    const binding = this.boundWidgets.get(widgetId)
+    if (!binding) return
+
+    // Filter out invalid values like "undefined", "NaN", empty strings
+    const validValues = values.filter(
+      v => v !== "" && v !== "undefined" && v !== "NaN" && v !== "null"
+    )
+    if (validValues.length === 0) {
+      this.clearUrlParam(binding.paramKey)
+      return
+    }
+
+    // Don't sync default values to URL
+    if (this.isDefaultArrayValue(validValues, binding)) {
+      this.clearUrlParam(binding.paramKey)
+      return
+    }
+
+    const url = new URL(window.location.href)
+    url.searchParams.set(binding.paramKey, validValues.join(","))
+    window.history.replaceState({}, "", url.toString())
+    this.notifyQueryParamsChange()
+  }
+
+  /**
+   * Sync an array value to URL using repeated params if the widget is bound.
+   * Used for multiselect and pills multi-select.
+   */
+  private syncRepeatedArrayToUrlIfBound(
+    widgetId: string,
+    values: string[]
+  ): void {
+    const binding = this.boundWidgets.get(widgetId)
+    if (!binding) return
+
+    const url = new URL(window.location.href)
+    url.searchParams.delete(binding.paramKey)
+
+    // Don't sync empty or default values
+    if (values.length === 0 || this.isDefaultArrayValue(values, binding)) {
+      window.history.replaceState({}, "", url.toString())
+      this.notifyQueryParamsChange()
+      return
+    }
+
+    // Repeated params: ?tags=a&tags=b
+    values.forEach(v => url.searchParams.append(binding.paramKey, v))
+    window.history.replaceState({}, "", url.toString())
+    this.notifyQueryParamsChange()
+  }
+
+  /**
+   * Clear a URL parameter.
+   */
+  private clearUrlParam(paramKey: string): void {
+    const url = new URL(window.location.href)
+    url.searchParams.delete(paramKey)
+    window.history.replaceState({}, "", url.toString())
+    this.notifyQueryParamsChange()
+  }
+
+  /**
+   * Check if a value equals the widget's default value.
+   * Handles type coercion since URL values are always strings.
+   */
+  /**
+   * Convert a value to string safely, handling primitives.
+   * Returns undefined for non-primitive types to avoid [object Object].
+   */
+  private toStringPrimitive(value: unknown): string | undefined {
+    if (
+      typeof value === "string" ||
+      typeof value === "number" ||
+      typeof value === "boolean"
+    ) {
+      return String(value)
+    }
+    return undefined
+  }
+
+  private isDefaultValue(value: unknown, binding: QueryParamBinding): boolean {
+    const defaultValue = binding.defaultValue
+    // Handle null/undefined
+    if (defaultValue === null || defaultValue === undefined) {
+      return value === null || value === undefined || value === ""
+    }
+    // Convert both to string for comparison (handles bool/number/string)
+    const valueStr = this.toStringPrimitive(value)
+    const defaultStr = this.toStringPrimitive(defaultValue)
+    if (valueStr === undefined || defaultStr === undefined) {
+      return false // Non-primitive types don't match by string comparison
+    }
+    return valueStr === defaultStr
+  }
+
+  /**
+   * Check if an array value equals the widget's default array value.
+   * Handles type coercion since URL values are always strings.
+   */
+  private isDefaultArrayValue(
+    values: string[],
+    binding: QueryParamBinding
+  ): boolean {
+    const defaultValue = binding.defaultValue
+    if (!Array.isArray(defaultValue)) {
+      // Default is not an array - check if values are empty or match single default
+      if (values.length === 0) return true
+      if (values.length === 1 && defaultValue !== null) {
+        const defaultStr = this.toStringPrimitive(defaultValue)
+        return defaultStr !== undefined && values[0] === defaultStr
+      }
+      return false
+    }
+    // Both are arrays - compare element by element as strings
+    if (values.length !== defaultValue.length) return false
+    return values.every((v, i) => {
+      const defaultStr = this.toStringPrimitive(defaultValue[i])
+      return defaultStr !== undefined && v === defaultStr
+    })
   }
 
   public getJsonValue(widget: WidgetInfo): string | undefined {
