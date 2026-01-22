@@ -80,6 +80,18 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         default=False,
         help="Run tests with the experimental Starlette server instead of Tornado",
     )
+    parser.addoption(
+        "--external-app-url",
+        action="store",
+        default=None,
+        help="Run tests against an externally hosted app URL instead of localhost",
+    )
+    parser.addoption(
+        "--browser-state-path",
+        action="store",
+        default=None,
+        help="Path to a Playwright storage state JSON file",
+    )
 
 
 def pytest_configure(config: pytest.Config) -> None:
@@ -89,6 +101,10 @@ def pytest_configure(config: pytest.Config) -> None:
     )
     config.addinivalue_line(
         "markers", "app_hash(hash): mark test to open the app with a URL hash"
+    )
+    config.addinivalue_line(
+        "markers",
+        "external_test: mark test as compatible with external app execution mode",
     )
 
 
@@ -110,6 +126,30 @@ def reorder_early_fixtures(metafunc: pytest.Metafunc) -> None:
 
 def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
     reorder_early_fixtures(metafunc)
+
+
+def _get_config_option_or_env(
+    pytestconfig: pytest.Config, option_name: str, env_name: str
+) -> str | None:
+    # `pytestconfig.getoption` is typed as `Any` in pytest, but for our `store`
+    # options (e.g. `--external-app-url`) we expect `str | None`.
+    raw_value = pytestconfig.getoption(option_name)
+    if raw_value is not None:
+        if not isinstance(raw_value, str):
+            raise pytest.UsageError(
+                f"Expected {option_name} to be a string, got {type(raw_value).__name__}."
+            )
+        value = raw_value.strip()
+        if value:
+            return value
+
+    env_raw_value = os.getenv(env_name)
+    if env_raw_value is not None:
+        env_value = env_raw_value.strip()
+        if env_value:
+            return env_value
+
+    return None
 
 
 class AsyncSubprocess:
@@ -286,6 +326,40 @@ def app_port(worker_id: str) -> int:
     return find_available_port()
 
 
+@pytest.fixture(scope="session")
+def external_app_url(pytestconfig: pytest.Config) -> str | None:
+    """Return the external app URL if configured via CLI or environment."""
+    value = _get_config_option_or_env(
+        pytestconfig, "--external-app-url", "STREAMLIT_E2E_EXTERNAL_APP_URL"
+    )
+    if value is None:
+        return None
+
+    parsed = parse.urlparse(value)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        raise pytest.UsageError(
+            "Invalid value for --external-app-url / STREAMLIT_E2E_EXTERNAL_APP_URL: "
+            f"{value!r}. Expected an absolute HTTP(S) URL, e.g. "
+            "'http://localhost:8501' or 'https://example.com/app'."
+        )
+
+    return value
+
+
+@pytest.fixture(scope="session")
+def browser_state_path(pytestconfig: pytest.Config) -> Path | None:
+    """Return a valid storage state path if configured via CLI or environment."""
+    value = _get_config_option_or_env(
+        pytestconfig, "--browser-state-path", "STREAMLIT_E2E_BROWSER_STATE_PATH"
+    )
+    if not value:
+        return None
+    path = Path(value).expanduser()
+    if not path.exists():
+        raise pytest.UsageError(f"Playwright storage state file not found at: {path}")
+    return path
+
+
 @pytest.fixture(scope="module")
 def app_server_extra_args(request: pytest.FixtureRequest) -> list[str]:
     """Fixture that returns extra arguments to pass to the Streamlit app server."""
@@ -300,8 +374,12 @@ def app_server(
     app_port: int,
     app_server_extra_args: list[str],
     request: pytest.FixtureRequest,
-) -> Generator[AsyncSubprocess, None, None]:
+    external_app_url: str | None,
+) -> Generator[AsyncSubprocess | None, None, None]:
     """Fixture that starts and stops the Streamlit app server."""
+    if external_app_url:
+        yield None
+        return
     streamlit_proc = start_app_server(
         app_port,
         request.module,
@@ -312,8 +390,16 @@ def app_server(
     print(streamlit_stdout, flush=True)
 
 
+@pytest.fixture(autouse=True)
+def skip_non_external_tests_in_external_mode(
+    request: pytest.FixtureRequest, external_app_url: str | None
+) -> None:
+    if external_app_url and request.node.get_closest_marker("external_test") is None:
+        pytest.skip("External app mode only supports tests marked 'external_test'.")
+
+
 @pytest.fixture
-def app(page: Page, app_port: int, request: pytest.FixtureRequest) -> Page:
+def app(page: Page, app_base_url: str, request: pytest.FixtureRequest) -> Page:
     """Fixture that opens the app."""
     marker = request.node.get_closest_marker("app_hash")
     hash_fragment = ""
@@ -322,7 +408,8 @@ def app(page: Page, app_port: int, request: pytest.FixtureRequest) -> Page:
 
     response: Response | None = None
     try:
-        response = page.goto(f"http://localhost:{app_port}/{hash_fragment}")
+        base = app_base_url.rstrip("/")
+        response = page.goto(f"{base}/{hash_fragment}")
     except Exception as e:
         print(e, flush=True)
 
@@ -341,6 +428,12 @@ def app(page: Page, app_port: int, request: pytest.FixtureRequest) -> Page:
     start_capture_traces(page)
     wait_for_app_loaded(page)
     return page
+
+
+@pytest.fixture(scope="module")
+def app_base_url(app_port: int, external_app_url: str | None) -> str:
+    """Return the base URL to use for app navigation."""
+    return external_app_url or f"http://localhost:{app_port}"
 
 
 @pytest.fixture
@@ -615,9 +708,16 @@ def browser_type_launch_args(
 
 @pytest.fixture(scope="session")
 def browser_context_args(
-    browser_context_args: dict[str, Any], browser_name: str
+    browser_context_args: dict[str, Any],
+    browser_name: str,
+    browser_state_path: Path | None,
 ) -> dict[str, Any]:
     """Fixture that adds clipboard permissions to the browser context for Chromium."""
+    if browser_state_path is not None:
+        browser_context_args = {
+            **browser_context_args,
+            "storage_state": str(browser_state_path),
+        }
     # Clipboard permissions are only supported in Chromium-based browsers
     if browser_name == "chromium":
         return {
