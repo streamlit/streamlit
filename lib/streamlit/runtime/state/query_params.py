@@ -96,12 +96,12 @@ def parse_url_param(value: str | list[str], value_type: str) -> Any:
         case "string_value":
             return val
         case "string_array_value":
-            # For repeated params or comma-separated values
+            # Repeated params: ?foo=a&foo=b -> ["a", "b"]
             return list(value) if isinstance(value, list) else [value]
         case "double_array_value":
-            # Comma-separated values - try to parse as floats, keep strings if that fails
-            # This allows deserializers to handle human-readable option values (select_slider)
-            parts = val.split(",")
+            # Repeated params: ?foo=1.5&foo=2.5 -> [1.5, 2.5]
+            # Also handles string values for select_slider option matching
+            parts = list(value) if isinstance(value, list) else [value]
             result_double: list[float | str] = []
             for part in parts:
                 try:
@@ -110,9 +110,9 @@ def parse_url_param(value: str | list[str], value_type: str) -> Any:
                     result_double.append(part)  # Keep as string for select_slider
             return result_double
         case "int_array_value":
-            # Comma-separated values - try to parse as ints, keep strings if that fails
-            # This allows deserializers to handle human-readable option values
-            parts = val.split(",")
+            # Repeated params: ?foo=1&foo=2 -> [1, 2]
+            # Also handles string values for option matching (pills, etc.)
+            parts = list(value) if isinstance(value, list) else [value]
             result_int: list[int | str] = []
             for part in parts:
                 try:
@@ -468,19 +468,25 @@ class QueryParams(MutableMapping[str, str]):
             return str(v)
 
         # Convert the value to a string representation for the URL
-        if value_type == "double_array_value":
-            # For slider ranges, join with comma
-            if isinstance(value, (list, tuple)):
-                str_value = ",".join(format_number(v) for v in value)
-            else:
-                str_value = format_number(value)
-        elif value_type in {"string_array_value", "int_array_value"}:
+        # All array types use repeated params: ?foo=a&foo=b
+        if value_type in {
+            "string_array_value",
+            "int_array_value",
+            "double_array_value",
+        }:
             if isinstance(value, (list, tuple)):
                 # Store as list for repeated params
-                self._query_params[param_key] = [str(v) for v in value]
+                self._query_params[param_key] = [
+                    format_number(v) if value_type == "double_array_value" else str(v)
+                    for v in value
+                ]
                 self._send_query_param_msg()
                 return
-            str_value = str(value)
+            str_value = (
+                format_number(value)
+                if value_type == "double_array_value"
+                else str(value)
+            )
         else:
             str_value = str(value)
 

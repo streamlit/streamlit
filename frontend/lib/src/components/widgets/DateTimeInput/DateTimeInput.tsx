@@ -97,8 +97,8 @@ function DateTimeInput({
         widgetId,
         queryParamKey,
         "string_array_value",
-        defaultValue,
-        "comma"
+        defaultValue
+        // Use default (repeated params) for consistency
       )
       return () => {
         widgetMgr.unregisterQueryParamBinding(widgetId)

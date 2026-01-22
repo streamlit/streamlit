@@ -353,7 +353,7 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
         queryParamKey,
         "int_array_value",
         defaultValue,
-        "comma",
+        undefined, // Use default (repeated params) for consistency
         optionStrings // Pass options for index-to-string conversion
       )
       return () => {

@@ -174,7 +174,7 @@ function Slider({
         queryParamKey,
         "double_array_value",
         defaultValue,
-        "comma", // Sliders use comma-separated values for ranges
+        undefined, // Use default (repeated params) for consistency
         sliderOptions // For select_slider: converts indices to option strings
       )
       return () => {

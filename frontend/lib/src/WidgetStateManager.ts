@@ -632,7 +632,7 @@ export class WidgetStateManager {
     })
     this.onWidgetValueChanged(widget.formId, source, fragmentId)
 
-    // Sync to URL if bound and from UI (comma-separated for ranges)
+    // Sync to URL if bound and from UI (repeated params for consistency)
     if (source.fromUi) {
       const binding = this.boundWidgets.get(widget.id)
       // For select_slider: convert indices to option strings for human-readable URLs
@@ -640,10 +640,10 @@ export class WidgetStateManager {
         const optionStrings = validValue.map(
           idx => binding.options?.[idx] ?? String(idx)
         )
-        this.syncCommaArrayToUrlIfBound(widget.id, optionStrings)
+        this.syncRepeatedArrayToUrlIfBound(widget.id, optionStrings)
       } else {
         // Regular slider: use numeric values
-        this.syncCommaArrayToUrlIfBound(
+        this.syncRepeatedArrayToUrlIfBound(
           widget.id,
           validValue.map(v => String(v))
         )
@@ -676,7 +676,7 @@ export class WidgetStateManager {
     })
     this.onWidgetValueChanged(widget.formId, source, fragmentId)
 
-    // Sync to URL if bound and from UI
+    // Sync to URL if bound and from UI (repeated params for consistency)
     if (source.fromUi) {
       const binding = this.boundWidgets.get(widget.id)
       // If binding has options, convert indices to option strings for human-readable URLs
@@ -684,10 +684,10 @@ export class WidgetStateManager {
         const optionStrings = value
           .map(idx => binding.options?.[idx])
           .filter((s): s is string => s !== undefined)
-        this.syncCommaArrayToUrlIfBound(widget.id, optionStrings)
+        this.syncRepeatedArrayToUrlIfBound(widget.id, optionStrings)
       } else {
         // Fallback to index values
-        this.syncCommaArrayToUrlIfBound(
+        this.syncRepeatedArrayToUrlIfBound(
           widget.id,
           value.map(v => String(v))
         )
@@ -786,7 +786,7 @@ export class WidgetStateManager {
 
   /**
    * Sync a comma-separated array value to URL if the widget is bound.
-   * Used for slider ranges and date ranges.
+   * Only used when urlFormat is explicitly set to "comma".
    */
   private syncCommaArrayToUrlIfBound(
     widgetId: string,

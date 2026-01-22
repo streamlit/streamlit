@@ -125,8 +125,8 @@ function DateInput({
         widgetId,
         queryParamKey,
         "string_array_value",
-        defaultValue,
-        "comma" // DateInput uses comma-separated for ranges
+        defaultValue
+        // Use default (repeated params) for consistency
       )
       return () => {
         widgetMgr.unregisterQueryParamBinding(widgetId)
