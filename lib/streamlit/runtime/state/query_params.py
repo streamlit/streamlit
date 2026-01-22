@@ -321,6 +321,10 @@ class QueryParams(MutableMapping[str, str]):
     ) -> None:
         """Register a widget binding to a query parameter.
 
+        If another widget was previously bound to this param_key, its binding
+        is replaced. The old widget's entry in _bindings_by_widget is cleaned up
+        to prevent orphaned references.
+
         Parameters
         ----------
         param_key : str
@@ -339,9 +343,15 @@ class QueryParams(MutableMapping[str, str]):
         """
         if param_key.lower() in PROTECTED_QUERY_PARAMS:
             raise StreamlitAPIException(
-                f"Cannot bind to protected query parameter '{param_key}'. "
-                f"Protected parameters: {', '.join(PROTECTED_QUERY_PARAMS)}"
+                f"Cannot bind to reserved query parameter '{param_key}'. "
+                f"'{EMBED_QUERY_PARAM}' and '{EMBED_OPTIONS_QUERY_PARAM}' are "
+                f"used internally for Streamlit's embed functionality."
             )
+
+        # Clean up old binding if a different widget was bound to this param
+        old_binding = self._bindings_by_param.get(param_key)
+        if old_binding and old_binding.widget_id != widget_id:
+            self._bindings_by_widget.pop(old_binding.widget_id, None)
 
         binding = WidgetBinding(
             widget_id=widget_id,
@@ -408,6 +418,29 @@ class QueryParams(MutableMapping[str, str]):
             The binding if found, None otherwise.
         """
         return self._bindings_by_widget.get(widget_id)
+
+    def remove_param(self, param_key: str) -> bool:
+        """Remove a query parameter without protection checks.
+
+        This is an internal method for use by SessionState when clearing
+        invalid URL-seeded values. It bypasses the bound param protection
+        since the binding system itself needs to clear these values.
+
+        Parameters
+        ----------
+        param_key : str
+            The query parameter key to remove.
+
+        Returns
+        -------
+        bool
+            True if the param was removed, False if it didn't exist.
+        """
+        if param_key in self._query_params:
+            del self._query_params[param_key]
+            self._send_query_param_msg()
+            return True
+        return False
 
     def set_initial_query_params(self, query_string: str) -> None:
         """Store the initial query params from the URL for session state seeding.

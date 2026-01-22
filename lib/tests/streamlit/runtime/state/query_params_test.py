@@ -653,12 +653,8 @@ class WidgetBindingTest(DeltaGeneratorTestCase):
         assert binding.value_type == "string_value"
         assert binding.script_hash == "hash_abc"
 
-    def test_bind_widget_overwrites_param_binding(self) -> None:
-        """Test that binding a new widget to the same param overwrites the param binding.
-
-        Note: The old widget's entry remains in _bindings_by_widget as a stale entry.
-        This is cleaned up during stale binding removal at the end of script runs.
-        """
+    def test_bind_widget_overwrites_param_binding_and_cleans_up_old(self) -> None:
+        """Test that binding a new widget to the same param overwrites and cleans up."""
         self.query_params.bind_widget(
             param_key="my_key",
             widget_id="widget_old",
@@ -681,6 +677,29 @@ class WidgetBindingTest(DeltaGeneratorTestCase):
 
         # New widget should be in _bindings_by_widget
         assert "widget_new" in self.query_params._bindings_by_widget
+
+        # Old widget should be removed from _bindings_by_widget (cleanup)
+        assert "widget_old" not in self.query_params._bindings_by_widget
+
+    def test_bind_widget_same_widget_same_param_no_cleanup(self) -> None:
+        """Test that re-binding same widget to same param doesn't cause issues."""
+        self.query_params.bind_widget(
+            param_key="my_key",
+            widget_id="widget_123",
+            value_type="string_value",
+            script_hash="hash_abc",
+        )
+        # Re-bind same widget (can happen on reruns)
+        self.query_params.bind_widget(
+            param_key="my_key",
+            widget_id="widget_123",
+            value_type="string_value",
+            script_hash="hash_abc",
+        )
+
+        # Widget should still be bound
+        assert self.query_params.is_bound("my_key")
+        assert "widget_123" in self.query_params._bindings_by_widget
 
     def test_unbind_widget_removes_binding(self) -> None:
         """Test that unbind_widget removes the binding from both registries."""
@@ -730,7 +749,7 @@ class ProtectedParamsBindingTest(DeltaGeneratorTestCase):
         self, _name: str, param_key: str
     ) -> None:
         """Test that binding to protected params raises StreamlitAPIException."""
-        with pytest.raises(StreamlitAPIException, match="Cannot bind to protected"):
+        with pytest.raises(StreamlitAPIException, match="Cannot bind to reserved"):
             self.query_params.bind_widget(
                 param_key=param_key,
                 widget_id="widget_123",
@@ -832,6 +851,42 @@ class InitialQueryParamsTest(DeltaGeneratorTestCase):
         """Test that get_initial_value returns None for missing params."""
         self.query_params.set_initial_query_params("foo=bar")
         assert self.query_params.get_initial_value("nonexistent") is None
+
+
+class RemoveParamTest(DeltaGeneratorTestCase):
+    """Tests for remove_param method."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.query_params = QueryParams()
+        self.query_params._query_params = {"foo": "bar", "baz": "qux"}
+
+    def test_remove_param_removes_existing_param(self) -> None:
+        """Test that remove_param removes an existing parameter."""
+        result = self.query_params.remove_param("foo")
+        assert result is True
+        assert "foo" not in self.query_params._query_params
+        assert "baz" in self.query_params._query_params
+
+    def test_remove_param_returns_false_for_nonexistent(self) -> None:
+        """Test that remove_param returns False for nonexistent param."""
+        result = self.query_params.remove_param("nonexistent")
+        assert result is False
+        # Original params unchanged
+        assert self.query_params._query_params == {"foo": "bar", "baz": "qux"}
+
+    def test_remove_param_sends_forward_message(self) -> None:
+        """Test that remove_param sends a forward message to update URL."""
+        self.query_params.remove_param("foo")
+        message = self.get_message_from_queue(0)
+        assert "baz=qux" in message.page_info_changed.query_string
+        assert "foo" not in message.page_info_changed.query_string
+
+    def test_remove_param_no_message_for_nonexistent(self) -> None:
+        """Test that no forward message is sent when param doesn't exist."""
+        self.query_params.remove_param("nonexistent")
+        with pytest.raises(IndexError):
+            self.get_message_from_queue(0)
 
 
 class SetCorrectedValueTest(DeltaGeneratorTestCase):

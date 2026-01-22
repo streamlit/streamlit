@@ -88,6 +88,12 @@ def register_widget(
         Optional binding for the widget's value to external state.
         Currently only "query-params" is supported, which binds the widget
         value to a URL query parameter. Requires a user-provided key.
+    formatted_options : list[str] or None
+        Optional list of formatted option strings for selection widgets
+        (radio, selectbox, multiselect, pills, segmented_control, select_slider).
+        Used for query param binding to support human-readable option strings
+        in URLs (e.g., ?color=Red instead of ?color=0) and to auto-correct
+        URLs when invalid options are filtered out.
 
     Returns
     -------
