@@ -39,7 +39,7 @@ def is_repl() -> bool:
     Detects standard Python REPL (via sys.flags.interactive) and
     IPython/other REPLs (via sys.ps1 prompt attribute).
     """
-    return hasattr(sys, "ps1") or sys.flags.interactive
+    return hasattr(sys, "ps1") or bool(sys.flags.interactive)
 
 
 def is_executable_in_path(name: str) -> bool:
