@@ -60,7 +60,6 @@ _os.environ["MPLBACKEND"] = "Agg"
 # Must be at the top, to avoid circular dependency.
 from streamlit import logger as _logger
 from streamlit import config as _config
-from streamlit.deprecation_util import deprecate_func_name as _deprecate_func_name
 from streamlit.version import STREAMLIT_VERSION_STRING as _STREAMLIT_VERSION_STRING
 
 # Give the package a version.
@@ -112,13 +111,8 @@ from streamlit.runtime.state import (
 )
 from streamlit.user_info import (
     UserInfoProxy as _UserInfoProxy,
-    DeprecatedUserInfoProxy as _DeprecatedUserInfoProxy,
     login as _login,
     logout as _logout,
-)
-from streamlit.commands.experimental_query_params import (
-    get_query_params as _get_query_params,
-    set_query_params as _set_query_params,
 )
 
 import streamlit.column_config as _column_config
@@ -280,32 +274,8 @@ logout = _logout
 # User
 user = _UserInfoProxy()
 
-# Experimental APIs
-experimental_user = _DeprecatedUserInfoProxy()
-
-_EXPERIMENTAL_QUERY_PARAMS_DEPRECATE_MSG = (
-    "Refer to our [docs page](https://docs.streamlit.io/develop/api-reference/caching-and-state/st.query_params) "
-    "for more information."
-)
-
-experimental_get_query_params = _deprecate_func_name(
-    _get_query_params,
-    "experimental_get_query_params",
-    "2024-04-11",
-    _EXPERIMENTAL_QUERY_PARAMS_DEPRECATE_MSG,
-    name_override="query_params",
-)
-experimental_set_query_params = _deprecate_func_name(
-    _set_query_params,
-    "experimental_set_query_params",
-    "2024-04-11",
-    _EXPERIMENTAL_QUERY_PARAMS_DEPRECATE_MSG,
-    name_override="query_params",
-)
-
-
 # make it possible to call streamlit.components.v1.html etc. by importing it here
 # import in the very end to avoid partially-initialized module import errors, because
 # streamlit.components.v1 also uses some streamlit imports
-import streamlit.components.v1
+import streamlit.components.v1  # noqa: F401
 import streamlit.components.v2  # noqa: F401

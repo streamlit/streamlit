@@ -270,7 +270,7 @@ class MultiSelectMixin:
         placeholder: str | None = None,
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
-        accept_new_options: Literal[False, True] | bool = False,
+        accept_new_options: bool = False,
         width: WidthWithoutContent = "stretch",
     ) -> list[T] | list[T | str]:
         r"""Display a multiselect widget.

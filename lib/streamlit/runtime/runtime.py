@@ -345,7 +345,7 @@ class Runtime:
         async_objs = self._get_async_objs()
 
         def stop_on_eventloop() -> None:
-            if self._state in (RuntimeState.STOPPING, RuntimeState.STOPPED):
+            if self._state in {RuntimeState.STOPPING, RuntimeState.STOPPED}:
                 return
 
             _LOGGER.debug("Runtime stopping...")
@@ -411,7 +411,7 @@ class Runtime:
                 "This should never happen."
             )
 
-        if self._state in (RuntimeState.STOPPING, RuntimeState.STOPPED):
+        if self._state in {RuntimeState.STOPPING, RuntimeState.STOPPED}:
             raise RuntimeStoppedError(f"Can't connect_session (state={self._state})")
 
         session_id = self._session_mgr.connect_session(
@@ -510,7 +510,7 @@ class Runtime:
         -----
         Threading: UNSAFE. Must be called on the eventloop thread.
         """
-        if self._state in (RuntimeState.STOPPING, RuntimeState.STOPPED):
+        if self._state in {RuntimeState.STOPPING, RuntimeState.STOPPED}:
             raise RuntimeStoppedError(f"Can't handle_backmsg (state={self._state})")
 
         session_info = self._session_mgr.get_active_session_info(session_id)
@@ -538,7 +538,7 @@ class Runtime:
         -----
         Threading: UNSAFE. Must be called on the eventloop thread.
         """
-        if self._state in (RuntimeState.STOPPING, RuntimeState.STOPPED):
+        if self._state in {RuntimeState.STOPPING, RuntimeState.STOPPED}:
             raise RuntimeStoppedError(
                 f"Can't handle_backmsg_deserialization_exception (state={self._state})"
             )
@@ -555,11 +555,11 @@ class Runtime:
 
     @property
     async def is_ready_for_browser_connection(self) -> tuple[bool, str]:
-        if self._state not in (
+        if self._state not in {
             RuntimeState.INITIAL,
             RuntimeState.STOPPING,
             RuntimeState.STOPPED,
-        ):
+        }:
             return True, "ok"
 
         return False, "unavailable"

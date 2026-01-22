@@ -15,7 +15,7 @@
 import pytest
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.conftest import ImageCompareFunction, wait_until
 
 
 def test_main_menu_images(themed_app: Page, assert_snapshot: ImageCompareFunction):
@@ -99,3 +99,74 @@ def test_renders_clear_cache_dialog_properly(
         "Are you sure you want to clear the app's function caches?"
     )
     assert_snapshot(dialog.get_by_role("dialog"), name="clear_cache_dialog")
+
+
+def test_cached_preference_persists_on_reload(app: Page):
+    """Test that the cached preference persists across full page reload."""
+    # Set the browser preference to light to ensure user preference overrides system preference
+    app.emulate_media(color_scheme="light")
+
+    # Explicitly set dark theme preference
+    app.get_by_test_id("stMainMenu").click()
+    app.get_by_text("Settings").click()
+    app.get_by_test_id("stSelectbox").get_by_text("Use system setting").click()
+    app.get_by_test_id("stSelectboxVirtualDropdown").get_by_text("Dark").click()
+    app.get_by_role("button", name="Close").click()
+
+    # Hard reload the app
+    app.goto(app.url)
+
+    # Check that the dark theme preference persists
+    app.get_by_test_id("stMainMenu").click()
+    app.get_by_text("Settings").click()
+    expect(app.get_by_text("Dark")).to_be_visible()
+
+
+def test_auto_theme_recalibrates_on_system_change(app: Page):
+    """Test that the auto theme recalibrates on underlying system preference change."""
+    # The browser preference starts in light mode
+    app.emulate_media(color_scheme="light")
+    app.get_by_test_id("stMainMenu").click()
+    app.get_by_text("Settings").click()
+
+    # The auto theme should be selected
+    expect(app.get_by_text("Use system setting")).to_be_visible()
+    app.get_by_role("button", name="Close").click()
+
+    # Check that auto translates to light theme
+    app_background = app.get_by_test_id("stApp")
+    light_background = app_background.evaluate(
+        "el => getComputedStyle(el).backgroundColor"
+    )
+    wait_until(
+        app,
+        lambda: app_background.evaluate("el => getComputedStyle(el).backgroundColor")
+        == light_background,
+    )
+
+    # Switch to explicit light theme
+    app.get_by_test_id("stMainMenu").click()
+    app.get_by_text("Settings").click()
+    app.get_by_test_id("stSelectbox").get_by_text("Use system setting").click()
+    app.get_by_test_id("stSelectboxVirtualDropdown").get_by_text("Light").click()
+    app.get_by_role("button", name="Close").click()
+
+    # The browser preference changes to dark mode
+    app.emulate_media(color_scheme="dark")
+    app.reload()
+
+    # Select the auto theme again
+    app.get_by_test_id("stMainMenu").click()
+    app.get_by_text("Settings").click()
+    app.get_by_test_id("stSelectbox").get_by_text("Light").click()
+    app.get_by_test_id("stSelectboxVirtualDropdown").get_by_text(
+        "Use system setting"
+    ).click()
+    app.get_by_role("button", name="Close").click()
+
+    # Check that auto translates to dark theme
+    wait_until(
+        app,
+        lambda: app_background.evaluate("el => getComputedStyle(el).backgroundColor")
+        != light_background,
+    )

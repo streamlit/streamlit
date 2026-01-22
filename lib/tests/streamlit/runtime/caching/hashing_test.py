@@ -323,9 +323,9 @@ class HashTest(unittest.TestCase):
         assert get_hash(abs) != get_hash(type)
 
     def test_regex(self):
-        p2 = re.compile(".*")
-        p1 = re.compile(".*")
-        p3 = re.compile(".*", re.IGNORECASE)
+        p2 = re.compile(r".*")
+        p1 = re.compile(r".*")
+        p3 = re.compile(r".*", re.IGNORECASE)
         assert get_hash(p1) == get_hash(p2)
         assert get_hash(p1) != get_hash(p3)
 
@@ -610,8 +610,8 @@ class HashTest(unittest.TestCase):
         temp1 = tempfile.NamedTemporaryFile()
         temp2 = tempfile.NamedTemporaryFile()
 
-        with open(__file__) as f:
-            with open(__file__) as g:
+        with open(__file__, encoding="utf-8") as f:
+            with open(__file__, encoding="utf-8") as g:
                 assert get_hash(f) == get_hash(g)
 
             assert get_hash(f) != get_hash(temp1)
@@ -620,7 +620,7 @@ class HashTest(unittest.TestCase):
         assert get_hash(temp1) != get_hash(temp2)
 
     def test_file_position(self):
-        with open(__file__) as f:
+        with open(__file__, encoding="utf-8") as f:
             h1 = get_hash(f)
             assert h1 == get_hash(f)
             f.readline()

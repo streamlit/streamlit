@@ -126,12 +126,9 @@ def docstrings():
         """Multiline docstring.
         Should not be printed.
         """
-        pass
 
     class Foo:
         """Class docstring. Should not be printed."""
-
-        pass
 
     nested()
 
@@ -141,7 +138,6 @@ docstrings()
 
 def my_func():
     """my_func: this help block should be printed."""
-    pass
 
 
 my_func

@@ -89,7 +89,7 @@ def _mock_git_repo(
 
         if diff_paths is not None:
 
-            class _DiffObj:
+            class _DiffObj:  # noqa: B903
                 def __init__(self, path: str) -> None:
                     self.a_path = path
 

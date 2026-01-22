@@ -56,7 +56,7 @@ HELP_TYPES: Final[tuple[type[Any], ...]] = (
 )
 
 
-class StreamingOutput(list[Any]):
+class StreamingOutput(list[Any]):  # noqa: FURB189
     pass
 
 
@@ -178,8 +178,7 @@ class WriteMixin:
 
         def flush_stream_response() -> None:
             """Write the full response to the app."""
-            nonlocal streamed_response
-            nonlocal stream_container
+            nonlocal streamed_response, stream_container
 
             if streamed_response and stream_container:
                 # Replace the stream_container element the full response

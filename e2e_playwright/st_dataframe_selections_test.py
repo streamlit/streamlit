@@ -492,7 +492,7 @@ def test_selection_state_remains_after_unmounting(
     _expect_multi_row_multi_column_selection(app)
 
     # Click button to unmount the component
-    app.get_by_test_id("stButton").locator("button").click()
+    app.get_by_role("button", name="Create some elements to").click()
     wait_for_app_run(app, 4000)
 
     expect(canvas).to_be_visible()
@@ -732,5 +732,67 @@ def test_multi_row_column_and_cell_select(
         app,
         "Dataframe multi-row, multi-column & multi-cell selection:",
         "{'selection': {'rows': [], 'columns': [], 'cells': []}}",
+        exact_match=True,
+    )
+
+
+def _get_persistent_selection_df(app: Page) -> Locator:
+    return get_element_by_key(app, "persistent_selection_df").get_by_test_id(
+        "stDataFrame"
+    )
+
+
+def test_selection_persists_after_data_update(app: Page):
+    """Test that row selections persist when data changes but key remains the same.
+
+    This verifies the key_as_main_identity feature for st.dataframe selections.
+    When a key is provided and selection_mode stays the same, selections should
+    be preserved even when the underlying data changes.
+    """
+    # First scroll to the bottom of the page to ensure the test section is loaded
+    update_button = get_element_by_key(app, "update_data_btn").locator("button")
+    update_button.scroll_into_view_if_needed()
+    expect(update_button).to_be_visible()
+
+    canvas = _get_persistent_selection_df(app)
+    expect_canvas_to_be_visible(canvas)
+    canvas.scroll_into_view_if_needed()
+
+    # Initially no selection
+    expect_prefixed_markdown(
+        app,
+        "Persistent selection:",
+        "{'selection': {'rows': [], 'columns': [], 'cells': []}}",
+        exact_match=True,
+    )
+    expect_prefixed_markdown(app, "Data update count:", "0", exact_match=True)
+
+    # Select rows 0 and 2
+    select_row(canvas, 1)
+    select_row(canvas, 3)
+    wait_for_app_run(app)
+
+    expect_prefixed_markdown(
+        app,
+        "Persistent selection:",
+        "{'selection': {'rows': [0, 2], 'columns': [], 'cells': []}}",
+        exact_match=True,
+    )
+
+    # Click the button to update data (changes the dataframe content)
+    # Scroll to button again after dataframe selections (page may have scrolled)
+    update_button.scroll_into_view_if_needed()
+    expect(update_button).to_be_visible()
+    update_button.click()
+    wait_for_app_run(app)
+
+    # Data update count should be incremented
+    expect_prefixed_markdown(app, "Data update count:", "1", exact_match=True)
+
+    # Selection should persist after data update
+    expect_prefixed_markdown(
+        app,
+        "Persistent selection:",
+        "{'selection': {'rows': [0, 2], 'columns': [], 'cells': []}}",
         exact_match=True,
     )

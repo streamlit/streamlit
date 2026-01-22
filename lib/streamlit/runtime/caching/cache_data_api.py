@@ -16,7 +16,7 @@
 
 from __future__ import annotations
 
-import pickle
+import pickle  # noqa: S403
 import threading
 from typing import (
     TYPE_CHECKING,
@@ -654,13 +654,13 @@ class CacheDataAPI:
         else:
             persist_string = persist
 
-        if persist_string not in (None, "disk"):
+        if persist_string not in {None, "disk"}:
             # We'll eventually have more persist options.
             raise StreamlitAPIException(
                 f"Unsupported persist option '{persist}'. Valid values are 'disk' or None."
             )
 
-        if scope not in ("global", "session"):
+        if scope not in {"global", "session"}:
             raise StreamlitAPIException(
                 f"Unsupported scope option '{scope}'. Valid values are 'global' or 'session'."
             )

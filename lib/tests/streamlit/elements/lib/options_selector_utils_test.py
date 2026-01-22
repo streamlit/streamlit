@@ -518,7 +518,7 @@ class TestValidateAndSyncValueWithOptions(unittest.TestCase):
         from copy import deepcopy
 
         # Custom class without __eq__ implementation
-        class MyOption:
+        class MyOption:  # noqa: B903
             def __init__(self, value: str):
                 self.value = value
 
@@ -619,7 +619,7 @@ class TestValidateMultiselectWithCustomObjects(unittest.TestCase):
         """Test that custom objects without __eq__ work with format_func validation."""
 
         # Custom class without __eq__ implementation
-        class MyOption:
+        class MyOption:  # noqa: B903
             def __init__(self, value: str):
                 self.value = value
 
@@ -649,7 +649,7 @@ class TestValidateMultiselectWithCustomObjects(unittest.TestCase):
     def test_custom_objects_partial_match_with_format_func(self):
         """Test that only matching custom objects are kept."""
 
-        class MyOption:
+        class MyOption:  # noqa: B903
             def __init__(self, value: str):
                 self.value = value
 
@@ -708,7 +708,7 @@ class TestValidateMultiselectWithCustomObjects(unittest.TestCase):
         but the format_func can't handle strings (e.g., lambda x: x.attribute).
         """
 
-        class MyOption:
+        class MyOption:  # noqa: B903
             def __init__(self, value: str):
                 self.value = value
 

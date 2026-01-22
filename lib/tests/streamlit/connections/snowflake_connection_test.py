@@ -102,6 +102,38 @@ class SnowflakeConnectionTest(unittest.TestCase):
         "streamlit.connections.snowflake_connection.SnowflakeConnection._connect",
         MagicMock(),
     )
+    def test_query_caches_separately_for_different_params(self):
+        """Test that different params values create separate cache entries."""
+        # Caching functions rely on an active script run ctx
+        add_script_run_ctx(threading.current_thread(), create_mock_script_run_ctx())
+
+        mock_cursor = MagicMock()
+        mock_cursor.fetch_pandas_all = MagicMock(return_value="i am a dataframe")
+        conn = SnowflakeConnection("my_snowflake_connection_params")
+        conn._instance.cursor.return_value = mock_cursor
+
+        # Call with different params - should result in separate cache entries
+        conn.query("SELECT * FROM t WHERE status = ?", params=["active"])
+        conn.query("SELECT * FROM t WHERE status = ?", params=["inactive"])
+        # Call again with same params - should hit cache
+        conn.query("SELECT * FROM t WHERE status = ?", params=["active"])
+        conn.query("SELECT * FROM t WHERE status = ?", params=["inactive"])
+
+        # Should have been called twice (once for each unique params value)
+        assert conn._instance.cursor.call_count == 2
+        assert mock_cursor.execute.call_count == 2
+        # Verify execute was called with the correct params
+        mock_cursor.execute.assert_any_call(
+            "SELECT * FROM t WHERE status = ?", params=["active"]
+        )
+        mock_cursor.execute.assert_any_call(
+            "SELECT * FROM t WHERE status = ?", params=["inactive"]
+        )
+
+    @patch(
+        "streamlit.connections.snowflake_connection.SnowflakeConnection._connect",
+        MagicMock(),
+    )
     def test_does_not_reset_cache_when_ttl_changes(self):
         # Caching functions rely on an active script run ctx
         add_script_run_ctx(threading.current_thread(), create_mock_script_run_ctx())

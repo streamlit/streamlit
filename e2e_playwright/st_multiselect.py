@@ -222,7 +222,7 @@ else:
 # Test for issue #13646: Custom class objects without __eq__ should work with format_func
 # This tests that selections are preserved for custom class objects after script reruns
 # when the widget uses a format_func to display the options.
-class CustomOption:
+class CustomOption:  # noqa: B903
     """Custom class without __eq__ implementation.
 
     This simulates the common pattern where users have custom objects with a

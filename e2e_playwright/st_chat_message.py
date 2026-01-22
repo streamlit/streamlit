@@ -56,11 +56,11 @@ at. Ut et dui molestie, iaculis magna sed.
 
 with st.chat_message("dog", avatar="https://static.streamlit.io/examples/dog.jpg"):
     st.write("Woof woof! I'm a dog and I like charts:")
-    st.line_chart(df, use_container_width=True)
+    st.line_chart(df, width="stretch")
 
 cat = st.chat_message("cat", avatar="https://static.streamlit.io/examples/cat.jpg")
 cat.write("I'm a cat and I like this dataset:")
-cat.dataframe(df, use_container_width=True)
+cat.dataframe(df, width="stretch")
 cat.text_input("What's your name?")
 
 

@@ -113,10 +113,6 @@ export { ScriptRunState } from "./ScriptRunState"
 export { SessionInfo } from "./SessionInfo"
 export {
   AUTO_THEME_NAME,
-  CUSTOM_THEME_AUTO_NAME,
-  CUSTOM_THEME_DARK_NAME,
-  CUSTOM_THEME_LIGHT_NAME,
-  CUSTOM_THEME_NAME,
   baseTheme,
   convertRemToPx,
   createAutoTheme,
@@ -124,20 +120,26 @@ export {
   createPresetThemes,
   createSidebarTheme,
   createTheme,
+  CUSTOM_THEME_AUTO_NAME,
+  CUSTOM_THEME_DARK_NAME,
+  CUSTOM_THEME_LIGHT_NAME,
+  CUSTOM_THEME_NAME,
   customTheme,
   darkTheme,
-  getCachedTheme,
+  getCachedThemeSelection,
   getDefaultTheme,
   getHostSpecifiedTheme,
   getHostSpecifiedThemeOnly,
+  getThemeSelectionFromThemeConfig,
   getSystemThemePreference,
   globalStyles,
   hasLightBackgroundColor,
   isPresetTheme,
   lightTheme,
-  mapCachedThemeToAvailableTheme,
+  getPreferredTheme,
+  mapCachedThemeSelectionToAvailableTheme,
   removeCachedTheme,
-  setCachedTheme,
+  setCachedThemeSelection,
   sortThemeInputKeys,
   toExportedTheme,
   toThemeInput,
@@ -146,6 +148,7 @@ export type {
   CachedTheme,
   EmotionTheme,
   PresetThemeName,
+  ThemeSelection,
   ThemeConfig,
 } from "./theme"
 export { default as emotionLightTheme } from "./theme/emotionLightTheme"
@@ -187,5 +190,5 @@ export {
   preserveEmbedQueryParams,
   setCookie,
 } from "./util/utils"
-export { WidgetStateManager, createFormsData } from "./WidgetStateManager"
+export { createFormsData, WidgetStateManager } from "./WidgetStateManager"
 export type { FormsData } from "./WidgetStateManager"

@@ -21,15 +21,15 @@
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
     # We fix ruff to a version to be in sync with the dev-requirements:
-    rev: v0.14.10
+    rev: v0.14.13
     hooks:
       # Run the linter.
-      - id: ruff
+      - id: ruff-check
         args: [--fix]
-        files: \.py$|\.pyi$
+        types_or: [python, pyi]
       # Run the formatter.
       - id: ruff-format
-        files: \.py$|\.pyi$
+        types_or: [python, pyi]
   - repo: local
     hooks:
       # Script ./scripts/run_in_subdirectory.py was used to work around a

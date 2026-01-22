@@ -46,7 +46,7 @@ def is_repl() -> bool:
 
     # <stdin> is what the basic Python REPL calls the root frame's
     # filename, and <string> is what iPython sometimes calls it.
-    return filename in ("<stdin>", "<string>")
+    return filename in {"<stdin>", "<string>"}
 
 
 def is_executable_in_path(name: str) -> bool:

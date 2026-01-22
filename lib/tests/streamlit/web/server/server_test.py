@@ -569,9 +569,11 @@ class SslServerTest(unittest.TestCase):
         ):
             start_listening(mock.MagicMock())
         assert logs.output == [
-            "ERROR:streamlit.web.server.server:Options 'server.sslCertFile' and "
-            "'server.sslKeyFile' must be set together. Set missing options or delete "
-            "existing options."
+            (
+                "ERROR:streamlit.web.server.server:Options 'server.sslCertFile' and "
+                "'server.sslKeyFile' must be set together. Set missing options or delete "
+                "existing options."
+            )
         ]
 
     @parameterized.expand(["server.sslCertFile", "server.sslKeyFile"])
