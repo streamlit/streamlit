@@ -187,9 +187,49 @@ export function useBasicWidgetState<
 ] {
   const getDefaultState = useCallback<(wm: WidgetStateManager, el: P) => T>(
     (_wm, el) => {
-      return getDefaultStateFromProto(el)
+      // If setValue is true, use the current value from the proto instead of default.
+      // This handles the case where the backend has seeded a value (e.g., from URL params)
+      // and we need to initialize with that value, not the default.
+      if (el.setValue) {
+        return getCurrStateFromProto(el)
+      }
+
+      // Also check if the proto has a non-default value even if setValue is false.
+      // This handles React Strict Mode where setValue was cleared by the first mount
+      // but the seeded value is still in element.value.
+      const currValue = getCurrStateFromProto(el)
+      const defaultValue = getDefaultStateFromProto(el)
+
+      // For arrays, compare by value not reference. Also check for non-empty arrays.
+      // Empty arrays should use defaultValue since they indicate uninitialized state.
+      if (Array.isArray(currValue) && Array.isArray(defaultValue)) {
+        // If currValue is empty, use defaultValue
+        if (currValue.length === 0) {
+          return defaultValue
+        }
+        // If currValue has different values than defaultValue, use currValue
+        if (
+          currValue.length !== defaultValue.length ||
+          currValue.some((v, i) => v !== defaultValue[i])
+        ) {
+          return currValue
+        }
+        // Arrays are equal, return defaultValue
+        return defaultValue
+      }
+
+      // For non-array values, use simple comparison
+      if (
+        currValue !== defaultValue &&
+        currValue !== null &&
+        currValue !== undefined
+      ) {
+        return currValue
+      }
+
+      return defaultValue
     },
-    [getDefaultStateFromProto]
+    [getDefaultStateFromProto, getCurrStateFromProto]
   )
 
   const [currentValue, setNextValueWithSource] = useBasicWidgetClientState({
