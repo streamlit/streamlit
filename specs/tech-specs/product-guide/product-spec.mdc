@@ -1,0 +1,111 @@
+---
+description: Guidelines for writing product specs
+globs: specs/**/*.md
+alwaysApply: false
+---
+
+# Product Spec Writing Guide
+
+Use this when writing or reviewing product specifications for Streamlit features.
+
+## Resources
+
+- **Template**: `specs/0000-template/product-spec.md`
+- **Process**: `specs/README.md`
+
+## The 10 Most Important Principles
+
+### 1. Problem First, Solution Second
+
+Never start with what you want to build. Start with why. Include:
+
+- User pain points with concrete examples
+- GitHub issues with upvote counts
+- Current workarounds and their limitations
+
+### 2. Show Code, Not Just Words
+
+Every API proposal needs concrete examples:
+
+```python
+# Show simplest usage
+st.new_feature("label")
+
+# Then progressive complexity
+st.new_feature("label", advanced_option=True)
+```
+
+### 3. Follow Existing Patterns Religiously
+
+Reference existing Streamlit commands obsessively and ensure that the same parameter name = same behavior everywhere.
+
+### 4. Present Options, Not Edicts
+
+Good specs show 2-3 API options with tradeoffs.
+
+### 5. Start Minimal, Plan for Growth
+
+- Ship the smallest useful API, but stay consistent with existing patterns.
+- Document potential future extensions and why they're out of scope for V1.
+
+### 6. Avoid Breaking Changes
+
+- Never deprecate widely-used patterns.
+- Extend existing parameters rather than adding conflicting ones
+
+### 7. Anticipate Edge Cases
+
+Document explicitly what happens with empty/null input, how it works in forms, fragments, sidebar, columns, and what errors can occur, and similar edge cases.
+
+### Parameter Order
+
+1. `label` (positional) — Primary identifier
+2. Type-specific params (positional OK)
+3. `key`, `help` (positional OK)
+4. `on_change`, `args`, `kwargs`
+5. `*` — Keyword-only separator
+6. Visual/enhancement params (`icon`, `placeholder`)
+7. State modifiers (`disabled`)
+8. Layout (`width`, `height`)
+
+### Naming Conventions
+
+| Use | Don't Use |
+|-----|-----------|
+| `label` | `title`, `name`, `text` |
+| `options` | `items`, `choices` |
+| `key` | `id` |
+| `help` | `tooltip`, `hint` |
+| `on_change` | `callback`, `handler` |
+
+### Prefer Enums Over Booleans
+
+```python
+# ❌ Bad: Boolean limits expansion
+st.text_input("Password", password=True)
+
+# ✅ Good: Enum allows growth
+st.text_input("Password", type="password")
+```
+
+### Return Types
+
+| Element Type | Returns |
+|--------------|---------|
+| Display elements | `DeltaGenerator` |
+| Widgets | Value type (`str`, `bool`, `T`) |
+| Control flow | `NoReturn` |
+| Containers | `DeltaGenerator` |
+
+## Spec Checklist
+
+Before requesting review:
+
+- [ ] Problem statement has GitHub issues with upvote counts
+- [ ] API shows full function signature with types
+- [ ] At least one simple code example
+- [ ] Platform support matrix included
+- [ ] Existing patterns are referenced
+- [ ] Edge cases documented
+- [ ] Eng estimate included
+- [ ] Out-of-scope section explains what's NOT included
