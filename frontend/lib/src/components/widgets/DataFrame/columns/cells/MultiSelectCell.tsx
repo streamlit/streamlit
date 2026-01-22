@@ -126,7 +126,7 @@ export const prepareOptions = (
     return {
       value: option.value,
       label: option.label ?? option.value ?? "",
-      color: option.color ?? undefined,
+      color: option.color,
     }
   })
 }
@@ -146,7 +146,7 @@ export const resolveValues = (
   options: readonly SelectOption[],
   allowDuplicates?: boolean
 ): { value: string; label?: string; color?: string }[] => {
-  if (values === undefined || values === null) {
+  if (isNullOrUndefined(values)) {
     return []
   }
 
@@ -552,7 +552,7 @@ const renderer: CustomRenderer<MultiSelectCell> = {
     const { ctx, theme, rect, highlighted } = args
     const { values, options: optionsIn } = cell.data
 
-    if (values === undefined || values === null) {
+    if (isNullOrUndefined(values)) {
       return true
     }
 
