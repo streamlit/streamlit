@@ -14,7 +14,6 @@
 
 from __future__ import annotations
 
-import os
 import platform
 import re
 import sys
@@ -35,18 +34,12 @@ def is_pex() -> bool:
 
 
 def is_repl() -> bool:
-    """Return True if running in the Python REPL."""
-    import inspect
+    """Return True if running in an interactive Python environment.
 
-    root_frame = inspect.stack()[-1]
-    filename = root_frame[1]  # 1 is the filename field in this tuple.
-
-    if filename.endswith(os.path.join("bin", "ipython")):
-        return True
-
-    # <stdin> is what the basic Python REPL calls the root frame's
-    # filename, and <string> is what iPython sometimes calls it.
-    return filename in {"<stdin>", "<string>"}
+    Detects standard Python REPL (via sys.flags.interactive) and
+    IPython/other REPLs (via sys.ps1 prompt attribute).
+    """
+    return hasattr(sys, "ps1") or sys.flags.interactive
 
 
 def is_executable_in_path(name: str) -> bool:
