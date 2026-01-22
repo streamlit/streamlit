@@ -59,6 +59,8 @@ export interface UseWidgetStateParams {
   fragmentId?: string
   originalNumRows: number
   originalColumns: BaseColumn[]
+  /** Hash identifying the underlying data content. Used to reset editing state when data changes. */
+  dataHash: string
 }
 
 export interface UseWidgetStateReturn {
@@ -109,6 +111,7 @@ function useWidgetState({
   fragmentId,
   originalNumRows,
   originalColumns,
+  dataHash,
 }: UseWidgetStateParams): UseWidgetStateReturn {
   const { READ_ONLY } = ArrowProto.EditingMode
 
@@ -118,14 +121,14 @@ function useWidgetState({
   )
   const [numRows, setNumRows] = useState(editingStateRef.current.getNumRows())
 
-  // Reset editing state when originalNumRows changes.
+  // Reset editing state when originalNumRows or dataHash changes.
   // Using useExecuteWhenChanged instead of useEffect to follow React best practices
   // for adjusting state when props change (avoids extra render cycle).
   // See: https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
   useExecuteWhenChanged(() => {
     editingStateRef.current = new EditingState(originalNumRows)
     setNumRows(editingStateRef.current.getNumRows())
-  }, [originalNumRows])
+  }, [originalNumRows, dataHash])
 
   /**
    * Resets the editing state to a fresh state

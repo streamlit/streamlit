@@ -82,6 +82,7 @@ describe("useWidgetState hook", () => {
           fragmentId: undefined,
           originalNumRows: 10,
           originalColumns: [],
+          dataHash: "test-hash",
         })
       )
 
@@ -101,6 +102,7 @@ describe("useWidgetState hook", () => {
             fragmentId: undefined,
             originalNumRows,
             originalColumns: [],
+            dataHash: "test-hash",
           }),
         { initialProps: { originalNumRows: 10 } }
       )
@@ -113,6 +115,42 @@ describe("useWidgetState hook", () => {
       expect(result.current.editingState.current.getNumRows()).toBe(20)
     })
 
+    it("resets editingState when dataHash changes", () => {
+      const columns = [createMockColumn("col1", 0)]
+
+      const { result, rerender } = renderHook(
+        ({ dataHash }) =>
+          useWidgetState({
+            element: ArrowProto.create({
+              editingMode: ArrowProto.EditingMode.FIXED,
+            }),
+            widgetMgr: undefined,
+            fragmentId: undefined,
+            originalNumRows: 10,
+            originalColumns: columns,
+            dataHash,
+          }),
+        { initialProps: { dataHash: "hash-1" } }
+      )
+
+      expect(result.current.numRows).toBe(10)
+
+      // Add a row to simulate user edits
+      act(() => {
+        result.current.editingState.current.addRow(new Map())
+        result.current.updateNumRows()
+      })
+
+      expect(result.current.numRows).toBe(11)
+
+      // Change dataHash to simulate data content change
+      rerender({ dataHash: "hash-2" })
+
+      // Editing state should be reset, numRows back to original
+      expect(result.current.numRows).toBe(10)
+      expect(result.current.editingState.current.getNumRows()).toBe(10)
+    })
+
     it("updateNumRows syncs component state with editing state", () => {
       const { result } = renderHook(() =>
         useWidgetState({
@@ -123,6 +161,7 @@ describe("useWidgetState hook", () => {
           fragmentId: undefined,
           originalNumRows: 10,
           originalColumns: [createMockColumn("col1", 0)],
+          dataHash: "test-hash",
         })
       )
 
@@ -163,6 +202,7 @@ describe("useWidgetState hook", () => {
           fragmentId: "test-fragment",
           originalNumRows: 5,
           originalColumns: columns,
+          dataHash: "test-hash",
         })
       )
 
@@ -203,6 +243,7 @@ describe("useWidgetState hook", () => {
           fragmentId: undefined,
           originalNumRows: 5,
           originalColumns: [],
+          dataHash: "test-hash",
         })
       )
 
@@ -237,6 +278,7 @@ describe("useWidgetState hook", () => {
           fragmentId: "test-fragment",
           originalNumRows: 0,
           originalColumns: columns,
+          dataHash: "test-hash",
         })
       )
 
@@ -271,6 +313,7 @@ describe("useWidgetState hook", () => {
           fragmentId: "test-fragment",
           originalNumRows: 10,
           originalColumns: columns,
+          dataHash: "test-hash",
         })
       )
 
@@ -319,6 +362,7 @@ describe("useWidgetState hook", () => {
           fragmentId: "test-fragment",
           originalNumRows: 10,
           originalColumns: columns,
+          dataHash: "test-hash",
         })
       )
 
@@ -366,6 +410,7 @@ describe("useWidgetState hook", () => {
           fragmentId: "test-fragment",
           originalNumRows: 10,
           originalColumns: columns,
+          dataHash: "test-hash",
         })
       )
 
@@ -414,6 +459,7 @@ describe("useWidgetState hook", () => {
           fragmentId: "test-fragment",
           originalNumRows: 10,
           originalColumns: columns,
+          dataHash: "test-hash",
         })
       )
 
@@ -461,6 +507,7 @@ describe("useWidgetState hook", () => {
           fragmentId: "test-fragment",
           originalNumRows: 10,
           originalColumns: columns,
+          dataHash: "test-hash",
         })
       )
 
@@ -503,6 +550,7 @@ describe("useWidgetState hook", () => {
           fragmentId: undefined,
           originalNumRows: 10,
           originalColumns: [],
+          dataHash: "test-hash",
         })
       )
 
@@ -529,6 +577,7 @@ describe("useWidgetState hook", () => {
           fragmentId: undefined,
           originalNumRows: 10,
           originalColumns: [],
+          dataHash: "test-hash",
         })
       )
 
@@ -560,6 +609,7 @@ describe("useWidgetState hook", () => {
           fragmentId: undefined,
           originalNumRows: 10,
           originalColumns: [],
+          dataHash: "test-hash",
         })
       )
 
@@ -601,6 +651,7 @@ describe("useWidgetState hook", () => {
           fragmentId: undefined,
           originalNumRows: 10,
           originalColumns: columns,
+          dataHash: "test-hash",
         })
       )
 
@@ -648,6 +699,7 @@ describe("useWidgetState hook", () => {
           fragmentId: undefined,
           originalNumRows: 10,
           originalColumns: columns,
+          dataHash: "test-hash",
         })
       )
 
@@ -691,6 +743,7 @@ describe("useWidgetState hook", () => {
           fragmentId: undefined,
           originalNumRows: 10,
           originalColumns: columns,
+          dataHash: "test-hash",
         })
       )
 
