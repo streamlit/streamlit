@@ -464,6 +464,46 @@ def _apply_dataframe_edits(
         _apply_row_additions(df, data_editor_state["added_rows"], dataframe_schema)
 
 
+def _compute_schema_hash(
+    df: pd.DataFrame,
+    arrow_schema: pa.Schema,
+) -> str:
+    """Compute a hash of the dataframe schema (structure, not values).
+
+    This hash captures the structural identity of a dataframe:
+    - Column names and order
+    - Column types (from Arrow schema)
+    - Index type
+    - Row count (editing state uses positional indices)
+
+    The hash does NOT include actual data values, allowing the widget ID
+    to remain stable when only cell values change (not structure).
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        The dataframe to compute the schema hash for.
+
+    arrow_schema : pa.Schema
+        The Arrow schema of the dataframe.
+
+    Returns
+    -------
+    str
+        MD5 hash of the schema components.
+    """
+    # Build schema components list
+    components: list[str] = [f"col:{col}" for col in df.columns]
+    components.extend(f"type:{field.name}:{field.type}" for field in arrow_schema)
+    components.append(f"index:{type(df.index).__name__}")
+
+    # Include row count - editing state uses positional indices,
+    # so row count changes would invalidate edit positions
+    components.append(f"rows:{len(df)}")
+
+    return calc_md5("|".join(components))
+
+
 def _is_supported_index(df_index: pd.Index[Any]) -> bool:
     """Check if the index is supported by the data editor component.
 
@@ -1072,16 +1112,28 @@ class DataEditorMixin:
 
         arrow_bytes = dataframe_util.convert_arrow_table_to_arrow_bytes(arrow_table)
 
+        # Compute schema hash for stable widget identity when key is provided.
+        # The schema hash captures structure (columns, types, row count) but not
+        # data values, allowing edits to persist when only values change.
+        schema_hash = _compute_schema_hash(data_df, arrow_table.schema)
+
         # We want to do this as early as possible to avoid introducing nondeterminism,
         # but it isn't clear how much processing is needed to have the data in a
         # format that will hash consistently, so we do it late here to have it
         # as close as possible to how it used to be.
         ctx = get_script_run_ctx()
+
+        # When a user provides a key, they're signaling intent for a persistent
+        # widget identity. We use schema_hash as the main identity component.
+        # This keeps the widget ID stable when only data values change,
+        # allowing editing state to persist across reruns.
         element_id = compute_and_register_element_id(
             "data_editor",
             user_key=key,
-            key_as_main_identity=False,
+            key_as_main_identity={"schema_hash"} if key else False,
             dg=self.dg,
+            schema_hash=schema_hash,
+            # Keep data in kwargs for backward compatibility when no key is provided
             data=arrow_bytes,
             width=width,
             height=height,
