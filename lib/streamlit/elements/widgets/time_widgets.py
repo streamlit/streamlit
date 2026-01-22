@@ -506,6 +506,11 @@ def _validate_date_value(
     if current_value is None or not has_explicit_bounds:
         return current_value, value_needs_reset
 
+    # Helper to convert datetime to date for comparison (datetime is a subclass of date,
+    # so isinstance checks pass, but comparing datetime with date raises TypeError).
+    def _to_date(v: date) -> date:
+        return v.date() if isinstance(v, datetime) else v
+
     # For range inputs, current_value is a tuple; for single inputs, it's a date
     if (
         parsed_values.is_range
@@ -515,13 +520,16 @@ def _validate_date_value(
         # For range mode, check if any date in the tuple is outside bounds.
         # Cast to tuple[date, ...] to satisfy the type checker after the length check.
         non_empty_value = cast("tuple[date, ...]", current_value)
-        start_date = non_empty_value[0]
-        end_date = non_empty_value[-1] if len(non_empty_value) > 1 else start_date
+        start_date = _to_date(non_empty_value[0])
+        end_date = _to_date(
+            non_empty_value[-1] if len(non_empty_value) > 1 else start_date
+        )
         if start_date < parsed_values.min or end_date > parsed_values.max:
             value_needs_reset = True
     elif not parsed_values.is_range and isinstance(current_value, date):
         # For single date mode
-        if current_value < parsed_values.min or current_value > parsed_values.max:
+        compare_value = _to_date(current_value)
+        if compare_value < parsed_values.min or compare_value > parsed_values.max:
             value_needs_reset = True
     else:
         # Type mismatch: widget mode doesn't match current value type (e.g., range mode
