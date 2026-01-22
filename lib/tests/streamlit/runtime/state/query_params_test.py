@@ -896,43 +896,39 @@ class SetCorrectedValueTest(DeltaGeneratorTestCase):
         super().setUp()
         self.query_params = QueryParams()
 
-    def test_set_corrected_value_string(self) -> None:
-        """Test setting a corrected string value."""
-        self.query_params._set_corrected_value("key", "corrected", "string_value")
-        assert self.query_params._query_params["key"] == "corrected"
+    @parameterized.expand(
+        [
+            ("string", "corrected", "string_value", "corrected"),
+            ("int", 42, "int_value", "42"),
+            ("float_whole", 5.0, "double_value", "5.0"),
+            ("float_decimal", 3.14, "double_value", "3.14"),
+        ]
+    )
+    def test_set_corrected_value_scalar(
+        self, _name: str, value: str | int | float, value_type: str, expected: str
+    ) -> None:
+        """Test setting corrected scalar values."""
+        self.query_params._set_corrected_value("key", value, value_type)
+        assert self.query_params._query_params["key"] == expected
 
-    def test_set_corrected_value_int(self) -> None:
-        """Test setting a corrected integer value."""
-        self.query_params._set_corrected_value("key", 42, "int_value")
-        assert self.query_params._query_params["key"] == "42"
-
-    def test_set_corrected_value_float(self) -> None:
-        """Test that scalar float values are formatted with str()."""
-        # Scalar double_value uses str() directly, not format_number()
-        self.query_params._set_corrected_value("key", 5.0, "double_value")
-        assert self.query_params._query_params["key"] == "5.0"
-
-    def test_set_corrected_value_float_with_decimal(self) -> None:
-        """Test that non-whole floats keep their decimal."""
-        self.query_params._set_corrected_value("key", 3.14, "double_value")
-        assert self.query_params._query_params["key"] == "3.14"
-
-    def test_set_corrected_value_list(self) -> None:
-        """Test setting a corrected list value."""
-        self.query_params._set_corrected_value("key", ["a", "b"], "string_array_value")
-        assert self.query_params._query_params["key"] == ["a", "b"]
-
-    def test_set_corrected_value_int_list(self) -> None:
-        """Test setting a corrected integer list value."""
-        self.query_params._set_corrected_value("key", [1, 2, 3], "int_array_value")
-        assert self.query_params._query_params["key"] == ["1", "2", "3"]
-
-    def test_set_corrected_value_double_list_formats_whole_numbers(self) -> None:
-        """Test that whole number floats in lists are formatted as integers."""
-        self.query_params._set_corrected_value(
-            "key", [1.0, 2.5, 3.0], "double_array_value"
-        )
-        assert self.query_params._query_params["key"] == ["1", "2.5", "3"]
+    @parameterized.expand(
+        [
+            ("string_list", ["a", "b"], "string_array_value", ["a", "b"]),
+            ("int_list", [1, 2, 3], "int_array_value", ["1", "2", "3"]),
+            (
+                "double_list_formats_whole",
+                [1.0, 2.5, 3.0],
+                "double_array_value",
+                ["1", "2.5", "3"],
+            ),
+        ]
+    )
+    def test_set_corrected_value_list(
+        self, _name: str, value: list, value_type: str, expected: list[str]
+    ) -> None:
+        """Test setting corrected list values."""
+        self.query_params._set_corrected_value("key", value, value_type)
+        assert self.query_params._query_params["key"] == expected
 
 
 class PopulateFromQueryStringTest(DeltaGeneratorTestCase):

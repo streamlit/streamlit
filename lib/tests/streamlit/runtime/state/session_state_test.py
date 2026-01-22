@@ -65,6 +65,24 @@ def _raw_session_state() -> SessionState:
     return get_session_state()._state
 
 
+def _create_test_widget_metadata(
+    widget_id: str,
+    value_type: str = "string_value",
+    deserializer=None,
+    serializer=None,
+    formatted_options: list[str] | None = None,
+) -> WidgetMetadata:
+    """Helper to create widget metadata for query param binding tests."""
+    return WidgetMetadata(
+        id=widget_id,
+        deserializer=deserializer or (lambda x: x if x is not None else "default"),
+        serializer=serializer or (lambda x: x),
+        value_type=value_type,
+        bind="query-params",
+        formatted_options=formatted_options,
+    )
+
+
 class WStateTests(unittest.TestCase):
     def setUp(self):
         wstates = WStates()
@@ -1446,24 +1464,6 @@ class HandleQueryParamBindingTest(DeltaGeneratorTestCase):
         self.session_state = SessionState()
         self.query_params = self.session_state.query_params
 
-    def _create_metadata(
-        self,
-        widget_id: str,
-        value_type: str = "string_value",
-        deserializer=None,
-        serializer=None,
-        formatted_options: list[str] | None = None,
-    ) -> WidgetMetadata:
-        """Helper to create widget metadata for testing."""
-        return WidgetMetadata(
-            id=widget_id,
-            deserializer=deserializer or (lambda x: x if x is not None else "default"),
-            serializer=serializer or (lambda x: x),
-            value_type=value_type,
-            bind="query-params",
-            formatted_options=formatted_options,
-        )
-
     @patch(
         "streamlit.runtime.state.session_state.get_script_run_ctx",
         return_value=MockScriptRunCtx(),
@@ -1472,7 +1472,7 @@ class HandleQueryParamBindingTest(DeltaGeneratorTestCase):
         """Test that URL value seeds widget state on initial load."""
         self.query_params.set_initial_query_params("my_widget=url_value")
 
-        metadata = self._create_metadata("$$ID-hash-my_widget")
+        metadata = _create_test_widget_metadata("$$ID-hash-my_widget")
 
         seeded = self.session_state._handle_query_param_binding(
             metadata, "my_widget", "$$ID-hash-my_widget"
@@ -1493,7 +1493,7 @@ class HandleQueryParamBindingTest(DeltaGeneratorTestCase):
         """Test that missing URL param returns False (no seeding)."""
         self.query_params.set_initial_query_params("")
 
-        metadata = self._create_metadata("$$ID-hash-my_widget")
+        metadata = _create_test_widget_metadata("$$ID-hash-my_widget")
 
         seeded = self.session_state._handle_query_param_binding(
             metadata, "my_widget", "$$ID-hash-my_widget"
@@ -1514,7 +1514,7 @@ class HandleQueryParamBindingTest(DeltaGeneratorTestCase):
             "$$ID-hash-my_widget", "user_value"
         )
 
-        metadata = self._create_metadata("$$ID-hash-my_widget")
+        metadata = _create_test_widget_metadata("$$ID-hash-my_widget")
 
         seeded = self.session_state._handle_query_param_binding(
             metadata, "my_widget", "$$ID-hash-my_widget"
@@ -1536,7 +1536,7 @@ class HandleQueryParamBindingTest(DeltaGeneratorTestCase):
         self.session_state._old_state["$$ID-hash-my_widget"] = "old_value"
         self.session_state._new_session_state["my_widget"] = "code_value"
 
-        metadata = self._create_metadata("$$ID-hash-my_widget")
+        metadata = _create_test_widget_metadata("$$ID-hash-my_widget")
 
         seeded = self.session_state._handle_query_param_binding(
             metadata, "my_widget", "$$ID-hash-my_widget"
@@ -1557,7 +1557,7 @@ class HandleQueryParamBindingTest(DeltaGeneratorTestCase):
 
         self.session_state._new_session_state["my_widget"] = "developer_default"
 
-        metadata = self._create_metadata("$$ID-hash-my_widget")
+        metadata = _create_test_widget_metadata("$$ID-hash-my_widget")
 
         seeded = self.session_state._handle_query_param_binding(
             metadata, "my_widget", "$$ID-hash-my_widget"
@@ -1575,27 +1575,9 @@ class SeedWidgetFromUrlTest(DeltaGeneratorTestCase):
         self.session_state = SessionState()
         self.query_params = self.session_state.query_params
 
-    def _create_metadata(
-        self,
-        widget_id: str,
-        value_type: str = "string_value",
-        deserializer=None,
-        serializer=None,
-        formatted_options: list[str] | None = None,
-    ) -> WidgetMetadata:
-        """Helper to create widget metadata for testing."""
-        return WidgetMetadata(
-            id=widget_id,
-            deserializer=deserializer or (lambda x: x if x is not None else "default"),
-            serializer=serializer or (lambda x: x),
-            value_type=value_type,
-            bind="query-params",
-            formatted_options=formatted_options,
-        )
-
     def test_seed_widget_parses_bool_value(self) -> None:
         """Test that boolean URL values are parsed correctly."""
-        metadata = self._create_metadata(
+        metadata = _create_test_widget_metadata(
             "widget_1",
             value_type="bool_value",
             deserializer=lambda x: x if x is not None else False,
@@ -1610,7 +1592,7 @@ class SeedWidgetFromUrlTest(DeltaGeneratorTestCase):
 
     def test_seed_widget_parses_int_value(self) -> None:
         """Test that integer URL values are parsed correctly."""
-        metadata = self._create_metadata(
+        metadata = _create_test_widget_metadata(
             "widget_1",
             value_type="int_value",
             deserializer=lambda x: x if x is not None else 0,
@@ -1634,7 +1616,7 @@ class SeedWidgetFromUrlTest(DeltaGeneratorTestCase):
                 return x
             raise ValueError("not a bool")
 
-        metadata = self._create_metadata(
+        metadata = _create_test_widget_metadata(
             "widget_1",
             value_type="bool_value",
             deserializer=bool_deserializer,
@@ -1659,7 +1641,7 @@ class SeedWidgetFromUrlTest(DeltaGeneratorTestCase):
                 return [v for v in values if v in valid]
             return [values] if values in valid else []
 
-        metadata = self._create_metadata(
+        metadata = _create_test_widget_metadata(
             "widget_1",
             value_type="string_array_value",
             deserializer=filter_deserializer,
@@ -1682,30 +1664,9 @@ class AutoCorrectUrlTest(DeltaGeneratorTestCase):
         self.session_state = SessionState()
         self.query_params = self.session_state.query_params
 
-    def _create_metadata(
-        self,
-        widget_id: str,
-        value_type: str = "string_value",
-        deserializer=None,
-        serializer=None,
-        formatted_options: list[str] | None = None,
-    ) -> WidgetMetadata:
-        """Helper to create widget metadata for testing."""
-        return WidgetMetadata(
-            id=widget_id,
-            deserializer=deserializer or (lambda x: x),
-            serializer=serializer or (lambda x: x),
-            value_type=value_type,
-            bind="query-params",
-            formatted_options=formatted_options,
-        )
-
     def test_no_correction_when_values_match(self) -> None:
         """Test that no correction happens when serialized == parsed."""
-        metadata = self._create_metadata(
-            "widget_1",
-            serializer=lambda x: x,
-        )
+        metadata = _create_test_widget_metadata("widget_1", serializer=lambda x: x)
 
         assert "my_key" not in self.query_params._query_params
 
@@ -1717,7 +1678,7 @@ class AutoCorrectUrlTest(DeltaGeneratorTestCase):
 
     def test_correction_updates_url_for_clamped_value(self) -> None:
         """Test that URL is corrected when value is clamped."""
-        metadata = self._create_metadata(
+        metadata = _create_test_widget_metadata(
             "widget_1",
             value_type="int_value",
             serializer=lambda x: x,
@@ -1734,7 +1695,7 @@ class AutoCorrectUrlTest(DeltaGeneratorTestCase):
 
     def test_preserve_strings_when_no_filtering_for_selection_widgets(self) -> None:
         """Test that human-readable strings are preserved when valid."""
-        metadata = self._create_metadata(
+        metadata = _create_test_widget_metadata(
             "widget_1",
             value_type="int_value",
             serializer=lambda x: 0,
@@ -1747,7 +1708,7 @@ class AutoCorrectUrlTest(DeltaGeneratorTestCase):
 
     def test_use_formatted_options_when_filtering(self) -> None:
         """Test that formatted_options are used when values are filtered."""
-        metadata = self._create_metadata(
+        metadata = _create_test_widget_metadata(
             "widget_1",
             value_type="int_array_value",
             serializer=lambda x: [0],
