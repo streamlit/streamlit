@@ -82,6 +82,7 @@ class MultiSelectSerde(Generic[T]):
     formatted_options: list[str]
     formatted_option_to_option_index: dict[str, int]
     default_options_indices: list[int]
+    format_func: Callable[[Any], str]
 
     def __init__(
         self,
@@ -90,6 +91,7 @@ class MultiSelectSerde(Generic[T]):
         formatted_options: list[str],
         formatted_option_to_option_index: dict[str, int],
         default_options_indices: list[int] | None = None,
+        format_func: Callable[[Any], str] = str,
     ) -> None:
         """Initialize the MultiSelectSerde.
 
@@ -111,24 +113,45 @@ class MultiSelectSerde(Generic[T]):
         default_option_index : int or None, optional
             The index of the default option to use when no selection is made.
             If None, no default option is selected.
+        format_func : Callable[[Any], str], optional
+            Function to format options for comparison. Used to compare values by their
+            string representation instead of using == directly. This is necessary because
+            widget values are deepcopied, and for custom classes without __eq__, the
+            deepcopied instances would fail identity comparison.
         """
 
         self.options = options
         self.formatted_options = formatted_options
         self.formatted_option_to_option_index = formatted_option_to_option_index
         self.default_options_indices = default_options_indices or []
+        self.format_func = format_func
 
     def serialize(self, value: list[T | str] | list[T]) -> list[str]:
         converted_value = convert_anything_to_list(value)
         values: list[str] = []
         for v in converted_value:
+            # Use format_func to find the formatted option instead of using
+            # self.options.index(v) which relies on == comparison. This is necessary
+            # because widget values are deepcopied, and for custom classes without
+            # __eq__, the deepcopied instances would fail identity comparison.
             try:
-                option_index = self.options.index(v)
-                values.append(self.formatted_options[option_index])
-            except ValueError:  # noqa: PERF203
-                # at this point we know that v is a string, otherwise
-                # it would have been found in the options
-                values.append(cast("str", v))
+                formatted_value = self.format_func(v)
+            except Exception:
+                # format_func failed (e.g., v is a string but format_func expects
+                # an object with specific attributes). Use str(v) to ensure we append
+                # a proper string, not the original object. This handles both cases:
+                # - v is already a string -> str(v) returns it unchanged
+                # - v is a custom object -> str(v) gives its string representation
+                values.append(str(v))
+                continue
+
+            if formatted_value in self.formatted_option_to_option_index:
+                values.append(formatted_value)
+            else:
+                # Value not found in options - it's likely a user-entered string
+                # (when accept_new_options=True) or an invalid value. Use the
+                # formatted string (not the original object) for type consistency.
+                values.append(formatted_value)
         return values
 
     def deserialize(self, ui_value: list[str] | None) -> list[T | str] | list[T]:
@@ -530,6 +553,7 @@ class MultiSelectMixin:
             formatted_options=formatted_options,
             formatted_option_to_option_index=formatted_option_to_option_index,
             default_options_indices=default_values,
+            format_func=format_func,
         )
 
         widget_state = register_widget(
@@ -560,7 +584,7 @@ class MultiSelectMixin:
             # previously selected values are no longer available.
             current_values, value_needs_reset = (
                 validate_and_sync_multiselect_value_with_options(
-                    widget_state.value, indexable_options, key
+                    widget_state.value, indexable_options, key, format_func
                 )
             )
 
