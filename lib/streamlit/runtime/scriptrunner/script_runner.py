@@ -528,6 +528,18 @@ class ScriptRunner:
                     and rerun_data.widget_states.widgets is not None
                 ):
                     widget_ids = {w.id for w in rerun_data.widget_states.widgets}
+
+                # For MPA page transitions: filter query params BEFORE cleanup.
+                # This uses existing bindings to remove params from other pages,
+                # ensuring st.query_params is accurate when the new page runs.
+                main_script_hash = self._pages_manager.main_script_hash
+                valid_script_hashes = {main_script_hash, page_script_hash}
+                with self._session_state.query_params() as qp:
+                    qp.populate_from_query_string(
+                        rerun_data.query_string, valid_script_hashes
+                    )
+
+                # Now safe to do normal cleanup - filtering already done
                 self._session_state.on_script_finished(widget_ids)
 
             fragment_ids_this_run: list[str] | None = (
