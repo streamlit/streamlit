@@ -1020,6 +1020,25 @@ class SessionState:
                 # This is important for widgets like select_slider where the URL contains
                 # indices but the widget stores the actual option values
                 deserialized_value = metadata.deserializer(parsed_value)
+
+                # If ALL URL values were invalid (filtered to empty list), don't seed.
+                # Let the widget use its default value instead.
+                # This handles cases like ?tags=InvalidOption where the option doesn't exist.
+                if (
+                    isinstance(deserialized_value, list)
+                    and len(deserialized_value) == 0
+                ):
+                    # Check if URL had values that were all filtered out
+                    url_had_values = (
+                        isinstance(parsed_value, list) and len(parsed_value) > 0
+                    ) or (isinstance(parsed_value, str) and len(parsed_value) > 0)
+                    if url_had_values:
+                        # Clear the invalid URL param
+                        if user_key in self.query_params._query_params:
+                            del self.query_params._query_params[user_key]
+                            self.query_params._send_query_param_msg()
+                        return False
+
                 # Store in widget state
                 self._new_widget_state.set_from_value(widget_id, deserialized_value)
                 # Also store in session state by user_key so widget_value_changed is True
