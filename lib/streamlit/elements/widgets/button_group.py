@@ -28,6 +28,7 @@ from typing import (
 )
 
 from streamlit import config
+from streamlit.dataframe_util import convert_anything_to_list
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
     LayoutConfig,
@@ -127,11 +128,11 @@ class _ButtonGroupSerde(Generic[T]):
         self.format_func = format_func
         self.selection_mode = selection_mode
 
-    def serialize(self, value: T | list[T] | None) -> list[str]:
+    def serialize(self, value: T | str | list[T | str] | None) -> list[str]:
         """Serialize value to list of formatted strings for wire format."""
         if self.selection_mode == "multi":
-            return self._serialize_multi(cast("list[T]", value))
-        return self._serialize_single(value)
+            return self._serialize_multi(value)
+        return self._serialize_single(cast("T | str | None", value))
 
     def deserialize(
         self, ui_value: list[str] | None
@@ -151,11 +152,15 @@ class _ButtonGroupSerde(Generic[T]):
         try:
             formatted_value = self.format_func(v)
         except Exception:
-            return [cast("str", v)]
+            # format_func failed (e.g., v is a string but format_func expects
+            # an object with specific attributes). Use str(v) to ensure we return
+            # a proper string, not the original object.
+            return [str(v)]
 
         if formatted_value in self.formatted_option_to_option_index:
             return [formatted_value]
-        return [cast("str", v)]
+        # Value not found in options - return formatted string for type consistency.
+        return [formatted_value]
 
     def _deserialize_single(self, ui_value: list[str] | None) -> T | str | None:
         """Deserialize from a list of strings to a single value."""
@@ -172,16 +177,26 @@ class _ButtonGroupSerde(Generic[T]):
         option_index = self.formatted_option_to_option_index.get(string_value)
         return self.options[option_index] if option_index is not None else string_value
 
-    def _serialize_multi(self, value: list[T | str] | list[T]) -> list[str]:
+    def _serialize_multi(self, value: T | str | list[T | str] | None) -> list[str]:
         """Serialize multi-select values to list of strings."""
+        if value is None:
+            return []
+        converted_value = convert_anything_to_list(cast("Any", value))
         values: list[str] = []
-        for v in value:
+        for v in converted_value:
             try:
                 formatted_value = self.format_func(v)
             except Exception:
+                # format_func failed (e.g., v is a string but format_func expects
+                # an object with specific attributes). Use str(v) to ensure we append
+                # a proper string, not the original object.
                 values.append(str(v))
                 continue
-            values.append(formatted_value)
+            if formatted_value in self.formatted_option_to_option_index:
+                values.append(formatted_value)
+            else:
+                # Value not found in options - return formatted string for type consistency.
+                values.append(formatted_value)
         return values
 
     def _deserialize_multi(self, ui_value: list[str] | None) -> list[T | str] | list[T]:
@@ -505,21 +520,24 @@ class ButtonGroupMixin:
                 ButtonGroupProto.SelectionVisualization.ALL_UP_TO_SELECTED
             )
 
-        sentiment = self._button_group(
-            transformed_options,
-            default=_default,
-            key=key,
-            selection_mode="single",
-            disabled=disabled,
-            deserializer=serde.deserialize,
-            serializer=serde.serialize,
-            on_change=on_change,
-            args=args,
-            kwargs=kwargs,
-            selection_visualization=selection_visualization,
-            style="borderless",
-            width=width,
-            options_format_func=_format_feedback_option,
+        sentiment = cast(
+            "RegisterWidgetResult[int]",
+            self._button_group(
+                transformed_options,
+                default=_default,
+                key=key,
+                selection_mode="single",
+                disabled=disabled,
+                deserializer=cast("WidgetDeserializer[int]", serde.deserialize),
+                serializer=cast("WidgetSerializer[int]", serde.serialize),
+                on_change=on_change,
+                args=args,
+                kwargs=kwargs,
+                selection_visualization=selection_visualization,
+                style="borderless",
+                width=width,
+                options_format_func=_format_feedback_option,
+            ),
         )
         return sentiment.value
 
@@ -1052,30 +1070,61 @@ class ButtonGroupMixin:
             selection_mode=selection_mode,
         )
 
-        res = self._button_group(
-            indexable_options,
-            default=default_values,
-            selection_mode=selection_mode,
-            disabled=disabled,
-            format_func=_transformed_format_func,
-            key=key,
-            help=help,
-            style=style,
-            serializer=serde.serialize,
-            deserializer=serde.deserialize,
-            on_change=on_change,
-            args=args,
-            kwargs=kwargs,
-            label=label,
-            label_visibility=label_visibility,
-            width=width,
-            options_format_func=actual_format_func,
-        )
-
-        # Handle enum coercion
         if selection_mode == "multi":
+            res = cast(
+                "RegisterWidgetResult[list[V] | list[V | str]]",
+                self._button_group(
+                    indexable_options,
+                    default=default_values,
+                    selection_mode=selection_mode,
+                    disabled=disabled,
+                    format_func=_transformed_format_func,
+                    key=key,
+                    help=help,
+                    style=style,
+                    serializer=cast(
+                        "WidgetSerializer[list[V] | list[V | str]]", serde.serialize
+                    ),
+                    deserializer=cast(
+                        "WidgetDeserializer[list[V] | list[V | str]]",
+                        serde.deserialize,
+                    ),
+                    on_change=on_change,
+                    args=args,
+                    kwargs=kwargs,
+                    label=label,
+                    label_visibility=label_visibility,
+                    width=width,
+                    options_format_func=actual_format_func,
+                ),
+            )
             res = maybe_coerce_enum_sequence(res, options, indexable_options)
             return res.value
+
+        res = cast(
+            "RegisterWidgetResult[V | str | None]",
+            self._button_group(
+                indexable_options,
+                default=default_values,
+                selection_mode=selection_mode,
+                disabled=disabled,
+                format_func=_transformed_format_func,
+                key=key,
+                help=help,
+                style=style,
+                serializer=cast("WidgetSerializer[V | str | None]", serde.serialize),
+                deserializer=cast(
+                    "WidgetDeserializer[V | str | None]", serde.deserialize
+                ),
+                on_change=on_change,
+                args=args,
+                kwargs=kwargs,
+                label=label,
+                label_visibility=label_visibility,
+                width=width,
+                options_format_func=actual_format_func,
+            ),
+        )
         res = maybe_coerce_enum(res, options, indexable_options)
         return res.value
 
@@ -1211,13 +1260,13 @@ class ButtonGroupMixin:
         # Validate and sync value with options (for pills/segmented_control)
         # Feedback handles reset via key_as_main_identity so no validation needed
         value_needs_reset = False
-        current_value = widget_state.value
+        current_value: T | list[T] | list[T | str] | None = widget_state.value
         if not is_feedback and options_format_func is not None:
             if selection_mode == "single":
                 # Single select: validate and possibly reset to default
                 default_index = default[0] if default else None
                 current_value, value_needs_reset = validate_and_sync_value_with_options(
-                    cast("Any", widget_state.value),
+                    cast("T | None", widget_state.value),
                     indexable_options,
                     default_index,
                     key,
@@ -1227,7 +1276,7 @@ class ButtonGroupMixin:
                 # Multi select: filter out invalid values
                 current_value, value_needs_reset = (
                     validate_and_sync_multiselect_value_with_options(
-                        cast("Any", widget_state.value),
+                        cast("list[T] | list[T | str]", widget_state.value),
                         indexable_options,
                         key,
                         options_format_func,
@@ -1236,9 +1285,10 @@ class ButtonGroupMixin:
 
         if value_needs_reset or widget_state.value_changed:
             # Always use string-based raw_values field
-            proto.raw_values[:] = serializer(
+            value_for_serialization = (
                 current_value if value_needs_reset else widget_state.value
             )
+            proto.raw_values[:] = serializer(cast("T", value_for_serialization))
             proto.set_value = True
 
         if ctx:
