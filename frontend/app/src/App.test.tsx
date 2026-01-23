@@ -25,6 +25,7 @@ import {
   waitFor,
 } from "@testing-library/react"
 import { cloneDeep } from "lodash-es"
+import { type Mock } from "vitest"
 
 import {
   getMenuStructure,
@@ -2039,7 +2040,7 @@ describe("App", () => {
       ).toBe("baz")
     })
 
-    it("sets queryString to an empty string if the page hash is different", () => {
+    it("preserves query params from state when navigating to different page", () => {
       renderApp(getProps())
 
       const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
@@ -2079,11 +2080,14 @@ describe("App", () => {
       const navLinks = screen.queryAllByTestId("stSidebarNavLink")
       expect(navLinks).toHaveLength(2)
 
+      const connectionManager = getMockConnectionManager()
+
+      // Clear only the hostCommunicationMgr mock before navigation
+      ;(hostCommunicationMgr.sendMessageToHost as Mock).mockClear()
+
       // TODO: Utilize user-event instead of fireEvent
       // eslint-disable-next-line testing-library/prefer-user-event
       fireEvent.click(navLinks[1])
-
-      const connectionManager = getMockConnectionManager()
 
       expect(
         // @ts-expect-error
@@ -2091,15 +2095,19 @@ describe("App", () => {
           .pageScriptHash
       ).toBe("subpage_hash")
 
+      // With query param binding, we preserve query params from state
+      // (which may include bound widget params) instead of clearing them
       expect(
         // @ts-expect-error
         connectionManager.sendMessage.mock.calls[0][0].rerunScript.queryString
-      ).toBe("")
+      ).toBe("foo=bar")
 
-      expect(hostCommunicationMgr.sendMessageToHost).toHaveBeenCalledWith({
-        type: "SET_QUERY_PARAM",
-        queryParams: "",
-      })
+      // No SET_QUERY_PARAM message sent during page navigation
+      // (The old behavior would clear params and send SET_QUERY_PARAM with "")
+      const setQueryParamCalls = (
+        hostCommunicationMgr.sendMessageToHost as Mock
+      ).mock.calls.filter(call => call[0]?.type === "SET_QUERY_PARAM")
+      expect(setQueryParamCalls).toHaveLength(0)
     })
   })
 
@@ -5332,21 +5340,26 @@ describe("App", () => {
       const navLinks = screen.queryAllByTestId("stSidebarNavLink")
       expect(navLinks).toHaveLength(2)
 
+      const connectionManager = getMockConnectionManager()
+
+      // Clear only the hostCommunicationMgr mock before navigation
+      ;(hostCommunicationMgr.sendMessageToHost as Mock).mockClear()
+
       // TODO: Utilize user-event instead of fireEvent
       // eslint-disable-next-line testing-library/prefer-user-event
       fireEvent.click(navLinks[1])
-
-      const connectionManager = getMockConnectionManager()
 
       expect(
         // @ts-expect-error
         connectionManager.sendMessage.mock.calls[0][0].rerunScript.queryString
       ).toBe(embedParams)
 
-      expect(hostCommunicationMgr.sendMessageToHost).toHaveBeenCalledWith({
-        type: "SET_QUERY_PARAM",
-        queryParams: embedParams,
-      })
+      // With query param binding, we preserve query params from state
+      // instead of sending a SET_QUERY_PARAM message on every page change
+      const setQueryParamCalls = (
+        hostCommunicationMgr.sendMessageToHost as Mock
+      ).mock.calls.filter(call => call[0]?.type === "SET_QUERY_PARAM")
+      expect(setQueryParamCalls).toHaveLength(0)
     })
 
     it("works with baseUrlPaths", () => {

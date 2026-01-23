@@ -347,7 +347,7 @@ export class App extends PureComponent<Props, State> {
       hostHideSidebarNav: false,
       sidebarChevronDownshift: 0,
       pageLinkBaseUrl: "",
-      // Initialize with actual URL query params so the first rerun includes them
+      // Capture initial URL params for page navigation preservation
       queryParams: window.location?.search?.replace(/^\?/, "") ?? "",
       deployedAppMetadata: {},
       libConfig: {},
@@ -365,9 +365,7 @@ export class App extends PureComponent<Props, State> {
       formsDataChanged: formsData => this.setState({ formsData }),
     })
 
-    // Wire up query param change handler for widget-to-URL sync.
-    // This keeps App's queryParams state in sync with the URL so that
-    // page navigation preserves query params from bound widgets.
+    // Sync widget URL changes to App state for page navigation preservation.
     this.widgetMgr.setQueryParamsChangeHandler(
       this.handleQueryParamsFromWidget
     )
@@ -1095,12 +1093,7 @@ export class App extends PureComponent<Props, State> {
     }
   }
 
-  /**
-   * Handle query parameter changes originating from widget value changes.
-   * This is called by WidgetStateManager when a widget bound to a query param
-   * updates its value. This keeps App's queryParams state in sync with the URL
-   * so that page navigation preserves bound widget query params.
-   */
+  /** Callback for WidgetStateManager when bound widgets update URL params. */
   handleQueryParamsFromWidget = (queryString: string): void => {
     this.setState({ queryParams: queryString })
 
@@ -1906,20 +1899,12 @@ export class App extends PureComponent<Props, State> {
       // The user specified exactly which page to run. We can simply use this
       // value in the BackMsg we send to the server.
       if (pageScriptHash !== currentPageScriptHash && !preserveQueryParams) {
-        // For page navigation, preserve query params from bound widgets.
-        // Previously we cleared all non-embed params, but with query param binding,
-        // we want to preserve params that were set by widgets (especially from
-        // the entry file in MPA v2 apps).
-        //
-        // If queryStringOverride is provided, use it. Otherwise, preserve
-        // the current state.queryParams (which includes bound widget params).
-        // Only fall back to embed params if neither is available.
+        // Preserve query params (including bound widget params) on page navigation.
         const currentParams = this.state.queryParams
         if (!queryStringOverride && currentParams) {
-          // Preserve bound widget params from state
           queryString = currentParams
         } else {
-          // Fall back to embed params only
+          // Fall back to embed params only.
           const preservedQueryParams = preserveEmbedQueryParams()
           queryString = getQueryString(
             queryStringOverride,

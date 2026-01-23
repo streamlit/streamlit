@@ -322,9 +322,10 @@ describe("ButtonGroup widget", () => {
       expectHighlightStyle(buttons[3])
       expectHighlightStyle(buttons[defaultSelectedIndex], false)
 
+      // When setValue is true, widget initializes directly with the setValue value
       expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledWith(
         props.element,
-        props.element.default,
+        props.element.value,
         {
           fromUi: false,
         },
