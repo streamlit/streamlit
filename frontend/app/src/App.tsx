@@ -340,7 +340,8 @@ export class App extends PureComponent<Props, State> {
       hostHideSidebarNav: false,
       sidebarChevronDownshift: 0,
       pageLinkBaseUrl: "",
-      // Capture initial URL params for page navigation preservation
+      // Initialize from URL so bound widget params from shared links are
+      // preserved on first page navigation (before handlePageInfoChanged fires).
       queryParams: window.location?.search?.replace(/^\?/, "") ?? "",
       deployedAppMetadata: {},
       libConfig: {},
@@ -1893,9 +1894,12 @@ export class App extends PureComponent<Props, State> {
       // The user specified exactly which page to run. We can simply use this
       // value in the BackMsg we send to the server.
       if (pageScriptHash !== currentPageScriptHash && !preserveQueryParams) {
-        // Preserve query params (including bound widget params) on page navigation.
         const currentParams = this.state.queryParams
-        if (!queryStringOverride && currentParams) {
+        // Use existing params from state (which includes bound widget params)
+        // unless there's an explicit override or no params exist yet.
+        const shouldPreserveCurrentParams =
+          !queryStringOverride && currentParams
+        if (shouldPreserveCurrentParams) {
           queryString = currentParams
         } else {
           // Fall back to embed params only.

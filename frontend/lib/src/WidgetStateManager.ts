@@ -620,11 +620,11 @@ export class WidgetStateManager {
     source: Source,
     fragmentId: string | undefined
   ): void {
-    // Filter out invalid values (NaN, undefined, null) before storing
+    // Filter out invalid values (NaN, undefined, null) before storing.
+    // If all values are invalid, skip the update entirely.
     const validValue = value.filter(
       v => v !== undefined && v !== null && !Number.isNaN(v)
     )
-    // Only update if we have valid values
     if (validValue.length === 0) {
       return
     }
