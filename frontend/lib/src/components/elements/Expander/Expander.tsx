@@ -14,8 +14,11 @@
  * limitations under the License.
  */
 
-import React, {
+import {
+  FC,
   memo,
+  MouseEvent,
+  PropsWithChildren,
   ReactElement,
   useCallback,
   useEffect,
@@ -88,7 +91,7 @@ export interface ExpanderProps {
   fragmentId?: string
 }
 
-const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
+const Expander: FC<PropsWithChildren<ExpanderProps>> = ({
   element,
   isStale,
   widgetMgr,
@@ -280,7 +283,7 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
     }
   }, [children, expanded, toggleAnimation])
 
-  const toggle = (e: React.MouseEvent<HTMLDetailsElement>): void => {
+  const toggle = (e: MouseEvent<HTMLDetailsElement>): void => {
     e.preventDefault()
 
     const newExpanded = !expanded
