@@ -25,10 +25,15 @@ import {
 } from "react"
 
 import { Tab as UITab, Tabs as UITabs } from "baseui/tabs-motion"
+import classNames from "classnames"
 
 import { AppNode, BlockNode } from "~lib/AppNode"
 import { BlockPropsWithoutWidth } from "~lib/components/core/Block"
-import { isElementStale } from "~lib/components/core/Block/utils"
+import {
+  convertKeyToClassName,
+  getKeyFromId,
+  isElementStale,
+} from "~lib/components/core/Block/utils"
 import { ScriptRunContext } from "~lib/components/core/ScriptRunContext"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
@@ -151,9 +156,12 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
 
   const TAB_HEIGHT = theme.sizes.tabHeight
   const TAB_BORDER_HEIGHT = theme.spacing.threeXS
+
+  const userKey = getKeyFromId(widgetId)
+
   return (
     <StyledTabContainer
-      className="stTabs"
+      className={classNames("stTabs", convertKeyToClassName(userKey))}
       data-testid="stTabs"
       isOverflowing={isOverflowing}
       tabHeight={TAB_HEIGHT}

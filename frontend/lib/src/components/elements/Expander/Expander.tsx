@@ -23,8 +23,14 @@ import React, {
   useState,
 } from "react"
 
+import classNames from "classnames"
+
 import { Block as BlockProto } from "@streamlit/protobuf"
 
+import {
+  convertKeyToClassName,
+  getKeyFromId,
+} from "~lib/components/core/Block/utils"
 import { DynamicIcon } from "~lib/components/shared/Icon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
 import { notNullOrUndefined } from "~lib/util/utils"
@@ -365,8 +371,13 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
   const showUserIcon = element.icon && !isHovered
   const showSpinner = isWaitingForBackend
 
+  const userKey = getKeyFromId(blockId)
+
   return (
-    <StyledExpandableContainer className="stExpander" data-testid="stExpander">
+    <StyledExpandableContainer
+      className={classNames("stExpander", convertKeyToClassName(userKey))}
+      data-testid="stExpander"
+    >
       <StyledDetails
         isStale={isStale}
         ref={detailsRef}
