@@ -1071,7 +1071,7 @@ class ButtonGroupMixin:
         )
 
         if selection_mode == "multi":
-            res = cast(
+            multi_res = cast(
                 "RegisterWidgetResult[list[V] | list[V | str]]",
                 self._button_group(
                     indexable_options,
@@ -1098,10 +1098,12 @@ class ButtonGroupMixin:
                     options_format_func=actual_format_func,
                 ),
             )
-            res = maybe_coerce_enum_sequence(res, options, indexable_options)
-            return res.value
+            multi_res = maybe_coerce_enum_sequence(
+                multi_res, options, indexable_options
+            )
+            return cast("list[V]", multi_res.value)
 
-        res = cast(
+        single_res = cast(
             "RegisterWidgetResult[V | str | None]",
             self._button_group(
                 indexable_options,
@@ -1125,8 +1127,8 @@ class ButtonGroupMixin:
                 options_format_func=actual_format_func,
             ),
         )
-        res = maybe_coerce_enum(res, options, indexable_options)
-        return res.value
+        single_res = maybe_coerce_enum(single_res, options, indexable_options)
+        return cast("V | None", single_res.value)
 
     def _button_group(
         self,
