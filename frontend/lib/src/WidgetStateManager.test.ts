@@ -1516,62 +1516,87 @@ describe("Trigger JSON payloads (aggregated)", () => {
     })
 
     describe("URL sync for scalar values", () => {
-      it("syncs bool value to URL", () => {
-        const widget = { id: "checkbox1", formId: "" }
-        widgetMgr.registerQueryParamBinding(
-          "checkbox1",
-          "enabled",
-          "bool_value",
-          false
-        )
+      it.each([
+        {
+          type: "bool",
+          paramKey: "enabled",
+          valueType: "bool_value",
+          defaultVal: false,
+          testVal: true,
+          expected: "enabled=true",
+        },
+        {
+          type: "int",
+          paramKey: "count",
+          valueType: "int_value",
+          defaultVal: 0,
+          testVal: 42,
+          expected: "count=42",
+        },
+        {
+          type: "double",
+          paramKey: "value",
+          valueType: "double_value",
+          defaultVal: 0,
+          testVal: 3.14,
+          expected: "value=3.14",
+        },
+        {
+          type: "string",
+          paramKey: "name",
+          valueType: "string_value",
+          defaultVal: "",
+          testVal: "Alice",
+          expected: "name=Alice",
+        },
+      ])(
+        "syncs $type value to URL",
+        ({ paramKey, valueType, defaultVal, testVal, expected }) => {
+          const widget = { id: "widget1", formId: "" }
+          widgetMgr.registerQueryParamBinding(
+            "widget1",
+            paramKey,
+            valueType,
+            defaultVal
+          )
 
-        widgetMgr.setBoolValue(widget, true, { fromUi: true }, undefined)
+          // Call the appropriate setter based on value type
+          if (valueType === "bool_value") {
+            widgetMgr.setBoolValue(
+              widget,
+              testVal as boolean,
+              { fromUi: true },
+              undefined
+            )
+          } else if (valueType === "int_value") {
+            widgetMgr.setIntValue(
+              widget,
+              testVal as number,
+              { fromUi: true },
+              undefined
+            )
+          } else if (valueType === "double_value") {
+            widgetMgr.setDoubleValue(
+              widget,
+              testVal as number,
+              { fromUi: true },
+              undefined
+            )
+          } else {
+            widgetMgr.setStringValue(
+              widget,
+              testVal as string,
+              { fromUi: true },
+              undefined
+            )
+          }
 
-        expect(window.history.replaceState).toHaveBeenCalled()
-        expect(mockOnQueryParamsChange).toHaveBeenCalledWith("enabled=true")
-      })
+          expect(window.history.replaceState).toHaveBeenCalled()
+          expect(mockOnQueryParamsChange).toHaveBeenCalledWith(expected)
+        }
+      )
 
-      it("syncs int value to URL", () => {
-        const widget = { id: "number1", formId: "" }
-        widgetMgr.registerQueryParamBinding("number1", "count", "int_value", 0)
-
-        widgetMgr.setIntValue(widget, 42, { fromUi: true }, undefined)
-
-        expect(window.history.replaceState).toHaveBeenCalled()
-        expect(mockOnQueryParamsChange).toHaveBeenCalledWith("count=42")
-      })
-
-      it("syncs double value to URL", () => {
-        const widget = { id: "slider1", formId: "" }
-        widgetMgr.registerQueryParamBinding(
-          "slider1",
-          "value",
-          "double_value",
-          0
-        )
-
-        widgetMgr.setDoubleValue(widget, 3.14, { fromUi: true }, undefined)
-
-        expect(window.history.replaceState).toHaveBeenCalled()
-        expect(mockOnQueryParamsChange).toHaveBeenCalledWith("value=3.14")
-      })
-
-      it("syncs string value to URL", () => {
-        const widget = { id: "text1", formId: "" }
-        widgetMgr.registerQueryParamBinding(
-          "text1",
-          "name",
-          "string_value",
-          ""
-        )
-
-        widgetMgr.setStringValue(widget, "Alice", { fromUi: true }, undefined)
-
-        expect(window.history.replaceState).toHaveBeenCalled()
-        expect(mockOnQueryParamsChange).toHaveBeenCalledWith("name=Alice")
-      })
-
-      it("does not sync when value is from backend", () => {
+      it("does not sync when value is from backend (fromUi: false)", () => {
         const widget = { id: "checkbox1", formId: "" }
         widgetMgr.registerQueryParamBinding(
           "checkbox1",
@@ -1581,6 +1606,16 @@ describe("Trigger JSON payloads (aggregated)", () => {
         )
 
         widgetMgr.setBoolValue(widget, true, { fromUi: false }, undefined)
+
+        expect(window.history.replaceState).not.toHaveBeenCalled()
+        expect(mockOnQueryParamsChange).not.toHaveBeenCalled()
+      })
+
+      it("does not sync unbound widget", () => {
+        const widget = { id: "unbound_widget", formId: "" }
+        // Don't register any binding for this widget
+
+        widgetMgr.setStringValue(widget, "test", { fromUi: true }, undefined)
 
         expect(window.history.replaceState).not.toHaveBeenCalled()
         expect(mockOnQueryParamsChange).not.toHaveBeenCalled()
@@ -1759,22 +1794,26 @@ describe("Trigger JSON payloads (aggregated)", () => {
       })
     })
 
-    describe("setQueryParamsChangeHandler", () => {
-      it("calls handler when URL changes", () => {
-        const handler = vi.fn()
-        widgetMgr.setQueryParamsChangeHandler(handler)
+    describe("handler edge cases", () => {
+      it("gracefully handles no handler set", () => {
+        // Create a new widgetMgr without setting a handler
+        const mgr = new WidgetStateManager({
+          sendRerunBackMsg: vi.fn(),
+          formsDataChanged: vi.fn(),
+        })
 
         const widget = { id: "checkbox1", formId: "" }
-        widgetMgr.registerQueryParamBinding(
+        mgr.registerQueryParamBinding(
           "checkbox1",
           "enabled",
           "bool_value",
           false
         )
 
-        widgetMgr.setBoolValue(widget, true, { fromUi: true }, undefined)
-
-        expect(handler).toHaveBeenCalledWith("enabled=true")
+        // Should not throw when no handler is set
+        expect(() => {
+          mgr.setBoolValue(widget, true, { fromUi: true }, undefined)
+        }).not.toThrow()
       })
     })
   })

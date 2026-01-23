@@ -207,12 +207,43 @@ describe("useBasicWidgetState - getDefaultState logic", () => {
   })
 
   describe("array comparison logic", () => {
-    it("uses defaultValue for empty currValue array", () => {
+    it.each([
+      {
+        desc: "uses defaultValue for empty currValue array",
+        currValue: [],
+        defaultValue: [1, 2, 3],
+        expected: [1, 2, 3],
+      },
+      {
+        desc: "uses currValue when array differs from default",
+        currValue: [3, 4],
+        defaultValue: [1, 2],
+        expected: [3, 4],
+      },
+      {
+        desc: "uses currValue when array length differs",
+        currValue: [1, 2, 3],
+        defaultValue: [1, 2],
+        expected: [1, 2, 3],
+      },
+      {
+        desc: "uses defaultValue when arrays are equal",
+        currValue: [1, 2, 3],
+        defaultValue: [1, 2, 3],
+        expected: [1, 2, 3],
+      },
+      {
+        desc: "handles string arrays - uses currValue when differs",
+        currValue: ["option-a", "option-c"],
+        defaultValue: ["option-a", "option-b"],
+        expected: ["option-a", "option-c"],
+      },
+    ])("$desc", ({ currValue, defaultValue, expected }) => {
       const element: MockProto = {
         formId: "",
         setValue: false,
-        value: [], // Empty array
-        default: [1, 2, 3], // Non-empty default
+        value: currValue,
+        default: defaultValue,
       }
 
       const { result } = renderHook(() =>
@@ -226,105 +257,30 @@ describe("useBasicWidgetState - getDefaultState logic", () => {
         })
       )
 
-      expect(result.current[0]).toEqual([1, 2, 3])
-    })
-
-    it("uses currValue when array differs from default", () => {
-      const element: MockProto = {
-        formId: "",
-        setValue: false,
-        value: [3, 4], // URL-seeded selection
-        default: [1, 2], // Widget default
-      }
-
-      const { result } = renderHook(() =>
-        useBasicWidgetState({
-          getStateFromWidgetMgr,
-          getCurrStateFromProto,
-          getDefaultStateFromProto,
-          updateWidgetMgrState,
-          element,
-          widgetMgr,
-        })
-      )
-
-      expect(result.current[0]).toEqual([3, 4])
-    })
-
-    it("uses currValue when array length differs", () => {
-      const element: MockProto = {
-        formId: "",
-        setValue: false,
-        value: [1, 2, 3],
-        default: [1, 2],
-      }
-
-      const { result } = renderHook(() =>
-        useBasicWidgetState({
-          getStateFromWidgetMgr,
-          getCurrStateFromProto,
-          getDefaultStateFromProto,
-          updateWidgetMgrState,
-          element,
-          widgetMgr,
-        })
-      )
-
-      expect(result.current[0]).toEqual([1, 2, 3])
-    })
-
-    it("uses defaultValue when arrays are equal", () => {
-      const element: MockProto = {
-        formId: "",
-        setValue: false,
-        value: [1, 2, 3],
-        default: [1, 2, 3],
-      }
-
-      const { result } = renderHook(() =>
-        useBasicWidgetState({
-          getStateFromWidgetMgr,
-          getCurrStateFromProto,
-          getDefaultStateFromProto,
-          updateWidgetMgrState,
-          element,
-          widgetMgr,
-        })
-      )
-
-      expect(result.current[0]).toEqual([1, 2, 3])
-    })
-
-    it("handles string arrays correctly", () => {
-      const element: MockProto = {
-        formId: "",
-        setValue: false,
-        value: ["option-a", "option-c"], // URL selections
-        default: ["option-a", "option-b"], // Default selections
-      }
-
-      const { result } = renderHook(() =>
-        useBasicWidgetState({
-          getStateFromWidgetMgr,
-          getCurrStateFromProto,
-          getDefaultStateFromProto,
-          updateWidgetMgrState,
-          element,
-          widgetMgr,
-        })
-      )
-
-      expect(result.current[0]).toEqual(["option-a", "option-c"])
+      expect(result.current[0]).toEqual(expected)
     })
   })
 
   describe("numeric values", () => {
-    it("uses currValue when numeric value differs from default", () => {
+    it.each([
+      {
+        desc: "uses currValue when numeric value differs from default",
+        currValue: 42,
+        defaultValue: 0,
+        expected: 42,
+      },
+      {
+        desc: "uses defaultValue when numeric values are equal",
+        currValue: 0,
+        defaultValue: 0,
+        expected: 0,
+      },
+    ])("$desc", ({ currValue, defaultValue, expected }) => {
       const element: MockProto = {
         formId: "",
         setValue: false,
-        value: 42, // URL-seeded number
-        default: 0, // Widget default
+        value: currValue,
+        default: defaultValue,
       }
 
       const { result } = renderHook(() =>
@@ -338,29 +294,7 @@ describe("useBasicWidgetState - getDefaultState logic", () => {
         })
       )
 
-      expect(result.current[0]).toBe(42)
-    })
-
-    it("uses defaultValue when numeric values are equal", () => {
-      const element: MockProto = {
-        formId: "",
-        setValue: false,
-        value: 0,
-        default: 0,
-      }
-
-      const { result } = renderHook(() =>
-        useBasicWidgetState({
-          getStateFromWidgetMgr,
-          getCurrStateFromProto,
-          getDefaultStateFromProto,
-          updateWidgetMgrState,
-          element,
-          widgetMgr,
-        })
-      )
-
-      expect(result.current[0]).toBe(0)
+      expect(result.current[0]).toBe(expected)
     })
   })
 })
