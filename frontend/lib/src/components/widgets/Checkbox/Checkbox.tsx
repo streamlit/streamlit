@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useCallback, useEffect } from "react"
+import { memo, ReactElement, useCallback } from "react"
 
 import {
   LABEL_PLACEMENT,
@@ -32,6 +32,7 @@ import {
   ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { useQueryParamBinding } from "~lib/hooks/useQueryParamBinding"
 import { hasLightBackgroundColor } from "~lib/theme"
 import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
@@ -65,22 +66,13 @@ function Checkbox({
   })
 
   // Query param binding registration
-  const queryParamKey = element.queryParamKey
-  const widgetId = element.id
-  const defaultValue = element.default
-  useEffect(() => {
-    if (queryParamKey) {
-      widgetMgr.registerQueryParamBinding(
-        widgetId,
-        queryParamKey,
-        "bool_value",
-        defaultValue
-      )
-      return () => {
-        widgetMgr.unregisterQueryParamBinding(widgetId)
-      }
-    }
-  }, [widgetMgr, widgetId, queryParamKey, defaultValue])
+  useQueryParamBinding(
+    widgetMgr,
+    element.id,
+    element.queryParamKey,
+    "bool_value",
+    element.default
+  )
 
   const onChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>): void => {

@@ -206,7 +206,9 @@ describe("Checkbox query param binding", () => {
       props.element.id,
       "my_checkbox",
       "bool_value",
-      props.element.default
+      props.element.default,
+      undefined,
+      undefined
     )
   })
 
@@ -245,7 +247,9 @@ describe("Checkbox query param binding", () => {
       props.element.id,
       "my_toggle",
       "bool_value",
-      true
+      true,
+      undefined,
+      undefined
     )
   })
 })

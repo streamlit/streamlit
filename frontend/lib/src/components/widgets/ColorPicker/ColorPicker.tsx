@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { FC, memo, useCallback, useEffect } from "react"
+import { FC, memo, useCallback } from "react"
 
 import { ColorPicker as ColorPickerProto } from "@streamlit/protobuf"
 
@@ -23,6 +23,7 @@ import {
   useBasicWidgetState,
   ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
+import { useQueryParamBinding } from "~lib/hooks/useQueryParamBinding"
 import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -96,22 +97,13 @@ const ColorPicker: FC<Props> = ({
   })
 
   // Query param binding registration
-  const queryParamKey = element.queryParamKey
-  const widgetId = element.id
-  const defaultValue = element.default
-  useEffect(() => {
-    if (queryParamKey) {
-      widgetMgr.registerQueryParamBinding(
-        widgetId,
-        queryParamKey,
-        "string_value",
-        defaultValue
-      )
-      return () => {
-        widgetMgr.unregisterQueryParamBinding(widgetId)
-      }
-    }
-  }, [widgetMgr, widgetId, queryParamKey, defaultValue])
+  useQueryParamBinding(
+    widgetMgr,
+    element.id,
+    element.queryParamKey,
+    "string_value",
+    element.default
+  )
 
   const handleColorClose = useCallback(
     (color: string): void => {

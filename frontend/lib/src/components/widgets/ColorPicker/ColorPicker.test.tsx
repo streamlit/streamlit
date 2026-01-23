@@ -187,7 +187,9 @@ describe("ColorPicker query param binding", () => {
       props.element.id,
       "my_color",
       "string_value",
-      props.element.default
+      props.element.default,
+      undefined,
+      undefined
     )
   })
 
@@ -225,7 +227,9 @@ describe("ColorPicker query param binding", () => {
       props.element.id,
       "theme_color",
       "string_value",
-      "#750dc5"
+      "#750dc5",
+      undefined,
+      undefined
     )
 
     // Verify the widget displays the custom default color
