@@ -21,7 +21,7 @@ from e2e_playwright.shared.app_utils import check_top_level_class, get_expander
 
 EXPANDER_HEADER_IDENTIFIER = "summary"
 
-NUMBER_OF_EXPANDERS: Final = 15
+NUMBER_OF_EXPANDERS: Final = 18  # 15 original + 3 dynamic
 
 
 def test_expander_displays_correctly(
@@ -135,3 +135,173 @@ def test_expander_hover_states(themed_app: Page, assert_snapshot: ImageCompareFu
 def test_check_top_level_class(app: Page):
     """Check that the top level class is correctly set."""
     check_top_level_class(app, "stExpander")
+
+
+def test_dynamic_expander_lazy_execution(app: Page):
+    """Test that dynamic expander only executes content when open."""
+    # Initially closed, lazy content should not have executed
+    expect(app.get_by_text("Lazy execution count: 0")).to_be_visible()
+
+    # Open the expander
+    lazy_expander = get_expander(app, "Dynamic lazy execution")
+    lazy_expander.locator("summary").click()
+    wait_for_app_run(app)
+
+    # Content should have executed once
+    expect(app.get_by_text("Lazy content executed 1 times")).to_be_visible()
+    expect(app.get_by_text("Lazy execution count: 1")).to_be_visible()
+
+    # Close the expander
+    lazy_expander.locator("summary").click()
+    wait_for_app_run(app)
+
+    # Count should stay at 1 (content didn't execute while closed)
+    expect(app.get_by_text("Lazy execution count: 1")).to_be_visible()
+
+
+def test_dynamic_expander_programmatic_control(app: Page):
+    """Test programmatic control of dynamic expander via session state."""
+    # Open via button
+    app.get_by_test_id("stButton").filter(has_text="Open Dynamic").locator(
+        "button"
+    ).click()
+    wait_for_app_run(app)
+
+    # Expander should be open
+    prog_expander = get_expander(app, "Programmatic dynamic")
+    expect(prog_expander.get_by_text("Programmatically controlled")).to_be_visible()
+
+    # Close via button
+    app.get_by_test_id("stButton").filter(has_text="Close Dynamic").locator(
+        "button"
+    ).click()
+    wait_for_app_run(app)
+
+    # Content should not be visible
+    expect(prog_expander.get_by_text("Programmatically controlled")).not_to_be_visible()
+
+
+def test_dynamic_expander_nested(app: Page):
+    """Test nested dynamic expanders with lazy execution and programmatic control."""
+    # Initially both closed, neither should have executed
+    expect(app.get_by_text("Nested execution - Outer: 0, Inner: 0")).to_be_visible()
+
+    # Open outer expander - only outer should execute
+    outer_expander = get_expander(app, "Outer dynamic")
+    outer_expander.locator("summary").first.click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Outer executed 1 times")).to_be_visible()
+    expect(app.get_by_text("Nested execution - Outer: 1, Inner: 0")).to_be_visible()
+
+    # Open inner expander - both should execute (outer again, inner for first time)
+    # Use outer_expander to scope the search to avoid ambiguity
+    inner_expander = outer_expander.get_by_test_id("stExpander").filter(
+        has=app.locator("summary").filter(has_text="Inner dynamic nested")
+    )
+    inner_expander.locator("summary").click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Outer executed 2 times")).to_be_visible()
+    expect(app.get_by_text("Inner executed 1 times")).to_be_visible()
+    expect(app.get_by_text("Nested execution - Outer: 2, Inner: 1")).to_be_visible()
+
+    # Close inner expander - outer executes but inner doesn't
+    inner_expander = outer_expander.get_by_test_id("stExpander").filter(
+        has=app.locator("summary").filter(has_text="Inner dynamic nested")
+    )
+    inner_expander.locator("summary").click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Nested execution - Outer: 3, Inner: 1")).to_be_visible()
+
+    # Close outer expander - neither executes
+    outer_expander.locator("summary").first.click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Nested execution - Outer: 3, Inner: 1")).to_be_visible()
+
+
+def test_dynamic_expander_nested_programmatic_control(app: Page):
+    """Test programmatic control of nested dynamic expanders via buttons."""
+    # Initially both closed
+    expect(app.get_by_text("Nested execution - Outer: 0, Inner: 0")).to_be_visible()
+
+    # Open outer via button
+    app.get_by_test_id("stButton").filter(has_text="Open Outer").locator(
+        "button"
+    ).click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Nested execution - Outer: 1, Inner: 0")).to_be_visible()
+
+    # Open inner via button
+    app.get_by_test_id("stButton").filter(has_text="Open Inner").locator(
+        "button"
+    ).click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Nested execution - Outer: 2, Inner: 1")).to_be_visible()
+
+    # Close inner via button
+    app.get_by_test_id("stButton").filter(has_text="Close Inner").locator(
+        "button"
+    ).click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Nested execution - Outer: 3, Inner: 1")).to_be_visible()
+
+    # Close outer via button
+    app.get_by_test_id("stButton").filter(has_text="Close Outer").locator(
+        "button"
+    ).click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Nested execution - Outer: 3, Inner: 1")).to_be_visible()
+
+
+def test_dynamic_expander_nested_state_preloading(app: Page):
+    """Test that setting inner expander state before outer is opened works correctly."""
+    # Initially both closed
+    expect(app.get_by_text("Nested execution - Outer: 0, Inner: 0")).to_be_visible()
+
+    # Click "Open Inner" first (inner widget not rendered yet, but state should be set)
+    app.get_by_test_id("stButton").filter(has_text="Open Inner").locator(
+        "button"
+    ).click()
+    wait_for_app_run(app)
+
+    # Outer still closed, neither executed
+    expect(app.get_by_text("Nested execution - Outer: 0, Inner: 0")).to_be_visible()
+
+    # Now open outer - inner should already be open because state was set
+    app.get_by_test_id("stButton").filter(has_text="Open Outer").locator(
+        "button"
+    ).click()
+    wait_for_app_run(app)
+
+    # Both should execute - outer renders and sees inner is already open
+    expect(app.get_by_text("Nested execution - Outer: 1, Inner: 1")).to_be_visible()
+    expect(app.get_by_text("Inner executed 1 times")).to_be_visible()
+
+    # Close outer while inner is open
+    app.get_by_test_id("stButton").filter(has_text="Close Outer").locator(
+        "button"
+    ).click()
+    wait_for_app_run(app)
+
+    # Neither executes
+    expect(app.get_by_text("Nested execution - Outer: 1, Inner: 1")).to_be_visible()
+
+    # Reopen outer - check current behavior
+    app.get_by_test_id("stButton").filter(has_text="Open Outer").locator(
+        "button"
+    ).click()
+    wait_for_app_run(app)
+
+    # Current behavior: State IS preserved even when widget is unmounted
+    # This may be unexpected - typically widget state should be lost when not rendered
+    # TODO: Consider if this behavior should change in the future
+    expect(app.get_by_text("Nested execution - Outer: 2, Inner: 2")).to_be_visible()
+    # Inner is visible because session_state preserved the open=True state
+    expect(app.get_by_text("Inner executed 2 times")).to_be_visible()
