@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import math
 from collections.abc import Iterable, Iterator, Mapping, MutableMapping
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Final, cast
@@ -505,8 +506,11 @@ class QueryParams(MutableMapping[str, str]):
             """Format a number, using integer format if value is a whole number.
 
             Examples: 5.0 -> "5", 5.5 -> "5.5", 5 -> "5"
+            Handles special float values (NaN, Inf) by returning them as-is.
             """
-            if isinstance(v, float) and v == int(v):
+            # math.isfinite returns False for NaN, inf, -inf
+            # which would raise ValueError/OverflowError when converting to int
+            if isinstance(v, float) and math.isfinite(v) and v == int(v):
                 return str(int(v))
             return str(v)
 
