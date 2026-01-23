@@ -160,6 +160,24 @@ export interface UseBasicWidgetStateArgs<
 }
 
 /**
+ * Check if currValue represents a seeded value that differs from default.
+ * Used for React Strict Mode recovery where setValue was cleared but value persists.
+ */
+function hasSeededValue<T>(currValue: T, defaultValue: T): boolean {
+  // Arrays: compare by value, treat empty as uninitialized
+  if (Array.isArray(currValue) && Array.isArray(defaultValue)) {
+    if (currValue.length === 0) return false
+    if (currValue.length !== defaultValue.length) return true
+    return currValue.some((v, i) => v !== defaultValue[i])
+  }
+
+  // Scalars: null/undefined/empty-string means "not set" (protobuf defaults)
+  if (isNullOrUndefined(currValue) || currValue === "") return false
+
+  return currValue !== defaultValue
+}
+
+/**
  * A React hook that makes the simplest kinds of widgets very easy to implement.
  *
  * This hook handles the standard widget state management pattern, including:
@@ -187,43 +205,17 @@ export function useBasicWidgetState<
 ] {
   const getDefaultState = useCallback<(wm: WidgetStateManager, el: P) => T>(
     (_wm, el) => {
-      // If setValue is true, use the current value from the proto instead of default.
-      // This handles the case where the backend has seeded a value (e.g., from URL params)
-      // and we need to initialize with that value, not the default.
+      // Backend explicitly set a value (e.g., from URL params or session_state)
       if (el.setValue) {
         return getCurrStateFromProto(el)
       }
 
-      // Also check if the proto has a non-default value even if setValue is false.
-      // This handles React Strict Mode where setValue was cleared by the first mount
-      // but the seeded value is still in element.value.
+      // React Strict Mode recovery: setValue was cleared by first mount,
+      // but the seeded value persists in element.value. Use it if it differs.
       const currValue = getCurrStateFromProto(el)
       const defaultValue = getDefaultStateFromProto(el)
 
-      // For arrays, compare by value not reference. Also check for non-empty arrays.
-      // Empty arrays should use defaultValue since they indicate uninitialized state.
-      if (Array.isArray(currValue) && Array.isArray(defaultValue)) {
-        // If currValue is empty, use defaultValue
-        if (currValue.length === 0) {
-          return defaultValue
-        }
-        // If currValue has different values than defaultValue, use currValue
-        if (
-          currValue.length !== defaultValue.length ||
-          currValue.some((v, i) => v !== defaultValue[i])
-        ) {
-          return currValue
-        }
-        // Arrays are equal, return defaultValue
-        return defaultValue
-      }
-
-      // For non-array values, use simple comparison
-      if (
-        currValue !== defaultValue &&
-        currValue !== null &&
-        currValue !== undefined
-      ) {
+      if (hasSeededValue(currValue, defaultValue)) {
         return currValue
       }
 
