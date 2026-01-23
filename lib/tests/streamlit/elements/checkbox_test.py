@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -26,6 +27,9 @@ from streamlit.proto.Checkbox_pb2 import Checkbox as CheckboxProto
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 class SomeObj:
@@ -369,7 +373,7 @@ hello
         ]
     )
     def test_bind_query_params_sets_query_param_key(
-        self, name: str, widget_func: callable
+        self, name: str, widget_func: Callable
     ):
         """Test that bind='query-params' with a key sets query_param_key in proto."""
         widget_func("the label", key="my_key", bind="query-params")
@@ -384,7 +388,7 @@ hello
         ]
     )
     def test_bind_query_params_without_key_raises_exception(
-        self, name: str, widget_func: callable
+        self, name: str, widget_func: Callable
     ):
         """Test that bind='query-params' without a key raises an exception."""
         with pytest.raises(StreamlitAPIException) as exc:
@@ -399,7 +403,7 @@ hello
         ]
     )
     def test_no_bind_does_not_set_query_param_key(
-        self, name: str, widget_func: callable
+        self, name: str, widget_func: Callable
     ):
         """Test that without bind parameter, query_param_key is not set."""
         widget_func("the label", key="my_key")
@@ -414,7 +418,7 @@ hello
         ]
     )
     def test_invalid_bind_value_raises_exception(
-        self, name: str, widget_func: callable
+        self, name: str, widget_func: Callable
     ):
         """Test that an invalid bind value raises StreamlitInvalidBindValueError."""
         with pytest.raises(StreamlitInvalidBindValueError) as exc:

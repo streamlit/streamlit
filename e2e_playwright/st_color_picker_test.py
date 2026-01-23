@@ -381,3 +381,16 @@ def test_color_picker_query_param_invalid_value(page: Page, app_port: int):
     expect_prefixed_markdown(page, "bound color value:", "#000000")
     # Invalid param should be removed from URL
     expect(page).to_have_url(re.compile(r"^((?!bound_color).)*$"))
+
+
+def test_color_picker_query_param_3char_hex(page: Page, app_port: int):
+    """Test that 3-char hex shorthand colors (e.g., #F00) work in URL params."""
+    # Load app with 3-char hex color (URL-encoded # is %23)
+    # #F00 is shorthand for #FF0000 (red)
+    page.goto(f"http://localhost:{app_port}/?bound_color=%23F00")
+    wait_for_app_loaded(page)
+
+    # Color picker should accept the 3-char hex and display it
+    # Note: The color picker may expand to 6-char or keep 3-char depending on implementation
+    # We just verify it's treated as valid (red color)
+    expect_prefixed_markdown(page, "bound color value:", "#F00")

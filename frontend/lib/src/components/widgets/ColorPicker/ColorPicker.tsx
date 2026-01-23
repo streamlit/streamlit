@@ -50,14 +50,16 @@ const getDefaultStateFromProto = (
   element: ColorPickerProto
 ): ColorPickerValue => {
   // Default to a sensible color if proto default is not set
-  return element.default || "#000000"
+  // Use ?? to only fallback on null/undefined, not empty string
+  return element.default ?? "#000000"
 }
 
 const getCurrStateFromProto = (
   element: ColorPickerProto
 ): ColorPickerValue => {
   // Return the current value, falling back to default if not set
-  return element.value || element.default || "#000000"
+  // Use ?? to only fallback on null/undefined, not empty string
+  return element.value ?? element.default ?? "#000000"
 }
 
 const updateWidgetMgrState = (
