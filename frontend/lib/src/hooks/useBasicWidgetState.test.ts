@@ -32,8 +32,9 @@ interface MockProto {
 }
 
 // Helper functions for the hook
+type MockValue = string | number | string[] | number[]
 const getStateFromWidgetMgr = vi.fn(
-  (_wm: WidgetStateManager, _el: MockProto) => undefined
+  (_wm: WidgetStateManager, _el: MockProto): MockValue | undefined => undefined
 )
 
 const getCurrStateFromProto = vi.fn((el: MockProto) => el.value)
@@ -60,7 +61,7 @@ describe("useBasicWidgetState - getDefaultState logic", () => {
     })
   })
 
-  describe("setValue behavior (URL-seeded values)", () => {
+  describe("setValue behavior", () => {
     it("uses currValue when setValue is true", () => {
       const element: MockProto = {
         formId: "",
@@ -84,12 +85,12 @@ describe("useBasicWidgetState - getDefaultState logic", () => {
       expect(result.current[0]).toBe("url-seeded-value")
     })
 
-    it("uses defaultValue when setValue is false and values are equal", () => {
+    it("uses defaultValue when setValue is false", () => {
       const element: MockProto = {
         formId: "",
         setValue: false,
-        value: "same-value",
-        default: "same-value",
+        value: "some-value",
+        default: "default-value",
       }
 
       const { result } = renderHook(() =>
@@ -103,91 +104,18 @@ describe("useBasicWidgetState - getDefaultState logic", () => {
         })
       )
 
-      expect(result.current[0]).toBe("same-value")
+      // When setValue is false, always use defaultValue
+      expect(result.current[0]).toBe("default-value")
     })
-  })
 
-  describe("React Strict Mode recovery (setValue false but value differs)", () => {
-    it("uses currValue when it differs from defaultValue", () => {
-      // This simulates React Strict Mode: setValue was cleared by first mount,
-      // but element.value still contains the seeded value
+    it("uses defaultValue when setValue is false even if values differ", () => {
+      // This is the key behavior change: we no longer infer seeding from
+      // value != default. Instead, we rely on WidgetStateManager to persist
+      // values across React Strict Mode remounts.
       const element: MockProto = {
         formId: "",
         setValue: false,
-        value: "seeded-value-from-url",
-        default: "widget-default",
-      }
-
-      const { result } = renderHook(() =>
-        useBasicWidgetState({
-          getStateFromWidgetMgr,
-          getCurrStateFromProto,
-          getDefaultStateFromProto,
-          updateWidgetMgrState,
-          element,
-          widgetMgr,
-        })
-      )
-
-      // Should use currValue since it differs from default
-      expect(result.current[0]).toBe("seeded-value-from-url")
-    })
-  })
-
-  describe("empty string handling (protobuf default)", () => {
-    it("treats empty string as 'no value set' and uses defaultValue", () => {
-      // Protobuf sets string fields to "" by default when not explicitly set
-      const element: MockProto = {
-        formId: "",
-        setValue: false,
-        value: "", // Empty string from protobuf
-        default: "#000000", // Actual widget default (e.g., ColorPicker)
-      }
-
-      const { result } = renderHook(() =>
-        useBasicWidgetState({
-          getStateFromWidgetMgr,
-          getCurrStateFromProto,
-          getDefaultStateFromProto,
-          updateWidgetMgrState,
-          element,
-          widgetMgr,
-        })
-      )
-
-      // Empty string should be treated as "no value", so use default
-      expect(result.current[0]).toBe("#000000")
-    })
-
-    it("uses non-empty currValue when it differs from default", () => {
-      const element: MockProto = {
-        formId: "",
-        setValue: false,
-        value: "user-entered-text",
-        default: "",
-      }
-
-      const { result } = renderHook(() =>
-        useBasicWidgetState({
-          getStateFromWidgetMgr,
-          getCurrStateFromProto,
-          getDefaultStateFromProto,
-          updateWidgetMgrState,
-          element,
-          widgetMgr,
-        })
-      )
-
-      expect(result.current[0]).toBe("user-entered-text")
-    })
-  })
-
-  describe("null/undefined handling", () => {
-    it("treats null currValue as 'no value set'", () => {
-      const element: MockProto = {
-        formId: "",
-        setValue: false,
-        value: null as unknown as string, // Simulating null
+        value: "different-value",
         default: "default-value",
       }
 
@@ -206,44 +134,18 @@ describe("useBasicWidgetState - getDefaultState logic", () => {
     })
   })
 
-  describe("array comparison logic", () => {
-    it.each([
-      {
-        desc: "uses defaultValue for empty currValue array",
-        currValue: [],
-        defaultValue: [1, 2, 3],
-        expected: [1, 2, 3],
-      },
-      {
-        desc: "uses currValue when array differs from default",
-        currValue: [3, 4],
-        defaultValue: [1, 2],
-        expected: [3, 4],
-      },
-      {
-        desc: "uses currValue when array length differs",
-        currValue: [1, 2, 3],
-        defaultValue: [1, 2],
-        expected: [1, 2, 3],
-      },
-      {
-        desc: "uses defaultValue when arrays are equal",
-        currValue: [1, 2, 3],
-        defaultValue: [1, 2, 3],
-        expected: [1, 2, 3],
-      },
-      {
-        desc: "handles string arrays - uses currValue when differs",
-        currValue: ["option-a", "option-c"],
-        defaultValue: ["option-a", "option-b"],
-        expected: ["option-a", "option-c"],
-      },
-    ])("$desc", ({ currValue, defaultValue, expected }) => {
+  describe("WidgetStateManager takes precedence over getDefaultState", () => {
+    it("uses WidgetStateManager value when setValue is false", () => {
+      // When WidgetStateManager has a value and setValue is false,
+      // WidgetStateManager value takes precedence over getDefaultStateFromProto
+      const storedValue = "stored-in-widget-mgr"
+      getStateFromWidgetMgr.mockReturnValueOnce(storedValue)
+
       const element: MockProto = {
         formId: "",
         setValue: false,
-        value: currValue,
-        default: defaultValue,
+        value: "proto-value",
+        default: "default-value",
       }
 
       const { result } = renderHook(() =>
@@ -257,30 +159,92 @@ describe("useBasicWidgetState - getDefaultState logic", () => {
         })
       )
 
-      expect(result.current[0]).toEqual(expected)
+      // WidgetStateManager value wins when setValue is false
+      expect(result.current[0]).toBe(storedValue)
+    })
+
+    it("setValue=true updates state even if WidgetStateManager has a value", () => {
+      // When setValue is true, the backend is explicitly setting a new value
+      // (e.g., from session_state update), so it should override cached value
+      const storedValue = "stored-in-widget-mgr"
+      getStateFromWidgetMgr.mockReturnValueOnce(storedValue)
+
+      const element: MockProto = {
+        formId: "",
+        setValue: true,
+        value: "new-backend-value",
+        default: "default-value",
+      }
+
+      const { result } = renderHook(() =>
+        useBasicWidgetState({
+          getStateFromWidgetMgr,
+          getCurrStateFromProto,
+          getDefaultStateFromProto,
+          updateWidgetMgrState,
+          element,
+          widgetMgr,
+        })
+      )
+
+      // setValue=true means backend is setting a new value, which should win
+      expect(result.current[0]).toBe("new-backend-value")
+    })
+  })
+
+  describe("array values", () => {
+    it("uses currValue array when setValue is true", () => {
+      const element: MockProto = {
+        formId: "",
+        setValue: true,
+        value: [3, 4, 5],
+        default: [1, 2],
+      }
+
+      const { result } = renderHook(() =>
+        useBasicWidgetState({
+          getStateFromWidgetMgr,
+          getCurrStateFromProto,
+          getDefaultStateFromProto,
+          updateWidgetMgrState,
+          element,
+          widgetMgr,
+        })
+      )
+
+      expect(result.current[0]).toEqual([3, 4, 5])
+    })
+
+    it("uses defaultValue array when setValue is false", () => {
+      const element: MockProto = {
+        formId: "",
+        setValue: false,
+        value: [3, 4, 5],
+        default: [1, 2],
+      }
+
+      const { result } = renderHook(() =>
+        useBasicWidgetState({
+          getStateFromWidgetMgr,
+          getCurrStateFromProto,
+          getDefaultStateFromProto,
+          updateWidgetMgrState,
+          element,
+          widgetMgr,
+        })
+      )
+
+      expect(result.current[0]).toEqual([1, 2])
     })
   })
 
   describe("numeric values", () => {
-    it.each([
-      {
-        desc: "uses currValue when numeric value differs from default",
-        currValue: 42,
-        defaultValue: 0,
-        expected: 42,
-      },
-      {
-        desc: "uses defaultValue when numeric values are equal",
-        currValue: 0,
-        defaultValue: 0,
-        expected: 0,
-      },
-    ])("$desc", ({ currValue, defaultValue, expected }) => {
+    it("uses currValue when setValue is true", () => {
       const element: MockProto = {
         formId: "",
-        setValue: false,
-        value: currValue,
-        default: defaultValue,
+        setValue: true,
+        value: 42,
+        default: 0,
       }
 
       const { result } = renderHook(() =>
@@ -294,7 +258,29 @@ describe("useBasicWidgetState - getDefaultState logic", () => {
         })
       )
 
-      expect(result.current[0]).toBe(expected)
+      expect(result.current[0]).toBe(42)
+    })
+
+    it("uses defaultValue when setValue is false", () => {
+      const element: MockProto = {
+        formId: "",
+        setValue: false,
+        value: 42,
+        default: 0,
+      }
+
+      const { result } = renderHook(() =>
+        useBasicWidgetState({
+          getStateFromWidgetMgr,
+          getCurrStateFromProto,
+          getDefaultStateFromProto,
+          updateWidgetMgrState,
+          element,
+          widgetMgr,
+        })
+      )
+
+      expect(result.current[0]).toBe(0)
     })
   })
 })

@@ -160,24 +160,6 @@ export interface UseBasicWidgetStateArgs<
 }
 
 /**
- * Check if currValue represents a seeded value that differs from default.
- * Used for React Strict Mode recovery where setValue was cleared but value persists.
- */
-function hasSeededValue<T>(currValue: T, defaultValue: T): boolean {
-  // Arrays: compare by value, treat empty as uninitialized
-  if (Array.isArray(currValue) && Array.isArray(defaultValue)) {
-    if (currValue.length === 0) return false
-    if (currValue.length !== defaultValue.length) return true
-    return currValue.some((v, i) => v !== defaultValue[i])
-  }
-
-  // Scalars: null/undefined/empty-string means "not set" (protobuf defaults)
-  if (isNullOrUndefined(currValue) || currValue === "") return false
-
-  return currValue !== defaultValue
-}
-
-/**
  * A React hook that makes the simplest kinds of widgets very easy to implement.
  *
  * This hook handles the standard widget state management pattern, including:
@@ -205,21 +187,15 @@ export function useBasicWidgetState<
 ] {
   const getDefaultState = useCallback<(wm: WidgetStateManager, el: P) => T>(
     (_wm, el) => {
-      // Backend explicitly set a value (e.g., from URL params or session_state)
+      // Backend explicitly set a value (e.g., from URL params or session_state).
+      // This handles both initial URL seeding and session_state updates.
+      // On React Strict Mode remount, WidgetStateManager will have the value
+      // (stored by the first mount's effect), so this path won't be reached.
       if (el.setValue) {
         return getCurrStateFromProto(el)
       }
 
-      // React Strict Mode recovery: setValue was cleared by first mount,
-      // but the seeded value persists in element.value. Use it if it differs.
-      const currValue = getCurrStateFromProto(el)
-      const defaultValue = getDefaultStateFromProto(el)
-
-      if (hasSeededValue(currValue, defaultValue)) {
-        return currValue
-      }
-
-      return defaultValue
+      return getDefaultStateFromProto(el)
     },
     [getDefaultStateFromProto, getCurrStateFromProto]
   )

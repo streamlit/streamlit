@@ -48,11 +48,24 @@ export interface WidgetInfo {
 }
 
 /**
+ * Valid widget value types for query param bindings.
+ * These correspond to the WidgetState proto value field names.
+ */
+export type WidgetValueType =
+  | "bool_value"
+  | "int_value"
+  | "double_value"
+  | "string_value"
+  | "string_array_value"
+  | "int_array_value"
+  | "double_array_value"
+
+/**
  * Binding information for a widget that syncs to URL query parameters.
  */
 export interface QueryParamBinding {
   paramKey: string
-  valueType: string // e.g., "bool_value", "string_value", etc.
+  valueType: WidgetValueType
   defaultValue: unknown
   urlFormat?: "comma" | "repeated" // How to serialize arrays
   options?: string[] // For index-based widgets, the formatted option strings
@@ -1116,7 +1129,7 @@ export class WidgetStateManager {
   public registerQueryParamBinding(
     widgetId: string,
     paramKey: string,
-    valueType: string,
+    valueType: WidgetValueType,
     defaultValue: unknown,
     urlFormat?: "comma" | "repeated",
     options?: string[]
@@ -1270,7 +1283,11 @@ export class WidgetStateManager {
     this.notifyQueryParamsChange()
   }
 
-  /** Convert a primitive value to string safely. */
+  /**
+   * Convert a primitive value to string safely.
+   * @returns The string representation, or undefined if value is not a primitive
+   *          (e.g., null, undefined, object, array).
+   */
   private toStringPrimitive(value: unknown): string | undefined {
     if (
       typeof value === "string" ||
@@ -1296,14 +1313,22 @@ export class WidgetStateManager {
     return valueStr === defaultStr
   }
 
-  /** Check if array equals the widget's default array (with type coercion). */
+  /**
+   * Check if array equals the widget's default array (with type coercion).
+   *
+   * Handles edge cases where the widget's default may be a scalar but the
+   * current value is an array (e.g., slider with value=[5] and defaultValue=5),
+   * or where an empty array should match a non-array default (cleared state).
+   */
   private isDefaultArrayValue(
     values: string[],
     binding: QueryParamBinding
   ): boolean {
     const defaultValue = binding.defaultValue
     if (!Array.isArray(defaultValue)) {
+      // Empty array matches non-array default (widget cleared to empty state)
       if (values.length === 0) return true
+      // Single-element array matches scalar default (e.g., slider: [5] == 5)
       if (values.length === 1 && defaultValue !== null) {
         const defaultStr = this.toStringPrimitive(defaultValue)
         return defaultStr !== undefined && values[0] === defaultStr
