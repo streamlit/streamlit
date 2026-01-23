@@ -332,92 +332,97 @@ jobs:
           script: |
             const COVERAGE_CHANGE_THRESHOLD = 0.03; // 0.03%
 
-            // Read current coverage from the existing file
-            const currentCoverage = require('./lib/coverage.json');
+            try {
+              // Read current coverage from the existing file
+              const currentCoverage = require('./lib/coverage.json');
 
-            // Read develop coverage from downloaded artifact
-            const developCoverage = require('/tmp/develop_coverage/coverage.json');
+              // Read develop coverage from downloaded artifact
+              const developCoverage = require('/tmp/develop_coverage/coverage.json');
 
-            // Calculate total coverage
-            const currentTotal = currentCoverage.totals.percent_covered;
-            const developTotal = developCoverage.totals.percent_covered;
+              // Calculate total coverage
+              const currentTotal = currentCoverage.totals.percent_covered;
+              const developTotal = developCoverage.totals.percent_covered;
 
-            // Calculate percentage difference
-            const diffPercent = currentTotal - developTotal;
-            const absDiffPercent = Math.abs(diffPercent);
+              // Calculate percentage difference
+              const diffPercent = currentTotal - developTotal;
+              const absDiffPercent = Math.abs(diffPercent);
 
-            console.log(`Current coverage: ${currentTotal.toFixed(4)}%`);
-            console.log(`Develop coverage: ${developTotal.toFixed(4)}%`);
-            console.log(`Coverage difference: ${diffPercent.toFixed(4)}%`);
+              console.log(`Current coverage: ${currentTotal.toFixed(4)}%`);
+              console.log(`Develop coverage: ${developTotal.toFixed(4)}%`);
+              console.log(`Coverage difference: ${diffPercent.toFixed(4)}%`);
 
             // Check if this PR is from a fork - fork PRs have limited GITHUB_TOKEN permissions
             // and cannot post comments to the PR
             const isForkPR = context.payload.pull_request?.head?.repo?.fork === true;
             if (isForkPR) {
-              console.log('PR is from a fork - skipping comment (insufficient permissions)');
+              console.log('PR is from a fork - skipping coverage comment (insufficient permissions)');
               console.log('Coverage information is available in the job summary above.');
               return;
             }
 
-            const changeType = diffPercent > 0 ? 'increased' : 'decreased';
-            const emoji = diffPercent > 0 ? '📈' : '📉';
+              const changeType = diffPercent > 0 ? 'increased' : 'decreased';
+              const emoji = diffPercent > 0 ? '📈' : '📉';
 
-            const commentBody = `### ${emoji} Python coverage change detected
+              const commentBody = `### ${emoji} Python coverage change detected
 
-            The Python unit test coverage has **${changeType} by ${Math.abs(diffPercent).toFixed(4)}%**
+              The Python unit test coverage has **${changeType} by ${Math.abs(diffPercent).toFixed(4)}%**
 
-            - Current PR: ${currentTotal.toFixed(4)}% (${currentCoverage.totals.num_statements} statements, ${currentCoverage.totals.missing_lines} missed)
-            - Latest develop: ${developTotal.toFixed(4)}% (${developCoverage.totals.num_statements} statements, ${developCoverage.totals.missing_lines} missed)
+              - Current PR: ${currentTotal.toFixed(4)}% (${currentCoverage.totals.num_statements} statements, ${currentCoverage.totals.missing_lines} missed)
+              - Latest develop: ${developTotal.toFixed(4)}% (${developCoverage.totals.num_statements} statements, ${developCoverage.totals.missing_lines} missed)
 
-            ${absDiffPercent >= COVERAGE_CHANGE_THRESHOLD
-              ? (diffPercent > 0
-                  ? '🎉 Great job on improving test coverage!'
-                  : '💡 Consider adding more unit tests to maintain or improve coverage.'
-                )
-              : '✅ Coverage change is within normal range.'
-            }
+              ${absDiffPercent >= COVERAGE_CHANGE_THRESHOLD
+                ? (diffPercent > 0
+                    ? '🎉 Great job on improving test coverage!'
+                    : '💡 Consider adding more unit tests to maintain or improve coverage.'
+                  )
+                : '✅ Coverage change is within normal range.'
+              }
 
-            <details>
-            <summary>Coverage by files</summary>
+              <details>
+              <summary>Coverage by files</summary>
 
-            ${process.env.COVERAGE_REPORT}
-            </details>
+              ${process.env.COVERAGE_REPORT}
+              </details>
 
-            📊 [View detailed coverage comparison](https://issues.streamlit.app/Test_Coverage_(Python)?pr=${context.issue.number})`;
+              📊 [View detailed coverage comparison](https://issues.streamlit.app/Test_Coverage_(Python)?pr=${context.issue.number})`;
 
 
-            // Unique identifier for our comment
-            const commentIdentifier = '<!-- STREAMLIT-PYTHON-COVERAGE-CHECK -->';
-            const fullCommentBody = `${commentIdentifier}\n${commentBody}`;
+              // Unique identifier for our comment
+              const commentIdentifier = '<!-- STREAMLIT-PYTHON-COVERAGE-CHECK -->';
+              const fullCommentBody = `${commentIdentifier}\n${commentBody}`;
 
-            // Get all comments on the PR
-            const { data: comments } = await github.rest.issues.listComments({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-            });
-
-            // Look for our previous coverage comment
-            const coverageComment = comments.find(comment => comment.body.includes(commentIdentifier));
-
-            if (coverageComment) {
-              // Update existing comment
-              await github.rest.issues.updateComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                comment_id: coverageComment.id,
-                body: fullCommentBody
-              });
-              console.log('Updated existing coverage comment');
-            } else if (absDiffPercent >= COVERAGE_CHANGE_THRESHOLD) {
-              // Only create new comment for significant changes
-              await github.rest.issues.createComment({
+              // Get all comments on the PR
+              const { data: comments } = await github.rest.issues.listComments({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: context.issue.number,
-                body: fullCommentBody
               });
-              console.log('Created new coverage comment');
-            } else {
-              console.log('Coverage change is not significant and no existing comment found, skipping comment');
+
+              // Look for our previous coverage comment
+              const coverageComment = comments.find(comment => comment.body.includes(commentIdentifier));
+
+              if (coverageComment) {
+                // Update existing comment
+                await github.rest.issues.updateComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  comment_id: coverageComment.id,
+                  body: fullCommentBody
+                });
+                console.log('Updated existing coverage comment');
+              } else if (absDiffPercent >= COVERAGE_CHANGE_THRESHOLD) {
+                // Only create new comment for significant changes
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.issue.number,
+                  body: fullCommentBody
+                });
+                console.log('Created new coverage comment');
+              } else {
+                console.log('Coverage change is not significant and no existing comment found, skipping comment');
+              }
+            } catch (error) {
+              console.error(`Error checking coverage changes: ${error.message}`);
+              throw error;
             }
