@@ -85,12 +85,15 @@ def parse_url_param(value: str | list[str], value_type: str) -> Any:
                 return False
             raise ValueError(f"Invalid boolean value: {val}")
         case "int_value":
-            # Try to parse as int, but return string if it fails
-            # This allows deserializers to handle human-readable option values
+            # Try to parse as int, but return string if it fails.
+            # This intentionally differs from double_value (which raises on failure)
+            # because int_value is used for selection widgets where URLs may contain
+            # human-readable option strings (e.g., ?fruit=apple instead of ?fruit=0).
+            # The deserializer will match the string against widget options.
             try:
                 return int(val)
             except ValueError:
-                return val  # Return as string for deserializer to handle
+                return val
         case "double_value":
             return float(val)
         case "string_value":
@@ -206,16 +209,21 @@ class QueryParams(MutableMapping[str, str]):
     ) -> None:
         # This overrides the `update` provided by MutableMapping
         # to ensure only one one ForwardMsg is sent.
-        # Check all keys for bound params before making any changes
-        keys_to_update: list[str] = []
-        other_as_list: list[tuple[str, str | Iterable[str]]] | None = None
+
+        # Consume dict-like objects into a list upfront to avoid iterating twice
+        # (once for keys, once for values). This prevents potential issues if
+        # `other` is modified during iteration.
+        other_as_list: list[tuple[str, str | Iterable[str]]]
         if hasattr(other, "keys") and hasattr(other, "__getitem__"):
             other_dict = cast("SupportsKeysAndGetItem[str, str | Iterable[str]]", other)
-            keys_to_update.extend(other_dict.keys())
+            keys = list(other_dict.keys())
+            other_as_list = [(k, other_dict[k]) for k in keys]
         else:
-            # other is an iterable of tuples - consume into list for later use
+            # other is an iterable of tuples - consume into list
             other_as_list = list(other)
-            keys_to_update.extend(key for key, _ in other_as_list)
+
+        # Collect all keys to check for bound params before making any changes
+        keys_to_update = [key for key, _ in other_as_list]
         keys_to_update.extend(kwds.keys())
 
         # Check for bound params
@@ -227,13 +235,8 @@ class QueryParams(MutableMapping[str, str]):
                 )
 
         # Now apply the updates
-        if other_as_list is not None:
-            for key, value in other_as_list:
-                self._set_item_internal(key, value)
-        elif hasattr(other, "keys") and hasattr(other, "__getitem__"):
-            other_dict = cast("SupportsKeysAndGetItem[str, str | Iterable[str]]", other)
-            for key in other_dict.keys():  # noqa: SIM118
-                self._set_item_internal(key, other_dict[key])
+        for key, value in other_as_list:
+            self._set_item_internal(key, value)
         for key, value in kwds.items():
             self._set_item_internal(key, value)
         self._send_query_param_msg()
@@ -377,10 +380,16 @@ class QueryParams(MutableMapping[str, str]):
     def is_bound(self, param_key: str) -> bool:
         """Check if a query parameter is bound to a widget.
 
+        Note: This check is case-sensitive, meaning "Foo" and "foo" are treated
+        as different parameters. This is intentional because Python keys are
+        case-sensitive and users explicitly choose their parameter names via
+        the widget's `key` argument. This differs from embed parameter checks
+        which are case-insensitive for URL compatibility.
+
         Parameters
         ----------
         param_key : str
-            The query parameter key.
+            The query parameter key (case-sensitive).
 
         Returns
         -------
@@ -493,7 +502,10 @@ class QueryParams(MutableMapping[str, str]):
         """
 
         def format_number(v: Any) -> str:
-            """Format a number, using integer format if value is a whole number."""
+            """Format a number, using integer format if value is a whole number.
+
+            Examples: 5.0 -> "5", 5.5 -> "5.5", 5 -> "5"
+            """
             if isinstance(v, float) and v == int(v):
                 return str(int(v))
             return str(v)
