@@ -39,6 +39,7 @@ from streamlit.proto.Checkbox_pb2 import Checkbox as CheckboxProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import (
+    BindOption,
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
@@ -75,6 +76,7 @@ class CheckboxMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
+        bind: BindOption = None,
     ) -> bool:
         r"""Display a checkbox widget.
 
@@ -183,6 +185,7 @@ class CheckboxMixin:
             disabled=disabled,
             label_visibility=label_visibility,
             type=CheckboxProto.StyleType.DEFAULT,
+            bind=bind,
             ctx=ctx,
             width=width,
         )
@@ -201,6 +204,7 @@ class CheckboxMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
+        bind: BindOption = None,
     ) -> bool:
         r"""Display a toggle widget.
 
@@ -309,6 +313,7 @@ class CheckboxMixin:
             disabled=disabled,
             label_visibility=label_visibility,
             type=CheckboxProto.StyleType.TOGGLE,
+            bind=bind,
             ctx=ctx,
             width=width,
         )
@@ -326,6 +331,7 @@ class CheckboxMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         type: CheckboxProto.StyleType.ValueType = CheckboxProto.StyleType.DEFAULT,
+        bind: BindOption = None,
         ctx: ScriptRunContext | None = None,
         width: Width = "content",
     ) -> bool:
@@ -364,6 +370,10 @@ class CheckboxMixin:
         if help is not None:
             checkbox_proto.help = dedent(help)
 
+        # Set query param key if bound
+        if bind == "query-params" and key is not None:
+            checkbox_proto.query_param_key = str(key)
+
         validate_width(width, allow_content=True)
         layout_config = LayoutConfig(width=width)
 
@@ -378,6 +388,7 @@ class CheckboxMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="bool_value",
+            bind=bind,
         )
 
         if checkbox_state.value_changed:
