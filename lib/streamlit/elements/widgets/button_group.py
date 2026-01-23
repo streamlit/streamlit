@@ -484,17 +484,21 @@ class ButtonGroupMixin:
         # Create string-based serde for feedback
         # Use the icon strings as formatted options to match what frontend sends.
         # transformed_options contains ButtonGroupProto.Option objects with contentIcon.
-        # The frontend reconstructs the formatted string from contentIcon + content.
+        # The frontend reconstructs the formatted string from contentIcon + content + index.
         def _format_feedback_option(idx: int) -> str:
-            """Format a sentiment index to its icon string."""
+            """Format a sentiment index to its unique icon string.
+
+            Includes the button index to ensure uniqueness when multiple options
+            have the same icon (e.g., stars all use the same star icon).
+            """
             # Find the button index for this sentiment value
             button_idx = options_indices.index(idx)
             opt = transformed_options[button_idx]
             icon = opt.content_icon or ""
             content = opt.content or ""
-            if icon:
-                return f"{icon} {content}".strip()
-            return content
+            base = f"{icon} {content}".strip() if icon else content
+            # Include button_idx to ensure uniqueness for identical icons (e.g., stars)
+            return f"{base}|{button_idx}"
 
         formatted_options = [_format_feedback_option(idx) for idx in options_indices]
         formatted_option_to_option_index = {

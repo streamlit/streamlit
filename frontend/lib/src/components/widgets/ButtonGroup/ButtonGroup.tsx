@@ -74,12 +74,12 @@ function getFormattedOption(
 
   // Reconstruct the formatted option string
   // If there's an icon, prepend it with a space separator (matching backend format)
+  // Include the index to ensure uniqueness when multiple options have the same icon
+  // (e.g., stars all use the same star icon)
   const icon = option.contentIcon
   const content = option.content ?? ""
-  if (icon) {
-    return `${icon} ${content}`.trim()
-  }
-  return content
+  const base = icon ? `${icon} ${content}`.trim() : content
+  return `${base}|${index}`
 }
 
 /**
