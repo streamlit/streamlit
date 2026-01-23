@@ -20,7 +20,7 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitInvalidBindValueError
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
@@ -232,3 +232,32 @@ class ColorPickerTest(DeltaGeneratorTestCase):
             c2 = self.get_delta_from_queue().new_element.color_picker
             id2 = c2.id
             assert id1 == id2
+
+    def test_bind_query_params_sets_query_param_key(self):
+        """Test that bind='query-params' with a key sets query_param_key in proto."""
+        st.color_picker("the label", key="my_color", bind="query-params")
+
+        c = self.get_delta_from_queue().new_element.color_picker
+        assert c.query_param_key == "my_color"
+
+    def test_bind_query_params_without_key_raises_exception(self):
+        """Test that bind='query-params' without a key raises an exception."""
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.color_picker("the label", bind="query-params")
+
+        assert "must have a 'key' parameter" in str(exc.value)
+
+    def test_no_bind_does_not_set_query_param_key(self):
+        """Test that without bind parameter, query_param_key is not set."""
+        st.color_picker("the label", key="my_color")
+
+        c = self.get_delta_from_queue().new_element.color_picker
+        assert c.query_param_key == ""
+
+    def test_invalid_bind_value_raises_exception(self):
+        """Test that an invalid bind value raises StreamlitInvalidBindValueError."""
+        with pytest.raises(StreamlitInvalidBindValueError) as exc:
+            st.color_picker("the label", key="my_color", bind="invalid-value")
+
+        assert "invalid-value" in str(exc.value)
+        assert "query-params" in str(exc.value)

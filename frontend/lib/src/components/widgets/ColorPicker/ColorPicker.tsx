@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { FC, memo, useCallback } from "react"
+import { FC, memo, useCallback, useEffect } from "react"
 
 import { ColorPicker as ColorPickerProto } from "@streamlit/protobuf"
 
@@ -49,13 +49,15 @@ const getStateFromWidgetMgr = (
 const getDefaultStateFromProto = (
   element: ColorPickerProto
 ): ColorPickerValue => {
-  return element.default ?? null
+  // Default to a sensible color if proto default is not set
+  return element.default || "#000000"
 }
 
 const getCurrStateFromProto = (
   element: ColorPickerProto
 ): ColorPickerValue => {
-  return element.value ?? null
+  // Return the current value, falling back to default if not set
+  return element.value || element.default || "#000000"
 }
 
 const updateWidgetMgrState = (
@@ -90,6 +92,24 @@ const ColorPicker: FC<Props> = ({
     widgetMgr,
     fragmentId,
   })
+
+  // Query param binding registration
+  const queryParamKey = element.queryParamKey
+  const widgetId = element.id
+  const defaultValue = element.default
+  useEffect(() => {
+    if (queryParamKey) {
+      widgetMgr.registerQueryParamBinding(
+        widgetId,
+        queryParamKey,
+        "string_value",
+        defaultValue
+      )
+      return () => {
+        widgetMgr.unregisterQueryParamBinding(widgetId)
+      }
+    }
+  }, [widgetMgr, widgetId, queryParamKey, defaultValue])
 
   const handleColorClose = useCallback(
     (color: string): void => {
