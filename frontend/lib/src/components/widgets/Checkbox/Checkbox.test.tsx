@@ -194,3 +194,58 @@ describe("Checkbox widget", () => {
     )
   })
 })
+
+describe("Checkbox query param binding", () => {
+  it("registers query param binding on mount when queryParamKey is set", () => {
+    const props = getProps({ queryParamKey: "my_checkbox" })
+    vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
+
+    render(<Checkbox {...props} />)
+
+    expect(props.widgetMgr.registerQueryParamBinding).toHaveBeenCalledWith(
+      props.element.id,
+      "my_checkbox",
+      "bool_value",
+      props.element.default
+    )
+  })
+
+  it("unregisters query param binding on unmount", () => {
+    const props = getProps({ queryParamKey: "my_checkbox" })
+    vi.spyOn(props.widgetMgr, "unregisterQueryParamBinding")
+
+    const { unmount } = render(<Checkbox {...props} />)
+    unmount()
+
+    expect(props.widgetMgr.unregisterQueryParamBinding).toHaveBeenCalledWith(
+      props.element.id
+    )
+  })
+
+  it("does not register query param binding when queryParamKey is not set", () => {
+    const props = getProps()
+    vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
+
+    render(<Checkbox {...props} />)
+
+    expect(props.widgetMgr.registerQueryParamBinding).not.toHaveBeenCalled()
+  })
+
+  it("registers query param binding for toggle widget", () => {
+    const props = getProps({
+      queryParamKey: "my_toggle",
+      type: CheckboxProto.StyleType.TOGGLE,
+      default: true,
+    })
+    vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
+
+    render(<Checkbox {...props} />)
+
+    expect(props.widgetMgr.registerQueryParamBinding).toHaveBeenCalledWith(
+      props.element.id,
+      "my_toggle",
+      "bool_value",
+      true
+    )
+  })
+})

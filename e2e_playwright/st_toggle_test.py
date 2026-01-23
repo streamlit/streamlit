@@ -16,7 +16,11 @@ import re
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.conftest import (
+    ImageCompareFunction,
+    wait_for_app_loaded,
+    wait_for_app_run,
+)
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_toggle,
@@ -28,7 +32,7 @@ from e2e_playwright.shared.app_utils import (
     get_toggle,
 )
 
-TOGGLE_ELEMENTS = 17
+TOGGLE_ELEMENTS = 19
 
 
 def test_toggle_widget_display(themed_app: Page, assert_snapshot: ImageCompareFunction):
@@ -180,3 +184,69 @@ def test_dynamic_toggle_props(app: Page, assert_snapshot: ImageCompareFunction):
     # Click the toggle
     click_toggle(app, "Updated dynamic toggle")
     expect_prefixed_markdown(app, "Updated toggle state:", "False")
+
+
+def test_toggle_query_param_seeding(page: Page, app_port: int):
+    """Test that toggle value can be seeded from URL query params."""
+    # Load app with query param set to true
+    page.goto(f"http://localhost:{app_port}/?bound_toggle=true")
+    wait_for_app_loaded(page)
+
+    # Toggle should be checked
+    toggle = get_toggle(page, "Bound toggle (default False)")
+    expect(toggle.locator("input")).to_be_checked()
+    expect_prefixed_markdown(page, "bound toggle value:", "True")
+
+
+def test_toggle_query_param_updates_url(app: Page):
+    """Test that clicking a bound toggle updates the URL."""
+    # Initially unchecked (default is False), no query param in URL
+    expect_prefixed_markdown(app, "bound toggle value:", "False")
+    expect(app).to_have_url(re.compile(r"^((?!bound_toggle).)*$"))
+
+    # Click the toggle
+    click_toggle(app, "Bound toggle (default False)")
+
+    # URL should now contain the query param
+    expect(app).to_have_url(re.compile(r"bound_toggle=true"))
+    expect_prefixed_markdown(app, "bound toggle value:", "True")
+
+    # Click again to turn off (back to default)
+    click_toggle(app, "Bound toggle (default False)")
+
+    # Query param should be removed since value is back to default
+    expect(app).to_have_url(re.compile(r"^((?!bound_toggle).)*$"))
+    expect_prefixed_markdown(app, "bound toggle value:", "False")
+
+
+def test_toggle_query_param_default_true(page: Page, app_port: int):
+    """Test toggle with default=True: seeding with false and param removal."""
+    # Load app with query param set to false (overriding true default)
+    page.goto(f"http://localhost:{app_port}/?bound_true=false")
+    wait_for_app_loaded(page)
+
+    # Toggle should be off (false overrides true default)
+    toggle = get_toggle(page, "Bound toggle (default True)")
+    expect(toggle.locator("input")).not_to_be_checked()
+    expect_prefixed_markdown(page, "bound toggle true value:", "False")
+
+    # Click to turn on (back to default True)
+    click_toggle(page, "Bound toggle (default True)")
+
+    # Query param should be removed since value is back to default (True)
+    expect(page).to_have_url(re.compile(r"^((?!bound_true).)*$"))
+    expect_prefixed_markdown(page, "bound toggle true value:", "True")
+
+
+def test_toggle_query_param_invalid_value(page: Page, app_port: int):
+    """Test that invalid URL values are cleared and widget uses default."""
+    # Load app with invalid query param value
+    page.goto(f"http://localhost:{app_port}/?bound_toggle=invalid")
+    wait_for_app_loaded(page)
+
+    # Toggle should use default (False), and invalid param should be cleared
+    toggle = get_toggle(page, "Bound toggle (default False)")
+    expect(toggle.locator("input")).not_to_be_checked()
+    expect_prefixed_markdown(page, "bound toggle value:", "False")
+    # Invalid param should be removed from URL
+    expect(page).to_have_url(re.compile(r"^((?!bound_toggle).)*$"))

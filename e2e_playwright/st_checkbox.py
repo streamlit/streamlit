@@ -105,3 +105,21 @@ else:
         kwargs={"param": "initial kwarg param"},
     )
     st.write("Initial checkbox state:", state)
+
+# Query param binding checkbox (default False)
+st.markdown("Query param binding:")
+bound_checkbox = st.checkbox(
+    "Bound checkbox (default False)",
+    key="bound_checkbox",
+    bind="query-params",
+)
+st.write("bound checkbox value:", bound_checkbox)
+
+# Query param binding checkbox with default True
+bound_checkbox_true = st.checkbox(
+    "Bound checkbox (default True)",
+    value=True,
+    key="bound_true",
+    bind="query-params",
+)
+st.write("bound checkbox true value:", bound_checkbox_true)

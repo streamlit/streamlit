@@ -361,3 +361,48 @@ hello
             == WidthConfigFields.USE_CONTENT.value
         )
         assert el.width_config.use_content is True
+
+    @parameterized.expand(
+        [
+            ("checkbox", st.checkbox),
+            ("toggle", st.toggle),
+        ]
+    )
+    def test_bind_query_params_sets_query_param_key(
+        self, name: str, widget_func: callable
+    ):
+        """Test that bind='query-params' with a key sets query_param_key in proto."""
+        widget_func("the label", key="my_key", bind="query-params")
+
+        c = self.get_delta_from_queue().new_element.checkbox
+        assert c.query_param_key == "my_key"
+
+    @parameterized.expand(
+        [
+            ("checkbox", st.checkbox),
+            ("toggle", st.toggle),
+        ]
+    )
+    def test_bind_query_params_without_key_raises_exception(
+        self, name: str, widget_func: callable
+    ):
+        """Test that bind='query-params' without a key raises an exception."""
+        with pytest.raises(StreamlitAPIException) as exc:
+            widget_func("the label", bind="query-params")
+
+        assert "must have a 'key' parameter" in str(exc.value)
+
+    @parameterized.expand(
+        [
+            ("checkbox", st.checkbox),
+            ("toggle", st.toggle),
+        ]
+    )
+    def test_no_bind_does_not_set_query_param_key(
+        self, name: str, widget_func: callable
+    ):
+        """Test that without bind parameter, query_param_key is not set."""
+        widget_func("the label", key="my_key")
+
+        c = self.get_delta_from_queue().new_element.checkbox
+        assert c.query_param_key == ""
