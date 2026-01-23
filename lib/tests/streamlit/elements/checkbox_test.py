@@ -21,7 +21,7 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit.elements.lib.policies import _LOGGER
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitInvalidBindValueError
 from streamlit.proto.Checkbox_pb2 import Checkbox as CheckboxProto
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -406,3 +406,19 @@ hello
 
         c = self.get_delta_from_queue().new_element.checkbox
         assert c.query_param_key == ""
+
+    @parameterized.expand(
+        [
+            ("checkbox", st.checkbox),
+            ("toggle", st.toggle),
+        ]
+    )
+    def test_invalid_bind_value_raises_exception(
+        self, name: str, widget_func: callable
+    ):
+        """Test that an invalid bind value raises StreamlitInvalidBindValueError."""
+        with pytest.raises(StreamlitInvalidBindValueError) as exc:
+            widget_func("the label", key="my_key", bind="invalid-value")
+
+        assert "invalid-value" in str(exc.value)
+        assert "query-params" in str(exc.value)

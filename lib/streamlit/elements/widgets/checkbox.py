@@ -154,6 +154,13 @@ class CheckboxMixin:
               the parent container, the width of the widget matches the width
               of the parent container.
 
+        bind : "query-params" or None
+            If set to ``"query-params"``, the widget's value will be synced
+            with a URL query parameter. When the widget value changes, the URL
+            is updated; when the page loads with a query parameter, the widget
+            is initialized from it. Requires a ``key`` to be set, which will
+            be used as the query parameter name. The default is ``None``.
+
         Returns
         -------
         bool
@@ -281,6 +288,13 @@ class CheckboxMixin:
               fixed width. If the specified width is greater than the width of
               the parent container, the width of the widget matches the width
               of the parent container.
+
+        bind : "query-params" or None
+            If set to ``"query-params"``, the widget's value will be synced
+            with a URL query parameter. When the widget value changes, the URL
+            is updated; when the page loads with a query parameter, the widget
+            is initialized from it. Requires a ``key`` to be set, which will
+            be used as the query parameter name. The default is ``None``.
 
         Returns
         -------
