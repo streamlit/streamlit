@@ -61,6 +61,73 @@ export interface Props {
   widthConfig: streamlit.IWidthConfig | undefined | null
 }
 
+/**
+ * Get the formatted option string for a given index.
+ * The format matches what the backend sends: the option's content field.
+ */
+function getFormattedOption(
+  element: ButtonGroupProto,
+  index: number
+): string | null {
+  const option = element.options[index]
+  if (!option) return null
+
+  // Reconstruct the formatted option string
+  // If there's an icon, prepend it with a space separator (matching backend format)
+  const icon = option.contentIcon
+  const content = option.content ?? ""
+  if (icon) {
+    return `${icon} ${content}`.trim()
+  }
+  return content
+}
+
+/**
+ * Find the index of an option by its formatted string value.
+ */
+function findOptionIndex(element: ButtonGroupProto, value: string): number {
+  for (let i = 0; i < element.options.length; i++) {
+    if (getFormattedOption(element, i) === value) {
+      return i
+    }
+  }
+  return -1
+}
+
+/**
+ * Convert string values to indices.
+ */
+function stringValuesToIndices(
+  element: ButtonGroupProto,
+  stringValues: string[]
+): number[] {
+  const indices: number[] = []
+  for (const value of stringValues) {
+    const index = findOptionIndex(element, value)
+    if (index >= 0) {
+      indices.push(index)
+    }
+  }
+  return indices
+}
+
+/**
+ * Convert indices to string values.
+ */
+function indicesToStringValues(
+  element: ButtonGroupProto,
+  indices: number[]
+): string[] {
+  const values: string[] = []
+  for (const index of indices) {
+    const value = getFormattedOption(element, index)
+    if (value !== null) {
+      values.push(value)
+    }
+  }
+  return values
+}
+
 function handleMultiSelection(
   index: number,
   currentSelection: number[]
@@ -97,9 +164,11 @@ function syncWithWidgetManager(
   valueWithSource: ValueWithSource<ButtonGroupValue>,
   fragmentId?: string
 ): void {
-  widgetMgr.setIntArrayValue(
+  // Always use string-based values for all ButtonGroup widgets
+  const stringValues = indicesToStringValues(element, valueWithSource.value)
+  widgetMgr.setStringArrayValue(
     element,
-    valueWithSource.value,
+    stringValues,
     { fromUi: valueWithSource.fromUi },
     fragmentId
   )
@@ -290,7 +359,12 @@ function getInitialValue(
   widgetMgr: WidgetStateManager,
   element: ButtonGroupProto
 ): ButtonGroupValue | undefined {
-  return widgetMgr.getIntArrayValue(element)
+  // Always use string-based values for all ButtonGroup widgets
+  const stringValues = widgetMgr.getStringArrayValue(element)
+  if (stringValues === undefined) {
+    return undefined
+  }
+  return stringValuesToIndices(element, stringValues)
 }
 
 function getDefaultStateFromProto(
@@ -300,7 +374,9 @@ function getDefaultStateFromProto(
 }
 
 function getCurrStateFromProto(element: ButtonGroupProto): ButtonGroupValue {
-  return element.value ?? []
+  // Always use string-based raw_values for all ButtonGroup widgets
+  const rawValues = element.rawValues ?? []
+  return stringValuesToIndices(element, rawValues)
 }
 
 function ButtonGroup(props: Readonly<Props>): ReactElement {

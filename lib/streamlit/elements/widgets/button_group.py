@@ -15,7 +15,6 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Sequence
-from dataclasses import dataclass, field
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -36,9 +35,13 @@ from streamlit.elements.lib.layout_utils import (
     validate_width,
 )
 from streamlit.elements.lib.options_selector_utils import (
-    check_and_convert_to_indices,
     convert_to_sequence_and_check_comparable,
+    create_mappings,
     get_default_indices,
+    maybe_coerce_enum,
+    maybe_coerce_enum_sequence,
+    validate_and_sync_multiselect_value_with_options,
+    validate_and_sync_value_with_options,
 )
 from streamlit.elements.lib.policies import (
     check_widget_policies,
@@ -93,96 +96,107 @@ _SELECTED_STAR_ICON: Final = ":material/star_filled:"
 SelectionMode: TypeAlias = Literal["single", "multi"]
 
 
-@dataclass
-class _MultiSelectSerde(Generic[T]):
-    """Only meant to be used internally for the button_group element.
+class _ButtonGroupSerde(Generic[T]):
+    """String-based serde for ButtonGroup widgets.
 
-    This serde is inspired by the MultiSelectSerde from multiselect.py. That serde has
-    been updated since then to support the accept_new_options parameter, which is not
-    required by the button_group element. If this changes again at some point,
-    the two elements can share the same serde again.
+    Uses string-based values (formatted option strings) for robust handling
+    of dynamic option changes. Handles both single-select and multi-select modes.
     """
 
     options: Sequence[T]
-    default_value: list[int] = field(default_factory=list)
-
-    def serialize(self, value: list[T]) -> list[int]:
-        indices = check_and_convert_to_indices(self.options, value)
-        return indices if indices is not None else []
-
-    def deserialize(self, ui_value: list[int] | None) -> list[T]:
-        current_value: list[int] = (
-            ui_value if ui_value is not None else self.default_value
-        )
-        return [self.options[i] for i in current_value]
-
-
-class _SingleSelectSerde(Generic[T]):
-    """Only meant to be used internally for the button_group element.
-
-    Uses the ButtonGroup's _MultiSelectSerde under-the-hood, but accepts a single
-    index value and deserializes to a single index value.
-    This is because button_group can be single and multi select, but we use the same
-    proto for both and, thus, map single values to a list of values and a receiving
-    value wrapped in a list to a single value.
-
-    When a default_value is provided is provided, the option corresponding to the
-    index is serialized/deserialized.
-    """
-
-    def __init__(
-        self,
-        option_indices: Sequence[T],
-        default_value: list[int] | None = None,
-    ) -> None:
-        # see docstring about why we use MultiSelectSerde here
-        self.multiselect_serde: _MultiSelectSerde[T] = _MultiSelectSerde(
-            option_indices, default_value if default_value is not None else []
-        )
-
-    def serialize(self, value: T | None) -> list[int]:
-        _value = [value] if value is not None else []
-        return self.multiselect_serde.serialize(_value)
-
-    def deserialize(self, ui_value: list[int] | None) -> T | None:
-        deserialized = self.multiselect_serde.deserialize(ui_value)
-
-        if len(deserialized) == 0:
-            return None
-
-        return deserialized[0]
-
-
-class ButtonGroupSerde(Generic[T]):
-    """A serde that can handle both single and multi select options.
-
-    It uses the same proto to wire the data, so that we can send and receive
-    single values via a list. We have different serdes for both cases though so
-    that when setting / getting the value via session_state, it is mapped correctly.
-    So for single select, the value will be a single value and for multi select, it will
-    be a list of values.
-    """
+    formatted_options: list[str]
+    formatted_option_to_option_index: dict[str, int]
+    default_values: list[int]
+    format_func: Callable[[Any], str]
+    selection_mode: SelectionMode
 
     def __init__(
         self,
         options: Sequence[T],
-        default_values: list[int],
-        type: Literal["single", "multi"],
+        *,
+        formatted_options: list[str],
+        formatted_option_to_option_index: dict[str, int],
+        default_values: list[int] | None = None,
+        format_func: Callable[[Any], str] = str,
+        selection_mode: SelectionMode = "single",
     ) -> None:
         self.options = options
-        self.default_values = default_values
-        self.type = type
-        self.serde: _SingleSelectSerde[T] | _MultiSelectSerde[T] = (
-            _SingleSelectSerde(options, default_value=default_values)
-            if type == "single"
-            else _MultiSelectSerde(options, default_values)
-        )
+        self.formatted_options = formatted_options
+        self.formatted_option_to_option_index = formatted_option_to_option_index
+        self.default_values = default_values or []
+        self.format_func = format_func
+        self.selection_mode = selection_mode
 
-    def serialize(self, value: T | list[T] | None) -> list[int]:
-        return self.serde.serialize(cast("Any", value))
+    def serialize(self, value: T | list[T] | None) -> list[str]:
+        """Serialize value to list of formatted strings for wire format."""
+        if self.selection_mode == "multi":
+            return self._serialize_multi(cast("list[T]", value))
+        return self._serialize_single(value)
 
-    def deserialize(self, ui_value: list[int] | None) -> list[T] | T | None:
-        return self.serde.deserialize(ui_value)
+    def deserialize(
+        self, ui_value: list[str] | None
+    ) -> T | str | list[T] | list[T | str] | None:
+        """Deserialize from list of strings to appropriate value type."""
+        if self.selection_mode == "multi":
+            return self._deserialize_multi(ui_value)
+        return self._deserialize_single(ui_value)
+
+    def _serialize_single(self, v: T | str | None) -> list[str]:
+        """Serialize single-select value to a list of strings."""
+        if v is None:
+            return []
+        if len(self.options) == 0:
+            return []
+
+        try:
+            formatted_value = self.format_func(v)
+        except Exception:
+            return [cast("str", v)]
+
+        if formatted_value in self.formatted_option_to_option_index:
+            return [formatted_value]
+        return [cast("str", v)]
+
+    def _deserialize_single(self, ui_value: list[str] | None) -> T | str | None:
+        """Deserialize from a list of strings to a single value."""
+        if len(self.options) == 0:
+            return None
+
+        if ui_value is None or len(ui_value) == 0:
+            if self.default_values:
+                return self.options[self.default_values[0]]
+            return None
+
+        # Take the first value from the list
+        string_value = ui_value[0]
+        option_index = self.formatted_option_to_option_index.get(string_value)
+        return self.options[option_index] if option_index is not None else string_value
+
+    def _serialize_multi(self, value: list[T | str] | list[T]) -> list[str]:
+        """Serialize multi-select values to list of strings."""
+        values: list[str] = []
+        for v in value:
+            try:
+                formatted_value = self.format_func(v)
+            except Exception:
+                values.append(str(v))
+                continue
+            values.append(formatted_value)
+        return values
+
+    def _deserialize_multi(self, ui_value: list[str] | None) -> list[T | str] | list[T]:
+        """Deserialize from list of strings to list of values."""
+        if ui_value is None:
+            return [self.options[i] for i in self.default_values]
+
+        values: list[T | str] = []
+        for v in ui_value:
+            option_index = self.formatted_option_to_option_index.get(v)
+            if option_index is not None:
+                values.append(self.options[option_index])
+            else:
+                values.append(v)
+        return values
 
 
 def get_mapped_options(
@@ -451,7 +465,39 @@ class ButtonGroupMixin:
         _default: list[int] | None = (
             [options_indices[default]] if default is not None else None
         )
-        serde = _SingleSelectSerde[int](options_indices, default_value=_default)
+
+        # Create string-based serde for feedback
+        # Use the icon strings as formatted options to match what frontend sends.
+        # transformed_options contains ButtonGroupProto.Option objects with contentIcon.
+        # The frontend reconstructs the formatted string from contentIcon + content.
+        def _format_feedback_option(idx: int) -> str:
+            """Format a sentiment index to its icon string."""
+            # Find the button index for this sentiment value
+            button_idx = options_indices.index(idx)
+            opt = transformed_options[button_idx]
+            icon = opt.content_icon or ""
+            content = opt.content or ""
+            if icon:
+                return f"{icon} {content}".strip()
+            return content
+
+        formatted_options = [_format_feedback_option(idx) for idx in options_indices]
+        formatted_option_to_option_index = {
+            formatted: i for i, formatted in enumerate(formatted_options)
+        }
+        default_values = (
+            [options_indices.index(options_indices[default])]
+            if default is not None
+            else []
+        )
+        serde = _ButtonGroupSerde[int](
+            options_indices,
+            formatted_options=formatted_options,
+            formatted_option_to_option_index=formatted_option_to_option_index,
+            default_values=default_values,
+            format_func=_format_feedback_option,
+            selection_mode="single",
+        )
 
         selection_visualization = ButtonGroupProto.SelectionVisualization.ONLY_SELECTED
         if options == "stars":
@@ -473,6 +519,7 @@ class ButtonGroupMixin:
             selection_visualization=selection_visualization,
             style="borderless",
             width=width,
+            options_format_func=_format_feedback_option,
         )
         return sentiment.value
 
@@ -957,11 +1004,14 @@ class ButtonGroupMixin:
     ) -> list[V] | V | None:
         maybe_raise_label_warnings(label, label_visibility)
 
+        # Use str as default format_func
+        actual_format_func: Callable[[Any], str] = format_func or str
+
         def _transformed_format_func(option: V) -> ButtonGroupProto.Option:
             """If option starts with a material icon or an emoji, we extract it to send
             it parsed to the frontend.
             """
-            transformed = format_func(option) if format_func else str(option)
+            transformed = actual_format_func(option)
             transformed_parts = transformed.split(" ")
             icon: str | None = None
             if len(transformed_parts) > 0:
@@ -987,8 +1037,19 @@ class ButtonGroupMixin:
         indexable_options = convert_to_sequence_and_check_comparable(options)
         default_values = get_default_indices(indexable_options, default)
 
-        serde: ButtonGroupSerde[V] = ButtonGroupSerde[V](
-            indexable_options, default_values, selection_mode
+        # Create string-based mappings for the serde
+        formatted_options, formatted_option_to_option_index = create_mappings(
+            indexable_options, actual_format_func
+        )
+
+        # Create string-based serde for pills/segmented_control
+        serde = _ButtonGroupSerde[V](
+            indexable_options,
+            formatted_options=formatted_options,
+            formatted_option_to_option_index=formatted_option_to_option_index,
+            default_values=default_values,
+            format_func=actual_format_func,
+            selection_mode=selection_mode,
         )
 
         res = self._button_group(
@@ -1008,11 +1069,14 @@ class ButtonGroupMixin:
             label=label,
             label_visibility=label_visibility,
             width=width,
+            options_format_func=actual_format_func,
         )
 
+        # Handle enum coercion
         if selection_mode == "multi":
+            res = maybe_coerce_enum_sequence(res, options, indexable_options)
             return res.value
-
+        res = maybe_coerce_enum(res, options, indexable_options)
         return res.value
 
     def _button_group(
@@ -1039,6 +1103,7 @@ class ButtonGroupMixin:
         label_visibility: LabelVisibility = "visible",
         help: str | None = None,
         width: Width = "content",
+        options_format_func: Callable[[Any], str] | None = None,
     ) -> RegisterWidgetResult[T]:
         _maybe_raise_selection_mode_warning(selection_mode)
 
@@ -1090,15 +1155,23 @@ class ButtonGroupMixin:
             ]
         )
 
+        # Determine key_as_main_identity based on style:
+        # - For feedback (borderless): include options and click_mode in identity
+        #   so widget resets when both options or click_mode change
+        # - For pills/segmented_control: only include click_mode in identity to allow
+        #   dynamic option changes without resetting, but reset when selection_mode changes
+        #   (since changing from single to multi or vice versa changes the value format)
+        is_feedback = style == "borderless"
+        key_as_main_identity: set[str] = (
+            {"options", "click_mode"} if is_feedback else {"click_mode"}
+        )
+
         element_id = compute_and_register_element_id(
             # The borderless style is used by st.feedback, but users expect to see
             # "feedback" in errors
-            "feedback" if style == "borderless" else style,
+            "feedback" if is_feedback else style,
             user_key=key,
-            # Treat the provided key as the main identity for segmented_control, pills and feedback,
-            # and only include kwargs that can invalidate the current selection.
-            # We whitelist the formatted options and the click mode (single vs multi).
-            key_as_main_identity={"options", "click_mode"},
+            key_as_main_identity=key_as_main_identity,
             dg=self.dg,
             options=formatted_options,
             default=default,
@@ -1123,6 +1196,7 @@ class ButtonGroupMixin:
             help=help,
         )
 
+        # Always use string-based values for all ButtonGroup widgets
         widget_state = register_widget(
             proto.id,
             on_change_handler=on_change,
@@ -1131,17 +1205,55 @@ class ButtonGroupMixin:
             deserializer=deserializer,
             serializer=serializer,
             ctx=ctx,
-            value_type="int_array_value",
+            value_type="string_array_value",
         )
 
-        if widget_state.value_changed:
-            proto.value[:] = serializer(widget_state.value)
+        # Validate and sync value with options (for pills/segmented_control)
+        # Feedback handles reset via key_as_main_identity so no validation needed
+        value_needs_reset = False
+        current_value = widget_state.value
+        if not is_feedback and options_format_func is not None:
+            if selection_mode == "single":
+                # Single select: validate and possibly reset to default
+                default_index = default[0] if default else None
+                current_value, value_needs_reset = validate_and_sync_value_with_options(
+                    cast("Any", widget_state.value),
+                    indexable_options,
+                    default_index,
+                    key,
+                    options_format_func,
+                )
+            else:
+                # Multi select: filter out invalid values
+                current_value, value_needs_reset = (
+                    validate_and_sync_multiselect_value_with_options(
+                        cast("Any", widget_state.value),
+                        indexable_options,
+                        key,
+                        options_format_func,
+                    )
+                )
+
+        if value_needs_reset or widget_state.value_changed:
+            # Always use string-based raw_values field
+            proto.raw_values[:] = serializer(
+                current_value if value_needs_reset else widget_state.value
+            )
             proto.set_value = True
 
         if ctx:
             save_for_app_testing(ctx, element_id, format_func)
 
         self.dg._enqueue("button_group", proto, layout_config=layout_config)
+
+        # Return widget_state with possibly updated value
+        if value_needs_reset:
+            from streamlit.runtime.state.common import RegisterWidgetResult
+
+            return RegisterWidgetResult(
+                cast("T", current_value),
+                widget_state.value_changed or value_needs_reset,
+            )
 
         return widget_state
 
