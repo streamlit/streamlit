@@ -2095,19 +2095,20 @@ describe("App", () => {
           .pageScriptHash
       ).toBe("subpage_hash")
 
-      // With query param binding, we preserve query params from state
-      // (which may include bound widget params) instead of clearing them
+      // When navigating to a different page, non-embed and non-bound params
+      // (like foo=bar) are cleared. Only embed params and bound widget params
+      // are preserved.
       expect(
         // @ts-expect-error
         connectionManager.sendMessage.mock.calls[0][0].rerunScript.queryString
-      ).toBe("foo=bar")
+      ).toBe("")
 
-      // No SET_QUERY_PARAM message sent during page navigation
-      // (The old behavior would clear params and send SET_QUERY_PARAM with "")
+      // SET_QUERY_PARAM message is sent to update the URL (clearing foo=bar)
       const setQueryParamCalls = (
         hostCommunicationMgr.sendMessageToHost as Mock
       ).mock.calls.filter(call => call[0]?.type === "SET_QUERY_PARAM")
-      expect(setQueryParamCalls).toHaveLength(0)
+      expect(setQueryParamCalls).toHaveLength(1)
+      expect(setQueryParamCalls[0][0].queryParams).toBe("")
     })
   })
 
@@ -5354,12 +5355,13 @@ describe("App", () => {
         connectionManager.sendMessage.mock.calls[0][0].rerunScript.queryString
       ).toBe(embedParams)
 
-      // With query param binding, we preserve query params from state
-      // instead of sending a SET_QUERY_PARAM message on every page change
+      // SET_QUERY_PARAM is sent to confirm the query params state to the host.
+      // For embed params, they are preserved so the message contains them.
       const setQueryParamCalls = (
         hostCommunicationMgr.sendMessageToHost as Mock
       ).mock.calls.filter(call => call[0]?.type === "SET_QUERY_PARAM")
-      expect(setQueryParamCalls).toHaveLength(0)
+      expect(setQueryParamCalls).toHaveLength(1)
+      expect(setQueryParamCalls[0][0].queryParams).toBe(embedParams)
     })
 
     it("works with baseUrlPaths", () => {

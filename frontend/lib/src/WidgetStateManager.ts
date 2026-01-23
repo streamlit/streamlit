@@ -1148,6 +1148,42 @@ export class WidgetStateManager {
     return this.boundWidgets.has(widgetId)
   }
 
+  /**
+   * Filter query params for page navigation.
+   * Preserves embed params and params bound to widgets, clears all others.
+   *
+   * @param embedParams - The embed query params string (from preserveEmbedQueryParams)
+   * @returns Filtered query string with embed + bound widget params
+   */
+  public filterParamsForPageChange(embedParams: string): string {
+    // If no widgets are bound, just return embed params
+    if (this.paramKeyToWidgetId.size === 0) {
+      return embedParams
+    }
+
+    // Get current URL params for bound widgets
+    const currentUrl = new URL(window.location.href)
+    const boundParams: string[] = []
+
+    this.paramKeyToWidgetId.forEach((_, paramKey) => {
+      const values = currentUrl.searchParams.getAll(paramKey)
+      values.forEach(value => {
+        boundParams.push(
+          `${encodeURIComponent(paramKey)}=${encodeURIComponent(value)}`
+        )
+      })
+    })
+
+    // Combine embed params with bound widget params
+    if (boundParams.length === 0) {
+      return embedParams
+    }
+
+    return embedParams
+      ? `${embedParams}&${boundParams.join("&")}`
+      : boundParams.join("&")
+  }
+
   /** Set callback for query param changes (used by App.tsx). */
   public setQueryParamsChangeHandler(
     handler: (queryString: string) => void

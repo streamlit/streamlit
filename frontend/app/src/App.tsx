@@ -1900,26 +1900,17 @@ export class App extends PureComponent<Props, State> {
       // The user specified exactly which page to run. We can simply use this
       // value in the BackMsg we send to the server.
       if (pageScriptHash !== currentPageScriptHash && !preserveQueryParams) {
-        const currentParams = this.state.queryParams
-        // Use existing params from state (which includes bound widget params)
-        // unless there's an explicit override or no params exist yet.
-        const shouldPreserveCurrentParams =
-          !queryStringOverride && currentParams
-        if (shouldPreserveCurrentParams) {
-          queryString = currentParams
-        } else {
-          // Fall back to embed params only.
-          const preservedQueryParams = preserveEmbedQueryParams()
-          queryString = getQueryString(
-            queryStringOverride,
-            preservedQueryParams
-          )
-          this.setState({ queryParams: queryString })
-          this.hostCommunicationMgr.sendMessageToHost({
-            type: "SET_QUERY_PARAM",
-            queryParams: queryString,
-          })
-        }
+        // When switching pages, preserve only embed params and widget-bound params.
+        // All other params (like ?foo=bar) should be cleared.
+        const filteredParams = this.widgetMgr.filterParamsForPageChange(
+          preserveEmbedQueryParams()
+        )
+        queryString = getQueryString(queryStringOverride, filteredParams)
+        this.setState({ queryParams: queryString })
+        this.hostCommunicationMgr.sendMessageToHost({
+          type: "SET_QUERY_PARAM",
+          queryParams: queryString,
+        })
       }
     } else if (currentPageScriptHash) {
       // The user didn't specify which page to run, which happens when they
