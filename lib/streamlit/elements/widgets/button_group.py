@@ -500,11 +500,7 @@ class ButtonGroupMixin:
         formatted_option_to_option_index = {
             formatted: i for i, formatted in enumerate(formatted_options)
         }
-        default_values = (
-            [options_indices.index(options_indices[default])]
-            if default is not None
-            else []
-        )
+        default_values = [options_indices.index(default)] if default is not None else []
         serde = _ButtonGroupSerde[int](
             options_indices,
             formatted_options=formatted_options,
