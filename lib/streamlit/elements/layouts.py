@@ -828,6 +828,14 @@ class LayoutsMixin:
             if current_tab_label not in tabs:
                 # If label not found, fall back to default
                 current_tab_label = tabs[default_index]
+        elif key:
+            # Non-widget path with key: compute ID for styling purposes only
+            element_id = compute_and_register_element_id(
+                "tabs",
+                user_key=key,
+                dg=None,
+                key_as_main_identity=False,
+            )
 
         def tab_proto(label: str) -> BlockProto:
             tab_proto = BlockProto()
@@ -848,7 +856,7 @@ class LayoutsMixin:
 
         block_proto.tab_container.default_tab_index = current_tab_index
 
-        if is_stateful and element_id:
+        if element_id:
             block_proto.tab_container.id = element_id
 
         tab_container = self.dg._block(block_proto)
@@ -1013,6 +1021,9 @@ class LayoutsMixin:
         # Determine if state tracking is enabled (widget mode)
         is_stateful = on_change == "rerun"
 
+        current_expanded = expanded
+        element_id: str | None = None
+
         if is_stateful:
             # Widget path: check policies, register widget, track state
             check_widget_policies(
@@ -1024,11 +1035,6 @@ class LayoutsMixin:
                 enable_check_callback_rules=False,
             )
 
-        # Default to the expanded parameter for non-stateful mode
-        current_expanded = expanded
-        element_id: str | None = None
-
-        if is_stateful:
             ctx = get_script_run_ctx()
 
             # Register element ID for widget
@@ -1058,6 +1064,14 @@ class LayoutsMixin:
 
             # Use widget state value
             current_expanded = expander_state.value
+        elif key:
+            # Non-widget path with key: compute ID for styling purposes only
+            element_id = compute_and_register_element_id(
+                "expander",
+                user_key=key,
+                dg=None,
+                key_as_main_identity=False,
+            )
 
         expandable_proto = BlockProto.Expandable()
         expandable_proto.expanded = current_expanded
