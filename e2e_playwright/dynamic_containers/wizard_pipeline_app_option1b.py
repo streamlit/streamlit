@@ -284,10 +284,12 @@ if tabs[2].open:
             st.subheader("Available Transformations")
 
             transform_filter = st.checkbox("Filter Rows", value=False)
+            filter_column = None
             if transform_filter:
                 filter_column = st.selectbox("Filter Column", df.columns)
 
             transform_select = st.checkbox("Select Columns", value=False)
+            selected_cols = None
             if transform_select:
                 selected_cols = st.multiselect(
                     "Columns to Keep", df.columns, default=list(df.columns)
@@ -295,9 +297,9 @@ if tabs[2].open:
 
             # Store transformations
             transformations = []
-            if transform_filter:
+            if transform_filter and filter_column is not None:
                 transformations.append(f"Filter by {filter_column}")
-            if transform_select:
+            if transform_select and selected_cols is not None:
                 transformations.append(f"Select {len(selected_cols)} columns")
 
             if transformations:
