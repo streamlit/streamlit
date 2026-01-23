@@ -1439,8 +1439,14 @@ describe("Trigger JSON payloads (aggregated)", () => {
 
   describe("Query Param Binding", () => {
     let mockOnQueryParamsChange: Mock
+    let originalLocation: Location
+    let originalReplaceState: typeof window.history.replaceState
 
     beforeEach(() => {
+      // Store originals for cleanup
+      originalLocation = window.location
+      originalReplaceState = window.history.replaceState
+
       mockOnQueryParamsChange = vi.fn()
       widgetMgr.setQueryParamsChangeHandler(mockOnQueryParamsChange)
       // Mock window.history.replaceState to capture URL changes
@@ -1455,6 +1461,16 @@ describe("Trigger JSON payloads (aggregated)", () => {
         },
         configurable: true,
       })
+    })
+
+    afterEach(() => {
+      // Restore original window.location and history.replaceState
+      Object.defineProperty(window, "location", {
+        value: originalLocation,
+        configurable: true,
+        writable: true,
+      })
+      window.history.replaceState = originalReplaceState
     })
 
     describe("registerQueryParamBinding", () => {
@@ -1520,7 +1536,7 @@ describe("Trigger JSON payloads (aggregated)", () => {
         {
           type: "bool",
           paramKey: "enabled",
-          valueType: "bool_value",
+          valueType: "bool_value" as const,
           defaultVal: false,
           testVal: true,
           expected: "enabled=true",
@@ -1528,7 +1544,7 @@ describe("Trigger JSON payloads (aggregated)", () => {
         {
           type: "int",
           paramKey: "count",
-          valueType: "int_value",
+          valueType: "int_value" as const,
           defaultVal: 0,
           testVal: 42,
           expected: "count=42",
@@ -1536,7 +1552,7 @@ describe("Trigger JSON payloads (aggregated)", () => {
         {
           type: "double",
           paramKey: "value",
-          valueType: "double_value",
+          valueType: "double_value" as const,
           defaultVal: 0,
           testVal: 3.14,
           expected: "value=3.14",
@@ -1544,7 +1560,7 @@ describe("Trigger JSON payloads (aggregated)", () => {
         {
           type: "string",
           paramKey: "name",
-          valueType: "string_value",
+          valueType: "string_value" as const,
           defaultVal: "",
           testVal: "Alice",
           expected: "name=Alice",
@@ -1564,28 +1580,23 @@ describe("Trigger JSON payloads (aggregated)", () => {
           if (valueType === "bool_value") {
             widgetMgr.setBoolValue(
               widget,
-              testVal as boolean,
+              testVal,
               { fromUi: true },
               undefined
             )
           } else if (valueType === "int_value") {
-            widgetMgr.setIntValue(
-              widget,
-              testVal as number,
-              { fromUi: true },
-              undefined
-            )
+            widgetMgr.setIntValue(widget, testVal, { fromUi: true }, undefined)
           } else if (valueType === "double_value") {
             widgetMgr.setDoubleValue(
               widget,
-              testVal as number,
+              testVal,
               { fromUi: true },
               undefined
             )
           } else {
             widgetMgr.setStringValue(
               widget,
-              testVal as string,
+              testVal,
               { fromUi: true },
               undefined
             )
@@ -1814,6 +1825,81 @@ describe("Trigger JSON payloads (aggregated)", () => {
         expect(() => {
           mgr.setBoolValue(widget, true, { fromUi: true }, undefined)
         }).not.toThrow()
+      })
+    })
+
+    describe("filterParamsForPageChange", () => {
+      it("returns only embed params when no widgets are bound", () => {
+        const result = widgetMgr.filterParamsForPageChange("embed=true")
+        expect(result).toBe("embed=true")
+      })
+
+      it("returns empty string when no embed params and no bound widgets", () => {
+        const result = widgetMgr.filterParamsForPageChange("")
+        expect(result).toBe("")
+      })
+
+      it("preserves bound widget params from current URL", () => {
+        // Register a binding
+        widgetMgr.registerQueryParamBinding(
+          "widget1",
+          "my_key",
+          "string_value",
+          "default"
+        )
+
+        // Set the widget value to update URL
+        const widget = { id: "widget1", formId: "" }
+        widgetMgr.setStringValue(
+          widget,
+          "my_value",
+          { fromUi: true },
+          undefined
+        )
+
+        // Now filter - should preserve the bound param
+        const result = widgetMgr.filterParamsForPageChange("")
+        expect(result).toBe("my_key=my_value")
+      })
+
+      it("combines embed params with bound widget params", () => {
+        // Register a binding
+        widgetMgr.registerQueryParamBinding(
+          "widget1",
+          "color",
+          "string_value",
+          "red"
+        )
+
+        // Set the widget value
+        const widget = { id: "widget1", formId: "" }
+        widgetMgr.setStringValue(widget, "blue", { fromUi: true }, undefined)
+
+        // Filter with embed params
+        const result = widgetMgr.filterParamsForPageChange("embed=true")
+        expect(result).toBe("embed=true&color=blue")
+      })
+
+      it("preserves multiple bound widget params", () => {
+        // Register multiple bindings
+        widgetMgr.registerQueryParamBinding(
+          "widget1",
+          "name",
+          "string_value",
+          ""
+        )
+        widgetMgr.registerQueryParamBinding("widget2", "count", "int_value", 0)
+
+        // Set widget values
+        const widget1 = { id: "widget1", formId: "" }
+        const widget2 = { id: "widget2", formId: "" }
+        widgetMgr.setStringValue(widget1, "test", { fromUi: true }, undefined)
+        widgetMgr.setIntValue(widget2, 42, { fromUi: true }, undefined)
+
+        // Filter - should preserve both bound params
+        const result = widgetMgr.filterParamsForPageChange("")
+        expect(result).toContain("name=test")
+        expect(result).toContain("count=42")
       })
     })
   })
