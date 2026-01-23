@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -131,7 +131,7 @@ def step2_data_preview(_tab: Any) -> None:
     source_config = st.session_state.pipeline_config["source"]
     st.info(f"📊 Data Source: **{source_config['type']}**")
 
-    if source_config["type"] in ["PostgreSQL", "MySQL", "MongoDB"]:
+    if source_config["type"] in {"PostgreSQL", "MySQL", "MongoDB"}:
         table_name = st.text_input(
             "Table/Collection Name", value="users", key="table_name"
         )

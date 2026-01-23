@@ -762,7 +762,7 @@ class LayoutsMixin:
             )
 
         # Validate and normalize on_change parameter
-        if on_change is not None and on_change not in ["ignore", "rerun"]:
+        if on_change is not None and on_change not in {"ignore", "rerun"}:
             raise StreamlitAPIException(
                 f"You have passed {on_change} to `on_change`. But only 'ignore', "
                 "'rerun', or None is supported."
@@ -1010,7 +1010,7 @@ class LayoutsMixin:
         if label is None:
             raise StreamlitAPIException("A label is required for an expander")
 
-        if on_change not in ["ignore", "rerun"]:
+        if on_change not in {"ignore", "rerun"}:
             raise StreamlitAPIException(
                 f"You have passed {on_change} to `on_change`. But only 'ignore' "
                 "or 'rerun' is supported."
