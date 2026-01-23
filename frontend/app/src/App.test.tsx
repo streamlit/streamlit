@@ -5365,7 +5365,7 @@ describe("App", () => {
         hostCommunicationMgr.sendMessageToHost as Mock
       ).mock.calls.filter(call => call[0]?.type === "SET_QUERY_PARAM")
       expect(setQueryParamCalls).toHaveLength(1)
-      expect(setQueryParamCalls[0][0].queryParams).toBe(embedParams)
+      expect(setQueryParamCalls[0][0].queryParams).toBe(`?${embedParams}`)
     })
 
     it("works with baseUrlPaths", () => {

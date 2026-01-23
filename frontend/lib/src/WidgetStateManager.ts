@@ -516,14 +516,21 @@ export class WidgetStateManager {
     this.onWidgetValueChanged(widget.formId, source, fragmentId)
 
     // Sync to URL if bound and from UI
-    if (source.fromUi && value !== null) {
+    if (source.fromUi) {
       const binding = this.boundWidgets.get(widget.id)
-      // If binding has options, convert index to option string for human-readable URLs
-      const optionValue = binding?.options?.[value]
-      if (optionValue !== undefined) {
-        this.syncToUrlIfBound(widget.id, optionValue)
-      } else {
-        this.syncToUrlIfBound(widget.id, String(value))
+      if (binding) {
+        if (value === null) {
+          // Clear URL param when widget is cleared
+          this.clearUrlParam(binding.paramKey)
+        } else {
+          // If binding has options, convert index to option string for human-readable URLs
+          const optionValue = binding.options?.[value]
+          if (optionValue !== undefined) {
+            this.syncToUrlIfBound(widget.id, optionValue)
+          } else {
+            this.syncToUrlIfBound(widget.id, String(value))
+          }
+        }
       }
     }
   }
@@ -547,8 +554,16 @@ export class WidgetStateManager {
     this.onWidgetValueChanged(widget.formId, source, fragmentId)
 
     // Sync to URL if bound and from UI
-    if (source.fromUi && value !== null) {
-      this.syncToUrlIfBound(widget.id, String(value))
+    if (source.fromUi) {
+      const binding = this.boundWidgets.get(widget.id)
+      if (binding) {
+        if (value === null) {
+          // Clear URL param when widget is cleared
+          this.clearUrlParam(binding.paramKey)
+        } else {
+          this.syncToUrlIfBound(widget.id, String(value))
+        }
+      }
     }
   }
 
@@ -571,8 +586,16 @@ export class WidgetStateManager {
     this.onWidgetValueChanged(widget.formId, source, fragmentId)
 
     // Sync to URL if bound and from UI
-    if (source.fromUi && value !== null) {
-      this.syncToUrlIfBound(widget.id, value)
+    if (source.fromUi) {
+      const binding = this.boundWidgets.get(widget.id)
+      if (binding) {
+        if (value === null) {
+          // Clear URL param when widget is cleared
+          this.clearUrlParam(binding.paramKey)
+        } else {
+          this.syncToUrlIfBound(widget.id, value)
+        }
+      }
     }
   }
 
@@ -1134,10 +1157,30 @@ export class WidgetStateManager {
     urlFormat?: "comma" | "repeated",
     options?: string[]
   ): void {
+    // Normalize defaultValue to URL-compatible format for index-based widgets.
+    // This ensures default comparison works correctly (e.g., "Red" === "Red"
+    // instead of "Red" === "0").
+    let normalizedDefault = defaultValue
+    if (options && options.length > 0) {
+      if (typeof defaultValue === "number" && options[defaultValue]) {
+        // Scalar index -> option string
+        normalizedDefault = options[defaultValue]
+      } else if (Array.isArray(defaultValue)) {
+        // Array of indices -> array of option strings
+        normalizedDefault = defaultValue
+          .map(idx =>
+            typeof idx === "number" && options[idx]
+              ? options[idx]
+              : String(idx)
+          )
+          .filter((s): s is string => s !== undefined)
+      }
+    }
+
     this.boundWidgets.set(widgetId, {
       paramKey,
       valueType,
-      defaultValue,
+      defaultValue: normalizedDefault,
       urlFormat,
       options,
     })
@@ -1236,9 +1279,8 @@ export class WidgetStateManager {
     const binding = this.boundWidgets.get(widgetId)
     if (!binding) return
 
-    const validValues = values.filter(
-      v => v !== "" && v !== "undefined" && v !== "NaN" && v !== "null"
-    )
+    // Only filter empty strings - user-provided values like "null" are legitimate
+    const validValues = values.filter(v => v !== "")
     if (
       validValues.length === 0 ||
       this.isDefaultArrayValue(validValues, binding)

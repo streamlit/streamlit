@@ -1903,7 +1903,7 @@ export class App extends PureComponent<Props, State> {
         this.setState({ queryParams: queryString })
         this.hostCommunicationMgr.sendMessageToHost({
           type: "SET_QUERY_PARAM",
-          queryParams: queryString,
+          queryParams: queryString ? `?${queryString}` : "",
         })
       }
     } else if (currentPageScriptHash) {
