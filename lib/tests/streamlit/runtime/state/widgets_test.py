@@ -344,6 +344,8 @@ EXCLUDED_KWARGS_FOR_ELEMENT_ID_COMPUTATION = {
     "on_submit",
     # Key should be provided via `user_key` instead.
     "key",
+    # bind controls URL syncing, not widget identity
+    "bind",
 }
 
 
