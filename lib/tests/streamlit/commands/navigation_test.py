@@ -458,3 +458,86 @@ class NavigationTest(DeltaGeneratorTestCase):
         # Test with invalid type
         with pytest.raises(StreamlitAPIException):
             st.navigation([st.Page("page1.py")], position=123)  # type: ignore
+
+    def test_hidden_pages_not_shown_in_navigation(self):
+        """Test that hidden pages are not included in the navigation menu."""
+        st.navigation(
+            [
+                st.Page("page1.py"),
+                st.Page("page2.py", hidden=True),
+                st.Page("page3.py"),
+            ]
+        )
+        c = self.get_message_from_queue().navigation
+        # Only page1 and page3 should be in the navigation
+        assert len(c.app_pages) == 2
+        assert c.app_pages[0].page_name == "page1"
+        assert c.app_pages[1].page_name == "page3"
+
+    def test_hidden_page_can_be_found_by_url_path(self):
+        """Test that hidden pages can still be accessed via URL path."""
+        hidden_page = st.Page("page2.py", hidden=True)
+        self.script_run_ctx.pages_manager.set_script_intent(
+            hidden_page._script_hash, ""
+        )
+        page = st.navigation(
+            [st.Page("page1.py"), hidden_page, st.Page("page3.py")]
+        )
+        # Should return the hidden page when navigating directly to it
+        assert page == hidden_page
+        # But it should not appear in the navigation menu
+        c = self.get_message_from_queue().navigation
+        assert len(c.app_pages) == 2
+        assert all(p.page_name != "page2" for p in c.app_pages)
+
+    def test_hidden_pages_with_sections(self):
+        """Test that hidden pages work correctly with sections."""
+        st.navigation(
+            {
+                "Section 1": [
+                    st.Page("page1.py"),
+                    st.Page("page2.py", hidden=True),
+                ],
+                "Section 2": [
+                    st.Page("page3.py"),
+                    st.Page("page4.py", hidden=True),
+                ],
+            }
+        )
+        c = self.get_message_from_queue().navigation
+        # Only visible pages should appear
+        assert len(c.app_pages) == 2
+        assert c.app_pages[0].page_name == "page1"
+        assert c.app_pages[0].section_header == "Section 1"
+        assert c.app_pages[1].page_name == "page3"
+        assert c.app_pages[1].section_header == "Section 2"
+
+    def test_all_hidden_pages_in_section_hides_section(self):
+        """Test that a section with all hidden pages is not shown."""
+        st.navigation(
+            {
+                "Section 1": [st.Page("page1.py")],
+                "Section 2": [
+                    st.Page("page2.py", hidden=True),
+                    st.Page("page3.py", hidden=True),
+                ],
+            }
+        )
+        c = self.get_message_from_queue().navigation
+        # Only Section 1 should be in the sections list
+        assert len(c.sections) == 1
+        assert c.sections[0] == "Section 1"
+        # Only page1 should be in the navigation
+        assert len(c.app_pages) == 1
+        assert c.app_pages[0].page_name == "page1"
+
+    def test_hidden_default_page(self):
+        """Test that a hidden page can be the default page."""
+        default_page = st.Page("page1.py", default=True, hidden=True)
+        page = st.navigation([default_page, st.Page("page2.py")])
+        # Should return the hidden default page
+        assert page == default_page
+        # But it should not appear in the navigation menu
+        c = self.get_message_from_queue().navigation
+        assert len(c.app_pages) == 1
+        assert c.app_pages[0].page_name == "page2"

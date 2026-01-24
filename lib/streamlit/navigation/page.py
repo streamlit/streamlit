@@ -37,6 +37,7 @@ def Page(  # noqa: N802
     icon: str | None = None,
     url_path: str | None = None,
     default: bool = False,
+    hidden: bool = False,
 ) -> StreamlitPage:
     """Configure a page for ``st.navigation`` in a multipage app.
 
@@ -112,6 +113,13 @@ def Page(  # noqa: N802
         default page. If ``default`` is ``True``, then the page will have
         an empty pathname and ``url_path`` will be ignored.
 
+    hidden : bool
+        Whether this page should be hidden from the navigation menu. If
+        ``hidden`` is ``False`` (default), the page will be shown in the
+        navigation menu. If ``hidden`` is ``True``, the page will not be
+        shown in the navigation menu, but it will still be accessible via
+        its URL path or through ``st.page_link``.
+
     Returns
     -------
     StreamlitPage
@@ -127,11 +135,12 @@ def Page(  # noqa: N802
     >>> pg = st.navigation([
     >>>     st.Page("page1.py", title="First page", icon="🔥"),
     >>>     st.Page(page2, title="Second page", icon=":material/favorite:"),
+    >>>     st.Page("secret.py", title="Secret page", hidden=True),
     >>> ])
     >>> pg.run()
     """
     return StreamlitPage(
-        page, title=title, icon=icon, url_path=url_path, default=default
+        page, title=title, icon=icon, url_path=url_path, default=default, hidden=hidden
     )
 
 
@@ -167,6 +176,12 @@ class StreamlitPage:
         The default page will always have a ``url_path`` of ``""`` to indicate
         the root URL (e.g. homepage).
 
+    hidden : bool
+        Whether the page is hidden from the navigation menu.
+
+        If ``hidden`` is ``True``, the page will not be shown in the navigation
+        menu but will still be accessible via its URL path or ``st.page_link``.
+
     """
 
     def __init__(
@@ -177,10 +192,12 @@ class StreamlitPage:
         icon: str | None = None,
         url_path: str | None = None,
         default: bool = False,
+        hidden: bool = False,
     ) -> None:
         # Must appear before the return so all pages, even if running in bare Python,
         # have a _default property. This way we can always tell which script needs to run.
         self._default: bool = default
+        self._hidden: bool = hidden
 
         ctx = get_script_run_ctx()
         if not ctx:
@@ -278,6 +295,15 @@ class StreamlitPage:
         the root URL (e.g. homepage).
         """
         return "" if self._default else self._url_path
+
+    @property
+    def hidden(self) -> bool:
+        """Whether the page is hidden from the navigation menu.
+
+        If ``hidden`` is ``True``, the page will not be shown in the navigation
+        menu but will still be accessible via its URL path or ``st.page_link``.
+        """
+        return self._hidden
 
     def run(self) -> None:
         """Execute the page.
