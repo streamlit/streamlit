@@ -115,6 +115,33 @@ function getFeedbackOptions(
 }
 
 /**
+ * Get a descriptive aria-label for a feedback option based on the feedback type.
+ */
+function getAriaLabel(
+  optionValue: number,
+  feedbackType: FeedbackProto.FeedbackType
+): string {
+  switch (feedbackType) {
+    case FeedbackProto.FeedbackType.THUMBS:
+      return optionValue === 1 ? "Thumbs up" : "Thumbs down"
+    case FeedbackProto.FeedbackType.FACES: {
+      const faceLabels = [
+        "Very dissatisfied",
+        "Dissatisfied",
+        "Neutral",
+        "Satisfied",
+        "Very satisfied",
+      ]
+      return faceLabels[optionValue] ?? `Rating ${optionValue + 1}`
+    }
+    case FeedbackProto.FeedbackType.STARS:
+      return `${optionValue + 1} out of ${NUM_STARS} stars`
+    default:
+      return `Rating ${optionValue + 1}`
+  }
+}
+
+/**
  * Determines if a feedback option should be shown as selected.
  * For stars, all options up to and including the selected one are shown as selected.
  * For thumbs and faces, only the exact selected option is shown as selected.
@@ -209,7 +236,7 @@ function Feedback(props: Readonly<Props>): ReactElement {
 
   const handleKeyDown = useCallback(
     (event: React.KeyboardEvent, currentIndex: number): void => {
-      let newIndex: number | null = null
+      let newIndex: number
 
       switch (event.key) {
         case "ArrowLeft":
@@ -231,12 +258,10 @@ function Feedback(props: Readonly<Props>): ReactElement {
           return
       }
 
-      if (newIndex !== null) {
-        // Focus the new button
-        const buttons =
-          event.currentTarget.parentElement?.querySelectorAll("button")
-        buttons?.[newIndex]?.focus()
-      }
+      // Focus the new button
+      const buttons =
+        event.currentTarget.parentElement?.querySelectorAll("button")
+      buttons?.[newIndex]?.focus()
     },
     [options, handleClick]
   )
@@ -261,7 +286,7 @@ function Feedback(props: Readonly<Props>): ReactElement {
               type="button"
               role="radio"
               aria-checked={value === option.value}
-              aria-label={`Rating ${option.value + 1}`}
+              aria-label={getAriaLabel(option.value, type)}
               tabIndex={
                 value === option.value || (value === null && index === 0)
                   ? 0

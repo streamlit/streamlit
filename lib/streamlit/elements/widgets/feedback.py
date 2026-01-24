@@ -60,8 +60,10 @@ def _get_num_options(feedback_type: Literal["thumbs", "faces", "stars"]) -> int:
     """Get the number of options for the given feedback type."""
     if feedback_type == "thumbs":
         return _NUM_THUMBS_OPTIONS
-    if feedback_type in {"faces", "stars"}:
+    if feedback_type == "faces":
         return _NUM_FACES_OPTIONS
+    if feedback_type == "stars":
+        return _NUM_STARS_OPTIONS
     return _NUM_THUMBS_OPTIONS
 
 
@@ -106,7 +108,8 @@ class FeedbackMixin:
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         width: Width = "content",
-    ) -> Literal[0, 1] | None: ...
+    ) -> Literal[0, 1] | None:
+        pass
 
     @overload
     def feedback(
@@ -120,7 +123,8 @@ class FeedbackMixin:
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         width: Width = "content",
-    ) -> Literal[0, 1, 2, 3, 4] | None: ...
+    ) -> Literal[0, 1, 2, 3, 4] | None:
+        pass
 
     @gather_metrics("feedback")
     def feedback(
