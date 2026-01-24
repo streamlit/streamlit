@@ -48,6 +48,7 @@ from streamlit.proto.NumberInput_pb2 import NumberInput as NumberInputProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import (
+    BindOption,
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
@@ -69,6 +70,8 @@ FloatOrNone = TypeVar("FloatOrNone", float, None)
 class NumberInputSerde:
     value: Number | None
     data_type: int
+    min_value: Number
+    max_value: Number
 
     def serialize(self, v: Number | None) -> Number | None:
         return v
@@ -76,8 +79,11 @@ class NumberInputSerde:
     def deserialize(self, ui_value: Number | None) -> Number | None:
         val: Number | None = ui_value if ui_value is not None else self.value
 
-        if val is not None and self.data_type == NumberInputProto.INT:
-            val = int(val)
+        if val is not None:
+            if self.data_type == NumberInputProto.INT:
+                val = int(val)
+            # Clamp to min/max range (e.g., for values seeded from URL)
+            val = max(self.min_value, min(self.max_value, val))
 
         return val
 
@@ -107,6 +113,7 @@ class NumberInputMixin:
         label_visibility: LabelVisibility = "visible",
         icon: str | None = None,
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> int | IntOrNone: ...
 
     # If "max_value: int" is given and all other numerical inputs are
@@ -133,6 +140,7 @@ class NumberInputMixin:
         label_visibility: LabelVisibility = "visible",
         icon: str | None = None,
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> int | IntOrNone: ...
 
     # If "value=int" is given and all other numerical inputs are "int"s
@@ -157,6 +165,7 @@ class NumberInputMixin:
         label_visibility: LabelVisibility = "visible",
         icon: str | None = None,
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> int: ...
 
     # If "step=int" is given and all other numerical inputs are "int"s
@@ -183,6 +192,7 @@ class NumberInputMixin:
         label_visibility: LabelVisibility = "visible",
         icon: str | None = None,
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> int | IntOrNone: ...
 
     # If all numerical inputs are floats (with value optionally being "min")
@@ -209,6 +219,7 @@ class NumberInputMixin:
         label_visibility: LabelVisibility = "visible",
         icon: str | None = None,
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> float | FloatOrNone: ...
 
     @gather_metrics("number_input")
@@ -231,6 +242,7 @@ class NumberInputMixin:
         label_visibility: LabelVisibility = "visible",
         icon: str | None = None,
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> Number | None:
         r"""Display a numeric input widget.
 
@@ -366,6 +378,15 @@ class NumberInputMixin:
               the parent container, the width of the widget matches the width
               of the parent container.
 
+        bind : "query-params" or None
+            If set to ``"query-params"``, the widget's value will be synced
+            with a URL query parameter. When the widget value changes, the URL
+            is updated; when the page loads with a query parameter, the widget
+            is initialized from it. Values from URL are automatically clamped
+            to ``min_value`` and ``max_value`` if set. Requires a ``key`` to
+            be set, which will be used as the query parameter name. The
+            default is ``None``.
+
         Returns
         -------
         int or float or None
@@ -415,6 +436,7 @@ class NumberInputMixin:
             label_visibility=label_visibility,
             icon=icon,
             width=width,
+            bind=bind,
             ctx=ctx,
         )
 
@@ -437,6 +459,7 @@ class NumberInputMixin:
         label_visibility: LabelVisibility = "visible",
         icon: str | None = None,
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
         ctx: ScriptRunContext | None = None,
     ) -> Number | None:
         key = to_key(key)
@@ -616,7 +639,14 @@ class NumberInputMixin:
         if icon is not None:
             number_input_proto.icon = validate_icon_or_emoji(icon)
 
-        serde = NumberInputSerde(value, data_type)
+        # Set query param key if bound
+        if bind == "query-params" and key is not None:
+            number_input_proto.query_param_key = str(key)
+
+        # min_value and max_value are guaranteed to be set by JSNumber defaults above
+        serde = NumberInputSerde(
+            value, data_type, cast("Number", min_value), cast("Number", max_value)
+        )
         widget_state = register_widget(
             number_input_proto.id,
             on_change_handler=on_change,
@@ -626,6 +656,7 @@ class NumberInputMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="double_value",
+            bind=bind,
         )
 
         # Validate the current value against the new min/max bounds.

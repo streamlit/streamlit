@@ -1451,3 +1451,68 @@ describe("NumberInput widget", () => {
     })
   })
 })
+
+describe("NumberInput query param binding", () => {
+  beforeEach(() => {
+    vi.spyOn(UseResizeObserver, "useResizeObserver").mockReturnValue({
+      elementRef: { current: null },
+      values: [250],
+    })
+  })
+
+  it("registers query param binding on mount when queryParamKey is set", () => {
+    const props = getIntProps({ queryParamKey: "my_number" })
+    vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
+
+    render(<NumberInput {...props} />)
+
+    expect(props.widgetMgr.registerQueryParamBinding).toHaveBeenCalledWith(
+      props.element.id,
+      "my_number",
+      "double_value",
+      props.element.default,
+      undefined,
+      undefined
+    )
+  })
+
+  it("unregisters query param binding on unmount", () => {
+    const props = getIntProps({ queryParamKey: "my_number" })
+    vi.spyOn(props.widgetMgr, "unregisterQueryParamBinding")
+
+    const { unmount } = render(<NumberInput {...props} />)
+    unmount()
+
+    expect(props.widgetMgr.unregisterQueryParamBinding).toHaveBeenCalledWith(
+      props.element.id
+    )
+  })
+
+  it("does not register query param binding when queryParamKey is not set", () => {
+    const props = getIntProps({ queryParamKey: "" })
+    vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
+
+    render(<NumberInput {...props} />)
+
+    expect(props.widgetMgr.registerQueryParamBinding).not.toHaveBeenCalled()
+  })
+
+  it("registers query param binding with float default value", () => {
+    const props = getFloatProps({
+      queryParamKey: "my_float",
+      default: 3.14,
+    })
+    vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
+
+    render(<NumberInput {...props} />)
+
+    expect(props.widgetMgr.registerQueryParamBinding).toHaveBeenCalledWith(
+      props.element.id,
+      "my_float",
+      "double_value",
+      3.14,
+      undefined,
+      undefined
+    )
+  })
+})

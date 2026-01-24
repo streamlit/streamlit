@@ -18,7 +18,11 @@ import re
 import pytest
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.conftest import (
+    ImageCompareFunction,
+    wait_for_app_loaded,
+    wait_for_app_run,
+)
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_toggle,
@@ -30,7 +34,7 @@ from e2e_playwright.shared.app_utils import (
     reset_hovering,
 )
 
-NUMBER_INPUT_COUNT = 20
+NUMBER_INPUT_COUNT = 23
 
 
 def test_number_input_widget_display(
@@ -485,3 +489,77 @@ def test_number_input_scientific_notation_step_decrement(app: Page):
     expect_prefixed_markdown(
         app, "number input 19 (small step decrement) - value:", "0.0000000"
     )
+
+
+def test_number_input_query_param_seeding_int(page: Page, app_port: int):
+    """Test that number input (int) value can be seeded from URL query params."""
+    # Load app with query param set
+    page.goto(f"http://localhost:{app_port}/?bound_int=42")
+    wait_for_app_loaded(page)
+
+    # Number input should show the seeded value
+    expect_prefixed_markdown(page, "bound int value:", "42")
+
+
+def test_number_input_query_param_seeding_float(page: Page, app_port: int):
+    """Test that number input (float) value can be seeded from URL query params."""
+    # Load app with query param overriding the "3.14" default
+    page.goto(f"http://localhost:{app_port}/?bound_float=2.718")
+    wait_for_app_loaded(page)
+
+    # Number input should show "2.718" (overriding "3.14" default)
+    expect_prefixed_markdown(page, "bound float value:", "2.718")
+
+
+def test_number_input_query_param_updates_url(app: Page):
+    """Test that changing a bound number input updates the URL."""
+    # Use the float widget which has a default value (easier to test)
+    number_input = get_element_by_key(app, "bound_float")
+    input_field = number_input.get_by_test_id("stNumberInputField")
+
+    # Change from default (3.14) to a new value
+    input_field.fill("2.718")
+    input_field.press("Enter")
+    wait_for_app_run(app)
+
+    # URL should now contain the query param
+    expect(app).to_have_url(re.compile(r"bound_float=2\.718"))
+    expect_prefixed_markdown(app, "bound float value:", "2.718")
+
+
+def test_number_input_query_param_with_default(page: Page, app_port: int):
+    """Test number input with custom default: seeding and param removal."""
+    # Load app with query param overriding the "3.14" default
+    page.goto(f"http://localhost:{app_port}/?bound_float=9.99")
+    wait_for_app_loaded(page)
+
+    # Number input should show "9.99"
+    expect_prefixed_markdown(page, "bound float value:", "9.99")
+
+    # Change back to default ("3.14")
+    number_input = get_element_by_key(page, "bound_float")
+    input_field = number_input.get_by_test_id("stNumberInputField")
+    input_field.fill("3.14")
+    input_field.press("Enter")
+    wait_for_app_run(page)
+
+    # Query param should be removed since value is back to default
+    expect(page).to_have_url(re.compile(r"^((?!bound_float).)*$"))
+    expect_prefixed_markdown(page, "bound float value:", "3.14")
+
+
+def test_number_input_query_param_clamped_to_min_max(page: Page, app_port: int):
+    """Test that URL values exceeding min/max are clamped."""
+    # Load app with value exceeding max=100
+    page.goto(f"http://localhost:{app_port}/?bound_minmax=999")
+    wait_for_app_loaded(page)
+
+    # Number input should clamp to max value (100)
+    expect_prefixed_markdown(page, "bound minmax value:", "100")
+
+    # Now test below min
+    page.goto(f"http://localhost:{app_port}/?bound_minmax=-50")
+    wait_for_app_loaded(page)
+
+    # Number input should clamp to min value (0)
+    expect_prefixed_markdown(page, "bound minmax value:", "0")

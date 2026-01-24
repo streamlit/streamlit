@@ -175,3 +175,32 @@ v19 = st.number_input(
     key="number_input_19",
 )
 st.write(f"number input 19 (small step decrement) - value: {v19:.7f}")
+
+# Query param bound number inputs
+st.markdown("Query param bound number inputs:")
+
+bound_int = st.number_input(
+    "Bound number input (int, no default)",
+    value=None,
+    key="bound_int",
+    bind="query-params",
+)
+st.write("bound int value:", bound_int)
+
+bound_float = st.number_input(
+    "Bound number input (float, default 3.14)",
+    value=3.14,
+    key="bound_float",
+    bind="query-params",
+)
+st.write("bound float value:", bound_float)
+
+bound_with_min_max = st.number_input(
+    "Bound number input (min=0, max=100)",
+    value=50,
+    min_value=0,
+    max_value=100,
+    key="bound_minmax",
+    bind="query-params",
+)
+st.write("bound minmax value:", bound_with_min_max)
