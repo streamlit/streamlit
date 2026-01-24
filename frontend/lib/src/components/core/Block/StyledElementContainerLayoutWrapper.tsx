@@ -16,8 +16,6 @@
 
 import { FC, useMemo } from "react"
 
-import { ButtonGroup } from "@streamlit/protobuf"
-
 import type { ElementNode } from "~lib/AppNode"
 import { StyledElementContainer } from "~lib/components/core/Block/styled-components"
 import { FlexContext } from "~lib/components/core/Layout/FlexContext"
@@ -94,10 +92,8 @@ export const StyledElementContainerLayoutWrapper: FC<
     minStretchBehavior = "8rem"
   }
 
-  if (
-    node.element.type === "buttonGroup" &&
-    node.element.buttonGroup?.style === ButtonGroup.Style.BORDERLESS
-  ) {
+  // Feedback widget should use fit-content for proper sizing
+  if (node.element.type === "feedback") {
     minStretchBehavior = "fit-content"
   }
 

@@ -1,0 +1,338 @@
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+from __future__ import annotations
+
+from typing import (
+    TYPE_CHECKING,
+    Literal,
+    cast,
+    overload,
+)
+
+from streamlit import config
+from streamlit.elements.lib.form_utils import current_form_id
+from streamlit.elements.lib.layout_utils import (
+    LayoutConfig,
+    Width,
+    validate_width,
+)
+from streamlit.elements.lib.policies import check_widget_policies
+from streamlit.elements.lib.utils import (
+    Key,
+    compute_and_register_element_id,
+    save_for_app_testing,
+    to_key,
+)
+from streamlit.errors import StreamlitAPIException
+from streamlit.proto.Feedback_pb2 import Feedback as FeedbackProto
+from streamlit.runtime.metrics_util import gather_metrics
+from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
+from streamlit.runtime.state import register_widget
+
+if TYPE_CHECKING:
+    from streamlit.delta_generator import DeltaGenerator
+    from streamlit.runtime.state import (
+        WidgetArgs,
+        WidgetCallback,
+        WidgetKwargs,
+    )
+
+
+# Number of options for each feedback type
+_NUM_THUMBS_OPTIONS = 2
+_NUM_FACES_OPTIONS = 5
+_NUM_STARS_OPTIONS = 5
+
+
+def _get_num_options(feedback_type: Literal["thumbs", "faces", "stars"]) -> int:
+    """Get the number of options for the given feedback type."""
+    if feedback_type == "thumbs":
+        return _NUM_THUMBS_OPTIONS
+    if feedback_type in {"faces", "stars"}:
+        return _NUM_FACES_OPTIONS
+    return _NUM_THUMBS_OPTIONS
+
+
+def _feedback_type_to_proto(
+    feedback_type: Literal["thumbs", "faces", "stars"],
+) -> FeedbackProto.FeedbackType.ValueType:
+    """Convert a feedback type string to the proto enum value."""
+    if feedback_type == "thumbs":
+        return FeedbackProto.FeedbackType.THUMBS
+    if feedback_type == "faces":
+        return FeedbackProto.FeedbackType.FACES
+    if feedback_type == "stars":
+        return FeedbackProto.FeedbackType.STARS
+    # Default to thumbs
+    return FeedbackProto.FeedbackType.THUMBS
+
+
+class FeedbackSerde:
+    """Serializer/deserializer for feedback widget values."""
+
+    def __init__(self, default_value: int | None = None):
+        self.default_value = default_value
+
+    def serialize(self, value: int | None) -> int | None:
+        """Serialize the value to be sent to the widget manager."""
+        return value
+
+    def deserialize(self, ui_value: int | None) -> int | None:
+        """Deserialize the value received from the widget manager."""
+        if ui_value is None:
+            return self.default_value
+        return ui_value
+
+
+class FeedbackMixin:
+    @overload
+    def feedback(
+        self,
+        options: Literal["thumbs"] = ...,
+        *,
+        key: Key | None = None,
+        default: int | None = None,
+        disabled: bool = False,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        width: Width = "content",
+    ) -> Literal[0, 1] | None: ...
+
+    @overload
+    def feedback(
+        self,
+        options: Literal["faces", "stars"] = ...,
+        *,
+        key: Key | None = None,
+        default: int | None = None,
+        disabled: bool = False,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        width: Width = "content",
+    ) -> Literal[0, 1, 2, 3, 4] | None: ...
+
+    @gather_metrics("feedback")
+    def feedback(
+        self,
+        options: Literal["thumbs", "faces", "stars"] = "thumbs",
+        *,
+        key: Key | None = None,
+        default: int | None = None,
+        disabled: bool = False,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        width: Width = "content",
+    ) -> int | None:
+        """Display a feedback widget.
+
+        A feedback widget is an icon-based button group available in three
+        styles, as described in ``options``. It is commonly used in chat and AI
+        apps to allow users to rate responses.
+
+        Parameters
+        ----------
+        options : "thumbs", "faces", or "stars"
+            The feedback options displayed to the user. ``options`` can be one
+            of the following:
+
+            - ``"thumbs"`` (default): Streamlit displays a thumb-up and
+              thumb-down button group.
+            - ``"faces"``: Streamlit displays a row of five buttons with
+              facial expressions depicting increasing satisfaction from left to
+              right.
+            - ``"stars"``: Streamlit displays a row of star icons, allowing the
+              user to select a rating from one to five stars.
+
+        key : str or int
+            An optional string or integer to use as the unique key for the widget.
+            If this is omitted, a key will be generated for the widget
+            based on its content. No two widgets may have the same key.
+
+        default : int or None
+            Default feedback value. This must be consistent with the feedback
+            type in ``options``:
+
+            - 0 or 1 if ``options="thumbs"``.
+            - Between 0 and 4, inclusive, if ``options="faces"`` or
+              ``options="stars"``.
+
+        disabled : bool
+            An optional boolean that disables the feedback widget if set
+            to ``True``. The default is ``False``.
+
+        on_change : callable
+            An optional callback invoked when this feedback widget's value
+            changes.
+
+        args : list or tuple
+            An optional list or tuple of args to pass to the callback.
+
+        kwargs : dict
+            An optional dict of kwargs to pass to the callback.
+
+        width : "content", "stretch", or int
+            The width of the feedback widget. This can be one of the following:
+
+            - ``"content"`` (default): The width of the widget matches the
+              width of its content, but doesn't exceed the width of the parent
+              container.
+            - ``"stretch"``: The width of the widget matches the width of the
+              parent container.
+            - An integer specifying the width in pixels: The widget has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the widget matches the width
+              of the parent container.
+
+        Returns
+        -------
+        int or None
+            An integer indicating the user's selection, where ``0`` is the
+            lowest feedback. Higher values indicate more positive feedback.
+            If no option was selected, the widget returns ``None``.
+
+            - For ``options="thumbs"``, a return value of ``0`` indicates
+              thumbs-down, and ``1`` indicates thumbs-up.
+            - For ``options="faces"`` and ``options="stars"``, return values
+              range from ``0`` (least satisfied) to ``4`` (most satisfied).
+
+        Examples
+        --------
+        Display a feedback widget with stars, and show the selected sentiment:
+
+        >>> import streamlit as st
+        >>>
+        >>> sentiment_mapping = ["one", "two", "three", "four", "five"]
+        >>> selected = st.feedback("stars")
+        >>> if selected is not None:
+        >>>     st.markdown(f"You selected {sentiment_mapping[selected]} star(s).")
+
+        .. output::
+            https://doc-feedback-stars.streamlit.app/
+            height: 200px
+
+        Display a feedback widget with thumbs, and show the selected sentiment:
+
+        >>> import streamlit as st
+        >>>
+        >>> sentiment_mapping = [":material/thumb_down:", ":material/thumb_up:"]
+        >>> selected = st.feedback("thumbs")
+        >>> if selected is not None:
+        >>>     st.markdown(f"You selected: {sentiment_mapping[selected]}")
+
+        .. output::
+            https://doc-feedback-thumbs.streamlit.app/
+            height: 200px
+
+        """
+        if options not in {"thumbs", "faces", "stars"}:
+            raise StreamlitAPIException(
+                "The options argument to st.feedback must be one of "
+                "['thumbs', 'faces', 'stars']. "
+                f"The argument passed was '{options}'."
+            )
+
+        num_options = _get_num_options(options)
+
+        if default is not None and (default < 0 or default >= num_options):
+            raise StreamlitAPIException(
+                f"The default value in '{options}' must be a number between 0 and {num_options - 1}."
+                f" The passed default value is {default}"
+            )
+
+        # Convert small pixel widths to "content" to prevent icon wrapping.
+        # Calculate threshold based on theme.baseFontSize to be responsive to
+        # custom themes. The calculation is based on icon buttons sized in rem:
+        # - Button size: ~1.5rem (icon 1.25rem + padding 0.125rem x 2)
+        # - Gap: 0.125rem between buttons
+        # - thumbs: 2 buttons + 1 gap = 3.125rem
+        # - faces/stars: 5 buttons + 4 gaps = 8rem
+        base_font_size = config.get_option("theme.baseFontSize") or 16
+        button_size_rem = 1.5
+        gap_size_rem = 0.125
+
+        if options == "thumbs":
+            # 2 buttons + 1 gap
+            min_width_rem = 2 * button_size_rem + gap_size_rem
+        else:
+            # 5 buttons + 4 gaps (faces or stars)
+            min_width_rem = 5 * button_size_rem + 4 * gap_size_rem
+
+        # Convert rem to pixels based on base font size, add 10% buffer
+        min_width_threshold = int(min_width_rem * base_font_size * 1.1)
+
+        if isinstance(width, int) and width < min_width_threshold:
+            width = "content"
+
+        key = to_key(key)
+        validate_width(width, allow_content=True)
+        layout_config = LayoutConfig(width=width)
+
+        check_widget_policies(self.dg, key, on_change, default_value=default)
+
+        ctx = get_script_run_ctx()
+        form_id = current_form_id(self.dg)
+
+        element_id = compute_and_register_element_id(
+            "feedback",
+            user_key=key,
+            key_as_main_identity={"options"},
+            dg=self.dg,
+            options=options,
+            default=default,
+            width=width,
+        )
+
+        # Build the proto
+        proto = FeedbackProto()
+        proto.id = element_id
+        proto.type = _feedback_type_to_proto(options)
+        proto.disabled = disabled
+        proto.form_id = form_id
+
+        if default is not None:
+            proto.default = default
+
+        serde = FeedbackSerde(default_value=default)
+
+        widget_state = register_widget(
+            proto.id,
+            on_change_handler=on_change,
+            args=args,
+            kwargs=kwargs,
+            deserializer=serde.deserialize,
+            serializer=serde.serialize,
+            ctx=ctx,
+            value_type="int_value",
+        )
+
+        if widget_state.value_changed:
+            if widget_state.value is not None:
+                proto.value = widget_state.value
+            proto.set_value = True
+
+        if ctx:
+            save_for_app_testing(ctx, element_id, None)
+
+        self.dg._enqueue("feedback", proto, layout_config=layout_config)
+
+        return widget_state.value
+
+    @property
+    def dg(self) -> DeltaGenerator:
+        """Get our DeltaGenerator."""
+        return cast("DeltaGenerator", self)

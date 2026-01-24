@@ -113,26 +113,19 @@ export function getContentElement(
   const kind =
     style === ButtonGroupProto.Style.PILLS
       ? BaseButtonKind.PILLS
-      : style === ButtonGroupProto.Style.BORDERLESS
-        ? BaseButtonKind.BORDERLESS_ICON
-        : BaseButtonKind.SEGMENTED_CONTROL
-  const size =
-    style === ButtonGroupProto.Style.BORDERLESS
-      ? BaseButtonSize.XSMALL
-      : BaseButtonSize.MEDIUM
+      : BaseButtonKind.SEGMENTED_CONTROL
+  const size = BaseButtonSize.MEDIUM
 
   // Use smaller font if kind is pills or segmented control
   const useSmallerFont =
     kind === BaseButtonKind.PILLS || kind === BaseButtonKind.SEGMENTED_CONTROL
-
-  const iconSize = style === ButtonGroupProto.Style.BORDERLESS ? "lg" : "base"
 
   return {
     element: (
       <DynamicButtonLabel
         icon={icon}
         label={content}
-        iconSize={iconSize}
+        iconSize="base"
         useSmallerFont={useSmallerFont}
       />
     ),
@@ -203,12 +196,6 @@ function getButtonGroupOverridesStyle(
   const width = containerWidth ? "100%" : "auto"
 
   switch (style) {
-    case ButtonGroupProto.Style.BORDERLESS:
-      return {
-        ...baseStyle,
-        columnGap: spacing.threeXS,
-        rowGap: spacing.threeXS,
-      }
     case ButtonGroupProto.Style.PILLS:
       return {
         ...baseStyle,

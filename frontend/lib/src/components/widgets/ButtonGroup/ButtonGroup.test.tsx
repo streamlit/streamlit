@@ -93,7 +93,7 @@ const getProps = (
     options: [...materialIconOnlyOptions, ...options],
     selectionVisualization:
       ButtonGroupProto.SelectionVisualization.ONLY_SELECTED,
-    style: ButtonGroupProto.Style.BORDERLESS,
+    style: ButtonGroupProto.Style.SEGMENTED_CONTROL,
     ...elementProps,
   }),
   disabled: false,
@@ -125,7 +125,7 @@ describe("ButtonGroup widget", () => {
     const buttons = getButtonGroupButtons()
     expect(buttons).toHaveLength(materialIconOnlyOptions.length)
     buttons.forEach((button, index) => {
-      expect(button).toHaveAttribute("kind", "borderlessIcon")
+      expect(button).toHaveAttribute("kind", "segmented_control")
       const icon = within(button).getByTestId("stIconMaterial")
       expect(icon.textContent).toContain(materialIconNames[index])
     })
@@ -564,61 +564,7 @@ describe("ButtonGroup widget", () => {
 })
 
 describe("ButtonGroup getContentElement", () => {
-  it("tests element with content, icon and borderless-style", () => {
-    const { element, kind, size } = getContentElement(
-      "foo",
-      "bar",
-      ButtonGroupProto.Style.BORDERLESS
-    )
-
-    expect(element.type).toBe(DynamicButtonLabel)
-    expect(element.props).toEqual({
-      label: "foo",
-      icon: "bar",
-      iconSize: "lg",
-      useSmallerFont: false,
-    })
-    expect(kind).toBe(BaseButtonKind.BORDERLESS_ICON)
-    expect(size).toBe(BaseButtonSize.XSMALL)
-  })
-
-  it("tests element with content and no icon and borderless-style", () => {
-    const { element, kind, size } = getContentElement(
-      "foo",
-      undefined,
-      ButtonGroupProto.Style.BORDERLESS
-    )
-
-    expect(element.type).toBe(DynamicButtonLabel)
-    expect(element.props).toEqual({
-      label: "foo",
-      icon: undefined,
-      iconSize: "lg",
-      useSmallerFont: false,
-    })
-    expect(kind).toBe(BaseButtonKind.BORDERLESS_ICON)
-    expect(size).toBe(BaseButtonSize.XSMALL)
-  })
-
-  it("tests element with no content, an icon and borderless-style", () => {
-    const { element, kind, size } = getContentElement(
-      "",
-      "foo",
-      ButtonGroupProto.Style.BORDERLESS
-    )
-
-    expect(element.type).toBe(DynamicButtonLabel)
-    expect(element.props).toEqual({
-      label: "",
-      icon: "foo",
-      iconSize: "lg",
-      useSmallerFont: false,
-    })
-    expect(kind).toBe(BaseButtonKind.BORDERLESS_ICON)
-    expect(size).toBe(BaseButtonSize.XSMALL)
-  })
-
-  it("tests element with content, icon and non-borderless-style", () => {
+  it("tests element with content, icon and pills-style", () => {
     const { element, kind, size } = getContentElement(
       "foo",
       "bar",
@@ -633,6 +579,24 @@ describe("ButtonGroup getContentElement", () => {
       useSmallerFont: true,
     })
     expect(kind).toBe(BaseButtonKind.PILLS)
+    expect(size).toBe(BaseButtonSize.MEDIUM)
+  })
+
+  it("tests element with content and no icon and segmented-control-style", () => {
+    const { element, kind, size } = getContentElement(
+      "foo",
+      undefined,
+      ButtonGroupProto.Style.SEGMENTED_CONTROL
+    )
+
+    expect(element.type).toBe(DynamicButtonLabel)
+    expect(element.props).toEqual({
+      label: "foo",
+      icon: undefined,
+      iconSize: "base",
+      useSmallerFont: true,
+    })
+    expect(kind).toBe(BaseButtonKind.SEGMENTED_CONTROL)
     expect(size).toBe(BaseButtonSize.MEDIUM)
   })
 })
