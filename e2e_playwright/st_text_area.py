@@ -185,3 +185,27 @@ else:
         max_chars=100,
     )
     st.write("Initial text area value:", ta_value)
+
+# Query param bound text areas
+bound_value = st.text_area(
+    "Bound text area (no default)",
+    key="bound_text_area",
+    bind="query-params",
+)
+st.write("bound text area value:", bound_value)
+
+bound_with_default = st.text_area(
+    "Bound text area (default 'hello')",
+    value="hello",
+    key="bound_text_area_default",
+    bind="query-params",
+)
+st.write("bound text area default value:", bound_with_default)
+
+bound_with_max_chars = st.text_area(
+    "Bound text area (max_chars=5)",
+    key="bound_text_area_max",
+    bind="query-params",
+    max_chars=5,
+)
+st.write("bound max chars value:", bound_with_max_chars)

@@ -23,6 +23,7 @@ from parameterized import parameterized
 import streamlit as st
 from streamlit.errors import (
     StreamlitAPIException,
+    StreamlitInvalidBindValueError,
     StreamlitInvalidHeightError,
     StreamlitInvalidWidthError,
 )
@@ -393,3 +394,54 @@ def test_None_session_state_value_retained():
     at = AppTest.from_function(script).run()
     at = at.button[0].click().run()
     assert at.text_area[0].value is None
+
+
+class TextAreaBindQueryParamsTest(DeltaGeneratorTestCase):
+    """Tests for text_area bind='query-params' functionality."""
+
+    def test_bind_query_params_sets_query_param_key(self):
+        """Test that bind='query-params' with a key sets query_param_key in proto."""
+        st.text_area("the label", key="my_key", bind="query-params")
+
+        c = self.get_delta_from_queue().new_element.text_area
+        assert c.query_param_key == "my_key"
+
+    def test_bind_query_params_without_key_raises_exception(self):
+        """Test that bind='query-params' without a key raises an exception."""
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.text_area("the label", bind="query-params")
+
+        assert "must have a 'key' parameter" in str(exc.value)
+
+    def test_no_bind_does_not_set_query_param_key(self):
+        """Test that without bind parameter, query_param_key is not set."""
+        st.text_area("the label", key="my_key")
+
+        c = self.get_delta_from_queue().new_element.text_area
+        assert c.query_param_key == ""
+
+    def test_invalid_bind_value_raises_exception(self):
+        """Test that an invalid bind value raises StreamlitInvalidBindValueError."""
+        with pytest.raises(StreamlitInvalidBindValueError) as exc:
+            st.text_area("the label", key="my_key", bind="invalid-value")
+
+        assert "invalid-value" in str(exc.value)
+        assert "query-params" in str(exc.value)
+
+    def test_bind_query_params_with_default_value(self):
+        """Test that bind works with a default value."""
+        st.text_area(
+            "the label", value="default text", key="my_key", bind="query-params"
+        )
+
+        c = self.get_delta_from_queue().new_element.text_area
+        assert c.query_param_key == "my_key"
+        assert c.default == "default text"
+
+    def test_bind_query_params_with_max_chars(self):
+        """Test that bind works with max_chars - values should be truncated."""
+        st.text_area("the label", key="my_key", bind="query-params", max_chars=10)
+
+        c = self.get_delta_from_queue().new_element.text_area
+        assert c.query_param_key == "my_key"
+        assert c.max_chars == 10

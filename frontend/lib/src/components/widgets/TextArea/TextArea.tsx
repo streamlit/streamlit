@@ -34,6 +34,7 @@ import {
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import useOnInputChange from "~lib/hooks/useOnInputChange"
+import { useQueryParamBinding } from "~lib/hooks/useQueryParamBinding"
 import useSubmitFormViaEnterKey from "~lib/hooks/useSubmitFormViaEnterKey"
 import { useTextInputAutoExpand } from "~lib/hooks/useTextInputAutoExpand"
 import useUpdateUiValue from "~lib/hooks/useUpdateUiValue"
@@ -59,7 +60,7 @@ const getStateFromWidgetMgr = (
   widgetMgr: WidgetStateManager,
   element: TextAreaProto
 ): TextAreaValue | undefined => {
-  return widgetMgr.getStringValue(element) ?? element.default ?? null
+  return widgetMgr.getStringValue(element) ?? undefined
 }
 
 const getDefaultStateFromProto = (element: TextAreaProto): TextAreaValue => {
@@ -143,6 +144,15 @@ const TextArea: FC<Props> = ({
     fragmentId,
     onFormCleared,
   })
+
+  // Query param binding registration
+  useQueryParamBinding(
+    widgetMgr,
+    element.id,
+    element.queryParamKey,
+    "string_value",
+    element.default
+  )
 
   useUpdateUiValue(value, uiValue, setUiValue, dirty)
 

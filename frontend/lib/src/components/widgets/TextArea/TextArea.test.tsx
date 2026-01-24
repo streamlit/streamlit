@@ -418,3 +418,61 @@ describe("TextArea widget", () => {
     expect(forId2).toBe(forId1)
   })
 })
+
+describe("TextArea query param binding", () => {
+  it("registers query param binding on mount when queryParamKey is set", () => {
+    const props = getProps({ queryParamKey: "my_text_area" })
+    vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
+
+    render(<TextArea {...props} />)
+
+    expect(props.widgetMgr.registerQueryParamBinding).toHaveBeenCalledWith(
+      props.element.id,
+      "my_text_area",
+      "string_value",
+      "",
+      undefined,
+      undefined
+    )
+  })
+
+  it("unregisters query param binding on unmount", () => {
+    const props = getProps({ queryParamKey: "my_text_area" })
+    vi.spyOn(props.widgetMgr, "unregisterQueryParamBinding")
+
+    const { unmount } = render(<TextArea {...props} />)
+    unmount()
+
+    expect(props.widgetMgr.unregisterQueryParamBinding).toHaveBeenCalledWith(
+      props.element.id
+    )
+  })
+
+  it("does not register query param binding when queryParamKey is not set", () => {
+    const props = getProps({ queryParamKey: "" })
+    vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
+
+    render(<TextArea {...props} />)
+
+    expect(props.widgetMgr.registerQueryParamBinding).not.toHaveBeenCalled()
+  })
+
+  it("registers query param binding with custom default value", () => {
+    const props = getProps({
+      queryParamKey: "my_text_area",
+      default: "default text",
+    })
+    vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
+
+    render(<TextArea {...props} />)
+
+    expect(props.widgetMgr.registerQueryParamBinding).toHaveBeenCalledWith(
+      props.element.id,
+      "my_text_area",
+      "string_value",
+      "default text",
+      undefined,
+      undefined
+    )
+  })
+})

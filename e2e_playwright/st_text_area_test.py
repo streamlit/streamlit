@@ -12,10 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import re
+
 import pytest
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.conftest import (
+    ImageCompareFunction,
+    wait_for_app_loaded,
+    wait_for_app_run,
+)
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_toggle,
@@ -26,7 +32,7 @@ from e2e_playwright.shared.app_utils import (
     get_text_area,
 )
 
-NUM_TEXT_AREAS = 25
+NUM_TEXT_AREAS = 28
 
 
 def test_text_area_widget_rendering(
@@ -366,3 +372,87 @@ def test_text_area_content_height_expansion(
     # Test reducing content and verify it shrinks back
     content_height_form.locator("textarea").first.fill("Line 1\nLine 2")
     assert_snapshot(content_height_form, name="st_text_area-content_height_reduced")
+
+
+# ============================================
+# Query Param Binding Tests
+# ============================================
+
+
+def test_text_area_query_param_seeding(page: Page, app_port: int):
+    """Test that text area value can be seeded from URL query params."""
+    # Load app with query param set
+    page.goto(f"http://localhost:{app_port}/?bound_text_area=seeded_value")
+    wait_for_app_loaded(page)
+
+    # Text area should show the seeded value
+    expect_prefixed_markdown(page, "bound text area value:", "seeded_value")
+
+
+def test_text_area_query_param_updates_url(app: Page):
+    """Test that changing a bound text area updates the URL."""
+    # Initially empty, no query param in URL
+    expect_prefixed_markdown(app, "bound text area value:", "")
+    expect(app).to_have_url(re.compile(r"^((?!bound_text_area=).)*$"))
+
+    # Type a value and submit
+    text_area = get_text_area(app, "Bound text area (no default)")
+    textarea_field = text_area.locator("textarea").first
+    textarea_field.fill("test_value")
+    textarea_field.press("Control+Enter")
+    wait_for_app_run(app)
+
+    # URL should now contain the query param
+    expect(app).to_have_url(re.compile(r"bound_text_area=test_value"))
+    expect_prefixed_markdown(app, "bound text area value:", "test_value")
+
+    # Clear the text area (back to empty default)
+    textarea_field.clear()
+    textarea_field.press("Control+Enter")
+    wait_for_app_run(app)
+
+    # Query param should be removed since value is back to default (empty)
+    expect(app).to_have_url(re.compile(r"^((?!bound_text_area=).)*$"))
+    expect_prefixed_markdown(app, "bound text area value:", "")
+
+
+def test_text_area_query_param_with_default(page: Page, app_port: int):
+    """Test text area with custom default: seeding and param removal."""
+    # Load app with query param overriding the "hello" default
+    page.goto(f"http://localhost:{app_port}/?bound_text_area_default=world")
+    wait_for_app_loaded(page)
+
+    # Text area should show "world" (overriding "hello" default)
+    expect_prefixed_markdown(page, "bound text area default value:", "world")
+
+    # Change back to default ("hello")
+    text_area = get_text_area(page, "Bound text area (default 'hello')")
+    textarea_field = text_area.locator("textarea").first
+    textarea_field.fill("hello")
+    textarea_field.press("Control+Enter")
+    wait_for_app_run(page)
+
+    # Query param should be removed since value is back to default
+    expect(page).to_have_url(re.compile(r"^((?!bound_text_area_default).)*$"))
+    expect_prefixed_markdown(page, "bound text area default value:", "hello")
+
+
+def test_text_area_query_param_special_characters(page: Page, app_port: int):
+    """Test that special characters in URL params are handled correctly."""
+    # Load app with URL-encoded special characters
+    # "hello world!" URL-encoded is "hello%20world%21"
+    page.goto(f"http://localhost:{app_port}/?bound_text_area=hello%20world%21")
+    wait_for_app_loaded(page)
+
+    # Text area should correctly decode and show "hello world!"
+    expect_prefixed_markdown(page, "bound text area value:", "hello world!")
+
+
+def test_text_area_query_param_max_chars_truncation(page: Page, app_port: int):
+    """Test that URL values exceeding max_chars are truncated."""
+    # Load app with value longer than max_chars=5
+    page.goto(f"http://localhost:{app_port}/?bound_text_area_max=verylongtext")
+    wait_for_app_loaded(page)
+
+    # Text area should truncate to 5 characters
+    expect_prefixed_markdown(page, "bound max chars value:", "veryl")
