@@ -37,7 +37,6 @@ from streamlit.elements.lib.layout_utils import (
 )
 from streamlit.elements.lib.options_selector_utils import (
     convert_to_sequence_and_check_comparable,
-    create_mappings,
     get_default_indices,
     maybe_coerce_enum,
     maybe_coerce_enum_sequence,
@@ -149,17 +148,27 @@ class _ButtonGroupSerde(Generic[T]):
         if len(self.options) == 0:
             return []
 
+        # First, try to find the option by value in the options list
+        for index, opt in enumerate(self.options):
+            if opt == v:
+                # Return the formatted string with index suffix
+                return [self.formatted_options[index]]
+
+        # If not found by direct comparison, try by formatted string
         try:
             formatted_value = self.format_func(v)
         except Exception:
-            # format_func failed (e.g., v is a string but format_func expects
-            # an object with specific attributes). Use str(v) to ensure we return
-            # a proper string, not the original object.
+            # format_func failed - return as string
             return [str(v)]
 
-        if formatted_value in self.formatted_option_to_option_index:
-            return [formatted_value]
-        # Value not found in options - return formatted string for type consistency.
+        # Look for the formatted value in formatted_options (which include index)
+        # by checking if the base part (before |) matches
+        for formatted_with_index in self.formatted_options:
+            base_formatted = formatted_with_index.rsplit("|", 1)[0]
+            if base_formatted == formatted_value:
+                return [formatted_with_index]
+
+        # Value not found in options - return formatted string for type consistency
         return [formatted_value]
 
     def _deserialize_single(self, ui_value: list[str] | None) -> T | str | None:
@@ -184,18 +193,38 @@ class _ButtonGroupSerde(Generic[T]):
         converted_value = convert_anything_to_list(cast("Any", value))
         values: list[str] = []
         for v in converted_value:
+            # First, try to find the option by value in the options list
+            found = False
+            for index, opt in enumerate(self.options):
+                if opt == v:
+                    # Return the formatted string with index suffix
+                    values.append(self.formatted_options[index])
+                    found = True
+                    break
+
+            if found:
+                continue
+
+            # If not found by direct comparison, try by formatted string
             try:
                 formatted_value = self.format_func(v)
             except Exception:
-                # format_func failed (e.g., v is a string but format_func expects
-                # an object with specific attributes). Use str(v) to ensure we append
-                # a proper string, not the original object.
+                # format_func failed - append as string
                 values.append(str(v))
                 continue
-            if formatted_value in self.formatted_option_to_option_index:
-                values.append(formatted_value)
-            else:
-                # Value not found in options - return formatted string for type consistency.
+
+            # Look for the formatted value in formatted_options (which include index)
+            # by checking if the base part (before |) matches
+            found = False
+            for formatted_with_index in self.formatted_options:
+                base_formatted = formatted_with_index.rsplit("|", 1)[0]
+                if base_formatted == formatted_value:
+                    values.append(formatted_with_index)
+                    found = True
+                    break
+
+            if not found:
+                # Value not found in options - append formatted string
                 values.append(formatted_value)
         return values
 
@@ -1056,9 +1085,18 @@ class ButtonGroupMixin:
         default_values = get_default_indices(indexable_options, default)
 
         # Create string-based mappings for the serde
-        formatted_options, formatted_option_to_option_index = create_mappings(
-            indexable_options, actual_format_func
-        )
+        # The format must match the frontend's getFormattedOption function:
+        # - Icon (if any) + content + "|" + index
+        # This ensures uniqueness even when multiple options have the same display text
+        # (e.g., all stars in st.feedback have the same icon)
+        formatted_options: list[str] = []
+        formatted_option_to_option_index: dict[str, int] = {}
+        for index, option in enumerate(indexable_options):
+            formatted = actual_format_func(option)
+            # Append index to match frontend format: "{content}|{index}"
+            formatted_with_index = f"{formatted}|{index}"
+            formatted_options.append(formatted_with_index)
+            formatted_option_to_option_index[formatted_with_index] = index
 
         # Create string-based serde for pills/segmented_control
         serde = _ButtonGroupSerde[V](
