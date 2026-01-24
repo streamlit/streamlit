@@ -44,7 +44,8 @@ const expectHighlightStyle = (
   if (!should_exist) {
     expectCheck = expect.not
   }
-  expectCheck.toHaveStyle("color: rgb(49, 51, 63);")
+  // Active/selected buttons have the primary color (rgb(255, 75, 75))
+  expectCheck.toHaveStyle("color: rgb(255, 75, 75);")
 }
 
 const getButtonGroupButtons = (): HTMLElement[] => {
@@ -52,7 +53,7 @@ const getButtonGroupButtons = (): HTMLElement[] => {
   return within(buttonGroupWidget).getAllByRole("button")
 }
 
-// options where content is only a material icon; used by st.feedback
+// options where content is only a material icon
 const materialIconOnlyOptions = [
   ButtonGroupProto.Option.create({
     contentIcon: `:material/${materialIconNames[0]}:`,
@@ -482,7 +483,7 @@ describe("ButtonGroup widget", () => {
 
       const buttons = getButtonGroupButtons()
       buttons.forEach((button, index) => {
-        expect(button).toHaveAttribute("kind", "borderlessIcon")
+        expect(button).toHaveAttribute("kind", "segmented_control")
         const icon = within(button).getByTestId("stIconMaterial")
         expect(icon.textContent).toContain(materialIconNames[index])
       })
@@ -493,19 +494,7 @@ describe("ButtonGroup widget", () => {
       )
     })
 
-    it("shows bigger icons for borderless ButtonGroup", () => {
-      const props = getProps({ default: [], options: materialIconOnlyOptions })
-      render(<ButtonGroup {...props} />)
-      const buttons = getButtonGroupButtons()
-      buttons.forEach((button, index) => {
-        expect(button).toHaveAttribute("kind", "borderlessIcon")
-        const icon = within(button).getByTestId("stIconMaterial")
-        expect(icon.textContent).toContain(materialIconNames[index])
-        expect(icon).toHaveStyle("width: 1.25rem")
-      })
-    })
-
-    it("shows smaller icons for non-borderless ButtonGroup", () => {
+    it("shows icons with correct size for segmented control ButtonGroup", () => {
       const props = getProps({
         default: [],
         options: materialIconOnlyOptions,
