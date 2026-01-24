@@ -55,6 +55,7 @@ from streamlit.testing.v1.element_tree import (
     Error,
     Exception,  # noqa: A004
     Expander,
+    Feedback,
     Header,
     Info,
     Json,
@@ -664,6 +665,20 @@ class AppTest:
             extension of the Element class.
         """
         return self._tree.exception
+
+    @property
+    def feedback(self) -> WidgetList[Feedback]:
+        """Sequence of all ``st.feedback`` widgets.
+
+        Returns
+        -------
+        WidgetList of Feedback
+            Sequence of all ``st.feedback`` widgets. Individual widgets can be
+            accessed from a WidgetList by index (order on the page) or key. For
+            example, ``at.feedback[0]`` for the first widget or
+            ``at.feedback(key="my_key")`` to access by key.
+        """
+        return self._tree.feedback
 
     @property
     def expander(self) -> Sequence[Expander]:

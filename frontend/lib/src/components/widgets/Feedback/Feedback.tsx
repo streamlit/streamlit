@@ -235,9 +235,7 @@ function Feedback(props: Readonly<Props>): ReactElement {
         // Focus the new button
         const buttons =
           event.currentTarget.parentElement?.querySelectorAll("button")
-        if (buttons && buttons[newIndex]) {
-          buttons[newIndex].focus()
-        }
+        buttons?.[newIndex]?.focus()
       }
     },
     [options, handleClick]
@@ -259,7 +257,7 @@ function Feedback(props: Readonly<Props>): ReactElement {
 
           return (
             <StyledFeedbackButton
-              key={index}
+              key={option.value}
               type="button"
               role="radio"
               aria-checked={value === option.value}
