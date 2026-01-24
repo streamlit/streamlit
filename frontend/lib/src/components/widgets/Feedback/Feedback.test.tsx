@@ -260,8 +260,7 @@ describe("Feedback widget", () => {
       )
     })
 
-    it("shows correct number of filled stars based on selection", async () => {
-      const user = userEvent.setup()
+    it("shows correct number of filled stars based on selection", () => {
       const props = getProps({
         type: FeedbackProto.FeedbackType.STARS,
         default: 4, // Select all 5 stars
