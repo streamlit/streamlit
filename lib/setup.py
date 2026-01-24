@@ -46,7 +46,7 @@ INSTALL_REQUIRES = [
     "packaging>=20",
     # Pandas <1.4 has a bug related to deleting columns in a DataFrame changing
     # the index dtype.
-    "pandas>=1.4.0, <3",
+    "pandas>=1.4.0, <4",
     "pillow>=7.1.0, <13",
     # `protoc` < 3.20 is not able to generate protobuf code compatible with protobuf >= 3.20.
     "protobuf>=3.20, <7",
