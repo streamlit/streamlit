@@ -62,9 +62,7 @@ def _get_num_options(feedback_type: Literal["thumbs", "faces", "stars"]) -> int:
         return _NUM_THUMBS_OPTIONS
     if feedback_type == "faces":
         return _NUM_FACES_OPTIONS
-    if feedback_type == "stars":
-        return _NUM_STARS_OPTIONS
-    return _NUM_THUMBS_OPTIONS
+    return _NUM_STARS_OPTIONS
 
 
 def _feedback_type_to_proto(
