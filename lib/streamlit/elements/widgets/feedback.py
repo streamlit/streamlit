@@ -73,10 +73,7 @@ def _feedback_type_to_proto(
         return FeedbackProto.FeedbackType.THUMBS
     if feedback_type == "faces":
         return FeedbackProto.FeedbackType.FACES
-    if feedback_type == "stars":
-        return FeedbackProto.FeedbackType.STARS
-    # Default to thumbs
-    return FeedbackProto.FeedbackType.THUMBS
+    return FeedbackProto.FeedbackType.STARS
 
 
 class FeedbackSerde:

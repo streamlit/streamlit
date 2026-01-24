@@ -26,19 +26,15 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit.elements.widgets.button_group import (
-    _FACES_ICONS,
-    _SELECTED_STAR_ICON,
-    _STAR_ICON,
-    _THUMB_ICONS,
     ButtonGroupMixin,
     ButtonGroupSerde,
     SelectionMode,
     _MultiSelectSerde,
     _SingleSelectSerde,
-    get_mapped_options,
 )
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
+from streamlit.proto.Feedback_pb2 import Feedback as FeedbackProto
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
 from streamlit.runtime.state.session_state import get_script_run_ctx
 from streamlit.testing.v1.util import patch_config_options
@@ -47,49 +43,6 @@ from tests.streamlit.elements.layout_test_utils import WidthConfigFields
 
 if TYPE_CHECKING:
     from collections.abc import Callable
-
-
-class TestGetMappedOptions:
-    def test_thumbs(self):
-        options, options_indices = get_mapped_options("thumbs")
-
-        assert len(options) == 2
-        assert len(options_indices) == 2
-
-        for index, option in enumerate(options):
-            assert option.content_icon == _THUMB_ICONS[index]
-
-        # ensure order of thumbs
-        assert "down" in options[1].content_icon
-        assert options_indices[0] == 1
-        assert "up" in options[0].content_icon
-        assert options_indices[1] == 0
-
-    def test_faces(self):
-        options, options_indices = get_mapped_options("faces")
-
-        assert len(options) == 5
-        assert len(options_indices) == 5
-
-        for index, option in enumerate(options):
-            assert option.content_icon == _FACES_ICONS[index]
-            assert option.selected_content_icon == ""
-            assert options_indices[index] == index
-
-        # ensure order of faces
-        assert "sad" in options[0].content_icon
-        assert "very_satisfied" in options[4].content_icon
-
-    def test_stars(self):
-        options, options_indices = get_mapped_options("stars")
-
-        assert len(options) == 5
-        assert len(options_indices) == 5
-
-        for index, option in enumerate(options):
-            assert option.content_icon == _STAR_ICON
-            assert option.selected_content_icon == _SELECTED_STAR_ICON
-            assert options_indices[index] == index
 
 
 class TestSingleSelectSerde:
@@ -220,19 +173,20 @@ class TestFeedbackCommand(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            ("thumbs", list(_THUMB_ICONS)),
-            ("faces", list(_FACES_ICONS)),
-            ("stars", list([_STAR_ICON] * 5)),
+            ("thumbs", FeedbackProto.FeedbackType.THUMBS),
+            ("faces", FeedbackProto.FeedbackType.FACES),
+            ("stars", FeedbackProto.FeedbackType.STARS),
         ]
     )
     def test_call_feedback_with_all_options(
-        self, option: Literal["thumbs", "faces", "stars"], expected_icons: list[str]
+        self,
+        option: Literal["thumbs", "faces", "stars"],
+        expected_type: FeedbackProto.FeedbackType.ValueType,
     ):
         st.feedback(option)
 
-        delta = self.get_delta_from_queue().new_element.button_group
-        assert delta.default == []
-        assert [option.content_icon for option in delta.options] == expected_icons
+        delta = self.get_delta_from_queue().new_element.feedback
+        assert delta.type == expected_type
 
     def test_invalid_option_literal(self):
         with pytest.raises(StreamlitAPIException) as e:
@@ -367,15 +321,6 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
     @parameterized.expand(
         [
             (
-                st.feedback,
-                ("thumbs",),
-                None,
-                [":material/thumb_up:", ":material/thumb_down:"],
-                "content_icon",
-                ButtonGroupProto.Style.BORDERLESS,
-                False,
-            ),
-            (
                 st.pills,
                 ("label", ["a", "b", "c"]),
                 {"help": "Test help param"},
@@ -432,16 +377,22 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
             is LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE
         )
 
-    @parameterized.expand(
-        get_command_matrix([("string_key",), (0,), (None,)], with_st_feedback=True)
-    )
+    @parameterized.expand(get_command_matrix([("string_key",), (0,), (None,)]))
     def test_key_types(self, command: Callable[..., None], key: str | int | None):
         """Test that the key argument can be passed as expected."""
 
-        # use options that is compatible with all commands including st.feedback
-        command("thumbs", key=key)
+        command(["a", "b", "c"], key=key)
 
         delta = self.get_delta_from_queue().new_element.button_group
+        assert delta.id.endswith(f"-{key}")
+
+    @parameterized.expand([("string_key",), (0,), (None,)])
+    def test_key_types_feedback(self, key: str | int | None):
+        """Test that the key argument can be passed as expected for st.feedback."""
+
+        st.feedback("thumbs", key=key)
+
+        delta = self.get_delta_from_queue().new_element.feedback
         assert delta.id.endswith(f"-{key}")
 
     @parameterized.expand(
@@ -495,7 +446,6 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            (st.feedback, ("thumbs",)),
             (st.pills, ("label", ["a", "b", "c"])),
         ]
     )
@@ -503,6 +453,13 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
         command(*command_args, disabled=True)
 
         delta = self.get_delta_from_queue().new_element.button_group
+        assert delta.disabled is True
+
+    def test_disabled_feedback(self):
+        """Test that st.feedback disabled state is set correctly."""
+        st.feedback("thumbs", disabled=True)
+
+        delta = self.get_delta_from_queue().new_element.feedback
         assert delta.disabled is True
 
     @parameterized.expand(
@@ -799,31 +756,48 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
             assert proto_option.content_icon == ""
             assert proto_option.content == option
 
-    @parameterized.expand(get_command_matrix([], with_st_feedback=True))
+    @parameterized.expand(get_command_matrix([]))
     def test_outside_form(self, command: Callable[..., None]):
         """Test that form id is marshalled correctly outside of a form."""
-        # pass an option that is valid for st.feedback and also the other button_group
-        # commands
-        command("thumbs")
+        command(["a", "b", "c"])
 
         proto = self.get_delta_from_queue().new_element.button_group
         assert proto.form_id == ""
 
-    @parameterized.expand(get_command_matrix([], with_st_feedback=True))
+    def test_outside_form_feedback(self):
+        """Test that form id is marshalled correctly outside of a form for st.feedback."""
+        st.feedback("thumbs")
+
+        proto = self.get_delta_from_queue().new_element.feedback
+        assert proto.form_id == ""
+
+    @parameterized.expand(get_command_matrix([]))
     @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
     def test_inside_form(self, command: Callable[..., None]):
         """Test that form id is marshalled correctly inside of a form."""
 
         with st.form("form"):
-            # pass an option that is valid for st.feedback and also the other button_group
-            # commands
-            command("thumbs")
+            command(["a", "b", "c"])
 
         # 2 elements will be created: form block, widget
         assert len(self.get_all_deltas_from_queue()) == 2
 
         form_proto = self.get_delta_from_queue(0).add_block
         proto = self.get_delta_from_queue(1).new_element.button_group
+        assert proto.form_id == form_proto.form.form_id
+
+    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
+    def test_inside_form_feedback(self):
+        """Test that form id is marshalled correctly inside of a form for st.feedback."""
+
+        with st.form("form"):
+            st.feedback("thumbs")
+
+        # 2 elements will be created: form block, widget
+        assert len(self.get_all_deltas_from_queue()) == 2
+
+        form_proto = self.get_delta_from_queue(0).add_block
+        proto = self.get_delta_from_queue(1).new_element.feedback
         assert proto.form_id == form_proto.form.form_id
 
     @parameterized.expand(get_command_matrix([]))
@@ -854,13 +828,9 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
 
         # 4 elements will be created: 1 horizontal block, 2 columns, 1 widget
         assert len(all_deltas) == 4
-        proto = self.get_delta_from_queue().new_element.button_group
+        proto = self.get_delta_from_queue().new_element.feedback
 
-        assert proto.default == []
-        assert [option.content_icon for option in proto.options] == [
-            ":material/thumb_up:",
-            ":material/thumb_down:",
-        ]
+        assert proto.type == FeedbackProto.FeedbackType.THUMBS
 
     @parameterized.expand(get_command_matrix([]))
     def test_default_string(self, command: Callable[..., None]):
@@ -974,7 +944,7 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
             )
         assert (
             str(exception.value) == "The style argument must be one of "
-            "['borderless', 'pills', 'segmented_control']. "
+            "['pills', 'segmented_control']. "
             "The argument passed was 'foo'."
         )
 
@@ -1098,7 +1068,7 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
                 # Whitelisted args:
                 options="thumbs",
             )
-            proto1 = self.get_delta_from_queue().new_element.button_group
+            proto1 = self.get_delta_from_queue().new_element.feedback
             id1 = proto1.id
 
             # Second render with different non-whitelisted params but same key
@@ -1113,7 +1083,7 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
                 # Whitelisted args:
                 options="thumbs",
             )
-            proto2 = self.get_delta_from_queue().new_element.button_group
+            proto2 = self.get_delta_from_queue().new_element.feedback
             id2 = proto2.id
             assert id1 == id2
 
@@ -1137,12 +1107,12 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
 
             # Apply first value for the whitelisted kwarg
             st.feedback(value1, **base_kwargs)  # type: ignore[arg-type]
-            proto1 = self.get_delta_from_queue().new_element.button_group
+            proto1 = self.get_delta_from_queue().new_element.feedback
             id1 = proto1.id
 
             # Apply second value for the whitelisted kwarg
             st.feedback(value2, **base_kwargs)  # type: ignore[arg-type]
-            proto2 = self.get_delta_from_queue().new_element.button_group
+            proto2 = self.get_delta_from_queue().new_element.feedback
             id2 = proto2.id
             assert id1 != id2
 

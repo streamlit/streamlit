@@ -20,9 +20,9 @@ from typing_extensions import assert_type
 
 # Perform some "type checking testing"; mypy should flag any assignments that are incorrect.
 if TYPE_CHECKING:
-    from streamlit.elements.widgets.button_group import ButtonGroupMixin
+    from streamlit.elements.widgets.feedback import FeedbackMixin
 
-    feedback = ButtonGroupMixin().feedback
+    feedback = FeedbackMixin().feedback
 
     assert_type(feedback(), Literal[0, 1] | None)
     assert_type(feedback("thumbs"), Literal[0, 1] | None)
