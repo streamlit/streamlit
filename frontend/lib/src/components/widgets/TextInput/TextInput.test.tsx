@@ -529,3 +529,61 @@ describe("TextInput widget", () => {
     expect(materialIcon).toHaveTextContent("search")
   })
 })
+
+describe("TextInput query param binding", () => {
+  it("registers query param binding on mount when queryParamKey is set", () => {
+    const props = getProps({ queryParamKey: "my_text" })
+    vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
+
+    render(<TextInput {...props} />)
+
+    expect(props.widgetMgr.registerQueryParamBinding).toHaveBeenCalledWith(
+      props.element.id,
+      "my_text",
+      "string_value",
+      props.element.default,
+      undefined,
+      undefined
+    )
+  })
+
+  it("unregisters query param binding on unmount", () => {
+    const props = getProps({ queryParamKey: "my_text" })
+    vi.spyOn(props.widgetMgr, "unregisterQueryParamBinding")
+
+    const { unmount } = render(<TextInput {...props} />)
+    unmount()
+
+    expect(props.widgetMgr.unregisterQueryParamBinding).toHaveBeenCalledWith(
+      props.element.id
+    )
+  })
+
+  it("does not register query param binding when queryParamKey is not set", () => {
+    const props = getProps()
+    vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
+
+    render(<TextInput {...props} />)
+
+    expect(props.widgetMgr.registerQueryParamBinding).not.toHaveBeenCalled()
+  })
+
+  it("registers query param binding with custom default value", () => {
+    const props = getProps({
+      queryParamKey: "search_query",
+      default: "initial search",
+    })
+    vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
+
+    render(<TextInput {...props} />)
+
+    expect(props.widgetMgr.registerQueryParamBinding).toHaveBeenCalledWith(
+      props.element.id,
+      "search_query",
+      "string_value",
+      "initial search",
+      undefined,
+      undefined
+    )
+  })
+})

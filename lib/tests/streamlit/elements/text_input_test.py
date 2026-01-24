@@ -21,7 +21,11 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.errors import StreamlitAPIException, StreamlitInvalidWidthError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidBindValueError,
+    StreamlitInvalidWidthError,
+)
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
 from streamlit.proto.TextInput_pb2 import TextInput
 from streamlit.testing.v1.app_test import AppTest
@@ -372,3 +376,62 @@ def test_None_session_state_value_retained():
     at = AppTest.from_function(script).run()
     at = at.button[0].click().run()
     assert at.text_input[0].value is None
+
+
+class TextInputBindQueryParamsTest(DeltaGeneratorTestCase):
+    """Tests for text_input bind='query-params' functionality."""
+
+    def test_bind_query_params_sets_query_param_key(self):
+        """Test that bind='query-params' with a key sets query_param_key in proto."""
+        st.text_input("the label", key="my_key", bind="query-params")
+
+        c = self.get_delta_from_queue().new_element.text_input
+        assert c.query_param_key == "my_key"
+
+    def test_bind_query_params_without_key_raises_exception(self):
+        """Test that bind='query-params' without a key raises an exception."""
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.text_input("the label", bind="query-params")
+
+        assert "must have a 'key' parameter" in str(exc.value)
+
+    def test_no_bind_does_not_set_query_param_key(self):
+        """Test that without bind parameter, query_param_key is not set."""
+        st.text_input("the label", key="my_key")
+
+        c = self.get_delta_from_queue().new_element.text_input
+        assert c.query_param_key == ""
+
+    def test_invalid_bind_value_raises_exception(self):
+        """Test that an invalid bind value raises StreamlitInvalidBindValueError."""
+        with pytest.raises(StreamlitInvalidBindValueError) as exc:
+            st.text_input("the label", key="my_key", bind="invalid-value")
+
+        assert "invalid-value" in str(exc.value)
+        assert "query-params" in str(exc.value)
+
+    def test_bind_query_params_with_default_value(self):
+        """Test that bind works with a default value."""
+        st.text_input(
+            "the label", value="default text", key="my_key", bind="query-params"
+        )
+
+        c = self.get_delta_from_queue().new_element.text_input
+        assert c.query_param_key == "my_key"
+        assert c.default == "default text"
+
+    def test_bind_query_params_with_password_type(self):
+        """Test that bind works with password type (though not recommended)."""
+        st.text_input("password", type="password", key="pw", bind="query-params")
+
+        c = self.get_delta_from_queue().new_element.text_input
+        assert c.query_param_key == "pw"
+        assert c.type == TextInput.PASSWORD
+
+    def test_bind_query_params_with_max_chars(self):
+        """Test that bind works with max_chars - values should be truncated."""
+        st.text_input("the label", key="my_key", bind="query-params", max_chars=5)
+
+        c = self.get_delta_from_queue().new_element.text_input
+        assert c.query_param_key == "my_key"
+        assert c.max_chars == 5

@@ -43,6 +43,7 @@ from streamlit.proto.TextInput_pb2 import TextInput as TextInputProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import (
+    BindOption,
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
@@ -60,9 +61,14 @@ if TYPE_CHECKING:
 @dataclass
 class TextInputSerde:
     value: str | None
+    max_chars: int | None = None
 
     def deserialize(self, ui_value: str | None) -> str | None:
-        return ui_value if ui_value is not None else self.value
+        result = ui_value if ui_value is not None else self.value
+        # Truncate if max_chars is set (handles URL-seeded values exceeding limit)
+        if result is not None and self.max_chars is not None:
+            result = result[: self.max_chars]
+        return result
 
     def serialize(self, v: str | None) -> str | None:
         return v
@@ -99,6 +105,7 @@ class TextWidgetsMixin:
         label_visibility: LabelVisibility = "visible",
         icon: str | None = None,
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> str:
         pass
 
@@ -121,6 +128,7 @@ class TextWidgetsMixin:
         label_visibility: LabelVisibility = "visible",
         icon: str | None = None,
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> str | None:
         pass
 
@@ -143,6 +151,7 @@ class TextWidgetsMixin:
         label_visibility: LabelVisibility = "visible",
         icon: str | None = None,
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> str | None:
         r"""Display a single-line text input widget.
 
@@ -256,6 +265,13 @@ class TextWidgetsMixin:
               the parent container, the width of the widget matches the width
               of the parent container.
 
+        bind : "query-params" or None
+            If set to ``"query-params"``, the widget's value will be synced
+            with a URL query parameter. When the widget value changes, the URL
+            is updated; when the page loads with a query parameter, the widget
+            is initialized from it. Requires a ``key`` to be set, which will
+            be used as the query parameter name. The default is ``None``.
+
         Returns
         -------
         str or None
@@ -291,6 +307,7 @@ class TextWidgetsMixin:
             label_visibility=label_visibility,
             icon=icon,
             width=width,
+            bind=bind,
             ctx=ctx,
         )
 
@@ -312,6 +329,7 @@ class TextWidgetsMixin:
         label_visibility: LabelVisibility = "visible",
         icon: str | None = None,
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
         ctx: ScriptRunContext | None = None,
     ) -> str | None:
         key = to_key(key)
@@ -387,7 +405,11 @@ class TextWidgetsMixin:
             autocomplete = "new-password" if type == "password" else ""
         text_input_proto.autocomplete = autocomplete
 
-        serde = TextInputSerde(value)
+        # Set query param key if bound
+        if bind == "query-params" and key is not None:
+            text_input_proto.query_param_key = str(key)
+
+        serde = TextInputSerde(value, max_chars)
 
         widget_state = register_widget(
             text_input_proto.id,
@@ -398,6 +420,7 @@ class TextWidgetsMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="string_value",
+            bind=bind,
         )
 
         if widget_state.value_changed:

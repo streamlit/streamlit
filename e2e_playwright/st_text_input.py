@@ -141,3 +141,29 @@ else:
         max_chars=100,
     )
     st.write("Initial text input value:", txt_value)
+
+# Query param bound text inputs
+st.markdown("Query param bound text inputs:")
+
+bound_value = st.text_input(
+    "Bound text input (no default)",
+    key="bound_text",
+    bind="query-params",
+)
+st.write("bound text value:", bound_value)
+
+bound_with_default = st.text_input(
+    "Bound text input (default 'hello')",
+    value="hello",
+    key="bound_text_default",
+    bind="query-params",
+)
+st.write("bound text default value:", bound_with_default)
+
+bound_with_max_chars = st.text_input(
+    "Bound text input (max_chars=5)",
+    key="bound_max",
+    bind="query-params",
+    max_chars=5,
+)
+st.write("bound max chars value:", bound_with_max_chars)
