@@ -106,8 +106,7 @@ class FeedbackMixin:
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         width: Width = "content",
-    ) -> Literal[0, 1] | None:
-        pass
+    ) -> Literal[0, 1] | None: ...
 
     @overload
     def feedback(
@@ -121,8 +120,7 @@ class FeedbackMixin:
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         width: Width = "content",
-    ) -> Literal[0, 1, 2, 3, 4] | None:
-        pass
+    ) -> Literal[0, 1, 2, 3, 4] | None: ...
 
     @gather_metrics("feedback")
     def feedback(
