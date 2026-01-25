@@ -463,6 +463,20 @@ class QueryParams(MutableMapping[str, str]):
         parsed = parse.parse_qs(query_string, keep_blank_values=True)
         self._initial_query_params = parsed
 
+    def set_initial_query_params_from_current(self) -> None:
+        """Set _initial_query_params from the current filtered _query_params.
+
+        This is called after MPA page transitions where populate_from_query_string()
+        has filtered out params bound to widgets on other pages. Using this ensures
+        widget seeding only uses params that are valid for the current page, preventing
+        stale values from previous pages from leaking through.
+        """
+        # Convert _query_params to the list format used by _initial_query_params
+        # (parse_qs returns dict[str, list[str]])
+        self._initial_query_params = {
+            k: v if isinstance(v, list) else [v] for k, v in self._query_params.items()
+        }
+
     def get_initial_value(self, param_key: str) -> str | list[str] | None:
         """Get the initial URL value for a query parameter.
 

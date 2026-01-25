@@ -539,6 +539,10 @@ class ScriptRunner:
                     qp.populate_from_query_string(
                         rerun_data.query_string, valid_script_hashes
                     )
+                    # Set initial params from FILTERED state for widget seeding.
+                    # This prevents stale params from previous pages from seeding
+                    # widgets on the new page if keys collide.
+                    qp.set_initial_query_params_from_current()
 
                 # Now safe to do normal cleanup - filtering already done
                 self._session_state.on_script_finished(widget_ids)

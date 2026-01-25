@@ -166,14 +166,15 @@ class ScriptRunContext:
         in_cached_function.set(False)
 
         with self.session_state.query_params() as qp:
-            # Always update initial query params for widget seeding.
-            # Widgets with bind="query-params" read from this on first render.
-            qp.set_initial_query_params(query_string)
-
-            # For same-page reruns (widget interactions), populate _query_params from URL.
-            # For page transitions, populate_from_query_string() is called in script_runner.py
-            # BEFORE reset() with valid_script_hashes to filter params from other pages.
+            # For same-page reruns (widget interactions), populate _query_params from URL
+            # and set initial params for widget seeding.
+            # For page transitions, both populate_from_query_string() AND
+            # set_initial_query_params_from_current() are called in script_runner.py
+            # BEFORE reset() to ensure filtering is applied to both _query_params
+            # AND _initial_query_params, preventing stale params from previous pages
+            # from seeding widgets on the new page.
             if is_same_page:
+                qp.set_initial_query_params(query_string)
                 qp.populate_from_query_string(query_string)
 
     def on_script_start(self) -> None:

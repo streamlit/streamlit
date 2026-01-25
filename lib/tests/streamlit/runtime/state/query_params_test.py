@@ -852,6 +852,117 @@ class InitialQueryParamsTest(DeltaGeneratorTestCase):
         self.query_params.set_initial_query_params("foo=bar")
         assert self.query_params.get_initial_value("nonexistent") is None
 
+    def test_set_initial_query_params_from_current_copies_filtered_state(self) -> None:
+        """Test that set_initial_query_params_from_current copies current _query_params."""
+        # Set up some initial params
+        self.query_params._query_params = {"foo": "bar", "baz": ["a", "b"]}
+
+        self.query_params.set_initial_query_params_from_current()
+
+        # Should copy current state to initial params (in list format)
+        assert self.query_params._initial_query_params == {
+            "foo": ["bar"],
+            "baz": ["a", "b"],
+        }
+        assert self.query_params.get_initial_value("foo") == "bar"
+        assert self.query_params.get_initial_value("baz") == ["a", "b"]
+
+    def test_set_initial_query_params_from_current_handles_empty(self) -> None:
+        """Test that set_initial_query_params_from_current handles empty state."""
+        self.query_params._query_params = {}
+
+        self.query_params.set_initial_query_params_from_current()
+
+        assert self.query_params._initial_query_params == {}
+        assert self.query_params.get_initial_value("anything") is None
+
+    def test_page_transition_filtering_prevents_stale_seeding(self) -> None:
+        """Test that MPA page transitions don't allow stale params to seed widgets.
+
+        This is the key regression test for the bug where filtered params from
+        a previous page could still seed widgets on the new page if they used
+        the same key.
+        """
+        # Simulate Page A having a bound widget with key "shared_key"
+        self.query_params.bind_widget(
+            param_key="shared_key",
+            widget_id="widget_a",
+            value_type="string_value",
+            script_hash="page_a",
+        )
+
+        # User is on Page A with URL ?shared_key=old_value&other=keep
+        # Now navigate to Page B (different page hash)
+        # This simulates what script_runner.py does:
+        valid_script_hashes = {"main", "page_b"}  # page_a is NOT in this set
+        self.query_params.populate_from_query_string(
+            "shared_key=old_value&other=keep", valid_script_hashes
+        )
+
+        # shared_key should be filtered out (bound to page_a, not in valid set)
+        assert "shared_key" not in self.query_params
+        assert "other" in self.query_params  # unbound params are kept
+
+        # Now set initial params from the FILTERED state (the fix)
+        self.query_params.set_initial_query_params_from_current()
+
+        # Widget seeding on Page B should NOT see the stale value
+        assert self.query_params.get_initial_value("shared_key") is None
+        # But unbound params should still be available for seeding
+        assert self.query_params.get_initial_value("other") == "keep"
+
+    def test_initial_page_load_preserves_all_url_params(self) -> None:
+        """Test that on initial page load (no bindings), all URL params are preserved.
+
+        This verifies the fix doesn't break initial page load where there are
+        no prior bindings and all URL params should be available for seeding.
+        """
+        # Simulate initial page load - no bindings exist yet
+        # script_runner.py calls populate_from_query_string with valid_script_hashes
+        # but since no bindings exist, nothing should be filtered
+        valid_script_hashes = {"main", "page_a"}
+        self.query_params.populate_from_query_string(
+            "foo=bar&baz=qux", valid_script_hashes
+        )
+
+        # All params should be preserved (no bindings to filter)
+        assert "foo" in self.query_params
+        assert "baz" in self.query_params
+
+        # Set initial params from current state
+        self.query_params.set_initial_query_params_from_current()
+
+        # All params available for widget seeding
+        assert self.query_params.get_initial_value("foo") == "bar"
+        assert self.query_params.get_initial_value("baz") == "qux"
+
+    def test_same_page_rerun_uses_fresh_url_params(self) -> None:
+        """Test that same-page reruns set initial params from fresh URL.
+
+        This verifies the fix doesn't break same-page reruns where we want
+        the current URL params to be available for widget seeding.
+        """
+        # Simulate first load - binding registered, initial params set
+        self.query_params.bind_widget(
+            param_key="my_input",
+            widget_id="widget_1",
+            value_type="string_value",
+            script_hash="page_a",
+        )
+        self.query_params.set_initial_query_params("my_input=original")
+        self.query_params.populate_from_query_string("my_input=original")
+
+        assert self.query_params.get_initial_value("my_input") == "original"
+
+        # Now simulate same-page rerun with updated URL (e.g., browser back)
+        # This is what reset() does when is_same_page=True
+        self.query_params.set_initial_query_params("my_input=updated")
+        self.query_params.populate_from_query_string("my_input=updated")
+
+        # Initial params should reflect the new URL
+        assert self.query_params.get_initial_value("my_input") == "updated"
+        assert self.query_params["my_input"] == "updated"
+
 
 class RemoveParamTest(DeltaGeneratorTestCase):
     """Tests for remove_param method."""
