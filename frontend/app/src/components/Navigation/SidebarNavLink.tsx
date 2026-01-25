@@ -39,6 +39,9 @@ export interface SidebarNavLinkProps {
   isInDropdown?: boolean
   children: string
   widgetsDisabled: boolean
+  // External URL support (Issue #9025)
+  isExternal?: boolean
+  externalUrl?: string | null
 }
 
 const SidebarNavLink = ({
@@ -50,6 +53,8 @@ const SidebarNavLink = ({
   isInDropdown,
   children,
   widgetsDisabled,
+  isExternal,
+  externalUrl,
 }: SidebarNavLinkProps): ReactElement => {
   const theme = useEmotionTheme()
   // If connection state not connected, or host has disabled inputs,
@@ -78,9 +83,12 @@ const SidebarNavLink = ({
         data-testid={navLinkTestId}
         isActive={isActive}
         disabled={disableSidebarNavLinks}
-        href={pageUrl}
-        onClick={onClick}
+        href={isExternal && externalUrl ? externalUrl : pageUrl}
+        onClick={isExternal ? undefined : onClick}
         aria-current={isActive ? "page" : undefined}
+        {...(isExternal
+          ? { target: "_blank", rel: "noopener noreferrer" }
+          : {})}
       >
         {icon?.length ? (
           <StyledSidebarNavIcon isActive={isActive}>

@@ -88,6 +88,8 @@ function NavLink({
         icon={page.icon}
         onClick={onClick}
         widgetsDisabled={widgetsDisabled}
+        isExternal={page.isExternal ?? false}
+        externalUrl={page.externalUrl}
       >
         {pageName}
       </SidebarNavLink>
@@ -275,6 +277,7 @@ const SidebarNav = ({
     (page: IAppPage, index: number) => {
       const pageUrl = endpoints.buildAppPageURL(pageLinkBaseUrl, page)
       const isActive = page.pageScriptHash === currentPageScriptHash
+      const isExternal = page.isExternal ?? false
 
       return (
         <NavLink
@@ -283,6 +286,10 @@ const SidebarNav = ({
           page={page}
           isActive={isActive}
           onClick={e => {
+            // External links are handled by the browser (target="_blank")
+            if (isExternal) {
+              return
+            }
             e.preventDefault()
             onPageChange(page.pageScriptHash as string)
             if (isMobile()) {

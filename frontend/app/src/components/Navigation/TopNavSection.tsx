@@ -87,7 +87,13 @@ const TopNavSection = ({
             const sectionName = section[0].sectionHeader
 
             return section.map((item, index) => {
+              const isExternal = item.isExternal ?? false
               const handleClick = (e: React.MouseEvent): boolean => {
+                // External links are handled by the browser (target="_blank")
+                if (isExternal) {
+                  setOpen(false)
+                  return true
+                }
                 e.preventDefault()
                 if (item.pageScriptHash) {
                   handlePageChange(item.pageScriptHash)
@@ -126,6 +132,8 @@ const TopNavSection = ({
                         item
                       )}
                       widgetsDisabled={widgetsDisabled}
+                      isExternal={isExternal}
+                      externalUrl={item.externalUrl}
                     >
                       {pageName}
                     </SidebarNavLink>

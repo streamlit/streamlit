@@ -213,3 +213,77 @@ class StPagesVisibilityTest(DeltaGeneratorTestCase):
         assert "visibility" in str(exc_info.value)
         assert "visible" in str(exc_info.value)
         assert "hidden" in str(exc_info.value)
+
+
+class TestExternalUrlSupport(DeltaGeneratorTestCase):
+    """Test external URL support in st.Page (Issue #9025)"""
+
+    def test_external_url_requires_title(self):
+        """Test that external URL pages require a title parameter."""
+        with pytest.raises(StreamlitAPIException) as exc_info:
+            st.Page("https://docs.streamlit.io")
+
+        assert "External URL pages require a `title` parameter" in str(exc_info.value)
+
+    def test_external_url_with_title(self):
+        """Test that external URL pages can be created with a title."""
+        page = st.Page("https://docs.streamlit.io", title="Docs")
+        assert page.title == "Docs"
+        assert page.is_external is True
+        assert page.external_url == "https://docs.streamlit.io"
+
+    def test_external_url_with_http(self):
+        """Test that http URLs are also supported."""
+        page = st.Page("http://example.com", title="Example")
+        assert page.is_external is True
+        assert page.external_url == "http://example.com"
+
+    def test_external_url_cannot_be_default(self):
+        """Test that external URL pages cannot be set as default."""
+        with pytest.raises(StreamlitAPIException) as exc_info:
+            st.Page("https://docs.streamlit.io", title="Docs", default=True)
+
+        assert "External URL pages cannot be set as the default page" in str(
+            exc_info.value
+        )
+
+    def test_external_url_with_icon(self):
+        """Test that external URL pages can have icons."""
+        page = st.Page(
+            "https://docs.streamlit.io", title="Docs", icon=":material/open_in_new:"
+        )
+        assert page.icon == ":material/open_in_new:"
+
+    def test_external_url_infers_url_path_from_title(self):
+        """Test that url_path is inferred from title for external URLs."""
+        page = st.Page("https://docs.streamlit.io", title="Streamlit Docs")
+        assert page.url_path == "streamlit_docs"
+
+    def test_external_url_custom_url_path(self):
+        """Test that custom url_path can be set for external URLs."""
+        page = st.Page(
+            "https://docs.streamlit.io", title="Docs", url_path="custom_path"
+        )
+        assert page.url_path == "custom_path"
+
+    def test_internal_page_is_not_external(self):
+        """Test that internal pages (file paths) are not marked as external."""
+        with patch("pathlib.Path.is_file", MagicMock(return_value=True)):
+            page = st.Page("page.py")
+            assert page.is_external is False
+            assert page.external_url is None
+
+    def test_callable_page_is_not_external(self):
+        """Test that callable pages are not marked as external."""
+        page = st.Page(lambda: True, title="Test")
+        assert page.is_external is False
+        assert page.external_url is None
+
+    def test_external_url_run_does_nothing(self):
+        """Test that run() on an external URL page does nothing."""
+        page = st.Page("https://docs.streamlit.io", title="Docs")
+        page._can_be_called = True
+        # Should not raise any exception
+        page.run()
+        # After run, _can_be_called should be False
+        assert page._can_be_called is False

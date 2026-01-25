@@ -84,6 +84,7 @@ const TopNav: React.FC<Props> = ({ endpoints, widgetsDisabled }) => {
           />
         )
       }
+      const isExternal = item.isExternal ?? false
       return (
         <StyledTopNavLinkContainer>
           <SidebarNavLink
@@ -93,12 +94,18 @@ const TopNav: React.FC<Props> = ({ endpoints, widgetsDisabled }) => {
             icon={item.icon}
             pageUrl={endpoints.buildAppPageURL(pageLinkBaseUrl, item)}
             onClick={e => {
+              // External links are handled by the browser (target="_blank")
+              if (isExternal) {
+                return
+              }
               e.preventDefault()
               if (item.pageScriptHash) {
                 onPageChange(item.pageScriptHash)
               }
             }}
             widgetsDisabled={widgetsDisabled}
+            isExternal={isExternal}
+            externalUrl={item.externalUrl}
           >
             {String(item.pageName)}
           </SidebarNavLink>

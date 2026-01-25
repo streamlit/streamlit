@@ -34,4 +34,8 @@ message AppPage {
 
   // Whether the page is hidden from navigation menu
   bool is_hidden = 7;
+  // External URL support (Issue #9025)
+  // If is_external is true, clicking this page opens external_url in a new tab
+  bool is_external = 8;
+  string external_url = 9;
 }
