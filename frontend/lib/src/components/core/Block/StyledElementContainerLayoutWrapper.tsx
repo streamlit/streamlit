@@ -108,6 +108,12 @@ export const StyledElementContainerLayoutWrapper: FC<
       styles.overflow = "visible"
     }
 
+    // Feedback widget should never shrink below its content width
+    // This prevents the icons from being clipped when a small pixel width is set
+    if (node.element.type === "feedback") {
+      styles.minWidth = "fit-content"
+    }
+
     if (node.element.type === "textArea") {
       // The st.text_area element has a legacy implementation where the height
       // is measuring only the input box so the pixel height must be set in the element
