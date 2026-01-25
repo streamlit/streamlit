@@ -60,7 +60,6 @@ const materialIconOnlyOptions = [
   }),
   ButtonGroupProto.Option.create({
     contentIcon: `:material/${materialIconNames[1]}:`,
-    selectedContentIcon: ":material/icon_2_selected:",
   }),
   ButtonGroupProto.Option.create({
     contentIcon: `:material/${materialIconNames[2]}:`,
@@ -92,8 +91,6 @@ const getProps = (
     disabled: false,
     label: "My ButtonGroup label",
     options: [...materialIconOnlyOptions, ...options],
-    selectionVisualization:
-      ButtonGroupProto.SelectionVisualization.ONLY_SELECTED,
     style: ButtonGroupProto.Style.SEGMENTED_CONTROL,
     ...elementProps,
   }),
@@ -409,89 +406,17 @@ describe("ButtonGroup widget", () => {
       expect(helpText).toBeInTheDocument()
     })
 
-    describe("visualizes selection behavior", () => {
-      // eslint-disable-next-line vitest/expect-expect
-      it("visualize only selected option", async () => {
-        const user = userEvent.setup()
-        const props = getProps({
-          selectionVisualization:
-            ButtonGroupProto.SelectionVisualization.ONLY_SELECTED,
-        })
-        render(<ButtonGroup {...props} />)
-
-        await user.click(getButtonGroupButtons()[0])
-        const buttons = getButtonGroupButtons()
-        expectHighlightStyle(buttons[0])
-        expectHighlightStyle(buttons[1], false)
-        expectHighlightStyle(buttons[2], false)
-      })
-
-      // eslint-disable-next-line vitest/expect-expect
-      it("visualizes all up to the selected option", async () => {
-        const user = userEvent.setup()
-        const props = getProps({
-          selectionVisualization:
-            ButtonGroupProto.SelectionVisualization.ALL_UP_TO_SELECTED,
-        })
-        render(<ButtonGroup {...props} />)
-
-        const buttonGroupWidget = screen.getByTestId("stButtonGroup")
-        const buttons = within(buttonGroupWidget).getAllByRole("button")
-        const buttonToClick = buttons[2]
-        await user.click(buttonToClick)
-        expectHighlightStyle(buttonToClick)
-        expectHighlightStyle(buttons[0])
-        // the second button has selectedContent set, so it should not be highlighted visually
-        expectHighlightStyle(buttons[1], false)
-        expectHighlightStyle(buttons[3], false)
-      })
-
-      // eslint-disable-next-line vitest/expect-expect
-      it("has no default visualization when selected content present", async () => {
-        const user = userEvent.setup()
-        // used for example by feedback stars
-        const disabledVisualizationOption = [
-          ButtonGroupProto.Option.create({
-            content: "Some text",
-            selectedContent: "Some text selected",
-          }),
-          ButtonGroupProto.Option.create({
-            content: "Some text 2",
-            selectedContent: "Some text selected 2",
-          }),
-        ]
-        const props = getProps({
-          selectionVisualization:
-            ButtonGroupProto.SelectionVisualization.ALL_UP_TO_SELECTED,
-          options: disabledVisualizationOption,
-        })
-        render(<ButtonGroup {...props} />)
-
-        const buttonGroupWidget = screen.getByTestId("stButtonGroup")
-        const buttons = within(buttonGroupWidget).getAllByRole("button")
-        const buttonToClick = buttons[1]
-        await user.click(buttonToClick)
-        expectHighlightStyle(buttonToClick, false)
-        expectHighlightStyle(buttons[0], false)
-      })
-    })
-
-    it("shows selection content when selected and available", async () => {
+    // eslint-disable-next-line vitest/expect-expect
+    it("visualizes only selected option", async () => {
       const user = userEvent.setup()
-      const props = getProps({ default: [], options: materialIconOnlyOptions })
+      const props = getProps()
       render(<ButtonGroup {...props} />)
 
+      await user.click(getButtonGroupButtons()[0])
       const buttons = getButtonGroupButtons()
-      buttons.forEach((button, index) => {
-        expect(button).toHaveAttribute("kind", "segmented_control")
-        const icon = within(button).getByTestId("stIconMaterial")
-        expect(icon.textContent).toContain(materialIconNames[index])
-      })
-
-      await user.click(buttons[1])
-      expect(getButtonGroupButtons()[1].textContent).toContain(
-        "icon_2_selected"
-      )
+      expectHighlightStyle(buttons[0])
+      expectHighlightStyle(buttons[1], false)
+      expectHighlightStyle(buttons[2], false)
     })
 
     it("shows icons with correct size for segmented control ButtonGroup", () => {
@@ -530,9 +455,8 @@ describe("ButtonGroup widget", () => {
     await user.click(getButtonGroupButtons()[1])
     let buttons = getButtonGroupButtons()
     expectHighlightStyle(buttons[0])
-    // the second button has selectedContent set, so it should not be highlighted visually
-    expectHighlightStyle(buttons[1], false)
-    expectHighlightStyle(buttons[2], false)
+    expectHighlightStyle(buttons[1])
+    expectHighlightStyle(buttons[2])
     expectHighlightStyle(buttons[3], false)
 
     // "Submit" the form

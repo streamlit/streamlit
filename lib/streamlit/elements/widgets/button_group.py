@@ -176,9 +176,6 @@ def _build_proto(
     disabled: bool,
     current_form_id: str,
     click_mode: ButtonGroupProto.ClickMode.ValueType,
-    selection_visualization: ButtonGroupProto.SelectionVisualization.ValueType = (
-        ButtonGroupProto.SelectionVisualization.ONLY_SELECTED
-    ),
     style: Literal["pills", "segmented_control"] = "pills",
     label: str | None = None,
     label_visibility: LabelVisibility = "visible",
@@ -204,7 +201,6 @@ def _build_proto(
 
     for formatted_option in formatted_options:
         proto.options.append(formatted_option)
-    proto.selection_visualization = selection_visualization
     return proto
 
 
@@ -772,9 +768,6 @@ class ButtonGroupMixin:
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
-        selection_visualization: ButtonGroupProto.SelectionVisualization.ValueType = (
-            ButtonGroupProto.SelectionVisualization.ONLY_SELECTED
-        ),
         label: str | None = None,
         label_visibility: LabelVisibility = "visible",
         help: str | None = None,
@@ -854,7 +847,6 @@ class ButtonGroupMixin:
             disabled,
             form_id,
             click_mode=parsed_selection_mode,
-            selection_visualization=selection_visualization,
             style=style,
             label=label,
             label_visibility=label_visibility,

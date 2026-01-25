@@ -29,12 +29,11 @@ message ButtonGroup {
 
   message Option {
     string content = 1;
-    // when set, this is the content that will be displayed when the option is selected
-    optional string selected_content = 2;
     // when set, this is the icon that will be displayed next to the option
     optional string content_icon = 3;
-    // when set, this is the icon that will be displayed next to the option when then option is selected
-    optional string selected_content_icon = 4;
+
+    reserved 2, 4;
+    reserved "selected_content", "selected_content_icon";
   }
 
   string id = 1;
@@ -49,23 +48,18 @@ message ButtonGroup {
   repeated uint32 value = 7;
   bool set_value = 8;
 
-  enum SelectionVisualization {
-    ONLY_SELECTED = 0;
-    ALL_UP_TO_SELECTED = 1;
-  }
-  SelectionVisualization selection_visualization = 9;
-
   enum Style {
     SEGMENTED_CONTROL = 0;
     PILLS = 1;
-    // BORDERLESS = 2; // Removed: was only used by st.feedback which now has its own proto
-    reserved 2;
   }
   Style style = 10;
 
   string label = 11;
   LabelVisibilityMessage label_visibility = 12;
   optional string help = 13;
+
+  reserved 9;
+  reserved "selection_visualization";
 
   // next id: 14
 }
