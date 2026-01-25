@@ -167,11 +167,25 @@ function isOptionSelected(
 // Type for feedback value - can be null (no selection) or an integer
 type FeedbackValue = number | null
 
+/**
+ * Get the feedback state from the widget manager.
+ * Uses string as wire format to distinguish three states:
+ * - undefined: No UI interaction yet
+ * - "": User explicitly cleared
+ * - "2": User selected value 2
+ */
 function getStateFromWidgetMgr(
   widgetMgr: WidgetStateManager,
   element: FeedbackProto
 ): FeedbackValue | undefined {
-  return widgetMgr.getIntValue(element)
+  const stringValue = widgetMgr.getStringValue(element)
+  if (stringValue === undefined) {
+    return undefined // No UI interaction yet
+  }
+  if (stringValue === "") {
+    return null // User explicitly cleared
+  }
+  return parseInt(stringValue, 10) // User selected a value
 }
 
 function getDefaultStateFromProto(element: FeedbackProto): FeedbackValue {
@@ -190,15 +204,23 @@ function getCurrStateFromProto(element: FeedbackProto): FeedbackValue {
   return element.value
 }
 
+/**
+ * Update the widget manager state with the feedback value.
+ * Converts int | null to string wire format:
+ * - null -> "" (empty string = cleared)
+ * - 2 -> "2" (string representation of value)
+ */
 function updateWidgetMgrState(
   element: FeedbackProto,
   widgetMgr: WidgetStateManager,
   valueWithSource: ValueWithSource<FeedbackValue>,
   fragmentId?: string
 ): void {
-  widgetMgr.setIntValue(
+  const stringValue =
+    valueWithSource.value === null ? "" : String(valueWithSource.value)
+  widgetMgr.setStringValue(
     element,
-    valueWithSource.value,
+    stringValue,
     { fromUi: valueWithSource.fromUi },
     fragmentId
   )

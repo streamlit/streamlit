@@ -76,20 +76,31 @@ def _feedback_type_to_proto(
 
 
 class FeedbackSerde:
-    """Serializer/deserializer for feedback widget values."""
+    """Serializer/deserializer for feedback widget values.
+
+    Uses string as the wire format to distinguish three states:
+    - None (field not set): No UI interaction yet -> use default_value
+    - "" (empty string): User explicitly cleared -> return None
+    - "2" (string with value): User selected -> return int value
+
+    This allows clearing to work correctly even when a default is set.
+    The session state and return values are always int | None.
+    """
 
     def __init__(self, default_value: int | None = None):
         self.default_value = default_value
 
-    def serialize(self, value: int | None) -> int | None:
-        """Serialize the value to be sent to the widget manager."""
-        return value
+    def serialize(self, value: int | None) -> str:
+        """Serialize int value to string for wire format."""
+        return "" if value is None else str(value)
 
-    def deserialize(self, ui_value: int | None) -> int | None:
-        """Deserialize the value received from the widget manager."""
+    def deserialize(self, ui_value: str | None) -> int | None:
+        """Deserialize string wire format back to int value."""
         if ui_value is None:
-            return self.default_value
-        return ui_value
+            return self.default_value  # No UI interaction yet
+        if ui_value == "":
+            return None  # User explicitly cleared
+        return int(ui_value)  # User selected a value
 
 
 class FeedbackMixin:
@@ -289,7 +300,7 @@ class FeedbackMixin:
             deserializer=serde.deserialize,
             serializer=serde.serialize,
             ctx=ctx,
-            value_type="int_value",
+            value_type="string_value",
         )
 
         if widget_state.value_changed:

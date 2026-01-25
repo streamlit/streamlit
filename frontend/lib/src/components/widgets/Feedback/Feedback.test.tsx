@@ -108,25 +108,25 @@ describe("Feedback widget", () => {
   describe("Selection behavior", () => {
     it("sets widget value on mount with default value", () => {
       const props = getProps({ default: 1 })
-      vi.spyOn(props.widgetMgr, "setIntValue")
+      vi.spyOn(props.widgetMgr, "setStringValue")
 
       render(<Feedback {...props} />)
-      expect(props.widgetMgr.setIntValue).toHaveBeenCalledWith(
+      expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
         props.element,
-        1,
+        "1",
         { fromUi: false },
         undefined
       )
     })
 
-    it("sets widget value on mount with null when no default", () => {
+    it("sets widget value on mount with empty string when no default", () => {
       const props = getProps()
-      vi.spyOn(props.widgetMgr, "setIntValue")
+      vi.spyOn(props.widgetMgr, "setStringValue")
 
       render(<Feedback {...props} />)
-      expect(props.widgetMgr.setIntValue).toHaveBeenCalledWith(
+      expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
         props.element,
-        null,
+        "",
         { fromUi: false },
         undefined
       )
@@ -137,7 +137,7 @@ describe("Feedback widget", () => {
       const props = getProps({
         type: FeedbackProto.FeedbackType.THUMBS,
       })
-      vi.spyOn(props.widgetMgr, "setIntValue")
+      vi.spyOn(props.widgetMgr, "setStringValue")
 
       render(<Feedback {...props} />)
 
@@ -145,9 +145,9 @@ describe("Feedback widget", () => {
       // Click thumbs up (first button, value 1)
       await user.click(buttons[0])
 
-      expect(props.widgetMgr.setIntValue).toHaveBeenCalledWith(
+      expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
         props.element,
-        1,
+        "1",
         { fromUi: true },
         undefined
       )
@@ -159,7 +159,7 @@ describe("Feedback widget", () => {
         type: FeedbackProto.FeedbackType.THUMBS,
         default: 1,
       })
-      vi.spyOn(props.widgetMgr, "setIntValue")
+      vi.spyOn(props.widgetMgr, "setStringValue")
 
       render(<Feedback {...props} />)
 
@@ -167,9 +167,9 @@ describe("Feedback widget", () => {
       // Click thumbs up again to deselect
       await user.click(buttons[0])
 
-      expect(props.widgetMgr.setIntValue).toHaveBeenCalledWith(
+      expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
         props.element,
-        null,
+        "",
         { fromUi: true },
         undefined
       )
@@ -181,7 +181,7 @@ describe("Feedback widget", () => {
         type: FeedbackProto.FeedbackType.THUMBS,
         default: 1,
       })
-      vi.spyOn(props.widgetMgr, "setIntValue")
+      vi.spyOn(props.widgetMgr, "setStringValue")
 
       render(<Feedback {...props} />)
 
@@ -189,9 +189,9 @@ describe("Feedback widget", () => {
       // Click thumbs down (second button, value 0)
       await user.click(buttons[1])
 
-      expect(props.widgetMgr.setIntValue).toHaveBeenCalledWith(
+      expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
         props.element,
-        0,
+        "0",
         { fromUi: true },
         undefined
       )
@@ -200,22 +200,22 @@ describe("Feedback widget", () => {
     it("passes fragmentId to widgetMgr", async () => {
       const user = userEvent.setup()
       const props = getProps({}, { fragmentId: "myFragmentId" })
-      vi.spyOn(props.widgetMgr, "setIntValue")
+      vi.spyOn(props.widgetMgr, "setStringValue")
 
       render(<Feedback {...props} />)
 
-      expect(props.widgetMgr.setIntValue).toHaveBeenCalledWith(
+      expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
         props.element,
-        null,
+        "",
         { fromUi: false },
         "myFragmentId"
       )
 
       const buttons = getFeedbackButtons()
       await user.click(buttons[0])
-      expect(props.widgetMgr.setIntValue).toHaveBeenCalledWith(
+      expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
         props.element,
-        1,
+        "1",
         { fromUi: true },
         "myFragmentId"
       )
@@ -330,7 +330,7 @@ describe("Feedback widget", () => {
     it("prevents interaction when disabled", async () => {
       const user = userEvent.setup()
       const props = getProps({}, { disabled: true })
-      vi.spyOn(props.widgetMgr, "setIntValue")
+      vi.spyOn(props.widgetMgr, "setStringValue")
 
       render(<Feedback {...props} />)
 
@@ -338,7 +338,7 @@ describe("Feedback widget", () => {
       await user.click(buttons[0])
 
       // Should only have been called once on mount, not on click
-      expect(props.widgetMgr.setIntValue).toHaveBeenCalledTimes(1)
+      expect(props.widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
     })
 
     it("renders buttons as disabled when element disabled prop is true", () => {
@@ -415,7 +415,7 @@ describe("Feedback widget", () => {
       const props = getProps({
         type: FeedbackProto.FeedbackType.THUMBS,
       })
-      vi.spyOn(props.widgetMgr, "setIntValue")
+      vi.spyOn(props.widgetMgr, "setStringValue")
 
       render(<Feedback {...props} />)
 
@@ -423,9 +423,9 @@ describe("Feedback widget", () => {
       buttons[0].focus()
       await user.keyboard("{Enter}")
 
-      expect(props.widgetMgr.setIntValue).toHaveBeenCalledWith(
+      expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
         props.element,
-        1,
+        "1",
         { fromUi: true },
         undefined
       )
@@ -436,7 +436,7 @@ describe("Feedback widget", () => {
       const props = getProps({
         type: FeedbackProto.FeedbackType.THUMBS,
       })
-      vi.spyOn(props.widgetMgr, "setIntValue")
+      vi.spyOn(props.widgetMgr, "setStringValue")
 
       render(<Feedback {...props} />)
 
@@ -444,9 +444,9 @@ describe("Feedback widget", () => {
       buttons[0].focus()
       await user.keyboard(" ")
 
-      expect(props.widgetMgr.setIntValue).toHaveBeenCalledWith(
+      expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
         props.element,
-        1,
+        "1",
         { fromUi: true },
         undefined
       )

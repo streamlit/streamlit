@@ -790,13 +790,14 @@ class ButtonGroup(Widget, Generic[T]):
 class Feedback(Widget):
     """A representation of ``st.feedback``."""
 
-    _value: int | None
+    _value: int | InitialValue | None
 
     proto: FeedbackProto = field(repr=False)
     form_id: str
 
     def __init__(self, proto: FeedbackProto, root: ElementTree) -> None:
         super().__init__(proto, root)
+        self._value = InitialValue()
         self.type = "feedback"
 
     @property
@@ -804,21 +805,32 @@ class Feedback(Widget):
         """Protobuf message representing the state of the widget, including
         any interactions that have happened.
         Should be the same as the frontend would produce for those interactions.
+
+        Uses string_value as wire format to distinguish three states:
+        - None: User explicitly cleared -> string_value = ""
+        - int: User selected -> string_value = str(value)
+        - No string_value set: No interaction yet (use default)
         """
         ws = WidgetState()
         ws.id = self.id
-        if self._value is not None:
-            ws.int_value = self._value
+
+        # Get the effective value: either from explicit set_value() or session state
+        effective_value = self.value
+
+        if effective_value is None:
+            ws.string_value = ""  # Cleared or no default
+        else:
+            ws.string_value = str(effective_value)  # User selected a value
         return ws
 
     @property
     def value(self) -> int | None:
         """The currently selected feedback value. (int or None)"""  # noqa: D400
-        if self._value is not None:
+        if not isinstance(self._value, InitialValue):
             return self._value
         state = self.root.session_state
         assert state
-        return cast("int | None", state.get(self.id))
+        return cast("int | None", state[self.id])
 
     def set_value(self, v: int | None) -> Feedback:
         """Set the value of the feedback widget. (int or None)"""  # noqa: D400
