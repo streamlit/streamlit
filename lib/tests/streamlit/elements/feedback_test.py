@@ -27,7 +27,6 @@ from streamlit.elements.widgets.feedback import FeedbackSerde
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Feedback_pb2 import Feedback as FeedbackProto
 from streamlit.runtime.state.session_state import get_script_run_ctx
-from streamlit.testing.v1.util import patch_config_options
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
 
@@ -235,7 +234,7 @@ class TestFeedbackWidthConfig(DeltaGeneratorTestCase):
         assert el.width_config.use_stretch is True
 
     def test_pixel_width(self):
-        """Test that pixel width is set correctly when above threshold."""
+        """Test that pixel width is set correctly."""
         st.feedback("thumbs", width=100)
 
         el = self.get_delta_from_queue().new_element
@@ -244,76 +243,6 @@ class TestFeedbackWidthConfig(DeltaGeneratorTestCase):
             == WidthConfigFields.PIXEL_WIDTH.value
         )
         assert el.width_config.pixel_width == 100
-
-    def test_small_width_converted_to_content_thumbs(self):
-        """Test that small pixel widths are converted to content for thumbs."""
-        # With default 16px base font: thumbs threshold ~55px (3.125rem x 16 x 1.1)
-        st.feedback("thumbs", width=30)
-
-        el = self.get_delta_from_queue().new_element
-        assert (
-            el.width_config.WhichOneof("width_spec")
-            == WidthConfigFields.USE_CONTENT.value
-        )
-        assert el.width_config.use_content is True
-
-    def test_small_width_converted_to_content_faces(self):
-        """Test that small pixel widths are converted to content for faces."""
-        # With default 16px base font: faces threshold ~141px (8rem x 16 x 1.1)
-        st.feedback("faces", width=100)
-
-        el = self.get_delta_from_queue().new_element
-        assert (
-            el.width_config.WhichOneof("width_spec")
-            == WidthConfigFields.USE_CONTENT.value
-        )
-        assert el.width_config.use_content is True
-
-    def test_adequate_width_preserved_thumbs(self):
-        """Test that adequate pixel widths are preserved for thumbs."""
-        st.feedback("thumbs", width=100, key="thumbs_adequate")
-
-        el = self.get_delta_from_queue().new_element
-        assert (
-            el.width_config.WhichOneof("width_spec")
-            == WidthConfigFields.PIXEL_WIDTH.value
-        )
-        assert el.width_config.pixel_width == 100
-
-    def test_adequate_width_preserved_stars(self):
-        """Test that adequate pixel widths are preserved for stars."""
-        st.feedback("stars", width=200, key="stars_adequate")
-
-        el = self.get_delta_from_queue().new_element
-        assert (
-            el.width_config.WhichOneof("width_spec")
-            == WidthConfigFields.PIXEL_WIDTH.value
-        )
-        assert el.width_config.pixel_width == 200
-
-    def test_threshold_adapts_to_base_font_size(self):
-        """Test that the conversion threshold adapts to theme.baseFontSize."""
-        # Test with 20px base font size (larger than default 16px)
-        # Threshold calculation: 3.125rem x 20 x 1.1 = 68.75px (thumbs)
-        with patch_config_options({"theme.baseFontSize": 20}):
-            st.feedback("thumbs", width=65, key="thumbs_20px_font")
-            el = self.get_delta_from_queue().new_element
-            # At 20px base font, 65px is below threshold, converts to content
-            assert (
-                el.width_config.WhichOneof("width_spec")
-                == WidthConfigFields.USE_CONTENT.value
-            )
-            assert el.width_config.use_content is True
-
-        # At 16px base font, same 65px width is above threshold, preserved
-        with patch_config_options({"theme.baseFontSize": 16}):
-            st.feedback("thumbs", width=65, key="thumbs_16px_font")
-            el = self.get_delta_from_queue().new_element
-            assert (
-                el.width_config.WhichOneof("width_spec")
-                == WidthConfigFields.PIXEL_WIDTH.value
-            )
-            assert el.width_config.pixel_width == 65
 
 
 class TestFeedbackStableId(DeltaGeneratorTestCase):

@@ -23,6 +23,9 @@ export interface StyledFeedbackContainerProps {
 export const StyledFeedbackContainer =
   styled.div<StyledFeedbackContainerProps>(({ containerWidth }) => ({
     width: containerWidth ? "100%" : "auto",
+    // Ensure container expands to fit content even when layout system
+    // constrains it with small pixel width (gh-12068)
+    minWidth: "fit-content",
   }))
 
 export const StyledFeedbackButtonGroup = styled.div(({ theme }) => ({
