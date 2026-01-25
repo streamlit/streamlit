@@ -27,10 +27,10 @@ export const StyledFeedbackContainer =
 
 export const StyledFeedbackButtonGroup = styled.div(({ theme }) => ({
   display: "flex",
-  flexWrap: "wrap",
-  columnGap: theme.spacing.threeXS,
-  rowGap: theme.spacing.threeXS,
-  maxWidth: "fit-content",
+  flexWrap: "nowrap",
+  gap: theme.spacing.threeXS,
+  // Ensure buttons don't get squished when container has small pixel width
+  minWidth: "fit-content",
 }))
 
 export interface StyledFeedbackButtonProps {
