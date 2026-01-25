@@ -469,15 +469,16 @@ class AppTest:
 
     @property
     def button_group(self) -> WidgetList[ButtonGroup[Any]]:
-        """Sequence of all ``st.feedback`` widgets.
+        """Sequence of all ``st.pills`` and ``st.segmented_control`` widgets.
 
         Returns
         -------
         WidgetList of ButtonGroup
-            Sequence of all ``st.feedback`` widgets. Individual widgets can be
-            accessed from a WidgetList by index (order on the page) or key. For
-            example, ``at.button_group[0]`` for the first widget or
-            ``at.button_group(key="my_key")`` for a widget with a given key.
+            Sequence of all ``st.pills`` and ``st.segmented_control`` widgets.
+            Individual widgets can be accessed from a WidgetList by index
+            (order on the page) or key. For example, ``at.button_group[0]`` for
+            the first widget or ``at.button_group(key="my_key")`` for a widget
+            with a given key.
         """
         return self._tree.button_group
 

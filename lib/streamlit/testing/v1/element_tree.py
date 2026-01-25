@@ -706,7 +706,7 @@ class Metric(Element):
 
 @dataclass(repr=False)
 class ButtonGroup(Widget, Generic[T]):
-    """A representation of button_group that is used by ``st.feedback``."""
+    """A representation of ``st.pills`` and ``st.segmented_control``."""
 
     _value: list[T] | None
 
