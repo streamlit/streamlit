@@ -657,13 +657,9 @@ export class WidgetStateManager {
     fragmentId: string | undefined
   ): void {
     // Filter out invalid values (NaN, undefined, null) before storing.
-    // If all values are invalid, skip the update entirely.
     const validValue = value.filter(
       v => v !== undefined && v !== null && !Number.isNaN(v)
     )
-    if (validValue.length === 0) {
-      return
-    }
     this.createWidgetState(widget, source).doubleArrayValue = new DoubleArray({
       data: validValue,
     })
@@ -1162,14 +1158,17 @@ export class WidgetStateManager {
     // instead of "Red" === "0").
     let normalizedDefault = defaultValue
     if (options && options.length > 0) {
-      if (typeof defaultValue === "number" && options[defaultValue]) {
+      if (
+        typeof defaultValue === "number" &&
+        options[defaultValue] !== undefined
+      ) {
         // Scalar index -> option string
         normalizedDefault = options[defaultValue]
       } else if (Array.isArray(defaultValue)) {
         // Array of indices -> array of option strings
         normalizedDefault = defaultValue
           .map(idx =>
-            typeof idx === "number" && options[idx]
+            typeof idx === "number" && options[idx] !== undefined
               ? options[idx]
               : String(idx)
           )
