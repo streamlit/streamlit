@@ -411,7 +411,7 @@ class TextAreaBindQueryParamsTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitAPIException) as exc:
             st.text_area("the label", bind="query-params")
 
-        assert "must have a 'key' parameter" in str(exc.value)
+        assert "must have a unique 'key' parameter" in str(exc.value)
 
     def test_no_bind_does_not_set_query_param_key(self):
         """Test that without bind parameter, query_param_key is not set."""
