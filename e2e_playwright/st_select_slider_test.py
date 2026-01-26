@@ -30,7 +30,7 @@ from e2e_playwright.shared.app_utils import (
     reset_hovering,
 )
 
-NUM_SELECT_SLIDERS = 17
+NUM_SELECT_SLIDERS = 18
 
 
 def test_select_slider_rendering(
@@ -261,8 +261,8 @@ def test_select_slider_tick_bar_visibility(
     assert_snapshot(slider, name="st_select_slider-tick_bar_visibility")
 
 
-def test_select_slider_range_dynamic_options_preserves_shared_values(app: Page):
-    """Test that range slider preserves shared values and resets invalid ones when options change."""
+def test_select_slider_range_dynamic_options_resets_on_invalid(app: Page):
+    """Test that range slider resets entirely when either value becomes invalid after options change."""
     range_slider = get_element_by_key(app, "dynamic_range_select_slider")
     expect(range_slider).to_be_visible()
 
@@ -271,8 +271,7 @@ def test_select_slider_range_dynamic_options_preserves_shared_values(app: Page):
     expect_prefixed_markdown(app, "Dynamic range selection:", "('alpha', 'echo')")
 
     # Toggle to enable alternative options ["charlie", "delta", "echo"]
-    # "alpha" is NOT in new options, but "echo" IS -> partial reset
-    # Start value "alpha" resets to default "charlie", end value "echo" is preserved
+    # "alpha" is NOT in new options -> entire range resets to new default ("charlie", "echo")
     click_toggle(app, "Enable alternative range options")
     expect_prefixed_markdown(app, "Dynamic range selection:", "('charlie', 'echo')")
     # Negative assertion: "alpha" should not be preserved (it's not in new options)
@@ -280,3 +279,37 @@ def test_select_slider_range_dynamic_options_preserves_shared_values(app: Page):
         has_text=re.compile(r"Dynamic range selection:")
     )
     expect(markdown_element).not_to_contain_text("'alpha'")
+
+
+def test_format_func_change_preserves_value(app: Page):
+    """Regression test: format_func changes should not cause UI/backend desync.
+
+    When format_func changes but the options and selected value stay the same,
+    the UI should correctly display the value with the new format_func formatting.
+    This tests that raw_value is sent to the frontend when format_func changes.
+    """
+    format_func_slider = get_element_by_key(app, "format_func_select_slider")
+    expect(format_func_slider).to_be_visible()
+
+    # Initially format_func shows title case ("Small", "Medium", "Large")
+    # Default value is "small" which displays as "Small"
+    expect_prefixed_markdown(app, "Format func selection:", "small")
+
+    # Move slider to "large" (rightmost)
+    # The slider has 3 options, so clicking right twice from default should get to "large"
+    format_func_slider.click()  # moves toward center
+    app.keyboard.press("ArrowRight")  # moves right
+    wait_for_app_run(app)
+    expect_prefixed_markdown(app, "Format func selection:", "large")
+
+    # Toggle to change format_func from title case to uppercase
+    # This changes the display from "Large" to "LARGE" but should preserve the value
+    click_toggle(app, "Toggle format_func style")
+
+    # The value should still be "large" (backend value unchanged)
+    # The UI should now display "LARGE" (uppercase format_func)
+    expect_prefixed_markdown(app, "Format func selection:", "large")
+
+    # Verify the slider thumb shows the uppercase formatted value
+    thumb_value = format_func_slider.get_by_test_id("stSliderThumbValue").first
+    expect(thumb_value).to_contain_text("LARGE")

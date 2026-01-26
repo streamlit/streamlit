@@ -413,9 +413,10 @@ def test_radio_interaction():
 def test_radio_enum_coercion():
     """Test E2E Enum Coercion on a radio.
 
-    With string-based widget values, enum options are naturally preserved
-    through string lookup, so enum coercion works correctly regardless of
-    the enumCoercion config setting.
+    When enum classes are redefined between runs (common in Streamlit scripts),
+    the widget should return a valid enum value from the current class when
+    coercion is enabled. When coercion is "off", the value from session state
+    (which may be from an old class) is returned as-is.
     """
 
     def script():
@@ -442,12 +443,15 @@ def test_radio_enum_coercion():
         assert at.text[0].value == at.text[1].value, "Enum Class ID not the same"
         assert at.text[2].value == "True", "Not all enums found in class"
 
-    # With string-based values, enum values are naturally preserved through
-    # string lookup in the options, so this works with any enumCoercion setting
     with patch_config_options({"runner.enumCoercion": "nameOnly"}):
         test_enum()
-    with patch_config_options({"runner.enumCoercion": "off"}):
-        test_enum()  # This now passes because string-based lookup preserves enum types
+    # With coercion="off", the value from session state (old class) is returned as-is,
+    # so class IDs will differ - expect assertion to fail.
+    with (
+        patch_config_options({"runner.enumCoercion": "off"}),
+        pytest.raises(AssertionError),
+    ):
+        test_enum()
 
 
 def test_None_session_state_value_retained():

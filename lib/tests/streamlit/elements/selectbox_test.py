@@ -544,12 +544,9 @@ def test_selectbox_enum_coercion():
     """Test E2E Enum Coercion on a selectbox.
 
     When enum classes are redefined between runs (common in Streamlit scripts),
-    the widget should return a valid enum value from the current class.
-
-    Note: AppTest has a limitation - enum classes defined in the script function
-    are the same class object across runs, not redefined like in real Streamlit.
-    This means we can only verify that the returned value is from a valid class,
-    not the full coercion=off reset behavior.
+    the widget should return a valid enum value from the current class when
+    coercion is enabled. When coercion is "off", the value from session state
+    (which may be from an old class) is returned as-is.
     """
 
     def script():
@@ -578,8 +575,13 @@ def test_selectbox_enum_coercion():
 
     with patch_config_options({"runner.enumCoercion": "nameOnly"}):
         test_enum()
-    with patch_config_options({"runner.enumCoercion": "off"}):
-        test_enum()  # Same assertions - see docstring for limitation
+    # With coercion="off", the value from session state (old class) is returned as-is,
+    # so class IDs will differ - expect assertion to fail.
+    with (
+        patch_config_options({"runner.enumCoercion": "off"}),
+        pytest.raises(AssertionError),
+    ):
+        test_enum()
 
 
 def test_None_session_state_value_retained():

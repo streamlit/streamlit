@@ -112,7 +112,7 @@ export interface Props {
  * Check if this is a select_slider (options-based) rather than a numeric slider.
  */
 function isSelectSlider(element: SliderProto): boolean {
-  return element.options.length > 0
+  return element.type === SliderProto.Type.SELECT_SLIDER
 }
 
 /**

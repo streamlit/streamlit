@@ -33,7 +33,8 @@ from streamlit.elements.lib.options_selector_utils import (
     index_,
     maybe_coerce_enum,
     maybe_coerce_enum_sequence,
-    validate_and_sync_select_slider_value_with_options,
+    validate_and_sync_range_value_with_options,
+    validate_and_sync_value_with_options,
 )
 from streamlit.elements.lib.policies import (
     check_widget_policies,
@@ -402,8 +403,6 @@ class SelectSliderMixin:
         if len(opt) == 0:
             raise StreamlitAPIException("The `options` argument needs to be non-empty")
 
-        is_range = _is_range_value(value)
-
         def as_index_list(v: Any) -> list[int]:
             if _is_range_value(v):
                 slider_value = [index_(opt, val) for val in v]
@@ -490,25 +489,46 @@ class SelectSliderMixin:
         # If the value is no longer valid (not in options), reset to default.
         # This handles the case where options change dynamically and the
         # previously selected value is no longer available.
-        validated_value, value_needs_reset = (
-            validate_and_sync_select_slider_value_with_options(
+        # Determine if we're dealing with a range value based on the actual
+        # widget state value, not just the value parameter (range can come from
+        # session state even when value param is None).
+        actual_is_range = isinstance(widget_state.value, tuple)
+        if actual_is_range:
+            # Range value: validate using range-specific function.
+            range_value = cast("tuple[T, T]", widget_state.value)
+            validated_range, value_needs_reset = (
+                validate_and_sync_range_value_with_options(
+                    range_value,
+                    opt,
+                    slider_value,
+                    key,
+                    format_func,
+                )
+            )
+            current_value: T | tuple[T, T] = validated_range
+        else:
+            # Single value: use the standard validation function.
+            validated_single, value_needs_reset = validate_and_sync_value_with_options(
                 widget_state.value,
                 opt,
-                slider_value,
-                is_range,
+                slider_value[0],
                 key,
                 format_func,
             )
-        )
-        # validated_value is guaranteed to be T | tuple[T, T] (not the outer None)
-        # because deserialize() always returns a default value, never None.
-        # Note: T itself might be None if None is a valid option value.
-        current_value = cast("T | tuple[T, T]", validated_value)
+            # validated_single is guaranteed to be T (not None) because
+            # deserialize() always returns a default value, never None.
+            current_value = cast("T", validated_single)
 
-        if value_needs_reset or widget_state.value_changed:
-            serialized_value = serde.serialize(current_value)
-            slider_proto.raw_value[:] = serialized_value
-            slider_proto.set_value = True
+        # Always send raw_value for select_slider to ensure the frontend has
+        # the correct string values. This is necessary because:
+        # 1. The frontend stores string values in WidgetStateManager
+        # 2. When format_func changes, the formatted strings change
+        # 3. The frontend remaps strings to indices when options change
+        # 4. Without sending raw_value, the frontend would have stale strings
+        #    that don't match the new formatted options, causing UI/backend desync
+        serialized_value = serde.serialize(current_value)
+        slider_proto.raw_value[:] = serialized_value
+        slider_proto.set_value = value_needs_reset or widget_state.value_changed
 
         if ctx:
             save_for_app_testing(ctx, element_id, format_func)

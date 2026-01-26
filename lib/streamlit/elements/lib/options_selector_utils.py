@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 from enum import Enum, EnumMeta
-from typing import TYPE_CHECKING, Any, Final, TypeVar, cast, overload
+from typing import TYPE_CHECKING, Any, Final, TypeVar, overload
 
 from streamlit import config, logger
 from streamlit.dataframe_util import OptionSequence, convert_anything_to_list
@@ -297,6 +297,11 @@ def validate_and_sync_value_with_options(
     This function has a side-effect: if the value is not found in the options
     and a key is provided, it will update session state with the new value.
 
+    Uses format_func comparison for all values (including Enums). This is the
+    correct approach because widget serdes deserialize by looking up formatted
+    strings and returning values from the current options list. The deserialized
+    value is always from the current class, so identity checking is unnecessary.
+
     Parameters
     ----------
     current_value
@@ -321,29 +326,16 @@ def validate_and_sync_value_with_options(
     if current_value is None:
         return current_value, False
 
-    # For Enum values, use the original index_() approach which uses == comparison.
-    # This correctly handles enum class identity - enums from different classes
-    # (e.g., after script rerun) should NOT be considered equal, which is important
-    # for enum coercion to work correctly when coercion is disabled.
-    if isinstance(current_value, Enum):
-        try:
-            index_(opt, current_value)
+    # Use format_func comparison for all values. This correctly handles:
+    # - Custom objects without __eq__ (deepcopied instances)
+    # - Enum values (already from current class due to serde deserialization)
+    formatted_options_set = {format_func(o) for o in opt}
+    try:
+        formatted_value = format_func(current_value)
+        if formatted_value in formatted_options_set:
             return current_value, False
-        except ValueError:
-            pass  # Fall through to reset logic below
-    else:
-        # For non-Enum values, use format_func comparison. This handles custom objects
-        # without __eq__ where widget values are deepcopied and the deepcopied instances
-        # would fail identity comparison with ==.
-        try:
-            formatted_value = format_func(current_value)
-        except Exception:
-            # format_func failed - value is invalid
-            formatted_value = None
-
-        formatted_options_set = {format_func(o) for o in opt}
-        if formatted_value is not None and formatted_value in formatted_options_set:
-            return current_value, False
+    except Exception:  # noqa: S110
+        pass  # format_func failed - value is invalid, fall through to reset
 
     # Value not in options - reset to default
     if default_index is not None and len(opt) > 0:
@@ -426,40 +418,41 @@ def validate_and_sync_multiselect_value_with_options(
     return valid_values, True
 
 
-def validate_and_sync_select_slider_value_with_options(
-    current_value: T | tuple[T, T] | None,
+def validate_and_sync_range_value_with_options(
+    current_value: tuple[T, T],
     opt: Sequence[T],
     default_indices: list[int],
-    is_range_value: bool,
     key: str | int | None,
     format_func: Callable[[Any], str] = str,
-) -> tuple[T | tuple[T, T] | None, bool]:
-    """Validate select_slider value(s) against options, resetting session state if invalid.
+) -> tuple[tuple[T, T], bool]:
+    """Validate a range value (tuple of two values) against options.
 
-    If a value is not found in options, resets to the default. For range values,
-    if either value is invalid, the entire range is reset.
+    If either value in the range is not found in options, the entire range is
+    reset to the default. This function has a side-effect: if the values are
+    invalid and a key is provided, it will update session state with the new value.
 
     Parameters
     ----------
     current_value
-        The current widget value to validate. Can be a single value or a tuple of two values.
+        The current range value (tuple of two values) to validate.
     opt
         The sequence of valid options.
     default_indices
-        The default indices to reset to if value is invalid.
-    is_range_value
-        Whether the select_slider is in range mode (returns tuple of two values).
+        The default indices to reset to if value is invalid. Should contain
+        at least one index; if only one index is provided, the second default
+        will be the last option.
     key
         The widget key for session state updates.
     format_func
-        Function to format options for comparison.
+        Function to format options for comparison. Used to compare values by their
+        string representation instead of using == directly.
 
     Returns
     -------
-    tuple[T | tuple[T, T] | None, bool]
+    tuple[tuple[T, T], bool]
         A tuple of (validated_value, value_was_reset).
     """
-    if current_value is None or len(opt) == 0:
+    if len(opt) == 0:
         return current_value, False
 
     formatted_options_set = {format_func(o) for o in opt}
@@ -471,31 +464,17 @@ def validate_and_sync_select_slider_value_with_options(
         except Exception:
             return False
 
-    def get_default() -> T | tuple[T, T]:
-        """Get the default value based on is_range_value mode."""
-        if is_range_value:
-            end_idx = default_indices[1] if len(default_indices) > 1 else len(opt) - 1
-            return (opt[default_indices[0]], opt[end_idx])
-        return opt[default_indices[0]]
+    def get_default_range() -> tuple[T, T]:
+        """Get the default range value."""
+        end_idx = default_indices[1] if len(default_indices) > 1 else len(opt) - 1
+        return (opt[default_indices[0]], opt[end_idx])
 
-    def reset_to_default() -> tuple[T | tuple[T, T], bool]:
-        """Reset to default and update session state."""
-        new_value = get_default()
-        if key is not None:
-            get_session_state().reset_state_value(str(key), new_value)
-        return new_value, True
-
-    # Check if current_value is a valid single option.
-    # This handles options that are themselves tuples/lists.
-    if is_valid(current_value):
+    # Validate both values in the range.
+    if is_valid(current_value[0]) and is_valid(current_value[1]):
         return current_value, False
 
-    # Check if it's a range value (tuple/list of 2 elements).
-    if isinstance(current_value, (tuple, list)) and len(current_value) == 2:
-        if is_valid(current_value[0]) and is_valid(current_value[1]):
-            return cast("tuple[T, T]", current_value), False
-        # Either value is invalid - reset entire range
-        return reset_to_default()
-
-    # Invalid single value - reset to default
-    return reset_to_default()
+    # Either value is invalid - reset entire range.
+    new_value = get_default_range()
+    if key is not None:
+        get_session_state().reset_state_value(str(key), new_value)
+    return new_value, True

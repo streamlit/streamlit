@@ -153,6 +153,48 @@ class SliderTest(DeltaGeneratorTestCase):
         assert c.default == [1]
         assert c.options == DAYS_OF_WEEK
 
+    def test_raw_value_always_sent(self):
+        """Test that raw_value is always populated to handle format_func changes.
+
+        This ensures the frontend always has the correct formatted string values,
+        which prevents UI/backend desync when format_func changes.
+        """
+        # Test with default value
+        st.select_slider(
+            "the label",
+            options=["small", "medium", "large"],
+        )
+        c = self.get_delta_from_queue().new_element.slider
+        assert list(c.raw_value) == ["small"]
+
+        # Test with explicit value
+        st.select_slider(
+            "the label",
+            value="medium",
+            options=["small", "medium", "large"],
+        )
+        c = self.get_delta_from_queue().new_element.slider
+        assert list(c.raw_value) == ["medium"]
+
+        # Test with format_func
+        st.select_slider(
+            "the label",
+            value="medium",
+            options=["small", "medium", "large"],
+            format_func=lambda x: x.upper(),
+        )
+        c = self.get_delta_from_queue().new_element.slider
+        assert list(c.raw_value) == ["MEDIUM"]
+
+        # Test range value
+        st.select_slider(
+            "the label",
+            value=("small", "large"),
+            options=["small", "medium", "large"],
+        )
+        c = self.get_delta_from_queue().new_element.slider
+        assert list(c.raw_value) == ["small", "large"]
+
     def test_numpy_array_no_value(self):
         """Test that it can be called with options=numpy array, no value"""
         st.select_slider("the label", options=np.array([1, 2, 3, 4]))
@@ -652,3 +694,56 @@ def test_select_slider_dynamic_options_with_enum():
     assert "Selected: GREEN" in at.get("markdown")[-1].value
     # Negative assertion: BLUE should not be preserved
     assert "Selected: BLUE" not in at.get("markdown")[-1].value
+
+
+def test_select_slider_format_func_change_preserves_value():
+    """Regression test: changing format_func should not cause value desync.
+
+    When format_func changes but the options stay the same, the selected value
+    should be preserved and displayed with the new formatting.
+    """
+
+    def script():
+        import streamlit as st
+
+        if "use_uppercase" not in st.session_state:
+            st.session_state.use_uppercase = False
+
+        # Same options, different format_func
+        options = ["small", "medium", "large"]
+        if st.session_state.use_uppercase:
+
+            def uppercase(x):
+                return x.upper()
+
+            format_func = uppercase
+        else:
+
+            def titlecase(x):
+                return x.title()
+
+            format_func = titlecase
+        selected = st.select_slider(
+            "Size",
+            options=options,
+            format_func=format_func,
+            key="size_slider",
+        )
+        st.write(f"Selected: {selected}")
+
+    at = AppTest.from_function(script).run()
+    # Initial value is "small"
+    assert "Selected: small" in at.get("markdown")[-1].value
+
+    # Select "large"
+    at.select_slider[0].set_value("large").run()
+    assert "Selected: large" in at.get("markdown")[-1].value
+
+    # Toggle format_func from title case to uppercase
+    # The value should still be "large" (not reset to default)
+    at.session_state.use_uppercase = True
+    at = at.run()
+    # The value should be preserved
+    assert "Selected: large" in at.get("markdown")[-1].value
+    # Negative assertion: should not reset to default "small"
+    assert "Selected: small" not in at.get("markdown")[-1].value
