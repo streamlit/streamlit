@@ -520,6 +520,7 @@ describe("Slider widget", () => {
         min: 0,
         max: 6,
         format: "%s",
+        type: SliderProto.Type.SELECT_SLIDER,
         options: [
           "red",
           "orange",
@@ -551,6 +552,7 @@ describe("Slider widget", () => {
         min: 0,
         max: 6,
         format: "%s",
+        type: SliderProto.Type.SELECT_SLIDER,
         options: [
           "red",
           "orange",
@@ -582,6 +584,7 @@ describe("Slider widget", () => {
         min: 0,
         max: 6,
         format: "%s",
+        type: SliderProto.Type.SELECT_SLIDER,
         options: [
           "red",
           "orange",
@@ -613,6 +616,7 @@ describe("Slider widget", () => {
         min: 0,
         max: 6,
         format: "%s",
+        type: SliderProto.Type.SELECT_SLIDER,
         options: [
           "red",
           "orange",
