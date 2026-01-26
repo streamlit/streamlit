@@ -112,8 +112,8 @@ const VirtualDropdown = forwardRef<any, any>((props, ref) => {
     <StyledList
       ref={ref}
       $style={{
-        paddingBottom: theme.spacing.sm,
-        paddingTop: theme.spacing.sm,
+        paddingBottom: theme.spacing.twoXS,
+        paddingTop: theme.spacing.twoXS,
         paddingLeft: theme.spacing.sm,
         paddingRight: theme.spacing.sm,
         // Somehow this adds an additional shadow, even though we already have
