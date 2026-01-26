@@ -1096,9 +1096,8 @@ class SelectSlider(Widget, Generic[T]):
     def _widget_state(self) -> WidgetState:
         # Build formatted options mapping
         format_func = self.format_func
-        formatted_options = [format_func(opt) for opt in self.options]
-        formatted_option_to_option_index = {
-            fmt: idx for idx, fmt in enumerate(formatted_options)
+        formatted_option_to_index = {
+            format_func(opt): idx for idx, opt in enumerate(self.options)
         }
 
         # Determine if this is a range value
@@ -1106,10 +1105,8 @@ class SelectSlider(Widget, Generic[T]):
 
         serde = SelectSliderSerde(
             self.options,
-            formatted_options=formatted_options,
-            formatted_option_to_option_index=formatted_option_to_option_index,
-            default_value_indices=[0] if not is_range else [0, len(self.options) - 1],
-            is_range_value=is_range,
+            formatted_option_to_index=formatted_option_to_index,
+            default_indices=[0] if not is_range else [0, len(self.options) - 1],
             format_func=format_func,
         )
 

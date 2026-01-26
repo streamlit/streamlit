@@ -77,119 +77,75 @@ class SelectSliderSerde(Generic[T]):
     """Serializer/deserializer for select_slider widget values.
 
     Uses formatted option strings for robust handling of dynamic option changes.
-    This allows the widget to maintain its value when options change, as long as
-    the formatted string representation of the value still exists in the new options.
     """
-
-    options: Sequence[T]
-    formatted_options: list[str]
-    formatted_option_to_option_index: dict[str, int]
-    default_value_indices: list[int]
-    is_range_value: bool
-    format_func: Callable[[Any], str]
 
     def __init__(
         self,
         options: Sequence[T],
         *,
-        formatted_options: list[str],
-        formatted_option_to_option_index: dict[str, int],
-        default_value_indices: list[int],
-        is_range_value: bool,
+        formatted_option_to_index: dict[str, int],
+        default_indices: list[int],
         format_func: Callable[[Any], str] = str,
     ) -> None:
         self.options = options
-        self.formatted_options = formatted_options
-        self.formatted_option_to_option_index = formatted_option_to_option_index
-        self.default_value_indices = default_value_indices
-        self.is_range_value = is_range_value
+        self.formatted_option_to_index = formatted_option_to_index
+        self.default_indices = default_indices
         self.format_func = format_func
+
+    def _get_default(self, is_range: bool) -> T | tuple[T, T]:
+        """Return the default value based on default_indices."""
+        if is_range or len(self.default_indices) >= 2:
+            end_idx = (
+                self.default_indices[1]
+                if len(self.default_indices) > 1
+                else len(self.options) - 1
+            )
+            return (self.options[self.default_indices[0]], self.options[end_idx])
+        return self.options[self.default_indices[0]]
 
     def serialize(self, v: T | tuple[T, T] | list[T]) -> list[str]:
         """Convert option value(s) to formatted string list."""
-        # First, check if v is a single option value by seeing if its formatted
-        # representation exists in our options. This handles the case where
-        # option values themselves are lists/tuples (e.g., options=[["a", "b"], ["c", "d"]]).
+        # Check if v is a single option (handles options that are tuples/lists)
         try:
-            formatted_v = self.format_func(v)
-            if formatted_v in self.formatted_option_to_option_index:
-                # v is a single option value, not a range
-                return [formatted_v]
+            formatted = self.format_func(v)
+            if formatted in self.formatted_option_to_index:
+                return [formatted]
         except Exception:  # noqa: S110
             pass
 
-        # Check if v is a range value (tuple/list of two items).
-        # Only treat it as a range if it's a tuple/list AND not a valid single option.
-        if isinstance(v, (tuple, list)) and len(v) == 2:
-            values = list(v)
-        elif self.is_range_value:
-            # Expected range but got non-tuple, fallback to default
-            return [self.formatted_options[i] for i in self.default_value_indices]
-        else:
-            values = [v]
+        # Handle as range/sequence
+        if isinstance(v, (tuple, list)):
+            return [self.format_func(x) for x in v]
 
-        result: list[str] = []
-        for val in values:
-            try:
-                formatted = self.format_func(val)
-            except Exception:
-                # format_func failed, use str() as fallback
-                formatted = str(val)
-            result.append(formatted)
-        return result
+        return [self.format_func(v)]
 
     def deserialize(self, ui_value: list[str] | None) -> T | tuple[T, T]:
         """Convert formatted string list back to option value(s)."""
-        if not ui_value or len(ui_value) == 0:
-            # Widget has not been used; fallback to default value
-            return_value: tuple[T, T] = cast(
-                "tuple[T, T]",
-                tuple(self.options[i] for i in self.default_value_indices),
-            )
-            return return_value if self.is_range_value else return_value[0]
+        is_range = ui_value is not None and len(ui_value) >= 2
 
-        # Convert strings back to option indices and values
-        result_indices: list[int] = []
-        result_values: list[T] = []
-        for formatted_str in ui_value:
-            option_index = self.formatted_option_to_option_index.get(formatted_str)
-            if option_index is not None:
-                result_indices.append(option_index)
-                result_values.append(self.options[option_index])
+        if not ui_value:
+            return self._get_default(is_range=len(self.default_indices) >= 2)
+
+        # Look up each string value
+        results: list[tuple[int, T]] = []
+        for i, s in enumerate(ui_value):
+            idx = self.formatted_option_to_index.get(s)
+            if idx is not None:
+                results.append((idx, self.options[idx]))
             else:
-                # Value not found in options, use default for this position
-                idx = len(result_values)
-                if idx < len(self.default_value_indices):
-                    default_idx = self.default_value_indices[idx]
-                    result_indices.append(default_idx)
-                    result_values.append(self.options[default_idx])
-                elif len(self.options) > 0:
-                    result_indices.append(0)
-                    result_values.append(self.options[0])
+                # Fallback to default for this position
+                default_idx = self.default_indices[
+                    min(i, len(self.default_indices) - 1)
+                ]
+                results.append((default_idx, self.options[default_idx]))
 
-        # Ensure we have the right number of values
-        while len(result_values) < len(self.default_value_indices):
-            idx = len(result_values)
-            default_idx = self.default_value_indices[idx]
-            result_indices.append(default_idx)
-            result_values.append(self.options[default_idx])
+        if is_range and len(results) >= 2:
+            # Ensure start <= end by index
+            if results[0][0] > results[1][0]:
+                return (results[1][1], results[0][1])
+            return (results[0][1], results[1][1])
 
-        # Determine if this is a range based on the actual data length, not the flag.
-        # This handles the case where session state sets a range without using
-        # the `value` parameter.
-        actual_is_range = len(ui_value) >= 2
-
-        if actual_is_range and len(result_indices) >= 2:
-            # For range values, ensure start <= end by option index (sort the range)
-            start_idx, end_idx = result_indices[0], result_indices[1]
-            start_val, end_val = result_values[0], result_values[1]
-            if start_idx > end_idx:
-                # Swap to ensure start <= end
-                return (end_val, start_val)
-            return (start_val, end_val)
-
-        return_value = cast("tuple[T, T]", tuple(result_values[:2]))
-        return return_value if actual_is_range else return_value[0]
+        return results[0][1]
 
 
 class SelectSliderMixin:
@@ -508,10 +464,8 @@ class SelectSliderMixin:
 
         serde = SelectSliderSerde(
             opt,
-            formatted_options=formatted_options,
-            formatted_option_to_option_index=formatted_option_to_option_index,
-            default_value_indices=slider_value,
-            is_range_value=is_range,
+            formatted_option_to_index=formatted_option_to_option_index,
+            default_indices=slider_value,
             format_func=format_func,
         )
 
