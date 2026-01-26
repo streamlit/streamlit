@@ -394,7 +394,7 @@ hello
         with pytest.raises(StreamlitAPIException) as exc:
             widget_func("the label", bind="query-params")
 
-        assert "must have a 'key' parameter" in str(exc.value)
+        assert "must have a unique 'key' parameter" in str(exc.value)
 
     @parameterized.expand(
         [
