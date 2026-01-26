@@ -38,7 +38,7 @@ export const ThemedStyledDropdownListItem = styled(StyledDropdownListItem, {
   const separatorStyle = {
     content: '""',
     position: "absolute" as const,
-    left: 0,
+    left: theme.spacing.none,
     right: theme.spacing.xs,
     height: theme.sizes.borderWidth,
     backgroundColor: theme.colors.fadedText10,
