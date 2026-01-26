@@ -258,12 +258,19 @@ def test_select_slider_dynamic_options_preserves_valid_selection(app: Page):
     app.keyboard.press("ArrowRight")
     wait_for_app_run(app)
     expect_prefixed_markdown(app, "Dynamic options selection:", "bravo")
+    # Negative assertion: "alpha" should no longer be the selected value
+    markdown_element = app.get_by_test_id("stMarkdown").filter(
+        has_text=re.compile(r"Dynamic options selection:")
+    )
+    expect(markdown_element).not_to_contain_text("selection: alpha")
 
     # Toggle to enable alternative options
     click_toggle(app, "Enable alternative options for dynamic options test")
 
     # Since "bravo" is not in ["alpha", "beta", "gamma"], should reset to default "alpha"
     expect_prefixed_markdown(app, "Dynamic options selection:", "alpha")
+    # Negative assertion: "bravo" should not be preserved
+    expect(markdown_element).not_to_contain_text("selection: bravo")
 
 
 def test_select_slider_dynamic_options_keeps_shared_option(app: Page):
@@ -293,3 +300,9 @@ def test_select_slider_range_dynamic_options_resets_when_invalid(app: Page):
     # Since neither "a" nor "e" exists in new options, should reset to default ("x", "z")
     click_toggle(app, "Enable alternative range options")
     expect_prefixed_markdown(app, "Dynamic range selection:", "('x', 'z')")
+    # Negative assertion: old range values should not be preserved
+    markdown_element = app.get_by_test_id("stMarkdown").filter(
+        has_text=re.compile(r"Dynamic range selection:")
+    )
+    expect(markdown_element).not_to_contain_text("'a'")
+    expect(markdown_element).not_to_contain_text("'e'")

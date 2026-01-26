@@ -531,6 +531,7 @@ describe("Slider widget", () => {
         ],
       })
       vi.spyOn(props.widgetMgr, "setStringArrayValue")
+      vi.spyOn(props.widgetMgr, "setDoubleArrayValue")
 
       render(<Slider {...props} />)
 
@@ -540,6 +541,8 @@ describe("Slider widget", () => {
         { fromUi: false },
         undefined
       )
+      // Negative assertion: setDoubleArrayValue should NOT be called for select_slider
+      expect(props.widgetMgr.setDoubleArrayValue).not.toHaveBeenCalled()
     })
 
     it("handles value changes with setStringArrayValue", () => {
@@ -628,6 +631,9 @@ describe("Slider widget", () => {
       // rawValue is "yellow" which is at index 2
       expect(slider).toHaveAttribute("aria-valuenow", "2")
       expect(slider).toHaveAttribute("aria-valuetext", "yellow")
+      // Negative assertion: should NOT use the default index (0)
+      expect(slider).not.toHaveAttribute("aria-valuenow", "0")
+      expect(slider).not.toHaveAttribute("aria-valuetext", "red")
     })
   })
 })

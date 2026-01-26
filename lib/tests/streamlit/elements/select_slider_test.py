@@ -516,12 +516,17 @@ def test_select_slider_dynamic_options_preserves_valid_selection():
     at.select_slider[0].set_value("bravo").run()
     assert at.select_slider[0].value == "bravo"
     assert "Selected: bravo" in at.get("markdown")[-1].value
+    # Negative assertion: "alpha" should no longer be selected
+    assert at.select_slider[0].value != "alpha"
 
     # Switch to alternative options - "bravo" doesn't exist, should reset to "alpha"
     at.session_state.use_alt_options = True
     at = at.run()
     assert at.select_slider[0].value == "alpha"
     assert "Selected: alpha" in at.get("markdown")[-1].value
+    # Negative assertion: "bravo" should not be preserved
+    assert at.select_slider[0].value != "bravo"
+    assert "Selected: bravo" not in at.get("markdown")[-1].value
 
     # Select "alpha" which exists in both option sets
     at.select_slider[0].set_value("alpha").run()
@@ -561,6 +566,8 @@ def test_select_slider_dynamic_options_range_resets_when_invalid():
     at.session_state.use_alt_options = True
     at = at.run()
     assert at.select_slider[0].value == ("x", "z")
+    # Negative assertion: old range values should not be preserved
+    assert at.select_slider[0].value != ("a", "e")
 
 
 def test_select_slider_dynamic_options_with_format_func():
@@ -596,3 +603,62 @@ def test_select_slider_dynamic_options_with_format_func():
     at.session_state.use_alt_options = True
     at = at.run()
     assert at.select_slider[0].value == 1
+    # Negative assertion: value 4 should not be preserved
+    assert at.select_slider[0].value != 4
+
+
+def test_select_slider_dynamic_options_with_enum():
+    """Test that dynamic options work correctly with Enum values."""
+    from enum import Enum
+
+    # Define enums at module level for serialization
+    class ColorA(Enum):
+        RED = "red"
+        GREEN = "green"
+        BLUE = "blue"
+
+    class ColorB(Enum):
+        GREEN = "green"
+        YELLOW = "yellow"
+        PURPLE = "purple"
+
+    def script():
+        from enum import Enum
+
+        import streamlit as st
+
+        class ColorA(Enum):
+            RED = "red"
+            GREEN = "green"
+            BLUE = "blue"
+
+        class ColorB(Enum):
+            GREEN = "green"
+            YELLOW = "yellow"
+            PURPLE = "purple"
+
+        if "use_alt_options" not in st.session_state:
+            st.session_state.use_alt_options = False
+
+        if st.session_state.use_alt_options:
+            options = list(ColorB)
+        else:
+            options = list(ColorA)
+
+        selected = st.select_slider("Color", options=options, key="color_slider")
+        st.write(f"Selected: {selected.name}")
+
+    at = AppTest.from_function(script).run()
+    # Initial value is ColorA.RED
+    assert "Selected: RED" in at.get("markdown")[-1].value
+
+    # Select ColorA.BLUE which only exists in ColorA
+    at.select_slider[0].set_value(ColorA.BLUE).run()
+    assert "Selected: BLUE" in at.get("markdown")[-1].value
+
+    # Switch to ColorB - BLUE doesn't exist, should reset to GREEN (first option)
+    at.session_state.use_alt_options = True
+    at = at.run()
+    assert "Selected: GREEN" in at.get("markdown")[-1].value
+    # Negative assertion: BLUE should not be preserved
+    assert "Selected: BLUE" not in at.get("markdown")[-1].value

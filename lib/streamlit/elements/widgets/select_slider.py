@@ -105,12 +105,12 @@ class SelectSliderSerde(Generic[T]):
         self.is_range_value = is_range_value
         self.format_func = format_func
 
-    def serialize(self, v: T | tuple[T, T]) -> list[str]:
+    def serialize(self, v: T | tuple[T, T] | list[T]) -> list[str]:
         """Convert option value(s) to formatted string list."""
-        # Detect if v is a range value (tuple of two items) based on actual data,
+        # Detect if v is a range value (tuple/list of two items) based on actual data,
         # not the is_range_value flag. This handles session state setting a range
         # without the widget being configured with a range default.
-        if isinstance(v, tuple) and len(v) == 2:
+        if isinstance(v, (tuple, list)) and len(v) == 2:
             values = list(v)
         elif self.is_range_value:
             # Expected range but got non-tuple, fallback to default

@@ -490,8 +490,9 @@ def validate_and_sync_select_slider_value_with_options(
 
     # Detect if current_value is actually a range even if is_range_value=False
     # This handles the case where session state sets a range without the widget
-    # being configured with a range default.
-    if isinstance(current_value, tuple) and len(current_value) == 2:
+    # being configured with a range default. Accept both tuple and list to match
+    # the API signature which allows both types for range values.
+    if isinstance(current_value, (tuple, list)) and len(current_value) == 2:
         # Handle range value (tuple of two values)
         # Type narrowing: current_value is now tuple[T, T]
         range_value = cast("tuple[T, T]", current_value)
