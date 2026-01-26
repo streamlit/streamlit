@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -60,7 +60,6 @@ _os.environ["MPLBACKEND"] = "Agg"
 # Must be at the top, to avoid circular dependency.
 from streamlit import logger as _logger
 from streamlit import config as _config
-from streamlit.deprecation_util import deprecate_func_name as _deprecate_func_name
 from streamlit.version import STREAMLIT_VERSION_STRING as _STREAMLIT_VERSION_STRING
 
 # Give the package a version.
@@ -87,10 +86,10 @@ _dg_singleton = _DeltaGeneratorSingleton(
     status_container_cls=_StatusContainer,
     dialog_container_cls=_Dialog,
 )
-_main = _dg_singleton._main_dg
-sidebar = _dg_singleton._sidebar_dg
-_event = _dg_singleton._event_dg
-_bottom = _dg_singleton._bottom_dg
+_main: _DeltaGenerator = _dg_singleton._main_dg
+sidebar: _DeltaGenerator = _dg_singleton._sidebar_dg
+_event: _DeltaGenerator = _dg_singleton._event_dg
+_bottom: _DeltaGenerator = _dg_singleton._bottom_dg
 
 
 from streamlit.elements.dialog_decorator import dialog_decorator as _dialog_decorator
@@ -112,13 +111,8 @@ from streamlit.runtime.state import (
 )
 from streamlit.user_info import (
     UserInfoProxy as _UserInfoProxy,
-    DeprecatedUserInfoProxy as _DeprecatedUserInfoProxy,
     login as _login,
     logout as _logout,
-)
-from streamlit.commands.experimental_query_params import (
-    get_query_params as _get_query_params,
-    set_query_params as _set_query_params,
 )
 
 import streamlit.column_config as _column_config
@@ -135,7 +129,6 @@ from streamlit.commands.echo import echo as echo
 from streamlit.commands.logo import logo as logo
 from streamlit.commands.navigation import navigation as navigation
 from streamlit.navigation.page import Page as Page
-from streamlit.elements.spinner import spinner as spinner
 
 from streamlit.commands.page_config import set_page_config as set_page_config
 from streamlit.commands.execution_control import (
@@ -180,6 +173,7 @@ container = _main.container
 dataframe = _main.dataframe
 data_editor = _main.data_editor
 date_input = _main.date_input
+datetime_input = _main.datetime_input
 divider = _main.divider
 download_button = _main.download_button
 expander = _main.expander
@@ -221,6 +215,7 @@ segmented_control = _main.segmented_control
 slider = _main.slider
 snow = _main.snow
 space = _main.space
+spinner = _main.spinner
 subheader = _main.subheader
 success = _main.success
 table = _main.table
@@ -279,32 +274,8 @@ logout = _logout
 # User
 user = _UserInfoProxy()
 
-# Experimental APIs
-experimental_user = _DeprecatedUserInfoProxy()
-
-_EXPERIMENTAL_QUERY_PARAMS_DEPRECATE_MSG = (
-    "Refer to our [docs page](https://docs.streamlit.io/develop/api-reference/caching-and-state/st.query_params) "
-    "for more information."
-)
-
-experimental_get_query_params = _deprecate_func_name(
-    _get_query_params,
-    "experimental_get_query_params",
-    "2024-04-11",
-    _EXPERIMENTAL_QUERY_PARAMS_DEPRECATE_MSG,
-    name_override="query_params",
-)
-experimental_set_query_params = _deprecate_func_name(
-    _set_query_params,
-    "experimental_set_query_params",
-    "2024-04-11",
-    _EXPERIMENTAL_QUERY_PARAMS_DEPRECATE_MSG,
-    name_override="query_params",
-)
-
-
 # make it possible to call streamlit.components.v1.html etc. by importing it here
 # import in the very end to avoid partially-initialized module import errors, because
 # streamlit.components.v1 also uses some streamlit imports
-import streamlit.components.v1
+import streamlit.components.v1  # noqa: F401
 import streamlit.components.v2  # noqa: F401

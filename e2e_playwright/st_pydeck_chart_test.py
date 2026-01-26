@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,7 +16,10 @@ import pytest
 from playwright.sync_api import Locator, Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
-from e2e_playwright.shared.app_utils import check_top_level_class
+from e2e_playwright.shared.app_utils import (
+    check_top_level_class,
+    select_selectbox_option,
+)
 from e2e_playwright.shared.toolbar_utils import (
     assert_fullscreen_toolbar_button_interactions,
 )
@@ -203,9 +206,7 @@ def test_height_parameter(app: Page, assert_snapshot: ImageCompareFunction) -> N
 
 def select_subtest(app: Page, name: str) -> Locator:
     # Select the text in the UI:
-    selectbox_input = app.get_by_test_id("stSelectbox").nth(0).locator("input")
-    selectbox_input.type(name)
-    selectbox_input.press("Enter")
+    select_selectbox_option(app, "Test to run", name)
 
     # The pydeck chart takes a while to load so check that
     # at least one gets attached with an increased timeout.

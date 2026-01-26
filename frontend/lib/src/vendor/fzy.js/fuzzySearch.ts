@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -213,20 +213,11 @@ function hasMatch(needle: string, haystack: string): boolean {
 }
 
 export {
-  /* constants */
-  SCORE_MIN,
-  SCORE_MAX,
-  SCORE_GAP_LEADING,
-  SCORE_GAP_TRAILING,
-  SCORE_GAP_INNER,
-  SCORE_MATCH_CONSECUTIVE,
-  SCORE_MATCH_SLASH,
-  SCORE_MATCH_WORD,
-  SCORE_MATCH_CAPITAL,
-  SCORE_MATCH_DOT,
-
-  /* functions */
-  score,
-  positions,
-  hasMatch,
+    SCORE_GAP_INNER, SCORE_GAP_LEADING,
+    SCORE_GAP_TRAILING, SCORE_MATCH_CAPITAL, SCORE_MATCH_CONSECUTIVE, SCORE_MATCH_DOT, SCORE_MATCH_SLASH,
+    SCORE_MATCH_WORD, SCORE_MAX,
+    /* constants */
+    SCORE_MIN, hasMatch, positions,
+    /* functions */
+    score
 }

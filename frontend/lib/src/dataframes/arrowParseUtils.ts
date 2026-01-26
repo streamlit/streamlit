@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,8 +28,7 @@ import {
   tableFromIPC,
   Vector,
 } from "apache-arrow"
-import range from "lodash/range"
-import unzip from "lodash/unzip"
+import { range, unzip } from "lodash-es"
 
 import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
 

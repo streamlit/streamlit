@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -65,6 +65,18 @@ if TYPE_CHECKING:
 # Used for static app testing
 class StaticPage(Page):
     pass
+
+
+def pytest_addoption(parser: pytest.Parser) -> None:
+    """Register custom command-line options."""
+    # Temporary option for testing the Starlette server migration.
+    # This can be removed once Tornado is fully replaced by Starlette.
+    parser.addoption(
+        "--use-starlette",
+        action="store_true",
+        default=False,
+        help="Run tests with the experimental Starlette server instead of Tornado",
+    )
 
 
 def pytest_configure(config: pytest.Config) -> None:
@@ -139,7 +151,7 @@ class AsyncSubprocess:
         # file. We do this instead of using subprocess.PIPE (which causes the
         # Popen object to capture the output to its own internal buffer),
         # because large amounts of output can cause it to deadlock.
-        self._stdout_file = TemporaryFile("w+")
+        self._stdout_file = TemporaryFile("w+", encoding="utf-8")
         print(f"Running: {shlex.join(self.args)}")
         self._proc = subprocess.Popen(
             self.args,
@@ -251,9 +263,12 @@ def app_port(worker_id: str) -> int:
 
 
 @pytest.fixture(scope="module")
-def app_server_extra_args() -> list[str]:
+def app_server_extra_args(request: pytest.FixtureRequest) -> list[str]:
     """Fixture that returns extra arguments to pass to the Streamlit app server."""
-    return []
+    args: list[str] = []
+    if request.config.getoption("--use-starlette"):
+        args.extend(["--server.useStarlette", "true"])
+    return args
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -430,11 +445,7 @@ font-src {app_url}/static/fonts/ {app_url}/static/media/ https: data: blob:;
             query_params = "?" + parse.urlencode(_iframe_element_attrs.src_query_params)
 
         src = f"{app_url}/{query_params}"
-        additional_html_head = (
-            _iframe_element_attrs.additional_html_head
-            if _iframe_element_attrs.additional_html_head
-            else ""
-        )
+        additional_html_head = _iframe_element_attrs.additional_html_head or ""
         _iframed_body = (
             f"""
             <!DOCTYPE html>
@@ -447,11 +458,7 @@ font-src {app_url}/static/fonts/ {app_url}/static/media/ https: data: blob:;
                 <body style="height: 100%;">
                     <iframe
                         src={src}
-                        id={
-                _iframe_element_attrs.element_id
-                if _iframe_element_attrs.element_id
-                else ""
-            }
+                        id={_iframe_element_attrs.element_id or ""}
                         title="Iframed Streamlit App"
                         allow="clipboard-read; clipboard-write; microphone; camera;"
                         sandbox="allow-modals allow-popups allow-same-origin allow-scripts allow-downloads"
@@ -769,6 +776,7 @@ def assert_snapshot(
         fail_fast: bool = False,
         file_type: Literal["png", "jpg"] = "png",
         style: str | None = None,
+        show_app_header: bool | None = None,
     ) -> None:
         """Compare a screenshot with screenshot from a past run.
 
@@ -788,12 +796,25 @@ def assert_snapshot(
             If True, the comparison will stop at the first pixel mismatch.
         file_type: "png" or "jpg"
             The file type of the screenshot. Defaults to "png".
+        show_app_header : bool or None
+            Whether to make the app header background transparent before taking the screenshot.
+            If None (default), the app header will be shown based on the
+            element type (page will always show the app header, other elements will hide it).
         """
-        nonlocal test_failure_messages
-        nonlocal snapshot_default_file_name
-        nonlocal module_snapshot_updates_dir
-        nonlocal module_snapshot_failures_dir
-        nonlocal snapshot_file_suffix
+        nonlocal \
+            test_failure_messages, \
+            snapshot_default_file_name, \
+            module_snapshot_updates_dir, \
+            module_snapshot_failures_dir, \
+            snapshot_file_suffix
+
+        if show_app_header is False or (
+            show_app_header is None and not isinstance(element, Page)
+        ):
+            # Make the app header background transparent:
+            if style is None:
+                style = ""
+            style += " .stAppHeader { background: transparent; }"
 
         if file_type == "jpg":
             file_extension = ".jpg"
@@ -1025,7 +1046,7 @@ def rerun_app(page: Page) -> None:
 
 
 def wait_until(
-    page: Page, fn: Callable[[], None | bool], timeout: int = 5000, interval: int = 100
+    page: Page, fn: Callable[[], bool | None], timeout: int = 5000, interval: int = 100
 ) -> None:
     """Run a test function in a loop until it evaluates to True
     or times out.
@@ -1065,7 +1086,7 @@ def wait_until(
             if timed_out():
                 raise TimeoutError(timeout_msg) from e
         else:
-            if result not in (None, True, False):
+            if result not in {None, True, False}:
                 raise ValueError(
                     "`wait_until` callback must return None, True or "
                     f"False, returned {result!r}"
@@ -1130,22 +1151,36 @@ def start_app_server(
         "none",
         "--server.enableStaticServing",
         "true",
+        "--server.scriptHealthCheckEnabled",
+        "true",
     ]
+
+    app_server_start_retries = 3
+    app_server_start_retry_delay_seconds = 20
 
     # Append any caller-supplied extra args at the end so they can override
     # defaults when necessary.
     if extra_args:
         args.extend(extra_args)
 
-    proc = AsyncSubprocess(args, cwd=".", env=env)
-    proc.start()
+    for i in range(app_server_start_retries):
+        proc = AsyncSubprocess(args, cwd=".", env=env)
+        proc.start()
 
-    if not wait_for_app_server_to_start(app_port):
+        if wait_for_app_server_to_start(app_port):
+            return proc
+
         stdout = proc.terminate()
         print(stdout, flush=True)
-        raise RuntimeError("Unable to start Streamlit app")
+        if i < app_server_start_retries - 1:
+            print(
+                f"Retrying to start app server in {app_server_start_retry_delay_seconds} seconds... "
+                f"(Attempt {i + 1}/{app_server_start_retries})",
+                flush=True,
+            )
+            time.sleep(app_server_start_retry_delay_seconds)
 
-    return proc
+    raise RuntimeError("Unable to start Streamlit app")
 
 
 # endregion

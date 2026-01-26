@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,10 +15,7 @@
  */
 import { Dispatch, SetStateAction, useEffect, useMemo, useState } from "react"
 
-import isArray from "lodash/isArray"
-import isEmpty from "lodash/isEmpty"
-import merge from "lodash/merge"
-import mergeWith from "lodash/mergeWith"
+import { isArray, isEmpty, merge, mergeWith } from "lodash-es"
 import { getLogger } from "loglevel"
 
 import { Arrow as ArrowProto, streamlit } from "@streamlit/protobuf"

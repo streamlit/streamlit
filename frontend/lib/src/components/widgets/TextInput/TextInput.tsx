@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,21 +14,19 @@
  * limitations under the License.
  */
 
-import React, { memo, ReactElement, useCallback, useState } from "react"
+import { memo, ReactElement, useCallback, useState } from "react"
 
 import { Input as UIInput } from "baseui/input"
-import uniqueId from "lodash/uniqueId"
+import { uniqueId } from "lodash-es"
 
 import { TextInput as TextInputProto } from "@streamlit/protobuf"
 
 import { getBorderColor } from "~lib/components/shared/Base/styled-components"
 import { DynamicIcon, isMaterialIcon } from "~lib/components/shared/Icon"
 import InputInstructions from "~lib/components/shared/InputInstructions/InputInstructions"
-import { Placement } from "~lib/components/shared/Tooltip"
-import TooltipIcon from "~lib/components/shared/TooltipIcon"
 import {
-  StyledWidgetLabelHelp,
   WidgetLabel,
+  WidgetLabelHelpIcon,
 } from "~lib/components/widgets/BaseWidget"
 import {
   useBasicWidgetState,
@@ -39,6 +37,7 @@ import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import useOnInputChange from "~lib/hooks/useOnInputChange"
 import useSubmitFormViaEnterKey from "~lib/hooks/useSubmitFormViaEnterKey"
 import useUpdateUiValue from "~lib/hooks/useUpdateUiValue"
+import { convertRemToPx } from "~lib/theme"
 import { isInForm, labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -114,7 +113,7 @@ function TextInput({
 
   // Hide input instructions for small widget sizes.
   const shouldShowInstructions =
-    focused && width > theme.breakpoints.hideWidgetDetails
+    focused && width > convertRemToPx(theme.breakpoints.hideWidgetDetails)
 
   const onBlur = useCallback((): void => {
     if (dirty) {
@@ -158,12 +157,7 @@ function TextInput({
         htmlFor={id}
       >
         {element.help && (
-          <StyledWidgetLabelHelp>
-            <TooltipIcon
-              content={element.help}
-              placement={Placement.TOP_RIGHT}
-            />
-          </StyledWidgetLabelHelp>
+          <WidgetLabelHelpIcon content={element.help} label={element.label} />
         )}
       </WidgetLabel>
       <UIInput

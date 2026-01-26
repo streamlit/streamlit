@@ -36,7 +36,18 @@ runs:
     - name: Install `protoc` binary
       run: |
         PROTOC_VERSION=26.1
-        curl -OL https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-x86_64.zip
+        # Use -f to fail on HTTP errors (preventing 404 pages from being saved as zips),
+        # and retry options to handle transient network failures common in CI.
+        curl -fOL --retry 5 --retry-all-errors --retry-delay 3 https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-x86_64.zip
+
+        # Validate the downloaded file is a zip archive.
+        # If the download was a 200 OK HTML page (e.g. soft error), unzip -tq will fail.
+        if ! unzip -tq protoc-${PROTOC_VERSION}-linux-x86_64.zip; then
+          echo "::error::Downloaded file is not a valid zip. Content preview:"
+          head -n 20 protoc-${PROTOC_VERSION}-linux-x86_64.zip
+          exit 1
+        fi
+
         sudo unzip -o protoc-${PROTOC_VERSION}-linux-x86_64.zip -d /usr/local bin/protoc
         sudo unzip -o protoc-${PROTOC_VERSION}-linux-x86_64.zip -d /usr/local 'include/*'
         sudo ln -s /usr/local/bin/protoc /usr/bin/protoc

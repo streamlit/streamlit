@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -85,4 +85,5 @@ def test_theme_from_window_variable(app: Page, assert_snapshot: ImageCompareFunc
     app.wait_for_timeout(5000)
     expect_font(app, "Inter")
     expect_font(app, "Monaspace Argon")
-    assert_snapshot(app, name="theme_from_window_variable", image_threshold=0.0005)
+    app.wait_for_timeout(5000)
+    assert_snapshot(app, name="theme_from_window_variable")

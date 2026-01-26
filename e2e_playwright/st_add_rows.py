@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -37,7 +37,7 @@ vega_element_1 = st.vega_lite_chart(
             "y": {"field": "b", "type": "quantitative"},
         },
     },
-    use_container_width=True,
+    width="stretch",
 )
 vega_element_2 = st.vega_lite_chart(
     {
@@ -49,7 +49,7 @@ vega_element_2 = st.vega_lite_chart(
             "y": {"field": "b", "type": "quantitative"},
         },
     },
-    use_container_width=True,
+    width="stretch",
 )
 vega_element_3 = st.vega_lite_chart(
     {
@@ -61,11 +61,11 @@ vega_element_3 = st.vega_lite_chart(
             "y": {"field": "b", "type": "quantitative"},
         },
     },
-    use_container_width=True,
+    width="stretch",
 )
 altair_element = st.altair_chart(
     alt.Chart(df).mark_line(point=True).encode(x="a", y="b").interactive(),
-    use_container_width=True,
+    width="stretch",
 )
 
 table_element.add_rows(df)
@@ -87,7 +87,7 @@ current_time = pd.to_datetime("08:00:00 2021-01-01", utc=True)
 simulation_step = pd.Timedelta(seconds=10)
 
 df1 = pd.DataFrame(data=[[current_time, 1]], columns=["t", "y"]).set_index("t")
-line_chart = st.line_chart(df1, use_container_width=True)
+line_chart = st.line_chart(df1, width="stretch")
 
 for count in range(5):
     current_time += simulation_step

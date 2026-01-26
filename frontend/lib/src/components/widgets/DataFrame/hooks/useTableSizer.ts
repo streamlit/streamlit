@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@
 // TODO: fix incorrect hook usage and delete this lint suppression
 /* eslint-disable react-hooks/exhaustive-deps -- TODO: Update to match React best practices */
 
-import React, { useLayoutEffect, useState } from "react"
+import { useLayoutEffect, useState } from "react"
 
 import { Size as ResizableSize } from "re-resizable"
 
@@ -87,7 +87,10 @@ function useTableSizer(
   // Group row + column header row
   const numHeaderRows = usesGroupRow ? 2 : 1
   const numTrailingRows =
-    element.editingMode === ArrowProto.EditingMode.DYNAMIC ? 1 : 0
+    element.editingMode === ArrowProto.EditingMode.DYNAMIC ||
+    element.editingMode === ArrowProto.EditingMode.ADD_ONLY
+      ? 1
+      : 0
 
   // Calculate the height of the table based on the number of rows:
   const totalDataRows = numRows + numTrailingRows

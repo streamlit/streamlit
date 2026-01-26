@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@ SMALL_LOGO = Image.open(str(PARENT_DIR / "small-streamlit.png"))
 
 LOGO = Image.open(str(PARENT_DIR / "full-streamlit.png"))
 
-st.logo(LOGO, link="https://www.example.com", icon_image=SMALL_LOGO)
+st.logo(LOGO, icon_image=SMALL_LOGO)
 
 st.header("Main Page")
 x = st.slider("x")
@@ -129,6 +129,9 @@ pg = st.navigation(
 if st.button("page 5"):
     st.switch_page("page_5.py")
 
+if st.button("Navigate with query params"):
+    st.switch_page("page_5.py", query_params={"team": "streamlit"})
+
 if st.button("page 9"):
     st.switch_page(page9)
 
@@ -141,6 +144,14 @@ st.page_link("page_5.py", label="page 5 page link")
 
 st.page_link(page9, label="page 9 page link")
 
+st.page_link(
+    page9,
+    label="page 9 with query params",
+    query_params={"foo": "bar", "baz": ["1", "2"]},
+)
+
 st.write("Context URL:", st.context.url)
 
 st.write("End of Script")
+
+st.write("Query Params:", str(st.query_params))

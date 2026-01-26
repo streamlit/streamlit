@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,8 +14,9 @@
  * limitations under the License.
  */
 
-import { AppNode, BlockNode, ElementNode } from "~lib/AppNode"
-import { AppNodeVisitor } from "~lib/render-tree/visitors/AppNodeVisitor.interface"
+import { AppNode, BlockNode, ElementNode, TransientNode } from "~lib/AppNode"
+
+import { AppNodeVisitor } from "./AppNodeVisitor.interface"
 
 /**
  * Visitor that clears stale nodes from the render tree. It does this by:
@@ -36,12 +37,12 @@ import { AppNodeVisitor } from "~lib/render-tree/visitors/AppNodeVisitor.interfa
  * // newNode will be undefined if the node should be filtered out
  * ```
  */
-export class ClearStaleNodeVisitor
-  implements AppNodeVisitor<AppNode | undefined>
-{
+export class ClearStaleNodeVisitor implements AppNodeVisitor<
+  AppNode | undefined
+> {
   private readonly currentScriptRunId: string
   private readonly fragmentIdsThisRun: string[]
-  private fragmentIdOfBlock?: string
+  private readonly fragmentIdOfBlock?: string
 
   constructor(
     currentScriptRunId: string,
@@ -137,5 +138,31 @@ export class ClearStaleNodeVisitor
       }
     }
     return node.scriptRunId === this.currentScriptRunId ? node : undefined
+  }
+
+  visitTransientNode(node: TransientNode): AppNode | undefined {
+    // Check whether the anchor element and transient elements are stale
+    const anchorNode = node.anchor?.accept(this)
+    const transientNodes = node.updateTransientNodes(element => {
+      return element.accept(this) as ElementNode | undefined
+    })
+
+    // Everything is stale
+    if (!anchorNode && transientNodes.length === 0) {
+      return undefined
+    }
+
+    // All the transient elements are stale, but not the anchor element
+    // so we return the anchor element
+    if (transientNodes.length === 0) {
+      return anchorNode
+    }
+
+    return new TransientNode(
+      node.scriptRunId,
+      anchorNode,
+      transientNodes,
+      node.deltaMsgReceivedAt
+    )
   }
 }

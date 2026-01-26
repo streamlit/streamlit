@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { memo, ReactElement } from "react"
+import { memo, ReactElement } from "react"
 
 import { Text as TextProto } from "@streamlit/protobuf"
 
@@ -23,7 +23,7 @@ import {
   StyledLabelHelpWrapper,
 } from "~lib/components/shared/TooltipIcon"
 
-import { StyledText } from "./styled-components"
+import { StyledInlineHelpIcon, StyledText } from "./styled-components"
 
 export interface TextProps {
   element: TextProto
@@ -35,8 +35,14 @@ export interface TextProps {
 function TextElement({ element }: Readonly<TextProps>): ReactElement {
   return (
     <StyledLabelHelpWrapper className="stText" data-testid="stText">
-      <StyledText>{element.body}</StyledText>
-      {element.help && <InlineTooltipIcon content={element.help} />}
+      <StyledText>
+        {element.body}
+        {element.help && (
+          <StyledInlineHelpIcon>
+            <InlineTooltipIcon content={element.help} />
+          </StyledInlineHelpIcon>
+        )}
+      </StyledText>
     </StyledLabelHelpWrapper>
   )
 }

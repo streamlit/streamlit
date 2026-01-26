@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -274,6 +274,6 @@ export const StyledCopyButton = styled.button(({ theme }) => ({
 
   // Accessible focus ring when keyboard focusing the button
   "&:focus-visible": {
-    boxShadow: `0 0 0 0.2rem ${theme.colors.darkenedBgMix25}`,
+    boxShadow: theme.shadows.focusRingSubtle,
   },
 }))

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { memo } from "react"
+import { memo } from "react"
 
 import { AcceptFileValue } from "~lib/util/utils"
 
@@ -33,23 +33,21 @@ export interface Props {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   getInputProps: any
   acceptFile: AcceptFileValue
-  inputHeight: string
 }
 
 const ChatFileUploadDropzone = ({
   getRootProps,
   getInputProps,
   acceptFile,
-  inputHeight,
 }: Props): React.ReactElement => {
   const inputProps = configureFileInputProps(getInputProps(), acceptFile)
 
   return (
     <>
-      <StyledChatFileUploadDropzone height={inputHeight} {...getRootProps()}>
+      <StyledChatFileUploadDropzone {...getRootProps()}>
         <input {...inputProps} />
       </StyledChatFileUploadDropzone>
-      <StyledChatFileUploadDropzoneLabel height={inputHeight}>
+      <StyledChatFileUploadDropzoneLabel>
         {`Drag and drop ${getUploadDescription(acceptFile)} here`}
       </StyledChatFileUploadDropzoneLabel>
     </>

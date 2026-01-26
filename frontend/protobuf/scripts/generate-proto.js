@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,7 +28,7 @@ console.log(`Proto files: ${protoGlob}`)
 const outputJsFile = "proto.js"
 const outputDtsFile = "proto.d.ts"
 
-// Commands to run
+// Commands to run with optimization flags
 const pbjsCommand = [
   "yarn",
   "run",
@@ -41,6 +41,8 @@ const pbjsCommand = [
   "static-module",
   "--wrap",
   "es6",
+  "--no-verify", // Remove verification methods (not used)
+  "--no-delimited", // Remove delimited encoding (not used)
 ]
 const pbtsCommand = ["yarn", "run", "--silent", "pbts", "proto.js"]
 const TEMPLATE = "/* eslint-disable */\n\n"
@@ -72,14 +74,14 @@ const runCommand = (commandAndArgs, outputFile) => {
 
 // Run the commands sequentially
 try {
-  console.log("Generating proto.js...")
+  console.log("Generating proto.js with optimizations...")
   runCommand(pbjsCommand, outputJsFile)
 
   console.log("Generating proto.d.ts...")
   runCommand(pbtsCommand, outputDtsFile)
 
-  console.log("Protobuf files generated successfully!")
+  console.log("✅ Protobuf files generated successfully!")
 } catch (err) {
-  console.error("Failed to generate protobuf files:", err)
+  console.error("❌ Failed to generate protobuf files:", err)
   process.exit(1)
 }

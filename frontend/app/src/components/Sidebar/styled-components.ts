@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -74,9 +74,9 @@ export const StyledSidebar = styled.section<StyledSidebarProps>(
       },
 
       [`@media (max-width: ${theme.breakpoints.md})`]: {
-        boxShadow: `-2rem 0 2rem 2rem ${
-          isCollapsed ? "transparent" : "#00000029"
-        }`,
+        boxShadow: isCollapsed
+          ? "-2rem 0 2rem 2rem transparent"
+          : theme.shadows.sidebar,
       },
 
       [`@media print`]: {
@@ -153,6 +153,17 @@ export const StyledSidebarHeaderContainer = styled.div(({ theme }) => ({
 }))
 
 export const StyledLogoLink = styled.a({
+  "&:hover": {
+    opacity: "0.7",
+  },
+})
+
+export const StyledLogoButton = styled.button({
+  // Reset button styles
+  background: "none",
+  border: "none",
+  padding: 0,
+  cursor: "pointer",
   "&:hover": {
     opacity: "0.7",
   },

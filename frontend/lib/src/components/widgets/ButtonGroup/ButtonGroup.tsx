@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, {
+import {
   forwardRef,
   memo,
   ReactElement,
@@ -34,15 +34,15 @@ import {
 import { shouldWidthStretch } from "~lib/components/core/Layout/utils"
 import BaseButton, {
   BaseButtonKind,
+  BaseButtonProps,
   BaseButtonSize,
   DynamicButtonLabel,
 } from "~lib/components/shared/BaseButton"
 import { StyledButtonGroup } from "~lib/components/shared/BaseButton/styled-components"
 import { Placement } from "~lib/components/shared/Tooltip"
-import TooltipIcon from "~lib/components/shared/TooltipIcon"
 import {
-  StyledWidgetLabelHelpInline,
   WidgetLabel,
+  WidgetLabelHelpIconInline,
 } from "~lib/components/widgets/BaseWidget"
 import {
   useBasicWidgetState,
@@ -76,7 +76,7 @@ function handleSelection(
   index: number,
   currentSelection?: number[]
 ): number[] {
-  if (mode == ButtonGroupProto.ClickMode.MULTI_SELECT) {
+  if (mode === ButtonGroupProto.ClickMode.MULTI_SELECT) {
     return handleMultiSelection(index, currentSelection ?? [])
   }
 
@@ -188,9 +188,8 @@ function getButtonGroupOverridesStyle(
   style: ButtonGroupProto.Style,
   spacing: EmotionTheme["spacing"],
   containerWidth: boolean
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-): Record<string, any> {
-  const baseStyle = {
+): React.CSSProperties {
+  const baseStyle: React.CSSProperties = {
     flexWrap: "wrap",
     // maxWidth must be conditional:
     // - "100%" for stretch width: allows buttons to fill container
@@ -202,12 +201,6 @@ function getButtonGroupOverridesStyle(
     margin: "0 0",
   }
   const width = containerWidth ? "100%" : "auto"
-  const segmentedControlNoStretch = containerWidth
-    ? {}
-    : {
-        content: "''",
-        flex: 10000,
-      }
 
   switch (style) {
     case ButtonGroupProto.Style.BORDERLESS:
@@ -228,10 +221,6 @@ function getButtonGroupOverridesStyle(
         ...baseStyle,
         columnGap: spacing.none,
         rowGap: spacing.twoXS,
-        // Adding an empty pseudo-element after the last button in the group.
-        // This will make buttons only as big as needed without stretching to the whole container width (aka let them 'hug' to the side)
-        // This is only needed if the button group has content width.
-        "::after": segmentedControlNoStretch,
         width,
       }
     default:
@@ -265,8 +254,8 @@ function createOptionChild(
   // we have to use forwardRef here because BasewebButtonGroup passes the ref down to its children
   // and we see a console.error otherwise
   return forwardRef(function BaseButtonGroup(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    props: any,
+    // Accept only the props compatible with BaseButton to improve type safety
+    props: Partial<BaseButtonProps>,
     _: Ref<BasewebButtonGroup>
   ): ReactElement {
     const { element, kind, size } = getContentElement(
@@ -307,11 +296,11 @@ function getInitialValue(
 function getDefaultStateFromProto(
   element: ButtonGroupProto
 ): ButtonGroupValue {
-  return element.default ?? null
+  return element.default ?? []
 }
 
 function getCurrStateFromProto(element: ButtonGroupProto): ButtonGroupValue {
-  return element.value ?? null
+  return element.value ?? []
 }
 
 function ButtonGroup(props: Readonly<Props>): ReactElement {
@@ -391,9 +380,11 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
         )}
       >
         {help && (
-          <StyledWidgetLabelHelpInline>
-            <TooltipIcon content={help} placement={Placement.TOP} />
-          </StyledWidgetLabelHelpInline>
+          <WidgetLabelHelpIconInline
+            content={help}
+            placement={Placement.TOP}
+            label={label}
+          />
         )}
       </WidgetLabel>
       <BasewebButtonGroup

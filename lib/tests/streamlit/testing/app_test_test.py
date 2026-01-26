@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -57,21 +57,21 @@ def test_get_query_params():
     def script():
         import streamlit as st
 
-        st.write(st.experimental_get_query_params())
+        st.write(st.query_params)
 
     at = AppTest.from_function(script).run()
     assert at.json[0].value == "{}"
     at.query_params["foo"] = 5
     at.query_params["bar"] = "baz"
     at.run()
-    assert at.json[0].value == '{"foo": ["5"], "bar": ["baz"]}'
+    assert at.json[0].value == '{"foo": "5", "bar": "baz"}'
 
 
 def test_set_query_params():
     def script():
         import streamlit as st
 
-        st.experimental_set_query_params(foo="bar")
+        st.query_params["foo"] = "bar"
 
     at = AppTest.from_function(script).run()
     # parse.parse_qs puts everything in lists

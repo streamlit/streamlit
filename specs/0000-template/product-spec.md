@@ -1,6 +1,7 @@
 ---
-Author(s): @github-name
-Status: Draft
+author: github-name
+created: YYYY-MM-DD
+status: Draft
 ---
 
 # Feature name
@@ -36,10 +37,11 @@ Some possible sub-sections:
 Check the boxes or add a comment with the reason it cannot be checked.
 -->
 
-- [ ] Works on all deployment platforms (e.g. [Streamlit Community Cloud](https://streamlit.io/cloud), [Streamlit in Snowflake](https://www.snowflake.com/en/product/features/streamlit-in-snowflake/), [Hugging Face Spaces](https://huggingface.co/spaces))?
-- [ ] No breaking API changes?
-- [ ] No new dependencies?
-- [ ] Metrics collected?
-- [ ] Any security or legal implications?
-- [ ] Anything to keep in mind for docs?
-- [ ] Any other risks?
+| Item                         | ✅ or comment          |
+|------------------------------|------------------------|
+| Works on SiS, Cloud, etc?    |                        |
+| No breaking API changes      |                        |
+| No new dependencies          |                        |
+| Metrics collected            |                        |
+| Any security/legal impact?   |                        |
+| Any docs changes needed?     |                        |

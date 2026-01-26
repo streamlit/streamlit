@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,17 +14,9 @@
  * limitations under the License.
  */
 
-import React, {
-  memo,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react"
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react"
 
-import isEqual from "lodash/isEqual"
-import zip from "lodash/zip"
+import { isEqual, zip } from "lodash-es"
 import { flushSync } from "react-dom"
 import { FileRejection } from "react-dropzone"
 
@@ -36,11 +28,9 @@ import {
   UploadedFileInfo as UploadedFileInfoProto,
 } from "@streamlit/protobuf"
 
-import { Placement } from "~lib/components/shared/Tooltip"
-import TooltipIcon from "~lib/components/shared/TooltipIcon"
 import {
-  StyledWidgetLabelHelp,
   WidgetLabel,
+  WidgetLabelHelpIcon,
 } from "~lib/components/widgets/BaseWidget"
 import { useFormClearHelper } from "~lib/components/widgets/Form"
 import { FileUploadClient } from "~lib/FileUploadClient"
@@ -608,12 +598,7 @@ const FileUploader = ({
         )}
       >
         {element.help && (
-          <StyledWidgetLabelHelp>
-            <TooltipIcon
-              content={element.help}
-              placement={Placement.TOP_RIGHT}
-            />
-          </StyledWidgetLabelHelp>
+          <WidgetLabelHelpIcon content={element.help} label={element.label} />
         )}
       </WidgetLabel>
       <FileDropzone

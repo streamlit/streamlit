@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -82,3 +82,41 @@ st.header("Header with content width", width="content")
 st.subheader("Subheader with 300px width", width=300, divider="blue")
 st.subheader("Subheader with stretch width", width="stretch")
 st.subheader("Subheader with content width", width="content")
+
+st.title(
+    "Centered Title",
+    text_alignment="center",
+    help="This is a help tooltip!",
+)
+st.title(
+    "Right Aligned Title",
+    text_alignment="right",
+    help="This is a help tooltip!",
+)
+
+st.header(
+    "Centered Header with longer text to demonstrate how text wraps and aligns when centered",
+    text_alignment="center",
+    divider="blue",
+    help="This is a help tooltip!",
+)
+st.header(
+    "Right Aligned Header with longer text to demonstrate how text wraps and "
+    "aligns when right-aligned and has a help tooltip",
+    text_alignment="right",
+    help="This is a help tooltip!",
+)
+
+st.subheader(
+    "Centered Subheader",
+    text_alignment="center",
+    help="This is a help tooltip!",
+    divider="blue",
+)
+st.subheader(
+    "Justified Subheader with longer text to demonstrate justification. This text "
+    "should wrap across multiple lines to show how justification distributes spacing "
+    "evenly across the line width.",
+    text_alignment="justify",
+    help="This is a help tooltip!",
+)

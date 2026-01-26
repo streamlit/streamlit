@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -62,7 +62,7 @@ def get_pydeck_chart(
                 ),
             ],
         ),
-        use_container_width=True,
+        width="stretch",
         key=key,
         on_select=on_select or "rerun",
         selection_mode=selection_mode,

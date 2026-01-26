@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -49,9 +49,6 @@ export const StyledWaveSurferDiv = styled.div<{ show: boolean }>(
     // as sibling divs. Stack them with relative positioning so they overlap.
     position: "relative",
     height: theme.sizes.largestElementHeight,
-    // Add vertical padding to prevent waveform from touching container edges.
-    paddingTop: theme.spacing.threeXS,
-    paddingBottom: theme.spacing.threeXS,
     // Each WaveSurfer child div should be absolutely positioned to stack
     "& > div": {
       position: "absolute",

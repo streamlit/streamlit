@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, {
+import {
   memo,
   ReactElement,
   useCallback,
@@ -37,10 +37,9 @@ import { getBorderColor } from "~lib/components/shared/Base/styled-components"
 import Icon from "~lib/components/shared/Icon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
 import Tooltip, { Placement } from "~lib/components/shared/Tooltip"
-import TooltipIcon from "~lib/components/shared/TooltipIcon"
 import {
-  StyledWidgetLabelHelp,
   WidgetLabel,
+  WidgetLabelHelpIcon,
 } from "~lib/components/widgets/BaseWidget"
 import {
   useBasicWidgetState,
@@ -254,12 +253,7 @@ function DateInput({
         )}
       >
         {element.help && (
-          <StyledWidgetLabelHelp>
-            <TooltipIcon
-              content={element.help}
-              placement={Placement.TOP_RIGHT}
-            />
-          </StyledWidgetLabelHelp>
+          <WidgetLabelHelpIcon content={element.help} label={element.label} />
         )}
       </WidgetLabel>
       <UIDatePicker

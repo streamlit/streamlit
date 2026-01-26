@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-import React from "react"
-
 import { screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
@@ -23,9 +21,9 @@ import * as LibModule from "@streamlit/lib"
 import {
   mockEndpoints,
   NavigationContextProps,
-  renderWithContexts,
   SidebarConfigContextProps,
 } from "@streamlit/lib"
+import { renderWithContexts } from "@streamlit/lib/testing"
 import { IAppPage, PageConfig } from "@streamlit/protobuf"
 
 import SidebarNav, { Props } from "./SidebarNav"

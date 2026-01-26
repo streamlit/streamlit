@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@
 import { useCallback, useState } from "react"
 
 import { CompactSelection, GridSelection } from "@glideapps/glide-data-grid"
-import isEqual from "lodash/isEqual"
+import { isEqual } from "lodash-es"
 
 import { Arrow as ArrowProto } from "@streamlit/protobuf"
 

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -113,7 +113,7 @@ def test_use_column_width_parameter(app: Page, assert_snapshot: ImageCompareFunc
 
     expect(app.get_by_test_id("stMainBlockContainer")).to_contain_text(
         "The use_column_width parameter has been deprecated and will be removed in a "
-        "future release. Please utilize the use_container_width parameter instead."
+        "future release. Please utilize the width parameter instead."
     )
 
 

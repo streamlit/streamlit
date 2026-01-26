@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import pytest
+from parameterized import parameterized
 
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
@@ -118,19 +119,19 @@ class StHeaderTest(DeltaGeneratorTestCase):
         test_cases = [
             (
                 "invalid",
-                "Invalid width value: 'invalid'. Width must be either an integer (pixels), 'stretch', or 'content'.",
+                "Width must be either a positive integer (pixels), 'stretch', or 'content'.",
             ),
             (
                 -100,
-                "Invalid width value: -100. Width must be either an integer (pixels), 'stretch', or 'content'.",
+                "Width must be either a positive integer (pixels), 'stretch', or 'content'.",
             ),
             (
                 0,
-                "Invalid width value: 0. Width must be either an integer (pixels), 'stretch', or 'content'.",
+                "Width must be either a positive integer (pixels), 'stretch', or 'content'.",
             ),
             (
                 100.5,
-                "Invalid width value: 100.5. Width must be either an integer (pixels), 'stretch', or 'content'.",
+                "Width must be either a positive integer (pixels), 'stretch', or 'content'.",
             ),
         ]
 
@@ -139,7 +140,7 @@ class StHeaderTest(DeltaGeneratorTestCase):
                 with pytest.raises(StreamlitAPIException) as exc:
                     st.header("some header", width=width_value)
 
-                assert str(exc.value) == expected_error_message
+                assert expected_error_message in str(exc.value)
 
     def test_st_header_default_width(self):
         """Test that st.header defaults to stretch width."""
@@ -253,19 +254,19 @@ class StSubheaderTest(DeltaGeneratorTestCase):
         test_cases = [
             (
                 "invalid",
-                "Invalid width value: 'invalid'. Width must be either an integer (pixels), 'stretch', or 'content'.",
+                "Width must be either a positive integer (pixels), 'stretch', or 'content'.",
             ),
             (
                 -100,
-                "Invalid width value: -100. Width must be either an integer (pixels), 'stretch', or 'content'.",
+                "Width must be either a positive integer (pixels), 'stretch', or 'content'.",
             ),
             (
                 0,
-                "Invalid width value: 0. Width must be either an integer (pixels), 'stretch', or 'content'.",
+                "Width must be either a positive integer (pixels), 'stretch', or 'content'.",
             ),
             (
                 100.5,
-                "Invalid width value: 100.5. Width must be either an integer (pixels), 'stretch', or 'content'.",
+                "Width must be either a positive integer (pixels), 'stretch', or 'content'.",
             ),
         ]
 
@@ -274,7 +275,7 @@ class StSubheaderTest(DeltaGeneratorTestCase):
                 with pytest.raises(StreamlitAPIException) as exc:
                     st.subheader("some subheader", width=width_value)
 
-                assert str(exc.value) == expected_error_message
+                assert expected_error_message in str(exc.value)
 
     def test_st_subheader_default_width(self):
         """Test that st.subheader defaults to stretch width."""
@@ -377,19 +378,19 @@ class StTitleTest(DeltaGeneratorTestCase):
         test_cases = [
             (
                 "invalid",
-                "Invalid width value: 'invalid'. Width must be either an integer (pixels), 'stretch', or 'content'.",
+                "Width must be either a positive integer (pixels), 'stretch', or 'content'.",
             ),
             (
                 -100,
-                "Invalid width value: -100. Width must be either an integer (pixels), 'stretch', or 'content'.",
+                "Width must be either a positive integer (pixels), 'stretch', or 'content'.",
             ),
             (
                 0,
-                "Invalid width value: 0. Width must be either an integer (pixels), 'stretch', or 'content'.",
+                "Width must be either a positive integer (pixels), 'stretch', or 'content'.",
             ),
             (
                 100.5,
-                "Invalid width value: 100.5. Width must be either an integer (pixels), 'stretch', or 'content'.",
+                "Width must be either a positive integer (pixels), 'stretch', or 'content'.",
             ),
         ]
 
@@ -398,7 +399,7 @@ class StTitleTest(DeltaGeneratorTestCase):
                 with pytest.raises(StreamlitAPIException) as exc:
                     st.title("some title", width=width_value)
 
-                assert str(exc.value) == expected_error_message
+                assert expected_error_message in str(exc.value)
 
     def test_st_title_default_width(self):
         """Test that st.title defaults to stretch width."""
@@ -412,3 +413,105 @@ class StTitleTest(DeltaGeneratorTestCase):
             == WidthConfigFields.USE_STRETCH.value
         )
         assert el.width_config.use_stretch is True
+
+
+class StTitleTextAlignmentTest(DeltaGeneratorTestCase):
+    """Test st.title text_alignment parameter."""
+
+    @parameterized.expand(
+        [
+            ("left", 1),
+            ("center", 2),
+            ("right", 3),
+            ("justify", 4),
+            (None, 1),  # Default case
+        ]
+    )
+    def test_st_title_text_alignment(
+        self, text_alignment: str | None, expected_alignment: int
+    ):
+        """Test st.title with various text_alignment values."""
+        if text_alignment is None:
+            st.title("Title text")
+        else:
+            st.title("Title text", text_alignment=text_alignment)
+
+        el = self.get_delta_from_queue().new_element
+        assert el.heading.body == "Title text"
+        assert el.heading.tag == "h1"
+        assert el.text_alignment_config.alignment == expected_alignment
+
+    def test_st_title_text_alignment_invalid(self):
+        """Test st.title with invalid text_alignment raises error."""
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.title("Title text", text_alignment="bottom")
+
+        assert 'Invalid text_alignment value: "bottom"' in str(exc.value)
+
+
+class StHeaderTextAlignmentTest(DeltaGeneratorTestCase):
+    """Test st.header text_alignment parameter."""
+
+    @parameterized.expand(
+        [
+            ("left", 1),
+            ("center", 2),
+            ("right", 3),
+            ("justify", 4),
+            (None, 1),  # Default case
+        ]
+    )
+    def test_st_header_text_alignment(
+        self, text_alignment: str | None, expected_alignment: int
+    ):
+        """Test st.header with various text_alignment values."""
+        if text_alignment is None:
+            st.header("Header text")
+        else:
+            st.header("Header text", text_alignment=text_alignment)
+
+        el = self.get_delta_from_queue().new_element
+        assert el.heading.body == "Header text"
+        assert el.heading.tag == "h2"
+        assert el.text_alignment_config.alignment == expected_alignment
+
+    def test_st_header_text_alignment_invalid(self):
+        """Test st.header with invalid text_alignment raises error."""
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.header("Header text", text_alignment="start")
+
+        assert 'Invalid text_alignment value: "start"' in str(exc.value)
+
+
+class StSubheaderTextAlignmentTest(DeltaGeneratorTestCase):
+    """Test st.subheader text_alignment parameter."""
+
+    @parameterized.expand(
+        [
+            ("left", 1),
+            ("center", 2),
+            ("right", 3),
+            ("justify", 4),
+            (None, 1),  # Default case
+        ]
+    )
+    def test_st_subheader_text_alignment(
+        self, text_alignment: str | None, expected_alignment: int
+    ):
+        """Test st.subheader with various text_alignment values."""
+        if text_alignment is None:
+            st.subheader("Subheader text")
+        else:
+            st.subheader("Subheader text", text_alignment=text_alignment)
+
+        el = self.get_delta_from_queue().new_element
+        assert el.heading.body == "Subheader text"
+        assert el.heading.tag == "h3"
+        assert el.text_alignment_config.alignment == expected_alignment
+
+    def test_st_subheader_text_alignment_invalid(self):
+        """Test st.subheader with invalid text_alignment raises error."""
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.subheader("Subheader text", text_alignment="middle")
+
+        assert 'Invalid text_alignment value: "middle"' in str(exc.value)

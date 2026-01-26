@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,6 +19,6 @@ import streamlit as st
 
 np.random.seed(0)
 
-df = pd.DataFrame(np.random.randn(50000, 20), columns=(f"col_{i}" for i in range(20)))
+df = pd.DataFrame(np.random.randn(50000, 20), columns=[f"col_{i}" for i in range(20)])
 
 st.dataframe(df)

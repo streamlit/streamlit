@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 
 from __future__ import annotations
 
-import pickle
+import pickle  # noqa: S403
 import threading
 from typing import (
     TYPE_CHECKING,
@@ -25,6 +25,7 @@ from typing import (
     Literal,
     TypeAlias,
     TypeVar,
+    cast,
     overload,
 )
 
@@ -40,6 +41,8 @@ from streamlit.runtime.caching.cache_utils import (
     Cache,
     CachedFunc,
     CachedFuncInfo,
+    CacheScope,
+    get_session_id_or_throw,
     make_cached_func_wrapper,
 )
 from streamlit.runtime.caching.cached_message_replay import (
@@ -61,11 +64,16 @@ from streamlit.runtime.caching.storage.dummy_cache_storage import (
     MemoryCacheStorageManager,
 )
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.runtime.stats import CacheStat, CacheStatsProvider, group_stats
+from streamlit.runtime.stats import (
+    CACHE_MEMORY_FAMILY,
+    CacheStat,
+    StatsProvider,
+    group_cache_stats,
+)
 from streamlit.time_util import time_to_seconds
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Sequence
     from datetime import timedelta
 
     from streamlit.runtime.caching.hashing import HashFuncsDict
@@ -98,12 +106,14 @@ class CachedDataFuncInfo(CachedFuncInfo[P, R]):
         show_spinner: bool | str,
         show_time: bool = False,
         hash_funcs: HashFuncsDict | None = None,
+        scope: CacheScope = "global",
     ) -> None:
         super().__init__(
             func,
             hash_funcs=hash_funcs,
             show_spinner=show_spinner,
             show_time=show_time,
+            scope=scope,
         )
         self.persist = persist
         self.max_entries = max_entries
@@ -131,6 +141,7 @@ class CachedDataFuncInfo(CachedFuncInfo[P, R]):
             max_entries=self.max_entries,
             ttl=self.ttl,
             display_name=self.display_name,
+            scope=self.scope,
         )
 
     def validate_params(self) -> None:
@@ -148,12 +159,17 @@ class CachedDataFuncInfo(CachedFuncInfo[P, R]):
         )
 
 
-class DataCaches(CacheStatsProvider):
+class DataCaches(StatsProvider):
     """Manages all DataCache instances."""
 
     def __init__(self) -> None:
         self._caches_lock = threading.Lock()
-        self._function_caches: dict[str, DataCache[Any]] = {}
+        # Map of session IDs to map of function keys to caches.
+        self._function_caches: dict[str | None, dict[str, DataCache[Any]]] = {}
+
+    @property
+    def stats_families(self) -> Sequence[str]:
+        return (CACHE_MEMORY_FAMILY,)
 
     def get_cache(
         self,
@@ -162,18 +178,37 @@ class DataCaches(CacheStatsProvider):
         max_entries: int | None,
         ttl: int | float | timedelta | str | None,
         display_name: str,
+        scope: CacheScope = "global",
     ) -> DataCache[Any]:
         """Return the mem cache for the given key.
 
         If it doesn't exist, create a new one with the given params.
+
+        Raises
+        ------
+        StreamlitAPIException
+            Raised when ``scope`` is ``"session"`` and there is no thread-local run
+            context.
         """
 
         ttl_seconds = time_to_seconds(ttl, coerce_none_to_inf=False)
 
+        # Fetch the session ID. Note that this will throw an exception if there is no
+        # session associated with the current thread.
+        session_id: str | None
+        if scope == "global":
+            session_id = None
+        else:
+            session_id = get_session_id_or_throw()
+
         # Get the existing cache, if it exists, and validate that its params
         # haven't changed.
         with self._caches_lock:
-            cache = self._function_caches.get(key)
+            session_caches = self._function_caches.get(session_id)
+            if session_caches is None:
+                session_caches = self._function_caches[session_id] = {}
+
+            cache = session_caches.get(key)
             if (
                 cache is not None
                 and cache.ttl_seconds == ttl_seconds
@@ -222,8 +257,21 @@ class DataCaches(CacheStatsProvider):
                 ttl_seconds=ttl_seconds,
                 display_name=display_name,
             )
-            self._function_caches[key] = cache
+            self._function_caches[session_id][key] = cache
             return cache
+
+    def clear_session(self, session_id: str) -> None:
+        """Clears all caches for the given session ID."""
+        # Hold the lock while removing the cache, but release it while clearing.
+        with self._caches_lock:
+            session_caches = self._function_caches.get(session_id)
+            if session_caches is not None:
+                del self._function_caches[session_id]
+
+        if session_caches is not None:
+            for cache in session_caches.values():
+                cache.clear()
+                cache.storage.close()
 
     def clear_all(self) -> None:
         """Clear all in-memory and on-disk caches."""
@@ -235,21 +283,35 @@ class DataCaches(CacheStatsProvider):
                 # available storages one by one
                 self.get_storage_manager().clear_all()
             except NotImplementedError:
-                for data_cache in self._function_caches.values():
-                    data_cache.clear()
-                    data_cache.storage.close()
+                for data_caches in self._function_caches.values():
+                    for data_cache in data_caches.values():
+                        data_cache.clear()
+                        data_cache.storage.close()
             self._function_caches = {}
 
-    def get_stats(self) -> list[CacheStat]:
+    def get_stats(
+        self, _family_names: Sequence[str] | None = None
+    ) -> dict[str, list[CacheStat]]:
         with self._caches_lock:
             # Shallow-clone our caches. We don't want to hold the global
             # lock during stats-gathering.
-            function_caches = self._function_caches.copy()
+            function_caches = [
+                cache
+                for caches in self._function_caches.values()
+                for cache in caches.values()
+            ]
 
         stats: list[CacheStat] = []
-        for cache in function_caches.values():
-            stats.extend(cache.get_stats())
-        return group_stats(stats)
+        for cache in function_caches:
+            cache_stats = cache.get_stats()
+            for family_stats in cache_stats.values():
+                stats.extend(family_stats)
+        if not stats:
+            return {}
+        # In general, get_stats methods need to be able to return only requested stat
+        # families, but this method only returns a single family, and we're guaranteed
+        # that it was one of those requested if we make it here.
+        return {CACHE_MEMORY_FAMILY: group_cache_stats(stats)}
 
     def validate_cache_params(
         self,
@@ -315,7 +377,12 @@ class DataCaches(CacheStatsProvider):
 _data_caches = DataCaches()
 
 
-def get_data_cache_stats_provider() -> CacheStatsProvider:
+def clear_session_cache(session_id: str) -> None:
+    """Clears all caches for the given session ID."""
+    _data_caches.clear_session(session_id)
+
+
+def get_data_cache_stats_provider() -> StatsProvider:
     """Return the StatsProvider for all @st.cache_data functions."""
     return _data_caches
 
@@ -358,6 +425,7 @@ class CacheDataAPI:
         show_time: bool = False,
         persist: CachePersistType | bool = None,
         hash_funcs: HashFuncsDict | None = None,
+        scope: CacheScope = "global",
     ) -> Callable[[Callable[P, R]], CachedFunc[P, R]]: ...
 
     def __call__(
@@ -370,6 +438,7 @@ class CacheDataAPI:
         show_time: bool = False,
         persist: CachePersistType | bool = None,
         hash_funcs: HashFuncsDict | None = None,
+        scope: CacheScope = "global",
     ) -> CachedFunc[P, R] | Callable[[Callable[P, R]], CachedFunc[P, R]]:
         return self._decorator(
             func,  # ty: ignore[invalid-argument-type]
@@ -379,6 +448,7 @@ class CacheDataAPI:
             show_spinner=show_spinner,
             show_time=show_time,
             hash_funcs=hash_funcs,
+            scope=scope,
         )
 
     def _decorator(
@@ -391,8 +461,14 @@ class CacheDataAPI:
         show_time: bool = False,
         persist: CachePersistType | bool,
         hash_funcs: HashFuncsDict | None = None,
+        scope: CacheScope = "global",
     ) -> CachedFunc[P, R] | Callable[[Callable[P, R]], CachedFunc[P, R]]:
         """Decorator to cache functions that return data (e.g. dataframe transforms, database queries, ML inference).
+
+        Cached objects can be global or session-scoped. Global cached data is
+        available across all users, sessions, and reruns. Session-scoped cached
+        data is only available in the current session and removed when the
+        session disconnects.
 
         Cached objects are stored in "pickled" form, which means that the return
         value of a cached function must be pickleable. Each caller of the cached
@@ -401,20 +477,17 @@ class CacheDataAPI:
         You can clear a function's cache with ``func.clear()`` or clear the entire
         cache with ``st.cache_data.clear()``.
 
-        A function's arguments must be hashable to cache it. If you have an
-        unhashable argument (like a database connection) or an argument you
-        want to exclude from caching, use an underscore prefix in the argument
-        name. In this case, Streamlit will return a cached value when all other
-        arguments match a previous function call. Alternatively, you can
-        declare custom hashing functions with ``hash_funcs``.
+        A function's arguments must be hashable to cache it. Streamlit makes a
+        best effort to hash a variety of objects, but the fallback hashing method
+        requires that the argument be pickleable, also. If you have an unhashable
+        argument (like a database connection) or an argument you want to exclude
+        from caching, use an underscore prefix in the argument name. In this case,
+        Streamlit will return a cached value when all other arguments match a
+        previous function call. Alternatively, you can declare custom hashing
+        functions with ``hash_funcs``.
 
-        Cached values are available to all users of your app. If you need to
-        save results that should only be accessible within a session, use
-        `Session State
-        <https://docs.streamlit.io/develop/concepts/architecture/session-state>`_
-        instead. Within each user session, an ``@st.cache_data``-decorated
-        function returns a *copy* of the cached return value (if the value is
-        already cached). To cache shared global resources (singletons), use
+        Objects cached by ``st.cache_data`` are returned as copies. To cache a
+        shared resource or something you want to mutate in place, use
         ``st.cache_resource`` instead. To learn more about caching, see
         `Caching overview
         <https://docs.streamlit.io/develop/concepts/architecture/caching>`_.
@@ -471,6 +544,17 @@ class CacheDataAPI:
             check to see if its type matches a key in this dict and, if so, will use
             the provided function to generate a hash for it. See below for an example
             of how this can be used.
+
+        scope : "global" or "session"
+            The scope for the data cache. If this is ``"global"`` (default),
+            the data is cached globally. If this is ``"session"``, the data is
+            removed from the cache when the session disconnects.
+
+            Because a session-scoped cache is cleared when a session disconnects,
+            an unstable network connection can cause the cache to populate
+            multiple times in a single session. If this is a problem, you might
+            consider adjusting the ``server.websocketPingInterval``
+            configuration option.
 
         Example
         -------
@@ -570,10 +654,15 @@ class CacheDataAPI:
         else:
             persist_string = persist
 
-        if persist_string not in (None, "disk"):
+        if persist_string not in {None, "disk"}:
             # We'll eventually have more persist options.
             raise StreamlitAPIException(
                 f"Unsupported persist option '{persist}'. Valid values are 'disk' or None."
+            )
+
+        if scope not in {"global", "session"}:
+            raise StreamlitAPIException(
+                f"Unsupported scope option '{scope}'. Valid values are 'global' or 'session'."
             )
 
         def wrapper(f: Callable[P, R]) -> CachedFunc[P, R]:
@@ -586,6 +675,7 @@ class CacheDataAPI:
                     max_entries=max_entries,
                     ttl=ttl,
                     hash_funcs=hash_funcs,
+                    scope=scope,
                 )
             )
 
@@ -601,6 +691,7 @@ class CacheDataAPI:
                 max_entries=max_entries,
                 ttl=ttl,
                 hash_funcs=hash_funcs,
+                scope=scope,
             )
         )
 
@@ -630,10 +721,15 @@ class DataCache(Cache[R]):
         self.max_entries = max_entries
         self.persist = persist
 
-    def get_stats(self) -> list[CacheStat]:
-        if isinstance(self.storage, CacheStatsProvider):
-            return self.storage.get_stats()
-        return []
+    def get_stats(
+        self, _family_names: Sequence[str] | None = None
+    ) -> dict[str, list[CacheStat]]:
+        # In general, get_stats methods need to be able to return only requested stat
+        # families, but this method only returns a single family, and we're guaranteed
+        # that it was one of those requested if we make it here.
+        if isinstance(self.storage, StatsProvider):
+            return cast("dict[str, list[CacheStat]]", self.storage.get_stats())
+        return {}
 
     def read_result(self, key: str) -> CachedResult[R]:
         """Read a value and messages from the cache. Raise `CacheKeyNotFoundError`

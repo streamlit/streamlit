@@ -1,5 +1,5 @@
 /**!
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ import "streamlit/proto/Block.proto";
 import "streamlit/proto/Element.proto";
 import "streamlit/proto/NamedDataSet.proto";
 import "streamlit/proto/ArrowNamedDataSet.proto";
+import "streamlit/proto/Transient.proto";
 
 // A change to an element.
 message Delta {
@@ -32,6 +33,9 @@ message Delta {
 
     // Append a new block to the frontend.
     Block add_block = 6;
+
+    // Append a new transient element (e.g. spinner) to the frontend.
+    Transient new_transient = 9;
 
     // Append data to a DataFrame in for current element. The element to add to
     // is identified by the ID field, above. The dataframe is identified either
