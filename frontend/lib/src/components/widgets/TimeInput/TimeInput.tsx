@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useCallback, useContext } from "react"
+import { forwardRef, memo, ReactElement, useCallback, useContext } from "react"
 
 import { ChevronDown } from "baseui/icon"
 import { StyledClearIcon } from "baseui/input/styled-components"
@@ -24,6 +24,7 @@ import { TimeInput as TimeInputProto } from "@streamlit/protobuf"
 
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import { getBorderColor } from "~lib/components/shared/Base/styled-components"
+import { ThemedStyledDropdownListItem } from "~lib/components/shared/Dropdown/styled-components"
 import {
   WidgetLabel,
   WidgetLabelHelpIcon,
@@ -39,10 +40,20 @@ import {
 } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import {
-  StyledClearIconContainer,
-  StyledTimeDropdownListItem,
-} from "./styled-components"
+import { StyledClearIconContainer } from "./styled-components"
+
+/**
+ * Wrapper component that adds an inner div to match VirtualDropdown's structure.
+ * This allows us to use the same ThemedStyledDropdownListItem for both TimeInput and Selectbox.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const TimeInputListItem = forwardRef<HTMLLIElement, any>(
+  ({ children, ...props }, ref) => (
+    <ThemedStyledDropdownListItem ref={ref} {...props}>
+      <div>{children}</div>
+    </ThemedStyledDropdownListItem>
+  )
+)
 
 export interface Props {
   disabled: boolean
@@ -127,8 +138,11 @@ function TimeInput({
 
           Dropdown: {
             style: () => ({
-              paddingTop: theme.spacing.none,
-              paddingBottom: theme.spacing.none,
+              // Padding to inset items from the edges (left padding matches VirtualDropdown)
+              paddingTop: theme.spacing.xs,
+              paddingBottom: theme.spacing.xs,
+              paddingLeft: theme.spacing.xs,
+              paddingRight: theme.spacing.none,
               // Somehow this adds an additional shadow, even though we already have
               // one on the popover, so we need to remove it here.
               boxShadow: "none",
@@ -137,7 +151,7 @@ function TimeInput({
           },
 
           DropdownListItem: {
-            component: StyledTimeDropdownListItem,
+            component: TimeInputListItem,
           },
 
           // Nudge the dropdown menu by 1px so the focus state doesn't get cut off
