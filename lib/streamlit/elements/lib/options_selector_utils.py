@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 from enum import Enum, EnumMeta
-from typing import TYPE_CHECKING, Any, Final, TypeVar, overload
+from typing import TYPE_CHECKING, Any, Final, TypeVar, cast, overload
 
 from streamlit import config, logger
 from streamlit.dataframe_util import OptionSequence, convert_anything_to_list
@@ -488,32 +488,40 @@ def validate_and_sync_select_slider_value_with_options(
             return (opt[indices[0]], opt[indices[1]])
         return opt[indices[0]]
 
-    if is_range_value:
+    # Detect if current_value is actually a range even if is_range_value=False
+    # This handles the case where session state sets a range without the widget
+    # being configured with a range default.
+    if isinstance(current_value, tuple) and len(current_value) == 2:
         # Handle range value (tuple of two values)
-        if not isinstance(current_value, tuple) or len(current_value) != 2:
-            # Invalid format, reset to default
-            new_value = get_default_value(default_indices)
-            if key is not None:
-                get_session_state().reset_state_value(str(key), new_value)
-            return new_value, True
-
-        start_valid = is_value_valid(current_value[0])
-        end_valid = is_value_valid(current_value[1])
+        # Type narrowing: current_value is now tuple[T, T]
+        range_value = cast("tuple[T, T]", current_value)
+        start_valid = is_value_valid(range_value[0])
+        end_valid = is_value_valid(range_value[1])
 
         if start_valid and end_valid:
-            return current_value, False
+            return range_value, False
 
-        # At least one value is invalid, reset to default
-        new_value = get_default_value(default_indices)
+        # At least one value is invalid, reset to default (as range)
+        new_value: tuple[T, T] = (
+            opt[default_indices[0]],
+            opt[default_indices[1] if len(default_indices) > 1 else len(opt) - 1],
+        )
         if key is not None:
             get_session_state().reset_state_value(str(key), new_value)
         return new_value, True
+    if is_range_value:
+        # Expected range but got non-tuple, reset to default
+        new_value_range = cast("tuple[T, T]", get_default_value(default_indices))
+        if key is not None:
+            get_session_state().reset_state_value(str(key), new_value_range)
+        return new_value_range, True
+
     # Handle single value
     if is_value_valid(current_value):
         return current_value, False
 
     # Value not in options - reset to default
-    new_value = get_default_value(default_indices)
+    new_value_single = get_default_value(default_indices)
     if key is not None:
-        get_session_state().reset_state_value(str(key), new_value)
-    return new_value, True
+        get_session_state().reset_state_value(str(key), new_value_single)
+    return new_value_single, True

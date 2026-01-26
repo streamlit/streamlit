@@ -107,13 +107,14 @@ class SelectSliderSerde(Generic[T]):
 
     def serialize(self, v: T | tuple[T, T]) -> list[str]:
         """Convert option value(s) to formatted string list."""
-        if self.is_range_value:
-            # Range value: tuple of two values
-            if isinstance(v, tuple) and len(v) == 2:
-                values = list(v)
-            else:
-                # Fallback to default if invalid
-                return [self.formatted_options[i] for i in self.default_value_indices]
+        # Detect if v is a range value (tuple of two items) based on actual data,
+        # not the is_range_value flag. This handles session state setting a range
+        # without the widget being configured with a range default.
+        if isinstance(v, tuple) and len(v) == 2:
+            values = list(v)
+        elif self.is_range_value:
+            # Expected range but got non-tuple, fallback to default
+            return [self.formatted_options[i] for i in self.default_value_indices]
         else:
             values = [v]
 
@@ -157,7 +158,11 @@ class SelectSliderSerde(Generic[T]):
             result_values.append(self.options[self.default_value_indices[idx]])
 
         return_value = cast("tuple[T, T]", tuple(result_values[:2]))
-        return return_value if self.is_range_value else return_value[0]
+        # Determine if this is a range based on the actual data length, not the flag.
+        # This handles the case where session state sets a range without using
+        # the `value` parameter.
+        actual_is_range = len(ui_value) >= 2
+        return return_value if actual_is_range else return_value[0]
 
 
 class SelectSliderMixin:
@@ -506,7 +511,7 @@ class SelectSliderMixin:
         # If the value is no longer valid (not in options), reset to default.
         # This handles the case where options change dynamically and the
         # previously selected value is no longer available.
-        current_value, value_needs_reset = (
+        validated_value, value_needs_reset = (
             validate_and_sync_select_slider_value_with_options(
                 widget_state.value,
                 opt,
@@ -516,6 +521,10 @@ class SelectSliderMixin:
                 format_func,
             )
         )
+        # validated_value is guaranteed to be T | tuple[T, T] (not the outer None)
+        # because deserialize() always returns a default value, never None.
+        # Note: T itself might be None if None is a valid option value.
+        current_value = cast("T | tuple[T, T]", validated_value)
 
         if value_needs_reset or widget_state.value_changed:
             serialized_value = serde.serialize(current_value)

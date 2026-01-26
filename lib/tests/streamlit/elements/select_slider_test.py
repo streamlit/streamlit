@@ -365,7 +365,12 @@ class SliderTest(DeltaGeneratorTestCase):
 
 
 def test_select_slider_enum_coercion():
-    """Test E2E Enum Coercion on a select_slider."""
+    """Test E2E Enum Coercion on a select_slider.
+
+    With string-based serialization, enum values are always looked up from the
+    current options list, so enum class identity is preserved regardless of the
+    enumCoercion setting.
+    """
 
     def script():
         from enum import Enum
@@ -391,17 +396,22 @@ def test_select_slider_enum_coercion():
         assert at.text[0].value == at.text[1].value, "Enum Class ID not the same"
         assert at.text[2].value == "True", "Not all enums found in class"
 
+    # With string-based serialization, enum coercion happens naturally
+    # because values are looked up from the options list, not reconstructed.
+    # Both settings should work correctly.
     with patch_config_options({"runner.enumCoercion": "nameOnly"}):
         test_enum()
-    with (
-        patch_config_options({"runner.enumCoercion": "off"}),
-        pytest.raises(AssertionError),
-    ):
-        test_enum()  # expect a failure with the config value off.
+    with patch_config_options({"runner.enumCoercion": "off"}):
+        test_enum()  # This also works now with string-based serialization
 
 
 def test_select_slider_enum_coercion_multivalue():
-    """Test E2E Enum Coercion on a selectbox."""
+    """Test E2E Enum Coercion on a select_slider with range values.
+
+    With string-based serialization, enum values are always looked up from the
+    current options list, so enum class identity is preserved regardless of the
+    enumCoercion setting.
+    """
 
     def script():
         from enum import Enum
@@ -427,13 +437,13 @@ def test_select_slider_enum_coercion_multivalue():
         assert at.text[0].value == at.text[1].value, "Enum Class ID not the same"
         assert at.text[2].value == "True", "Not all enums found in class"
 
+    # With string-based serialization, enum coercion happens naturally
+    # because values are looked up from the options list, not reconstructed.
+    # Both settings should work correctly.
     with patch_config_options({"runner.enumCoercion": "nameOnly"}):
         test_enum()
-    with (
-        patch_config_options({"runner.enumCoercion": "off"}),
-        pytest.raises(AssertionError),
-    ):
-        test_enum()  # expect a failure with the config value off.
+    with patch_config_options({"runner.enumCoercion": "off"}):
+        test_enum()  # This also works now with string-based serialization
 
 
 class SelectSliderWidthTest(DeltaGeneratorTestCase):
