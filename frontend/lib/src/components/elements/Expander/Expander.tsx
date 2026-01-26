@@ -111,8 +111,9 @@ const Expander: FC<PropsWithChildren<ExpanderProps>> = ({
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const contentRef = useRef<HTMLDivElement>(null)
 
-  // Track previous backend state to detect changes
+  // Track previous backend state and label to detect changes
   const prevBackendStateRef = useRef<boolean>(backendExpandedState || false)
+  const prevLabelRef = useRef<string>(label)
 
   const onAnimationFinish = useCallback((open: boolean): void => {
     if (!detailsRef.current) {
@@ -161,18 +162,22 @@ const Expander: FC<PropsWithChildren<ExpanderProps>> = ({
   useEffect(() => {
     // Only apply the expanded state if it was actually set in the proto.
     if (notNullOrUndefined(backendExpandedState)) {
-      // Detect if backend state changed
+      // Detect if backend state or label changed
       const stateChanged = backendExpandedState !== prevBackendStateRef.current
+      const labelChanged = label !== prevLabelRef.current
 
-      if (stateChanged) {
-        // Backend state changed! Update local state
+      // When label changes, we're dealing with a different expander instance.
+      // Reset the local state to match backend state even if the backend value
+      // happens to be the same as the previous expander's value.
+      if (labelChanged || stateChanged) {
+        // Update local state
         // eslint-disable-next-line react-hooks/set-state-in-effect -- Synchronizing with backend state
         setExpanded(backendExpandedState)
         // Clear loading state since backend has responded
         setIsWaitingForBackend(false)
 
-        // Start animation based on backend state change
-        if (detailsRef.current && summaryRef.current) {
+        // Only animate if the backend state actually changed (not just the label)
+        if (stateChanged && detailsRef.current && summaryRef.current) {
           const detailsEl = detailsRef.current
           const summaryEl = summaryRef.current
 
@@ -224,16 +229,22 @@ const Expander: FC<PropsWithChildren<ExpanderProps>> = ({
               summaryHeight + 2 * BORDER_SIZE
             )
           }
+        } else {
+          // Label changed but state didn't, just sync DOM without animation
+          if (detailsRef.current) {
+            detailsRef.current.open = backendExpandedState
+          }
         }
       } else {
-        // State didn't change from backend, just sync DOM
+        // Neither label nor state changed, just sync DOM
         if (detailsRef.current) {
           detailsRef.current.open = backendExpandedState
         }
       }
 
-      // Update previous state tracker
+      // Update previous state and label trackers
       prevBackendStateRef.current = backendExpandedState
+      prevLabelRef.current = label
     }
 
     // Having `label` in the dependency array here is necessary because
