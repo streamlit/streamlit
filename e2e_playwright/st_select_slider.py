@@ -194,17 +194,22 @@ else:
 
 
 # Dynamic options change test - tests that options can be changed dynamically
-# while preserving valid selections and resetting invalid ones
+# while preserving valid selections and resetting invalid ones.
+# "charlie" exists in both lists at different indices for testing preservation:
+# - Initial: index 2 (out of 5 options)
+# - Updated: index 0 (out of 3 options) -> slider thumb should move left
 if st.toggle("Enable alternative options for dynamic options test"):
     dynamic_options_val = st.select_slider(
         "Dynamic options slider",
-        options=["alpha", "beta", "gamma"],
+        # "charlie" is at index 0 here, default would be "charlie"
+        options=["charlie", "delta", "echo"],
         key="dynamic_options_select_slider",
     )
     st.write("Dynamic options selection:", dynamic_options_val)
 else:
     dynamic_options_val = st.select_slider(
         "Dynamic options slider",
+        # "charlie" is at index 2 here, default is "alpha" (index 0)
         options=["alpha", "bravo", "charlie", "delta", "echo"],
         key="dynamic_options_select_slider",
     )
@@ -212,19 +217,25 @@ else:
 
 
 # Range slider with dynamic options
+# "charlie" exists in both lists at different indices for testing preservation:
+# - Initial: index 2 (out of 5 options)
+# - Updated: index 0 (out of 3 options)
+# When "charlie" is selected in a range, the thumb position should update
 if st.toggle("Enable alternative range options"):
     range_dyn_val = st.select_slider(
         "Dynamic range slider",
-        options=["x", "y", "z"],
-        value=("x", "z"),
+        # "charlie" is at index 0, "echo" at index 2
+        options=["charlie", "delta", "echo"],
+        value=("charlie", "echo"),
         key="dynamic_range_select_slider",
     )
     st.write("Dynamic range selection:", range_dyn_val)
 else:
     range_dyn_val = st.select_slider(
         "Dynamic range slider",
-        options=["a", "b", "c", "d", "e"],
-        value=("a", "e"),
+        # "charlie" is at index 2, "echo" at index 4
+        options=["alpha", "bravo", "charlie", "delta", "echo"],
+        value=("alpha", "echo"),
         key="dynamic_range_select_slider",
     )
     st.write("Dynamic range selection:", range_dyn_val)

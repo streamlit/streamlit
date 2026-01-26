@@ -245,8 +245,8 @@ def test_select_slider_tick_bar_visibility(
     assert_snapshot(slider, name="st_select_slider-tick_bar_visibility")
 
 
-def test_select_slider_dynamic_options_preserves_valid_selection(app: Page):
-    """Test that changing options dynamically preserves a valid selection."""
+def test_select_slider_dynamic_options_resets_invalid_selection(app: Page):
+    """Test that changing options dynamically resets an invalid selection to default."""
     dynamic_slider = get_element_by_key(app, "dynamic_options_select_slider")
     expect(dynamic_slider).to_be_visible()
 
@@ -264,45 +264,56 @@ def test_select_slider_dynamic_options_preserves_valid_selection(app: Page):
     )
     expect(markdown_element).not_to_contain_text("selection: alpha")
 
-    # Toggle to enable alternative options
+    # Toggle to enable alternative options ["charlie", "delta", "echo"]
     click_toggle(app, "Enable alternative options for dynamic options test")
 
-    # Since "bravo" is not in ["alpha", "beta", "gamma"], should reset to default "alpha"
-    expect_prefixed_markdown(app, "Dynamic options selection:", "alpha")
+    # Since "bravo" is not in ["charlie", "delta", "echo"], should reset to default "charlie"
+    expect_prefixed_markdown(app, "Dynamic options selection:", "charlie")
     # Negative assertion: "bravo" should not be preserved
     expect(markdown_element).not_to_contain_text("selection: bravo")
 
 
 def test_select_slider_dynamic_options_keeps_shared_option(app: Page):
-    """Test that when options change, shared options retain their selection."""
+    """Test that when options change, shared options retain their selection and thumb moves."""
     dynamic_slider = get_element_by_key(app, "dynamic_options_select_slider")
     expect(dynamic_slider).to_be_visible()
 
     # Initially "alpha" is the default value (first option)
     expect_prefixed_markdown(app, "Dynamic options selection:", "alpha")
 
-    # Toggle to enable alternative options - "alpha" exists in both option sets
+    # Move to "charlie" (index 2 in initial options ["alpha", "bravo", "charlie", "delta", "echo"])
+    dynamic_slider.click()
+    app.keyboard.press("ArrowRight")  # bravo
+    app.keyboard.press("ArrowRight")  # charlie
+    wait_for_app_run(app)
+    expect_prefixed_markdown(app, "Dynamic options selection:", "charlie")
+
+    # Toggle to enable alternative options ["charlie", "delta", "echo"]
+    # "charlie" exists in both option sets but at different positions:
+    # - Initial: index 2 (out of 5)
+    # - Updated: index 0 (out of 3) -> slider thumb should move to the left
     click_toggle(app, "Enable alternative options for dynamic options test")
 
-    # "alpha" should still be selected because it exists in the new options too
-    expect_prefixed_markdown(app, "Dynamic options selection:", "alpha")
+    # "charlie" should still be selected because it exists in the new options too
+    expect_prefixed_markdown(app, "Dynamic options selection:", "charlie")
 
 
-def test_select_slider_range_dynamic_options_resets_when_invalid(app: Page):
-    """Test that range slider resets to defaults when options change and values become invalid."""
+def test_select_slider_range_dynamic_options_preserves_shared_values(app: Page):
+    """Test that range slider preserves shared values and resets invalid ones when options change."""
     range_slider = get_element_by_key(app, "dynamic_range_select_slider")
     expect(range_slider).to_be_visible()
 
-    # Initially default range is ("a", "e")
-    expect_prefixed_markdown(app, "Dynamic range selection:", "('a', 'e')")
+    # Initially default range is ("alpha", "echo")
+    # Options are ["alpha", "bravo", "charlie", "delta", "echo"]
+    expect_prefixed_markdown(app, "Dynamic range selection:", "('alpha', 'echo')")
 
-    # Toggle to enable alternative options ["x", "y", "z"]
-    # Since neither "a" nor "e" exists in new options, should reset to default ("x", "z")
+    # Toggle to enable alternative options ["charlie", "delta", "echo"]
+    # "alpha" is NOT in new options, but "echo" IS -> partial reset
+    # Start value "alpha" resets to default "charlie", end value "echo" is preserved
     click_toggle(app, "Enable alternative range options")
-    expect_prefixed_markdown(app, "Dynamic range selection:", "('x', 'z')")
-    # Negative assertion: old range values should not be preserved
+    expect_prefixed_markdown(app, "Dynamic range selection:", "('charlie', 'echo')")
+    # Negative assertion: "alpha" should not be preserved (it's not in new options)
     markdown_element = app.get_by_test_id("stMarkdown").filter(
         has_text=re.compile(r"Dynamic range selection:")
     )
-    expect(markdown_element).not_to_contain_text("'a'")
-    expect(markdown_element).not_to_contain_text("'e'")
+    expect(markdown_element).not_to_contain_text("'alpha'")

@@ -448,8 +448,6 @@ class SelectSliderMixin:
         element_id = compute_and_register_element_id(
             "select_slider",
             user_key=key,
-            # Treat the provided key as the main identity. This allows
-            # dynamic updates to options without resetting the widget state.
             key_as_main_identity=True,
             dg=self.dg,
             label=label,

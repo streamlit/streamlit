@@ -47,6 +47,10 @@ import {
   ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import {
+  arrayComparator,
+  useExecuteWhenChanged,
+} from "~lib/hooks/useExecuteWhenChanged"
 import { formatMoment, MomentKind } from "~lib/util/formatMoment"
 import { formatNumber } from "~lib/util/formatNumber"
 import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
@@ -192,6 +196,28 @@ function Slider({
   useEffect(() => {
     setUiValue(value)
   }, [value])
+
+  // For select_slider: when options change, recompute indices from WidgetStateManager.
+  // This handles the case where the selected string value exists in both old and new
+  // options but at different indices - the UI needs to update to show the correct position.
+  useExecuteWhenChanged(
+    () => {
+      if (!isSelectSlider(element)) return
+
+      // Get current string values from widget manager and convert to new indices
+      const stringValues = widgetMgr.getStringArrayValue(element)
+      if (stringValues === undefined) return
+
+      const newIndices = stringValuesToIndices(
+        stringValues,
+        element.options,
+        element.default
+      )
+      setUiValue(newIndices)
+    },
+    [element.options],
+    (prev, curr) => arrayComparator(prev[0], curr[0])
+  )
 
   const handleFinalChange = useCallback(
     ({ value: valueArg }: { value: number[] }): void => {
