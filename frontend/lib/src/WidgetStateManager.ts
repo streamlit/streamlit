@@ -490,11 +490,7 @@ export class WidgetStateManager {
   ): void {
     this.createWidgetState(widget, source).boolValue = value
     this.onWidgetValueChanged(widget.formId, source, fragmentId)
-
-    // Sync to URL if bound and from UI
-    if (source.fromUi) {
-      this.syncToUrlIfBound(widget.id, String(value))
-    }
+    this.maybeSyncValueToUrl(widget.id, source, value)
   }
 
   public getIntValue(widget: WidgetInfo): number | undefined {
@@ -514,25 +510,7 @@ export class WidgetStateManager {
   ): void {
     this.createWidgetState(widget, source).intValue = value
     this.onWidgetValueChanged(widget.formId, source, fragmentId)
-
-    // Sync to URL if bound and from UI
-    if (source.fromUi) {
-      const binding = this.boundWidgets.get(widget.id)
-      if (binding) {
-        if (value === null) {
-          // Clear URL param when widget is cleared
-          this.clearUrlParam(binding.paramKey)
-        } else {
-          // If binding has options, convert index to option string for human-readable URLs
-          const optionValue = binding.options?.[value]
-          if (optionValue !== undefined) {
-            this.syncToUrlIfBound(widget.id, optionValue)
-          } else {
-            this.syncToUrlIfBound(widget.id, String(value))
-          }
-        }
-      }
-    }
+    this.maybeSyncValueToUrl(widget.id, source, value)
   }
 
   public getDoubleValue(widget: WidgetInfo): number | undefined {
@@ -552,19 +530,7 @@ export class WidgetStateManager {
   ): void {
     this.createWidgetState(widget, source).doubleValue = value
     this.onWidgetValueChanged(widget.formId, source, fragmentId)
-
-    // Sync to URL if bound and from UI
-    if (source.fromUi) {
-      const binding = this.boundWidgets.get(widget.id)
-      if (binding) {
-        if (value === null) {
-          // Clear URL param when widget is cleared
-          this.clearUrlParam(binding.paramKey)
-        } else {
-          this.syncToUrlIfBound(widget.id, String(value))
-        }
-      }
-    }
+    this.maybeSyncValueToUrl(widget.id, source, value)
   }
 
   public getStringValue(widget: WidgetInfo): string | undefined {
@@ -584,19 +550,7 @@ export class WidgetStateManager {
   ): void {
     this.createWidgetState(widget, source).stringValue = value
     this.onWidgetValueChanged(widget.formId, source, fragmentId)
-
-    // Sync to URL if bound and from UI
-    if (source.fromUi) {
-      const binding = this.boundWidgets.get(widget.id)
-      if (binding) {
-        if (value === null) {
-          // Clear URL param when widget is cleared
-          this.clearUrlParam(binding.paramKey)
-        } else {
-          this.syncToUrlIfBound(widget.id, value)
-        }
-      }
-    }
+    this.maybeSyncValueToUrl(widget.id, source, value)
   }
 
   public setStringArrayValue(
@@ -609,17 +563,7 @@ export class WidgetStateManager {
       data: value,
     })
     this.onWidgetValueChanged(widget.formId, source, fragmentId)
-
-    // Sync to URL if bound and from UI
-    if (source.fromUi) {
-      const binding = this.boundWidgets.get(widget.id)
-      if (binding?.urlFormat === "comma") {
-        this.syncCommaArrayToUrlIfBound(widget.id, value)
-      } else {
-        // Default to repeated params for string arrays
-        this.syncRepeatedArrayToUrlIfBound(widget.id, value)
-      }
-    }
+    this.maybeSyncValueToUrl(widget.id, source, value)
   }
 
   public getStringArrayValue(widget: WidgetInfo): string[] | undefined {
@@ -660,28 +604,15 @@ export class WidgetStateManager {
     const validValue = value.filter(
       v => v !== undefined && v !== null && !Number.isNaN(v)
     )
+    // If all values are invalid, skip the update entirely.
+    if (validValue.length === 0) {
+      return
+    }
     this.createWidgetState(widget, source).doubleArrayValue = new DoubleArray({
       data: validValue,
     })
     this.onWidgetValueChanged(widget.formId, source, fragmentId)
-
-    // Sync to URL if bound and from UI
-    if (source.fromUi) {
-      const binding = this.boundWidgets.get(widget.id)
-      if (binding?.options && binding.options.length > 0) {
-        // For select_slider: convert indices to option strings, filtering invalid
-        const optionStrings = validValue
-          .map(idx => binding.options?.[idx])
-          .filter((s): s is string => s !== undefined)
-        this.syncRepeatedArrayToUrlIfBound(widget.id, optionStrings)
-      } else {
-        // Regular slider: use numeric values
-        this.syncRepeatedArrayToUrlIfBound(
-          widget.id,
-          validValue.map(v => String(v))
-        )
-      }
-    }
+    this.maybeSyncValueToUrl(widget.id, source, validValue)
   }
 
   public getIntArrayValue(widget: WidgetInfo): number[] | undefined {
@@ -708,23 +639,7 @@ export class WidgetStateManager {
       data: value,
     })
     this.onWidgetValueChanged(widget.formId, source, fragmentId)
-
-    // Sync to URL if bound and from UI
-    if (source.fromUi) {
-      const binding = this.boundWidgets.get(widget.id)
-      if (binding?.options) {
-        // Convert indices to option strings, filtering out invalid indices
-        const optionStrings = value
-          .map(idx => binding.options?.[idx])
-          .filter((s): s is string => s !== undefined)
-        this.syncRepeatedArrayToUrlIfBound(widget.id, optionStrings)
-      } else {
-        this.syncRepeatedArrayToUrlIfBound(
-          widget.id,
-          value.map(v => String(v))
-        )
-      }
-    }
+    this.maybeSyncValueToUrl(widget.id, source, value)
   }
 
   public getJsonValue(widget: WidgetInfo): string | undefined {
@@ -1322,6 +1237,92 @@ export class WidgetStateManager {
     url.searchParams.delete(paramKey)
     window.history.replaceState({}, "", url.toString())
     this.notifyQueryParamsChange()
+  }
+
+  /**
+   * Sync widget value to URL if the widget is bound and value is from UI.
+   * This is the unified entry point for URL syncing, reducing duplication
+   * across the various set*Value methods.
+   *
+   * @param widgetId - The widget's unique identifier
+   * @param source - The source of the value change (must have fromUi: true to sync)
+   * @param config - Configuration for how to convert and sync the value
+   * @param value - The widget value to sync
+   */
+  /**
+   * Sync widget value to URL if bound and change is from UI.
+   * Converts the value to URL format based on the binding's valueType.
+   */
+  private maybeSyncValueToUrl(
+    widgetId: string,
+    source: Source,
+    value: unknown
+  ): void {
+    if (!source.fromUi) return
+
+    const binding = this.boundWidgets.get(widgetId)
+    if (!binding) return
+
+    // Handle null - clear the param
+    if (value === null) {
+      this.clearUrlParam(binding.paramKey)
+      return
+    }
+
+    // Convert and sync based on binding's valueType
+    switch (binding.valueType) {
+      case "bool_value":
+        this.syncToUrlIfBound(widgetId, String(value as boolean))
+        break
+
+      case "double_value":
+        this.syncToUrlIfBound(widgetId, String(value as number))
+        break
+
+      case "int_value": {
+        const num = value as number
+        const urlValue = binding.options?.[num] ?? String(num)
+        this.syncToUrlIfBound(widgetId, urlValue)
+        break
+      }
+
+      case "string_value":
+        this.syncToUrlIfBound(widgetId, value as string)
+        break
+
+      case "string_array_value": {
+        const arr = value as string[]
+        if (binding.urlFormat === "comma") {
+          this.syncCommaArrayToUrlIfBound(widgetId, arr)
+        } else {
+          this.syncRepeatedArrayToUrlIfBound(widgetId, arr)
+        }
+        break
+      }
+
+      case "int_array_value": {
+        const arr = value as number[]
+        const urlValues = binding.options
+          ? arr
+              .map(idx => binding.options?.[idx])
+              .filter((s): s is string => s !== undefined)
+          : arr.map(n => String(n))
+        this.syncRepeatedArrayToUrlIfBound(widgetId, urlValues)
+        break
+      }
+
+      case "double_array_value": {
+        const arr = value as number[]
+        const urlValues =
+          binding.options && binding.options.length > 0
+            ? arr
+                .map(idx => binding.options?.[idx])
+                .filter((s): s is string => s !== undefined)
+            : arr.map(n => String(n))
+        this.syncRepeatedArrayToUrlIfBound(widgetId, urlValues)
+        break
+      }
+    }
   }
 
   /**
