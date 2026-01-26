@@ -1054,7 +1054,9 @@ def _update_encoding_with_sort(
         else:
             sort_order = "ascending"
         sort_field = sort_from_user.removeprefix("-")
-        encoding["sort"] = alt.SortField(field=sort_field, order=sort_order)
+        encoding["sort"] = alt.EncodingSortField(
+            field=sort_field, op="min", order=sort_order
+        )
 
 
 def _get_color_encoding(
