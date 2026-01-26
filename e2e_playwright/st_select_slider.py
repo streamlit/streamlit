@@ -157,6 +157,11 @@ st.write("Runs:", st.session_state.runs)
 # Markdown text trick to fix firefox sub-pixel flakiness:
 st.write("Dynamic select slider state:")
 
+# Dynamic select slider test - tests changing props AND dynamic options.
+# "green" exists in both option lists at different indices for testing preservation:
+# - Initial: index 3 (out of 5 options: red, orange, yellow, green, blue)
+# - Updated: index 0 (out of 3 options: green, blue, purple) -> slider thumb should move left
+# When user selects "green" and then toggles, it should stay selected but move position.
 if st.toggle("Update select slider props"):
     dyn_val = st.select_slider(
         "Updated dynamic select slider",
@@ -169,9 +174,8 @@ if st.toggle("Update select slider props"):
         ),
         args=("Updated select arg",),
         kwargs={"param": "updated kwarg param"},
-        # options are not yet supported for dynamic changes
-        # keeping it at the same value:
-        options=["red", "orange", "yellow", "green", "blue"],
+        # "green" is at index 0 here (shared with initial options)
+        options=["green", "blue", "purple"],
     )
     st.write("Updated select slider value:", dyn_val)
 else:
@@ -186,45 +190,19 @@ else:
         ),
         args=("Initial select arg",),
         kwargs={"param": "initial kwarg param"},
-        # options are not yet supported for dynamic changes
-        # keeping it at the same value:
+        # "green" is at index 3 here (shared with updated options)
         options=["red", "orange", "yellow", "green", "blue"],
     )
     st.write("Initial select slider value:", dyn_val)
 
 
-# Dynamic options change test - tests that options can be changed dynamically
-# while preserving valid selections and resetting invalid ones.
-# "charlie" exists in both lists at different indices for testing preservation:
-# - Initial: index 2 (out of 5 options)
-# - Updated: index 0 (out of 3 options) -> slider thumb should move left
-if st.toggle("Enable alternative options for dynamic options test"):
-    dynamic_options_val = st.select_slider(
-        "Dynamic options slider",
-        # "charlie" is at index 0 here, default would be "charlie"
-        options=["charlie", "delta", "echo"],
-        key="dynamic_options_select_slider",
-    )
-    st.write("Dynamic options selection:", dynamic_options_val)
-else:
-    dynamic_options_val = st.select_slider(
-        "Dynamic options slider",
-        # "charlie" is at index 2 here, default is "alpha" (index 0)
-        options=["alpha", "bravo", "charlie", "delta", "echo"],
-        key="dynamic_options_select_slider",
-    )
-    st.write("Dynamic options selection:", dynamic_options_val)
-
-
-# Range slider with dynamic options
-# "charlie" exists in both lists at different indices for testing preservation:
-# - Initial: index 2 (out of 5 options)
-# - Updated: index 0 (out of 3 options)
-# When "charlie" is selected in a range, the thumb position should update
+# Range slider with dynamic options - tests partial preservation
+# When one range value is invalid and one is valid after options change:
+# - "alpha" only exists in initial options (should reset)
+# - "echo" exists in both (should be preserved)
 if st.toggle("Enable alternative range options"):
     range_dyn_val = st.select_slider(
         "Dynamic range slider",
-        # "charlie" is at index 0, "echo" at index 2
         options=["charlie", "delta", "echo"],
         value=("charlie", "echo"),
         key="dynamic_range_select_slider",
@@ -233,7 +211,6 @@ if st.toggle("Enable alternative range options"):
 else:
     range_dyn_val = st.select_slider(
         "Dynamic range slider",
-        # "charlie" is at index 2, "echo" at index 4
         options=["alpha", "bravo", "charlie", "delta", "echo"],
         value=("alpha", "echo"),
         key="dynamic_range_select_slider",
