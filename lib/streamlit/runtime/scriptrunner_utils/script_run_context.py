@@ -24,7 +24,6 @@ from typing import (
     Final,
     TypeAlias,
 )
-from urllib import parse
 
 from streamlit.errors import (
     NoSessionContext,
@@ -142,6 +141,9 @@ class ScriptRunContext:
         cached_message_hashes: set[str] | None = None,
         context_info: ContextInfo | None = None,
     ) -> None:
+        # Check if this is a same-page rerun BEFORE updating page_script_hash
+        is_same_page = self.page_script_hash == page_script_hash
+
         self.cursors = {}
         self.widget_ids_this_run = set()
         self.widget_user_keys_this_run = set()
@@ -163,16 +165,17 @@ class ScriptRunContext:
 
         in_cached_function.set(False)
 
-        parsed_query_params = parse.parse_qs(query_string, keep_blank_values=True)
         with self.session_state.query_params() as qp:
-            qp.clear_with_no_forward_msg()
-            for key, val in parsed_query_params.items():
-                if len(val) == 0:
-                    qp.set_with_no_forward_msg(key, val="")
-                elif len(val) == 1:
-                    qp.set_with_no_forward_msg(key, val=val[-1])
-                else:
-                    qp.set_with_no_forward_msg(key, val)
+            # For same-page reruns (widget interactions), populate _query_params from URL
+            # and set initial params for widget seeding.
+            # For page transitions, both populate_from_query_string() AND
+            # set_initial_query_params_from_current() are called in script_runner.py
+            # BEFORE reset() to ensure filtering is applied to both _query_params
+            # AND _initial_query_params, preventing stale params from previous pages
+            # from seeding widgets on the new page.
+            if is_same_page:
+                qp.set_initial_query_params(query_string)
+                qp.populate_from_query_string(query_string)
 
     def on_script_start(self) -> None:
         self._has_script_started = True
