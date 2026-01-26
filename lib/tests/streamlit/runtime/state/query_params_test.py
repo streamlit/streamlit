@@ -21,6 +21,7 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.state.query_params import (
     QueryParams,
     _set_item_in_dict,
+    parse_url_param,
     process_query_params,
 )
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -483,3 +484,779 @@ class TestSetItemInDict:
         target: dict[str, list[str] | str] = {}
         with pytest.raises(StreamlitAPIException, match=match):
             _set_item_in_dict(target, key, value)  # type: ignore[arg-type]
+
+
+# =============================================================================
+# Query Parameter Widget Binding Unit Tests
+# =============================================================================
+
+
+class ParseUrlParamTest(DeltaGeneratorTestCase):
+    """Tests for the parse_url_param function."""
+
+    @parameterized.expand(
+        [
+            ("true_lowercase", "true", "bool_value", True),
+            ("true_uppercase", "TRUE", "bool_value", True),
+            ("true_mixed", "True", "bool_value", True),
+            ("false_lowercase", "false", "bool_value", False),
+            ("false_uppercase", "FALSE", "bool_value", False),
+            ("false_mixed", "False", "bool_value", False),
+        ]
+    )
+    def test_parse_bool_value(
+        self, _name: str, value: str, value_type: str, expected: bool
+    ) -> None:
+        """Test parsing boolean values from URL params."""
+        assert parse_url_param(value, value_type) == expected
+
+    def test_parse_bool_value_invalid_raises(self) -> None:
+        """Test that invalid boolean values raise ValueError."""
+        with pytest.raises(ValueError, match="Invalid boolean"):
+            parse_url_param("not_a_bool", "bool_value")
+
+    @parameterized.expand(
+        [
+            ("positive_int", "42", "int_value", 42),
+            ("negative_int", "-10", "int_value", -10),
+            ("zero", "0", "int_value", 0),
+        ]
+    )
+    def test_parse_int_value(
+        self, _name: str, value: str, value_type: str, expected: int
+    ) -> None:
+        """Test parsing integer values from URL params."""
+        assert parse_url_param(value, value_type) == expected
+
+    def test_parse_int_value_returns_string_on_failure(self) -> None:
+        """Test that non-numeric strings are returned as-is for int_value.
+
+        This allows deserializers to handle human-readable option values.
+        """
+        result = parse_url_param("option_a", "int_value")
+        assert result == "option_a"
+        assert isinstance(result, str)
+
+    @parameterized.expand(
+        [
+            ("positive_float", "3.14", "double_value", 3.14),
+            ("negative_float", "-2.5", "double_value", -2.5),
+            ("integer_as_float", "10", "double_value", 10.0),
+        ]
+    )
+    def test_parse_double_value(
+        self, _name: str, value: str, value_type: str, expected: float
+    ) -> None:
+        """Test parsing float values from URL params."""
+        assert parse_url_param(value, value_type) == expected
+
+    def test_parse_double_value_invalid_raises(self) -> None:
+        """Test that invalid float values raise ValueError."""
+        with pytest.raises(ValueError, match="could not convert string to float"):
+            parse_url_param("not_a_number", "double_value")
+
+    def test_parse_string_value(self) -> None:
+        """Test parsing string values from URL params."""
+        assert parse_url_param("hello world", "string_value") == "hello world"
+
+    @parameterized.expand(
+        [
+            ("single_value", "a", "string_array_value", ["a"]),
+            ("multiple_values", ["a", "b", "c"], "string_array_value", ["a", "b", "c"]),
+        ]
+    )
+    def test_parse_string_array_value(
+        self, _name: str, value: str | list[str], value_type: str, expected: list[str]
+    ) -> None:
+        """Test parsing string array values from URL params."""
+        assert parse_url_param(value, value_type) == expected
+
+    @parameterized.expand(
+        [
+            ("single_int", "1", "int_array_value", [1]),
+            ("multiple_ints", ["1", "2", "3"], "int_array_value", [1, 2, 3]),
+            (
+                "mixed_with_strings",
+                ["1", "option_a"],
+                "int_array_value",
+                [1, "option_a"],
+            ),
+        ]
+    )
+    def test_parse_int_array_value(
+        self,
+        _name: str,
+        value: str | list[str],
+        value_type: str,
+        expected: list[int | str],
+    ) -> None:
+        """Test parsing int array values from URL params."""
+        assert parse_url_param(value, value_type) == expected
+
+    @parameterized.expand(
+        [
+            ("single_float", "1.5", "double_array_value", [1.5]),
+            ("multiple_floats", ["1.5", "2.5"], "double_array_value", [1.5, 2.5]),
+            (
+                "mixed_with_strings",
+                ["1.5", "option_a"],
+                "double_array_value",
+                [1.5, "option_a"],
+            ),
+        ]
+    )
+    def test_parse_double_array_value(
+        self,
+        _name: str,
+        value: str | list[str],
+        value_type: str,
+        expected: list[float | str],
+    ) -> None:
+        """Test parsing float array values from URL params."""
+        assert parse_url_param(value, value_type) == expected
+
+    def test_parse_uses_last_value_for_scalar_types(self) -> None:
+        """Test that list values use the last element for scalar types."""
+        assert parse_url_param(["first", "last"], "string_value") == "last"
+        assert parse_url_param(["1", "99"], "int_value") == 99
+
+    def test_parse_unknown_type_returns_as_is(self) -> None:
+        """Test that unknown value types return the value as-is."""
+        assert parse_url_param("hello", "unknown_type") == "hello"
+
+
+class WidgetBindingTest(DeltaGeneratorTestCase):
+    """Tests for widget binding registration and management."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.query_params = QueryParams()
+
+    def test_bind_widget_registers_binding(self) -> None:
+        """Test that bind_widget creates a binding in both registries."""
+        self.query_params.bind_widget(
+            param_key="my_key",
+            widget_id="widget_123",
+            value_type="string_value",
+            script_hash="hash_abc",
+        )
+
+        # Check binding exists in both registries
+        assert self.query_params.is_bound("my_key")
+        assert "widget_123" in self.query_params._bindings_by_widget
+
+        # Check binding data is correct
+        binding = self.query_params.get_binding_for_param("my_key")
+        assert binding is not None
+        assert binding.widget_id == "widget_123"
+        assert binding.param_key == "my_key"
+        assert binding.value_type == "string_value"
+        assert binding.script_hash == "hash_abc"
+
+    def test_bind_widget_overwrites_param_binding_and_cleans_up_old(self) -> None:
+        """Test that binding a new widget to the same param overwrites and cleans up."""
+        self.query_params.bind_widget(
+            param_key="my_key",
+            widget_id="widget_old",
+            value_type="string_value",
+            script_hash="hash_old",
+        )
+        self.query_params.bind_widget(
+            param_key="my_key",
+            widget_id="widget_new",
+            value_type="int_value",
+            script_hash="hash_new",
+        )
+
+        # The param should now be bound to the new widget
+        binding = self.query_params.get_binding_for_param("my_key")
+        assert binding is not None
+        assert binding.widget_id == "widget_new"
+        assert binding.value_type == "int_value"
+        assert binding.script_hash == "hash_new"
+
+        # New widget should be in _bindings_by_widget
+        assert "widget_new" in self.query_params._bindings_by_widget
+
+        # Old widget should be removed from _bindings_by_widget (cleanup)
+        assert "widget_old" not in self.query_params._bindings_by_widget
+
+    def test_bind_widget_same_widget_same_param_no_cleanup(self) -> None:
+        """Test that re-binding same widget to same param doesn't cause issues."""
+        self.query_params.bind_widget(
+            param_key="my_key",
+            widget_id="widget_123",
+            value_type="string_value",
+            script_hash="hash_abc",
+        )
+        # Re-bind same widget (can happen on reruns)
+        self.query_params.bind_widget(
+            param_key="my_key",
+            widget_id="widget_123",
+            value_type="string_value",
+            script_hash="hash_abc",
+        )
+
+        # Widget should still be bound
+        assert self.query_params.is_bound("my_key")
+        assert "widget_123" in self.query_params._bindings_by_widget
+
+    def test_unbind_widget_removes_binding(self) -> None:
+        """Test that unbind_widget removes the binding from both registries."""
+        self.query_params.bind_widget(
+            param_key="my_key",
+            widget_id="widget_123",
+            value_type="string_value",
+            script_hash="hash_abc",
+        )
+
+        self.query_params.unbind_widget("widget_123")
+
+        assert not self.query_params.is_bound("my_key")
+        assert "widget_123" not in self.query_params._bindings_by_widget
+        assert self.query_params.get_binding_for_param("my_key") is None
+
+    def test_unbind_widget_noop_for_unknown_widget(self) -> None:
+        """Test that unbind_widget is a no-op for unknown widget IDs."""
+        # Should not raise
+        self.query_params.unbind_widget("nonexistent_widget")
+
+    def test_is_bound_returns_false_for_unbound_param(self) -> None:
+        """Test that is_bound returns False for parameters that aren't bound."""
+        assert not self.query_params.is_bound("unbound_key")
+
+    def test_get_binding_for_widget_returns_none_for_unknown(self) -> None:
+        """Test that get_binding_for_widget returns None for unknown widgets."""
+        assert self.query_params.get_binding_for_widget("unknown") is None
+
+
+class ProtectedParamsBindingTest(DeltaGeneratorTestCase):
+    """Tests for protected query parameter binding behavior."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.query_params = QueryParams()
+
+    @parameterized.expand(
+        [
+            ("embed", "embed"),
+            ("embed_options", "embed_options"),
+            ("embed_uppercase", "EMBED"),
+            ("embed_options_uppercase", "EMBED_OPTIONS"),
+        ]
+    )
+    def test_bind_widget_raises_for_protected_params(
+        self, _name: str, param_key: str
+    ) -> None:
+        """Test that binding to protected params raises StreamlitAPIException."""
+        with pytest.raises(StreamlitAPIException, match="Cannot bind to reserved"):
+            self.query_params.bind_widget(
+                param_key=param_key,
+                widget_id="widget_123",
+                value_type="string_value",
+                script_hash="hash_abc",
+            )
+
+
+class DirectManipulationProtectionTest(DeltaGeneratorTestCase):
+    """Tests for preventing direct manipulation of bound query parameters."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.query_params = QueryParams()
+        self.query_params._query_params = {"bound_key": "value", "unbound_key": "other"}
+        self.query_params.bind_widget(
+            param_key="bound_key",
+            widget_id="widget_123",
+            value_type="string_value",
+            script_hash="hash_abc",
+        )
+
+    def test_setitem_raises_for_bound_param(self) -> None:
+        """Test that __setitem__ raises for bound parameters."""
+        with pytest.raises(StreamlitAPIException, match="bound to a widget"):
+            self.query_params["bound_key"] = "new_value"
+
+    def test_setitem_allows_unbound_param(self) -> None:
+        """Test that __setitem__ allows setting unbound parameters."""
+        self.query_params["unbound_key"] = "new_value"
+        assert self.query_params["unbound_key"] == "new_value"
+
+    def test_delitem_raises_for_bound_param(self) -> None:
+        """Test that __delitem__ raises for bound parameters."""
+        with pytest.raises(StreamlitAPIException, match="bound to a widget"):
+            del self.query_params["bound_key"]
+
+    def test_delitem_allows_unbound_param(self) -> None:
+        """Test that __delitem__ allows deleting unbound parameters."""
+        del self.query_params["unbound_key"]
+        assert "unbound_key" not in self.query_params
+
+    def test_update_raises_if_any_key_is_bound(self) -> None:
+        """Test that update raises if any key in the update is bound."""
+        with pytest.raises(StreamlitAPIException, match="bound to a widget"):
+            self.query_params.update({"bound_key": "new_value", "new_key": "value"})
+
+    def test_update_allows_only_unbound_keys(self) -> None:
+        """Test that update allows updating only unbound keys."""
+        self.query_params.update({"unbound_key": "updated", "another_key": "value"})
+        assert self.query_params["unbound_key"] == "updated"
+        assert self.query_params["another_key"] == "value"
+
+    def test_clear_raises_if_any_bound_params_exist(self) -> None:
+        """Test that clear raises if any bound parameters exist."""
+        with pytest.raises(StreamlitAPIException, match="bound to widgets"):
+            self.query_params.clear()
+
+    def test_clear_works_when_no_bound_params(self) -> None:
+        """Test that clear works when there are no bound parameters."""
+        # Unbind the widget first
+        self.query_params.unbind_widget("widget_123")
+        self.query_params.clear()
+        assert len(self.query_params) == 0
+
+
+class InitialQueryParamsTest(DeltaGeneratorTestCase):
+    """Tests for initial query parameter storage and retrieval."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.query_params = QueryParams()
+
+    def test_set_initial_query_params_parses_and_stores(self) -> None:
+        """Test that set_initial_query_params correctly parses and stores params."""
+        self.query_params.set_initial_query_params("foo=bar&baz=1&baz=2")
+
+        assert self.query_params._initial_query_params == {
+            "foo": ["bar"],
+            "baz": ["1", "2"],
+        }
+
+    def test_set_initial_query_params_handles_empty_string(self) -> None:
+        """Test that set_initial_query_params handles empty query string."""
+        self.query_params.set_initial_query_params("")
+        assert self.query_params._initial_query_params == {}
+
+    def test_get_initial_value_returns_single_value(self) -> None:
+        """Test that get_initial_value returns single value as string."""
+        self.query_params.set_initial_query_params("foo=bar")
+        assert self.query_params.get_initial_value("foo") == "bar"
+
+    def test_get_initial_value_returns_list_for_multiple(self) -> None:
+        """Test that get_initial_value returns list for multiple values."""
+        self.query_params.set_initial_query_params("foo=a&foo=b&foo=c")
+        assert self.query_params.get_initial_value("foo") == ["a", "b", "c"]
+
+    def test_get_initial_value_returns_none_for_missing(self) -> None:
+        """Test that get_initial_value returns None for missing params."""
+        self.query_params.set_initial_query_params("foo=bar")
+        assert self.query_params.get_initial_value("nonexistent") is None
+
+    def test_set_initial_query_params_from_current_copies_filtered_state(self) -> None:
+        """Test that set_initial_query_params_from_current copies current _query_params."""
+        # Set up some initial params
+        self.query_params._query_params = {"foo": "bar", "baz": ["a", "b"]}
+
+        self.query_params.set_initial_query_params_from_current()
+
+        # Should copy current state to initial params (in list format)
+        assert self.query_params._initial_query_params == {
+            "foo": ["bar"],
+            "baz": ["a", "b"],
+        }
+        assert self.query_params.get_initial_value("foo") == "bar"
+        assert self.query_params.get_initial_value("baz") == ["a", "b"]
+
+    def test_set_initial_query_params_from_current_handles_empty(self) -> None:
+        """Test that set_initial_query_params_from_current handles empty state."""
+        self.query_params._query_params = {}
+
+        self.query_params.set_initial_query_params_from_current()
+
+        assert self.query_params._initial_query_params == {}
+        assert self.query_params.get_initial_value("anything") is None
+
+    def test_page_transition_filtering_prevents_stale_seeding(self) -> None:
+        """Test that MPA page transitions don't allow stale params to seed widgets.
+
+        This is the key regression test for the bug where filtered params from
+        a previous page could still seed widgets on the new page if they used
+        the same key.
+        """
+        # Simulate Page A having a bound widget with key "shared_key"
+        self.query_params.bind_widget(
+            param_key="shared_key",
+            widget_id="widget_a",
+            value_type="string_value",
+            script_hash="page_a",
+        )
+
+        # User is on Page A with URL ?shared_key=old_value&other=keep
+        # Now navigate to Page B (different page hash)
+        # This simulates what script_runner.py does:
+        valid_script_hashes = {"main", "page_b"}  # page_a is NOT in this set
+        self.query_params.populate_from_query_string(
+            "shared_key=old_value&other=keep", valid_script_hashes
+        )
+
+        # shared_key should be filtered out (bound to page_a, not in valid set)
+        assert "shared_key" not in self.query_params
+        assert "other" in self.query_params  # unbound params are kept
+
+        # Now set initial params from the FILTERED state (the fix)
+        self.query_params.set_initial_query_params_from_current()
+
+        # Widget seeding on Page B should NOT see the stale value
+        assert self.query_params.get_initial_value("shared_key") is None
+        # But unbound params should still be available for seeding
+        assert self.query_params.get_initial_value("other") == "keep"
+
+    def test_initial_page_load_preserves_all_url_params(self) -> None:
+        """Test that on initial page load (no bindings), all URL params are preserved.
+
+        This verifies the fix doesn't break initial page load where there are
+        no prior bindings and all URL params should be available for seeding.
+        """
+        # Simulate initial page load - no bindings exist yet
+        # script_runner.py calls populate_from_query_string with valid_script_hashes
+        # but since no bindings exist, nothing should be filtered
+        valid_script_hashes = {"main", "page_a"}
+        self.query_params.populate_from_query_string(
+            "foo=bar&baz=qux", valid_script_hashes
+        )
+
+        # All params should be preserved (no bindings to filter)
+        assert "foo" in self.query_params
+        assert "baz" in self.query_params
+
+        # Set initial params from current state
+        self.query_params.set_initial_query_params_from_current()
+
+        # All params available for widget seeding
+        assert self.query_params.get_initial_value("foo") == "bar"
+        assert self.query_params.get_initial_value("baz") == "qux"
+
+    def test_same_page_rerun_uses_fresh_url_params(self) -> None:
+        """Test that same-page reruns set initial params from fresh URL.
+
+        This verifies the fix doesn't break same-page reruns where we want
+        the current URL params to be available for widget seeding.
+        """
+        # Simulate first load - binding registered, initial params set
+        self.query_params.bind_widget(
+            param_key="my_input",
+            widget_id="widget_1",
+            value_type="string_value",
+            script_hash="page_a",
+        )
+        self.query_params.set_initial_query_params("my_input=original")
+        self.query_params.populate_from_query_string("my_input=original")
+
+        assert self.query_params.get_initial_value("my_input") == "original"
+
+        # Now simulate same-page rerun with updated URL (e.g., browser back)
+        # This is what reset() does when is_same_page=True
+        self.query_params.set_initial_query_params("my_input=updated")
+        self.query_params.populate_from_query_string("my_input=updated")
+
+        # Initial params should reflect the new URL
+        assert self.query_params.get_initial_value("my_input") == "updated"
+        assert self.query_params["my_input"] == "updated"
+
+
+class RemoveParamTest(DeltaGeneratorTestCase):
+    """Tests for remove_param method."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.query_params = QueryParams()
+        self.query_params._query_params = {"foo": "bar", "baz": "qux"}
+
+    def test_remove_param_removes_existing_param(self) -> None:
+        """Test that remove_param removes an existing parameter."""
+        result = self.query_params.remove_param("foo")
+        assert result is True
+        assert "foo" not in self.query_params._query_params
+        assert "baz" in self.query_params._query_params
+
+    def test_remove_param_returns_false_for_nonexistent(self) -> None:
+        """Test that remove_param returns False for nonexistent param."""
+        result = self.query_params.remove_param("nonexistent")
+        assert result is False
+        # Original params unchanged
+        assert self.query_params._query_params == {"foo": "bar", "baz": "qux"}
+
+    def test_remove_param_sends_forward_message(self) -> None:
+        """Test that remove_param sends a forward message to update URL."""
+        self.query_params.remove_param("foo")
+        message = self.get_message_from_queue(0)
+        assert "baz=qux" in message.page_info_changed.query_string
+        assert "foo" not in message.page_info_changed.query_string
+
+    def test_remove_param_no_message_for_nonexistent(self) -> None:
+        """Test that no forward message is sent when param doesn't exist."""
+        self.query_params.remove_param("nonexistent")
+        with pytest.raises(IndexError):
+            self.get_message_from_queue(0)
+
+
+class SetCorrectedValueTest(DeltaGeneratorTestCase):
+    """Tests for URL auto-correction via _set_corrected_value."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.query_params = QueryParams()
+
+    @parameterized.expand(
+        [
+            ("string", "corrected", "string_value", "corrected"),
+            ("int", 42, "int_value", "42"),
+            ("float_whole", 5.0, "double_value", "5.0"),
+            ("float_decimal", 3.14, "double_value", "3.14"),
+        ]
+    )
+    def test_set_corrected_value_scalar(
+        self, _name: str, value: str | int | float, value_type: str, expected: str
+    ) -> None:
+        """Test setting corrected scalar values."""
+        self.query_params._set_corrected_value("key", value, value_type)
+        assert self.query_params._query_params["key"] == expected
+
+    @parameterized.expand(
+        [
+            ("string_list", ["a", "b"], "string_array_value", ["a", "b"]),
+            ("int_list", [1, 2, 3], "int_array_value", ["1", "2", "3"]),
+            (
+                "double_list_formats_whole",
+                [1.0, 2.5, 3.0],
+                "double_array_value",
+                ["1", "2.5", "3"],
+            ),
+        ]
+    )
+    def test_set_corrected_value_list(
+        self, _name: str, value: list, value_type: str, expected: list[str]
+    ) -> None:
+        """Test setting corrected list values."""
+        self.query_params._set_corrected_value("key", value, value_type)
+        assert self.query_params._query_params["key"] == expected
+
+
+class PopulateFromQueryStringTest(DeltaGeneratorTestCase):
+    """Tests for populate_from_query_string method."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.query_params = QueryParams()
+
+    def test_populate_clears_and_repopulates(self) -> None:
+        """Test that populate_from_query_string clears existing params first."""
+        self.query_params._query_params = {"old_key": "old_value"}
+        self.query_params.populate_from_query_string("new_key=new_value")
+
+        assert "old_key" not in self.query_params._query_params
+        assert self.query_params["new_key"] == "new_value"
+
+    def test_populate_handles_single_values(self) -> None:
+        """Test populating single-value parameters."""
+        self.query_params.populate_from_query_string("foo=bar")
+        assert self.query_params._query_params["foo"] == "bar"
+
+    def test_populate_handles_multiple_values(self) -> None:
+        """Test populating multi-value parameters."""
+        self.query_params.populate_from_query_string("foo=a&foo=b&foo=c")
+        assert self.query_params._query_params["foo"] == ["a", "b", "c"]
+
+    def test_populate_handles_empty_values(self) -> None:
+        """Test populating empty-value parameters."""
+        self.query_params.populate_from_query_string("foo=")
+        assert self.query_params._query_params["foo"] == ""
+
+    def test_populate_without_filter_keeps_all_params(self) -> None:
+        """Test that without valid_script_hashes, all params are kept."""
+        # Bind a widget to a param
+        self.query_params.bind_widget(
+            param_key="bound_key",
+            widget_id="widget_123",
+            value_type="string_value",
+            script_hash="page_hash",
+        )
+
+        self.query_params.populate_from_query_string(
+            "bound_key=value&unbound_key=other"
+        )
+
+        assert self.query_params["bound_key"] == "value"
+        assert self.query_params["unbound_key"] == "other"
+
+    def test_populate_filters_params_from_other_pages(self) -> None:
+        """Test MPA page transition filtering."""
+        # Bind a widget with a specific page hash
+        self.query_params.bind_widget(
+            param_key="page_a_key",
+            widget_id="widget_page_a",
+            value_type="string_value",
+            script_hash="page_a_hash",
+        )
+
+        # Populate with valid_script_hashes that exclude page_a
+        self.query_params.populate_from_query_string(
+            "page_a_key=value&main_key=main_value",
+            valid_script_hashes={"main_hash", "page_b_hash"},
+        )
+
+        # page_a_key should be filtered out
+        assert "page_a_key" not in self.query_params._query_params
+        assert self.query_params["main_key"] == "main_value"
+
+        # Widget binding should also be removed
+        assert "widget_page_a" not in self.query_params._bindings_by_widget
+
+    def test_populate_keeps_params_from_valid_pages(self) -> None:
+        """Test that params from valid pages are kept."""
+        self.query_params.bind_widget(
+            param_key="main_key",
+            widget_id="widget_main",
+            value_type="string_value",
+            script_hash="main_hash",
+        )
+
+        self.query_params.populate_from_query_string(
+            "main_key=value",
+            valid_script_hashes={"main_hash", "page_hash"},
+        )
+
+        assert self.query_params["main_key"] == "value"
+        assert "widget_main" in self.query_params._bindings_by_widget
+
+
+class RemoveStaleBindingsTest(DeltaGeneratorTestCase):
+    """Tests for remove_stale_bindings method."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.query_params = QueryParams()
+
+    def test_removes_bindings_for_inactive_widgets(self) -> None:
+        """Test that bindings are removed for widgets not in active set."""
+        self.query_params._query_params = {"key1": "val1", "key2": "val2"}
+        self.query_params.bind_widget(
+            param_key="key1",
+            widget_id="widget_active",
+            value_type="string_value",
+            script_hash="hash",
+        )
+        self.query_params.bind_widget(
+            param_key="key2",
+            widget_id="widget_inactive",
+            value_type="string_value",
+            script_hash="hash",
+        )
+
+        # Only widget_active is active
+        self.query_params.remove_stale_bindings(active_widget_ids={"widget_active"})
+
+        # widget_inactive should be unbound and its param removed
+        assert not self.query_params.is_bound("key2")
+        assert "key2" not in self.query_params._query_params
+        assert "widget_inactive" not in self.query_params._bindings_by_widget
+
+        # widget_active should still be bound
+        assert self.query_params.is_bound("key1")
+        assert "key1" in self.query_params._query_params
+
+    def test_preserves_widgets_outside_running_fragment(self) -> None:
+        """Test that widgets outside the running fragment are preserved."""
+        from dataclasses import dataclass
+
+        @dataclass
+        class MockMetadata:
+            fragment_id: str | None
+
+        widget_metadata = {
+            "widget_main": MockMetadata(None),  # Main script widget
+            "widget_frag_a": MockMetadata("fragment_a"),
+            "widget_frag_b": MockMetadata("fragment_b"),
+        }
+
+        self.query_params._query_params = {
+            "main_key": "main_val",
+            "frag_a_key": "frag_a_val",
+            "frag_b_key": "frag_b_val",
+        }
+        self.query_params.bind_widget(
+            param_key="main_key",
+            widget_id="widget_main",
+            value_type="string_value",
+            script_hash="hash",
+        )
+        self.query_params.bind_widget(
+            param_key="frag_a_key",
+            widget_id="widget_frag_a",
+            value_type="string_value",
+            script_hash="hash",
+        )
+        self.query_params.bind_widget(
+            param_key="frag_b_key",
+            widget_id="widget_frag_b",
+            value_type="string_value",
+            script_hash="hash",
+        )
+
+        # Running only fragment_a - only widget_frag_a is active in this run
+        self.query_params.remove_stale_bindings(
+            active_widget_ids={"widget_frag_a"},
+            fragment_ids_this_run=["fragment_a"],
+            widget_metadata=widget_metadata,
+        )
+
+        # widget_main and widget_frag_b should be preserved (different fragment)
+        assert self.query_params.is_bound("main_key")
+        assert self.query_params.is_bound("frag_b_key")
+
+        # widget_frag_a is active, so it should also be preserved
+        assert self.query_params.is_bound("frag_a_key")
+
+    def test_removes_inactive_widgets_in_running_fragment(self) -> None:
+        """Test that inactive widgets IN the running fragment are removed."""
+        from dataclasses import dataclass
+
+        @dataclass
+        class MockMetadata:
+            fragment_id: str | None
+
+        widget_metadata = {
+            "widget_frag_active": MockMetadata("fragment_a"),
+            "widget_frag_conditional": MockMetadata("fragment_a"),  # Hidden
+        }
+
+        self.query_params._query_params = {
+            "active_key": "active_val",
+            "conditional_key": "conditional_val",
+        }
+        self.query_params.bind_widget(
+            param_key="active_key",
+            widget_id="widget_frag_active",
+            value_type="string_value",
+            script_hash="hash",
+        )
+        self.query_params.bind_widget(
+            param_key="conditional_key",
+            widget_id="widget_frag_conditional",
+            value_type="string_value",
+            script_hash="hash",
+        )
+
+        # Only widget_frag_active is active (conditional widget is hidden)
+        self.query_params.remove_stale_bindings(
+            active_widget_ids={"widget_frag_active"},
+            fragment_ids_this_run=["fragment_a"],
+            widget_metadata=widget_metadata,
+        )
+
+        # Conditional widget should be removed
+        assert not self.query_params.is_bound("conditional_key")
+        assert "conditional_key" not in self.query_params._query_params
+
+        # Active widget should be preserved
+        assert self.query_params.is_bound("active_key")
