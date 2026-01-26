@@ -42,72 +42,65 @@ jobs:
             const pollIntervalMs = 60 * 1000; // 1 minute
             const startTime = Date.now();
 
-            // List of Playwright workflow files to check
-            const playwrightWorkflows = ['playwright.yml', 'playwright-changed-files.yml'];
+            // We primarily care about playwright.yml (full E2E tests)
+            // playwright-changed-files.yml only runs a subset and may pass even when full tests fail
+            const primaryWorkflow = 'playwright.yml';
 
             while (Date.now() - startTime < maxWaitMs) {
-              let foundCompletedRun = null;
-              let foundRunningWorkflow = false;
+              try {
+                const { data: runs } = await github.rest.actions.listWorkflowRuns({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  workflow_id: primaryWorkflow,
+                  head_sha: headSha,
+                  per_page: 1
+                });
 
-              for (const workflowFile of playwrightWorkflows) {
-                try {
-                  const { data: runs } = await github.rest.actions.listWorkflowRuns({
-                    owner: context.repo.owner,
-                    repo: context.repo.repo,
-                    workflow_id: workflowFile,
-                    head_sha: headSha,
-                    per_page: 1
-                  });
+                if (runs.workflow_runs.length > 0) {
+                  const run = runs.workflow_runs[0];
+                  console.log(`${primaryWorkflow}: status=${run.status}, conclusion=${run.conclusion}`);
 
-                  if (runs.workflow_runs.length > 0) {
-                    const run = runs.workflow_runs[0];
-                    console.log(`${workflowFile}: status=${run.status}, conclusion=${run.conclusion}`);
-
-                    if (run.status === 'completed') {
-                      if (run.conclusion === 'failure') {
-                        // Found a failed Playwright run - this is what we want
-                        foundCompletedRun = { workflow: workflowFile, run };
-                        break;
-                      } else if (run.conclusion === 'success') {
-                        // Playwright passed - no snapshots to update
-                        core.notice('Playwright tests passed - no snapshot updates needed');
-                        core.setOutput('status', 'passed');
-                        core.setOutput('run_id', '');
-                        return;
-                      }
-                      // Other conclusions (cancelled, skipped) - continue checking other workflows
+                  if (run.status === 'completed') {
+                    if (run.conclusion === 'failure') {
+                      // Found a failed Playwright run - this is what we want
+                      console.log(`Found failed Playwright run: ${primaryWorkflow}, run_id=${run.id}`);
+                      core.setOutput('status', 'failed');
+                      core.setOutput('run_id', run.id.toString());
+                      core.setOutput('workflow', primaryWorkflow);
+                      return;
+                    } else if (run.conclusion === 'success') {
+                      // Playwright passed - no snapshots to update
+                      core.notice('Playwright tests passed - no snapshot updates needed');
+                      core.setOutput('status', 'passed');
+                      core.setOutput('run_id', '');
+                      return;
                     } else {
-                      // Still running
-                      foundRunningWorkflow = true;
+                      // Other conclusions (cancelled, skipped)
+                      core.notice(`Playwright workflow completed with conclusion: ${run.conclusion}`);
+                      core.setOutput('status', run.conclusion);
+                      core.setOutput('run_id', '');
+                      return;
                     }
                   }
-                } catch (error) {
-                  console.log(`Could not fetch runs for ${workflowFile}: ${error.message}`);
+                  // Still running - continue polling
+                  console.log('Playwright tests still running, waiting...');
+                } else {
+                  // No workflow run found yet
+                  const elapsed = Math.round((Date.now() - startTime) / 1000);
+                  if (elapsed > 120) {
+                    // After 2 minutes, if no workflow found, give up
+                    core.notice('No Playwright workflow runs found for this commit');
+                    core.setOutput('status', 'not_found');
+                    core.setOutput('run_id', '');
+                    return;
+                  }
+                  console.log('Playwright workflow not started yet, waiting...');
                 }
-              }
-
-              if (foundCompletedRun) {
-                console.log(`Found failed Playwright run: ${foundCompletedRun.workflow}, run_id=${foundCompletedRun.run.id}`);
-                core.setOutput('status', 'failed');
-                core.setOutput('run_id', foundCompletedRun.run.id.toString());
-                core.setOutput('workflow', foundCompletedRun.workflow);
-                return;
-              }
-
-              if (!foundRunningWorkflow) {
-                // No Playwright workflows found or all were skipped/cancelled
-                const elapsed = Math.round((Date.now() - startTime) / 1000);
-                if (elapsed > 120) {
-                  // After 2 minutes, if no workflow found, give up
-                  core.notice('No Playwright workflow runs found for this commit');
-                  core.setOutput('status', 'not_found');
-                  core.setOutput('run_id', '');
-                  return;
-                }
+              } catch (error) {
+                console.log(`Could not fetch runs for ${primaryWorkflow}: ${error.message}`);
               }
 
               // Wait before next poll
-              console.log('Playwright tests still running or not started, waiting...');
               await new Promise(resolve => setTimeout(resolve, pollIntervalMs));
             }
 
