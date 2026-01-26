@@ -759,18 +759,16 @@ describe("Multiselect widget", () => {
       await user.type(multiSelect, "strem")
 
       // Check if fuzzy matching works and shows multiple results
-      const selectAllOption = screen.queryByText(/Select \d+ matches/)
-      if (selectAllOption) {
-        await user.click(selectAllOption)
+      const selectAllOption = screen.getByText(/Select \d+ matches/)
+      await user.click(selectAllOption)
 
-        // Should select all fuzzy-matched options
-        expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-          props.element,
-          expect.arrayContaining(["streamlit", "stream"]),
-          { fromUi: true },
-          undefined
-        )
-      }
+      // Should select all fuzzy-matched options
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+        props.element,
+        expect.arrayContaining(["streamlit", "stream"]),
+        { fromUi: true },
+        undefined
+      )
     })
 
     it("respects maxSelections when using 'Select x matches'", async () => {

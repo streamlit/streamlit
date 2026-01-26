@@ -40,7 +40,7 @@ export const ThemedStyledDropdownListItem = styled(StyledDropdownListItem, {
     position: "absolute" as const,
     left: 0,
     right: theme.spacing.xs,
-    height: "1px",
+    height: theme.sizes.borderWidth,
     backgroundColor: theme.colors.fadedText10,
   }
 
