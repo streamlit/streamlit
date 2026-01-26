@@ -49,6 +49,8 @@ def register_widget(
     value_type: ValueFieldName,
     presenter: WidgetValuePresenter | None = None,
     bind: BindOption = None,
+    # TODO(query-params): Remove formatted_options once all selection widgets use
+    # string-based wire formats (string_value/string_array_value).
     formatted_options: list[str] | None = None,
 ) -> RegisterWidgetResult[T]:
     """Register a widget with Streamlit, and return its current value.
@@ -89,11 +91,10 @@ def register_widget(
         Currently only "query-params" is supported, which binds the widget
         value to a URL query parameter. Requires a user-provided key.
     formatted_options : list[str] or None
-        Optional list of formatted option strings for selection widgets
-        (radio, selectbox, multiselect, pills, segmented_control, select_slider).
-        Used for query param binding to support human-readable option strings
-        in URLs (e.g., ?color=Red instead of ?color=0) and to auto-correct
-        URLs when invalid options are filtered out.
+        **Temporary** - will be removed once all selection widgets use string-based
+        wire formats. Currently used for index-based widgets (pills, segmented_control,
+        select_slider) to convert indices back to human-readable option strings
+        in URLs when auto-correcting filtered values.
 
     Returns
     -------
@@ -129,8 +130,9 @@ def register_widget(
         user_key = user_key_from_element_id(element_id)
         if user_key is None:
             raise StreamlitAPIException(
-                "Widget must have a 'key' parameter when using bind='query-params'. "
-                "The key will be used as the query parameter name."
+                "When using bind='query-params', the widget must have a unique 'key' "
+                "parameter specified. This 'key' will be used as the name of the "
+                "query parameter."
             )
 
     # Create the widget's updated metadata, and register it with session_state.

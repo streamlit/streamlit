@@ -154,10 +154,10 @@ class WidgetMetadata(Generic[T]):
     # Optional binding for the widget's value to external state (e.g. query params)
     bind: BindOption = None
 
-    # Optional formatted options for selection widgets (radio, selectbox, multiselect,
-    # pills, segmented_control, select_slider). Used for query param binding to:
-    # 1. Support human-readable option strings in URLs (e.g., ?color=Red instead of ?color=0)
-    # 2. Auto-correct URLs when invalid options are filtered out
+    # TODO(query-params): Remove formatted_options once all selection widgets use
+    # string-based wire formats (string_value/string_array_value).
+    # Currently used for query param binding to convert indices back to human-readable
+    # option strings in URLs when auto-correcting filtered values.
     formatted_options: list[str] | None = None
 
     def __repr__(self) -> str:

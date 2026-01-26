@@ -649,7 +649,7 @@ class RegisterWidgetsTest(DeltaGeneratorTestCase):
         """Test that bind='query-params' raises if widget has no key."""
         # Element ID format for widgets without user key is "$$ID-<hash>-None"
         with pytest.raises(
-            errors.StreamlitAPIException, match="must have a 'key' parameter"
+            errors.StreamlitAPIException, match="must have a unique 'key' parameter"
         ):
             register_widget(
                 element_id="$$ID-some_hash-None",  # No user key (ends with -None)

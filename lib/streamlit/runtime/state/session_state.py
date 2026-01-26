@@ -54,7 +54,7 @@ from streamlit.runtime.stats import (
     group_cache_stats,
 )
 
-_LOGGER = get_logger(__name__)
+_LOGGER: Final = get_logger(__name__)
 
 if TYPE_CHECKING:
     from streamlit.runtime.session_manager import SessionManager
@@ -1063,8 +1063,10 @@ class SessionState:
         if serialized_value == parsed_value:
             return  # No correction needed
 
-        # For string option types (selection widgets), don't auto-correct valid
-        # strings to indices - only correct if values were actually filtered.
+        # TODO(query-params): Remove this formatted_options handling once all selection
+        # widgets use string-based wire formats (string_value/string_array_value).
+        # For index-based widgets, don't auto-correct valid strings to indices -
+        # only correct if values were actually filtered.
         string_option_types = ("int_value", "int_array_value", "double_array_value")
         use_formatted_options = False
 
