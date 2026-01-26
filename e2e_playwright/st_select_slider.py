@@ -236,27 +236,3 @@ markdown_select_slider_value = st.select_slider(
     key="markdown_options_select_slider",
 )
 st.write("Markdown option selection:", markdown_select_slider_value)
-
-# Regression test for format_func changes.
-# When format_func changes but the options and selected value stay the same,
-# the UI should display the correct value with the new format_func.
-# This tests the fix for UI/backend desync when format_func changes.
-SIZES = ["small", "medium", "large"]
-
-if st.toggle("Toggle format_func style"):
-    # format_func that displays options in uppercase
-    format_func_slider_val = st.select_slider(
-        "Label 16 - Dynamic format_func",
-        options=SIZES,
-        format_func=lambda x: x.upper(),
-        key="format_func_select_slider",
-    )
-else:
-    # format_func that displays options with title case
-    format_func_slider_val = st.select_slider(
-        "Label 16 - Dynamic format_func",
-        options=SIZES,
-        format_func=lambda x: x.title(),
-        key="format_func_select_slider",
-    )
-st.write("Format func selection:", format_func_slider_val)

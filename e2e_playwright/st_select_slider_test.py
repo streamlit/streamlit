@@ -30,7 +30,7 @@ from e2e_playwright.shared.app_utils import (
     reset_hovering,
 )
 
-NUM_SELECT_SLIDERS = 18
+NUM_SELECT_SLIDERS = 17
 
 
 def test_select_slider_rendering(
@@ -279,37 +279,3 @@ def test_select_slider_range_dynamic_options_resets_on_invalid(app: Page):
         has_text=re.compile(r"Dynamic range selection:")
     )
     expect(markdown_element).not_to_contain_text("'alpha'")
-
-
-def test_format_func_change_preserves_value(app: Page):
-    """Regression test: format_func changes should not cause UI/backend desync.
-
-    When format_func changes but the options and selected value stay the same,
-    the UI should correctly display the value with the new format_func formatting.
-    This tests that raw_value is sent to the frontend when format_func changes.
-    """
-    format_func_slider = get_element_by_key(app, "format_func_select_slider")
-    expect(format_func_slider).to_be_visible()
-
-    # Initially format_func shows title case ("Small", "Medium", "Large")
-    # Default value is "small" which displays as "Small"
-    expect_prefixed_markdown(app, "Format func selection:", "small")
-
-    # Move slider to "large" (rightmost)
-    # The slider has 3 options, so clicking right twice from default should get to "large"
-    format_func_slider.click()  # moves toward center
-    app.keyboard.press("ArrowRight")  # moves right
-    wait_for_app_run(app)
-    expect_prefixed_markdown(app, "Format func selection:", "large")
-
-    # Toggle to change format_func from title case to uppercase
-    # This changes the display from "Large" to "LARGE" but should preserve the value
-    click_toggle(app, "Toggle format_func style")
-
-    # The value should still be "large" (backend value unchanged)
-    # The UI should now display "LARGE" (uppercase format_func)
-    expect_prefixed_markdown(app, "Format func selection:", "large")
-
-    # Verify the slider thumb shows the uppercase formatted value
-    thumb_value = format_func_slider.get_by_test_id("stSliderThumbValue").first
-    expect(thumb_value).to_contain_text("LARGE")

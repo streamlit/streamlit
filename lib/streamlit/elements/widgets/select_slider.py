@@ -519,16 +519,10 @@ class SelectSliderMixin:
             # deserialize() always returns a default value, never None.
             current_value = cast("T", validated_single)
 
-        # Always send raw_value for select_slider to ensure the frontend has
-        # the correct string values. This is necessary because:
-        # 1. The frontend stores string values in WidgetStateManager
-        # 2. When format_func changes, the formatted strings change
-        # 3. The frontend remaps strings to indices when options change
-        # 4. Without sending raw_value, the frontend would have stale strings
-        #    that don't match the new formatted options, causing UI/backend desync
-        serialized_value = serde.serialize(current_value)
-        slider_proto.raw_value[:] = serialized_value
-        slider_proto.set_value = value_needs_reset or widget_state.value_changed
+        if value_needs_reset or widget_state.value_changed:
+            serialized_value = serde.serialize(current_value)
+            slider_proto.raw_value[:] = serialized_value
+            slider_proto.set_value = True
 
         if ctx:
             save_for_app_testing(ctx, element_id, format_func)
