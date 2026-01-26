@@ -352,6 +352,43 @@ describe("Feedback widget", () => {
         expect(button).toBeDisabled()
       })
     })
+
+    it("shows default selection when disabled", () => {
+      // Regression test: disabled feedback with default should show selection
+      const props = getProps(
+        { default: 2, type: FeedbackProto.FeedbackType.STARS },
+        { disabled: true }
+      )
+      vi.spyOn(props.widgetMgr, "setStringValue")
+
+      render(<Feedback {...props} />)
+
+      // Should have called setStringValue with the default value
+      expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
+        props.element,
+        "2",
+        { fromUi: false },
+        undefined
+      )
+
+      // The first 3 buttons (0, 1, 2) should be shown as selected (filled stars)
+      const buttons = getFeedbackButtons()
+      expect(buttons[0]).toHaveAttribute(
+        "data-testid",
+        "stFeedbackButtonActive"
+      )
+      expect(buttons[1]).toHaveAttribute(
+        "data-testid",
+        "stFeedbackButtonActive"
+      )
+      expect(buttons[2]).toHaveAttribute(
+        "data-testid",
+        "stFeedbackButtonActive"
+      )
+      // Buttons 3 and 4 should NOT be selected
+      expect(buttons[3]).toHaveAttribute("data-testid", "stFeedbackButton")
+      expect(buttons[4]).toHaveAttribute("data-testid", "stFeedbackButton")
+    })
   })
 
   describe("Keyboard navigation", () => {

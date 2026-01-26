@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useCallback, useMemo } from "react"
+import { memo, ReactElement, useCallback, useMemo, useRef } from "react"
 
 import { Feedback as FeedbackProto, streamlit } from "@streamlit/protobuf"
 
@@ -33,7 +33,7 @@ import {
 } from "./styled-components"
 
 // Icon definitions for each feedback type
-const THUMBS_ICONS = [":material/thumb_up:", ":material/thumb_down:"] as const
+const THUMBS_ICONS = [":material/thumb_up:", ":material/thumb_down:"]
 
 const FACES_ICONS = [
   ":material/sentiment_sad:",
@@ -41,7 +41,7 @@ const FACES_ICONS = [
   ":material/sentiment_neutral:",
   ":material/sentiment_satisfied:",
   ":material/sentiment_very_satisfied:",
-] as const
+]
 
 const STAR_ICON = ":material/star:"
 const STAR_FILLED_ICON = ":material/star_filled:"
@@ -70,21 +70,6 @@ function getFeedbackOptions(
   feedbackType: FeedbackProto.FeedbackType
 ): FeedbackOption[] {
   switch (feedbackType) {
-    case FeedbackProto.FeedbackType.THUMBS:
-      // Display order: thumbs-up (value=1), thumbs-down (value=0)
-      // So visually it's [up, down] but values are [1, 0]
-      return [
-        {
-          icon: THUMBS_ICONS[0],
-          selectedIcon: THUMBS_ICONS[0],
-          value: 1,
-        },
-        {
-          icon: THUMBS_ICONS[1],
-          selectedIcon: THUMBS_ICONS[1],
-          value: 0,
-        },
-      ]
     case FeedbackProto.FeedbackType.FACES:
       return FACES_ICONS.map((icon, index) => ({
         icon,
@@ -98,18 +83,11 @@ function getFeedbackOptions(
         value: index,
       }))
     default:
-      // Default to thumbs
+      // Default to thumbs (includes THUMBS case)
+      // Display order: thumbs-up (value=1), thumbs-down (value=0)
       return [
-        {
-          icon: THUMBS_ICONS[0],
-          selectedIcon: THUMBS_ICONS[0],
-          value: 1,
-        },
-        {
-          icon: THUMBS_ICONS[1],
-          selectedIcon: THUMBS_ICONS[1],
-          value: 0,
-        },
+        { icon: THUMBS_ICONS[0], selectedIcon: THUMBS_ICONS[0], value: 1 },
+        { icon: THUMBS_ICONS[1], selectedIcon: THUMBS_ICONS[1], value: 0 },
       ]
   }
 }
@@ -189,19 +167,13 @@ function getStateFromWidgetMgr(
 }
 
 function getDefaultStateFromProto(element: FeedbackProto): FeedbackValue {
-  // If default is not set, return null
-  if (element.default === null || element.default === undefined) {
-    return null
-  }
-  return element.default
+  // Use nullish coalescing - protobuf returns undefined when optional field is not set
+  return element.default ?? null
 }
 
 function getCurrStateFromProto(element: FeedbackProto): FeedbackValue {
-  // If value is not set, return null
-  if (element.value === null || element.value === undefined) {
-    return null
-  }
-  return element.value
+  // Use nullish coalescing - protobuf returns undefined when optional field is not set
+  return element.value ?? null
 }
 
 /**
@@ -230,7 +202,7 @@ function Feedback(props: Readonly<Props>): ReactElement {
   const { disabled, element, fragmentId, widgetMgr, widthConfig } = props
   const { type } = element
 
-  const [value, setValueWithSource] = useBasicWidgetState<
+  const [hookValue, setValueWithSource] = useBasicWidgetState<
     FeedbackValue,
     FeedbackProto
   >({
@@ -243,9 +215,14 @@ function Feedback(props: Readonly<Props>): ReactElement {
     fragmentId,
   })
 
+  // Use element.value (from session_state) as the source of truth when set.
+  // The hook's value may lag behind due to effect timing, so prefer element.value.
+  const value = element.value ?? hookValue
+
   const containerWidth = shouldWidthStretch(widthConfig)
 
   const options = useMemo(() => getFeedbackOptions(type), [type])
+  const buttonRefsRef = useRef<(HTMLButtonElement | null)[]>([])
 
   const handleClick = useCallback(
     (optionValue: number): void => {
@@ -256,6 +233,10 @@ function Feedback(props: Readonly<Props>): ReactElement {
     [value, setValueWithSource]
   )
 
+  /**
+   * Handle keyboard navigation for the feedback buttons (roving tabindex pattern).
+   * Arrow keys move focus between buttons, Enter/Space selects the focused option.
+   */
   const handleKeyDown = useCallback(
     (event: React.KeyboardEvent, currentIndex: number): void => {
       let newIndex: number
@@ -280,10 +261,8 @@ function Feedback(props: Readonly<Props>): ReactElement {
           return
       }
 
-      // Focus the new button
-      const buttons =
-        event.currentTarget.parentElement?.querySelectorAll("button")
-      buttons?.[newIndex]?.focus()
+      // Focus the new button using ref
+      buttonRefsRef.current[newIndex]?.focus()
     },
     [options, handleClick]
   )
@@ -305,6 +284,9 @@ function Feedback(props: Readonly<Props>): ReactElement {
           return (
             <StyledFeedbackButton
               key={option.value}
+              ref={el => {
+                buttonRefsRef.current[index] = el
+              }}
               type="button"
               role="radio"
               aria-checked={value === option.value}
