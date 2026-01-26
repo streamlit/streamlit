@@ -814,7 +814,7 @@ describe("App", () => {
       const props = getProps()
       window.localStorage.setItem(
         LocalStore.ACTIVE_THEME,
-        JSON.stringify({ name: lightTheme.name })
+        JSON.stringify("Light")
       )
       renderApp(props)
 
@@ -847,7 +847,7 @@ describe("App", () => {
     it("sets the custom theme again if a custom theme is already active", () => {
       window.localStorage.setItem(
         LocalStore.ACTIVE_THEME,
-        JSON.stringify({ name: CUSTOM_THEME_NAME, themeInput: {} })
+        JSON.stringify("System")
       )
       const props = getProps()
       props.theme.activeTheme = {
@@ -2380,7 +2380,7 @@ describe("App", () => {
         it("b) with 'Light' preset cached - preserves Light theme", () => {
           window.localStorage.setItem(
             LocalStore.ACTIVE_THEME,
-            JSON.stringify({ name: "Light" })
+            JSON.stringify("Light")
           )
 
           const props = getProps()
@@ -2402,10 +2402,7 @@ describe("App", () => {
         it("c) with 'Custom Theme' cached - resets to default", () => {
           window.localStorage.setItem(
             LocalStore.ACTIVE_THEME,
-            JSON.stringify({
-              name: CUSTOM_THEME_NAME,
-              themeInput: { primaryColor: "blue" },
-            })
+            JSON.stringify("System")
           )
 
           const props = getProps()
@@ -2434,11 +2431,7 @@ describe("App", () => {
         it("d) with 'Custom Theme Light' cached - resets to default", () => {
           window.localStorage.setItem(
             LocalStore.ACTIVE_THEME,
-            JSON.stringify({
-              name: CUSTOM_THEME_LIGHT_NAME,
-              displayName: "Light",
-              themeInput: { primaryColor: "lightblue" },
-            })
+            JSON.stringify("Light")
           )
 
           const props = getProps()
@@ -2491,7 +2484,7 @@ describe("App", () => {
         it("b) with 'Light' preset cached - preserves Light theme", () => {
           window.localStorage.setItem(
             LocalStore.ACTIVE_THEME,
-            JSON.stringify({ name: "Light" })
+            JSON.stringify("Light")
           )
 
           const props = getProps()
@@ -2520,10 +2513,7 @@ describe("App", () => {
         it("c) with 'Custom Theme' cached - preserves Custom Theme", () => {
           window.localStorage.setItem(
             LocalStore.ACTIVE_THEME,
-            JSON.stringify({
-              name: CUSTOM_THEME_NAME,
-              themeInput: { primaryColor: "blue" },
-            })
+            JSON.stringify("System")
           )
 
           const props = getProps()
@@ -2558,11 +2548,7 @@ describe("App", () => {
         it("d) with 'Custom Theme Light' cached - switches to Custom Theme", () => {
           window.localStorage.setItem(
             LocalStore.ACTIVE_THEME,
-            JSON.stringify({
-              name: CUSTOM_THEME_LIGHT_NAME,
-              displayName: "Light",
-              themeInput: { primaryColor: "lightblue" },
-            })
+            JSON.stringify("Light")
           )
 
           const props = getProps()
@@ -2623,7 +2609,7 @@ describe("App", () => {
         it("b) with 'Light' preset cached - preserves Light theme", () => {
           window.localStorage.setItem(
             LocalStore.ACTIVE_THEME,
-            JSON.stringify({ name: "Light" })
+            JSON.stringify("Light")
           )
 
           const props = getProps()
@@ -2657,10 +2643,7 @@ describe("App", () => {
         it("c) with 'Custom Theme' cached - switches to Custom Theme Auto", () => {
           window.localStorage.setItem(
             LocalStore.ACTIVE_THEME,
-            JSON.stringify({
-              name: CUSTOM_THEME_NAME,
-              themeInput: { primaryColor: "blue" },
-            })
+            JSON.stringify("System")
           )
 
           const props = getProps()
@@ -2697,11 +2680,7 @@ describe("App", () => {
         it("d) with 'Custom Theme Light' cached - preserves Custom Theme Light", () => {
           window.localStorage.setItem(
             LocalStore.ACTIVE_THEME,
-            JSON.stringify({
-              name: CUSTOM_THEME_LIGHT_NAME,
-              displayName: "Light",
-              themeInput: { primaryColor: "lightblue" },
-            })
+            JSON.stringify("Light")
           )
 
           const props = getProps()
@@ -2779,14 +2758,8 @@ describe("App", () => {
         backgroundColor: "black",
       },
     })
-    const cachedLightTheme: CachedTheme = {
-      name: CUSTOM_THEME_LIGHT_NAME,
-      themeInput: customTheme,
-    }
-    const cachedDarkTheme: CachedTheme = {
-      name: CUSTOM_THEME_DARK_NAME,
-      themeInput: customTheme,
-    }
+    const cachedLightTheme: CachedTheme = "Light"
+    const cachedDarkTheme: CachedTheme = "Dark"
 
     it("respects embed_options=light_theme over cached dark preference", () => {
       // Set cached theme to dark

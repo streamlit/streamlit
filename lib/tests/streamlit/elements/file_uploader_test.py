@@ -21,8 +21,17 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit import config
+from streamlit.elements.widgets.file_uploader import (
+    FileUploaderSerde,
+    _get_upload_files,
+)
 from streamlit.errors import StreamlitAPIException, StreamlitInvalidWidthError
-from streamlit.proto.Common_pb2 import FileURLs as FileURLsProto
+from streamlit.proto.Common_pb2 import (
+    FileUploaderState as FileUploaderStateProto,
+)
+from streamlit.proto.Common_pb2 import (
+    FileURLs as FileURLsProto,
+)
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
 from streamlit.runtime.uploaded_file_manager import (
     DeletedFile,
@@ -535,3 +544,107 @@ class FileUploaderStableIdTest(DeltaGeneratorTestCase):
             c2 = self.get_delta_from_queue().new_element.file_uploader
             id2 = c2.id
             assert id1 != id2
+
+
+class FileUploaderSerdeTest(DeltaGeneratorTestCase):
+    """Test FileUploaderSerde serialization and deserialization."""
+
+    def test_serialize_with_single_uploaded_file(self):
+        """Test serialization of a single uploaded file."""
+        serde = FileUploaderSerde(accept_multiple_files=False)
+
+        # Create a mock uploaded file
+        rec = UploadedFileRec("file123", "test.txt", "text/plain", b"content")
+        file_urls = FileURLsProto(
+            file_id="file123", delete_url="delete_url", upload_url="upload_url"
+        )
+        uploaded_file = UploadedFile(rec, file_urls)
+
+        # Serialize the file
+        result = serde.serialize(uploaded_file)
+
+        # Verify the serialized proto
+        assert len(result.uploaded_file_info) == 1
+        file_info = result.uploaded_file_info[0]
+        assert file_info.file_id == "file123"
+        assert file_info.name == "test.txt"
+
+    def test_serialize_with_multiple_uploaded_files(self):
+        """Test serialization of multiple uploaded files."""
+        serde = FileUploaderSerde(accept_multiple_files=True)
+
+        # Create mock uploaded files
+        rec1 = UploadedFileRec("file1", "test1.txt", "text/plain", b"content1")
+        rec2 = UploadedFileRec("file2", "test2.txt", "text/plain", b"content2")
+        file_urls1 = FileURLsProto(file_id="file1", delete_url="d1", upload_url="u1")
+        file_urls2 = FileURLsProto(file_id="file2", delete_url="d2", upload_url="u2")
+        files = [UploadedFile(rec1, file_urls1), UploadedFile(rec2, file_urls2)]
+
+        # Serialize the files
+        result = serde.serialize(files)
+
+        # Verify the serialized proto
+        assert len(result.uploaded_file_info) == 2
+
+    def test_serialize_with_none(self):
+        """Test serialization with None input."""
+        serde = FileUploaderSerde(accept_multiple_files=False)
+        result = serde.serialize(None)
+
+        # Should return empty state
+        assert len(result.uploaded_file_info) == 0
+
+    def test_serialize_with_empty_list(self):
+        """Test serialization with empty list."""
+        serde = FileUploaderSerde(accept_multiple_files=True)
+        result = serde.serialize([])
+
+        # Should return empty state
+        assert len(result.uploaded_file_info) == 0
+
+    def test_serialize_skips_deleted_files(self):
+        """Test serialization skips DeletedFile entries."""
+        serde = FileUploaderSerde(accept_multiple_files=True)
+
+        # Create a list with a regular file and a deleted file
+        rec = UploadedFileRec("file1", "test.txt", "text/plain", b"content")
+        file_urls = FileURLsProto(file_id="file1", delete_url="d1", upload_url="u1")
+        files = [
+            UploadedFile(rec, file_urls),
+            DeletedFile("deleted_file"),
+        ]
+
+        # Serialize the files
+        result = serde.serialize(files)
+
+        # Should only contain the non-deleted file
+        assert len(result.uploaded_file_info) == 1
+        assert result.uploaded_file_info[0].file_id == "file1"
+
+
+class GetUploadFilesTest(DeltaGeneratorTestCase):
+    """Test _get_upload_files function."""
+
+    def test_get_upload_files_returns_empty_for_none(self):
+        """Test _get_upload_files returns empty list for None input."""
+        result = _get_upload_files(None)
+        assert len(result) == 0
+
+    def test_get_upload_files_returns_empty_no_ctx(self):
+        """Test _get_upload_files returns empty list when no script context."""
+        proto = FileUploaderStateProto()
+
+        with patch(
+            "streamlit.elements.widgets.file_uploader.get_script_run_ctx",
+            return_value=None,
+        ):
+            result = _get_upload_files(proto)
+            assert len(result) == 0
+
+    def test_get_upload_files_returns_empty_for_empty_file_info(self):
+        """Test _get_upload_files returns empty list when no file info."""
+        proto = FileUploaderStateProto()
+        # No files added to uploaded_file_info
+
+        result = _get_upload_files(proto)
+        assert len(result) == 0

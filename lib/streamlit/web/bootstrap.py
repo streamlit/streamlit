@@ -325,8 +325,17 @@ def _install_config_watchers(flag_options: dict[str, Any]) -> None:
         load_config_options(flag_options)
 
     for filename in config.get_config_files("config.toml"):
-        if os.path.exists(filename):
-            watch_file(filename, on_config_changed)
+        # Watch each config file path directly, even if it doesn't exist yet.
+        # This allows detecting both file creation and subsequent modifications.
+        # We use the poll watcher because:
+        # 1. It handles non-existent paths gracefully, including when parent
+        #    directories (like ~/.streamlit/) don't exist yet. The event-based
+        #    watcher requires the parent directory to exist to schedule a watch.
+        # 2. Config files change rarely, so the polling overhead is negligible.
+        # 3. The 200ms poll interval latency is imperceptible for config reloads.
+        watch_file(
+            filename, on_config_changed, watcher_type="poll", allow_nonexistent=True
+        )
 
 
 def run_asgi_app(

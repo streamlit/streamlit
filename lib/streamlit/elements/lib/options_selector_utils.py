@@ -290,6 +290,7 @@ def validate_and_sync_value_with_options(
     opt: Sequence[T],
     default_index: int | None,
     key: str | int | None,
+    format_func: Callable[[Any], str] = str,
 ) -> tuple[T | None, bool]:
     """Validate current value against options, resetting session state if invalid.
 
@@ -306,6 +307,11 @@ def validate_and_sync_value_with_options(
         The default index to reset to if value is invalid.
     key
         The widget key for session state updates.
+    format_func
+        Function to format options for comparison. Used to compare values by their
+        string representation instead of using == directly. This is necessary because
+        widget values are deepcopied, and for custom classes without __eq__, the
+        deepcopied instances would fail identity comparison.
 
     Returns
     -------
@@ -315,30 +321,50 @@ def validate_and_sync_value_with_options(
     if current_value is None:
         return current_value, False
 
-    # Check if current value is still in the new options
-    try:
-        index_(opt, current_value)
-        return current_value, False
-    except ValueError:
-        # Value not in options - reset to default
-        if default_index is not None and len(opt) > 0:
-            new_value: T | None = opt[default_index]
-        else:
-            new_value = None
+    # For Enum values, use the original index_() approach which uses == comparison.
+    # This correctly handles enum class identity - enums from different classes
+    # (e.g., after script rerun) should NOT be considered equal, which is important
+    # for enum coercion to work correctly when coercion is disabled.
+    if isinstance(current_value, Enum):
+        try:
+            index_(opt, current_value)
+            return current_value, False
+        except ValueError:
+            pass  # Fall through to reset logic below
+    else:
+        # For non-Enum values, use format_func comparison. This handles custom objects
+        # without __eq__ where widget values are deepcopied and the deepcopied instances
+        # would fail identity comparison with ==.
+        try:
+            formatted_value = format_func(current_value)
+        except Exception:
+            # format_func failed - value is invalid
+            formatted_value = None
 
-        if key is not None:
-            # Update session_state so subsequent accesses in this run
-            # return the corrected value. Use reset_state_value to avoid
-            # the "cannot be modified after widget instantiated" error.
-            get_session_state().reset_state_value(str(key), new_value)
+        formatted_options_set = {format_func(o) for o in opt}
+        if formatted_value is not None and formatted_value in formatted_options_set:
+            return current_value, False
 
-        return new_value, True
+    # Value not in options - reset to default
+    if default_index is not None and len(opt) > 0:
+        new_value: T | None = opt[default_index]
+    else:
+        new_value = None
+
+    if key is not None:
+        # Update session_state so subsequent accesses in this run
+        # return the corrected value. Use reset_state_value to avoid
+        # the "cannot be modified after widget instantiated" error.
+        get_session_state().reset_state_value(str(key), new_value)
+
+    return new_value, True
 
 
 def validate_and_sync_multiselect_value_with_options(
     current_values: list[T] | list[T | str],
     opt: Sequence[T],
     key: str | int | None,
+    format_func: Callable[[Any], str] = str,
 ) -> tuple[list[T] | list[T | str], bool]:
     """Validate multiselect values against options, syncing session state if needed.
 
@@ -356,6 +382,11 @@ def validate_and_sync_multiselect_value_with_options(
         The sequence of valid options.
     key
         The widget key for session state updates.
+    format_func
+        Function to format options for comparison. Used to compare values by their
+        string representation instead of using == directly. This is necessary because
+        widget values are deepcopied, and for custom classes without __eq__, the
+        deepcopied instances would fail identity comparison.
 
     Returns
     -------
@@ -365,13 +396,26 @@ def validate_and_sync_multiselect_value_with_options(
     if not current_values:
         return current_values, False
 
+    # Create a set of formatted options for O(1) lookup.
+    # We use format_func to compare values by their string representation
+    # instead of using == directly. This is necessary because widget values
+    # are deepcopied, and for custom classes without __eq__, the deepcopied
+    # instances would fail identity comparison.
+    formatted_options_set = {format_func(o) for o in opt}
+
     valid_values: list[T | str] = []
     for value in current_values:
         try:
-            index_(opt, value)
+            formatted_value = format_func(value)
+        except Exception:  # noqa: S112
+            # format_func failed on this value (e.g., a string value from a previous
+            # session when format_func expects an object with specific attributes).
+            # In this case, the value is definitely not valid since the current options
+            # can be formatted successfully.
+            continue
+
+        if formatted_value in formatted_options_set:
             valid_values.append(value)
-        except ValueError:  # noqa: PERF203
-            pass
 
     if len(valid_values) == len(current_values):
         return current_values, False

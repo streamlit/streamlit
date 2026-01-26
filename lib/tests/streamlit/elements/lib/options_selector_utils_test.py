@@ -513,6 +513,35 @@ class TestValidateAndSyncValueWithOptions(unittest.TestCase):
         assert value == expected_value
         assert needs_reset is expected_needs_reset
 
+    def test_custom_objects_without_eq_using_format_func(self):
+        """Test that custom objects without __eq__ work with format_func validation."""
+        from copy import deepcopy
+
+        # Custom class without __eq__ implementation
+        class MyOption:  # noqa: B903
+            def __init__(self, value: str):
+                self.value = value
+
+        def format_func(x):
+            return x.value
+
+        original_options = [MyOption("a"), MyOption("b"), MyOption("c")]
+        deepcopied_value = deepcopy(original_options[1])
+
+        # Without the fix, this would reset because deepcopy creates new instances
+        # and == falls back to identity comparison for objects without __eq__
+        value, needs_reset = validate_and_sync_value_with_options(
+            deepcopied_value,
+            original_options,
+            0,
+            None,
+            format_func=format_func,
+        )
+
+        # Value should be valid since format_func output matches
+        assert value is deepcopied_value
+        assert needs_reset is False
+
 
 class TestValidateAndSyncMultiselectValueWithOptions(unittest.TestCase):
     """Test class for validate_and_sync_multiselect_value_with_options utility function."""
@@ -577,3 +606,132 @@ class TestValidateAndSyncMultiselectValueWithOptions(unittest.TestCase):
         )
         assert values == expected_values
         assert needs_reset is expected_needs_reset
+
+
+class TestValidateMultiselectWithCustomObjects(unittest.TestCase):
+    """Test class for validating multiselect with custom class objects.
+
+    This tests the fix for https://github.com/streamlit/streamlit/issues/13646
+    where custom objects without __eq__ would fail validation after deepcopy.
+    """
+
+    def test_custom_objects_without_eq_using_format_func(self):
+        """Test that custom objects without __eq__ work with format_func validation."""
+
+        # Custom class without __eq__ implementation
+        class MyOption:  # noqa: B903
+            def __init__(self, value: str):
+                self.value = value
+
+        # Create options and their deepcopied equivalents (simulating what happens
+        # after register_widget deepcopies the values)
+        from copy import deepcopy
+
+        original_options = [MyOption("a"), MyOption("b"), MyOption("c")]
+        deepcopied_values = [
+            deepcopy(original_options[0]),
+            deepcopy(original_options[1]),
+        ]
+
+        # Without the fix, this would fail because deepcopy creates new instances
+        # and == falls back to identity comparison for objects without __eq__
+        values, needs_reset = validate_and_sync_multiselect_value_with_options(
+            deepcopied_values,
+            original_options,
+            None,
+            format_func=lambda x: x.value,  # Compare by .value attribute
+        )
+
+        # All values should be valid since they have matching format_func output
+        assert len(values) == 2
+        assert needs_reset is False
+
+    def test_custom_objects_partial_match_with_format_func(self):
+        """Test that only matching custom objects are kept."""
+
+        class MyOption:  # noqa: B903
+            def __init__(self, value: str):
+                self.value = value
+
+        from copy import deepcopy
+
+        original_options = [MyOption("a"), MyOption("b")]  # "c" is removed
+        # Simulate values that include one that's no longer in options
+        deepcopied_values = [
+            deepcopy(MyOption("a")),
+            deepcopy(MyOption("c")),  # This one should be filtered out
+        ]
+
+        values, needs_reset = validate_and_sync_multiselect_value_with_options(
+            deepcopied_values,
+            original_options,
+            None,
+            format_func=lambda x: x.value,
+        )
+
+        # Only "a" should remain, "c" should be filtered out
+        assert len(values) == 1
+        assert values[0].value == "a"
+        assert needs_reset is True
+
+    def test_default_format_func_with_custom_str(self):
+        """Test that custom objects with __str__ work with default format_func."""
+
+        class MyOption:
+            def __init__(self, value: str):
+                self.value = value
+
+            def __str__(self):
+                return self.value
+
+        from copy import deepcopy
+
+        original_options = [MyOption("a"), MyOption("b"), MyOption("c")]
+        deepcopied_values = [deepcopy(original_options[0])]
+
+        # Using default str format_func
+        values, needs_reset = validate_and_sync_multiselect_value_with_options(
+            deepcopied_values,
+            original_options,
+            None,
+            # format_func defaults to str
+        )
+
+        assert len(values) == 1
+        assert needs_reset is False
+
+    def test_format_func_failure_filters_out_value(self):
+        """Test that values are filtered out when format_func fails on them.
+
+        This handles the edge case where options changed and the deserializer
+        returned a raw string (because the formatted option no longer exists),
+        but the format_func can't handle strings (e.g., lambda x: x.attribute).
+        """
+
+        class MyOption:  # noqa: B903
+            def __init__(self, value: str):
+                self.value = value
+
+        # format_func that only works on MyOption objects, not strings
+        def format_func(x):
+            return x.value
+
+        original_options = [MyOption("b"), MyOption("c")]
+
+        # Simulate a string value that came from an old session where
+        # the option no longer exists (deserializer returns raw string)
+        current_values = ["old_value", MyOption("b")]
+
+        # The string should be filtered out (format_func fails on it)
+        # but MyOption("b") should remain valid
+        values, needs_reset = validate_and_sync_multiselect_value_with_options(
+            current_values,
+            original_options,
+            None,
+            format_func=format_func,
+        )
+
+        # Only MyOption("b") should remain
+        assert len(values) == 1
+        assert values[0].value == "b"
+        assert needs_reset is True

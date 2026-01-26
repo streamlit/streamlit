@@ -119,11 +119,9 @@ export type ThemeConfig = {
   themeInput?: Partial<CustomThemeConfig>
 }
 
-export type CachedTheme = {
-  name: string
+export type ThemeSelection = "System" | "Light" | "Dark"
 
-  themeInput?: Partial<CustomThemeConfig>
-}
+export type CachedTheme = ThemeSelection
 
 type IconSizes = typeof emotionBaseTheme.iconSizes
 export type ThemeSizings = typeof emotionBaseTheme.sizes
