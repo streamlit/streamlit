@@ -92,11 +92,6 @@ export const StyledElementContainerLayoutWrapper: FC<
     minStretchBehavior = "8rem"
   }
 
-  // Feedback widget should use fit-content for proper sizing
-  if (node.element.type === "feedback") {
-    minStretchBehavior = "fit-content"
-  }
-
   const styleOverrides = useMemo(() => {
     const styles: React.CSSProperties = {}
 
@@ -106,12 +101,6 @@ export const StyledElementContainerLayoutWrapper: FC<
 
     if (VISIBLE_OVERFLOW_OVERRIDE.includes(node.element.type ?? "")) {
       styles.overflow = "visible"
-    }
-
-    // Feedback widget should never shrink below its content width
-    // This prevents the icons from being clipped when a small pixel width is set
-    if (node.element.type === "feedback") {
-      styles.minWidth = "fit-content"
     }
 
     if (node.element.type === "textArea") {
