@@ -488,10 +488,17 @@ def validate_and_sync_select_slider_value_with_options(
             return (opt[indices[0]], opt[indices[1]])
         return opt[indices[0]]
 
-    # Detect if current_value is actually a range even if is_range_value=False
+    # First, check if current_value is a valid single option.
+    # This handles the case where option values themselves are lists/tuples
+    # (e.g., options=[["a", "b"], ["c", "d"]]).
+    if is_value_valid(current_value):
+        return current_value, False
+
+    # Detect if current_value is actually a range even if is_range_value=False.
     # This handles the case where session state sets a range without the widget
     # being configured with a range default. Accept both tuple and list to match
     # the API signature which allows both types for range values.
+    # Only check for range after confirming it's not a valid single option.
     if isinstance(current_value, (tuple, list)) and len(current_value) == 2:
         # Handle range value (tuple of two values)
         # Type narrowing: current_value is now tuple[T, T]
@@ -510,16 +517,13 @@ def validate_and_sync_select_slider_value_with_options(
         if key is not None:
             get_session_state().reset_state_value(str(key), new_value)
         return new_value, True
+
     if is_range_value:
         # Expected range but got non-tuple, reset to default
         new_value_range = cast("tuple[T, T]", get_default_value(default_indices))
         if key is not None:
             get_session_state().reset_state_value(str(key), new_value_range)
         return new_value_range, True
-
-    # Handle single value
-    if is_value_valid(current_value):
-        return current_value, False
 
     # Value not in options - reset to default
     new_value_single = get_default_value(default_indices)

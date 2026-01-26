@@ -107,9 +107,19 @@ class SelectSliderSerde(Generic[T]):
 
     def serialize(self, v: T | tuple[T, T] | list[T]) -> list[str]:
         """Convert option value(s) to formatted string list."""
-        # Detect if v is a range value (tuple/list of two items) based on actual data,
-        # not the is_range_value flag. This handles session state setting a range
-        # without the widget being configured with a range default.
+        # First, check if v is a single option value by seeing if its formatted
+        # representation exists in our options. This handles the case where
+        # option values themselves are lists/tuples (e.g., options=[["a", "b"], ["c", "d"]]).
+        try:
+            formatted_v = self.format_func(v)
+            if formatted_v in self.formatted_option_to_option_index:
+                # v is a single option value, not a range
+                return [formatted_v]
+        except Exception:  # noqa: S110
+            pass
+
+        # Check if v is a range value (tuple/list of two items).
+        # Only treat it as a range if it's a tuple/list AND not a valid single option.
         if isinstance(v, (tuple, list)) and len(v) == 2:
             values = list(v)
         elif self.is_range_value:
@@ -138,30 +148,47 @@ class SelectSliderSerde(Generic[T]):
             )
             return return_value if self.is_range_value else return_value[0]
 
-        # Convert strings back to option values
+        # Convert strings back to option indices and values
+        result_indices: list[int] = []
         result_values: list[T] = []
         for formatted_str in ui_value:
             option_index = self.formatted_option_to_option_index.get(formatted_str)
             if option_index is not None:
+                result_indices.append(option_index)
                 result_values.append(self.options[option_index])
             else:
                 # Value not found in options, use default for this position
                 idx = len(result_values)
                 if idx < len(self.default_value_indices):
-                    result_values.append(self.options[self.default_value_indices[idx]])
+                    default_idx = self.default_value_indices[idx]
+                    result_indices.append(default_idx)
+                    result_values.append(self.options[default_idx])
                 elif len(self.options) > 0:
+                    result_indices.append(0)
                     result_values.append(self.options[0])
 
         # Ensure we have the right number of values
         while len(result_values) < len(self.default_value_indices):
             idx = len(result_values)
-            result_values.append(self.options[self.default_value_indices[idx]])
+            default_idx = self.default_value_indices[idx]
+            result_indices.append(default_idx)
+            result_values.append(self.options[default_idx])
 
-        return_value = cast("tuple[T, T]", tuple(result_values[:2]))
         # Determine if this is a range based on the actual data length, not the flag.
         # This handles the case where session state sets a range without using
         # the `value` parameter.
         actual_is_range = len(ui_value) >= 2
+
+        if actual_is_range and len(result_indices) >= 2:
+            # For range values, ensure start <= end by option index (sort the range)
+            start_idx, end_idx = result_indices[0], result_indices[1]
+            start_val, end_val = result_values[0], result_values[1]
+            if start_idx > end_idx:
+                # Swap to ensure start <= end
+                return (end_val, start_val)
+            return (start_val, end_val)
+
+        return_value = cast("tuple[T, T]", tuple(result_values[:2]))
         return return_value if actual_is_range else return_value[0]
 
 
