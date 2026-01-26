@@ -424,3 +424,96 @@ def validate_and_sync_multiselect_value_with_options(
         get_session_state().reset_state_value(str(key), valid_values)
 
     return valid_values, True
+
+
+def validate_and_sync_select_slider_value_with_options(
+    current_value: T | tuple[T, T] | None,
+    opt: Sequence[T],
+    default_indices: list[int],
+    is_range_value: bool,
+    key: str | int | None,
+    format_func: Callable[[Any], str] = str,
+) -> tuple[T | tuple[T, T] | None, bool]:
+    """Validate select_slider value(s) against options, resetting session state if invalid.
+
+    This function handles both single-value and range (tuple) select_slider values.
+    If a value is not found in options, it resets to the corresponding default.
+
+    Parameters
+    ----------
+    current_value
+        The current widget value to validate. Can be a single value or a tuple of two values.
+    opt
+        The sequence of valid options.
+    default_indices
+        The default indices to reset to if value is invalid. For single value, this is [index].
+        For range value, this is [start_index, end_index].
+    is_range_value
+        Whether the select_slider is in range mode (returns tuple of two values).
+    key
+        The widget key for session state updates.
+    format_func
+        Function to format options for comparison. Used to compare values by their
+        string representation instead of using == directly.
+
+    Returns
+    -------
+    tuple[T | tuple[T, T] | None, bool]
+        A tuple of (validated_value, value_was_reset).
+    """
+    if current_value is None or len(opt) == 0:
+        return current_value, False
+
+    formatted_options_set = {format_func(o) for o in opt}
+
+    def is_value_valid(val: Any) -> bool:
+        """Check if a single value is valid (exists in options)."""
+        # For Enum values, use equality comparison
+        if isinstance(val, Enum):
+            try:
+                index_(opt, val)
+                return True
+            except ValueError:
+                return False
+        # For non-Enum values, use format_func comparison
+        try:
+            formatted = format_func(val)
+            return formatted in formatted_options_set
+        except Exception:
+            return False
+
+    def get_default_value(indices: list[int]) -> T | tuple[T, T]:
+        """Get the default value based on indices and mode."""
+        if is_range_value:
+            return (opt[indices[0]], opt[indices[1]])
+        return opt[indices[0]]
+
+    if is_range_value:
+        # Handle range value (tuple of two values)
+        if not isinstance(current_value, tuple) or len(current_value) != 2:
+            # Invalid format, reset to default
+            new_value = get_default_value(default_indices)
+            if key is not None:
+                get_session_state().reset_state_value(str(key), new_value)
+            return new_value, True
+
+        start_valid = is_value_valid(current_value[0])
+        end_valid = is_value_valid(current_value[1])
+
+        if start_valid and end_valid:
+            return current_value, False
+
+        # At least one value is invalid, reset to default
+        new_value = get_default_value(default_indices)
+        if key is not None:
+            get_session_state().reset_state_value(str(key), new_value)
+        return new_value, True
+    # Handle single value
+    if is_value_valid(current_value):
+        return current_value, False
+
+    # Value not in options - reset to default
+    new_value = get_default_value(default_indices)
+    if key is not None:
+        get_session_state().reset_state_value(str(key), new_value)
+    return new_value, True

@@ -193,6 +193,43 @@ else:
     st.write("Initial select slider value:", dyn_val)
 
 
+# Dynamic options change test - tests that options can be changed dynamically
+# while preserving valid selections and resetting invalid ones
+if st.toggle("Enable alternative options for dynamic options test"):
+    dynamic_options_val = st.select_slider(
+        "Dynamic options slider",
+        options=["alpha", "beta", "gamma"],
+        key="dynamic_options_select_slider",
+    )
+    st.write("Dynamic options selection:", dynamic_options_val)
+else:
+    dynamic_options_val = st.select_slider(
+        "Dynamic options slider",
+        options=["alpha", "bravo", "charlie", "delta", "echo"],
+        key="dynamic_options_select_slider",
+    )
+    st.write("Dynamic options selection:", dynamic_options_val)
+
+
+# Range slider with dynamic options
+if st.toggle("Enable alternative range options"):
+    range_dyn_val = st.select_slider(
+        "Dynamic range slider",
+        options=["x", "y", "z"],
+        value=("x", "z"),
+        key="dynamic_range_select_slider",
+    )
+    st.write("Dynamic range selection:", range_dyn_val)
+else:
+    range_dyn_val = st.select_slider(
+        "Dynamic range slider",
+        options=["a", "b", "c", "d", "e"],
+        value=("a", "e"),
+        key="dynamic_range_select_slider",
+    )
+    st.write("Dynamic range selection:", range_dyn_val)
+
+
 MARKDOWN_SELECT_SLIDER_OPTIONS = [
     "~~Strikethrough~~",
     "*Italics*",

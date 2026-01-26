@@ -29,7 +29,7 @@ from e2e_playwright.shared.app_utils import (
     get_slider,
 )
 
-NUM_SELECT_SLIDERS = 16
+NUM_SELECT_SLIDERS = 18
 
 
 def test_select_slider_rendering(
@@ -243,3 +243,53 @@ def test_select_slider_tick_bar_visibility(
     slider.hover()
     expect(slider.get_by_test_id("stSliderTickBar")).to_be_visible()
     assert_snapshot(slider, name="st_select_slider-tick_bar_visibility")
+
+
+def test_select_slider_dynamic_options_preserves_valid_selection(app: Page):
+    """Test that changing options dynamically preserves a valid selection."""
+    dynamic_slider = get_element_by_key(app, "dynamic_options_select_slider")
+    expect(dynamic_slider).to_be_visible()
+
+    # Initially "alpha" is the default value (first option)
+    expect_prefixed_markdown(app, "Dynamic options selection:", "alpha")
+
+    # Click to select "bravo" (the second option in initial options)
+    dynamic_slider.click()
+    app.keyboard.press("ArrowRight")
+    wait_for_app_run(app)
+    expect_prefixed_markdown(app, "Dynamic options selection:", "bravo")
+
+    # Toggle to enable alternative options
+    click_toggle(app, "Enable alternative options for dynamic options test")
+
+    # Since "bravo" is not in ["alpha", "beta", "gamma"], should reset to default "alpha"
+    expect_prefixed_markdown(app, "Dynamic options selection:", "alpha")
+
+
+def test_select_slider_dynamic_options_keeps_shared_option(app: Page):
+    """Test that when options change, shared options retain their selection."""
+    dynamic_slider = get_element_by_key(app, "dynamic_options_select_slider")
+    expect(dynamic_slider).to_be_visible()
+
+    # Initially "alpha" is the default value (first option)
+    expect_prefixed_markdown(app, "Dynamic options selection:", "alpha")
+
+    # Toggle to enable alternative options - "alpha" exists in both option sets
+    click_toggle(app, "Enable alternative options for dynamic options test")
+
+    # "alpha" should still be selected because it exists in the new options too
+    expect_prefixed_markdown(app, "Dynamic options selection:", "alpha")
+
+
+def test_select_slider_range_dynamic_options_resets_when_invalid(app: Page):
+    """Test that range slider resets to defaults when options change and values become invalid."""
+    range_slider = get_element_by_key(app, "dynamic_range_select_slider")
+    expect(range_slider).to_be_visible()
+
+    # Initially default range is ("a", "e")
+    expect_prefixed_markdown(app, "Dynamic range selection:", "('a', 'e')")
+
+    # Toggle to enable alternative options ["x", "y", "z"]
+    # Since neither "a" nor "e" exists in new options, should reset to default ("x", "z")
+    click_toggle(app, "Enable alternative range options")
+    expect_prefixed_markdown(app, "Dynamic range selection:", "('x', 'z')")

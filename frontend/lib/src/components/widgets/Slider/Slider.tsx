@@ -104,6 +104,39 @@ export interface Props {
   fragmentId?: string
 }
 
+/**
+ * Check if this is a select_slider (options-based) rather than a numeric slider.
+ */
+function isSelectSlider(element: SliderProto): boolean {
+  return element.options.length > 0
+}
+
+/**
+ * Convert string values (formatted options) to indices for select_slider.
+ * Returns the indices in the options array that correspond to the string values.
+ */
+function stringValuesToIndices(
+  stringValues: string[],
+  options: string[],
+  defaultIndices: number[]
+): number[] {
+  return stringValues.map((str, i) => {
+    const index = options.indexOf(str)
+    // If not found, fall back to default index for this position
+    return index >= 0 ? index : (defaultIndices[i] ?? 0)
+  })
+}
+
+/**
+ * Convert indices to string values (formatted options) for select_slider.
+ */
+function indicesToStringValues(
+  indices: number[],
+  options: string[]
+): string[] {
+  return indices.map(i => options[i] ?? "")
+}
+
 function Slider({
   disabled,
   element,
@@ -371,6 +404,19 @@ function getStateFromWidgetMgr(
   widgetMgr: WidgetStateManager,
   element: SliderProto
 ): number[] | undefined {
+  if (isSelectSlider(element)) {
+    // For select_slider, get string values and convert to indices
+    const stringValues = widgetMgr.getStringArrayValue(element)
+    if (stringValues === undefined) {
+      return undefined
+    }
+    return stringValuesToIndices(
+      stringValues,
+      element.options,
+      element.default
+    )
+  }
+  // For regular slider, get numeric values directly
   return widgetMgr.getDoubleArrayValue(element)
 }
 
@@ -379,6 +425,16 @@ function getDefaultStateFromProto(element: SliderProto): number[] {
 }
 
 function getCurrStateFromProto(element: SliderProto): number[] {
+  if (isSelectSlider(element)) {
+    // For select_slider, read string values from rawValue and convert to indices
+    const rawValues = element.rawValue
+    if (rawValues && rawValues.length > 0) {
+      return stringValuesToIndices(rawValues, element.options, element.default)
+    }
+    // Fall back to default indices
+    return element.default
+  }
+  // For regular slider, use numeric value directly
   return element.value
 }
 
@@ -388,12 +444,24 @@ function updateWidgetMgrState(
   vws: ValueWithSource<number[]>,
   fragmentId?: string
 ): void {
-  widgetMgr.setDoubleArrayValue(
-    element,
-    vws.value,
-    { fromUi: vws.fromUi },
-    fragmentId
-  )
+  if (isSelectSlider(element)) {
+    // For select_slider, convert indices to string values
+    const stringValues = indicesToStringValues(vws.value, element.options)
+    widgetMgr.setStringArrayValue(
+      element,
+      stringValues,
+      { fromUi: vws.fromUi },
+      fragmentId
+    )
+  } else {
+    // For regular slider, use numeric values directly
+    widgetMgr.setDoubleArrayValue(
+      element,
+      vws.value,
+      { fromUi: vws.fromUi },
+      fragmentId
+    )
+  }
 }
 
 function isDateTimeType(element: SliderProto): boolean {
