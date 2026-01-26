@@ -297,10 +297,6 @@ def validate_and_sync_value_with_options(
     This function has a side-effect: if the value is not found in the options
     and a key is provided, it will update session state with the new value.
 
-    Uses format_func comparison for all values (including Enums). This is the
-    correct approach because widget serdes deserialize by looking up formatted
-    strings and returning values from the current options list. The deserialized
-    value is always from the current class, so identity checking is unnecessary.
 
     Parameters
     ----------
