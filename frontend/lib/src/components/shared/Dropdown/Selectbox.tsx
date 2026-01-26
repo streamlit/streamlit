@@ -249,25 +249,25 @@ const Selectbox: FC<Props> = ({
                       overflow: "auto",
                       boxSizing: "border-box",
 
-                      borderTopLeftRadius: theme.radii.xl,
-                      borderTopRightRadius: theme.radii.xl,
-                      borderBottomRightRadius: theme.radii.xl,
-                      borderBottomLeftRadius: theme.radii.xl,
+                      borderTopLeftRadius: theme.radii.default,
+                      borderTopRightRadius: theme.radii.default,
+                      borderBottomRightRadius: theme.radii.default,
+                      borderBottomLeftRadius: theme.radii.default,
 
-                      borderLeftWidth: theme.sizes.borderWidth,
-                      borderRightWidth: theme.sizes.borderWidth,
-                      borderTopWidth: theme.sizes.borderWidth,
-                      borderBottomWidth: theme.sizes.borderWidth,
+                      borderLeftWidth: lightBackground ? "0" : theme.sizes.borderWidth,
+                      borderRightWidth: lightBackground ? "0" : theme.sizes.borderWidth,
+                      borderTopWidth: lightBackground ? "0" : theme.sizes.borderWidth,
+                      borderBottomWidth: lightBackground ? "0" : theme.sizes.borderWidth,
 
-                      borderLeftStyle: "solid",
-                      borderRightStyle: "solid",
-                      borderTopStyle: "solid",
-                      borderBottomStyle: "solid",
+                      borderLeftStyle: lightBackground ? "none" : "solid",
+                      borderRightStyle: lightBackground ? "none" : "solid",
+                      borderTopStyle: lightBackground ? "none" : "solid",
+                      borderBottomStyle: lightBackground ? "none" : "solid",
 
-                      borderLeftColor: theme.colors.borderColor,
-                      borderRightColor: theme.colors.borderColor,
-                      borderTopColor: theme.colors.borderColor,
-                      borderBottomColor: theme.colors.borderColor,
+                      borderLeftColor: lightBackground ? "transparent" : theme.colors.borderColor,
+                      borderRightColor: lightBackground ? "transparent" : theme.colors.borderColor,
+                      borderTopColor: lightBackground ? "transparent" : theme.colors.borderColor,
+                      borderBottomColor: lightBackground ? "transparent" : theme.colors.borderColor,
 
                       boxShadow: lightBackground
                         ? "0px 4px 16px rgba(0, 0, 0, 0.16)"

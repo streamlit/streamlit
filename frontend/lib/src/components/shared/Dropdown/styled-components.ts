@@ -37,7 +37,7 @@ export const ThemedStyledDropdownListItem = styled(StyledDropdownListItem, {
     alignItems: "center",
     marginLeft: theme.spacing.none,
     marginRight: theme.spacing.none,
-    borderRadius: theme.radii.xl, // ALL items get rounded corners
+    borderRadius: theme.radii.default, // ALL items get rounded corners
     overflow: "hidden",
 
     // ensure any Base Web inner wrappers cannot paint square backgrounds
@@ -47,19 +47,19 @@ export const ThemedStyledDropdownListItem = styled(StyledDropdownListItem, {
     // keep text above our highlight layer
     "& > *": { position: "relative", zIndex: theme.zIndices.priority },
 
-    paddingTop: theme.spacing.none,
-    paddingBottom: theme.spacing.none,
+    paddingTop: theme.spacing.twoXS,
+    paddingBottom: theme.spacing.twoXS,
     paddingLeft: theme.spacing.sm,
     paddingRight: theme.spacing.sm,
 
-    fontSize: theme.fontSizes.sm,
+    fontSize: theme.fontSizes.md,
 
     // our rounded highlight - same radius for ALL items
     "::before": {
       content: '""',
       position: "absolute",
       inset: 0,
-      borderRadius: theme.radii.xl, // Consistent rounded corners on all items
+      borderRadius: theme.radii.default, // Consistent rounded corners on all items
       background: bgColor,
       opacity: hasBg ? 1 : 0,
       transition: "opacity 120ms ease",
