@@ -14,17 +14,32 @@
  * limitations under the License.
  */
 
+import { forwardRef } from "react"
+
 import { ErrorOutline } from "@emotion-icons/material-outlined"
 import type { DatepickerProps } from "baseui/datepicker"
 import { ChevronDown } from "baseui/icon"
 import { PLACEMENT } from "baseui/popover"
 
 import { getBorderColor } from "~lib/components/shared/Base/styled-components"
+import { ThemedStyledDropdownListItem } from "~lib/components/shared/Dropdown/styled-components"
 import Icon from "~lib/components/shared/Icon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
 import Tooltip, { Placement } from "~lib/components/shared/Tooltip"
-import { StyledTimeDropdownListItem } from "~lib/components/widgets/TimeInput/styled-components"
 import { EmotionTheme, hasLightBackgroundColor } from "~lib/theme"
+
+/**
+ * Wrapper component that adds an inner div to match VirtualDropdown's structure.
+ * This allows us to use the same ThemedStyledDropdownListItem for the time picker dropdown.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const TimeInputListItem = forwardRef<HTMLLIElement, any>(
+  ({ children, ...props }, ref) => (
+    <ThemedStyledDropdownListItem ref={ref} {...props}>
+      <div>{children}</div>
+    </ThemedStyledDropdownListItem>
+  )
+)
 
 type DateTimePickerOverrides = NonNullable<DatepickerProps<Date>["overrides"]>
 
@@ -292,14 +307,17 @@ export const createDateTimePickerOverrides = ({
               },
               Dropdown: {
                 style: () => ({
-                  paddingTop: theme.spacing.none,
-                  paddingBottom: theme.spacing.none,
+                  // Padding to inset items from the edges (left padding matches VirtualDropdown)
+                  paddingTop: theme.spacing.xs,
+                  paddingBottom: theme.spacing.xs,
+                  paddingLeft: theme.spacing.xs,
+                  paddingRight: theme.spacing.none,
                   boxShadow: "none",
                   maxHeight: theme.sizes.maxDropdownHeight,
                 }),
               },
               DropdownListItem: {
-                component: StyledTimeDropdownListItem,
+                component: TimeInputListItem,
               },
               Popover: {
                 props: {
