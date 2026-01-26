@@ -280,10 +280,50 @@ class TestExternalUrlSupport(DeltaGeneratorTestCase):
         assert page.external_url is None
 
     def test_external_url_run_does_nothing(self):
-        """Test that run() on an external URL page does nothing."""
+        """Test that run() on an external URL page does nothing and no code is executed."""
         page = st.Page("https://docs.streamlit.io", title="Docs")
         page._can_be_called = True
-        # Should not raise any exception
-        page.run()
-        # After run, _can_be_called should be False
-        assert page._can_be_called is False
+
+        # Mock the script run context to verify no execution happens
+        with patch("streamlit.navigation.page.get_script_run_ctx") as mock_get_ctx:
+            mock_ctx = MagicMock()
+            mock_get_ctx.return_value = mock_ctx
+
+            # Should not raise any exception
+            page.run()
+
+            # After run, _can_be_called should be False
+            assert page._can_be_called is False
+
+            # Verify no script execution methods were called
+            mock_ctx.run_with_active_hash.assert_not_called()
+            mock_ctx.pages_manager.get_page_script_byte_code.assert_not_called()
+
+    def test_external_url_url_path_sanitization(self):
+        """Test that special characters are sanitized from url_path."""
+        # Test various special characters that should be removed
+        page = st.Page("https://example.com", title="FAQ & Help")
+        assert page.url_path == "faq_help"
+
+        page = st.Page("https://example.com", title="What's New?")
+        assert page.url_path == "whats_new"
+
+        page = st.Page("https://example.com", title="A/B Testing")
+        assert page.url_path == "ab_testing"
+
+        page = st.Page("https://example.com", title="Search #1")
+        assert page.url_path == "search_1"
+
+    def test_external_url_empty_url_path_raises_error(self):
+        """Test that external URL with title that results in empty url_path raises error."""
+        with pytest.raises(StreamlitAPIException) as exc_info:
+            st.Page("https://example.com", title="&#?")
+
+        assert "URL path cannot be empty" in str(exc_info.value)
+
+    def test_external_url_cannot_have_nested_url_path(self):
+        """Test that external URL pages cannot have nested url_path."""
+        with pytest.raises(StreamlitAPIException) as exc_info:
+            st.Page("https://example.com", title="Test", url_path="foo/bar")
+
+        assert "nested path" in str(exc_info.value)

@@ -350,8 +350,18 @@ def _navigation(
                 default_page = page
 
     if default_page is None:
-        default_page = page_list[0]
-        default_page._default = True
+        # Find the first non-external page to be the default
+        for page in page_list:
+            if not page.is_external:
+                default_page = page
+                default_page._default = True
+                break
+        # If all pages are external, raise an error
+        if default_page is None:
+            raise StreamlitAPIException(
+                "At least one non-external page is required. "
+                "External URL pages cannot be the default page."
+            )
 
     ctx = get_script_run_ctx()
     if not ctx:

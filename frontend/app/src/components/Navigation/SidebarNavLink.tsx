@@ -84,7 +84,7 @@ const SidebarNavLink = ({
         isActive={isActive}
         disabled={disableSidebarNavLinks}
         href={isExternal && externalUrl ? externalUrl : pageUrl}
-        onClick={isExternal ? undefined : onClick}
+        onClick={onClick}
         aria-current={isActive ? "page" : undefined}
         {...(isExternal
           ? { target: "_blank", rel: "noopener noreferrer" }

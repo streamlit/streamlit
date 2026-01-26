@@ -14,26 +14,35 @@
 
 from __future__ import annotations
 
+import re
 import types
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal
-from urllib.parse import urlparse
 
 from streamlit.errors import StreamlitAPIException, StreamlitValueError
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.source_util import page_icon_and_name
 from streamlit.string_util import validate_icon_or_emoji
+from streamlit.url_util import is_url
 from streamlit.util import calc_md5
 
 
-def _is_url(value: str) -> bool:
-    """Check if a string is a valid HTTP/HTTPS URL."""
-    try:
-        result = urlparse(value)
-        return result.scheme in {"http", "https"} and bool(result.netloc)
-    except (ValueError, AttributeError):
-        return False
+def _sanitize_url_path(title: str) -> str:
+    """Sanitize a title string to be used as a URL path.
+
+    Converts the title to lowercase, replaces spaces with underscores,
+    and removes special characters that are not URL-safe.
+    """
+    # Convert to lowercase and replace spaces with underscores
+    path = title.lower().replace(" ", "_")
+    # Remove characters that are problematic in URLs: & # ? / ' and others
+    path = re.sub(r"[&#?/\\:*\"<>|']", "", path)
+    # Remove leading/trailing underscores
+    path = path.strip("_")
+    # Replace multiple consecutive underscores with a single one
+    path = re.sub(r"_+", "_", path)
+    return path
 
 
 if TYPE_CHECKING:
@@ -237,7 +246,7 @@ class StreamlitPage:
             return
 
         # Check if page is an external URL
-        if isinstance(page, str) and _is_url(page):
+        if isinstance(page, str) and is_url(page):
             if title is None:
                 raise StreamlitAPIException(
                     "External URL pages require a `title` parameter. "
@@ -254,7 +263,20 @@ class StreamlitPage:
             if icon is not None:
                 validate_icon_or_emoji(icon)
             # For external URLs, use a sanitized version of title as url_path if not provided
-            self._url_path: str = url_path or title.lower().replace(" ", "_")
+            self._url_path: str = url_path or _sanitize_url_path(title)
+
+            # Validate url_path for external URLs (same constraints as internal pages)
+            if self._url_path.strip() == "":
+                raise StreamlitAPIException(
+                    "The URL path cannot be empty. Please provide a valid `url_path` "
+                    "or a `title` that can be converted to a valid URL path."
+                )
+            self._url_path = self._url_path.strip("/")
+            if "/" in self._url_path:
+                raise StreamlitAPIException(
+                    "The URL path cannot contain a nested path (e.g. foo/bar)."
+                )
+
             self._can_be_called: bool = False
             return
 

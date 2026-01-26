@@ -150,4 +150,112 @@ describe("SidebarNavLink", () => {
       expect(sidebarNavLink).toHaveStyle("pointer-events: none")
     })
   })
+
+  describe("when isExternal is true", () => {
+    it("renders with target='_blank' and rel='noopener noreferrer'", () => {
+      render(
+        <SidebarNavLink
+          {...getProps({
+            isExternal: true,
+            externalUrl: "https://docs.streamlit.io",
+          })}
+        />
+      )
+
+      const sidebarNavLink = screen.getByTestId("stSidebarNavLink")
+      expect(sidebarNavLink).toHaveAttribute("target", "_blank")
+      expect(sidebarNavLink).toHaveAttribute("rel", "noopener noreferrer")
+    })
+
+    it("uses externalUrl for href when provided", () => {
+      render(
+        <SidebarNavLink
+          {...getProps({
+            isExternal: true,
+            externalUrl: "https://docs.streamlit.io",
+            pageUrl: "https://internal.example.com",
+          })}
+        />
+      )
+
+      const sidebarNavLink = screen.getByTestId("stSidebarNavLink")
+      expect(sidebarNavLink).toHaveAttribute(
+        "href",
+        "https://docs.streamlit.io"
+      )
+    })
+
+    it("falls back to pageUrl when externalUrl is not provided", () => {
+      render(
+        <SidebarNavLink
+          {...getProps({
+            isExternal: true,
+            externalUrl: null,
+            pageUrl: "https://fallback.example.com",
+          })}
+        />
+      )
+
+      const sidebarNavLink = screen.getByTestId("stSidebarNavLink")
+      expect(sidebarNavLink).toHaveAttribute(
+        "href",
+        "https://fallback.example.com"
+      )
+    })
+
+    it("calls onClick when external link is clicked", async () => {
+      const user = userEvent.setup()
+      const onClick = vi.fn()
+      render(
+        <SidebarNavLink
+          {...getProps({
+            isExternal: true,
+            externalUrl: "https://docs.streamlit.io",
+            onClick,
+          })}
+        />
+      )
+
+      const sidebarNavLink = screen.getByTestId("stSidebarNavLink")
+      await user.click(sidebarNavLink)
+
+      expect(onClick).toHaveBeenCalled()
+    })
+
+    it("works correctly with isTopNav for external links", () => {
+      render(
+        <SidebarNavLink
+          {...getProps({
+            isExternal: true,
+            externalUrl: "https://docs.streamlit.io",
+            isTopNav: true,
+          })}
+        />
+      )
+
+      const sidebarNavLink = screen.getByTestId("stTopNavLink")
+      expect(sidebarNavLink).toHaveAttribute("target", "_blank")
+      expect(sidebarNavLink).toHaveAttribute("rel", "noopener noreferrer")
+      expect(sidebarNavLink).toHaveAttribute(
+        "href",
+        "https://docs.streamlit.io"
+      )
+    })
+  })
+
+  describe("when isExternal is false", () => {
+    it("does not have target='_blank' attribute", () => {
+      render(<SidebarNavLink {...getProps({ isExternal: false })} />)
+
+      const sidebarNavLink = screen.getByTestId("stSidebarNavLink")
+      expect(sidebarNavLink).not.toHaveAttribute("target", "_blank")
+    })
+
+    it("does not have rel='noopener noreferrer' attribute", () => {
+      render(<SidebarNavLink {...getProps({ isExternal: false })} />)
+
+      const sidebarNavLink = screen.getByTestId("stSidebarNavLink")
+      expect(sidebarNavLink).not.toHaveAttribute("rel", "noopener noreferrer")
+    })
+  })
 })

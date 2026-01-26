@@ -288,6 +288,10 @@ const SidebarNav = ({
           onClick={e => {
             // External links are handled by the browser (target="_blank")
             if (isExternal) {
+              // Still collapse sidebar on mobile for external links
+              if (isMobile()) {
+                collapseSidebar()
+              }
               return
             }
             e.preventDefault()
