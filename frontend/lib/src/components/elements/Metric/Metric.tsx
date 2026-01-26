@@ -266,6 +266,7 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
     body: metricValue,
     label,
     delta,
+    deltaDescription,
     direction,
     color,
     labelVisibility,
@@ -394,6 +395,9 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
                 isLabel // Treat the metric delta with the label limitations.
                 inheritFont
               />
+              {deltaDescription && (
+                <span> {deltaDescription}</span>
+              )}
             </StyledTruncateText>
           </StyledMetricDeltaText>
         )}

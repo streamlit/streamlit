@@ -105,6 +105,7 @@ class MetricMixin:
         chart_type: Literal["line", "bar", "area"] = "line",
         delta_arrow: DeltaArrow = "auto",
         format: str | NumberFormat | None = None,
+        delta_description: str | None = None,
     ) -> DeltaGenerator:
         r"""Display a metric in big bold font, with an optional indicator of how the metric changed.
 
@@ -261,6 +262,15 @@ class MetricMixin:
               specifier, like ``"%d"`` to show a signed integer (e.g. "1234") or
               ``"%.2f"`` to show a float with 2 decimal places.
 
+        delta_description : str or None
+            Additional text to display next to the delta value. For example,
+            "month over month" or "from Q1". This provides context for what
+            the delta represents. If this is ``None`` (default), no description
+            is displayed.
+
+            The description can optionally contain GitHub-flavored Markdown,
+            subject to the same limitations described in the ``label`` parameter.
+
         Examples
         --------
                 **Example 1: Show a metric**
@@ -404,6 +414,9 @@ class MetricMixin:
 
         if format is not None:
             metric_proto.format = format
+
+        if delta_description is not None:
+            metric_proto.delta_description = delta_description
 
         validate_height(height, allow_content=True)
         validate_width(width, allow_content=True)
