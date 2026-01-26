@@ -188,10 +188,10 @@ def test_dynamic_select_slider_props_and_options(
     expect_help_tooltip(app, dynamic_select_slider, "initial help")
 
     # Move to "green" (index 3 in initial options: red, orange, yellow, green, blue)
-    # This tests that shared options are preserved when toggling
+    # This tests that shared options are preserved when toggling.
+    # Clicking the slider track moves to center (~index 2 = "yellow"), then ArrowRight to "green"
     dynamic_select_slider.click()
-    app.keyboard.press("ArrowRight")  # yellow
-    app.keyboard.press("ArrowRight")  # green
+    app.keyboard.press("ArrowRight")  # yellow -> green
     wait_for_app_run(app)
     expect_prefixed_markdown(app, "Initial select slider value:", "green")
 
@@ -213,11 +213,12 @@ def test_dynamic_select_slider_props_and_options(
     # Check that the help tooltip is correct:
     expect_help_tooltip(app, dynamic_select_slider, "updated help")
 
-    # Move slider to test it still works after options change
+    # Move slider to test it still works after options change.
+    # Click moves to center (~"blue" at index 1), then ArrowRight moves to "purple" (index 2)
     dynamic_select_slider.click()
     dynamic_select_slider.press("ArrowRight")
     wait_for_app_run(app)
-    expect_prefixed_markdown(app, "Updated select slider value:", "blue")
+    expect_prefixed_markdown(app, "Updated select slider value:", "purple")
 
 
 def test_no_rerun_on_drag(app: Page):
