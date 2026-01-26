@@ -27,6 +27,7 @@ from e2e_playwright.shared.app_utils import (
     get_element_by_key,
     get_expander,
     get_slider,
+    reset_hovering,
 )
 
 NUM_SELECT_SLIDERS = 17
@@ -182,6 +183,7 @@ def test_dynamic_select_slider_props_and_options(
     expect(dynamic_select_slider).to_contain_text("Initial dynamic select slider")
     expect_prefixed_markdown(app, "Initial select slider value:", "orange")
 
+    reset_hovering(app)
     assert_snapshot(dynamic_select_slider, name="st_select_slider-dynamic_initial")
 
     # Check that the help tooltip is correct:
@@ -208,6 +210,7 @@ def test_dynamic_select_slider_props_and_options(
     expect_prefixed_markdown(app, "Updated select slider value:", "green")
 
     dynamic_select_slider.scroll_into_view_if_needed()
+    reset_hovering(app)
     assert_snapshot(dynamic_select_slider, name="st_select_slider-dynamic_updated")
 
     # Check that the help tooltip is correct:
