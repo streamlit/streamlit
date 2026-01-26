@@ -577,6 +577,46 @@ class MetricTest(DeltaGeneratorTestCase):
         assert c.body == "123"
         assert c.format == ""
 
+    def test_delta_description_none(self):
+        """Test that metric works with default delta_description=None."""
+        st.metric("label_test", "123", delta="5")
+
+        c = self.get_delta_from_queue().new_element.metric
+        assert c.label == "label_test"
+        assert c.body == "123"
+        assert c.delta == "5"
+        assert c.delta_description == ""
+
+    def test_delta_description_with_value(self):
+        """Test that metric can be called with delta_description parameter."""
+        st.metric(
+            "label_test",
+            "123",
+            delta="5",
+            delta_description="month over month"
+        )
+
+        c = self.get_delta_from_queue().new_element.metric
+        assert c.label == "label_test"
+        assert c.body == "123"
+        assert c.delta == "5"
+        assert c.delta_description == "month over month"
+
+    def test_delta_description_without_delta(self):
+        """Test that delta_description is set even without delta (edge case)."""
+        st.metric(
+            "label_test",
+            "123",
+            delta_description="from last week"
+        )
+
+        c = self.get_delta_from_queue().new_element.metric
+        assert c.label == "label_test"
+        assert c.body == "123"
+        assert c.delta == ""
+        # delta_description is still set even though delta is empty
+        assert c.delta_description == "from last week"
+
     @parameterized.expand(
         [
             ("plain", "plain"),

@@ -658,4 +658,55 @@ describe("Metric element", () => {
       })
     })
   })
+
+  // Delta description tests
+  describe("Delta description", () => {
+    it("does not render delta_description when not provided", () => {
+      const props = getProps({ delta: "10" })
+      render(<Metric {...props} />)
+
+      const deltaElement = screen.getByTestId("stMetricDelta")
+      expect(deltaElement).toBeInTheDocument()
+      expect(deltaElement).toHaveTextContent("10")
+      expect(deltaElement).not.toHaveTextContent("month over month")
+    })
+
+    it("renders delta_description when provided", () => {
+      const props = getProps({
+        delta: "10",
+        deltaDescription: "month over month",
+      })
+      render(<Metric {...props} />)
+
+      const deltaElement = screen.getByTestId("stMetricDelta")
+      expect(deltaElement).toBeInTheDocument()
+      expect(deltaElement).toHaveTextContent("10")
+      expect(deltaElement).toHaveTextContent("month over month")
+    })
+
+    it("renders delta_description with different text", () => {
+      const props = getProps({
+        delta: "-5%",
+        deltaDescription: "from last week",
+      })
+      render(<Metric {...props} />)
+
+      const deltaElement = screen.getByTestId("stMetricDelta")
+      expect(deltaElement).toHaveTextContent("-5%")
+      expect(deltaElement).toHaveTextContent("from last week")
+    })
+
+    it("handles empty delta_description gracefully", () => {
+      const props = getProps({
+        delta: "10",
+        deltaDescription: "",
+      })
+      render(<Metric {...props} />)
+
+      const deltaElement = screen.getByTestId("stMetricDelta")
+      expect(deltaElement).toHaveTextContent("10")
+      // Empty delta_description should not add extra whitespace
+      expect(deltaElement.textContent).toBe("10")
+    })
+  })
 })
