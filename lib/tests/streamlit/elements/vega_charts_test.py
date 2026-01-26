@@ -2160,6 +2160,31 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
         assert chart_spec["encoding"]["x"]["sort"]["field"] == "C"
         assert chart_spec["encoding"]["x"]["sort"]["order"] == "descending"
 
+    def test_bar_chart_sort_with_multiple_y_columns(self):
+        """Test that sort works correctly when sorting by x column with multiple y columns.
+
+        This is a regression test for a bug where sorting by the x column when multiple
+        y columns are specified caused a KeyError due to duplicate columns in the melt
+        operation.
+        """
+        df = pd.DataFrame(
+            {
+                "A": ["foo", "bar", "baz"],
+                "B": [10, 20, 30],
+                "C": [1, 3, 2],
+            }
+        )
+
+        # This should not raise a KeyError
+        st.bar_chart(df, x="A", y=["B", "C"], sort="-A")
+
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        chart_spec = json.loads(proto.spec)
+
+        # Verify descending sort is applied
+        assert chart_spec["encoding"]["x"]["sort"]["field"] == "A"
+        assert chart_spec["encoding"]["x"]["sort"]["order"] == "descending"
+
     def test_bar_chart_sort_horizontal(self):
         """Test that sort works correctly on horizontal bar charts."""
         df = pd.DataFrame(

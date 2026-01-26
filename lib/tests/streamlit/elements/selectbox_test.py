@@ -623,6 +623,12 @@ class TestSelectboxSerde:
         assert res is None
 
     def test_serialize_empty_options(self):
+        """Test serializing with empty options.
+
+        Even with empty options, serialize should return the formatted value
+        (not None or empty string) because accept_new_options=True allows
+        user-entered values even when the options list is empty.
+        """
         options = []
         formatted_options, formatted_option_to_option_index = create_mappings(options)
         serde = SelectboxSerde(
@@ -631,8 +637,12 @@ class TestSelectboxSerde:
             formatted_option_to_option_index=formatted_option_to_option_index,
         )
 
+        # With default format_func (str), "something" should serialize to "something"
         res = serde.serialize("something")
-        assert res == ""
+        assert res == "something"
+        # Should not return empty string or None
+        assert res != ""
+        assert res is not None
 
     def test_serialize_with_format_func(self):
         options = ["Option A", "Option B", "Option C"]
@@ -648,13 +658,16 @@ class TestSelectboxSerde:
             options,
             formatted_options=formatted_options,
             formatted_option_to_option_index=formatted_option_to_option_index,
+            format_func=format_func,
         )
 
         res = serde.serialize("Option A")
         assert res == "Format: Option A"
 
+        # When a value is not found in options but format_func succeeds,
+        # return the formatted value (not the original) for type consistency
         res = serde.serialize("Option D")
-        assert res == "Option D"
+        assert res == "Format: Option D"
 
     def test_deserialize(self):
         options = ["Option A", "Option B", "Option C"]
@@ -707,6 +720,7 @@ class TestSelectboxSerde:
         assert res == "Option C"
 
     def test_deserialize_empty_options_with_default_index(self):
+        """Test that deserializing with empty options returns None even with default index."""
         options = []
         formatted_options, formatted_option_to_option_index = create_mappings(options)
         default_index = 0
@@ -719,6 +733,29 @@ class TestSelectboxSerde:
 
         res = serde.deserialize(None)
         assert res is None
+
+    def test_deserialize_empty_options_with_string_value(self):
+        """Test deserializing a string value with empty options.
+
+        When accept_new_options=True, users can enter custom values even
+        when options is empty. The serde should return these user-entered
+        values as-is.
+        """
+        options = []
+        formatted_options, formatted_option_to_option_index = create_mappings(options)
+        serde = SelectboxSerde(
+            options,
+            formatted_options=formatted_options,
+            formatted_option_to_option_index=formatted_option_to_option_index,
+        )
+
+        # User-entered values should be returned as-is (supports accept_new_options=True)
+        res = serde.deserialize("user_entered_value")
+        assert res == "user_entered_value"
+
+        # Even empty string is a valid user input when accept_new_options=True
+        res = serde.deserialize("")
+        assert res == ""
 
     def test_deserialize_complex_options(self):
         # Test with more complex option types
@@ -777,3 +814,38 @@ class TestSelectboxSerde:
 
         res = serde.deserialize("TestEnum.B")
         assert res == TestEnum.B
+
+    def test_serialize_deepcopied_custom_objects(self):
+        """Test that serialize works with deepcopied custom objects without __eq__.
+
+        This tests the fix for https://github.com/streamlit/streamlit/issues/13646
+        where custom objects without __eq__ would fail serialization after deepcopy
+        because the old implementation used index_() which relies on ==.
+        """
+        from copy import deepcopy
+
+        # Custom class without __eq__ implementation
+        class MyOption:  # noqa: B903
+            def __init__(self, value: str):
+                self.value = value
+
+        def format_func(x):
+            return x.value
+
+        options = [MyOption("a"), MyOption("b"), MyOption("c")]
+        formatted_options, formatted_option_to_option_index = create_mappings(
+            options, format_func
+        )
+        serde = SelectboxSerde(
+            options,
+            formatted_options=formatted_options,
+            formatted_option_to_option_index=formatted_option_to_option_index,
+            format_func=format_func,
+        )
+
+        # Simulate deepcopied value (what happens after register_widget)
+        deepcopied_value = deepcopy(options[0])
+
+        # This should work correctly using format_func comparison
+        res = serde.serialize(deepcopied_value)
+        assert res == "a"

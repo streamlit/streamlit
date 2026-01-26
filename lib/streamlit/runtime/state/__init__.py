@@ -12,7 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from streamlit.runtime.state.common import WidgetArgs, WidgetCallback, WidgetKwargs
+from streamlit.runtime.state.common import (
+    BindOption,
+    WidgetArgs,
+    WidgetCallback,
+    WidgetKwargs,
+)
 from streamlit.runtime.state.query_params_proxy import QueryParamsProxy
 from streamlit.runtime.state.safe_session_state import SafeSessionState
 from streamlit.runtime.state.session_state import (
@@ -28,6 +33,7 @@ from streamlit.runtime.state.widgets import register_widget
 
 __all__ = [
     "SCRIPT_RUN_WITHOUT_ERRORS_KEY",
+    "BindOption",
     "QueryParamsProxy",
     "SafeSessionState",
     "SessionState",

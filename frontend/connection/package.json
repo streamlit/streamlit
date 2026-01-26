@@ -1,6 +1,6 @@
 {
   "name": "@streamlit/connection",
-  "version": "1.53.0",
+  "version": "1.53.1",
   "license": "Apache-2.0",
   "private": true,
   "type": "module",
@@ -33,7 +33,7 @@
     "@streamlit/protobuf": "workspace:^",
     "@streamlit/utils": "workspace:^",
     "axios": "^1.13.2",
-    "lodash-es": "^4.17.22",
+    "lodash-es": "^4.17.23",
     "loglevel": "^1.9.2"
   },
   "devDependencies": {
