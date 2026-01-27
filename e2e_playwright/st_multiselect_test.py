@@ -511,11 +511,13 @@ def test_multiselect_preserves_scroll_position_on_remove(app: Page):
     # Note: We must dispatch a scroll event because programmatically setting scrollTop
     # doesn't fire scroll events in webkit/firefox, and the React component needs the
     # scroll event to capture the position for restoration after re-renders.
+    # We use requestAnimationFrame to ensure the event is fully processed before continuing.
     value_container.evaluate(
-        """el => {
+        """el => new Promise(resolve => {
             el.scrollTop = el.scrollHeight / 2;
             el.dispatchEvent(new Event('scroll', { bubbles: true }));
-        }"""
+            requestAnimationFrame(() => resolve());
+        })"""
     )
 
     # Get initial scroll position (should be > 0 since there are many items)
@@ -524,6 +526,10 @@ def test_multiselect_preserves_scroll_position_on_remove(app: Page):
 
     # Remove an item by clicking its delete button
     del_from_multiselect(app, "multiselect 17 - show maxHeight", "fifteen")
+
+    # Wait for the scroll position to be preserved (useLayoutEffect runs synchronously
+    # after DOM updates but we need to give the browser a frame to stabilize)
+    app.wait_for_timeout(50)
 
     # Verify scroll position is preserved
     final_scroll = value_container.evaluate("el => el.scrollTop")
