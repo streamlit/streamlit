@@ -560,7 +560,7 @@ describe("TextInput query param binding", () => {
   })
 
   it("does not register query param binding when queryParamKey is not set", () => {
-    const props = getProps()
+    const props = getProps({ queryParamKey: "" })
     vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
 
     render(<TextInput {...props} />)

@@ -396,11 +396,19 @@ class TextInputBindQueryParamsTest(DeltaGeneratorTestCase):
         assert "must have a unique 'key' parameter" in str(exc.value)
 
     def test_no_bind_does_not_set_query_param_key(self):
-        """Test that without bind parameter, query_param_key is not set."""
+        """Test that without bind parameter, query_param_key is not set.
+
+        When query_param_key is empty, the frontend will not register any
+        URL query parameter binding, so the widget operates normally without
+        URL synchronization.
+        """
         st.text_input("the label", key="my_key")
 
         c = self.get_delta_from_queue().new_element.text_input
         assert c.query_param_key == ""
+        # Verify widget still has normal properties (not affected by missing bind)
+        assert c.label == "the label"
+        assert c.default == ""
 
     def test_invalid_bind_value_raises_exception(self):
         """Test that an invalid bind value raises StreamlitInvalidBindValueError."""

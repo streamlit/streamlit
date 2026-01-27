@@ -751,11 +751,19 @@ class NumberInputBindQueryParamsTest(DeltaGeneratorTestCase):
         assert "must have a unique 'key' parameter" in str(exc.value)
 
     def test_no_bind_does_not_set_query_param_key(self):
-        """Test that without bind parameter, query_param_key is not set."""
-        st.number_input("the label", key="my_key")
+        """Test that without bind parameter, query_param_key is not set.
+
+        When query_param_key is empty, the frontend will not register any
+        URL query parameter binding, so the widget operates normally without
+        URL synchronization.
+        """
+        st.number_input("the label", key="my_key", value=0)
 
         c = self.get_delta_from_queue().new_element.number_input
         assert c.query_param_key == ""
+        # Verify widget still has normal properties (not affected by missing bind)
+        assert c.label == "the label"
+        assert c.default == 0
 
     def test_invalid_bind_value_raises_exception(self):
         """Test that an invalid bind value raises StreamlitInvalidBindValueError."""
@@ -806,6 +814,7 @@ class NumberInputBindQueryParamsTest(DeltaGeneratorTestCase):
         (150, 100),  # Above max -> clamped to max
         (-50, 0),  # Below min -> clamped to min
         (50, 50),  # In range -> unchanged
+        (None, 50),  # None -> returns default value
     ],
 )
 def test_serde_clamps_to_min_max(ui_value, expected):
