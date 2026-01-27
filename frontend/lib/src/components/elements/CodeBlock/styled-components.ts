@@ -100,7 +100,12 @@ export const StyledPre = styled.pre<StyledCodeProps>(
     // Add padding around the code
     padding: theme.spacing.lg,
 
-    code: { ...codeBlockStyle(theme, wrapLines) },
+    code: {
+      ...codeBlockStyle(theme, wrapLines),
+      // Ensure code block takes full width and has right padding for scroll end
+      display: "block",
+      paddingRight: theme.iconSizes.threeXL,
+    },
 
     // The token can consist of many lines, e.g. a triple-quote string, so
     // we need to make sure that the color is not overwritten.
