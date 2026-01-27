@@ -61,13 +61,15 @@ def preview_data(_source_type: str, _table_name: str) -> pd.DataFrame:
     )
 
 
-def validate_destination(dest_type: str, _dest_config: dict) -> tuple[bool, str]:
+def validate_destination(
+    dest_type: str, _dest_config: dict[str, Any]
+) -> tuple[bool, str]:
     """Simulate destination validation."""
     time.sleep(0.7)
     return True, f"✅ Successfully configured {dest_type} destination"
 
 
-def execute_pipeline(_config: dict):
+def execute_pipeline(_config: dict[str, Any]):
     """Simulate pipeline execution."""
     steps = [
         "Extracting data",
@@ -329,13 +331,13 @@ st.info("💡 Navigate through tabs to configure your pipeline")
 # Create tabs with function arguments (Option 2)
 # Each function is called ONLY when its tab is active
 st.tabs(
-    {
-        "1️⃣ Data Source": step1_data_source,
-        "2️⃣ Data Preview": step2_data_preview,
-        "3️⃣ Transformations": step3_transformations,
-        "4️⃣ Destination": step4_destination,
-        "5️⃣ Execute": step5_execute,
-    }
+    [
+        "1️⃣ Data Source",
+        "2️⃣ Data Preview",
+        "3️⃣ Transformations",
+        "4️⃣ Destination",
+        "5️⃣ Execute",
+    ]
 )
 
 # Footer

@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import random
 import time
+from typing import Any
 
 import pandas as pd
 
@@ -81,20 +82,24 @@ def preview_data(_source_type: str, _table_name: str) -> pd.DataFrame:
     )
 
 
-def apply_transformations(data: pd.DataFrame, _transformations: list) -> pd.DataFrame:
+def apply_transformations(
+    data: pd.DataFrame, _transformations: list[Any]
+) -> pd.DataFrame:
     """Simulate data transformations."""
     time.sleep(0.6)
     # Mock transformation
     return data.copy()
 
 
-def validate_destination(dest_type: str, _dest_config: dict) -> tuple[bool, str]:
+def validate_destination(
+    dest_type: str, _dest_config: dict[str, Any]
+) -> tuple[bool, str]:
     """Simulate destination validation."""
     time.sleep(0.7)
     return True, f"✅ Successfully configured {dest_type} destination"
 
 
-def execute_pipeline(_config: dict):
+def execute_pipeline(_config: dict[str, Any]):
     """Simulate pipeline execution."""
     steps = [
         "Extracting data",

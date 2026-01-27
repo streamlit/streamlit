@@ -318,13 +318,13 @@ start_time = time.time()
 # Create tabs with function arguments (Option 2)
 # Each function is called ONLY when its tab is active
 st.tabs(
-    {
-        "📈 Sales": show_sales_tab,
-        "👥 Customers": show_customer_tab,
-        "📦 Inventory": show_inventory_tab,
-        "📊 Analytics": show_analytics_tab,
-        "👔 Employees": show_employee_tab,
-    },
+    [
+        "📈 Sales",
+        "👥 Customers",
+        "📦 Inventory",
+        "📊 Analytics",
+        "👔 Employees",
+    ],
     key="db_tabs",
 )
 
