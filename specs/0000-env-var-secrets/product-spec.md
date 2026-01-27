@@ -8,7 +8,7 @@ status: Draft
 
 ## Summary
 
-Enable secrets configuration via environment variables to allow users to leverage existing secrets management infrastructure instead of relying solely on `secrets.toml` files. This spec evaluates three approaches and recommends one for implementation.
+Enable secrets configuration via environment variables to allow users to leverage existing secrets management infrastructure instead of relying solely on `secrets.toml` files. This spec evaluates four approaches and recommends a primary solution with a secondary option for advanced users.
 
 ## Problem
 
@@ -285,19 +285,159 @@ export STREAMLIT_SECRETS_JSON='{
 
 ---
 
+### Option D: Programmatic Secrets via `st.App`
+
+Pass secrets directly to the `st.App` constructor for programmatic configuration before server startup.
+
+#### Example
+
+```python
+import os
+import streamlit as st
+
+# Load secrets from any source: env vars, Vault, AWS Secrets Manager, etc.
+secrets = {
+    "auth": {
+        "client_id": os.environ["OAUTH_CLIENT_ID"],
+        "client_secret": os.environ["OAUTH_CLIENT_SECRET"],
+        "redirect_uri": "https://myapp.example.com/callback",
+    },
+    "database": {
+        "host": "localhost",
+        "port": 5432,  # Typed values supported
+        "credentials": {
+            "user": os.environ["DB_USER"],
+            "password": os.environ["DB_PASS"],
+        },
+    },
+}
+
+app = st.App("main.py", secrets=secrets)
+```
+
+#### API
+
+The `st.App` class accepts an optional `secrets` parameter:
+
+```python
+st.App(
+    script_path: str | Path,
+    *,
+    secrets: dict[str, Any] | None = None,  # NEW
+    lifespan: Callable[[App], AsyncContextManager[dict[str, Any] | None]] | None = None,
+    routes: Sequence[BaseRoute] | None = None,
+    middleware: Sequence[Middleware] | None = None,
+    exception_handlers: Mapping[Any, ExceptionHandler] | None = None,
+    debug: bool = False,
+) -> App
+```
+
+#### Behavior
+
+- **Merge precedence**: Secrets passed to `st.App` override values from `secrets.toml` files and environment variable sources
+- **Deep merge**: Nested dictionaries are merged recursively (not replaced entirely)
+- **Timing**: Secrets are injected before the runtime starts, ensuring `st.secrets` is fully populated when the script runs
+- **Type support**: Supports all TOML-compatible types (strings, numbers, booleans, arrays, nested dicts)
+
+#### Merge Order (lowest to highest priority)
+
+```
+1. secrets.toml files (existing behavior)
+2. Placeholder substitution (${{VAR}}) — applied during file parsing
+3. Prefixed env vars (STREAMLIT_SECRETS_*) — if implemented
+4. JSON env var (STREAMLIT_SECRETS_JSON) — if implemented
+5. st.App(secrets=...) — highest priority, always wins
+```
+
+#### Use Cases
+
+##### External Secrets Manager Integration
+
+```python
+import streamlit as st
+from my_vault_client import get_secrets
+
+# Fetch secrets from HashiCorp Vault, AWS Secrets Manager, Azure Key Vault, etc.
+vault_secrets = get_secrets("streamlit/myapp")
+
+app = st.App("main.py", secrets=vault_secrets)
+```
+
+##### Dynamic Secrets at Startup
+
+```python
+import os
+import streamlit as st
+from contextlib import asynccontextmanager
+
+@asynccontextmanager
+async def lifespan(app):
+    # Secrets are already available here!
+    print(f"Starting with client_id: {st.secrets['auth']['client_id'][:8]}...")
+    yield
+
+# Construct secrets programmatically
+secrets = {
+    "auth": {
+        "client_id": os.environ["OAUTH_CLIENT_ID"],
+        "client_secret": os.environ["OAUTH_CLIENT_SECRET"],
+    }
+}
+
+app = st.App("main.py", secrets=secrets, lifespan=lifespan)
+```
+
+##### Testing with Mock Secrets
+
+```python
+import streamlit as st
+
+# In test setup, inject test secrets without modifying files
+test_secrets = {
+    "auth": {
+        "client_id": "test-client-id",
+        "client_secret": "test-client-secret",
+    },
+    "database": {
+        "url": "sqlite:///:memory:",
+    },
+}
+
+app = st.App("main.py", secrets=test_secrets)
+```
+
+#### Pros
+
+- **Full control**: Load secrets from any source with arbitrary logic
+- **No file needed**: Works without `secrets.toml` for pure programmatic config
+- **Typed values**: Supports all TOML-compatible types natively
+- **Secrets manager friendly**: Natural fit for Vault, AWS Secrets Manager, etc.
+- **Testable**: Easy to inject mock secrets in tests
+- **Early availability**: Secrets available before runtime starts (in lifespan hooks)
+
+#### Cons
+
+- **Requires code changes**: Must use `st.App` instead of traditional `streamlit run`
+- **Not declarative**: Secrets structure defined in code, not config file
+- **Python-only**: Cannot be configured via CLI or environment alone
+
+---
+
 ## Comparison
 
-| Criteria                  | Option A: Placeholders | Option B: Prefixed Vars | Option C: JSON |
-| ------------------------- | ---------------------- | ----------------------- | -------------- |
-| No file needed            | ❌                     | ✅                      | ✅             |
-| Typed values              | ✅ (partial)           | ❌                      | ✅             |
-| Default values            | ✅                     | ❌                      | ❌             |
-| Human readable            | ✅                     | ✅                      | ❌             |
-| String concatenation      | ✅                     | ❌                      | ❌             |
-| 12-factor compliant       | ✅                     | ✅                      | ✅             |
-| Easy debugging            | ✅                     | ✅                      | ❌             |
-| Platform compatibility    | High                   | Very High               | High           |
-| Implementation complexity | Low                    | Medium                  | Low            |
+| Criteria                  | Option A: Placeholders | Option B: Prefixed Vars | Option C: JSON | Option D: st.App |
+| ------------------------- | ---------------------- | ----------------------- | -------------- | ---------------- |
+| No file needed            | ❌                     | ✅                      | ✅             | ✅               |
+| Typed values              | ✅ (partial)           | ❌                      | ✅             | ✅               |
+| Default values            | ✅                     | ❌                      | ❌             | ✅ (in code)     |
+| Human readable            | ✅                     | ✅                      | ❌             | ✅               |
+| String concatenation      | ✅                     | ❌                      | ❌             | ✅ (in code)     |
+| 12-factor compliant       | ✅                     | ✅                      | ✅             | ✅               |
+| Easy debugging            | ✅                     | ✅                      | ❌             | ✅               |
+| Secrets manager friendly  | ❌                     | ❌                      | ✅             | ✅               |
+| Platform compatibility    | High                   | Very High               | High           | Medium           |
+| Implementation complexity | Low                    | Medium                  | Low            | Low              |
+| Requires st.App           | ❌                     | ❌                      | ❌             | ✅               |
 
 ---
 
@@ -335,7 +475,27 @@ st.login()  # Works! Credentials injected from env vars.
 
 ### What Option A Doesn't Solve
 
-Users who want **zero files** (pure env-var configuration) would need Option B. This is a valid use case but less common than the "inject secrets into existing config" pattern.
+- Users who want **zero files** (pure env-var configuration) would need Option B or D.
+- Users integrating with **external secrets managers** (Vault, AWS Secrets Manager) would benefit from Option D's programmatic approach.
+
+### Secondary Recommendation: Option D for Advanced Users
+
+For users adopting `st.App` (see [st.App spec](./0000-st-app/product-spec.md)), **Option D** provides maximum flexibility:
+
+```python
+import os
+import streamlit as st
+from my_secrets_client import fetch_secrets
+
+# Load from any source: env vars, Vault, AWS Secrets Manager, etc.
+app = st.App("main.py", secrets=fetch_secrets("streamlit/myapp"))
+```
+
+This is particularly valuable for:
+
+- Enterprise deployments with centralized secrets management
+- Testing scenarios requiring mock secrets
+- Applications needing secrets available in lifespan hooks (before first request)
 
 ---
 
@@ -347,7 +507,8 @@ The options are not mutually exclusive. If broader support is desired, multiple 
 1. secrets.toml files (existing behavior)
 2. Placeholder substitution (${{VAR}}) — applied during file parsing
 3. Prefixed env vars (STREAMLIT_SECRETS_*) — merged after file parsing
-4. JSON env var (STREAMLIT_SECRETS_JSON) — merged last
+4. JSON env var (STREAMLIT_SECRETS_JSON) — merged after prefixed vars
+5. st.App(secrets=...) — highest priority, always wins
 ```
 
 This would allow users to:
@@ -355,8 +516,9 @@ This would allow users to:
 - Use placeholders for most cases (Option A)
 - Override individual values via prefixed env vars (Option B)
 - Bulk-inject from secrets managers via JSON (Option C)
+- Programmatically inject secrets with full control via `st.App` (Option D)
 
-**Note**: Implementing multiple options increases complexity and testing surface. Starting with Option A alone may be preferable, with other options added based on user feedback.
+**Note**: Implementing multiple options increases complexity and testing surface. Starting with Option A alone may be preferable, with Option D added when `st.App` becomes generally available, and other options added based on user feedback.
 
 ---
 
@@ -436,6 +598,89 @@ heroku config:set STREAMLIT_SECRETS_AUTH__CLIENT_SECRET="yyy"
 ```
 
 No `secrets.toml` file needed in the repository.
+
+### Example 4: AWS Secrets Manager Integration (Option D)
+
+```python
+# app.py
+import json
+import boto3
+import streamlit as st
+
+def get_aws_secrets(secret_name: str) -> dict:
+    """Fetch secrets from AWS Secrets Manager."""
+    client = boto3.client("secretsmanager")
+    response = client.get_secret_value(SecretId=secret_name)
+    return json.loads(response["SecretString"])
+
+# Load secrets from AWS before server starts
+aws_secrets = get_aws_secrets("prod/streamlit/myapp")
+
+app = st.App("dashboard.py", secrets=aws_secrets)
+
+# Run with: uvicorn app:app
+```
+
+### Example 5: HashiCorp Vault Integration (Option D)
+
+```python
+# app.py
+import os
+import hvac
+import streamlit as st
+
+def get_vault_secrets(path: str) -> dict:
+    """Fetch secrets from HashiCorp Vault."""
+    client = hvac.Client(url="https://vault.example.com")
+    client.auth.approle.login(
+        role_id=os.environ["VAULT_ROLE_ID"],
+        secret_id=os.environ["VAULT_SECRET_ID"],
+    )
+    secret = client.secrets.kv.v2.read_secret_version(path=path)
+    return secret["data"]["data"]
+
+app = st.App(
+    "dashboard.py",
+    secrets={
+        "auth": get_vault_secrets("streamlit/auth"),
+        "database": get_vault_secrets("streamlit/database"),
+    },
+)
+```
+
+### Example 6: Testing with Mock Secrets (Option D)
+
+```python
+# test_app.py
+import pytest
+from httpx import ASGITransport, AsyncClient
+import streamlit as st
+
+@pytest.fixture
+def test_app():
+    """Create app with test secrets."""
+    return st.App(
+        "dashboard.py",
+        secrets={
+            "auth": {
+                "client_id": "test-client-id",
+                "client_secret": "test-secret",
+            },
+            "database": {
+                "url": "sqlite:///:memory:",
+            },
+        },
+    )
+
+@pytest.mark.anyio
+async def test_health_endpoint(test_app):
+    async with AsyncClient(
+        transport=ASGITransport(app=test_app),
+        base_url="http://test",
+    ) as client:
+        response = await client.get("/_stcore/health")
+        assert response.status_code == 200
+```
 
 ---
 
