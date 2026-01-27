@@ -983,7 +983,8 @@ class ArrowMixin:
             " If you have a specific use-case that requires the `add_rows` "
             "functionality, please tell us via this "
             "[issue on Github](https://github.com/streamlit/streamlit/issues/13063).",
-            show_in_browser=False,
+            show_in_browser=True,
+            show_once=True,
         )
 
         return _arrow_add_rows(self.dg, data, **kwargs)

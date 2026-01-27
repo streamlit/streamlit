@@ -55,6 +55,16 @@ def large_logo_w_sidebar_subtest():
     st.sidebar.write("Hi")
 
 
+def material_icon_logo_subtest():
+    st.logo(":material/rocket_launch:", size="medium")
+    st.sidebar.write("Hi")
+
+
+def emoji_logo_subtest():
+    st.logo("🚀", size="medium")
+    st.sidebar.write("Hi")
+
+
 # NOTE: Must be run last, since st.navigation will linger in all other tests.
 def logo_w_sidebar_and_nav_subtest():
     st.logo(

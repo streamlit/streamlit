@@ -299,6 +299,16 @@ describe("useVegaElementPreprocessor", () => {
         expectedHeight: undefined,
       },
       {
+        testName:
+          "does not set spec.width when useContainerWidth=true but containerWidth<=0",
+        containerWidth: 0,
+        containerHeight: 300,
+        useContainerWidth: true,
+        useContainerHeight: false,
+        expectedWidth: undefined,
+        expectedHeight: undefined,
+      },
+      {
         testName: "sets spec.height when useContainerHeight=true",
         containerWidth: 400,
         containerHeight: 300,
@@ -306,6 +316,16 @@ describe("useVegaElementPreprocessor", () => {
         useContainerHeight: true,
         expectedWidth: undefined,
         expectedHeight: 300,
+      },
+      {
+        testName:
+          "does not set spec.height when useContainerHeight=true but containerHeight<=0",
+        containerWidth: 400,
+        containerHeight: 0,
+        useContainerWidth: false,
+        useContainerHeight: true,
+        expectedWidth: undefined,
+        expectedHeight: undefined,
       },
       {
         testName: "sets both spec.width and spec.height when both are true",

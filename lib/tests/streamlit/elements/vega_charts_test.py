@@ -2005,8 +2005,9 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
         assert chart_spec["encoding"]["y"]["stack"] == stack
 
     @parameterized.expand(ST_CHART_ARGS)
+    @patch("streamlit.elements.arrow.show_deprecation_warning")
     def test_add_rows_preserves_initial_chart_styling(
-        self, chart_command: Callable, altair_type: str
+        self, chart_command: Callable, altair_type: str, _
     ):
         """Test that add_rows works on an empty chart, preserving initial chart styling."""
         empty_df = pd.DataFrame({"A": [], "B": []})
@@ -2048,7 +2049,10 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
         assert new_proto.use_container_width == test_use_container_width
 
     @parameterized.expand([st.area_chart, st.bar_chart])
-    def test_bar_and_area_preserve_initial_stack_param(self, chart_command: Callable):
+    @patch("streamlit.elements.arrow.show_deprecation_warning")
+    def test_bar_and_area_preserve_initial_stack_param(
+        self, chart_command: Callable, _
+    ):
         """Test that the stack parameter is preserved when adding rows to a bar or area chart."""
         empty_df = pd.DataFrame({"A": [], "B": []})
         test_stack = "normalize"
@@ -2078,7 +2082,8 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
 
         assert updated_spec["encoding"]["y"]["stack"] == test_stack
 
-    def test_bar_chart_preserves_initial_horizontal_param(self):
+    @patch("streamlit.elements.arrow.show_deprecation_warning")
+    def test_bar_chart_preserves_initial_horizontal_param(self, _):
         """Test that the horizontal parameter is preserved when adding rows to a bar chart."""
         empty_df = pd.DataFrame({"A": [], "B": []})
         test_horizontal = True
@@ -2110,7 +2115,8 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
         assert updated_spec["encoding"]["x"]["type"] == "quantitative"
         assert updated_spec["encoding"]["y"]["type"] == "ordinal"
 
-    def test_bar_chart_preserves_initial_sort_param(self):
+    @patch("streamlit.elements.arrow.show_deprecation_warning")
+    def test_bar_chart_preserves_initial_sort_param(self, _):
         """Test that the sort parameter is preserved when adding rows to a bar chart."""
         empty_df = pd.DataFrame({"A": [], "B": [], "C": []})
         test_sort = "C"

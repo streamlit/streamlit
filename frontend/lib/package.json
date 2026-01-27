@@ -117,9 +117,9 @@
     "urlpattern-polyfill": "^10.1.0",
     "uuid": "^13.0.0",
     "vega": "^6.2.0",
-    "vega-embed": "^7.0.2",
+    "vega-embed": "^7.1.0",
     "vega-interpreter": "^2.2.1",
-    "vega-lite": "6.3.1",
+    "vega-lite": "6.4.2",
     "wavesurfer.js": "^7.11.1",
     "xxhashjs": "^0.2.2"
   },
