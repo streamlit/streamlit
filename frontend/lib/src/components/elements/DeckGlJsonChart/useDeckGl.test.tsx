@@ -361,4 +361,208 @@ describe("useDeckGl", () => {
       expect(result.current.viewState).toEqual(newViewState)
     })
   })
+
+  describe("selection sanitization", () => {
+    const getPropsWithArrayData = (
+      data: unknown[],
+      layerId: string = "test-layer"
+    ): UseDeckGlProps => {
+      const json = {
+        initialViewState: mockInitialViewState,
+        layers: [
+          {
+            "@@type": "ScatterplotLayer",
+            id: layerId,
+            data,
+            getPosition: "@@=[lng, lat]",
+            pickable: true,
+          },
+        ],
+      }
+
+      return {
+        element: DeckGlJsonChartProto.create({
+          id: "test-element-id",
+          json: JSON.stringify(json),
+          selectionMode: [DeckGlJsonChartProto.SelectionMode.SINGLE_OBJECT],
+        }),
+        widgetMgr: new WidgetStateManager({
+          sendRerunBackMsg: vi.fn(),
+          formsDataChanged: vi.fn(),
+        }),
+        fragmentId: "myFragmentId",
+        isLightTheme: false,
+        theme: mockTheme.emotion,
+      }
+    }
+
+    it("should remove selection when layer is removed", () => {
+      // Start with data and a selection
+      const initialData = [
+        { lat: 1, lng: 1 },
+        { lat: 2, lng: 2 },
+        { lat: 3, lng: 3 },
+      ]
+      const initialProps = getPropsWithArrayData(
+        initialData,
+        "layer-to-remove"
+      )
+
+      const { result, rerender } = renderHook(props => useDeckGl(props), {
+        initialProps,
+      })
+
+      // Set a selection on the layer
+      act(() => {
+        result.current.setSelection({
+          fromUi: true,
+          value: {
+            selection: {
+              indices: { "layer-to-remove": [0, 1] },
+              objects: { "layer-to-remove": [{}, {}] },
+            },
+          },
+        })
+      })
+
+      // Rerender to apply the selection
+      rerender(initialProps)
+      expect(result.current.data.selection.indices["layer-to-remove"]).toEqual(
+        [0, 1]
+      )
+
+      // Now remove the layer by providing a different layer
+      const newProps = getPropsWithArrayData(initialData, "different-layer")
+      rerender(newProps)
+
+      // Selection for removed layer should be cleared
+      expect(
+        result.current.data.selection.indices["layer-to-remove"]
+      ).toBeUndefined()
+    })
+
+    it("should remove orphaned indices when data shrinks", () => {
+      // Start with 5 items
+      const initialData = [
+        { lat: 1, lng: 1 },
+        { lat: 2, lng: 2 },
+        { lat: 3, lng: 3 },
+        { lat: 4, lng: 4 },
+        { lat: 5, lng: 5 },
+      ]
+      const initialProps = getPropsWithArrayData(
+        initialData,
+        "shrinking-layer"
+      )
+
+      const { result, rerender } = renderHook(props => useDeckGl(props), {
+        initialProps,
+      })
+
+      // Select items at indices 2 and 4
+      act(() => {
+        result.current.setSelection({
+          fromUi: true,
+          value: {
+            selection: {
+              indices: { "shrinking-layer": [2, 4] },
+              objects: { "shrinking-layer": [{}, {}] },
+            },
+          },
+        })
+      })
+
+      rerender(initialProps)
+      expect(result.current.data.selection.indices["shrinking-layer"]).toEqual(
+        [2, 4]
+      )
+
+      // Shrink to 3 items - index 4 is now invalid
+      const shrunkData = [
+        { lat: 1, lng: 1 },
+        { lat: 2, lng: 2 },
+        { lat: 3, lng: 3 },
+      ]
+      const shrunkProps = getPropsWithArrayData(shrunkData, "shrinking-layer")
+      rerender(shrunkProps)
+
+      // Only index 2 should remain (index 4 is out of bounds)
+      expect(result.current.data.selection.indices["shrinking-layer"]).toEqual(
+        [2]
+      )
+    })
+
+    it("should preserve selection for layers with URL data", () => {
+      // Create props with URL data (non-array)
+      const propsWithUrlData = getUseDeckGlProps({
+        selectionMode: [DeckGlJsonChartProto.SelectionMode.SINGLE_OBJECT],
+        id: "test-element-id",
+      })
+
+      const { result, rerender } = renderHook(props => useDeckGl(props), {
+        initialProps: propsWithUrlData,
+      })
+
+      // Set a selection on the URL-data layer
+      const layerId = "0533490f-fcf9-4dc0-8c94-ae4fbd42eb6f"
+      act(() => {
+        result.current.setSelection({
+          fromUi: true,
+          value: {
+            selection: {
+              indices: { [layerId]: [5, 10, 15] },
+              objects: { [layerId]: [{}, {}, {}] },
+            },
+          },
+        })
+      })
+
+      rerender(propsWithUrlData)
+
+      // Selection should be preserved since we can't validate URL data indices
+      expect(result.current.data.selection.indices[layerId]).toEqual([
+        5, 10, 15,
+      ])
+    })
+
+    it("should clear all selections when data shrinks to empty", () => {
+      // Start with data
+      const initialData = [
+        { lat: 1, lng: 1 },
+        { lat: 2, lng: 2 },
+      ]
+      const initialProps = getPropsWithArrayData(initialData, "emptying-layer")
+
+      const { result, rerender } = renderHook(props => useDeckGl(props), {
+        initialProps,
+      })
+
+      // Select item at index 0
+      act(() => {
+        result.current.setSelection({
+          fromUi: true,
+          value: {
+            selection: {
+              indices: { "emptying-layer": [0] },
+              objects: { "emptying-layer": [{}] },
+            },
+          },
+        })
+      })
+
+      rerender(initialProps)
+      expect(result.current.data.selection.indices["emptying-layer"]).toEqual([
+        0,
+      ])
+
+      // Shrink to empty array
+      const emptyProps = getPropsWithArrayData([], "emptying-layer")
+      rerender(emptyProps)
+
+      // Selection should be cleared (no valid indices)
+      expect(
+        result.current.data.selection.indices["emptying-layer"]
+      ).toBeUndefined()
+    })
+  })
 })

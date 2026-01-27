@@ -26,6 +26,10 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit.elements import deck_gl_json_chart
+from streamlit.elements.deck_gl_json_chart import (
+    PydeckSelectionSerde,
+    parse_selection_mode,
+)
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.DeckGlJsonChart_pb2 import DeckGlJsonChart as PydeckProto
 from streamlit.testing.v1.util import patch_config_options
@@ -606,3 +610,156 @@ class PyDeckElementIdStabilityTest(DeltaGeneratorTestCase):
 
             # IDs should be different because selection_mode is in key_as_main_identity
             assert id1 != id2
+
+
+class PydeckSelectionSerdeTest(DeltaGeneratorTestCase):
+    """Test PydeckSelectionSerde serialization and deserialization."""
+
+    def test_deserialize_none_returns_empty_state(self):
+        """Test that deserializing None returns an empty selection state."""
+        serde = PydeckSelectionSerde()
+        result = serde.deserialize(None)
+
+        assert result["selection"]["indices"] == {}
+        assert result["selection"]["objects"] == {}
+
+    def test_deserialize_valid_json(self):
+        """Test that deserializing valid JSON returns the correct state."""
+        serde = PydeckSelectionSerde()
+        json_str = (
+            '{"selection": {"indices": {"layer1": [0, 1]}, '
+            '"objects": {"layer1": [{"name": "obj1"}, {"name": "obj2"}]}}}'
+        )
+        result = serde.deserialize(json_str)
+
+        assert result["selection"]["indices"]["layer1"] == [0, 1]
+        assert result["selection"]["objects"]["layer1"] == [
+            {"name": "obj1"},
+            {"name": "obj2"},
+        ]
+
+    def test_deserialize_empty_dict_returns_empty_state(self):
+        """Test that deserializing an empty dict returns empty selection state."""
+        serde = PydeckSelectionSerde()
+        result = serde.deserialize("{}")
+
+        # Should return empty state when selection key is missing
+        assert result["selection"]["indices"] == {}
+        assert result["selection"]["objects"] == {}
+
+    def test_serialize_selection_state(self):
+        """Test that serializing a selection state returns valid JSON."""
+        serde = PydeckSelectionSerde()
+        state = {
+            "selection": {
+                "indices": {"my_layer": [2, 5]},
+                "objects": {"my_layer": [{"id": "a"}, {"id": "b"}]},
+            }
+        }
+        result = serde.serialize(state)
+        parsed = json.loads(result)
+
+        assert parsed["selection"]["indices"]["my_layer"] == [2, 5]
+        assert parsed["selection"]["objects"]["my_layer"] == [{"id": "a"}, {"id": "b"}]
+
+    def test_deserialize_supports_attribute_notation(self):
+        """Test that deserialized state supports attribute notation."""
+        serde = PydeckSelectionSerde()
+        json_str = (
+            '{"selection": {"indices": {"layer1": [0]}, "objects": {"layer1": [{}]}}}'
+        )
+        result = serde.deserialize(json_str)
+
+        # Should support both dict and attribute access
+        assert result.selection.indices["layer1"] == [0]
+
+
+class ParseSelectionModeTest(DeltaGeneratorTestCase):
+    """Test parse_selection_mode function."""
+
+    def test_parse_single_object_mode(self):
+        """Test parsing single-object selection mode."""
+        result = parse_selection_mode("single-object")
+        assert PydeckProto.SelectionMode.SINGLE_OBJECT in result
+        assert len(result) == 1
+
+    def test_parse_multi_object_mode(self):
+        """Test parsing multi-object selection mode."""
+        result = parse_selection_mode("multi-object")
+        assert PydeckProto.SelectionMode.MULTI_OBJECT in result
+        assert len(result) == 1
+
+    def test_invalid_selection_mode_raises_exception(self):
+        """Test that an invalid selection mode raises StreamlitAPIException."""
+        with pytest.raises(StreamlitAPIException) as e:
+            parse_selection_mode("invalid-mode")
+        assert "Invalid selection mode" in str(e.value)
+
+    def test_set_selection_mode_raises_exception(self):
+        """Test that a set of selection modes raises StreamlitAPIException."""
+        with pytest.raises(StreamlitAPIException) as e:
+            parse_selection_mode({"single-object", "multi-object"})
+        assert "Selection mode must be a single value" in str(e.value)
+
+    def test_list_selection_mode_raises_exception(self):
+        """Test that a list of selection modes raises StreamlitAPIException."""
+        with pytest.raises(StreamlitAPIException) as e:
+            parse_selection_mode(["single-object"])
+        assert "Selection mode must be a single value" in str(e.value)
+
+
+class PydeckCallbackTest(DeltaGeneratorTestCase):
+    """Test pydeck_chart with callback functions."""
+
+    def test_on_select_with_callable(self):
+        """Test that pydeck_chart works with a callable for on_select."""
+        callback_called = []
+
+        def my_callback():
+            callback_called.append(True)
+
+        st.pydeck_chart(
+            pdk.Deck(
+                layers=[
+                    pdk.Layer("ScatterplotLayer", data=df1, id="layer1"),
+                ]
+            ),
+            on_select=my_callback,
+        )
+
+        el = self.get_delta_from_queue().new_element
+        # Should have an ID when selections are enabled
+        assert el.deck_gl_json_chart.id != ""
+        assert el.deck_gl_json_chart.selection_mode == [
+            PydeckProto.SelectionMode.SINGLE_OBJECT
+        ]
+
+    def test_key_with_on_select_ignore_has_no_id(self):
+        """Test that key has no effect when on_select is 'ignore'."""
+        st.pydeck_chart(
+            pdk.Deck(
+                layers=[
+                    pdk.Layer("ScatterplotLayer", data=df1),
+                ]
+            ),
+            on_select="ignore",
+            key="my_key",  # Key should have no effect
+        )
+
+        el = self.get_delta_from_queue().new_element
+        # Should not have an ID when selections are not enabled
+        assert el.deck_gl_json_chart.id == ""
+        assert el.deck_gl_json_chart.selection_mode == []
+
+    def test_invalid_on_select_raises_exception(self):
+        """Test that an invalid on_select value raises StreamlitAPIException."""
+        with pytest.raises(StreamlitAPIException) as e:
+            st.pydeck_chart(
+                pdk.Deck(
+                    layers=[
+                        pdk.Layer("ScatterplotLayer", data=df1),
+                    ]
+                ),
+                on_select="invalid",
+            )
+        assert "only 'ignore', 'rerun', or a callable is supported" in str(e.value)
