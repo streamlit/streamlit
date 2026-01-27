@@ -183,23 +183,26 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent): void => {
-      if (sidebarRef && window) {
-        const { current } = sidebarRef
-        const target = event.target as Node | null
+      const sidebarElement = sidebarRef.current
+      const appRootElement = appRootRef?.current
+      const target = event.target as Node | null
 
-        // Only collapse if click is outside the sidebar but inside the main app.
-        // This excludes clicks on portaled elements (dropdowns, modals, etc.)
-        // since they render outside the main app container.
-        if (
-          current &&
-          target &&
-          !current.contains(target) &&
-          appRootRef?.current?.contains(target) &&
-          innerWidth <= mediumBreakpointPx &&
-          !isCollapsed
-        ) {
-          onToggleCollapse(true)
-        }
+      if (!sidebarElement || !target) {
+        return
+      }
+
+      const isInsideSidebar = sidebarElement.contains(target)
+      const isInsideApp = appRootElement?.contains(target) ?? false
+      const isMobileViewport = innerWidth <= mediumBreakpointPx
+
+      // Only collapse if click is outside the sidebar but inside the main app.
+      // This excludes clicks on portaled elements (dropdowns, modals, etc.)
+      // since they render outside the main app container.
+      const shouldCollapse =
+        !isInsideSidebar && isInsideApp && isMobileViewport && !isCollapsed
+
+      if (shouldCollapse) {
+        onToggleCollapse(true)
       }
     }
 
@@ -209,7 +212,6 @@ const Sidebar: React.FC<SidebarProps> = ({
       document.removeEventListener("mousedown", handleClickOutside)
     }
   }, [
-    lastInnerWidth,
     mediumBreakpointPx,
     isCollapsed,
     onToggleCollapse,

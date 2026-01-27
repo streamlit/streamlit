@@ -14,27 +14,19 @@
  * limitations under the License.
  */
 
-import { ReactElement, useMemo, useRef } from "react"
-
-import {
-  fireEvent,
-  render,
-  RenderResult,
-  screen,
-  within,
-} from "@testing-library/react"
+import { fireEvent, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
 import {
   mockEndpoints,
-  mockTheme,
-  NavigationContext,
   NavigationContextProps,
-  SidebarConfigContext,
   SidebarConfigContextProps,
-  ThemeProvider,
-  WindowDimensionsProvider,
 } from "@streamlit/lib"
+import {
+  renderWithContexts,
+  RenderWithContextsOptions,
+  RenderWithContextsResult,
+} from "@streamlit/lib/testing"
 import { Logo, PageConfig } from "@streamlit/protobuf"
 
 import Sidebar, { SidebarProps } from "./Sidebar"
@@ -70,78 +62,35 @@ const mockEndpointProp = mockEndpoints({
   sendClientErrorToHost,
 })
 
-// Wrapper component that sets up all required context providers
-function SidebarWrapper({
-  props = {},
-  sidebarConfigContext = {},
-  navigationContext = {},
-}: {
-  props?: Partial<SidebarProps>
-  sidebarConfigContext?: Partial<SidebarConfigContextProps>
-  navigationContext?: Partial<NavigationContextProps>
-}): ReactElement {
-  const appRootRef = useRef<HTMLDivElement>(null)
-
-  const sidebarConfigContextValues = useMemo<SidebarConfigContextProps>(
-    () => ({
-      initialSidebarState: PageConfig.SidebarState.AUTO,
-      appLogo: null,
-      sidebarChevronDownshift: 0,
-      expandSidebarNav: false,
-      hideSidebarNav: false,
-      appRootRef,
-      ...sidebarConfigContext,
-    }),
-    [sidebarConfigContext, appRootRef]
-  )
-
-  const navigationContextValues = useMemo<NavigationContextProps>(
-    () => ({
-      pageLinkBaseUrl: "",
-      currentPageScriptHash: "",
-      onPageChange: vi.fn(),
-      navSections: [],
-      appPages: [],
-      ...navigationContext,
-    }),
-    [navigationContext]
-  )
-
-  return (
-    <ThemeProvider theme={mockTheme.emotion}>
-      <WindowDimensionsProvider>
-        <SidebarConfigContext.Provider value={sidebarConfigContextValues}>
-          <NavigationContext.Provider value={navigationContextValues}>
-            <div data-testid="stApp" ref={appRootRef}>
-              <Sidebar
-                endpoints={mockEndpointProp}
-                hasElements
-                isCollapsed={false}
-                onToggleCollapse={vi.fn()}
-                widgetsDisabled={false}
-                {...props}
-              />
-            </div>
-          </NavigationContext.Provider>
-        </SidebarConfigContext.Provider>
-      </WindowDimensionsProvider>
-    </ThemeProvider>
-  )
-}
-
 function renderSidebar(
   props: Partial<SidebarProps> = {},
   options?: {
-    sidebarConfigContext?: Partial<SidebarConfigContextProps>
+    sidebarConfigContext?: Partial<
+      Omit<SidebarConfigContextProps, "appRootRef">
+    > & {
+      appRootRef?: boolean
+    }
     navigationContext?: Partial<NavigationContextProps>
   }
-): RenderResult {
-  return render(
-    <SidebarWrapper
-      props={props}
-      sidebarConfigContext={options?.sidebarConfigContext}
-      navigationContext={options?.navigationContext}
-    />
+): RenderWithContextsResult {
+  const contextOptions: RenderWithContextsOptions = {
+    sidebarConfigContext: {
+      appRootRef: true,
+      ...options?.sidebarConfigContext,
+    },
+    navigationContext: options?.navigationContext,
+  }
+
+  return renderWithContexts(
+    <Sidebar
+      endpoints={mockEndpointProp}
+      hasElements
+      isCollapsed={false}
+      onToggleCollapse={vi.fn()}
+      widgetsDisabled={false}
+      {...props}
+    />,
+    contextOptions
   )
 }
 
@@ -686,9 +635,10 @@ describe("Sidebar Component", () => {
     })
 
     // Note: The positive case (sidebar DOES collapse when clicking outside sidebar but
-    // inside main app on mobile) is tested via e2e tests because properly mocking the
-    // viewport width and theme breakpoints in unit tests is complex. The important
-    // behavior (NOT collapsing on portaled elements) is validated by the tests below.
+    // inside main app on mobile) is tested via e2e tests in e2e_playwright/st_sidebar_test.py.
+    // The unit test mock for window dimensions doesn't correctly override the provider in
+    // renderWithContexts. The critical behavior (NOT collapsing on portaled elements like
+    // dropdowns) is validated by the negative tests below.
 
     it("does not collapse sidebar when clicking outside the main app container (portaled elements)", () => {
       const mockOnToggleCollapse = vi.fn()
