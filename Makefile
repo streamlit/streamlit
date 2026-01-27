@@ -252,13 +252,34 @@ debug:
 		echo "Error: Script '$$SCRIPT' not found"; \
 		exit 1; \
 	fi; \
-	echo "Killing any existing servers on ports 3000 and 8501..."; \
-	lsof -ti:3000 | xargs kill -9 2>/dev/null || true; \
-	lsof -ti:8501 | xargs kill -9 2>/dev/null || true; \
+	PORT_3000_PID=$$(lsof -ti:3000 2>/dev/null | tr '\n' ' '); \
+	PORT_8501_PID=$$(lsof -ti:8501 2>/dev/null | tr '\n' ' '); \
+	if [[ -n "$$PORT_3000_PID" ]] || [[ -n "$$PORT_8501_PID" ]]; then \
+		echo "Error: Required ports are already in use."; \
+		if [[ -n "$$PORT_3000_PID" ]]; then \
+			echo "  Port 3000 (Vite): PID(s) $$PORT_3000_PID"; \
+		fi; \
+		if [[ -n "$$PORT_8501_PID" ]]; then \
+			echo "  Port 8501 (Streamlit): PID(s) $$PORT_8501_PID"; \
+		fi; \
+		echo ""; \
+		echo "Please stop these processes and try again."; \
+		echo "To kill them: kill $$PORT_3000_PID$$PORT_8501_PID"; \
+		exit 1; \
+	fi; \
+	DEBUG_DIR="$$(pwd)/.debug"; \
+	echo "Setting up debug log files..."; \
+	mkdir -p "$$DEBUG_DIR"; \
+	> "$$DEBUG_DIR/backend.log"; \
+	> "$$DEBUG_DIR/frontend.log"; \
 	echo ""; \
 	echo "Starting debug session for: $$SCRIPT"; \
 	echo "  Streamlit backend: http://localhost:8501"; \
 	echo "  Vite dev server:   http://localhost:3000"; \
+	echo ""; \
+	echo "Log files (persist after exit):"; \
+	echo "  .debug/backend.log  - Streamlit/Python output"; \
+	echo "  .debug/frontend.log - Vite/browser console output"; \
 	echo ""; \
 	echo "Press Ctrl+C to stop both servers."; \
 	echo ""; \
@@ -267,11 +288,12 @@ debug:
 		echo "Stopping servers..."; \
 		lsof -ti:3000 | xargs kill 2>/dev/null || true; \
 		lsof -ti:8501 | xargs kill 2>/dev/null || true; \
+		echo "Debug logs saved to .debug/"; \
 	}; \
 	trap cleanup EXIT; \
-	streamlit run "$$SCRIPT" --server.headless true & \
+	streamlit run "$$SCRIPT" --server.headless true 2>&1 | tee "$$DEBUG_DIR/backend.log" & \
 	sleep 2; \
-	cd frontend && TERMINAL_CONSOLE=1 yarn start
+	cd frontend && TERMINAL_CONSOLE=1 yarn start 2>&1 | tee "$$DEBUG_DIR/frontend.log"
 
 .PHONY: frontend-lint
 # Lint and check formatting of frontend files.

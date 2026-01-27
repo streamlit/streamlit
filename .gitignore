@@ -92,6 +92,8 @@ lib/streamlit/static
 streamlit-storage
 # Directory for temporary files (can be used by agents):
 work-tmp
+# Debug logs directory (used by `make debug`):
+.debug/
 
 # Data Files
 **/uber-raw-data-sep14.csv

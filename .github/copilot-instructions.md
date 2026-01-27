@@ -66,6 +66,13 @@ Selection of `make` commands for development (run in the repo root):
 - `debug-e2e-test`: Run e2e test in debug mode, via: `make debug-e2e-test st_command_test.py`.
 - `run-e2e-test`: Run e2e test, via: `make run-e2e-test st_command_test.py`.
 
+**Debugging (for AI agents):**
+
+- `debug`: Start Streamlit backend and Vite dev server together, via: `make debug my_app.py`.
+  - Logs are written to `.debug/backend.log` (Python/Streamlit) and `.debug/frontend.log` (Vite/browser console).
+  - Log files are cleared on each run but persist after exit for post-mortem analysis.
+  - Browser `console.log()` output appears in both terminal and `.debug/frontend.log`.
+
 ### Development Tips
 
 - **Follow existing patterns**: Check neighboring files for conventions.
