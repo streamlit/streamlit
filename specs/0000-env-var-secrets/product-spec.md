@@ -287,7 +287,7 @@ export STREAMLIT_SECRETS_JSON='{
 
 ### Option D: Programmatic Secrets via `st.App`
 
-Pass secrets directly to the `st.App` constructor for programmatic configuration before server startup.
+Pass secrets directly to the [`st.App`](https://github.com/streamlit/streamlit/pull/13449) constructor for programmatic configuration before server startup.
 
 #### Example
 
@@ -480,7 +480,7 @@ st.login()  # Works! Credentials injected from env vars.
 
 ### Secondary Recommendation: Option D for Advanced Users
 
-For users adopting `st.App` (see [st.App spec](./0000-st-app/product-spec.md)), **Option D** provides maximum flexibility:
+For users adopting [`st.App`](https://github.com/streamlit/streamlit/pull/13449), **Option D** provides maximum flexibility:
 
 ```python
 import os
