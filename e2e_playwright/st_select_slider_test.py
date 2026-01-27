@@ -27,9 +27,10 @@ from e2e_playwright.shared.app_utils import (
     get_element_by_key,
     get_expander,
     get_slider,
+    reset_hovering,
 )
 
-NUM_SELECT_SLIDERS = 16
+NUM_SELECT_SLIDERS = 17
 
 
 def test_select_slider_rendering(
@@ -166,46 +167,61 @@ def test_select_slider_works_with_fragments(app: Page):
 
 
 @pytest.mark.skip_browser("firefox")  # Firefox runs into sub-pixel flakiness
-def test_dynamic_select_slider_props(app: Page, assert_snapshot: ImageCompareFunction):
-    """Test that the select slider can be updated dynamically while keeping the state."""
+def test_dynamic_select_slider_props_and_options(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that the select slider can be updated dynamically while keeping the state.
+
+    Also tests dynamic options: "green" exists in both option sets at different indices:
+    - Initial: index 3 (out of 5: red, orange, yellow, green, blue)
+    - Updated: index 0 (out of 3: green, blue, purple)
+    When selecting "green" and toggling, the value should be preserved but thumb position changes.
+    """
     dynamic_select_slider = get_element_by_key(app, "dynamic_select_slider_with_key")
     expect(dynamic_select_slider).to_be_visible()
 
     expect(dynamic_select_slider).to_contain_text("Initial dynamic select slider")
     expect_prefixed_markdown(app, "Initial select slider value:", "orange")
 
+    reset_hovering(app)
     assert_snapshot(dynamic_select_slider, name="st_select_slider-dynamic_initial")
 
     # Check that the help tooltip is correct:
     expect_help_tooltip(app, dynamic_select_slider, "initial help")
 
-    # Click in the middle of the slider
+    # Move to "green" (index 3 in initial options: red, orange, yellow, green, blue)
+    # This tests that shared options are preserved when toggling.
+    # Clicking the slider track moves to center (~index 2 = "yellow"), then ArrowRight to "green"
     dynamic_select_slider.click()
+    app.keyboard.press("ArrowRight")  # yellow -> green
     wait_for_app_run(app)
+    expect_prefixed_markdown(app, "Initial select slider value:", "green")
 
-    expect_prefixed_markdown(app, "Initial select slider value:", "yellow")
-
-    # Click the toggle to update the select slider props
+    # Click the toggle to update the select slider props AND options
+    # Options change from [red, orange, yellow, green, blue] to [green, blue, purple]
+    # "green" exists in both but at different positions (index 3 -> index 0)
     click_toggle(app, "Update select slider props")
 
-    # new select slider is visible:
+    # New select slider is visible:
     expect(dynamic_select_slider).to_contain_text("Updated dynamic select slider")
 
-    # Ensure the previously entered value remains visible
-    expect_prefixed_markdown(app, "Updated select slider value:", "yellow")
+    # "green" should be preserved because it exists in the new options
+    # The slider thumb should have moved to the left (index 0 in new options)
+    expect_prefixed_markdown(app, "Updated select slider value:", "green")
 
     dynamic_select_slider.scroll_into_view_if_needed()
+    reset_hovering(app)
     assert_snapshot(dynamic_select_slider, name="st_select_slider-dynamic_updated")
 
     # Check that the help tooltip is correct:
     expect_help_tooltip(app, dynamic_select_slider, "updated help")
 
-    # Click in the middle and move slider once to right
+    # Move slider to test it still works after options change.
+    # Click moves to center (~"blue" at index 1), then ArrowRight moves to "purple" (index 2)
     dynamic_select_slider.click()
     dynamic_select_slider.press("ArrowRight")
     wait_for_app_run(app)
-
-    expect_prefixed_markdown(app, "Updated select slider value:", "green")
+    expect_prefixed_markdown(app, "Updated select slider value:", "purple")
 
 
 def test_no_rerun_on_drag(app: Page):
@@ -243,3 +259,23 @@ def test_select_slider_tick_bar_visibility(
     slider.hover()
     expect(slider.get_by_test_id("stSliderTickBar")).to_be_visible()
     assert_snapshot(slider, name="st_select_slider-tick_bar_visibility")
+
+
+def test_select_slider_range_dynamic_options_resets_on_invalid(app: Page):
+    """Test that range slider resets entirely when either value becomes invalid after options change."""
+    range_slider = get_element_by_key(app, "dynamic_range_select_slider")
+    expect(range_slider).to_be_visible()
+
+    # Initially default range is ("alpha", "echo")
+    # Options are ["alpha", "bravo", "charlie", "delta", "echo"]
+    expect_prefixed_markdown(app, "Dynamic range selection:", "('alpha', 'echo')")
+
+    # Toggle to enable alternative options ["charlie", "delta", "echo"]
+    # "alpha" is NOT in new options -> entire range resets to new default ("charlie", "echo")
+    click_toggle(app, "Enable alternative range options")
+    expect_prefixed_markdown(app, "Dynamic range selection:", "('charlie', 'echo')")
+    # Negative assertion: "alpha" should not be preserved (it's not in new options)
+    markdown_element = app.get_by_test_id("stMarkdown").filter(
+        has_text=re.compile(r"Dynamic range selection:")
+    )
+    expect(markdown_element).not_to_contain_text("'alpha'")

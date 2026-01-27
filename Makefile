@@ -67,7 +67,6 @@ init: python-init frontend-init protobuf
 # Remove all generated files.
 clean:
 	cd lib; rm -rf build dist  .eggs *.egg-info
-	rm -rf lib/conda-recipe/dist
 	find . -name '*.pyc' -type f -delete || true
 	find . -name __pycache__ -type d -delete || true
 	find . -name .pytest_cache -exec rm -rfv {} \; || true
@@ -429,18 +428,3 @@ package: init frontend
 	# Get rid of the old build and dist folders to make sure that we clean old js and css.
 	rm -rfv lib/build lib/dist
 	cd lib ; python3 setup.py bdist_wheel sdist
-
-.PHONY: conda-package
-# Create conda distribution files.
-conda-package: init
-	if [ "${SNOWPARK_CONDA_BUILD}" = "1" ] ; then\
-		echo "Creating Snowpark conda build, so skipping building frontend assets."; \
-	else \
-		make frontend; \
-	fi
-	rm -rf lib/conda-recipe/dist
-	mkdir lib/conda-recipe/dist
-	# This can take upwards of 20 minutes to complete in a fresh conda installation! (Dependency solving is slow.)
-	# NOTE: Running the following command requires both conda and conda-build to
-	# be installed.
-	GIT_HASH=$$(git rev-parse --short HEAD) conda build lib/conda-recipe --output-folder lib/conda-recipe/dist

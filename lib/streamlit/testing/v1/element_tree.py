@@ -1094,18 +1094,33 @@ class SelectSlider(Widget, Generic[T]):
 
     @property
     def _widget_state(self) -> WidgetState:
-        serde = SelectSliderSerde(self.options, [], False)
+        # Build formatted options mapping
+        format_func = self.format_func
+        formatted_option_to_index = {
+            format_func(opt): idx for idx, opt in enumerate(self.options)
+        }
+
+        # Determine if this is a range value
+        is_range = isinstance(self.value, (list, tuple)) and len(self.value) == 2
+
+        serde = SelectSliderSerde(
+            self.options,
+            formatted_option_to_index=formatted_option_to_index,
+            default_indices=[0] if not is_range else [0, len(self.options) - 1],
+            format_func=format_func,
+        )
+
         try:
-            v = serde.serialize(self.format_func(self.value))
-        except (ValueError, TypeError):
-            try:
-                v = serde.serialize([self.format_func(val) for val in self.value])  # type: ignore
-            except:  # noqa: E722
-                raise ValueError(f"Could not find index for {self.value}")
+            if is_range:
+                v = serde.serialize(tuple(self.value))  # type: ignore
+            else:
+                v = serde.serialize(self.value)  # type: ignore
+        except (ValueError, TypeError) as e:
+            raise ValueError(f"Could not serialize value {self.value}") from e
 
         ws = WidgetState()
         ws.id = self.id
-        ws.double_array_value.data[:] = v
+        ws.string_array_value.data[:] = v
         return ws
 
     @property
