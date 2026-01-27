@@ -241,6 +241,20 @@ describe("SidebarNavLink", () => {
         "https://docs.streamlit.io"
       )
     })
+
+    it("renders external link icon (open_in_new)", () => {
+      render(
+        <SidebarNavLink
+          {...getProps({
+            isExternal: true,
+            externalUrl: "https://docs.streamlit.io",
+          })}
+        />
+      )
+
+      const externalIcon = screen.getByTestId("stIconMaterial")
+      expect(externalIcon).toHaveTextContent("open_in_new")
+    })
   })
 
   describe("when isExternal is false", () => {
@@ -256,6 +270,16 @@ describe("SidebarNavLink", () => {
 
       const sidebarNavLink = screen.getByTestId("stSidebarNavLink")
       expect(sidebarNavLink).not.toHaveAttribute("rel", "noopener noreferrer")
+    })
+
+    it("does not render external link icon", () => {
+      render(<SidebarNavLink {...getProps({ isExternal: false })} />)
+
+      const icons = screen.queryAllByTestId("stIconMaterial")
+      // Should not have any material icons (unless page has its own icon)
+      icons.forEach(icon => {
+        expect(icon).not.toHaveTextContent("open_in_new")
+      })
     })
   })
 })
