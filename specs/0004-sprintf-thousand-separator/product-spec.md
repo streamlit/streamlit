@@ -1,7 +1,7 @@
 ---
 author: lukasmasuch
 created: 2025-12-10
-status: Draft
+status: Approved
 ---
 
 # Thousand separator support in sprintf format strings
