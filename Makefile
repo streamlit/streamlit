@@ -239,6 +239,40 @@ frontend-fast:
 frontend-dev:
 	cd frontend/ ; yarn start
 
+.PHONY: debug
+# Start Streamlit and Vite dev server for debugging. Use via `make debug my-script.py`.
+debug:
+	@SCRIPT=$$(echo $(filter-out $@,$(MAKECMDGOALS))); \
+	if [[ -z "$$SCRIPT" ]]; then \
+		echo "Error: Please specify a Streamlit script"; \
+		echo "Usage: make debug <script.py>"; \
+		exit 1; \
+	fi; \
+	if [[ ! -f "$$SCRIPT" ]]; then \
+		echo "Error: Script '$$SCRIPT' not found"; \
+		exit 1; \
+	fi; \
+	echo "Killing any existing servers on ports 3000 and 8501..."; \
+	lsof -ti:3000 | xargs kill -9 2>/dev/null || true; \
+	lsof -ti:8501 | xargs kill -9 2>/dev/null || true; \
+	echo ""; \
+	echo "Starting debug session for: $$SCRIPT"; \
+	echo "  Streamlit backend: http://localhost:8501"; \
+	echo "  Vite dev server:   http://localhost:3000"; \
+	echo ""; \
+	echo "Press Ctrl+C to stop both servers."; \
+	echo ""; \
+	cleanup() { \
+		echo ""; \
+		echo "Stopping servers..."; \
+		lsof -ti:3000 | xargs kill 2>/dev/null || true; \
+		lsof -ti:8501 | xargs kill 2>/dev/null || true; \
+	}; \
+	trap cleanup EXIT; \
+	streamlit run "$$SCRIPT" --server.headless true & \
+	sleep 2; \
+	cd frontend && TERMINAL_CONSOLE=1 yarn start
+
 .PHONY: frontend-lint
 # Lint and check formatting of frontend files.
 frontend-lint:
@@ -428,3 +462,8 @@ package: init frontend
 	# Get rid of the old build and dist folders to make sure that we clean old js and css.
 	rm -rfv lib/build lib/dist
 	cd lib ; python3 setup.py bdist_wheel sdist
+
+# Catch-all target to allow passing arguments to make commands (e.g., `make debug my-script.py`).
+# This prevents Make from interpreting arguments as targets.
+%:
+	@:

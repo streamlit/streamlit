@@ -26,6 +26,7 @@ frontend                  Build the frontend.
 frontend-with-profiler    Build the frontend with the profiler enabled.
 frontend-fast             Build the frontend (as fast as possible).
 frontend-dev              Start the frontend development server.
+debug                     Start Streamlit and Vite dev server for debugging. Use via `make debug my-script.py`.
 frontend-lint             Lint and check formatting of frontend files.
 frontend-types            Run the frontend type checker.
 frontend-format           Format frontend files.
