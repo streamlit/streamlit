@@ -465,9 +465,11 @@ def test_sidebar_collapses_on_click_outside_on_mobile(app: Page):
     sidebar = app.get_by_test_id("stSidebar")
     wait_until(app, create_sidebar_expanded_checker(sidebar))
 
-    # Click on the main app area (outside sidebar)
+    # Click on the main app area (outside sidebar) using explicit coordinates
+    # on the right edge of the viewport to ensure we're outside the sidebar
+    # (sidebar is ~264px wide, so clicking at x=380 is safely outside)
     main_app = app.get_by_test_id("stAppViewContainer")
-    main_app.click()
+    main_app.click(position={"x": 380, "y": 400})
 
     # Sidebar should collapse
     wait_until(app, create_sidebar_collapsed_checker(sidebar))

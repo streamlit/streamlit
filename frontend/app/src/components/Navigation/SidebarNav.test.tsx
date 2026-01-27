@@ -18,11 +18,7 @@ import { screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
 import * as LibModule from "@streamlit/lib"
-import {
-  mockEndpoints,
-  NavigationContextProps,
-  SidebarConfigContextProps,
-} from "@streamlit/lib"
+import { mockEndpoints, NavigationContextProps } from "@streamlit/lib"
 import {
   renderWithContexts,
   RenderWithContextsOptions,

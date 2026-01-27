@@ -28,7 +28,6 @@ import {
   mockSessionInfo,
   mockTheme,
   NavigationContextProps,
-  SidebarConfigContextProps,
   WidgetStateManager,
 } from "@streamlit/lib"
 import {
