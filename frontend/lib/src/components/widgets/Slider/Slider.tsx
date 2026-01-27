@@ -433,6 +433,7 @@ function getStateFromWidgetMgr(
   if (isSelectSlider(element)) {
     // For select_slider, get string values and convert to indices
     const stringValues = widgetMgr.getStringArrayValue(element)
+    // No value stored yet - normal case during initial render
     if (stringValues === undefined) {
       return undefined
     }

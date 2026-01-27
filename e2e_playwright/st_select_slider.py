@@ -174,7 +174,7 @@ if st.toggle("Update select slider props"):
         ),
         args=("Updated select arg",),
         kwargs={"param": "updated kwarg param"},
-        # "green" is at index 0 here (shared with initial options)
+        # After update, "green" is at index 0
         options=["green", "blue", "purple"],
     )
     st.write("Updated select slider value:", dyn_val)
@@ -190,7 +190,7 @@ else:
         ),
         args=("Initial select arg",),
         kwargs={"param": "initial kwarg param"},
-        # "green" is at index 3 here (shared with updated options)
+        # In the initial state, "green" is at index 3
         options=["red", "orange", "yellow", "green", "blue"],
     )
     st.write("Initial select slider value:", dyn_val)
