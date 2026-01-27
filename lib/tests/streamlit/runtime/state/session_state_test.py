@@ -19,6 +19,7 @@ from __future__ import annotations
 import json
 import unittest
 from copy import deepcopy
+from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from typing import Any
 from unittest.mock import MagicMock, patch
@@ -62,6 +63,24 @@ def _raw_session_state() -> SessionState:
     SafeSessionState wrapper.
     """
     return get_session_state()._state
+
+
+def _create_test_widget_metadata(
+    widget_id: str,
+    value_type: str = "string_value",
+    deserializer=None,
+    serializer=None,
+    formatted_options: list[str] | None = None,
+) -> WidgetMetadata:
+    """Helper to create widget metadata for query param binding tests."""
+    return WidgetMetadata(
+        id=widget_id,
+        deserializer=deserializer or (lambda x: x if x is not None else "default"),
+        serializer=serializer or (lambda x: x),
+        value_type=value_type,
+        bind="query-params",
+        formatted_options=formatted_options,
+    )
 
 
 class WStateTests(unittest.TestCase):
@@ -1427,3 +1446,277 @@ def test_session_state_iteration_excludes_trigger_widgets() -> None:
     assert (
         len([k for k in visible_keys if k.startswith("$$STREAMLIT_INTERNAL_KEY")]) == 0
     )
+
+
+# Query Parameter Binding Tests
+@dataclass
+class MockScriptRunCtx:
+    """Mock script run context for testing."""
+
+    active_script_hash: str = "main_hash"
+
+
+class HandleQueryParamBindingTest(DeltaGeneratorTestCase):
+    """Tests for _handle_query_param_binding method."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.session_state = SessionState()
+        self.query_params = self.session_state.query_params
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_url_seeds_widget_on_initial_load(self, mock_ctx: MagicMock) -> None:
+        """Test that URL value seeds widget state on initial load."""
+        self.query_params.set_initial_query_params("my_widget=url_value")
+
+        metadata = _create_test_widget_metadata("$$ID-hash-my_widget")
+
+        seeded = self.session_state._handle_query_param_binding(
+            metadata, "my_widget", "$$ID-hash-my_widget"
+        )
+
+        assert seeded is True
+        assert self.query_params.is_bound("my_widget")
+        assert (
+            self.session_state._new_widget_state["$$ID-hash-my_widget"] == "url_value"
+        )
+        assert self.session_state._new_session_state["my_widget"] == "url_value"
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_no_url_param_returns_false(self, mock_ctx: MagicMock) -> None:
+        """Test that missing URL param returns False (no seeding)."""
+        self.query_params.set_initial_query_params("")
+
+        metadata = _create_test_widget_metadata("$$ID-hash-my_widget")
+
+        seeded = self.session_state._handle_query_param_binding(
+            metadata, "my_widget", "$$ID-hash-my_widget"
+        )
+
+        assert seeded is False
+        assert self.query_params.is_bound("my_widget")
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_frontend_value_takes_priority(self, mock_ctx: MagicMock) -> None:
+        """Test that user interaction (frontend value) wins over URL."""
+        self.query_params.set_initial_query_params("my_widget=url_value")
+
+        self.session_state._new_widget_state.set_from_value(
+            "$$ID-hash-my_widget", "user_value"
+        )
+
+        metadata = _create_test_widget_metadata("$$ID-hash-my_widget")
+
+        seeded = self.session_state._handle_query_param_binding(
+            metadata, "my_widget", "$$ID-hash-my_widget"
+        )
+
+        assert seeded is False
+        assert (
+            self.session_state._new_widget_state["$$ID-hash-my_widget"] == "user_value"
+        )
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_session_state_wins_on_rerun(self, mock_ctx: MagicMock) -> None:
+        """Test that session_state value wins on subsequent reruns."""
+        self.query_params.set_initial_query_params("my_widget=url_value")
+
+        self.session_state._old_state["$$ID-hash-my_widget"] = "old_value"
+        self.session_state._new_session_state["my_widget"] = "code_value"
+
+        metadata = _create_test_widget_metadata("$$ID-hash-my_widget")
+
+        seeded = self.session_state._handle_query_param_binding(
+            metadata, "my_widget", "$$ID-hash-my_widget"
+        )
+
+        assert seeded is False
+        assert self.session_state._new_session_state["my_widget"] == "code_value"
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_url_wins_on_initial_load_even_with_session_state(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """Test that URL wins on initial load even if session_state was set."""
+        self.query_params.set_initial_query_params("my_widget=url_value")
+
+        self.session_state._new_session_state["my_widget"] = "developer_default"
+
+        metadata = _create_test_widget_metadata("$$ID-hash-my_widget")
+
+        seeded = self.session_state._handle_query_param_binding(
+            metadata, "my_widget", "$$ID-hash-my_widget"
+        )
+
+        assert seeded is True
+        assert self.session_state._new_session_state["my_widget"] == "url_value"
+
+
+class SeedWidgetFromUrlTest(DeltaGeneratorTestCase):
+    """Tests for _seed_widget_from_url method."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.session_state = SessionState()
+        self.query_params = self.session_state.query_params
+
+    def test_seed_widget_parses_bool_value(self) -> None:
+        """Test that boolean URL values are parsed correctly."""
+        metadata = _create_test_widget_metadata(
+            "widget_1",
+            value_type="bool_value",
+            deserializer=lambda x: x if x is not None else False,
+        )
+
+        seeded = self.session_state._seed_widget_from_url(
+            metadata, "my_checkbox", "widget_1", "true"
+        )
+
+        assert seeded is True
+        assert self.session_state._new_widget_state["widget_1"] is True
+
+    def test_seed_widget_parses_int_value(self) -> None:
+        """Test that integer URL values are parsed correctly."""
+        metadata = _create_test_widget_metadata(
+            "widget_1",
+            value_type="int_value",
+            deserializer=lambda x: x if x is not None else 0,
+        )
+
+        seeded = self.session_state._seed_widget_from_url(
+            metadata, "my_number", "widget_1", "42"
+        )
+
+        assert seeded is True
+        assert self.session_state._new_widget_state["widget_1"] == 42
+
+    def test_seed_widget_clears_invalid_value(self) -> None:
+        """Test that invalid URL values are cleared."""
+        self.query_params._query_params["my_bool"] = "invalid"
+
+        def bool_deserializer(x):
+            if x is None:
+                return False
+            if isinstance(x, bool):
+                return x
+            raise ValueError("not a bool")
+
+        metadata = _create_test_widget_metadata(
+            "widget_1",
+            value_type="bool_value",
+            deserializer=bool_deserializer,
+        )
+
+        seeded = self.session_state._seed_widget_from_url(
+            metadata, "my_bool", "widget_1", "invalid"
+        )
+
+        assert seeded is False
+        assert "my_bool" not in self.query_params._query_params
+
+    def test_seed_widget_clears_when_all_options_filtered(self) -> None:
+        """Test that URL is cleared when all options are invalid."""
+        self.query_params._query_params["tags"] = ["InvalidA", "InvalidB"]
+
+        def filter_deserializer(values):
+            if values is None:
+                return []
+            valid = {"Apple", "Banana", "Cherry"}
+            if isinstance(values, list):
+                return [v for v in values if v in valid]
+            return [values] if values in valid else []
+
+        metadata = _create_test_widget_metadata(
+            "widget_1",
+            value_type="string_array_value",
+            deserializer=filter_deserializer,
+            serializer=lambda x: x,
+        )
+
+        seeded = self.session_state._seed_widget_from_url(
+            metadata, "tags", "widget_1", ["InvalidA", "InvalidB"]
+        )
+
+        assert seeded is False
+        assert "tags" not in self.query_params._query_params
+
+
+class AutoCorrectUrlTest(DeltaGeneratorTestCase):
+    """Tests for _auto_correct_url_if_needed method."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.session_state = SessionState()
+        self.query_params = self.session_state.query_params
+
+    def test_no_correction_when_values_match(self) -> None:
+        """Test that no correction happens when serialized == parsed."""
+        metadata = _create_test_widget_metadata("widget_1", serializer=lambda x: x)
+
+        assert "my_key" not in self.query_params._query_params
+
+        self.session_state._auto_correct_url_if_needed(
+            metadata, "my_key", "same_value", "same_value"
+        )
+
+        assert "my_key" not in self.query_params._query_params
+
+    def test_correction_updates_url_for_clamped_value(self) -> None:
+        """Test that URL is corrected when value is clamped."""
+        metadata = _create_test_widget_metadata(
+            "widget_1",
+            value_type="int_value",
+            serializer=lambda x: x,
+        )
+
+        self.session_state._auto_correct_url_if_needed(
+            metadata,
+            "my_slider",
+            100,
+            50,
+        )
+
+        assert self.query_params._query_params["my_slider"] == "50"
+
+    def test_preserve_strings_when_no_filtering_for_selection_widgets(self) -> None:
+        """Test that human-readable strings are preserved when valid."""
+        metadata = _create_test_widget_metadata(
+            "widget_1",
+            value_type="int_value",
+            serializer=lambda x: 0,
+            formatted_options=["Red", "Green", "Blue"],
+        )
+
+        self.session_state._auto_correct_url_if_needed(metadata, "color", "Red", "Red")
+
+        assert "color" not in self.query_params._query_params
+
+    def test_use_formatted_options_when_filtering(self) -> None:
+        """Test that formatted_options are used when values are filtered."""
+        metadata = _create_test_widget_metadata(
+            "widget_1",
+            value_type="int_array_value",
+            serializer=lambda x: [0],
+            formatted_options=["Apple", "Banana", "Cherry"],
+        )
+
+        self.session_state._auto_correct_url_if_needed(
+            metadata, "tags", ["Apple", "Invalid"], ["Apple"]
+        )
+
+        assert self.query_params._query_params["tags"] == ["Apple"]

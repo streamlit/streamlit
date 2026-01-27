@@ -55,14 +55,12 @@ def run_chart_colors_test_app():
         np.random.seed(7)
         data = pd.DataFrame(np.random.randn(20, 3), columns=["a", "b", "c"])
 
-        st.line_chart(
-            data, x_label="x label", y_label="y label", use_container_width=True
-        )
+        st.line_chart(data, x_label="x label", y_label="y label", width="stretch")
         st.sidebar.line_chart(
             data,
             x_label="x label",
             y_label="y label",
-            use_container_width=True,
+            width="stretch",
             height=250,
         )
 
@@ -121,7 +119,7 @@ def run_chart_colors_test_app():
             x="time",
             y="value",
             color="category_num",
-            use_container_width=True,
+            width="stretch",
         )
 
         st.sidebar.area_chart(
@@ -129,7 +127,7 @@ def run_chart_colors_test_app():
             x="time",
             y="value",
             color="category_num",
-            use_container_width=True,
+            width="stretch",
             height=250,
         )
 
@@ -150,7 +148,7 @@ def run_chart_colors_test_app():
                 orientation="h", yanchor="top", y=-0.15, xanchor="center", x=0.5, len=1
             )
         )
-        st.plotly_chart(fig_sequential, use_container_width=True)
+        st.plotly_chart(fig_sequential, width="stretch")
 
     # Charts testing diverging colors.
     with col3:
@@ -176,10 +174,10 @@ def run_chart_colors_test_app():
                 ),
             )
         )
-        st.altair_chart(diverging_chart, theme="streamlit", use_container_width=True)
+        st.altair_chart(diverging_chart, theme="streamlit", width="stretch")
 
         st.sidebar.altair_chart(
-            diverging_chart, theme="streamlit", use_container_width=True, height=250
+            diverging_chart, theme="streamlit", width="stretch", height=250
         )
 
         st.write("**Diverging: `st.plotly_chart`**")
@@ -209,4 +207,4 @@ def run_chart_colors_test_app():
             )
         )
 
-        st.plotly_chart(plotly_fig, theme="streamlit", use_container_width=True)
+        st.plotly_chart(plotly_fig, theme="streamlit", width="stretch")

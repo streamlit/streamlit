@@ -35,7 +35,6 @@ from streamlit.elements.lib.layout_utils import (
 )
 from streamlit.elements.lib.options_selector_utils import (
     create_mappings,
-    index_,
     maybe_coerce_enum,
     validate_and_sync_value_with_options,
 )
@@ -79,6 +78,7 @@ class SelectboxSerde(Generic[T]):
     formatted_options: list[str]
     formatted_option_to_option_index: dict[str, int]
     default_option_index: int | None
+    format_func: Callable[[Any], str]
 
     def __init__(
         self,
@@ -87,6 +87,7 @@ class SelectboxSerde(Generic[T]):
         formatted_options: list[str],
         formatted_option_to_option_index: dict[str, int],
         default_option_index: int | None = None,
+        format_func: Callable[[Any], str] = str,
     ) -> None:
         """Initialize the SelectboxSerde.
 
@@ -108,33 +109,53 @@ class SelectboxSerde(Generic[T]):
         default_option_index : int or None, optional
             The index of the default option to use when no selection is made.
             If None, no default option is selected.
+        format_func : Callable[[Any], str], optional
+            Function to format options for comparison. Used to compare values by their
+            string representation instead of using == directly. This is necessary because
+            widget values are deepcopied, and for custom classes without __eq__, the
+            deepcopied instances would fail identity comparison.
         """
 
         self.options = options
         self.formatted_options = formatted_options
         self.formatted_option_to_option_index = formatted_option_to_option_index
         self.default_option_index = default_option_index
+        self.format_func = format_func
 
     def serialize(self, v: T | str | None) -> str | None:
         if v is None:
             return None
-        if len(self.options) == 0:
-            return ""
+        # Note: We don't short-circuit for empty options here because
+        # accept_new_options=True allows user-entered values even with no options.
+        # The normal flow below handles this correctly.
 
-        # we don't check for isinstance(v, str) because this could lead to wrong
-        # results if v is a string that is part of the options itself as it would
-        # skip formatting in that case
+        # Use format_func to find the formatted option instead of using
+        # index_(self.options, v) which relies on == comparison. This is necessary
+        # because widget values are deepcopied, and for custom classes without
+        # __eq__, the deepcopied instances would fail identity comparison.
         try:
-            option_index = index_(self.options, v)
-            return self.formatted_options[option_index]
-        except ValueError:
-            # we know that v is a string, otherwise it would have been found in the
-            # options
-            return cast("str", v)
+            formatted_value = self.format_func(v)
+        except Exception:
+            # format_func failed (e.g., v is a string but format_func expects
+            # an object with specific attributes). Use str(v) to ensure we return
+            # a proper string, not the original object. This handles both cases:
+            # - v is already a string -> str(v) returns it unchanged
+            # - v is a custom object -> str(v) gives its string representation
+            return str(v)
+
+        if formatted_value in self.formatted_option_to_option_index:
+            return formatted_value
+        # Value not found in options - return the formatted string (not the original
+        # object) to maintain type consistency since serialize() must return str|None
+        return formatted_value
 
     def deserialize(self, ui_value: str | None) -> T | str | None:
-        # check if the option is pointing to a generic option type T,
-        # otherwise return the option itself
+        # Note: We don't short-circuit for empty options here because
+        # accept_new_options=True allows user-entered values even with no options.
+        # The normal flow below handles this: ui_value not in options -> return ui_value.
+
+        # Check if the option is pointing to a generic option type T,
+        # otherwise return the option itself.
         if ui_value is None:
             return (
                 self.options[self.default_option_index]
@@ -583,6 +604,7 @@ class SelectboxMixin:
             formatted_options=formatted_options,
             formatted_option_to_option_index=formatted_option_to_option_index,
             default_option_index=index,
+            format_func=format_func,
         )
         widget_state = register_widget(
             selectbox_proto.id,
@@ -605,7 +627,7 @@ class SelectboxMixin:
             # This handles the case where options change dynamically and the
             # previously selected value is no longer available.
             current_value, value_needs_reset = validate_and_sync_value_with_options(
-                widget_state.value, opt, index, key
+                widget_state.value, opt, index, key, format_func
             )
 
         if value_needs_reset or widget_state.value_changed:

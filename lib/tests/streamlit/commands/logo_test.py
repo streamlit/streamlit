@@ -18,6 +18,7 @@ import pytest
 from PIL import Image
 
 import streamlit as st
+from streamlit.commands.logo import _invalid_logo_text
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.memory_media_file_storage import get_extension_for_mimetype
 from streamlit.web.server.server import MEDIA_ENDPOINT
@@ -119,3 +120,31 @@ class LogoTest(DeltaGeneratorTestCase):
         )
         with pytest.raises(StreamlitAPIException):
             st.logo(streamlit, size="corgi")
+
+    def test_invalid_logo_text_returns_error_message(self):
+        """Test _invalid_logo_text returns formatted error message."""
+        result = _invalid_logo_text("image")
+        assert "image passed to st.logo is invalid" in result
+        assert "documentation" in result
+
+        result = _invalid_logo_text("icon_image")
+        assert "icon_image passed to st.logo is invalid" in result
+
+    def test_invalid_image_raises_exception(self):
+        """Test that invalid image input raises StreamlitAPIException."""
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.logo("not_a_valid_image_path_that_does_not_exist.xyz")
+
+        assert "image passed to st.logo is invalid" in str(exc.value)
+        assert "documentation" in str(exc.value)
+
+    def test_invalid_icon_image_raises_exception(self):
+        """Test that invalid icon_image input raises StreamlitAPIException."""
+        streamlit = Image.open(
+            str(pathlib.Path(__file__).parent / "full-streamlit.png")
+        )
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.logo(streamlit, icon_image="not_a_valid_icon_path.xyz")
+
+        assert "icon_image passed to st.logo is invalid" in str(exc.value)
+        assert "documentation" in str(exc.value)

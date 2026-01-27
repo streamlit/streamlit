@@ -135,7 +135,9 @@ class BaseSnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
             ),
             wait=wait_fixed(1),
         )
-        def _query(sql: str) -> DataFrame:
+        # `params` must be an explicit parameter (not captured from closure) so that
+        # `@st.cache_data` includes it in the cache key.
+        def _query(sql: str, params: Any = None) -> DataFrame:
             cur = self._instance.cursor()
             cur.execute(sql, params=params, **kwargs)
             return cur.fetch_pandas_all()  # type: ignore
@@ -153,7 +155,7 @@ class BaseSnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
             ttl=ttl,
         )(_query)
 
-        return _query(sql)
+        return _query(sql, params)
 
     def write_pandas(
         self,
@@ -349,6 +351,7 @@ class BaseSnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
         """Closes the underlying Snowflake connection."""
         if self._raw_instance is not None:
             self._raw_instance.close()
+            self._raw_instance = None
 
 
 class SnowflakeConnection(BaseSnowflakeConnection):

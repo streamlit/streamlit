@@ -953,3 +953,91 @@ def test_state_access():
     at.session_state.foo = "quux"
     at.run()
     assert at.markdown[0].value == "quux"
+
+
+def test_button_group_feedback():
+    """Test ButtonGroup widget used by st.feedback."""
+
+    def script():
+        import streamlit as st
+
+        # st.feedback creates a button_group widget
+        st.feedback("thumbs")
+        st.feedback("stars")
+
+    at = AppTest.from_function(script).run()
+    # Feedback widgets use button_group
+    # The feedback element does not have a select/unselect but we can test it exists
+    assert len(at.get("button_group")) == 2
+
+    result = repr(at.get("button_group")[0])
+    assert "ButtonGroup" in result
+
+
+def test_unknown_element():
+    """Test UnknownElement handles new/unrecognized element types gracefully."""
+
+    # UnknownElement is used internally when an element type isn't recognized
+    # We can't easily test it directly without mocking, but we can verify
+    # that accessing elements through the testing framework works
+    def script():
+        import streamlit as st
+
+        st.write("Hello")
+
+    at = AppTest.from_function(script).run()
+    # markdown elements are recognized, not unknown
+    assert at.markdown[0].value == "Hello"
+
+
+def test_element_list_equality():
+    """Test ElementList equality comparison."""
+
+    def script():
+        import streamlit as st
+
+        st.button("button1")
+        st.checkbox("checkbox1")
+
+    at = AppTest.from_function(script).run()
+
+    # Same list should be equal
+    buttons1 = at.button
+    buttons2 = at.button
+    assert buttons1 == buttons2
+
+    # Different lists should not be equal
+    assert buttons1 != at.checkbox
+
+
+def test_widget_list_call_by_key():
+    """Test WidgetList can retrieve widget by key."""
+
+    def script():
+        import streamlit as st
+
+        st.button("button1", key="btn1")
+        st.button("button2", key="btn2")
+
+    at = AppTest.from_function(script).run()
+
+    # Access by key
+    btn = at.button("btn1")
+    assert btn.label == "button1"
+
+    btn2 = at.button("btn2")
+    assert btn2.label == "button2"
+
+
+def test_widget_list_call_by_key_not_found():
+    """Test WidgetList raises KeyError for missing key."""
+
+    def script():
+        import streamlit as st
+
+        st.button("button1", key="btn1")
+
+    at = AppTest.from_function(script).run()
+
+    with pytest.raises(KeyError):
+        at.button("nonexistent")

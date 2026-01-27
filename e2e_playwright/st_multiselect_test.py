@@ -30,7 +30,7 @@ from e2e_playwright.shared.app_utils import (
     get_multiselect,
 )
 
-MULTISELECT_COUNT = 20
+MULTISELECT_COUNT = 21
 
 
 def _get_multiselect_input(locator: Locator | Page, label: str) -> Locator:
@@ -517,3 +517,40 @@ def test_multiselect_preserves_scroll_position_on_remove(app: Page):
     # Verify scroll position is preserved
     final_scroll = value_container.evaluate("el => el.scrollTop")
     assert final_scroll == initial_scroll
+
+
+def test_multiselect_custom_objects_without_eq(app: Page):
+    """Test that custom class objects without __eq__ work correctly with format_func.
+
+    This tests the fix for https://github.com/streamlit/streamlit/issues/13646
+    where custom objects without __eq__ would have their selections cleared
+    after script reruns because the validation used identity comparison after
+    deepcopy created new instances.
+    """
+    # Get the multiselect with custom objects
+    multiselect_elem = get_multiselect(app, "multiselect 20 - custom objects")
+
+    # Initial state - no selections
+    expect_text(app, "value 20: []")
+
+    # Select first option "Option A"
+    select_for_multiselect(app, "multiselect 20 - custom objects", "Option A", True)
+
+    # Verify selection is preserved after the script rerun
+    # This is the key test - without the fix, the selection would be cleared
+    # because deepcopy creates new object instances and the validation used
+    # identity comparison (==) which fails for objects without __eq__
+    expect_text(app, "value 20: ['opt_a']")
+
+    # Verify the selection is visible in the UI
+    expect(multiselect_elem.locator('[data-baseweb="tag"]')).to_have_count(1)
+    expect(
+        multiselect_elem.get_by_role("button").get_by_text("Option A", exact=True)
+    ).to_be_visible()
+
+    # Select another option to verify multiple selections work
+    select_for_multiselect(app, "multiselect 20 - custom objects", "Option B", True)
+    expect_text(app, "value 20: ['opt_a', 'opt_b']")
+
+    # Verify both selections are visible
+    expect(multiselect_elem.locator('[data-baseweb="tag"]')).to_have_count(2)
