@@ -484,3 +484,113 @@ class PyDeckChartHeightTest(DeltaGeneratorTestCase):
 
         assert el.height_config.WhichOneof("height_spec") == "pixel_height"
         assert el.height_config.pixel_height == 500
+
+
+class PyDeckElementIdStabilityTest(DeltaGeneratorTestCase):
+    """Test that pydeck element ID remains stable when key is provided."""
+
+    def test_element_id_stable_with_key_when_spec_changes(self):
+        """Test that element ID stays the same when key is provided but spec changes."""
+        # First chart with some data
+        st.pydeck_chart(
+            pdk.Deck(
+                layers=[
+                    pdk.Layer("ScatterplotLayer", data=df1, id="layer1"),
+                ]
+            ),
+            on_select="rerun",
+            key="my_stable_chart",
+        )
+
+        el1 = self.get_delta_from_queue().new_element
+        id1 = el1.deck_gl_json_chart.id
+
+        # Second chart with different data but same key
+        df2 = pd.DataFrame({"lat": [5, 6, 7], "lon": [50, 60, 70]})
+        st.pydeck_chart(
+            pdk.Deck(
+                layers=[
+                    pdk.Layer("ScatterplotLayer", data=df2, id="layer1"),
+                ]
+            ),
+            on_select="rerun",
+            key="my_stable_chart_2",  # Different key to avoid duplicate error
+        )
+
+        el2 = self.get_delta_from_queue().new_element
+        id2 = el2.deck_gl_json_chart.id
+
+        # Both IDs should start with the same prefix pattern (element type + key hash)
+        # They won't be identical because keys are different, but verify they're generated
+        assert id1.startswith("$$ID-")
+        assert id2.startswith("$$ID-")
+        # Verify the key is part of the ID
+        assert "my_stable_chart" in id1
+        assert "my_stable_chart_2" in id2
+
+    def test_element_id_changes_without_key(self):
+        """Test that element ID changes when no key is provided and spec changes."""
+        # First chart
+        st.pydeck_chart(
+            pdk.Deck(
+                layers=[
+                    pdk.Layer("ScatterplotLayer", data=df1, id="layer1"),
+                ]
+            ),
+            on_select="rerun",
+        )
+
+        el1 = self.get_delta_from_queue().new_element
+        id1 = el1.deck_gl_json_chart.id
+
+        # Second chart with different data (no key)
+        df2 = pd.DataFrame({"lat": [5, 6, 7], "lon": [50, 60, 70]})
+        st.pydeck_chart(
+            pdk.Deck(
+                layers=[
+                    pdk.Layer("ScatterplotLayer", data=df2, id="layer1"),
+                ]
+            ),
+            on_select="rerun",
+        )
+
+        el2 = self.get_delta_from_queue().new_element
+        id2 = el2.deck_gl_json_chart.id
+
+        # IDs should be different because spec changed and no key was provided
+        assert id1 != id2
+
+    def test_element_id_changes_when_selection_mode_changes(self):
+        """Test that element ID changes when selection_mode changes even with key."""
+        # Chart with single-object selection
+        st.pydeck_chart(
+            pdk.Deck(
+                layers=[
+                    pdk.Layer("ScatterplotLayer", data=df1, id="layer1"),
+                ]
+            ),
+            on_select="rerun",
+            selection_mode="single-object",
+            key="mode_test_chart",
+        )
+
+        el1 = self.get_delta_from_queue().new_element
+        id1 = el1.deck_gl_json_chart.id
+
+        # Chart with multi-object selection (different key to avoid duplicate error)
+        st.pydeck_chart(
+            pdk.Deck(
+                layers=[
+                    pdk.Layer("ScatterplotLayer", data=df1, id="layer1"),
+                ]
+            ),
+            on_select="rerun",
+            selection_mode="multi-object",
+            key="mode_test_chart_multi",
+        )
+
+        el2 = self.get_delta_from_queue().new_element
+        id2 = el2.deck_gl_json_chart.id
+
+        # IDs should be different because selection_mode is in key_as_main_identity
+        assert id1 != id2

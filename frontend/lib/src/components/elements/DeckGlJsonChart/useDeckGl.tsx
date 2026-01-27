@@ -287,7 +287,12 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
         value: { selection: { indices: newIndices, objects: newObjects } },
       })
     }
-  }, [parsedPydeckJson, isSelectionModeActivated, data.selection, setSelection])
+  }, [
+    parsedPydeckJson,
+    isSelectionModeActivated,
+    data.selection,
+    setSelection,
+  ])
 
   const deck = useMemo<DeckObject>(() => {
     const jsonCopy = { ...parsedPydeckJson }
