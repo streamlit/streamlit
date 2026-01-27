@@ -123,8 +123,8 @@ const SidebarNavLink = ({
         {isExternal && (
           <DynamicIcon
             size="sm"
-            iconValue=":material/open_in_new:"
-            color={theme.colors.fadedText60}
+            iconValue=":material/launch:"
+            color={theme.colors.bodyText}
           />
         )}
       </StyledSidebarNavLink>

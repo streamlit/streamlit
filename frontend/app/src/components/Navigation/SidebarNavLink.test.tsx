@@ -242,7 +242,7 @@ describe("SidebarNavLink", () => {
       )
     })
 
-    it("renders external link icon (open_in_new)", () => {
+    it("renders external link icon (launch)", () => {
       render(
         <SidebarNavLink
           {...getProps({
@@ -253,7 +253,7 @@ describe("SidebarNavLink", () => {
       )
 
       const externalIcon = screen.getByTestId("stIconMaterial")
-      expect(externalIcon).toHaveTextContent("open_in_new")
+      expect(externalIcon).toHaveTextContent("launch")
     })
   })
 
@@ -278,7 +278,7 @@ describe("SidebarNavLink", () => {
       const icons = screen.queryAllByTestId("stIconMaterial")
       // Should not have any material icons (unless page has its own icon)
       icons.forEach(icon => {
-        expect(icon).not.toHaveTextContent("open_in_new")
+        expect(icon).not.toHaveTextContent("launch")
       })
     })
   })
