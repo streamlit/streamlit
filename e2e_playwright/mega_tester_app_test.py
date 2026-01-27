@@ -62,8 +62,7 @@ def is_expected_error(
     )
 
 
-@pytest.mark.external_test
-def test_no_console_errors(page: Page, app_base_url: str, browser_name: str):
+def test_no_console_errors(page: Page, app_port: int, browser_name: str):
     """Test that the app does not log any console errors."""
 
     console_errors = []
@@ -84,7 +83,7 @@ def test_no_console_errors(page: Page, app_base_url: str, browser_name: str):
             )
 
     page.on("console", on_console_message)
-    goto_app(page, app_base_url)
+    goto_app(page, f"http://localhost:{app_port}")
 
     page.wait_for_load_state()
 
