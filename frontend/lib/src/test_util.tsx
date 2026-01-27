@@ -386,9 +386,15 @@ export const renderWithContexts = (
         }
       }
       if (newOptions?.sidebarConfigContext) {
+        // Filter out appRootRef since it's handled separately (boolean in options vs RefObject in context)
+        const filteredSidebarConfig = Object.fromEntries(
+          Object.entries(newOptions.sidebarConfigContext).filter(
+            ([key]) => key !== "appRootRef"
+          )
+        )
         currentSidebarConfigContextProps = {
           ...currentSidebarConfigContextProps,
-          ...newOptions.sidebarConfigContext,
+          ...filteredSidebarConfig,
         }
       }
       if (newOptions?.themeContext) {

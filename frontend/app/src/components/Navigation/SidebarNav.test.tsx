@@ -23,7 +23,10 @@ import {
   NavigationContextProps,
   SidebarConfigContextProps,
 } from "@streamlit/lib"
-import { renderWithContexts } from "@streamlit/lib/testing"
+import {
+  renderWithContexts,
+  RenderWithContextsOptions,
+} from "@streamlit/lib/testing"
 import { IAppPage, PageConfig } from "@streamlit/protobuf"
 
 import SidebarNav, { Props } from "./SidebarNav"
@@ -147,8 +150,8 @@ const getProps = (props: Partial<Props> = {}): Props => ({
 })
 
 function getSidebarConfigContextOutput(
-  context: Partial<SidebarConfigContextProps>
-): SidebarConfigContextProps {
+  context: RenderWithContextsOptions["sidebarConfigContext"] = {}
+): NonNullable<RenderWithContextsOptions["sidebarConfigContext"]> {
   return {
     initialSidebarState: PageConfig.SidebarState.AUTO,
     appLogo: null,
@@ -176,7 +179,7 @@ function getNavigationContextOutput(
 function renderSidebarNav(
   props: Partial<Props> = {},
   overrides?: {
-    sidebarConfigContext?: Partial<SidebarConfigContextProps>
+    sidebarConfigContext?: RenderWithContextsOptions["sidebarConfigContext"]
     navigationContext?: Partial<NavigationContextProps>
   }
 ): ReturnType<typeof renderWithContexts> {
