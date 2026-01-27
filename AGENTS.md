@@ -67,6 +67,7 @@ Selection of `make` commands for development (run in the repo root):
 **Debugging (for AI agents):**
 
 - `debug`: Start Streamlit backend and Vite dev server together, via: `make debug my_app.py`.
+  - Both servers support hot-reload: changes to frontend code or the app script are applied within seconds.
   - Logs are written to `work-tmp/debug-backend.log` (Python/Streamlit) and `work-tmp/debug-frontend.log` (Vite/browser console).
   - Log files are cleared on each run but persist after exit for post-mortem analysis.
   - Browser `console.log()` output appears in `work-tmp/debug-frontend.log`.
