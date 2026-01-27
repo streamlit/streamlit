@@ -292,11 +292,11 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
     for (const [layerId, indices] of Object.entries(data.selection.indices)) {
       const layerDataForId = layerData.get(layerId)
       if (layerDataForId === undefined) {
-        // Layer doesn't exist OR has non-array data (URL, GeoJSON), OR
-        // layers are missing explicit IDs so we cannot validate selections.
+        // Layer doesn't exist OR has non-array data (URL, GeoJSON).
         if (!layerData.has(layerId)) {
-          if (hasUnknownLayerId) {
-            // Preserve selection when layer IDs are missing in the spec.
+          // Layer no longer exists in spec. Only preserve if we cannot validate
+          // at all (i.e., ALL layers lack IDs, so layerData is empty).
+          if (hasUnknownLayerId && layerData.size === 0) {
             newIndices[layerId] = indices
             newObjects[layerId] = data.selection.objects[layerId] || []
             continue

@@ -534,6 +534,124 @@ describe("useDeckGl", () => {
       ])
     })
 
+    it("should remove orphaned selection when spec has mixed layers with and without IDs", () => {
+      // This tests the bug where hasUnknownLayerId being true would incorrectly
+      // preserve selections for layers that don't exist in the spec.
+      //
+      // Scenario:
+      // 1. Initial spec has layer "A" (with ID) and layer "B" (no ID)
+      // 2. User has selection for "layer-A" and stale selection for "old-layer"
+      // 3. Spec changes (data update) - triggers sanitization
+      // 4. "old-layer" should be removed even though hasUnknownLayerId is true
+      //    because layerData.size > 0 means we CAN validate layer existence
+
+      // Helper to create props with multiple layers
+      const getPropsWithMultipleLayers = (
+        layers: Array<{
+          data: unknown[]
+          id: string | null
+        }>
+      ): UseDeckGlProps => {
+        const layerConfigs = layers.map(l => {
+          const layer: Record<string, unknown> = {
+            "@@type": "ScatterplotLayer",
+            data: l.data,
+            getPosition: "@@=[lng, lat]",
+            pickable: true,
+          }
+          if (l.id !== null) {
+            layer.id = l.id
+          }
+          return layer
+        })
+
+        const json = {
+          initialViewState: mockInitialViewState,
+          layers: layerConfigs,
+        }
+
+        return {
+          element: DeckGlJsonChartProto.create({
+            id: "test-element-id",
+            json: JSON.stringify(json),
+            selectionMode: [DeckGlJsonChartProto.SelectionMode.SINGLE_OBJECT],
+          }),
+          widgetMgr: new WidgetStateManager({
+            sendRerunBackMsg: vi.fn(),
+            formsDataChanged: vi.fn(),
+          }),
+          fragmentId: "myFragmentId",
+          isLightTheme: false,
+          theme: mockTheme.emotion,
+        }
+      }
+
+      const initialData = [
+        { lat: 1, lng: 1 },
+        { lat: 2, lng: 2 },
+      ]
+
+      // Initial: layer "A" (with ID) and layer "B" (no ID)
+      const initialProps = getPropsWithMultipleLayers([
+        { data: initialData, id: "layer-A" },
+        { data: initialData, id: null }, // layer B has no ID
+      ])
+
+      const { result, rerender } = renderHook(props => useDeckGl(props), {
+        initialProps,
+      })
+
+      // Set selections on layer "A" and a non-existent "old-layer"
+      act(() => {
+        result.current.setSelection({
+          fromUi: true,
+          value: {
+            selection: {
+              indices: {
+                "layer-A": [0],
+                "old-layer": [1],
+              },
+              objects: {
+                "layer-A": [{ lat: 1, lng: 1 }],
+                "old-layer": [{ lat: 2, lng: 2 }],
+              },
+            },
+          },
+        })
+      })
+
+      rerender(initialProps)
+
+      // Both selections should be present after initial selection
+      // (sanitization hasn't run yet because spec hasn't changed)
+      expect(result.current.data.selection.indices["layer-A"]).toEqual([0])
+      expect(result.current.data.selection.indices["old-layer"]).toEqual([1])
+
+      // Now change the spec data to trigger sanitization
+      // Layer structure stays the same (A with ID, B without), just data changes
+      const updatedData = [
+        { lat: 1, lng: 1 },
+        { lat: 2, lng: 2 },
+        { lat: 3, lng: 3 }, // added one more item
+      ]
+      const updatedProps = getPropsWithMultipleLayers([
+        { data: updatedData, id: "layer-A" },
+        { data: updatedData, id: null },
+      ])
+      rerender(updatedProps)
+
+      // "layer-A" selection should be preserved (layer still exists)
+      expect(result.current.data.selection.indices["layer-A"]).toEqual([0])
+
+      // "old-layer" selection should be REMOVED with the fix.
+      // Before the fix: hasUnknownLayerId=true would preserve it (BUG!)
+      // With the fix: layerData.size=1 (layer-A exists), so we can validate
+      // layer existence and "old-layer" is clearly not in the spec.
+      expect(
+        result.current.data.selection.indices["old-layer"]
+      ).toBeUndefined()
+    })
+
     it("should preserve selection for layers with URL data", () => {
       // Create props with URL data (non-array)
       const propsWithUrlData = getUseDeckGlProps({
