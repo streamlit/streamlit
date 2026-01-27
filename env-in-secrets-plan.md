@@ -49,8 +49,10 @@ $${{VAR_NAME}}          # Escaped - produces literal ${{VAR_NAME}}
 
 Regex pattern:
 ```python
-r'\$\{\{([A-Za-z_][A-Za-z0-9_]*)(?::-([^}]*))?\}\}'
+r'\$\{\{([A-Za-z_][A-Za-z0-9_]*)(?::-((?:[^}]|\}(?!\}))*)?)?)\}\}'
 ```
+
+Note: This pattern uses a negative lookahead `\}(?!\})` to correctly handle default values containing single closing braces like `${{VAR:-{key: value}}}`.
 
 ## Implementation Details
 

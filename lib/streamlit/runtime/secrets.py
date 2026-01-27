@@ -158,6 +158,12 @@ def _substitute_env_vars(value: Any, path: str) -> Any:
     - ${{VAR:-default}} - substitutes with VAR if set, otherwise uses default
     - $${{VAR}} - escaped, becomes literal ${{VAR}}
 
+    Note on empty string behavior:
+        This implementation uses the env var value if it's set, even if empty.
+        This differs from POSIX shell's ${VAR:-default} which treats empty strings
+        as unset. Our choice is intentional: if a user explicitly sets VAR="",
+        they likely want that empty value, not the default.
+
     Parameters
     ----------
     value : Any

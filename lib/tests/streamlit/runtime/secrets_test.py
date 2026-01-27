@@ -481,6 +481,38 @@ class SecretsDirectoryTest(unittest.TestCase):
             assert self.secrets["example_login"]["password"] == "example_password2"
             assert self.secrets["example_token"] == "token123"
 
+    @patch("streamlit.watcher.path_watcher.watch_dir", MagicMock())
+    def test_env_var_substitution_in_directory_secrets(self):
+        """Test that env var substitution works in directory-based (Kubernetes-style) secrets."""
+        # Save and restore os.environ
+        prev_environ = dict(os.environ)
+
+        try:
+            os.environ["SECRET_USER"] = "k8s_user"
+            os.environ["SECRET_PASS"] = "k8s_pass"
+
+            # Create a secret with an env var placeholder
+            os.makedirs(os.path.join(self.temp_dir_path, "k8s_secret"))
+            with open(
+                os.path.join(self.temp_dir_path, "k8s_secret", "connection"),
+                "w",
+                encoding="utf-8",
+            ) as f:
+                f.write("user=${{SECRET_USER}},pass=${{SECRET_PASS}}")
+
+            mock_get_option = testutil.build_mock_config_get_option(
+                {"secrets.files": [self.temp_dir_path]}
+            )
+
+            # Create a fresh Secrets instance to avoid cached values
+            secrets = Secrets()
+
+            with patch("streamlit.config.get_option", new=mock_get_option):
+                assert secrets["k8s_secret"] == "user=k8s_user,pass=k8s_pass"
+        finally:
+            os.environ.clear()
+            os.environ.update(prev_environ)
+
 
 class AttrDictTest(unittest.TestCase):
     def test_attr_dict_is_mapping_but_not_built_in_dict(self):
@@ -665,6 +697,27 @@ empty_default = "${{NONEXISTENT:-}}"
 """
         with patch("builtins.open", mock_open(read_data=mock_toml)):
             assert self.secrets["empty_default"] == ""
+
+    @patch("streamlit.watcher.path_watcher.watch_file")
+    @patch("streamlit.config.get_option", return_value=[MOCK_SECRETS_FILE_LOC])
+    def test_env_var_set_to_empty_string(self, *mocks):
+        """Test that env vars set to empty string are used (not treated as unset).
+
+        This differs from POSIX shell ${VAR:-default} which treats empty strings
+        as unset. Our implementation uses the empty string value, which is more
+        explicit and avoids unexpected behavior.
+        """
+        os.environ["EMPTY_VAR"] = ""
+
+        mock_toml = """
+basic_empty = "${{EMPTY_VAR}}"
+with_default = "${{EMPTY_VAR:-default}}"
+"""
+        with patch("builtins.open", mock_open(read_data=mock_toml)):
+            # Empty string is used, not treated as unset
+            assert self.secrets["basic_empty"] == ""
+            # Default is NOT used because var is set (even though empty)
+            assert self.secrets["with_default"] == ""
 
     @patch("streamlit.watcher.path_watcher.watch_file")
     @patch("streamlit.config.get_option", return_value=[MOCK_SECRETS_FILE_LOC])
