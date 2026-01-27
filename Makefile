@@ -267,33 +267,31 @@ debug:
 		echo "To kill them: kill $$PORT_3000_PID$$PORT_8501_PID"; \
 		exit 1; \
 	fi; \
-	DEBUG_DIR="$$(pwd)/.debug"; \
-	echo "Setting up debug log files..."; \
+	DEBUG_DIR="$$(pwd)/work-tmp"; \
 	mkdir -p "$$DEBUG_DIR"; \
-	> "$$DEBUG_DIR/backend.log"; \
-	> "$$DEBUG_DIR/frontend.log"; \
+	> "$$DEBUG_DIR/debug-backend.log"; \
+	> "$$DEBUG_DIR/debug-frontend.log"; \
 	echo ""; \
-	echo "Starting debug session for: $$SCRIPT"; \
-	echo "  Streamlit backend: http://localhost:8501"; \
-	echo "  Vite dev server:   http://localhost:3000"; \
+	echo "Debug session: $$SCRIPT"; \
 	echo ""; \
-	echo "Log files (persist after exit):"; \
-	echo "  .debug/backend.log  - Streamlit/Python output"; \
-	echo "  .debug/frontend.log - Vite/browser console output"; \
+	echo "  App URL: http://localhost:3000"; \
 	echo ""; \
-	echo "Press Ctrl+C to stop both servers."; \
+	echo "  Log files:"; \
+	echo "    work-tmp/debug-backend.log  - Streamlit/Python output"; \
+	echo "    work-tmp/debug-frontend.log - Vite/browser console output"; \
+	echo ""; \
+	echo "Press Ctrl+C to stop."; \
 	echo ""; \
 	cleanup() { \
 		echo ""; \
-		echo "Stopping servers..."; \
+		echo "Stopping servers... logs saved to work-tmp/"; \
 		lsof -ti:3000 | xargs kill 2>/dev/null || true; \
 		lsof -ti:8501 | xargs kill 2>/dev/null || true; \
-		echo "Debug logs saved to .debug/"; \
 	}; \
 	trap cleanup EXIT; \
-	streamlit run "$$SCRIPT" --server.headless true 2>&1 | tee "$$DEBUG_DIR/backend.log" & \
+	streamlit run "$$SCRIPT" --server.headless true >> "$$DEBUG_DIR/debug-backend.log" 2>&1 & \
 	sleep 2; \
-	cd frontend && TERMINAL_CONSOLE=1 yarn start 2>&1 | tee "$$DEBUG_DIR/frontend.log"
+	cd frontend && TERMINAL_CONSOLE=1 yarn start >> "$$DEBUG_DIR/debug-frontend.log" 2>&1
 
 .PHONY: frontend-lint
 # Lint and check formatting of frontend files.
