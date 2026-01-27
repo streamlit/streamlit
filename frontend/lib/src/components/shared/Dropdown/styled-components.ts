@@ -36,9 +36,13 @@ export const ThemedStyledDropdownListItem = styled(StyledDropdownListItem, {
     position: "relative",
     display: "flex",
     alignItems: "center",
+
+    marginTop: theme.spacing.none,
+    marginBottom: theme.spacing.none,
     marginLeft: theme.spacing.none,
     marginRight: theme.spacing.none,
-    borderRadius: theme.radii.default, // ALL items get rounded corners
+
+    borderRadius: theme.radii.default,
     overflow: "hidden",
 
     // ensure any Base Web inner wrappers cannot paint square backgrounds
@@ -46,12 +50,11 @@ export const ThemedStyledDropdownListItem = styled(StyledDropdownListItem, {
     "& [data-baseweb]": { backgroundColor: "transparent !important" },
 
     // keep text above our highlight layer
-    "& > *": { position: "relative", zIndex: theme.zIndices.priority },
 
-    paddingTop: theme.spacing.twoXS,
-    paddingBottom: theme.spacing.twoXS,
-    paddingLeft: theme.spacing.sm,
-    paddingRight: theme.spacing.sm,
+    paddingTop: theme.spacing.none,
+    paddingBottom: theme.spacing.none,
+    paddingLeft: theme.spacing.lg,
+    paddingRight: theme.spacing.lg,
 
     fontSize: theme.fontSizes.md,
 
@@ -59,13 +62,22 @@ export const ThemedStyledDropdownListItem = styled(StyledDropdownListItem, {
     "::before": {
       content: '""',
       position: "absolute",
-      inset: 0,
+      inset: `2px ${theme.spacing.sm}`,
       borderRadius: theme.radii.default, // Consistent rounded corners on all items
       background: bgColor,
       opacity: hasBg ? 1 : 0,
       transition: "opacity 120ms ease",
       pointerEvents: "none",
       zIndex: theme.zIndices.base,
+    },
+
+    "& > *": {
+      position: "relative",
+      zIndex: theme.zIndices.priority,
+      paddingTop: theme.spacing.threeXS,
+      paddingBottom: theme.spacing.threeXS,
+      paddingLeft: theme.spacing.none,
+      paddingRight: theme.spacing.none,
     },
 
     fontWeight: theme.fontWeights.normal,

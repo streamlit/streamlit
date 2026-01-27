@@ -41,6 +41,7 @@ import { useSelectCommon } from "~lib/hooks/useSelectCommon"
 import { hasLightBackgroundColor } from "~lib/theme"
 import { LabelVisibilityOptions } from "~lib/util/utils"
 
+
 export interface Props {
   value: string | null
   onChange: (value: string | null) => void
@@ -241,9 +242,12 @@ const Selectbox: FC<Props> = ({
                   style: () => {
                     const lightBackground = hasLightBackgroundColor(theme)
                     return {
-                      marginTop: theme.spacing.none,
+                      marginTop: theme.spacing.twoXS,
                       marginRight: theme.spacing.none,
-                      marginBottom: theme.spacing.sm,
+                      marginBottom: theme.spacing.none,
+
+                      paddingTop: theme.spacing.sm,
+                      paddingBottom: theme.spacing.sm,
 
                       maxHeight: "70vh",
                       overflow: "auto",
@@ -254,20 +258,36 @@ const Selectbox: FC<Props> = ({
                       borderBottomRightRadius: theme.radii.default,
                       borderBottomLeftRadius: theme.radii.default,
 
-                      borderLeftWidth: lightBackground ? "0" : theme.sizes.borderWidth,
-                      borderRightWidth: lightBackground ? "0" : theme.sizes.borderWidth,
-                      borderTopWidth: lightBackground ? "0" : theme.sizes.borderWidth,
-                      borderBottomWidth: lightBackground ? "0" : theme.sizes.borderWidth,
+                      borderLeftWidth: lightBackground
+                        ? "0"
+                        : theme.sizes.borderWidth,
+                      borderRightWidth: lightBackground
+                        ? "0"
+                        : theme.sizes.borderWidth,
+                      borderTopWidth: lightBackground
+                        ? "0"
+                        : theme.sizes.borderWidth,
+                      borderBottomWidth: lightBackground
+                        ? "0"
+                        : theme.sizes.borderWidth,
 
                       borderLeftStyle: lightBackground ? "none" : "solid",
                       borderRightStyle: lightBackground ? "none" : "solid",
                       borderTopStyle: lightBackground ? "none" : "solid",
                       borderBottomStyle: lightBackground ? "none" : "solid",
 
-                      borderLeftColor: lightBackground ? "transparent" : theme.colors.borderColor,
-                      borderRightColor: lightBackground ? "transparent" : theme.colors.borderColor,
-                      borderTopColor: lightBackground ? "transparent" : theme.colors.borderColor,
-                      borderBottomColor: lightBackground ? "transparent" : theme.colors.borderColor,
+                      borderLeftColor: lightBackground
+                        ? "transparent"
+                        : theme.colors.borderColor,
+                      borderRightColor: lightBackground
+                        ? "transparent"
+                        : theme.colors.borderColor,
+                      borderTopColor: lightBackground
+                        ? "transparent"
+                        : theme.colors.borderColor,
+                      borderBottomColor: lightBackground
+                        ? "transparent"
+                        : theme.colors.borderColor,
 
                       boxShadow: lightBackground
                         ? "0px 4px 16px rgba(0, 0, 0, 0.16)"
