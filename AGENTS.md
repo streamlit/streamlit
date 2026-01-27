@@ -78,7 +78,7 @@ Selection of `make` commands for development (run in the repo root):
 - **Follow existing patterns**: Check neighboring files for conventions.
 - You can use the `work-tmp` directory to store temporary files, specs, and scripts.
 - If you fail to run a `make` command, remember to run it from the root / top-level directory.
-- The hot-reload dev server for the frontend will be available at <http://localhost:3000>.
+- Use `make debug <script.py>` to start both backend and frontend with hot-reload for debugging. The app will be available at <http://localhost:3000>.
 - The main branch of this repository is `develop`.
 
 ## Testing Strategy
