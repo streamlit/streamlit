@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -219,7 +219,7 @@ def _normalize_tuple(
         r = rgb_formatter(color_4tuple[0], color_4tuple)
         g = rgb_formatter(color_4tuple[1], color_4tuple)
         b = rgb_formatter(color_4tuple[2], color_4tuple)
-        alpha = alpha_formatter(color_4tuple[3], color_4tuple)
+        alpha = alpha_formatter(color_4tuple[3], color_4tuple)  # ty: ignore[index-out-of-bounds]
         return r, g, b, alpha
 
     raise StreamlitInvalidColorError(color)
@@ -245,7 +245,7 @@ def _float_formatter(component: float, color: MaybeColor) -> float:
     Anything too small will become 0.0, and anything too large will become 1.0.
     """
     if isinstance(component, int):
-        component = component / 255.0
+        component /= 255.0
 
     if isinstance(component, float):
         return min(1.0, max(component, 0.0))

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, {
+import {
   memo,
   ReactElement,
   useCallback,
@@ -30,12 +30,16 @@ import { AudioInput as AudioInputProto } from "@streamlit/protobuf"
 import { useWaveformController } from "~lib/components/audio"
 import Toolbar, { ToolbarAction } from "~lib/components/shared/Toolbar"
 import { Placement } from "~lib/components/shared/Tooltip"
-import TooltipIcon from "~lib/components/shared/TooltipIcon"
-import { WidgetLabel } from "~lib/components/widgets/BaseWidget"
+import {
+  WidgetLabel,
+  WidgetLabelHelpIcon,
+} from "~lib/components/widgets/BaseWidget"
 import { FormClearHelper } from "~lib/components/widgets/Form"
 import { FileUploadClient } from "~lib/FileUploadClient"
 import useDownloadUrl from "~lib/hooks/useDownloadUrl"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import useWidgetManagerElementState from "~lib/hooks/useWidgetManagerElementState"
+import { convertRemToPx } from "~lib/theme"
 import { uploadFiles } from "~lib/util/uploadFiles"
 import {
   isNullOrUndefined,
@@ -56,7 +60,6 @@ import {
   StyledWaveformInnerDiv,
   StyledWaveformTimeCode,
   StyledWaveSurferDiv,
-  StyledWidgetLabelHelp,
 } from "./styled-components"
 
 export interface Props {
@@ -74,6 +77,7 @@ const AudioInput: React.FC<Props> = ({
   fragmentId,
   disabled,
 }): ReactElement => {
+  const theme = useEmotionTheme()
   const containerRef = useRef<HTMLDivElement>(null)
 
   const [hasNoMicPermissions, setHasNoMicPermissions] = useState(false)
@@ -232,6 +236,7 @@ const AudioInput: React.FC<Props> = ({
   const controller = useWaveformController({
     containerRef,
     sampleRate: element.sampleRate ?? undefined,
+    waveformPadding: convertRemToPx(theme.spacing.twoXS), // Pixels of vertical padding to prevent waveform from touching edges
     events: {
       onPermissionDenied: () => {
         setHasNoMicPermissions(true)
@@ -534,9 +539,11 @@ const AudioInput: React.FC<Props> = ({
         )}
       >
         {element.help && (
-          <StyledWidgetLabelHelp>
-            <TooltipIcon content={element.help} placement={Placement.TOP} />
-          </StyledWidgetLabelHelp>
+          <WidgetLabelHelpIcon
+            content={element.help}
+            placement={Placement.TOP}
+            label={element.label}
+          />
         )}
       </WidgetLabel>
       <StyledWaveformContainerDiv disabled={disabled}>

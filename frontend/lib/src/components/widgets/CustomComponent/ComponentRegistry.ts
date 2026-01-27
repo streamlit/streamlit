@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -106,7 +106,7 @@ export class ComponentRegistry {
     return this.endpoints.buildBidiComponentURL(componentName, path)
   }
 
-  private onMessageEvent = (event: MessageEvent): void => {
+  private readonly onMessageEvent = (event: MessageEvent): void => {
     if (
       isNullOrUndefined(event.data) ||
       !Object.hasOwn(event.data, "isStreamlitMessage")

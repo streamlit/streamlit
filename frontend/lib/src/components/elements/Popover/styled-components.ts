@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,8 +16,10 @@
 
 import styled from "@emotion/styled"
 
-export const StyledPopoverButtonIcon = styled.div(({ theme }) => ({
-  marginLeft: theme.spacing.threeXS,
+export const StyledPopoverLabelContainer = styled.div(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  gap: theme.spacing.threeXS,
   // This is a hacky way to offset the "padding" of the expansion svg
   // icon. Reason is that we want to use the same padding to the right side
   // as the text on the left side. The alternative would be to overwrite the
@@ -28,4 +30,10 @@ export const StyledPopoverButtonIcon = styled.div(({ theme }) => ({
   // consider putting this into a theme variable or creating a shared styled component.
   // The SVG icon we are using seems to have an internal padding of around 25%.
   marginRight: `calc(-${theme.iconSizes.lg} * 0.25)`,
+}))
+
+export const StyledPopoverExpansionIcon = styled.div(({ theme }) => ({
+  display: "inline-flex",
+  // Small hack to better align the expansion icon with the label.
+  marginTop: theme.spacing.threeXS,
 }))

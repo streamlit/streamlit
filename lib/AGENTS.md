@@ -1,6 +1,6 @@
 # Python Development Guide
 
-- Supported Python versions: 3.10 - 3.13
+- Supported Python versions: 3.10 - 3.14
 - Docstrings: Numpy style
 - Linter: Ruff 0.x (`.ruff.toml`)
 - Formatter: Ruff 0.x (`.ruff.toml`)

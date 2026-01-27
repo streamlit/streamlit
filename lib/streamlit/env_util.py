@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -46,7 +46,7 @@ def is_repl() -> bool:
 
     # <stdin> is what the basic Python REPL calls the root frame's
     # filename, and <string> is what iPython sometimes calls it.
-    return filename in ("<stdin>", "<string>")
+    return filename in {"<stdin>", "<string>"}
 
 
 def is_executable_in_path(name: str) -> bool:

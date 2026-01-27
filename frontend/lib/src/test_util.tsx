@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { FC, PropsWithChildren, ReactElement } from "react"
+import { FC, PropsWithChildren, ReactElement } from "react"
 
 import {
   render as reactTestingLibraryRender,
@@ -25,6 +25,10 @@ import { Vector } from "apache-arrow"
 
 import { PageConfig } from "@streamlit/protobuf"
 
+import {
+  DownloadContext,
+  DownloadContextProps,
+} from "./components/core/DownloadContext"
 import {
   FormsContext,
   FormsContextProps,
@@ -179,6 +183,7 @@ export interface RenderWithContextsOptions {
   navigationContext?: Partial<NavigationContextProps>
   formsContext?: Partial<FormsContextProps>
   scriptRunContext?: Partial<ScriptRunContextProps>
+  downloadContext?: Partial<DownloadContextProps>
 }
 
 /**
@@ -278,6 +283,11 @@ export const renderWithContexts = (
     ...options.formsContext,
   }
 
+  let currentDownloadContextProps: DownloadContextProps = {
+    requestDeferredFile: undefined,
+    ...options.downloadContext,
+  }
+
   const Wrapper: FC<PropsWithChildren> = ({ children }) => (
     <ThemeProvider theme={mockTheme.emotion}>
       <WindowDimensionsProvider>
@@ -296,9 +306,15 @@ export const renderWithContexts = (
                     <ScriptRunContext.Provider
                       value={currentScriptRunContextProps}
                     >
-                      <FormsContext.Provider value={currentFormsContextProps}>
-                        {children}
-                      </FormsContext.Provider>
+                      <DownloadContext.Provider
+                        value={currentDownloadContextProps}
+                      >
+                        <FormsContext.Provider
+                          value={currentFormsContextProps}
+                        >
+                          {children}
+                        </FormsContext.Provider>
+                      </DownloadContext.Provider>
                     </ScriptRunContext.Provider>
                   </ViewStateContext.Provider>
                 </NavigationContext.Provider>
@@ -355,6 +371,12 @@ export const renderWithContexts = (
         currentFormsContextProps = {
           ...currentFormsContextProps,
           ...newOptions.formsContext,
+        }
+      }
+      if (newOptions?.downloadContext) {
+        currentDownloadContextProps = {
+          ...currentDownloadContextProps,
+          ...newOptions.downloadContext,
         }
       }
       if (newOptions?.scriptRunContext) {

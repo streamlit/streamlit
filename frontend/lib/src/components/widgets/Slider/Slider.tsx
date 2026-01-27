@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,13 +14,14 @@
  * limitations under the License.
  */
 
-import React, {
+import {
   createRef,
   forwardRef,
   memo,
   ReactElement,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
 } from "react"
@@ -30,24 +31,28 @@ import {
   Slider as UISlider,
   StyledInnerTrack as UIStyledInnerTrack,
 } from "baseui/slider"
-import pick from "lodash/pick"
+import { pick } from "lodash-es"
 import moment from "moment"
-import { sprintf } from "sprintf-js"
 
 import { Slider as SliderProto } from "@streamlit/protobuf"
 
 import { withCalculatedWidth } from "~lib/components/core/Layout/withCalculatedWidth"
-import { Placement } from "~lib/components/shared/Tooltip"
-import TooltipIcon from "~lib/components/shared/TooltipIcon"
+import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
 import {
-  StyledWidgetLabelHelp,
   WidgetLabel,
+  WidgetLabelHelpIcon,
 } from "~lib/components/widgets/BaseWidget"
 import {
   useBasicWidgetState,
   ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import {
+  arrayComparator,
+  useExecuteWhenChanged,
+} from "~lib/hooks/useExecuteWhenChanged"
+import { formatMoment, MomentKind } from "~lib/util/formatMoment"
+import { formatNumber } from "~lib/util/formatNumber"
 import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -79,8 +84,18 @@ function SliderTickBar({
       isHovered={isHovered}
       isDisabled={isDisabled}
     >
-      <span>{minLabel}</span>
-      <span>{maxLabel}</span>
+      <StreamlitMarkdown
+        source={minLabel}
+        allowHTML={false}
+        inheritFont
+        isLabel
+      />
+      <StreamlitMarkdown
+        source={maxLabel}
+        allowHTML={false}
+        inheritFont
+        isLabel
+      />
     </StyledSliderTickBar>
   )
 }
@@ -89,9 +104,41 @@ export interface Props {
   disabled: boolean
   element: SliderProto
   widgetMgr: WidgetStateManager
-  // eslint-disable-next-line @eslint-react/no-unused-props
   width: number
   fragmentId?: string
+}
+
+/**
+ * Check if this is a select_slider (options-based) rather than a numeric slider.
+ */
+function isSelectSlider(element: SliderProto): boolean {
+  return element.type === SliderProto.Type.SELECT_SLIDER
+}
+
+/**
+ * Convert string values (formatted options) to indices for select_slider.
+ * Returns the indices in the options array that correspond to the string values.
+ */
+function stringValuesToIndices(
+  stringValues: string[],
+  options: string[],
+  defaultIndices: number[]
+): number[] {
+  return stringValues.map((str, i) => {
+    const index = options.indexOf(str)
+    // If not found, fall back to default index for this position
+    return index >= 0 ? index : (defaultIndices[i] ?? 0)
+  })
+}
+
+/**
+ * Convert indices to string values (formatted options) for select_slider.
+ */
+function indicesToStringValues(
+  indices: number[],
+  options: string[]
+): string[] {
+  return indices.map(i => options[i] ?? "")
 }
 
 function Slider({
@@ -134,17 +181,43 @@ function Slider({
 
   const theme = useEmotionTheme()
 
+  // Keep a ref to the latest element so stable callbacks (`renderThumb`) can
+  // always read the current format/options without depending on `element` in
+  // their dependency arrays (which would hurt referential stability).
+  const elementRef = useRef(element)
+  elementRef.current = element
+
   const formattedValueArr = uiValue.map(v => formatValue(v, element))
   const formattedMinValue = formatValue(element.min, element)
   const formattedMaxValue = formatValue(element.max, element)
-
-  const thumbAriaLabel = element.label
 
   // When resetting a form, `value` will change so we need to change `uiValue`
   // to match.
   useEffect(() => {
     setUiValue(value)
   }, [value])
+
+  // For select_slider: when options change, recompute indices from WidgetStateManager.
+  // This handles the case where the selected string value exists in both old and new
+  // options but at different indices - the UI needs to update to show the correct position.
+  useExecuteWhenChanged(
+    () => {
+      if (!isSelectSlider(element)) return
+
+      // Get current string values from widget manager and convert to new indices
+      const stringValues = widgetMgr.getStringArrayValue(element)
+      if (stringValues === undefined) return
+
+      const newIndices = stringValuesToIndices(
+        stringValues,
+        element.options,
+        element.default
+      )
+      setUiValue(newIndices)
+    },
+    [element.options],
+    (prev, curr) => arrayComparator(prev[0], curr[0])
+  )
 
   const handleFinalChange = useCallback(
     ({ value: valueArg }: { value: number[] }): void => {
@@ -162,13 +235,11 @@ function Slider({
     []
   )
 
-  // TODO: Update to match React best practices
-  // eslint-disable-next-line react-hooks/react-compiler
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
   const renderThumb = useCallback(
     forwardRef<HTMLDivElement, StyleProps>(
       function renderThumb(props, ref): ReactElement {
-        const { $thumbIndex } = props
+        const { $thumbIndex, $value } = props
         const thumbIndex = $thumbIndex || 0
         thumbRefs[thumbIndex] = ref as React.MutableRefObject<HTMLDivElement>
         // eslint-disable-next-line @eslint-react/no-create-ref
@@ -191,7 +262,17 @@ function Slider({
           "draggable",
         ])
 
-        const formattedValue = formattedValueArr[thumbIndex]
+        const currentElement = elementRef.current
+
+        // We intentionally re-compute the formatted value here from the latest
+        // thumb value and the latest element (via `elementRef`) instead of
+        // reading from `formattedValueArr` in the outer closure. This keeps
+        // `renderThumb` referentially stable across user interactions while
+        // still reflecting changes to formatting-related props like
+        // `element.format`.
+        const thumbValues = $value ?? [currentElement.min]
+        const thumbValue = thumbValues[thumbIndex] ?? currentElement.min
+        const formattedValue = formatValue(thumbValue, currentElement)
 
         return (
           <StyledThumb
@@ -200,14 +281,19 @@ function Slider({
             isDragged={props.$isDragged === true}
             ref={thumbRefs[thumbIndex]}
             aria-valuetext={formattedValue}
-            aria-label={thumbAriaLabel}
+            aria-label={currentElement.label}
           >
             <StyledThumbValue
               data-testid="stSliderThumbValue"
               disabled={props.$disabled === true}
               ref={thumbValueRefs[thumbIndex]}
             >
-              {formattedValue}
+              <StreamlitMarkdown
+                source={formattedValue}
+                allowHTML={false}
+                inheritFont
+                isLabel
+              />
             </StyledThumbValue>
           </StyledThumb>
         )
@@ -219,22 +305,15 @@ function Slider({
     []
   )
 
-  useEffect(() => {
-    // Update the numbers on the thumb via DOM manipulation to avoid a redraw,
-    // which drops the widget's focus state.
-    thumbValueRefs.map((ref, i) => {
-      if (ref.current) {
-        ref.current.innerText = formattedValueArr[i]
-      }
-    })
-
-    thumbRefs.map((ref, i) => {
+  useLayoutEffect(() => {
+    // Keep aria-valuetext in sync with the formatted values for accessibility.
+    thumbRefs.forEach((ref, i) => {
       if (ref.current) {
         ref.current.setAttribute("aria-valuetext", formattedValueArr[i])
       }
     })
 
-    // If, after rendering, the thumb value's is outside the container (too
+    // If, after rendering, the thumb value is outside the container (too
     // far left or too far right), bring it inside. Or if there are two
     // thumbs and their values overlap, fix that.
     const sliderDiv = sliderRef.current ?? null
@@ -266,9 +345,7 @@ function Slider({
   // Then we can adjust the padding around the thumbs separately
   // from the dimensions of the track.
   //
-  // TODO: Update to match React best practices
-  // eslint-disable-next-line react-hooks/react-compiler
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
   const renderInnerTrack = useCallback(
     forwardRef<HTMLDivElement, StylePropsWithChildren>(
       function renderInnerTrack(props, ref): ReactElement {
@@ -308,12 +385,7 @@ function Slider({
         )}
       >
         {element.help && (
-          <StyledWidgetLabelHelp>
-            <TooltipIcon
-              content={element.help}
-              placement={Placement.TOP_RIGHT}
-            />
-          </StyledWidgetLabelHelp>
+          <WidgetLabelHelpIcon content={element.help} label={element.label} />
         )}
       </WidgetLabel>
       <UISlider
@@ -358,6 +430,20 @@ function getStateFromWidgetMgr(
   widgetMgr: WidgetStateManager,
   element: SliderProto
 ): number[] | undefined {
+  if (isSelectSlider(element)) {
+    // For select_slider, get string values and convert to indices
+    const stringValues = widgetMgr.getStringArrayValue(element)
+    // No value stored yet - normal case during initial render
+    if (stringValues === undefined) {
+      return undefined
+    }
+    return stringValuesToIndices(
+      stringValues,
+      element.options,
+      element.default
+    )
+  }
+  // For regular slider, get numeric values directly
   return widgetMgr.getDoubleArrayValue(element)
 }
 
@@ -366,6 +452,16 @@ function getDefaultStateFromProto(element: SliderProto): number[] {
 }
 
 function getCurrStateFromProto(element: SliderProto): number[] {
+  if (isSelectSlider(element)) {
+    // For select_slider, read string values from rawValue and convert to indices
+    const rawValues = element.rawValue
+    if (rawValues && rawValues.length > 0) {
+      return stringValuesToIndices(rawValues, element.options, element.default)
+    }
+    // Fall back to default indices
+    return element.default
+  }
+  // For regular slider, use numeric value directly
   return element.value
 }
 
@@ -375,12 +471,24 @@ function updateWidgetMgrState(
   vws: ValueWithSource<number[]>,
   fragmentId?: string
 ): void {
-  widgetMgr.setDoubleArrayValue(
-    element,
-    vws.value,
-    { fromUi: vws.fromUi },
-    fragmentId
-  )
+  if (isSelectSlider(element)) {
+    // For select_slider, convert indices to string values
+    const stringValues = indicesToStringValues(vws.value, element.options)
+    widgetMgr.setStringArrayValue(
+      element,
+      stringValues,
+      { fromUi: vws.fromUi },
+      fragmentId
+    )
+  } else {
+    // For regular slider, use numeric values directly
+    widgetMgr.setDoubleArrayValue(
+      element,
+      vws.value,
+      { fromUi: vws.fromUi },
+      fragmentId
+    )
+  }
 }
 
 function isDateTimeType(element: SliderProto): boolean {
@@ -392,22 +500,35 @@ function isDateTimeType(element: SliderProto): boolean {
   )
 }
 
+function getMomentKind(element: SliderProto): MomentKind {
+  const { dataType } = element
+  if (dataType === SliderProto.DataType.DATE) {
+    return "date"
+  }
+  if (dataType === SliderProto.DataType.TIME) {
+    return "time"
+  }
+  return "datetime"
+}
+
 function formatValue(value: number, element: SliderProto): string {
   const { format, options } = element
+
+  if (options.length > 0) {
+    // select slider does not support format strings, so we just return the option string.
+    return options[value] ?? ""
+  }
+
   if (isDateTimeType(element)) {
     // Python datetime uses microseconds, but JS & Moment uses milliseconds
     // The timestamp is always set to the UTC timezone, even so, the actual timezone
     // for this timestamp in the backend could be different.
     // However, the frontend component does not need to know about the actual timezone.
-
-    return moment.utc(value / 1000).format(format)
+    const momentDate = moment.utc(value / 1000)
+    return formatMoment(momentDate, format, getMomentKind(element))
   }
 
-  if (options.length > 0) {
-    return sprintf(format, options[value])
-  }
-
-  return sprintf(format, value)
+  return formatNumber(value, format)
 }
 
 /**

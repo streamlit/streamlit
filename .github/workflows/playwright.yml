@@ -6,6 +6,7 @@ on:
       - "develop"
   pull_request:
     types: [opened, synchronize, reopened]
+
   # Allows workflow to be called from other workflows
   workflow_call:
     inputs:
@@ -20,8 +21,8 @@ concurrency:
 
 jobs:
   playwright-e2e-tests:
-    runs-on: ubuntu-latest-32-cores
-    timeout-minutes: 35
+    runs-on: ubuntu-latest-64-cores
+    timeout-minutes: 30
 
     defaults:
       run:
@@ -29,7 +30,7 @@ jobs:
 
     steps:
       - name: Checkout Streamlit code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           ref: ${{ inputs.ref }}
           persist-credentials: false
@@ -61,7 +62,7 @@ jobs:
           rm -rf ./test-results
           pytest --ignore ./custom_components --browser webkit --browser chromium --browser firefox -n auto --reruns 1 -m "not performance"
       - name: Upload failed test results
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         if: always()
         with:
           name: playwright_test_results_${{ steps.short_sha.outputs.sha_short }}

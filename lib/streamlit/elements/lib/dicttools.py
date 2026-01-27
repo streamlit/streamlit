@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -73,7 +73,7 @@ def _unflatten_single_dict(flat_dict: dict[Any, Any]) -> dict[Any, Any]:
             curr_dict = curr_dict[k]
 
         if prev_dict is not None:
-            prev_dict[k] = v
+            prev_dict[path[-1]] = v
 
     return out
 

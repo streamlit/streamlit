@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,6 +15,10 @@
 import time
 
 import streamlit as st
+
+# Regression test for gh-12067: Pills at the start of the app should not wrap
+# The bug only reproduces when pills are among the first elements rendered
+st.pills("Regression test 3", ["1", "2", "3"], key="regression_3")
 
 st.header("Pills - standard")
 

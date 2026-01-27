@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -109,7 +109,7 @@ class FileWatcherTest(unittest.TestCase):
         ]
         mock_echo.assert_has_calls(calls)
 
-    @patch("streamlit.watcher.path_watcher.PollingPathWatcher")
+    @patch("streamlit.watcher.polling_path_watcher.PollingPathWatcher")
     @patch("streamlit.watcher.event_based_path_watcher.EventBasedPathWatcher")
     def test_watch_file(self, mock_event_watcher, mock_polling_watcher):
         """Test all possible outcomes of both `get_default_path_watcher_class` and
@@ -160,10 +160,31 @@ class FileWatcherTest(unittest.TestCase):
         "streamlit.watcher.path_watcher._is_watchdog_available", Mock(return_value=True)
     )
     @patch("streamlit.watcher.event_based_path_watcher.EventBasedPathWatcher")
-    def test_watch_dir_kwarg_plumbing(self, mock_event_watcher):
-        # NOTE: We only test kwarg plumbing for watch_dir since watcher_class
-        # selection is tested extensively in test_watch_file, and the two
-        # functions are otherwise identical.
+    def test_watch_file_allow_nonexistent(self, mock_event_watcher: Mock) -> None:
+        """Test that watch_file passes allow_nonexistent to the watcher class."""
+        on_file_changed = Mock()
+
+        watching_file = watch_file(
+            "some/file/path",
+            on_file_changed,
+            watcher_type="watchdog",
+            allow_nonexistent=True,
+        )
+
+        assert watching_file
+        mock_event_watcher.assert_called_with(
+            "some/file/path",
+            on_file_changed,
+            glob_pattern=None,
+            allow_nonexistent=True,
+        )
+
+    @patch(
+        "streamlit.watcher.path_watcher._is_watchdog_available", Mock(return_value=True)
+    )
+    @patch("streamlit.watcher.event_based_path_watcher.EventBasedPathWatcher")
+    def test_watch_dir_kwarg_plumbing(self, mock_event_watcher: Mock) -> None:
+        """Test that watch_dir passes kwargs to the watcher class."""
         on_file_changed = Mock()
 
         watching_dir = watch_dir(

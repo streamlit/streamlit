@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -100,4 +100,36 @@ st.html(
     </div>
     """,
     width=300,
+)
+
+# Test that JavaScript executes when explicitly allowed
+st.html(
+    """
+    <div id="x">initial</div>
+    <script>
+      document.getElementById('x').textContent = 'OK'
+      window.__st_html_flag__ = 'ran'
+    </script>
+    """,
+    unsafe_allow_javascript=True,
+)
+
+# Test that nested lists display proper indentation (issue #13426)
+st.html(
+    """
+    <ul id="nested-list-test">
+        <li>Pets
+            <ul>
+                <li>Dog</li>
+                <li>Cat</li>
+            </ul>
+        </li>
+        <li>Fruits
+            <ul>
+                <li>Apple</li>
+                <li>Orange</li>
+            </ul>
+        </li>
+    </ul>
+    """
 )

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,11 @@
  * limitations under the License.
  */
 
-export type { AppNode } from "./render-tree/AppNode.interface"
+export {
+  NO_SCRIPT_RUN_ID,
+  type AppNode,
+} from "./render-tree/AppNode.interface"
 export { AppRoot } from "./render-tree/AppRoot"
 export { BlockNode } from "./render-tree/BlockNode"
 export { ElementNode } from "./render-tree/ElementNode"
+export { TransientNode } from "./render-tree/TransientNode"

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { memo, ReactElement } from "react"
+import { forwardRef, memo, ReactElement } from "react"
 
 import {
   BaseButtonKind,
@@ -27,17 +27,13 @@ import {
 
 // We define separate BaseLinkButton, and not use BaseButton for st.link_button,
 // because link behavior requires tag <a> instead of <button>.
-function BaseLinkButton({
-  kind,
-  size,
-  disabled,
-  children,
-  autoFocus,
-  href,
-  rel,
-  target,
-  onClick,
-}: Readonly<BaseLinkButtonPropsT>): ReactElement {
+const BaseLinkButton = forwardRef<
+  HTMLAnchorElement,
+  Readonly<BaseLinkButtonPropsT>
+>(function BaseLinkButtonWithRef(
+  { kind, size, disabled, children, autoFocus, href, rel, target, onClick },
+  ref
+): ReactElement {
   let ComponentType = StyledPrimaryLinkButton
 
   if (kind === BaseButtonKind.SECONDARY) {
@@ -48,6 +44,7 @@ function BaseLinkButton({
 
   return (
     <ComponentType
+      ref={ref}
       kind={kind}
       size={size || BaseButtonSize.MEDIUM}
       containerWidth={true}
@@ -63,7 +60,9 @@ function BaseLinkButton({
       {children}
     </ComponentType>
   )
-}
+})
+
+BaseLinkButton.displayName = "BaseLinkButton"
 export type BaseButtonProps = BaseLinkButtonPropsT
 export { BaseButtonKind, BaseButtonSize }
 export default memo(BaseLinkButton)

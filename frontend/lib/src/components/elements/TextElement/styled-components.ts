@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,10 +16,23 @@
 
 import styled from "@emotion/styled"
 
-export const StyledText = styled.div(({ theme }) => ({
+// Text element itself - rendered inline-block so it stays with help icon
+export const StyledText = styled.span(({ theme }) => ({
   fontFamily: theme.genericFonts.bodyFont,
   color: theme.colors.bodyText,
   whiteSpace: "pre-line",
   whiteSpaceCollapse: "preserve",
   wordBreak: "break-word",
+  display: "inline-block",
+  verticalAlign: "middle",
+  width: "100%",
+}))
+
+// Inline help icon wrapper to keep it flowing with the text
+export const StyledInlineHelpIcon = styled.span(({ theme }) => ({
+  display: "inline-block",
+  verticalAlign: "middle",
+  marginLeft: theme.spacing.twoXS,
+  // Fine-tune vertical positioning for perfect visual centering
+  transform: "translateY(-0.05em)",
 }))

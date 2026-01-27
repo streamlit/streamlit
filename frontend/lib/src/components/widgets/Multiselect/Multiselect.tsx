@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,26 +14,35 @@
  * limitations under the License.
  */
 
-import { FC, memo, useCallback, useContext, useMemo } from "react"
+import {
+  FC,
+  memo,
+  useCallback,
+  useContext,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+} from "react"
 
 import { ChevronDown } from "baseui/icon"
 import {
   type OnChangeParams,
   type Option,
+  type SharedStylePropsArg,
+  StyledValueContainer,
   TYPE,
   Select as UISelect,
 } from "baseui/select"
-import without from "lodash/without"
+import { without } from "lodash-es"
 
 import { MultiSelect as MultiSelectProto } from "@streamlit/protobuf"
 
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
+import { getBorderColor } from "~lib/components/shared/Base/styled-components"
 import { VirtualDropdown } from "~lib/components/shared/Dropdown"
-import { Placement } from "~lib/components/shared/Tooltip"
-import TooltipIcon from "~lib/components/shared/TooltipIcon"
 import {
-  StyledWidgetLabelHelp,
   WidgetLabel,
+  WidgetLabelHelpIcon,
 } from "~lib/components/widgets/BaseWidget"
 import { StyledUISelect } from "~lib/components/widgets/Multiselect/styled-components"
 import {
@@ -92,6 +101,8 @@ const Multiselect: FC<Props> = props => {
 
   const theme = useEmotionTheme()
   const isInSidebar = useContext(IsSidebarContext)
+  const valueContainerRef = useRef<HTMLDivElement>(null)
+  const scrollTopRef = useRef(0)
   const [value, setValueWithSource] = useBasicWidgetState<
     MultiselectValue,
     MultiSelectProto
@@ -213,6 +224,40 @@ const Multiselect: FC<Props> = props => {
     return `${pxMaxHeight}px`
   }, [theme.fontSizes.baseFontSize])
 
+  // Runs every render to capture BaseWeb's internal DOM updates that can reset scroll position.
+  // Performance is acceptable since this is a leaf component with no children to re-render.
+  useLayoutEffect(() => {
+    if (valueContainerRef.current) {
+      valueContainerRef.current.scrollTop = scrollTopRef.current
+    }
+  })
+
+  const handleValueContainerScroll = useCallback(
+    (e: React.UIEvent<HTMLDivElement>) => {
+      // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Safe: layout already computed during scroll event
+      scrollTopRef.current = e.currentTarget.scrollTop
+    },
+    []
+  )
+
+  // Memoized to prevent BaseWeb from remounting on every render
+  const ValueContainer = useMemo(
+    () =>
+      // eslint-disable-next-line @eslint-react/no-nested-component-definitions -- Required for baseweb component override with refs
+      function ValueContainer(
+        props: SharedStylePropsArg & { children: React.ReactNode }
+      ): React.ReactElement {
+        return (
+          <StyledValueContainer
+            {...props}
+            ref={valueContainerRef}
+            onScroll={handleValueContainerScroll}
+          />
+        )
+      },
+    [handleValueContainerScroll]
+  )
+
   return (
     <div className="stMultiSelect" data-testid="stMultiSelect">
       <WidgetLabel
@@ -223,12 +268,7 @@ const Multiselect: FC<Props> = props => {
         )}
       >
         {element.help && (
-          <StyledWidgetLabelHelp>
-            <TooltipIcon
-              content={element.help}
-              placement={Placement.TOP_RIGHT}
-            />
-          </StyledWidgetLabelHelp>
+          <WidgetLabelHelpIcon content={element.help} label={element.label} />
         )}
       </WidgetLabel>
       <StyledUISelect>
@@ -285,14 +325,22 @@ const Multiselect: FC<Props> = props => {
               }),
             },
             ControlContainer: {
-              style: {
-                maxHeight: maxHeight,
-                minHeight: theme.sizes.minElementHeight,
-                // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
-                borderLeftWidth: theme.sizes.borderWidth,
-                borderRightWidth: theme.sizes.borderWidth,
-                borderTopWidth: theme.sizes.borderWidth,
-                borderBottomWidth: theme.sizes.borderWidth,
+              style: ({ $isFocused }: { $isFocused: boolean }) => {
+                const borderColor = getBorderColor(theme.colors, $isFocused)
+                return {
+                  maxHeight: maxHeight,
+                  minHeight: theme.sizes.minElementHeight,
+                  // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
+                  borderLeftWidth: theme.sizes.borderWidth,
+                  borderRightWidth: theme.sizes.borderWidth,
+                  borderTopWidth: theme.sizes.borderWidth,
+                  borderBottomWidth: theme.sizes.borderWidth,
+
+                  borderTopColor: borderColor,
+                  borderRightColor: borderColor,
+                  borderBottomColor: borderColor,
+                  borderLeftColor: borderColor,
+                }
               },
             },
             Placeholder: {
@@ -304,6 +352,7 @@ const Multiselect: FC<Props> = props => {
               }),
             },
             ValueContainer: {
+              component: ValueContainer,
               style: () => ({
                 overflowY: "auto",
                 paddingLeft: theme.spacing.sm,

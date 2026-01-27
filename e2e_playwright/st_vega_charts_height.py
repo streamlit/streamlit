@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -31,6 +31,9 @@ st.header("Vega Charts Height Tests")
 
 # Test explicit height parameters
 st.subheader("Explicit Height Parameter Tests")
+
+# Add some additional text to remove flakiness in firefox caused by subpixel sizing:
+st.write("Testing different height parameters for vega charts")
 
 st.write("Chart with height='content':")
 st.vega_lite_chart(simple_df, simple_spec, height="content")

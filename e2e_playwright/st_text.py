@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -44,4 +44,32 @@ st.text(
     This is useful when you want precise control over the text container's width,
     regardless of the content or surrounding elements.""",
     width=300,
+)
+
+st.header("Text Alignment Tests")
+
+st.text(
+    "Left aligned text (default)",
+    text_alignment="left",
+    width="stretch",
+    help="This is a help tooltip!",
+)
+st.text(
+    "Center aligned text",
+    text_alignment="center",
+    width="stretch",
+    help="This is a help tooltip!",
+)
+st.text(
+    "Right aligned text",
+    text_alignment="right",
+    width="stretch",
+    help="This is a help tooltip!",
+)
+st.text(
+    """Justified text. This is a longer text to demonstrate justification. This is a longer text to
+    demonstrate justification and the help tooltip styling works properly.""",
+    text_alignment="justify",
+    width="stretch",
+    help="This is a help tooltip!",
 )

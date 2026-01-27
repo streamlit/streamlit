@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -80,6 +80,8 @@ class ToastMixin:
               <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
               font library.
 
+            - ``"spinner"``: Displays a spinner as an icon.
+
         duration : "short", "long", "infinite", or int
             The time to display the toast message. This can be one of the
             following:
@@ -149,7 +151,7 @@ class ToastMixin:
         toast_proto.body = clean_text(validate_text(body))
         toast_proto.icon = validate_icon_or_emoji(icon)
 
-        if duration in ["short", "long", "infinite"] or (
+        if duration in {"short", "long", "infinite"} or (
             isinstance(duration, int) and duration > 0
         ):
             if duration == "short":

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -40,6 +40,7 @@ from streamlit.elements.widgets.select_slider import SelectSliderSerde
 from streamlit.elements.widgets.slider import SliderSerde, SliderStep
 from streamlit.elements.widgets.time_widgets import (
     DateInputSerde,
+    DateTimeInputSerde,
     DateWidgetReturn,
     TimeInputSerde,
     _parse_date_value,
@@ -62,6 +63,7 @@ if TYPE_CHECKING:
     from streamlit.proto.Code_pb2 import Code as CodeProto
     from streamlit.proto.ColorPicker_pb2 import ColorPicker as ColorPickerProto
     from streamlit.proto.DateInput_pb2 import DateInput as DateInputProto
+    from streamlit.proto.DateTimeInput_pb2 import DateTimeInput as DateTimeInputProto
     from streamlit.proto.Element_pb2 import Element as ElementProto
     from streamlit.proto.Exception_pb2 import Exception as ExceptionProto
     from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
@@ -87,8 +89,6 @@ T = TypeVar("T")
 @dataclass
 class InitialValue:
     """Used to represent the initial value of a widget."""
-
-    pass
 
 
 # TODO: This class serves as a fallback option for elements that have not
@@ -513,7 +513,7 @@ DateValue: TypeAlias = SingleDateValue | Sequence[SingleDateValue] | None
 class DateInput(Widget):
     """A representation of ``st.date_input``."""
 
-    _value: DateValue | None | InitialValue
+    _value: DateValue | InitialValue | None
     proto: DateInputProto = field(repr=False)
     label: str
     min: date
@@ -882,7 +882,7 @@ Number: TypeAlias = int | float
 class NumberInput(Widget):
     """A representation of ``st.number_input``."""
 
-    _value: Number | None | InitialValue
+    _value: Number | InitialValue | None
     proto: NumberInputProto = field(repr=False)
     label: str
     min: Number | None
@@ -943,7 +943,7 @@ class NumberInput(Widget):
 class Radio(Widget, Generic[T]):
     """A representation of ``st.radio``."""
 
-    _value: T | None | InitialValue
+    _value: T | InitialValue | None
 
     proto: RadioProto = field(repr=False)
     label: str
@@ -993,8 +993,8 @@ class Radio(Widget, Generic[T]):
         """
         ws = WidgetState()
         ws.id = self.id
-        if self.index is not None:
-            ws.int_value = self.index
+        if self.index is not None and len(self.options) > 0:
+            ws.string_value = self.options[self.index]
         return ws
 
 
@@ -1002,7 +1002,7 @@ class Radio(Widget, Generic[T]):
 class Selectbox(Widget, Generic[T]):
     """A representation of ``st.selectbox``."""
 
-    _value: T | None | InitialValue
+    _value: T | InitialValue | None
 
     proto: SelectboxProto = field(repr=False)
     label: str
@@ -1094,18 +1094,33 @@ class SelectSlider(Widget, Generic[T]):
 
     @property
     def _widget_state(self) -> WidgetState:
-        serde = SelectSliderSerde(self.options, [], False)
+        # Build formatted options mapping
+        format_func = self.format_func
+        formatted_option_to_index = {
+            format_func(opt): idx for idx, opt in enumerate(self.options)
+        }
+
+        # Determine if this is a range value
+        is_range = isinstance(self.value, (list, tuple)) and len(self.value) == 2
+
+        serde = SelectSliderSerde(
+            self.options,
+            formatted_option_to_index=formatted_option_to_index,
+            default_indices=[0] if not is_range else [0, len(self.options) - 1],
+            format_func=format_func,
+        )
+
         try:
-            v = serde.serialize(self.format_func(self.value))
-        except (ValueError, TypeError):
-            try:
-                v = serde.serialize([self.format_func(val) for val in self.value])  # type: ignore
-            except:  # noqa: E722
-                raise ValueError(f"Could not find index for {self.value}")
+            if is_range:
+                v = serde.serialize(tuple(self.value))  # type: ignore
+            else:
+                v = serde.serialize(self.value)  # type: ignore
+        except (ValueError, TypeError) as e:
+            raise ValueError(f"Could not serialize value {self.value}") from e
 
         ws = WidgetState()
         ws.id = self.id
-        ws.double_array_value.data[:] = v
+        ws.string_array_value.data[:] = v
         return ws
 
     @property
@@ -1222,7 +1237,7 @@ class Text(Element):
 class TextArea(Widget):
     """A representation of ``st.text_area``."""
 
-    _value: str | None | InitialValue
+    _value: str | InitialValue | None
 
     proto: TextAreaProto = field(repr=False)
     label: str
@@ -1274,7 +1289,7 @@ class TextArea(Widget):
 class TextInput(Widget):
     """A representation of ``st.text_input``."""
 
-    _value: str | None | InitialValue
+    _value: str | InitialValue | None
     proto: TextInputProto = field(repr=False)
     label: str
     max_chars: int
@@ -1323,13 +1338,14 @@ class TextInput(Widget):
 
 
 TimeValue: TypeAlias = time | datetime
+DateTimeWidgetValue: TypeAlias = datetime
 
 
 @dataclass(repr=False)
 class TimeInput(Widget):
     """A representation of ``st.time_input``."""
 
-    _value: TimeValue | None | InitialValue
+    _value: TimeValue | InitialValue | None
     proto: TimeInputProto = field(repr=False)
     label: str
     step: int
@@ -1380,6 +1396,59 @@ class TimeInput(Widget):
             return self
         dt = datetime.combine(date.today(), self.value) - timedelta(seconds=self.step)
         return self.set_value(dt.time())
+
+
+@dataclass(repr=False)
+class DateTimeInput(Widget):
+    """A representation of ``st.datetime_input``."""
+
+    _value: DateTimeWidgetValue | InitialValue | None
+    proto: DateTimeInputProto = field(repr=False)
+    label: str
+    format: str
+    min: str
+    max: str
+    step: int
+    help: str
+    form_id: str
+
+    def __init__(self, proto: DateTimeInputProto, root: ElementTree) -> None:
+        super().__init__(proto, root)
+        self._value = InitialValue()
+        self.type = "date_time_input"
+
+    def set_value(self, v: DateTimeWidgetValue | None) -> DateTimeInput:
+        """Set the value of the widget."""
+        self._value = v
+        return self
+
+    @property
+    def _widget_state(self) -> WidgetState:
+        from datetime import datetime
+
+        datetime_ui_format = "%Y/%m/%d, %H:%M"
+
+        ws = WidgetState()
+        ws.id = self.id
+
+        # Parse min and max values for validation
+        min_dt = datetime.strptime(self.min, datetime_ui_format)
+        max_dt = datetime.strptime(self.max, datetime_ui_format)
+
+        serde = DateTimeInputSerde(value=None, min=min_dt, max=max_dt)
+        serialized_value = serde.serialize(self.value)
+        if serialized_value is not None:
+            ws.string_array_value.data[:] = serialized_value
+        return ws
+
+    @property
+    def value(self) -> datetime | None:
+        """The current value of the widget. (datetime)"""  # noqa: D400
+        if not isinstance(self._value, InitialValue):
+            return self._value
+        state = self.root.session_state
+        assert state
+        return state[self.id]  # type: ignore
 
 
 @dataclass(repr=False)
@@ -1531,6 +1600,10 @@ class Block:
     @property
     def date_input(self) -> WidgetList[DateInput]:
         return WidgetList(self.get("date_input"))  # type: ignore
+
+    @property
+    def datetime_input(self) -> WidgetList[DateTimeInput]:
+        return WidgetList(self.get("date_time_input"))  # type: ignore
 
     @property
     def divider(self) -> ElementList[Divider]:
@@ -1986,6 +2059,8 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                 new_node = ColorPicker(elt.color_picker, root=root)
             elif ty == "date_input":
                 new_node = DateInput(elt.date_input, root=root)
+            elif ty == "date_time_input":
+                new_node = DateTimeInput(elt.date_time_input, root=root)
             elif ty == "exception":
                 new_node = Exception(elt.exception, root=root)
             elif ty == "heading":

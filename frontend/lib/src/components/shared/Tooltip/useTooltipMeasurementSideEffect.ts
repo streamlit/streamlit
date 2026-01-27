@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -50,7 +50,7 @@ export function useTooltipMeasurementSideEffect(
     const handleMeasurement = async (): Promise<void> => {
       // Implement a retry mechanism to ensure we get valid coordinates
       const getMeasurements = (): DOMRect | null => {
-        // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
+        // eslint-disable-next-line streamlit-custom/no-force-reflow-access, react-hooks/immutability -- Existing usage
         const rect = parentElement.getBoundingClientRect()
         // Check if we have valid non-zero coordinates
         if (rect.x !== 0 || rect.y !== 0) {

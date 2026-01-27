@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -439,6 +439,36 @@ def test_error_state_handling(app: Page, assert_snapshot: ImageCompareFunction):
         audio_input.get_by_text("An error has occurred, please try again.")
     ).to_be_visible()
     assert_snapshot(audio_input, name="st_audio_input-error_state")
+
+
+@pytest.mark.skip_browser("webkit")  # Webkit CI audio permission issue
+def test_permission_denied_state(
+    app_with_microphone_permission_denied: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that permission denied state is displayed."""
+    app_with_microphone_permission_denied.on(
+        "console", lambda msg: print(f"CONSOLE[{msg.type}]: {msg.text}")
+    )
+
+    audio_input = get_audio_input_by_label(
+        app_with_microphone_permission_denied, "Audio Input 1"
+    )
+
+    # Try to record - should trigger permission denied
+    record_button = audio_input.get_by_role("button", name="Record", exact=True)
+    record_button.click()
+    app_with_microphone_permission_denied.wait_for_timeout(2000)
+
+    # Verify permission denied message appears
+    expect(
+        audio_input.get_by_text("This app would like to use your microphone")
+    ).to_be_visible()
+
+    # Verify record button is disabled
+    expect(record_button).to_be_disabled()
+
+    # Take snapshot
+    assert_snapshot(audio_input, name="st_audio_input-permission_denied")
 
 
 @pytest.mark.skip_browser("webkit")  # Webkit CI audio permission issue

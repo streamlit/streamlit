@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -126,12 +126,9 @@ def docstrings():
         """Multiline docstring.
         Should not be printed.
         """
-        pass
 
     class Foo:
         """Class docstring. Should not be printed."""
-
-        pass
 
     nested()
 
@@ -141,7 +138,6 @@ docstrings()
 
 def my_func():
     """my_func: this help block should be printed."""
-    pass
 
 
 my_func

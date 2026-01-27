@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -49,7 +49,9 @@ st.write("value 4:", v4)
 v5 = st.radio("radio 5 (horizontal)", options, horizontal=True)
 st.write("value 5:", v5)
 
-v6 = st.radio("radio 6 (options from dataframe)", pd.DataFrame({"foo": list(options)}))
+v6: str = st.radio(
+    "radio 6 (options from dataframe)", pd.DataFrame({"foo": list(options)})
+)
 st.write("value 6:", v6)
 
 v7 = st.radio(
@@ -130,6 +132,10 @@ st.radio(
 if st.toggle("Update radio props"):
     dr_value = st.radio(
         "Updated dynamic radio",
+        # "mango" exists in both lists at different indices for testing preservation
+        # mango is at index 0 here, default is index 1 (papaya)
+        options=["mango", "papaya", "grape", "apple"],
+        index=1,  # default is "papaya"
         key="dynamic_radio_with_key",
         help="updated help",
         width=300,
@@ -139,15 +145,22 @@ if st.toggle("Update radio props"):
         ),
         args=("Updated radio arg",),
         kwargs={"param": "updated kwarg param"},
-        captions=["🍎", "🍌", "🍊"],
-        # Whitelisted kwargs:
-        options=["apple", "banana", "orange"],
+        captions=["🥭", "🍈", "🍇", "🍎"],
+        # Changing format_func is allowed, but selection is based on the
+        # formatted string labels. If the formatted label changes (e.g.,
+        # "Apple" vs "APPLE"), previously selected options may become
+        # unselected. This is something we might be able to improve with
+        # additional refactorings.
         format_func=lambda x: x.capitalize(),
     )
     st.write("Updated radio value:", dr_value)
 else:
     dr_value = st.radio(
         "Initial dynamic radio",
+        # "mango" exists in both lists at different indices for testing preservation
+        # mango is at index 2 here, default is index 0 (apple)
+        options=["apple", "banana", "mango", "orange"],
+        index=0,  # default is "apple"
         key="dynamic_radio_with_key",
         help="initial help",
         width="content",
@@ -157,9 +170,7 @@ else:
         ),
         args=("Initial radio arg",),
         kwargs={"param": "initial kwarg param"},
-        captions=["🍎 Apple", "🍌 Banana", "🍊 Orange"],
-        # Whitelisted kwargs:
-        options=["apple", "banana", "orange"],
+        captions=["🍎 Apple", "🍌 Banana", "🥭 Mango", "🍊 Orange"],
         format_func=lambda x: x.capitalize(),
     )
     st.write("Initial radio value:", dr_value)

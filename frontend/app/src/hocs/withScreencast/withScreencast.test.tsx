@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-import React, { PureComponent, ReactElement } from "react"
+import { PureComponent, ReactElement } from "react"
 
 import { screen } from "@testing-library/react"
 
-import { render } from "@streamlit/lib"
+import { render } from "@streamlit/lib/testing"
 
 import withScreencast, { ScreenCastHOC, Steps } from "./withScreencast"
 

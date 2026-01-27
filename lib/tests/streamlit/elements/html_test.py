@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -24,6 +24,31 @@ from tests.streamlit.elements.layout_test_utils import WidthConfigFields
 
 class StHtmlAPITest(DeltaGeneratorTestCase):
     """Test st.html API."""
+
+    def test_unsafe_allow_javascript_default_false(self):
+        """By default JS execution is disabled (flag False)."""
+        st.html("<div>Hi</div>")
+        el = self.get_delta_from_queue().new_element
+        assert el.html.body == "<div>Hi</div>"
+        assert el.html.unsafe_allow_javascript is False
+
+    def test_unsafe_allow_javascript_true(self):
+        """When enabled, the flag is serialized as True."""
+        st.html("<div>Hi</div>", unsafe_allow_javascript=True)
+        el = self.get_delta_from_queue().new_element
+        assert el.html.body == "<div>Hi</div>"
+        assert el.html.unsafe_allow_javascript is True
+
+    def test_unsafe_allow_javascript_style_only_ignores_flag(self):
+        """Style-only HTML ignores the JS flag since no scripts can execute."""
+        css = "<style>body{background:red}</style>"
+        st.html(css, unsafe_allow_javascript=True)
+        # First message routes the style-only tag to the event container; then
+        # the element
+        _ = self.get_message_from_queue()
+        style_el = self.get_delta_from_queue().new_element
+        assert style_el.html.body == css
+        assert style_el.html.unsafe_allow_javascript is False
 
     def test_st_html(self):
         """Test st.html."""
@@ -192,19 +217,19 @@ class StHtmlAPITest(DeltaGeneratorTestCase):
         test_cases = [
             (
                 "invalid",
-                "Invalid width value: 'invalid'. Width must be either an integer (pixels), 'stretch', or 'content'.",
+                "Width must be either a positive integer (pixels), 'stretch', or 'content'.",
             ),
             (
                 -100,
-                "Invalid width value: -100. Width must be either an integer (pixels), 'stretch', or 'content'.",
+                "Width must be either a positive integer (pixels), 'stretch', or 'content'.",
             ),
             (
                 0,
-                "Invalid width value: 0. Width must be either an integer (pixels), 'stretch', or 'content'.",
+                "Width must be either a positive integer (pixels), 'stretch', or 'content'.",
             ),
             (
                 100.5,
-                "Invalid width value: 100.5. Width must be either an integer (pixels), 'stretch', or 'content'.",
+                "Width must be either a positive integer (pixels), 'stretch', or 'content'.",
             ),
         ]
 
@@ -213,7 +238,7 @@ class StHtmlAPITest(DeltaGeneratorTestCase):
                 with pytest.raises(StreamlitAPIException) as exc:
                     st.html("<p>test html</p>", width=width_value)
 
-                assert str(exc.value) == expected_error_message
+                assert expected_error_message in str(exc.value)
 
     def test_st_html_default_width(self):
         """Test that st.html defaults to stretch width."""

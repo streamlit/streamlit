@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,8 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-import React from "react"
 
 import { screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
@@ -61,10 +59,7 @@ describe("Popover container", () => {
       </Popover>
     )
 
-    const popover = screen.getByRole("button", {
-      name: `${props.element.label}`,
-    })
-    expect(popover).toBeInTheDocument()
+    expect(screen.getByText(props.element.label)).toBeVisible()
   })
 
   it("should render the text when opened", async () => {

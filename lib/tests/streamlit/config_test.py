@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -76,6 +76,7 @@ class ConfigTest(unittest.TestCase):
             "showSidebarBorder",
             "chartCategoricalColors",
             "chartSequentialColors",
+            "chartDivergingColors",
         ]
 
         theme_config_options = [
@@ -798,6 +799,7 @@ class ConfigTest(unittest.TestCase):
                 "server.sslCertFile",
                 "server.sslKeyFile",
                 "server.trustedUserHeaders",
+                "server.useStarlette",
                 "ui.hideTopBar",
             ]
         )
@@ -989,6 +991,7 @@ class ConfigTest(unittest.TestCase):
             "headingFontWeights": None,
             "chartCategoricalColors": None,
             "chartSequentialColors": None,
+            "chartDivergingColors": None,
             "redColor": None,
             "orangeColor": None,
             "yellowColor": None,
@@ -1063,6 +1066,9 @@ class ConfigTest(unittest.TestCase):
         config._set_option(
             "theme.chartSequentialColors", ["#000000", "#111111", "#222222"], "test"
         )
+        config._set_option(
+            "theme.chartDivergingColors", ["#000000", "#111111", "#222222"], "test"
+        )
         config._set_option("theme.redColor", "red", "test")
         config._set_option("theme.orangeColor", "orange", "test")
         config._set_option("theme.yellowColor", "yellow", "test")
@@ -1127,6 +1133,7 @@ class ConfigTest(unittest.TestCase):
             "showSidebarBorder": True,
             "chartCategoricalColors": ["#000000", "#111111", "#222222"],
             "chartSequentialColors": ["#000000", "#111111", "#222222"],
+            "chartDivergingColors": ["#000000", "#111111", "#222222"],
             "redColor": "red",
             "orangeColor": "orange",
             "yellowColor": "yellow",
@@ -1451,10 +1458,10 @@ class ConfigLoadingTest(unittest.TestCase):
         makedirs_patch = patch("streamlit.config.os.makedirs")
         makedirs_patch.return_value = True
         pathexists_patch = patch("streamlit.config.os.path.exists")
-        pathexists_patch.side_effect = lambda path: path in [
+        pathexists_patch.side_effect = lambda path: path in {
             global_config_path,
             local_config_path,
-        ]
+        }
 
         with open_patch, makedirs_patch, pathexists_patch:
             config.get_config_options()
@@ -1499,10 +1506,10 @@ class ConfigLoadingTest(unittest.TestCase):
         makedirs_patch = patch("streamlit.config.os.makedirs")
         makedirs_patch.return_value = True
         pathexists_patch = patch("streamlit.config.os.path.exists")
-        pathexists_patch.side_effect = lambda path: path in [
+        pathexists_patch.side_effect = lambda path: path in {
             global_config_path,
             local_config_path,
-        ]
+        }
 
         with open_patch, makedirs_patch, pathexists_patch:
             config.get_config_options(options_from_flags={"theme.font": "monospace"})
@@ -1616,7 +1623,7 @@ class ThemeInheritanceIntegrationTest(unittest.TestCase):
 
         # Use the same pattern as other tests in the repo
         with tempfile.NamedTemporaryFile(
-            mode="w", suffix=f"_{filename}", delete=False
+            encoding="utf-8", mode="w", suffix=f"_{filename}", delete=False
         ) as f:
             f.write(content)
             return f.name
@@ -1978,10 +1985,10 @@ class ThemeInheritanceIntegrationTest(unittest.TestCase):
 
                 with self._config_patches(config_toml):
                     with patch("streamlit.config.os.path.exists") as mock_exists:
-                        mock_exists.side_effect = lambda path: path in [
+                        mock_exists.side_effect = lambda path: path in {
                             env_theme_file,
                             cli_theme_file,
-                        ]
+                        }
 
                         # First simulate env var processing
                         config.get_config_options(force_reparse=True)
@@ -2338,7 +2345,7 @@ class ThemeInheritanceIntegrationTest(unittest.TestCase):
 
                 # THE CRITICAL TEST: theme.base must be valid for app_session
                 final_base = config.get_option("theme.base")
-                assert final_base in ("light", "dark"), (
+                assert final_base in {"light", "dark"}, (
                     f"theme.base should be 'light' or 'dark', got '{final_base}'"
                 )
                 assert final_base == "light"  # Should default to light
@@ -2395,7 +2402,7 @@ class ThemeInheritanceIntegrationTest(unittest.TestCase):
 
                 # THE CRITICAL TEST: theme.base must be valid for app_session
                 final_base = config.get_option("theme.base")
-                assert final_base in ("light", "dark"), (
+                assert final_base in {"light", "dark"}, (
                     f"theme.base should be 'light' or 'dark', got '{final_base}'"
                 )
                 assert final_base == "light"  # Should default to light

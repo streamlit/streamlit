@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -32,8 +32,27 @@ from e2e_playwright.shared.app_utils import (
 
 
 def get_pill_button(locator: Locator, text: str) -> Locator:
-    return locator.get_by_test_id(re.compile("stBaseButton-pills(Active)?")).filter(
+    return locator.get_by_test_id(re.compile(r"stBaseButton-pills(Active)?")).filter(
         has_text=text
+    )
+
+
+def test_pills_regression_no_wrap_at_app_start(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test regression for gh-12067: Pills at the start of the app should not wrap.
+
+    The bug caused pills with 3+ options to have their last option wrap to a new line
+    when pills were among the first elements rendered in the app. This was due to
+    maxWidth: "100%" causing flexbox width calculation errors.
+    """
+    # This pills is at the very start of the app (before the header)
+    # With the bug, the last option ("3") would wrap to a new line
+    regression_pills = get_element_by_key(app, "regression_3")
+
+    assert_snapshot(
+        regression_pills,
+        name="st_pills-regression_no_wrap_3_options",
     )
 
 
@@ -106,9 +125,7 @@ def test_pills_are_disabled_and_take_screenshot(
     selected_pill = get_pill_button(pills, "Air")
     selected_pill.click(force=True)
     wait_for_app_run(app)
-    expect(selected_pill).not_to_have_css(
-        "color", re.compile("rgb\\(\\d+, \\d+, \\d+\\)")
-    )
+    expect(selected_pill).not_to_have_css("color", re.compile(r"rgb\(\d+, \d+, \d+\)"))
     expect_markdown(app, "pills-disabled: None")
     assert_snapshot(pills, name="st_pills-disabled")
 
@@ -122,9 +139,7 @@ def test_pills_are_disabled_and_selected_and_take_screenshot(
     selected_pill = get_pill_button(pills, "Air")
     selected_pill.click(force=True)
     wait_for_app_run(app)
-    expect(selected_pill).not_to_have_css(
-        "color", re.compile("rgb\\(\\d+, \\d+, \\d+\\)")
-    )
+    expect(selected_pill).not_to_have_css("color", re.compile(r"rgb\(\d+, \d+, \d+\)"))
     expect_markdown(app, "pills-disabled-selected: Water")
     assert_snapshot(pills, name="st_pills-disabled-selected")
 

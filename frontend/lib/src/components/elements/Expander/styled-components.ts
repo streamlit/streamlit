@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,6 @@
  */
 
 import styled from "@emotion/styled"
-import { transparentize } from "color2k"
 
 import { STALE_STYLES, STALE_TRANSITION_PARAMS } from "~lib/theme"
 
@@ -50,7 +49,7 @@ export const StyledDetails = styled.details<StyledDetailsProps>(
   })
 )
 
-export const StyledSummaryHeading = styled.span({
+export const StyledSummaryHeading = styled.span(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   flexGrow: 1,
@@ -58,7 +57,8 @@ export const StyledSummaryHeading = styled.span({
   width: "100%",
   maxWidth: "100%",
   overflow: "hidden",
-})
+  gap: theme.spacing.sm,
+}))
 
 export const StyledSummaryLabelWrapper = styled.div({
   display: "flex",
@@ -85,7 +85,7 @@ export const StyledSummary = styled.summary<StyledSummaryProps>(
       outline: "none",
     },
     "&:focus-visible": {
-      boxShadow: `0 0 0 0.2rem ${transparentize(theme.colors.primary, 0.5)}`,
+      boxShadow: theme.shadows.focusRing,
     },
     fontSize: "inherit",
     paddingLeft: theme.spacing.md,

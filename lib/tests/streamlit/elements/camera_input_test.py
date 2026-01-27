@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,16 +14,21 @@
 
 """camera_input unit test."""
 
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from parameterized import parameterized
 
 import streamlit as st
+from streamlit.elements.widgets.camera_input import CameraInputSerde
 from streamlit.errors import StreamlitAPIException, StreamlitInvalidWidthError
 from streamlit.proto.Common_pb2 import FileURLs as FileURLsProto
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
-from streamlit.runtime.uploaded_file_manager import UploadedFile, UploadedFileRec
+from streamlit.runtime.uploaded_file_manager import (
+    DeletedFile,
+    UploadedFile,
+    UploadedFileRec,
+)
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
 
@@ -74,7 +79,7 @@ class CameraInputTest(DeltaGeneratorTestCase):
         st.cache_data(lambda: st.camera_input("the label"))()
 
         # The widget itself is still created, so we need to go back one element more:
-        el = self.get_delta_from_queue(-2).new_element.exception
+        el = self.get_delta_from_queue(-3).new_element.exception
         assert el.type == "CachedWidgetWarning"
         assert el.is_warning
 
@@ -140,3 +145,82 @@ class CameraInputWidthTest(DeltaGeneratorTestCase):
         """Test width config with various invalid values."""
         with pytest.raises(StreamlitInvalidWidthError):
             st.camera_input("the label", width=invalid_width)
+
+    def test_stable_id_with_key(self):
+        """Test that the widget ID is stable when a stable key is provided."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            # First render with certain params
+            st.camera_input(
+                label="Label 1",
+                key="camera_input_key",
+                help="Help 1",
+                disabled=False,
+                width="stretch",
+                on_change=lambda: None,
+                args=("arg1", "arg2"),
+                kwargs={"kwarg1": "kwarg1"},
+                label_visibility="visible",
+            )
+            c1 = self.get_delta_from_queue().new_element.camera_input
+            id1 = c1.id
+
+            # Second render with different params but same key
+            st.camera_input(
+                label="Label 2",
+                key="camera_input_key",
+                help="Help 2",
+                disabled=True,
+                width=200,
+                on_change=lambda: None,
+                args=("arg_1", "arg_2"),
+                kwargs={"kwarg_1": "kwarg_1"},
+                label_visibility="hidden",
+            )
+            c2 = self.get_delta_from_queue().new_element.camera_input
+            id2 = c2.id
+            assert id1 == id2
+
+
+class CameraInputSerdeTest(DeltaGeneratorTestCase):
+    """Test CameraInputSerde serialization and deserialization."""
+
+    def test_serialize_with_uploaded_file(self):
+        """Test serialization of a captured camera image."""
+        serde = CameraInputSerde()
+
+        # Create a mock uploaded file
+        rec = UploadedFileRec("file123", "snapshot.jpg", "image/jpeg", b"image_data")
+        file_urls = FileURLsProto(
+            file_id="file123", delete_url="delete_url", upload_url="upload_url"
+        )
+        uploaded_file = UploadedFile(rec, file_urls)
+
+        # Serialize the file
+        result = serde.serialize(uploaded_file)
+
+        # Verify the serialized proto
+        assert len(result.uploaded_file_info) == 1
+        file_info = result.uploaded_file_info[0]
+        assert file_info.file_id == "file123"
+        assert file_info.name == "snapshot.jpg"
+        assert file_info.size == len(b"image_data")
+
+    def test_serialize_with_none(self):
+        """Test serialization when no image is captured."""
+        serde = CameraInputSerde()
+        result = serde.serialize(None)
+
+        # Should return empty state
+        assert len(result.uploaded_file_info) == 0
+
+    def test_serialize_with_deleted_file(self):
+        """Test serialization with a deleted file."""
+        serde = CameraInputSerde()
+        deleted = DeletedFile("file123")
+        result = serde.serialize(deleted)
+
+        # Should return empty state for deleted file
+        assert len(result.uploaded_file_info) == 0

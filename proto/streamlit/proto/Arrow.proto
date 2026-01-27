@@ -1,5 +1,5 @@
 /**!
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -49,12 +49,16 @@ message Arrow {
   // How to show borders around the table and between cells. Note that this property
   // is only used for `st.table` at the moment.
   BorderMode border_mode = 14;
+  // Placeholder string used when rendering missing values (e.g. nulls, NaNs).
+  optional string placeholder = 15;
 
   // Available editing modes:
   enum EditingMode {
     READ_ONLY = 0; // Read-only table.
     FIXED = 1; // Activates editing but only allow editing of existing cells.
     DYNAMIC = 2; // Activates editing and allow adding & deleting rows.
+    ADD_ONLY = 3; // Activates editing and allow adding rows (no deleting).
+    DELETE_ONLY = 4; // Activates editing and allow deleting rows (no adding).
   }
 
   // Available selection modes:

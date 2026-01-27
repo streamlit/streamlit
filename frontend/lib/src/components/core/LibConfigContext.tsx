@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -52,8 +52,10 @@ import { LibConfig } from "@streamlit/connection"
  * Note: `disableFullscreenMode` is intentionally omitted from LibConfig and passed
  * as a prop instead for better performance (avoids unnecessary re-renders).
  */
-export interface LibConfigContextProps
-  extends Omit<LibConfig, "disableFullscreenMode"> {
+export interface LibConfigContextProps extends Omit<
+  LibConfig,
+  "disableFullscreenMode"
+> {
   /**
    * The current locale of the app. Defaults to the browser's locale.
    * Used for internationalization of date pickers and other locale-sensitive

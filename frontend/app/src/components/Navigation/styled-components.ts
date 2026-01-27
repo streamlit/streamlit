@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -50,9 +50,10 @@ export const getNavTextColor = (
     : transparentize(theme.colors.bodyText, 0.25)
 }
 
-export const StyledSidebarNavContainer = styled.div({
+export const StyledSidebarNavContainer = styled.div(({ theme }) => ({
   position: "relative",
-})
+  fontFamily: theme.genericFonts.bodyFont,
+}))
 
 export const StyledSidebarNavItems = styled.ul(({ theme }) => {
   return {

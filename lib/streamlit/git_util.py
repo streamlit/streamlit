@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -79,7 +79,7 @@ class GitRepo:
 
             if self.git_version is not None and self.git_version >= _MIN_GIT_VERSION:
                 git_root = self.repo.git.rev_parse("--show-toplevel")
-                self.module = os.path.relpath(path, git_root)
+                self.module = str(os.path.relpath(path, git_root))
         except Exception:
             _LOGGER.debug(
                 "Did not find a git repo at %s. This is expected if this isn't a git repo, but could "

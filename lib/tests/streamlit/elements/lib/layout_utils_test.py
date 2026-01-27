@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -291,9 +291,13 @@ class LayoutUtilsTest(unittest.TestCase):
 
     @parameterized.expand(
         [
+            ("xxsmall",),
+            ("xsmall",),
             ("small",),
             ("medium",),
             ("large",),
+            ("xlarge",),
+            ("xxlarge",),
             ("stretch",),
             (1,),
             (100,),
@@ -322,9 +326,13 @@ class LayoutUtilsTest(unittest.TestCase):
 
     @parameterized.expand(
         [
+            ("xxsmall", 0.25),
+            ("xsmall", 0.5),
             ("small", 0.75),
             ("medium", 2.5),
             ("large", 4.25),
+            ("xlarge", 6),
+            ("xxlarge", 8),
         ]
     )
     def test_get_width_config_rem(self, size: str, expected_rem: float):
@@ -338,9 +346,13 @@ class LayoutUtilsTest(unittest.TestCase):
 
     @parameterized.expand(
         [
+            ("xxsmall", 0.25),
+            ("xsmall", 0.5),
             ("small", 0.75),
             ("medium", 2.5),
             ("large", 4.25),
+            ("xlarge", 6),
+            ("xxlarge", 8),
         ]
     )
     def test_get_height_config_rem(self, size: str, expected_rem: float):

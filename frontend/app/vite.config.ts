@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,7 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+/// <reference types="vitest/config" />
 import { defineConfig } from "vite"
+import { analyzer } from "vite-bundle-analyzer"
 import { version } from "./package.json"
 
 import react from "@vitejs/plugin-react-swc"
@@ -25,6 +28,7 @@ const HASH = process.env.OMIT_HASH_FROM_MAIN_FILES ? "" : ".[hash]"
 // This is a convenience for developers for debugging purposes
 const DEV_BUILD = Boolean(process.env.DEV_BUILD)
 const IS_PROFILER_BUILD = Boolean(process.env.IS_PROFILER_BUILD)
+const ANALYZE_BUNDLE = Boolean(process.env.ANALYZE_BUNDLE)
 // The URL of the backend server to proxy to:
 // Can be changed to run against a remote server or different port:
 const DEV_SERVER_BACKEND_URL =
@@ -63,6 +67,22 @@ export default defineConfig({
       plugins: [["@swc/plugin-emotion", {}]],
     }),
     viteTsconfigPaths(),
+    ...(ANALYZE_BUNDLE
+      ? [
+          analyzer({
+            analyzerMode: "json",
+            // NOTE: fileName is relative to the build output directory (outDir: "build").
+            // "../bundle-analysis.json" will be created in the project root (frontend/app/bundle-analysis.json).
+            fileName: "../bundle-analysis.json",
+          }),
+          analyzer({
+            analyzerMode: "static",
+            // NOTE: fileName is relative to the build output directory (outDir: "build").
+            // "../bundle-analysis.html" will be created in the project root (frontend/app/bundle-analysis.html).
+            fileName: "../bundle-analysis.html",
+          }),
+        ]
+      : []),
   ],
   resolve: {
     alias: [
@@ -72,6 +92,11 @@ export default defineConfig({
       {
         find: "react-syntax-highlighter",
         replacement: "react-syntax-highlighter/dist/cjs/index.js",
+      },
+      // Redirect old lodash to lodash-es to avoid duplication
+      {
+        find: "lodash",
+        replacement: "lodash-es",
       },
       ...profilerAliases,
     ],
@@ -88,7 +113,9 @@ export default defineConfig({
         changeOrigin: true,
         ws: true,
       },
-      "^.*/media/.*": {
+      // Use negative lookahead to avoid matching /static/media/* (Vite's font files)
+      // while still matching /media/* and /basepath/media/* (backend user uploads)
+      "^(?!.*/static/media).*/media/.*": {
         target: DEV_SERVER_BACKEND_URL,
         changeOrigin: true,
       },
@@ -100,12 +127,20 @@ export default defineConfig({
         target: DEV_SERVER_BACKEND_URL,
         changeOrigin: true,
       },
+      "^.*/auth/.*": {
+        target: DEV_SERVER_BACKEND_URL,
+        changeOrigin: true,
+      },
+      "^.*/oauth2callback": {
+        target: DEV_SERVER_BACKEND_URL,
+        changeOrigin: true,
+      },
     },
   },
   build: {
     outDir: "build",
     assetsDir: "static",
-    sourcemap: DEV_BUILD,
+    sourcemap: DEV_BUILD || ANALYZE_BUNDLE,
     manifest: true,
     rollupOptions: {
       output: {
@@ -163,10 +198,6 @@ export default defineConfig({
           include: ["vitest-canvas-mock"],
         },
       },
-    },
-    server: {
-      // Want a Non-Dev port for testing
-      port: 3001,
     },
   },
 })

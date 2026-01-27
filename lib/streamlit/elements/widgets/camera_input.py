@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -232,7 +232,7 @@ class CameraInputMixin:
         element_id = compute_and_register_element_id(
             "camera_input",
             user_key=key,
-            key_as_main_identity=False,
+            key_as_main_identity=True,
             dg=self.dg,
             label=label,
             help=help,

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,9 +18,7 @@ import asyncio
 import gc
 import threading
 import unittest
-from asyncio import AbstractEventLoop
 from typing import TYPE_CHECKING, Any, cast
-from unittest import IsolatedAsyncioTestCase
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -33,7 +31,7 @@ from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.Common_pb2 import FileURLs, FileURLsRequest, FileURLsResponse
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.NewSession_pb2 import FontFace, FontSource
-from streamlit.runtime import Runtime, app_session
+from streamlit.runtime import Runtime, app_session, caching
 from streamlit.runtime.app_session import AppSession, AppSessionState
 from streamlit.runtime.caching.storage.dummy_cache_storage import (
     MemoryCacheStorageManager,
@@ -70,7 +68,7 @@ def del_path(monkeypatch):
 
 
 def _create_test_session(
-    event_loop: AbstractEventLoop | None = None,
+    event_loop: asyncio.AbstractEventLoop | None = None,
     session_id_override: str | None = None,
 ) -> AppSession:
     """Create an AppSession instance with some default mocked data."""
@@ -129,21 +127,33 @@ class AppSessionTest(unittest.TestCase):
     )
     def test_shutdown(self, patched_disconnect):
         """Test that AppSession.shutdown behaves sanely."""
-        session = _create_test_session()
+        with (
+            patch.object(
+                caching, "clear_session_data_cache"
+            ) as mock_clear_session_data,
+            patch.object(
+                caching, "clear_session_resource_cache"
+            ) as mock_clear_session_resource,
+        ):
+            session = _create_test_session()
 
-        mock_file_mgr = MagicMock(spec=UploadedFileManager)
-        session._uploaded_file_mgr = mock_file_mgr
+            mock_file_mgr = MagicMock(spec=UploadedFileManager)
+            session._uploaded_file_mgr = mock_file_mgr
 
-        session.shutdown()
-        assert session._state == AppSessionState.SHUTDOWN_REQUESTED
-        mock_file_mgr.remove_session_files.assert_called_once_with(session.id)
-        patched_disconnect.assert_called_once_with(session._on_secrets_file_changed)
+            session.shutdown()
+            assert session._state == AppSessionState.SHUTDOWN_REQUESTED
+            mock_file_mgr.remove_session_files.assert_called_once_with(session.id)
+            mock_clear_session_data.assert_called_once_with(session.id)
+            mock_clear_session_resource.assert_called_once_with(session.id)
+            patched_disconnect.assert_called_once_with(session._on_secrets_file_changed)
 
-        # A 2nd shutdown call should have no effect.
-        session.shutdown()
-        assert session._state == AppSessionState.SHUTDOWN_REQUESTED
+            # A 2nd shutdown call should have no effect.
+            session.shutdown()
+            assert session._state == AppSessionState.SHUTDOWN_REQUESTED
 
-        mock_file_mgr.remove_session_files.assert_called_once_with(session.id)
+            mock_file_mgr.remove_session_files.assert_called_once_with(session.id)
+            mock_clear_session_data.assert_called_once_with(session.id)
+            mock_clear_session_resource.assert_called_once_with(session.id)
 
     def test_shutdown_with_running_scriptrunner(self):
         """If we have a running ScriptRunner, shutting down should stop it."""
@@ -695,6 +705,17 @@ class AppSessionTest(unittest.TestCase):
         assert session._client_state.query_string == "shutdown_query"
         assert session._client_state.page_script_hash == "shutdown_hash"
 
+    def test_clear_session_caches(self) -> None:
+        """Tests clear_session_caches."""
+
+        test_session = _create_test_session()
+
+        with patch.object(app_session, "caching") as mock_caching:
+            test_session.clear_session_caches()
+
+        mock_caching.clear_session_data_cache.assert_called_with(test_session.id)
+        mock_caching.clear_session_resource_cache.assert_called_with(test_session.id)
+
 
 def _mock_get_options_for_section(
     overrides: dict[str, Any] | None = None,
@@ -836,6 +857,18 @@ def _mock_get_options_for_section(
             "#158237",
             "#177233",
         ],
+        "chartDivergingColors": [
+            "#7d353b",
+            "#bd4043",
+            "#ff4b4b",
+            "#ff8c8c",
+            "#ffc7c7",
+            "#a6dcff",
+            "#60b4ff",
+            "#1c83e1",
+            "#0054a3",
+            "#004280",
+        ],
         "redColor": "#7d353b",
         "orangeColor": "#d95a00",
         "yellowColor": "#916e10",
@@ -908,7 +941,7 @@ def _mock_get_options_for_section(
     return get_options_for_section
 
 
-class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
+class AppSessionScriptEventTest(unittest.IsolatedAsyncioTestCase):
     """Tests for AppSession's ScriptRunner event handling."""
 
     @patch(
@@ -1359,6 +1392,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                     "dataframeHeaderBackgroundColor": None,
                     "chartCategoricalColors": None,
                     "chartSequentialColors": None,
+                    "chartDivergingColors": None,
                     "redColor": None,
                     "orangeColor": None,
                     "yellowColor": None,
@@ -1424,6 +1458,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                     "dataframeHeaderBackgroundColor": None,
                     "chartCategoricalColors": None,
                     "chartSequentialColors": None,
+                    "chartDivergingColors": None,
                     "redColor": None,
                     "orangeColor": None,
                     "yellowColor": None,
@@ -1489,6 +1524,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                     "dataframeHeaderBackgroundColor": None,
                     "chartCategoricalColors": None,
                     "chartSequentialColors": None,
+                    "chartDivergingColors": None,
                     "redColor": None,
                     "orangeColor": None,
                     "yellowColor": None,
@@ -1604,6 +1640,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         assert not new_session_msg.custom_theme.heading_font_weights
         assert not new_session_msg.custom_theme.chart_categorical_colors
         assert not new_session_msg.custom_theme.chart_sequential_colors
+        assert not new_session_msg.custom_theme.chart_diverging_colors
 
         app_session._populate_theme_msg(
             new_session_msg.custom_theme.sidebar,
@@ -1651,6 +1688,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         assert not new_session_msg.custom_theme.sidebar.heading_font_weights
         assert not new_session_msg.custom_theme.sidebar.chart_categorical_colors
         assert not new_session_msg.custom_theme.sidebar.chart_sequential_colors
+        assert not new_session_msg.custom_theme.sidebar.chart_diverging_colors
 
     @patch("streamlit.runtime.app_session.config")
     def test_can_specify_all_options(self, patched_config):
@@ -1751,6 +1789,18 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
             "#09ab3b",
             "#158237",
             "#177233",
+        ]
+        assert list(new_session_msg.custom_theme.chart_diverging_colors) == [
+            "#7d353b",
+            "#bd4043",
+            "#ff4b4b",
+            "#ff8c8c",
+            "#ffc7c7",
+            "#a6dcff",
+            "#60b4ff",
+            "#1c83e1",
+            "#0054a3",
+            "#004280",
         ]
         assert list(new_session_msg.custom_theme.font_faces) == [
             FontFace(
@@ -2217,3 +2267,154 @@ class ShouldRerunOnFileChangeTest(unittest.TestCase):
         session._client_state.page_script_hash = "hash2"
 
         assert not session._should_rerun_on_file_change("page1.py")
+
+
+class DeferredFileRequestTest(unittest.TestCase):
+    """Tests for deferred file request handling in AppSession."""
+
+    def setUp(self):
+        super().setUp()
+        # Create a test session
+        self.event_loop = MagicMock()
+        with (
+            patch(
+                "streamlit.runtime.app_session.asyncio.get_running_loop",
+                return_value=self.event_loop,
+            ),
+            patch(
+                "streamlit.runtime.app_session.LocalSourcesWatcher",
+                MagicMock(spec=LocalSourcesWatcher),
+            ),
+        ):
+            self.session = AppSession(
+                script_data=ScriptData("/fake/script_path.py", is_hello=False),
+                uploaded_file_manager=MagicMock(spec=UploadedFileManager),
+                script_cache=MagicMock(),
+                message_enqueued_callback=None,
+                user_info={"email": "test@example.com"},
+            )
+
+    @patch("streamlit.runtime.app_session.runtime.get_instance")
+    def test_handle_deferred_file_request_success(self, mock_get_runtime):
+        """Test successful deferred file request handling."""
+        # Mock the runtime and media file manager
+        mock_media_mgr = MagicMock()
+        mock_media_mgr.execute_deferred.return_value = "/media/test_file_url"
+        mock_runtime = MagicMock()
+        mock_runtime.media_file_mgr = mock_media_mgr
+        mock_get_runtime.return_value = mock_runtime
+
+        # Create the request
+        from streamlit.proto.BackMsg_pb2 import DeferredFileRequest
+
+        request = DeferredFileRequest()
+        request.file_id = "test_file_id"
+        request.session_id = self.session.id
+
+        # Handle the request (now async)
+        asyncio.run(self.session._handle_deferred_file_request(request))
+
+        # Verify execute_deferred was called
+        mock_media_mgr.execute_deferred.assert_called_once_with("test_file_id")
+
+        # Check that a response was enqueued
+        msg = self.session._browser_queue._queue[-1]
+        assert msg.HasField("deferred_file_response")
+        assert msg.deferred_file_response.file_id == "test_file_id"
+        assert msg.deferred_file_response.url == "/media/test_file_url"
+        assert msg.deferred_file_response.error_msg == ""
+
+    @patch("streamlit.runtime.app_session.runtime.get_instance")
+    def test_handle_deferred_file_request_error(self, mock_get_runtime):
+        """Test deferred file request handling when callable fails."""
+        # Mock the runtime and media file manager
+        mock_media_mgr = MagicMock()
+        from streamlit.runtime.media_file_storage import MediaFileStorageError
+
+        mock_media_mgr.execute_deferred.side_effect = MediaFileStorageError(
+            "Callable execution failed: Test error"
+        )
+        mock_runtime = MagicMock()
+        mock_runtime.media_file_mgr = mock_media_mgr
+        mock_get_runtime.return_value = mock_runtime
+
+        # Create the request
+        from streamlit.proto.BackMsg_pb2 import DeferredFileRequest
+
+        request = DeferredFileRequest()
+        request.file_id = "test_file_id"
+        request.session_id = self.session.id
+
+        # Handle the request (now async)
+        asyncio.run(self.session._handle_deferred_file_request(request))
+
+        # Check that an error response was enqueued
+        msg = self.session._browser_queue._queue[-1]
+        assert msg.HasField("deferred_file_response")
+        assert msg.deferred_file_response.file_id == "test_file_id"
+        assert msg.deferred_file_response.url == ""
+        assert "Callable execution failed" in msg.deferred_file_response.error_msg
+
+    @patch("streamlit.runtime.app_session.runtime.get_instance")
+    def test_handle_deferred_file_request_file_not_found(self, mock_get_runtime):
+        """Test deferred file request handling when file_id doesn't exist."""
+        # Mock the runtime and media file manager
+        mock_media_mgr = MagicMock()
+        from streamlit.runtime.media_file_storage import MediaFileStorageError
+
+        mock_media_mgr.execute_deferred.side_effect = MediaFileStorageError(
+            "Deferred file nonexistent_id not found"
+        )
+        mock_runtime = MagicMock()
+        mock_runtime.media_file_mgr = mock_media_mgr
+        mock_get_runtime.return_value = mock_runtime
+
+        # Create request for non-existent file
+        from streamlit.proto.BackMsg_pb2 import DeferredFileRequest
+
+        request = DeferredFileRequest()
+        request.file_id = "nonexistent_id"
+        request.session_id = self.session.id
+
+        # Handle the request (now async)
+        asyncio.run(self.session._handle_deferred_file_request(request))
+
+        # Check that an error response was enqueued
+        msg = self.session._browser_queue._queue[-1]
+        assert msg.HasField("deferred_file_response")
+        assert msg.deferred_file_response.file_id == "nonexistent_id"
+        assert msg.deferred_file_response.url == ""
+        assert "not found" in msg.deferred_file_response.error_msg
+
+    def test_handle_backmsg_routes_deferred_file_request(self):
+        """Test that handle_backmsg routes deferred_file_request correctly."""
+
+        # Create a mock async handler that returns a coroutine
+        async def mock_async_handler(request):
+            pass
+
+        # Create a BackMsg with deferred_file_request
+        from streamlit.proto.BackMsg_pb2 import BackMsg
+
+        msg = BackMsg()
+        msg.deferred_file_request.file_id = "test_id"
+        msg.deferred_file_request.session_id = self.session.id
+
+        # Mock the async handler and asyncio.create_task
+        with (
+            patch.object(
+                self.session,
+                "_handle_deferred_file_request",
+                side_effect=mock_async_handler,
+            ),
+            patch(
+                "streamlit.runtime.app_session.asyncio.create_task"
+            ) as mock_create_task,
+        ):
+            # Handle the message
+            self.session.handle_backmsg(msg)
+
+            # Verify create_task was called with a coroutine
+            mock_create_task.assert_called_once()
+            # The argument to create_task should be a coroutine
+            assert asyncio.iscoroutine(mock_create_task.call_args[0][0])

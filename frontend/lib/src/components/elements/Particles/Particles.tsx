@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import React, { FC, memo, useContext, useMemo } from "react"
+import { FC, memo, useContext, useMemo } from "react"
 
-import range from "lodash/range"
+import { range } from "lodash-es"
 
 import { LibConfigContext } from "~lib/components/core/LibConfigContext"
 
@@ -47,6 +47,7 @@ const Particles: FC<React.PropsWithChildren<Props>> = ({
   const particleTypes = useMemo(
     () =>
       range(numParticles).map(() =>
+        // eslint-disable-next-line react-hooks/purity -- TODO: Update to match React best practices
         Math.floor(Math.random() * numParticleTypes)
       ),
     [numParticles, numParticleTypes]

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -35,7 +35,7 @@ from e2e_playwright.shared.app_utils import (
 
 def get_feedback_icon_buttons(locator: Locator, type: str | None = None) -> Locator:
     elements = locator.get_by_test_id(
-        re.compile("stBaseButton-borderlessIcon(Active)?")
+        re.compile(r"stBaseButton-borderlessIcon(Active)?")
     )
     if type:
         elements = elements.filter(has_text=type)
@@ -132,7 +132,7 @@ def test_feedback_buttons_are_disabled(app: Page):
     selected_button = star_buttons.nth(4)
     selected_button.click(force=True)
     expect(selected_button).not_to_have_css(
-        "color", re.compile("rgb\\(\\d+, \\d+, \\d+\\)")
+        "color", re.compile(r"rgb\(\d+, \d+, \d+\)")
     )
     # the feedback value was set to 3 via session state
     text = get_markdown(app, "feedback-disabled: 3")
@@ -188,13 +188,9 @@ def test_feedback_remount_keep_value(app: Page):
     selected_button.click()
     wait_for_app_run(app)
     expect(app.get_by_text("feedback-after-sleep: 1")).to_be_visible()
-    expect(selected_button).to_have_css(
-        "color", re.compile("rgb\\(\\d+, \\d+, \\d+\\)")
-    )
+    expect(selected_button).to_have_css("color", re.compile(r"rgb\(\d+, \d+, \d+\)"))
     click_button(app, "Create some elements to unmount component")
-    expect(selected_button).to_have_css(
-        "color", re.compile("rgb\\(\\d+, \\d+, \\d+\\)")
-    )
+    expect(selected_button).to_have_css("color", re.compile(r"rgb\(\d+, \d+, \d+\)"))
     expect(app.get_by_text("feedback-after-sleep: 1")).to_be_visible()
 
 
@@ -222,6 +218,17 @@ def test_feedback_width_examples(app: Page, assert_snapshot: ImageCompareFunctio
 
     thumbs_300px = get_element_by_key(app, "thumbs_300px_width")
     assert_snapshot(thumbs_300px, name="st_feedback-thumbs_width_300px")
+
+
+def test_feedback_minimum_width_enforcement(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that st.feedback enforces minimum width to prevent icon wrapping (gh-12068)."""
+    thumbs_min = get_element_by_key(app, "thumbs_min_width")
+    assert_snapshot(thumbs_min, name="st_feedback-thumbs_min_width_enforced")
+
+    stars_min = get_element_by_key(app, "stars_min_width")
+    assert_snapshot(stars_min, name="st_feedback-stars_min_width_enforced")
 
 
 def test_dynamic_feedback_props(app: Page, assert_snapshot: ImageCompareFunction):

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -80,6 +80,13 @@ st.color_picker(
     "Color picker with 100px width",
     "#45B7D1",
     width=100,
+)
+
+st.color_picker(
+    "Color picker with 20px width (enforces 40px minimum)",
+    "#95E1D3",
+    width=20,
+    key="color_picker_min_width",
 )
 
 if st.toggle("Update color picker props"):
