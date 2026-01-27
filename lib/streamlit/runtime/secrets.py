@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import os
+import re
 import threading
 from collections.abc import Callable, ItemsView, Iterator, KeysView, Mapping, ValuesView
 from copy import deepcopy
@@ -32,6 +33,15 @@ from streamlit.errors import StreamlitMaxRetriesError, StreamlitSecretNotFoundEr
 from streamlit.logger import get_logger
 
 _LOGGER: Final = get_logger(__name__)
+
+# Pattern for environment variable substitution in secrets
+# Matches: ${{VAR_NAME}} or ${{VAR_NAME:-default_value}}
+# Group 1: variable name, Group 2: optional default value
+_ENV_VAR_PATTERN: Final = re.compile(
+    r"\$\{\{([A-Za-z_][A-Za-z0-9_]*)(?::-((?:[^}]|\}(?!\}))*)?)?\}\}"
+)
+# Pattern for escaped placeholders: $${{VAR}} -> ${{VAR}}
+_ESCAPED_PATTERN: Final = re.compile(r"\$\$\{\{")
 
 
 class SecretErrorMessages:
@@ -71,6 +81,10 @@ class SecretErrorMessages:
         self.invalid_secret_path: Callable[[str], str] = lambda path: (
             f"Invalid secrets path: {path}: path is not a .toml file or a directory"
         )
+        self.env_var_not_found: Callable[[str, str], str] = lambda var_name, path: (
+            f'Environment variable "{var_name}" referenced in secrets at "{path}" is not set. '
+            "Set the environment variable or provide a default value using ${{VAR:-default}} syntax."
+        )
 
     def set_missing_attr_message(self, message: Callable[[str], str]) -> None:
         """Set the missing attribute error message."""
@@ -100,6 +114,10 @@ class SecretErrorMessages:
         """Set the invalid secret path error message."""
         self.invalid_secret_path = message
 
+    def set_env_var_not_found_message(self, message: Callable[[str, str], str]) -> None:
+        """Set the environment variable not found error message."""
+        self.env_var_not_found = message
+
     def get_missing_attr_message(self, attr_name: str) -> str:
         """Get the missing attribute error message."""
         return self.missing_attr_message(attr_name)
@@ -124,8 +142,71 @@ class SecretErrorMessages:
         """Get the invalid secret path error message."""
         return self.invalid_secret_path(path)
 
+    def get_env_var_not_found_message(self, var_name: str, path: str) -> str:
+        """Get the environment variable not found error message."""
+        return self.env_var_not_found(var_name, path)
+
 
 secret_error_messages_singleton: Final = SecretErrorMessages()
+
+
+def _substitute_env_vars(value: Any, path: str) -> Any:
+    """Recursively substitute environment variable placeholders in string values.
+
+    Supports the following syntax in string values:
+    - ${{VAR}} - substitutes with the value of environment variable VAR
+    - ${{VAR:-default}} - substitutes with VAR if set, otherwise uses default
+    - $${{VAR}} - escaped, becomes literal ${{VAR}}
+
+    Parameters
+    ----------
+    value : Any
+        The value to process. Strings are checked for placeholders,
+        dicts and lists are recursively processed, other types pass through.
+    path : str
+        The path to the secrets file, used for error messages.
+
+    Returns
+    -------
+    Any
+        The value with environment variables substituted.
+
+    Raises
+    ------
+    StreamlitSecretNotFoundError
+        If an environment variable is referenced but not set and no default provided.
+    """
+    if isinstance(value, str):
+        # Use a placeholder that's unlikely to appear in actual content
+        escape_marker = "\x00ESCAPED_ENV_VAR\x00"
+
+        # First, temporarily replace escaped patterns $${{ with a marker
+        result = _ESCAPED_PATTERN.sub(escape_marker, value)
+
+        def replace_env_var(match: re.Match[str]) -> str:
+            var_name = match.group(1)
+            default = match.group(2)
+            env_value = os.environ.get(var_name)
+            if env_value is not None:
+                return env_value
+            if default is not None:
+                return default
+            msg = secret_error_messages_singleton.get_env_var_not_found_message(
+                var_name, path
+            )
+            raise StreamlitSecretNotFoundError(msg)
+
+        # Substitute env vars
+        result = _ENV_VAR_PATTERN.sub(replace_env_var, result)
+
+        # Restore escaped placeholders
+        result = result.replace(escape_marker, "${{")
+        return result
+    if isinstance(value, dict):
+        return {k: _substitute_env_vars(v, path) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_substitute_env_vars(item, path) for item in value]
+    return value
 
 
 def _convert_to_dict(obj: Mapping[str, Any] | AttrDict) -> dict[str, Any]:
@@ -271,6 +352,9 @@ class Secrets(Mapping[str, Any]):
             )
             raise StreamlitSecretNotFoundError(msg) from ex
 
+        # Substitute environment variable placeholders
+        secrets = _substitute_env_vars(secrets, path)
+
         return secrets, found_secrets_file
 
     def _parse_directory(self, path: str) -> tuple[Mapping[str, Any], bool]:
@@ -316,6 +400,9 @@ class Secrets(Mapping[str, Any]):
                 secrets[dirname] = sub_secrets[next(iter(sub_secrets.keys()))]
             else:
                 secrets[dirname] = sub_secrets
+
+        # Substitute environment variable placeholders
+        secrets = _substitute_env_vars(secrets, path)
 
         return secrets, found_secrets_file
 

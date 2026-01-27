@@ -612,3 +612,164 @@ class SecretsFallbackTest(DeltaGeneratorTestCase):
                     markdown_text = element.markdown.body
                     assert "Error" not in markdown_text
                     assert "error" not in markdown_text
+
+
+class EnvVarSubstitutionTest(unittest.TestCase):
+    """Tests for environment variable substitution in secrets."""
+
+    def setUp(self) -> None:
+        # Save and restore os.environ
+        self._prev_environ = dict(os.environ)
+        self.secrets = Secrets()
+
+    def tearDown(self) -> None:
+        os.environ.clear()
+        os.environ.update(self._prev_environ)
+
+    @patch("streamlit.watcher.path_watcher.watch_file")
+    @patch("streamlit.config.get_option", return_value=[MOCK_SECRETS_FILE_LOC])
+    def test_basic_env_var_substitution(self, *mocks):
+        """Test basic ${{VAR}} substitution."""
+        os.environ["TEST_USER"] = "alice"
+        os.environ["TEST_PASS"] = "secret123"
+
+        mock_toml = """
+db_username = "${{TEST_USER}}"
+db_password = "${{TEST_PASS}}"
+"""
+        with patch("builtins.open", mock_open(read_data=mock_toml)):
+            assert self.secrets["db_username"] == "alice"
+            assert self.secrets["db_password"] == "secret123"
+
+    @patch("streamlit.watcher.path_watcher.watch_file")
+    @patch("streamlit.config.get_option", return_value=[MOCK_SECRETS_FILE_LOC])
+    def test_env_var_with_default_value(self, *mocks):
+        """Test ${{VAR:-default}} substitution."""
+        # TEST_MISSING is not set
+        os.environ["TEST_SET"] = "set_value"
+
+        mock_toml = """
+with_default = "${{TEST_MISSING:-fallback}}"
+set_var = "${{TEST_SET:-ignored}}"
+"""
+        with patch("builtins.open", mock_open(read_data=mock_toml)):
+            assert self.secrets["with_default"] == "fallback"
+            assert self.secrets["set_var"] == "set_value"
+
+    @patch("streamlit.watcher.path_watcher.watch_file")
+    @patch("streamlit.config.get_option", return_value=[MOCK_SECRETS_FILE_LOC])
+    def test_env_var_with_empty_default(self, *mocks):
+        """Test ${{VAR:-}} with empty default."""
+        mock_toml = """
+empty_default = "${{NONEXISTENT:-}}"
+"""
+        with patch("builtins.open", mock_open(read_data=mock_toml)):
+            assert self.secrets["empty_default"] == ""
+
+    @patch("streamlit.watcher.path_watcher.watch_file")
+    @patch("streamlit.config.get_option", return_value=[MOCK_SECRETS_FILE_LOC])
+    def test_combined_env_vars(self, *mocks):
+        """Test multiple env vars in a single value."""
+        os.environ["USER"] = "admin"
+        os.environ["PASS"] = "pw123"
+        os.environ["HOST"] = "localhost"
+
+        mock_toml = """
+connection = "postgres://${{USER}}:${{PASS}}@${{HOST}}/db"
+"""
+        with patch("builtins.open", mock_open(read_data=mock_toml)):
+            assert self.secrets["connection"] == "postgres://admin:pw123@localhost/db"
+
+    @patch("streamlit.watcher.path_watcher.watch_file")
+    @patch("streamlit.config.get_option", return_value=[MOCK_SECRETS_FILE_LOC])
+    def test_nested_section_substitution(self, *mocks):
+        """Test env var substitution in nested sections."""
+        os.environ["DB_USER"] = "jane"
+        os.environ["DB_PASS"] = "password"
+
+        mock_toml = """
+[database]
+user = "${{DB_USER}}"
+password = "${{DB_PASS}}"
+"""
+        with patch("builtins.open", mock_open(read_data=mock_toml)):
+            assert self.secrets["database"]["user"] == "jane"
+            assert self.secrets.database.password == "password"
+
+    @patch("streamlit.watcher.path_watcher.watch_file")
+    @patch("streamlit.config.get_option", return_value=[MOCK_SECRETS_FILE_LOC])
+    def test_escaped_placeholder(self, *mocks):
+        """Test $${{VAR}} produces literal ${{VAR}}."""
+        os.environ["REAL_VAR"] = "substituted"
+
+        mock_toml = """
+escaped = "$${{NOT_SUBSTITUTED}}"
+mixed = "${{REAL_VAR}} and $${{LITERAL}}"
+"""
+        with patch("builtins.open", mock_open(read_data=mock_toml)):
+            assert self.secrets["escaped"] == "${{NOT_SUBSTITUTED}}"
+            assert self.secrets["mixed"] == "substituted and ${{LITERAL}}"
+
+    @patch("streamlit.config.get_option", return_value=[MOCK_SECRETS_FILE_LOC])
+    def test_missing_env_var_raises_error(self, *mocks):
+        """Test that missing env var without default raises error."""
+        mock_toml = """
+missing = "${{NONEXISTENT_VAR}}"
+"""
+        with patch("builtins.open", mock_open(read_data=mock_toml)):
+            with pytest.raises(StreamlitSecretNotFoundError) as exc_info:
+                _ = self.secrets["missing"]
+            assert "NONEXISTENT_VAR" in str(exc_info.value)
+
+    @patch("streamlit.watcher.path_watcher.watch_file")
+    @patch("streamlit.config.get_option", return_value=[MOCK_SECRETS_FILE_LOC])
+    def test_non_string_values_unchanged(self, *mocks):
+        """Test that non-string values are not affected."""
+        mock_toml = """
+number = 42
+float_val = 3.14
+bool_val = true
+"""
+        with patch("builtins.open", mock_open(read_data=mock_toml)):
+            assert self.secrets["number"] == 42
+            assert self.secrets["float_val"] == 3.14
+            assert self.secrets["bool_val"] is True
+
+    @patch("streamlit.watcher.path_watcher.watch_file")
+    @patch("streamlit.config.get_option", return_value=[MOCK_SECRETS_FILE_LOC])
+    def test_list_values_with_substitution(self, *mocks):
+        """Test env var substitution in list values."""
+        os.environ["ITEM1"] = "first"
+        os.environ["ITEM2"] = "second"
+
+        mock_toml = """
+items = ["${{ITEM1}}", "${{ITEM2}}", "literal"]
+"""
+        with patch("builtins.open", mock_open(read_data=mock_toml)):
+            assert self.secrets["items"] == ["first", "second", "literal"]
+
+    @patch("streamlit.watcher.path_watcher.watch_file")
+    @patch("streamlit.config.get_option", return_value=[MOCK_SECRETS_FILE_LOC])
+    def test_no_substitution_without_placeholder(self, *mocks):
+        """Test that values without placeholders are unchanged."""
+        mock_toml = """
+plain = "just a regular string"
+with_dollar = "$not_a_placeholder"
+with_braces = "{{not_a_placeholder}}"
+"""
+        with patch("builtins.open", mock_open(read_data=mock_toml)):
+            assert self.secrets["plain"] == "just a regular string"
+            assert self.secrets["with_dollar"] == "$not_a_placeholder"
+            assert self.secrets["with_braces"] == "{{not_a_placeholder}}"
+
+    @patch("streamlit.watcher.path_watcher.watch_file")
+    @patch("streamlit.config.get_option", return_value=[MOCK_SECRETS_FILE_LOC])
+    def test_default_with_special_chars(self, *mocks):
+        """Test default values containing special characters."""
+        mock_toml = """
+url = "${{MISSING_URL:-https://example.com/path?q=1}}"
+json_like = "${{MISSING:-{key: value}}}"
+"""
+        with patch("builtins.open", mock_open(read_data=mock_toml)):
+            assert self.secrets["url"] == "https://example.com/path?q=1"
+            assert self.secrets["json_like"] == "{key: value}"
