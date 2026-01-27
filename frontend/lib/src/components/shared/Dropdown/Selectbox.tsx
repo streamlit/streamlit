@@ -41,7 +41,6 @@ import { useSelectCommon } from "~lib/hooks/useSelectCommon"
 import { hasLightBackgroundColor } from "~lib/theme"
 import { LabelVisibilityOptions } from "~lib/util/utils"
 
-
 export interface Props {
   value: string | null
   onChange: (value: string | null) => void
