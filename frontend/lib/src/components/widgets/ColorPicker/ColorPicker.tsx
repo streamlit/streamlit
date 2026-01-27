@@ -23,7 +23,6 @@ import {
   useBasicWidgetState,
   ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
-import { useQueryParamBinding } from "~lib/hooks/useQueryParamBinding"
 import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -94,16 +93,13 @@ const ColorPicker: FC<Props> = ({
     element,
     widgetMgr,
     fragmentId,
+    queryParamBinding: element.queryParamKey
+      ? {
+          paramKey: element.queryParamKey,
+          valueType: "string_value",
+        }
+      : undefined,
   })
-
-  // Query param binding registration
-  useQueryParamBinding(
-    widgetMgr,
-    element.id,
-    element.queryParamKey,
-    "string_value",
-    element.default
-  )
 
   const handleColorClose = useCallback(
     (color: string): void => {

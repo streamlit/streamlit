@@ -32,7 +32,6 @@ import {
   ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { useQueryParamBinding } from "~lib/hooks/useQueryParamBinding"
 import { hasLightBackgroundColor } from "~lib/theme"
 import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
@@ -63,16 +62,13 @@ function Checkbox({
     element,
     widgetMgr,
     fragmentId,
+    queryParamBinding: element.queryParamKey
+      ? {
+          paramKey: element.queryParamKey,
+          valueType: "bool_value",
+        }
+      : undefined,
   })
-
-  // Query param binding registration
-  useQueryParamBinding(
-    widgetMgr,
-    element.id,
-    element.queryParamKey,
-    "bool_value",
-    element.default
-  )
 
   const onChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>): void => {
