@@ -17,6 +17,7 @@ from __future__ import annotations
 import json
 import os
 from unittest import mock
+from unittest.mock import MagicMock, patch
 
 import pandas as pd
 import pydeck as pdk
@@ -490,43 +491,46 @@ class PyDeckElementIdStabilityTest(DeltaGeneratorTestCase):
     """Test that pydeck element ID remains stable when key is provided."""
 
     def test_element_id_stable_with_key_when_spec_changes(self):
-        """Test that element ID stays the same when key is provided but spec changes."""
-        # First chart with some data
-        st.pydeck_chart(
-            pdk.Deck(
-                layers=[
-                    pdk.Layer("ScatterplotLayer", data=df1, id="layer1"),
-                ]
-            ),
-            on_select="rerun",
-            key="my_stable_chart",
-        )
+        """Test that element ID stays the same when key is provided but spec changes.
 
-        el1 = self.get_delta_from_queue().new_element
-        id1 = el1.deck_gl_json_chart.id
+        When selections are enabled and a key is provided, the element ID should remain
+        stable across data changes to preserve selection state.
+        """
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            # First chart with some data
+            st.pydeck_chart(
+                pdk.Deck(
+                    layers=[
+                        pdk.Layer("ScatterplotLayer", data=df1, id="layer1"),
+                    ]
+                ),
+                on_select="rerun",
+                key="my_stable_chart",
+            )
 
-        # Second chart with different data but same key
-        df2 = pd.DataFrame({"lat": [5, 6, 7], "lon": [50, 60, 70]})
-        st.pydeck_chart(
-            pdk.Deck(
-                layers=[
-                    pdk.Layer("ScatterplotLayer", data=df2, id="layer1"),
-                ]
-            ),
-            on_select="rerun",
-            key="my_stable_chart_2",  # Different key to avoid duplicate error
-        )
+            el1 = self.get_delta_from_queue().new_element
+            id1 = el1.deck_gl_json_chart.id
 
-        el2 = self.get_delta_from_queue().new_element
-        id2 = el2.deck_gl_json_chart.id
+            # Second chart with different data but same key
+            df2 = pd.DataFrame({"lat": [5, 6, 7], "lon": [50, 60, 70]})
+            st.pydeck_chart(
+                pdk.Deck(
+                    layers=[
+                        pdk.Layer("ScatterplotLayer", data=df2, id="layer1"),
+                    ]
+                ),
+                on_select="rerun",
+                key="my_stable_chart",  # Same key to test ID stability
+            )
 
-        # Both IDs should start with the same prefix pattern (element type + key hash)
-        # They won't be identical because keys are different, but verify they're generated
-        assert id1.startswith("$$ID-")
-        assert id2.startswith("$$ID-")
-        # Verify the key is part of the ID
-        assert "my_stable_chart" in id1
-        assert "my_stable_chart_2" in id2
+            el2 = self.get_delta_from_queue().new_element
+            id2 = el2.deck_gl_json_chart.id
+
+            # IDs should be identical since key and selection_mode are the same
+            assert id1 == id2
 
     def test_element_id_changes_without_key(self):
         """Test that element ID changes when no key is provided and spec changes."""
@@ -561,36 +565,44 @@ class PyDeckElementIdStabilityTest(DeltaGeneratorTestCase):
         assert id1 != id2
 
     def test_element_id_changes_when_selection_mode_changes(self):
-        """Test that element ID changes when selection_mode changes even with key."""
-        # Chart with single-object selection
-        st.pydeck_chart(
-            pdk.Deck(
-                layers=[
-                    pdk.Layer("ScatterplotLayer", data=df1, id="layer1"),
-                ]
-            ),
-            on_select="rerun",
-            selection_mode="single-object",
-            key="mode_test_chart",
-        )
+        """Test that element ID changes when selection_mode changes even with key.
 
-        el1 = self.get_delta_from_queue().new_element
-        id1 = el1.deck_gl_json_chart.id
+        selection_mode is part of key_as_main_identity, so changing it should
+        result in a different element ID even when the same key is provided.
+        """
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            # Chart with single-object selection
+            st.pydeck_chart(
+                pdk.Deck(
+                    layers=[
+                        pdk.Layer("ScatterplotLayer", data=df1, id="layer1"),
+                    ]
+                ),
+                on_select="rerun",
+                selection_mode="single-object",
+                key="mode_test_chart",
+            )
 
-        # Chart with multi-object selection (different key to avoid duplicate error)
-        st.pydeck_chart(
-            pdk.Deck(
-                layers=[
-                    pdk.Layer("ScatterplotLayer", data=df1, id="layer1"),
-                ]
-            ),
-            on_select="rerun",
-            selection_mode="multi-object",
-            key="mode_test_chart_multi",
-        )
+            el1 = self.get_delta_from_queue().new_element
+            id1 = el1.deck_gl_json_chart.id
 
-        el2 = self.get_delta_from_queue().new_element
-        id2 = el2.deck_gl_json_chart.id
+            # Chart with multi-object selection (same key)
+            st.pydeck_chart(
+                pdk.Deck(
+                    layers=[
+                        pdk.Layer("ScatterplotLayer", data=df1, id="layer1"),
+                    ]
+                ),
+                on_select="rerun",
+                selection_mode="multi-object",
+                key="mode_test_chart",  # Same key
+            )
 
-        # IDs should be different because selection_mode is in key_as_main_identity
-        assert id1 != id2
+            el2 = self.get_delta_from_queue().new_element
+            id2 = el2.deck_gl_json_chart.id
+
+            # IDs should be different because selection_mode is in key_as_main_identity
+            assert id1 != id2

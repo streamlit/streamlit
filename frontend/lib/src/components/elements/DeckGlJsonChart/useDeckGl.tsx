@@ -164,6 +164,33 @@ function updateWidgetMgrState(
   )
 }
 
+/**
+ * Builds a Map from layer ID to data array length.
+ * Returns undefined for layers with non-array data (URLs, GeoJSON objects)
+ * since we cannot determine the data length for validation.
+ */
+const getLayerDataLengths = (
+  layers: ParsedDeckGlConfig["layers"] | undefined
+): Map<string, number | undefined> => {
+  const layerDataLengths = new Map<string, number | undefined>()
+  if (!layers) {
+    return layerDataLengths
+  }
+  for (const layer of layers) {
+    if (layer && !Array.isArray(layer)) {
+      const layerId = `${layer.id || null}`
+      // Only set a numeric length for array data.
+      // For URL strings, GeoJSON objects, or undefined data, use undefined
+      // to indicate we cannot validate indices for this layer.
+      layerDataLengths.set(
+        layerId,
+        Array.isArray(layer.data) ? layer.data.length : undefined
+      )
+    }
+  }
+  return layerDataLengths
+}
+
 export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
   const {
     height: fullScreenHeight,
@@ -238,33 +265,32 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
       return
     }
 
-    // Get data length for each layer
-    const layerDataLengths = new Map<string, number>()
-    for (const layer of parsedPydeckJson.layers) {
-      if (layer && !Array.isArray(layer)) {
-        const layerId = `${layer.id || null}`
-        layerDataLengths.set(
-          layerId,
-          Array.isArray(layer.data) ? layer.data.length : 0
-        )
-      }
-    }
+    const layerDataLengths = getLayerDataLengths(parsedPydeckJson.layers)
 
     // Filter out orphaned selections
     const newIndices: Record<string, number[]> = {}
-    const newObjects: Record<string, object[]> = {}
+    const newObjects: Record<string, unknown[]> = {}
     let changed = false
 
     for (const [layerId, indices] of Object.entries(data.selection.indices)) {
       const maxLen = layerDataLengths.get(layerId)
       if (maxLen === undefined) {
-        changed = true // layer no longer exists
+        // Layer doesn't exist OR has non-array data (URL, GeoJSON).
+        // For non-existent layers, remove selection. For non-array data,
+        // we can't validate indices, so preserve the selection.
+        if (!layerDataLengths.has(layerId)) {
+          changed = true // layer no longer exists
+          continue
+        }
+        // Non-array data: preserve all selections for this layer
+        newIndices[layerId] = indices
+        newObjects[layerId] = data.selection.objects[layerId] || []
         continue
       }
 
       const objects = data.selection.objects[layerId] || []
       const validIndices: number[] = []
-      const validObjects: object[] = []
+      const validObjects: unknown[] = []
 
       indices.forEach((idx, i) => {
         if (idx < maxLen) {
@@ -287,12 +313,10 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
         value: { selection: { indices: newIndices, objects: newObjects } },
       })
     }
-  }, [
-    parsedPydeckJson,
-    isSelectionModeActivated,
-    data.selection,
-    setSelection,
-  ])
+    // Only run sanitization when spec changes, not on every selection change.
+    // data.selection is intentionally omitted to avoid unnecessary re-executions.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- sanitization should only run on spec change
+  }, [parsedPydeckJson, isSelectionModeActivated, setSelection])
 
   const deck = useMemo<DeckObject>(() => {
     const jsonCopy = { ...parsedPydeckJson }
@@ -318,25 +342,22 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
 
     if (jsonCopy.layers) {
       // Build a map of layer IDs to data lengths for validation
-      const layerDataLengths = new Map<string, number>()
-      for (const layer of jsonCopy.layers) {
-        if (layer && !Array.isArray(layer)) {
-          const layerId = `${layer.id || null}`
-          layerDataLengths.set(
-            layerId,
-            Array.isArray(layer.data) ? layer.data.length : 0
-          )
-        }
-      }
+      const layerDataLengths = getLayerDataLengths(jsonCopy.layers)
 
       // Only consider a selection valid if the layer exists and has at least one
       // index within the current data length. This prevents dimming when selection
       // state is stale (e.g., after data shrinks or layers are removed).
+      // For layers with non-array data (undefined length), we cannot validate
+      // indices, so we assume the selection is valid.
       const anyLayersHaveSelection = Object.entries(
         data.selection.indices
       ).some(([layerId, indices]) => {
         const maxLen = layerDataLengths.get(layerId)
-        return maxLen !== undefined && indices?.some(idx => idx < maxLen)
+        // If maxLen is undefined but the layer exists, it has non-array data - assume valid
+        if (maxLen === undefined) {
+          return layerDataLengths.has(layerId) && indices?.length > 0
+        }
+        return indices?.some(idx => idx < maxLen)
       })
 
       const anyLayersHavePickableDefined = jsonCopy.layers.some(layer =>
