@@ -239,3 +239,97 @@ class UploadFileRequestHandlerInvalidSessionTest(tornado.testing.AsyncHTTPTestCa
         assert response.code == 400
         assert "Invalid session_id" in response.reason
         assert self.file_mgr.get_files("sessionId", ["fileId"]) == []
+
+
+class UploadFileRequestHandlerOptionsTest(tornado.testing.AsyncHTTPTestCase):
+    """Tests the /upload_file OPTIONS endpoint."""
+
+    def get_app(self):
+        self.file_mgr = MemoryUploadedFileManager(upload_endpoint=UPLOAD_FILE_ENDPOINT)
+        return tornado.web.Application(
+            [
+                (
+                    f"{UPLOAD_FILE_ENDPOINT}/(?P<session_id>[^/]+)/(?P<file_id>[^/]+)",
+                    UploadFileRequestHandler,
+                    dict(
+                        file_mgr=self.file_mgr,
+                        is_active_session=lambda session_id: True,
+                    ),
+                ),
+            ]
+        )
+
+    def test_options_returns_cors_headers(self):
+        """Test OPTIONS request returns proper CORS headers."""
+        response = self.fetch(
+            f"{UPLOAD_FILE_ENDPOINT}/session_id/file_id",
+            method="OPTIONS",
+            headers={
+                "Access-Control-Request-Method": "PUT",
+                "Access-Control-Request-Headers": "Content-Type",
+            },
+        )
+        assert response.code == 204
+        assert "Access-Control-Allow-Methods" in response.headers
+        assert "PUT" in response.headers["Access-Control-Allow-Methods"]
+        assert "DELETE" in response.headers["Access-Control-Allow-Methods"]
+
+
+class UploadFileRequestHandlerDeleteTest(tornado.testing.AsyncHTTPTestCase):
+    """Tests the /upload_file DELETE endpoint."""
+
+    def get_app(self):
+        self.file_mgr = MemoryUploadedFileManager(upload_endpoint=UPLOAD_FILE_ENDPOINT)
+        return tornado.web.Application(
+            [
+                (
+                    f"{UPLOAD_FILE_ENDPOINT}/(?P<session_id>[^/]+)/(?P<file_id>[^/]+)",
+                    UploadFileRequestHandler,
+                    dict(
+                        file_mgr=self.file_mgr,
+                        is_active_session=lambda session_id: True,
+                    ),
+                ),
+            ]
+        )
+
+    def _upload_file(self, session_id: str, file_id: str, data: bytes):
+        """Helper to upload a file."""
+        req = requests.Request(
+            method="PUT",
+            url=self.get_url(f"{UPLOAD_FILE_ENDPOINT}/{session_id}/{file_id}"),
+            files={"file": data},
+        ).prepare()
+
+        return self.fetch(
+            req.url,
+            method=req.method,
+            headers=req.headers,
+            body=req.body,
+        )
+
+    def test_delete_removes_uploaded_file(self):
+        """Test DELETE request removes an uploaded file."""
+        # First upload a file
+        self._upload_file("session_id", "file_id", b"test data")
+
+        # Verify file exists
+        files = self.file_mgr.get_files("session_id", ["file_id"])
+        assert len(files) == 1
+
+        # Delete the file
+        response = self.fetch(
+            f"{UPLOAD_FILE_ENDPOINT}/session_id/file_id",
+            method="DELETE",
+        )
+        assert response.code == 204
+
+    def test_delete_handles_nonexistent_file(self):
+        """Test DELETE request handles non-existent files gracefully."""
+        # Try to delete a file that doesn't exist
+        response = self.fetch(
+            f"{UPLOAD_FILE_ENDPOINT}/session_id/nonexistent_file_id",
+            method="DELETE",
+        )
+        # Should still return 204 even if file doesn't exist
+        assert response.code == 204

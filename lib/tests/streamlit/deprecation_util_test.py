@@ -20,6 +20,7 @@ from unittest.mock import Mock, patch
 from parameterized import parameterized
 
 from streamlit.deprecation_util import (
+    _shown_warnings,
     deprecate_func_name,
     deprecate_obj_name,
     show_deprecation_warning,
@@ -209,3 +210,58 @@ class DeprecationUtilTest(unittest.TestCase):
 
         # We only show the warning a single time for a given object.
         mock_show_warning.assert_called_once_with(expected_warning)
+
+    @patch("streamlit.deprecation_util._LOGGER")
+    @patch("streamlit.warning")
+    def test_show_deprecation_warning_show_once(
+        self, mock_warning: Mock, mock_logger: Mock
+    ):
+        """Test that show_once=True only shows the warning once per unique message."""
+        # Clear any previously shown warnings from other tests
+        _shown_warnings.clear()
+
+        message = "This feature is deprecated (show_once test)."
+
+        with patch_config_options({"client.showErrorDetails": "full"}):
+            # First call should show the warning
+            show_deprecation_warning(message, show_once=True)
+            assert mock_logger.warning.call_count == 1
+            assert mock_warning.call_count == 1
+
+            # Second call with same message should NOT show the warning
+            show_deprecation_warning(message, show_once=True)
+            assert mock_logger.warning.call_count == 1  # Still 1
+            assert mock_warning.call_count == 1  # Still 1
+
+            # Third call with same message should still NOT show the warning
+            show_deprecation_warning(message, show_once=True)
+            assert mock_logger.warning.call_count == 1  # Still 1
+            assert mock_warning.call_count == 1  # Still 1
+
+            # Different message should show a new warning
+            different_message = "A different deprecation warning."
+            show_deprecation_warning(different_message, show_once=True)
+            assert mock_logger.warning.call_count == 2
+            assert mock_warning.call_count == 2
+
+    @patch("streamlit.deprecation_util._LOGGER")
+    @patch("streamlit.warning")
+    def test_show_deprecation_warning_without_show_once(
+        self, mock_warning: Mock, mock_logger: Mock
+    ):
+        """Test that show_once=False (default) shows the warning every time."""
+        message = "This feature is deprecated (multiple times)."
+
+        with patch_config_options({"client.showErrorDetails": "full"}):
+            # Each call should show the warning
+            show_deprecation_warning(message)
+            assert mock_logger.warning.call_count == 1
+            assert mock_warning.call_count == 1
+
+            show_deprecation_warning(message)
+            assert mock_logger.warning.call_count == 2
+            assert mock_warning.call_count == 2
+
+            show_deprecation_warning(message)
+            assert mock_logger.warning.call_count == 3
+            assert mock_warning.call_count == 3

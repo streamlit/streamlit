@@ -27,7 +27,6 @@ import {
 import {
   DatePickerCell,
   DropdownCell,
-  MultiSelectCell,
   RangeCell,
   SparklineCell,
 } from "@glideapps/glide-data-grid-cells"
@@ -170,7 +169,6 @@ function useCustomRenderer(
         DropdownCell,
         RangeCell,
         DatePickerCell,
-        MultiSelectCell,
         ...CustomCells,
       ] as DataEditorProps["customRenderers"],
     // This doesn't change during the lifetime of the component,

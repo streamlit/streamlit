@@ -36,6 +36,7 @@ import {
   EmotionTheme,
   lightTheme,
   ThemeConfig,
+  ThemeSelection,
   ThemeSpacing,
 } from "~lib/theme"
 import { LocalStore } from "~lib/util/storageUtils"
@@ -1133,41 +1134,6 @@ export const createTheme = (
   }
 }
 
-export const getCachedTheme = (): ThemeConfig | null => {
-  if (!localStorageAvailable()) {
-    return null
-  }
-
-  const cachedThemeStr = window.localStorage.getItem(LocalStore.ACTIVE_THEME)
-  if (!cachedThemeStr) {
-    return null
-  }
-
-  const { name: themeName, themeInput }: CachedTheme =
-    JSON.parse(cachedThemeStr)
-  switch (themeName) {
-    case lightTheme.name:
-      return getMergedLightTheme()
-    case darkTheme.name:
-      return getMergedDarkTheme()
-    case CUSTOM_THEME_LIGHT_NAME:
-      // Restore custom light theme with displayName
-      return {
-        ...createTheme(themeName, themeInput as Partial<CustomThemeConfig>),
-        displayName: "Light",
-      }
-    case CUSTOM_THEME_DARK_NAME:
-      // Restore custom dark theme with displayName
-      return {
-        ...createTheme(themeName, themeInput as Partial<CustomThemeConfig>),
-        displayName: "Dark",
-      }
-    default:
-      // At this point we're guaranteed that themeInput is defined.
-      return createTheme(themeName, themeInput as Partial<CustomThemeConfig>)
-  }
-}
-
 const deleteOldCachedThemes = (): void => {
   const { CACHED_THEME_VERSION, CACHED_THEME_BASE_KEY } = LocalStore
   const { localStorage } = window
@@ -1180,12 +1146,67 @@ const deleteOldCachedThemes = (): void => {
   // `stActiveTheme-${window.location.pathname}` with no version number.
   localStorage.removeItem(CACHED_THEME_BASE_KEY)
 
-  for (let i = 1; i <= CACHED_THEME_VERSION; i++) {
+  // Versions before the current schema stored full theme configs. Clear them.
+  for (let i = 1; i < CACHED_THEME_VERSION; i++) {
     localStorage.removeItem(`${CACHED_THEME_BASE_KEY}-v${i}`)
   }
 }
 
-export const setCachedTheme = (themeConfig: ThemeConfig): void => {
+export const getThemeSelectionFromThemeConfig = (
+  themeConfig: ThemeConfig
+): ThemeSelection => {
+  if (
+    themeConfig.name === AUTO_THEME_NAME ||
+    themeConfig.name === CUSTOM_THEME_AUTO_NAME
+  ) {
+    return "System"
+  }
+
+  if (
+    themeConfig.name === lightTheme.name ||
+    themeConfig.name === CUSTOM_THEME_LIGHT_NAME
+  ) {
+    return "Light"
+  }
+
+  if (
+    themeConfig.name === darkTheme.name ||
+    themeConfig.name === CUSTOM_THEME_DARK_NAME
+  ) {
+    return "Dark"
+  }
+
+  // Single custom theme ("Custom Theme") has no light/dark distinction,
+  // so we treat it as "System" for caching purposes. This ensures:
+  // 1. No false mapping to preset themes
+  // 2. Embed options can still override on subsequent visits
+  if (themeConfig.name === CUSTOM_THEME_NAME) {
+    return "System"
+  }
+
+  return "System" // This is reached for unrecognized theme names
+}
+
+const isThemeSelection = (value: unknown): value is ThemeSelection =>
+  value === "System" || value === "Light" || value === "Dark"
+
+export const getCachedThemeSelection = (): ThemeSelection | null => {
+  if (!localStorageAvailable()) {
+    return null
+  }
+
+  deleteOldCachedThemes()
+
+  const cachedThemeStr = window.localStorage.getItem(LocalStore.ACTIVE_THEME)
+  if (!cachedThemeStr) {
+    return null
+  }
+
+  const cachedTheme: CachedTheme = JSON.parse(cachedThemeStr)
+  return isThemeSelection(cachedTheme) ? cachedTheme : null
+}
+
+export const setCachedThemeSelection = (themeConfig: ThemeConfig): void => {
   if (!localStorageAvailable()) {
     return
   }
@@ -1197,12 +1218,8 @@ export const setCachedTheme = (themeConfig: ThemeConfig): void => {
     return
   }
 
-  const cachedTheme: CachedTheme = {
-    name: themeConfig.name,
-    ...(!isPresetTheme(themeConfig) && {
-      themeInput: toThemeInput(themeConfig.emotion),
-    }),
-  }
+  const cachedTheme: CachedTheme =
+    getThemeSelectionFromThemeConfig(themeConfig)
 
   window.localStorage.setItem(
     LocalStore.ACTIVE_THEME,
@@ -1242,15 +1259,21 @@ export const getHostSpecifiedTheme = (): ThemeConfig => {
 
 export const getDefaultTheme = (): ThemeConfig => {
   // Priority for default theme
-  const cachedTheme = getCachedTheme()
-
-  // We shouldn't ever have auto saved in our storage in case
-  // OS theme changes but we explicitly check in case!
-  if (cachedTheme && cachedTheme.name !== AUTO_THEME_NAME) {
-    return cachedTheme
+  const hostSpecified = getHostSpecifiedThemeOnly()
+  if (hostSpecified) {
+    return hostSpecified
   }
 
-  return getHostSpecifiedTheme()
+  const cachedSelection = getCachedThemeSelection()
+  if (cachedSelection === "Light") {
+    return getMergedLightTheme()
+  }
+
+  if (cachedSelection === "Dark") {
+    return getMergedDarkTheme()
+  }
+
+  return createAutoTheme()
 }
 
 const whiteSpace = /\s+/
@@ -1553,47 +1576,66 @@ export const createSidebarTheme = (activeTheme: ThemeConfig): ThemeConfig => {
   )
 }
 
-// Bidirectional theme name mappings for preset ↔ custom theme equivalents
-const THEME_MAPPING: Record<string, string> = {
-  [lightTheme.name]: CUSTOM_THEME_LIGHT_NAME,
-  [darkTheme.name]: CUSTOM_THEME_DARK_NAME,
-  [CUSTOM_THEME_LIGHT_NAME]: lightTheme.name,
-  [CUSTOM_THEME_DARK_NAME]: darkTheme.name,
-}
-
 /**
- * Maps a user's cached theme preference to the best matching theme from available themes.
- * Handles intelligent mapping between preset and custom themes:
- * - "Light" preset → "Custom Theme Light" (when custom light/dark exist)
- * - "Dark" preset → "Custom Theme Dark" (when custom light/dark exist)
- * - "Custom Theme Light" → "Light" preset (when custom themes removed)
- * - "Custom Theme Dark" → "Dark" preset (when custom themes removed)
+ * Maps a user's cached theme selection to the best matching theme from available themes.
  *
- * @param cachedTheme - The user's cached theme preference
+ * @param cachedThemeSelection - The user's cached theme selection
  * @param availableThemes - The list of currently available themes
  * @returns The best matching theme, or null if no suitable match found
+ *
+ * @example
+ * // When custom themes exist:
+ * mapCachedThemeSelectionToAvailableTheme("Light", [customLight, customDark, customAuto])
+ * // Returns customLight (CUSTOM_THEME_LIGHT_NAME)
+ *
+ * @example
+ * // When only preset themes:
+ * mapCachedThemeSelectionToAvailableTheme("Light", [lightTheme, darkTheme])
+ * // Returns lightTheme ("Light")
  */
-export const mapCachedThemeToAvailableTheme = (
-  cachedTheme: ThemeConfig | null,
+export const mapCachedThemeSelectionToAvailableTheme = (
+  cachedThemeSelection: ThemeSelection | null,
   availableThemes: ThemeConfig[]
 ): ThemeConfig | null => {
-  if (!cachedTheme) {
+  if (!cachedThemeSelection) {
     return null
   }
 
-  // If the cached theme exactly matches an available theme, use it
-  const exactMatch = availableThemes.find(
-    theme => theme.name === cachedTheme.name
-  )
-  if (exactMatch) {
-    return exactMatch
+  const mappedNames: Record<ThemeSelection, string[]> = {
+    System: [CUSTOM_THEME_AUTO_NAME, AUTO_THEME_NAME, CUSTOM_THEME_NAME],
+    Light: [CUSTOM_THEME_LIGHT_NAME, lightTheme.name],
+    Dark: [CUSTOM_THEME_DARK_NAME, darkTheme.name],
   }
 
-  // Try to map to equivalent theme (e.g., "Light" → "Custom Theme Light")
-  const mappedName = THEME_MAPPING[cachedTheme.name]
-  if (mappedName) {
-    return availableThemes.find(theme => theme.name === mappedName) ?? null
+  for (const themeName of mappedNames[cachedThemeSelection]) {
+    const match = availableThemes.find(theme => theme.name === themeName)
+    if (match) {
+      return match
+    }
   }
 
   return null
+}
+
+/**
+ * Gets the user's preferred theme from available themes.
+ * Host-specified embed options take precedence over cached selections.
+ *
+ * @param availableThemes - The list of currently available themes
+ * @returns The best matching theme, or null if no preference found
+ */
+export const getPreferredTheme = (
+  availableThemes: ThemeConfig[]
+): ThemeConfig | null => {
+  const hostSpecified = getHostSpecifiedThemeOnly()
+  const hostSpecifiedSelection = hostSpecified
+    ? getThemeSelectionFromThemeConfig(hostSpecified)
+    : null
+  const userPreferenceSelection =
+    hostSpecifiedSelection ?? getCachedThemeSelection()
+
+  return mapCachedThemeSelectionToAvailableTheme(
+    userPreferenceSelection,
+    availableThemes
+  )
 }

@@ -51,6 +51,10 @@ WidgetArgs: TypeAlias = tuple[Any, ...] | list[Any]
 WidgetKwargs: TypeAlias = dict[str, Any]
 WidgetCallback: TypeAlias = Callable[..., None]
 
+# Type for the bind parameter on widgets
+# Currently only supports binding to query params
+BindOption: TypeAlias = Literal["query-params"] | None
+
 # A deserializer receives the value from whatever field is set on the
 # WidgetState proto, and returns a regular python value. A serializer
 # receives a regular python value, and returns something suitable for
@@ -146,6 +150,15 @@ class WidgetMetadata(Generic[T]):
     # Components v2) that need to synthesize a presentation-only value from
     # multiple internal widget states.
     presenter: WidgetValuePresenter | None = None
+
+    # Optional binding for the widget's value to external state (e.g. query params)
+    bind: BindOption = None
+
+    # TODO(query-params): Remove formatted_options once all selection widgets use
+    # string-based wire formats (string_value/string_array_value).
+    # Currently used for query param binding to convert indices back to human-readable
+    # option strings in URLs when auto-correcting filtered values.
+    formatted_options: list[str] | None = None
 
     def __repr__(self) -> str:
         return util.repr_(self)

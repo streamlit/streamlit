@@ -2005,8 +2005,9 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
         assert chart_spec["encoding"]["y"]["stack"] == stack
 
     @parameterized.expand(ST_CHART_ARGS)
+    @patch("streamlit.elements.arrow.show_deprecation_warning")
     def test_add_rows_preserves_initial_chart_styling(
-        self, chart_command: Callable, altair_type: str
+        self, chart_command: Callable, altair_type: str, _
     ):
         """Test that add_rows works on an empty chart, preserving initial chart styling."""
         empty_df = pd.DataFrame({"A": [], "B": []})
@@ -2048,7 +2049,10 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
         assert new_proto.use_container_width == test_use_container_width
 
     @parameterized.expand([st.area_chart, st.bar_chart])
-    def test_bar_and_area_preserve_initial_stack_param(self, chart_command: Callable):
+    @patch("streamlit.elements.arrow.show_deprecation_warning")
+    def test_bar_and_area_preserve_initial_stack_param(
+        self, chart_command: Callable, _
+    ):
         """Test that the stack parameter is preserved when adding rows to a bar or area chart."""
         empty_df = pd.DataFrame({"A": [], "B": []})
         test_stack = "normalize"
@@ -2078,7 +2082,8 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
 
         assert updated_spec["encoding"]["y"]["stack"] == test_stack
 
-    def test_bar_chart_preserves_initial_horizontal_param(self):
+    @patch("streamlit.elements.arrow.show_deprecation_warning")
+    def test_bar_chart_preserves_initial_horizontal_param(self, _):
         """Test that the horizontal parameter is preserved when adding rows to a bar chart."""
         empty_df = pd.DataFrame({"A": [], "B": []})
         test_horizontal = True
@@ -2110,7 +2115,8 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
         assert updated_spec["encoding"]["x"]["type"] == "quantitative"
         assert updated_spec["encoding"]["y"]["type"] == "ordinal"
 
-    def test_bar_chart_preserves_initial_sort_param(self):
+    @patch("streamlit.elements.arrow.show_deprecation_warning")
+    def test_bar_chart_preserves_initial_sort_param(self, _):
         """Test that the sort parameter is preserved when adding rows to a bar chart."""
         empty_df = pd.DataFrame({"A": [], "B": [], "C": []})
         test_sort = "C"
@@ -2158,6 +2164,31 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
 
         # Verify descending sort is applied to the categorical (x) axis
         assert chart_spec["encoding"]["x"]["sort"]["field"] == "C"
+        assert chart_spec["encoding"]["x"]["sort"]["order"] == "descending"
+
+    def test_bar_chart_sort_with_multiple_y_columns(self):
+        """Test that sort works correctly when sorting by x column with multiple y columns.
+
+        This is a regression test for a bug where sorting by the x column when multiple
+        y columns are specified caused a KeyError due to duplicate columns in the melt
+        operation.
+        """
+        df = pd.DataFrame(
+            {
+                "A": ["foo", "bar", "baz"],
+                "B": [10, 20, 30],
+                "C": [1, 3, 2],
+            }
+        )
+
+        # This should not raise a KeyError
+        st.bar_chart(df, x="A", y=["B", "C"], sort="-A")
+
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        chart_spec = json.loads(proto.spec)
+
+        # Verify descending sort is applied
+        assert chart_spec["encoding"]["x"]["sort"]["field"] == "A"
         assert chart_spec["encoding"]["x"]["sort"]["order"] == "descending"
 
     def test_bar_chart_sort_horizontal(self):

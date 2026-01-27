@@ -611,6 +611,9 @@ def _melt_data(
 
     y_series = melted_df[new_y_column_name]
     if (
+        # After melting columns of different dtypes, the result has object dtype.
+        # In pandas 3.0+, melting columns with the same StringDtype keeps StringDtype,
+        # so this check correctly identifies only truly mixed-type scenarios.
         y_series.dtype == "object"
         and "mixed" in infer_dtype(y_series)
         and len(y_series.unique()) > 100
@@ -859,9 +862,9 @@ def _maybe_melt(
         color_column = _MELTED_COLOR_COLUMN_NAME
 
         columns_to_leave_alone = [x_column]
-        if size_column:
+        if size_column and size_column not in columns_to_leave_alone:
             columns_to_leave_alone.append(size_column)
-        if sort_column:
+        if sort_column and sort_column not in columns_to_leave_alone:
             columns_to_leave_alone.append(sort_column)
 
         df = _melt_data(

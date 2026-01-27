@@ -31,6 +31,10 @@ from streamlit.web.server.starlette.starlette_auth_routes import (
     _parse_provider_token,
     create_auth_routes,
 )
+from streamlit.web.server.starlette.starlette_server_config import (
+    TOKENS_COOKIE_NAME,
+    USER_COOKIE_NAME,
+)
 from tests.testutil import patch_config_options
 
 if TYPE_CHECKING:
@@ -503,56 +507,252 @@ class TestAsyncAuthCacheExpiration:
 class TestGetOriginFromSecrets:
     """Tests for _get_origin_from_secrets function."""
 
-    def test_returns_none_when_no_auth_section(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Test that None is returned when no auth section exists."""
+    def test_returns_none_when_no_origin(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Test that None is returned when get_origin_from_redirect_uri returns None."""
+        # Since _get_origin_from_secrets is now just a wrapper around
+        # get_origin_from_redirect_uri, we mock that function directly
         monkeypatch.setattr(
             starlette_auth_routes,
-            "get_secrets_auth_section",
+            "get_origin_from_redirect_uri",
             lambda: None,
-        )
-        assert _get_origin_from_secrets() is None
-
-    def test_returns_none_when_no_redirect_uri(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Test that None is returned when redirect_uri is not configured."""
-        from unittest.mock import MagicMock
-
-        mock_auth_section = MagicMock()
-        mock_auth_section.get.return_value = None
-        monkeypatch.setattr(
-            starlette_auth_routes,
-            "get_secrets_auth_section",
-            lambda: mock_auth_section,
         )
         assert _get_origin_from_secrets() is None
 
     def test_extracts_origin_from_redirect_uri(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Test that origin is correctly extracted from redirect_uri."""
-        from unittest.mock import MagicMock
-
-        mock_auth_section = MagicMock()
-        mock_auth_section.get.return_value = "https://example.com/oauth2callback"
+        """Test that origin is correctly returned from shared function."""
         monkeypatch.setattr(
             starlette_auth_routes,
-            "get_secrets_auth_section",
-            lambda: mock_auth_section,
+            "get_origin_from_redirect_uri",
+            lambda: "https://example.com",
         )
         assert _get_origin_from_secrets() == "https://example.com"
 
     def test_handles_localhost_uri(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test that localhost URIs are handled correctly."""
-        from unittest.mock import MagicMock
-
-        mock_auth_section = MagicMock()
-        mock_auth_section.get.return_value = "http://localhost:8501/oauth2callback"
         monkeypatch.setattr(
             starlette_auth_routes,
-            "get_secrets_auth_section",
-            lambda: mock_auth_section,
+            "get_origin_from_redirect_uri",
+            lambda: "http://localhost:8501",
         )
         assert _get_origin_from_secrets() == "http://localhost:8501"
+
+
+class TestGetProviderLogoutUrl:
+    """Tests for _get_provider_logout_url function."""
+
+    def test_returns_none_when_no_user_cookie(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test that None is returned when no user cookie exists."""
+        from unittest.mock import MagicMock
+
+        from streamlit.web.server.starlette.starlette_auth_routes import (
+            _get_provider_logout_url,
+        )
+
+        mock_request = MagicMock()
+        mock_request.cookies = {}
+
+        assert _get_provider_logout_url(mock_request) is None
+
+    def test_returns_none_when_no_provider_in_cookie(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test that None is returned when cookie doesn't contain provider."""
+        from unittest.mock import MagicMock
+
+        from streamlit.web.server.starlette.starlette_auth_routes import (
+            _get_provider_logout_url,
+        )
+
+        # Mock cookie without provider field
+        monkeypatch.setattr(
+            starlette_auth_routes,
+            "_get_cookie_value_from_request",
+            lambda request, name: b'{"email": "test@example.com"}',
+        )
+
+        mock_request = MagicMock()
+        assert _get_provider_logout_url(mock_request) is None
+
+    def test_returns_none_when_no_end_session_endpoint(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test that None is returned when provider has no end_session_endpoint."""
+        from unittest.mock import MagicMock
+
+        from streamlit.web.server.starlette.starlette_auth_routes import (
+            _get_provider_logout_url,
+        )
+
+        # Mock cookie with provider
+        monkeypatch.setattr(
+            starlette_auth_routes,
+            "_get_cookie_value_from_request",
+            lambda request, name: b'{"provider": "testprovider"}',
+        )
+
+        # Mock OAuth client that returns metadata without end_session_endpoint
+        class MockClient:
+            client_id = "test-client-id"
+
+            def load_server_metadata(self) -> dict[str, Any]:
+                return {"issuer": "https://example.com"}
+
+        monkeypatch.setattr(
+            starlette_auth_routes,
+            "_create_oauth_client",
+            lambda provider: (MockClient(), "/redirect"),
+        )
+
+        mock_request = MagicMock()
+        assert _get_provider_logout_url(mock_request) is None
+
+    @patch_config_options({"server.cookieSecret": "test-secret"})
+    def test_returns_logout_url_with_end_session_endpoint(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test that logout URL is returned when provider has end_session_endpoint."""
+        from unittest.mock import MagicMock
+
+        from streamlit.web.server.starlette.starlette_auth_routes import (
+            _get_provider_logout_url,
+        )
+
+        # Mock cookies - must differentiate between USER and TOKENS cookies
+        def mock_get_cookie(request: Any, name: str) -> bytes | None:
+            if name == USER_COOKIE_NAME:
+                return b'{"provider": "testprovider"}'
+            if name == TOKENS_COOKIE_NAME:
+                return b'{"id_token": "test-id-token", "access_token": "test-access"}'
+            return None
+
+        monkeypatch.setattr(
+            starlette_auth_routes,
+            "_get_cookie_value_from_request",
+            mock_get_cookie,
+        )
+
+        # Mock OAuth client with end_session_endpoint
+        class MockClient:
+            client_id = "test-client-id"
+
+            def load_server_metadata(self) -> dict[str, Any]:
+                return {
+                    "issuer": "https://example.com",
+                    "end_session_endpoint": "https://example.com/logout",
+                }
+
+        monkeypatch.setattr(
+            starlette_auth_routes,
+            "_create_oauth_client",
+            lambda provider: (MockClient(), "/redirect"),
+        )
+
+        # Mock get_validated_redirect_uri (now shared in auth_util)
+        monkeypatch.setattr(
+            starlette_auth_routes,
+            "get_validated_redirect_uri",
+            lambda: "http://localhost:8501/oauth2callback",
+        )
+
+        mock_request = MagicMock()
+        result = _get_provider_logout_url(mock_request)
+
+        assert result is not None
+        assert "https://example.com/logout" in result
+        assert "client_id=test-client-id" in result
+        assert "post_logout_redirect_uri" in result
+        # Verify that the validated redirect_uri is included in the logout URL
+        assert "localhost" in result
+        # Verify id_token_hint is included when tokens cookie has id_token
+        assert "id_token_hint=test-id-token" in result
+
+    @patch_config_options({"server.cookieSecret": "test-secret"})
+    def test_returns_none_when_redirect_uri_invalid(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test that None is returned when redirect_uri doesn't end with /oauth2callback."""
+        from unittest.mock import MagicMock
+
+        from streamlit.web.server.starlette.starlette_auth_routes import (
+            _get_provider_logout_url,
+        )
+
+        # Mock user cookie with provider
+        monkeypatch.setattr(
+            starlette_auth_routes,
+            "_get_cookie_value_from_request",
+            lambda request, name: b'{"provider": "testprovider"}',
+        )
+
+        # Mock OAuth client with end_session_endpoint
+        class MockClient:
+            client_id = "test-client-id"
+
+            def load_server_metadata(self) -> dict[str, Any]:
+                return {
+                    "issuer": "https://example.com",
+                    "end_session_endpoint": "https://example.com/logout",
+                }
+
+        monkeypatch.setattr(
+            starlette_auth_routes,
+            "_create_oauth_client",
+            lambda provider: (MockClient(), "/redirect"),
+        )
+
+        # Mock get_validated_redirect_uri to return None (invalid redirect_uri)
+        monkeypatch.setattr(
+            starlette_auth_routes,
+            "get_validated_redirect_uri",
+            lambda: None,
+        )
+
+        mock_request = MagicMock()
+        result = _get_provider_logout_url(mock_request)
+
+        # Should return None when redirect_uri is invalid
+        assert result is None
+
+
+class TestLogoutWithProviderRedirect:
+    """Tests for logout behavior with provider end_session_endpoint."""
+
+    @patch_config_options({"server.cookieSecret": "test-secret"})
+    def test_logout_redirects_to_provider_when_end_session_available(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test that logout redirects to provider logout URL when available."""
+
+        # Mock _get_provider_logout_url to return a URL
+        monkeypatch.setattr(
+            starlette_auth_routes,
+            "_get_provider_logout_url",
+            lambda request: "https://provider.com/logout?post_logout_redirect_uri=http%3A%2F%2Flocalhost%3A8501%2Foauth2callback",
+        )
+
+        app = Starlette(routes=create_auth_routes(""))
+        with TestClient(app) as client:
+            response = client.get("/auth/logout", follow_redirects=False)
+            assert response.status_code == 302
+            assert "provider.com/logout" in response.headers["location"]
+
+    def test_logout_redirects_to_base_when_no_end_session(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test that logout redirects to base URL when no end_session_endpoint."""
+        # Mock _get_provider_logout_url to return None
+        monkeypatch.setattr(
+            starlette_auth_routes,
+            "_get_provider_logout_url",
+            lambda request: None,
+        )
+
+        app = Starlette(routes=create_auth_routes(""))
+        with TestClient(app) as client:
+            response = client.get("/auth/logout", follow_redirects=False)
+            assert response.status_code == 302
+            assert response.headers["location"].endswith("/")
