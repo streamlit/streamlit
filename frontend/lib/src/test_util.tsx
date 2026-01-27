@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { FC, PropsWithChildren, ReactElement, useMemo, useRef } from "react"
+import { FC, PropsWithChildren, ReactElement, useRef } from "react"
 
 import {
   render as reactTestingLibraryRender,
@@ -312,13 +312,13 @@ export const renderWithContexts = (
     const appRootRef = useRef<HTMLDivElement>(null)
 
     // Build the actual sidebar config with the ref if needed
-    const sidebarConfigValue: SidebarConfigContextProps = useMemo(
-      () => ({
-        ...currentSidebarConfigContextProps,
-        ...(shouldCreateAppRoot && { appRootRef }),
-      }),
-      [appRootRef]
-    )
+    // Note: We intentionally don't use useMemo here because rerenderWithContexts
+    // needs to update the context value on each rerender when currentSidebarConfigContextProps changes.
+    // eslint-disable-next-line react/jsx-no-constructed-context-values
+    const sidebarConfigValue: SidebarConfigContextProps = {
+      ...currentSidebarConfigContextProps,
+      ...(shouldCreateAppRoot && { appRootRef }),
+    }
 
     const content = shouldCreateAppRoot ? (
       <div data-testid="stApp" ref={appRootRef}>
