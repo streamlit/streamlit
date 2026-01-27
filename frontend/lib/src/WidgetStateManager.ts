@@ -69,6 +69,8 @@ export interface QueryParamBinding {
   valueType: WidgetValueType
   defaultValue: unknown
   urlFormat?: "comma" | "repeated" // How to serialize arrays
+  // TODO(query-params): Remove options field after wire format changes from
+  // index-based to string-based values for applicable widgets (selectbox, pills, etc.)
   options?: string[] // For index-based widgets, the formatted option strings
 }
 
@@ -1059,7 +1061,8 @@ export class WidgetStateManager {
 
   /**
    * Register a widget's binding to a URL query parameter.
-   * @param options - For index-based widgets, the formatted option strings
+   * @param options - For index-based widgets, the formatted option strings.
+   *   TODO(query-params): Remove options param after wire format changes.
    */
   public registerQueryParamBinding(
     widgetId: string,
@@ -1069,6 +1072,8 @@ export class WidgetStateManager {
     urlFormat?: "comma" | "repeated",
     options?: string[]
   ): void {
+    // TODO(query-params): Remove options normalization after wire format changes
+    // from index-based to string-based values for applicable widgets.
     // Normalize defaultValue to URL-compatible format for index-based widgets.
     // This ensures default comparison works correctly (e.g., "Red" === "Red"
     // instead of "Red" === "0").
@@ -1190,6 +1195,7 @@ export class WidgetStateManager {
       case "double_value":
         return String(value as number)
 
+      // TODO(query-params): Remove options lookup after wire format changes.
       case "int_value": {
         const num = value as number
         return binding.options?.[num] ?? String(num)
@@ -1203,6 +1209,7 @@ export class WidgetStateManager {
         return arr
       }
 
+      // TODO(query-params): Remove options lookup after wire format changes.
       case "int_array_value": {
         const arr = value as number[]
         return binding.options
@@ -1212,6 +1219,7 @@ export class WidgetStateManager {
           : arr.map(n => String(n))
       }
 
+      // TODO(query-params): Remove options lookup after wire format changes.
       case "double_array_value": {
         const arr = value as number[]
         return binding.options && binding.options.length > 0
