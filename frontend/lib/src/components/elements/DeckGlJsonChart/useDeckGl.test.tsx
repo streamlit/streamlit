@@ -365,19 +365,22 @@ describe("useDeckGl", () => {
   describe("selection sanitization", () => {
     const getPropsWithArrayData = (
       data: unknown[],
-      layerId: string = "test-layer"
+      layerId: string | null = "test-layer"
     ): UseDeckGlProps => {
+      const layer: Record<string, unknown> = {
+        "@@type": "ScatterplotLayer",
+        data,
+        getPosition: "@@=[lng, lat]",
+        pickable: true,
+      }
+
+      if (layerId !== null) {
+        layer.id = layerId
+      }
+
       const json = {
         initialViewState: mockInitialViewState,
-        layers: [
-          {
-            "@@type": "ScatterplotLayer",
-            id: layerId,
-            data,
-            getPosition: "@@=[lng, lat]",
-            pickable: true,
-          },
-        ],
+        layers: [layer],
       }
 
       return {
@@ -492,6 +495,45 @@ describe("useDeckGl", () => {
       )
     })
 
+    it("should preserve selection when layers have no explicit IDs", () => {
+      const initialData = [
+        { lat: 1, lng: 1 },
+        { lat: 2, lng: 2 },
+      ]
+      const initialProps = getPropsWithArrayData(initialData, null)
+
+      const { result, rerender } = renderHook(props => useDeckGl(props), {
+        initialProps,
+      })
+
+      const unknownLayerId = "auto-layer-id"
+      act(() => {
+        result.current.setSelection({
+          fromUi: true,
+          value: {
+            selection: {
+              indices: { [unknownLayerId]: [0] },
+              objects: { [unknownLayerId]: [{}] },
+            },
+          },
+        })
+      })
+
+      rerender(initialProps)
+
+      const updatedData = [
+        { lat: 1, lng: 1 },
+        { lat: 2, lng: 2 },
+        { lat: 3, lng: 3 },
+      ]
+      const updatedProps = getPropsWithArrayData(updatedData, null)
+      rerender(updatedProps)
+
+      expect(result.current.data.selection.indices[unknownLayerId]).toEqual([
+        0,
+      ])
+    })
+
     it("should preserve selection for layers with URL data", () => {
       // Create props with URL data (non-array)
       const propsWithUrlData = getUseDeckGlProps({
@@ -563,6 +605,43 @@ describe("useDeckGl", () => {
       expect(
         result.current.data.selection.indices["emptying-layer"]
       ).toBeUndefined()
+    })
+
+    it("should refresh selection objects when data changes", () => {
+      const initialData = [
+        { id: "a", lat: 1, lng: 1 },
+        { id: "b", lat: 2, lng: 2 },
+      ]
+      const initialProps = getPropsWithArrayData(initialData, "object-layer")
+
+      const { result, rerender } = renderHook(props => useDeckGl(props), {
+        initialProps,
+      })
+
+      act(() => {
+        result.current.setSelection({
+          fromUi: true,
+          value: {
+            selection: {
+              indices: { "object-layer": [1] },
+              objects: { "object-layer": [{ id: "b", lat: 2, lng: 2 }] },
+            },
+          },
+        })
+      })
+
+      rerender(initialProps)
+
+      const updatedData = [
+        { id: "a", lat: 1, lng: 1 },
+        { id: "b-updated", lat: 2, lng: 2 },
+      ]
+      const updatedProps = getPropsWithArrayData(updatedData, "object-layer")
+      rerender(updatedProps)
+
+      expect(result.current.data.selection.objects["object-layer"][0]).toEqual(
+        updatedData[1]
+      )
     })
   })
 })
