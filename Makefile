@@ -271,9 +271,41 @@ debug:
 	mkdir -p "$$DEBUG_DIR"; \
 	> "$$DEBUG_DIR/debug-backend.log"; \
 	> "$$DEBUG_DIR/debug-frontend.log"; \
+	cleanup() { \
+		echo ""; \
+		echo "Stopping servers... logs saved to work-tmp/"; \
+		lsof -ti:3000 | xargs kill 2>/dev/null || true; \
+		lsof -ti:8501 | xargs kill 2>/dev/null || true; \
+	}; \
+	trap cleanup EXIT; \
+	streamlit run "$$SCRIPT" \
+		--server.headless=true \
+		--server.runOnSave=true \
+		--browser.gatherUsageStats=false \
+		--global.developmentMode=true \
+		>> "$$DEBUG_DIR/debug-backend.log" 2>&1 & \
+	cd frontend && TERMINAL_CONSOLE=1 yarn start >> "$$DEBUG_DIR/debug-frontend.log" 2>&1 & \
 	echo ""; \
-	echo "Debug session: $$SCRIPT"; \
+	echo "Starting debug session: $$SCRIPT"; \
+	BACKEND_READY=false; \
+	FRONTEND_READY=false; \
+	for i in $$(seq 1 60); do \
+		if [[ "$$BACKEND_READY" == "false" ]] && curl -s http://localhost:8501/_stcore/health > /dev/null 2>&1; then \
+			BACKEND_READY=true; \
+		fi; \
+		if [[ "$$FRONTEND_READY" == "false" ]] && curl -s http://localhost:3000 > /dev/null 2>&1; then \
+			FRONTEND_READY=true; \
+		fi; \
+		if [[ "$$BACKEND_READY" == "true" ]] && [[ "$$FRONTEND_READY" == "true" ]]; then \
+			break; \
+		fi; \
+		sleep 1; \
+	done; \
 	echo ""; \
+	if [[ "$$BACKEND_READY" == "false" ]] || [[ "$$FRONTEND_READY" == "false" ]]; then \
+		echo "Warning: Servers may not have started correctly. Check log files."; \
+		echo ""; \
+	fi; \
 	echo "  App URL: http://localhost:3000"; \
 	echo ""; \
 	echo "  Log files:"; \
@@ -282,16 +314,7 @@ debug:
 	echo ""; \
 	echo "Press Ctrl+C to stop."; \
 	echo ""; \
-	cleanup() { \
-		echo ""; \
-		echo "Stopping servers... logs saved to work-tmp/"; \
-		lsof -ti:3000 | xargs kill 2>/dev/null || true; \
-		lsof -ti:8501 | xargs kill 2>/dev/null || true; \
-	}; \
-	trap cleanup EXIT; \
-	streamlit run "$$SCRIPT" --server.headless true >> "$$DEBUG_DIR/debug-backend.log" 2>&1 & \
-	sleep 2; \
-	cd frontend && TERMINAL_CONSOLE=1 yarn start >> "$$DEBUG_DIR/debug-frontend.log" 2>&1
+	wait
 
 .PHONY: frontend-lint
 # Lint and check formatting of frontend files.
