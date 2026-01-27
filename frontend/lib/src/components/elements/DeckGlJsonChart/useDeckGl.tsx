@@ -36,6 +36,7 @@ import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import { useStWidthHeight } from "~lib/hooks/useStWidthHeight"
 import { EmotionTheme } from "~lib/theme"
+import { isNullOrUndefined } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import type {
@@ -187,7 +188,7 @@ const getLayerDataInfo = (
 
   for (const layer of layers) {
     if (layer && !Array.isArray(layer)) {
-      if (layer.id === null || layer.id === undefined) {
+      if (isNullOrUndefined(layer.id)) {
         hasUnknownLayerId = true
         continue
       }
@@ -404,10 +405,7 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
           layer.pickable = true
         }
 
-        const layerId =
-          layer.id === null || layer.id === undefined
-            ? undefined
-            : `${layer.id}`
+        const layerId = isNullOrUndefined(layer.id) ? undefined : `${layer.id}`
         const selectedIndices =
           layerId !== undefined
             ? data?.selection?.indices?.[layerId] || []
