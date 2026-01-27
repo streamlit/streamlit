@@ -508,15 +508,7 @@ def test_multiselect_preserves_scroll_position_on_remove(app: Page):
 
     # Scroll to middle of the value container (not bottom, to avoid clamping issues
     # when items are removed and scrollHeight decreases)
-    # Note: We must dispatch a scroll event because programmatically setting scrollTop
-    # doesn't fire scroll events in webkit/firefox, and the React component needs the
-    # scroll event to capture the position for restoration after re-renders.
-    value_container.evaluate(
-        """el => {
-            el.scrollTop = el.scrollHeight / 2;
-            el.dispatchEvent(new Event('scroll', { bubbles: true }));
-        }"""
-    )
+    value_container.evaluate("el => { el.scrollTop = el.scrollHeight / 2; }")
 
     # Get initial scroll position (should be > 0 since there are many items)
     initial_scroll = value_container.evaluate("el => el.scrollTop")
