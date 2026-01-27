@@ -54,6 +54,12 @@ def _process_logo_image(
     -------
     tuple[ImageType, str]
         The detected image type and the prepared image data.
+
+    Raises
+    ------
+    StreamlitAPIException
+        If the image is an empty string or a plain text string that is not
+        a valid file path, URL, emoji, or material icon.
     """
     ImageType = LogoProto.ImageType  # noqa: N806
 

@@ -144,6 +144,8 @@ const LogoComponent = ({
         target="_blank"
         rel="noreferrer"
         data-testid="stLogoLink"
+        // Icon/emoji logos don't have alt text, so we need an aria-label for accessibility
+        aria-label={isIconOrEmoji ? "App Logo" : undefined}
       >
         {logo}
       </StyledLogoLink>
