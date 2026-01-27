@@ -18490,13 +18490,13 @@ __metadata:
   linkType: hard
 
 "vega-selections@npm:^6.1.0":
-  version: 6.1.0
-  resolution: "vega-selections@npm:6.1.0"
+  version: 6.1.2
+  resolution: "vega-selections@npm:6.1.2"
   dependencies:
     d3-array: "npm:3.2.4"
     vega-expression: "npm:^6.1.0"
     vega-util: "npm:^2.1.0"
-  checksum: 10c0/72ef4a3dfb1718b744d657ec3a15a5544db6b95a49990012433e10293125e5217fbe023efc7c91eb65a52e64a3c2c8ccc407aa610d69cd42216f7c562f049ee7
+  checksum: 10c0/9eb432e123b036eb9406fca99cdb7515e590eb19a1dc3142a377627b160c9279fc6ed4a21ad19ab5302423b533cb328ec0b1ca8ecc6e1542071209fbfbb1da13
   languageName: node
   linkType: hard
 
