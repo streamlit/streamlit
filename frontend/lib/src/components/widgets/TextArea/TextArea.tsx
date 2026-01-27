@@ -34,7 +34,6 @@ import {
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import useOnInputChange from "~lib/hooks/useOnInputChange"
-import { useQueryParamBinding } from "~lib/hooks/useQueryParamBinding"
 import useSubmitFormViaEnterKey from "~lib/hooks/useSubmitFormViaEnterKey"
 import { useTextInputAutoExpand } from "~lib/hooks/useTextInputAutoExpand"
 import useUpdateUiValue from "~lib/hooks/useUpdateUiValue"
@@ -143,16 +142,13 @@ const TextArea: FC<Props> = ({
     widgetMgr,
     fragmentId,
     onFormCleared,
+    queryParamBinding: element.queryParamKey
+      ? {
+          paramKey: element.queryParamKey,
+          valueType: "string_value",
+        }
+      : undefined,
   })
-
-  // Query param binding registration
-  useQueryParamBinding(
-    widgetMgr,
-    element.id,
-    element.queryParamKey,
-    "string_value",
-    element.default
-  )
 
   useUpdateUiValue(value, uiValue, setUiValue, dirty)
 

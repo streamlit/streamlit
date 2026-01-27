@@ -39,7 +39,6 @@ import {
 import { useBasicWidgetState } from "~lib/hooks/useBasicWidgetState"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { useQueryParamBinding } from "~lib/hooks/useQueryParamBinding"
 import { convertRemToPx } from "~lib/theme"
 import {
   isInForm,
@@ -145,16 +144,13 @@ const NumberInput: React.FC<Props> = ({
       setDirty(false)
       setFormattedValue(formatCurrentValue(newValue))
     }, [elementDefault, formatCurrentValue]),
+    queryParamBinding: element.queryParamKey
+      ? {
+          paramKey: element.queryParamKey,
+          valueType: "double_value",
+        }
+      : undefined,
   })
-
-  // Query param binding registration
-  useQueryParamBinding(
-    widgetMgr,
-    element.id,
-    element.queryParamKey,
-    "double_value",
-    element.default
-  )
 
   // Additional local state for UI interactions
   const [isFocused, setIsFocused] = useState(false)
