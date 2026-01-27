@@ -163,5 +163,5 @@ class ServerUtilTest(unittest.TestCase):
 
     def test_get_display_address_does_not_modify_non_wildcards(self):
         """Verify non-wildcard addresses are returned unchanged."""
-        for addr in ["127.0.0.1", "localhost", "10.0.0.1", "example.com"]:
+        for addr in ["10.0.0.1", "example.com", "my-other-host.local", "203.0.113.5"]:
             assert server_util.get_display_address(addr) == addr
