@@ -293,6 +293,54 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
         out = sys.stdout.getvalue()
         assert "Unix Socket: unix://mysocket.sock" in out
 
+    def test_print_urls_with_wildcard_address(self):
+        """Verify 0.0.0.0 is displayed as localhost in the URL."""
+        mock_is_manually_set = testutil.build_mock_config_is_manually_set(
+            {"browser.serverAddress": False, "server.address": True}
+        )
+        mock_get_option = testutil.build_mock_config_get_option(
+            {
+                "server.address": "0.0.0.0",
+                "server.port": 8501,
+                "global.developmentMode": False,
+            }
+        )
+
+        with (
+            patch.object(config, "get_option", new=mock_get_option),
+            patch.object(config, "is_manually_set", new=mock_is_manually_set),
+        ):
+            bootstrap._print_url(False)
+
+        out = sys.stdout.getvalue()
+        assert "URL: http://localhost:8501" in out
+        # The raw 0.0.0.0 address should not appear in the URL
+        assert "0.0.0.0" not in out
+
+    def test_print_urls_with_ipv6_wildcard(self):
+        """Verify :: (IPv6 wildcard) is displayed as localhost in the URL."""
+        mock_is_manually_set = testutil.build_mock_config_is_manually_set(
+            {"browser.serverAddress": False, "server.address": True}
+        )
+        mock_get_option = testutil.build_mock_config_get_option(
+            {
+                "server.address": "::",
+                "server.port": 8501,
+                "global.developmentMode": False,
+            }
+        )
+
+        with (
+            patch.object(config, "get_option", new=mock_get_option),
+            patch.object(config, "is_manually_set", new=mock_is_manually_set),
+        ):
+            bootstrap._print_url(False)
+
+        out = sys.stdout.getvalue()
+        assert "URL: http://localhost:8501" in out
+        # The raw :: address should not appear in the URL
+        assert "http://::" not in out
+
     @patch("streamlit.web.bootstrap.asyncio.get_running_loop", Mock())
     @patch("streamlit.web.bootstrap.secrets.load_if_toml_exists", Mock())
     @patch("streamlit.web.bootstrap._maybe_print_static_folder_warning")

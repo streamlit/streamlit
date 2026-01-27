@@ -139,7 +139,7 @@ def _on_server_start(server: Server) -> None:
             if server_address_is_unix_socket():
                 # Don't open browser when server address is an unix socket
                 return
-            addr = config.get_option("server.address")
+            addr = server_util.get_display_address(config.get_option("server.address"))
         else:
             addr = "localhost"
 
@@ -248,8 +248,11 @@ def _print_url(is_running_hello: bool) -> None:
     elif (
         config.is_manually_set("server.address") and not server_address_is_unix_socket()
     ):
+        display_address = server_util.get_display_address(
+            config.get_option("server.address")
+        )
         named_urls = [
-            ("URL", server_util.get_url(config.get_option("server.address"))),
+            ("URL", server_util.get_url(display_address)),
         ]
 
     elif server_address_is_unix_socket():
