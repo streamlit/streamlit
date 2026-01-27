@@ -230,6 +230,65 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
   }, [isFullScreen, isLightTheme, element.json])
 
+  // Sanitize selection when spec changes to remove orphaned indices
+  // (layer removed or data length shrunk). This prevents visual glitches
+  // when selection state is preserved via key-based identity.
+  useEffect(() => {
+    if (!isSelectionModeActivated || !parsedPydeckJson.layers) {
+      return
+    }
+
+    // Get data length for each layer
+    const layerDataLengths = new Map<string, number>()
+    for (const layer of parsedPydeckJson.layers) {
+      if (layer && !Array.isArray(layer)) {
+        const layerId = `${layer.id || null}`
+        layerDataLengths.set(
+          layerId,
+          Array.isArray(layer.data) ? layer.data.length : 0
+        )
+      }
+    }
+
+    // Filter out orphaned selections
+    const newIndices: Record<string, number[]> = {}
+    const newObjects: Record<string, object[]> = {}
+    let changed = false
+
+    for (const [layerId, indices] of Object.entries(data.selection.indices)) {
+      const maxLen = layerDataLengths.get(layerId)
+      if (maxLen === undefined) {
+        changed = true // layer no longer exists
+        continue
+      }
+
+      const objects = data.selection.objects[layerId] || []
+      const validIndices: number[] = []
+      const validObjects: object[] = []
+
+      indices.forEach((idx, i) => {
+        if (idx < maxLen) {
+          validIndices.push(idx)
+          validObjects.push(objects[i] ?? {})
+        } else {
+          changed = true
+        }
+      })
+
+      if (validIndices.length > 0) {
+        newIndices[layerId] = validIndices
+        newObjects[layerId] = validObjects
+      }
+    }
+
+    if (changed) {
+      setSelection({
+        fromUi: false,
+        value: { selection: { indices: newIndices, objects: newObjects } },
+      })
+    }
+  }, [parsedPydeckJson, isSelectionModeActivated, data.selection, setSelection])
+
   const deck = useMemo<DeckObject>(() => {
     const jsonCopy = { ...parsedPydeckJson }
 
@@ -253,9 +312,27 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
     }
 
     if (jsonCopy.layers) {
-      const anyLayersHaveSelection = Object.values(
+      // Build a map of layer IDs to data lengths for validation
+      const layerDataLengths = new Map<string, number>()
+      for (const layer of jsonCopy.layers) {
+        if (layer && !Array.isArray(layer)) {
+          const layerId = `${layer.id || null}`
+          layerDataLengths.set(
+            layerId,
+            Array.isArray(layer.data) ? layer.data.length : 0
+          )
+        }
+      }
+
+      // Only consider a selection valid if the layer exists and has at least one
+      // index within the current data length. This prevents dimming when selection
+      // state is stale (e.g., after data shrinks or layers are removed).
+      const anyLayersHaveSelection = Object.entries(
         data.selection.indices
-      ).some(layer => layer?.length)
+      ).some(([layerId, indices]) => {
+        const maxLen = layerDataLengths.get(layerId)
+        return maxLen !== undefined && indices?.some(idx => idx < maxLen)
+      })
 
       const anyLayersHavePickableDefined = jsonCopy.layers.some(layer =>
         Object.hasOwn(layer, "pickable")
