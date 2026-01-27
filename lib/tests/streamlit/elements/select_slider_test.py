@@ -491,8 +491,8 @@ def test_select_slider_dynamic_options_preserves_valid_selection():
             st.session_state.use_alt_options = False
 
         if st.session_state.use_alt_options:
-            # "alpha" is shared between both option sets
-            options = ["alpha", "beta", "gamma"]
+            # "alpha" and "delta" are shared between both option sets
+            options = ["alpha", "beta", "gamma", "delta"]
         else:
             options = ["alpha", "bravo", "charlie", "delta", "echo"]
 
@@ -518,14 +518,14 @@ def test_select_slider_dynamic_options_preserves_valid_selection():
     assert at.select_slider[0].value != "bravo"
     assert "Selected: bravo" not in at.get("markdown")[-1].value
 
-    # Select "alpha" which exists in both option sets
-    at.select_slider[0].set_value("alpha").run()
-    assert at.select_slider[0].value == "alpha"
+    # Select "delta" which exists in both option sets (and is not the default)
+    at.select_slider[0].set_value("delta").run()
+    assert at.select_slider[0].value == "delta"
 
-    # Switch back to original options - "alpha" should be preserved
+    # Switch back to original options - "delta" should be preserved
     at.session_state.use_alt_options = False
     at = at.run()
-    assert at.select_slider[0].value == "alpha"
+    assert at.select_slider[0].value == "delta"
 
 
 def test_select_slider_dynamic_options_range_resets_when_invalid():

@@ -14,6 +14,7 @@
 
 import enum
 import unittest
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -655,7 +656,7 @@ class TestValidateAndSyncRangeValueWithOptions(unittest.TestCase):
         options = [1, 2, 3, 4, 5]
 
         # Custom format_func that formats numbers with prefix
-        def format_func(x):
+        def format_func(x: Any) -> str:
             return f"num_{x}"
 
         value, needs_reset = validate_and_sync_range_value_with_options(

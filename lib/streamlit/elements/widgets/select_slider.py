@@ -131,7 +131,7 @@ class SelectSliderSerde(Generic[T]):
         results: list[tuple[int, T]] = []
         for i, s in enumerate(ui_value):
             idx = self.formatted_option_to_index.get(s)
-            if idx is not None:
+            if idx is not None and idx < len(self.options):
                 results.append((idx, self.options[idx]))
             else:
                 # Fallback to default for this position
@@ -141,7 +141,7 @@ class SelectSliderSerde(Generic[T]):
                 results.append((default_idx, self.options[default_idx]))
 
         if is_range and len(results) >= 2:
-            # Ensure start <= end by index
+            # Ensure start <= end by returning deserialized range value in ascending order
             if results[0][0] > results[1][0]:
                 return (results[1][1], results[0][1])
             return (results[0][1], results[1][1])
