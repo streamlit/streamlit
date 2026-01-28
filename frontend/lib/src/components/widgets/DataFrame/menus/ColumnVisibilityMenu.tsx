@@ -294,25 +294,52 @@ const ColumnVisibilityMenu: React.FC<ColumnVisibilityMenuProps> = ({
             paddingRight: "0 !important",
 
             backgroundColor: "transparent",
-            border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
           },
         },
         Inner: {
-          style: {
-            backgroundColor: hasLightBackgroundColor(theme)
-              ? theme.colors.bgColor
-              : theme.colors.secondaryBg,
-            color: theme.colors.bodyText,
-            fontSize: theme.fontSizes.sm,
-            fontWeight: theme.fontWeights.normal,
-            minWidth: theme.sizes.minMenuWidth,
-            maxWidth: `calc(${theme.sizes.minMenuWidth} * 2)`,
-            maxHeight: theme.sizes.maxDropdownHeight,
-            overflow: "auto",
-            paddingTop: "0 !important",
-            paddingBottom: "0 !important",
-            paddingLeft: "0 !important",
-            paddingRight: "0 !important",
+          style: () => {
+            const lightBackground = hasLightBackgroundColor(theme)
+            return {
+              borderTopWidth: lightBackground ? 0 : theme.sizes.borderWidth,
+              borderBottomWidth: lightBackground ? 0 : theme.sizes.borderWidth,
+              borderLeftWidth: lightBackground ? 0 : theme.sizes.borderWidth,
+              borderRightWidth: lightBackground ? 0 : theme.sizes.borderWidth,
+              borderTopStyle: lightBackground ? "none" : "solid",
+              borderBottomStyle: lightBackground ? "none" : "solid",
+              borderLeftStyle: lightBackground ? "none" : "solid",
+              borderRightStyle: lightBackground ? "none" : "solid",
+              borderTopColor: lightBackground
+                ? "transparent"
+                : theme.colors.borderColor,
+              borderBottomColor: lightBackground
+                ? "transparent"
+                : theme.colors.borderColor,
+              borderLeftColor: lightBackground
+                ? "transparent"
+                : theme.colors.borderColor,
+              borderRightColor: lightBackground
+                ? "transparent"
+                : theme.colors.borderColor,
+              boxShadow: lightBackground
+                ? theme.shadows.popover
+                : theme.shadows.none,
+              borderTopLeftRadius: theme.radii.default,
+              borderTopRightRadius: theme.radii.default,
+              borderBottomLeftRadius: theme.radii.default,
+              borderBottomRightRadius: theme.radii.default,
+              backgroundColor: theme.colors.bgColor,
+              color: theme.colors.bodyText,
+              fontSize: theme.fontSizes.sm,
+              fontWeight: theme.fontWeights.normal,
+              minWidth: theme.sizes.minMenuWidth,
+              maxWidth: `calc(${theme.sizes.minMenuWidth} * 2)`,
+              maxHeight: theme.sizes.maxDropdownHeight,
+              overflow: "hidden",
+              paddingTop: "0 !important",
+              paddingBottom: "0 !important",
+              paddingLeft: "0 !important",
+              paddingRight: "0 !important",
+            }
           },
         },
       }}

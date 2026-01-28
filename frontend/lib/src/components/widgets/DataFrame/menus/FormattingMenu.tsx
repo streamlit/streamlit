@@ -239,21 +239,49 @@ function FormattingMenu({
             paddingLeft: "0 !important",
             paddingRight: "0 !important",
             backgroundColor: "transparent",
-            border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
           },
         },
         Inner: {
-          style: {
-            backgroundColor: hasLightBackgroundColor(theme)
-              ? colors.bgColor
-              : colors.secondaryBg,
-            color: colors.bodyText,
-            fontSize: fontSizes.sm,
-            fontWeight: fontWeights.normal,
-            paddingTop: "0 !important",
-            paddingBottom: "0 !important",
-            paddingLeft: "0 !important",
-            paddingRight: "0 !important",
+          style: () => {
+            const lightBackground = hasLightBackgroundColor(theme)
+            return {
+              borderTopWidth: lightBackground ? 0 : theme.sizes.borderWidth,
+              borderBottomWidth: lightBackground ? 0 : theme.sizes.borderWidth,
+              borderLeftWidth: lightBackground ? 0 : theme.sizes.borderWidth,
+              borderRightWidth: lightBackground ? 0 : theme.sizes.borderWidth,
+              borderTopStyle: lightBackground ? "none" : "solid",
+              borderBottomStyle: lightBackground ? "none" : "solid",
+              borderLeftStyle: lightBackground ? "none" : "solid",
+              borderRightStyle: lightBackground ? "none" : "solid",
+              borderTopColor: lightBackground
+                ? "transparent"
+                : theme.colors.borderColor,
+              borderBottomColor: lightBackground
+                ? "transparent"
+                : theme.colors.borderColor,
+              borderLeftColor: lightBackground
+                ? "transparent"
+                : theme.colors.borderColor,
+              borderRightColor: lightBackground
+                ? "transparent"
+                : theme.colors.borderColor,
+              boxShadow: lightBackground
+                ? theme.shadows.popover
+                : theme.shadows.none,
+              borderTopLeftRadius: radii.default,
+              borderTopRightRadius: radii.default,
+              borderBottomLeftRadius: radii.default,
+              borderBottomRightRadius: radii.default,
+              overflow: "hidden",
+              backgroundColor: colors.bgColor,
+              color: colors.bodyText,
+              fontSize: fontSizes.sm,
+              fontWeight: fontWeights.normal,
+              paddingTop: "0 !important",
+              paddingBottom: "0 !important",
+              paddingLeft: "0 !important",
+              paddingRight: "0 !important",
+            }
           },
         },
       }}
