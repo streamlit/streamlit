@@ -246,6 +246,8 @@ def test_datetime_column_formatting_via_ui(
     )
     # Click on the date format option:
     formatting_menu.get_by_text("Calendar").click()
+    # Move mouse away from header to clear hover state:
+    app.mouse.move(0, 0)
     # Add a quick timeout to wait for the column to be adjusted/autosized before
     # taking a snapshot:
     app.wait_for_timeout(250)
@@ -270,6 +272,8 @@ def test_time_column_formatting_via_ui(
     assert_snapshot(formatting_menu, name="st_dataframe-time_column_formatting_menu")
     # Click on the time format option:
     formatting_menu.get_by_text("Localized").click()
+    # Move mouse away from header to clear hover state:
+    app.mouse.move(0, 0)
     # Add a quick timeout to wait for the column to be adjusted/autosized before
     # taking a snapshot:
     app.wait_for_timeout(250)
@@ -296,6 +300,8 @@ def test_date_column_formatting_via_ui(
     assert_snapshot(formatting_menu, name="st_dataframe-date_column_formatting_menu")
     # Click on the date format option:
     formatting_menu.get_by_text("Localized").click()
+    # Move mouse away from header to clear hover state:
+    app.mouse.move(0, 0)
     # Add a quick timeout to wait for the column to be adjusted/autosized before
     # taking a snapshot:
     app.wait_for_timeout(250)
