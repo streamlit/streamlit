@@ -1,7 +1,7 @@
 ---
-author: "@lukasmasuch"
+author: lukasmasuch
 created: 2025-12-01
-status: Draft
+status: Approved
 ---
 
 # `on_click` parameter for `st.link_button`
