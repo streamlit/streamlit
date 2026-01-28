@@ -45,8 +45,14 @@ export const ThemedStyledDropdownListItem = styled(StyledDropdownListItem, {
   }
 
   return {
+    position: "relative",
     display: "flex",
     alignItems: "center",
+
+    margin: theme.spacing.none,
+    borderRadius: theme.radii.default,
+    overflow: "hidden",
+
     paddingTop: theme.spacing.none,
     paddingBottom: theme.spacing.none,
     // No horizontal padding on li - padding and highlight is on the first div child
@@ -54,8 +60,6 @@ export const ThemedStyledDropdownListItem = styled(StyledDropdownListItem, {
     paddingRight: theme.spacing.none,
     background: "transparent",
     fontWeight: theme.fontWeights.normal,
-    // Position relative for pseudo-elements
-    position: "relative",
 
     // Override the default itemSize set on the component's JSX
     // on mobile, so we can make list items taller and scrollable
@@ -77,6 +81,7 @@ export const ThemedStyledDropdownListItem = styled(StyledDropdownListItem, {
       background: $isHighlighted
         ? theme.colors.darkenedBgMix15
         : "transparent",
+      transition: "background 120ms ease",
     },
     "&:hover > div:first-of-type, &:active > div:first-of-type, &:focus-visible > div:first-of-type":
       {

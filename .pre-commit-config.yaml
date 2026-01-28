@@ -235,7 +235,6 @@ repos:
           |.*tsconfig\.json$
       - id: check-toml
       - id: check-yaml
-        exclude: lib/conda-recipe/meta.yaml
       - id: check-symlinks
       - id: check-case-conflict
       - id: check-merge-conflict

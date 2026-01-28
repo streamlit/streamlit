@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { createContext } from "react"
+import { createContext, RefObject } from "react"
 
 import { Logo, PageConfig } from "@streamlit/protobuf"
 
@@ -73,6 +73,17 @@ export interface SidebarConfigContextProps {
    * @see AppView
    */
   hideSidebarNav: boolean
+
+  /**
+   * Ref to the root app container element.
+   * Used to detect if click events are inside the main app container
+   * vs. in a portal (dropdowns, modals, etc.) to prevent incorrect
+   * sidebar collapse on mobile.
+   *
+   * Consumed by: Sidebar
+   * @see Sidebar
+   */
+  appRootRef?: RefObject<HTMLDivElement> | null
 }
 
 /**
