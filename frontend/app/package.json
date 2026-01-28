@@ -119,7 +119,7 @@
     "vite-bundle-analyzer": "^1.3.2",
     "vite-plugin-svgr": "^4.5.0",
     "vite-tsconfig-paths": "^6.0.4",
-    "vitest": "^4.0.17",
+    "vitest": "^4.0.18",
     "vitest-canvas-mock": "^1.1.2",
     "vitest-websocket-mock": "^0.5.0"
   },
