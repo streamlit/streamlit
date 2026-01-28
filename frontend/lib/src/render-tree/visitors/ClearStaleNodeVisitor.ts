@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,8 @@
  */
 
 import { AppNode, BlockNode, ElementNode, TransientNode } from "~lib/AppNode"
-import { AppNodeVisitor } from "~lib/render-tree/visitors/AppNodeVisitor.interface"
+
+import { AppNodeVisitor } from "./AppNodeVisitor.interface"
 
 /**
  * Visitor that clears stale nodes from the render tree. It does this by:
@@ -36,9 +37,9 @@ import { AppNodeVisitor } from "~lib/render-tree/visitors/AppNodeVisitor.interfa
  * // newNode will be undefined if the node should be filtered out
  * ```
  */
-export class ClearStaleNodeVisitor
-  implements AppNodeVisitor<AppNode | undefined>
-{
+export class ClearStaleNodeVisitor implements AppNodeVisitor<
+  AppNode | undefined
+> {
   private readonly currentScriptRunId: string
   private readonly fragmentIdsThisRun: string[]
   private readonly fragmentIdOfBlock?: string

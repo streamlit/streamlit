@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -192,3 +192,44 @@ def test_spinner_width_300px_snapshot(app: Page, assert_snapshot: ImageCompareFu
     spinner_element = app.get_by_test_id("stSpinner")
     expect(spinner_element).to_be_visible()
     assert_snapshot(spinner_element, name="st_spinner-width_300px")
+
+
+def test_spinner_with_container_elements(app: Page):
+    """Test that container elements (columns) can be created inside a spinner context.
+
+    Regression test for issue #13658: App crash when creating container elements
+    (st.columns, st.tabs) inside a container within a st.spinner context.
+    """
+    get_button(app, "Run spinner with container").click()
+
+    # The spinner should appear first
+    expect(app.get_by_test_id("stSpinner")).to_be_visible()
+
+    # Wait for the app to finish running
+    wait_for_app_run(app)
+
+    # After the spinner completes, the columns should be visible with their content
+    expect(app.get_by_test_id("stSpinner")).to_have_count(0)
+    expect(app.get_by_text("Column 1")).to_be_visible()
+    expect(app.get_by_text("Column 2")).to_be_visible()
+
+
+def test_spinner_with_delayed_container_write(app: Page):
+    """Test that writing to a container after a delay inside spinner context works.
+
+    This tests the scenario where a container is created inside a spinner,
+    exists empty when the spinner first renders, and then content is added.
+    The fix ensures the TransientNode properly captures the BlockNode as its
+    anchor when replacing it.
+    """
+    get_button(app, "Run spinner with delayed container write").click()
+
+    # The spinner should appear while processing
+    expect(app.get_by_test_id("stSpinner")).to_be_visible()
+
+    # Wait for the app to finish running
+    wait_for_app_run(app)
+
+    # After the spinner completes, the container content should be visible
+    expect(app.get_by_test_id("stSpinner")).to_have_count(0)
+    expect(app.get_by_text("Hello World")).to_be_visible()

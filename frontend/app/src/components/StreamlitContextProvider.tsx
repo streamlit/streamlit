@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { memo, PropsWithChildren, useMemo } from "react"
+import { memo, PropsWithChildren, RefObject, useMemo } from "react"
 
 import {
   DownloadContext,
@@ -72,6 +72,7 @@ type SidebarConfigContextValues = {
   sidebarChevronDownshift: number
   expandSidebarNav: boolean
   hideSidebarNav: boolean
+  appRootRef?: RefObject<HTMLDivElement> | null
 }
 
 type ThemeContextValues = {
@@ -131,6 +132,7 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
   sidebarChevronDownshift,
   expandSidebarNav,
   hideSidebarNav,
+  appRootRef,
   // ThemeContext
   activeTheme,
   setTheme,
@@ -166,6 +168,7 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
       sidebarChevronDownshift,
       expandSidebarNav,
       hideSidebarNav,
+      appRootRef,
     }),
     [
       initialSidebarState,
@@ -174,6 +177,7 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
       sidebarChevronDownshift,
       expandSidebarNav,
       hideSidebarNav,
+      appRootRef,
     ]
   )
 

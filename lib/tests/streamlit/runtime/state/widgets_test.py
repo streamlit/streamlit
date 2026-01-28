@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -405,7 +405,7 @@ class ComputeElementIdTests(DeltaGeneratorTestCase):
         "in element ID calculation."
 
         # Some elements cannot be used in a form
-        if element_name not in ["button", "chat_input", "download_button"]:
+        if element_name not in {"button", "chat_input", "download_button"}:
             # For all other check that form_id is set:
             assert call_kwargs.get("form_id") == "", (
                 "form_id is expected to be included in element ID calculation."
@@ -644,6 +644,62 @@ class RegisterWidgetsTest(DeltaGeneratorTestCase):
                 callbacks={"change": lambda: None},
                 value_type="bool_value",
             )
+
+    def test_bind_query_params_requires_key(self):
+        """Test that bind='query-params' raises if widget has no key."""
+        # Element ID format for widgets without user key is "$$ID-<hash>-None"
+        with pytest.raises(
+            errors.StreamlitAPIException, match="must have a unique 'key' parameter"
+        ):
+            register_widget(
+                element_id="$$ID-some_hash-None",  # No user key (ends with -None)
+                ctx=None,
+                on_change_handler=None,
+                args=None,
+                kwargs=None,
+                deserializer=lambda x: x,
+                serializer=lambda x: x,
+                value_type="string_value",
+                bind="query-params",
+            )
+
+    def test_bind_query_params_with_key_succeeds(self):
+        """Test that bind='query-params' works when widget has a key.
+
+        Note: With ctx=None, the function returns early with a fallback result.
+        The important thing is that it doesn't raise the validation error.
+        """
+        # Widget with user key should not raise the validation error
+        # (it will return early due to ctx=None, but that's expected)
+        result = register_widget(
+            element_id="$$ID-some_hash-my_widget_key",  # Has user key
+            ctx=None,
+            on_change_handler=None,
+            args=None,
+            kwargs=None,
+            deserializer=lambda x: x if x is not None else "default",
+            serializer=lambda x: x,
+            value_type="string_value",
+            bind="query-params",
+        )
+        # Should return a fallback result without raising
+        assert result is not None
+
+    def test_bind_none_does_not_require_key(self):
+        """Test that bind=None (default) doesn't require a key."""
+        # Should not raise even without a user key
+        result = register_widget(
+            element_id="$$ID-some_hash-None",  # No user key
+            ctx=None,
+            on_change_handler=None,
+            args=None,
+            kwargs=None,
+            deserializer=lambda x: x if x is not None else "default",
+            serializer=lambda x: x,
+            value_type="string_value",
+            bind=None,
+        )
+        assert result is not None
 
 
 @patch("streamlit.runtime.Runtime.exists", new=MagicMock(return_value=True))

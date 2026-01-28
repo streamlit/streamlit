@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ from typing import (
     Any,
     Final,
     NoReturn,
+    cast,
 )
 
 from streamlit import config, logger, runtime
@@ -28,10 +29,6 @@ from streamlit.auth_util import (
     get_secrets_auth_section,
     is_authlib_installed,
     validate_auth_credentials,
-)
-from streamlit.deprecation_util import (
-    make_deprecated_name_warning,
-    show_deprecation_warning,
 )
 from streamlit.errors import StreamlitAPIException, StreamlitAuthError
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
@@ -42,7 +39,7 @@ from streamlit.runtime.scriptrunner_utils.script_run_context import (
 from streamlit.url_util import make_url_path
 
 if TYPE_CHECKING:
-    from streamlit.runtime.scriptrunner_utils.script_run_context import UserInfo
+    from streamlit.runtime.scriptrunner_utils.script_run_context import UserInfoType
 
 
 _LOGGER: Final = logger.get_logger(__name__)
@@ -67,18 +64,21 @@ def login(provider: str | None = None) -> None:
     is an extension of OAuth 2.0, you can't use generic OAuth providers.
     Streamlit parses the user's identity token and surfaces its attributes in
     ``st.user``. If the provider returns an access token, that
-    token is ignored. Therefore, this command will not allow your app to act on
-    behalf of a user in a secure system.
+    token is ignored unless you explicitly expose it.
 
-    For all providers, there are two shared settings, ``redirect_uri`` and
-    ``cookie_secret``, which you must specify in an ``[auth]`` dictionary
-    in ``secrets.toml``. Other settings must be defined as described in the
-    ``provider`` parameter.
+    For all providers, there are three shared settings, ``redirect_uri``,
+    ``cookie_secret``, and ``expose_tokens``, which you must specify in an
+    ``[auth]`` dictionary in ``secrets.toml``. Other settings must be defined
+    as described in the ``provider`` parameter.
 
     - ``redirect_uri`` is your app's absolute URL with the pathname
       ``oauth2callback``. For local development using the default port, this is
       ``http://localhost:8501/oauth2callback``.
     - ``cookie_secret`` should be a strong, randomly generated secret.
+    - ``expose_tokens`` is a list of token types to expose. The supported token
+      types are ``"id"`` and ``"access"``. This is an optional setting, and no
+      tokens are exposed by default. For information and examples about exposing
+      tokens, see |st.user|_.
 
     In addition to the shared settings, the following settings are required:
 
@@ -148,26 +148,28 @@ def login(provider: str | None = None) -> None:
     using OIDC with Google, see `Google Identity
     <https://developers.google.com/identity/openid-connect/openid-connect>`_.
 
-    ``.streamlit/secrets.toml``:
+    .. code-block:: toml
+        :filename: .streamlit/secrets.toml
 
-    >>> [auth]
-    >>> redirect_uri = "http://localhost:8501/oauth2callback"
-    >>> cookie_secret = "xxx"
-    >>> client_id = "xxx"
-    >>> client_secret = "xxx"
-    >>> server_metadata_url = "https://accounts.google.com/.well-known/openid-configuration"  # fmt: skip
+        [auth]
+        redirect_uri = "http://localhost:8501/oauth2callback"
+        cookie_secret = "xxx"
+        client_id = "xxx"
+        client_secret = "xxx"
+        server_metadata_url = "https://accounts.google.com/.well-known/openid-configuration"  # fmt: skip
 
-    Your app code:
+    .. code-block:: python
+        :filename: streamlit_app.py
 
-    >>> import streamlit as st
-    >>>
-    >>> if not st.user.is_logged_in:
-    >>>     if st.button("Log in"):
-    >>>         st.login()
-    >>> else:
-    >>>     if st.button("Log out"):
-    >>>         st.logout()
-    >>>     st.write(f"Hello, {st.user.name}!")
+        import streamlit as st
+
+        if not st.user.is_logged_in:
+            if st.button("Log in"):
+                st.login()
+        else:
+            if st.button("Log out"):
+                st.logout()
+            st.write(f"Hello, {st.user.name}!")
 
     **Example 2: Use a named identity provider**
 
@@ -184,25 +186,27 @@ def login(provider: str | None = None) -> None:
     `Microsoft identity platform
     <https://learn.microsoft.com/en-us/entra/identity-platform/v2-protocols-oidc#find-your-apps-openid-configuration-document-uri>`_.
 
-    ``.streamlit/secrets.toml``:
+    .. code-block:: toml
+        :filename: .streamlit/secrets.toml
 
-    >>> [auth]
-    >>> redirect_uri = "http://localhost:8501/oauth2callback"
-    >>> cookie_secret = "xxx"
-    >>>
-    >>> [auth.microsoft]
-    >>> client_id = "xxx"
-    >>> client_secret = "xxx"
-    >>> server_metadata_url = "https://login.microsoftonline.com/{tenant}/v2.0/.well-known/openid-configuration"
+        [auth]
+        redirect_uri = "http://localhost:8501/oauth2callback"
+        cookie_secret = "xxx"
 
-    Your app code:
+        [auth.microsoft]
+        client_id = "xxx"
+        client_secret = "xxx"
+        server_metadata_url = "https://login.microsoftonline.com/{tenant}/v2.0/.well-known/openid-configuration"
 
-    >>> import streamlit as st
-    >>>
-    >>> if not st.user.is_logged_in:
-    >>>     st.login("microsoft")
-    >>> else:
-    >>>     st.write(f"Hello, {st.user.name}!")
+    .. code-block:: python
+        :filename: streamlit_app.py
+
+        import streamlit as st
+
+        if not st.user.is_logged_in:
+            st.login("microsoft")
+        else:
+            st.write(f"Hello, {st.user.name}!")
 
     **Example 3: Use multiple, named providers**
 
@@ -214,34 +218,38 @@ def login(provider: str | None = None) -> None:
     set ``{tenant}`` and ``{subdomain}`` in ``server_metadata_url`` for
     Microsoft and Okta, respectively.
 
-    >>> [auth]
-    >>> redirect_uri = "http://localhost:8501/oauth2callback"
-    >>> cookie_secret = "xxx"
-    >>>
-    >>> [auth.microsoft]
-    >>> client_id = "xxx"
-    >>> client_secret = "xxx"
-    >>> server_metadata_url = "https://login.microsoftonline.com/{tenant}/v2.0/.well-known/openid-configuration"
-    >>>
-    >>> [auth.okta]
-    >>> client_id = "xxx"
-    >>> client_secret = "xxx"
-    >>> server_metadata_url = "https://{subdomain}.okta.com/.well-known/openid-configuration"  # fmt: skip
+    .. code-block:: toml
+        :filename: .streamlit/secrets.toml
 
-    Your app code:
+        [auth]
+        redirect_uri = "http://localhost:8501/oauth2callback"
+        cookie_secret = "xxx"
 
-    >>> import streamlit as st
-    >>>
-    >>> if not st.user.is_logged_in:
-    >>>     st.header("Log in:")
-    >>>     if st.button("Microsoft"):
-    >>>         st.login("microsoft")
-    >>>     if st.button("Okta"):
-    >>>         st.login("okta")
-    >>> else:
-    >>>     if st.button("Log out"):
-    >>>         st.logout()
-    >>>     st.write(f"Hello, {st.user.name}!")
+        [auth.microsoft]
+        client_id = "xxx"
+        client_secret = "xxx"
+        server_metadata_url = "https://login.microsoftonline.com/{tenant}/v2.0/.well-known/openid-configuration"
+
+        [auth.okta]
+        client_id = "xxx"
+        client_secret = "xxx"
+        server_metadata_url = "https://{subdomain}.okta.com/.well-known/openid-configuration"
+
+    .. code-block:: python
+        :filename: streamlit_app.py
+
+        import streamlit as st
+
+        if not st.user.is_logged_in:
+            st.header("Log in:")
+            if st.button("Microsoft"):
+                st.login("microsoft")
+            if st.button("Okta"):
+                st.login("okta")
+        else:
+            if st.button("Log out"):
+                st.logout()
+            st.write(f"Hello, {st.user.name}!")
 
     **Example 4: Change the default connection settings**
 
@@ -256,28 +264,30 @@ def login(provider: str | None = None) -> None:
     `Customize Signup and Login Prompts
     <https://auth0.com/docs/customize/login-pages/universal-login/customize-signup-and-login-prompts>`_.
 
-    ``.streamlit/secrets.toml``:
+    .. code-block:: toml
+        :filename: .streamlit/secrets.toml
 
-    >>> [auth]
-    >>> redirect_uri = "http://localhost:8501/oauth2callback"
-    >>> cookie_secret = "xxx"
-    >>>
-    >>> [auth.auth0]
-    >>> client_id = "xxx"
-    >>> client_secret = "xxx"
-    >>> server_metadata_url = "https://{account}.{region}.auth0.com/.well-known/openid-configuration"  # fmt: skip
-    >>> client_kwargs = { "prompt" = "login" }
+        [auth]
+        redirect_uri = "http://localhost:8501/oauth2callback"
+        cookie_secret = "xxx"
 
-    Your app code:
+        [auth.auth0]
+        client_id = "xxx"
+        client_secret = "xxx"
+        server_metadata_url = "https://{account}.{region}.auth0.com/.well-known/openid-configuration"
+        client_kwargs = { "prompt" = "login" }
 
-    >>> import streamlit as st
-    >>>
-    >>> if st.button("Log in"):
-    >>>     st.login("auth0")
-    >>> if st.user.is_logged_in:
-    >>>     if st.button("Log out"):
-    >>>         st.logout()
-    >>>     st.write(f"Hello, {st.user.name}!)
+    .. code-block:: python
+        :filename: streamlit_app.py
+
+        import streamlit as st
+
+        if st.button("Log in"):
+            st.login("auth0")
+        if st.user.is_logged_in:
+            if st.button("Log out"):
+                st.logout()
+            st.write(f"Hello, {st.user.name}!)
 
     """
     if provider is None:
@@ -301,8 +311,9 @@ def logout() -> None:
     """Logout the current user.
 
     This command removes the user's information from ``st.user``,
-    deletes their identity cookie, and redirects them back to your app's home
-    page. This creates a new session.
+    deletes their identity cookie, and redirects them to perform a proper
+    logout from the OAuth provider (if available) before returning to your
+    app's home page. This creates a new session.
 
     If the user has multiple sessions open in the same browser,
     ``st.user`` will not be cleared in any other session.
@@ -311,8 +322,9 @@ def logout() -> None:
     ``st.logout()`` within that session to update ``st.user``.
 
     .. Note::
-        This does not log the user out of their underlying account from the
-        identity provider.
+        If the OAuth provider supports OIDC end_session_endpoint in their
+        server metadata, the user will be logged out from the identity provider
+        as well. If not available, only local logout is performed.
 
     Example
     -------
@@ -361,7 +373,7 @@ def generate_login_redirect_url(provider: str) -> str:
     return f"{login_path}?provider={provider_token}"
 
 
-def _get_user_info() -> UserInfo:
+def _get_user_info() -> UserInfoType:
     ctx = _get_script_run_ctx()
     if ctx is None:
         _LOGGER.warning(
@@ -378,7 +390,142 @@ def _get_user_info() -> UserInfo:
     return context_user_info
 
 
-class UserInfoProxy(Mapping[str, str | bool | None]):
+class TokensProxy(Mapping[str, str]):
+    """
+    A read-only, dict-like object for accessing exposed tokens from the\
+    identity provider.
+
+    This class provides access to tokens that have been explicitly exposed via
+    the ``expose_tokens`` setting in your authentication configuration. Tokens
+    contain sensitive credentials that your app can use to authenticate with
+    external services on behalf of the logged-in user.
+
+    To expose tokens in ``st.user.tokens``, add the ``expose_tokens`` parameter to your authentication
+    configuration in ``.streamlit/secrets.toml``. ``expose_tokens`` must be in
+    the ``[auth]`` section and can't be a nested dictionary. You can specify a
+    single token type as a string or multiple token types as a list. Streamlit
+    supports exposing ``"id"`` tokens and ``"access"`` tokens. If
+    ``expose_tokens`` isn't configured, ``st.user.tokens`` is an empty dict.
+
+    .. warning::
+        Tokens are sensitive credentials that should be handled securely. Never
+        expose tokens in your app's UI, logs, or error messages. Only use tokens
+        for server-side API calls, and be mindful of token expiration times.
+        Only expose tokens if your app needs them for specific API integrations.
+
+    You can access token values using either key or attribute notation. For
+    example, use ``st.user.tokens["id"]`` or ``st.user.tokens.id`` to access
+    the ``id`` token. The object is read-only to prevent accidental modification of sensitive
+    credentials.
+
+    Attributes
+    ----------
+    id : str
+        The identity token. This is only available if ``"id"`` is in ``expose_tokens``.
+    access : str
+        The access token. This is only available if ``"access"`` is in ``expose_tokens``.
+
+    Examples
+    --------
+    **Example 1: Expose the ID token**
+
+    To expose only the identity token, add ``expose_tokens`` to your
+    authentication configuration. This example uses an unnamed default provider.
+
+    .. code-block:: toml
+        :filename: .streamlit/secrets.toml
+
+        [auth]
+        redirect_uri = "http://localhost:8501/oauth2callback"
+        cookie_secret = "xxx"
+        client_id = "xxx"
+        client_secret = "xxx"
+        server_metadata_url = "https://accounts.google.com/.well-known/openid-configuration"
+        expose_tokens = "id"
+
+    .. code-block:: python
+        :filename: streamlit_app.py
+
+        import streamlit as st
+
+        if st.user.is_logged_in:
+            id_token = st.user.tokens["id"]
+            # Use the token for API verification
+
+    **Example 2: Expose both ID and access tokens**
+
+    You can use a list to expose multiple tokens. If you use one or more named
+    identity providers, the same tokens must be exposed for all providers in
+    the shared ``[auth]`` section.
+
+    .. code-block:: toml
+        :filename: .streamlit/secrets.toml
+
+        [auth]
+        redirect_uri = "http://localhost:8501/oauth2callback"
+        cookie_secret = "xxx"
+        expose_tokens = ["id", "access"]
+
+        [auth.google]
+        client_id = "xxx"
+        client_secret = "xxx"
+        server_metadata_url = "https://accounts.google.com/.well-known/openid-configuration"
+
+        [auth.microsoft]
+        client_id = "xxx"
+        client_secret = "xxx"
+        server_metadata_url = "https://login.microsoftonline.com/{tenant}/v2.0/.well-known/openid-configuration"
+
+    .. code-block:: python
+        :filename: streamlit_app.py
+
+        import streamlit as st
+
+        if st.user.is_logged_in:
+            id_token = st.user.tokens["id"]
+            access_token = st.user.tokens["access"]
+            # Use the tokens for API verification
+    """
+
+    def __init__(self, tokens: dict[str, str]) -> None:
+        self._tokens = tokens
+
+    def __getitem__(self, key: str) -> str:
+        return self._tokens[key]
+
+    def __getattr__(self, key: str) -> str:
+        try:
+            return self._tokens[key]
+        except KeyError:
+            raise AttributeError(f'Token "{key}" is not exposed or does not exist.')
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        if name.startswith("_"):
+            super().__setattr__(name, value)
+        else:
+            raise StreamlitAPIException("st.user.tokens cannot be modified")
+
+    def __setitem__(self, name: str, value: Any) -> None:
+        raise StreamlitAPIException("st.user.tokens cannot be modified")
+
+    def __iter__(self) -> Iterator[str]:
+        return iter(self._tokens)
+
+    def __len__(self) -> int:
+        return len(self._tokens)
+
+    def to_dict(self) -> dict[str, str]:
+        """Return the token mapping as a standard dictionary.
+
+        Returns
+        -------
+        dict[str, str]
+            A dictionary mapping token names to token values.
+        """
+        return dict(self._tokens)
+
+
+class UserInfoProxy(Mapping[str, str | bool | TokensProxy | None]):
     """
     A read-only, dict-like object for accessing information about the current\
     user.
@@ -407,10 +554,14 @@ class UserInfoProxy(Mapping[str, str | bool | None]):
 
     Attributes
     ----------
-    is_logged_in: bool
+    is_logged_in : bool
         Whether a user is logged in. For a locally running app, this attribute
         is only available when authentication (``st.login()``) is configured in
         ``secrets.toml``. Otherwise, it does not exist.
+
+    tokens: TokensProxy
+        A read-only, dict-like object for accessing exposed tokens from the
+        identity provider.
 
     Examples
     --------
@@ -425,32 +576,36 @@ class UserInfoProxy(Mapping[str, str | bool | None]):
     <https://developers.google.com/identity/openid-connect/openid-connect#obtainuserinfo>`_
     in Google's docs.
 
-    Your app code:
+    .. code-block:: python
+        :filename: streamlit_app.py
 
-    >>> import streamlit as st
-    >>>
-    >>> if st.user.is_logged_in:
-    >>>     st.write(st.user)
+        import streamlit as st
+
+        if st.user.is_logged_in:
+            st.write(st.user)
 
     Displayed data when a user is logged in:
 
-    >>> {
-    >>>     "is_logged_in":true
-    >>>     "iss":"https://accounts.google.com"
-    >>>     "azp":"{client_id}.apps.googleusercontent.com"
-    >>>     "aud":"{client_id}.apps.googleusercontent.com"
-    >>>     "sub":"{unique_user_id}"
-    >>>     "email":"{user}@gmail.com"
-    >>>     "email_verified":true
-    >>>     "at_hash":"{access_token_hash}"
-    >>>     "nonce":"{nonce_string}"
-    >>>     "name":"{full_name}"
-    >>>     "picture":"https://lh3.googleusercontent.com/a/{content_path}"
-    >>>     "given_name":"{given_name}"
-    >>>     "family_name":"{family_name}"
-    >>>     "iat":{issued_time}
-    >>>     "exp":{expiration_time}
-    >>> }
+    .. code-block:: json
+
+        {
+            "is_logged_in":true
+            "iss":"https://accounts.google.com"
+            "azp":"{client_id}.apps.googleusercontent.com"
+            "aud":"{client_id}.apps.googleusercontent.com"
+            "sub":"{unique_user_id}"
+            "email":"{user}@gmail.com"
+            "email_verified":true
+            "at_hash":"{access_token_hash}"
+            "nonce":"{nonce_string}"
+            "name":"{full_name}"
+            "picture":"https://lh3.googleusercontent.com/a/{content_path}"
+            "given_name":"{given_name}"
+            "family_name":"{family_name}"
+            "iat":{issued_time}
+            "exp":{expiration_time}
+            "tokens":{}
+    }
 
     **Example 2: Microsoft's identity token**
 
@@ -461,43 +616,51 @@ class UserInfoProxy(Mapping[str, str | bool | None]):
     <https://learn.microsoft.com/en-us/entra/identity-platform/id-token-claims-reference>`_
     in Microsoft's docs.
 
-    Your app code:
+    .. code-block:: python
+        :filename: streamlit_app.py
 
-    >>> import streamlit as st
-    >>>
-    >>> if st.user.is_logged_in:
-    >>>     st.write(st.user)
+        import streamlit as st
+
+        if st.user.is_logged_in:
+            st.write(st.user)
 
     Displayed data when a user is logged in:
 
-    >>> {
-    >>>     "is_logged_in":true
-    >>>     "ver":"2.0"
-    >>>     "iss":"https://login.microsoftonline.com/{tenant_id}/v2.0"
-    >>>     "sub":"{application_user_id}"
-    >>>     "aud":"{application_id}"
-    >>>     "exp":{expiration_time}
-    >>>     "iat":{issued_time}
-    >>>     "nbf":{start_time}
-    >>>     "name":"{full_name}"
-    >>>     "preferred_username":"{username}"
-    >>>     "oid":"{user_GUID}"
-    >>>     "email":"{email}"
-    >>>     "tid":"{tenant_id}"
-    >>>     "nonce":"{nonce_string}"
-    >>>     "aio":"{opaque_string}"
-    >>> }
+    .. code-block:: json
+
+        {
+            "is_logged_in":true
+            "ver":"2.0"
+            "iss":"https://login.microsoftonline.com/{tenant_id}/v2.0"
+            "sub":"{application_user_id}"
+            "aud":"{application_id}"
+            "exp":{expiration_time}
+            "iat":{issued_time}
+            "nbf":{start_time}
+            "name":"{full_name}"
+            "preferred_username":"{username}"
+            "oid":"{user_GUID}"
+            "email":"{email}"
+            "tid":"{tenant_id}"
+            "nonce":"{nonce_string}"
+            "aio":"{opaque_string}"
+            "tokens":{}
+        }
     """
 
-    def __getitem__(self, key: str) -> str | bool | None:
+    def __getitem__(self, key: str) -> str | bool | TokensProxy | None:
+        if key == "tokens":
+            return self.tokens
         try:
-            return _get_user_info()[key]
+            return cast("str | bool | None", _get_user_info()[key])
         except KeyError:
             raise KeyError(f'st.user has no key "{key}".')
 
-    def __getattr__(self, key: str) -> str | bool | None:
+    def __getattr__(self, key: str) -> str | bool | TokensProxy | None:
+        if key == "tokens":
+            return self.tokens
         try:
-            return _get_user_info()[key]
+            return cast("str | bool | None", _get_user_info()[key])
         except KeyError:
             raise AttributeError(f'st.user has no attribute "{key}".')
 
@@ -513,7 +676,7 @@ class UserInfoProxy(Mapping[str, str | bool | None]):
     def __len__(self) -> int:
         return len(_get_user_info())
 
-    def to_dict(self) -> UserInfo:
+    def to_dict(self) -> UserInfoType:
         """
         Get user info as a dictionary.
 
@@ -528,37 +691,9 @@ class UserInfoProxy(Mapping[str, str | bool | None]):
         """
         return _get_user_info()
 
-
-has_shown_experimental_user_warning = False
-
-
-def maybe_show_deprecated_user_warning() -> None:
-    """Show a deprecation warning for the experimental_user alias."""
-    global has_shown_experimental_user_warning  # noqa: PLW0603
-
-    if not has_shown_experimental_user_warning:
-        has_shown_experimental_user_warning = True
-        show_deprecation_warning(
-            make_deprecated_name_warning(
-                "experimental_user",
-                "user",
-                "2025-11-06",
-            )
-        )
-
-
-class DeprecatedUserInfoProxy(UserInfoProxy):
-    """
-    A deprecated alias for UserInfoProxy.
-
-    This class is deprecated and will be removed in a future version of
-    Streamlit.
-    """
-
-    def __getattribute__(self, name: str) -> Any:
-        maybe_show_deprecated_user_warning()
-        return super().__getattribute__(name)
-
-    def __getitem__(self, key: str) -> Any:
-        maybe_show_deprecated_user_warning()
-        return super().__getitem__(key)
+    @property
+    @gather_metrics("user.tokens")
+    def tokens(self) -> TokensProxy:
+        """Access exposed tokens via a dict-like object."""
+        user_info = _get_user_info()
+        return TokensProxy(cast("dict[str, str]", user_info.get("tokens", {})))

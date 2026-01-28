@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -74,6 +74,12 @@ export const getNoRestrictedImports = (
       importNames: ["CancelToken"],
       message: "Please use the `AbortController` API instead of `CancelToken`",
     },
+    {
+      name: "react",
+      importNames: ["default"],
+      message:
+        "Please use named imports for React (e.g., import { useState } from 'react';)",
+    },
   ]
 
   const basePaths = isTestFile
@@ -92,6 +98,43 @@ export const getNoRestrictedImports = (
       patterns: [...additionalPatterns],
     },
   ]
+}
+
+/**
+ * Helper to create the no-restricted-properties rule config.
+ *
+ * @param {boolean} allowWindowStreamlit - Whether to allow window.__streamlit access.
+ *   Set to true for test files that need to mock the config module itself.
+ */
+export const getNoRestrictedProperties = (allowWindowStreamlit = false) => {
+  const restrictions = [
+    {
+      object: "window",
+      property: "innerWidth",
+      message: "Please use the `useWindowDimensionsContext` hook instead.",
+    },
+    {
+      object: "window",
+      property: "innerHeight",
+      message: "Please use the `useWindowDimensionsContext` hook instead.",
+    },
+    {
+      object: "navigator",
+      property: "clipboard",
+      message: "Please use the `useCopyToClipboard` hook instead.",
+    },
+  ]
+
+  if (!allowWindowStreamlit) {
+    restrictions.push({
+      object: "window",
+      property: "__streamlit",
+      message:
+        "Please access window.__streamlit properties via StreamlitConfig in '@streamlit/utils' instead.",
+    })
+  }
+
+  return ["error", ...restrictions]
 }
 
 export default defineConfig([
@@ -256,24 +299,7 @@ export default defineConfig([
           message: "Please use the `useWindowDimensionsContext` hook instead.",
         },
       ],
-      "no-restricted-properties": [
-        "error",
-        {
-          object: "window",
-          property: "innerWidth",
-          message: "Please use the `useWindowDimensionsContext` hook instead.",
-        },
-        {
-          object: "window",
-          property: "innerHeight",
-          message: "Please use the `useWindowDimensionsContext` hook instead.",
-        },
-        {
-          object: "navigator",
-          property: "clipboard",
-          message: "Please use the `useCopyToClipboard` hook instead.",
-        },
-      ],
+      "no-restricted-properties": getNoRestrictedProperties(),
       // Imports should be `import "./FooModule"`, not `import "./FooModule.js"`
       // We need to configure this to check our .tsx files, see:
       // https://github.com/benmosher/eslint-plugin-import/issues/1615#issuecomment-577500405
@@ -354,6 +380,7 @@ export default defineConfig([
       // We only turn this rule on for certain directories
       "streamlit-custom/enforce-memo": "off",
       "streamlit-custom/no-force-reflow-access": "error",
+      "streamlit-custom/no-aria-hidden-with-focusable-children": "error",
       "no-restricted-imports": getNoRestrictedImports(),
       // React configuration
       "react/jsx-uses-react": "off",
@@ -367,6 +394,13 @@ export default defineConfig([
       // prohibit autoFocus prop
       // https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/blob/main/docs/rules/no-autofocus.md
       "jsx-a11y/no-autofocus": ["error", { ignoreNonDOM: true }],
+      // Stricter a11y enforcement beyond the recommended ruleset:
+      // - Require accessible names for icon-only controls
+      "jsx-a11y/control-has-associated-label": "error",
+      // - Do not hide focusable controls from assistive technology
+      "jsx-a11y/no-aria-hidden-on-focusable": "error",
+      // - Avoid making non-interactive elements keyboard-focusable via tabIndex>=0
+      "jsx-a11y/no-noninteractive-tabindex": "error",
     },
     settings: {
       react: {
@@ -406,6 +440,24 @@ export default defineConfig([
       // Enforce consistent use of it() over test()
       "vitest/consistent-test-it": ["error", { fn: "it" }],
       "no-restricted-imports": getNoRestrictedImports([], true),
+    },
+  },
+  // Specific test files that need to access window.__streamlit for testing the config module itself
+  {
+    files: ["utils/src/config/index.test.ts", "lib/src/theme/utils.test.ts"],
+    rules: {
+      // These test files need to set window.__streamlit to test the config capture behavior
+      "no-restricted-properties": getNoRestrictedProperties(true),
+    },
+  },
+  // Config module - allow direct window.__streamlit access for capturing values
+  {
+    files: ["utils/src/config/index.ts"],
+    rules: {
+      // This is the only place where direct window.__streamlit access is allowed
+      // as it captures values at module load time and exports frozen copies.
+      // Other restrictions (innerWidth, innerHeight, clipboard) still apply.
+      "no-restricted-properties": getNoRestrictedProperties(true),
     },
   },
   // Theme files specific configuration

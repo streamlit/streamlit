@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,4 +27,6 @@ export const spacing = {
   twoXL: "1.5rem", // 24px
   threeXL: "2rem", // 32px
   fourXL: "4rem", // 64px
+  fiveXL: "6rem", // 96px
+  sixXL: "8rem", // 128px
 }

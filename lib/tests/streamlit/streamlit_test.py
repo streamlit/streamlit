@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -41,7 +41,7 @@ def get_version() -> str | None:
     dirname = os.path.dirname(__file__)
     base_dir = os.path.abspath(os.path.join(dirname, "../.."))
     pattern = re.compile(r"(?:.*VERSION = \")(?P<version>.*)(?:\"  # PEP-440$)")
-    with open(os.path.join(base_dir, "setup.py")) as f:
+    with open(os.path.join(base_dir, "setup.py"), encoding="utf-8") as f:
         for line in f:
             m = pattern.match(line)
             if m:
@@ -57,9 +57,6 @@ NON_ELEMENT_COMMANDS: set[str] = {
     "cache_resource",
     "connection",
     "context",
-    "experimental_get_query_params",
-    "experimental_set_query_params",
-    "experimental_user",
     "fragment",
     "get_option",
     "login",

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -776,6 +776,21 @@ class AltairChartWidthTest(DeltaGeneratorTestCase):
                     y=alt.Y("b:Q"),
                 )
                 .repeat(row=["a", "b"]),
+            ),
+            (
+                "nested_vconcat_hconcat",
+                "Nested vconcat+hconcat charts (issue #13410)",
+                lambda df: alt.vconcat(
+                    alt.Chart(df).mark_bar().encode(x=alt.X("a:O"), y=alt.Y("b:Q")),
+                    alt.hconcat(
+                        alt.Chart(df)
+                        .mark_point()
+                        .encode(x=alt.X("a:O"), y=alt.Y("b:Q")),
+                        alt.Chart(df)
+                        .mark_line()
+                        .encode(x=alt.X("a:O"), y=alt.Y("b:Q")),
+                    ),
+                ),
             ),
         ]
     )
@@ -1990,8 +2005,9 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
         assert chart_spec["encoding"]["y"]["stack"] == stack
 
     @parameterized.expand(ST_CHART_ARGS)
+    @patch("streamlit.elements.arrow.show_deprecation_warning")
     def test_add_rows_preserves_initial_chart_styling(
-        self, chart_command: Callable, altair_type: str
+        self, chart_command: Callable, altair_type: str, _
     ):
         """Test that add_rows works on an empty chart, preserving initial chart styling."""
         empty_df = pd.DataFrame({"A": [], "B": []})
@@ -2033,7 +2049,10 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
         assert new_proto.use_container_width == test_use_container_width
 
     @parameterized.expand([st.area_chart, st.bar_chart])
-    def test_bar_and_area_preserve_initial_stack_param(self, chart_command: Callable):
+    @patch("streamlit.elements.arrow.show_deprecation_warning")
+    def test_bar_and_area_preserve_initial_stack_param(
+        self, chart_command: Callable, _
+    ):
         """Test that the stack parameter is preserved when adding rows to a bar or area chart."""
         empty_df = pd.DataFrame({"A": [], "B": []})
         test_stack = "normalize"
@@ -2063,7 +2082,8 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
 
         assert updated_spec["encoding"]["y"]["stack"] == test_stack
 
-    def test_bar_chart_preserves_initial_horizontal_param(self):
+    @patch("streamlit.elements.arrow.show_deprecation_warning")
+    def test_bar_chart_preserves_initial_horizontal_param(self, _):
         """Test that the horizontal parameter is preserved when adding rows to a bar chart."""
         empty_df = pd.DataFrame({"A": [], "B": []})
         test_horizontal = True
@@ -2095,7 +2115,8 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
         assert updated_spec["encoding"]["x"]["type"] == "quantitative"
         assert updated_spec["encoding"]["y"]["type"] == "ordinal"
 
-    def test_bar_chart_preserves_initial_sort_param(self):
+    @patch("streamlit.elements.arrow.show_deprecation_warning")
+    def test_bar_chart_preserves_initial_sort_param(self, _):
         """Test that the sort parameter is preserved when adding rows to a bar chart."""
         empty_df = pd.DataFrame({"A": [], "B": [], "C": []})
         test_sort = "C"
@@ -2143,6 +2164,31 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
 
         # Verify descending sort is applied to the categorical (x) axis
         assert chart_spec["encoding"]["x"]["sort"]["field"] == "C"
+        assert chart_spec["encoding"]["x"]["sort"]["order"] == "descending"
+
+    def test_bar_chart_sort_with_multiple_y_columns(self):
+        """Test that sort works correctly when sorting by x column with multiple y columns.
+
+        This is a regression test for a bug where sorting by the x column when multiple
+        y columns are specified caused a KeyError due to duplicate columns in the melt
+        operation.
+        """
+        df = pd.DataFrame(
+            {
+                "A": ["foo", "bar", "baz"],
+                "B": [10, 20, 30],
+                "C": [1, 3, 2],
+            }
+        )
+
+        # This should not raise a KeyError
+        st.bar_chart(df, x="A", y=["B", "C"], sort="-A")
+
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        chart_spec = json.loads(proto.spec)
+
+        # Verify descending sort is applied
+        assert chart_spec["encoding"]["x"]["sort"]["field"] == "A"
         assert chart_spec["encoding"]["x"]["sort"]["order"] == "descending"
 
     def test_bar_chart_sort_horizontal(self):
@@ -2673,6 +2719,39 @@ class VegaLiteChartWidthTest(DeltaGeneratorTestCase):
                     },
                 },
             ),
+            (
+                "nested_vconcat_hconcat",
+                "Nested vconcat+hconcat charts (issue #13410)",
+                {
+                    "vconcat": [
+                        {
+                            "hconcat": [
+                                {
+                                    "mark": "bar",
+                                    "encoding": {
+                                        "x": {"field": "a", "type": "ordinal"},
+                                        "y": {"field": "b", "type": "quantitative"},
+                                    },
+                                },
+                                {
+                                    "mark": "point",
+                                    "encoding": {
+                                        "x": {"field": "a", "type": "ordinal"},
+                                        "y": {"field": "b", "type": "quantitative"},
+                                    },
+                                },
+                            ]
+                        },
+                        {
+                            "mark": "line",
+                            "encoding": {
+                                "x": {"field": "a", "type": "ordinal"},
+                                "y": {"field": "b", "type": "quantitative"},
+                            },
+                        },
+                    ]
+                },
+            ),
         ]
     )
     def test_vega_lite_chart_default_width_content_charts(
@@ -2959,3 +3038,566 @@ class VegaUtilitiesTest(unittest.TestCase):
         """Test that _stabilize_vega_json_spec correctly fixes the auto-generated names."""
         result = _stabilize_vega_json_spec(input_spec)
         assert result == expected
+
+
+class NestedCompositionTest(unittest.TestCase):
+    """Test nested composition detection and autosize behavior.
+
+    In valid Vega-Lite specs, composition operators (hconcat, vconcat, concat, layer)
+    are always top-level keys of a view specification. They cannot be buried inside
+    encoding, mark, or other nested properties. This allows the detection function
+    to check only immediate children for nested composition operators.
+    """
+
+    def test_has_nested_composition_simple_vconcat(self):
+        """Test that simple vconcat without nested compositions returns False."""
+        from streamlit.elements.vega_charts import _has_nested_composition
+
+        spec = {
+            "vconcat": [
+                {"mark": "bar", "encoding": {"x": {"field": "a"}, "y": {"field": "b"}}},
+                {
+                    "mark": "point",
+                    "encoding": {"x": {"field": "a"}, "y": {"field": "b"}},
+                },
+            ]
+        }
+        assert _has_nested_composition(spec) is False
+
+    def test_has_nested_composition_vconcat_with_hconcat(self):
+        """Test that vconcat containing hconcat returns True."""
+        from streamlit.elements.vega_charts import _has_nested_composition
+
+        spec = {
+            "vconcat": [
+                {
+                    "hconcat": [
+                        {
+                            "mark": "bar",
+                            "encoding": {"x": {"field": "a"}, "y": {"field": "b"}},
+                        },
+                        {
+                            "mark": "point",
+                            "encoding": {"x": {"field": "a"}, "y": {"field": "b"}},
+                        },
+                    ]
+                },
+                {
+                    "mark": "line",
+                    "encoding": {"x": {"field": "a"}, "y": {"field": "b"}},
+                },
+            ]
+        }
+        assert _has_nested_composition(spec) is True
+
+    def test_has_nested_composition_vconcat_with_layer(self):
+        """Test that vconcat containing layer returns True."""
+        from streamlit.elements.vega_charts import _has_nested_composition
+
+        spec = {
+            "vconcat": [
+                {
+                    "layer": [
+                        {
+                            "mark": "line",
+                            "encoding": {"x": {"field": "a"}, "y": {"field": "b"}},
+                        },
+                        {
+                            "mark": "point",
+                            "encoding": {"x": {"field": "a"}, "y": {"field": "b"}},
+                        },
+                    ]
+                }
+            ]
+        }
+        assert _has_nested_composition(spec) is True
+
+    def test_has_nested_composition_vconcat_with_nested_vconcat(self):
+        """Test that vconcat containing vconcat returns True."""
+        from streamlit.elements.vega_charts import _has_nested_composition
+
+        spec = {
+            "vconcat": [
+                {
+                    "vconcat": [
+                        {
+                            "mark": "bar",
+                            "encoding": {"x": {"field": "a"}, "y": {"field": "b"}},
+                        },
+                        {
+                            "mark": "point",
+                            "encoding": {"x": {"field": "a"}, "y": {"field": "b"}},
+                        },
+                    ]
+                }
+            ]
+        }
+        assert _has_nested_composition(spec) is True
+
+    def test_has_nested_composition_no_vconcat(self):
+        """Test that spec without vconcat returns False."""
+        from streamlit.elements.vega_charts import _has_nested_composition
+
+        spec = {
+            "mark": "bar",
+            "encoding": {"x": {"field": "a"}, "y": {"field": "b"}},
+        }
+        assert _has_nested_composition(spec) is False
+
+
+class VegaLiteAutosizeTest(DeltaGeneratorTestCase):
+    """Test autosize configuration for various chart types."""
+
+    # Shared test dataframe for multiple tests in this class.
+    TEST_DF = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
+
+    def test_simple_vconcat_with_use_container_width_gets_fit_x(self):
+        """Test that simple vconcat with use_container_width=True gets fit-x autosize."""
+        df = self.TEST_DF
+        spec = {
+            "vconcat": [
+                {
+                    "mark": "bar",
+                    "encoding": {
+                        "x": {"field": "a", "type": "ordinal"},
+                        "y": {"field": "b", "type": "quantitative"},
+                    },
+                },
+                {
+                    "mark": "point",
+                    "encoding": {
+                        "x": {"field": "a", "type": "ordinal"},
+                        "y": {"field": "b", "type": "quantitative"},
+                    },
+                },
+            ]
+        }
+
+        st.vega_lite_chart(df, spec, use_container_width=True)
+
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        parsed_spec = json.loads(proto.spec)
+        assert parsed_spec["autosize"]["type"] == "fit-x"
+        assert parsed_spec["autosize"]["contains"] == "padding"
+
+    def test_nested_vconcat_hconcat_with_use_container_width_true_gets_pad(self):
+        """Test that nested vconcat+hconcat with use_container_width=True gets pad autosize."""
+        df = self.TEST_DF
+        spec = {
+            "vconcat": [
+                {
+                    "hconcat": [
+                        {
+                            "mark": "bar",
+                            "encoding": {
+                                "x": {"field": "a", "type": "ordinal"},
+                                "y": {"field": "b", "type": "quantitative"},
+                            },
+                        },
+                        {
+                            "mark": "point",
+                            "encoding": {
+                                "x": {"field": "a", "type": "ordinal"},
+                                "y": {"field": "b", "type": "quantitative"},
+                            },
+                        },
+                    ]
+                },
+                {
+                    "mark": "line",
+                    "encoding": {
+                        "x": {"field": "a", "type": "ordinal"},
+                        "y": {"field": "b", "type": "quantitative"},
+                    },
+                },
+            ]
+        }
+
+        st.vega_lite_chart(df, spec, use_container_width=True)
+
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        parsed_spec = json.loads(proto.spec)
+        assert parsed_spec["autosize"]["type"] == "pad"
+        assert parsed_spec["autosize"]["contains"] == "padding"
+
+    def test_nested_vconcat_hconcat_with_use_container_width_false_gets_pad(self):
+        """Test that nested vconcat+hconcat with use_container_width=False gets pad autosize."""
+        df = self.TEST_DF
+        spec = {
+            "vconcat": [
+                {
+                    "hconcat": [
+                        {
+                            "mark": "bar",
+                            "encoding": {
+                                "x": {"field": "a", "type": "ordinal"},
+                                "y": {"field": "b", "type": "quantitative"},
+                            },
+                        },
+                        {
+                            "mark": "point",
+                            "encoding": {
+                                "x": {"field": "a", "type": "ordinal"},
+                                "y": {"field": "b", "type": "quantitative"},
+                            },
+                        },
+                    ]
+                },
+                {
+                    "mark": "line",
+                    "encoding": {
+                        "x": {"field": "a", "type": "ordinal"},
+                        "y": {"field": "b", "type": "quantitative"},
+                    },
+                },
+            ]
+        }
+
+        st.vega_lite_chart(df, spec, use_container_width=False)
+
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        parsed_spec = json.loads(proto.spec)
+        assert parsed_spec["autosize"]["type"] == "pad"
+        assert parsed_spec["autosize"]["contains"] == "padding"
+
+    def test_issue_13410_chart_with_width_stretch(self):
+        """Test the exact scenario from issue #13410 with width='stretch'."""
+        df = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+
+        # Create Altair chart equivalent to: base & (base | base)
+        base_spec = {
+            "mark": "circle",
+            "encoding": {"x": {"field": "a"}, "y": {"field": "b"}},
+            "width": 200,
+            "height": 200,
+        }
+
+        nested_spec = {
+            "vconcat": [
+                base_spec,
+                {"hconcat": [base_spec, base_spec]},
+            ]
+        }
+
+        st.vega_lite_chart(df, nested_spec, width="stretch")
+
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        parsed_spec = json.loads(proto.spec)
+        # Should use pad autosize for natural sizing
+        # Frontend skips setting width on nested compositions to avoid overflow
+        assert parsed_spec["autosize"]["type"] == "pad"
+        assert parsed_spec["autosize"]["contains"] == "padding"
+
+    def test_issue_13410_chart_with_width_content(self):
+        """Test the exact scenario from issue #13410 with width='content'."""
+        df = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+
+        # Create Altair chart equivalent to: base & (base | base)
+        base_spec = {
+            "mark": "circle",
+            "encoding": {"x": {"field": "a"}, "y": {"field": "b"}},
+            "width": 200,
+            "height": 200,
+        }
+
+        nested_spec = {
+            "vconcat": [
+                base_spec,
+                {"hconcat": [base_spec, base_spec]},
+            ]
+        }
+
+        st.vega_lite_chart(df, nested_spec, width="content")
+
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        parsed_spec = json.loads(proto.spec)
+        # Should use pad autosize for natural sizing
+        assert parsed_spec["autosize"]["type"] == "pad"
+        assert parsed_spec["autosize"]["contains"] == "padding"
+
+    def test_altair_nested_vconcat_hconcat_with_width_stretch(self):
+        """Test Altair chart with nested vconcat+hconcat using width='stretch'."""
+        df = self.TEST_DF
+
+        # Using Altair to create nested chart
+        chart = alt.vconcat(
+            alt.Chart(df).mark_bar().encode(x="a:O", y="b:Q"),
+            alt.hconcat(
+                alt.Chart(df).mark_point().encode(x="a:O", y="b:Q"),
+                alt.Chart(df).mark_line().encode(x="a:O", y="b:Q"),
+            ),
+        )
+
+        st.altair_chart(chart, width="stretch")
+
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        parsed_spec = json.loads(proto.spec)
+        # Should use pad autosize for natural sizing
+        # Frontend skips setting width on nested compositions to avoid overflow
+        assert parsed_spec["autosize"]["type"] == "pad"
+        assert parsed_spec["autosize"]["contains"] == "padding"
+
+    def test_nested_vconcat_hconcat_defaults_to_content_width(self):
+        """Test that nested vconcat+hconcat defaults to width='content', not 'stretch'."""
+        df = self.TEST_DF
+        chart = alt.vconcat(
+            alt.Chart(df).mark_bar().encode(x="a:O", y="b:Q"),
+            alt.hconcat(
+                alt.Chart(df).mark_point().encode(x="a:O", y="b:Q"),
+                alt.Chart(df).mark_line().encode(x="a:O", y="b:Q"),
+            ),
+        )
+
+        # Call without specifying width - should default to content
+        st.altair_chart(chart)
+
+        el = self.get_delta_from_queue().new_element
+        # Should default to content width, not stretch
+        assert el.width_config.WhichOneof("width_spec") == "use_content"
+        assert el.width_config.use_content is True
+
+        # Should use pad autosize for natural sizing
+        parsed_spec = json.loads(el.arrow_vega_lite_chart.spec)
+        assert parsed_spec["autosize"]["type"] == "pad"
+
+    def test_explicit_autosize_not_overridden(self):
+        """Test that explicit autosize in spec is preserved and not overridden."""
+        df = self.TEST_DF
+        spec = {
+            "mark": "bar",
+            "encoding": {
+                "x": {"field": "a", "type": "ordinal"},
+                "y": {"field": "b", "type": "quantitative"},
+            },
+            "autosize": {"type": "none"},  # Explicit autosize should be preserved
+        }
+
+        st.vega_lite_chart(df, spec, use_container_width=True)
+
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        parsed_spec = json.loads(proto.spec)
+        # Explicit autosize should not be overridden
+        assert parsed_spec["autosize"]["type"] == "none"
+
+    def test_simple_hconcat_with_use_container_width_gets_fit(self):
+        """Test that simple hconcat (non-nested) with use_container_width=True gets fit autosize."""
+        df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
+        spec = {
+            "hconcat": [
+                {
+                    "mark": "bar",
+                    "encoding": {
+                        "x": {"field": "a", "type": "ordinal"},
+                        "y": {"field": "b", "type": "quantitative"},
+                    },
+                },
+                {
+                    "mark": "point",
+                    "encoding": {
+                        "x": {"field": "a", "type": "ordinal"},
+                        "y": {"field": "b", "type": "quantitative"},
+                    },
+                },
+            ]
+        }
+
+        st.vega_lite_chart(df, spec, use_container_width=True)
+
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        parsed_spec = json.loads(proto.spec)
+        # Simple hconcat (not nested inside vconcat) should use fit
+        assert parsed_spec["autosize"]["type"] == "fit"
+        assert parsed_spec["autosize"]["contains"] == "padding"
+
+    def test_layer_chart_with_use_container_width_gets_fit(self):
+        """Test that layer chart (non-nested) with use_container_width=True gets fit autosize."""
+        df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
+        spec = {
+            "layer": [
+                {
+                    "mark": "bar",
+                    "encoding": {
+                        "x": {"field": "a", "type": "ordinal"},
+                        "y": {"field": "b", "type": "quantitative"},
+                    },
+                },
+                {
+                    "mark": "line",
+                    "encoding": {
+                        "x": {"field": "a", "type": "ordinal"},
+                        "y": {"field": "b", "type": "quantitative"},
+                    },
+                },
+            ]
+        }
+
+        st.vega_lite_chart(df, spec, use_container_width=True)
+
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        parsed_spec = json.loads(proto.spec)
+        # Layer charts (not nested inside vconcat) should use fit
+        assert parsed_spec["autosize"]["type"] == "fit"
+        assert parsed_spec["autosize"]["contains"] == "padding"
+
+
+class VegaChartsSelectionsStableIdTest(DeltaGeneratorTestCase):
+    """Tests for element ID stability when selections are enabled for Vega/Altair charts."""
+
+    @unittest.skipIf(
+        is_altair_version_less_than("5.0.0") is True,
+        "This test only runs if altair is >= 5.0.0",
+    )
+    def test_stable_id_with_key_and_selections_altair(self):
+        """Test that the element ID is stable when data changes but key and selection_mode remain the same.
+
+        When selections are enabled and a key is provided, the element ID should remain
+        stable across data changes to preserve selection state.
+        """
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            # First render with certain data
+            df1 = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+            point = alt.selection_point(name="my_selection")
+            chart1 = alt.Chart(df1).mark_bar().encode(x="a", y="b").add_params(point)
+            st.altair_chart(
+                chart1,
+                key="selectable_chart",
+                on_select="rerun",
+            )
+            c1 = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+            id1 = c1.id
+
+            # Second render with different data but same key and selection
+            df2 = pd.DataFrame({"x": [10, 20], "y": [30, 40], "z": [50, 60]})
+            chart2 = (
+                alt.Chart(df2)
+                .mark_point()
+                .encode(x="x", y="y", size="z")
+                .add_params(point)
+            )
+            st.altair_chart(
+                chart2,
+                key="selectable_chart",
+                on_select="rerun",
+            )
+            c2 = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+            id2 = c2.id
+
+            # ID should be stable since key and selection_mode are the same
+            assert id1 == id2
+
+    @unittest.skipIf(
+        is_altair_version_less_than("5.0.0") is True,
+        "This test only runs if altair is >= 5.0.0",
+    )
+    def test_stable_id_with_key_and_selections_vega_lite(self):
+        """Test that the element ID is stable for vega_lite_chart when data changes but key remains the same."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            # First render
+            df1 = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+            spec = {
+                "mark": "bar",
+                "encoding": {
+                    "x": {"field": "a", "type": "ordinal"},
+                    "y": {"field": "b", "type": "quantitative"},
+                },
+                "params": [{"name": "my_selection", "select": "point"}],
+            }
+            st.vega_lite_chart(
+                df1,
+                spec,
+                key="selectable_vega_chart",
+                on_select="rerun",
+            )
+            c1 = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+            id1 = c1.id
+
+            # Second render with different data but same key and selection mode
+            df2 = pd.DataFrame({"a": [10, 20, 30], "b": [40, 50, 60]})
+            st.vega_lite_chart(
+                df2,
+                spec,
+                key="selectable_vega_chart",
+                on_select="rerun",
+            )
+            c2 = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+            id2 = c2.id
+
+            # ID should be stable since key and selection_mode are the same
+            assert id1 == id2
+
+    @unittest.skipIf(
+        is_altair_version_less_than("5.0.0") is True,
+        "This test only runs if altair is >= 5.0.0",
+    )
+    def test_id_changes_when_selection_mode_changes(self):
+        """Test that changing selection_mode changes the ID even when a key is provided.
+
+        The selection_mode parameter is whitelisted, meaning changes to it should
+        result in a new element ID.
+        """
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            df = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+
+            # First render with point selection
+            point = alt.selection_point(name="my_point_selection")
+            chart1 = alt.Chart(df).mark_bar().encode(x="a", y="b").add_params(point)
+            st.altair_chart(
+                chart1,
+                key="changing_selection_chart",
+                on_select="rerun",
+                selection_mode="my_point_selection",
+            )
+            c1 = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+            id1 = c1.id
+
+            # Second render with interval selection (different selection mode)
+            interval = alt.selection_interval(name="my_interval_selection")
+            chart2 = alt.Chart(df).mark_bar().encode(x="a", y="b").add_params(interval)
+            st.altair_chart(
+                chart2,
+                key="changing_selection_chart",
+                on_select="rerun",
+                selection_mode="my_interval_selection",
+            )
+            c2 = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+            id2 = c2.id
+
+            # ID should change since selection_mode changed
+            assert id1 != id2
+
+    @unittest.skipIf(
+        is_altair_version_less_than("5.0.0") is True,
+        "This test only runs if altair is >= 5.0.0",
+    )
+    def test_id_changes_without_key(self):
+        """Test that changing data changes the ID when no key is provided."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            # First render
+            df1 = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+            point = alt.selection_point(name="my_selection")
+            chart1 = alt.Chart(df1).mark_bar().encode(x="a", y="b").add_params(point)
+            st.altair_chart(chart1, on_select="rerun")
+            c1 = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+            id1 = c1.id
+
+            # Second render with different data
+            df2 = pd.DataFrame({"x": [10, 20], "y": [30, 40]})
+            chart2 = alt.Chart(df2).mark_point().encode(x="x", y="y").add_params(point)
+            st.altair_chart(chart2, on_select="rerun")
+            c2 = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+            id2 = c2.id
+
+            # ID should change since no key is provided and data changed
+            assert id1 != id2

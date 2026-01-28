@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@
  * Tests for the useRegisterShortcut hook.
  */
 
-import React, { act, ReactElement } from "react"
+import { act, ReactElement } from "react"
 
 import * as hotkeysModule from "hotkeys-js"
 import { Mock, vi } from "vitest"

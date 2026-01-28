@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from streamlit import deprecation_util
 from streamlit.components.v2.component_definition_resolver import (
     build_definition_with_validation,
 )
@@ -27,7 +28,7 @@ from streamlit.components.v2.get_bidi_component_manager import (
 from streamlit.errors import StreamlitAPIException
 
 if TYPE_CHECKING:
-    from streamlit.components.v2.types import BidiComponentCallable
+    from streamlit.components.v2.types import ComponentRenderer
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -106,6 +107,7 @@ def _create_component_callable(
     html: str | None = None,
     css: str | None = None,
     js: str | None = None,
+    isolate_styles: bool = True,
 ) -> Callable[..., Any]:
     """Create a component callable, handling both lookup and registration cases.
 
@@ -121,6 +123,9 @@ def _create_component_callable(
     js : str | None
         Inline JavaScript (string) or a string path/glob to a file under
         ``asset_dir``; see :func:`_register_component` for path validation semantics.
+    isolate_styles : bool
+        Whether to sandbox the component's styles in a shadow root.
+        Defaults to True.
 
     Returns
     -------
@@ -143,7 +148,6 @@ def _create_component_callable(
         default: dict[str, Any] | None = None,
         width: Width = "stretch",
         height: Height = "content",
-        isolate_styles: bool = True,
         **on_callbacks: WidgetCallback | None,
     ) -> BidiComponentResult:
         """Mount the component.
@@ -161,9 +165,6 @@ def _create_component_callable(
             The width of the component.
         height : Height
             The height of the component.
-        isolate_styles : bool
-            Whether to sandbox the component styles in a shadow-root. Defaults to
-            True.
         **on_callbacks : WidgetCallback
             Callback functions for handling component events. Use pattern
             on_{state_name}_change (e.g., on_click_change, on_value_change).
@@ -174,6 +175,20 @@ def _create_component_callable(
             Component state.
         """
         import streamlit as st
+
+        # Backwards-tolerant: old code may still pass isolate_styles at mount
+        # time. Since isolate_styles is now configured on component(), ignore it
+        # here to prevent a runtime error.
+        if "isolate_styles" in on_callbacks:
+            on_callbacks.pop("isolate_styles", None)
+
+            deprecation_util.show_deprecation_warning(
+                "Passing `isolate_styles` when mounting a component created via "
+                "`st.components.v2.component` is deprecated and will be ignored. "
+                "Set `isolate_styles` when creating the component instead "
+                "(`st.components.v2.component(..., isolate_styles=...)`).",
+                show_in_browser=False,
+            )
 
         return st._bidi_component(
             component_key,
@@ -186,10 +201,6 @@ def _create_component_callable(
             **on_callbacks,
         )
 
-    # Ensure the function remains compatible with the shared public callable type.
-    # Static type assertion to ensure the callable matches the shared signature
-    _typed_check_mount_component: BidiComponentCallable = _mount_component
-
     return _mount_component
 
 
@@ -199,11 +210,13 @@ def component(
     html: str | None = None,
     css: str | None = None,
     js: str | None = None,
-) -> BidiComponentCallable:
+    isolate_styles: bool = True,
+) -> ComponentRenderer:
     '''Register an ``st.components.v2`` component and return a callable to mount it.
 
-    A component must have HTML, JavaScript, or both. If you want a component
-    with only CSS, use ``st.html`` instead.
+    Components can have any combination of HTML, CSS, and JavaScript. If none
+    are provided, the component renders as an empty element without raising
+    an error.
 
     If your component is defined in an installed package, you can declare an
     asset directory (``asset_dir``) through ``pyproject.toml`` files in the
@@ -250,9 +263,6 @@ def component(
         element and populate it via JavaScript. Alternatively, you can append
         a new element to the parent. For more information, see Example 2.
 
-        ``html`` and ``js`` can't both be ``None``. At least one of them must
-        be provided.
-
     css : str or None
         Inline CSS. This can be one of the following strings:
 
@@ -267,12 +277,17 @@ def component(
         - A path or glob to a JS file, relative to the component's
           asset directory.
 
-        ``html`` and ``js`` can't both be ``None``. At least one of them must
-        be provided.
+    isolate_styles : bool
+        Whether to sandbox the component styles in a shadow root. If this is
+        ``True`` (default), the component's HTML is mounted inside a shadow DOM
+        and, in your component's JavaScript, ``parentElement`` returns a
+        ``ShadowRoot``. If this is ``False``, the component's HTML is mounted
+        directly into the app's DOM tree, and ``parentElement`` returns a
+        regular ``HTMLElement``.
 
     Returns
     -------
-    BidiComponentCallable
+    ComponentRenderer
         The component's mounting command.
 
         This callable accepts the component parameters like ``key`` and
@@ -506,7 +521,9 @@ def component(
         height: 250px
 
     '''
-    return _create_component_callable(name, html=html, css=css, js=js)
+    return _create_component_callable(
+        name, html=html, css=css, js=js, isolate_styles=isolate_styles
+    )
 
 
 __all__ = [

@@ -72,12 +72,12 @@ jobs:
       - name: Run frontend tests
         run: make frontend-tests
       - name: Upload coverage json-summary
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: vitest_coverage_json
           path: frontend/coverage/coverage-summary.json
       - name: Upload coverage HTML report
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: vitest_coverage_html
           path: frontend/coverage
@@ -136,7 +136,7 @@ jobs:
           submodules: "recursive"
 
       - name: Download coverage JSON
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: vitest_coverage_json
           path: /tmp/current_coverage
@@ -162,7 +162,7 @@ jobs:
             core.setOutput('run_id', runs.workflow_runs[0].id);
 
       - name: Download develop coverage
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           repository: streamlit/streamlit
           run-id: ${{ steps.get-latest-run.outputs.run_id }}

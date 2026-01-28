@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,8 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-import React from "react"
 
 import { screen, waitFor } from "@testing-library/react"
 
@@ -33,7 +31,7 @@ const getHeadingProps = (
     anchor: "some-anchor",
     tag: "h1",
     body: `hello world
-this is a new line`,
+             this is a new line`,
     ...elementProps,
   }),
 })
@@ -68,9 +66,9 @@ describe("Heading", () => {
     const props = getHeadingProps({ body: "hello" })
     render(<Heading {...props} />)
 
-    // trying to trigger the :hover css state did not work, so using 'hidden: true' here. We have an e2e test to check the hovering.
-    const link = screen.getByRole("link", { hidden: true })
+    const link = screen.getByRole("link")
     expect(link).toHaveAttribute("href", "#some-anchor")
+    expect(link).toHaveAccessibleName("Link to heading")
   })
 
   it("does not render anchor link when it is hidden", () => {
@@ -168,9 +166,9 @@ describe("Heading", () => {
   it("does not render tables", async () => {
     const props = getHeadingProps({
       body: `| Syntax | Description |
-| ----------- | ----------- |
-| Header      | Title       |
-| Paragraph   | Text        |`,
+           | ----------- | ----------- |
+           | Header      | Title       |
+           | Paragraph   | Text        |`,
     })
     render(<Heading {...props} />)
 
@@ -181,7 +179,7 @@ describe("Heading", () => {
     // Wait for lazy-loaded content to render
     await waitFor(() => {
       expect(screen.getByTestId("stMarkdownContainer")).toHaveTextContent(
-        "| Syntax | Description || ----------- | ----------- | | Header | Title | | Paragraph | Text |"
+        "| Syntax | Description | | ----------- | ----------- | | Header | Title | | Paragraph | Text |"
       )
     })
 

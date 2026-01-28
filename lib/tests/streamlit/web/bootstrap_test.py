@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,6 +20,8 @@ import types
 from io import StringIO
 from unittest import IsolatedAsyncioTestCase, TestCase
 from unittest.mock import Mock, patch
+
+import pytest
 
 from streamlit import config
 from streamlit.runtime.runtime import Runtime
@@ -376,27 +378,31 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
 
     @patch("streamlit.web.bootstrap.asyncio.get_running_loop", Mock())
     @patch("streamlit.web.bootstrap._maybe_print_static_folder_warning", Mock())
-    @patch("streamlit.web.bootstrap._LOGGER.error")
+    @patch("streamlit.web.bootstrap._LOGGER.exception")
     @patch("streamlit.web.bootstrap.secrets.load_if_toml_exists")
-    def test_log_secret_load_error(self, mock_load_secrets, mock_log_error):
+    def test_log_secret_load_error(self, mock_load_secrets, mock_log_exception):
         """If secrets throws an error on startup, we catch and log it."""
         mock_exception = Exception("Secrets exploded!")
         mock_load_secrets.side_effect = mock_exception
 
         bootstrap._on_server_start(Mock())
-        mock_log_error.assert_called_once_with(
-            "Failed to load secrets.toml file",
-            exc_info=True,
-        )
+        mock_log_exception.assert_called_once_with("Failed to load secrets.toml file")
 
     @patch("streamlit.config.get_config_options")
     @patch("streamlit.web.bootstrap.watch_file")
     def test_install_config_watcher(
-        self, patched_watch_file, patched_get_config_options
-    ):
-        with patch("os.path.exists", return_value=True):
-            bootstrap._install_config_watchers(flag_options={"server_port": 8502})
+        self, patched_watch_file: Mock, patched_get_config_options: Mock
+    ) -> None:
+        """Test that config watchers are installed for all config file locations."""
+        bootstrap._install_config_watchers(flag_options={"server_port": 8502})
+
+        # watch_file should be called for each config file location (2 locations)
         assert patched_watch_file.call_count == 2
+
+        # Verify watch_file was called with poll watcher and allow_nonexistent=True
+        _args, kwargs = patched_watch_file.call_args_list[0]
+        assert kwargs["watcher_type"] == "poll"
+        assert kwargs["allow_nonexistent"] is True
 
         args, _kwargs = patched_watch_file.call_args_list[0]
         on_config_changed = args[1]
@@ -489,3 +495,59 @@ class BootstrapUvloopTest(TestCase):
         with patch.object(bootstrap.env_util, "IS_WINDOWS", False):
             with patch.dict("sys.modules", {"uvloop": None}):
                 bootstrap._maybe_install_uvloop(running_in_event_loop=False)
+
+
+class BootstrapAsgiTest(IsolatedAsyncioTestCase):
+    """Test bootstrap functions for ASGI app mode."""
+
+    @patch("streamlit.web.bootstrap.report_watchdog_availability")
+    @patch("streamlit.web.bootstrap._install_config_watchers")
+    @patch("streamlit.web.bootstrap._fix_sys_argv")
+    @patch("streamlit.web.bootstrap._fix_sys_path")
+    def test_run_asgi_app_calls_bootstrap_functions(
+        self,
+        mock_fix_sys_path,
+        mock_fix_sys_argv,
+        mock_install_watchers,
+        mock_report_watchdog,
+    ):
+        """Test that run_asgi_app calls the expected bootstrap functions."""
+        import uvicorn
+
+        with (
+            testutil.patch_config_options(
+                {"server.address": "localhost", "server.port": 8501}
+            ),
+            patch.object(uvicorn, "run") as mock_uvicorn_run,
+        ):
+            bootstrap.run_asgi_app(
+                main_script_path="/path/to/main.py",
+                app_import_string="myapp:app",
+                args=["--arg1", "value1"],
+                flag_options={"server_port": 8501},
+            )
+
+        # Verify process-level setup was called
+        mock_fix_sys_path.assert_called_once_with("/path/to/main.py")
+        mock_fix_sys_argv.assert_called_once_with(
+            "/path/to/main.py", ["--arg1", "value1"]
+        )
+        mock_install_watchers.assert_called_once_with({"server_port": 8501})
+        mock_report_watchdog.assert_called_once()
+
+        # Verify uvicorn.run was called with the app import string
+        mock_uvicorn_run.assert_called_once()
+        call_kwargs = mock_uvicorn_run.call_args
+        assert call_kwargs[0][0] == "myapp:app"
+
+    def test_run_asgi_app_raises_without_uvicorn(self):
+        """Test that run_asgi_app raises RuntimeError if uvicorn is not installed."""
+        with patch.dict("sys.modules", {"uvicorn": None}):
+            with pytest.raises(RuntimeError) as cm:
+                bootstrap.run_asgi_app(
+                    main_script_path="/path/to/main.py",
+                    app_import_string="myapp:app",
+                    args=[],
+                    flag_options={},
+                )
+            assert "uvicorn is required" in str(cm.value)

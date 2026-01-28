@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -52,30 +52,30 @@ export {
   DATETIMETZ,
   DECIMAL,
   DICTIONARY,
+  DIFFERENT_COLUMN_TYPES,
+  DISPLAY_VALUES,
+  // Special cases
+  EMPTY,
+  FEWER_COLUMNS,
   FLOAT64,
   INT64,
   INTERVAL_DATETIME64,
   INTERVAL_FLOAT64,
   INTERVAL_INT64,
   INTERVAL_UINT64,
+  MULTI,
+  NAMED_INDEX,
   PERIOD,
   RANGE,
-  UINT64,
-  UNICODE,
-  TIMEDELTA,
-  // Special cases
-  EMPTY,
-  MULTI,
+  SMALL,
   STYLER,
-  DISPLAY_VALUES,
-  FEWER_COLUMNS,
-  DIFFERENT_COLUMN_TYPES,
-  VEGA_LITE,
-  NAMED_INDEX,
+  TALL,
   // Specific sizes
   TEN_BY_TEN,
-  TALL,
+  TIMEDELTA,
+  UINT64,
+  UNICODE,
+  VEGA_LITE,
   VERY_TALL,
-  SMALL,
   WIDE,
 }

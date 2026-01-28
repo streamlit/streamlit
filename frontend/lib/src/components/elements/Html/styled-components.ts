@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,13 @@
 
 import styled from "@emotion/styled"
 
-export const StyledHtml = styled.div({
+export const StyledHtml = styled.div(({ theme }) => ({
   width: "100%",
-})
+
+  // Restore padding for lists inside st.html to fix
+  // nested list indentation (issue #13426). The global styles reset
+  // padding to 0 for ul/ol elements, so we need to restore it here.
+  "ul, ol, dl": {
+    paddingLeft: theme.spacing.threeXL,
+  },
+}))

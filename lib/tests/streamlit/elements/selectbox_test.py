@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -292,9 +292,9 @@ class SelectboxTest(DeltaGeneratorTestCase):
                 kwargs={"kwarg1": "kwarg1"},
                 label_visibility="visible",
                 placeholder="placeholder 1",
-                # Whitelisted kwargs:
                 format_func=lambda x: x.capitalize(),
                 options=["a", "b", "cd"],
+                # Whitelisted kwargs:
                 accept_new_options=True,
             )
             c1 = self.get_delta_from_queue().new_element.selectbox
@@ -313,9 +313,9 @@ class SelectboxTest(DeltaGeneratorTestCase):
                 kwargs={"kwarg_1": "kwarg_1"},
                 label_visibility="hidden",
                 placeholder="placeholder 2",
+                format_func=lambda x: x.upper(),
+                options=["apple", "banana", "cherry"],
                 # Whitelisted kwargs:
-                format_func=lambda x: x.capitalize(),
-                options=["a", "b", "cd"],
                 accept_new_options=True,
             )
             c2 = self.get_delta_from_queue().new_element.selectbox
@@ -324,9 +324,7 @@ class SelectboxTest(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            ("options", ["a", "b"], ["a", "b", "c"]),
             ("accept_new_options", True, False),
-            ("format_func", lambda x: x.lower(), lambda x: x.upper()),
         ]
     )
     def test_whitelisted_stable_key_kwargs(
@@ -381,8 +379,175 @@ def test_selectbox_interaction():
     assert selectbox.value is None
 
 
+def test_selectbox_preserves_selection_when_options_expand():
+    """Test that selection is preserved when new options are added."""
+
+    def script():
+        import streamlit as st
+
+        # Use session state to track which options to show
+        if "expanded" not in st.session_state:
+            st.session_state["expanded"] = False
+
+        if st.session_state["expanded"]:
+            options = ["A", "B", "C", "D"]
+        else:
+            options = ["A", "B", "C"]
+
+        selected = st.selectbox("Pick one", options, key="picker")
+        # Output the actual returned value to verify
+        st.text(f"Selected: {selected}")
+
+        if st.button("Expand options"):
+            st.session_state["expanded"] = True
+
+    at = AppTest.from_function(script).run()
+
+    # Select "B"
+    at = at.selectbox[0].set_value("B").run()
+    assert at.text[0].value == "Selected: B"
+
+    # Click button to expand options (add "D")
+    at = at.button[0].click().run()
+
+    # Selection should be preserved since "B" is still in options
+    # (no extra run needed - value is valid in both old and new options)
+    # Check the actual widget return value via st.text output
+    assert at.text[0].value == "Selected: B"
+
+
+def test_selectbox_resets_when_selection_removed():
+    """Test that selection resets to default when selected option is removed."""
+
+    def script():
+        import streamlit as st
+
+        # Use session state to track which options to show
+        if "shrunk" not in st.session_state:
+            st.session_state["shrunk"] = False
+
+        if st.session_state["shrunk"]:
+            options = ["A", "C"]  # "B" removed
+        else:
+            options = ["A", "B", "C"]
+
+        selected = st.selectbox("Pick one", options, key="picker")
+        # Output the actual returned value to verify
+        st.text(f"Selected: {selected}")
+
+        if st.button("Shrink options"):
+            st.session_state["shrunk"] = True
+
+    at = AppTest.from_function(script).run()
+
+    # Select "B"
+    at = at.selectbox[0].set_value("B").run()
+    assert at.text[0].value == "Selected: B"
+
+    # Click button to shrink options (remove "B")
+    at = at.button[0].click().run()
+    # Extra run needed: AppTest doesn't fully simulate frontend processing
+    # the set_value=True response. The second run picks up the reset value.
+    at = at.run()
+
+    # Selection should reset to default ("A") since "B" is no longer in options
+    # Check the actual widget return value via st.text output
+    assert at.text[0].value == "Selected: A"
+
+
+def test_selectbox_resets_when_options_shrink_significantly():
+    """Test that selection resets when options shrink and selected value is gone.
+
+    When a user selects a value that later gets removed from the options,
+    the selection should reset to the default index.
+    """
+
+    def script():
+        import streamlit as st
+
+        if "shrunk" not in st.session_state:
+            st.session_state["shrunk"] = False
+
+        if st.session_state["shrunk"]:
+            # Only 2 options now - "C", "D", "E" are gone
+            options = ["A", "B"]
+        else:
+            # 5 options
+            options = ["A", "B", "C", "D", "E"]
+
+        selected = st.selectbox("Pick one", options, index=0, key="picker")
+        st.text(f"Selected: {selected}")
+
+        if st.button("Shrink options"):
+            st.session_state["shrunk"] = True
+
+    at = AppTest.from_function(script).run()
+
+    # Initial selection should be "A" (default)
+    assert at.text[0].value == "Selected: A"
+
+    # Select "D" which will be removed when options shrink
+    at = at.selectbox[0].set_value("D").run()
+    assert at.text[0].value == "Selected: D"
+
+    # Click button to shrink options (removes "C", "D", "E")
+    at = at.button[0].click().run()
+    # Extra run needed: AppTest doesn't fully simulate frontend processing
+    # the set_value=True response. The second run picks up the reset value.
+    at = at.run()
+
+    # Selection should reset to "A" (default) since "D" is no longer in options
+    assert at.text[0].value == "Selected: A"
+
+
+def test_selectbox_preserves_custom_value_with_accept_new_options():
+    """Test that accept_new_options=True preserves values not in the options list.
+
+    When accept_new_options=True, the validation is skipped and the value is
+    preserved even if it's not in the current options list.
+    """
+
+    def script():
+        import streamlit as st
+
+        if "shrunk" not in st.session_state:
+            st.session_state["shrunk"] = False
+
+        if st.session_state["shrunk"]:
+            options = ["A", "C"]  # "B" removed
+        else:
+            options = ["A", "B", "C"]
+
+        selected = st.selectbox(
+            "Pick one", options, key="picker", accept_new_options=True
+        )
+        st.text(f"Selected: {selected}")
+
+        if st.button("Shrink options"):
+            st.session_state["shrunk"] = True
+
+    at = AppTest.from_function(script).run()
+
+    # Select "B"
+    at = at.selectbox[0].set_value("B").run()
+    assert at.text[0].value == "Selected: B"
+
+    # Click button to shrink options (remove "B")
+    at = at.button[0].click().run()
+
+    # With accept_new_options=True, selection should be PRESERVED even though
+    # "B" is no longer in options (no reset, no extra run needed)
+    assert at.text[0].value == "Selected: B"
+
+
 def test_selectbox_enum_coercion():
-    """Test E2E Enum Coercion on a selectbox."""
+    """Test E2E Enum Coercion on a selectbox.
+
+    When enum classes are redefined between runs (common in Streamlit scripts),
+    the widget should return a valid enum value from the current class when
+    coercion is enabled. When coercion is "off", the value from session state
+    (which may be from an old class) is returned as-is.
+    """
 
     def script():
         from enum import Enum
@@ -410,11 +575,13 @@ def test_selectbox_enum_coercion():
 
     with patch_config_options({"runner.enumCoercion": "nameOnly"}):
         test_enum()
+    # With coercion="off", the value from session state (old class) is returned as-is,
+    # so class IDs will differ - expect assertion to fail.
     with (
         patch_config_options({"runner.enumCoercion": "off"}),
         pytest.raises(AssertionError),
     ):
-        test_enum()  # expect a failure with the config value off.
+        test_enum()
 
 
 def test_None_session_state_value_retained():
@@ -458,6 +625,12 @@ class TestSelectboxSerde:
         assert res is None
 
     def test_serialize_empty_options(self):
+        """Test serializing with empty options.
+
+        Even with empty options, serialize should return the formatted value
+        (not None or empty string) because accept_new_options=True allows
+        user-entered values even when the options list is empty.
+        """
         options = []
         formatted_options, formatted_option_to_option_index = create_mappings(options)
         serde = SelectboxSerde(
@@ -466,8 +639,12 @@ class TestSelectboxSerde:
             formatted_option_to_option_index=formatted_option_to_option_index,
         )
 
+        # With default format_func (str), "something" should serialize to "something"
         res = serde.serialize("something")
-        assert res == ""
+        assert res == "something"
+        # Should not return empty string or None
+        assert res != ""
+        assert res is not None
 
     def test_serialize_with_format_func(self):
         options = ["Option A", "Option B", "Option C"]
@@ -483,13 +660,16 @@ class TestSelectboxSerde:
             options,
             formatted_options=formatted_options,
             formatted_option_to_option_index=formatted_option_to_option_index,
+            format_func=format_func,
         )
 
         res = serde.serialize("Option A")
         assert res == "Format: Option A"
 
+        # When a value is not found in options but format_func succeeds,
+        # return the formatted value (not the original) for type consistency
         res = serde.serialize("Option D")
-        assert res == "Option D"
+        assert res == "Format: Option D"
 
     def test_deserialize(self):
         options = ["Option A", "Option B", "Option C"]
@@ -542,6 +722,7 @@ class TestSelectboxSerde:
         assert res == "Option C"
 
     def test_deserialize_empty_options_with_default_index(self):
+        """Test that deserializing with empty options returns None even with default index."""
         options = []
         formatted_options, formatted_option_to_option_index = create_mappings(options)
         default_index = 0
@@ -554,6 +735,29 @@ class TestSelectboxSerde:
 
         res = serde.deserialize(None)
         assert res is None
+
+    def test_deserialize_empty_options_with_string_value(self):
+        """Test deserializing a string value with empty options.
+
+        When accept_new_options=True, users can enter custom values even
+        when options is empty. The serde should return these user-entered
+        values as-is.
+        """
+        options = []
+        formatted_options, formatted_option_to_option_index = create_mappings(options)
+        serde = SelectboxSerde(
+            options,
+            formatted_options=formatted_options,
+            formatted_option_to_option_index=formatted_option_to_option_index,
+        )
+
+        # User-entered values should be returned as-is (supports accept_new_options=True)
+        res = serde.deserialize("user_entered_value")
+        assert res == "user_entered_value"
+
+        # Even empty string is a valid user input when accept_new_options=True
+        res = serde.deserialize("")
+        assert res == ""
 
     def test_deserialize_complex_options(self):
         # Test with more complex option types
@@ -612,3 +816,38 @@ class TestSelectboxSerde:
 
         res = serde.deserialize("TestEnum.B")
         assert res == TestEnum.B
+
+    def test_serialize_deepcopied_custom_objects(self):
+        """Test that serialize works with deepcopied custom objects without __eq__.
+
+        This tests the fix for https://github.com/streamlit/streamlit/issues/13646
+        where custom objects without __eq__ would fail serialization after deepcopy
+        because the old implementation used index_() which relies on ==.
+        """
+        from copy import deepcopy
+
+        # Custom class without __eq__ implementation
+        class MyOption:  # noqa: B903
+            def __init__(self, value: str):
+                self.value = value
+
+        def format_func(x):
+            return x.value
+
+        options = [MyOption("a"), MyOption("b"), MyOption("c")]
+        formatted_options, formatted_option_to_option_index = create_mappings(
+            options, format_func
+        )
+        serde = SelectboxSerde(
+            options,
+            formatted_options=formatted_options,
+            formatted_option_to_option_index=formatted_option_to_option_index,
+            format_func=format_func,
+        )
+
+        # Simulate deepcopied value (what happens after register_widget)
+        deepcopied_value = deepcopy(options[0])
+
+        # This should work correctly using format_func comparison
+        res = serde.serialize(deepcopied_value)
+        assert res == "a"

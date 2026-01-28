@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -215,7 +215,7 @@ headers = {
 }
 styled_df.set_table_styles([cell_hover, headers])  # type: ignore
 styled_df.set_table_styles(
-    {
+    {  # ty: ignore[invalid-argument-type]
         ("Regression", "Tumour"): [
             {"selector": "th", "props": "border-left: 1px solid white"},
             {"selector": "td", "props": "border-left: 1px solid #000066"},

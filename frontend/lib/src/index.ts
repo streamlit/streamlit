@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -126,21 +126,32 @@ export {
   CUSTOM_THEME_NAME,
   customTheme,
   darkTheme,
-  getCachedTheme,
+  getCachedThemeSelection,
   getDefaultTheme,
   getHostSpecifiedTheme,
+  getHostSpecifiedThemeOnly,
+  getThemeSelectionFromThemeConfig,
   getSystemThemePreference,
   globalStyles,
   hasLightBackgroundColor,
   isPresetTheme,
   lightTheme,
+  getPreferredTheme,
+  mapCachedThemeSelectionToAvailableTheme,
   removeCachedTheme,
-  setCachedTheme,
+  setCachedThemeSelection,
   sortThemeInputKeys,
   toExportedTheme,
   toThemeInput,
 } from "./theme"
-export type { EmotionTheme, PresetThemeName, ThemeConfig } from "./theme"
+export type {
+  CachedTheme,
+  EmotionTheme,
+  IconSize,
+  PresetThemeName,
+  ThemeSelection,
+  ThemeConfig,
+} from "./theme"
 export { default as emotionLightTheme } from "./theme/emotionLightTheme"
 export { fonts, spacing } from "./theme/primitives"
 export { ensureError } from "./util/ErrorHandling"

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -124,6 +124,8 @@ if st.toggle("Update datetime input props"):
         key="dynamic_datetime_input_with_key",
         on_change=lambda: None,
         step=900,
+        min_value=datetime(2020, 1, 1, 0, 0),
+        max_value=datetime(2025, 12, 31, 23, 59),
     )
     st.write("Updated datetime input value:", dval)
 else:
@@ -135,5 +137,7 @@ else:
         key="dynamic_datetime_input_with_key",
         on_change=lambda: None,
         step=900,
+        min_value=datetime(2010, 1, 1, 0, 0),
+        max_value=datetime(2030, 12, 31, 23, 59),
     )
     st.write("Initial datetime input value:", dval)

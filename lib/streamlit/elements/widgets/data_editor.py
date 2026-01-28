@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -167,8 +167,7 @@ class DataEditorSerde:
         # Convert the keys (numerical row positions) to integers.
         # The keys are strings because they are serialized to JSON.
         data_editor_state["edited_rows"] = {
-            int(k): v
-            for k, v in data_editor_state["edited_rows"].items()  # ty: ignore[possibly-missing-attribute]
+            int(k): v for k, v in data_editor_state["edited_rows"].items()
         }
         return data_editor_state
 
@@ -202,13 +201,13 @@ def _parse_value(
 
     try:
         if column_data_kind == ColumnDataKind.LIST:
-            return list(value) if is_list_like(value) else [value]  # ty: ignore
+            return list(value) if is_list_like(value) else [value]  # ty: ignore[invalid-argument-type]
 
         if column_data_kind == ColumnDataKind.EMPTY:
             # For empty columns, preserve the value type from the frontend.
             # If it's a list (e.g., from multiselect), return as list.
             # If it's a scalar (e.g., from number input), return as scalar.
-            return list(value) if is_list_like(value) else value  # ty: ignore
+            return list(value) if is_list_like(value) else value  # ty: ignore[invalid-argument-type]
 
         if column_data_kind == ColumnDataKind.STRING:
             return str(value)
@@ -239,12 +238,12 @@ def _parse_value(
         if column_data_kind == ColumnDataKind.TIMEDELTA:
             return pd.Timedelta(value)
 
-        if column_data_kind in [
+        if column_data_kind in {
             ColumnDataKind.DATETIME,
             ColumnDataKind.DATE,
             ColumnDataKind.TIME,
-        ]:
-            datetime_value = pd.Timestamp(value)  # ty: ignore
+        }:
+            datetime_value = pd.Timestamp(value)
 
             if pd.isna(datetime_value):
                 return None  # type: ignore[unreachable]
@@ -482,7 +481,7 @@ def _is_supported_index(df_index: pd.Index[Any]) -> bool:
 
     return (
         type(df_index)
-        in [
+        in {
             pd.RangeIndex,
             pd.Index,
             pd.DatetimeIndex,
@@ -491,7 +490,7 @@ def _is_supported_index(df_index: pd.Index[Any]) -> bool:
             # pd.IntervalIndex,
             # Period type isn't editable currently:
             # pd.PeriodIndex,
-        ]
+        }
         # We need to check these index types without importing, since they are
         # deprecated and planned to be removed soon.
         or is_type(df_index, "pandas.core.indexes.numeric.Int64Index")
@@ -793,10 +792,10 @@ class DataEditorMixin:
             first index column.
 
         num_rows : "fixed", "dynamic", "add", or "delete"
-            Specifies if the user can add and delete rows in the data editor.
+            Specifies if the user can add and/or delete rows in the data editor.
 
-            - ``"fixed"`` (default): The user cannot add or delete rows.
-            - ``"dynamic"``: The user can add and delete rows, but column
+            - ``"fixed"`` (default): The user can't add or delete rows.
+            - ``"dynamic"``: The user can add and delete rows, and column
               sorting is disabled.
             - ``"add"``: The user can only add rows (no deleting), and column
               sorting is disabled.
@@ -1030,7 +1029,7 @@ class DataEditorMixin:
             update_column_config(
                 column_config_mapping, INDEX_IDENTIFIER, {"required": True}
             )
-            if num_rows in ("dynamic", "add") and hide_index is True:
+            if num_rows in {"dynamic", "add"} and hide_index is True:
                 _LOGGER.warning(
                     "Setting `hide_index=True` in data editor with a non-range index will not have any effect "
                     "when `num_rows` is '%s'. It is required for the user to fill in index values for "
@@ -1039,7 +1038,7 @@ class DataEditorMixin:
                     num_rows,
                 )
 
-        if hide_index is None and has_range_index and num_rows in ("dynamic", "add"):
+        if hide_index is None and has_range_index and num_rows in {"dynamic", "add"}:
             # Temporary workaround:
             # We hide range indices if num_rows allows adding rows.
             # since the current way of handling this index during editing is a
@@ -1132,7 +1131,7 @@ class DataEditorMixin:
             # Even on collisions, there should not be a big issue with the
             # rendering in the data editor.
             styler_uuid = calc_md5(key or self.dg._get_delta_path_str())[:10]
-            data.set_uuid(styler_uuid)
+            data.set_uuid(styler_uuid)  # ty: ignore[call-non-callable, possibly-missing-attribute]
             marshall_styler(proto, data, styler_uuid)
 
         proto.data = arrow_bytes
