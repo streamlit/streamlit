@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { memo, PropsWithChildren, useMemo } from "react"
+import { memo, PropsWithChildren, RefObject, useMemo } from "react"
 
 import {
   DownloadContext,
@@ -74,6 +74,7 @@ type SidebarConfigContextValues = {
   sidebarChevronDownshift: number
   expandSidebarNav: boolean
   hideSidebarNav: boolean
+  appRootRef?: RefObject<HTMLDivElement> | null
 }
 
 type ThemeContextValues = {
@@ -134,6 +135,7 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
   sidebarChevronDownshift,
   expandSidebarNav,
   hideSidebarNav,
+  appRootRef,
   // ThemeContext
   activeTheme,
   setTheme,
@@ -176,6 +178,7 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
       sidebarChevronDownshift,
       expandSidebarNav,
       hideSidebarNav,
+      appRootRef,
     }),
     [
       initialSidebarState,
@@ -184,6 +187,7 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
       sidebarChevronDownshift,
       expandSidebarNav,
       hideSidebarNav,
+      appRootRef,
     ]
   )
 

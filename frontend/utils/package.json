@@ -1,6 +1,6 @@
 {
   "name": "@streamlit/utils",
-  "version": "1.53.0",
+  "version": "1.53.1",
   "license": "Apache-2.0",
   "private": true,
   "type": "module",
@@ -32,12 +32,12 @@
   "devDependencies": {
     "@types/eslint": "^9.6.1",
     "eslint": "^9.39.2",
-    "prettier": "^3.8.0",
+    "prettier": "^3.8.1",
     "typesync": "^0.14.3",
     "vite": "^7.3.1",
     "vite-plugin-dts": "^4.5.4",
     "vite-tsconfig-paths": "^6.0.4",
-    "vitest": "^4.0.17"
+    "vitest": "^4.0.18"
   },
   "browserslist": [
     ">0.2%",

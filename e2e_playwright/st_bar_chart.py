@@ -93,6 +93,9 @@ st.bar_chart(
     df, x="b", y="a", sort="b", horizontal=True
 )  # horizontal, sort by categories
 st.bar_chart(df, x="b", y="a", sort="a", horizontal=True)  # horizontal, sort by values
+st.bar_chart(
+    df, x="a", y=["b", "c"], sort="-a"
+)  # sort by x column with multiple y columns (regression test)
 
 # Test that add_rows maintains original styling params:
 # color, width, height, horizontal, stack

@@ -26,3 +26,4 @@ exclude = [
 [rules]
 unresolved-import = "ignore"
 possibly-unresolved-reference = "error"
+unused-ignore-comment = "ignore"
