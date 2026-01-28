@@ -33,13 +33,13 @@ export const ThemedStyledDropdownListItem = styled(StyledDropdownListItem, {
   $isSelectAll,
   $isCreatable,
 }) => {
-  // Separator line style shared by select all (::after) and creatable (::before)
-  // right: xs to match container's left padding (right has no container padding, scrollbar overlays)
+  // Separator line style shared by select all (::after) and creatable (::before).
+  // The right offset aligns with the item highlight's right edge.
   const separatorStyle = {
     content: '""',
     position: "absolute" as const,
     left: theme.spacing.none,
-    right: theme.spacing.xs,
+    right: `max(0px, calc(${theme.spacing.xs} - var(--scrollbar-gutter-size, 0px)))`,
     height: theme.sizes.borderWidth,
     backgroundColor: theme.colors.fadedText10,
   }
@@ -75,8 +75,11 @@ export const ThemedStyledDropdownListItem = styled(StyledDropdownListItem, {
       paddingRight: theme.spacing.sm,
       paddingTop: theme.spacing.threeXS,
       paddingBottom: theme.spacing.threeXS,
-      // Right margin creates inset from scrollbar (matches container's left padding)
-      marginRight: theme.spacing.xs,
+      // Right margin creates inset from scrollbar, adjusted for scrollbar gutter.
+      // In overlay mode (gutter=0): marginRight = xs (original spacing)
+      // In classic mode (gutter>0): marginRight = 0 (gutter provides spacing, larger gap accepted)
+      // Using max() to prevent negative margins which would clip the border radius.
+      marginRight: `max(0px, calc(${theme.spacing.xs} - var(--scrollbar-gutter-size, 0px)))`,
       borderRadius: theme.radii.md,
       background: $isHighlighted
         ? theme.colors.darkenedBgMix15

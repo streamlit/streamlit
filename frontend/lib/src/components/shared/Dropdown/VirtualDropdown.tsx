@@ -25,6 +25,7 @@ import { FixedSizeList } from "react-window"
 
 import { OverflowTooltip, Placement } from "~lib/components/shared/Tooltip"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { useScrollbarGutterSize } from "~lib/hooks/useScrollbarGutterSize"
 import { convertRemToPx } from "~lib/theme/utils"
 
 import { ThemedStyledDropdownListItem } from "./styled-components"
@@ -70,6 +71,7 @@ function FixedSizeListItem(props: FixedSizeListItemProps): ReactElement {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
 const VirtualDropdown = forwardRef<any, any>((props, ref) => {
   const theme = useEmotionTheme()
+  const scrollbarGutterSize = useScrollbarGutterSize()
   // TODO: Update to match React best practices
   // eslint-disable-next-line @eslint-react/no-children-to-array
   const children = Children.toArray(props.children) as ReactElement[]
@@ -141,6 +143,16 @@ const VirtualDropdown = forwardRef<any, any>((props, ref) => {
           return id ?? value
         }}
         itemSize={convertRemToPx(theme.sizes.dropdownItemHeight)}
+        style={
+          {
+            // Reserve space for scrollbar to prevent layout shifts when macOS
+            // switches between overlay and classic scrollbar modes.
+            scrollbarGutter: "stable",
+            // Pass scrollbar gutter size to children via CSS custom property
+            // so they can adjust their margins accordingly.
+            "--scrollbar-gutter-size": `${scrollbarGutterSize}px`,
+          } as React.CSSProperties
+        }
       >
         {FixedSizeListItem}
       </FixedSizeList>
