@@ -8,7 +8,7 @@ status: Draft
 
 ## Summary
 
-Add `on_click: Literal["rerun", "ignore"] | Callable = "ignore"` to `st.link_button`, enabling
+Add `on_click: Literal["rerun", "ignore"] | WidgetCallback = "ignore"` to `st.link_button`, enabling
 server-side callbacks when the user clicks the link. This mirrors the `on_click` behavior
 already available in `st.download_button`.
 
@@ -36,7 +36,8 @@ result as "read" when a user opens it via a hyperlink.
 ```python
 st.link_button(
     ...,
-    on_click: Literal["rerun", "ignore"] | Callable = "ignore",  # NEW
+    key: str | int | None = None,  # NEW
+    on_click: Literal["rerun", "ignore"] | WidgetCallback = "ignore",  # NEW
     args: WidgetArgs | None = None,  # NEW
     kwargs: WidgetKwargs | None = None,  # NEW
 )
@@ -44,11 +45,12 @@ st.link_button(
 
 ### Parameters
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `on_click` | `"ignore"`, `"rerun"`, or `callable` | `"ignore"` | How the button should respond to clicks. `"ignore"` (default): No rerun, link opens in new tab only. `"rerun"`: Clicking triggers a rerun in addition to opening the link. `callable`: Clicking triggers a rerun and executes the callback before the rest of the app. |
-| `args` | `list \| tuple \| None` | `None` | Arguments to pass to the callback. |
-| `kwargs` | `dict \| None` | `None` | Keyword arguments to pass to the callback. |
+| Parameter  | Type                                       | Default    | Description                                                                                                                                                                                                                                                                  |
+| ---------- | ------------------------------------------ | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `key`      | `str \| int \| None`                       | `None`     | An optional string or integer to uniquely identify the widget. If omitted, a key will be generated automatically.                                                                                                                                                            |
+| `on_click` | `"ignore"`, `"rerun"`, or `WidgetCallback` | `"ignore"` | How the button should respond to clicks. `"ignore"` (default): No rerun, link opens in new tab only. `"rerun"`: Clicking triggers a rerun in addition to opening the link. `WidgetCallback`: Clicking triggers a rerun and executes the callback before the rest of the app. |
+| `args`     | `list \| tuple \| None`                    | `None`     | Arguments to pass to the callback.                                                                                                                                                                                                                                           |
+| `kwargs`   | `dict \| None`                             | `None`     | Keyword arguments to pass to the callback.                                                                                                                                                                                                                                   |
 
 ### Behavior
 
@@ -102,6 +104,14 @@ for result in results:
 - Default is `"ignore"` (unlike `st.download_button`'s `"rerun"`).
 - Requires registering `st.link_button` as a widget with state management when
   `on_click != "ignore"`
+
+## Future Considerations
+
+- **Interaction with [#7464](https://github.com/streamlit/streamlit/issues/7464) (opening link in same tab):**
+  If we implement the ability to open links in the same tab, the `on_click` behavior would need
+  reconsideration. Triggering a rerun before navigating away could feel awkward since the user
+  would leave the app immediately. We may want to either skip the rerun entirely or execute the
+  callback synchronously before navigation. This can be addressed when implementing #7464.
 
 ## Checklist
 
