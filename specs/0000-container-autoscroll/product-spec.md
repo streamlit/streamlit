@@ -1,7 +1,7 @@
 ---
-author: "@lukasmasuch"
+author: lukasmasuch
 created: 2025-12-03
-status: Draft
+status: Approved
 ---
 
 # Allow configuring auto-scrolling for `st.container`
@@ -58,9 +58,9 @@ st.container(
 
 ### Parameter
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `autoscroll` | `bool \| None` | `None` | Whether to automatically scroll to the bottom when new content is added. Only applicable when the container has a fixed height. If `None`, auto-scroll is enabled when the container has a fixed height and contains `st.chat_message` elements. |
+| Parameter    | Type           | Default | Description                                                                                                                                                                                                                                      |
+| ------------ | -------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `autoscroll` | `bool \| None` | `None`  | Whether to automatically scroll to the bottom when new content is added. Only applicable when the container has a fixed height. If `None`, auto-scroll is enabled when the container has a fixed height and contains `st.chat_message` elements. |
 
 ### Behavior
 
@@ -71,6 +71,11 @@ st.container(
   2. The container contains `st.chat_message` elements
 - This preserves the current default behavior for chat interfaces
 - Otherwise, standard scrolling behavior applies
+
+> **Design note:** We considered using `"auto"` as the default (similar to `width`/`height` on
+> some elements) but chose `None` for consistency with parameters like `hide_index` in
+> `st.dataframe`, where the default selects one of the existing boolean options based on
+> context rather than representing a distinct behavior mode.
 
 **`autoscroll=False`:**
 
@@ -174,12 +179,32 @@ with st.container(height=500, autoscroll=False, border=True):
 - **Fragment reruns**: Scroll state is preserved across fragment reruns
 - **Container resizing**: Scroll position is recalculated when container dimensions change
 
+## Future Considerations
+
+The following ideas are out of scope for the initial implementation but worth exploring in
+follow-up work:
+
+**Scroll-to-bottom button indicator**: Show a small "scroll to bottom" button when
+`autoscroll=True` and the user has scrolled away from the bottom, similar to ChatGPT's UI.
+This would provide a visual cue and quick way to resume auto-scrolling. This enhancement
+should also be applied to the existing main area scroll-to-bottom behavior when `st.chat_input`
+is used.
+
+**Support for `height="stretch"` containers**: Enable autoscroll for containers that fill
+their parent's available space (e.g., `st.container(height="stretch", autoscroll=True)`).
+This is technically feasible for single-container scenarios by signaling to the parent
+scrollable area (main/sidebar) to enable autoscroll. However, multiple stretch containers
+with autoscroll in the same parent creates conflicting scroll intents and poor UX. A
+`max_height` parameter could also help address this use case. Requires further investigation
+into the interaction model and potential warnings/restrictions.
+
 ## Checklist
 
-- [x] Will this work on all deployment platforms (e.g. [Streamlit Community Cloud](https://streamlit.io/cloud), [Streamlit in Snowflake](https://www.snowflake.com/en/product/features/streamlit-in-snowflake/), [Hugging Face Spaces](https://huggingface.co/spaces))?
-- [x] No breaking API changes?
-- [x] No new dependencies?
-- [x] Metrics collected?
-- [x] Any security or legal implications?
-- [x] Anything to keep in mind for docs?
-- [x] Any other risks?
+| Item                       | ✅ or comment                                    |
+| -------------------------- | ------------------------------------------------ |
+| Works on SiS, Cloud, etc?  | ✅                                               |
+| No breaking API changes    | ✅                                               |
+| No new dependencies        | ✅ Leverages existing `useScrollToBottom` hook   |
+| Metrics collected          | ✅                                               |
+| Any security/legal impact? | ✅                                               |
+| Any docs changes needed?   | ✅ Document `autoscroll` parameter with examples |
