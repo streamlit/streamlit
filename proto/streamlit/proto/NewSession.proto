@@ -125,6 +125,15 @@ message Config {
   }
   ToolbarMode toolbar_mode = 8;
 
+  // See config option "client.showErrorLinks".
+  enum ShowErrorLinks {
+    SHOW_ERROR_LINKS_UNSPECIFIED = 0;
+    SHOW_ERROR_LINKS_AUTO = 1;
+    SHOW_ERROR_LINKS_TRUE = 2;
+    SHOW_ERROR_LINKS_FALSE = 3;
+  }
+  ShowErrorLinks show_error_links = 9;
+
   reserved 1;
 }
 
