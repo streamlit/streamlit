@@ -157,11 +157,11 @@ action = st.menu_button(
 
 ## Checklist
 
-| Item                       | ✅ or comment                     |
-| -------------------------- | --------------------------------- |
-| Works on SiS, Cloud, etc?  | ✅                                |
-| No breaking API changes    | ✅                                |
-| No new dependencies        | ✅                                |
-| Metrics collected          | ✅                                |
-| Any security/legal impact? | ✅                                |
-| Any docs changes needed?   | New widget documentation required |
+| Item                       | ✅ or comment          |
+| -------------------------- | ---------------------- |
+| Works on SiS, Cloud, etc?  | ✅                     |
+| No breaking API changes    | ✅                     |
+| No new dependencies        | ✅                     |
+| Metrics collected          | ✅                     |
+| Any security/legal impact? | ✅                     |
+| Any docs changes needed?   | ✅ Document new widget |
