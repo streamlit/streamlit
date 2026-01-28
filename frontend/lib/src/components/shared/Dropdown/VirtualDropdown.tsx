@@ -110,10 +110,17 @@ const VirtualDropdown = forwardRef<any, any>((props, ref) => {
     )
   }
 
-  const height = Math.min(
-    convertRemToPx(theme.sizes.maxDropdownHeight),
+  const maxHeight = convertRemToPx(theme.sizes.maxDropdownHeight)
+  const contentHeight =
     children.length * convertRemToPx(theme.sizes.dropdownItemHeight)
-  )
+  const height = Math.min(maxHeight, contentHeight)
+
+  // Check if scrollbar will be visible (content exceeds max height)
+  const hasScrollbar = contentHeight > maxHeight
+
+  // Only account for scrollbar gutter when scrollbar is actually visible
+  // and we're in classic scrollbar mode (gutter > 0)
+  const effectiveGutterSize = hasScrollbar ? scrollbarGutterSize : 0
 
   return (
     <StyledList
@@ -145,12 +152,9 @@ const VirtualDropdown = forwardRef<any, any>((props, ref) => {
         itemSize={convertRemToPx(theme.sizes.dropdownItemHeight)}
         style={
           {
-            // Reserve space for scrollbar to prevent layout shifts when macOS
-            // switches between overlay and classic scrollbar modes.
-            scrollbarGutter: "stable",
             // Pass scrollbar gutter size to children via CSS custom property
-            // so they can adjust their margins accordingly.
-            "--scrollbar-gutter-size": `${scrollbarGutterSize}px`,
+            // so they can adjust their margins when scrollbar is visible in classic mode.
+            "--scrollbar-gutter-size": `${effectiveGutterSize}px`,
           } as React.CSSProperties
         }
       >
