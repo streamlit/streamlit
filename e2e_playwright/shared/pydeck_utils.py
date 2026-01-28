@@ -62,7 +62,7 @@ def get_pydeck_chart(
                 ),
             ],
         ),
-        use_container_width=True,
+        width="stretch",
         key=key,
         on_select=on_select or "rerun",
         selection_mode=selection_mode,

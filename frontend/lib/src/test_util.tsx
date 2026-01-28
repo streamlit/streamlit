@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { FC, PropsWithChildren, ReactElement } from "react"
+import { FC, PropsWithChildren, ReactElement, useRef } from "react"
 
 import {
   render as reactTestingLibraryRender,
@@ -178,7 +178,16 @@ export function mockWindowLocation(hostname: string): void {
 export interface RenderWithContextsOptions {
   viewStateContext?: Partial<ViewStateContextProps>
   libConfigContext?: Partial<LibConfigContextProps>
-  sidebarConfigContext?: Partial<SidebarConfigContextProps>
+  /**
+   * Sidebar config context overrides. Note: `appRootRef` accepts a boolean here -
+   * when true, the helper creates a wrapper div with data-testid="stApp" and
+   * provides the ref through context (mirroring App.tsx behavior).
+   */
+  sidebarConfigContext?: Partial<
+    Omit<SidebarConfigContextProps, "appRootRef">
+  > & {
+    appRootRef?: boolean
+  }
   themeContext?: Partial<ThemeContextProps>
   navigationContext?: Partial<NavigationContextProps>
   formsContext?: Partial<FormsContextProps>
@@ -246,8 +255,18 @@ export const renderWithContexts = (
     sidebarChevronDownshift: 0,
     expandSidebarNav: false,
     hideSidebarNav: false,
-    ...options.sidebarConfigContext,
+    // Note: appRootRef is handled separately in the Wrapper component
+    ...(options.sidebarConfigContext
+      ? Object.fromEntries(
+          Object.entries(options.sidebarConfigContext).filter(
+            ([key]) => key !== "appRootRef"
+          )
+        )
+      : {}),
   }
+
+  // Track whether we should create an app root wrapper
+  const shouldCreateAppRoot = options.sidebarConfigContext?.appRootRef === true
 
   let currentThemeContextProps: ThemeContextProps = {
     activeTheme: mockTheme,
@@ -288,43 +307,63 @@ export const renderWithContexts = (
     ...options.downloadContext,
   }
 
-  const Wrapper: FC<PropsWithChildren> = ({ children }) => (
-    <ThemeProvider theme={mockTheme.emotion}>
-      <WindowDimensionsProvider>
-        <FlexContext.Provider value={flexContextValue}>
-          <LibConfigContext.Provider value={currentLibConfigContextProps}>
-            <SidebarConfigContext.Provider
-              value={currentSidebarConfigContextProps}
-            >
-              <ThemeContext.Provider value={currentThemeContextProps}>
-                <NavigationContext.Provider
-                  value={currentNavigationContextProps}
-                >
-                  <ViewStateContext.Provider
-                    value={currentViewStateContextProps}
+  const Wrapper: FC<PropsWithChildren> = ({ children }) => {
+    // Create ref for app root if needed
+    const appRootRef = useRef<HTMLDivElement>(null)
+
+    // Build the actual sidebar config with the ref if needed
+    // Note: We intentionally don't use useMemo here because rerenderWithContexts
+    // needs to update the context value on each rerender when currentSidebarConfigContextProps changes.
+    // eslint-disable-next-line react/jsx-no-constructed-context-values
+    const sidebarConfigValue: SidebarConfigContextProps = {
+      ...currentSidebarConfigContextProps,
+      ...(shouldCreateAppRoot && { appRootRef }),
+    }
+
+    const content = shouldCreateAppRoot ? (
+      <div data-testid="stApp" ref={appRootRef}>
+        {children}
+      </div>
+    ) : (
+      children
+    )
+
+    return (
+      <ThemeProvider theme={mockTheme.emotion}>
+        <WindowDimensionsProvider>
+          <FlexContext.Provider value={flexContextValue}>
+            <LibConfigContext.Provider value={currentLibConfigContextProps}>
+              <SidebarConfigContext.Provider value={sidebarConfigValue}>
+                <ThemeContext.Provider value={currentThemeContextProps}>
+                  <NavigationContext.Provider
+                    value={currentNavigationContextProps}
                   >
-                    <ScriptRunContext.Provider
-                      value={currentScriptRunContextProps}
+                    <ViewStateContext.Provider
+                      value={currentViewStateContextProps}
                     >
-                      <DownloadContext.Provider
-                        value={currentDownloadContextProps}
+                      <ScriptRunContext.Provider
+                        value={currentScriptRunContextProps}
                       >
-                        <FormsContext.Provider
-                          value={currentFormsContextProps}
+                        <DownloadContext.Provider
+                          value={currentDownloadContextProps}
                         >
-                          {children}
-                        </FormsContext.Provider>
-                      </DownloadContext.Provider>
-                    </ScriptRunContext.Provider>
-                  </ViewStateContext.Provider>
-                </NavigationContext.Provider>
-              </ThemeContext.Provider>
-            </SidebarConfigContext.Provider>
-          </LibConfigContext.Provider>
-        </FlexContext.Provider>
-      </WindowDimensionsProvider>
-    </ThemeProvider>
-  )
+                          <FormsContext.Provider
+                            value={currentFormsContextProps}
+                          >
+                            {content}
+                          </FormsContext.Provider>
+                        </DownloadContext.Provider>
+                      </ScriptRunContext.Provider>
+                    </ViewStateContext.Provider>
+                  </NavigationContext.Provider>
+                </ThemeContext.Provider>
+              </SidebarConfigContext.Provider>
+            </LibConfigContext.Provider>
+          </FlexContext.Provider>
+        </WindowDimensionsProvider>
+      </ThemeProvider>
+    )
+  }
 
   const result = reactTestingLibraryRender(component, {
     wrapper: Wrapper,
@@ -350,9 +389,15 @@ export const renderWithContexts = (
         }
       }
       if (newOptions?.sidebarConfigContext) {
+        // Filter out appRootRef since it's handled separately (boolean in options vs RefObject in context)
+        const filteredSidebarConfig = Object.fromEntries(
+          Object.entries(newOptions.sidebarConfigContext).filter(
+            ([key]) => key !== "appRootRef"
+          )
+        )
         currentSidebarConfigContextProps = {
           ...currentSidebarConfigContextProps,
-          ...newOptions.sidebarConfigContext,
+          ...filteredSidebarConfig,
         }
       }
       if (newOptions?.themeContext) {

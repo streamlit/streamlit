@@ -312,6 +312,56 @@ def test_scan_component_manifests_empty_distributions() -> None:
         assert manifests == []
 
 
+@parameterized.expand(
+    [
+        ("none_name", None),
+        ("empty_string_name", ""),
+    ]
+)
+def test_scan_component_manifests_skips_distributions_without_name(
+    _case: str, dist_name: str | None
+) -> None:
+    """Test scanning skips distributions with missing or invalid dist.name."""
+    from streamlit.components.v2.manifest_scanner import scan_component_manifests
+
+    invalid_dist = Mock()
+    invalid_dist.name = dist_name
+    invalid_metadata = MagicMock()
+    invalid_metadata.__contains__.return_value = False
+    invalid_metadata.get_all.return_value = []
+    invalid_dist.metadata = invalid_metadata
+
+    valid_dist = Mock()
+    valid_dist.name = "streamlit-package-0"
+    valid_metadata = MagicMock()
+    metadata_dict = {
+        "Name": "streamlit-package-0",
+        "Summary": "Description for streamlit-package-0",
+    }
+    valid_metadata.__getitem__.side_effect = metadata_dict.__getitem__
+    valid_metadata.__contains__.side_effect = metadata_dict.__contains__
+    valid_metadata.get_all.return_value = []
+    valid_dist.metadata = valid_metadata
+
+    with (
+        patch(
+            "streamlit.components.v2.manifest_scanner.importlib.metadata.distributions"
+        ) as mock_distributions,
+        patch(
+            "streamlit.components.v2.manifest_scanner._process_single_package"
+        ) as mock_process,
+    ):
+        mock_distributions.return_value = [invalid_dist, valid_dist]
+        mock_process.return_value = None
+
+        # Should not raise, even with malformed distributions.
+        manifests = scan_component_manifests(max_workers=1)
+
+        assert manifests == []
+        # Anti-regression: do not attempt to process the invalid distribution.
+        mock_process.assert_called_once_with(valid_dist)
+
+
 def test_scan_component_manifests_error_handling() -> None:
     """Test that scanning handles errors gracefully."""
     from streamlit.components.v2.manifest_scanner import (

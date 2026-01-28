@@ -28,10 +28,13 @@ import {
   mockSessionInfo,
   mockTheme,
   NavigationContextProps,
-  SidebarConfigContextProps,
   WidgetStateManager,
 } from "@streamlit/lib"
-import { render, renderWithContexts } from "@streamlit/lib/testing"
+import {
+  render,
+  renderWithContexts,
+  RenderWithContextsOptions,
+} from "@streamlit/lib/testing"
 import {
   Block as BlockProto,
   Element,
@@ -46,8 +49,8 @@ import AppView, { AppViewProps } from "./AppView"
 const FAKE_SCRIPT_HASH = "fake_script_hash"
 
 function getSidebarConfigContextOutput(
-  context: Partial<SidebarConfigContextProps>
-): SidebarConfigContextProps {
+  context: RenderWithContextsOptions["sidebarConfigContext"] = {}
+): NonNullable<RenderWithContextsOptions["sidebarConfigContext"]> {
   return {
     initialSidebarState: PageConfig.SidebarState.AUTO,
     appLogo: null,
@@ -113,7 +116,7 @@ function getProps(props: Partial<AppViewProps> = {}): AppViewProps {
 function renderAppView(
   props: Partial<AppViewProps> = {},
   overrides?: {
-    sidebarConfigContext?: Partial<SidebarConfigContextProps>
+    sidebarConfigContext?: RenderWithContextsOptions["sidebarConfigContext"]
     navigationContext?: Partial<NavigationContextProps>
   }
 ): ReturnType<typeof renderWithContexts> {

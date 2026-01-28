@@ -136,9 +136,7 @@ const ArrowVegaLiteChart: FC<Props> = ({
   } = useCalculatedDimensions(
     // We need to update whenever the showData state changes because
     // the underlying element ref that needs to be observed is updated.
-    [showData],
-    // Use 0 as fallback instead of -1 because Vega-Lite cannot handle negative dimensions
-    0
+    [showData]
   )
 
   const useStretchWidth =
@@ -232,10 +230,14 @@ const ArrowVegaLiteChart: FC<Props> = ({
   }, [data, datasets])
 
   if (showData) {
+    const derivedHeight =
+      fullScreenHeight ??
+      (chartContainerHeight > 0 ? chartContainerHeight : undefined)
+
     return (
       <ReadOnlyGrid
         data={data ?? datasets[0]?.data}
-        height={fullScreenHeight ?? chartContainerHeight ?? undefined}
+        height={derivedHeight}
         width={widthConfig ?? undefined}
         customToolbarActions={[
           <ToolbarAction

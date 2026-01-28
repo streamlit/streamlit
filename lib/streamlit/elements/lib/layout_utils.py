@@ -273,7 +273,7 @@ def get_justify(
     justify = map_to_flex_terminology[alignment]
     if justify not in valid_justify:
         return Block.FlexContainer.Justify.JUSTIFY_UNDEFINED
-    if justify in ["start", "end", "center"]:
+    if justify in {"start", "end", "center"}:
         return cast(
             "Block.FlexContainer.Justify.ValueType",
             getattr(Block.FlexContainer.Justify, f"JUSTIFY_{justify.upper()}"),

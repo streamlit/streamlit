@@ -20,7 +20,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-if __name__ not in ("__main__", "__mp_main__"):
+if __name__ not in {"__main__", "__mp_main__"}:
     raise SystemExit(
         "This file is intended to be executed as an executable program. You cannot use "
         f"it as a module.To run this script, run the ./{__file__} command"

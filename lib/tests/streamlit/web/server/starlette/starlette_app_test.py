@@ -397,7 +397,7 @@ def test_media_endpoint_no_content_encoding_for_video(
     assert response.status_code == 200
     # Media routes use Content-Encoding: identity to prevent gzip compression.
     # Both None and "identity" indicate no encoding is applied.
-    assert response.headers.get("Content-Encoding") in (None, "identity")
+    assert response.headers.get("Content-Encoding") in {None, "identity"}
 
 
 def test_media_endpoint_no_content_encoding_for_audio(
@@ -419,7 +419,7 @@ def test_media_endpoint_no_content_encoding_for_audio(
     assert response.status_code == 200
     # Media routes use Content-Encoding: identity to prevent gzip compression.
     # Both None and "identity" indicate no encoding is applied.
-    assert response.headers.get("Content-Encoding") in (None, "identity")
+    assert response.headers.get("Content-Encoding") in {None, "identity"}
 
 
 def test_media_endpoint_no_content_encoding_for_range_requests(
@@ -440,7 +440,7 @@ def test_media_endpoint_no_content_encoding_for_range_requests(
 
     assert response.status_code == HTTPStatus.PARTIAL_CONTENT
     # Range requests for media don't include Content-Encoding
-    assert response.headers.get("Content-Encoding") in (None, "identity")
+    assert response.headers.get("Content-Encoding") in {None, "identity"}
 
 
 def test_upload_put_adds_file(

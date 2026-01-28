@@ -1466,10 +1466,10 @@ class ConfigLoadingTest(unittest.TestCase):
         makedirs_patch = patch("streamlit.config.os.makedirs")
         makedirs_patch.return_value = True
         pathexists_patch = patch("streamlit.config.os.path.exists")
-        pathexists_patch.side_effect = lambda path: path in [
+        pathexists_patch.side_effect = lambda path: path in {
             global_config_path,
             local_config_path,
-        ]
+        }
 
         with open_patch, makedirs_patch, pathexists_patch:
             config.get_config_options()
@@ -1514,10 +1514,10 @@ class ConfigLoadingTest(unittest.TestCase):
         makedirs_patch = patch("streamlit.config.os.makedirs")
         makedirs_patch.return_value = True
         pathexists_patch = patch("streamlit.config.os.path.exists")
-        pathexists_patch.side_effect = lambda path: path in [
+        pathexists_patch.side_effect = lambda path: path in {
             global_config_path,
             local_config_path,
-        ]
+        }
 
         with open_patch, makedirs_patch, pathexists_patch:
             config.get_config_options(options_from_flags={"theme.font": "monospace"})
@@ -1993,10 +1993,10 @@ class ThemeInheritanceIntegrationTest(unittest.TestCase):
 
                 with self._config_patches(config_toml):
                     with patch("streamlit.config.os.path.exists") as mock_exists:
-                        mock_exists.side_effect = lambda path: path in [
+                        mock_exists.side_effect = lambda path: path in {
                             env_theme_file,
                             cli_theme_file,
-                        ]
+                        }
 
                         # First simulate env var processing
                         config.get_config_options(force_reparse=True)
@@ -2353,7 +2353,7 @@ class ThemeInheritanceIntegrationTest(unittest.TestCase):
 
                 # THE CRITICAL TEST: theme.base must be valid for app_session
                 final_base = config.get_option("theme.base")
-                assert final_base in ("light", "dark"), (
+                assert final_base in {"light", "dark"}, (
                     f"theme.base should be 'light' or 'dark', got '{final_base}'"
                 )
                 assert final_base == "light"  # Should default to light
@@ -2410,7 +2410,7 @@ class ThemeInheritanceIntegrationTest(unittest.TestCase):
 
                 # THE CRITICAL TEST: theme.base must be valid for app_session
                 final_base = config.get_option("theme.base")
-                assert final_base in ("light", "dark"), (
+                assert final_base in {"light", "dark"}, (
                     f"theme.base should be 'light' or 'dark', got '{final_base}'"
                 )
                 assert final_base == "light"  # Should default to light

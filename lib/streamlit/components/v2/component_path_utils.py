@@ -146,7 +146,7 @@ class ComponentPathUtils:
             len(path) >= 3
             and path[0].isalpha()
             and path[1] == ":"
-            and path[2] in ("/", "\\")
+            and path[2] in {"/", "\\"}
         )
         is_unc_abs = path.startswith("\\\\")
 

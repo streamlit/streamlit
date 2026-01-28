@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { PureComponent, ReactNode } from "react"
+import { createRef, PureComponent, ReactNode } from "react"
 
 import classNames from "classnames"
 import { enableMapSet, enablePatches } from "immer"
@@ -75,12 +75,11 @@ import {
   FileUploadClient,
   FormsData,
   generateUID,
-  getCachedTheme,
   getElementId,
   getEmbeddingIdClassName,
-  getHostSpecifiedThemeOnly,
   getIFrameEnclosingApp,
   getLocaleLanguage,
+  getPreferredTheme,
   getQueryString,
   getScreencastTimestamp,
   getTimezone,
@@ -100,7 +99,6 @@ import {
   isToolbarDisplayed,
   IToolbarItem,
   lightTheme,
-  mapCachedThemeToAvailableTheme,
   mark,
   measure,
   notUndefined,
@@ -266,6 +264,12 @@ export class App extends PureComponent<Props, State> {
   private readonly componentRegistry: ComponentRegistry
 
   private readonly embeddingId: string = generateUID()
+
+  /**
+   * Ref to the root app container element.
+   * Used by components like Sidebar to detect clicks inside/outside the app.
+   */
+  private readonly appRootRef = createRef<HTMLDivElement>()
 
   // Listener registry for deferred file responses: fileId -> set of listeners
   private readonly deferredFileListeners = new Map<
@@ -1476,16 +1480,7 @@ export class App extends PureComponent<Props, State> {
       // Add the new custom themes to the theme manager and remove the preset themes
       this.props.theme.addThemes(customThemes, { keepPresetThemes: false })
 
-      // Check for host-specified theme first (embed_options query params)
-      const hostSpecified = getHostSpecifiedThemeOnly()
-      const userPreference = hostSpecified ?? getCachedTheme()
-      // Map the user's preference (host-specified or cached) to the best matching theme
-      // - Applies full server config while preserving user's light/dark selection
-      const mappedTheme = mapCachedThemeToAvailableTheme(
-        userPreference,
-        customThemes
-      )
-
+      const mappedTheme = getPreferredTheme(customThemes)
       if (mappedTheme) {
         // User has a mappable preference - apply the full server config
         // while preserving their light/dark selection
@@ -1513,16 +1508,8 @@ export class App extends PureComponent<Props, State> {
       this.props.theme.addThemes([])
 
       if (usingCustomTheme) {
-        // Check for host-specified theme first (embed_options query params)
-        const hostSpecified = getHostSpecifiedThemeOnly()
-        const userPreference = hostSpecified ?? getCachedTheme()
         const presetThemes = [lightTheme, darkTheme]
-        // Try to map preference (host-specified or cached) back to preset themes
-        // e.g., "Custom Theme Light" → "Light", "Custom Theme Dark" → "Dark"
-        const mappedTheme = mapCachedThemeToAvailableTheme(
-          userPreference,
-          presetThemes
-        )
+        const mappedTheme = getPreferredTheme(presetThemes)
 
         if (mappedTheme) {
           // User had a custom theme preference that maps to a preset - preserve their choice
@@ -2083,7 +2070,9 @@ export class App extends PureComponent<Props, State> {
       sessionInfo: this.sessionInfo,
       isServerConnected: this.isServerConnected(),
       settings: this.state.userSettings,
-      allowRunOnSave: this.state.allowRunOnSave,
+      allowRunOnSave:
+        this.state.allowRunOnSave &&
+        showDevelopmentOptions(this.state.isOwner, this.state.toolbarMode),
       onSave: this.saveSettings,
       onClose: () => {},
       animateModal,
@@ -2440,6 +2429,7 @@ export class App extends PureComponent<Props, State> {
       <StreamlitContextProvider
         initialSidebarState={initialSidebarState}
         initialSidebarWidth={this.state.initialSidebarWidth}
+        appRootRef={this.appRootRef}
         pageLinkBaseUrl={pageLinkBaseUrl}
         currentPageScriptHash={currentPageScriptHash}
         onPageChange={this.onPageChange}
@@ -2475,6 +2465,7 @@ export class App extends PureComponent<Props, State> {
           onKeyUp={this.handleKeyUp}
         >
           <StyledApp
+            ref={this.appRootRef}
             className={outerDivClass}
             data-testid="stApp"
             data-test-script-state={

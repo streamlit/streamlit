@@ -413,7 +413,7 @@ class FormMixin:
             width = "stretch" if use_container_width else "content"
 
         # Checks whether the entered button type is one of the allowed options
-        if type not in ["primary", "secondary", "tertiary"]:
+        if type not in {"primary", "secondary", "tertiary"}:
             raise StreamlitAPIException(
                 'The type argument to st.form_submit_button must be "primary", "secondary", or "tertiary". \n'
                 f'The argument passed was "{type}".'

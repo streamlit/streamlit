@@ -739,7 +739,7 @@ class SliderMixin:
 
         # Ensure that the value is either a single value or a range of values.
         single_value = isinstance(value, tuple(SUPPORTED_TYPES.keys()))
-        range_value = isinstance(value, (list, tuple)) and len(value) in (0, 1, 2)
+        range_value = isinstance(value, (list, tuple)) and len(value) in {0, 1, 2}
         if not single_value and not range_value:
             raise StreamlitAPIException(
                 "Slider value should either be an int/float/datetime or a list/tuple of "
@@ -778,7 +778,7 @@ class SliderMixin:
 
             datetime_min = time.min.replace(tzinfo=prepared_value[0].tzinfo)
             datetime_max = time.max.replace(tzinfo=prepared_value[0].tzinfo)
-        if data_type in (SliderProto.DATETIME, SliderProto.DATE):
+        if data_type in {SliderProto.DATETIME, SliderProto.DATE}:
             prepared_value = cast("Sequence[datetime]", prepared_value)
 
             datetime_min = prepared_value[0] - timedelta(days=14)
@@ -823,10 +823,10 @@ class SliderMixin:
             max_value = defaults[data_type]["max_value"]
         if step is None:
             step = defaults[data_type]["step"]
-            if data_type in (
+            if data_type in {
                 SliderProto.DATETIME,
                 SliderProto.DATE,
-            ) and max_value - min_value < timedelta(days=1):
+            } and max_value - min_value < timedelta(days=1):
                 step = timedelta(minutes=15)
         if format is None:
             format = cast("str", defaults[data_type]["format"])  # noqa: A001
@@ -945,7 +945,7 @@ class SliderMixin:
             # Restore times/datetimes to original timezone (dates are always naive)
             orig_tz = (
                 prepared_value[0].tzinfo
-                if data_type in (SliderProto.TIME, SliderProto.DATETIME)
+                if data_type in {SliderProto.TIME, SliderProto.DATETIME}
                 else None
             )
 

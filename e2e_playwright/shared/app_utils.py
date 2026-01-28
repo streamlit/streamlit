@@ -1403,7 +1403,7 @@ def get_segment_button(locator: Locator, text: str) -> Locator:
         The segment button.
     """
     return locator.get_by_test_id(
-        re.compile("stBaseButton-segmented_control(Active)?")
+        re.compile(r"stBaseButton-segmented_control(Active)?")
     ).filter(has_text=text)
 
 

@@ -1008,7 +1008,6 @@ class DialogTest(DeltaGeneratorTestCase):
 
         with dialog:
             """No content so that 'get_delta_from_queue' returns the dialog."""
-            pass
 
         dialog_block = self.get_delta_from_queue()
         assert dialog_block.add_block.dialog.title == DialogTest.title
@@ -1202,7 +1201,6 @@ class DialogTest(DeltaGeneratorTestCase):
 
         with dialog:
             """No content so that 'get_delta_from_queue' returns the dialog."""
-            pass
 
         dialog_block = self.get_delta_from_queue()
         assert dialog_block.add_block.dialog.title == DialogTest.title

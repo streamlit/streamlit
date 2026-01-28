@@ -169,7 +169,7 @@ def test_segmented_control_are_disabled_and_label_collapsed(app: Page):
     selected_button.click(force=True)
     wait_for_app_run(app)
     expect(selected_button).not_to_have_css(
-        "color", re.compile("rgb\\(\\d+, \\d+, \\d+\\)")
+        "color", re.compile(r"rgb\(\d+, \d+, \d+\)")
     )
     expect_markdown(app, "segmented-control-disabled: None")
     expect(segmented_control.get_by_text("Select an emotion:")).not_to_be_visible()
