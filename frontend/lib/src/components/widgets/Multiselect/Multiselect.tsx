@@ -466,7 +466,12 @@ const Multiselect: FC<Props> = props => {
               component: ValueContainer,
               style: () => ({
                 overflowY: "auto",
-                paddingLeft: theme.spacing.xs,
+                // When nothing selected, add extra padding to align placeholder with dropdown items
+                // When items selected, use smaller padding so tags are closer to the edge
+                paddingLeft:
+                  value.length === 0
+                    ? `calc(${theme.spacing.xs} - 1px + ${theme.spacing.xs})`
+                    : `calc(${theme.spacing.xs} - 1px)`,
                 paddingTop: theme.spacing.none,
                 paddingBottom: theme.spacing.none,
                 paddingRight: theme.spacing.none,
@@ -502,10 +507,10 @@ const Multiselect: FC<Props> = props => {
                   Root: {
                     style: {
                       fontWeight: theme.fontWeights.normal,
-                      borderTopLeftRadius: theme.radii.md,
-                      borderTopRightRadius: theme.radii.md,
-                      borderBottomRightRadius: theme.radii.md,
-                      borderBottomLeftRadius: theme.radii.md,
+                      borderTopLeftRadius: theme.radii.md2,
+                      borderTopRightRadius: theme.radii.md2,
+                      borderBottomRightRadius: theme.radii.md2,
+                      borderBottomLeftRadius: theme.radii.md2,
                       fontSize: theme.fontSizes.md,
                       paddingLeft: theme.spacing.sm,
                       marginLeft: theme.spacing.none,
@@ -554,7 +559,13 @@ const Multiselect: FC<Props> = props => {
                 },
               },
             },
-            Input: { props: { readOnly: inputReadOnly } },
+            Input: {
+              props: { readOnly: inputReadOnly },
+              style: () => ({
+                // Match the Placeholder paddingLeft so cursor aligns with placeholder text
+                paddingLeft: theme.spacing.none,
+              }),
+            },
             Dropdown: {
               component: VirtualDropdown,
               style: { boxShadow: "none", overflow: "hidden" },

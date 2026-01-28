@@ -79,10 +79,10 @@ export const ThemedStyledDropdownListItem = styled(StyledDropdownListItem, {
       // In classic mode (gutter>0): marginRight = 0 (gutter provides spacing, larger gap accepted)
       // Using max() to prevent negative margins which would clip the border radius.
       marginRight: `max(0px, calc(${theme.spacing.xs} - var(--scrollbar-gutter-size, 0px)))`,
-      borderTopLeftRadius: theme.radii.md,
-      borderTopRightRadius: theme.radii.md,
-      borderBottomRightRadius: theme.radii.md,
-      borderBottomLeftRadius: theme.radii.md,
+      borderTopLeftRadius: theme.radii.md2,
+      borderTopRightRadius: theme.radii.md2,
+      borderBottomRightRadius: theme.radii.md2,
+      borderBottomLeftRadius: theme.radii.md2,
       background: $isHighlighted
         ? theme.colors.darkenedBgMix15
         : "transparent",

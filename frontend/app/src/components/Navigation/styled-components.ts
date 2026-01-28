@@ -121,7 +121,7 @@ export const StyledSidebarNavLink = styled.a<StyledSidebarNavLinkProps>(
       flexDirection: "row",
       alignItems: "center",
       gap: theme.spacing.sm,
-      borderRadius: theme.radii.default,
+      borderRadius: theme.radii.md2,
       paddingLeft: theme.spacing.sm,
       paddingRight: theme.spacing.sm,
 
@@ -307,7 +307,8 @@ export const StyledTopNavLinkContainer = styled.div(({ theme }) => ({
 
 // This is specifically for use in TopNavSection's popover menu
 export const StyledTopNavSidebarNavLinkContainer = styled.div(({ theme }) => ({
-  margin: `${theme.spacing.twoXS} ${theme.spacing.sm}`,
+  marginLeft: theme.spacing.xs,
+  marginRight: theme.spacing.xs,
 }))
 
 export const StyledNavSectionText = styled.span(() => ({
@@ -321,7 +322,7 @@ export const StyledSectionName = styled.div(({ theme }) => ({
 }))
 
 export const StyledPopoverContent = styled.div(({ theme }) => ({
-  padding: `${theme.spacing.twoXS} 0`,
+  padding: `${theme.spacing.xs} 0`,
   fontSize: theme.fontSizes.sm,
 }))
 
