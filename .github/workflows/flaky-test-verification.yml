@@ -53,6 +53,10 @@ jobs:
           if [[ -z "$runs_input" ]]; then
             runs_input="25"
           fi
+          if [[ ! "$runs_input" =~ ^[1-9][0-9]*$ ]]; then
+            echo "::error::runs must be a positive integer (>= 1), got: $runs_input"
+            exit 1
+          fi
           echo "runs=$runs_input" >> "$GITHUB_OUTPUT"
 
           # Resolve PR number from input or event
@@ -71,8 +75,8 @@ jobs:
           fi
 
           # Validate pr_number is a positive integer
-          if [[ ! "$pr_number" =~ ^[0-9]+$ ]]; then
-            echo "::error::PR number must be a positive integer, got: $pr_number"
+          if [[ ! "$pr_number" =~ ^[1-9][0-9]*$ ]]; then
+            echo "::error::PR number must be a positive integer (>= 1), got: $pr_number"
             exit 1
           fi
           echo "pr_number=$pr_number" >> "$GITHUB_OUTPUT"

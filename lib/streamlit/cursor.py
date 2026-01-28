@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,10 +14,14 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
 from streamlit import util
+from streamlit.proto.Element_pb2 import Element
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
 
 
 def make_delta_path(
@@ -53,12 +57,76 @@ def get_container_cursor(
     return cursor
 
 
+T = TypeVar("T")
+
+
+class SparseList(Generic[T]):
+    """A list-like data structure that only stores non-empty items."""
+
+    def __init__(self) -> None:
+        self._data: dict[int, T] = {}
+
+    def __setitem__(self, index: int, value: T) -> None:
+        if not isinstance(index, int) or index < 0:
+            raise IndexError("SparseList indices must be non-negative integers")
+
+        self._data[index] = value
+
+    def __getitem__(self, index: int) -> T:
+        if index not in self._data:
+            raise KeyError(f"Index {index} is empty")
+
+        return self._data[index]
+
+    def __delitem__(self, index: int) -> None:
+        if index in self._data:
+            del self._data[index]
+        else:
+            raise KeyError(f"Index {index} is empty")
+
+    def __iter__(self) -> Iterator[T]:
+        # Iterate in index order.
+        for index in sorted(self._data):
+            yield self._data[index]
+
+    def __len__(self) -> int:
+        # number of filled items
+        return len(self._data)
+
+    def items(self) -> Iterator[tuple[int, T]]:
+        """Iterate through (index, value) for filled entries."""
+        for index in sorted(self._data):
+            yield index, self._data[index]
+
+    def __contains__(self, index: int) -> bool:
+        return index in self._data
+
+    def __repr__(self) -> str:
+        items = ", ".join(f"{i}: {v}" for i, v in self.items())
+        return f"SparseList({{{items}}})"
+
+
 class Cursor:
     """A pointer to a delta location in the app.
 
     When adding an element to the app, you should always call
     get_locked_cursor() on that element's respective Cursor.
+
+    Parameters
+    ----------
+    transient_index: int | None
+      The running index of the transient elements.
+    transient_elements: SparseList[Element] | None
+      The list of active transient elements.
     """
+
+    def __init__(
+        self,
+        transient_index: int | None = None,
+        transient_elements: SparseList[Element] | None = None,
+    ) -> None:
+        self._transient_index: int | None = transient_index
+        self._transient_elements = transient_elements or SparseList[Element]()
 
     def __repr__(self) -> str:
         return util.repr_(self)
@@ -91,8 +159,24 @@ class Cursor:
     def is_locked(self) -> bool:
         raise NotImplementedError()
 
+    @property
+    def transient_elements(self) -> SparseList[Element]:
+        return self._transient_elements
+
+    @property
+    def transient_index(self) -> int:
+        return 0 if self._transient_index is None else self._transient_index
+
     def get_locked_cursor(self, **props: Any) -> LockedCursor:
         raise NotImplementedError()
+
+    def get_transient_cursor(self) -> Cursor:
+        if self._transient_index is None:
+            self._transient_index = 0
+        else:
+            self._transient_index += 1
+
+        return self
 
     @property
     def props(self) -> Any:
@@ -105,7 +189,13 @@ class Cursor:
 
 
 class RunningCursor(Cursor):
-    def __init__(self, root_container: int, parent_path: tuple[int, ...] = ()) -> None:
+    def __init__(
+        self,
+        root_container: int,
+        parent_path: tuple[int, ...] = (),
+        transient_index: int | None = None,
+        transient_elements: SparseList[Element] | None = None,
+    ) -> None:
         """A moving pointer to a delta location in the app.
 
         RunningCursors auto-increment to the next available location when you
@@ -118,8 +208,13 @@ class RunningCursor(Cursor):
         parent_path: tuple of ints
           The full path of this cursor, consisting of the IDs of all ancestors.
           The 0th item is the topmost ancestor.
+        transient_index: int | None
+          The running index of the transient elements.
+        transient_elements: SparseList[Element]
+          The list of active transient elements.
 
         """
+        super().__init__(transient_index, transient_elements)
         self._root_container = root_container
         self._parent_path = parent_path
         self._index = 0
@@ -149,6 +244,8 @@ class RunningCursor(Cursor):
         )
 
         self._index += 1
+        self._transient_index = None
+        self._transient_elements = SparseList[Element]()
 
         return locked_cursor
 
@@ -159,6 +256,8 @@ class LockedCursor(Cursor):
         root_container: int,
         parent_path: tuple[int, ...] = (),
         index: int = 0,
+        transient_index: int | None = None,
+        transient_elements: SparseList[Element] | None = None,
         **props: Any,
     ) -> None:
         """A locked pointer to a location in the app.
@@ -174,12 +273,17 @@ class LockedCursor(Cursor):
           The full path of this cursor, consisting of the IDs of all ancestors. The
           0th item is the topmost ancestor.
         index: int
+        transient_index: int | None
+          The running index of the transient elements.
+        transient_elements: SparseList[Element]
+          The list of active transient elements.
         **props: any
           Anything else you want to store in this cursor. This is a temporary
           measure that will go away when we implement improved return values
           for elements.
 
         """
+        super().__init__(transient_index, transient_elements)
         self._root_container = root_container
         self._index = index
         self._parent_path = parent_path
@@ -201,10 +305,10 @@ class LockedCursor(Cursor):
     def is_locked(self) -> bool:
         return True
 
-    def get_locked_cursor(self, **props: Any) -> LockedCursor:
-        self._props = props
-        return self
-
     @property
     def props(self) -> Any:
         return self._props
+
+    def get_locked_cursor(self, **props: Any) -> LockedCursor:
+        self._props = props
+        return self

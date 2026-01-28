@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -30,7 +30,7 @@ from streamlit.runtime import Runtime, RuntimeConfig
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
 from streamlit.runtime.scriptrunner import add_script_run_ctx
-from streamlit.web.server import ComponentRequestHandler, Server
+from streamlit.web.server import ComponentRequestHandler
 from tests.testutil import create_mock_script_run_ctx, patch_config_options
 
 URL = "http://not.a.real.url:3001"
@@ -262,7 +262,7 @@ class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
                 return BytesIO(payload)
             from io import TextIOWrapper
 
-            return TextIOWrapper(str(payload, encoding=encoding))
+            return TextIOWrapper(str(payload, encoding=encoding), encoding="utf-8")
 
         with mock.patch(MOCK_IS_DIR_PATH):
             declare_component("test", path=PATH)
@@ -291,7 +291,9 @@ class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
         assert ComponentRequestHandler.get_content_type("test.css") == "custom/css"
 
         # Have the server reinitialize the mimetypes
-        Server.initialize_mimetypes()
+        from streamlit.web.bootstrap import _initialize_mimetypes
+
+        _initialize_mimetypes()
 
         assert ComponentRequestHandler.get_content_type("test.html") == "text/html"
         assert (

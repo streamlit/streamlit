@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -72,7 +72,6 @@ class StHelpTest(DeltaGeneratorTestCase):
 
         def my_func(some_param, another_param=123):
             """This is the doc"""
-            pass
 
         with patch_varname_getter():
             st.help(my_func)
@@ -262,7 +261,7 @@ class StHelpTest(DeltaGeneratorTestCase):
                 "Static method 1"
 
             @classmethod
-            def classmethod1(self, y=20):
+            def classmethod1(cls, y=20):
                 "Class method 1"
 
         with patch_varname_getter():
@@ -304,7 +303,7 @@ class StHelpTest(DeltaGeneratorTestCase):
                 "Static method 1"
 
             @classmethod
-            def classmethod1(self, y=20):
+            def classmethod1(cls, y=20):
                 "Class method 1"
 
         my_instance = MyClass()

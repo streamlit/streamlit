@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +16,9 @@
 
 export const breakpoints = {
   // This value is used to determine whether we should hide/show the "Please enter to apply" in all widgets.
-  hideWidgetDetails: 180,
+  hideWidgetDetails: "11.25rem", // 180px at 16px base
   // This value is used to determine whether we should hide/show the - and + buttons in st.number_input.
-  hideNumberInputControls: 120,
+  hideNumberInputControls: "7.5rem", // 120px at 16px base
   sm: "576px",
   columns: "640px",
   md: "768px",

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -69,7 +69,20 @@ def _get_abs_folder_path(path: str) -> str:
 
 
 class EventBasedPathWatcher:
-    """Watches a single path on disk using watchdog."""
+    """Watches a single path on disk using watchdog.
+
+    Behavior differs based on whether watching a file or directory:
+
+    **File watching:** Detects content changes via MD5 hash comparison. The
+    callback receives the file path and is invoked when content changes. With
+    allow_nonexistent=True, also detects file creation.
+
+    **Directory watching:** Detects any file activity within the directory
+    (creation, deletion, modification). The callback receives the actual
+    changed file path (not the directory). Note that glob_pattern only affects
+    the initial state hash, not which events trigger callbacks - all file
+    events in the directory invoke the callback.
+    """
 
     @staticmethod
     def close_all() -> None:
@@ -91,17 +104,22 @@ class EventBasedPathWatcher:
         Parameters
         ----------
         path : str
-            The path to watch.
+            The path to watch (file or directory).
         on_changed : Callable[[str], None]
-            Callback to call when the path changes.
+            Callback invoked when changes are detected. For files, receives
+            the file path. For directories, receives the path of the actual
+            changed file within the directory.
         glob_pattern : str or None
-            A glob pattern to filter the files in a directory that should be
-            watched. Only relevant when creating an EventBasedPathWatcher on a
-            directory.
+            A glob pattern for initial state detection when watching a
+            directory (e.g., "*.py"). Note: This does NOT filter which file
+            events trigger the callback - all file events in the directory
+            will invoke the callback regardless of this pattern.
         allow_nonexistent : bool
             If True, the watcher will not raise an exception if the path does
             not exist. This can be used to watch for the creation of a file or
-            directory at a given path.
+            directory at a given path. Note: The parent directory of the path
+            must exist for watching to work. If the parent doesn't exist, the
+            watcher is silently skipped.
         """
         self._path = os.path.realpath(path)
         self._on_changed = on_changed
@@ -189,6 +207,18 @@ class _MultiPathWatcher:
                         folder_handler, folder_path, recursive=True
                     )
                     self._folder_handlers[folder_path] = folder_handler
+                except FileNotFoundError:
+                    # This happens when watching a non-existent file whose parent
+                    # directory also doesn't exist (e.g., .streamlit/config.toml
+                    # when .streamlit/ hasn't been created yet). This is expected
+                    # and not an error - we just can't watch until the directory
+                    # is created.
+                    _LOGGER.debug(
+                        "Cannot watch path %s: directory %s does not exist",
+                        path,
+                        folder_path,
+                    )
+                    return
                 except Exception as ex:
                     _LOGGER.warning(
                         "Failed to schedule watch observer for path %s",

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -32,6 +32,7 @@ if TYPE_CHECKING:
 DEVELOPMENT_PORT: Final = 3000
 
 AUTH_COOKIE_NAME: Final = "_streamlit_user"
+TOKENS_COOKIE_NAME: Final = "_streamlit_user_tokens"
 
 
 def allowlisted_origins() -> set[str]:
@@ -81,7 +82,7 @@ def is_url_from_allowed_origins(url: str) -> bool:
         url_util.get_hostname(origin) for origin in allowlisted_origins()
     ]
 
-    allowed_domains: list[str | None | Callable[[], str | None]] = [
+    allowed_domains: list[str | Callable[[], str | None] | None] = [
         # Check localhost first.
         "localhost",
         "0.0.0.0",  # noqa: S104

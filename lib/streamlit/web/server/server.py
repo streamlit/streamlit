@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@ from __future__ import annotations
 
 import errno
 import logging
-import mimetypes
 import os
 import sys
 from pathlib import Path
@@ -64,6 +63,8 @@ if TYPE_CHECKING:
     import asyncio
     from collections.abc import Awaitable
     from ssl import SSLContext
+
+    from streamlit.web.server.starlette import UvicornServer
 
 _LOGGER: Final = get_logger(__name__)
 
@@ -131,9 +132,11 @@ MAX_PORT_SEARCH_RETRIES: Final = 100
 # to an unix socket.
 UNIX_SOCKET_PREFIX: Final = "unix://"
 
-# Please make sure to also update frontend/app/vite.config.ts
-# dev server proxy when changing or updating these endpoints as well
-# as the endpoints in frontend/connection/src/DefaultStreamlitEndpoints
+# Server endpoint paths for the Streamlit API.
+
+# IMPORTANT: Keep these in sync with:
+# - frontend/app/vite.config.ts (dev server proxy configuration)
+# - frontend/connection/src/DefaultStreamlitEndpoints.ts
 MEDIA_ENDPOINT: Final = "/media"
 COMPONENT_ENDPOINT: Final = "/component"
 BIDI_COMPONENT_ENDPOINT: Final = "/_stcore/bidi-components"
@@ -258,13 +261,15 @@ def start_listening_tcp_socket(http_server: HTTPServer) -> None:
             break  # It worked! So let's break out of the loop.
 
         except OSError as e:
-            if e.errno == errno.EADDRINUSE:
+            # EADDRINUSE: port in use by another process
+            # EACCES: port reserved by system (common on Windows, see #13521)
+            if e.errno in {errno.EADDRINUSE, errno.EACCES}:
                 if server_port_is_manually_set():
-                    _LOGGER.error("Port %s is already in use", port)  # noqa: TRY400
+                    _LOGGER.error("Port %s is not available", port)  # noqa: TRY400
                     sys.exit(1)
                 else:
                     _LOGGER.debug(
-                        "Port %s already in use, trying to use the next one.", port
+                        "Port %s not available, trying to use the next one.", port
                     )
                     port += 1
 
@@ -277,7 +282,7 @@ def start_listening_tcp_socket(http_server: HTTPServer) -> None:
 
     if call_count >= MAX_PORT_SEARCH_RETRIES:
         raise RetriesExceededError(
-            f"Cannot start Streamlit server. Port {port} is already in use, and "
+            f"Cannot start Streamlit server. Port {port} is not available, and "
             f"Streamlit was unable to find a free port after {MAX_PORT_SEARCH_RETRIES} attempts.",
         )
 
@@ -286,9 +291,10 @@ class Server:
     def __init__(self, main_script_path: str, is_hello: bool) -> None:
         """Create the server. It won't be started yet."""
         _set_tornado_log_levels()
-        self.initialize_mimetypes()
 
         self._main_script_path = main_script_path
+        self._use_starlette = bool(config.get_option("server.useStarlette"))
+        self._starlette_server: UvicornServer | None = None
 
         # The task that runs the server if an event loop is already running.
         # We need to save a reference to it so that it doesn't get
@@ -315,17 +321,6 @@ class Server:
             ),
         )
 
-        self._runtime.stats_mgr.register_provider(media_file_storage)
-
-    @classmethod
-    def initialize_mimetypes(cls) -> None:
-        """Ensures that common mime-types are robust against system misconfiguration."""
-        mimetypes.add_type("text/html", ".html")
-        mimetypes.add_type("application/javascript", ".js")
-        mimetypes.add_type("application/javascript", ".mjs")
-        mimetypes.add_type("text/css", ".css")
-        mimetypes.add_type("image/webp", ".webp")
-
     def __repr__(self) -> str:
         return util.repr_(self)
 
@@ -341,6 +336,11 @@ class Server:
 
         _LOGGER.debug("Starting server...")
 
+        if self._use_starlette:
+            # Use starlette+uvicorn instead of tornado:
+            await self._start_starlette()
+            return
+
         app = self._create_app()
         start_listening(app)
 
@@ -352,6 +352,17 @@ class Server:
     @property
     def stopped(self) -> Awaitable[None]:
         """A Future that completes when the Server's run loop has exited."""
+
+        if self._starlette_server is not None:
+
+            async def _wait_for_starlette_stop() -> None:
+                if self._starlette_server is not None:
+                    await self._starlette_server.stopped.wait()
+                # Also wait for the runtime to complete its shutdown
+                # (session cleanup, etc.) to ensure graceful shutdown.
+                await self._runtime.stopped
+
+            return _wait_for_starlette_stop()
         return self._runtime.stopped
 
     def _create_app(self) -> tornado.web.Application:
@@ -516,7 +527,18 @@ class Server:
 
     def stop(self) -> None:
         cli_util.print_to_cli("  Stopping...", fg="blue")
-        self._runtime.stop()
+        if self._starlette_server is not None:
+            # Starlette's lifespan handler calls runtime.stop() during shutdown
+            self._starlette_server.stop()
+        else:
+            # Tornado mode: stop runtime directly
+            self._runtime.stop()
+
+    async def _start_starlette(self) -> None:
+        from streamlit.web.server.starlette import UvicornServer
+
+        self._starlette_server = UvicornServer(self._runtime)
+        await self._starlette_server.start()
 
 
 def _set_tornado_log_levels() -> None:

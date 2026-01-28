@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING, Any, Final, TypeVar, overload
 from streamlit import config, logger
 from streamlit.dataframe_util import OptionSequence, convert_anything_to_list
 from streamlit.errors import StreamlitAPIException
+from streamlit.runtime.state import get_session_state
 from streamlit.runtime.state.common import RegisterWidgetResult
 from streamlit.type_util import (
     check_python_comparable,
@@ -282,3 +283,194 @@ def create_mappings(
         formatted_options,
         formatted_option_to_option_mapping,
     )
+
+
+def validate_and_sync_value_with_options(
+    current_value: T | None,
+    opt: Sequence[T],
+    default_index: int | None,
+    key: str | int | None,
+    format_func: Callable[[Any], str] = str,
+) -> tuple[T | None, bool]:
+    """Validate current value against options, resetting session state if invalid.
+
+    This function has a side-effect: if the value is not found in the options
+    and a key is provided, it will update session state with the new value.
+
+
+    Parameters
+    ----------
+    current_value
+        The current widget value to validate.
+    opt
+        The sequence of valid options.
+    default_index
+        The default index to reset to if value is invalid.
+    key
+        The widget key for session state updates.
+    format_func
+        Function to format options for comparison. Used to compare values by their
+        string representation instead of using == directly. This is necessary because
+        widget values are deepcopied, and for custom classes without __eq__, the
+        deepcopied instances would fail identity comparison.
+
+    Returns
+    -------
+    tuple[T | None, bool]
+        A tuple of (validated_value, value_was_reset).
+    """
+    if current_value is None:
+        return current_value, False
+
+    # Use format_func comparison for all values. This correctly handles:
+    # - Custom objects without __eq__ (deepcopied instances)
+    # - Enum values (already from current class due to serde deserialization)
+    formatted_options_set = {format_func(o) for o in opt}
+    try:
+        formatted_value = format_func(current_value)
+        if formatted_value in formatted_options_set:
+            return current_value, False
+    except Exception:  # noqa: S110
+        pass  # format_func failed - value is invalid, fall through to reset
+
+    # Value not in options - reset to default
+    if default_index is not None and len(opt) > 0:
+        new_value: T | None = opt[default_index]
+    else:
+        new_value = None
+
+    if key is not None:
+        # Update session_state so subsequent accesses in this run
+        # return the corrected value. Use reset_state_value to avoid
+        # the "cannot be modified after widget instantiated" error.
+        get_session_state().reset_state_value(str(key), new_value)
+
+    return new_value, True
+
+
+def validate_and_sync_multiselect_value_with_options(
+    current_values: list[T] | list[T | str],
+    opt: Sequence[T],
+    key: str | int | None,
+    format_func: Callable[[Any], str] = str,
+) -> tuple[list[T] | list[T | str], bool]:
+    """Validate multiselect values against options, syncing session state if needed.
+
+    This function has a side-effect: if any values are filtered out and a key
+    is provided, it will update session state with the filtered list.
+
+    Unlike selectbox which resets to a default when the value is invalid,
+    multiselect filters out invalid values and keeps the valid ones.
+
+    Parameters
+    ----------
+    current_values
+        The current list of selected values to validate.
+    opt
+        The sequence of valid options.
+    key
+        The widget key for session state updates.
+    format_func
+        Function to format options for comparison. Used to compare values by their
+        string representation instead of using == directly. This is necessary because
+        widget values are deepcopied, and for custom classes without __eq__, the
+        deepcopied instances would fail identity comparison.
+
+    Returns
+    -------
+    tuple[list[T] | list[T | str], bool]
+        A tuple of (validated_values, values_were_filtered).
+    """
+    if not current_values:
+        return current_values, False
+
+    # Create a set of formatted options for O(1) lookup.
+    # We use format_func to compare values by their string representation
+    # instead of using == directly. This is necessary because widget values
+    # are deepcopied, and for custom classes without __eq__, the deepcopied
+    # instances would fail identity comparison.
+    formatted_options_set = {format_func(o) for o in opt}
+
+    valid_values: list[T | str] = []
+    for value in current_values:
+        try:
+            formatted_value = format_func(value)
+        except Exception:  # noqa: S112
+            # format_func failed on this value (e.g., a string value from a previous
+            # session when format_func expects an object with specific attributes).
+            # In this case, the value is definitely not valid since the current options
+            # can be formatted successfully.
+            continue
+
+        if formatted_value in formatted_options_set:
+            valid_values.append(value)
+
+    if len(valid_values) == len(current_values):
+        return current_values, False
+
+    if key is not None:
+        get_session_state().reset_state_value(str(key), valid_values)
+
+    return valid_values, True
+
+
+def validate_and_sync_range_value_with_options(
+    current_value: tuple[T, T],
+    opt: Sequence[T],
+    default_indices: list[int],
+    key: str | int | None,
+    format_func: Callable[[Any], str] = str,
+) -> tuple[tuple[T, T], bool]:
+    """Validate a range value (tuple of two values) against options.
+
+    If either value in the range is not found in options, the entire range is
+    reset to the default. This function has a side-effect: if the values are
+    invalid and a key is provided, it will update session state with the new value.
+
+    Parameters
+    ----------
+    current_value
+        The current range value (tuple of two values) to validate.
+    opt
+        The sequence of valid options.
+    default_indices
+        The default indices to reset to if value is invalid. Should contain
+        at least one index; if only one index is provided, the second default
+        will be the last option.
+    key
+        The widget key for session state updates.
+    format_func
+        Function to format options for comparison. Used to compare values by their
+        string representation instead of using == directly.
+
+    Returns
+    -------
+    tuple[tuple[T, T], bool]
+        A tuple of (validated_value, value_was_reset).
+    """
+    if len(opt) == 0:
+        return current_value, False
+
+    formatted_options_set = {format_func(o) for o in opt}
+
+    def is_valid(val: Any) -> bool:
+        """Check if a value exists in options via format_func comparison."""
+        try:
+            return format_func(val) in formatted_options_set
+        except Exception:
+            return False
+
+    def get_default_range() -> tuple[T, T]:
+        """Get the default range value."""
+        end_idx = default_indices[1] if len(default_indices) > 1 else len(opt) - 1
+        return (opt[default_indices[0]], opt[end_idx])
+
+    # Validate both values in the range.
+    if is_valid(current_value[0]) and is_valid(current_value[1]):
+        return current_value, False
+
+    # Either value is invalid - reset entire range.
+    new_value = get_default_range()
+    if key is not None:
+        get_session_state().reset_state_value(str(key), new_value)
+    return new_value, True

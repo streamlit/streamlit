@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -86,3 +86,11 @@ with st.expander("Link Button Width Examples", expanded=True):
     st.link_button("Content Width (Default)", "https://example.com", width="content")
     st.link_button("Stretch Width", "https://example.com", width="stretch")
     st.link_button("400px Width", "https://example.com", width=400)
+
+
+st.link_button(
+    "Icon Right",
+    "https://streamlit.io",
+    icon=":material/bolt:",
+    icon_position="right",
+)

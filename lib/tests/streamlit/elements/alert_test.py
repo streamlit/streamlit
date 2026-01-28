@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -37,7 +37,9 @@ class AlertAPITest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitInvalidWidthError) as e:
             alert_func("some alert", width="invalid")
         assert "Invalid width value" in str(e.value)
-        assert "Width must be either an integer (pixels) or 'stretch'" in str(e.value)
+        assert "Width must be either a positive integer (pixels) or 'stretch'" in str(
+            e.value
+        )
 
     @parameterized.expand([(st.error,), (st.warning,), (st.info,), (st.success,)])
     def test_st_alert_negative_width(self, alert_func):
@@ -45,7 +47,9 @@ class AlertAPITest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitInvalidWidthError) as e:
             alert_func("some alert", width=-100)
         assert "Invalid width value" in str(e.value)
-        assert "Width must be either an integer (pixels) or 'stretch'" in str(e.value)
+        assert "Width must be either a positive integer (pixels) or 'stretch'" in str(
+            e.value
+        )
 
 
 class StErrorAPITest(DeltaGeneratorTestCase):

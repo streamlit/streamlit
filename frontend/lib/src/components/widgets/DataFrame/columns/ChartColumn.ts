@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,12 +22,12 @@ import {
 import { SparklineCellType } from "@glideapps/glide-data-grid-cells"
 
 import { EmotionTheme } from "~lib/theme"
+import { formatNumber } from "~lib/util/formatNumber"
 import { isNullOrUndefined } from "~lib/util/utils"
 
 import {
   BaseColumn,
   BaseColumnProps,
-  formatNumber,
   getEmptyCell,
   getErrorCell,
   mergeColumnParameters,
@@ -204,14 +204,15 @@ function BaseChartColumn(
       let maxValueDefault: number
       let minValueDefault: number
 
-      if (chartData.length === 1) {
+      // Handle case where all values are identical (including single-element arrays)
+      if (minValue === maxValue) {
         let newMaxValue: number
 
         if (maxValue <= 0) newMaxValue = maxValue === 0 ? 1 : 0
         else newMaxValue = maxValue
 
         maxValueDefault = parameters.y_max ?? newMaxValue
-        minValueDefault = parameters.y_min ?? (maxValue >= 0 ? 0 : maxValue) //maxValue = minValue (only one value in chartData)
+        minValueDefault = parameters.y_min ?? (maxValue >= 0 ? 0 : maxValue)
       } else {
         maxValueDefault = parameters.y_max ?? maxValue
         minValueDefault = parameters.y_min ?? minValue

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -167,13 +167,17 @@ class LayoutsMixin:
               When ``horizontal`` is ``True``, ``"distribute"`` aligns the
               elements the same as ``"top"``.
 
-        gap : "small", "medium", "large", or None
+        gap : "xxsmall", "xsmall", "small", "medium", "large", "xlarge", "xxlarge", or None
             The minimum gap size between the elements inside the container.
             This can be one of the following:
 
+            - ``"xxsmall"``: 0.25rem gap between the elements.
+            - ``"xsmall"``: 0.5rem gap between the elements.
             - ``"small"`` (default): 1rem gap between the elements.
             - ``"medium"``: 2rem gap between the elements.
             - ``"large"``: 4rem gap between the elements.
+            - ``"xlarge"``: 6rem gap between the elements.
+            - ``"xxlarge"``: 8rem gap between the elements.
             - ``None``: No gap between the elements.
 
             The rem unit is relative to the ``theme.baseFontSize``
@@ -364,13 +368,17 @@ class LayoutsMixin:
               Or ``[1, 2, 3]`` creates three columns where the second one is two times
               the width of the first one, and the third one is three times that width.
 
-        gap : "small", "medium", "large", or None
+        gap : "xxsmall", "xsmall", "small", "medium", "large", "xlarge", "xxlarge", or None
             The size of the gap between the columns. This can be one of the
             following:
 
+            - ``"xxsmall"``: 0.25rem gap between the columns.
+            - ``"xsmall"``: 0.5rem gap between the columns.
             - ``"small"`` (default): 1rem gap between the columns.
             - ``"medium"``: 2rem gap between the columns.
             - ``"large"``: 4rem gap between the columns.
+            - ``"xlarge"``: 6rem gap between the columns.
+            - ``"xxlarge"``: 8rem gap between the columns.
             - ``None``: No gap between the columns.
 
             The rem unit is relative to the ``theme.baseFontSize``
@@ -1028,7 +1036,7 @@ class LayoutsMixin:
             width = "stretch" if use_container_width else "content"
 
         # Checks whether the entered button type is one of the allowed options
-        if type not in ["primary", "secondary", "tertiary"]:
+        if type not in {"primary", "secondary", "tertiary"}:
             raise StreamlitAPIException(
                 'The type argument to st.popover must be "primary", "secondary", or "tertiary". '
                 f'\nThe argument passed was "{type}".'
@@ -1186,6 +1194,7 @@ class LayoutsMixin:
         *,
         dismissible: bool = True,
         width: Literal["small", "large", "medium"] = "small",
+        icon: str | None = None,
         on_dismiss: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
     ) -> Dialog:
         """Inserts the dialog container.
@@ -1194,7 +1203,12 @@ class LayoutsMixin:
         The dialog_decorator also has a more descriptive docstring since it is user-facing.
         """
         return get_dg_singleton_instance().dialog_container_cls._create(
-            self.dg, title, dismissible=dismissible, width=width, on_dismiss=on_dismiss
+            self.dg,
+            title,
+            dismissible=dismissible,
+            width=width,
+            icon=icon,
+            on_dismiss=on_dismiss,
         )
 
     @property

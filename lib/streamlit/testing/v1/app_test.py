@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -218,7 +218,7 @@ class AppTest:
 
         path = Path(TMP_DIR.name, script_name)
         aligned_script = textwrap.dedent(script)
-        path.write_text(aligned_script)
+        path.write_text(aligned_script, encoding="utf-8")
         return AppTest(
             str(path), default_timeout=default_timeout, args=args, kwargs=kwargs
         )

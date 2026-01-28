@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -138,3 +138,41 @@ st.metric("Pixel height (200px)", 123, 123, border=True, height=200)
 with st.container(height=400, key="height_test"):
     st.metric("Stretch height", 123, 123, height="stretch")
     st.metric("Content height", 123, 123, height="content")
+
+# Test named delta colors
+col1, col2 = st.columns(2)
+with col1:
+    st.metric(
+        "Yellow delta",
+        100,
+        "+5%",
+        delta_color="yellow",
+        border=True,
+        chart_data=generate_sparkline_data(),
+        chart_type="bar",
+    )
+with col2:
+    st.metric(
+        "Primary delta",
+        75,
+        "-2",
+        delta_color="primary",
+        border=True,
+        chart_data=generate_sparkline_data(),
+        chart_type="line",
+    )
+
+# Format parameter tests
+format_col1, format_col2, format_col3, format_col4 = st.container(
+    key="metric_format_config"
+).columns(4)
+
+with format_col1:
+    st.metric("Compact format", 1234567, delta=50000, format="compact")
+with format_col2:
+    st.metric("Dollar format", 1234.56, delta=-50.25, format="dollar")
+with format_col3:
+    st.metric("Printf format", 22.5678, delta=10.126, format="%.2f%%")
+with format_col4:
+    # Non-numeric string should NOT be formatted
+    st.metric("Non-numeric (no format)", "70 °F", delta="+5%", format="compact")

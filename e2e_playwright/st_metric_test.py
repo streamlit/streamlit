@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -144,7 +144,7 @@ def test_markdown_label_value_and_delta_support(
     assert_snapshot(
         get_metric(
             themed_app,
-            re.compile("Test 11.+"),
+            re.compile(r"Test 11.+"),
         ),
         name="st_metric-markdown_support",
     )
@@ -266,4 +266,47 @@ def test_height_in_container(app: Page, assert_snapshot: ImageCompareFunction):
     assert_snapshot(
         container,
         name="st_metric-height_in_container",
+    )
+
+
+def test_format_rendering(themed_app: Page, assert_snapshot: ImageCompareFunction):
+    """Test usage of client-side formatting options."""
+    metric = get_metric(themed_app, "Compact format")
+    # 1234567 with compact format should show as "1.2M" or similar
+    expect(metric.get_by_test_id("stMetricValue")).not_to_have_text("1234567")
+    # 50000 with compact format should show as "50K" or similar
+    expect(metric.get_by_test_id("stMetricDelta")).not_to_have_text("50000")
+
+    metric = get_metric(themed_app, "Non-numeric (no format)")
+    # Non-numeric strings should remain unchanged
+    expect(metric.get_by_test_id("stMetricValue")).to_have_text("70 °F")
+    expect(metric.get_by_test_id("stMetricDelta")).to_have_text("+5%")
+
+    metric = get_metric(themed_app, "Printf format")
+    # Printf format "%.2f%%" should round to 2 decimal places
+    expect(metric.get_by_test_id("stMetricValue")).to_have_text("22.57%")
+    expect(metric.get_by_test_id("stMetricDelta")).to_have_text("10.13%")
+
+    metric = get_metric(themed_app, "Dollar format")
+    # Dollar format should include the $ symbol
+    expect(metric.get_by_test_id("stMetricValue")).to_contain_text("$")
+    expect(metric.get_by_test_id("stMetricDelta")).to_contain_text("$")
+
+    assert_snapshot(
+        get_element_by_key(themed_app, "metric_format_config"),
+        name="st_metric-format_options",
+    )
+
+
+def test_custom_delta_color_render(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that custom delta colors render correctly."""
+    assert_snapshot(
+        get_metric(themed_app, "Yellow delta"),
+        name="st_metric-yellow_delta",
+    )
+    assert_snapshot(
+        get_metric(themed_app, "Primary delta"),
+        name="st_metric-primary_delta",
     )
