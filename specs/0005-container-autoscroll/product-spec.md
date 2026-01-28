@@ -184,11 +184,11 @@ with st.container(height=500, autoscroll=False, border=True):
 The following ideas are out of scope for the initial implementation but worth exploring in
 follow-up work:
 
-**Scroll-to-bottom button indicator**: Show a small "scroll to bottom" button when
-`autoscroll=True` and the user has scrolled away from the bottom, similar to ChatGPT's UI.
-This would provide a visual cue and quick way to resume auto-scrolling. This enhancement
-should also be applied to the existing main area scroll-to-bottom behavior when `st.chat_input`
-is used.
+**Scroll-to-bottom button indicator** ([#13249](https://github.com/streamlit/streamlit/issues/13249)):
+Show a small "scroll to bottom" button when `autoscroll=True` and the user has scrolled away
+from the bottom, similar to ChatGPT's UI. This would provide a visual cue and quick way to
+resume auto-scrolling. This enhancement should also be applied to the existing main area
+scroll-to-bottom behavior when `st.chat_input` is used.
 
 **Support for `height="stretch"` containers**: Enable autoscroll for containers that fill
 their parent's available space (e.g., `st.container(height="stretch", autoscroll=True)`).
