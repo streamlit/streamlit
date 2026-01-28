@@ -245,56 +245,20 @@ const Selectbox: FC<Props> = ({
                   style: () => {
                     const lightBackground = hasLightBackgroundColor(theme)
                     return {
-                      marginTop: theme.spacing.twoXS,
-                      marginRight: theme.spacing.none,
-                      marginBottom: theme.spacing.none,
-
-                      paddingTop: theme.spacing.sm,
-                      paddingBottom: theme.spacing.sm,
-
                       maxHeight: "70vh",
                       overflow: "auto",
                       boxSizing: "border-box",
-
-                      borderTopLeftRadius: theme.radii.default,
-                      borderTopRightRadius: theme.radii.default,
-                      borderBottomRightRadius: theme.radii.default,
-                      borderBottomLeftRadius: theme.radii.default,
-
-                      borderLeftWidth: lightBackground
-                        ? "0"
+                      borderRadius: theme.radii.default,
+                      borderWidth: lightBackground
+                        ? 0
                         : theme.sizes.borderWidth,
-                      borderRightWidth: lightBackground
-                        ? "0"
-                        : theme.sizes.borderWidth,
-                      borderTopWidth: lightBackground
-                        ? "0"
-                        : theme.sizes.borderWidth,
-                      borderBottomWidth: lightBackground
-                        ? "0"
-                        : theme.sizes.borderWidth,
-
-                      borderLeftStyle: lightBackground ? "none" : "solid",
-                      borderRightStyle: lightBackground ? "none" : "solid",
-                      borderTopStyle: lightBackground ? "none" : "solid",
-                      borderBottomStyle: lightBackground ? "none" : "solid",
-
-                      borderLeftColor: lightBackground
+                      borderStyle: lightBackground ? "none" : "solid",
+                      borderColor: lightBackground
                         ? "transparent"
                         : theme.colors.borderColor,
-                      borderRightColor: lightBackground
-                        ? "transparent"
-                        : theme.colors.borderColor,
-                      borderTopColor: lightBackground
-                        ? "transparent"
-                        : theme.colors.borderColor,
-                      borderBottomColor: lightBackground
-                        ? "transparent"
-                        : theme.colors.borderColor,
-
                       boxShadow: lightBackground
-                        ? "0px 4px 16px rgba(0, 0, 0, 0.16)"
-                        : "0px 4px 16px rgba(0, 0, 0, 0.7)",
+                        ? theme.shadows.popover
+                        : theme.shadows.none,
                     }
                   },
                 },
