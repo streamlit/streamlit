@@ -20,8 +20,8 @@ import styled from "@emotion/styled"
  * A styled menu list component used by the column menu.
  */
 export const StyledMenuList = styled.div(({ theme }) => ({
-  paddingTop: theme.spacing.none,
-  paddingBottom: theme.spacing.xs,
+  paddingTop: theme.spacing.threeXS,
+  paddingBottom: theme.spacing.threeXS,
   paddingLeft: theme.spacing.xs,
   paddingRight: theme.spacing.xs,
 }))
@@ -39,6 +39,8 @@ export const StyledMenuListItem = styled.div<StyledMenuListItemProps>(
     alignItems: "center",
     justifyContent: "flex-start",
     gap: theme.spacing.sm,
+    marginTop: theme.spacing.twoXS,
+    marginBottom: theme.spacing.twoXS,
     paddingLeft: theme.spacing.sm,
     paddingRight: theme.spacing.sm,
     paddingTop: theme.spacing.threeXS,
