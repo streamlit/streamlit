@@ -248,7 +248,10 @@ const Selectbox: FC<Props> = ({
                       maxHeight: "70vh",
                       overflow: "auto",
                       boxSizing: "border-box",
-                      borderRadius: theme.radii.default,
+                      borderTopLeftRadius: theme.radii.default,
+                      borderTopRightRadius: theme.radii.default,
+                      borderBottomRightRadius: theme.radii.default,
+                      borderBottomLeftRadius: theme.radii.default,
                       borderWidth: lightBackground
                         ? 0
                         : theme.sizes.borderWidth,

@@ -115,7 +115,10 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
                 [`@media (max-width: ${theme.breakpoints.sm})`]: {
                   maxWidth: `calc(100% - ${theme.spacing.threeXL})`,
                 },
-                borderRadius: theme.radii.xl,
+                borderTopLeftRadius: theme.radii.xl,
+                borderTopRightRadius: theme.radii.xl,
+                borderBottomRightRadius: theme.radii.xl,
+                borderBottomLeftRadius: theme.radii.xl,
                 borderWidth: lightBackground ? 0 : theme.sizes.borderWidth,
                 padding: padding,
                 borderStyle: lightBackground ? "none" : "solid",
