@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -146,7 +146,7 @@ class ComponentPathUtils:
             len(path) >= 3
             and path[0].isalpha()
             and path[1] == ":"
-            and path[2] in ("/", "\\")
+            and path[2] in {"/", "\\"}
         )
         is_unc_abs = path.startswith("\\\\")
 

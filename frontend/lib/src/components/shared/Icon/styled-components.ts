@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -43,7 +43,7 @@ export const StyledSpinnerIcon = styled(Spinner, {
     width: adjustedSpinnerSize,
     height: adjustedSpinnerSize,
     fontSize: adjustedSpinnerSize,
-    justifyContents: "center",
+    justifyContent: "center",
     margin: computeSpacingStyle(margin, theme),
     padding: computeSpacingStyle(padding, theme),
     borderColor: theme.colors.fadedText10,
@@ -71,7 +71,7 @@ export const StyledIcon = styled("span", {
     fill: "currentColor",
     display: "inline-flex",
     alignItems: "center",
-    justifyContents: "center",
+    justifyContent: "center",
     fontSize: theme.iconSizes[size],
     width: theme.iconSizes[size],
     height: theme.iconSizes[size],
@@ -93,7 +93,7 @@ export const StyledDynamicIcon = styled.span<StyledDynamicIconProps>(
       fill: "currentColor",
       display: "inline-flex",
       alignItems: "center",
-      justifyContents: "center",
+      justifyContent: "center",
       fontSize: theme.iconSizes[size],
       width: theme.iconSizes[size],
       height: theme.iconSizes[size],
@@ -123,7 +123,7 @@ export const StyledEmojiIcon = styled.span<StyledEmojiIconProps>(
     return {
       display: "inline-flex",
       alignItems: "center",
-      justifyContents: "center",
+      justifyContent: "center",
       fontSize: adjustedIconSize,
       width: adjustedIconSize,
       height: adjustedIconSize,

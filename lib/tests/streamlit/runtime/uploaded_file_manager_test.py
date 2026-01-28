@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -90,22 +90,21 @@ class UploadedFileManagerTest(unittest.TestCase):
         assert self.mgr.get_files("session2", [FILE_1.file_id]) == [FILE_1]
 
     def test_cache_stats_provider(self):
-        """Test CacheStatsProvider implementation."""
+        """Test StatsProvider implementation."""
 
         # Test empty manager
-        assert self.mgr.get_stats() == []
+        assert self.mgr.get_stats() == {}
 
         # Test manager with files
         self.mgr.add_file("session1", FILE_1)
         self.mgr.add_file("session1", FILE_2)
 
-        expected = [
-            CacheStat(
-                category_name="UploadedFileManager",
-                cache_name="",
-                byte_length=len(FILE_1.data) + len(FILE_2.data),
-            ),
-        ]
+        expected_stat = CacheStat(
+            category_name="UploadedFileManager",
+            cache_name="",
+            byte_length=len(FILE_1.data) + len(FILE_2.data),
+        )
+        expected = {expected_stat.family_name: [expected_stat]}
         assert expected == self.mgr.get_stats()
 
 
@@ -143,8 +142,9 @@ class UploadedFileManagerThreadingTest(unittest.TestCase):
 
         # Ensure all files have unique IDs
         file_ids = set()
-        for file_rec in self.mgr.file_storage["session"].values():
-            file_ids.add(file_rec.file_id)
+        file_ids.update(
+            file_rec.file_id for file_rec in self.mgr.file_storage["session"].values()
+        )
         assert len(file_ids) == self.NUM_THREADS
 
     def test_remove_file(self):

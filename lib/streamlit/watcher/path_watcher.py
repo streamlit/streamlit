@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,12 +17,13 @@ from __future__ import annotations
 import os
 from typing import TYPE_CHECKING, TypeAlias
 
-import streamlit.watcher
 from streamlit import cli_util, config, env_util
-from streamlit.watcher.polling_path_watcher import PollingPathWatcher
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+
+    from streamlit.watcher.event_based_path_watcher import EventBasedPathWatcher
+    from streamlit.watcher.polling_path_watcher import PollingPathWatcher
 
 
 # local_sources_watcher.py caches the return value of
@@ -49,9 +50,7 @@ class NoOpPathWatcher:
 # implementation if its import failed (due to missing watchdog module),
 # so we can't reference it directly in this type.
 PathWatcherType: TypeAlias = (
-    type["streamlit.watcher.event_based_path_watcher.EventBasedPathWatcher"]
-    | type[PollingPathWatcher]
-    | type[NoOpPathWatcher]
+    type["EventBasedPathWatcher"] | type["PollingPathWatcher"] | type[NoOpPathWatcher]
 )
 
 
@@ -67,7 +66,7 @@ def _is_watchdog_available() -> bool:
 
 def report_watchdog_availability() -> None:
     if (
-        config.get_option("server.fileWatcherType") not in ["poll", "none"]
+        config.get_option("server.fileWatcherType") not in {"poll", "none"}
         and not _is_watchdog_available()
     ):
         msg = "\n  $ xcode-select --install" if env_util.IS_DARWIN else ""
@@ -138,8 +137,37 @@ def watch_file(
     path: str,
     on_file_changed: Callable[[str], None],
     watcher_type: str | None = None,
+    *,  # keyword-only arguments:
+    allow_nonexistent: bool = False,
 ) -> bool:
-    return _watch_path(path, on_file_changed, watcher_type)
+    """Watch a file for changes.
+
+    The callback is invoked when the file's content changes (detected via MD5).
+    If allow_nonexistent is True, the watcher will also detect when the file
+    is created.
+
+    Parameters
+    ----------
+    path
+        Path to the file to watch.
+    on_file_changed
+        Callback invoked with the file path when changes are detected.
+    watcher_type
+        Optional watcher type ('watchdog', 'poll', 'auto', or 'none').
+    allow_nonexistent
+        If True, watch for file creation even if the file doesn't exist yet.
+        Note: The file's parent directory must exist for watching to work.
+        If the parent directory doesn't exist, the watcher silently skips
+        watching (the file can't be created without its parent directory).
+
+    Returns
+    -------
+    bool
+        True if the watcher was successfully created.
+    """
+    return _watch_path(
+        path, on_file_changed, watcher_type, allow_nonexistent=allow_nonexistent
+    )
 
 
 def watch_dir(
@@ -150,6 +178,36 @@ def watch_dir(
     glob_pattern: str | None = None,
     allow_nonexistent: bool = False,
 ) -> bool:
+    """Watch a directory for file changes.
+
+    The callback is invoked for any file activity within the directory,
+    including file creation, deletion, and content modifications. The callback
+    receives the path of the actual changed file (not the directory path).
+
+    Note: The glob_pattern parameter only affects the initial state detection
+    (which files are counted when determining if the directory changed). It does
+    NOT filter which file events trigger the callback - all file events in the
+    directory will invoke the callback regardless of glob_pattern.
+
+    Parameters
+    ----------
+    path
+        Path to the directory to watch.
+    on_dir_changed
+        Callback invoked with the changed file path when changes are detected.
+    watcher_type
+        Optional watcher type ('watchdog', 'poll', 'auto', or 'none').
+    glob_pattern
+        Glob pattern for initial state detection (e.g., "*.py"). Does not
+        filter runtime events.
+    allow_nonexistent
+        If True, watch for directory creation even if it doesn't exist yet.
+
+    Returns
+    -------
+    bool
+        True if the watcher was successfully created.
+    """
     # Add a trailing slash to the path to ensure
     # that its interpreted as a directory.
     path = os.path.join(path, "")
@@ -180,5 +238,7 @@ def get_path_watcher_class(watcher_type: str) -> PathWatcherType:
 
         return EventBasedPathWatcher
     if watcher_type in {"auto", "poll"}:
+        from streamlit.watcher.polling_path_watcher import PollingPathWatcher
+
         return PollingPathWatcher
     return NoOpPathWatcher

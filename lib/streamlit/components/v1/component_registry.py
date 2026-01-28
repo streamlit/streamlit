@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -120,7 +120,7 @@ def declare_component(
     if not url and (
         component_base_path := config.get_option("server.customComponentBaseUrlPath")
     ):
-        url = f"{component_base_path}/{component_name}/"
+        url = f"{component_base_path}/{component_name}/"  # ty: ignore[possibly-unresolved-reference]
 
     # Create our component object, and register it.
     component = CustomComponent(

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,11 +14,12 @@
  * limitations under the License.
  */
 
-import React, { useEffect, useMemo, useRef } from "react"
+import { useEffect, useMemo, useRef } from "react"
 
 import { BidiComponentContext } from "~lib/components/widgets/BidiComponent/BidiComponentContext"
 import { handleError } from "~lib/components/widgets/BidiComponent/utils/error"
 import { LOG } from "~lib/components/widgets/BidiComponent/utils/logger"
+import { useCrossOriginAttribute } from "~lib/hooks/useCrossOriginAttribute"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 
 /**
@@ -112,6 +113,9 @@ export const useHandleHtmlAndCssContent = ({
     return getBidiComponentURL(componentName, cssSourcePath)
   }, [componentName, cssSourcePath, getBidiComponentURL])
 
+  // Match the app-wide crossOrigin behavior used for media elements.
+  const cssLinkCrossOrigin = useCrossOriginAttribute(cssLinkHref)
+
   useEffect(() => {
     if (skip) {
       return
@@ -144,6 +148,14 @@ export const useHandleHtmlAndCssContent = ({
         const linkElement = document.createElement("link")
         linkElement.href = cssLinkHref
         linkElement.rel = "stylesheet"
+
+        if (cssLinkCrossOrigin) {
+          // Use the computed attribute value to keep behavior consistent with
+          // the rest of the app (see `useCrossOriginAttribute` /
+          // `getCrossOriginAttribute`).
+          linkElement.crossOrigin = cssLinkCrossOrigin
+        }
+
         linkElement.onerror = () => {
           handleError(
             new Error(`Failed to load CSS from ${cssLinkHref}`),
@@ -157,7 +169,15 @@ export const useHandleHtmlAndCssContent = ({
     } catch (error) {
       handleError(error, setError, "Failed to process HTML/CSS content")
     }
-  }, [html, cssContent, containerRef, cssLinkHref, setError, skip])
+  }, [
+    html,
+    cssContent,
+    containerRef,
+    cssLinkCrossOrigin,
+    cssLinkHref,
+    setError,
+    skip,
+  ])
 
   return contentRef
 }

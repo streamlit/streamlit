@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -113,7 +113,9 @@ export default defineConfig({
         changeOrigin: true,
         ws: true,
       },
-      "^.*/media/.*": {
+      // Use negative lookahead to avoid matching /static/media/* (Vite's font files)
+      // while still matching /media/* and /basepath/media/* (backend user uploads)
+      "^(?!.*/static/media).*/media/.*": {
         target: DEV_SERVER_BACKEND_URL,
         changeOrigin: true,
       },

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ import {
   Element,
   ForwardMsgMetadata,
   Logo,
+  Transient as TransientProto,
 } from "@streamlit/protobuf"
 
 import { ensureError } from "~lib/util/ErrorHandling"
@@ -36,7 +37,9 @@ import {
 import { AppNode, NO_SCRIPT_RUN_ID } from "./AppNode.interface"
 import { BlockNode } from "./BlockNode"
 import { ElementNode } from "./ElementNode"
+import { TransientNode } from "./TransientNode"
 import { ClearStaleNodeVisitor } from "./visitors/ClearStaleNodeVisitor"
+import { ClearTransientNodesVisitor } from "./visitors/ClearTransientNodesVisitor"
 import { DebugVisitor } from "./visitors/DebugVisitor"
 import { ElementsSetVisitor } from "./visitors/ElementsSetVisitor"
 import { FilterMainScriptElementsVisitor } from "./visitors/FilterMainScriptElementsVisitor"
@@ -247,6 +250,18 @@ export class AppRoot {
         )
       }
 
+      case "newTransient": {
+        const transient = delta.newTransient as TransientProto
+        return this.addTransient(
+          deltaPath,
+          scriptRunId,
+          transient,
+          metadata,
+          activeScriptHash,
+          delta.fragmentId
+        )
+      }
+
       case "arrowAddRows": {
         try {
           return this.arrowAddRows(
@@ -342,6 +357,24 @@ export class AppRoot {
     )
   }
 
+  public clearTransientNodes(fragmentIdsThisRun?: Array<string>): AppRoot {
+    const visitor = new ClearTransientNodesVisitor(fragmentIdsThisRun)
+    const newChildren = this.root.children.map(node =>
+      this.ensureBlockNode(node.accept(visitor))
+    )
+
+    return new AppRoot(
+      this.mainScriptHash,
+      new BlockNode(
+        this.mainScriptHash,
+        newChildren,
+        new BlockProto({ allowEmpty: true }),
+        this.main.scriptRunId
+      ),
+      this.appLogo
+    )
+  }
+
   /** Return a Set containing all Elements in the tree. */
   public getElements(): Set<Element> {
     const visitor = new ElementsSetVisitor()
@@ -404,7 +437,18 @@ export class AppRoot {
       existingNode instanceof BlockNode &&
       existingNode.deltaBlock.type === block.type
     ) {
-      children = existingNode.children
+      // For dialog blocks, don't inherit children if the dialog identity is different.
+      // The identity is computed from the dialog's attributes.
+      // This prevents showing stale elements from a previous
+      // dialog when switching between different dialogs (see issue #10907).
+      const isDialogWithDifferentIdentity =
+        block.dialog &&
+        existingNode.deltaBlock.dialog &&
+        block.id !== existingNode.deltaBlock.id
+
+      if (!isDialogWithDifferentIdentity) {
+        children = existingNode.children
+      }
     }
 
     const blockNode = new BlockNode(
@@ -421,6 +465,43 @@ export class AppRoot {
         this.root,
         deltaPath,
         blockNode,
+        scriptRunId
+      ) as BlockNode,
+      this.appLogo
+    )
+  }
+
+  addTransient(
+    deltaPath: number[],
+    scriptRunId: string,
+    transient: TransientProto,
+    metadata: ForwardMsgMetadata,
+    activeScriptHash: string,
+    fragmentId?: string,
+    deltaMsgReceivedAt?: number
+  ): AppRoot {
+    const transientNode = new TransientNode(
+      scriptRunId,
+      undefined, // We do not have an anchor yet
+      transient.elements.map(
+        element =>
+          new ElementNode(
+            element as Element,
+            metadata,
+            scriptRunId,
+            activeScriptHash,
+            fragmentId
+          )
+      ),
+      deltaMsgReceivedAt
+    )
+
+    return new AppRoot(
+      this.mainScriptHash,
+      SetNodeByDeltaPathVisitor.setNodeAtPath(
+        this.root,
+        deltaPath,
+        transientNode,
         scriptRunId
       ) as BlockNode,
       this.appLogo

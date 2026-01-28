@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -144,9 +144,8 @@ function useDataExporter(
       // in all of the common browser, but might cause some trouble in
       // less common browsers. To not crash the whole app, we just lazy import
       // this here.
-      const nativeFileSystemAdapter = await import(
-        "native-file-system-adapter"
-      )
+      const nativeFileSystemAdapter =
+        await import("native-file-system-adapter")
       const fileHandle = await nativeFileSystemAdapter.showSaveFilePicker({
         suggestedName,
         types: [{ accept: { "text/csv": [".csv"] } }],

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -144,7 +144,7 @@ def test_markdown_label_value_and_delta_support(
     assert_snapshot(
         get_metric(
             themed_app,
-            re.compile("Test 11.+"),
+            re.compile(r"Test 11.+"),
         ),
         name="st_metric-markdown_support",
     )

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,21 +15,27 @@ from __future__ import annotations
 
 import json
 from typing import Any, Final, cast
-from urllib.parse import urlparse
 
 import tornado.web
 
 from streamlit.auth_util import (
     AuthCache,
+    build_logout_url,
+    clear_cookie_and_chunks,
     decode_provider_token,
     generate_default_provider_section,
+    get_cookie_with_chunks,
+    get_origin_from_redirect_uri,
+    get_redirect_uri,
     get_secrets_auth_section,
+    get_validated_redirect_uri,
+    set_cookie_with_chunks,
 )
 from streamlit.errors import StreamlitAuthError
 from streamlit.logger import get_logger
 from streamlit.url_util import make_url_path
 from streamlit.web.server.oidc_mixin import TornadoOAuth, TornadoOAuth2App
-from streamlit.web.server.server_util import AUTH_COOKIE_NAME
+from streamlit.web.server.server_util import AUTH_COOKIE_NAME, TOKENS_COOKIE_NAME
 
 _LOGGER: Final = get_logger(__name__)
 
@@ -40,7 +46,7 @@ def create_oauth_client(provider: str) -> tuple[TornadoOAuth2App, str]:
     """Create an OAuth client for the given provider based on secrets.toml configuration."""
     auth_section = get_secrets_auth_section()
     if auth_section:
-        redirect_uri = auth_section.get("redirect_uri", None)
+        redirect_uri = get_redirect_uri(auth_section) or "/"
         config = auth_section.to_dict()
     else:
         config = {}
@@ -72,33 +78,71 @@ class AuthHandlerMixin(tornado.web.RequestHandler):
     def redirect_to_base(self) -> None:
         self.redirect(make_url_path(self.base_url, "/"))
 
-    def set_auth_cookie(self, user_info: dict[str, Any]) -> None:
-        serialized_cookie_value = json.dumps(user_info)
+    def set_auth_cookie(
+        self, user_info: dict[str, Any], tokens: dict[str, Any]
+    ) -> None:
+        set_cookie_with_chunks(
+            self._set_single_cookie,
+            self._create_signed_value,
+            AUTH_COOKIE_NAME,
+            user_info,
+        )
+        set_cookie_with_chunks(
+            self._set_single_cookie,
+            self._create_signed_value,
+            TOKENS_COOKIE_NAME,
+            tokens,
+        )
 
-        # log error if cookie value is larger than 4096 bytes
-        if len(serialized_cookie_value.encode()) > 4096:
-            _LOGGER.error(
-                "Authentication cookie size exceeds maximum browser limit of 4096 bytes. Authentication may fail."
-            )
-
+    def _set_single_cookie(self, cookie_name: str, value: str) -> None:
+        """Set a single cookie."""
         try:
             # We don't specify Tornado secure flag here because it leads to missing cookie on Safari.
             # The OIDC flow should work only on secure context anyway (localhost or HTTPS),
             # so specifying the secure flag here will not add anything in terms of security.
             self.set_signed_cookie(
-                AUTH_COOKIE_NAME,
-                serialized_cookie_value,
+                cookie_name,
+                value,
                 httpOnly=True,
             )
         except AttributeError:
             self.set_secure_cookie(
-                AUTH_COOKIE_NAME,
-                serialized_cookie_value,
+                cookie_name,
+                value,
                 httponly=True,
             )
 
+    def _create_signed_value(self, cookie_name: str, value: str) -> bytes:
+        """Create a signed cookie value."""
+        try:
+            return self.create_signed_value(cookie_name, value)
+        except AttributeError:
+            # Default to the older method for compatibility with Tornado < 6.3.0
+            return cast("bytes", self.create_secure_cookie_value(cookie_name, value))  # type: ignore[attr-defined]
+
+    def _get_signed_cookie(self, cookie_name: str) -> bytes | None:
+        """Get a signed cookie."""
+        try:
+            return cast("bytes", self.get_signed_cookie(cookie_name))
+        except AttributeError:
+            # Default to the older method for compatibility with Tornado < 6.3.0
+            return cast("bytes", self.get_secure_cookie(cookie_name))
+        except Exception:
+            # Handle cases where cookie_secret is not configured or other errors
+            return None
+
     def clear_auth_cookie(self) -> None:
-        self.clear_cookie(AUTH_COOKIE_NAME)
+        """Clear auth cookies, including any split cookie chunks."""
+        clear_cookie_and_chunks(
+            self._get_signed_cookie,
+            self.clear_cookie,
+            AUTH_COOKIE_NAME,
+        )
+        clear_cookie_and_chunks(
+            self._get_signed_cookie,
+            self.clear_cookie,
+            TOKENS_COOKIE_NAME,
+        )
 
 
 class AuthLoginHandler(AuthHandlerMixin, tornado.web.RequestHandler):
@@ -130,16 +174,81 @@ class AuthLoginHandler(AuthHandlerMixin, tornado.web.RequestHandler):
 class AuthLogoutHandler(AuthHandlerMixin, tornado.web.RequestHandler):
     def get(self) -> None:
         self.clear_auth_cookie()
-        self.redirect_to_base()
+
+        provider_logout_url = self._get_provider_logout_url()
+        if provider_logout_url:
+            self.redirect(provider_logout_url)
+        else:
+            self.redirect_to_base()
+
+    def _get_provider_logout_url(self) -> str | None:
+        """Get the OAuth provider's logout URL from OIDC metadata."""
+        cookie_value = get_cookie_with_chunks(self._get_signed_cookie, AUTH_COOKIE_NAME)
+
+        if not cookie_value:
+            return None
+
+        try:
+            user_info = json.loads(cookie_value)
+            provider = user_info.get("provider")
+            if not provider:
+                return None
+
+            client, _ = create_oauth_client(provider)
+
+            metadata = client.load_server_metadata()
+            end_session_endpoint = metadata.get("end_session_endpoint")
+
+            if not end_session_endpoint:
+                _LOGGER.info("No end_session_endpoint found for provider %s", provider)
+                return None
+
+            # Use redirect_uri (i.e. /oauth2callback) for post_logout_redirect_uri
+            # This is safer than redirecting to root as some providers seem to
+            # require url to be in a whitelist /oauth2callback should be whitelisted
+            redirect_uri = get_validated_redirect_uri()
+            if redirect_uri is None:
+                _LOGGER.info("Redirect url could not be determined")
+                return None
+
+            # Get id_token_hint from tokens cookie if available
+            id_token: str | None = None
+            tokens_cookie_value = get_cookie_with_chunks(
+                self._get_signed_cookie, TOKENS_COOKIE_NAME
+            )
+            if tokens_cookie_value:
+                try:
+                    tokens = json.loads(tokens_cookie_value)
+                    id_token = tokens.get("id_token")
+                except (json.JSONDecodeError, TypeError):
+                    _LOGGER.exception("Error, invalid tokens cookie value.")
+                    return None
+
+            return build_logout_url(
+                end_session_endpoint=end_session_endpoint,
+                client_id=client.client_id,
+                post_logout_redirect_uri=redirect_uri,
+                id_token=id_token,
+            )
+
+        except Exception as e:
+            _LOGGER.warning("Failed to get provider logout URL: %s", e)
+            return None
 
 
 class AuthCallbackHandler(AuthHandlerMixin, tornado.web.RequestHandler):
     async def get(self) -> None:
         provider = self._get_provider_by_state()
+        if provider is None:
+            # This could be a logout redirect (no state parameter) or invalid state
+            # In both cases, redirect to base
+            self.redirect_to_base()
+            return
+
         origin = self._get_origin_from_secrets()
         if origin is None:
             _LOGGER.error(
-                "Error, misconfigured origin for `redirect_uri` in secrets. ",
+                "Error, misconfigured origin for `redirect_uri` in secrets.",
             )
             self.redirect_to_base()
             return
@@ -161,51 +270,45 @@ class AuthCallbackHandler(AuthHandlerMixin, tornado.web.RequestHandler):
             self.redirect_to_base()
             return
 
-        if provider is None:
-            # See https://github.com/streamlit/streamlit/issues/13101
-            _LOGGER.warning(
-                "Missing provider for OAuth callback; this often indicates a stale "
-                "or replayed callback (for example, from browser back/forward "
-                "navigation).",
-            )
-            self.redirect_to_base()
-            return
-
         client, _ = create_oauth_client(provider)
         token = client.authorize_access_token(self)
         user = cast("dict[str, Any]", token.get("userinfo"))
 
-        cookie_value = dict(user, origin=origin, is_logged_in=True)
+        cookie_value = dict(user, origin=origin, is_logged_in=True, provider=provider)
+        tokens = {k: token[k] for k in ["id_token", "access_token"] if k in token}
+
         if user:
-            self.set_auth_cookie(cookie_value)
+            self.set_auth_cookie(cookie_value, tokens)
+            # Keep tokens in a separate cookie to avoid hitting the size limit
         else:
-            _LOGGER.error(
-                "Error, missing user info.",
-            )
+            _LOGGER.error("Error, missing user info.")
         self.redirect_to_base()
 
     def _get_provider_by_state(self) -> str | None:
-        state_code_from_url = self.get_argument("state")
+        state_code_from_url = self.get_argument("state", None)
+        if state_code_from_url is None:
+            return None
+
         current_cache_keys = list(auth_cache.get_dict().keys())
         state_provider_mapping = {}
         for key in current_cache_keys:
-            _, _, recorded_provider, code = key.split("_")
+            # Authlib stores OAuth state in the cache using keys in the format:
+            # "_state_{provider}_{state_code}" (e.g., "_state_google_abc123").
+            #
+            # Note: This split assumes no underscores in provider names or state codes.
+            # This is safe because: (1) provider names with underscores are explicitly
+            # blocked in validate_auth_credentials() in auth_util.py, and (2) Authlib's
+            # generate_token() uses only alphanumeric characters (a-zA-Z0-9) for state
+            # codes. See auth_util.py for the underscore validation.
+            try:
+                _, _, recorded_provider, code = key.split("_")
+            except ValueError:
+                # Skip cache keys that don't match the expected 4-part format.
+                continue
             state_provider_mapping[code] = recorded_provider
 
         provider: str | None = state_provider_mapping.get(state_code_from_url)
         return provider
 
     def _get_origin_from_secrets(self) -> str | None:
-        redirect_uri = None
-        auth_section = get_secrets_auth_section()
-        if auth_section:
-            redirect_uri = auth_section.get("redirect_uri", None)
-
-        if not redirect_uri:
-            return None
-
-        redirect_uri_parsed = urlparse(redirect_uri)
-        origin_from_redirect_uri: str = (
-            redirect_uri_parsed.scheme + "://" + redirect_uri_parsed.netloc
-        )
-        return origin_from_redirect_uri
+        return get_origin_from_redirect_uri()

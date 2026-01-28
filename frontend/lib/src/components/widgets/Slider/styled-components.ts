@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
 
 import styled from "@emotion/styled"
 import { type StyleProps } from "baseui/slider"
-import { transparentize } from "color2k"
 
 export const StyledSlider = styled.div({
   position: "relative",
@@ -46,14 +45,12 @@ export const StyledThumb = styled.div<StyledThumbProps>(
     justifyContent: "center",
     height: theme.sizes.sliderThumb,
     width: theme.sizes.sliderThumb,
-    boxShadow: isDragged
-      ? `0 0 0 0.2rem ${transparentize(theme.colors.primary, 0.5)}`
-      : "none",
+    boxShadow: isDragged ? theme.shadows.focusRing : theme.shadows.none,
     ":focus": {
       outline: "none",
     },
     ":focus-visible": {
-      boxShadow: `0 0 0 0.2rem ${transparentize(theme.colors.primary, 0.5)}`,
+      boxShadow: theme.shadows.focusRing,
     },
   })
 )

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,8 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-import React from "react"
 
 import * as glideDataGridModule from "@glideapps/glide-data-grid"
 import { screen } from "@testing-library/react"
@@ -64,6 +62,7 @@ describe("DataFrame widget", () => {
   const props = getProps(new Quiver({ data: TEN_BY_TEN }))
 
   beforeEach(() => {
+    vi.clearAllMocks()
     vi.spyOn(UseResizeObserver, "useResizeObserver").mockReturnValue({
       elementRef: { current: null },
       values: [250],
@@ -132,6 +131,92 @@ describe("DataFrame widget", () => {
         rangeSelect: "cell",
         fillHandle: false,
         onColumnResize: undefined,
+      }),
+      {}
+    )
+  })
+
+  it("enables trailing row for ADD_ONLY editing mode", () => {
+    render(
+      <DataFrame
+        {...getProps(
+          new Quiver({ data: TEN_BY_TEN }),
+          false,
+          ArrowProto.EditingMode.ADD_ONLY
+        )}
+      />
+    )
+
+    // ADD_ONLY mode should enable trailingRowOptions for adding rows
+    expect(glideDataGridModule.DataEditor).toHaveBeenCalledWith(
+      expect.objectContaining({
+        trailingRowOptions: expect.objectContaining({
+          sticky: false,
+          tint: true,
+        }),
+      }),
+      {}
+    )
+
+    // ADD_ONLY mode should NOT enable row deletion features
+    expect(glideDataGridModule.DataEditor).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        rowSelect: "multi",
+        rowSelectionMode: "multi",
+      }),
+      {}
+    )
+  })
+
+  it("enables row selection for DELETE_ONLY editing mode", () => {
+    render(
+      <DataFrame
+        {...getProps(
+          new Quiver({ data: TEN_BY_TEN }),
+          false,
+          ArrowProto.EditingMode.DELETE_ONLY
+        )}
+      />
+    )
+
+    // DELETE_ONLY mode should enable row selection for deleting rows
+    expect(glideDataGridModule.DataEditor).toHaveBeenCalledWith(
+      expect.objectContaining({
+        rowSelect: "multi",
+        rowSelectionMode: "multi",
+      }),
+      {}
+    )
+
+    // DELETE_ONLY mode should NOT enable row adding features
+    expect(glideDataGridModule.DataEditor).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        trailingRowOptions: expect.anything(),
+      }),
+      {}
+    )
+  })
+
+  it("enables both trailing row and row selection for DYNAMIC editing mode", () => {
+    render(
+      <DataFrame
+        {...getProps(
+          new Quiver({ data: TEN_BY_TEN }),
+          false,
+          ArrowProto.EditingMode.DYNAMIC
+        )}
+      />
+    )
+
+    // DYNAMIC mode should enable both adding and deleting rows
+    expect(glideDataGridModule.DataEditor).toHaveBeenCalledWith(
+      expect.objectContaining({
+        trailingRowOptions: expect.objectContaining({
+          sticky: false,
+          tint: true,
+        }),
+        rowSelect: "multi",
+        rowSelectionMode: "multi",
       }),
       {}
     )

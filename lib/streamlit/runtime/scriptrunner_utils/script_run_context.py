@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,18 +18,15 @@ import collections
 import contextlib
 import contextvars
 import threading
-from collections import Counter
 from dataclasses import dataclass, field
 from typing import (
     TYPE_CHECKING,
     Final,
     TypeAlias,
 )
-from urllib import parse
 
 from streamlit.errors import (
     NoSessionContext,
-    StreamlitAPIException,
 )
 from streamlit.logger import get_logger
 from streamlit.runtime.forward_msg_cache import (
@@ -52,7 +49,7 @@ if TYPE_CHECKING:
     from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 _LOGGER: Final = get_logger(__name__)
 
-UserInfo: TypeAlias = dict[str, str | bool | None]
+UserInfoType: TypeAlias = dict[str, str | bool | dict[str, str] | None]
 
 
 # If true, it indicates that we are in a cached function that disallows the usage of
@@ -83,7 +80,7 @@ class ScriptRunContext:
     session_state: SafeSessionState
     uploaded_file_mgr: UploadedFileManager
     main_script_path: str
-    user_info: UserInfo
+    user_info: UserInfoType
     fragment_storage: FragmentStorage
     pages_manager: PagesManager
 
@@ -93,7 +90,9 @@ class ScriptRunContext:
     gather_usage_stats: bool = False
     command_tracking_deactivated: bool = False
     tracked_commands: list[Command] = field(default_factory=list)
-    tracked_commands_counter: Counter[str] = field(default_factory=collections.Counter)
+    tracked_commands_counter: collections.Counter[str] = field(
+        default_factory=collections.Counter
+    )
     _has_script_started: bool = False
     widget_ids_this_run: set[str] = field(default_factory=set)
     widget_user_keys_this_run: set[str] = field(default_factory=set)
@@ -107,10 +106,6 @@ class ScriptRunContext:
     _active_script_hash: str = ""
     # we allow only one dialog to be open at the same time
     has_dialog_opened: bool = False
-
-    # TODO(willhuang1997): Remove this variable when experimental query params are removed
-    _experimental_query_params_used = False
-    _production_query_params_used = False
 
     @property
     def page_script_hash(self) -> str:
@@ -146,6 +141,9 @@ class ScriptRunContext:
         cached_message_hashes: set[str] | None = None,
         context_info: ContextInfo | None = None,
     ) -> None:
+        # Check if this is a same-page rerun BEFORE updating page_script_hash
+        is_same_page = self.page_script_hash == page_script_hash
+
         self.cursors = {}
         self.widget_ids_this_run = set()
         self.widget_user_keys_this_run = set()
@@ -167,16 +165,17 @@ class ScriptRunContext:
 
         in_cached_function.set(False)
 
-        parsed_query_params = parse.parse_qs(query_string, keep_blank_values=True)
         with self.session_state.query_params() as qp:
-            qp.clear_with_no_forward_msg()
-            for key, val in parsed_query_params.items():
-                if len(val) == 0:
-                    qp.set_with_no_forward_msg(key, val="")
-                elif len(val) == 1:
-                    qp.set_with_no_forward_msg(key, val=val[-1])
-                else:
-                    qp.set_with_no_forward_msg(key, val)
+            # For same-page reruns (widget interactions), populate _query_params from URL
+            # and set initial params for widget seeding.
+            # For page transitions, both populate_from_query_string() AND
+            # set_initial_query_params_from_current() are called in script_runner.py
+            # BEFORE reset() to ensure filtering is applied to both _query_params
+            # AND _initial_query_params, preventing stale params from previous pages
+            # from seeding widgets on the new page.
+            if is_same_page:
+                qp.set_initial_query_params(query_string)
+                qp.populate_from_query_string(query_string)
 
     def on_script_start(self) -> None:
         self._has_script_started = True
@@ -200,22 +199,6 @@ class ScriptRunContext:
 
         # Pass the message up to our associated ScriptRunner.
         self._enqueue(msg_to_send)
-
-    def ensure_single_query_api_used(self) -> None:
-        if self._experimental_query_params_used and self._production_query_params_used:
-            raise StreamlitAPIException(
-                "Using `st.query_params` together with either `st.experimental_get_query_params` "
-                "or `st.experimental_set_query_params` is not supported. Please "
-                " convert your app to only use `st.query_params`"
-            )
-
-    def mark_experimental_query_params_used(self) -> None:
-        self._experimental_query_params_used = True
-        self.ensure_single_query_api_used()
-
-    def mark_production_query_params_used(self) -> None:
-        self._production_query_params_used = True
-        self.ensure_single_query_api_used()
 
 
 SCRIPT_RUN_CONTEXT_ATTR_NAME: Final = "streamlit_script_run_ctx"

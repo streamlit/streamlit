@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@
 // Timestamp when the Streamlit execution started for GUEST_READY message
 const streamlitExecutionStartedAt = Date.now()
 
-import React, { StrictMode } from "react"
+import { StrictMode } from "react"
 
 import log from "loglevel"
 import { createRoot } from "react-dom/client"
