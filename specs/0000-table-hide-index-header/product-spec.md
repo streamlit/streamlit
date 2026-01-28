@@ -8,8 +8,8 @@ status: Draft
 
 ## Summary
 
-Add `hide_index: bool | None = None` and `hide_header: bool = False` parameters to `st.table`,
-enabling users to control the visibility of the index column and column headers.
+Add `hide_index: bool | None = None` and `hide_header: bool | None = None` parameters to `st.table`,
+enabling users to control the visibility of the index column and column headers with smart auto-hide defaults.
 
 ## Problem
 
@@ -44,17 +44,17 @@ indices) and column headers, which is problematic for:
 ```python
 st.table(
     ...,
-    hide_index: bool | None = None,  # NEW
-    hide_header: bool = False,       # NEW
+    hide_index: bool | None = None,   # NEW
+    hide_header: bool | None = None,  # NEW
 )
 ```
 
 ### Parameters
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `hide_index` | `bool \| None` | `None` | Whether to hide the index column. If `None`, auto-hide default RangeIndex. |
-| `hide_header` | `bool` | `False` | Whether to hide the column headers row. |
+| Parameter     | Type           | Default | Description                                                                        |
+| ------------- | -------------- | ------- | ---------------------------------------------------------------------------------- |
+| `hide_index`  | `bool \| None` | `None`  | Whether to hide the index column. If `None`, auto-hide default RangeIndex.         |
+| `hide_header` | `bool \| None` | `None`  | Whether to hide the column headers row. If `None`, auto-hide based on data format. |
 
 ### Behavior
 
@@ -66,8 +66,15 @@ st.table(
 
 **`hide_header`:**
 
-- `False` (default): Show column headers
-- `True`: Hide all header rows, including all levels of the MultiIndex headers.
+- `None` (default): Auto-hide based on input data format (using `determine_data_format`). Hide headers for formats without user-defined column names:
+  - `KEY_VALUE_DICT` (e.g., `{"a": 1, "b": 2}`)
+  - `LIST_OF_ROWS` (e.g., `[["a", 1], ["b", 2]]`)
+  - `LIST_OF_VALUES` (e.g., `[1, 2, 3]`)
+  - `NUMPY_LIST` / `NUMPY_MATRIX`
+  - `SET_OF_VALUES` / `TUPLE_OF_VALUES`
+  - `PANDAS_ARRAY` / `PYARROW_ARRAY`
+- `True`: Always hide all header rows, including all levels of MultiIndex headers
+- `False`: Always show
 
 ### Examples
 
@@ -86,16 +93,25 @@ df_custom = df.set_index(pd.Index(["row1", "row2"]))
 st.table(df_custom)  # Index shown
 ```
 
-**Key-value display (no headers):**
+**Auto-hide headers based on data format:**
 
 ```python
-# Clean key-value table for metrics
+# KEY_VALUE_DICT format - headers auto-hidden
 st.table({
     "Price": "$145.00",
     "Customer": "Bobby Jones",
     "Address": "129 Market St, NYC",
     "Store": "Trader Joe's"
-}, hide_header=True)
+})
+
+# LIST_OF_ROWS format - headers auto-hidden
+st.table([["Alice", 25], ["Bob", 30]])
+
+# LIST_OF_VALUES format - header auto-hidden
+st.table([1, 2, 3, 4, 5])
+
+# PANDAS_DATAFRAME format - headers shown (has user-defined column names)
+st.table(pd.DataFrame({"Name": ["Alice", "Bob"], "Age": [25, 30]}))
 ```
 
 **Minimal table:**
