@@ -293,8 +293,10 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
         out = sys.stdout.getvalue()
         assert "Unix Socket: unix://mysocket.sock" in out
 
-    def test_print_urls_with_wildcard_address(self):
-        """Verify 0.0.0.0 is displayed as localhost in the URL."""
+    @patch("streamlit.net_util.get_internal_ip")
+    def test_print_urls_with_wildcard_address(self, mock_get_internal_ip):
+        """Verify 0.0.0.0 shows both Local URL and Network URL like default."""
+        mock_get_internal_ip.return_value = "internal-ip"
         mock_is_manually_set = testutil.build_mock_config_is_manually_set(
             {"browser.serverAddress": False, "server.address": True}
         )
@@ -303,6 +305,7 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
                 "server.address": "0.0.0.0",
                 "server.port": 8501,
                 "global.developmentMode": False,
+                "server.headless": False,
             }
         )
 
@@ -313,12 +316,20 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
             bootstrap._print_url(False)
 
         out = sys.stdout.getvalue()
-        assert "URL: http://localhost:8501" in out
+        assert "Local URL: http://localhost:8501" in out
+        assert "Network URL: http://internal-ip:8501" in out
         # The raw 0.0.0.0 address should not appear in the URL
         assert "0.0.0.0" not in out
+        # Should not show generic "URL:" label (that's for specific addresses)
+        # Using regex to match "URL:" that is NOT preceded by "Local " or "Network "
+        import re
 
-    def test_print_urls_with_ipv6_wildcard(self):
-        """Verify :: (IPv6 wildcard) is displayed as localhost in the URL."""
+        assert not re.search(r"(?<!Local )(?<!Network )URL:", out)
+
+    @patch("streamlit.net_util.get_internal_ip")
+    def test_print_urls_with_ipv6_wildcard(self, mock_get_internal_ip):
+        """Verify :: (IPv6 wildcard) shows both Local URL and Network URL like default."""
+        mock_get_internal_ip.return_value = "internal-ip"
         mock_is_manually_set = testutil.build_mock_config_is_manually_set(
             {"browser.serverAddress": False, "server.address": True}
         )
@@ -327,6 +338,7 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
                 "server.address": "::",
                 "server.port": 8501,
                 "global.developmentMode": False,
+                "server.headless": False,
             }
         )
 
@@ -337,9 +349,15 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
             bootstrap._print_url(False)
 
         out = sys.stdout.getvalue()
-        assert "URL: http://localhost:8501" in out
+        assert "Local URL: http://localhost:8501" in out
+        assert "Network URL: http://internal-ip:8501" in out
         # The raw :: address should not appear in the URL
         assert "http://::" not in out
+        # Should not show generic "URL:" label (that's for specific addresses)
+        # Using regex to match "URL:" that is NOT preceded by "Local " or "Network "
+        import re
+
+        assert not re.search(r"(?<!Local )(?<!Network )URL:", out)
 
     @patch("streamlit.web.bootstrap.asyncio.get_running_loop", Mock())
     @patch("streamlit.web.bootstrap.secrets.load_if_toml_exists", Mock())

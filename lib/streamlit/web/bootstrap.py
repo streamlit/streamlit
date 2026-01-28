@@ -246,13 +246,13 @@ def _print_url(is_running_hello: bool) -> None:
         ]
 
     elif (
-        config.is_manually_set("server.address") and not server_address_is_unix_socket()
+        config.is_manually_set("server.address")
+        and not server_address_is_unix_socket()
+        and config.get_option("server.address") not in {"0.0.0.0", "::"}  # noqa: S104
     ):
-        display_address = server_util.get_display_address(
-            config.get_option("server.address")
-        )
+        # Non-wildcard specific address - show single URL
         named_urls = [
-            ("URL", server_util.get_url(display_address)),
+            ("URL", server_util.get_url(config.get_option("server.address"))),
         ]
 
     elif server_address_is_unix_socket():
