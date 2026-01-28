@@ -98,10 +98,7 @@ const VirtualDropdown = forwardRef<any, any>((props, ref) => {
       >
         <StyledEmptyState
           $style={{
-            paddingBottom: theme.spacing.none,
-            paddingTop: theme.spacing.none,
-            paddingLeft: theme.spacing.none,
-            paddingRight: theme.spacing.none,
+            padding: theme.spacing.none,
             color: theme.colors.fadedText60,
           }}
           {...childrenProps}

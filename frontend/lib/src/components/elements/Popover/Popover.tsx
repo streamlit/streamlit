@@ -31,6 +31,7 @@ import BaseButton, {
 import { DynamicIcon } from "~lib/components/shared/Icon"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { hasLightBackgroundColor } from "~lib/theme"
 
 import {
   StyledPopoverExpansionIcon,
@@ -93,47 +94,39 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
             props: {
               "data-testid": "stPopoverBody",
             },
-            style: () => ({
-              marginRight: theme.spacing.lg,
-              marginBottom: theme.spacing.lg,
+            style: () => {
+              const lightBackground = hasLightBackgroundColor(theme)
+              // In light mode, use full padding. In dark mode, subtract border width.
+              const padding = lightBackground
+                ? theme.spacing.twoXL
+                : `calc(${theme.spacing.twoXL} - ${theme.sizes.borderWidth})`
 
-              maxHeight: "70vh",
-              overflow: "auto",
-              maxWidth: `calc(${theme.sizes.contentMaxWidth} - 2*${theme.spacing.lg})`,
-              minWidth: stretchWidth
-                ? // If width="stretch", we use the container width as minimum:
-                  `${Math.max(calculatedWidth, 160)}px` // 10rem ~= 160px
-                : theme.sizes.minPopupWidth,
-              [`@media (max-width: ${theme.breakpoints.sm})`]: {
-                maxWidth: `calc(100% - ${theme.spacing.threeXL})`,
-              },
-              borderTopLeftRadius: theme.radii.xl,
-              borderTopRightRadius: theme.radii.xl,
-              borderBottomRightRadius: theme.radii.xl,
-              borderBottomLeftRadius: theme.radii.xl,
+              return {
+                marginRight: theme.spacing.lg,
+                marginBottom: theme.spacing.lg,
 
-              borderLeftWidth: theme.sizes.borderWidth,
-              borderRightWidth: theme.sizes.borderWidth,
-              borderTopWidth: theme.sizes.borderWidth,
-              borderBottomWidth: theme.sizes.borderWidth,
-
-              paddingRight: `calc(${theme.spacing.twoXL} - ${theme.sizes.borderWidth})`, // 1px to account for border.
-              paddingLeft: `calc(${theme.spacing.twoXL} - ${theme.sizes.borderWidth})`,
-              paddingBottom: `calc(${theme.spacing.twoXL} - ${theme.sizes.borderWidth})`,
-              paddingTop: `calc(${theme.spacing.twoXL} - ${theme.sizes.borderWidth})`,
-
-              borderLeftStyle: "solid",
-              borderRightStyle: "solid",
-              borderTopStyle: "solid",
-              borderBottomStyle: "solid",
-
-              borderLeftColor: theme.colors.borderColor,
-              borderRightColor: theme.colors.borderColor,
-              borderTopColor: theme.colors.borderColor,
-              borderBottomColor: theme.colors.borderColor,
-
-              boxShadow: theme.shadows.popover,
-            }),
+                maxHeight: "70vh",
+                overflow: "auto",
+                maxWidth: `calc(${theme.sizes.contentMaxWidth} - 2*${theme.spacing.lg})`,
+                minWidth: stretchWidth
+                  ? // If width="stretch", we use the container width as minimum:
+                    `${Math.max(calculatedWidth, 160)}px` // 10rem ~= 160px
+                  : theme.sizes.minPopupWidth,
+                [`@media (max-width: ${theme.breakpoints.sm})`]: {
+                  maxWidth: `calc(100% - ${theme.spacing.threeXL})`,
+                },
+                borderRadius: theme.radii.xl,
+                borderWidth: lightBackground ? 0 : theme.sizes.borderWidth,
+                padding: padding,
+                borderStyle: lightBackground ? "none" : "solid",
+                borderColor: lightBackground
+                  ? "transparent"
+                  : theme.colors.borderColor,
+                boxShadow: lightBackground
+                  ? theme.shadows.popover
+                  : theme.shadows.none,
+              }
+            },
           },
         }}
       >

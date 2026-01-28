@@ -34,6 +34,7 @@ import {
   ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { hasLightBackgroundColor } from "~lib/theme"
 import {
   isNullOrUndefined,
   labelVisibilityProtoValueToEnum,
@@ -137,32 +138,52 @@ function TimeInput({
           },
 
           Dropdown: {
-            style: () => ({
-              // Padding to inset items from the edges (left padding matches VirtualDropdown)
-              paddingTop: theme.spacing.xs,
-              paddingBottom: theme.spacing.xs,
-              paddingLeft: theme.spacing.xs,
-              paddingRight: theme.spacing.none,
-              // Somehow this adds an additional shadow, even though we already have
-              // one on the popover, so we need to remove it here.
-              boxShadow: "none",
-              maxHeight: theme.sizes.maxDropdownHeight,
-            }),
+            style: () =>
+              ({
+                // Padding to inset items from the edges (matches VirtualDropdown)
+                paddingTop: theme.spacing.none,
+                paddingBottom: theme.spacing.none,
+                paddingLeft: theme.spacing.xs,
+                paddingRight: theme.spacing.xs,
+                // Somehow this adds an additional shadow, even though we already have
+                // one on the popover, so we need to remove it here.
+                boxShadow: "none",
+                overflow: "hidden",
+                maxHeight: theme.sizes.maxDropdownHeight,
+                // Set CSS variable to make ThemedStyledDropdownListItem marginRight = 0
+                // since we're using container padding for spacing instead
+                "--scrollbar-gutter-size": theme.spacing.xs,
+              }) as React.CSSProperties,
           },
 
           DropdownListItem: {
             component: TimeInputListItem,
           },
 
-          // Nudge the dropdown menu by 1px so the focus state doesn't get cut off
           Popover: {
             props: {
               ignoreBoundary: isInSidebar,
               overrides: {
                 Body: {
-                  style: () => ({
-                    marginTop: theme.spacing.px,
-                  }),
+                  style: () => {
+                    const lightBackground = hasLightBackgroundColor(theme)
+                    return {
+                      maxHeight: "70vh",
+                      overflow: "auto",
+                      boxSizing: "border-box",
+                      borderRadius: theme.radii.default,
+                      borderWidth: lightBackground
+                        ? 0
+                        : theme.sizes.borderWidth,
+                      borderStyle: lightBackground ? "none" : "solid",
+                      borderColor: lightBackground
+                        ? "transparent"
+                        : theme.colors.borderColor,
+                      boxShadow: lightBackground
+                        ? theme.shadows.popover
+                        : theme.shadows.none,
+                    }
+                  },
                 },
               },
             },

@@ -51,6 +51,7 @@ import {
 } from "~lib/hooks/useBasicWidgetState"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useSelectCommon } from "~lib/hooks/useSelectCommon"
+import { hasLightBackgroundColor } from "~lib/theme"
 import { fuzzyFilterSelectOptions } from "~lib/util/fuzzyFilterSelectOptions"
 import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
@@ -386,9 +387,25 @@ const Multiselect: FC<Props> = props => {
                 ignoreBoundary: isInSidebar,
                 overrides: {
                   Body: {
-                    style: () => ({
-                      marginTop: theme.spacing.px,
-                    }),
+                    style: () => {
+                      const lightBackground = hasLightBackgroundColor(theme)
+                      return {
+                        maxHeight: "70vh",
+                        overflow: "auto",
+                        boxSizing: "border-box",
+                        borderRadius: theme.radii.default,
+                        borderWidth: lightBackground
+                          ? 0
+                          : theme.sizes.borderWidth,
+                        borderStyle: lightBackground ? "none" : "solid",
+                        borderColor: lightBackground
+                          ? "transparent"
+                          : theme.colors.borderColor,
+                        boxShadow: lightBackground
+                          ? theme.shadows.popover
+                          : theme.shadows.none,
+                      }
+                    },
                   },
                 },
               },
@@ -535,7 +552,10 @@ const Multiselect: FC<Props> = props => {
               },
             },
             Input: { props: { readOnly: inputReadOnly } },
-            Dropdown: { component: VirtualDropdown },
+            Dropdown: {
+              component: VirtualDropdown,
+              style: { boxShadow: "none", overflow: "hidden" },
+            },
           }}
         />
       </StyledUISelect>
