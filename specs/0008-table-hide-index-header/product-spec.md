@@ -1,7 +1,7 @@
 ---
-author: "@lukasmasuch"
+author: lukasmasuch
 created: 2025-12-02
-status: Draft
+status: Approved
 ---
 
 # Allow hiding index and header columns in `st.table`
@@ -128,10 +128,12 @@ st.table(df, hide_index=True, hide_header=True)
 
 ## Checklist
 
-- [x] Will this work on all deployment platforms?
-- [x] No breaking API changes?
-- [x] No new dependencies?
-- [x] Metrics collected?
-- [x] Any security or legal implications?
-- [x] Anything to keep in mind for docs?
-- [x] Any other risks?
+| Item                       | ✅ or comment |
+| -------------------------- | ------------- |
+| Works on SiS, Cloud, etc?  | ✅            |
+| No breaking API changes    | ✅            |
+| No new dependencies        | ✅            |
+| Metrics collected          | ✅            |
+| Any security/legal impact? | ✅            |
+| Any docs changes needed?   | ✅            |
+| Any other risks?           | ✅            |
