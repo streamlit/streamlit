@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -359,7 +359,6 @@ class ImageProtoTest(DeltaGeneratorTestCase):
 
     def test_BytesIO_to_bytes(self):
         """Test streamlit.image.BytesIO_to_bytes."""
-        pass
 
     def test_verify_np_shape(self):
         """Test streamlit.image.verify_np_shape.
@@ -387,7 +386,6 @@ class ImageProtoTest(DeltaGeneratorTestCase):
         - float with clipping
         - int  with clipping
         """
-        pass
 
     @parameterized.expand([("P", True), ("RGBA", True), ("LA", True), ("RGB", False)])
     def test_image_may_have_alpha_channel(self, format: str, expected_alpha: bool):
@@ -558,23 +556,23 @@ class ImageProtoTest(DeltaGeneratorTestCase):
         [
             (
                 "invalid",
-                "Invalid width value: 'invalid'. Width must be either an integer (pixels), 'stretch', or 'content'.",
+                "Width must be either a positive integer (pixels), 'stretch', or 'content'.",
             ),
             (
                 "",
-                "Invalid width value: ''. Width must be either an integer (pixels), 'stretch', or 'content'.",
+                "Width must be either a positive integer (pixels), 'stretch', or 'content'.",
             ),
             (
                 0,
-                "Invalid width value: 0. Width must be either an integer (pixels), 'stretch', or 'content'.",
+                "Width must be either a positive integer (pixels), 'stretch', or 'content'.",
             ),
             (
                 -1,
-                "Invalid width value: -1. Width must be either an integer (pixels), 'stretch', or 'content'.",
+                "Width must be either a positive integer (pixels), 'stretch', or 'content'.",
             ),
             (
                 None,
-                "Invalid width value: None. Width must be either an integer (pixels), 'stretch', or 'content'.",
+                "Width must be either a positive integer (pixels), 'stretch', or 'content'.",
             ),
         ]
     )
@@ -585,4 +583,4 @@ class ImageProtoTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitAPIException) as exc_info:
             st.image(img, width=invalid_width)
 
-        assert str(exc_info.value) == expected_error_message
+        assert expected_error_message in str(exc_info.value)

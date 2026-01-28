@@ -385,13 +385,6 @@ protoc --version
 
 </details>
 
-#### Installing conda and conda-build
-
-If you want to build Streamlit as a conda package on your local machine (needing to do this should be rare), you'll need to install a few extra dependencies so that the `make conda-package` target works.
-
-1. First, install `conda` using your favorite package manager or by following [these instructions](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html). Both `anaconda` and `miniconda` will work.
-2. Then, run `conda install conda-build`.
-
 ## Introducing dependencies
 
 We aim to only introduce dependencies in this project that have reasonable restrictions and comply with various laws.

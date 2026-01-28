@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,13 +14,7 @@
  * limitations under the License.
  */
 
-import React, {
-  memo,
-  MouseEvent,
-  ReactElement,
-  useCallback,
-  useRef,
-} from "react"
+import { memo, MouseEvent, ReactElement, useCallback, useRef } from "react"
 
 import { LinkButton as LinkButtonProto } from "@streamlit/protobuf"
 
@@ -31,6 +25,7 @@ import {
   BaseButtonTooltip,
   DynamicButtonLabel,
 } from "~lib/components/shared/BaseButton"
+import { mapProtoIconPosition } from "~lib/components/shared/BaseButton/iconPosition"
 import { useRegisterShortcut } from "~lib/hooks/useRegisterShortcut"
 
 import BaseLinkButton from "./BaseLinkButton"
@@ -98,6 +93,7 @@ function LinkButton(props: Readonly<Props>): ReactElement {
         >
           <DynamicButtonLabel
             icon={element.icon}
+            iconPosition={mapProtoIconPosition(element.iconPosition)}
             label={element.label}
             shortcut={shortcut}
           />

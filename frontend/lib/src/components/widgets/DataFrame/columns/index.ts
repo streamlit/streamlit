@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
  */
 
 import JsonCellRenderer from "./cells/JsonCell"
+import MultiSelectCellRenderer from "./cells/MultiSelectCell"
 import {
   AreaChartColumn,
   BarChartColumn,
@@ -36,6 +37,7 @@ import { ColumnCreator } from "./utils"
 
 export { ImageCellEditor } from "./cells/ImageCellEditor"
 export type { JsonCell } from "./cells/JsonCell"
+export type { MultiSelectCell } from "./cells/MultiSelectCell"
 export type { DateTimeColumnParams } from "./DateTimeColumn"
 export type { LinkColumnParams } from "./LinkColumn"
 export type { NumberColumnParams } from "./NumberColumn"
@@ -69,7 +71,7 @@ export const ColumnTypes = new Map<string, ColumnCreator>(
   })
 )
 
-export const CustomCells = [JsonCellRenderer]
+export const CustomCells = [JsonCellRenderer, MultiSelectCellRenderer]
 
 export {
   AreaChartColumn,

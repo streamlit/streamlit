@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -52,7 +52,7 @@ class EditingState {
   private deletedRows: number[] = []
 
   // The original number of rows in the table (without potential additions & deletions)
-  private numRows = 0
+  private readonly numRows: number = 0
 
   constructor(numRows: number) {
     this.numRows = numRows

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -208,8 +208,11 @@ def marshall(
     """
 
     if type_util.is_graphviz_chart(figure_or_dot):
-        dot = figure_or_dot.source
-        engine = figure_or_dot.engine
+        chart = cast(
+            "graphviz.Graph | graphviz.Digraph | graphviz.Source", figure_or_dot
+        )
+        dot = chart.source
+        engine = chart.engine
     elif isinstance(figure_or_dot, str):
         dot = figure_or_dot
         engine = "dot"

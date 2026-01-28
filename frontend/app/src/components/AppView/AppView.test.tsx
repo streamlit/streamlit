@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,8 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-import React from "react"
 
 import { fireEvent, screen } from "@testing-library/react"
 
@@ -30,10 +28,13 @@ import {
   mockSessionInfo,
   mockTheme,
   NavigationContextProps,
-  SidebarConfigContextProps,
   WidgetStateManager,
 } from "@streamlit/lib"
-import { render, renderWithContexts } from "@streamlit/lib/testing"
+import {
+  render,
+  renderWithContexts,
+  RenderWithContextsOptions,
+} from "@streamlit/lib/testing"
 import {
   Block as BlockProto,
   Element,
@@ -48,8 +49,8 @@ import AppView, { AppViewProps } from "./AppView"
 const FAKE_SCRIPT_HASH = "fake_script_hash"
 
 function getSidebarConfigContextOutput(
-  context: Partial<SidebarConfigContextProps>
-): SidebarConfigContextProps {
+  context: RenderWithContextsOptions["sidebarConfigContext"] = {}
+): NonNullable<RenderWithContextsOptions["sidebarConfigContext"]> {
   return {
     initialSidebarState: PageConfig.SidebarState.AUTO,
     appLogo: null,
@@ -115,7 +116,7 @@ function getProps(props: Partial<AppViewProps> = {}): AppViewProps {
 function renderAppView(
   props: Partial<AppViewProps> = {},
   overrides?: {
-    sidebarConfigContext?: Partial<SidebarConfigContextProps>
+    sidebarConfigContext?: RenderWithContextsOptions["sidebarConfigContext"]
     navigationContext?: Partial<NavigationContextProps>
   }
 ): ReturnType<typeof renderWithContexts> {

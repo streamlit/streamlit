@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -112,7 +112,7 @@ export const StyledBaseButton = styled.button<RequiredBaseButtonProps>(
         // When focus-visible (e.g. if the button was focused via keyboard navigation)
         // we use the hover style of the respective button type (see below) and
         // additionally show a colored focus ring
-        boxShadow: `0 0 0 0.2rem ${transparentize(theme.colors.primary, 0.5)}`,
+        boxShadow: theme.shadows.focusRing,
       },
       ...getSizeStyle(size, theme),
     }
@@ -377,7 +377,7 @@ export const StyledHeaderButton = styled(
       outline: "none",
     },
     "&:focus-visible": {
-      boxShadow: `0 0 0 0.2rem ${transparentize(theme.colors.gray90, 0.8)}`,
+      boxShadow: theme.shadows.focusRingMuted,
     },
     "&:hover": {
       backgroundColor: theme.colors.darkenedBgMix15,

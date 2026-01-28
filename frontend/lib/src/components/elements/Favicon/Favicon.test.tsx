@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,7 +36,7 @@ const SMART_DISPLAY_MATERIAL_ICON_URL =
 const ACCESSIBILITY_NEW_MATERIAL_ICON_URL =
   "https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/accessibility_new/default/24px.svg"
 
-test("is set up with the default favicon", () => {
+it("is set up with the default favicon", () => {
   expect(getFaviconHref()).toBe("http://localhost:3000/default.png")
 })
 

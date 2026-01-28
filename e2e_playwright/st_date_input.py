@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -132,10 +132,9 @@ if st.toggle("Update date input props"):
         args=("Updated date arg",),
         kwargs={"param": "updated kwarg param"},
         key="dynamic_date_input_with_key",
-        # min_value, max_value, & format are not yet supported for dynamic changes
-        # keeping it at the same value for now:
-        min_value=date(2010, 1, 1),
-        max_value=date(2030, 1, 1),
+        min_value=date(2020, 1, 1),
+        max_value=date(2025, 1, 1),
+        # Whitelisted kwargs:
         format="YYYY/MM/DD",
     )
     st.write("Updated date input value:", dval)
@@ -153,6 +152,7 @@ else:
         key="dynamic_date_input_with_key",
         min_value=date(2010, 1, 1),
         max_value=date(2030, 1, 1),
+        # Whitelisted kwargs:
         format="YYYY/MM/DD",
     )
     st.write("Initial date input value:", dval)

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -30,6 +30,10 @@ from streamlit.elements.lib.policies import (
     check_session_state_rules,
 )
 from streamlit.elements.lib.utils import Key, to_key
+from streamlit.elements.widgets.button import (
+    IconPosition,
+    _normalize_icon_position,
+)
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto import Block_pb2
 from streamlit.runtime.metrics_util import gather_metrics
@@ -247,6 +251,7 @@ class FormMixin:
         key: Key | None = None,
         type: Literal["primary", "secondary", "tertiary"] = "secondary",
         icon: str | None = None,
+        icon_position: IconPosition = "left",
         disabled: bool = False,
         use_container_width: bool | None = None,
         width: Width = "content",
@@ -335,6 +340,10 @@ class FormMixin:
 
             - ``"spinner"``: Displays a spinner as an icon.
 
+        icon_position : "left" or "right"
+            The position of the icon relative to the button label. This
+            defaults to ``"left"``.
+
         disabled : bool
             Whether to disable the button. If this is ``False`` (default), the
             user can interact with the button. If this is ``True``, the button
@@ -404,11 +413,15 @@ class FormMixin:
             width = "stretch" if use_container_width else "content"
 
         # Checks whether the entered button type is one of the allowed options
-        if type not in ["primary", "secondary", "tertiary"]:
+        if type not in {"primary", "secondary", "tertiary"}:
             raise StreamlitAPIException(
                 'The type argument to st.form_submit_button must be "primary", "secondary", or "tertiary". \n'
                 f'The argument passed was "{type}".'
             )
+
+        normalized_icon_position = _normalize_icon_position(
+            icon_position, "st.form_submit_button"
+        )
 
         return self._form_submit_button(
             label=label,
@@ -418,6 +431,7 @@ class FormMixin:
             kwargs=kwargs,
             type=type,
             icon=icon,
+            icon_position=normalized_icon_position,
             disabled=disabled,
             ctx=ctx,
             width=width,
@@ -436,6 +450,7 @@ class FormMixin:
         key: Key | None = None,
         type: Literal["primary", "secondary", "tertiary"] = "secondary",
         icon: str | None = None,
+        icon_position: IconPosition = "left",
         disabled: bool = False,
         ctx: ScriptRunContext | None = None,
         width: Width = "content",
@@ -453,6 +468,7 @@ class FormMixin:
             kwargs=kwargs,
             type=type,
             icon=icon,
+            icon_position=icon_position,
             disabled=disabled,
             ctx=ctx,
             width=width,

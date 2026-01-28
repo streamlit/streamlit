@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -55,12 +55,20 @@ describe("encodeToWav", () => {
       close: vi.fn(),
     }
 
-    global.AudioContext = vi.fn(
-      () => mockAudioContext
-    ) as unknown as typeof AudioContext
-    global.OfflineAudioContext = vi.fn(
-      () => mockOfflineContext
-    ) as unknown as typeof OfflineAudioContext
+    const AudioContextMock = vi.fn().mockImplementation(function (
+      this: AudioContext
+    ) {
+      return mockAudioContext
+    })
+
+    const OfflineAudioContextMock = vi.fn().mockImplementation(function (
+      this: OfflineAudioContext
+    ) {
+      return mockOfflineContext
+    })
+
+    global.AudioContext = AudioContextMock
+    global.OfflineAudioContext = OfflineAudioContextMock
 
     const testArrayBuffer = new ArrayBuffer(100)
     const testBlob = {
@@ -107,9 +115,13 @@ describe("encodeToWav", () => {
       close: vi.fn(),
     }
 
-    global.AudioContext = vi.fn(
-      () => mockAudioContext
-    ) as unknown as typeof AudioContext
+    const AudioContextMock = vi.fn().mockImplementation(function (
+      this: AudioContext
+    ) {
+      return mockAudioContext
+    })
+
+    global.AudioContext = AudioContextMock
     const originalOfflineAudioContext = global.OfflineAudioContext
     global.OfflineAudioContext =
       undefined as unknown as typeof OfflineAudioContext
@@ -184,12 +196,20 @@ describe("encodeToWav", () => {
     const originalAudioContext = global.AudioContext
     const originalOfflineAudioContext = global.OfflineAudioContext
 
-    global.AudioContext = vi.fn(
-      () => mockAudioContext
-    ) as unknown as typeof AudioContext
-    global.OfflineAudioContext = vi.fn(
-      () => mockOfflineContext
-    ) as unknown as typeof OfflineAudioContext
+    const AudioContextMock = vi.fn().mockImplementation(function (
+      this: AudioContext
+    ) {
+      return mockAudioContext
+    })
+
+    const OfflineAudioContextMock = vi.fn().mockImplementation(function (
+      this: OfflineAudioContext
+    ) {
+      return mockOfflineContext
+    })
+
+    global.AudioContext = AudioContextMock
+    global.OfflineAudioContext = OfflineAudioContextMock
 
     const testArrayBuffer = new ArrayBuffer(100)
     const testBlob = {

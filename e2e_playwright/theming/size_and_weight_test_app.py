@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -59,7 +59,7 @@ def run_size_and_weight_test_app():
     col1, col2, col3 = st.columns(3)
 
     with col1:
-        if st.button("Open Dialog", use_container_width=True):
+        if st.button("Open Dialog", width="stretch"):
             my_dialog()
         st.segmented_control(
             "Segmented Control",
@@ -137,7 +137,7 @@ def run_size_and_weight_test_app():
             st.dataframe(
                 pd.DataFrame({"A": [1, 2], "B": ["streamlit.io", "snowflake.com"]}),
                 column_config={"B": st.column_config.LinkColumn()},
-                use_container_width=True,
+                width="stretch",
             )
 
     with st.sidebar:

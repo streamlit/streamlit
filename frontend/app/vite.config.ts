@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,6 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+/// <reference types="vitest/config" />
 import { defineConfig } from "vite"
 import { analyzer } from "vite-bundle-analyzer"
 import { version } from "./package.json"
@@ -111,7 +113,9 @@ export default defineConfig({
         changeOrigin: true,
         ws: true,
       },
-      "^.*/media/.*": {
+      // Use negative lookahead to avoid matching /static/media/* (Vite's font files)
+      // while still matching /media/* and /basepath/media/* (backend user uploads)
+      "^(?!.*/static/media).*/media/.*": {
         target: DEV_SERVER_BACKEND_URL,
         changeOrigin: true,
       },
@@ -194,10 +198,6 @@ export default defineConfig({
           include: ["vitest-canvas-mock"],
         },
       },
-    },
-    server: {
-      // Want a Non-Dev port for testing
-      port: 3001,
     },
   },
 })

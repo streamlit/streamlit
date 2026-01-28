@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -278,8 +278,10 @@ def _get_stack_trace_str_list(exception: BaseException) -> list[str]:
     # Format the extracted traceback and add it to the protobuf element.
     if extracted_traceback is None:
         trace_str_list = [
-            "Cannot extract the stack trace for this exception. "
-            "Try calling exception() within the `catch` block."
+            (
+                "Cannot extract the stack trace for this exception. "
+                "Try calling exception() within the `catch` block."
+            )
         ]
     else:
         internal_frames, external_frames = _split_internal_streamlit_frames(

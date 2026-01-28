@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -47,11 +47,9 @@ export type OptionalReactElements =
  * return <>{elements}</>
  * ```
  */
-export class RenderNodeVisitor
-  implements AppNodeVisitor<OptionalReactElements>
-{
+export class RenderNodeVisitor implements AppNodeVisitor<OptionalReactElements> {
   private readonly props: BlockPropsWithoutWidth
-  private elementKeyOverride?: string
+  private readonly elementKeyOverride?: string
   private readonly elementKeySet: Set<string>
   public readonly reactElements: ReactElement[]
   private index: number

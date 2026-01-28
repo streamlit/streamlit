@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -60,7 +60,7 @@ def test_path_security_cases(root: Path, candidate: str, expect_allowed: bool) -
     abspath = build_safe_abspath(str(root), candidate)
     if expect_allowed:
         assert abspath is not None
-        assert Path(abspath).read_text() == "ok"
+        assert Path(abspath).read_text(encoding="utf-8") == "ok"
     else:
         assert abspath is None
 
@@ -104,7 +104,7 @@ def test_symlink_within_root_allowed(root: Path) -> None:
 
     abspath = build_safe_abspath(str(root), "alias.txt")
     assert abspath is not None
-    assert Path(abspath).read_text() == "ok"
+    assert Path(abspath).read_text(encoding="utf-8") == "ok"
 
 
 @pytest.mark.parametrize(

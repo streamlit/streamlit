@@ -77,13 +77,13 @@ jobs:
       - name: Set MY_DATE_TIME env var
         run: echo "MY_DATE_TIME=$(date +'%Y%m%d%H%M%S')" >> $GITHUB_ENV
       - name: Upload failed test results
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         if: always()
         with:
           name: playwright_test_results_${{ steps.short_sha.outputs.sha_short }}
           path: e2e_playwright/test-results
       - name: Upload Performance results
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         if: always()
         with:
           name: performance_results_${{ env.MY_DATE_TIME }}

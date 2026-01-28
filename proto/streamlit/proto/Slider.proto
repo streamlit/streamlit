@@ -1,5 +1,5 @@
 /**!
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -57,4 +57,9 @@ message Slider {
   bool disabled = 15;
   LabelVisibilityMessage label_visibility = 16;
   Type type = 17;
+
+  // String-based value for select_slider to support dynamic option changes.
+  // Stores formatted option strings instead of indices.
+  repeated string raw_value = 18;
 }
+// Next: 19

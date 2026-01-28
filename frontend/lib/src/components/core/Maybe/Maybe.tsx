@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,13 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import React, { memo, PropsWithChildren } from "react"
+import { memo, PropsWithChildren } from "react"
 
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-interface MaybeProps
-  extends PropsWithChildren<{
-    enable: boolean
-  }> {}
+interface MaybeProps extends PropsWithChildren<{
+  enable: boolean
+}> {}
 
 const Maybe: React.FC<MaybeProps> = memo(
   function Maybe({ children }) {

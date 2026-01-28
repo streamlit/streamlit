@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { Children, forwardRef, ReactElement } from "react"
+import { Children, forwardRef, ReactElement } from "react"
 
 import {
   type OptionListProps,
@@ -84,6 +84,7 @@ const VirtualDropdown = forwardRef<any, any>((props, ref) => {
           // Somehow this adds an additional shadow, even though we already have
           // one on the popover, so we need to remove it here.
           boxShadow: "none",
+          overflow: "hidden",
         }}
         ref={ref}
         data-testid="stSelectboxVirtualDropdownEmpty"
@@ -111,11 +112,16 @@ const VirtualDropdown = forwardRef<any, any>((props, ref) => {
     <StyledList
       ref={ref}
       $style={{
-        paddingTop: 0,
-        paddingBottom: 0,
+        paddingBottom: theme.spacing.none,
+        paddingTop: theme.spacing.none,
+        paddingLeft: theme.spacing.none,
+        paddingRight: theme.spacing.none,
         // Somehow this adds an additional shadow, even though we already have
         // one on the popover, so we need to remove it here.
         boxShadow: "none",
+        overflow: "hidden",
+        overflowX: "hidden",
+        overflowY: "auto",
       }}
       data-testid="stSelectboxVirtualDropdown"
     >

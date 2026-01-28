@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import json
 from abc import ABC, abstractmethod
-from typing import Any, Generic, TypeVar, cast
+from typing import Any, Generic, Literal, TypeVar, cast
 
 from streamlit.runtime.secrets import AttrDict, secrets_singleton
 from streamlit.util import calc_md5
@@ -34,6 +34,13 @@ class BaseConnection(ABC, Generic[RawConnectionT]):
     Additionally, it also provides a few methods/properties designed to make
     implementation of connections more convenient. See the docstrings for each of the
     methods of this class for more information
+
+    By default, ``BaseConnection`` is a global-scoped connection. It has a class
+    method |BaseConnection.scope()|_ that returns ``"global"``. To implement a session-scoped
+    connection, override this method to return ``"session"`` in your subclass.
+
+    .. |BaseConnection.scope()| replace:: ``BaseConnection.scope()``
+    .. _BaseConnection.scope(): #baseconnectionscope
 
     .. note::
         While providing an implementation of ``_connect`` is technically all that's
@@ -174,3 +181,35 @@ class BaseConnection(ABC, Generic[RawConnectionT]):
             The underlying connection object.
         """
         raise NotImplementedError
+
+    @classmethod
+    def scope(cls) -> Literal["global", "session"]:
+        """Returns the scope of this connection type.
+
+        This is a class method. ``"global"`` connection instances will be cached
+        globally and are typically created once during the lifetime of an
+        application. ``"session"`` connection instances will be cached per
+        session and are typically created once per user session.
+
+        A connection's scope can't be changed for different instances of the
+        same connection type. If you want to switch between global and
+        session-scoped connections, you should create two different connection
+        types.
+
+        Returns
+        -------
+        "global" or "session"
+        """
+        return "global"
+
+    def close(self) -> None:
+        """A function to invoke when this connection needs to be cleaned up.
+
+        ``close`` is registered as an ``on_release`` hook in the resource cache when a
+        connection is created with ``st.connection``.
+
+        Returns
+        -------
+        None
+        """
+        # NOTE: Default implementation is intentionally a no-op.

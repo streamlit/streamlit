@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,7 +14,6 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from textwrap import dedent
 from typing import TYPE_CHECKING, Any, Generic, TypeVar, cast, overload
 
@@ -27,7 +26,11 @@ from streamlit.elements.lib.layout_utils import (
     Width,
     validate_width,
 )
-from streamlit.elements.lib.options_selector_utils import index_, maybe_coerce_enum
+from streamlit.elements.lib.options_selector_utils import (
+    create_mappings,
+    maybe_coerce_enum,
+    validate_and_sync_value_with_options,
+)
 from streamlit.elements.lib.policies import (
     check_widget_policies,
     maybe_raise_label_warnings,
@@ -63,27 +66,70 @@ if TYPE_CHECKING:
 T = TypeVar("T")
 
 
-@dataclass
 class RadioSerde(Generic[T]):
-    options: Sequence[T]
-    index: int | None
+    """Serializer/deserializer for Radio widget values.
 
-    def serialize(self, v: object) -> int | None:
+    Uses string-based values (formatted option strings) for robust handling
+    of dynamic option changes, similar to SelectboxSerde.
+    """
+
+    options: Sequence[T]
+    formatted_options: list[str]
+    formatted_option_to_option_index: dict[str, int]
+    default_option_index: int | None
+    format_func: Callable[[Any], str]
+
+    def __init__(
+        self,
+        options: Sequence[T],
+        *,
+        formatted_options: list[str],
+        formatted_option_to_option_index: dict[str, int],
+        default_option_index: int | None = None,
+        format_func: Callable[[Any], str] = str,
+    ) -> None:
+        self.options = options
+        self.formatted_options = formatted_options
+        self.formatted_option_to_option_index = formatted_option_to_option_index
+        self.default_option_index = default_option_index
+        self.format_func = format_func
+
+    def serialize(self, v: T | str | None) -> str | None:
         if v is None:
             return None
+        if len(self.options) == 0:
+            return None
 
-        return 0 if len(self.options) == 0 else index_(self.options, v)
+        # Use format_func to find the formatted option instead of using
+        # index_(self.options, v) which relies on == comparison. This is necessary
+        # because widget values are deepcopied, and for custom classes without
+        # __eq__, the deepcopied instances would fail identity comparison.
+        try:
+            formatted_value = self.format_func(v)
+        except Exception:
+            # format_func failed (e.g., v is a string but format_func expects
+            # an object with specific attributes). Treat v as a raw string.
+            return cast("str", v)
 
-    def deserialize(self, ui_value: int | None) -> T | None:
-        idx = ui_value if ui_value is not None else self.index
+        if formatted_value in self.formatted_option_to_option_index:
+            return formatted_value
+        # Value not found in options - return as raw string
+        return cast("str", v)
 
-        return (
-            self.options[idx]
-            if idx is not None
-            and len(self.options) > 0
-            and self.options[idx] is not None
-            else None
-        )
+    def deserialize(self, ui_value: str | None) -> T | str | None:
+        # If no options, there's no valid value - return None
+        if len(self.options) == 0:
+            return None
+
+        if ui_value is None:
+            return (
+                self.options[self.default_option_index]
+                if self.default_option_index is not None
+                else None
+            )
+
+        option_index = self.formatted_option_to_option_index.get(ui_value)
+        return self.options[option_index] if option_index is not None else ui_value
 
 
 class RadioMixin:
@@ -368,18 +414,17 @@ class RadioMixin:
         opt = convert_anything_to_list(options)
         check_python_comparable(opt)
 
+        formatted_options, formatted_option_to_option_index = create_mappings(
+            opt, format_func
+        )
+
         element_id = compute_and_register_element_id(
             "radio",
             user_key=key,
-            # Treat provided key as the main widget identity. Only include the
-            # following parameters in the identity computation since they can
-            # invalidate the current selection mapping.
-            # Changes to format_func also invalidate the current selection,
-            # but this is already handled via the `options` parameter below:
-            key_as_main_identity={"options"},
+            key_as_main_identity=True,
             dg=self.dg,
             label=label,
-            options=[str(format_func(option)) for option in opt],
+            options=formatted_options,
             index=index,
             help=help,
             horizontal=horizontal,
@@ -415,7 +460,7 @@ class RadioMixin:
         radio_proto.label = label
         if index is not None:
             radio_proto.default = index
-        radio_proto.options[:] = [str(format_func(option)) for option in opt]
+        radio_proto.options[:] = formatted_options
         radio_proto.form_id = current_form_id(self.dg)
         radio_proto.horizontal = horizontal
         radio_proto.disabled = disabled
@@ -429,7 +474,13 @@ class RadioMixin:
         if help is not None:
             radio_proto.help = dedent(help)
 
-        serde = RadioSerde(opt, index)
+        serde = RadioSerde(
+            opt,
+            formatted_options=formatted_options,
+            formatted_option_to_option_index=formatted_option_to_option_index,
+            default_option_index=index,
+            format_func=format_func,
+        )
 
         widget_state = register_widget(
             radio_proto.id,
@@ -439,21 +490,30 @@ class RadioMixin:
             deserializer=serde.deserialize,
             serializer=serde.serialize,
             ctx=ctx,
-            value_type="int_value",
+            value_type="string_value",
         )
         widget_state = maybe_coerce_enum(widget_state, options, opt)
 
-        if widget_state.value_changed:
-            if widget_state.value is not None:
-                serialized_value = serde.serialize(widget_state.value)
-                if serialized_value is not None:
-                    radio_proto.value = serialized_value
+        # Validate the current value against the new options.
+        # If the value is no longer valid (not in options), reset to default.
+        # This handles the case where options change dynamically and the
+        # previously selected value is no longer available.
+        # Cast to T | None since radio doesn't support accept_new_options,
+        # so string values that aren't in options will be reset to default.
+        current_value, value_needs_reset = validate_and_sync_value_with_options(
+            cast("T | None", widget_state.value), opt, index, key
+        )
+
+        if value_needs_reset or widget_state.value_changed:
+            serialized_value = serde.serialize(current_value)
+            if serialized_value is not None:
+                radio_proto.raw_value = serialized_value
             radio_proto.set_value = True
 
         if ctx:
             save_for_app_testing(ctx, element_id, format_func)
         self.dg._enqueue("radio", radio_proto, layout_config=layout_config)
-        return widget_state.value
+        return current_value
 
     @property
     def dg(self) -> DeltaGenerator:

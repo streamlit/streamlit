@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -51,6 +51,7 @@ from streamlit.runtime.scriptrunner_utils.script_requests import (
 )
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
     ScriptRunContext,
+    UserInfoType,
     add_script_run_ctx,
     get_script_run_ctx,
 )
@@ -174,7 +175,7 @@ class ScriptRunner:
         uploaded_file_mgr: UploadedFileManager,
         script_cache: ScriptCache,
         initial_rerun_data: RerunData,
-        user_info: dict[str, str | bool | None],
+        user_info: UserInfoType,
         fragment_storage: FragmentStorage,
         pages_manager: PagesManager,
     ) -> None:
@@ -527,6 +528,23 @@ class ScriptRunner:
                     and rerun_data.widget_states.widgets is not None
                 ):
                     widget_ids = {w.id for w in rerun_data.widget_states.widgets}
+
+                # For MPA page transitions: filter query params BEFORE cleanup.
+                # This uses existing bindings to remove params from other pages,
+                # ensuring st.query_params is accurate when the new page runs.
+                # (st.query_params in user code will reflect the correct params for the new page)
+                main_script_hash = self._pages_manager.main_script_hash
+                valid_script_hashes = {main_script_hash, page_script_hash}
+                with self._session_state.query_params() as qp:
+                    qp.populate_from_query_string(
+                        rerun_data.query_string, valid_script_hashes
+                    )
+                    # Set initial params from FILTERED state for widget seeding.
+                    # This prevents stale params from previous pages from seeding
+                    # widgets on the new page if keys collide.
+                    qp.set_initial_query_params_from_current()
+
+                # Now safe to do normal cleanup - filtering already done
                 self._session_state.on_script_finished(widget_ids)
 
             fragment_ids_this_run: list[str] | None = (

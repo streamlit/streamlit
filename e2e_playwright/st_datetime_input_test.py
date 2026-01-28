@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -269,3 +269,29 @@ def test_dynamic_props_update(app: Page):
     expect_prefixed_markdown(
         app, "Updated datetime input value:", "2025-12-01 14:30:00"
     )
+
+    # Test dynamic min/max behavior when bounds change:
+    # Toggle back to initial bounds (2010-2030)
+    click_toggle(app, "Update datetime input props")
+    expect_prefixed_markdown(
+        app, "Initial datetime input value:", "2025-12-01 14:30:00"
+    )
+
+    # Set value to 2028/01/01 which is valid in initial bounds (2010-2030)
+    input_field.fill("2028/01/01, 10:00")
+    input_field.press("Enter")
+    # Click on a markdown element to close the popover
+    app.get_by_text("Dynamic datetime input:").click()
+    wait_for_app_run(app)
+    expect_prefixed_markdown(
+        app, "Initial datetime input value:", "2028-01-01 10:00:00"
+    )
+
+    # Toggle to updated bounds (2020-2025) - value 2028 is outside, should reset to default
+    click_toggle(app, "Update datetime input props")
+    # The default value for updated state is BASE_DATETIME + 3h15m = 2025-11-19 20:00:00
+    expect_prefixed_markdown(
+        app, "Updated datetime input value:", "2025-11-19 20:00:00"
+    )
+    # Anti-regression: ensure the old out-of-bounds value is not retained
+    expect(app.get_by_text("2028-01-01")).not_to_be_visible()

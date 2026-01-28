@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -62,6 +62,7 @@ from streamlit.runtime.state import (
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.elements.lib.column_types import DateTimeFormat, NumberFormat
     from streamlit.elements.lib.layout_utils import WidthWithoutContent
 
 SliderNumericT = TypeVar("SliderNumericT", int, float)
@@ -89,7 +90,7 @@ SliderValueT = TypeVar("SliderValueT", int, float, date, time, datetime)
 SliderValueGeneric: TypeAlias = SliderValueT | Sequence[SliderValueT]
 SliderValue: TypeAlias = (
     SliderValueGeneric[int]
-    | SliderValueGeneric[float]  # ty: ignore
+    | SliderValueGeneric[float]
     | SliderValueGeneric[date]
     | SliderValueGeneric[time]
     | SliderValueGeneric[datetime]
@@ -99,7 +100,7 @@ SliderReturnGeneric: TypeAlias = (
 )
 SliderReturn: TypeAlias = (
     SliderReturnGeneric[int]
-    | SliderReturnGeneric[float]  # ty: ignore
+    | SliderReturnGeneric[float]
     | SliderReturnGeneric[date]
     | SliderReturnGeneric[time]
     | SliderReturnGeneric[datetime]
@@ -229,7 +230,7 @@ class SliderMixin:
         max_value: None = None,
         value: None = None,
         step: int | None = None,
-        format: str | None = None,
+        format: str | NumberFormat | None = None,
         key: Key | None = None,
         help: str | None = None,
         on_change: WidgetCallback | None = None,
@@ -251,7 +252,7 @@ class SliderMixin:
         max_value: SliderNumericT | None = None,
         value: SliderNumericT | None = None,
         step: StepNumericT[SliderNumericT] | None = None,
-        format: str | None = None,
+        format: str | NumberFormat | None = None,
         key: Key | None = None,
         help: str | None = None,
         on_change: WidgetCallback | None = None,
@@ -274,7 +275,7 @@ class SliderMixin:
         *,
         value: SliderNumericSpanT[SliderNumericT],
         step: StepNumericT[SliderNumericT] | None = None,
-        format: str | None = None,
+        format: str | NumberFormat | None = None,
         key: Key | None = None,
         help: str | None = None,
         on_change: WidgetCallback | None = None,
@@ -295,7 +296,7 @@ class SliderMixin:
         max_value: SliderNumericT,
         value: SliderNumericSpanT[SliderNumericT],
         step: StepNumericT[SliderNumericT] | None = None,
-        format: str | None = None,
+        format: str | NumberFormat | None = None,
         key: Key | None = None,
         help: str | None = None,
         on_change: WidgetCallback | None = None,
@@ -317,7 +318,7 @@ class SliderMixin:
         max_value: SliderDatelikeT | None = None,
         value: SliderDatelikeT | None = None,
         step: StepDatelikeT | None = None,
-        format: str | None = None,
+        format: str | DateTimeFormat | None = None,
         key: Key | None = None,
         help: str | None = None,
         on_change: WidgetCallback | None = None,
@@ -340,7 +341,7 @@ class SliderMixin:
         max_value: SliderDatelikeT,
         value: SliderDatelikeT | None = None,
         step: StepDatelikeT | None = None,
-        format: str | None = None,
+        format: str | DateTimeFormat | None = None,
         key: Key | None = None,
         help: str | None = None,
         on_change: WidgetCallback | None = None,
@@ -361,7 +362,7 @@ class SliderMixin:
         *,
         value: SliderDatelikeT,
         step: StepDatelikeT | None = None,
-        format: str | None = None,
+        format: str | DateTimeFormat | None = None,
         key: Key | None = None,
         help: str | None = None,
         on_change: WidgetCallback | None = None,
@@ -385,7 +386,7 @@ class SliderMixin:
         | tuple[SliderDatelikeT]
         | tuple[SliderDatelikeT, SliderDatelikeT],
         step: StepDatelikeT | None = None,
-        format: str | None = None,
+        format: str | DateTimeFormat | None = None,
         key: Key | None = None,
         help: str | None = None,
         on_change: WidgetCallback | None = None,
@@ -407,7 +408,7 @@ class SliderMixin:
         value: SliderDatelikeSpanT[SliderDatelikeT],
         /,
         step: StepDatelikeT | None = None,
-        format: str | None = None,
+        format: str | DateTimeFormat | None = None,
         key: Key | None = None,
         help: str | None = None,
         on_change: WidgetCallback | None = None,
@@ -517,16 +518,43 @@ class SliderMixin:
             (or if max_value - min_value < 1 day)
 
         format : str or None
-            A printf-style format string controlling how the interface should
-            display numbers. This does not impact the return value.
+            A printf-style format string or a predefined format name controlling
+            how the interface should display values. This does not impact the
+            return value.
 
-            For information about formatting integers and floats, see
+            For integers and floats, you can use a printf-style format string
+            or one of the following predefined formats:
+
+            - ``"plain"``: Show the full number without formatting (e.g. ``1234.567``).
+            - ``"localized"``: Show the number in the user's locale format (e.g. ``1,234.567``).
+            - ``"percent"``: Show as a percentage (e.g. ``50%`` from ``0.5``).
+            - ``"dollar"``: Show as US dollars (e.g. ``$1,234.57``).
+            - ``"euro"``: Show as euros (e.g. ``€1,234.57``).
+            - ``"yen"``: Show as Japanese yen (e.g. ``¥1,235``).
+            - ``"compact"``: Show in compact notation (e.g. ``1.2K``).
+            - ``"scientific"``: Show in scientific notation (e.g. ``1.235E3``).
+            - ``"engineering"``: Show in engineering notation (e.g. ``1.235E3``).
+            - ``"accounting"``: Show in accounting format with parentheses for negatives.
+            - ``"bytes"``: Show in byte units (e.g. ``1.2KB``).
+
+            For information about printf-style format strings, see
             `sprintf.js
             <https://github.com/alexei/sprintf.js?tab=readme-ov-file#format-specification>`_.
             For example, ``format="%0.1f"`` adjusts the displayed decimal
             precision to only show one digit after the decimal.
 
-            For information about formatting datetimes, dates, and times, see
+            For datetimes, dates, and times, you can use a momentJS format string
+            or one of the following predefined formats:
+
+            - ``"localized"``: Show in the user's locale format.
+            - ``"distance"``: Show as relative time (e.g. ``"2 hours ago"``).
+            - ``"calendar"``: Show as calendar time (e.g. ``"Tomorrow 12:00"``).
+              Works best with datetime values. For date-only values, displays
+              relative day names (e.g. ``"Yesterday"``). For time-only values,
+              this format may produce unexpected results.
+            - ``"iso8601"``: Show in ISO 8601 format.
+
+            For information about momentJS format strings, see
             `momentJS <https://momentjs.com/docs/#/displaying/format/>`_.
             For example, ``format="ddd ha"`` adjusts the displayed datetime to
             show the day of the week and the hour ("Tue 8pm").
@@ -711,7 +739,7 @@ class SliderMixin:
 
         # Ensure that the value is either a single value or a range of values.
         single_value = isinstance(value, tuple(SUPPORTED_TYPES.keys()))
-        range_value = isinstance(value, (list, tuple)) and len(value) in (0, 1, 2)
+        range_value = isinstance(value, (list, tuple)) and len(value) in {0, 1, 2}
         if not single_value and not range_value:
             raise StreamlitAPIException(
                 "Slider value should either be an int/float/datetime or a list/tuple of "
@@ -750,7 +778,7 @@ class SliderMixin:
 
             datetime_min = time.min.replace(tzinfo=prepared_value[0].tzinfo)
             datetime_max = time.max.replace(tzinfo=prepared_value[0].tzinfo)
-        if data_type in (SliderProto.DATETIME, SliderProto.DATE):
+        if data_type in {SliderProto.DATETIME, SliderProto.DATE}:
             prepared_value = cast("Sequence[datetime]", prepared_value)
 
             datetime_min = prepared_value[0] - timedelta(days=14)
@@ -795,10 +823,10 @@ class SliderMixin:
             max_value = defaults[data_type]["max_value"]
         if step is None:
             step = defaults[data_type]["step"]
-            if data_type in (
+            if data_type in {
                 SliderProto.DATETIME,
                 SliderProto.DATE,
-            ) and max_value - min_value < timedelta(days=1):  # ty: ignore[unsupported-operator]
+            } and max_value - min_value < timedelta(days=1):
                 step = timedelta(minutes=15)
         if format is None:
             format = cast("str", defaults[data_type]["format"])  # noqa: A001
@@ -917,7 +945,7 @@ class SliderMixin:
             # Restore times/datetimes to original timezone (dates are always naive)
             orig_tz = (
                 prepared_value[0].tzinfo
-                if data_type in (SliderProto.TIME, SliderProto.DATETIME)
+                if data_type in {SliderProto.TIME, SliderProto.DATETIME}
                 else None
             )
 

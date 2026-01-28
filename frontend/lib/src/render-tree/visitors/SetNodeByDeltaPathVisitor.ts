@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,10 +14,7 @@
  * limitations under the License.
  */
 
-import { AppNode } from "~lib/render-tree/AppNode.interface"
-import { BlockNode } from "~lib/render-tree/BlockNode"
-import { ElementNode } from "~lib/render-tree/ElementNode"
-import { TransientNode } from "~lib/render-tree/TransientNode"
+import { AppNode, BlockNode, ElementNode, TransientNode } from "~lib/AppNode"
 
 import { AppNodeVisitor } from "./AppNodeVisitor.interface"
 
@@ -37,20 +34,72 @@ export class SetNodeByDeltaPathVisitor implements AppNodeVisitor<AppNode> {
   private readonly scriptRunId: string
 
   constructor(deltaPath: number[], nodeToSet: AppNode, scriptRunId: string) {
-    if (deltaPath.length === 0) {
-      throw new Error("deltaPath cannot be empty")
-    }
     this.deltaPath = deltaPath
     this.nodeToSet = nodeToSet
     this.scriptRunId = scriptRunId
   }
 
-  visitElementNode(_node: ElementNode): AppNode {
-    // ElementNodes are leaf nodes - they cannot have children set
-    throw new Error("'SetNodeByDeltaPathVisitor' cannot visit an ElementNode")
+  visitElementNode(node: ElementNode): AppNode {
+    if (this.deltaPath.length > 0) {
+      throw new Error("'setIn' cannot be called on an ElementNode")
+    }
+
+    // We are setting the element. If we are setting a transient node,
+    // we have an opportunity to set the anchor.
+    if (this.nodeToSet instanceof TransientNode && !this.nodeToSet.anchor) {
+      return new TransientNode(
+        this.nodeToSet.scriptRunId,
+        node,
+        this.nodeToSet.transientNodes,
+        this.nodeToSet.deltaMsgReceivedAt
+      )
+    }
+
+    return this.nodeToSet
+  }
+
+  visitTransientNode(node: TransientNode): AppNode {
+    // If the path is empty, we're replacing this transient node.
+    // Let the node decide how to best replace the transient node.
+    // This is especially important for transient nodes to reconcile themselves.
+    if (this.deltaPath.length === 0) {
+      return this.nodeToSet.replaceTransientNodeWithSelf(node)
+    }
+
+    // TransientNode is transparent in the delta path hierarchy - it doesn't
+    // consume an index from the path. We drill through to the anchor and
+    // preserve the transient wrapper around the modified anchor.
+    if (node.anchor) {
+      const newAnchor = node.anchor.accept(this)
+      return new TransientNode(
+        node.scriptRunId,
+        newAnchor,
+        node.transientNodes,
+        node.deltaMsgReceivedAt
+      )
+    }
+
+    throw new Error("TransientNode has no anchor to set node at")
   }
 
   visitBlockNode(node: BlockNode): AppNode {
+    if (this.deltaPath.length === 0) {
+      // When replacing a BlockNode with a TransientNode that has no anchor,
+      // capture the current BlockNode as the anchor. This preserves the original
+      // block structure so it can be restored when transient elements are cleared.
+      // This mirrors the analogous behavior in visitElementNode.
+      if (this.nodeToSet instanceof TransientNode && !this.nodeToSet.anchor) {
+        return new TransientNode(
+          this.nodeToSet.scriptRunId,
+          node,
+          this.nodeToSet.transientNodes,
+          this.nodeToSet.deltaMsgReceivedAt
+        )
+      }
+
+      return this.nodeToSet
+    }
+
     const [currentIndex, ...remainingPath] = this.deltaPath
 
     // Validate the index
@@ -61,20 +110,50 @@ export class SetNodeByDeltaPathVisitor implements AppNodeVisitor<AppNode> {
     }
 
     // Create a copy of the children array
-    const newChildren = node.children.slice()
+    let newChildren: AppNode[] = []
+    const childVisitor = new SetNodeByDeltaPathVisitor(
+      remainingPath,
+      this.nodeToSet,
+      this.scriptRunId
+    )
 
-    if (remainingPath.length === 0) {
-      // Base case: we're at the target location, set the node
+    // If the child at the current index is undefined, we assume we are out of bounds
+    // This may be just an element being added at the end of the block.
+    // So, we can just replace it with the nodeToSet assuming the path is valid.
+    if (!node.children[currentIndex]) {
+      if (remainingPath.length > 0) {
+        throw new Error("Cannot set a node at a delta path")
+      }
+
+      newChildren = node.children.slice()
       newChildren[currentIndex] = this.nodeToSet
     } else {
-      // Recursive case: continue down the path
-      const childVisitor = new SetNodeByDeltaPathVisitor(
-        remainingPath,
-        this.nodeToSet,
-        this.scriptRunId
-      )
-      newChildren[currentIndex] =
-        newChildren[currentIndex].accept(childVisitor)
+      let index = 0
+      while (index < node.children.length) {
+        const child = node.children[index]
+
+        if (index !== currentIndex) {
+          newChildren.push(child)
+          index++
+          continue
+        }
+
+        const nextChild = child.accept(childVisitor)
+        if (
+          !(child instanceof TransientNode) &&
+          nextChild instanceof TransientNode &&
+          nextChild.anchor !== child
+        ) {
+          // This will be an insertion of the new transient
+          // and not affect the existing non-transient child
+          newChildren.push(nextChild)
+          newChildren.push(child)
+        } else {
+          // This will be a replacement
+          newChildren.push(nextChild)
+        }
+        index++
+      }
     }
 
     // Create a new BlockNode with the updated children
@@ -86,30 +165,6 @@ export class SetNodeByDeltaPathVisitor implements AppNodeVisitor<AppNode> {
       node.fragmentId,
       node.deltaMsgReceivedAt
     )
-  }
-
-  visitTransientNode(node: TransientNode): AppNode {
-    const [, ...remainingPath] = this.deltaPath
-
-    // If we need to drill down, we will travel through the anchor.
-    if (remainingPath.length > 0) {
-      if (node.anchor) {
-        return node.anchor.accept(
-          new SetNodeByDeltaPathVisitor(
-            remainingPath,
-            this.nodeToSet,
-            this.scriptRunId
-          )
-        )
-      }
-
-      throw new Error("TransientNode has no anchor to set node at")
-    }
-
-    // At this point, we know the nodeToSet is to replace the transient node
-    // so we let the node decide how to best replace the transient node
-    // This is especially important for transient nodes to reconcile themselves
-    return this.nodeToSet.replaceTransientNodeWithSelf(node)
   }
 
   /**

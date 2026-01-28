@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -57,7 +57,10 @@ class FragmentStorage(Protocol):
     # Weirdly, we have to define this above the `set` method, or mypy gets it confused
     # with the `set` type of `new_fragments_ids`.
     @abstractmethod
-    def clear(self, new_fragment_ids: set[str] | None = None) -> None:
+    def clear(
+        self,
+        new_fragment_ids: set[str] | None = None,  # ty: ignore[invalid-type-form]
+    ) -> None:
         """Remove all fragments saved in this FragmentStorage unless listed in
         new_fragment_ids.
         """
@@ -101,7 +104,7 @@ class MemoryFragmentStorage(FragmentStorage):
 
     # Weirdly, we have to define this above the `set` method, or mypy gets it confused
     # with the `set` type of `new_fragments_ids`.
-    def clear(self, new_fragment_ids: set[str] | None = None) -> None:
+    def clear(self, new_fragment_ids: set[str] | None = None) -> None:  # ty: ignore[invalid-type-form]
         if new_fragment_ids is None:
             new_fragment_ids = set()
 

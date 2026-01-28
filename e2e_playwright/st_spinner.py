@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -26,6 +26,46 @@ if st.button("Run spinner with time"):
     with st.spinner("Loading...", show_time=True):
         time.sleep(2)
 
+if st.button("Run double spinner"):
+    with st.spinner("Loading..."):
+        with st.spinner("Also loading..."):
+            time.sleep(3)
+
+        time.sleep(3)
+
+if st.button("Run markdown updated with spinner"):
+    placeholder = st.markdown("Some Text")
+    with placeholder.spinner("something"):
+        time.sleep(2)
+
+if st.button("Run spinner in with st.empty block"):
+    with st.empty():
+        with st.spinner("spinner in empty block"):
+            time.sleep(2)
+            st.markdown("Some More Text")
+
+if st.button("Run spinner in fragment"):
+
+    @st.fragment
+    def test_fragment():
+        with st.spinner("Loading..."):
+            time.sleep(2)
+
+        st.button("Run fragment")
+
+    test_fragment()
+
+
+if st.button("Run spinner before fragment"):
+    with st.spinner("Loading..."):
+        time.sleep(2)
+
+        @st.fragment
+        def test_fragment():
+            st.button("Run fragment")
+
+        test_fragment()
+
 st.header("Spinner - width examples")
 
 if st.button("Run spinner with content width (default)"):
@@ -42,3 +82,18 @@ if st.button("Run spinner with 300px width"):
         width=300,
     ):
         time.sleep(2)
+
+# Regression test for issue #13658: container elements in spinner context
+if st.button("Run spinner with container"):
+    with st.spinner("Running..."):
+        time.sleep(2)  # Small delay to trigger spinner rendering
+        cols = st.container().columns(2)
+        cols[0].write("Column 1")
+        cols[1].write("Column 2")
+
+# Regression test for transient node replacing block node
+if st.button("Run spinner with delayed container write"):
+    with st.spinner("Processing..."):
+        container = st.container()
+        time.sleep(2)  # Container exists but is empty when spinner renders
+        container.write("Hello World")

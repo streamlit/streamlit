@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -59,7 +59,7 @@ class RuntimeThreadingTest(IsolatedAsyncioTestCase):
                     cache_storage_manager=MagicMock(),
                 )
                 queue.put(Runtime(config))
-            except BaseException as e:
+            except Exception as e:
                 queue.put(e)
 
         thread = threading.Thread(target=create_runtime_on_another_thread)
@@ -69,7 +69,7 @@ class RuntimeThreadingTest(IsolatedAsyncioTestCase):
             raise RuntimeError("Thread.join timed out!")
 
         runtime = queue.get(block=True, timeout=1)
-        if isinstance(runtime, BaseException):
+        if isinstance(runtime, Exception):
             raise runtime
 
         # Ensure we can start and stop the Runtime
