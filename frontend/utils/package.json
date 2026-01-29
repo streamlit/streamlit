@@ -30,7 +30,6 @@
     "typesync:ci": "typesync --dry=fail"
   },
   "devDependencies": {
-    "@types/eslint": "^9.6.1",
     "eslint": "^9.39.2",
     "prettier": "^3.8.1",
     "typesync": "^0.14.3",

@@ -37,7 +37,6 @@
     "loglevel": "^1.9.2"
   },
   "devDependencies": {
-    "@types/eslint": "^9.6.1",
     "@types/lodash-es": "^4.17.12",
     "axios-mock-adapter": "^2.1.0",
     "eslint": "^9.39.2",
