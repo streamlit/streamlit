@@ -445,14 +445,14 @@ check:
 		cd lib && PYTHONPATH=. pytest -v $$PY_TESTS || exit 1; \
 		echo ""; \
 	fi
-	@# Pre-commit hooks on all changed files (handles formatting and linting)
+	@# Pre-commit hooks on all changed files (handles frontend formatting via prettier)
 	@CHANGED=$$(python3 scripts/get_changed_files.py --all); \
 	if [ -n "$$CHANGED" ]; then \
 		echo "=== Pre-commit hooks ==="; \
 		pre-commit run --files $$CHANGED || exit 1; \
 		echo ""; \
 	fi
-	@# Frontend lint (with auto-fix)
+	@# Frontend lint only (formatting is handled by pre-commit above)
 	@FE_FILES=$$(python3 scripts/get_changed_files.py --frontend --frontend-tests --strip-prefix frontend/); \
 	if [ -n "$$FE_FILES" ]; then \
 		echo "=== Frontend: lint (eslint) ==="; \
