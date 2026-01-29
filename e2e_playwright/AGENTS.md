@@ -22,11 +22,27 @@ Import from `conftest.py`:
 
 - `app: Page` - Light mode app fixture
 - `themed_app: Page` - Light & dark mode app fixture
+- `app_target: AppTarget` - App interaction wrapper (supports iframe-hosted external apps)
+- `app_base_url: str` - Base URL for app navigation (external or localhost)
+- `build_app_url(...)` - URL builder to compose paths/query/fragment from `app_base_url`
 - `assert_snapshot` - Screenshot testing fixture. Ensure element is stable before calling.
 - `wait_for_app_run(app)` - Wait for app run to finish
 - `wait_for_app_loaded(app)` - Wait for initial app load
 - `rerun_app(app)` - Trigger app rerun and wait
 - `wait_until(app, fn)` - Run test function until True or timeout
+
+## External Test Mode
+
+- When writing `@pytest.mark.external_test` tests, prefer `app_target` over a bare `Page`/`FrameLocator`. It abstracts whether the app DOM is at the top-level (`Page`) or inside a host page (`FrameLocator`).
+- External modes are configured via CLI/env and may affect what fixtures mean:
+  - `--external-app-url` / `STREAMLIT_E2E_EXTERNAL_APP_URL`: run against an externally hosted Streamlit app (no local server).
+  - `--external-host-url` / `STREAMLIT_E2E_EXTERNAL_HOST_URL`: run against a host page that embeds the app in an iframe (no local server).
+  - `--external-iframe-selector` / `STREAMLIT_E2E_EXTERNAL_IFRAME_SELECTOR`: iframe selector inside the host page (defaults to `iframe`).
+- Deciding whether a test should be marked `external_test` is **manual for now**. Only add the marker when the test is explicitly intended to run against an externally hosted app/host page.
+- As a rule of thumb, a test is a good candidate for `external_test` if it:
+  - can run without starting the local app server (it should not depend on the test module's `*.py` script being launched by the harness),
+  - uses stable selectors and the `app_target`/`app_base_url` abstractions (so it works both for top-level and iframe-hosted apps),
+  - avoids relying on local-only infrastructure like request routing/interception (`iframed_app`) or filesystem-coupled assumptions.
 
 ## Best Practices
 
