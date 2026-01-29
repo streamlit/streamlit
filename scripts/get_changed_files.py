@@ -148,12 +148,15 @@ def get_changed_files(base_branch: str | None = None) -> list[str]:
 
 
 def get_python_files(files: list[str]) -> list[str]:
-    """Get Python source files (excluding tests, vendor, proto)."""
+    """Get Python files (excluding vendor, proto, e2e tests)."""
     result = []
     for f in files:
         if _is_excluded(f):
             continue
-        if re.search(PYTHON_EXTENSIONS, f) and not f.endswith(PYTHON_TEST_SUFFIX):
+        # Skip e2e tests - they're handled separately by --e2e
+        if f.startswith(E2E_PREFIX):
+            continue
+        if re.search(PYTHON_EXTENSIONS, f):
             result.append(f)
     return result
 
@@ -192,16 +195,12 @@ def get_python_test_files(files: list[str]) -> list[str]:
 
 
 def get_frontend_files(files: list[str]) -> list[str]:
-    """Get frontend source files (excluding tests, vendor)."""
+    """Get frontend files (excluding vendor)."""
     result = []
     for f in files:
         if _is_excluded(f):
             continue
-        if (
-            f.startswith(FRONTEND_PREFIX)
-            and re.search(FRONTEND_EXTENSIONS, f)
-            and not re.search(FRONTEND_TEST_PATTERN, f)
-        ):
+        if f.startswith(FRONTEND_PREFIX) and re.search(FRONTEND_EXTENSIONS, f):
             result.append(f)
     return result
 
@@ -261,7 +260,7 @@ def main() -> int:
     parser.add_argument(
         "--python",
         action="store_true",
-        help="Python source files (excludes tests)",
+        help="Python files (source and tests, excludes e2e)",
     )
     parser.add_argument(
         "--python-tests",
@@ -271,7 +270,7 @@ def main() -> int:
     parser.add_argument(
         "--frontend",
         action="store_true",
-        help="Frontend source files (excludes tests)",
+        help="Frontend files (source and tests)",
     )
     parser.add_argument(
         "--frontend-tests",

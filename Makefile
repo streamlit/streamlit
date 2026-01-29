@@ -411,7 +411,7 @@ cli-smoke-tests:
 # Run all checks (format, lint, types, unit tests) on changed files only. Useful to verify the current state of the codebase before committing.
 check:
 	@echo "=== Checking changed files ==="
-	@CHANGED=$$(python3 scripts/get_changed_files.py --all); \
+	@CHANGED=$$(uv run python scripts/get_changed_files.py --all); \
 	if [ -z "$$CHANGED" ]; then \
 		echo "No changed files found."; \
 		exit 0; \
@@ -420,41 +420,41 @@ check:
 	echo "$$CHANGED" | tr ' ' '\n' | sed 's/^/  /'; \
 	echo ""
 	@# Python format and lint checks (with auto-fix)
-	@PY_FILES=$$(python3 scripts/get_changed_files.py --python --python-tests); \
+	@PY_FILES=$$(uv run python scripts/get_changed_files.py --python); \
 	if [ -n "$$PY_FILES" ]; then \
 		echo "=== Python: format (ruff) ==="; \
-		ruff format $$PY_FILES || exit 1; \
+		uv run ruff format $$PY_FILES || exit 1; \
 		echo ""; \
 		echo "=== Python: lint (ruff) ==="; \
-		ruff check --fix $$PY_FILES || exit 1; \
+		uv run ruff check --fix $$PY_FILES || exit 1; \
 		echo ""; \
 		echo "=== Python: type check (ty) ==="; \
-		ty check $$PY_FILES || exit 1; \
+		uv run ty check $$PY_FILES || exit 1; \
 		echo ""; \
 		echo "=== Python: type check (mypy) ==="; \
-		mypy --config-file=mypy.ini $$PY_FILES || exit 1; \
+		uv run mypy --config-file=mypy.ini $$PY_FILES || exit 1; \
 		echo ""; \
 	else \
 		echo "No Python files changed."; \
 		echo ""; \
 	fi
 	@# Python tests
-	@PY_TESTS=$$(python3 scripts/get_changed_files.py --python-tests --strip-prefix lib/); \
+	@PY_TESTS=$$(uv run python scripts/get_changed_files.py --python-tests --strip-prefix lib/); \
 	if [ -n "$$PY_TESTS" ]; then \
 		echo "=== Python: tests (pytest) ==="; \
 		echo "Running: $$PY_TESTS"; \
-		cd lib && PYTHONPATH=. pytest -v $$PY_TESTS || exit 1; \
+		cd lib && uv run pytest -v $$PY_TESTS || exit 1; \
 		echo ""; \
 	fi
 	@# Pre-commit hooks on all changed files (handles frontend formatting via prettier)
-	@CHANGED=$$(python3 scripts/get_changed_files.py --all); \
+	@CHANGED=$$(uv run python scripts/get_changed_files.py --all); \
 	if [ -n "$$CHANGED" ]; then \
 		echo "=== Pre-commit hooks ==="; \
-		pre-commit run --files $$CHANGED || exit 1; \
+		uv run pre-commit run --files $$CHANGED || exit 1; \
 		echo ""; \
 	fi
 	@# Frontend lint only (formatting is handled by pre-commit above)
-	@FE_FILES=$$(python3 scripts/get_changed_files.py --frontend --frontend-tests --strip-prefix frontend/); \
+	@FE_FILES=$$(uv run python scripts/get_changed_files.py --frontend --strip-prefix frontend/); \
 	if [ -n "$$FE_FILES" ]; then \
 		echo "=== Frontend: lint (eslint) ==="; \
 		cd frontend && ./node_modules/.bin/eslint --fix $$FE_FILES || exit 1; \
@@ -464,7 +464,7 @@ check:
 		echo ""; \
 	fi
 	@# Frontend tests
-	@FE_TESTS=$$(python3 scripts/get_changed_files.py --frontend-tests --strip-prefix frontend/); \
+	@FE_TESTS=$$(uv run python scripts/get_changed_files.py --frontend-tests --strip-prefix frontend/); \
 	if [ -n "$$FE_TESTS" ]; then \
 		echo "=== Frontend: tests (vitest) ==="; \
 		echo "Running: $$FE_TESTS"; \
