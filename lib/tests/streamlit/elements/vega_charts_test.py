@@ -980,6 +980,36 @@ class VegaLiteChartTest(DeltaGeneratorTestCase):
         )
         assert json.loads(proto.spec) == merge_dicts(autosize_spec, {"mark": "rect"})
 
+    def test_vega_lite_chart_with_builtin_color_name(self):
+        """Test that built-in color names in raw Vega-Lite specs are passed through.
+
+        Built-in color names (red, blue, etc.) in raw st.vega_lite_chart specs
+        are passed through to the frontend unchanged, where they are resolved
+        to theme colors. This documents that the feature works for raw Vega-Lite
+        specs, not just the built-in chart helpers.
+        """
+        df = pd.DataFrame({"x": [1, 2, 3], "y": [10, 20, 30]})
+
+        # Create a raw Vega-Lite spec with a built-in color name
+        st.vega_lite_chart(
+            df,
+            {
+                "mark": "line",
+                "encoding": {
+                    "x": {"field": "x", "type": "quantitative"},
+                    "y": {"field": "y", "type": "quantitative"},
+                    "color": {"value": "red"},  # Built-in color name
+                },
+            },
+        )
+
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        chart_spec = json.loads(proto.spec)
+
+        # The backend passes through the color name unchanged
+        # (frontend will resolve "red" to theme.redColor)
+        assert chart_spec["encoding"]["color"]["value"] == "red"
+
     def test_datasets_in_spec(self):
         """Test passing datasets={foo: df} inside the spec."""
         st.vega_lite_chart({"mark": "rect", "datasets": {"foo": df1}})
