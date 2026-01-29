@@ -1541,6 +1541,80 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
         )
 
     @parameterized.expand(ST_CHART_ARGS)
+    def test_chart_with_builtin_color_name(
+        self, chart_command: Callable, altair_type: str
+    ):
+        """Test that built-in color names are passed through as-is (not converted).
+
+        Built-in color names (red, blue, etc.) are resolved to theme colors
+        on the frontend, so the backend should pass them through unchanged.
+        """
+        df = pd.DataFrame([[20, 30]], columns=["a", "b"])
+        EXPECTED_DATAFRAME = pd.DataFrame([[20, 30]], columns=["a", "b"])
+
+        # Test single built-in color name
+        chart_command(df, x="a", y="b", color="red")
+
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        chart_spec = json.loads(proto.spec)
+
+        if altair_type == "line" and not is_altair_version_less_than("5.0.0"):
+            chart_spec = chart_spec["layer"][0]
+
+        # Built-in color names should be passed through as-is (not converted to hex)
+        assert chart_spec["encoding"]["color"]["value"] == "red"
+
+        self.assert_output_df_is_correct_and_input_is_untouched(
+            orig_df=df, expected_df=EXPECTED_DATAFRAME, chart_proto=proto
+        )
+
+    @parameterized.expand(ST_CHART_ARGS)
+    def test_chart_with_builtin_color_name_list(
+        self, chart_command: Callable, altair_type: str
+    ):
+        """Test that a list of built-in color names are passed through as-is.
+
+        Built-in color names in a list should be passed through unchanged,
+        while regular colors should still be converted to CSS format.
+        """
+        df = pd.DataFrame([[20, 30, 40]], columns=["a", "b", "c"])
+
+        # Test list of built-in color names
+        chart_command(df, x="a", y=["b", "c"], color=["blue", "green"])
+
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        chart_spec = json.loads(proto.spec)
+
+        if altair_type == "line" and not is_altair_version_less_than("5.0.0"):
+            chart_spec = chart_spec["layer"][0]
+
+        # Built-in color names should be passed through as-is
+        assert chart_spec["encoding"]["color"]["scale"]["range"] == ["blue", "green"]
+
+    @parameterized.expand(ST_CHART_ARGS)
+    def test_chart_with_mixed_color_list(
+        self, chart_command: Callable, altair_type: str
+    ):
+        """Test that mixed color lists (built-in names + hex) work correctly.
+
+        Built-in color names should pass through unchanged while hex colors
+        remain as-is.
+        """
+        df = pd.DataFrame([[20, 30, 40]], columns=["a", "b", "c"])
+
+        # Test mixed list: built-in name + hex color
+        chart_command(df, x="a", y=["b", "c"], color=["red", "#00ff00"])
+
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        chart_spec = json.loads(proto.spec)
+
+        if altair_type == "line" and not is_altair_version_less_than("5.0.0"):
+            chart_spec = chart_spec["layer"][0]
+
+        # Built-in name passed through, hex color also passed through
+        assert chart_spec["encoding"]["color"]["scale"]["range"] == ["red", "#00ff00"]
+
+    @parameterized.expand(ST_CHART_ARGS)
     def test_chart_with_color_column(self, chart_command: Callable, altair_type: str):
         """Test color support for built-in charts."""
         df = pd.DataFrame(
@@ -1959,7 +2033,8 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
 
         too_few_args = ["#f00", ["#f00"], (1, 0, 0, 0.5)]
         too_many_args = [["#f00", "#0ff"], [(1, 0, 0), (0, 0, 1)]]
-        bad_args = ["foo", "blue"]
+        # Note: built-in color names like "blue", "red", etc. are now valid
+        bad_args = ["foo", "notacolor"]
 
         for color_arg in too_few_args:
             with pytest.raises(StreamlitAPIException) as exc:
