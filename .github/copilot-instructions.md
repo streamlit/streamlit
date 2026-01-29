@@ -40,7 +40,7 @@
 Selection of `make` commands for development (run in the repo root):
 
 - `help`: Show all available make commands.
-- `check`: Run all checks (format, lint, types, tests) on changed files only.
+- `check`: Run all checks (format, lint, types, unit tests) on changed files only. Useful to verify the current state of the codebase before committing.
 - `protobuf`: Recompile Protobufs for Python and the frontend.
 - `autofix`: Autofix linting and formatting errors.
 
@@ -80,19 +80,3 @@ Selection of `make` commands for development (run in the repo root):
 - **E2E Tests**: Test the entire app logic end-to-end with Playwright.
 - **(Python) Type Tests**: Verify public API typing with mypy `assert_type`.
 - Prefer running specific tests / test scripts for newly added tests instead the entire test suite.
-
-## Completing Work Sessions
-
-Before finishing any work session, **always run `make check`** to validate your changes:
-
-```bash
-make check
-```
-
-This command runs all relevant checks (formatting, linting, type checking, and unit tests) on uncommitted changes only (staged, unstaged, and untracked files). Already committed files are not checked. E2E tests are not included - use `make run-e2e-test` for those. If any issues are found:
-
-1. Fix the reported issues.
-2. Re-run `make check`.
-3. Repeat until all checks pass.
-
-Only consider your work complete when `make check` succeeds with no errors.

@@ -407,7 +407,7 @@ cli-smoke-tests:
 	python3 scripts/cli_smoke_tests.py
 
 .PHONY: check
-# Run format, lint, and test checks on changed (uncommitted) files only. Auto-fixes where possible.
+# Run all checks (format, lint, types, unit tests) on changed files only. Useful to verify the current state of the codebase before committing.
 check:
 	@echo "=== Checking changed files ==="
 	@CHANGED=$$(python3 scripts/get_changed_files.py --all); \
