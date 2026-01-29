@@ -122,17 +122,17 @@ export const StyledBaseButton = styled.button<RequiredBaseButtonProps>(
 export const StyledPrimaryButton = styled(
   StyledBaseButton
 )<RequiredBaseButtonProps>(({ theme }) => ({
-  backgroundColor: theme.colors.primary,
+  backgroundColor: "#00ff00",
   color: theme.colors.white,
-  border: `${theme.sizes.borderWidth} solid ${theme.colors.primary}`,
+  border: `${theme.sizes.borderWidth} solid #00ff00`,
   "&:hover, &:focus-visible": {
-    backgroundColor: darken(theme.colors.primary, 0.15),
-    borderColor: darken(theme.colors.primary, 0.15),
+    backgroundColor: darken("#00ff00", 0.15),
+    borderColor: darken("#00ff00", 0.15),
   },
   "&:active": {
-    backgroundColor: theme.colors.primary,
+    backgroundColor: "#00ff00",
     // Keep the border darker when clicked so that the button looks "pressed"
-    borderColor: darken(theme.colors.primary, 0.15),
+    borderColor: darken("#00ff00", 0.15),
   },
   "&:disabled, &:disabled:hover, &:disabled:active": {
     borderColor: theme.colors.borderColor,
