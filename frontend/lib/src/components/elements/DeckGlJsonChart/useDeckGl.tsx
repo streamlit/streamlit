@@ -206,6 +206,97 @@ const getLayerDataInfo = (
   return { layerData, hasUnknownLayerId }
 }
 
+type SanitizedSelection = {
+  indices: Record<string, number[]>
+  objects: Record<string, unknown[]>
+  changed: boolean
+}
+
+/**
+ * Filters valid indices for a layer with array data.
+ * Removes indices that are out of bounds after data shrinks and updates
+ * objects to match the current data at each index.
+ */
+const filterValidIndicesForLayer = (
+  indices: number[],
+  objects: unknown[],
+  layerDataArray: unknown[]
+): { validIndices: number[]; validObjects: unknown[]; changed: boolean } => {
+  const validIndices: number[] = []
+  const validObjects: unknown[] = []
+  let changed = false
+
+  indices.forEach((idx, i) => {
+    if (idx < layerDataArray.length) {
+      const nextObject = layerDataArray[idx]
+      if (nextObject !== objects[i]) {
+        changed = true
+      }
+      validIndices.push(idx)
+      validObjects.push(nextObject ?? objects[i] ?? {})
+    } else {
+      changed = true
+    }
+  })
+
+  return { validIndices, validObjects, changed }
+}
+
+/**
+ * Sanitizes selection state by removing orphaned selections.
+ * Orphaned selections occur when layers are removed or data length shrinks.
+ * For layers with non-array data (URLs, GeoJSON), selections are preserved
+ * since we cannot validate indices against them.
+ */
+const sanitizeSelection = (
+  currentSelection: {
+    indices: Record<string, number[]>
+    objects: Record<string, unknown[]>
+  },
+  layerDataInfo: LayerDataInfo
+): SanitizedSelection => {
+  const { layerData, hasUnknownLayerId } = layerDataInfo
+  const newIndices: Record<string, number[]> = {}
+  const newObjects: Record<string, unknown[]> = {}
+  let changed = false
+
+  for (const [layerId, indices] of Object.entries(currentSelection.indices)) {
+    const layerDataForId = layerData.get(layerId)
+    if (layerDataForId === undefined) {
+      // Layer doesn't exist OR has non-array data (URL, GeoJSON).
+      if (!layerData.has(layerId)) {
+        // Layer no longer exists in spec. Only preserve if we cannot validate
+        // at all (i.e., ALL layers lack IDs, so layerData is empty).
+        if (hasUnknownLayerId && layerData.size === 0) {
+          newIndices[layerId] = indices
+          newObjects[layerId] = currentSelection.objects[layerId] || []
+          continue
+        }
+        changed = true // layer no longer exists
+        continue
+      }
+      // Non-array data: preserve all selections for this layer
+      newIndices[layerId] = indices
+      newObjects[layerId] = currentSelection.objects[layerId] || []
+      continue
+    }
+
+    const objects = currentSelection.objects[layerId] || []
+    const result = filterValidIndicesForLayer(indices, objects, layerDataForId)
+
+    if (result.changed) {
+      changed = true
+    }
+
+    if (result.validIndices.length > 0) {
+      newIndices[layerId] = result.validIndices
+      newObjects[layerId] = result.validObjects
+    }
+  }
+
+  return { indices: newIndices, objects: newObjects, changed }
+}
+
 export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
   const {
     height: fullScreenHeight,
@@ -280,63 +371,18 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
       return
     }
 
-    const { layerData, hasUnknownLayerId } = getLayerDataInfo(
-      parsedPydeckJson.layers
-    )
+    const layerDataInfo = getLayerDataInfo(parsedPydeckJson.layers)
+    const sanitized = sanitizeSelection(data.selection, layerDataInfo)
 
-    // Filter out orphaned selections
-    const newIndices: Record<string, number[]> = {}
-    const newObjects: Record<string, unknown[]> = {}
-    let changed = false
-
-    for (const [layerId, indices] of Object.entries(data.selection.indices)) {
-      const layerDataForId = layerData.get(layerId)
-      if (layerDataForId === undefined) {
-        // Layer doesn't exist OR has non-array data (URL, GeoJSON).
-        if (!layerData.has(layerId)) {
-          // Layer no longer exists in spec. Only preserve if we cannot validate
-          // at all (i.e., ALL layers lack IDs, so layerData is empty).
-          if (hasUnknownLayerId && layerData.size === 0) {
-            newIndices[layerId] = indices
-            newObjects[layerId] = data.selection.objects[layerId] || []
-            continue
-          }
-          changed = true // layer no longer exists
-          continue
-        }
-        // Non-array data: preserve all selections for this layer
-        newIndices[layerId] = indices
-        newObjects[layerId] = data.selection.objects[layerId] || []
-        continue
-      }
-
-      const objects = data.selection.objects[layerId] || []
-      const validIndices: number[] = []
-      const validObjects: unknown[] = []
-
-      indices.forEach((idx, i) => {
-        if (idx < layerDataForId.length) {
-          const nextObject = layerDataForId[idx]
-          if (nextObject !== objects[i]) {
-            changed = true
-          }
-          validIndices.push(idx)
-          validObjects.push(nextObject ?? objects[i] ?? {})
-        } else {
-          changed = true
-        }
-      })
-
-      if (validIndices.length > 0) {
-        newIndices[layerId] = validIndices
-        newObjects[layerId] = validObjects
-      }
-    }
-
-    if (changed) {
+    if (sanitized.changed) {
       setSelection({
         fromUi: false,
-        value: { selection: { indices: newIndices, objects: newObjects } },
+        value: {
+          selection: {
+            indices: sanitized.indices,
+            objects: sanitized.objects,
+          },
+        },
       })
     }
   }, [parsedPydeckJson, isSelectionModeActivated])
@@ -368,8 +414,9 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
       const { layerData } = getLayerDataInfo(jsonCopy.layers)
 
       // Only consider a selection valid if the layer exists and has at least one
-      // index within the current data length. This prevents dimming when selection
-      // state is stale (e.g., after data shrinks or layers are removed).
+      // index within the current data length. This prevents "dimming" (reducing
+      // opacity of unselected points to 40%) when selection state is stale
+      // (e.g., after data shrinks or layers are removed).
       // For layers with non-array data (undefined length), we cannot validate
       // indices, so we assume the selection is valid.
       const anyLayersHaveSelection = Object.entries(
