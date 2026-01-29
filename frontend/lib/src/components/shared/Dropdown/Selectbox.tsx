@@ -37,7 +37,7 @@ import {
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
 import { useSelectCommon } from "~lib/hooks/useSelectCommon"
-import { hasLightBackgroundColor } from "~lib/theme"
+import { convertRemToPx, hasLightBackgroundColor } from "~lib/theme"
 import { LabelVisibilityOptions } from "~lib/util/utils"
 
 export interface Props {
@@ -240,6 +240,7 @@ const Selectbox: FC<Props> = ({
           Popover: {
             props: {
               ignoreBoundary: isInSidebar,
+              popoverMargin: convertRemToPx(theme.spacing.twoXS),
               overrides: {
                 Body: {
                   style: () => {

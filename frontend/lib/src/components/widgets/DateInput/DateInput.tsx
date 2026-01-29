@@ -46,7 +46,7 @@ import {
   ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { hasLightBackgroundColor } from "~lib/theme"
+import { convertRemToPx, hasLightBackgroundColor } from "~lib/theme"
 import {
   isNullOrUndefined,
   labelVisibilityProtoValueToEnum,
@@ -275,12 +275,12 @@ function DateInput({
             props: {
               ignoreBoundary: isInSidebar,
               placement: PLACEMENT.bottomLeft,
+              popoverMargin: convertRemToPx(theme.spacing.twoXS) + 1,
               overrides: {
                 Body: {
                   style: () => {
                     const lightBackground = hasLightBackgroundColor(theme)
                     return {
-                      marginTop: spacing.px,
                       borderTopLeftRadius: theme.radii.default,
                       borderTopRightRadius: theme.radii.default,
                       borderBottomRightRadius: theme.radii.default,

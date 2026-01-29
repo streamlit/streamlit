@@ -51,7 +51,7 @@ import {
 } from "~lib/hooks/useBasicWidgetState"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useSelectCommon } from "~lib/hooks/useSelectCommon"
-import { hasLightBackgroundColor } from "~lib/theme"
+import { convertRemToPx, hasLightBackgroundColor } from "~lib/theme"
 import { fuzzyFilterSelectOptions } from "~lib/util/fuzzyFilterSelectOptions"
 import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
@@ -385,6 +385,7 @@ const Multiselect: FC<Props> = props => {
             Popover: {
               props: {
                 ignoreBoundary: isInSidebar,
+                popoverMargin: convertRemToPx(theme.spacing.twoXS),
                 overrides: {
                   Body: {
                     style: () => {

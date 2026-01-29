@@ -31,7 +31,7 @@ import BaseButton, {
 import { DynamicIcon } from "~lib/components/shared/Icon"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { hasLightBackgroundColor } from "~lib/theme"
+import { convertRemToPx, hasLightBackgroundColor } from "~lib/theme"
 
 import {
   StyledPopoverExpansionIcon,
@@ -75,6 +75,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
       <UIPopover
         triggerType={TRIGGER_TYPE.click}
         placement={PLACEMENT.bottomLeft}
+        popoverMargin={convertRemToPx(theme.spacing.twoXS)}
         content={() => children}
         isOpen={open}
         onClickOutside={() => setOpen(false)}

@@ -27,7 +27,7 @@ import {
 } from "~lib/components/widgets/BaseWidget"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
-import { hasLightBackgroundColor } from "~lib/theme"
+import { convertRemToPx, hasLightBackgroundColor } from "~lib/theme"
 import { LabelVisibilityOptions } from "~lib/util/utils"
 
 import {
@@ -149,6 +149,7 @@ const BaseColorPicker = (props: BaseColorPickerProps): React.ReactElement => {
       <UIPopover
         onClose={onColorClose}
         placement="bottomLeft"
+        popoverMargin={convertRemToPx(theme.spacing.twoXS)}
         content={() => (
           <StyledChromePicker data-testid="stColorPickerPopover">
             <ChromePicker

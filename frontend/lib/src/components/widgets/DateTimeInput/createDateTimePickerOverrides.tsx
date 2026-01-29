@@ -27,7 +27,11 @@ import Icon from "~lib/components/shared/Icon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
 import Tooltip, { Placement } from "~lib/components/shared/Tooltip"
 import { measureScrollbarGutterSize } from "~lib/hooks/useScrollbarGutterSize"
-import { EmotionTheme, hasLightBackgroundColor } from "~lib/theme"
+import {
+  convertRemToPx,
+  EmotionTheme,
+  hasLightBackgroundColor,
+} from "~lib/theme"
 
 /**
  * Wrapper component that adds an inner div to match VirtualDropdown's structure.
@@ -69,12 +73,12 @@ export const createDateTimePickerOverrides = ({
     props: {
       ignoreBoundary: isInSidebar,
       placement: PLACEMENT.bottomLeft,
+      popoverMargin: convertRemToPx(theme.spacing.twoXS) + 1,
       overrides: {
         Body: {
           style: () => {
             const lightBackground = hasLightBackgroundColor(theme)
             return {
-              marginTop: theme.spacing.px,
               borderTopLeftRadius: theme.radii.default,
               borderTopRightRadius: theme.radii.default,
               borderBottomRightRadius: theme.radii.default,
@@ -356,12 +360,12 @@ export const createDateTimePickerOverrides = ({
               Popover: {
                 props: {
                   ignoreBoundary: isInSidebar,
+                  popoverMargin: convertRemToPx(theme.spacing.twoXS) + 1,
                   overrides: {
                     Body: {
                       style: () => {
                         const lightBackground = hasLightBackgroundColor(theme)
                         return {
-                          marginTop: theme.spacing.px,
                           borderTopLeftRadius: theme.radii.default,
                           borderTopRightRadius: theme.radii.default,
                           borderBottomRightRadius: theme.radii.default,

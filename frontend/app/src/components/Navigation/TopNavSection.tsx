@@ -23,7 +23,12 @@ import {
 import { PLACEMENT, TRIGGER_TYPE, Popover as UIPopover } from "baseui/popover"
 
 import { StreamlitEndpoints } from "@streamlit/connection"
-import { hasLightBackgroundColor, Icon, useEmotionTheme } from "@streamlit/lib"
+import {
+  convertRemToPx,
+  hasLightBackgroundColor,
+  Icon,
+  useEmotionTheme,
+} from "@streamlit/lib"
 import { IAppPage } from "@streamlit/protobuf"
 import { isNullOrUndefined } from "@streamlit/utils"
 
@@ -75,6 +80,7 @@ const TopNavSection = ({
     <UIPopover
       triggerType={TRIGGER_TYPE.click}
       placement={PLACEMENT.bottomLeft}
+      popoverMargin={convertRemToPx(theme.spacing.twoXS)}
       content={() => (
         <StyledPopoverContent data-testid="stTopNavPopover">
           {sections.map((section, _sectionIndex) => {
@@ -132,7 +138,6 @@ const TopNavSection = ({
           style: () => {
             const lightBackground = hasLightBackgroundColor(theme)
             return {
-              marginTop: theme.spacing.twoXS,
               marginRight: theme.spacing.lg,
               marginBottom: theme.spacing.lg,
 

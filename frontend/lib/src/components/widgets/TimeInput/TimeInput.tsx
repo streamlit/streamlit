@@ -35,7 +35,7 @@ import {
 } from "~lib/hooks/useBasicWidgetState"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { measureScrollbarGutterSize } from "~lib/hooks/useScrollbarGutterSize"
-import { hasLightBackgroundColor } from "~lib/theme"
+import { convertRemToPx, hasLightBackgroundColor } from "~lib/theme"
 import {
   isNullOrUndefined,
   labelVisibilityProtoValueToEnum,
@@ -196,6 +196,7 @@ function TimeInput({
           Popover: {
             props: {
               ignoreBoundary: isInSidebar,
+              popoverMargin: convertRemToPx(theme.spacing.twoXS),
               overrides: {
                 Body: {
                   style: () => {
