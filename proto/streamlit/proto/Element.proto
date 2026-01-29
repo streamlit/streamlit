@@ -16,8 +16,6 @@
 
 syntax = "proto3";
 
-option java_package = "com.snowflake.apps.streamlit";
-option java_outer_classname = "ElementProto";
 
 import "streamlit/proto/Alert.proto";
 import "streamlit/proto/Arrow.proto";

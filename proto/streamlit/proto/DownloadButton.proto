@@ -16,8 +16,6 @@
 
 syntax = "proto3";
 
-option java_package = "com.snowflake.apps.streamlit";
-option java_outer_classname = "DownloadButtonProto";
 
 import "streamlit/proto/ButtonLikeIconPosition.proto";
 

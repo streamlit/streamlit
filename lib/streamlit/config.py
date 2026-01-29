@@ -617,6 +617,17 @@ _create_option(
     scriptable=True,
 )
 
+_create_option(
+    "client.showErrorLinks",
+    description="""
+        Controls whether to show external help links (Google, ChatGPT) in
+        error displays. Can be "auto" (shows on localhost only), true (always
+        show), or false (never show).
+    """,
+    default_val="auto",
+    type_=str,
+)
+
 # Config Section: Runner #
 
 _create_section("runner", "Settings for how Streamlit executes your script")

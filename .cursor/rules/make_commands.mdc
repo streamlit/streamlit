@@ -45,5 +45,6 @@ trace-e2e-test            Run e2e test with tracing and view it. Use via `make t
 lighthouse-tests          Run Lighthouse performance tests.
 bare-execution-tests      Run all e2e tests in bare mode.
 cli-smoke-tests           Run CLI smoke tests.
+check                     Run all checks (format, lint, types, unit tests) on changed files only. Useful to verify the current state of the codebase before committing.
 autofix                   Autofix linting and formatting errors.
 package                   Create Python wheel files in `dist/`.
