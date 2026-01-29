@@ -16,7 +16,7 @@ This helps make sure:
 4. Your time is well spent!
 
 > [!TIP]
-> To be clear: if you open a PR that adds a new feature (and isn't just a bug fix or similar) *without* prior support from the Streamlit team, the chances of getting it merged are *extremely low*. Adding a new feature comes with a lot of baggage, such as thinking through the exact API, making sure it fulfills our standards, and maintaining it in the future – even if it's just a small parameter.
+> To be clear: if you open a PR that adds a new feature (and isn't just a bug fix or similar) _without_ prior support from the Streamlit team, the chances of getting it merged are _extremely low_. Adding a new feature comes with a lot of baggage, such as thinking through the exact API, making sure it fulfills our standards, and maintaining it in the future – even if it's just a small parameter.
 
 ## Style Guide
 
@@ -80,7 +80,7 @@ Streamlit's development setup is pretty Mac- and Linux-centric. If you're doing 
 
 ### 2. Grab the code
 
-*(You probably already know how to do this, but just in case...)*
+_(You probably already know how to do this, but just in case...)_
 
 First fork [the repo](https://github.com/streamlit/streamlit) via the UI on Github and then do the following:
 
@@ -143,7 +143,7 @@ uv run streamlit hello
 
 #### When you modify JS, or CSS code
 
-Since we use that awesome dev server above, when you change any JS/CSS code everything should automatically *just work* without the need to restart any of the servers.
+Since we use that awesome dev server above, when you change any JS/CSS code everything should automatically _just work_ without the need to restart any of the servers.
 
 #### When you modify Python code
 
@@ -235,7 +235,7 @@ make python-format
 
 ```
 
-Alternatively, you can use the `ruff format` command directly.
+Alternatively, you can use `uv run ruff format` directly.
 
 #### Linting
 
@@ -246,7 +246,7 @@ make python-lint
 
 ```
 
-Alternatively, you can use the `ruff check` command directly.
+Alternatively, you can use `uv run ruff check` directly.
 
 #### Type-checking
 
@@ -302,13 +302,13 @@ But you can run pre-commit hooks manually as needed.
 - Run all checks on your staged files by using:
 
   ```shell
-  pre-commit run
+  uv run pre-commit run
   ```
 
 - Run all checks on all files by using:
 
   ```shell
-  pre-commit run --all-files
+  uv run pre-commit run --all-files
   ```
 
 ## Troubleshooting
@@ -333,7 +333,7 @@ To fix this make sure your Python environment is set up correctly. Try running `
 If the `protoc` command fails and there is a version mismatch reported, try to install the correct version.
 
 - Go to [Protobuf releases](https://github.com/protocolbuffers/protobuf/releases)
-- Choose the [Protobuf tag](https://github.com/protocolbuffers/protobuf/tags) which matches Python's environment Protobuf version, for example [3.20.0](https://github.com/protocolbuffers/protobuf/releases/tag/v3.20.0). Call `pip show protobuf` or equivalent to find this out.
+- Choose the [Protobuf tag](https://github.com/protocolbuffers/protobuf/tags) which matches Python's environment Protobuf version, for example [3.20.0](https://github.com/protocolbuffers/protobuf/releases/tag/v3.20.0). Call `uv run pip show protobuf` or equivalent to find this out.
 - Download zip containing protoc for your system, example: [protoc-3.20.0-osx-x86_64.zip](https://github.com/protocolbuffers/protobuf/releases/download/v3.20.0/protoc-3.20.0-osx-x86_64.zip)
 
 <details>
