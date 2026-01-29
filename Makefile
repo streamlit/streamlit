@@ -406,6 +406,69 @@ bare-execution-tests:
 cli-smoke-tests:
 	python3 scripts/cli_smoke_tests.py
 
+.PHONY: check
+# Run format, lint, and test checks on changed (uncommitted) files only. Auto-fixes where possible.
+check:
+	@echo "=== Checking changed files ==="
+	@CHANGED=$$(python3 scripts/get_changed_files.py --all); \
+	if [ -z "$$CHANGED" ]; then \
+		echo "No changed files found."; \
+		exit 0; \
+	fi; \
+	echo "Changed files:"; \
+	echo "$$CHANGED" | tr ' ' '\n' | sed 's/^/  /'; \
+	echo ""
+	@# Python format and lint checks (with auto-fix)
+	@PY_FILES=$$(python3 scripts/get_changed_files.py --python --python-tests); \
+	if [ -n "$$PY_FILES" ]; then \
+		echo "=== Python: format (ruff) ==="; \
+		ruff format $$PY_FILES || exit 1; \
+		echo ""; \
+		echo "=== Python: lint (ruff) ==="; \
+		ruff check --fix $$PY_FILES || exit 1; \
+		echo ""; \
+		echo "=== Python: type check (ty) ==="; \
+		ty check $$PY_FILES || exit 1; \
+		echo ""; \
+		echo "=== Python: type check (mypy) ==="; \
+		mypy --config-file=mypy.ini $$PY_FILES || exit 1; \
+		echo ""; \
+	else \
+		echo "No Python files changed."; \
+		echo ""; \
+	fi
+	@# Python tests
+	@PY_TESTS=$$(python3 scripts/get_changed_files.py --python-tests --strip-prefix lib/); \
+	if [ -n "$$PY_TESTS" ]; then \
+		echo "=== Python: tests (pytest) ==="; \
+		echo "Running: $$PY_TESTS"; \
+		cd lib && PYTHONPATH=. pytest -v $$PY_TESTS || exit 1; \
+		echo ""; \
+	fi
+	@# Frontend lint (with auto-fix)
+	@FE_FILES=$$(python3 scripts/get_changed_files.py --frontend --frontend-tests --strip-prefix frontend/); \
+	if [ -n "$$FE_FILES" ]; then \
+		echo "=== Frontend: lint (eslint) ==="; \
+		cd frontend && ./node_modules/.bin/eslint --fix $$FE_FILES || exit 1; \
+		echo ""; \
+	fi
+	@# Frontend tests
+	@FE_TESTS=$$(python3 scripts/get_changed_files.py --frontend-tests --strip-prefix frontend/); \
+	if [ -n "$$FE_TESTS" ]; then \
+		echo "=== Frontend: tests (vitest) ==="; \
+		echo "Running: $$FE_TESTS"; \
+		cd frontend && yarn vitest run $$FE_TESTS || exit 1; \
+		echo ""; \
+	fi
+	@# Pre-commit hooks on all changed files (handles formatting and linting)
+	@CHANGED=$$(python3 scripts/get_changed_files.py --all); \
+	if [ -n "$$CHANGED" ]; then \
+		echo "=== Pre-commit hooks ==="; \
+		pre-commit run --files $$CHANGED || exit 1; \
+		echo ""; \
+	fi
+	@echo "=== All checks passed! ==="
+
 .PHONY: autofix
 # Autofix linting and formatting errors.
 autofix:
