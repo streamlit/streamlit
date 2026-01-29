@@ -562,6 +562,72 @@ class BootstrapUvloopTest(TestCase):
             with patch.dict("sys.modules", {"uvloop": None}):
                 bootstrap._maybe_install_uvloop(running_in_event_loop=False)
 
+    def test_run_with_uvloop_uses_uvloop_run_when_available(self):
+        """_run_with_uvloop uses uvloop.run() when available."""
+        fake_uvloop = types.ModuleType("uvloop")
+        fake_uvloop.run = Mock()
+
+        async def dummy_coro():
+            pass
+
+        coro = dummy_coro()
+        with (
+            patch.object(bootstrap.env_util, "IS_WINDOWS", False),
+            patch.dict("sys.modules", {"uvloop": fake_uvloop}),
+        ):
+            bootstrap._run_with_uvloop(coro)
+
+        fake_uvloop.run.assert_called_once_with(coro)
+
+    def test_run_with_uvloop_falls_back_to_asyncio_on_windows(self):
+        """_run_with_uvloop uses asyncio.run() on Windows."""
+        async def dummy_coro():
+            pass
+
+        coro = dummy_coro()
+        with (
+            patch.object(bootstrap.env_util, "IS_WINDOWS", True),
+            patch("asyncio.run") as mock_asyncio_run,
+        ):
+            bootstrap._run_with_uvloop(coro)
+
+        mock_asyncio_run.assert_called_once_with(coro)
+
+    def test_run_with_uvloop_falls_back_when_uvloop_missing(self):
+        """_run_with_uvloop uses asyncio.run() when uvloop is not installed."""
+        async def dummy_coro():
+            pass
+
+        coro = dummy_coro()
+        with (
+            patch.object(bootstrap.env_util, "IS_WINDOWS", False),
+            patch.dict("sys.modules", {"uvloop": None}),
+            patch("asyncio.run") as mock_asyncio_run,
+        ):
+            bootstrap._run_with_uvloop(coro)
+
+        mock_asyncio_run.assert_called_once_with(coro)
+
+    def test_run_with_uvloop_falls_back_when_run_not_available(self):
+        """_run_with_uvloop falls back to install() pattern when run() is missing."""
+        fake_uvloop = types.ModuleType("uvloop")
+        fake_uvloop.install = Mock()
+        # No .run attribute
+
+        async def dummy_coro():
+            pass
+
+        coro = dummy_coro()
+        with (
+            patch.object(bootstrap.env_util, "IS_WINDOWS", False),
+            patch.dict("sys.modules", {"uvloop": fake_uvloop}),
+            patch("asyncio.run") as mock_asyncio_run,
+        ):
+            bootstrap._run_with_uvloop(coro)
+
+        fake_uvloop.install.assert_called_once()
+        mock_asyncio_run.assert_called_once_with(coro)
+
 
 class BootstrapAsgiTest(IsolatedAsyncioTestCase):
     """Test bootstrap functions for ASGI app mode."""

@@ -60,7 +60,12 @@ def _fix_sys_path(main_script_path: str) -> None:
 
 
 def _maybe_install_uvloop(running_in_event_loop: bool) -> None:
-    """Install uvloop as the default event loop policy if available."""
+    """Install uvloop as the default event loop policy if available.
+
+    Note: This function uses uvloop.install() which is deprecated in Python 3.12+.
+    For new code paths, prefer using _run_with_uvloop() which uses the newer
+    uvloop.run() API when available.
+    """
 
     if running_in_event_loop:
         return
@@ -80,6 +85,39 @@ def _maybe_install_uvloop(running_in_event_loop: bool) -> None:
         _LOGGER.warning(
             "Failed to install uvloop. Falling back to default loop.", exc_info=True
         )
+
+
+def _run_with_uvloop(main: Any) -> None:
+    """Run an async function with uvloop if available, otherwise use asyncio.run().
+
+    This uses uvloop.run() when available (uvloop >= 0.15.0), which is the
+    recommended approach for Python 3.12+ as uvloop.install() is deprecated.
+    """
+    if env_util.IS_WINDOWS:
+        asyncio.run(main)
+        return
+
+    try:
+        import uvloop
+    except ModuleNotFoundError:
+        asyncio.run(main)
+        return
+
+    # Use uvloop.run() if available (uvloop >= 0.15.0)
+    if hasattr(uvloop, "run"):
+        try:
+            uvloop.run(main)
+            _LOGGER.debug("Server ran with uvloop.run().")
+            return
+        except Exception:
+            _LOGGER.warning(
+                "Failed to run with uvloop.run(). Falling back to asyncio.run().",
+                exc_info=True,
+            )
+
+    # Fallback to the deprecated uvloop.install() + asyncio.run() pattern
+    _maybe_install_uvloop(running_in_event_loop=False)
+    asyncio.run(main)
 
 
 def _fix_tornado_crash() -> None:
@@ -456,8 +494,7 @@ def run(
         # This prevents the task from being garbage collected
         server._bootstrap_task = task
     else:
-        _maybe_install_uvloop(running_in_event_loop)
-        # No running event loop, so we can use asyncio.run
+        # No running event loop, so we can start a new one
         # This is the normal case when running streamlit from the command line
         _LOGGER.debug("Starting new event loop for server")
-        asyncio.run(main())
+        _run_with_uvloop(main())

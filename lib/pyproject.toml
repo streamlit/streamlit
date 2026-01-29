@@ -186,8 +186,6 @@ filterwarnings = [
   "ignore:The converter attribute was deprecated:matplotlib.MatplotlibDeprecationWarning:plotly.*:",
   # Protobuf's label() deprecation when accessing field descriptors in tests
   "ignore:label\\(\\) is deprecated:DeprecationWarning:_pytest.*:",
-  # uvloop.install() deprecation in Python 3.12+ (upstream issue in uvloop)
-  "ignore:uvloop.install\\(\\) is deprecated:DeprecationWarning:uvloop.*:",
   # MagicMock creates async mocks internally that may not be awaited
   "ignore:coroutine .* was never awaited:RuntimeWarning:unittest.mock:",
   # Streamlit's own warning when DataFrame.attrs contain non-serializable objects
