@@ -29,45 +29,57 @@ These tests verify expected server behavior covering:
 
 from __future__ import annotations
 
+from urllib import parse
+
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import wait_for_app_loaded, wait_for_app_run
+from e2e_playwright.conftest import build_app_url, wait_for_app_loaded, wait_for_app_run
 from e2e_playwright.shared.app_utils import click_button
+
+
+def _app_ws_url(app_base_url: str, path: str) -> str:
+    http_url = build_app_url(app_base_url, path=path)
+    split_url = parse.urlsplit(http_url)
+    scheme = "wss" if split_url.scheme == "https" else "ws"
+    return parse.urlunsplit(
+        (scheme, split_url.netloc, split_url.path, split_url.query, "")
+    )
+
 
 # =============================================================================
 # Health Endpoint Tests
 # =============================================================================
 
 
-def test_health_endpoint_returns_ok(app: Page, app_port: int):
+def test_health_endpoint_returns_ok(app: Page, app_base_url: str):
     """Test that /_stcore/health returns 'ok' when app is healthy."""
-    response = app.request.get(f"http://localhost:{app_port}/_stcore/health")
+    response = app.request.get(build_app_url(app_base_url, path="/_stcore/health"))
 
     expect(response).to_be_ok()
     assert response.status == 200
     assert response.text() == "ok"
 
 
-def test_health_endpoint_has_no_cache_header(app: Page, app_port: int):
+def test_health_endpoint_has_no_cache_header(app: Page, app_base_url: str):
     """Test that health endpoint sets Cache-Control: no-cache."""
-    response = app.request.get(f"http://localhost:{app_port}/_stcore/health")
+    response = app.request.get(build_app_url(app_base_url, path="/_stcore/health"))
 
     expect(response).to_be_ok()
     assert response.headers.get("cache-control") == "no-cache"
 
 
-def test_health_endpoint_supports_head_method(app: Page, app_port: int):
+def test_health_endpoint_supports_head_method(app: Page, app_base_url: str):
     """Test that health endpoint supports HEAD method for monitoring services."""
-    response = app.request.head(f"http://localhost:{app_port}/_stcore/health")
+    response = app.request.head(build_app_url(app_base_url, path="/_stcore/health"))
 
     expect(response).to_be_ok()
     assert response.status == 200
 
 
-def test_health_endpoint_supports_options_for_cors(app: Page, app_port: int):
+def test_health_endpoint_supports_options_for_cors(app: Page, app_base_url: str):
     """Test that health endpoint handles OPTIONS requests for CORS preflight."""
     response = app.request.fetch(
-        f"http://localhost:{app_port}/_stcore/health",
+        build_app_url(app_base_url, path="/_stcore/health"),
         method="OPTIONS",
     )
 
@@ -75,10 +87,10 @@ def test_health_endpoint_supports_options_for_cors(app: Page, app_port: int):
     assert response.status == 204
 
 
-def test_script_health_endpoint_returns_ok(app: Page, app_port: int):
+def test_script_health_endpoint_returns_ok(app: Page, app_base_url: str):
     """Test that /_stcore/script-health-check returns 'ok' for valid script."""
     response = app.request.get(
-        f"http://localhost:{app_port}/_stcore/script-health-check"
+        build_app_url(app_base_url, path="/_stcore/script-health-check")
     )
 
     expect(response).to_be_ok()
@@ -92,9 +104,9 @@ def test_script_health_endpoint_returns_ok(app: Page, app_port: int):
 # =============================================================================
 
 
-def test_metrics_endpoint_returns_valid_response(app: Page, app_port: int):
+def test_metrics_endpoint_returns_valid_response(app: Page, app_base_url: str):
     """Test that /_stcore/metrics returns metrics in openmetrics format."""
-    response = app.request.get(f"http://localhost:{app_port}/_stcore/metrics")
+    response = app.request.get(build_app_url(app_base_url, path="/_stcore/metrics"))
 
     expect(response).to_be_ok()
     assert response.status == 200
@@ -107,10 +119,10 @@ def test_metrics_endpoint_returns_valid_response(app: Page, app_port: int):
     assert len(response.text()) > 0
 
 
-def test_metrics_endpoint_accepts_protobuf(app: Page, app_port: int):
+def test_metrics_endpoint_accepts_protobuf(app: Page, app_base_url: str):
     """Test that metrics endpoint can return protobuf when requested."""
     response = app.request.get(
-        f"http://localhost:{app_port}/_stcore/metrics",
+        build_app_url(app_base_url, path="/_stcore/metrics"),
         headers={"Accept": "application/x-protobuf"},
     )
 
@@ -122,7 +134,7 @@ def test_metrics_endpoint_accepts_protobuf(app: Page, app_port: int):
     assert "protobuf" in content_type
 
 
-def test_metrics_endpoint_filters_by_family_cache_memory(app: Page, app_port: int):
+def test_metrics_endpoint_filters_by_family_cache_memory(app: Page, app_base_url: str):
     """Test that metrics endpoint filters results by families query parameter.
 
     When requesting families=cache_memory_bytes, only cache memory metrics
@@ -132,7 +144,9 @@ def test_metrics_endpoint_filters_by_family_cache_memory(app: Page, app_port: in
     wait_for_app_loaded(app)
 
     response = app.request.get(
-        f"http://localhost:{app_port}/_stcore/metrics?families=cache_memory_bytes"
+        build_app_url(
+            app_base_url, path="/_stcore/metrics", query="families=cache_memory_bytes"
+        )
     )
 
     expect(response).to_be_ok()
@@ -146,13 +160,17 @@ def test_metrics_endpoint_filters_by_family_cache_memory(app: Page, app_port: in
     assert "active_sessions" not in text
 
 
-def test_metrics_endpoint_filters_by_family_session_events(app: Page, app_port: int):
+def test_metrics_endpoint_filters_by_family_session_events(
+    app: Page, app_base_url: str
+):
     """Test that metrics endpoint returns session_events_total when requested.
 
     Session events metrics track connections, reconnections, and disconnections.
     """
     response = app.request.get(
-        f"http://localhost:{app_port}/_stcore/metrics?families=session_events_total"
+        build_app_url(
+            app_base_url, path="/_stcore/metrics", query="families=session_events_total"
+        )
     )
 
     expect(response).to_be_ok()
@@ -166,13 +184,17 @@ def test_metrics_endpoint_filters_by_family_session_events(app: Page, app_port: 
     assert "active_sessions" not in text
 
 
-def test_metrics_endpoint_filters_by_family_active_sessions(app: Page, app_port: int):
+def test_metrics_endpoint_filters_by_family_active_sessions(
+    app: Page, app_base_url: str
+):
     """Test that metrics endpoint returns active_sessions when requested.
 
     Active sessions metrics track the current number of connected sessions.
     """
     response = app.request.get(
-        f"http://localhost:{app_port}/_stcore/metrics?families=active_sessions"
+        build_app_url(
+            app_base_url, path="/_stcore/metrics", query="families=active_sessions"
+        )
     )
 
     expect(response).to_be_ok()
@@ -186,14 +208,17 @@ def test_metrics_endpoint_filters_by_family_active_sessions(app: Page, app_port:
     assert "session_events_total" not in text
 
 
-def test_metrics_endpoint_filters_by_multiple_families(app: Page, app_port: int):
+def test_metrics_endpoint_filters_by_multiple_families(app: Page, app_base_url: str):
     """Test that metrics endpoint supports filtering by multiple families.
 
     Multiple families query params should return metrics for all requested families.
     """
     response = app.request.get(
-        f"http://localhost:{app_port}/_stcore/metrics"
-        "?families=session_events_total&families=active_sessions"
+        build_app_url(
+            app_base_url,
+            path="/_stcore/metrics",
+            query="families=session_events_total&families=active_sessions",
+        )
     )
 
     expect(response).to_be_ok()
@@ -207,14 +232,16 @@ def test_metrics_endpoint_filters_by_multiple_families(app: Page, app_port: int)
     assert "cache_memory_bytes" not in text
 
 
-def test_metrics_endpoint_unknown_family_returns_empty(app: Page, app_port: int):
+def test_metrics_endpoint_unknown_family_returns_empty(app: Page, app_base_url: str):
     """Test that metrics endpoint returns empty response for unknown families.
 
     When requesting a family that doesn't exist, the response should contain
     only the EOF marker.
     """
     response = app.request.get(
-        f"http://localhost:{app_port}/_stcore/metrics?families=unknown_family"
+        build_app_url(
+            app_base_url, path="/_stcore/metrics", query="families=unknown_family"
+        )
     )
 
     expect(response).to_be_ok()
@@ -225,7 +252,7 @@ def test_metrics_endpoint_unknown_family_returns_empty(app: Page, app_port: int)
     assert text.strip() == "# EOF"
 
 
-def test_metrics_endpoint_no_filter_returns_all_families(app: Page, app_port: int):
+def test_metrics_endpoint_no_filter_returns_all_families(app: Page, app_base_url: str):
     """Test that metrics endpoint without filter returns all metric families.
 
     When no families query param is provided, all available metrics should be returned.
@@ -234,7 +261,7 @@ def test_metrics_endpoint_no_filter_returns_all_families(app: Page, app_port: in
     """
     wait_for_app_loaded(app)
 
-    response = app.request.get(f"http://localhost:{app_port}/_stcore/metrics")
+    response = app.request.get(build_app_url(app_base_url, path="/_stcore/metrics"))
 
     expect(response).to_be_ok()
     assert response.status == 200
@@ -252,9 +279,9 @@ def test_metrics_endpoint_no_filter_returns_all_families(app: Page, app_port: in
 # =============================================================================
 
 
-def test_host_config_endpoint_returns_json(app: Page, app_port: int):
+def test_host_config_endpoint_returns_json(app: Page, app_base_url: str):
     """Test that /_stcore/host-config returns valid JSON configuration."""
-    response = app.request.get(f"http://localhost:{app_port}/_stcore/host-config")
+    response = app.request.get(build_app_url(app_base_url, path="/_stcore/host-config"))
 
     expect(response).to_be_ok()
     assert response.status == 200
@@ -268,9 +295,9 @@ def test_host_config_endpoint_returns_json(app: Page, app_port: int):
     assert "enableCustomParentMessages" in config
 
 
-def test_host_config_has_no_cache_header(app: Page, app_port: int):
+def test_host_config_has_no_cache_header(app: Page, app_base_url: str):
     """Test that host-config endpoint sets Cache-Control: no-cache."""
-    response = app.request.get(f"http://localhost:{app_port}/_stcore/host-config")
+    response = app.request.get(build_app_url(app_base_url, path="/_stcore/host-config"))
 
     expect(response).to_be_ok()
     assert response.headers.get("cache-control") == "no-cache"
@@ -281,12 +308,14 @@ def test_host_config_has_no_cache_header(app: Page, app_port: int):
 # =============================================================================
 
 
-def test_cors_options_preflight_returns_204(app: Page, app_port: int):
+def test_cors_options_preflight_returns_204(app: Page, app_base_url: str):
     """Test that OPTIONS preflight requests return 204 No Content."""
+    split_base_url = parse.urlsplit(app_base_url)
+    request_origin = f"{split_base_url.scheme}://{split_base_url.netloc}"
     response = app.request.fetch(
-        f"http://localhost:{app_port}/_stcore/health",
+        build_app_url(app_base_url, path="/_stcore/health"),
         method="OPTIONS",
-        headers={"Origin": "http://localhost:3000"},
+        headers={"Origin": request_origin},
     )
 
     # OPTIONS should return 204 No Content
@@ -298,15 +327,15 @@ def test_cors_options_preflight_returns_204(app: Page, app_port: int):
 # =============================================================================
 
 
-def _get_media_url_from_image(app: Page, app_port: int) -> str | None:
+def _get_media_url_from_image(app: Page, app_base_url: str) -> str | None:
     """Helper to get the media URL from an image element.
 
     Parameters
     ----------
     app : Page
         The Playwright page object.
-    app_port : int
-        The port number where the app is running.
+    app_base_url : str
+        The base URL where the app is running.
 
     Returns
     -------
@@ -324,15 +353,15 @@ def _get_media_url_from_image(app: Page, app_port: int) -> str | None:
     if src and "/media/" in src:
         # Make it a full URL if it's relative
         if src.startswith("/"):
-            return f"http://localhost:{app_port}{src}"
+            return build_app_url(app_base_url, path=src)
         return src
 
     return None
 
 
-def test_media_endpoint_serves_image_content(app: Page, app_port: int):
+def test_media_endpoint_serves_image_content(app: Page, app_base_url: str):
     """Test that media endpoint correctly serves image content."""
-    media_url = _get_media_url_from_image(app, app_port)
+    media_url = _get_media_url_from_image(app, app_base_url)
 
     assert media_url is not None
 
@@ -348,9 +377,9 @@ def test_media_endpoint_serves_image_content(app: Page, app_port: int):
     assert "image" in content_type
 
 
-def test_media_endpoint_supports_range_requests(app: Page, app_port: int):
+def test_media_endpoint_supports_range_requests(app: Page, app_base_url: str):
     """Test that media endpoint supports Accept-Ranges header for streaming."""
-    media_url = _get_media_url_from_image(app, app_port)
+    media_url = _get_media_url_from_image(app, app_base_url)
 
     assert media_url is not None
 
@@ -363,9 +392,9 @@ def test_media_endpoint_supports_range_requests(app: Page, app_port: int):
     assert accept_ranges == "bytes"
 
 
-def test_media_endpoint_handles_range_request(app: Page, app_port: int):
+def test_media_endpoint_handles_range_request(app: Page, app_base_url: str):
     """Test that media endpoint correctly handles Range header requests."""
-    media_url = _get_media_url_from_image(app, app_port)
+    media_url = _get_media_url_from_image(app, app_base_url)
 
     assert media_url is not None
 
@@ -384,10 +413,10 @@ def test_media_endpoint_handles_range_request(app: Page, app_port: int):
     assert len(response.body()) == 10
 
 
-def test_media_endpoint_returns_404_for_invalid_file(app: Page, app_port: int):
+def test_media_endpoint_returns_404_for_invalid_file(app: Page, app_base_url: str):
     """Test that media endpoint returns 404 for non-existent files."""
     response = app.request.get(
-        f"http://localhost:{app_port}/media/nonexistent-file-id.txt"
+        build_app_url(app_base_url, path="/media/nonexistent-file-id.txt")
     )
 
     assert response.status == 404
@@ -398,10 +427,10 @@ def test_media_endpoint_returns_404_for_invalid_file(app: Page, app_port: int):
 # =============================================================================
 
 
-def test_upload_endpoint_options_returns_cors_headers(app: Page, app_port: int):
+def test_upload_endpoint_options_returns_cors_headers(app: Page, app_base_url: str):
     """Test that upload endpoint OPTIONS request returns CORS headers."""
     response = app.request.fetch(
-        f"http://localhost:{app_port}/_stcore/upload_file/test-session/test-file",
+        build_app_url(app_base_url, path="/_stcore/upload_file/test-session/test-file"),
         method="OPTIONS",
     )
 
@@ -414,7 +443,7 @@ def test_upload_endpoint_options_returns_cors_headers(app: Page, app_port: int):
     assert "DELETE" in response.headers.get("access-control-allow-methods", "")
 
 
-def test_upload_endpoint_rejects_invalid_session(app: Page, app_port: int):
+def test_upload_endpoint_rejects_invalid_session(app: Page, app_base_url: str):
     """Test that upload endpoint rejects uploads with invalid session_id.
 
     When XSRF protection is enabled (default), the server will return 403 Forbidden
@@ -425,7 +454,9 @@ def test_upload_endpoint_rejects_invalid_session(app: Page, app_port: int):
 
     # Try to upload with an invalid session ID
     response = app.request.put(
-        f"http://localhost:{app_port}/_stcore/upload_file/invalid-session-id/test-file",
+        build_app_url(
+            app_base_url, path="/_stcore/upload_file/invalid-session-id/test-file"
+        ),
         multipart={
             "file": {
                 "name": "test.txt",
@@ -439,7 +470,7 @@ def test_upload_endpoint_rejects_invalid_session(app: Page, app_port: int):
     assert response.status in {400, 403}, f"Expected 400 or 403, got {response.status}"
 
 
-def test_upload_delete_endpoint(app: Page, app_port: int):
+def test_upload_delete_endpoint(app: Page, app_base_url: str):
     """Test that upload DELETE endpoint responds correctly.
 
     When XSRF protection is enabled (default), the server will return 403 Forbidden
@@ -450,7 +481,7 @@ def test_upload_delete_endpoint(app: Page, app_port: int):
 
     # DELETE on a non-existent file
     response = app.request.delete(
-        f"http://localhost:{app_port}/_stcore/upload_file/any-session/any-file"
+        build_app_url(app_base_url, path="/_stcore/upload_file/any-session/any-file")
     )
 
     # Should return 204 (success) or 403 (XSRF protection)
@@ -494,10 +525,10 @@ def test_xsrf_cookie_format(app: Page):
 # =============================================================================
 
 
-def test_frontend_static_files_served(app: Page, app_port: int):
+def test_frontend_static_files_served(app: Page, app_base_url: str):
     """Test that frontend static files (JS, CSS) are served correctly."""
     # Request the main page
-    response = app.request.get(f"http://localhost:{app_port}/")
+    response = app.request.get(build_app_url(app_base_url, path="/"))
 
     expect(response).to_be_ok()
     assert response.status == 200
@@ -507,19 +538,19 @@ def test_frontend_static_files_served(app: Page, app_port: int):
     assert "text/html" in content_type
 
 
-def test_frontend_static_files_have_cache_headers(app: Page, app_port: int):
+def test_frontend_static_files_have_cache_headers(app: Page, app_base_url: str):
     """Test that index.html has no-cache but assets have long cache."""
     # Index should have no-cache
-    response = app.request.get(f"http://localhost:{app_port}/")
+    response = app.request.get(build_app_url(app_base_url, path="/"))
 
     expect(response).to_be_ok()
     cache_control = response.headers.get("cache-control", "")
     assert "no-cache" in cache_control
 
 
-def test_nonexistent_route_returns_index(app: Page, app_port: int):
+def test_nonexistent_route_returns_index(app: Page, app_base_url: str):
     """Test that non-existent routes return index.html (SPA behavior)."""
-    response = app.request.get(f"http://localhost:{app_port}/nonexistent-page")
+    response = app.request.get(build_app_url(app_base_url, path="/nonexistent-page"))
 
     # Should still return 200 and serve the SPA
     expect(response).to_be_ok()
@@ -534,7 +565,7 @@ def test_nonexistent_route_returns_index(app: Page, app_port: int):
 # =============================================================================
 
 
-def test_trailing_slash_redirect_on_static_paths(app: Page, app_port: int):
+def test_trailing_slash_redirect_on_static_paths(app: Page, app_base_url: str):
     """Test that trailing slashes on static paths are handled correctly.
 
     The server should either:
@@ -545,7 +576,7 @@ def test_trailing_slash_redirect_on_static_paths(app: Page, app_port: int):
     """
     # Request a path with trailing slash
     response = app.request.get(
-        f"http://localhost:{app_port}/some-path/",
+        build_app_url(app_base_url, path="/some-path/"),
         max_redirects=0,  # Don't follow redirects to see the redirect response
     )
 
@@ -560,7 +591,7 @@ def test_trailing_slash_redirect_on_static_paths(app: Page, app_port: int):
     )
 
 
-def test_base_url_without_trailing_slash(app: Page, app_port: int):
+def test_base_url_without_trailing_slash(app: Page, app_base_url: str):
     """Test that base URL without trailing slash is handled correctly.
 
     The server should either:
@@ -568,14 +599,14 @@ def test_base_url_without_trailing_slash(app: Page, app_port: int):
     - Or serve content directly
     """
     # The root path should work (may redirect to add trailing slash or serve directly)
-    response = app.request.get(f"http://localhost:{app_port}")
+    response = app.request.get(app_base_url.rstrip("/"))
 
     # Should succeed (possibly after redirect)
     expect(response).to_be_ok()
     assert response.status == 200
 
 
-def test_double_slash_not_redirected_to_external(app: Page, app_port: int):
+def test_double_slash_not_redirected_to_external(app: Page, app_base_url: str):
     """Test that double slashes don't cause redirect to external host.
 
     A path like //example.com could be misinterpreted as a protocol-relative URL.
@@ -583,7 +614,7 @@ def test_double_slash_not_redirected_to_external(app: Page, app_port: int):
     """
     # Request with double slash at start
     response = app.request.get(
-        f"http://localhost:{app_port}//some-path",
+        build_app_url(app_base_url, path="//some-path"),
         max_redirects=0,
     )
 
@@ -626,7 +657,7 @@ def test_websocket_connection_to_stream_endpoint(app: Page):
     )
 
 
-def test_direct_websocket_connection_with_subprotocol(app: Page, app_port: int):
+def test_direct_websocket_connection_with_subprotocol(app: Page, app_base_url: str):
     """Test direct WebSocket connection with Sec-WebSocket-Protocol header.
 
     This verifies the server correctly handles the subprotocol negotiation.
@@ -634,25 +665,26 @@ def test_direct_websocket_connection_with_subprotocol(app: Page, app_port: int):
     of Python async WebSocket libraries conflicting with Playwright's event loop.
     """
     # The app fixture automatically navigates and waits for the app to load.
-    result = app.evaluate(f"""
-        () => new Promise((resolve, reject) => {{
-            const ws = new WebSocket(
-                'ws://localhost:{app_port}/_stcore/stream',
-                ['streamlit']
-            );
-            ws.onopen = () => {{
+    ws_url = _app_ws_url(app_base_url, path="/_stcore/stream")
+    result = app.evaluate(
+        """
+        (url) => new Promise((resolve, reject) => {
+            const ws = new WebSocket(url, ['streamlit']);
+            ws.onopen = () => {
                 resolve(ws.protocol);
                 ws.close();
-            }};
+            };
             ws.onerror = () => reject('connection failed');
             setTimeout(() => reject('timeout'), 5000);
-        }})
-    """)
+        })
+    """,
+        ws_url,
+    )
 
     assert result == "streamlit", f"Expected 'streamlit' subprotocol, got: {result}"
 
 
-def test_direct_websocket_with_session_id_in_subprotocol(app: Page, app_port: int):
+def test_direct_websocket_with_session_id_in_subprotocol(app: Page, app_base_url: str):
     """Test that server accepts session ID in Sec-WebSocket-Protocol for reconnection.
 
     This verifies the server correctly parses the third entry (session ID)
@@ -670,20 +702,24 @@ def test_direct_websocket_with_session_id_in_subprotocol(app: Page, app_port: in
         session_id = "test-session-id-12345"
 
     # Subprotocol entries: protocol name, XSRF token placeholder, session ID
-    result = app.evaluate(f"""
-        () => new Promise((resolve, reject) => {{
+    ws_url = _app_ws_url(app_base_url, path="/_stcore/stream")
+    result = app.evaluate(
+        """
+        ([url, sessionId]) => new Promise((resolve, reject) => {
             const ws = new WebSocket(
-                'ws://localhost:{app_port}/_stcore/stream',
-                ['streamlit', 'placeholder', '{session_id}']
+                url,
+                ['streamlit', 'placeholder', sessionId]
             );
-            ws.onopen = () => {{
-                resolve({{ connected: true, protocol: ws.protocol }});
+            ws.onopen = () => {
+                resolve({ connected: true, protocol: ws.protocol });
                 ws.close();
-            }};
-            ws.onerror = () => resolve({{ connected: false, error: 'connection failed' }});
-            setTimeout(() => resolve({{ connected: false, error: 'timeout' }}), 5000);
-        }})
-    """)
+            };
+            ws.onerror = () => resolve({ connected: false, error: 'connection failed' });
+            setTimeout(() => resolve({ connected: false, error: 'timeout' }), 5000);
+        })
+    """,
+        [ws_url, session_id],
+    )
 
     assert result["connected"], f"WebSocket connection failed: {result.get('error')}"
     assert result["protocol"] == "streamlit", (

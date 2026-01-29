@@ -24,6 +24,7 @@ from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import (
     AsyncSubprocess,
+    build_app_url,
     find_available_port,
     wait_for_app_run,
 )
@@ -34,14 +35,14 @@ if TYPE_CHECKING:
 
 AUTH_SECRETS_TEMPLATE = """
 [auth]
-redirect_uri = "http://localhost:{app_port}/oauth2callback"
+redirect_uri = "{redirect_uri}"
 cookie_secret = "your_cookie_secret_here"
 expose_tokens = ["id", "access"]
 
 [auth.testprovider]
 client_id = "test-client-id"
 client_secret = "test-client-secret"
-server_metadata_url = "http://localhost:{oidc_server_port}/.well-known/openid-configuration"
+server_metadata_url = "{server_metadata_url}"
 """
 
 
@@ -112,11 +113,14 @@ def fake_oidc_server(
 
 
 @pytest.fixture(scope="module")
-def prepare_secrets_file(app_port: int, oidc_server_port: int):
-    """Fixture that inject the correct port to auth_secrets.toml file redirect_uri."""
-    # Read in the file
+def prepare_secrets_file(app_base_url: str, oidc_server_port: int):
+    """Create a temporary auth secrets TOML with correct redirect/provider URLs."""
+    redirect_uri = build_app_url(app_base_url, path="/oauth2callback")
+    server_metadata_url = build_app_url(
+        f"http://localhost:{oidc_server_port}", path="/.well-known/openid-configuration"
+    )
     rendered_secrets = AUTH_SECRETS_TEMPLATE.format(
-        app_port=app_port, oidc_server_port=oidc_server_port
+        redirect_uri=redirect_uri, server_metadata_url=server_metadata_url
     )
     with NamedTemporaryFile(suffix=".toml", delete=False) as tmp_secrets_file:
         tmp_secrets_file.write(rendered_secrets.encode())
@@ -139,7 +143,7 @@ def app_server_extra_args(
 
 
 def _click_and_wait_for_oauth_redirect(
-    app: Page, button_label: str, app_port: int
+    app: Page, button_label: str, app_base_url: str
 ) -> None:
     """Click a button that triggers OAuth redirect and wait for navigation back to app.
 
@@ -148,15 +152,15 @@ def _click_and_wait_for_oauth_redirect(
     """
     get_button(app, button_label).click()
     # Wait for OAuth redirect chain to complete and return to app root
-    app.wait_for_url(f"http://localhost:{app_port}/")
+    app.wait_for_url(build_app_url(app_base_url, path="/"))
     wait_for_app_run(app)
 
 
 @pytest.mark.parametrize("fake_oidc_server", ["success"], indirect=True)
 @pytest.mark.usefixtures("fake_oidc_server", "prepare_secrets_file")
-def test_login_successful(app: Page, app_port: int):
+def test_login_successful(app: Page, app_base_url: str):
     """Test authentication flow with test provider."""
-    _click_and_wait_for_oauth_redirect(app, "TEST LOGIN", app_port)
+    _click_and_wait_for_oauth_redirect(app, "TEST LOGIN", app_base_url)
 
     expect_markdown(app, "authtest@example.com")
 
@@ -168,9 +172,9 @@ def test_login_successful(app: Page, app_port: int):
 
 @pytest.mark.parametrize("fake_oidc_server", ["failure"], indirect=True)
 @pytest.mark.usefixtures("fake_oidc_server", "prepare_secrets_file")
-def test_login_failure(app: Page, app_port: int):
+def test_login_failure(app: Page, app_base_url: str):
     """Test authentication flow with error response from oidc server."""
-    _click_and_wait_for_oauth_redirect(app, "TEST LOGIN", app_port)
+    _click_and_wait_for_oauth_redirect(app, "TEST LOGIN", app_base_url)
 
     text = app.get_by_test_id("stMarkdownContainer").filter(has_text="John Doe")
     expect(text).not_to_be_attached()
@@ -178,20 +182,20 @@ def test_login_failure(app: Page, app_port: int):
 
 @pytest.mark.parametrize("fake_oidc_server", ["success"], indirect=True)
 @pytest.mark.usefixtures("fake_oidc_server", "prepare_secrets_file")
-def test_logout_with_end_session_endpoint(app: Page, app_port: int):
+def test_logout_with_end_session_endpoint(app: Page, app_base_url: str):
     """Test logout flow using OIDC end_session_endpoint.
 
     This tests PR #12693: logout should redirect to provider's end_session_endpoint.
     """
     # First login
-    _click_and_wait_for_oauth_redirect(app, "TEST LOGIN", app_port)
+    _click_and_wait_for_oauth_redirect(app, "TEST LOGIN", app_base_url)
 
     # Verify we're logged in
     expect_markdown(app, "YOU ARE LOGGED IN")
     expect_markdown(app, "John Doe")
 
     # Now logout (also goes through OIDC end_session_endpoint redirect)
-    _click_and_wait_for_oauth_redirect(app, "TEST LOGOUT", app_port)
+    _click_and_wait_for_oauth_redirect(app, "TEST LOGOUT", app_base_url)
 
     # Verify we're logged out
     expect_markdown(app, "NOT LOGGED IN")

@@ -20,7 +20,7 @@ from typing import Final
 import pytest
 from playwright.sync_api import FilePayload, Page, expect
 
-from e2e_playwright.conftest import wait_for_app_run
+from e2e_playwright.conftest import build_app_url, wait_for_app_run
 from e2e_playwright.shared.app_utils import (
     click_button,
     expect_connection_status,
@@ -35,13 +35,15 @@ NUM_DISCONNECTS: Final[int] = 15
 DISCONNECT_WEBSOCKET_ACTION: Final = "window.streamlitDebug.disconnectWebsocket();"
 
 
-def _get_session_event_counts(app: Page, app_port: int) -> dict[str, int]:
+def _get_session_event_counts(app: Page, app_base_url: str) -> dict[str, int]:
     """Fetch session event metrics from the metrics endpoint.
 
     Returns a dict with keys 'connect', 'reconnect', 'disconnect' and their counts.
     """
     response = app.request.get(
-        f"http://localhost:{app_port}/_stcore/metrics?families=session_events_total"
+        build_app_url(
+            app_base_url, path="/_stcore/metrics", query="families=session_events_total"
+        )
     )
     text = response.text()
 
@@ -132,13 +134,13 @@ def test_retain_uploaded_files_when_websocket_connection_drops_and_reconnects(
 # skip webkit because the camera permission cannot be set programmatically
 @pytest.mark.skip_browser("webkit")
 def test_retain_captured_pictures_when_websocket_connection_drops_and_reconnects(
-    app: Page, app_port: int
+    app: Page, app_base_url: str
 ):
     # wait for the media call that is made when the image is returned
     with app.expect_event(
         "response",
         predicate=lambda response: response.url.startswith(
-            f"http://localhost:{app_port}/media/"
+            build_app_url(app_base_url, path="/media/")
         ),
     ):
         expect(app.get_by_test_id("stToolbar")).to_be_attached()
@@ -164,7 +166,7 @@ def test_retain_captured_pictures_when_websocket_connection_drops_and_reconnects
 
 
 def test_session_event_metrics_increase_on_disconnect_and_reconnect(
-    app: Page, app_port: int
+    app: Page, app_base_url: str
 ):
     """Test that session_events_total metrics increase on disconnect/reconnect.
 
@@ -173,7 +175,7 @@ def test_session_event_metrics_increase_on_disconnect_and_reconnect(
     """
     wait_for_app_run(app)
 
-    initial_counts = _get_session_event_counts(app, app_port)
+    initial_counts = _get_session_event_counts(app, app_base_url)
 
     assert initial_counts["connect"] > 0, (
         f"Expected connect count to be nonzero, got {initial_counts['connect']}"
@@ -183,7 +185,7 @@ def test_session_event_metrics_increase_on_disconnect_and_reconnect(
     expect_connection_status(app, "CONNECTING", DISCONNECT_WEBSOCKET_ACTION)
     expect(app.get_by_test_id("stStatusWidget")).not_to_be_attached()
 
-    updated_counts = _get_session_event_counts(app, app_port)
+    updated_counts = _get_session_event_counts(app, app_base_url)
 
     assert updated_counts["disconnect"] > initial_counts["disconnect"], (
         f"Expected disconnect count to increase from {initial_counts['disconnect']}, "
@@ -197,7 +199,7 @@ def test_session_event_metrics_increase_on_disconnect_and_reconnect(
 
 
 def test_session_event_metrics_increase_after_multiple_disconnects(
-    app: Page, app_port: int
+    app: Page, app_base_url: str
 ):
     """Test that session_events_total metrics accumulate over multiple disconnects.
 
@@ -206,7 +208,7 @@ def test_session_event_metrics_increase_after_multiple_disconnects(
     """
     wait_for_app_run(app)
 
-    initial_counts = _get_session_event_counts(app, app_port)
+    initial_counts = _get_session_event_counts(app, app_base_url)
 
     num_disconnects = 3
     for _ in range(num_disconnects):
@@ -214,7 +216,7 @@ def test_session_event_metrics_increase_after_multiple_disconnects(
         expect_connection_status(app, "CONNECTING", DISCONNECT_WEBSOCKET_ACTION)
         expect(app.get_by_test_id("stStatusWidget")).not_to_be_attached()
 
-    final_counts = _get_session_event_counts(app, app_port)
+    final_counts = _get_session_event_counts(app, app_base_url)
 
     disconnect_increase = final_counts["disconnect"] - initial_counts["disconnect"]
     assert disconnect_increase >= num_disconnects, (

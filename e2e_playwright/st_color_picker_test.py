@@ -19,6 +19,7 @@ from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import (
     ImageCompareFunction,
+    build_app_url,
     wait_for_app_loaded,
     wait_for_app_run,
 )
@@ -199,10 +200,10 @@ def test_typing_new_hsl_color_on_color_picker_works(
     assert_snapshot(default_picker, name="st_color_picker-typed_new_hsl_color")
 
 
-def test_color_picker_query_param_seeding(page: Page, app_port: int):
+def test_color_picker_query_param_seeding(page: Page, app_base_url: str):
     """Test that color picker value can be seeded from URL query params."""
     # Load app with query param set (URL-encoded # is %23)
-    page.goto(f"http://localhost:{app_port}/?bound_color=%23FF5733")
+    page.goto(build_app_url(app_base_url, query={"bound_color": "#FF5733"}))
     wait_for_app_loaded(page)
 
     # Color picker should show the seeded color (displayed uppercase)
@@ -240,10 +241,10 @@ def test_color_picker_query_param_updates_url(app: Page):
     expect_prefixed_markdown(app, "bound color value:", "#000000")
 
 
-def test_color_picker_query_param_default_custom(page: Page, app_port: int):
+def test_color_picker_query_param_default_custom(page: Page, app_base_url: str):
     """Test color picker with custom default: seeding and param removal."""
     # Load app with query param overriding the red default
-    page.goto(f"http://localhost:{app_port}/?bound_red=%2300FF00")
+    page.goto(build_app_url(app_base_url, query={"bound_red": "#00FF00"}))
     wait_for_app_loaded(page)
 
     # Color picker should show green (overriding red default, case preserved from URL)
@@ -262,10 +263,10 @@ def test_color_picker_query_param_default_custom(page: Page, app_port: int):
     expect_prefixed_markdown(page, "bound color red value:", "#ff0000")
 
 
-def test_color_picker_query_param_invalid_value(page: Page, app_port: int):
+def test_color_picker_query_param_invalid_value(page: Page, app_base_url: str):
     """Test that invalid URL values are cleared and widget uses default."""
     # Load app with invalid query param value (not a valid hex color)
-    page.goto(f"http://localhost:{app_port}/?bound_color=notacolor")
+    page.goto(build_app_url(app_base_url, query={"bound_color": "notacolor"}))
     wait_for_app_loaded(page)
 
     # Color picker should use default (black), and invalid param should be cleared
@@ -274,11 +275,11 @@ def test_color_picker_query_param_invalid_value(page: Page, app_port: int):
     expect(page).not_to_have_url(re.compile(r"bound_color"))
 
 
-def test_color_picker_query_param_3char_hex(page: Page, app_port: int):
+def test_color_picker_query_param_3char_hex(page: Page, app_base_url: str):
     """Test that 3-char hex shorthand colors (e.g., #F00) work in URL params."""
     # Load app with 3-char hex color (URL-encoded # is %23)
     # #F00 is shorthand for #FF0000 (red)
-    page.goto(f"http://localhost:{app_port}/?bound_color=%23F00")
+    page.goto(build_app_url(app_base_url, query={"bound_color": "#F00"}))
     wait_for_app_loaded(page)
 
     # Color picker should accept the 3-char hex and display it

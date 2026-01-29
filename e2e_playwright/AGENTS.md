@@ -45,6 +45,17 @@ Import from `conftest.py`:
   - uses stable selectors and the `app_target`/`app_base_url` abstractions (so it works both for top-level and iframe-hosted apps),
   - avoids relying on local-only infrastructure like request routing/interception (`iframed_app`) or filesystem-coupled assumptions.
 
+## URL Handling (No Localhost Hardcoding)
+
+- In test modules (outside `conftest.py`), never hardcode or construct `http://localhost:{app_port}`.
+- Use `app_base_url` (and `build_app_url`) for navigation, routing, and URL assertions.
+- Build URLs with `build_app_url(app_base_url, path=..., query=..., fragment=...)` to preserve any base path/query and support external app runs.
+- For direct navigation, prefer `page.goto(build_app_url(...))` over string concatenation.
+- For network interception and direct HTTP calls, also build from `app_base_url`:
+  - `page.route(build_app_url(app_base_url, path="/media/**"), handler)`
+  - `page.request.get(build_app_url(app_base_url, path="/_stcore/health"))`
+- Avoid parsing the current URL to “recover” a localhost port (e.g. `urlparse(app.url).port`). If you need a stable base, use `app_base_url` (or `app_target.base_url`).
+
 ## Best Practices
 
 - Imports should be at the top-level of the test file. Only use imports inside test functions when there is a specific reason.

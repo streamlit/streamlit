@@ -18,6 +18,7 @@ from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import (
     ImageCompareFunction,
+    build_app_url,
     wait_for_app_loaded,
     wait_for_app_run,
 )
@@ -186,9 +187,9 @@ def test_dynamic_toggle_props(app: Page, assert_snapshot: ImageCompareFunction):
     expect_prefixed_markdown(app, "Updated toggle state:", "False")
 
 
-def test_toggle_query_param_seeding(page: Page, app_port: int):
+def test_toggle_query_param_seeding(page: Page, app_base_url: str):
     """Test that toggle value can be seeded from URL query params."""
-    page.goto(f"http://localhost:{app_port}/?bound_toggle=true")
+    page.goto(build_app_url(app_base_url, query={"bound_toggle": "true"}))
     wait_for_app_loaded(page)
 
     expect_prefixed_markdown(page, "bound toggle value:", "True")
@@ -215,10 +216,10 @@ def test_toggle_query_param_updates_url(app: Page):
     expect(app).not_to_have_url(re.compile(r"bound_toggle="))
 
 
-def test_toggle_query_param_default_true(page: Page, app_port: int):
+def test_toggle_query_param_default_true(page: Page, app_base_url: str):
     """Test toggle with default True: seeding and param removal."""
     # Load app with query param overriding the True default
-    page.goto(f"http://localhost:{app_port}/?bound_toggle_true=false")
+    page.goto(build_app_url(app_base_url, query={"bound_toggle_true": "false"}))
     wait_for_app_loaded(page)
 
     # Toggle should be off (overriding True default)
@@ -232,9 +233,9 @@ def test_toggle_query_param_default_true(page: Page, app_port: int):
     expect(page).not_to_have_url(re.compile(r"bound_toggle_true"))
 
 
-def test_toggle_query_param_invalid_value(page: Page, app_port: int):
+def test_toggle_query_param_invalid_value(page: Page, app_base_url: str):
     """Test that invalid URL values are cleared and widget uses default."""
-    page.goto(f"http://localhost:{app_port}/?bound_toggle=invalid")
+    page.goto(build_app_url(app_base_url, query={"bound_toggle": "invalid"}))
     wait_for_app_loaded(page)
 
     # Toggle should use default (False), and invalid param should be cleared
