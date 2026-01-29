@@ -26,6 +26,7 @@ import { ThemedStyledDropdownListItem } from "~lib/components/shared/Dropdown/st
 import Icon from "~lib/components/shared/Icon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
 import Tooltip, { Placement } from "~lib/components/shared/Tooltip"
+import { measureScrollbarGutterSize } from "~lib/hooks/useScrollbarGutterSize"
 import { EmotionTheme, hasLightBackgroundColor } from "~lib/theme"
 
 /**
@@ -70,8 +71,23 @@ export const createDateTimePickerOverrides = ({
       placement: PLACEMENT.bottomLeft,
       overrides: {
         Body: {
-          style: {
-            marginTop: theme.spacing.px,
+          style: () => {
+            const lightBackground = hasLightBackgroundColor(theme)
+            return {
+              marginTop: theme.spacing.px,
+              borderTopLeftRadius: theme.radii.default,
+              borderTopRightRadius: theme.radii.default,
+              borderBottomRightRadius: theme.radii.default,
+              borderBottomLeftRadius: theme.radii.default,
+              borderWidth: lightBackground ? 0 : theme.sizes.borderWidth,
+              borderStyle: lightBackground ? "none" : "solid",
+              borderColor: lightBackground
+                ? "transparent"
+                : theme.colors.borderColor,
+              boxShadow: lightBackground
+                ? theme.shadows.popover
+                : theme.shadows.none,
+            }
           },
         },
       },
@@ -306,27 +322,62 @@ export const createDateTimePickerOverrides = ({
                 },
               },
               Dropdown: {
-                style: () => ({
-                  // Padding to inset items from the edges (left padding matches VirtualDropdown)
-                  paddingTop: theme.spacing.xs,
-                  paddingBottom: theme.spacing.xs,
-                  paddingLeft: theme.spacing.xs,
-                  paddingRight: theme.spacing.none,
-                  boxShadow: "none",
-                  maxHeight: theme.sizes.maxDropdownHeight,
-                }),
+                style: () => {
+                  // Detect scrollbar mode: classic (>0) vs overlay (0)
+                  const scrollbarGutterSize = measureScrollbarGutterSize()
+                  const isClassicMode = scrollbarGutterSize > 0
+                  return {
+                    paddingTop: theme.spacing.none,
+                    paddingBottom: theme.spacing.none,
+                    paddingLeft: theme.spacing.xs,
+                    // Overlay: paddingRight = paddingLeft; Classic: no padding (gutter handles it)
+                    paddingRight: isClassicMode
+                      ? theme.spacing.none
+                      : theme.spacing.xs,
+                    boxShadow: "none",
+                    overflowY: "auto",
+                    overflowX: "hidden",
+                    maxHeight: theme.sizes.maxDropdownHeight,
+                    // Classic mode: reserve gutter space for scrollbar
+                    scrollbarGutter: isClassicMode ? "stable" : undefined,
+                    // Items have 0 margin (gutter or padding provides spacing)
+                    "--scrollbar-gutter-size": theme.spacing.xs,
+                  } as React.CSSProperties
+                },
               },
               DropdownListItem: {
                 component: TimeInputListItem,
+                style: () =>
+                  ({
+                    // Items have 0 margin (gutter or padding provides spacing)
+                    "--scrollbar-gutter-size": theme.spacing.xs,
+                  }) as React.CSSProperties,
               },
               Popover: {
                 props: {
                   ignoreBoundary: isInSidebar,
                   overrides: {
                     Body: {
-                      style: () => ({
-                        marginTop: theme.spacing.px,
-                      }),
+                      style: () => {
+                        const lightBackground = hasLightBackgroundColor(theme)
+                        return {
+                          marginTop: theme.spacing.px,
+                          borderTopLeftRadius: theme.radii.default,
+                          borderTopRightRadius: theme.radii.default,
+                          borderBottomRightRadius: theme.radii.default,
+                          borderBottomLeftRadius: theme.radii.default,
+                          borderWidth: lightBackground
+                            ? 0
+                            : theme.sizes.borderWidth,
+                          borderStyle: lightBackground ? "none" : "solid",
+                          borderColor: lightBackground
+                            ? "transparent"
+                            : theme.colors.borderColor,
+                          boxShadow: lightBackground
+                            ? theme.shadows.popover
+                            : theme.shadows.none,
+                        }
+                      },
                     },
                   },
                 },

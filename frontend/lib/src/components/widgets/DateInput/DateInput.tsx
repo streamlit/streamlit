@@ -277,8 +277,23 @@ function DateInput({
               placement: PLACEMENT.bottomLeft,
               overrides: {
                 Body: {
-                  style: {
-                    marginTop: spacing.px,
+                  style: () => {
+                    const lightBackground = hasLightBackgroundColor(theme)
+                    return {
+                      marginTop: spacing.px,
+                      borderTopLeftRadius: theme.radii.default,
+                      borderTopRightRadius: theme.radii.default,
+                      borderBottomRightRadius: theme.radii.default,
+                      borderBottomLeftRadius: theme.radii.default,
+                      borderWidth: lightBackground ? 0 : sizes.borderWidth,
+                      borderStyle: lightBackground ? "none" : "solid",
+                      borderColor: lightBackground
+                        ? "transparent"
+                        : colors.borderColor,
+                      boxShadow: lightBackground
+                        ? theme.shadows.popover
+                        : theme.shadows.none,
+                    }
                   },
                 },
               },
