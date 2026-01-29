@@ -40,6 +40,7 @@ Import from `conftest.py`:
 ## External Test Mode
 
 - When writing `@pytest.mark.external_test` tests, prefer `app_target` over a bare `Page`/`FrameLocator`. It abstracts whether the app DOM is at the top-level (`Page`) or inside a host page (`FrameLocator`).
+- The `external_test` marker supports a small set of keyword arguments. See `e2e_playwright/conftest.py` (and `pytest --markers`) for the canonical list and behavior.
 - External modes are configured via CLI/env and may affect what fixtures mean:
   - `--external-app-url` / `STREAMLIT_E2E_EXTERNAL_APP_URL`: run against an externally hosted Streamlit app (no local server).
   - `--external-host-url` / `STREAMLIT_E2E_EXTERNAL_HOST_URL`: run against a host page that embeds the app in an iframe (no local server).

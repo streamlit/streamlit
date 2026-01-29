@@ -129,7 +129,11 @@ def pytest_configure(config: pytest.Config) -> None:
     )
     config.addinivalue_line(
         "markers",
-        "external_test: mark test as compatible with external app execution mode",
+        "external_test(upload_test_assets=False): "
+        "mark test as compatible with external app execution mode. "
+        "Set upload_test_assets=True when the hosted app needs "
+        "`e2e_playwright/test_assets/` to be available. "
+        "Only the documented keyword arguments are supported (unknown kwargs error).",
     )
 
 
@@ -163,6 +167,35 @@ def pytest_collection_modifyitems(
     all tests will be skipped (see ``skip_non_external_tests_in_external_mode``)
     which is usually not what the user intended.
     """
+    for item in items:
+        marker = item.get_closest_marker("external_test")
+        if marker is None:
+            continue
+
+        if marker.args:
+            raise pytest.UsageError(
+                "external_test marker does not accept positional arguments. "
+                "Use keyword arguments only, e.g. "
+                "@pytest.mark.external_test(upload_test_assets=True)."
+            )
+
+        allowed_kwargs = {"upload_test_assets"}
+        unknown_kwargs = sorted(set(marker.kwargs) - allowed_kwargs)
+        if unknown_kwargs:
+            raise pytest.UsageError(
+                "external_test marker received unknown keyword arguments: "
+                f"{', '.join(unknown_kwargs)}. "
+                "Allowed keyword arguments: upload_test_assets."
+            )
+
+        if "upload_test_assets" in marker.kwargs and not isinstance(
+            marker.kwargs["upload_test_assets"], bool
+        ):
+            raise pytest.UsageError(
+                "external_test marker keyword argument upload_test_assets "
+                "must be a boolean."
+            )
+
     external_app = _get_config_option_or_env(
         config, "--external-app-url", "STREAMLIT_E2E_EXTERNAL_APP_URL"
     )
