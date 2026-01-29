@@ -439,11 +439,11 @@ check:
 		echo ""; \
 	fi
 	@# Python tests
-	@PY_TESTS=$$(uv run python scripts/get_changed_files.py --python-tests --strip-prefix lib/); \
+	@PY_TESTS=$$(uv run python scripts/get_changed_files.py --python-tests); \
 	if [ -n "$$PY_TESTS" ]; then \
 		echo "=== Python: tests (pytest) ==="; \
 		echo "Running: $$PY_TESTS"; \
-		cd lib && uv run pytest -v $$PY_TESTS || exit 1; \
+		uv run pytest -c lib/pyproject.toml -v $$PY_TESTS || exit 1; \
 		echo ""; \
 	fi
 	@# Pre-commit hooks on all changed files (handles frontend formatting via prettier)
