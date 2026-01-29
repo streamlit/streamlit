@@ -210,6 +210,27 @@ def test_enter_to_submit_false(app: Page):
     expect(form_8.get_by_test_id("stMarkdown").last).not_to_have_text("Form submitted")
 
 
+def test_number_input_enter_submits_current_value(app: Page):
+    """Tests that pressing Enter on number_input submits the current value (not stale).
+
+    This is a regression test for issue #13751 where the form would submit
+    with the old value instead of the newly typed value when pressing Enter
+    without first blurring the field.
+    """
+    # Use form_1 which has number_input and displays the submitted value
+    form_1 = app.get_by_test_id("stForm").nth(0)
+    number_input = form_1.get_by_test_id("stNumberInput").locator("input")
+
+    # Type a new value and press Enter WITHOUT blurring the field
+    number_input.fill("42")
+    number_input.press("Enter")
+    wait_for_app_run(app)
+
+    # Verify the submitted value is the new value, not the old one (0.0)
+    markdown_elements = app.get_by_test_id("stMarkdown")
+    expect(markdown_elements.nth(3)).to_have_text("Number Input: 42.0")
+
+
 def test_form_submits_on_click(app: Page):
     """Tests that submit via enabled form submit button works."""
     form_6 = app.get_by_test_id("stForm").nth(5)

@@ -313,9 +313,32 @@ const NumberInput: React.FC<Props> = ({
     (e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>): void => {
       if (e.key === "Enter") {
         if (dirty) {
-          // When committing, if currentNumericValue is null (empty input),
-          // commitValue will fall back to elementDefault
-          commitValue({ value: currentNumericValue, fromUi: true })
+          // Validate range first - if invalid, report and don't submit
+          if (
+            notNullOrUndefined(currentNumericValue) &&
+            (min > currentNumericValue || currentNumericValue > max)
+          ) {
+            inputRef.current?.reportValidity()
+            return
+          }
+
+          const newValue = currentNumericValue ?? elementDefault ?? null
+
+          // Update local state
+          setDirty(false)
+          setFormattedValue(formatCurrentValue(newValue))
+
+          // CRITICAL FIX: Update widget manager SYNCHRONOUSLY before form submit.
+          // This ensures the form has the current value when it submits.
+          // The setValueWithSource in commitValue triggers an async useEffect,
+          // but submitForm runs immediately after, reading stale state.
+          // By calling updateWidgetMgrState directly, we bypass the async path.
+          updateWidgetMgrState(
+            element,
+            widgetMgr,
+            { value: newValue, fromUi: true },
+            fragmentId
+          )
         }
         if (widgetMgr.allowFormEnterToSubmit(elementFormId)) {
           widgetMgr.submitForm(elementFormId, fragmentId)
@@ -325,10 +348,14 @@ const NumberInput: React.FC<Props> = ({
     [
       dirty,
       currentNumericValue,
-      commitValue,
+      min,
+      max,
+      elementDefault,
+      formatCurrentValue,
+      element,
       widgetMgr,
-      elementFormId,
       fragmentId,
+      elementFormId,
     ]
   )
 
