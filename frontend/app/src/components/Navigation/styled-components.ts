@@ -322,7 +322,7 @@ export const StyledSectionName = styled.div(({ theme }) => ({
 }))
 
 export const StyledPopoverContent = styled.div(({ theme }) => ({
-  padding: `${theme.spacing.xs} 0`,
+  padding: `${theme.spacing.twoXS} 0`,
   fontSize: theme.fontSizes.sm,
 }))
 
