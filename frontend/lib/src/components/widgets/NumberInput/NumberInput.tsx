@@ -463,6 +463,7 @@ const NumberInput: React.FC<Props> = ({
             Input: {
               props: {
                 "data-testid": "stNumberInputField",
+                "aria-invalid": !!error,
                 step: step,
                 min: min,
                 max: max,

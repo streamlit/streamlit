@@ -1509,11 +1509,12 @@ describe("NumberInput widget", () => {
       await user.type(input, "200")
       await user.tab()
 
-      // aria-invalid is set on the input's label element (the UIInput wrapper)
       expect(input).toHaveAttribute("aria-label", "Label")
       // The container should have the error class
       const container = screen.getByTestId("stNumberInputContainer")
       expect(container.className).toContain("error")
+      // aria-invalid is set on the input element via UIInput
+      expect(input).toHaveAttribute("aria-invalid", "true")
     })
   })
 })
