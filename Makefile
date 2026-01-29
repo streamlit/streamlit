@@ -432,7 +432,7 @@ check:
 		uv run ty check $$PY_FILES || exit 1; \
 		echo ""; \
 		echo "=== Python: type check (mypy) ==="; \
-		uv run mypy --config-file=mypy.ini $$PY_FILES || exit 1; \
+		uv run mypy $$PY_FILES || exit 1; \
 		echo ""; \
 	else \
 		echo "No Python files changed."; \
