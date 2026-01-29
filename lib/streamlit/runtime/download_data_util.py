@@ -46,7 +46,8 @@ def convert_data_to_bytes_and_infer_mime(
             inferred_mime_type = (
                 mimetypes.guess_type(filename)[0] or "application/octet-stream"
             )
-        elif os.path.isfile(data):  # ← YOU'RE MISSING THIS CHECK!
+        elif (isinstance(data, str) and data.startswith(("./", "../", "/")) 
+              and os.path.isfile(data)):
             data_as_bytes = file_util.local_file_down(data)
             inferred_mime_type = (
                 mimetypes.guess_type(data)[0] or "application/octet-stream"
