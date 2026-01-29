@@ -147,6 +147,7 @@ export {
 export type {
   CachedTheme,
   EmotionTheme,
+  IconSize,
   PresetThemeName,
   ThemeSelection,
   ThemeConfig,

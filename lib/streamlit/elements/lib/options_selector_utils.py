@@ -297,6 +297,7 @@ def validate_and_sync_value_with_options(
     This function has a side-effect: if the value is not found in the options
     and a key is provided, it will update session state with the new value.
 
+
     Parameters
     ----------
     current_value
@@ -321,29 +322,16 @@ def validate_and_sync_value_with_options(
     if current_value is None:
         return current_value, False
 
-    # For Enum values, use the original index_() approach which uses == comparison.
-    # This correctly handles enum class identity - enums from different classes
-    # (e.g., after script rerun) should NOT be considered equal, which is important
-    # for enum coercion to work correctly when coercion is disabled.
-    if isinstance(current_value, Enum):
-        try:
-            index_(opt, current_value)
+    # Use format_func comparison for all values. This correctly handles:
+    # - Custom objects without __eq__ (deepcopied instances)
+    # - Enum values (already from current class due to serde deserialization)
+    formatted_options_set = {format_func(o) for o in opt}
+    try:
+        formatted_value = format_func(current_value)
+        if formatted_value in formatted_options_set:
             return current_value, False
-        except ValueError:
-            pass  # Fall through to reset logic below
-    else:
-        # For non-Enum values, use format_func comparison. This handles custom objects
-        # without __eq__ where widget values are deepcopied and the deepcopied instances
-        # would fail identity comparison with ==.
-        try:
-            formatted_value = format_func(current_value)
-        except Exception:
-            # format_func failed - value is invalid
-            formatted_value = None
-
-        formatted_options_set = {format_func(o) for o in opt}
-        if formatted_value is not None and formatted_value in formatted_options_set:
-            return current_value, False
+    except Exception:  # noqa: S110
+        pass  # format_func failed - value is invalid, fall through to reset
 
     # Value not in options - reset to default
     if default_index is not None and len(opt) > 0:
@@ -424,3 +412,65 @@ def validate_and_sync_multiselect_value_with_options(
         get_session_state().reset_state_value(str(key), valid_values)
 
     return valid_values, True
+
+
+def validate_and_sync_range_value_with_options(
+    current_value: tuple[T, T],
+    opt: Sequence[T],
+    default_indices: list[int],
+    key: str | int | None,
+    format_func: Callable[[Any], str] = str,
+) -> tuple[tuple[T, T], bool]:
+    """Validate a range value (tuple of two values) against options.
+
+    If either value in the range is not found in options, the entire range is
+    reset to the default. This function has a side-effect: if the values are
+    invalid and a key is provided, it will update session state with the new value.
+
+    Parameters
+    ----------
+    current_value
+        The current range value (tuple of two values) to validate.
+    opt
+        The sequence of valid options.
+    default_indices
+        The default indices to reset to if value is invalid. Should contain
+        at least one index; if only one index is provided, the second default
+        will be the last option.
+    key
+        The widget key for session state updates.
+    format_func
+        Function to format options for comparison. Used to compare values by their
+        string representation instead of using == directly.
+
+    Returns
+    -------
+    tuple[tuple[T, T], bool]
+        A tuple of (validated_value, value_was_reset).
+    """
+    if len(opt) == 0:
+        return current_value, False
+
+    formatted_options_set = {format_func(o) for o in opt}
+
+    def is_valid(val: Any) -> bool:
+        """Check if a value exists in options via format_func comparison."""
+        try:
+            return format_func(val) in formatted_options_set
+        except Exception:
+            return False
+
+    def get_default_range() -> tuple[T, T]:
+        """Get the default range value."""
+        end_idx = default_indices[1] if len(default_indices) > 1 else len(opt) - 1
+        return (opt[default_indices[0]], opt[end_idx])
+
+    # Validate both values in the range.
+    if is_valid(current_value[0]) and is_valid(current_value[1]):
+        return current_value, False
+
+    # Either value is invalid - reset entire range.
+    new_value = get_default_range()
+    if key is not None:
+        get_session_state().reset_state_value(str(key), new_value)
+    return new_value, True
