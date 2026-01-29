@@ -73,7 +73,7 @@ jobs:
         if: steps.update-snapshots.outputs.script_status == 'success' && steps.count-snapshots.outputs.has_updates == 'true'
         id: git-check
         run: |
-          git add -A
+          git add e2e_playwright/__snapshots__
           git status --porcelain
           echo "changes=$(if git diff --staged --quiet; then echo false; else echo true; fi)" >> $GITHUB_OUTPUT
 
@@ -84,7 +84,7 @@ jobs:
           git config user.name "Streamlit Bot"
           fix_branch="snapshots/${{ github.event.pull_request.number }}-${{ github.run_id }}"
           git checkout -b "$fix_branch"
-          git add -A
+          git add e2e_playwright/__snapshots__
           git commit -m "Update E2E test snapshots"
           git push --set-upstream origin "$fix_branch"
 
