@@ -458,6 +458,9 @@ check:
 		echo "=== Frontend: lint (eslint) ==="; \
 		cd frontend && ./node_modules/.bin/eslint --fix $$FE_FILES || exit 1; \
 		echo ""; \
+	else \
+		echo "No frontend files changed."; \
+		echo ""; \
 	fi
 	@# Frontend tests
 	@FE_TESTS=$$(python3 scripts/get_changed_files.py --frontend-tests --strip-prefix frontend/); \
