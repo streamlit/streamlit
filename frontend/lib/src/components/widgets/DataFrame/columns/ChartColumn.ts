@@ -40,6 +40,23 @@ export const LINE_CHART_TYPE = "line_chart"
 export const AREA_CHART_TYPE = "area_chart"
 export const BAR_CHART_TYPE = "bar_chart"
 
+type ChartAutoColor = "auto" | "auto-inverse"
+type ChartNamedSwatch =
+  | "red"
+  | "blue"
+  | "green"
+  | "yellow"
+  | "violet"
+  | "orange"
+  | "gray"
+  | "grey"
+  | "primary"
+
+declare const __cssColorBrand: unique symbol
+type CSSColorString = string & { readonly [__cssColorBrand]?: never }
+
+type ChartColor = ChartAutoColor | ChartNamedSwatch | CSSColorString
+
 /**
  * Get the color mapping to map a user-defined color to the our
  * theme colors.
@@ -62,23 +79,6 @@ const getColorMapping = (theme: EmotionTheme): Map<string, string> => {
     })
   )
 }
-
-type ChartAutoColor = "auto" | "auto-inverse"
-type ChartNamedSwatch =
-  | "red"
-  | "blue"
-  | "green"
-  | "yellow"
-  | "violet"
-  | "orange"
-  | "gray"
-  | "grey"
-  | "primary"
-
-declare const __cssColorBrand: unique symbol
-type CSSColorString = string & { readonly [__cssColorBrand]?: never }
-
-type ChartColor = ChartAutoColor | ChartNamedSwatch | CSSColorString
 
 export interface ChartColumnParams {
   /**
