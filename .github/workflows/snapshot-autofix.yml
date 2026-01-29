@@ -35,6 +35,13 @@ jobs:
           submodules: "recursive"
           fetch-depth: 2
 
+      - name: Remove 'update-snapshots' label to prevent re-triggers
+        if: github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr edit ${{ github.event.pull_request.number }} --remove-label "update-snapshots"
+
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
@@ -143,13 +150,6 @@ jobs:
             --base "${{ github.head_ref }}" \
             --title "[snapshots] Update E2E snapshots for #${{ github.event.pull_request.number }}" \
             --body "$PR_BODY"
-
-      - name: Remove 'update-snapshots' label from source PR
-        if: steps.update-snapshots.outputs.script_status == 'success' && steps.count-snapshots.outputs.has_updates == 'true' && steps.git-check.outputs.changes == 'true' && github.event.pull_request.head.repo.full_name == github.repository
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh pr edit ${{ github.event.pull_request.number }} --remove-label "update-snapshots"
 
       - name: Show notices for fork PRs
         if: steps.update-snapshots.outputs.script_status == 'success' && steps.count-snapshots.outputs.has_updates == 'true' && steps.git-check.outputs.changes == 'true' && github.event.pull_request.head.repo.full_name != github.repository
