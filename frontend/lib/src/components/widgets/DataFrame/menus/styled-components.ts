@@ -78,7 +78,7 @@ export const StyledMenuDivider = styled.div(({ theme }) => ({
 export const StyledColumnHeaderRow = styled.div(({ theme }) => ({
   display: "flex",
   alignItems: "center",
-  padding: `${theme.spacing.sm} ${theme.spacing.sm}`,
+  padding: `${theme.spacing.twoXS} ${theme.spacing.none}`,
   cursor: "default",
   gap: theme.spacing.twoXS,
 }))
