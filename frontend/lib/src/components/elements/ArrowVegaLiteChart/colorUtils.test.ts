@@ -252,6 +252,170 @@ describe("colorUtils", () => {
       })
     })
 
+    it("resolves colors in facet specs", () => {
+      // Facet spec structure: { facet: {...}, spec: {encoding...} }
+      // See: https://vega.github.io/vega-lite/docs/facet.html
+      const spec = {
+        facet: {
+          column: { field: "category", type: "nominal" },
+        },
+        spec: {
+          mark: "bar",
+          encoding: {
+            x: { field: "x", type: "quantitative" },
+            y: { field: "y", type: "quantitative" },
+            color: { value: "green" },
+          },
+        },
+      }
+
+      resolveBuiltinColorsInSpec(spec, mockTheme)
+
+      expect((spec.spec as Record<string, unknown>).encoding).toMatchObject({
+        color: { value: mockTheme.colors.greenColor },
+      })
+    })
+
+    it("resolves colors in repeat specs", () => {
+      // Repeat spec structure: { repeat: {...}, spec: {encoding...} }
+      // See: https://vega.github.io/vega-lite/docs/repeat.html
+      const spec = {
+        repeat: {
+          column: ["field1", "field2"],
+        },
+        spec: {
+          mark: "point",
+          encoding: {
+            x: { field: { repeat: "column" }, type: "quantitative" },
+            y: { field: "y", type: "quantitative" },
+            color: { value: "blue" },
+          },
+        },
+      }
+
+      resolveBuiltinColorsInSpec(spec, mockTheme)
+
+      expect((spec.spec as Record<string, unknown>).encoding).toMatchObject({
+        color: { value: mockTheme.colors.blueColor },
+      })
+    })
+
+    it("resolves colors in nested facet with layers", () => {
+      // Complex case: facet with layered spec
+      const spec = {
+        facet: {
+          row: { field: "category", type: "nominal" },
+        },
+        spec: {
+          layer: [
+            {
+              mark: "line",
+              encoding: {
+                color: { value: "red" },
+              },
+            },
+            {
+              mark: "point",
+              encoding: {
+                color: { value: "orange" },
+              },
+            },
+          ],
+        },
+      }
+
+      resolveBuiltinColorsInSpec(spec, mockTheme)
+
+      const innerSpec = spec.spec as Record<string, unknown>
+      const layers = innerSpec.layer as Array<Record<string, unknown>>
+
+      expect(layers[0].encoding).toMatchObject({
+        color: { value: mockTheme.colors.redColor },
+      })
+      expect(layers[1].encoding).toMatchObject({
+        color: { value: mockTheme.colors.orangeColor },
+      })
+    })
+
+    it("resolves colors in nested layers", () => {
+      // Nested layers are valid in Vega-Lite
+      const spec = {
+        layer: [
+          {
+            layer: [
+              {
+                mark: "line",
+                encoding: {
+                  color: { value: "red" },
+                },
+              },
+              {
+                mark: "point",
+                encoding: {
+                  color: { value: "blue" },
+                },
+              },
+            ],
+          },
+          {
+            mark: "area",
+            encoding: {
+              color: { value: "green" },
+            },
+          },
+        ],
+      }
+
+      resolveBuiltinColorsInSpec(spec, mockTheme)
+
+      const outerLayers = spec.layer as Array<Record<string, unknown>>
+      const innerLayers = outerLayers[0].layer as Array<
+        Record<string, unknown>
+      >
+
+      // Check nested layer colors
+      expect(innerLayers[0].encoding).toMatchObject({
+        color: { value: mockTheme.colors.redColor },
+      })
+      expect(innerLayers[1].encoding).toMatchObject({
+        color: { value: mockTheme.colors.blueColor },
+      })
+
+      // Check outer layer color
+      expect(outerLayers[1].encoding).toMatchObject({
+        color: { value: mockTheme.colors.greenColor },
+      })
+    })
+
+    it("resolves colors in deeply nested compositions", () => {
+      // vconcat containing hconcat containing layers
+      const spec = {
+        vconcat: [
+          {
+            hconcat: [
+              {
+                layer: [
+                  {
+                    encoding: { color: { value: "red" } },
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      }
+
+      resolveBuiltinColorsInSpec(spec, mockTheme)
+
+      const vconcat = spec.vconcat as Array<Record<string, unknown>>
+      const hconcat = vconcat[0].hconcat as Array<Record<string, unknown>>
+      const layer = hconcat[0].layer as Array<Record<string, unknown>>
+
+      expect(layer[0].encoding).toMatchObject({
+        color: { value: mockTheme.colors.redColor },
+      })
+    })
+
     it("leaves non-builtin colors unchanged", () => {
       const spec = {
         encoding: {

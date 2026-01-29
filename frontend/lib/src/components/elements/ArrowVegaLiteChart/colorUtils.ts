@@ -81,11 +81,18 @@ export function resolveBuiltinColor(
  * Resolve built-in color names in a Vega-Lite spec to their theme color values.
  * This mutates the spec in place.
  *
- * Handles these spec structures:
- * - Top-level encoding (bar_chart, area_chart, scatter_chart)
- * - Layer specs (line_chart uses layers for tooltips)
- * - Nested specs (vconcat, hconcat, concat)
+ * Handles all Vega-Lite composition types via recursive traversal:
+ * - Unit specs with top-level encoding
+ * - Layer specs (including nested layers)
+ * - Concatenation specs (vconcat, hconcat, concat)
+ * - Facet specs (both operator form and encoding channels)
+ * - Repeat specs (row/column/layer forms, both object and array)
  *
+ * Colors are resolved in `encoding.color` only (both value and scale.range).
+ * Mark-level colors (mark.color, mark.fill, mark.stroke) are NOT resolved
+ * as these are static styling properties, not data-driven encodings.
+ *
+ * @see https://vega.github.io/vega-lite/docs/composition.html
  * @param spec The Vega-Lite specification object
  * @param theme The Streamlit EmotionTheme containing color values
  */
@@ -93,19 +100,21 @@ export function resolveBuiltinColorsInSpec(
   spec: Record<string, unknown>,
   theme: EmotionTheme
 ): void {
-  // Handle layer specs (line_chart wraps in layers for tooltip support)
+  // Handle top-level encoding first (unit specs like bar_chart, area_chart)
+  resolveEncodingColors(spec, theme)
+
+  // Handle layer specs - recursively process each layer
+  // Layers can contain unit specs or nested layers (but not concat/facet/repeat)
+  // See: https://vega.github.io/vega-lite/docs/layer.html
   if (Array.isArray(spec.layer)) {
     for (const layerSpec of spec.layer) {
       if (layerSpec && typeof layerSpec === "object") {
-        resolveEncodingColors(layerSpec as Record<string, unknown>, theme)
+        resolveBuiltinColorsInSpec(layerSpec as Record<string, unknown>, theme)
       }
     }
   }
 
-  // Handle top-level encoding (bar_chart, area_chart, scatter_chart)
-  resolveEncodingColors(spec, theme)
-
-  // Handle nested composition specs (vconcat, hconcat, concat)
+  // Handle concatenation specs (vconcat, hconcat, concat)
   for (const key of ["vconcat", "hconcat", "concat"]) {
     if (Array.isArray(spec[key])) {
       for (const subSpec of spec[key] as unknown[]) {
@@ -114,6 +123,15 @@ export function resolveBuiltinColorsInSpec(
         }
       }
     }
+  }
+
+  // Handle facet and repeat specs - both use nested "spec" property
+  if (
+    ("facet" in spec || "repeat" in spec) &&
+    spec.spec &&
+    typeof spec.spec === "object"
+  ) {
+    resolveBuiltinColorsInSpec(spec.spec as Record<string, unknown>, theme)
   }
 }
 
