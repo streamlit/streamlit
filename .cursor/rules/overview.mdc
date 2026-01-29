@@ -95,7 +95,7 @@ Before finishing any work session, **always run `make check`** to validate your 
 make check
 ```
 
-This command runs all relevant checks (formatting, linting, type checking, and tests) on uncommitted changes only (staged, unstaged, and untracked files). Already committed files are not checked. If any issues are found:
+This command runs all relevant checks (formatting, linting, type checking, and unit tests) on uncommitted changes only (staged, unstaged, and untracked files). Already committed files are not checked. E2E tests are not included - use `make run-e2e-test` for those. If any issues are found:
 
 1. Fix the reported issues.
 2. Re-run `make check`.
