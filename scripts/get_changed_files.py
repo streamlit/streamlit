@@ -27,6 +27,9 @@ Usage:
     python scripts/get_changed_files.py --all --base-branch main
 
 Output is space-separated file paths, suitable for passing to commands.
+
+Note: Files with spaces in their paths are not supported and will be ignored.
+This is a limitation of the space-separated output format used for shell consumption.
 """
 
 from __future__ import annotations
@@ -70,7 +73,14 @@ FRONTEND_TEST_PATTERN = r"\.test\.(ts|tsx)$"
 
 
 def _is_excluded(path: str) -> bool:
-    """Check if path should be excluded from checks."""
+    """Check if path should be excluded from checks.
+
+    Excludes:
+    - Paths in EXCLUDED_PATHS (vendor, proto)
+    - Paths containing spaces (not supported due to space-separated output format)
+    """
+    if " " in path:
+        return True
     return any(excluded in path for excluded in EXCLUDED_PATHS)
 
 
@@ -80,6 +90,10 @@ def get_changed_files(base_branch: str | None = None) -> list[str]:
     Args:
         base_branch: If provided, also include files changed between this branch
                      and HEAD (useful for getting all changes in a PR).
+
+    Note:
+        Files with spaces in their paths are excluded (not supported due to
+        space-separated output format).
     """
     files: set[str] = set()
 
@@ -129,7 +143,8 @@ def get_changed_files(base_branch: str | None = None) -> list[str]:
                     f.strip() for f in result.stdout.strip().split("\n") if f.strip()
                 )
 
-    return sorted(files)
+    # Filter out files with spaces (not supported due to space-separated output)
+    return sorted(f for f in files if " " not in f)
 
 
 def get_python_files(files: list[str]) -> list[str]:
