@@ -47,10 +47,6 @@ jobs:
       - name: Set up uv
         uses: astral-sh/setup-uv@v7
 
-      - name: Install Python deps for slack notifications
-        run: |
-          uv pip install --system requests
-
       - name: Configure Git
         run: |
           git config user.name "${{ github.actor }}"
@@ -158,7 +154,7 @@ jobs:
           CHERRY_PICK_SHA: ${{ inputs.cherry_pick_sha }}
           RUN_ID: ${{ github.run_id }}
         run: |
-          python scripts/slack_notifications.py release_automation cherry_pick_to_release_branch_success
+          uv run python scripts/slack_notifications.py release_automation cherry_pick_to_release_branch_success
 
       - name: Slack notification - failure
         if: ${{ steps.cp.outputs.status == 'failed' && inputs.dry_run != true }}
@@ -171,7 +167,7 @@ jobs:
           ERROR_REASON: ${{ steps.cp.outputs.error_reason }}
           RELEASE_BRANCH: ${{ steps.vars.outputs.release_branch }}
         run: |
-          python scripts/slack_notifications.py release_automation cherry_pick_to_release_branch_failed
+          uv run python scripts/slack_notifications.py release_automation cherry_pick_to_release_branch_failed
 
       - name: Fail job if cherry-pick failed
         if: ${{ steps.cp.outputs.status == 'failed' }}

@@ -42,13 +42,16 @@ jobs:
         run: |
           gh pr edit ${{ github.event.pull_request.number }} --remove-label "update-snapshots"
 
-      - name: Set up Python
+      - name: Set Python version vars
+        uses: ./.github/actions/build_info
+
+      - name: Set up Python ${{ env.PYTHON_MAX_VERSION }}
         uses: actions/setup-python@v6
         with:
-          python-version: "3.12"
+          python-version: "${{ env.PYTHON_MAX_VERSION }}"
 
-      - name: Install dependencies
-        run: pip install requests
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v7
 
       - name: Run update_e2e_snapshots.py
         id: update-snapshots
@@ -57,7 +60,7 @@ jobs:
         run: |
           # Run the existing script with the token
           # The script will wait for Playwright to complete, download artifacts, and merge snapshots
-          if python scripts/update_e2e_snapshots.py --token "$GITHUB_TOKEN"; then
+          if uv run python scripts/update_e2e_snapshots.py --token "$GITHUB_TOKEN"; then
             echo "script_status=success" >> $GITHUB_OUTPUT
           else
             echo "script_status=failed" >> $GITHUB_OUTPUT

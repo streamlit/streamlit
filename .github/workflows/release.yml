@@ -68,13 +68,20 @@ jobs:
           fetch-depth: 2
       - name: Set Python version vars
         uses: ./.github/actions/build_info
+      - name: Set up Python ${{ env.PYTHON_MAX_VERSION }}
+        uses: actions/setup-python@v6
+        with:
+          python-version: "${{ env.PYTHON_MAX_VERSION }}"
+      - name: Setup virtual env
+        uses: ./.github/actions/make_init
+        with:
+          python_version: ${{ env.PYTHON_MAX_VERSION }}
       - name: Look up the related GitHub PR branch name
         # Need GH Token to use gh api
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          pip install requests
-          echo "GH_PR_BRANCH=$(python scripts/get_release_branch.py)" >> $GITHUB_ENV
+          echo "GH_PR_BRANCH=$(uv run --quiet python scripts/get_release_branch.py)" >> $GITHUB_ENV
       - name: Ensure release branch corresponding to this tag exists
         env:
           GH_PR_BRANCH: ${{ env.GH_PR_BRANCH }}
@@ -85,10 +92,6 @@ jobs:
             echo "ERROR: release branch corresponding to this tag does not exist."
             exit 1
           fi
-      - name: Setup virtual env
-        uses: ./.github/actions/make_init
-        with:
-          python_version: ${{ env.PYTHON_MAX_VERSION }}
       - name: Verify git tag vs. version
         env:
           GIT_TAG: ${{ env.GIT_TAG }}
@@ -119,16 +122,16 @@ jobs:
           GIT_TAG: ${{ env.GIT_TAG }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          python scripts/create_release.py
+          uv run python scripts/create_release.py
       - name: Successful Release Slack Message
         if: ${{ success() }}
         env:
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
           RUN_ID: ${{ github.run_id }}
-        run: python scripts/slack_notifications.py release success
+        run: uv run python scripts/slack_notifications.py release success
       - name: Failed Release Slack Message
         if: ${{ failure() }}
         env:
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
           RUN_ID: ${{ github.run_id }}
-        run: python scripts/slack_notifications.py release failure
+        run: uv run python scripts/slack_notifications.py release failure

@@ -61,7 +61,7 @@ jobs:
         env:
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
           RUN_ID: ${{ github.run_id }}
-        run: python scripts/slack_notifications.py nightly tag
+        run: uv run python scripts/slack_notifications.py nightly tag
 
   run-python-tests:
     needs: create-nightly-tag
@@ -114,12 +114,20 @@ jobs:
           ref: ${{ needs.create-nightly-tag.outputs.tag }}
           persist-credentials: false
           submodules: "recursive"
+      - name: Set Python version vars
+        uses: ./.github/actions/build_info
+      - name: Set up Python ${{ env.PYTHON_MAX_VERSION }}
+        uses: actions/setup-python@v6
+        with:
+          python-version: "${{ env.PYTHON_MAX_VERSION }}"
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v7
       - if: ${{ needs.run-python-tests.result == 'failure' }}
-        run: python scripts/slack_notifications.py nightly python
+        run: uv run python scripts/slack_notifications.py nightly python
       - if: ${{ needs.run-javascript-tests.result == 'failure' }}
-        run: python scripts/slack_notifications.py nightly js
+        run: uv run python scripts/slack_notifications.py nightly js
       - if: ${{ needs.run-playwright-tests.result == 'failure' }}
-        run: python scripts/slack_notifications.py nightly playwright
+        run: uv run python scripts/slack_notifications.py nightly playwright
 
   create-nightly-build:
     runs-on: ubuntu-latest
@@ -208,7 +216,7 @@ jobs:
         env:
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
           RUN_ID: ${{ github.run_id }}
-        run: python scripts/slack_notifications.py nightly build
+        run: uv run python scripts/slack_notifications.py nightly build
 
   setup-nightly-preview:
     runs-on: ubuntu-latest

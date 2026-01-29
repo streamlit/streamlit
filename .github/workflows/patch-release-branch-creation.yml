@@ -47,10 +47,6 @@ jobs:
       - name: Set up uv
         uses: astral-sh/setup-uv@v7
 
-      - name: Install Python deps for release automation
-        run: |
-          uv pip install --system packaging semver requests
-
       - name: Configure Git
         run: |
           git config user.name "${{ github.actor }}"
@@ -163,4 +159,4 @@ jobs:
           RUN_ID: ${{ github.run_id }}
           RELEASE_BASE_REF: ${{ inputs.base_tag }}
         run: |
-          python scripts/slack_notifications.py release_automation branch_created
+          uv run python scripts/slack_notifications.py release_automation branch_created
