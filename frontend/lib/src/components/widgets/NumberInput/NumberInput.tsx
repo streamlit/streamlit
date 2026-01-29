@@ -328,9 +328,14 @@ const NumberInput: React.FC<Props> = ({
           setDirty(false)
           setFormattedValue(formatCurrentValue(newValue))
 
-          // CRITICAL FIX: Update widget manager SYNCHRONOUSLY before form submit.
+          // Update the internal React state so value stays in sync.
+          // This is needed because the useEffect at lines 170-175 will reset
+          // formattedValue based on 'value' when props change (and dirty=false).
+          setValueWithSource({ value: newValue, fromUi: true })
+
+          // CRITICAL: Also update widget manager SYNCHRONOUSLY before form submit.
           // This ensures the form has the current value when it submits.
-          // The setValueWithSource in commitValue triggers an async useEffect,
+          // The setValueWithSource above triggers an async useEffect for widget mgr,
           // but submitForm runs immediately after, reading stale state.
           // By calling updateWidgetMgrState directly, we bypass the async path.
           updateWidgetMgrState(
@@ -352,6 +357,7 @@ const NumberInput: React.FC<Props> = ({
       max,
       elementDefault,
       formatCurrentValue,
+      setValueWithSource,
       element,
       widgetMgr,
       fragmentId,
