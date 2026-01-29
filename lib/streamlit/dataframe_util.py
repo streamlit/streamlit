@@ -464,7 +464,7 @@ def _is_list_of_scalars(data: Iterable[Any]) -> bool:
 
     # Overview on all value that are interpreted as scalar:
     # https://pandas.pydata.org/docs/reference/api/pandas.api.types.is_scalar.html
-    return infer_dtype(data, skipna=True) not in ["mixed", "unknown-array"]
+    return infer_dtype(data, skipna=True) not in {"mixed", "unknown-array"}
 
 
 def _iterable_to_list(
@@ -1056,9 +1056,7 @@ def is_colum_type_arrow_incompatible(column: Series[Any] | Index[Any]) -> bool:
     """
     from pandas.api.types import infer_dtype, is_dict_like, is_list_like
 
-    if column.dtype.kind in [
-        "c",  # complex64, complex128, complex256
-    ]:
+    if column.dtype.kind == "c":  # complex64, complex128, complex256
         return True
 
     if str(column.dtype) in {
@@ -1074,15 +1072,17 @@ def is_colum_type_arrow_incompatible(column: Series[Any] | Index[Any]) -> bool:
         return True
 
     if column.dtype == "object":
-        # The dtype of mixed type columns is always object, the actual type of the column
-        # values can be determined via the infer_dtype function:
+        # The dtype of mixed type columns is always object. In pandas 3.0+, pure
+        # string columns use StringDtype instead of object, so they won't enter
+        # this block (and they're Arrow-compatible anyway). The actual type of
+        # object dtype column values can be determined via the infer_dtype function:
         # https://pandas.pydata.org/docs/reference/api/pandas.api.types.infer_dtype.html
         inferred_type = infer_dtype(column, skipna=True)
 
-        if inferred_type in [
+        if inferred_type in {
             "mixed-integer",
             "complex",
-        ]:
+        }:
             return True
         if inferred_type == "mixed":
             # This includes most of the more complex/custom types (objects, dicts,
@@ -1405,11 +1405,11 @@ def convert_pandas_df_to_data_format(
         return _unify_missing_values(df).to_dict(orient="list")
     if data_format == DataFormat.COLUMN_SERIES_MAPPING:
         return df.to_dict(orient="series")
-    if data_format in [
+    if data_format in {
         DataFormat.LIST_OF_VALUES,
         DataFormat.TUPLE_OF_VALUES,
         DataFormat.SET_OF_VALUES,
-    ]:
+    }:
         df = _unify_missing_values(df)
         return_list = []
         if len(df.columns) == 1:

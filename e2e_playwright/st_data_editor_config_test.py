@@ -16,6 +16,7 @@ from playwright.sync_api import Locator, Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 from e2e_playwright.shared.app_utils import (
+    COMMAND_KEY,
     check_top_level_class,
     expect_prefixed_markdown,
     get_element_by_key,
@@ -378,4 +379,67 @@ def test_editing_empty_column_returns_scalar_not_list(app: Page):
         "Empty column result:",
         "{'number_col': {0: 42, 1: 99}, 'text_col': {0: 'hello', 1: None}}",
         exact_match=True,
+    )
+
+
+def test_multiselect_pill_text_selection_and_copy(app: Page, browser_name: str) -> None:
+    """Test that pill label text in multiselect can be selected and copied.
+
+    This verifies the text selection enhancement that allows users to select and copy
+    text from pill labels. Previously, clicking on a pill label would interact with
+    the react-select control, but now it allows text selection without
+    removing or affecting the selected value.
+    """
+    multiselect_column_df = _get_editor(app, "multiselect-column")
+    expect_canvas_to_be_visible(multiselect_column_df)
+
+    # Click on the first cell of the multiselect column to open the editor
+    click_on_cell(multiselect_column_df, 1, 0, double_click=True, column_width="medium")
+
+    # Get the cell overlay
+    cell_overlay = get_open_cell_overlay(app)
+    expect(cell_overlay).to_contain_text("Exploration")
+    expect(cell_overlay).to_contain_text("Visualization")
+
+    # Find the pill label for "Exploration" - this is a MultiValueLabel component
+    exploration_pill = cell_overlay.get_by_text("Exploration", exact=True)
+    expect(exploration_pill).to_be_visible()
+
+    # Triple-click to select all text in the pill label
+    # This simulates a user trying to select text for copying
+    exploration_pill.click(click_count=3)
+
+    # Verify text is selected using window.getSelection()
+    selected_text = app.evaluate("window.getSelection().toString()")
+    assert "Exploration" in selected_text, (
+        f"Expected 'Exploration' to be selected, got: '{selected_text}'"
+    )
+
+    # The pill should still be present after clicking on the label text
+    # (Previously, clicking might have triggered react-select's control behavior)
+    expect(cell_overlay).to_contain_text("Exploration")
+    expect(cell_overlay).to_contain_text("Visualization")
+
+    # Copy the selected text using keyboard shortcut
+    app.keyboard.press(f"{COMMAND_KEY}+c")
+
+    # Verify clipboard contents - only works reliably in Chromium
+    # (Firefox and WebKit have different clipboard permission models)
+    if browser_name == "chromium":
+        clipboard_text = app.evaluate("navigator.clipboard.readText()")
+        assert "Exploration" in clipboard_text, (
+            f"Expected 'Exploration' in clipboard, got: '{clipboard_text}'"
+        )
+
+    # Close the editor by pressing Escape and verify no values were removed
+    app.keyboard.press("Escape")
+    reset_focus(app)
+    wait_for_app_run(app)
+
+    # The original values should still be in the dataframe (no accidental removal)
+    expect_prefixed_markdown(
+        app, "Multiselect column return:", "exploration", exact_match=False
+    )
+    expect_prefixed_markdown(
+        app, "Multiselect column return:", "visualization", exact_match=False
     )

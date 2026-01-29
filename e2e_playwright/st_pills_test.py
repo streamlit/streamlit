@@ -32,7 +32,7 @@ from e2e_playwright.shared.app_utils import (
 
 
 def get_pill_button(locator: Locator, text: str) -> Locator:
-    return locator.get_by_test_id(re.compile("stBaseButton-pills(Active)?")).filter(
+    return locator.get_by_test_id(re.compile(r"stBaseButton-pills(Active)?")).filter(
         has_text=text
     )
 
@@ -125,9 +125,7 @@ def test_pills_are_disabled_and_take_screenshot(
     selected_pill = get_pill_button(pills, "Air")
     selected_pill.click(force=True)
     wait_for_app_run(app)
-    expect(selected_pill).not_to_have_css(
-        "color", re.compile("rgb\\(\\d+, \\d+, \\d+\\)")
-    )
+    expect(selected_pill).not_to_have_css("color", re.compile(r"rgb\(\d+, \d+, \d+\)"))
     expect_markdown(app, "pills-disabled: None")
     assert_snapshot(pills, name="st_pills-disabled")
 
@@ -141,9 +139,7 @@ def test_pills_are_disabled_and_selected_and_take_screenshot(
     selected_pill = get_pill_button(pills, "Air")
     selected_pill.click(force=True)
     wait_for_app_run(app)
-    expect(selected_pill).not_to_have_css(
-        "color", re.compile("rgb\\(\\d+, \\d+, \\d+\\)")
-    )
+    expect(selected_pill).not_to_have_css("color", re.compile(r"rgb\(\d+, \d+, \d+\)"))
     expect_markdown(app, "pills-disabled-selected: Water")
     assert_snapshot(pills, name="st_pills-disabled-selected")
 

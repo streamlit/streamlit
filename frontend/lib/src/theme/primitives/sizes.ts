@@ -73,4 +73,6 @@ export const sizes = {
   dialogLargeWidth: "80rem",
   defaultStrokeWidth: 2.25,
   metricStrokeWidth: 2,
+  // Default for box-shadow focus ring width
+  focusRingWidth: "0.2rem",
 }

@@ -251,11 +251,11 @@ def _get_machine_id_v3() -> str:
     """
 
     if os.path.isfile(_ETC_MACHINE_ID_PATH):
-        with open(_ETC_MACHINE_ID_PATH) as f:
+        with open(_ETC_MACHINE_ID_PATH, encoding="utf-8") as f:
             machine_id = f.read()
 
     elif os.path.isfile(_DBUS_MACHINE_ID_PATH):
-        with open(_DBUS_MACHINE_ID_PATH) as f:
+        with open(_DBUS_MACHINE_ID_PATH, encoding="utf-8") as f:
             machine_id = f.read()
 
     else:
@@ -380,7 +380,7 @@ def _get_command_telemetry(
         pos = i
         if is_method:
             # If func is a method, ignore the first argument (self)
-            i = i + 1  # noqa: PLW2901
+            i += 1  # noqa: PLW2901
 
         keyword = arg_keywords[i] if len(arg_keywords) > i else f"{i}"
         if keyword == "self":

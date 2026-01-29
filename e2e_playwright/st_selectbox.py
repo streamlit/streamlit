@@ -39,7 +39,7 @@ more_options = [
     "e2e/scripts/st_info.py",
     "e2e/scripts/st_echo.py",
     "e2e/scripts/st_json.py",
-    "e2e/scripts/st_experimental_get_query_params.py",
+    "e2e/scripts/st_query_params.py",
     "e2e/scripts/st_markdown.py",
     "e2e/scripts/st_color_picker.py",
     "e2e/scripts/st_expander.py",

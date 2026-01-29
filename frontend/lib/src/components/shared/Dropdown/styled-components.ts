@@ -18,27 +18,73 @@ import isPropValid from "@emotion/is-prop-valid"
 import styled from "@emotion/styled"
 import { StyledDropdownListItem } from "baseui/select"
 
+import { EmotionTheme } from "~lib/theme"
+
 export const ThemedStyledDropdownListItem = styled(StyledDropdownListItem, {
   shouldForwardProp: isPropValid,
-})(({ theme, $isHighlighted }) => {
+})(({ theme, $isHighlighted, $selected }) => {
+  const hoverBg = theme.colors.darkenedBgMix15
+  const selectedBg = (theme as EmotionTheme).colors?.darkenedBgMix25 ?? hoverBg
+  const hasBg = Boolean($selected || $isHighlighted)
+  const bgColor = $selected
+    ? selectedBg
+    : $isHighlighted
+      ? hoverBg
+      : "transparent"
+
   return {
+    position: "relative",
     display: "flex",
     alignItems: "center",
+
+    marginTop: theme.spacing.none,
+    marginBottom: theme.spacing.none,
+    marginLeft: theme.spacing.none,
+    marginRight: theme.spacing.none,
+
+    borderRadius: theme.radii.default,
+    overflow: "hidden",
+
+    // ensure any Base Web inner wrappers cannot paint square backgrounds
+    "& *": { backgroundColor: "transparent !important" },
+    "& [data-baseweb]": { backgroundColor: "transparent !important" },
+
+    // keep text above our highlight layer
+
     paddingTop: theme.spacing.none,
     paddingBottom: theme.spacing.none,
     paddingLeft: theme.spacing.lg,
     paddingRight: theme.spacing.lg,
-    background: $isHighlighted ? theme.colors.darkenedBgMix15 : undefined,
+
+    fontSize: theme.fontSizes.md,
+
+    // our rounded highlight - same radius for ALL items
+    "::before": {
+      content: '""',
+      position: "absolute",
+      inset: `2px ${theme.spacing.sm}`,
+      borderRadius: theme.radii.default, // Consistent rounded corners on all items
+      background: bgColor,
+      opacity: hasBg ? 1 : 0,
+      transition: "opacity 120ms ease",
+      pointerEvents: "none",
+      zIndex: theme.zIndices.base,
+    },
+
+    "& > *": {
+      position: "relative",
+      zIndex: theme.zIndices.priority,
+      paddingTop: theme.spacing.threeXS,
+      paddingBottom: theme.spacing.threeXS,
+      paddingLeft: theme.spacing.none,
+      paddingRight: theme.spacing.none,
+    },
+
     fontWeight: theme.fontWeights.normal,
 
-    // Override the default itemSize set on the component's JSX
-    // on mobile, so we can make list items taller and scrollable
     [`@media (max-width: ${theme.breakpoints.md})`]: {
       minHeight: theme.sizes.dropdownItemHeight,
       height: "auto !important",
-    },
-    "&:hover, &:active, &:focus-visible": {
-      background: theme.colors.darkenedBgMix15,
     },
   }
 })

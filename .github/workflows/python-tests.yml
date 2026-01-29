@@ -351,6 +351,15 @@ jobs:
               console.log(`Develop coverage: ${developTotal.toFixed(4)}%`);
               console.log(`Coverage difference: ${diffPercent.toFixed(4)}%`);
 
+            // Check if this PR is from a fork - fork PRs have limited GITHUB_TOKEN permissions
+            // and cannot post comments to the PR
+            const isForkPR = context.payload.pull_request?.head?.repo?.fork === true;
+            if (isForkPR) {
+              console.log('PR is from a fork - skipping coverage comment (insufficient permissions)');
+              console.log('Coverage information is available in the job summary above.');
+              return;
+            }
+
               const changeType = diffPercent > 0 ? 'increased' : 'decreased';
               const emoji = diffPercent > 0 ? '📈' : '📉';
 

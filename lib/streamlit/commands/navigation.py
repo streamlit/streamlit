@@ -292,7 +292,7 @@ def navigation(
 
     """
     # Validate position parameter
-    if not isinstance(position, str) or position not in ["sidebar", "hidden", "top"]:
+    if not isinstance(position, str) or position not in {"sidebar", "hidden", "top"}:
         raise StreamlitAPIException(
             f'Invalid position "{position}". '
             'The position parameter must be one of "sidebar", "hidden", or "top".'

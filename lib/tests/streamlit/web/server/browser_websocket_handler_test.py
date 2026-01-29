@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import json
 from http.cookies import Morsel
 from unittest.mock import ANY, MagicMock, patch
 
@@ -25,8 +26,10 @@ from tornado.httputil import HTTPHeaders
 from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime import Runtime, SessionClientDisconnectedError
-from streamlit.web.server.browser_websocket_handler import TornadoClientContext
-from streamlit.web.server.server import BrowserWebSocketHandler
+from streamlit.web.server.browser_websocket_handler import (
+    BrowserWebSocketHandler,
+    TornadoClientContext,
+)
 from tests.streamlit.web.server.server_test_case import ServerTestCase
 from tests.testutil import patch_config_options
 
@@ -229,6 +232,36 @@ class BrowserWebSocketHandlerTest(ServerTestCase):
 
             assert context1 is context2
 
+    @patch_config_options({"server.enableXsrfProtection": True})
+    @tornado.testing.gen_test
+    async def test_malformed_cookie_json_is_handled_gracefully(self):
+        """Test that malformed JSON in auth cookie doesn't crash the connection."""
+        with self._patch_app_session():
+            await self.server.start()
+
+            with (
+                patch.object(
+                    BrowserWebSocketHandler,
+                    "get_signed_cookie",
+                    return_value=b"not valid json {{{",
+                ),
+                patch.object(
+                    BrowserWebSocketHandler,
+                    "_validate_xsrf_token",
+                    return_value=True,
+                ),
+                patch.object(
+                    self.server._runtime, "connect_session"
+                ) as patched_connect_session,
+            ):
+                await self.ws_connect()
+
+                # Connection should succeed with empty user_info
+                patched_connect_session.assert_called_once()
+                call_kwargs = patched_connect_session.call_args.kwargs
+                # user_info should be empty since cookie parsing failed
+                assert call_kwargs["user_info"] == {}
+
 
 class TornadoClientContextTest(tornado.testing.AsyncTestCase):
     """Tests for TornadoClientContext class."""
@@ -282,3 +315,129 @@ class TornadoClientContextTest(tornado.testing.AsyncTestCase):
         ctx = TornadoClientContext(mock_request)
 
         assert ctx.remote_ip is None
+
+
+class ValidateXsrfTokenTest(tornado.testing.AsyncTestCase):
+    """Tests for _validate_xsrf_token method."""
+
+    def _create_handler_with_xsrf(
+        self, supplied_token: str, expected_token: str
+    ) -> BrowserWebSocketHandler:
+        """Create a handler with mocked XSRF token methods."""
+        handler = MagicMock(spec=BrowserWebSocketHandler)
+        # Mock _decode_xsrf_token to return (version, token, timestamp)
+        handler._decode_xsrf_token = MagicMock(return_value=(2, supplied_token, 12345))
+        # Mock _get_raw_xsrf_token to return (mask, token, timestamp)
+        handler._get_raw_xsrf_token = MagicMock(
+            return_value=(b"mask", expected_token, 12345)
+        )
+        return handler
+
+    def test_validate_xsrf_token_returns_true_for_matching_tokens(self) -> None:
+        """Test that matching tokens return True."""
+        handler = self._create_handler_with_xsrf("valid_token", "valid_token")
+
+        # Call the actual method
+        result = BrowserWebSocketHandler._validate_xsrf_token(handler, "valid_token")
+
+        assert result is True
+
+    def test_validate_xsrf_token_returns_false_for_mismatched_tokens(self) -> None:
+        """Test that mismatched tokens return False."""
+        handler = self._create_handler_with_xsrf("wrong_token", "expected_token")
+
+        result = BrowserWebSocketHandler._validate_xsrf_token(handler, "wrong_token")
+
+        assert result is False
+
+    def test_validate_xsrf_token_returns_false_for_empty_supplied_token(self) -> None:
+        """Test that empty supplied token returns False."""
+        handler = self._create_handler_with_xsrf("", "expected_token")
+
+        result = BrowserWebSocketHandler._validate_xsrf_token(handler, "")
+
+        assert result is False
+
+    def test_validate_xsrf_token_returns_false_for_empty_expected_token(self) -> None:
+        """Test that empty expected token returns False."""
+        handler = self._create_handler_with_xsrf("supplied_token", "")
+
+        result = BrowserWebSocketHandler._validate_xsrf_token(handler, "supplied_token")
+
+        assert result is False
+
+
+class ParseUserCookieTest(tornado.testing.AsyncTestCase):
+    """Tests for _parse_user_cookie method."""
+
+    def _create_handler_with_request(self, origin: str) -> BrowserWebSocketHandler:
+        """Create a handler with mocked request headers."""
+        handler = MagicMock(spec=BrowserWebSocketHandler)
+        handler.request = MagicMock()
+        handler.request.headers = {"Origin": origin}
+        return handler
+
+    def test_parse_user_cookie_extracts_user_info_on_origin_match(self) -> None:
+        """Test that user info is extracted when origins match."""
+        handler = self._create_handler_with_request("http://localhost:8501")
+        cookie_value = json.dumps(
+            {
+                "origin": "http://localhost:8501",
+                "is_logged_in": True,
+                "email": "test@example.com",
+                "name": "Test User",
+            }
+        ).encode()
+
+        result = BrowserWebSocketHandler._parse_user_cookie(handler, cookie_value)
+
+        assert result["is_logged_in"] is True
+        assert result["email"] == "test@example.com"
+        assert result["name"] == "Test User"
+        assert "origin" not in result
+
+    def test_parse_user_cookie_returns_empty_on_origin_mismatch(self) -> None:
+        """Test that empty dict is returned when origins don't match."""
+        handler = self._create_handler_with_request("http://localhost:8501")
+        cookie_value = json.dumps(
+            {
+                "origin": "http://different-origin.com",
+                "is_logged_in": True,
+                "email": "test@example.com",
+            }
+        ).encode()
+
+        result = BrowserWebSocketHandler._parse_user_cookie(handler, cookie_value)
+
+        # Should return empty dict due to origin mismatch
+        assert len(result) == 0
+
+    def test_parse_user_cookie_handles_https_origin(self) -> None:
+        """Test that HTTPS origins are handled correctly."""
+        handler = self._create_handler_with_request("https://app.example.com")
+        cookie_value = json.dumps(
+            {
+                "origin": "https://app.example.com",
+                "is_logged_in": True,
+                "email": "test@example.com",
+            }
+        ).encode()
+
+        result = BrowserWebSocketHandler._parse_user_cookie(handler, cookie_value)
+
+        assert result["is_logged_in"] is True
+        assert result["email"] == "test@example.com"
+
+    def test_parse_user_cookie_handles_origin_with_port(self) -> None:
+        """Test that origins with ports are handled correctly."""
+        handler = self._create_handler_with_request("http://localhost:3000")
+        cookie_value = json.dumps(
+            {
+                "origin": "http://localhost:3000",
+                "is_logged_in": True,
+            }
+        ).encode()
+
+        result = BrowserWebSocketHandler._parse_user_cookie(handler, cookie_value)
+
+        assert result["is_logged_in"] is True

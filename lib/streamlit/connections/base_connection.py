@@ -35,6 +35,13 @@ class BaseConnection(ABC, Generic[RawConnectionT]):
     implementation of connections more convenient. See the docstrings for each of the
     methods of this class for more information
 
+    By default, ``BaseConnection`` is a global-scoped connection. It has a class
+    method |BaseConnection.scope()|_ that returns ``"global"``. To implement a session-scoped
+    connection, override this method to return ``"session"`` in your subclass.
+
+    .. |BaseConnection.scope()| replace:: ``BaseConnection.scope()``
+    .. _BaseConnection.scope(): #baseconnectionscope
+
     .. note::
         While providing an implementation of ``_connect`` is technically all that's
         required to define a valid connection, connections should also provide the user
@@ -179,14 +186,19 @@ class BaseConnection(ABC, Generic[RawConnectionT]):
     def scope(cls) -> Literal["global", "session"]:
         """Returns the scope of this connection type.
 
-        "global" connection instances will be cached globally, and typically created
-        once during the lifetime of an application. "session" connection instances will
-        be cached per session, and typically will be created once per user session.
+        This is a class method. ``"global"`` connection instances will be cached
+        globally and are typically created once during the lifetime of an
+        application. ``"session"`` connection instances will be cached per
+        session and are typically created once per user session.
+
+        A connection's scope can't be changed for different instances of the
+        same connection type. If you want to switch between global and
+        session-scoped connections, you should create two different connection
+        types.
 
         Returns
         -------
         "global" or "session"
-            The scope of this connection type.
         """
         return "global"
 

@@ -125,6 +125,15 @@ message Config {
   }
   ToolbarMode toolbar_mode = 8;
 
+  // See config option "client.showErrorLinks".
+  enum ShowErrorLinks {
+    SHOW_ERROR_LINKS_UNSPECIFIED = 0;
+    SHOW_ERROR_LINKS_AUTO = 1;
+    SHOW_ERROR_LINKS_TRUE = 2;
+    SHOW_ERROR_LINKS_FALSE = 3;
+  }
+  ShowErrorLinks show_error_links = 9;
+
   reserved 1;
 }
 
@@ -187,6 +196,7 @@ message CustomThemeConfig {
   optional string dataframe_header_background_color = 31;
   repeated string chart_categorical_colors = 33;
   repeated string chart_sequential_colors = 36;
+  repeated string chart_diverging_colors = 62;
 
   // Main color configs:
   optional string red_color = 38;
@@ -220,7 +230,7 @@ message CustomThemeConfig {
   optional CustomThemeConfig light = 60;
   optional CustomThemeConfig dark = 61;
 
-  // Next ID: 62
+  // Next ID: 63
 }
 
 message FontFace {

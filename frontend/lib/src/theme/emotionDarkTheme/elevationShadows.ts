@@ -14,8 +14,16 @@
  * limitations under the License.
  */
 
-import { colors } from "~lib/theme/primitives/colors"
-
-export default {
-  ...colors,
+/**
+ * Elevation shadows for dark theme.
+ * Higher opacity values for better visibility on dark backgrounds.
+ */
+const elevationShadows = {
+  tooltip: "0px 1px 4px rgba(0, 0, 0, 0.4)",
+  popover: "0px 4px 16px rgba(0, 0, 0, 0.7)",
+  toolbar: "1px 2px 8px rgba(0, 0, 0, 0.2)",
+  sidebar: "-2rem 0 2rem 2rem rgba(0, 0, 0, 0.4)",
+  none: "none",
 }
+
+export default elevationShadows

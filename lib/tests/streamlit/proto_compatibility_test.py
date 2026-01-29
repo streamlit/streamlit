@@ -88,6 +88,7 @@ FD = FieldDescriptor
                 ("hide_top_bar", FD.LABEL_OPTIONAL, FD.TYPE_BOOL),
                 ("hide_sidebar_nav", FD.LABEL_OPTIONAL, FD.TYPE_BOOL),
                 ("toolbar_mode", FD.LABEL_OPTIONAL, FD.TYPE_ENUM),
+                ("show_error_links", FD.LABEL_OPTIONAL, FD.TYPE_ENUM),
             },
         ),
         (
@@ -132,6 +133,7 @@ FD = FieldDescriptor
                 ("show_sidebar_border", FD.LABEL_OPTIONAL, FD.TYPE_BOOL),
                 ("chart_categorical_colors", FD.LABEL_REPEATED, FD.TYPE_STRING),
                 ("chart_sequential_colors", FD.LABEL_REPEATED, FD.TYPE_STRING),
+                ("chart_diverging_colors", FD.LABEL_REPEATED, FD.TYPE_STRING),
                 ("red_color", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("orange_color", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("yellow_color", FD.LABEL_OPTIONAL, FD.TYPE_STRING),

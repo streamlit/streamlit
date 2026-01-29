@@ -22,6 +22,7 @@ import { transparentize } from "color2k"
 import { ThemeConfig } from "~lib/theme"
 import { createBaseUiTheme } from "~lib/theme/createBaseUiTheme"
 import { createEmotionColors } from "~lib/theme/getColors"
+import { createShadows } from "~lib/theme/getShadows"
 import {
   breakpoints,
   colors,
@@ -85,12 +86,16 @@ const genericColors = {
   ...optionalThemeColors,
 }
 
+// Create colors and shadows using the same pattern as emotionBaseTheme
+const emotionColors = createEmotionColors(genericColors)
+const shadows = createShadows(emotionColors)
+
 const emotionMockTheme = {
   inSidebar: false,
   showSidebarBorder: false,
   linkUnderline: true,
   breakpoints,
-  colors: createEmotionColors(genericColors),
+  colors: emotionColors,
   fonts,
   fontSizes,
   fontWeights,
@@ -98,6 +103,7 @@ const emotionMockTheme = {
   iconSizes,
   lineHeights,
   radii,
+  shadows,
   sizes,
   spacing,
   zIndices,

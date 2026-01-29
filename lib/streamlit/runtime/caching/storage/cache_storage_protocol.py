@@ -156,7 +156,6 @@ class CacheStorage(Protocol):
         to close open resources, before we delete the storage instance.
         e.g. close the database connection etc.
         """
-        pass
 
 
 class CacheStorageManager(Protocol):
@@ -235,5 +234,3 @@ class CacheStorageManager(Protocol):
         -----
         Threading: Should be safe to call from any thread.
         """
-
-        pass
