@@ -266,7 +266,7 @@ describe("colorUtils", () => {
         },
       }
 
-      resolveBuiltinColorsInSpec(spec, mockTheme)
+      resolveNamedColorsInSpec(spec, mockTheme)
 
       expect((spec.spec as Record<string, unknown>).encoding).toMatchObject({
         color: { value: mockTheme.colors.greenColor },
@@ -290,7 +290,7 @@ describe("colorUtils", () => {
         },
       }
 
-      resolveBuiltinColorsInSpec(spec, mockTheme)
+      resolveNamedColorsInSpec(spec, mockTheme)
 
       expect((spec.spec as Record<string, unknown>).encoding).toMatchObject({
         color: { value: mockTheme.colors.blueColor },
@@ -321,7 +321,7 @@ describe("colorUtils", () => {
         },
       }
 
-      resolveBuiltinColorsInSpec(spec, mockTheme)
+      resolveNamedColorsInSpec(spec, mockTheme)
 
       const innerSpec = spec.spec as Record<string, unknown>
       const layers = innerSpec.layer as Array<Record<string, unknown>>
@@ -363,7 +363,7 @@ describe("colorUtils", () => {
         ],
       }
 
-      resolveBuiltinColorsInSpec(spec, mockTheme)
+      resolveNamedColorsInSpec(spec, mockTheme)
 
       const outerLayers = spec.layer as Array<Record<string, unknown>>
       const innerLayers = outerLayers[0].layer as Array<
@@ -402,7 +402,7 @@ describe("colorUtils", () => {
         ],
       }
 
-      resolveBuiltinColorsInSpec(spec, mockTheme)
+      resolveNamedColorsInSpec(spec, mockTheme)
 
       const vconcat = spec.vconcat as Array<Record<string, unknown>>
       const hconcat = vconcat[0].hconcat as Array<Record<string, unknown>>

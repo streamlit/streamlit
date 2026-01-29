@@ -17,15 +17,12 @@
 import { transparentize } from "color2k"
 
 import { darkTheme, lightTheme } from "~lib/theme/index"
-import { NamedColor } from "~lib/theme/types"
 
 import {
   getDividerColors,
   getMarkdownTextColors,
   getThemeBackgroundColors,
   hasLightBackgroundColor,
-  isNamedColor,
-  NAMED_COLORS,
   resolveNamedBackgroundColor,
   resolveNamedColor,
 } from "./getColors"
@@ -246,80 +243,8 @@ describe("getMarkdownTextColors", () => {
   })
 })
 
-describe("NAMED_COLORS", () => {
-  it("contains all expected color names", () => {
-    const expectedColors = [
-      "red",
-      "orange",
-      "yellow",
-      "green",
-      "blue",
-      "violet",
-      "gray",
-      "grey",
-      "primary",
-    ]
-    expectedColors.forEach(color => {
-      expect(NAMED_COLORS.has(color)).toBe(true)
-    })
-    expect(NAMED_COLORS.size).toBe(expectedColors.length)
-  })
-
-  it("is derived from NAMED_COLOR_CONFIG (config is the source of truth)", () => {
-    // This test ensures that if someone adds a color to the config,
-    // it automatically becomes available in NAMED_COLORS.
-    // NamedColor is now derived from NAMED_COLOR_CONFIG,
-    // so this compile-time check verifies the type covers all expected values.
-    const allBuiltinColors: NamedColor[] = [
-      "red",
-      "orange",
-      "yellow",
-      "green",
-      "blue",
-      "violet",
-      "gray",
-      "grey",
-      "primary",
-    ]
-
-    // Runtime check that all NamedColor values are in the set
-    allBuiltinColors.forEach(color => {
-      expect(NAMED_COLORS.has(color)).toBe(true)
-    })
-
-    // Verify the set size matches (no extra colors in set)
-    expect(NAMED_COLORS.size).toBe(allBuiltinColors.length)
-  })
-})
-
-describe("isNamedColor", () => {
-  it("returns true for valid builtin color names", () => {
-    expect(isNamedColor("red")).toBe(true)
-    expect(isNamedColor("blue")).toBe(true)
-    expect(isNamedColor("primary")).toBe(true)
-    expect(isNamedColor("gray")).toBe(true)
-    expect(isNamedColor("grey")).toBe(true)
-  })
-
-  it("returns true for uppercase color names (case insensitive)", () => {
-    expect(isNamedColor("RED")).toBe(true)
-    expect(isNamedColor("Blue")).toBe(true)
-    expect(isNamedColor("PRIMARY")).toBe(true)
-  })
-
-  it("returns false for non-builtin colors", () => {
-    expect(isNamedColor("#ff0000")).toBe(false)
-    expect(isNamedColor("pink")).toBe(false)
-    expect(isNamedColor("rgb(255, 0, 0)")).toBe(false)
-  })
-
-  it("returns false for non-string values", () => {
-    expect(isNamedColor(null)).toBe(false)
-    expect(isNamedColor(undefined)).toBe(false)
-    expect(isNamedColor(123)).toBe(false)
-    expect(isNamedColor({})).toBe(false)
-  })
-})
+// Note: Tests for NAMED_COLORS and isNamedColor are in namedColors.test.ts
+// This file only tests functions defined in getColors.ts
 
 describe("resolveNamedColor", () => {
   it("resolves builtin color names to theme colors for light theme", () => {

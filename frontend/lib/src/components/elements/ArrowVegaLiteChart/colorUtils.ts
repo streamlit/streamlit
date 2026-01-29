@@ -49,7 +49,7 @@ export function resolveNamedColorsInSpec(
   if (Array.isArray(spec.layer)) {
     for (const layerSpec of spec.layer) {
       if (layerSpec && typeof layerSpec === "object") {
-        resolveBuiltinColorsInSpec(layerSpec as Record<string, unknown>, theme)
+        resolveNamedColorsInSpec(layerSpec as Record<string, unknown>, theme)
       }
     }
   }
@@ -71,7 +71,7 @@ export function resolveNamedColorsInSpec(
     spec.spec &&
     typeof spec.spec === "object"
   ) {
-    resolveBuiltinColorsInSpec(spec.spec as Record<string, unknown>, theme)
+    resolveNamedColorsInSpec(spec.spec as Record<string, unknown>, theme)
   }
 }
 

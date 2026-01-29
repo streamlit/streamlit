@@ -15,10 +15,19 @@
  */
 
 /**
+ * Named Colors - Single Source of Truth
+ *
  * This file defines all named colors (e.g., "red", "blue", "primary") and
- * their mappings to theme color properties.
+ * their mappings to theme color properties. Named colors can be used across
+ * charts, DataFrame columns, and other Streamlit components.
+ *
  * To add a new color: add it to NAMED_COLOR_CONFIG below.
  * The type and set are automatically derived from the config.
+ *
+ * NOTE: "purple" and "violet" are handled differently:
+ * - For main colors, "purple" is not supported (passes through unchanged).
+ * - For background colors, "purple" is computed as purplebg (DISTINCT from violet)
+ *   in order to support the rainbow gradient.
  */
 
 /**
