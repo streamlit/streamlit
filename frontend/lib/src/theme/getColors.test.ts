@@ -17,16 +17,17 @@
 import { transparentize } from "color2k"
 
 import { darkTheme, lightTheme } from "~lib/theme/index"
+import { NamedColor } from "~lib/theme/types"
 
 import {
-  BUILTIN_COLOR_NAMES,
   getDividerColors,
   getMarkdownTextColors,
   getThemeBackgroundColors,
   hasLightBackgroundColor,
-  isBuiltinColorName,
-  resolveBuiltinBackgroundColor,
-  resolveBuiltinColor,
+  isNamedColor,
+  NAMED_COLORS,
+  resolveNamedBackgroundColor,
+  resolveNamedColor,
 } from "./getColors"
 
 describe("getDividerColors", () => {
@@ -245,7 +246,7 @@ describe("getMarkdownTextColors", () => {
   })
 })
 
-describe("BUILTIN_COLOR_NAMES", () => {
+describe("NAMED_COLORS", () => {
   it("contains all expected color names", () => {
     const expectedColors = [
       "red",
@@ -259,70 +260,94 @@ describe("BUILTIN_COLOR_NAMES", () => {
       "primary",
     ]
     expectedColors.forEach(color => {
-      expect(BUILTIN_COLOR_NAMES.has(color)).toBe(true)
+      expect(NAMED_COLORS.has(color)).toBe(true)
     })
-    expect(BUILTIN_COLOR_NAMES.size).toBe(expectedColors.length)
+    expect(NAMED_COLORS.size).toBe(expectedColors.length)
+  })
+
+  it("is derived from NAMED_COLOR_CONFIG (config is the source of truth)", () => {
+    // This test ensures that if someone adds a color to the config,
+    // it automatically becomes available in NAMED_COLORS.
+    // NamedColor is now derived from NAMED_COLOR_CONFIG,
+    // so this compile-time check verifies the type covers all expected values.
+    const allBuiltinColors: NamedColor[] = [
+      "red",
+      "orange",
+      "yellow",
+      "green",
+      "blue",
+      "violet",
+      "gray",
+      "grey",
+      "primary",
+    ]
+
+    // Runtime check that all NamedColor values are in the set
+    allBuiltinColors.forEach(color => {
+      expect(NAMED_COLORS.has(color)).toBe(true)
+    })
+
+    // Verify the set size matches (no extra colors in set)
+    expect(NAMED_COLORS.size).toBe(allBuiltinColors.length)
   })
 })
 
-describe("isBuiltinColorName", () => {
+describe("isNamedColor", () => {
   it("returns true for valid builtin color names", () => {
-    expect(isBuiltinColorName("red")).toBe(true)
-    expect(isBuiltinColorName("blue")).toBe(true)
-    expect(isBuiltinColorName("primary")).toBe(true)
-    expect(isBuiltinColorName("gray")).toBe(true)
-    expect(isBuiltinColorName("grey")).toBe(true)
+    expect(isNamedColor("red")).toBe(true)
+    expect(isNamedColor("blue")).toBe(true)
+    expect(isNamedColor("primary")).toBe(true)
+    expect(isNamedColor("gray")).toBe(true)
+    expect(isNamedColor("grey")).toBe(true)
   })
 
   it("returns true for uppercase color names (case insensitive)", () => {
-    expect(isBuiltinColorName("RED")).toBe(true)
-    expect(isBuiltinColorName("Blue")).toBe(true)
-    expect(isBuiltinColorName("PRIMARY")).toBe(true)
+    expect(isNamedColor("RED")).toBe(true)
+    expect(isNamedColor("Blue")).toBe(true)
+    expect(isNamedColor("PRIMARY")).toBe(true)
   })
 
   it("returns false for non-builtin colors", () => {
-    expect(isBuiltinColorName("#ff0000")).toBe(false)
-    expect(isBuiltinColorName("pink")).toBe(false)
-    expect(isBuiltinColorName("rgb(255, 0, 0)")).toBe(false)
+    expect(isNamedColor("#ff0000")).toBe(false)
+    expect(isNamedColor("pink")).toBe(false)
+    expect(isNamedColor("rgb(255, 0, 0)")).toBe(false)
   })
 
   it("returns false for non-string values", () => {
-    expect(isBuiltinColorName(null)).toBe(false)
-    expect(isBuiltinColorName(undefined)).toBe(false)
-    expect(isBuiltinColorName(123)).toBe(false)
-    expect(isBuiltinColorName({})).toBe(false)
+    expect(isNamedColor(null)).toBe(false)
+    expect(isNamedColor(undefined)).toBe(false)
+    expect(isNamedColor(123)).toBe(false)
+    expect(isNamedColor({})).toBe(false)
   })
 })
 
-describe("resolveBuiltinColor", () => {
+describe("resolveNamedColor", () => {
   it("resolves builtin color names to theme colors for light theme", () => {
     const colors = lightTheme.emotion.colors
 
-    expect(resolveBuiltinColor("red", lightTheme.emotion)).toBe(
-      colors.redColor
-    )
-    expect(resolveBuiltinColor("orange", lightTheme.emotion)).toBe(
+    expect(resolveNamedColor("red", lightTheme.emotion)).toBe(colors.redColor)
+    expect(resolveNamedColor("orange", lightTheme.emotion)).toBe(
       colors.orangeColor
     )
-    expect(resolveBuiltinColor("yellow", lightTheme.emotion)).toBe(
+    expect(resolveNamedColor("yellow", lightTheme.emotion)).toBe(
       colors.yellowColor
     )
-    expect(resolveBuiltinColor("green", lightTheme.emotion)).toBe(
+    expect(resolveNamedColor("green", lightTheme.emotion)).toBe(
       colors.greenColor
     )
-    expect(resolveBuiltinColor("blue", lightTheme.emotion)).toBe(
+    expect(resolveNamedColor("blue", lightTheme.emotion)).toBe(
       colors.blueColor
     )
-    expect(resolveBuiltinColor("violet", lightTheme.emotion)).toBe(
+    expect(resolveNamedColor("violet", lightTheme.emotion)).toBe(
       colors.violetColor
     )
-    expect(resolveBuiltinColor("gray", lightTheme.emotion)).toBe(
+    expect(resolveNamedColor("gray", lightTheme.emotion)).toBe(
       colors.grayColor
     )
-    expect(resolveBuiltinColor("grey", lightTheme.emotion)).toBe(
+    expect(resolveNamedColor("grey", lightTheme.emotion)).toBe(
       colors.grayColor
     )
-    expect(resolveBuiltinColor("primary", lightTheme.emotion)).toBe(
+    expect(resolveNamedColor("primary", lightTheme.emotion)).toBe(
       colors.primary
     )
   })
@@ -330,11 +355,9 @@ describe("resolveBuiltinColor", () => {
   it("resolves builtin color names to theme colors for dark theme", () => {
     const colors = darkTheme.emotion.colors
 
-    expect(resolveBuiltinColor("red", darkTheme.emotion)).toBe(colors.redColor)
-    expect(resolveBuiltinColor("blue", darkTheme.emotion)).toBe(
-      colors.blueColor
-    )
-    expect(resolveBuiltinColor("primary", darkTheme.emotion)).toBe(
+    expect(resolveNamedColor("red", darkTheme.emotion)).toBe(colors.redColor)
+    expect(resolveNamedColor("blue", darkTheme.emotion)).toBe(colors.blueColor)
+    expect(resolveNamedColor("primary", darkTheme.emotion)).toBe(
       colors.primary
     )
   })
@@ -342,69 +365,79 @@ describe("resolveBuiltinColor", () => {
   it("handles case-insensitive color names", () => {
     const colors = lightTheme.emotion.colors
 
-    expect(resolveBuiltinColor("RED", lightTheme.emotion)).toBe(
-      colors.redColor
-    )
-    expect(resolveBuiltinColor("Blue", lightTheme.emotion)).toBe(
+    expect(resolveNamedColor("RED", lightTheme.emotion)).toBe(colors.redColor)
+    expect(resolveNamedColor("Blue", lightTheme.emotion)).toBe(
       colors.blueColor
     )
-    expect(resolveBuiltinColor("PRIMARY", lightTheme.emotion)).toBe(
+    expect(resolveNamedColor("PRIMARY", lightTheme.emotion)).toBe(
       colors.primary
     )
   })
 
   it("returns non-builtin colors unchanged", () => {
-    expect(resolveBuiltinColor("#ff0000", lightTheme.emotion)).toBe("#ff0000")
-    expect(resolveBuiltinColor("pink", lightTheme.emotion)).toBe("pink")
-    expect(resolveBuiltinColor("rgb(255, 0, 0)", lightTheme.emotion)).toBe(
+    expect(resolveNamedColor("#ff0000", lightTheme.emotion)).toBe("#ff0000")
+    expect(resolveNamedColor("pink", lightTheme.emotion)).toBe("pink")
+    expect(resolveNamedColor("rgb(255, 0, 0)", lightTheme.emotion)).toBe(
       "rgb(255, 0, 0)"
     )
   })
 
   it("does not resolve purple (no purpleColor exists, use violet instead)", () => {
     // "purple" is not a built-in color name - it passes through unchanged
-    // This differs from resolveBuiltinBackgroundColor which DOES support "purple"
-    expect(resolveBuiltinColor("purple", lightTheme.emotion)).toBe("purple")
+    // This differs from resolveNamedBackgroundColor which DOES support "purple"
+    expect(resolveNamedColor("purple", lightTheme.emotion)).toBe("purple")
 
     // Use "violet" for the main color
-    expect(resolveBuiltinColor("violet", lightTheme.emotion)).toBe(
+    expect(resolveNamedColor("violet", lightTheme.emotion)).toBe(
       lightTheme.emotion.colors.violetColor
     )
   })
+
+  it("returns consistent results on repeated calls (memoization)", () => {
+    // First call
+    const result1 = resolveNamedColor("red", lightTheme.emotion)
+    // Second call should return the same value
+    const result2 = resolveNamedColor("red", lightTheme.emotion)
+    expect(result1).toBe(result2)
+
+    // Different color, same theme
+    const result3 = resolveNamedColor("blue", lightTheme.emotion)
+    expect(result3).toBe(lightTheme.emotion.colors.blueColor)
+  })
 })
 
-describe("resolveBuiltinBackgroundColor", () => {
+describe("resolveNamedBackgroundColor", () => {
   it("resolves builtin color names to background colors for light theme", () => {
     const bgColors = getThemeBackgroundColors(lightTheme.emotion)
 
-    expect(resolveBuiltinBackgroundColor("red", lightTheme.emotion)).toBe(
+    expect(resolveNamedBackgroundColor("red", lightTheme.emotion)).toBe(
       bgColors.redbg
     )
-    expect(resolveBuiltinBackgroundColor("orange", lightTheme.emotion)).toBe(
+    expect(resolveNamedBackgroundColor("orange", lightTheme.emotion)).toBe(
       bgColors.orangebg
     )
-    expect(resolveBuiltinBackgroundColor("yellow", lightTheme.emotion)).toBe(
+    expect(resolveNamedBackgroundColor("yellow", lightTheme.emotion)).toBe(
       bgColors.yellowbg
     )
-    expect(resolveBuiltinBackgroundColor("green", lightTheme.emotion)).toBe(
+    expect(resolveNamedBackgroundColor("green", lightTheme.emotion)).toBe(
       bgColors.greenbg
     )
-    expect(resolveBuiltinBackgroundColor("blue", lightTheme.emotion)).toBe(
+    expect(resolveNamedBackgroundColor("blue", lightTheme.emotion)).toBe(
       bgColors.bluebg
     )
-    expect(resolveBuiltinBackgroundColor("violet", lightTheme.emotion)).toBe(
+    expect(resolveNamedBackgroundColor("violet", lightTheme.emotion)).toBe(
       bgColors.violetbg
     )
-    expect(resolveBuiltinBackgroundColor("purple", lightTheme.emotion)).toBe(
+    expect(resolveNamedBackgroundColor("purple", lightTheme.emotion)).toBe(
       bgColors.purplebg
     )
-    expect(resolveBuiltinBackgroundColor("gray", lightTheme.emotion)).toBe(
+    expect(resolveNamedBackgroundColor("gray", lightTheme.emotion)).toBe(
       bgColors.graybg
     )
-    expect(resolveBuiltinBackgroundColor("grey", lightTheme.emotion)).toBe(
+    expect(resolveNamedBackgroundColor("grey", lightTheme.emotion)).toBe(
       bgColors.graybg
     )
-    expect(resolveBuiltinBackgroundColor("primary", lightTheme.emotion)).toBe(
+    expect(resolveNamedBackgroundColor("primary", lightTheme.emotion)).toBe(
       bgColors.primarybg
     )
   })
@@ -412,13 +445,13 @@ describe("resolveBuiltinBackgroundColor", () => {
   it("resolves builtin color names to background colors for dark theme", () => {
     const bgColors = getThemeBackgroundColors(darkTheme.emotion)
 
-    expect(resolveBuiltinBackgroundColor("red", darkTheme.emotion)).toBe(
+    expect(resolveNamedBackgroundColor("red", darkTheme.emotion)).toBe(
       bgColors.redbg
     )
-    expect(resolveBuiltinBackgroundColor("blue", darkTheme.emotion)).toBe(
+    expect(resolveNamedBackgroundColor("blue", darkTheme.emotion)).toBe(
       bgColors.bluebg
     )
-    expect(resolveBuiltinBackgroundColor("primary", darkTheme.emotion)).toBe(
+    expect(resolveNamedBackgroundColor("primary", darkTheme.emotion)).toBe(
       bgColors.primarybg
     )
   })
@@ -426,36 +459,36 @@ describe("resolveBuiltinBackgroundColor", () => {
   it("handles case-insensitive color names", () => {
     const bgColors = getThemeBackgroundColors(lightTheme.emotion)
 
-    expect(resolveBuiltinBackgroundColor("RED", lightTheme.emotion)).toBe(
+    expect(resolveNamedBackgroundColor("RED", lightTheme.emotion)).toBe(
       bgColors.redbg
     )
-    expect(resolveBuiltinBackgroundColor("Blue", lightTheme.emotion)).toBe(
+    expect(resolveNamedBackgroundColor("Blue", lightTheme.emotion)).toBe(
       bgColors.bluebg
     )
-    expect(resolveBuiltinBackgroundColor("PRIMARY", lightTheme.emotion)).toBe(
+    expect(resolveNamedBackgroundColor("PRIMARY", lightTheme.emotion)).toBe(
       bgColors.primarybg
     )
   })
 
   it("returns non-builtin colors unchanged", () => {
-    expect(resolveBuiltinBackgroundColor("#ff0000", lightTheme.emotion)).toBe(
+    expect(resolveNamedBackgroundColor("#ff0000", lightTheme.emotion)).toBe(
       "#ff0000"
     )
-    expect(resolveBuiltinBackgroundColor("pink", lightTheme.emotion)).toBe(
+    expect(resolveNamedBackgroundColor("pink", lightTheme.emotion)).toBe(
       "pink"
     )
     expect(
-      resolveBuiltinBackgroundColor("rgb(255, 0, 0)", lightTheme.emotion)
+      resolveNamedBackgroundColor("rgb(255, 0, 0)", lightTheme.emotion)
     ).toBe("rgb(255, 0, 0)")
   })
 
   it("has distinct purple and violet background colors", () => {
     const bgColors = getThemeBackgroundColors(lightTheme.emotion)
 
-    expect(resolveBuiltinBackgroundColor("purple", lightTheme.emotion)).toBe(
+    expect(resolveNamedBackgroundColor("purple", lightTheme.emotion)).toBe(
       bgColors.purplebg
     )
-    expect(resolveBuiltinBackgroundColor("violet", lightTheme.emotion)).toBe(
+    expect(resolveNamedBackgroundColor("violet", lightTheme.emotion)).toBe(
       bgColors.violetbg
     )
     // Unlike main colors, purple and violet have distinct background colors

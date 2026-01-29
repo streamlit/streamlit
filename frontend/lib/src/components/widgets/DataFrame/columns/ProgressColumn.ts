@@ -23,7 +23,7 @@ import { RangeCellType } from "@glideapps/glide-data-grid-cells"
 
 import { isIntegerType } from "~lib/dataframes/arrowTypeUtils"
 import { ChartColor, EmotionTheme } from "~lib/theme"
-import { resolveBuiltinColor } from "~lib/theme/getColors"
+import { resolveNamedColor } from "~lib/theme/getColors"
 import { formatNumber } from "~lib/util/formatNumber"
 import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
 
@@ -220,7 +220,7 @@ function ProgressColumn(
             : theme?.colors.greenColor
         }
       } else if (parameters.color) {
-        progressColor = resolveBuiltinColor(parameters.color, theme)
+        progressColor = resolveNamedColor(parameters.color, theme)
       }
 
       return {

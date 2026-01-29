@@ -25,7 +25,10 @@ import {
   RequiredThemeColors,
 } from "./emotionBaseTheme/themeColors"
 import { ThemeShadows } from "./getShadows"
+import type { NamedColor } from "./namedColors"
 import { PrimitiveColors } from "./primitives"
+// Re-export NamedColor from the single source of truth
+export type { NamedColor } from "./namedColors"
 
 /**
  * Comprehensive type for emotion theme colors.
@@ -133,21 +136,6 @@ export type ThemeSpacing = keyof ThemeSpacings
 export type PresetThemeName = "Light" | "Dark"
 
 /**
- * Built-in color names that map to Streamlit theme colors.
- * Used across charts, DataFrame columns, and other components.
- */
-export type BuiltinColorName =
-  | "red"
-  | "orange"
-  | "yellow"
-  | "green"
-  | "blue"
-  | "violet"
-  | "gray"
-  | "grey"
-  | "primary"
-
-/**
  * Auto color modes for charts and progress bars.
  * - "auto": Green when positive/increasing, red when negative/decreasing
  * - "auto-inverse": Red when positive/increasing, green when negative/decreasing
@@ -164,4 +152,4 @@ export type CSSColorString = string & { readonly [__cssColorBrand]?: never }
 /**
  * Union of all valid color parameter values for charts and progress bars.
  */
-export type ChartColor = ChartAutoColor | BuiltinColorName | CSSColorString
+export type ChartColor = ChartAutoColor | NamedColor | CSSColorString

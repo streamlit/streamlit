@@ -15,10 +15,10 @@
  */
 
 import { EmotionTheme } from "~lib/theme"
-import { isBuiltinColorName, resolveBuiltinColor } from "~lib/theme/getColors"
+import { isNamedColor, resolveNamedColor } from "~lib/theme/getColors"
 
 /**
- * Resolve built-in color names in a Vega-Lite spec to their theme color values.
+ * Resolve named colors in a Vega-Lite spec to their theme color values.
  * This mutates the spec in place.
  *
  * Handles all Vega-Lite composition types via recursive traversal:
@@ -36,7 +36,7 @@ import { isBuiltinColorName, resolveBuiltinColor } from "~lib/theme/getColors"
  * @param spec The Vega-Lite specification object
  * @param theme The Streamlit EmotionTheme containing color values
  */
-export function resolveBuiltinColorsInSpec(
+export function resolveNamedColorsInSpec(
   spec: Record<string, unknown>,
   theme: EmotionTheme
 ): void {
@@ -59,7 +59,7 @@ export function resolveBuiltinColorsInSpec(
     if (Array.isArray(spec[key])) {
       for (const subSpec of spec[key] as unknown[]) {
         if (subSpec && typeof subSpec === "object") {
-          resolveBuiltinColorsInSpec(subSpec as Record<string, unknown>, theme)
+          resolveNamedColorsInSpec(subSpec as Record<string, unknown>, theme)
         }
       }
     }
@@ -91,8 +91,8 @@ function resolveEncodingColors(
 
   // Case 1: ColorValue - { value: "red" }
   // Used when: st.line_chart(df, color="red")
-  if ("value" in colorEncoding && isBuiltinColorName(colorEncoding.value)) {
-    colorEncoding.value = resolveBuiltinColor(colorEncoding.value, theme)
+  if ("value" in colorEncoding && isNamedColor(colorEncoding.value)) {
+    colorEncoding.value = resolveNamedColor(colorEncoding.value, theme)
   }
 
   // Case 2: Color with scale - { scale: { range: ["red", "blue"] } }
@@ -100,7 +100,7 @@ function resolveEncodingColors(
   const scale = colorEncoding.scale as Record<string, unknown> | undefined
   if (scale && Array.isArray(scale.range)) {
     scale.range = (scale.range as unknown[]).map(color =>
-      isBuiltinColorName(color) ? resolveBuiltinColor(color, theme) : color
+      isNamedColor(color) ? resolveNamedColor(color, theme) : color
     )
   }
 }

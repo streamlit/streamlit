@@ -22,7 +22,7 @@ import {
 import { SparklineCellType } from "@glideapps/glide-data-grid-cells"
 
 import { ChartColor, EmotionTheme } from "~lib/theme"
-import { resolveBuiltinColor } from "~lib/theme/getColors"
+import { resolveNamedColor } from "~lib/theme/getColors"
 import { formatNumber } from "~lib/util/formatNumber"
 import { isNullOrUndefined } from "~lib/util/utils"
 
@@ -85,7 +85,7 @@ function BaseChartColumn(
     defaultColor = theme.colors.greenColor
   } else {
     defaultColor = parameters.color
-      ? resolveBuiltinColor(parameters.color, theme)
+      ? resolveNamedColor(parameters.color, theme)
       : undefined
   }
 

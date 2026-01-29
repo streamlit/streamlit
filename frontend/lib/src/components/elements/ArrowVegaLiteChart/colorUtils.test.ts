@@ -15,15 +15,15 @@
  */
 
 import { EmotionTheme, lightTheme } from "~lib/theme"
-import { isBuiltinColorName, resolveBuiltinColor } from "~lib/theme/getColors"
+import { isNamedColor, resolveNamedColor } from "~lib/theme/getColors"
 
-import { resolveBuiltinColorsInSpec } from "./colorUtils"
+import { resolveNamedColorsInSpec } from "./colorUtils"
 
 // Use the actual light theme for realistic color values
 const mockTheme: EmotionTheme = lightTheme.emotion
 
 describe("colorUtils", () => {
-  describe("isBuiltinColorName", () => {
+  describe("isNamedColor", () => {
     it.each([
       "red",
       "orange",
@@ -35,13 +35,13 @@ describe("colorUtils", () => {
       "grey",
       "primary",
     ])('returns true for builtin color name "%s"', name => {
-      expect(isBuiltinColorName(name)).toBe(true)
+      expect(isNamedColor(name)).toBe(true)
     })
 
     it.each(["Red", "RED", "Blue", "GRAY", "Grey", "PRIMARY"])(
       'returns true for case-insensitive builtin color name "%s"',
       name => {
-        expect(isBuiltinColorName(name)).toBe(true)
+        expect(isNamedColor(name)).toBe(true)
       }
     )
 
@@ -53,58 +53,58 @@ describe("colorUtils", () => {
       "pink",
       "cyan",
     ])('returns false for non-builtin color "%s"', value => {
-      expect(isBuiltinColorName(value)).toBe(false)
+      expect(isNamedColor(value)).toBe(false)
     })
 
     it.each([null, undefined, 123, [], {}])(
       "returns false for non-string value %p",
       value => {
-        expect(isBuiltinColorName(value)).toBe(false)
+        expect(isNamedColor(value)).toBe(false)
       }
     )
   })
 
-  describe("resolveBuiltinColor", () => {
+  describe("resolveNamedColor", () => {
     it("resolves builtin color names to theme colors", () => {
-      expect(resolveBuiltinColor("red", mockTheme)).toBe(
+      expect(resolveNamedColor("red", mockTheme)).toBe(
         mockTheme.colors.redColor
       )
-      expect(resolveBuiltinColor("blue", mockTheme)).toBe(
+      expect(resolveNamedColor("blue", mockTheme)).toBe(
         mockTheme.colors.blueColor
       )
-      expect(resolveBuiltinColor("primary", mockTheme)).toBe(
+      expect(resolveNamedColor("primary", mockTheme)).toBe(
         mockTheme.colors.primary
       )
     })
 
     it("handles grey/gray alias", () => {
-      expect(resolveBuiltinColor("gray", mockTheme)).toBe(
+      expect(resolveNamedColor("gray", mockTheme)).toBe(
         mockTheme.colors.grayColor
       )
-      expect(resolveBuiltinColor("grey", mockTheme)).toBe(
+      expect(resolveNamedColor("grey", mockTheme)).toBe(
         mockTheme.colors.grayColor
       )
     })
 
     it("is case-insensitive", () => {
-      expect(resolveBuiltinColor("RED", mockTheme)).toBe(
+      expect(resolveNamedColor("RED", mockTheme)).toBe(
         mockTheme.colors.redColor
       )
-      expect(resolveBuiltinColor("Blue", mockTheme)).toBe(
+      expect(resolveNamedColor("Blue", mockTheme)).toBe(
         mockTheme.colors.blueColor
       )
     })
 
     it("returns non-builtin colors unchanged", () => {
-      expect(resolveBuiltinColor("#ff0000", mockTheme)).toBe("#ff0000")
-      expect(resolveBuiltinColor("rgb(255, 0, 0)", mockTheme)).toBe(
+      expect(resolveNamedColor("#ff0000", mockTheme)).toBe("#ff0000")
+      expect(resolveNamedColor("rgb(255, 0, 0)", mockTheme)).toBe(
         "rgb(255, 0, 0)"
       )
-      expect(resolveBuiltinColor("notacolor", mockTheme)).toBe("notacolor")
+      expect(resolveNamedColor("notacolor", mockTheme)).toBe("notacolor")
     })
   })
 
-  describe("resolveBuiltinColorsInSpec", () => {
+  describe("resolveNamedColorsInSpec", () => {
     it("resolves single color value in encoding", () => {
       const spec = {
         encoding: {
@@ -112,7 +112,7 @@ describe("colorUtils", () => {
         },
       }
 
-      resolveBuiltinColorsInSpec(spec, mockTheme)
+      resolveNamedColorsInSpec(spec, mockTheme)
 
       expect(spec.encoding.color.value).toBe(mockTheme.colors.redColor)
     })
@@ -128,7 +128,7 @@ describe("colorUtils", () => {
         },
       }
 
-      resolveBuiltinColorsInSpec(spec, mockTheme)
+      resolveNamedColorsInSpec(spec, mockTheme)
 
       expect(spec.encoding.color.scale.range).toEqual([
         mockTheme.colors.redColor,
@@ -148,7 +148,7 @@ describe("colorUtils", () => {
         },
       }
 
-      resolveBuiltinColorsInSpec(spec, mockTheme)
+      resolveNamedColorsInSpec(spec, mockTheme)
 
       expect(spec.encoding.color.scale.range).toEqual([
         mockTheme.colors.redColor,
@@ -175,7 +175,7 @@ describe("colorUtils", () => {
         ],
       }
 
-      resolveBuiltinColorsInSpec(spec, mockTheme)
+      resolveNamedColorsInSpec(spec, mockTheme)
 
       expect(
         (spec.layer[0] as Record<string, unknown>).encoding
@@ -205,7 +205,7 @@ describe("colorUtils", () => {
         ],
       }
 
-      resolveBuiltinColorsInSpec(spec, mockTheme)
+      resolveNamedColorsInSpec(spec, mockTheme)
 
       expect(
         (spec.vconcat[0] as Record<string, unknown>).encoding
@@ -235,7 +235,7 @@ describe("colorUtils", () => {
         ],
       }
 
-      resolveBuiltinColorsInSpec(spec, mockTheme)
+      resolveNamedColorsInSpec(spec, mockTheme)
 
       expect(
         (spec.hconcat[0] as Record<string, unknown>).encoding
@@ -420,7 +420,7 @@ describe("colorUtils", () => {
         },
       }
 
-      resolveBuiltinColorsInSpec(spec, mockTheme)
+      resolveNamedColorsInSpec(spec, mockTheme)
 
       expect(spec.encoding.color.value).toBe("#ff0000")
     })
@@ -434,7 +434,7 @@ describe("colorUtils", () => {
       }
 
       // Should not throw
-      expect(() => resolveBuiltinColorsInSpec(spec, mockTheme)).not.toThrow()
+      expect(() => resolveNamedColorsInSpec(spec, mockTheme)).not.toThrow()
     })
 
     it("handles spec without encoding", () => {
@@ -443,7 +443,7 @@ describe("colorUtils", () => {
       }
 
       // Should not throw
-      expect(() => resolveBuiltinColorsInSpec(spec, mockTheme)).not.toThrow()
+      expect(() => resolveNamedColorsInSpec(spec, mockTheme)).not.toThrow()
     })
 
     it("resolves primary color", () => {
@@ -453,7 +453,7 @@ describe("colorUtils", () => {
         },
       }
 
-      resolveBuiltinColorsInSpec(spec, mockTheme)
+      resolveNamedColorsInSpec(spec, mockTheme)
 
       expect(spec.encoding.color.value).toBe(mockTheme.colors.primary)
     })

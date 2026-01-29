@@ -22,7 +22,7 @@ import {
   blend,
   EmotionTheme,
   hasLightBackgroundColor,
-  resolveBuiltinBackgroundColor,
+  resolveNamedBackgroundColor,
 } from "~lib/theme"
 import { isNullOrUndefined } from "~lib/util/utils"
 
@@ -83,7 +83,7 @@ export const prepareOptions = (
       } else if (option.color) {
         // Resolve built-in color names to theme background colors,
         // otherwise use the color value directly.
-        resolvedColor = resolveBuiltinBackgroundColor(option.color, theme)
+        resolvedColor = resolveNamedBackgroundColor(option.color, theme)
       }
       // The upstream implementation has some issues with the alpha channel.
       // Therefore, we are blending the color with the background to remove the alpha channel.
