@@ -1,5 +1,5 @@
 # Snapshot autofix workflow - updates E2E test snapshots when Playwright tests fail
-# Triggered by adding the 'snapshots' label to a PR
+# Triggered by adding the 'update-snapshots' label to a PR
 name: Snapshot Autofix
 
 on:
@@ -8,7 +8,7 @@ on:
 
 jobs:
   snapshot-autofix:
-    if: contains(github.event.pull_request.labels.*.name, 'snapshots')
+    if: contains(github.event.pull_request.labels.*.name, 'update-snapshots')
     runs-on: ubuntu-latest
     timeout-minutes: 45
 
@@ -79,7 +79,7 @@ jobs:
               "2. Extract them to `e2e_playwright/__snapshots__/`",
               "3. Commit and push the changes",
               "",
-              "You can re-run this workflow by removing and re-adding the `snapshots` label."
+              "You can re-run this workflow by removing and re-adding the `update-snapshots` label."
             ].join("\n");
 
             await github.rest.issues.createComment({
@@ -130,7 +130,7 @@ jobs:
 
             Automated snapshot updates for #${{ github.event.pull_request.number }} created via the snapshot autofix CI workflow.
 
-            This workflow was triggered by adding the `snapshots` label to a PR after Playwright E2E tests failed with snapshot mismatches.
+            This workflow was triggered by adding the `update-snapshots` label to a PR after Playwright E2E tests failed with snapshot mismatches.
 
             **Updated snapshots:** ${{ steps.count-snapshots.outputs.snapshot_count }} file(s)
 
@@ -144,12 +144,12 @@ jobs:
             --title "[snapshots] Update E2E snapshots for #${{ github.event.pull_request.number }}" \
             --body "$PR_BODY"
 
-      - name: Remove 'snapshots' label from source PR
+      - name: Remove 'update-snapshots' label from source PR
         if: steps.update-snapshots.outputs.script_status == 'success' && steps.count-snapshots.outputs.has_updates == 'true' && steps.git-check.outputs.changes == 'true' && github.event.pull_request.head.repo.full_name == github.repository
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh pr edit ${{ github.event.pull_request.number }} --remove-label "snapshots"
+          gh pr edit ${{ github.event.pull_request.number }} --remove-label "update-snapshots"
 
       - name: Show notices for fork PRs
         if: steps.update-snapshots.outputs.script_status == 'success' && steps.count-snapshots.outputs.has_updates == 'true' && steps.git-check.outputs.changes == 'true' && github.event.pull_request.head.repo.full_name != github.repository
