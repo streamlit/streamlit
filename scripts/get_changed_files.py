@@ -200,14 +200,40 @@ def get_frontend_files(files: list[str]) -> list[str]:
 
 
 def get_frontend_test_files(files: list[str]) -> list[str]:
-    """Get frontend test files."""
-    result = []
+    """Get frontend test files, including mapped tests from changed source files.
+
+    Maps source files to test files in the same directory:
+    - Component.tsx -> Component.test.tsx
+    - utils.ts -> utils.test.ts
+    """
+    test_files: set[str] = set()
+
     for f in files:
         if _is_excluded(f):
             continue
-        if f.startswith(FRONTEND_PREFIX) and re.search(FRONTEND_TEST_PATTERN, f):
-            result.append(f)
-    return result
+
+        if not f.startswith(FRONTEND_PREFIX):
+            continue
+
+        if not re.search(FRONTEND_EXTENSIONS, f):
+            continue
+
+        # Direct test file
+        if re.search(FRONTEND_TEST_PATTERN, f):
+            test_files.add(f)
+            continue
+
+        # Map source file to test file: Component.tsx -> Component.test.tsx
+        # Extract base name and extension
+        match = re.search(r"^(.+)\.(tsx?|jsx?)$", f)
+        if match:
+            base = match.group(1)
+            ext = match.group(2)
+            test_file = f"{base}.test.{ext}"
+            if (REPO_ROOT / test_file).exists():
+                test_files.add(test_file)
+
+    return sorted(test_files)
 
 
 def get_e2e_files(files: list[str]) -> list[str]:
