@@ -34,6 +34,7 @@ import {
   ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { measureScrollbarGutterSize } from "~lib/hooks/useScrollbarGutterSize"
 import { hasLightBackgroundColor } from "~lib/theme"
 import {
   isNullOrUndefined,
@@ -85,6 +86,19 @@ function TimeInput({
 
   const clearable = isNullOrUndefined(element.default) && !disabled
   const theme = useEmotionTheme()
+
+  // Calculate if scrollbar will be needed based on number of time options
+  const stepSeconds = element.step ? Number(element.step) : 900
+  const numTimeOptions = Math.floor(86400 / stepSeconds) // 86400 = seconds in a day
+  // Only account for scrollbar gutter when scrollbar is actually visible
+  const hasScrollbar = numTimeOptions * 40 > 300 // dropdownItemHeight=40px, maxDropdownHeight=300px
+
+  // Helper to get effective gutter size - called fresh when dropdown renders
+  // This allows it to pick up scrollbar mode changes (e.g., plugging in mouse)
+  const getEffectiveGutterSize = (): number => {
+    if (!hasScrollbar) return 0
+    return measureScrollbarGutterSize()
+  }
 
   const selectOverrides = {
     Select: {
@@ -138,26 +152,45 @@ function TimeInput({
           },
 
           Dropdown: {
-            style: () =>
-              ({
+            style: () => {
+              // Measure fresh when dropdown opens (not memoized like the hook)
+              // This allows picking up scrollbar mode changes when reopening dropdown
+              const effectiveGutterSize = getEffectiveGutterSize()
+              return {
                 // Padding to inset items from the edges (matches VirtualDropdown)
+                // No right padding - scrollbar sits at edge, items use marginRight for spacing
                 paddingTop: theme.spacing.none,
                 paddingBottom: theme.spacing.none,
                 paddingLeft: theme.spacing.xs,
-                paddingRight: theme.spacing.xs,
+                paddingRight: theme.spacing.none,
                 // Somehow this adds an additional shadow, even though we already have
                 // one on the popover, so we need to remove it here.
                 boxShadow: "none",
-                overflow: "hidden",
+                // Allow scrolling within the dropdown
+                overflowY: "auto",
+                overflowX: "hidden",
                 maxHeight: theme.sizes.maxDropdownHeight,
-                // Set CSS variable to make ThemedStyledDropdownListItem marginRight = 0
-                // since we're using container padding for spacing instead
-                "--scrollbar-gutter-size": theme.spacing.xs,
-              }) as React.CSSProperties,
+                // Only reserve space for scrollbar in classic mode (effectiveGutterSize > 0)
+                // In overlay mode, scrollbar overlays content so no gutter needed
+                scrollbarGutter:
+                  effectiveGutterSize > 0 ? "stable" : undefined,
+                // Pass scrollbar gutter size to children via CSS custom property
+                // so they can adjust their margins (matches VirtualDropdown behavior)
+                "--scrollbar-gutter-size": `${effectiveGutterSize}px`,
+              } as React.CSSProperties
+            },
           },
 
           DropdownListItem: {
             component: TimeInputListItem,
+            style: () => {
+              // Measure fresh when dropdown opens (matches Dropdown style)
+              const effectiveGutterSize = getEffectiveGutterSize()
+              return {
+                // Set CSS variable directly on items to ensure it cascades to inner highlight
+                "--scrollbar-gutter-size": `${effectiveGutterSize}px`,
+              } as React.CSSProperties
+            },
           },
 
           Popover: {
