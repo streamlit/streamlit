@@ -623,3 +623,86 @@ def test_number_input_query_param_non_clearable_empty_value(
     # Non-clearable number input should reject empty value, show default 3.14
     expect_prefixed_markdown(page, "bound float value:", "3.14")
     expect(page).not_to_have_url(re.compile(r"[?&]bound_float="))
+
+
+def test_number_input_error_state_below_min(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that entering a value below min shows a custom error UI."""
+    number_input = get_number_input(themed_app, "number input 3 (min & max)")
+    input_field = number_input.locator("input")
+
+    # Enter a value below min (min=1)
+    input_field.fill("0")
+    input_field.press("Tab")
+
+    # Check that the error icon is shown
+    error_icon = number_input.get_by_test_id("stTooltipErrorHoverTarget")
+    expect(error_icon).to_be_visible()
+
+    # Hover over the error tooltip target
+    error_icon.hover()
+
+    # Check that the expected error tooltip message is shown
+    tooltip = themed_app.get_by_test_id("stTooltipErrorContent")
+    expect(tooltip).to_have_text("Value must be at least 1.")
+
+    # Snapshot test of number input in error state
+    assert_snapshot(number_input, name="st_number_input-error_below_min")
+
+
+def test_number_input_error_state_above_max(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that entering a value above max shows a custom error UI."""
+    number_input = get_number_input(themed_app, "number input 3 (min & max)")
+    input_field = number_input.locator("input")
+
+    # Enter a value above max (max=10)
+    input_field.fill("99")
+    input_field.press("Tab")
+
+    # Check that the error icon is shown
+    error_icon = number_input.get_by_test_id("stTooltipErrorHoverTarget")
+    expect(error_icon).to_be_visible()
+
+    # Hover over the error tooltip target
+    error_icon.hover()
+
+    # Check that the expected error tooltip message is shown
+    tooltip = themed_app.get_by_test_id("stTooltipErrorContent")
+    expect(tooltip).to_have_text("Value must be at most 10.")
+
+    # Snapshot test of number input in error state
+    assert_snapshot(number_input, name="st_number_input-error_above_max")
+
+
+def test_number_input_error_clears_on_valid_value(app: Page):
+    """Test that error state clears when a valid value is entered."""
+    number_input = get_number_input(app, "number input 3 (min & max)")
+    input_field = number_input.locator("input")
+
+    # First trigger error state
+    input_field.fill("0")
+    input_field.press("Tab")
+    error_icon = number_input.get_by_test_id("stTooltipErrorHoverTarget")
+    expect(error_icon).to_be_visible()
+
+    # Now enter a valid value (within min=1, max=10)
+    input_field.fill("5")
+    input_field.press("Enter")
+
+    # Error icon should no longer be visible
+    expect(
+        number_input.get_by_test_id("stTooltipErrorHoverTarget")
+    ).not_to_be_visible()
+
+
+def test_number_input_no_error_for_valid_value(app: Page):
+    """Test that no error is shown for a value within range."""
+    number_input = get_number_input(app, "number input 3 (min & max)")
+
+    # No error icon should be present initially
+    expect(
+        number_input.get_by_test_id("stTooltipErrorHoverTarget")
+    ).not_to_be_visible()
