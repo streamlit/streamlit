@@ -1,7 +1,7 @@
 ---
-author: "@jrieke"
+author: jrieke
 created: 2026-01-06
-status: Draft
+status: Approved
 ---
 
 # Binding widget state to query params & persisting widget state
@@ -22,12 +22,10 @@ There are two problems here:
    [streamlit-qs](https://github.com/Asaurus1/streamlit-qs).
 
    Issues:
-
    - #302
    - #9325
 
 2. **Persisting widget state:** Today, a widget loses its state:
-
    - if it is not rendered (even temporarily, even with `key`), and
    - when switching pages (page factors into widget identity, even with the same `key`).
 
@@ -43,7 +41,6 @@ There are two problems here:
    preserving the state of a page while you view another page.
 
    Issues:
-
    - #6074
    - #5813
 

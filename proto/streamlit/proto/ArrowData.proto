@@ -16,8 +16,6 @@
 
 syntax = "proto3";
 
-option java_package = "com.snowflake.apps.streamlit";
-option java_outer_classname = "ArrowDataProto";
 
 // Data-only Arrow buffer. This intentionally excludes any UI- or element-
 // specific configuration that exists in Arrow.proto. Use this message when
