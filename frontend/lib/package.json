@@ -113,7 +113,7 @@
     "typed-signals": "^3.0.0",
     "ua-parser-js": "^1.0.41",
     "unified": "^11.0.5",
-    "unist-util-visit": "^5.0.0",
+    "unist-util-visit": "^5.1.0",
     "urlpattern-polyfill": "^10.1.0",
     "uuid": "^13.0.0",
     "vega": "^6.2.0",
