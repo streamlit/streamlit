@@ -15,12 +15,9 @@
  */
 
 import { EmotionTheme, lightTheme } from "~lib/theme"
+import { isBuiltinColorName, resolveBuiltinColor } from "~lib/theme/getColors"
 
-import {
-  isBuiltinColorName,
-  resolveBuiltinColor,
-  resolveBuiltinColorsInSpec,
-} from "./colorUtils"
+import { resolveBuiltinColorsInSpec } from "./colorUtils"
 
 // Use the actual light theme for realistic color values
 const mockTheme: EmotionTheme = lightTheme.emotion

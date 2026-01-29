@@ -20,7 +20,7 @@ import { transparentize } from "color2k"
 
 import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
 import { mockTheme } from "~lib/mocks/mockTheme"
-import { blend, getMarkdownBgColors } from "~lib/theme"
+import { blend, getThemeBackgroundColors } from "~lib/theme"
 
 import MultiselectColumn, {
   type MultiselectColumnParams,
@@ -214,7 +214,7 @@ describe("prepareOptions", () => {
       { value: "prio", label: "Priority", color: "red" },
     ]
     const opts = prepareOptions(namedColorOption, mockTheme.emotion)
-    const mdColors = getMarkdownBgColors(mockTheme.emotion)
+    const mdColors = getThemeBackgroundColors(mockTheme.emotion)
     const expected = blend(mdColors.redbg, mockTheme.emotion.colors.bgColor)
     expect(opts[0].color).toEqual(expected)
   })

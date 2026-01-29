@@ -17,6 +17,7 @@
 import { darken, getLuminance, lighten, mix, transparentize } from "color2k"
 
 import {
+  BuiltinColorName,
   DerivedColors,
   EmotionTheme,
   EmotionThemeColors,
@@ -137,7 +138,7 @@ export function getDividerColors(theme: EmotionTheme): DividerColors {
   }
 }
 
-type MarkdownBgColors = {
+type ThemeBackgroundColors = {
   redbg: string
   orangebg: string
   yellowbg: string
@@ -149,7 +150,9 @@ type MarkdownBgColors = {
   primarybg: string
 }
 
-export function getMarkdownBgColors(theme: EmotionTheme): MarkdownBgColors {
+export function getThemeBackgroundColors(
+  theme: EmotionTheme
+): ThemeBackgroundColors {
   const lightTheme = hasLightBackgroundColor(theme)
   const colors = theme.colors
 
@@ -323,4 +326,118 @@ export function getIncreasingGreen(theme: EmotionTheme): string {
   return hasLightBackgroundColor(theme)
     ? theme.colors.blueGreen80
     : theme.colors.green40
+}
+
+/**
+ * Set of built-in color names for quick lookup.
+ */
+export const BUILTIN_COLOR_NAMES: ReadonlySet<string> = new Set([
+  "red",
+  "orange",
+  "yellow",
+  "green",
+  "blue",
+  "violet",
+  "gray",
+  "grey",
+  "primary",
+])
+
+/**
+ * Type guard to check if a value is a built-in color name.
+ */
+export function isBuiltinColorName(value: unknown): value is BuiltinColorName {
+  return (
+    typeof value === "string" && BUILTIN_COLOR_NAMES.has(value.toLowerCase())
+  )
+}
+
+// Cache color mappings per theme to avoid recreating objects on every call.
+// WeakMap allows garbage collection when themes are no longer referenced.
+const builtinColorCache = new WeakMap<EmotionTheme, Record<string, string>>()
+const builtinBgColorCache = new WeakMap<EmotionTheme, Record<string, string>>()
+
+/**
+ * Get or create the builtin color mapping for a theme.
+ */
+function getBuiltinColorMap(theme: EmotionTheme): Record<string, string> {
+  let colorMap = builtinColorCache.get(theme)
+  if (!colorMap) {
+    colorMap = {
+      red: theme.colors.redColor,
+      orange: theme.colors.orangeColor,
+      yellow: theme.colors.yellowColor,
+      green: theme.colors.greenColor,
+      blue: theme.colors.blueColor,
+      violet: theme.colors.violetColor,
+      gray: theme.colors.grayColor,
+      grey: theme.colors.grayColor,
+      primary: theme.colors.primary,
+    }
+    builtinColorCache.set(theme, colorMap)
+  }
+  return colorMap
+}
+
+/**
+ * Get or create the builtin background color mapping for a theme.
+ */
+function getBuiltinBgColorMap(theme: EmotionTheme): Record<string, string> {
+  let colorMap = builtinBgColorCache.get(theme)
+  if (!colorMap) {
+    const bgColors = getThemeBackgroundColors(theme)
+    colorMap = {
+      red: bgColors.redbg,
+      orange: bgColors.orangebg,
+      yellow: bgColors.yellowbg,
+      green: bgColors.greenbg,
+      blue: bgColors.bluebg,
+      violet: bgColors.violetbg,
+      // "purple" has its own distinct background color (different from violet)
+      purple: bgColors.purplebg,
+      gray: bgColors.graybg,
+      grey: bgColors.graybg,
+      primary: bgColors.primarybg,
+    }
+    builtinBgColorCache.set(theme, colorMap)
+  }
+  return colorMap
+}
+
+/**
+ * Resolve a built-in color name to its theme color value.
+ * If the color is not a built-in name, returns it unchanged.
+ *
+ * Note: "purple" is not supported here (no purpleColor exists in the theme).
+ * Use "violet" instead. For background colors, both "purple" and "violet"
+ * are supported via resolveBuiltinBackgroundColor().
+ *
+ * @param color - The color string to resolve
+ * @param theme - The EmotionTheme containing color values
+ * @returns The resolved theme color or the original color if not a built-in name
+ */
+export function resolveBuiltinColor(
+  color: string,
+  theme: EmotionTheme
+): string {
+  const colorMap = getBuiltinColorMap(theme)
+  return colorMap[color.toLowerCase()] ?? color
+}
+
+/**
+ * Resolve a built-in color name to its theme background color value.
+ * If the color is not a built-in name, returns it unchanged.
+ *
+ * Note: "purple" and "violet" have distinct background colors.
+ *
+ * @param color - The color string to resolve
+ * @param theme - The EmotionTheme containing color values
+ * @returns The resolved theme background color or the original color if not a built-in name
+ */
+export function resolveBuiltinBackgroundColor(
+  color: string,
+  theme: EmotionTheme
+): string {
+  const colorMap = getBuiltinBgColorMap(theme)
+  return colorMap[color.toLowerCase()] ?? color
 }

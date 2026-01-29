@@ -15,67 +15,7 @@
  */
 
 import { EmotionTheme } from "~lib/theme"
-
-/**
- * Built-in color names that map to Streamlit theme colors.
- * These are passed from the backend as strings and resolved here
- * to actual theme color values.
- *
- * TODO: Consolidate with similar getColorMapping functions in
- * ProgressColumn.ts, ChartColumn.ts, and MultiselectColumn.ts
- * into a shared theme utility.
- */
-const BUILTIN_COLOR_NAMES = new Set([
-  "red",
-  "orange",
-  "yellow",
-  "green",
-  "blue",
-  "violet",
-  "gray",
-  "grey", // alias for gray
-  "primary",
-])
-
-/**
- * Maps built-in color names to their corresponding theme color keys.
- */
-const COLOR_NAME_TO_THEME_KEY: Record<string, keyof EmotionTheme["colors"]> = {
-  red: "redColor",
-  orange: "orangeColor",
-  yellow: "yellowColor",
-  green: "greenColor",
-  blue: "blueColor",
-  violet: "violetColor",
-  gray: "grayColor",
-  grey: "grayColor", // alias
-  primary: "primary",
-}
-
-/**
- * Check if a value is a built-in color name.
- */
-export function isBuiltinColorName(value: unknown): value is string {
-  return (
-    typeof value === "string" && BUILTIN_COLOR_NAMES.has(value.toLowerCase())
-  )
-}
-
-/**
- * Resolve a built-in color name to its theme color value.
- * If the color is not a built-in name, returns it unchanged.
- */
-export function resolveBuiltinColor(
-  color: string,
-  theme: EmotionTheme
-): string {
-  const lowerColor = color.toLowerCase()
-  const themeKey = COLOR_NAME_TO_THEME_KEY[lowerColor]
-  if (themeKey) {
-    return theme.colors[themeKey] as string
-  }
-  return color
-}
+import { isBuiltinColorName, resolveBuiltinColor } from "~lib/theme/getColors"
 
 /**
  * Resolve built-in color names in a Vega-Lite spec to their theme color values.

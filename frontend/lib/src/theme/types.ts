@@ -131,3 +131,37 @@ export type IconSize = keyof IconSizes
 export type ThemeSizing = keyof ThemeSizings
 export type ThemeSpacing = keyof ThemeSpacings
 export type PresetThemeName = "Light" | "Dark"
+
+/**
+ * Built-in color names that map to Streamlit theme colors.
+ * Used across charts, DataFrame columns, and other components.
+ */
+export type BuiltinColorName =
+  | "red"
+  | "orange"
+  | "yellow"
+  | "green"
+  | "blue"
+  | "violet"
+  | "gray"
+  | "grey"
+  | "primary"
+
+/**
+ * Auto color modes for charts and progress bars.
+ * - "auto": Green when positive/increasing, red when negative/decreasing
+ * - "auto-inverse": Red when positive/increasing, green when negative/decreasing
+ */
+export type ChartAutoColor = "auto" | "auto-inverse"
+
+/**
+ * Branded type for CSS color strings (hex, rgb, etc.)
+ * Allows any string while providing type safety for color values.
+ */
+declare const __cssColorBrand: unique symbol
+export type CSSColorString = string & { readonly [__cssColorBrand]?: never }
+
+/**
+ * Union of all valid color parameter values for charts and progress bars.
+ */
+export type ChartColor = ChartAutoColor | BuiltinColorName | CSSColorString
