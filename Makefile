@@ -445,6 +445,13 @@ check:
 		cd lib && PYTHONPATH=. pytest -v $$PY_TESTS || exit 1; \
 		echo ""; \
 	fi
+	@# Pre-commit hooks on all changed files (handles formatting and linting)
+	@CHANGED=$$(python3 scripts/get_changed_files.py --all); \
+	if [ -n "$$CHANGED" ]; then \
+		echo "=== Pre-commit hooks ==="; \
+		pre-commit run --files $$CHANGED || exit 1; \
+		echo ""; \
+	fi
 	@# Frontend lint (with auto-fix)
 	@FE_FILES=$$(python3 scripts/get_changed_files.py --frontend --frontend-tests --strip-prefix frontend/); \
 	if [ -n "$$FE_FILES" ]; then \
@@ -458,13 +465,6 @@ check:
 		echo "=== Frontend: tests (vitest) ==="; \
 		echo "Running: $$FE_TESTS"; \
 		cd frontend && yarn vitest run $$FE_TESTS || exit 1; \
-		echo ""; \
-	fi
-	@# Pre-commit hooks on all changed files (handles formatting and linting)
-	@CHANGED=$$(python3 scripts/get_changed_files.py --all); \
-	if [ -n "$$CHANGED" ]; then \
-		echo "=== Pre-commit hooks ==="; \
-		pre-commit run --files $$CHANGED || exit 1; \
 		echo ""; \
 	fi
 	@echo "=== All checks passed! ==="
