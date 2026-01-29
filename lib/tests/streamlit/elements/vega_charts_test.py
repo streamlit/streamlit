@@ -1615,6 +1615,41 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
         assert chart_spec["encoding"]["color"]["scale"]["range"] == ["red", "#00ff00"]
 
     @parameterized.expand(ST_CHART_ARGS)
+    def test_column_name_takes_priority_over_builtin_color_name(
+        self, chart_command: Callable, altair_type: str
+    ):
+        """Test that column names take priority over built-in color names.
+
+        If a DataFrame has a column named "red" (or any other built-in color name),
+        passing color="red" should use that column for color encoding, not treat
+        "red" as a built-in color value.
+        """
+        # DataFrame with a column named "red" (a built-in color name)
+        df = pd.DataFrame(
+            {
+                "x": [0, 1, 2],
+                "y": [10, 20, 30],
+                "red": ["category_a", "category_b", "category_a"],
+            }
+        )
+
+        # When color="red" and there's a column named "red", it should be
+        # treated as a column reference, not a built-in color value
+        chart_command(df, x="x", y="y", color="red")
+
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        chart_spec = json.loads(proto.spec)
+
+        if altair_type == "line" and not is_altair_version_less_than("5.0.0"):
+            chart_spec = chart_spec["layer"][0]
+
+        # Should be a field reference (color encoding), not a ColorValue
+        assert "field" in chart_spec["encoding"]["color"]
+        assert chart_spec["encoding"]["color"]["field"] == "red"
+        # Should NOT have a "value" key (which would indicate a color value)
+        assert "value" not in chart_spec["encoding"]["color"]
+
+    @parameterized.expand(ST_CHART_ARGS)
     def test_chart_with_color_column(self, chart_command: Callable, altair_type: str):
         """Test color support for built-in charts."""
         df = pd.DataFrame(

@@ -222,6 +222,36 @@ describe("colorUtils", () => {
       })
     })
 
+    it("resolves colors in hconcat specs", () => {
+      const spec = {
+        hconcat: [
+          {
+            encoding: {
+              color: { value: "orange" },
+            },
+          },
+          {
+            encoding: {
+              color: { value: "violet" },
+            },
+          },
+        ],
+      }
+
+      resolveBuiltinColorsInSpec(spec, mockTheme)
+
+      expect(
+        (spec.hconcat[0] as Record<string, unknown>).encoding
+      ).toMatchObject({
+        color: { value: mockTheme.colors.orangeColor },
+      })
+      expect(
+        (spec.hconcat[1] as Record<string, unknown>).encoding
+      ).toMatchObject({
+        color: { value: mockTheme.colors.violetColor },
+      })
+    })
+
     it("leaves non-builtin colors unchanged", () => {
       const spec = {
         encoding: {
