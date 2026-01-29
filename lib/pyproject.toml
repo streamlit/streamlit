@@ -172,8 +172,6 @@ streamlit = ["py.typed", "hello/**/*.py"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-# Required for pytest-asyncio to use function-scoped event loops by default
-asyncio_default_fixture_loop_scope = "function"
 markers = [
   "slow: marks tests as slow",
   "require_integration: marks tests that require integration dependencies",
@@ -184,6 +182,18 @@ filterwarnings = [
   "ignore::UserWarning:altair.*:",
   "ignore::DeprecationWarning:flatbuffers.*:",
   "ignore::DeprecationWarning:keras_preprocessing.*:",
+  # Plotly's mplexporter uses deprecated matplotlib converter API
+  "ignore:The converter attribute was deprecated:matplotlib.MatplotlibDeprecationWarning:plotly.*:",
+  # Protobuf's label() deprecation when accessing field descriptors in tests
+  "ignore:label\\(\\) is deprecated:DeprecationWarning:_pytest.*:",
+  # uvloop.install() deprecation in Python 3.12+ (upstream issue in uvloop)
+  "ignore:uvloop.install\\(\\) is deprecated:DeprecationWarning:uvloop.*:",
+  # MagicMock creates async mocks internally that may not be awaited
+  "ignore:coroutine .* was never awaited:RuntimeWarning:unittest.mock:",
+  # Streamlit's own warning when DataFrame.attrs contain non-serializable objects
+  "ignore:Could not serialize pd.DataFrame.attrs:UserWarning:streamlit.*:",
+  # Altair's warning about deduplicated selection parameters (surfaced through our code)
+  "ignore:Automatically deduplicated selection parameter:UserWarning:streamlit.*:",
 ]
 addopts = "--cov=streamlit --cov-report=html --cov-config=lib/pyproject.toml"
 
