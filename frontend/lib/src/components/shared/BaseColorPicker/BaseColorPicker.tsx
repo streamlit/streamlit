@@ -27,6 +27,7 @@ import {
 } from "~lib/components/widgets/BaseWidget"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
+import { hasLightBackgroundColor } from "~lib/theme"
 import { LabelVisibilityOptions } from "~lib/util/utils"
 
 import {
@@ -158,6 +159,27 @@ const BaseColorPicker = (props: BaseColorPickerProps): React.ReactElement => {
             />
           </StyledChromePicker>
         )}
+        overrides={{
+          Body: {
+            style: () => {
+              const lightBackground = hasLightBackgroundColor(theme)
+              return {
+                borderTopLeftRadius: theme.radii.default,
+                borderTopRightRadius: theme.radii.default,
+                borderBottomRightRadius: theme.radii.default,
+                borderBottomLeftRadius: theme.radii.default,
+                borderWidth: lightBackground ? 0 : theme.sizes.borderWidth,
+                borderStyle: lightBackground ? "none" : "solid",
+                borderColor: lightBackground
+                  ? "transparent"
+                  : theme.colors.borderColor,
+                boxShadow: lightBackground
+                  ? theme.shadows.popover
+                  : theme.shadows.none,
+              }
+            },
+          },
+        }}
       >
         <StyledColorPreview disabled={disabled}>
           <StyledColorBlock
