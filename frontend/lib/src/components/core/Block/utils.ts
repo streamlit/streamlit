@@ -205,9 +205,7 @@ export function checkFlexContainerBackwardsCompatibile(
   return false
 }
 
-export function shouldActivateScrollToBottom(
-  blockNode: BlockNode
-): boolean {
+export function shouldActivateScrollToBottom(blockNode: BlockNode): boolean {
   const hasHeight = blockNode.deltaBlock.heightConfig?.pixelHeight
   if (
     hasHeight &&

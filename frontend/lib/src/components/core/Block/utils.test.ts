@@ -168,9 +168,7 @@ describe("getColumnGapSize", () => {
         gapSize: streamlit.GapSize.MEDIUM,
       },
     }
-    expect(getColumnGapSize(columnProto)).toBe(
-      streamlit.GapSize.MEDIUM
-    )
+    expect(getColumnGapSize(columnProto)).toBe(streamlit.GapSize.MEDIUM)
   })
 
   it("returns default gapSize when gapSize is undefined", () => {
@@ -179,16 +177,12 @@ describe("getColumnGapSize", () => {
         gapSize: streamlit.GapSize.GAP_UNDEFINED,
       },
     }
-    expect(getColumnGapSize(columnProto)).toBe(
-      streamlit.GapSize.SMALL
-    )
+    expect(getColumnGapSize(columnProto)).toBe(streamlit.GapSize.SMALL)
   })
 
   it("returns GapSize.SMALL when gapConfig does not exist", () => {
     const columnProto = {}
-    expect(getColumnGapSize(columnProto)).toBe(
-      streamlit.GapSize.SMALL
-    )
+    expect(getColumnGapSize(columnProto)).toBe(streamlit.GapSize.SMALL)
   })
 })
 

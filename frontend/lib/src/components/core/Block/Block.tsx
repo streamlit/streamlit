@@ -163,9 +163,7 @@ export const FlexBoxContainer = (
   const direction = getDirectionOfBlock(props.node.deltaBlock)
   const parentContext = useContext(FlexContext)
 
-  const activateScrollToBottom = shouldActivateScrollToBottom(
-    props.node
-  )
+  const activateScrollToBottom = shouldActivateScrollToBottom(props.node)
   const scrollContainerRef = useScrollToBottom(activateScrollToBottom)
 
   const layout_styles = useLayoutStyles({
