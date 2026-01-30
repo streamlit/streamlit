@@ -620,7 +620,6 @@ class DataEditorTest(DeltaGeneratorTestCase):
         assert el.width_config.use_stretch is True
 
         # Test other default values
-        assert proto.height == 0
         assert proto.editing_mode == ArrowProto.EditingMode.FIXED
         assert proto.selection_mode == []
         assert not proto.disabled

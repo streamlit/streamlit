@@ -25,6 +25,8 @@ import { WidgetStateManager } from "~lib/WidgetStateManager"
 import { DeckGlJsonChart } from "./DeckGlJsonChart"
 import type { DeckGLProps } from "./types"
 
+const mockLayerId = "0533490f-fcf9-4dc0-8c94-ae4fbd42eb6f"
+
 const mockInitialViewState = {
   bearing: -27.36,
   latitude: 52.2323,
@@ -117,8 +119,8 @@ describe("DeckGlJsonChart", () => {
           props.element,
           JSON.stringify({
             selection: {
-              indices: { "0533490f-fcf9-4dc0-8c94-ae4fbd42eb6f": [0] },
-              objects: { "0533490f-fcf9-4dc0-8c94-ae4fbd42eb6f": [{}] },
+              indices: { [mockLayerId]: [0] },
+              objects: { [mockLayerId]: [{}] },
             },
           }),
           { fromUi: true },
@@ -133,6 +135,64 @@ describe("DeckGlJsonChart", () => {
       ).not.toBeInTheDocument()
     }
   )
+
+  it("should render clear selection button when there is an active selection and not disabled", async () => {
+    const props = getProps({
+      selectionMode: [DeckGlJsonChartProto.SelectionMode.SINGLE_OBJECT],
+      id: "test-element-id",
+    })
+
+    // Set up an active selection
+    props.widgetMgr.setStringValue(
+      props.element,
+      JSON.stringify({
+        selection: {
+          indices: { [mockLayerId]: [0] },
+          objects: { [mockLayerId]: [{ testProp: "value" }] },
+        },
+      }),
+      { fromUi: true },
+      props.fragmentId
+    )
+
+    render(<DeckGlJsonChart {...props} />)
+
+    const chart = screen.getByTestId("stDeckGlJsonChart")
+    await userEvent.hover(chart)
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("Clear selection")).toBeVisible()
+    })
+  })
+
+  it("should render clear selection button for multi-object selection mode", async () => {
+    const props = getProps({
+      selectionMode: [DeckGlJsonChartProto.SelectionMode.MULTI_OBJECT],
+      id: "test-element-id",
+    })
+
+    // Set up an active multi-selection
+    props.widgetMgr.setStringValue(
+      props.element,
+      JSON.stringify({
+        selection: {
+          indices: { [mockLayerId]: [0, 2, 4] },
+          objects: { [mockLayerId]: [{}, {}, {}] },
+        },
+      }),
+      { fromUi: true },
+      props.fragmentId
+    )
+
+    render(<DeckGlJsonChart {...props} />)
+
+    const chart = screen.getByTestId("stDeckGlJsonChart")
+    await userEvent.hover(chart)
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("Clear selection")).toBeVisible()
+    })
+  })
 
   describe("fullscreen mode", () => {
     it("should render expand button by default", async () => {

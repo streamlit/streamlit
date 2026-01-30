@@ -68,9 +68,8 @@ function GraphVizChart({
     collapse,
   } = useRequiredContext(ElementFullscreenContext)
 
-  // Determine if we should use container width based on layout config or legacy prop
-  const shouldUseContainerWidth =
-    shouldWidthStretch(widthConfig) || element.useContainerWidth
+  // Determine if we should use container width based on layout config
+  const shouldUseContainerWidth = shouldWidthStretch(widthConfig)
 
   const shouldUseContainerHeight = shouldHeightStretch(heightConfig)
 

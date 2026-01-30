@@ -38,14 +38,10 @@ import DataFrame, { DataFrameProps } from "./DataFrame"
 
 const getProps = (
   data: Quiver,
-  useContainerWidth = false,
   editingMode: ArrowProto.EditingMode = ArrowProto.EditingMode.READ_ONLY
 ): DataFrameProps => ({
   element: ArrowProto.create({
     data: new Uint8Array(),
-    useContainerWidth,
-    width: 400,
-    height: 400,
     editingMode,
   }),
   data,
@@ -120,7 +116,6 @@ describe("DataFrame widget", () => {
       <DataFrame
         {...getProps(
           new Quiver({ data: TEN_BY_TEN }),
-          true,
           ArrowProto.EditingMode.FIXED
         )}
       />
@@ -141,7 +136,6 @@ describe("DataFrame widget", () => {
       <DataFrame
         {...getProps(
           new Quiver({ data: TEN_BY_TEN }),
-          false,
           ArrowProto.EditingMode.ADD_ONLY
         )}
       />
@@ -173,7 +167,6 @@ describe("DataFrame widget", () => {
       <DataFrame
         {...getProps(
           new Quiver({ data: TEN_BY_TEN }),
-          false,
           ArrowProto.EditingMode.DELETE_ONLY
         )}
       />
@@ -202,7 +195,6 @@ describe("DataFrame widget", () => {
       <DataFrame
         {...getProps(
           new Quiver({ data: TEN_BY_TEN }),
-          false,
           ArrowProto.EditingMode.DYNAMIC
         )}
       />

@@ -20,3 +20,13 @@ rules/*
 !rules/overview.mdc
 !rules/make_commands.mdc
 !rules/new_feature.mdc
+
+# Ignore all hooks
+hooks/*
+# Only track certain hooks so that we don't track a user's local hooks
+# You can add more hooks to this list as needed!
+
+# Ignore all skills
+skills/*
+# Only track certain skills so that we don't track a user's local skills
+# You can add more skills to this list as needed!
