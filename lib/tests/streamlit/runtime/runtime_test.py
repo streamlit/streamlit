@@ -69,7 +69,6 @@ class RuntimeConfigTests(unittest.TestCase):
     def test_runtime_config_defaults(self):
         config = RuntimeConfig(
             "/my/script.py",
-            None,
             MemoryMediaFileStorage("/mock/media"),
             MemoryUploadedFileManager("/mock/upload"),
         )

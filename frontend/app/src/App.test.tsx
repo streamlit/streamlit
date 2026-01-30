@@ -306,7 +306,6 @@ const NEW_SESSION_JSON: INewSession = {
   config: {
     gatherUsageStats: false,
     maxCachedMessageAge: 0,
-    mapboxToken: "mapboxToken",
     allowRunOnSave: false,
     hideSidebarNav: false,
     hideTopBar: false,
@@ -1570,7 +1569,6 @@ describe("App", () => {
       config: {
         gatherUsageStats: false,
         maxCachedMessageAge: 0,
-        mapboxToken: "mapboxToken",
         allowRunOnSave: false,
         hideSidebarNav: false,
       },
