@@ -398,13 +398,18 @@ class FormSubmitButtonTest(DeltaGeneratorTestCase):
             form.form_submit_button(icon_position="center")  # type: ignore[arg-type]
 
     def test_submit_button_does_not_use_container_width_by_default(self):
-        """Test that a submit button does not use_use_container width by default."""
+        """Test that a submit button uses content width by default."""
 
         form = st.form("foo")
         form.form_submit_button(type="primary")
 
         last_delta = self.get_delta_from_queue()
-        assert not last_delta.new_element.button.use_container_width
+        el = last_delta.new_element
+        assert (
+            el.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.USE_CONTENT.value
+        )
+        assert el.width_config.use_content is True
 
     def test_return_false_when_not_submitted(self):
         with st.form("form1"):

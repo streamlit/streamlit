@@ -646,8 +646,6 @@ class IFrameTest(DeltaGeneratorTestCase):
         assert el.iframe.scrolling
 
         assert el.width_config.pixel_width == 200
-        assert el.iframe.width == 0.0  # deprecated field should remain at default
-        assert el.iframe.has_width is False  # deprecated field should remain at default
 
     def test_html(self):
         """Test components.html"""
@@ -660,8 +658,6 @@ class IFrameTest(DeltaGeneratorTestCase):
         assert el.iframe.scrolling
 
         assert el.width_config.pixel_width == 200
-        assert el.iframe.width == 0.0  # deprecated field should remain at default
-        assert el.iframe.has_width is False  # deprecated field should remain at default
 
 
 class AlternativeComponentRegistryTest(unittest.TestCase):
