@@ -61,7 +61,7 @@
     "uuid": "^13.0.0"
   },
   "devDependencies": {
-    "@eslint-react/eslint-plugin": "^2.6.4",
+    "@eslint-react/eslint-plugin": "^2.7.4",
     "@eslint/compat": "^2.0.1",
     "@eslint/eslintrc": "^3.3.3",
     "@eslint/js": "^9.39.2",
