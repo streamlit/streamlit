@@ -29,7 +29,7 @@ def test_popover_button_rendering(
 ):
     """Test that the popover buttons are correctly rendered via screenshot matching."""
     popover_elements = themed_app.get_by_test_id("stPopover")
-    expect(popover_elements).to_have_count(14)
+    expect(popover_elements).to_have_count(16)  # 14 original + 2 dynamic (20, 21)
 
     assert_snapshot(
         get_popover(themed_app, "popover 5 (in sidebar)"), name="st_popover-sidebar"
@@ -204,3 +204,54 @@ def test_show_tooltip_on_hover(app: Page):
 def test_check_top_level_class(app: Page):
     """Check that the top level class is correctly set."""
     check_top_level_class(app, "stPopover")
+
+
+def test_dynamic_popover_lazy_execution(app: Page):
+    """Test that dynamic popover only executes content when open."""
+    # Initially closed, lazy content should not have executed
+    expect(app.get_by_text("Lazy execution count: 0")).to_be_visible()
+
+    # Open the popover
+    lazy_popover_button = (
+        get_popover(app, "popover 20 (dynamic lazy execution)")
+        .get_by_test_id("stPopoverButton")
+        .first
+    )
+    lazy_popover_button.click()
+    wait_for_app_run(app)
+
+    # Content should have executed once
+    popover_body = app.get_by_test_id("stPopoverBody").first
+    expect(popover_body.get_by_text("Lazy content executed 1 times")).to_be_visible()
+    expect(app.get_by_text("Lazy execution count: 1")).to_be_visible()
+
+    # Close the popover (click outside)
+    app.get_by_test_id("stApp").click(position={"x": 0, "y": 0})
+    wait_for_app_run(app)
+
+    # Count should stay at 1 (content didn't execute while closed)
+    expect(app.get_by_text("Lazy execution count: 1")).to_be_visible()
+
+
+def test_dynamic_popover_programmatic_control(app: Page):
+    """Test programmatic control of dynamic popover via session state."""
+    # Open via button
+    app.get_by_test_id("stButton").filter(has_text="Open Dynamic Popover").locator(
+        "button"
+    ).click()
+    wait_for_app_run(app)
+
+    # Popover should be open
+    popover_body = app.get_by_test_id("stPopoverBody").first
+    expect(
+        popover_body.get_by_text("Programmatically controlled popover content")
+    ).to_be_visible()
+
+    # Close via button
+    app.get_by_test_id("stButton").filter(has_text="Close Dynamic Popover").locator(
+        "button"
+    ).click()
+    wait_for_app_run(app)
+
+    # Content should not be visible
+    expect(app.get_by_test_id("stPopoverBody")).not_to_be_visible()
