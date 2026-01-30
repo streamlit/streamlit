@@ -15,7 +15,8 @@
  */
 
 import { EmotionTheme, lightTheme } from "~lib/theme"
-import { isNamedColor, resolveNamedColor } from "~lib/theme/getColors"
+import { resolveNamedColor } from "~lib/theme/getColors"
+import { isNamedColor } from "~lib/theme/namedColors"
 
 import { resolveNamedColorsInSpec } from "./colorUtils"
 

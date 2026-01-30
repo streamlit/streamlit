@@ -24,10 +24,6 @@ import {
   GenericColors,
 } from "./types"
 
-// Re-export from namedColors for convenience
-export { isNamedColor, NAMED_COLORS } from "./namedColors"
-export type { NamedColor } from "./namedColors"
-
 export const computeDerivedColors = (
   genericColors: GenericColors
 ): DerivedColors => {

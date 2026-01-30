@@ -27,8 +27,6 @@ import {
 import { ThemeShadows } from "./getShadows"
 import type { NamedColor } from "./namedColors"
 import { PrimitiveColors } from "./primitives"
-// Re-export NamedColor from the single source of truth
-export type { NamedColor } from "./namedColors"
 
 /**
  * Comprehensive type for emotion theme colors.

@@ -15,7 +15,8 @@
  */
 
 import { EmotionTheme } from "~lib/theme"
-import { isNamedColor, resolveNamedColor } from "~lib/theme/getColors"
+import { resolveNamedColor } from "~lib/theme/getColors"
+import { isNamedColor } from "~lib/theme/namedColors"
 
 /**
  * Resolve named colors in a Vega-Lite spec to their theme color values.
