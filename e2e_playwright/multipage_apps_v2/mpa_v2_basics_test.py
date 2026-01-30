@@ -28,6 +28,7 @@ from e2e_playwright.shared.app_utils import (
     expect_prefixed_markdown,
     get_element_by_key,
     goto_app,
+    reset_hovering,
 )
 
 
@@ -215,7 +216,7 @@ def test_section_headers_can_be_collapsed_and_expanded(
     section_1_header.hover()
     assert_snapshot(section_1_header, name="mpa-section-header-hover")
     # move mouse away to avoid flakiness
-    themed_app.mouse.move(0, 0)
+    reset_hovering(themed_app)
 
     page_links = themed_app.get_by_test_id("stSidebarNav").locator("a")
     expect(page_links).to_have_count(13)
@@ -261,7 +262,7 @@ def test_handles_expand_collapse_of_mpa_nav_correctly(
     view_button.click(force=True)
     expect(view_button).to_have_text("View less")
     # move the mouse out of the way to avoid hover effects
-    themed_app.mouse.move(0, 0)
+    reset_hovering(themed_app)
     assert_snapshot(
         themed_app.get_by_test_id("stSidebarNav"), name="mpa-sidebar_nav_expanded"
     )
@@ -270,7 +271,7 @@ def test_handles_expand_collapse_of_mpa_nav_correctly(
     view_button.click(force=True)
     expect(view_button).to_have_text("View 3 more")
     # move the mouse out of the way to avoid hover effects
-    themed_app.mouse.move(0, 0)
+    reset_hovering(themed_app)
     assert_snapshot(
         themed_app.get_by_test_id("stSidebarNav"), name="mpa-sidebar_nav_collapsed"
     )
@@ -279,7 +280,7 @@ def test_handles_expand_collapse_of_mpa_nav_correctly(
     view_button.click(force=True)
     expect(view_button).to_have_text("View less")
     # move the mouse out of the way to avoid hover effects
-    themed_app.mouse.move(0, 0)
+    reset_hovering(themed_app)
     assert_snapshot(
         themed_app.get_by_test_id("stSidebarNav"), name="mpa-sidebar_nav_expanded"
     )

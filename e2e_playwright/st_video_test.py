@@ -25,6 +25,7 @@ from e2e_playwright.shared.app_utils import (
     click_button,
     click_checkbox,
     goto_app,
+    reset_hovering,
     select_radio_option,
 )
 
@@ -37,7 +38,7 @@ def _select_video_to_show(app: Page, label: str) -> Locator:
     # Prevent flakiness: we move the mouse before scrolling to prevent the cursor
     # hovering over a video element and, thereby, changing how the video interface is
     # rendered (e.g. without the controls in the bottom which are hidden)
-    app.mouse.move(0, 0)
+    reset_hovering(app)
     video_element.scroll_into_view_if_needed()
     expect(video_element).to_be_visible()
     return video_element

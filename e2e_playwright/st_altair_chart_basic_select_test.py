@@ -31,6 +31,7 @@ from e2e_playwright.shared.app_utils import (
     click_form_button,
     expect_prefixed_markdown,
     get_element_by_key,
+    reset_hovering,
 )
 
 
@@ -353,7 +354,7 @@ def _test_shift_click_point_selection_scatter_chart_displays_selection(
 
     # move the mouse away so that we do not have any hover-menu effects on the chart when taking the screenshot.
     # we re-use the screenshot for the unmounting test.
-    app.mouse.move(0, 0)
+    reset_hovering(app)
     app.wait_for_timeout(250)
 
     expected_prefix = "Scatter chart with selection_point:"

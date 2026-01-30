@@ -18,6 +18,7 @@ from e2e_playwright.conftest import (
     ImageCompareFunction,
     wait_for_app_run,
 )
+from e2e_playwright.shared.app_utils import reset_hovering
 from e2e_playwright.shared.vega_utils import assert_vega_chart_height
 
 
@@ -26,7 +27,7 @@ def navigate_to_page(app: Page, index: int):
     wait_for_app_run(app)
     # Move the mouse to the top left corner to prevent any weird hover effects
     # in the screenshots
-    app.mouse.move(0, 0)
+    reset_hovering(app)
 
 
 def check_page_title(app: Page, title: str) -> None:

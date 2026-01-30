@@ -24,6 +24,7 @@ from e2e_playwright.shared.app_utils import (
     get_button_group,
     get_segment_button,
     goto_app,
+    reset_hovering,
     wait_for_all_images_to_be_loaded,
 )
 from e2e_playwright.shared.react18_utils import take_stable_snapshot
@@ -121,7 +122,7 @@ def test_handles_expand_collapse_of_mpa_nav_correctly(
     # adjust for the screenshot after the click
     page.wait_for_timeout(250)
     # move the mouse out of the way to avoid hover effects
-    page.mouse.move(0, 0)
+    reset_hovering(page)
     assert_snapshot(
         page.get_by_test_id("stSidebarNav"), name="mpa-sidebar_nav_expanded"
     )
@@ -130,7 +131,7 @@ def test_handles_expand_collapse_of_mpa_nav_correctly(
     view_button.click(force=True)
     page.wait_for_timeout(250)
     # move the mouse out of the way to avoid hover effects
-    page.mouse.move(0, 0)
+    reset_hovering(page)
     assert_snapshot(
         page.get_by_test_id("stSidebarNav"), name="mpa-sidebar_nav_collapsed"
     )
@@ -139,7 +140,7 @@ def test_handles_expand_collapse_of_mpa_nav_correctly(
     view_button.click(force=True)
     page.wait_for_timeout(250)
     # move the mouse out of the way to avoid hover effects
-    page.mouse.move(0, 0)
+    reset_hovering(page)
     assert_snapshot(
         page.get_by_test_id("stSidebarNav"), name="mpa-sidebar_nav_expanded"
     )
