@@ -16,8 +16,6 @@
 
 syntax = "proto3";
 
-option java_package = "com.snowflake.apps.streamlit";
-option java_outer_classname = "SliderProto";
 
 import "streamlit/proto/LabelVisibilityMessage.proto";
 
@@ -57,4 +55,9 @@ message Slider {
   bool disabled = 15;
   LabelVisibilityMessage label_visibility = 16;
   Type type = 17;
+
+  // String-based value for select_slider to support dynamic option changes.
+  // Stores formatted option strings instead of indices.
+  repeated string raw_value = 18;
 }
+// Next: 19

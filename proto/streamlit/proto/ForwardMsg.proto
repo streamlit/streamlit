@@ -16,8 +16,6 @@
 
 syntax = "proto3";
 
-option java_package = "com.snowflake.apps.streamlit";
-option java_outer_classname = "ForwardMsgProto";
 
 import "streamlit/proto/AutoRerun.proto";
 import "streamlit/proto/Common.proto";

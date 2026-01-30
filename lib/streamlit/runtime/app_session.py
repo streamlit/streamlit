@@ -1007,6 +1007,24 @@ def _get_toolbar_mode() -> Config.ToolbarMode.ValueType:
     return enum_value
 
 
+def _get_show_error_links() -> Config.ShowErrorLinks.ValueType:
+    config_key = "client.showErrorLinks"
+    allowed_values = ["auto", "true", "false"]
+    value_to_enum = {
+        "auto": Config.ShowErrorLinks.SHOW_ERROR_LINKS_AUTO,
+        "true": Config.ShowErrorLinks.SHOW_ERROR_LINKS_TRUE,
+        "false": Config.ShowErrorLinks.SHOW_ERROR_LINKS_FALSE,
+    }
+    config_value = config.get_option(config_key)
+    if config_value not in allowed_values:
+        raise ValueError(
+            f"Config {config_key!r} expects to have one of "
+            f"the following values: {', '.join(allowed_values)}. "
+            f"Current value: {config_value}"
+        )
+    return value_to_enum[config_value]
+
+
 def _populate_config_msg(msg: Config) -> None:
     msg.gather_usage_stats = config.get_option("browser.gatherUsageStats")
     msg.max_cached_message_age = config.get_option("global.maxCachedMessageAge")
@@ -1015,6 +1033,7 @@ def _populate_config_msg(msg: Config) -> None:
     if config.get_option("client.showSidebarNavigation") is False:
         msg.hide_sidebar_nav = True
     msg.toolbar_mode = _get_toolbar_mode()
+    msg.show_error_links = _get_show_error_links()
 
 
 def _parse_and_populate_chart_colors(
