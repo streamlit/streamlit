@@ -18,10 +18,6 @@ syntax = "proto3";
 
 
 message PlotlyChart {
-  // DEPRECATED: If True, will overwrite the chart width spec to fit to container.
-  // Use widthConfig in layout configuration instead.
-  bool use_container_width = 5 [deprecated=true];
-
   // override the properties with a theme. Currently, only "streamlit" or None are accepted.
   string theme = 6;
 
@@ -40,7 +36,8 @@ message PlotlyChart {
   // JSON-serialized dict with Plotly's config object.
   string config = 11;
 
-  reserved 3, 4;
+  reserved 1, 2, 3, 4, 5;
+  reserved "url", "figure", "use_container_width";
 
   // Available selection modes:
   enum SelectionMode {
@@ -48,21 +45,4 @@ message PlotlyChart {
       BOX = 1; // Box selection mode
       LASSO = 2; // Lasso selection mode
   }
-
-  // DEPRECATED and unused.
-  oneof chart {
-    // DEPRECATED and unused.
-    string url = 1;
-
-    // DEPRECATED and unused.
-    Figure figure = 2;
-  }
-
-}
-
-
-// DEPRECATED and unused.
-message Figure {
-  string spec = 1;
-  string config = 2;
 }

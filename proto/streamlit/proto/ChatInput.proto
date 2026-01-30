@@ -26,12 +26,6 @@ message ChatInput {
   bool set_value = 6;
   string default = 7;
 
-  // DEPRECATED: position property is deprecated and unused.
-  enum Position {
-    BOTTOM = 0;
-  }
-  Position position = 8;
-
   enum AcceptFile {
     NONE = 0;
     SINGLE = 1;
@@ -52,4 +46,7 @@ message ChatInput {
   // Sample rate for audio recording in Hz (e.g., 16000, 48000)
   // If not set, uses browser default
   optional int32 audio_sample_rate = 13;
+
+  reserved 8;
+  reserved "position";
 }

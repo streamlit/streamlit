@@ -32,7 +32,6 @@ import "streamlit/proto/ChatInput.proto";
 import "streamlit/proto/Checkbox.proto";
 import "streamlit/proto/Code.proto";
 import "streamlit/proto/ColorPicker.proto";
-import "streamlit/proto/DataFrame.proto";
 import "streamlit/proto/DateInput.proto";
 import "streamlit/proto/DateTimeInput.proto";
 import "streamlit/proto/DeckGlJsonChart.proto";
@@ -67,7 +66,6 @@ import "streamlit/proto/TextArea.proto";
 import "streamlit/proto/TextInput.proto";
 import "streamlit/proto/TimeInput.proto";
 import "streamlit/proto/Toast.proto";
-import "streamlit/proto/VegaLiteChart.proto";
 import "streamlit/proto/Video.proto";
 import "streamlit/proto/Heading.proto";
 import "streamlit/proto/BidiComponent.proto";
@@ -102,10 +100,6 @@ message Element {
     Checkbox checkbox = 20;
     ColorPicker color_picker = 35;
     ComponentInstance component_instance = 37;
-    // DEPRECATED: This element is deprecated and unused:
-    DataFrame data_frame = 3;
-    // DEPRECATED: This element is deprecated and unused:
-    DataFrame table = 11;
     DateInput date_input = 27;
     DeckGlJsonChart deck_gl_json_chart = 34;
     DocString doc_string = 7;
@@ -139,13 +133,12 @@ message Element {
     TimeInput time_input = 26;
     DateTimeInput date_time_input = 62;
     Toast toast = 50;
-    // DEPRECATED: This element is deprecated and unused:
-    VegaLiteChart vega_lite_chart = 10;
     Video video = 14;
     Heading heading = 47;
     Code code = 48;
     // Next ID: 63
   }
 
-  reserved 9;
+  reserved 3, 9, 10, 11;
+  reserved "data_frame", "vega_lite_chart", "table";
 }

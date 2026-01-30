@@ -23,23 +23,11 @@ message DeckGlJsonChart {
 
   string tooltip = 2;
 
-  // DEPRECATED: If True, will overwrite the chart width spec to fit to container.
-  // Use widthConfig in layout configuration instead.
-  bool use_container_width = 4 [deprecated=true];
-
   // ID, required for selection events.
   string id = 5;
 
   // The Mapbox token, if any.
   string mapbox_token = 6;
-
-  // DEPRECATED: Width in pixels
-  // Use widthConfig in layout configuration instead.
-  uint32 width = 7 [deprecated=true];
-
-  // DEPRECATED: Height in pixels
-  // Use heightConfig in layout configuration instead.
-  uint32 height = 8 [deprecated=true];
 
   // If non-empty, treat this instance as a Widget
   repeated SelectionMode selection_mode = 9;
@@ -52,6 +40,9 @@ message DeckGlJsonChart {
     SINGLE_OBJECT = 0; // Only one object can be selected at a time.
     MULTI_OBJECT = 1; // Multiple objects can be selected at a time.
   }
+
+  reserved 4, 7, 8;
+  reserved "use_container_width", "width", "height";
 
   // Next ID: 11
 }

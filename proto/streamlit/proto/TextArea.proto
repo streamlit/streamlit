@@ -24,9 +24,6 @@ message TextArea {
   string label = 2;
   optional string default = 3;
 
-  // deprecated. Use heightConfig on Element.proto.
-  uint32 height = 4 [deprecated = true];
-
   uint32 max_chars = 5;
   string help = 6;
   string form_id = 7;
@@ -35,4 +32,7 @@ message TextArea {
   string placeholder = 10;
   bool disabled = 11;
   LabelVisibilityMessage label_visibility = 12;
+
+  reserved 4;
+  reserved "height";
 }
