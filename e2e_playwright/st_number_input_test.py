@@ -693,9 +693,7 @@ def test_number_input_error_clears_on_valid_value(app: Page):
     input_field.press("Enter")
 
     # Error icon should no longer be visible
-    expect(
-        number_input.get_by_test_id("stTooltipErrorHoverTarget")
-    ).not_to_be_visible()
+    expect(number_input.get_by_test_id("stTooltipErrorHoverTarget")).not_to_be_visible()
 
 
 def test_number_input_no_error_for_valid_value(app: Page):
@@ -703,6 +701,4 @@ def test_number_input_no_error_for_valid_value(app: Page):
     number_input = get_number_input(app, "number input 3 (min & max)")
 
     # No error icon should be present initially
-    expect(
-        number_input.get_by_test_id("stTooltipErrorHoverTarget")
-    ).not_to_be_visible()
+    expect(number_input.get_by_test_id("stTooltipErrorHoverTarget")).not_to_be_visible()

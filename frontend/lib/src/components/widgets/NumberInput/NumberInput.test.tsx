@@ -1065,9 +1065,7 @@ describe("NumberInput widget", () => {
 
         // Should not change the formatted value and should show error tooltip
         expect(input).toHaveDisplayValue("100") // Still shows the invalid input
-        expect(
-          screen.getByTestId("stTooltipErrorHoverTarget")
-        ).toBeVisible()
+        expect(screen.getByTestId("stTooltipErrorHoverTarget")).toBeVisible()
       })
 
       it.each([
@@ -1490,14 +1488,18 @@ describe("NumberInput widget", () => {
       await user.type(input, "50")
       await user.tab()
 
-      expect(screen.queryByTestId("stTooltipErrorHoverTarget")).not.toBeInTheDocument()
+      expect(
+        screen.queryByTestId("stTooltipErrorHoverTarget")
+      ).not.toBeInTheDocument()
     })
 
     it("does not show error for value within range", async () => {
       const props = getIntProps({ min: 0, max: 100, default: 50 })
       render(<NumberInput {...props} />)
 
-      expect(screen.queryByTestId("stTooltipErrorHoverTarget")).not.toBeInTheDocument()
+      expect(
+        screen.queryByTestId("stTooltipErrorHoverTarget")
+      ).not.toBeInTheDocument()
     })
 
     it("sets aria-invalid when value is out of range", async () => {
