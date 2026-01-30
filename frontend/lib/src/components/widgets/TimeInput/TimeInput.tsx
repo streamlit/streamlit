@@ -34,7 +34,7 @@ import {
   ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { measureScrollbarGutterSize } from "~lib/hooks/useScrollbarGutterSize"
+import { useScrollbarGutterSize } from "~lib/hooks/useScrollbarGutterSize"
 import { convertRemToPx, hasLightBackgroundColor } from "~lib/theme"
 import {
   isNullOrUndefined,
@@ -92,13 +92,8 @@ function TimeInput({
   const numTimeOptions = Math.floor(86400 / stepSeconds) // 86400 = seconds in a day
   // Only account for scrollbar gutter when scrollbar is actually visible
   const hasScrollbar = numTimeOptions * 40 > 300 // dropdownItemHeight=40px, maxDropdownHeight=300px
-
-  // Helper to get effective gutter size - called fresh when dropdown renders
-  // This allows it to pick up scrollbar mode changes (e.g., plugging in mouse)
-  const getEffectiveGutterSize = (): number => {
-    if (!hasScrollbar) return 0
-    return measureScrollbarGutterSize()
-  }
+  const scrollbarGutterSize = useScrollbarGutterSize()
+  const effectiveGutterSize = hasScrollbar ? scrollbarGutterSize : 0
 
   const selectOverrides = {
     Select: {
@@ -152,11 +147,8 @@ function TimeInput({
           },
 
           Dropdown: {
-            style: () => {
-              // Measure fresh when dropdown opens (not memoized like the hook)
-              // This allows picking up scrollbar mode changes when reopening dropdown
-              const effectiveGutterSize = getEffectiveGutterSize()
-              return {
+            style: () =>
+              ({
                 // Padding to inset items from the edges (matches VirtualDropdown)
                 // No right padding - scrollbar sits at edge, items use marginRight for spacing
                 paddingTop: theme.spacing.none,
@@ -177,20 +169,16 @@ function TimeInput({
                 // Pass scrollbar gutter size to children via CSS custom property
                 // so they can adjust their margins (matches VirtualDropdown behavior)
                 "--scrollbar-gutter-size": `${effectiveGutterSize}px`,
-              } as React.CSSProperties
-            },
+              }) as React.CSSProperties,
           },
 
           DropdownListItem: {
             component: TimeInputListItem,
-            style: () => {
-              // Measure fresh when dropdown opens (matches Dropdown style)
-              const effectiveGutterSize = getEffectiveGutterSize()
-              return {
+            style: () =>
+              ({
                 // Set CSS variable directly on items to ensure it cascades to inner highlight
                 "--scrollbar-gutter-size": `${effectiveGutterSize}px`,
-              } as React.CSSProperties
-            },
+              }) as React.CSSProperties,
           },
 
           Popover: {
