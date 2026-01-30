@@ -535,7 +535,6 @@ class ScriptCheckTest(RuntimeTestCase):
         # to specify a non-mocked path.)
         config = RuntimeConfig(
             script_path=self._path,
-            command_line=None,
             component_registry=LocalComponentRegistry(),
             media_file_storage=MemoryMediaFileStorage("/mock/media"),
             uploaded_file_manager=MemoryUploadedFileManager("/mock/upload"),
@@ -611,7 +610,6 @@ class BidiComponentManagerTest(unittest.TestCase):
         # Create a mock config with minimum required parameters
         config = RuntimeConfig(
             script_path="test_path",
-            command_line=None,
             media_file_storage=MagicMock(),
             uploaded_file_manager=MagicMock(),
         )
@@ -637,7 +635,6 @@ class BidiComponentManagerTest(unittest.TestCase):
         # Create a mock config with our custom registry
         config = RuntimeConfig(
             script_path="test_path",
-            command_line=None,
             media_file_storage=MagicMock(),
             uploaded_file_manager=MagicMock(),
             bidi_component_registry=custom_component_manager,

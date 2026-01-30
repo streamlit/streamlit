@@ -73,7 +73,6 @@ FD = FieldDescriptor
                 ("user_info", FD.LABEL_OPTIONAL, FD.TYPE_MESSAGE),
                 ("environment_info", FD.LABEL_OPTIONAL, FD.TYPE_MESSAGE),
                 ("session_status", FD.LABEL_OPTIONAL, FD.TYPE_MESSAGE),
-                ("command_line", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("session_id", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("is_hello", FD.LABEL_OPTIONAL, FD.TYPE_BOOL),
             },
@@ -83,7 +82,6 @@ FD = FieldDescriptor
             {
                 ("gather_usage_stats", FD.LABEL_OPTIONAL, FD.TYPE_BOOL),
                 ("max_cached_message_age", FD.LABEL_OPTIONAL, FD.TYPE_INT32),
-                ("mapbox_token", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("allow_run_on_save", FD.LABEL_OPTIONAL, FD.TYPE_BOOL),
                 ("hide_top_bar", FD.LABEL_OPTIONAL, FD.TYPE_BOOL),
                 ("hide_sidebar_nav", FD.LABEL_OPTIONAL, FD.TYPE_BOOL),

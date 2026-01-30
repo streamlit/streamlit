@@ -11,8 +11,8 @@ Updated: 2026-01-30
 |----------|-------|--------|
 | Deleted proto files | 4 | ✅ Done |
 | Removed unused messages | 2 | ✅ Done |
-| Removed unused fields | 24 | ✅ Done |
-| Deprecated fields still in use | ~8 | ⏳ Remaining |
+| Removed unused fields | 26 | ✅ Done |
+| Deprecated fields still in use | ~6 | ⏳ Remaining |
 
 ---
 
@@ -128,18 +128,18 @@ These fields are marked deprecated but are **still actively used** and cannot be
 - Consider deprecation timeline for major version bump
 - Update `proto_compatibility_test.py` when ready to remove
 
-### 3. Config Fields (still in codebase)
+### 3. Config Fields (removed)
 
-**Status:** Deprecated but still present in code for compatibility.
+**Status:** ✅ Removed - these fields were deprecated and unused.
 
-| Field | File | Notes |
-|-------|------|-------|
-| `Initialize.command_line` | NewSession.proto:83 | Deprecated for security reasons |
-| `Config.mapbox_token` | NewSession.proto:105 | Moved to `DeckGlJsonChart.mapbox_token` |
+| Field | File | Status |
+|-------|------|--------|
+| `Initialize.command_line` | NewSession.proto | ✅ Removed (reserved 5) |
+| `Config.mapbox_token` | NewSession.proto | ✅ Removed (reserved 4) |
 
-**Next Steps:**
-- `command_line`: Can be removed when all clients are updated
-- `mapbox_token`: Keep for backward compatibility or migrate consumers
+**Notes:**
+- `command_line`: Was deprecated for security reasons. Never populated - `is_hello` field used instead.
+- `mapbox_token`: Migration to `DeckGlJsonChart.mapbox_token` was complete. Field was never populated.
 
 ---
 
@@ -174,8 +174,8 @@ All reserved field numbers for backward protocol compatibility:
 | Balloons.proto | 1, 2 | - |
 | NumberInput.proto | 4, 5, 6, 7, 9, 10 | - |
 | FileUploader.proto | 5 | - |
-| NewSession.proto | 5 | - |
-| NewSession.Config | 1 | - |
+| NewSession.Initialize | 5 | `command_line` |
+| NewSession.Config | 1, 4 | `mapbox_token` |
 | NewSession.UserInfo | 2 | - |
 | Image.proto (Image) | 1 | `data` |
 | Image.proto (ImageList) | 2 | `width` |
@@ -190,4 +190,3 @@ All reserved field numbers for backward protocol compatibility:
 
 1. **StringTriggerValue migration** - Migrate to `ChatInputValue` for chat input widget state
 2. **Theme config deprecation** - Plan timeline for removing deprecated theme fields in next major version
-3. **Config field cleanup** - Remove `command_line` and evaluate `mapbox_token` migration

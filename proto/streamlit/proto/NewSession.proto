@@ -80,9 +80,8 @@ message Initialize {
   // The session status at the time the connection was established
   SessionStatus session_status = 4;
 
-  // DEPRECATED: We no longer send this to the frontend for security reasons.
-  // The actual command line as a string
-  string command_line = 5;
+  reserved 5;
+  reserved "command_line";
 
   // The AppSession.id for this connection's AppSession.
   // This is used to associate uploaded files with the client that uploaded
@@ -102,8 +101,8 @@ message Config {
   // See config option "global.maxCachedMessageAge".
   int32 max_cached_message_age = 3;
 
-  // DEPRECATED: the mapbox token was moved to the DeckGlJsonChart message.
-  string mapbox_token = 4;
+  reserved 4;
+  reserved "mapbox_token";
 
   // See config option "server.allowRunOnSave".
   bool allow_run_on_save = 5;
