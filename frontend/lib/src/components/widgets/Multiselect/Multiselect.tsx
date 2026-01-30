@@ -178,7 +178,7 @@ const Multiselect: FC<Props> = props => {
         }
       }
     },
-    [value, element.maxSelections]
+    [value, element.maxSelections, element.options]
   )
 
   /**
@@ -250,15 +250,15 @@ const Multiselect: FC<Props> = props => {
             id: "__SELECT_MATCHES__",
           }
           return [selectMatchesOption, ...filteredOptions]
-        } else {
-          // No search: just use marker, handler computes unselected from element.options
-          const selectAllOption: Option = {
-            label: "Select all",
-            value: "__SELECT_ALL__",
-            id: "__SELECT_ALL__",
-          }
-          return [selectAllOption, ...filteredOptions]
         }
+
+        // No search: just use marker, handler computes unselected from element.options
+        const selectAllOption: Option = {
+          label: "Select all",
+          value: "__SELECT_ALL__",
+          id: "__SELECT_ALL__",
+        }
+        return [selectAllOption, ...filteredOptions]
       }
 
       return filteredOptions
