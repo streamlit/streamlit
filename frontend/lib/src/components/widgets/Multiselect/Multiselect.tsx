@@ -52,7 +52,6 @@ import {
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useSelectCommon } from "~lib/hooks/useSelectCommon"
 import { convertRemToPx, hasLightBackgroundColor } from "~lib/theme"
-import { fuzzyFilterSelectOptions } from "~lib/util/fuzzyFilterSelectOptions"
 import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -105,10 +104,8 @@ const Multiselect: FC<Props> = props => {
   const isInSidebar = useContext(IsSidebarContext)
   const valueContainerRef = useRef<HTMLDivElement>(null)
   const scrollTopRef = useRef(0)
-  // Refs to store current unselected options for "Select all" and "Select x matches"
-  // This avoids serializing all values into the option value string
-  const unselectedMatchesRef = useRef<string[]>([])
-  const unselectedOptionsRef = useRef<string[]>([])
+  // Ref to store filtered matches for "Select X matches" option
+  const selectMatchesRef = useRef<string[]>([])
   const [value, setValueWithSource] = useBasicWidgetState<
     MultiselectValue,
     MultiSelectProto
@@ -145,38 +142,32 @@ const Multiselect: FC<Props> = props => {
           return []
         }
         case "select": {
-          // Handle "Select all matches" option
-          if (data.option?.value === "__SELECT_ALL_MATCHES__") {
-            // Get matched values from ref (avoids serialization)
-            const matchedValues = unselectedMatchesRef.current
-            // Add only new options (excluding already selected ones)
-            const newOptions = matchedValues.filter(
-              (optionValue: string) => !value.includes(optionValue)
+          // Handle "Select all" option (no search) - compute from element.options
+          if (data.option?.value === "__SELECT_ALL__") {
+            const unselectedValues = element.options.filter(
+              opt => !value.includes(opt)
             )
 
             // Respect maxSelections limit
             if (element.maxSelections > 0) {
               const remainingSlots = element.maxSelections - value.length
-              const optionsToAdd = newOptions.slice(0, remainingSlots)
-              return [...value, ...optionsToAdd]
+              return [...value, ...unselectedValues.slice(0, remainingSlots)]
             }
 
-            return [...value, ...newOptions]
+            return [...value, ...unselectedValues]
           }
 
-          // Handle "Select all" option
-          if (data.option?.value === "__SELECT_ALL__") {
-            // Get unselected values from ref (avoids serialization)
-            const unselectedValues = unselectedOptionsRef.current
+          // Handle "Select x matches" option (with search) - values stored in ref
+          if (data.option?.value === "__SELECT_MATCHES__") {
+            const filteredValues = selectMatchesRef.current
 
             // Respect maxSelections limit
             if (element.maxSelections > 0) {
               const remainingSlots = element.maxSelections - value.length
-              const optionsToAdd = unselectedValues.slice(0, remainingSlots)
-              return [...value, ...optionsToAdd]
+              return [...value, ...filteredValues.slice(0, remainingSlots)]
             }
 
-            return [...value, ...unselectedValues]
+            return [...value, ...filteredValues]
           }
 
           return value.concat([data.option?.value])
@@ -242,46 +233,25 @@ const Multiselect: FC<Props> = props => {
         return []
       }
 
-      // Get unfiltered matches to determine if we should show "Select all matches"
-      const allMatches = filterValue.trim()
-        ? fuzzyFilterSelectOptions(
-            options as readonly { label: string; value: string }[],
-            filterValue.trim()
-          )
-        : options
-
       // Get filtered options (excluding already selected ones) for the dropdown
       const filteredOptions = createFilterOptions(value)(options, filterValue)
 
-      // Add "Select all" or "Select x matches" option
-      if (filterValue.trim()) {
-        // Filter out already selected options from the matches first
-        const unselectedMatches = allMatches.filter(
-          (opt: Option) => !value.includes(opt.value as string)
-        )
-        // Add "Select x matches" option when searching and multiple unselected matches found
-        if (unselectedMatches.length > 1) {
-          // Store matched values in ref instead of serializing into option value
-          unselectedMatchesRef.current = unselectedMatches.map(
+      // Add "Select all" or "Select x matches" option when multiple selectable options
+      if (filteredOptions.length > 1) {
+        if (filterValue.trim()) {
+          // With search: store filtered values in dedicated ref
+          // Using separate ref from "Select all" avoids race conditions
+          selectMatchesRef.current = filteredOptions.map(
             (opt: Option) => opt.value as string
           )
-          const selectAllOption: Option = {
-            label: `Select ${unselectedMatches.length} matches`,
-            value: "__SELECT_ALL_MATCHES__",
-            id: "__SELECT_ALL_MATCHES__",
+          const selectMatchesOption: Option = {
+            label: `Select ${filteredOptions.length} matches`,
+            value: "__SELECT_MATCHES__",
+            id: "__SELECT_MATCHES__",
           }
-          return [selectAllOption, ...filteredOptions]
-        }
-      } else {
-        // Add "Select all" option when not searching and there are multiple unselected options
-        const unselectedOptions = options.filter(
-          option => !value.includes(option.value as string)
-        )
-        if (unselectedOptions.length > 1) {
-          // Store unselected values in ref instead of serializing into option value
-          unselectedOptionsRef.current = unselectedOptions.map(
-            (opt: Option) => opt.value as string
-          )
+          return [selectMatchesOption, ...filteredOptions]
+        } else {
+          // No search: just use marker, handler computes unselected from element.options
           const selectAllOption: Option = {
             label: "Select all",
             value: "__SELECT_ALL__",
