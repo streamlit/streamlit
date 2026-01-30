@@ -1683,6 +1683,9 @@ class ThemeInheritanceIntegrationTest(unittest.TestCase):
                 assert config.get_option("theme.primaryColor") == "#00ff41"
                 assert config.get_option("theme.backgroundColor") == "#0a0a0a"
                 assert config.get_option("theme.textColor") == "#ffffff"
+                assert "base theme file:" in config.get_where_defined(
+                    "theme.primaryColor"
+                )
 
     @patch("streamlit.config_util.url_util.is_url")
     @patch("streamlit.config_util.urllib.request.urlopen")
@@ -1910,7 +1913,9 @@ class ThemeInheritanceIntegrationTest(unittest.TestCase):
                 # The original theme.base option should show CLI flag as source
                 # But after inheritance, theme.base gets the value from the theme file
                 # Let's verify a non-base option shows the CLI flag was the trigger
-                assert "theme file:" in config.get_where_defined("theme.primaryColor")
+                assert "base theme file:" in config.get_where_defined(
+                    "theme.primaryColor"
+                )
 
     def test_theme_inheritance_with_base_via_env_var(self):
         """Test theme inheritance when theme.base is set via direct environment variable."""
@@ -1966,7 +1971,7 @@ class ThemeInheritanceIntegrationTest(unittest.TestCase):
                             )  # From theme file content
 
                             # Verify it shows as coming from theme file (since inheritance processed it)
-                            assert "theme file:" in config.get_where_defined(
+                            assert "base theme file:" in config.get_where_defined(
                                 "theme.primaryColor"
                             )
 
@@ -2017,7 +2022,7 @@ class ThemeInheritanceIntegrationTest(unittest.TestCase):
                         assert (
                             config.get_option("theme.primaryColor") == "#ffffff"
                         )  # From CLI theme file
-                        assert "theme file:" in config.get_where_defined(
+                        assert "base theme file:" in config.get_where_defined(
                             "theme.primaryColor"
                         )
 
@@ -2049,7 +2054,9 @@ class ThemeInheritanceIntegrationTest(unittest.TestCase):
                 assert config.get_option("theme.primaryColor") == "#ff0000"
                 assert config.get_option("theme.backgroundColor") == "#ffffff"
                 assert config.get_option("theme.font") == "serif"
-                assert "theme file:" in config.get_where_defined("theme.primaryColor")
+                assert "base theme file:" in config.get_where_defined(
+                    "theme.primaryColor"
+                )
 
     def test_theme_inheritance_complex_precedence(self):
         """Test complex precedence scenario for theme.base and config.toml overrides."""
@@ -2138,10 +2145,13 @@ class ThemeInheritanceIntegrationTest(unittest.TestCase):
                 )  # From base theme (no override)
 
                 # Verify where_defined is correct
-                assert "theme file:" in config.get_where_defined(
+                assert "base theme file:" in config.get_where_defined(
                     "theme.backgroundColor"
                 )
-                assert "theme file:" in config.get_where_defined("theme.textColor")
+                assert (
+                    config.get_where_defined("theme.textColor")
+                    == f"config.toml (project): {os.path.join(os.getcwd(), '.streamlit/config.toml')}"
+                )
 
     def test_theme_inheritance_preserves_env_var_and_flag_precedence(self):
         """Test that theme inheritance preserves environment variables and command line flags."""
@@ -2302,12 +2312,12 @@ class ThemeInheritanceIntegrationTest(unittest.TestCase):
 
                 # Verify where_defined is correct
                 assert (
-                    "theme file"
+                    "base theme file"
                     in config.get_where_defined("theme.light.backgroundColor").lower()
                 )
                 assert (
-                    "theme file"
-                    in config.get_where_defined("theme.sidebar.textColor").lower()
+                    config.get_where_defined("theme.sidebar.textColor")
+                    == f"config.toml (project): {os.path.join(os.getcwd(), '.streamlit/config.toml')}"
                 )
                 assert (
                     "command-line"
@@ -2353,9 +2363,7 @@ class ThemeInheritanceIntegrationTest(unittest.TestCase):
 
                 # Verify where_defined shows the default behavior
                 where_defined = config.get_where_defined("theme.base")
-                assert "theme file:" in where_defined
-                assert "(default)" in where_defined
-                assert theme_file in where_defined
+                assert where_defined == "default light theme"
 
                 # Verify theme inheritance worked correctly for other options
                 assert (
@@ -2423,8 +2431,7 @@ class ThemeInheritanceIntegrationTest(unittest.TestCase):
 
                 # Verify where_defined for base shows it's from theme file with default
                 where_defined_base = config.get_where_defined("theme.base")
-                assert "theme file:" in where_defined_base
-                assert "(default)" in where_defined_base
+                assert where_defined_base == "default light theme"
 
                 # Simulate what app_session.py would check (this was the warning source)
                 base_map = {"light": "LIGHT", "dark": "DARK"}
