@@ -52,21 +52,31 @@ def update_root_pyproject_toml(project_name: str) -> None:
         content = f.read()
 
     # Update [tool.uv.sources] section - change the key from 'streamlit' to new name
-    content = re.sub(
-        r'^streamlit = \{ path = "lib", editable = true \}$',
+    uv_sources_pattern = r'^streamlit = \{ path = "lib", editable = true \}$'
+    content, uv_sources_count = re.subn(
+        uv_sources_pattern,
         rf'{project_name} = {{ path = "lib", editable = true }}',
         content,
         flags=re.MULTILINE,
     )
+    if uv_sources_count == 0:
+        raise Exception(
+            f'In file "{file_path}", did not find regex "{uv_sources_pattern}"'
+        )
 
     # Update dependency references in dependency-groups from "streamlit" to new name
     # These appear as standalone "streamlit", entries in the arrays
-    content = re.sub(
-        r'^  "streamlit",$',
+    dep_groups_pattern = r'^  "streamlit",$'
+    content, dep_groups_count = re.subn(
+        dep_groups_pattern,
         rf'  "{project_name}",',
         content,
         flags=re.MULTILINE,
     )
+    if dep_groups_count == 0:
+        raise Exception(
+            f'In file "{file_path}", did not find regex "{dep_groups_pattern}"'
+        )
 
     with open(file_path, "w", encoding="utf-8") as f:
         f.write(content)
