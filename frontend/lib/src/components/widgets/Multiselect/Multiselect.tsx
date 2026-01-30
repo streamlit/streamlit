@@ -443,7 +443,7 @@ const Multiselect: FC<Props> = props => {
                 // When items selected, use smaller padding so tags are closer to the edge
                 paddingLeft:
                   value.length === 0
-                    ? `calc(${theme.spacing.xs} - 1px + ${theme.spacing.xs})`
+                    ? `calc(${theme.spacing.xs} + ${theme.spacing.xs})` // Keep aligned with selectbox placeholder
                     : `calc(${theme.spacing.xs} - 1px)`,
                 paddingTop: theme.spacing.none,
                 paddingBottom: theme.spacing.none,
