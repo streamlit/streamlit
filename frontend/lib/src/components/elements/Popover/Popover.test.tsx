@@ -19,6 +19,7 @@ import { userEvent } from "@testing-library/user-event"
 
 import { Block as BlockProto } from "@streamlit/protobuf"
 
+import { ScriptRunState } from "~lib/ScriptRunState"
 import { render } from "~lib/test_util"
 
 import Popover, { PopoverProps } from "./Popover"
@@ -35,6 +36,8 @@ const getProps = (
   }),
   empty: false,
   stretchWidth: false,
+  scriptRunState: ScriptRunState.NOT_RUNNING,
+  scriptRunId: "test-script-run-id",
   ...props,
 })
 

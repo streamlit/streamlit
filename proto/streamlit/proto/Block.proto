@@ -153,6 +153,10 @@ message Block {
     bool disabled = 4;
     string icon = 5;
     string type = 6;
+    // Widget ID for dynamic popovers (set when on_change is used)
+    optional string id = 7;
+    // Initial open state (used with on_change)
+    optional bool open = 8;
   }
 
 

@@ -85,6 +85,19 @@ class TabsSerde:
         return ui_value if ui_value is not None else self.default_label
 
 
+@dataclass
+class PopoverSerde:
+    """Serializer/deserializer for popover widget state."""
+
+    open: bool
+
+    def serialize(self, v: bool) -> bool:
+        return bool(v)
+
+    def deserialize(self, ui_value: bool | None) -> bool:
+        return ui_value if ui_value is not None else self.open
+
+
 class LayoutsMixin:
     @gather_metrics("container")
     def container(
@@ -1097,12 +1110,15 @@ class LayoutsMixin:
         self,
         label: str,
         *,
+        open: bool = False,
         type: Literal["primary", "secondary", "tertiary"] = "secondary",
         help: str | None = None,
         icon: str | None = None,
         disabled: bool = False,
         use_container_width: bool | None = None,
         width: Width = "content",
+        key: Key | None = None,
+        on_change: Literal["ignore", "rerun"] = "ignore",
     ) -> DeltaGenerator:
         r"""Insert a popover container.
 
@@ -1139,6 +1155,11 @@ class LayoutsMixin:
 
             .. |st.markdown| replace:: ``st.markdown``
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
+
+        open : bool
+            If True, initializes the popover in "open" state. Defaults to
+            False (closed). This only sets the initial state; the user can
+            still toggle the popover by clicking it.
 
         help : str or None
             A tooltip that gets displayed when the popover button is hovered
@@ -1218,6 +1239,25 @@ class LayoutsMixin:
             button. The popover container may be wider than its button to fit
             the container's contents.
 
+        key : str or None
+            An optional string to give this popover a stable identity. If ``key``
+            is provided and ``on_change`` is set to ``"rerun"``, the open/closed
+            state will be accessible via ``st.session_state[key]``.
+
+        on_change : "ignore" or "rerun"
+            How the popover should respond to user open/close events. This controls
+            whether or not the popover behaves like an input widget with persistent
+            state. ``on_change`` can be one of the following:
+
+            - ``"ignore"`` (default): Streamlit will not track the popover's state.
+              The ``.open`` attribute will return ``None``. The popover can be used
+              inside ``@st.cache_data`` decorated functions.
+
+            - ``"rerun"``: Streamlit will rerun the app when the user opens or
+              closes the popover. The ``.open`` attribute will return the current
+              state (``True`` if open, ``False`` if closed). The popover cannot be
+              used inside ``@st.cache_data`` decorated functions.
+
         Examples
         --------
         You can use the ``with`` notation to insert any element into a popover:
@@ -1265,10 +1305,77 @@ class LayoutsMixin:
                 f'\nThe argument passed was "{type}".'
             )
 
+        if on_change not in {"ignore", "rerun"}:
+            raise StreamlitAPIException(
+                f"You have passed {on_change} to `on_change`. But only 'ignore' "
+                "or 'rerun' is supported."
+            )
+
+        key = to_key(key)
+
+        # Determine if state tracking is enabled (widget mode)
+        is_stateful = on_change == "rerun"
+
+        current_open = open
+        element_id: str | None = None
+
+        if is_stateful:
+            # Widget path: check policies, register widget, track state
+            check_widget_policies(
+                self.dg,
+                key,
+                on_change=None,
+                default_value=None,
+                writes_allowed=True,  # Allow programmatic control via session state
+                enable_check_callback_rules=False,
+            )
+
+            ctx = get_script_run_ctx()
+
+            # Register element ID for widget
+            element_id = compute_and_register_element_id(
+                "popover",
+                user_key=key,
+                key_as_main_identity=True,
+                dg=self.dg,
+                label=label,
+                open=open,
+                type=type,
+                help=help,
+                icon=icon,
+                disabled=disabled,
+                width=width,
+                on_change=on_change,
+            )
+
+            # Create serde for state management
+            serde = PopoverSerde(open=open)
+
+            # Register the widget and get current state
+            popover_state = register_widget(
+                element_id,
+                deserializer=serde.deserialize,
+                serializer=serde.serialize,
+                ctx=ctx,
+                value_type="bool_value",
+            )
+
+            # Use widget state value
+            current_open = popover_state.value
+        elif key:
+            # Non-widget path with key: compute ID for styling purposes only
+            element_id = compute_and_register_element_id(
+                "popover",
+                user_key=key,
+                dg=None,
+                key_as_main_identity=False,
+            )
+
         popover_proto = BlockProto.Popover()
         popover_proto.label = label
         popover_proto.disabled = disabled
         popover_proto.type = type
+        popover_proto.open = current_open
         if help:
             popover_proto.help = str(help)
         if icon is not None:
@@ -1276,12 +1383,17 @@ class LayoutsMixin:
 
         block_proto = BlockProto()
         block_proto.allow_empty = True
+        if element_id is not None:
+            block_proto.id = element_id
         block_proto.popover.CopyFrom(popover_proto)
 
         validate_width(width, allow_content=True)
         block_proto.width_config.CopyFrom(get_width_config(width))
 
-        return self.dg._block(block_proto=block_proto)
+        return self.dg._block(
+            block_proto=block_proto,
+            open=current_open if is_stateful else None,
+        )
 
     @gather_metrics("status")
     def status(
