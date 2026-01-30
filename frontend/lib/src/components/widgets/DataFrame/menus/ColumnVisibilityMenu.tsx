@@ -334,7 +334,7 @@ const ColumnVisibilityMenu: React.FC<ColumnVisibilityMenuProps> = ({
               minWidth: theme.sizes.minMenuWidth,
               maxWidth: `calc(${theme.sizes.minMenuWidth} * 2)`,
               maxHeight: theme.sizes.maxDropdownHeight,
-              overflow: "hidden",
+              overflow: "auto",
               paddingTop: "0 !important",
               paddingBottom: "0 !important",
               paddingLeft: "0 !important",

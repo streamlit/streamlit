@@ -211,10 +211,8 @@ describe("Multiselect widget", () => {
     await user.click(expandListButton)
 
     const options = screen.getAllByRole("option")
-    // Filter out the "Select all" option to get actual data options
-    const dataOptions = options.filter(
-      option => !option.textContent?.startsWith("Select all")
-    )
+    // Skip the first option which is always "Select all"
+    const dataOptions = options.slice(1)
     // Since default: [0] selects "a", only "b" and "c" should be available in the dropdown
     const unselectedOptions = props.element.options.slice(1) // ["b", "c"]
     expect(dataOptions.length).toBe(unselectedOptions.length)
@@ -278,10 +276,8 @@ describe("Multiselect widget", () => {
     await user.click(expandListButton)
 
     const options = screen.getAllByRole("option")
-    // Filter out the "Select all" option to get actual data options
-    const dataOptions = options.filter(
-      option => !option.textContent?.startsWith("Select all")
-    )
+    // Skip the first option which is always "Select all"
+    const dataOptions = options.slice(1)
     expect(dataOptions.length).toBe(props.element.options.length)
     dataOptions.forEach((option, idx) => {
       expect(option).toHaveTextContent(props.element.options[idx])
@@ -302,10 +298,8 @@ describe("Multiselect widget", () => {
     await user.click(expandListButton)
 
     const options = screen.getAllByRole("option")
-    // Filter out the "Select all" option to get actual data options
-    const dataOptions = options.filter(
-      option => !option.textContent?.startsWith("Select all")
-    )
+    // Skip the first option which is always "Select all"
+    const dataOptions = options.slice(1)
     expect(dataOptions.length).toBe(props.element.options.length)
     dataOptions.forEach((option, idx) => {
       expect(option).toHaveTextContent(props.element.options[idx])
@@ -355,9 +349,8 @@ describe("Multiselect widget", () => {
     await user.click(expandListButton)
     // Options list should only have b & c available - default a selected
     const allOptions = screen.getAllByRole("option")
-    const dataOptions = allOptions.filter(
-      option => !option.textContent?.startsWith("Select all")
-    )
+    // Skip the first option which is always "Select all"
+    const dataOptions = allOptions.slice(1)
     expect(dataOptions.length).toBe(2)
     expect(dataOptions[0]).toHaveTextContent("b")
     expect(dataOptions[1]).toHaveTextContent("c")
@@ -433,14 +426,12 @@ describe("Multiselect widget", () => {
       const options = screen.getAllByRole("option")
       // Should have "Select all" + "b" + "c" = 3 total
       expect(options.length).toBe(3)
-      // Find actual data options (not "Select all")
-      const dataOptions = options.filter(
-        option => !option.textContent?.startsWith("Select all")
-      )
+      // Skip the first option which is always "Select all"
+      const dataOptions = options.slice(1)
       expect(dataOptions[0]).toHaveTextContent("b")
       expect(dataOptions[1]).toHaveTextContent("c")
       // Select b from the list
-      await user.click(options[0])
+      await user.click(screen.getByText("b"))
 
       expect(
         screen.getByText(
@@ -495,10 +486,8 @@ describe("Multiselect widget", () => {
       const updatedOptions = screen.getAllByRole("option")
       // Should have "Select all" + "a" + "c" = 3 total
       expect(updatedOptions.length).toBe(3)
-      // Find actual data options (not "Select all")
-      const dataOptions = updatedOptions.filter(
-        option => !option.textContent?.startsWith("Select all")
-      )
+      // Skip the first option which is always "Select all"
+      const dataOptions = updatedOptions.slice(1)
       expect(dataOptions[0]).toHaveTextContent("a")
       expect(dataOptions[1]).toHaveTextContent("c")
     })
@@ -645,7 +634,8 @@ describe("Multiselect widget", () => {
       await user.click(expandButton)
 
       // Should not show "Select x matches" option
-      expect(screen.queryByText(/Select \d+ matches/)).not.toBeInTheDocument()
+      // Using loose regex to catch broken cases like "Select matches" without a number
+      expect(screen.queryByText(/Select.*matches/)).not.toBeInTheDocument()
 
       // Should show all options
       expect(screen.getByText("apple")).toBeInTheDocument()
@@ -666,7 +656,7 @@ describe("Multiselect widget", () => {
       await user.type(multiSelect, "xyz")
 
       // Should not show "Select x matches" option
-      expect(screen.queryByText(/Select \d+ matches/)).not.toBeInTheDocument()
+      expect(screen.queryByText(/Select.*matches/)).not.toBeInTheDocument()
 
       // Should show no results message
       expect(screen.getByText("No results")).toBeInTheDocument()
@@ -684,7 +674,7 @@ describe("Multiselect widget", () => {
       await user.type(multiSelect, "bana")
 
       // Should not show "Select x matches" option when only one result
-      expect(screen.queryByText(/Select \d+ matches/)).not.toBeInTheDocument()
+      expect(screen.queryByText(/Select.*matches/)).not.toBeInTheDocument()
 
       // Should show the single matching option
       expect(screen.getByText("banana")).toBeInTheDocument()
@@ -730,7 +720,7 @@ describe("Multiselect widget", () => {
       await user.type(multiSelect, "ap")
 
       // Should not show "Select x matches" option when only one match is unselected
-      expect(screen.queryByText(/Select \d+ matches/)).not.toBeInTheDocument()
+      expect(screen.queryByText(/Select.*matches/)).not.toBeInTheDocument()
 
       // Click on the single available option
       const apricotOption = screen.getByText("apricot")
@@ -889,7 +879,7 @@ describe("Multiselect widget", () => {
       // Should not show "Select all" option when searching
       expect(screen.queryByText(/^Select all$/)).not.toBeInTheDocument()
       // Should also not show "Select x matches" since there's only 1 unselected match (apricot)
-      expect(screen.queryByText(/Select \d+ matches/)).not.toBeInTheDocument()
+      expect(screen.queryByText(/Select.*matches/)).not.toBeInTheDocument()
     })
 
     it("shows 'Select all' consistently when options are selected/deselected", async () => {

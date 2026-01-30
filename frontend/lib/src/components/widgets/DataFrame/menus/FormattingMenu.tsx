@@ -272,7 +272,7 @@ function FormattingMenu({
               borderTopRightRadius: radii.default,
               borderBottomLeftRadius: radii.default,
               borderBottomRightRadius: radii.default,
-              overflow: "hidden",
+              overflow: "auto",
               backgroundColor: colors.bgColor,
               color: colors.bodyText,
               fontSize: fontSizes.sm,

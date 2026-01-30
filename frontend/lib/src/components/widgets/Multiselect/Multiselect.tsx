@@ -105,6 +105,10 @@ const Multiselect: FC<Props> = props => {
   const isInSidebar = useContext(IsSidebarContext)
   const valueContainerRef = useRef<HTMLDivElement>(null)
   const scrollTopRef = useRef(0)
+  // Refs to store current unselected options for "Select all" and "Select x matches"
+  // This avoids serializing all values into the option value string
+  const unselectedMatchesRef = useRef<string[]>([])
+  const unselectedOptionsRef = useRef<string[]>([])
   const [value, setValueWithSource] = useBasicWidgetState<
     MultiselectValue,
     MultiSelectProto
@@ -142,45 +146,37 @@ const Multiselect: FC<Props> = props => {
         }
         case "select": {
           // Handle "Select all matches" option
-          if (data.option?.value?.startsWith("__SELECT_ALL_MATCHES__")) {
-            // Extract the filtered option values from the encoded value
-            const parts = data.option.value.split("|||")
-            if (parts.length > 1) {
-              const filteredValues = parts.slice(1) // Remove the first part which is the marker
-              // Add only new options (excluding already selected ones)
-              const newOptions = filteredValues.filter(
-                (optionValue: string) => !value.includes(optionValue)
-              )
+          if (data.option?.value === "__SELECT_ALL_MATCHES__") {
+            // Get matched values from ref (avoids serialization)
+            const matchedValues = unselectedMatchesRef.current
+            // Add only new options (excluding already selected ones)
+            const newOptions = matchedValues.filter(
+              (optionValue: string) => !value.includes(optionValue)
+            )
 
-              // Respect maxSelections limit
-              if (element.maxSelections > 0) {
-                const remainingSlots = element.maxSelections - value.length
-                const optionsToAdd = newOptions.slice(0, remainingSlots)
-                return [...value, ...optionsToAdd]
-              }
-
-              return [...value, ...newOptions]
+            // Respect maxSelections limit
+            if (element.maxSelections > 0) {
+              const remainingSlots = element.maxSelections - value.length
+              const optionsToAdd = newOptions.slice(0, remainingSlots)
+              return [...value, ...optionsToAdd]
             }
-            return value
+
+            return [...value, ...newOptions]
           }
 
           // Handle "Select all" option
-          if (data.option?.value?.startsWith("__SELECT_ALL__")) {
-            // Extract the unselected option values from the encoded value
-            const parts = data.option.value.split("|||")
-            if (parts.length > 1) {
-              const unselectedValues = parts.slice(1) // Remove the first part which is the marker
+          if (data.option?.value === "__SELECT_ALL__") {
+            // Get unselected values from ref (avoids serialization)
+            const unselectedValues = unselectedOptionsRef.current
 
-              // Respect maxSelections limit
-              if (element.maxSelections > 0) {
-                const remainingSlots = element.maxSelections - value.length
-                const optionsToAdd = unselectedValues.slice(0, remainingSlots)
-                return [...value, ...optionsToAdd]
-              }
-
-              return [...value, ...unselectedValues]
+            // Respect maxSelections limit
+            if (element.maxSelections > 0) {
+              const remainingSlots = element.maxSelections - value.length
+              const optionsToAdd = unselectedValues.slice(0, remainingSlots)
+              return [...value, ...optionsToAdd]
             }
-            return value
+
+            return [...value, ...unselectedValues]
           }
 
           return value.concat([data.option?.value])
@@ -265,12 +261,13 @@ const Multiselect: FC<Props> = props => {
         )
         // Add "Select x matches" option when searching and multiple unselected matches found
         if (unselectedMatches.length > 1) {
-          const allMatchedValues = allMatches
-            .map((opt: Option) => opt.value)
-            .join("|||")
+          // Store matched values in ref instead of serializing into option value
+          unselectedMatchesRef.current = unselectedMatches.map(
+            (opt: Option) => opt.value as string
+          )
           const selectAllOption: Option = {
             label: `Select ${unselectedMatches.length} matches`,
-            value: `__SELECT_ALL_MATCHES__|||${allMatchedValues}`,
+            value: "__SELECT_ALL_MATCHES__",
             id: "__SELECT_ALL_MATCHES__",
           }
           return [selectAllOption, ...filteredOptions]
@@ -281,12 +278,13 @@ const Multiselect: FC<Props> = props => {
           option => !value.includes(option.value as string)
         )
         if (unselectedOptions.length > 1) {
-          const allUnselectedValues = unselectedOptions
-            .map((opt: Option) => opt.value)
-            .join("|||")
+          // Store unselected values in ref instead of serializing into option value
+          unselectedOptionsRef.current = unselectedOptions.map(
+            (opt: Option) => opt.value as string
+          )
           const selectAllOption: Option = {
             label: "Select all",
-            value: `__SELECT_ALL__|||${allUnselectedValues}`,
+            value: "__SELECT_ALL__",
             id: "__SELECT_ALL__",
           }
           return [selectAllOption, ...filteredOptions]
