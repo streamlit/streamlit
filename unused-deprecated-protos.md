@@ -60,6 +60,8 @@ Updated: 2026-01-30
 | Radio.proto | `value` (int32) | 7 |
 | Arrow.proto | `width`, `height`, `use_container_width` | 3, 4, 5 |
 | Image.proto (ImageList) | `width` | 2 |
+| NewSession.Initialize | `command_line` | 5 |
+| NewSession.Config | `mapbox_token` | 4 |
 
 ### Widget Value Fields Migration (Completed)
 
@@ -87,6 +89,18 @@ Frontend fallback code removed from:
 - `ImageList.tsx` - Removed `WidthBehavior` enum and legacy width handling
 - `useTableSizer.ts` - Updated to use only widthConfig/heightConfig
 - `useColumnLoader.ts` - Updated to use only widthConfig
+
+### Config Fields Cleanup (Completed)
+
+Removed deprecated and unused config fields from NewSession.proto:
+
+| Field Removed | File | Notes |
+|---------------|------|-------|
+| `Initialize.command_line` | NewSession.proto | Deprecated for security reasons. Never populated - `is_hello` field used instead. |
+| `Config.mapbox_token` | NewSession.proto | Migration to `DeckGlJsonChart.mapbox_token` was complete. Field was never populated. |
+
+Also removed:
+- `RuntimeConfig.command_line` field from Python backend
 
 ---
 
@@ -127,19 +141,6 @@ These fields are marked deprecated but are **still actively used** and cannot be
 - These are kept for backward compatibility with external consumers
 - Consider deprecation timeline for major version bump
 - Update `proto_compatibility_test.py` when ready to remove
-
-### 3. Config Fields (removed)
-
-**Status:** ✅ Removed - these fields were deprecated and unused.
-
-| Field | File | Status |
-|-------|------|--------|
-| `Initialize.command_line` | NewSession.proto | ✅ Removed (reserved 5) |
-| `Config.mapbox_token` | NewSession.proto | ✅ Removed (reserved 4) |
-
-**Notes:**
-- `command_line`: Was deprecated for security reasons. Never populated - `is_hello` field used instead.
-- `mapbox_token`: Migration to `DeckGlJsonChart.mapbox_token` was complete. Field was never populated.
 
 ---
 
