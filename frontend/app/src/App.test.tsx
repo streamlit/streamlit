@@ -78,7 +78,6 @@ import {
   IPageConfig,
   IPageInfo,
   IPageNotFound,
-  IPagesChanged,
   IParentMessage,
   Navigation,
   SessionEvent,
@@ -421,7 +420,6 @@ type ForwardMsgType =
   | ILogo
   | INavigation
   | INewSession
-  | IPagesChanged
   | IPageConfig
   | IPageInfo
   | IParentMessage

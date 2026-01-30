@@ -60,16 +60,15 @@ const MOCK_FORM_WIDGET = {
 }
 
 const MOCK_FILE_UPLOADER_STATE = new FileUploaderStateProto({
-  maxFileId: 42,
   uploadedFileInfo: [
     new UploadedFileInfoProto({
-      id: 4,
+      fileId: "file-1",
       name: "bob",
       size: 5,
     }),
 
     new UploadedFileInfoProto({
-      id: 42,
+      fileId: "file-2",
       name: "linus",
       size: 9001,
     }),

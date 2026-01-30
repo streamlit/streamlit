@@ -188,14 +188,6 @@ export function backwardsCompatibleColumnGapSize(
 ): streamlit.GapSize {
   if (columnProto.gapConfig?.gapSize) {
     return columnProto.gapConfig.gapSize
-  } else if (columnProto.gap) {
-    if (columnProto.gap === "small") {
-      return streamlit.GapSize.SMALL
-    } else if (columnProto.gap === "medium") {
-      return streamlit.GapSize.MEDIUM
-    } else if (columnProto.gap === "large") {
-      return streamlit.GapSize.LARGE
-    }
   }
   return streamlit.GapSize.SMALL
 }
@@ -216,12 +208,7 @@ export function checkFlexContainerBackwardsCompatibile(
 export function getActivateScrollToBottomBackwardsCompatible(
   blockNode: BlockNode
 ): boolean {
-  const hasHeight =
-    blockNode.deltaBlock.heightConfig?.pixelHeight ||
-    // This is deprecated, but we have some integrations that
-    // cache messages so we are keeping this here to make sure the
-    // frontend is backwards compatible with the old messages.
-    blockNode.deltaBlock.vertical?.height
+  const hasHeight = blockNode.deltaBlock.heightConfig?.pixelHeight
   if (
     hasHeight &&
     blockNode.children.some(node => {

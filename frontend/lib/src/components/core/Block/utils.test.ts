@@ -184,49 +184,10 @@ describe("backwardsCompatibleColumnGapSize", () => {
     )
   })
 
-  const gapStringCases = [
-    { gap: "small", expected: streamlit.GapSize.SMALL },
-    { gap: "medium", expected: streamlit.GapSize.MEDIUM },
-    { gap: "large", expected: streamlit.GapSize.LARGE },
-  ]
-
-  it.each(gapStringCases)(
-    "converts '$gap' gap to corresponding GapSize",
-    ({ gap, expected }) => {
-      const columnProto = { gap }
-      expect(backwardsCompatibleColumnGapSize(columnProto)).toBe(expected)
-    }
-  )
-
-  const fallbackCases = [
-    {
-      description: "when neither gapSize nor gap exists",
-      proto: {},
-      expected: streamlit.GapSize.SMALL,
-    },
-    {
-      description: "with unrecognized gap string",
-      proto: { gap: "unrecognized" },
-      expected: streamlit.GapSize.SMALL,
-    },
-  ]
-
-  it.each(fallbackCases)(
-    "returns GapSize.SMALL $description",
-    ({ proto, expected }) => {
-      expect(backwardsCompatibleColumnGapSize(proto)).toBe(expected)
-    }
-  )
-
-  it("prioritizes gapSize when both gapSize and gap exist", () => {
-    const columnProto = {
-      gapConfig: {
-        gapSize: streamlit.GapSize.LARGE,
-      },
-      gap: "small",
-    }
+  it("returns GapSize.SMALL when gapConfig does not exist", () => {
+    const columnProto = {}
     expect(backwardsCompatibleColumnGapSize(columnProto)).toBe(
-      streamlit.GapSize.LARGE
+      streamlit.GapSize.SMALL
     )
   })
 })
@@ -353,15 +314,6 @@ describe("getActivateScrollToBottomBackwardsCompatible", () => {
     expect(getActivateScrollToBottomBackwardsCompatible(mockNode)).toBe(true)
   })
 
-  it("returns true when vertical has height and has chatMessage child", () => {
-    const mockNode = createBlockNode(
-      { vertical: { height: 100 } },
-      true // Has chatMessage child
-    )
-
-    expect(getActivateScrollToBottomBackwardsCompatible(mockNode)).toBe(true)
-  })
-
   it("returns false when has height but no chatMessage child", () => {
     const mockNode = createBlockNode(
       { heightConfig: { pixelHeight: 100 } },
@@ -380,9 +332,9 @@ describe("getActivateScrollToBottomBackwardsCompatible", () => {
     expect(getActivateScrollToBottomBackwardsCompatible(mockNode)).toBe(false)
   })
 
-  it("returns false when vertical has height but no children", () => {
+  it("returns false when has heightConfig but no children", () => {
     // Create parent node directly without children for this test
-    const parentBlock = new BlockProto({ vertical: { height: 100 } })
+    const parentBlock = new BlockProto({ heightConfig: { pixelHeight: 100 } })
 
     const mockNode = new BlockNode(
       "test-script-hash",
