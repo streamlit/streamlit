@@ -1836,7 +1836,6 @@ class Column(Block):
     type: str = field(repr=False)
     proto: BlockProto.Column = field(repr=False)
     weight: float
-    gap: str
 
     def __init__(
         self,
@@ -1848,7 +1847,6 @@ class Column(Block):
         self.root = root
         self.type = "column"
         self.weight = proto.weight
-        self.gap = proto.gap
 
 
 @dataclass(repr=False)
