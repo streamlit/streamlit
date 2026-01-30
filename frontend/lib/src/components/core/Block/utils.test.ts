@@ -299,13 +299,31 @@ describe("shouldActivateScrollToBottom", () => {
     )
   }
 
-  it("returns true when flexContainer has heightConfig and has chatMessage child", () => {
+  it("returns true when flexContainer has pixelHeight and has chatMessage child", () => {
     const mockNode = createBlockNode(
       { heightConfig: { pixelHeight: 100 } },
       true // Has chatMessage child
     )
 
     expect(shouldActivateScrollToBottom(mockNode)).toBe(true)
+  })
+
+  it("returns false when has useStretch height and chatMessage child", () => {
+    const mockNode = createBlockNode(
+      { heightConfig: { useStretch: true } },
+      true // Has chatMessage child
+    )
+
+    expect(shouldActivateScrollToBottom(mockNode)).toBe(false)
+  })
+
+  it("returns false when has useContent height and chatMessage child", () => {
+    const mockNode = createBlockNode(
+      { heightConfig: { useContent: true } },
+      true // Has chatMessage child
+    )
+
+    expect(shouldActivateScrollToBottom(mockNode)).toBe(false)
   })
 
   it("returns false when has height but no chatMessage child", () => {

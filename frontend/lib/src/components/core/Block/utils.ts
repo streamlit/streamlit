@@ -206,9 +206,10 @@ export function checkFlexContainerBackwardsCompatibile(
 }
 
 export function shouldActivateScrollToBottom(blockNode: BlockNode): boolean {
-  const hasHeight = blockNode.deltaBlock.heightConfig?.pixelHeight
+  // Auto-scroll only activates for containers with a fixed pixel height.
+  const hasFixedPixelHeight = blockNode.deltaBlock.heightConfig?.pixelHeight
   if (
-    hasHeight &&
+    hasFixedPixelHeight &&
     blockNode.children.some(node => {
       return (
         node instanceof BlockNode && node.deltaBlock.type === "chatMessage"
