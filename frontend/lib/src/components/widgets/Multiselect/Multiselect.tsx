@@ -39,7 +39,11 @@ import { MultiSelect as MultiSelectProto } from "@streamlit/protobuf"
 
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import { getBorderColor } from "~lib/components/shared/Base/styled-components"
-import { VirtualDropdown } from "~lib/components/shared/Dropdown"
+import {
+  SELECT_ALL_ID,
+  SELECT_MATCHES_ID,
+  VirtualDropdown,
+} from "~lib/components/shared/Dropdown"
 import {
   WidgetLabel,
   WidgetLabelHelpIcon,
@@ -143,7 +147,7 @@ const Multiselect: FC<Props> = props => {
         }
         case "select": {
           // Handle "Select all" option (no search) - compute from element.options
-          if (data.option?.value === "__SELECT_ALL__") {
+          if (data.option?.value === SELECT_ALL_ID) {
             const unselectedValues = element.options.filter(
               opt => !value.includes(opt)
             )
@@ -158,7 +162,7 @@ const Multiselect: FC<Props> = props => {
           }
 
           // Handle "Select x matches" option (with search) - values stored in ref
-          if (data.option?.value === "__SELECT_MATCHES__") {
+          if (data.option?.value === SELECT_MATCHES_ID) {
             const filteredValues = selectMatchesRef.current
 
             // Respect maxSelections limit
@@ -246,8 +250,8 @@ const Multiselect: FC<Props> = props => {
           )
           const selectMatchesOption: Option = {
             label: `Select ${filteredOptions.length} matches`,
-            value: "__SELECT_MATCHES__",
-            id: "__SELECT_MATCHES__",
+            value: SELECT_MATCHES_ID,
+            id: SELECT_MATCHES_ID,
           }
           return [selectMatchesOption, ...filteredOptions]
         }
@@ -255,8 +259,8 @@ const Multiselect: FC<Props> = props => {
         // No search: just use marker, handler computes unselected from element.options
         const selectAllOption: Option = {
           label: "Select all",
-          value: "__SELECT_ALL__",
-          id: "__SELECT_ALL__",
+          value: SELECT_ALL_ID,
+          id: SELECT_ALL_ID,
         }
         return [selectAllOption, ...filteredOptions]
       }

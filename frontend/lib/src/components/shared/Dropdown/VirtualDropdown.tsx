@@ -30,6 +30,10 @@ import { convertRemToPx } from "~lib/theme/utils"
 
 import { ThemedStyledDropdownListItem } from "./styled-components"
 
+// Constants for special dropdown option IDs used by Multiselect
+export const SELECT_ALL_ID = "__SELECT_ALL__"
+export const SELECT_MATCHES_ID = "__SELECT_MATCHES__"
+
 /*
  * A component that renders a large dropdown to render only a fixed amount of
  * options at a time. Overall, the dropdown improves performance for
@@ -49,9 +53,9 @@ function FixedSizeListItem(props: FixedSizeListItemProps): ReactElement {
   // isCreatable is set by baseui when the option is not in the list of options and the user is typing a new one
   const label = item.isCreatable ? `Add: ${item.label}` : item.label
 
-  // Check if this is a "Select all" or "Select all matches" option
+  // Check if this is a "Select all" or "Select X matches" option
   const isSelectAllOption =
-    item.id === "__SELECT_ALL__" || item.id === "__SELECT_ALL_MATCHES__"
+    item.id === SELECT_ALL_ID || item.id === SELECT_MATCHES_ID
 
   return (
     <ThemedStyledDropdownListItem
