@@ -1,0 +1,215 @@
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+[build-system]
+requires = ["setuptools>=65.5.1", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "streamlit"
+version = "1.53.1"
+description = "A faster way to build and share data apps"
+# Note: README.md is in the repo root. The build process copies it to lib/
+# before building. See .github/workflows/release.yml.
+readme = "README.md"
+license = "Apache-2.0"
+requires-python = ">=3.10"
+authors = [{ name = "Snowflake Inc", email = "hello@streamlit.io" }]
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Environment :: Console",
+  "Environment :: Web Environment",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Science/Research",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Topic :: Database :: Front-Ends",
+  "Topic :: Office/Business :: Financial :: Spreadsheet",
+  "Topic :: Scientific/Engineering :: Information Analysis",
+  "Topic :: Scientific/Engineering :: Visualization",
+  "Topic :: Software Development :: Libraries :: Application Frameworks",
+  "Topic :: Software Development :: Widget Sets",
+]
+
+# IMPORTANT: We should try very hard *not* to add dependencies to Streamlit.
+# And if you do add one, make the required version as general as possible:
+# - Include relevant lower bound for any features we use from our dependencies
+# - Always include the lower bound as >= VERSION, to keep testing min versions easy
+# - And include an upper bound that's < NEXT_MAJOR_VERSION
+# NOTE: If you change the lower bound of a version, you will need to run
+# `make update-min-deps` and commit the changes to `min-constraints-gen.txt`.
+dependencies = [
+  # Altair 5.4.0 and 5.4.1 have compatibility issues with narwhals library
+  # that cause st.line_chart and other built-in charts to fail rendering.
+  # See: https://github.com/streamlit/streamlit/issues/12064
+  "altair>=4.0,<7,!=5.4.0,!=5.4.1",
+  "blinker>=1.5.0,<2",
+  "cachetools>=5.5,<7",
+  "click>=7.0,<9",
+  "gitpython>=3.0.7,<4,!=3.1.19",
+  "numpy>=1.23,<3",
+  # The "packaging" package isn't version-capped because they use calendar-based
+  # versioning, i.e. "major" version increase != breaking changes
+  "packaging>=20",
+  # Pandas <1.4 has a bug related to deleting columns in a DataFrame changing
+  # the index dtype.
+  "pandas>=1.4.0,<3",
+  "pillow>=7.1.0,<13",
+  "pydeck>=0.8.0b4,<1",
+  # `protoc` < 3.20 is not able to generate protobuf code compatible with protobuf >= 3.20.
+  "protobuf>=3.20,<7",
+  # pyarrow is not semantically versioned, gets new major versions frequently, and
+  # doesn't tend to break the API on major version upgrades, so we don't put an
+  # upper bound on it.
+  "pyarrow>=7.0",
+  "requests>=2.27,<3",
+  "tenacity>=8.1.0,<10",
+  # Starting from Python 3.11, Python has built in support for reading TOML files.
+  # Let's make sure to remove this "toml" library when we stop supporting Python 3.10.
+  "toml>=0.10.1,<2",
+  # Tornado 6.0.3 was the current version when Python 3.8 was released (Oct 14, 2019).
+  # Tornado 6.5.0 is skipped due to a bug with Unicode characters in the filename.
+  # See https://github.com/tornadoweb/tornado/commit/62c276434dc5b13e10336666348408bf8c062391
+  "tornado>=6.0.3,<7,!=6.5.0",
+  # Starlette requires typing-extensions >= 4.10.
+  "typing-extensions>=4.10.0,<5",
+  # Don't require watchdog on MacOS, since it'll fail without xcode tools.
+  # Without watchdog, we fallback to a polling file watcher to check for app changes.
+  "watchdog>=2.1.5,<7; platform_system != 'Darwin'",
+]
+
+[project.optional-dependencies]
+# Optional dependency required for Snowflake connection:
+snowflake = [
+  "snowflake-snowpark-python[modin]>=1.17.0; python_version<'3.12'",
+  "snowflake-connector-python>=3.3.0; python_version<'3.12'",
+]
+# Optional dependency required for Starlette integration:
+starlette = [
+  # ASGI web-framework:
+  "starlette>=0.40.0",
+  # ASGI server:
+  "uvicorn>=0.30.0",
+  # Required by starlette:
+  "anyio>=4.0.0",
+  # Required for file-upload support:
+  "python-multipart>=0.0.10",
+  # Required for websocket support:
+  "websockets>=12.0.0",
+  # Required for cookie signing:
+  "itsdangerous>=2.1.2",
+]
+# Optional dependency required for PDF rendering:
+pdf = ["streamlit-pdf>=1.0.0"]
+# Optional dependency required for auth:
+auth = ["Authlib>=1.3.2"]
+# Optional charting dependencies:
+charts = [
+  "matplotlib>=3.0.0",
+  "graphviz>=0.19.0",
+  "plotly>=4.0.0",
+  # orjson speeds up large plotly figure processing by 5-10x:
+  "orjson>=3.5.0",
+]
+# Optional SQL connection dependency:
+sql = ["SQLAlchemy>=2.0.0"]
+# Optional dependency for better performance:
+performance = [
+  # orjson speeds up large plotly figure processing by 5-10x:
+  "orjson>=3.5.0",
+  # uvloop speeds up the event loop:
+  "uvloop>=0.15.2; sys_platform != 'win32' and sys_platform != 'cygwin' and platform_python_implementation != 'PyPy'",
+  # Faster http parsing for Starlette server:
+  "httptools>=0.6.3",
+]
+# Install all optional dependencies:
+all = [
+  "streamlit[auth,charts,snowflake,sql,pdf,performance]",
+  # Improved exception traceback formatting:
+  "rich>=11.0.0",
+]
+
+[project.scripts]
+streamlit = "streamlit.web.cli:main"
+
+[project.urls]
+Homepage = "https://streamlit.io"
+Documentation = "https://docs.streamlit.io/"
+"Source Code" = "https://github.com/streamlit/streamlit"
+"Bug Tracker" = "https://github.com/streamlit/streamlit/issues"
+"Release Notes" = "https://docs.streamlit.io/develop/quick-reference/changelog"
+Community = "https://discuss.streamlit.io/"
+
+[tool.setuptools]
+zip-safe = false
+include-package-data = true
+
+[tool.setuptools.packages.find]
+exclude = ["tests", "tests.*"]
+
+# PEP 561: https://mypy.readthedocs.io/en/stable/installed_packages.html
+[tool.setuptools.package-data]
+streamlit = ["py.typed", "hello/**/*.py"]
+
+# =============================================================================
+# Pytest Configuration
+# =============================================================================
+# Used when running pytest with -c lib/pyproject.toml from repo root.
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# Required for pytest-asyncio to use function-scoped event loops by default
+asyncio_default_fixture_loop_scope = "function"
+markers = [
+  "slow: marks tests as slow",
+  "require_integration: marks tests that require integration dependencies",
+  "performance: performance tests",
+]
+filterwarnings = [
+  # PyTest filter syntax: action:message:category:module:line
+  "ignore::UserWarning:altair.*:",
+  "ignore::DeprecationWarning:flatbuffers.*:",
+  "ignore::DeprecationWarning:keras_preprocessing.*:",
+]
+addopts = "--cov=streamlit --cov-report=html --cov-config=lib/pyproject.toml"
+
+# =============================================================================
+# Coverage Configuration
+# =============================================================================
+# Used by pytest-cov when running tests.
+
+[tool.coverage.run]
+source = ["streamlit"]
+omit = [
+  "streamlit/proto/*",
+  "streamlit/vendor/*",
+  "streamlit/hello/*",
+  "streamlit/static/*",
+]
+
+[tool.coverage.report]
+omit = [
+  "streamlit/proto/*",
+  "streamlit/vendor/*",
+  "streamlit/hello/*",
+  "streamlit/static/*",
+]
+exclude_also = [
+  "if TYPE_CHECKING:",
+  "def dg\\(self\\)",
+  "raise NotImplementedError",
+]

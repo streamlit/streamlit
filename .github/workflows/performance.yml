@@ -43,18 +43,14 @@ jobs:
           fetch-depth: 2
       - name: Set Python version vars
         uses: ./.github/actions/build_info
-      - name: Set up Python ${{ env.PYTHON_MAX_VERSION }}
-        uses: actions/setup-python@v6
-        with:
-          python-version: "${{ env.PYTHON_MAX_VERSION }}"
       - name: Setup virtual env
         uses: ./.github/actions/make_init
+        with:
+          python_version: ${{ env.PYTHON_MAX_VERSION }}
       - name: Install playwright
         uses: ./.github/actions/playwright_install
       - name: Install integration dependencies
-        run: |
-          source venv/bin/activate
-          uv pip install polars
+        run: uv pip install polars
       - name: Run make frontend-with-profiler
         run: make frontend-with-profiler
       - name: Run playwright performance tests

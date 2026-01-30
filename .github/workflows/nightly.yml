@@ -33,12 +33,10 @@ jobs:
           fetch-depth: 2
       - name: Set Python version vars
         uses: ./.github/actions/build_info
-      - name: Set up Python ${{ env.PYTHON_MAX_VERSION }}
-        uses: actions/setup-python@v6
-        with:
-          python-version: "${{ env.PYTHON_MAX_VERSION }}"
       - name: Setup virtual env
         uses: ./.github/actions/make_init
+        with:
+          python_version: ${{ env.PYTHON_MAX_VERSION }}
 
       - name: Create tag
         id: create_tag
@@ -52,7 +50,7 @@ jobs:
           ./scripts/update_version.py $TAG
           ./scripts/update_name.py streamlit-nightly
 
-          git add lib/setup.py frontend/package.json lib/streamlit/__init__.py lib/streamlit/version.py
+          git add lib/pyproject.toml frontend/package.json lib/streamlit/__init__.py lib/streamlit/version.py
 
           git commit -m "Update version and project name in files"
 
@@ -156,18 +154,15 @@ jobs:
           submodules: "recursive"
       - name: Set Python version vars
         uses: ./.github/actions/build_info
-      - name: Set up Python ${{ env.PYTHON_MAX_VERSION }}
-        uses: actions/setup-python@v6
-        with:
-          python-version: "${{ env.PYTHON_MAX_VERSION }}"
       - name: Setup virtual env
         uses: ./.github/actions/make_init
+        with:
+          python_version: ${{ env.PYTHON_MAX_VERSION }}
       - name: Verify git tag vs. version
         env:
           TAG: ${{ needs.create-nightly-tag.outputs.tag }}
         run: |
-          cd lib
-          python setup.py verify
+          uv run python scripts/verify_version.py
       - name: Fix apt mirrors
         if: ${{ runner.os == 'Linux' }}
         uses: ./.github/actions/apt_mirror_fix

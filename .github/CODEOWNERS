@@ -1,7 +1,7 @@
 # We need to take additional care when making changes to Python dependencies
 # to ensure that Streamlit works with as wide a range of packages/package
 # versions as possible.
-lib/setup.py @streamlit/open-source-release-team
+lib/pyproject.toml @streamlit/open-source-release-team
 
 # `audit_frontend_dependencies` ensures that the libraries we ship
 # with our frontend code don't violate Snowflake open source policy.

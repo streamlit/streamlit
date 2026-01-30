@@ -592,13 +592,33 @@ class DataframeUtilTest(unittest.TestCase):
         )
 
     @pytest.mark.require_integration
+    @pytest.mark.timeout(60)  # 60 second timeout to prevent CI hangs
     def test_verify_ray_integration(self):
         """Integration test ray object handling.
 
         This is in addition to the tests using the mocks to verify that
         the latest version of the library is still supported.
         """
+        import os
+
         import ray
+
+        # Set environment variables to prevent Ray from hanging during initialization.
+        # These must be set before ray.init() is called.
+        os.environ.setdefault("RAY_DISABLE_DOCKER_CPU_WARNING", "1")
+        os.environ.setdefault("RAY_OBJECT_STORE_MEMORY", "100000000")  # 100MB
+
+        # Explicitly initialize Ray with minimal resources to prevent hangs in CI.
+        # Without this, ray.data.from_pandas() will auto-initialize Ray, which can
+        # hang indefinitely in resource-constrained CI environments.
+        if not ray.is_initialized():
+            ray.init(
+                num_cpus=1,
+                include_dashboard=False,
+                ignore_reinit_error=True,
+                configure_logging=False,
+                log_to_driver=False,
+            )
 
         df = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
         ray_dataset = ray.data.from_pandas(df)

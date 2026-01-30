@@ -32,11 +32,11 @@ make python-tests
 - Run a specific test file with:
 
 ```bash
-PYTHONPATH=lib pytest lib/tests/streamlit/my_example_test.py
+uv run pytest lib/tests/streamlit/my_example_test.py
 ```
 
 - Run a specific test inside a test file with:
 
 ```bash
-PYTHONPATH=lib pytest lib/tests/streamlit/my_example_test.py -k test_that_something_works
+uv run pytest lib/tests/streamlit/my_example_test.py -k test_that_something_works
 ```
