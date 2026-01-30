@@ -183,7 +183,7 @@ export function getKeyFromId(
   return userKey === "None" ? undefined : userKey
 }
 
-export function backwardsCompatibleColumnGapSize(
+export function getColumnGapSize(
   columnProto: BlockProto.IColumn
 ): streamlit.GapSize {
   if (columnProto.gapConfig?.gapSize) {
@@ -205,7 +205,7 @@ export function checkFlexContainerBackwardsCompatibile(
   return false
 }
 
-export function getActivateScrollToBottomBackwardsCompatible(
+export function shouldActivateScrollToBottom(
   blockNode: BlockNode
 ): boolean {
   const hasHeight = blockNode.deltaBlock.heightConfig?.pixelHeight

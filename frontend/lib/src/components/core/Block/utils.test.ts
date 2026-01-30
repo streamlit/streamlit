@@ -20,10 +20,10 @@ import { BlockNode, ElementNode } from "~lib/AppNode"
 import { ScriptRunState } from "~lib/ScriptRunState"
 
 import {
-  backwardsCompatibleColumnGapSize,
+  getColumnGapSize,
   checkFlexContainerBackwardsCompatibile,
   convertKeyToClassName,
-  getActivateScrollToBottomBackwardsCompatible,
+  shouldActivateScrollToBottom,
   getBorderBackwardsCompatible,
   getKeyFromId,
   isElementStale,
@@ -161,14 +161,14 @@ describe("getKeyFromId", () => {
   })
 })
 
-describe("backwardsCompatibleColumnGapSize", () => {
+describe("getColumnGapSize", () => {
   it("returns gapSize when it exists", () => {
     const columnProto = {
       gapConfig: {
         gapSize: streamlit.GapSize.MEDIUM,
       },
     }
-    expect(backwardsCompatibleColumnGapSize(columnProto)).toBe(
+    expect(getColumnGapSize(columnProto)).toBe(
       streamlit.GapSize.MEDIUM
     )
   })
@@ -179,14 +179,14 @@ describe("backwardsCompatibleColumnGapSize", () => {
         gapSize: streamlit.GapSize.GAP_UNDEFINED,
       },
     }
-    expect(backwardsCompatibleColumnGapSize(columnProto)).toBe(
+    expect(getColumnGapSize(columnProto)).toBe(
       streamlit.GapSize.SMALL
     )
   })
 
   it("returns GapSize.SMALL when gapConfig does not exist", () => {
     const columnProto = {}
-    expect(backwardsCompatibleColumnGapSize(columnProto)).toBe(
+    expect(getColumnGapSize(columnProto)).toBe(
       streamlit.GapSize.SMALL
     )
   })
@@ -265,7 +265,7 @@ describe("getBorderBackwardsCompatible", () => {
   })
 })
 
-describe("getActivateScrollToBottomBackwardsCompatible", () => {
+describe("shouldActivateScrollToBottom", () => {
   // Helper function to create a proper BlockNode instance for testing
   const createBlockNode = (
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -311,7 +311,7 @@ describe("getActivateScrollToBottomBackwardsCompatible", () => {
       true // Has chatMessage child
     )
 
-    expect(getActivateScrollToBottomBackwardsCompatible(mockNode)).toBe(true)
+    expect(shouldActivateScrollToBottom(mockNode)).toBe(true)
   })
 
   it("returns false when has height but no chatMessage child", () => {
@@ -320,7 +320,7 @@ describe("getActivateScrollToBottomBackwardsCompatible", () => {
       false // No chatMessage child
     )
 
-    expect(getActivateScrollToBottomBackwardsCompatible(mockNode)).toBe(false)
+    expect(shouldActivateScrollToBottom(mockNode)).toBe(false)
   })
 
   it("returns false when has chatMessage child but no height", () => {
@@ -329,7 +329,7 @@ describe("getActivateScrollToBottomBackwardsCompatible", () => {
       true // Has chatMessage child
     )
 
-    expect(getActivateScrollToBottomBackwardsCompatible(mockNode)).toBe(false)
+    expect(shouldActivateScrollToBottom(mockNode)).toBe(false)
   })
 
   it("returns false when has heightConfig but no children", () => {
@@ -343,6 +343,6 @@ describe("getActivateScrollToBottomBackwardsCompatible", () => {
       "test-script-run-id"
     )
 
-    expect(getActivateScrollToBottomBackwardsCompatible(mockNode)).toBe(false)
+    expect(shouldActivateScrollToBottom(mockNode)).toBe(false)
   })
 })

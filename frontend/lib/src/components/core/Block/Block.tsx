@@ -53,11 +53,11 @@ import {
 } from "./styled-components"
 import {
   assignDividerColor,
-  backwardsCompatibleColumnGapSize,
+  getColumnGapSize,
   BaseBlockProps,
   checkFlexContainerBackwardsCompatibile,
   convertKeyToClassName,
-  getActivateScrollToBottomBackwardsCompatible,
+  shouldActivateScrollToBottom,
   getBorderBackwardsCompatible,
   getClassnamePrefix,
   getKeyFromId,
@@ -163,7 +163,7 @@ export const FlexBoxContainer = (
   const direction = getDirectionOfBlock(props.node.deltaBlock)
   const parentContext = useContext(FlexContext)
 
-  const activateScrollToBottom = getActivateScrollToBottomBackwardsCompatible(
+  const activateScrollToBottom = shouldActivateScrollToBottom(
     props.node
   )
   const scrollContainerRef = useScrollToBottom(activateScrollToBottom)
@@ -375,7 +375,7 @@ export const BlockNodeRenderer = (
     return (
       <StyledColumn
         weight={node.deltaBlock.column.weight ?? 0}
-        gap={backwardsCompatibleColumnGapSize(node.deltaBlock.column)}
+        gap={getColumnGapSize(node.deltaBlock.column)}
         verticalAlignment={
           node.deltaBlock.column.verticalAlignment ?? undefined
         }
