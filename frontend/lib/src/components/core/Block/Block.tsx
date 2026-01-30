@@ -53,15 +53,15 @@ import {
 } from "./styled-components"
 import {
   assignDividerColor,
-  getColumnGapSize,
   BaseBlockProps,
   checkFlexContainerBackwardsCompatibile,
   convertKeyToClassName,
-  shouldActivateScrollToBottom,
   getBorderBackwardsCompatible,
   getClassnamePrefix,
+  getColumnGapSize,
   getKeyFromId,
   isComponentStale,
+  shouldActivateScrollToBottom,
   shouldComponentBeEnabled,
 } from "./utils"
 

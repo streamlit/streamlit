@@ -20,13 +20,13 @@ import { BlockNode, ElementNode } from "~lib/AppNode"
 import { ScriptRunState } from "~lib/ScriptRunState"
 
 import {
-  getColumnGapSize,
   checkFlexContainerBackwardsCompatibile,
   convertKeyToClassName,
-  shouldActivateScrollToBottom,
   getBorderBackwardsCompatible,
+  getColumnGapSize,
   getKeyFromId,
   isElementStale,
+  shouldActivateScrollToBottom,
 } from "./utils"
 
 describe("isElementStale", () => {
