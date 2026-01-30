@@ -40,6 +40,38 @@ FILES_AND_REGEXES = {
 }
 
 
+def update_root_pyproject_toml(project_name: str) -> None:
+    """Update the root pyproject.toml to use the new package name.
+
+    This is required for uv to correctly resolve the local package
+    when its name changes (e.g., from 'streamlit' to 'streamlit-nightly').
+    """
+    file_path = os.path.join(BASE_DIR, "pyproject.toml")
+
+    with open(file_path, encoding="utf-8") as f:
+        content = f.read()
+
+    # Update [tool.uv.sources] section - change the key from 'streamlit' to new name
+    content = re.sub(
+        r'^streamlit = \{ path = "lib", editable = true \}$',
+        rf'{project_name} = {{ path = "lib", editable = true }}',
+        content,
+        flags=re.MULTILINE,
+    )
+
+    # Update dependency references in dependency-groups from "streamlit" to new name
+    # These appear as standalone "streamlit", entries in the arrays
+    content = re.sub(
+        r'^  "streamlit",$',
+        rf'  "{project_name}",',
+        content,
+        flags=re.MULTILINE,
+    )
+
+    with open(file_path, "w", encoding="utf-8") as f:
+        f.write(content)
+
+
 def update_files(project_name: str, files: dict[str, str]) -> None:
     """Update files with new project name."""
     for filename, regex in files.items():
@@ -63,6 +95,7 @@ def main() -> None:
         raise Exception(f'Specify project name, e.g: "{sys.argv[0]} streamlit-nightly"')
     project_name = sys.argv[1]
     update_files(project_name, FILES_AND_REGEXES)
+    update_root_pyproject_toml(project_name)
 
 
 if __name__ == "__main__":
