@@ -19,6 +19,7 @@ import { userEvent } from "@testing-library/user-event"
 
 import { Block as BlockProto } from "@streamlit/protobuf"
 
+import { ScriptRunState } from "~lib/ScriptRunState"
 import { render } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -34,6 +35,9 @@ const getProps = (
     ...elementProps,
   }),
   isStale: false,
+  empty: false,
+  scriptRunState: ScriptRunState.NOT_RUNNING,
+  scriptRunId: "test-script-run-id",
   ...props,
 })
 

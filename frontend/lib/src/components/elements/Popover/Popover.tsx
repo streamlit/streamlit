@@ -29,11 +29,7 @@ import { PLACEMENT, TRIGGER_TYPE, Popover as UIPopover } from "baseui/popover"
 import { Block as BlockProto } from "@streamlit/protobuf"
 
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
-import {
-  ParagraphSkeleton,
-  SquareSkeleton,
-  TextLineSkeleton,
-} from "~lib/components/elements/Skeleton/styled-components"
+import { TextLineSkeleton } from "~lib/components/elements/Skeleton/styled-components"
 import { Box } from "~lib/components/shared/Base/styled-components"
 import BaseButton, {
   BaseButtonKind,
@@ -208,25 +204,9 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
         triggerType={TRIGGER_TYPE.click}
         placement={PLACEMENT.bottomLeft}
         content={() => {
-          // Show skeleton while loading
+          // Show skeleton while loading - no extra padding needed as Body has padding
           if (isLoadingContent) {
-            return (
-              <Box
-                style={{
-                  padding: theme.spacing.twoXL,
-                  minWidth: "200px",
-                }}
-              >
-                <ParagraphSkeleton>
-                  <TextLineSkeleton width="90%" />
-                  <TextLineSkeleton width="100%" />
-                  <TextLineSkeleton width="75%" />
-                </ParagraphSkeleton>
-                <Box style={{ marginTop: theme.spacing.md }}>
-                  <SquareSkeleton height="2.5rem" width="100%" />
-                </Box>
-              </Box>
-            )
+            return <TextLineSkeleton width="100%" />
           }
 
           // Show actual content (or empty if no content)

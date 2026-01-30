@@ -20,6 +20,8 @@ import {
   PropsWithChildren,
   ReactElement,
   useCallback,
+  useEffect,
+  useRef,
   useState,
 } from "react"
 
@@ -31,8 +33,10 @@ import {
   convertKeyToClassName,
   getKeyFromId,
 } from "~lib/components/core/Block/utils"
+import { TextLineSkeleton } from "~lib/components/elements/Skeleton/styled-components"
 import { DynamicIcon } from "~lib/components/shared/Icon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
+import { ScriptRunState } from "~lib/ScriptRunState"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
@@ -82,25 +86,78 @@ export const ExpanderIcon = (props: ExpanderIconProps): ReactElement => {
 export interface ExpanderProps {
   element: BlockProto.Expandable
   isStale: boolean
+  empty: boolean
   widgetMgr?: WidgetStateManager
   blockId?: string
   fragmentId?: string
+  /** Current script run state - used to detect when content loading is complete */
+  scriptRunState: ScriptRunState
+  /** Current script run ID - used to detect when a new script run completes */
+  scriptRunId: string
 }
 
 const Expander: FC<PropsWithChildren<ExpanderProps>> = ({
   element,
   isStale,
+  empty,
   widgetMgr,
   blockId,
   fragmentId,
+  scriptRunState,
+  scriptRunId,
   children,
 }): ReactElement => {
   const { label, expanded: backendExpandedState, icon } = element
   const [isHovered, setIsHovered] = useState(false)
 
+  // Check if this is a widget (dynamic expander with state tracking)
+  const isWidget = Boolean(widgetMgr && blockId)
+
+  // Track loading state: true when we're waiting for backend content after opening
+  const [isLoadingContent, setIsLoadingContent] = useState(false)
+
+  // Track the scriptRunId when loading started - used to detect when the
+  // script run that would populate content has completed
+  const loadingStartScriptRunIdRef = useRef<string | null>(null)
+
+  // Clear loading state if expander becomes non-empty (content arrived)
+  useEffect(() => {
+    if (!empty && isLoadingContent) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Syncing with external system (backend content)
+      setIsLoadingContent(false)
+    }
+  }, [empty, isLoadingContent])
+
+  // Clear loading state when script run completes (for empty expanders)
+  useEffect(() => {
+    // Clear loading when script run completes
+    // scriptRunId is captured synchronously in handleWidgetToggle before triggering rerun
+    if (
+      isLoadingContent &&
+      scriptRunState === ScriptRunState.NOT_RUNNING &&
+      loadingStartScriptRunIdRef.current !== null &&
+      scriptRunId !== loadingStartScriptRunIdRef.current
+    ) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Syncing with external system (backend script run state)
+      setIsLoadingContent(false)
+      loadingStartScriptRunIdRef.current = null
+    }
+  }, [isLoadingContent, scriptRunState, scriptRunId])
+
   // Callback to notify backend of toggle (only used in widget mode)
   const handleWidgetToggle = useCallback(
     (newOpen: boolean): void => {
+      // If opening a widget expander with empty content, show loading state
+      // Capture scriptRunId synchronously BEFORE triggering rerun to avoid race condition
+      if (isWidget && newOpen && empty) {
+        setIsLoadingContent(true)
+        loadingStartScriptRunIdRef.current = scriptRunId
+      } else {
+        setIsLoadingContent(false)
+        loadingStartScriptRunIdRef.current = null
+      }
+
+      // Send state update to backend - must happen AFTER capturing scriptRunId
       if (widgetMgr && blockId) {
         widgetMgr.setBoolValue(
           { id: blockId },
@@ -110,7 +167,7 @@ const Expander: FC<PropsWithChildren<ExpanderProps>> = ({
         )
       }
     },
-    [widgetMgr, blockId, fragmentId]
+    [widgetMgr, blockId, fragmentId, isWidget, empty, scriptRunId]
   )
 
   // Delegate all animation/state logic to hook
@@ -168,7 +225,7 @@ const Expander: FC<PropsWithChildren<ExpanderProps>> = ({
           </StyledSummaryHeading>
         </StyledSummary>
         <StyledDetailsPanel data-testid="stExpanderDetails" ref={contentRef}>
-          {children}
+          {isLoadingContent ? <TextLineSkeleton width="100%" /> : children}
         </StyledDetailsPanel>
       </StyledDetails>
     </StyledExpandableContainer>
