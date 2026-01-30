@@ -980,6 +980,36 @@ class VegaLiteChartTest(DeltaGeneratorTestCase):
         )
         assert json.loads(proto.spec) == merge_dicts(autosize_spec, {"mark": "rect"})
 
+    def test_vega_lite_chart_with_builtin_color_name(self):
+        """Test that built-in color names in raw Vega-Lite specs are passed through.
+
+        Built-in color names (red, blue, etc.) in raw st.vega_lite_chart specs
+        are passed through to the frontend unchanged, where they are resolved
+        to theme colors. This documents that the feature works for raw Vega-Lite
+        specs, not just the built-in chart helpers.
+        """
+        df = pd.DataFrame({"x": [1, 2, 3], "y": [10, 20, 30]})
+
+        # Create a raw Vega-Lite spec with a built-in color name
+        st.vega_lite_chart(
+            df,
+            {
+                "mark": "line",
+                "encoding": {
+                    "x": {"field": "x", "type": "quantitative"},
+                    "y": {"field": "y", "type": "quantitative"},
+                    "color": {"value": "red"},  # Built-in color name
+                },
+            },
+        )
+
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        chart_spec = json.loads(proto.spec)
+
+        # The backend passes through the color name unchanged
+        # (frontend will resolve "red" to theme.redColor)
+        assert chart_spec["encoding"]["color"]["value"] == "red"
+
     def test_datasets_in_spec(self):
         """Test passing datasets={foo: df} inside the spec."""
         st.vega_lite_chart({"mark": "rect", "datasets": {"foo": df1}})
@@ -1541,6 +1571,115 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
         )
 
     @parameterized.expand(ST_CHART_ARGS)
+    def test_chart_with_builtin_color_name(
+        self, chart_command: Callable, altair_type: str
+    ):
+        """Test that built-in color names are passed through as-is (not converted).
+
+        Built-in color names (red, blue, etc.) are resolved to theme colors
+        on the frontend, so the backend should pass them through unchanged.
+        """
+        df = pd.DataFrame([[20, 30]], columns=["a", "b"])
+        EXPECTED_DATAFRAME = pd.DataFrame([[20, 30]], columns=["a", "b"])
+
+        # Test single built-in color name
+        chart_command(df, x="a", y="b", color="red")
+
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        chart_spec = json.loads(proto.spec)
+
+        if altair_type == "line" and not is_altair_version_less_than("5.0.0"):
+            chart_spec = chart_spec["layer"][0]
+
+        # Built-in color names should be passed through as-is (not converted to hex)
+        assert chart_spec["encoding"]["color"]["value"] == "red"
+
+        self.assert_output_df_is_correct_and_input_is_untouched(
+            orig_df=df, expected_df=EXPECTED_DATAFRAME, chart_proto=proto
+        )
+
+    @parameterized.expand(ST_CHART_ARGS)
+    def test_chart_with_builtin_color_name_list(
+        self, chart_command: Callable, altair_type: str
+    ):
+        """Test that a list of built-in color names are passed through as-is.
+
+        Built-in color names in a list should be passed through unchanged,
+        while regular colors should still be converted to CSS format.
+        """
+        df = pd.DataFrame([[20, 30, 40]], columns=["a", "b", "c"])
+
+        # Test list of built-in color names
+        chart_command(df, x="a", y=["b", "c"], color=["blue", "green"])
+
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        chart_spec = json.loads(proto.spec)
+
+        if altair_type == "line" and not is_altair_version_less_than("5.0.0"):
+            chart_spec = chart_spec["layer"][0]
+
+        # Built-in color names should be passed through as-is
+        assert chart_spec["encoding"]["color"]["scale"]["range"] == ["blue", "green"]
+
+    @parameterized.expand(ST_CHART_ARGS)
+    def test_chart_with_mixed_color_list(
+        self, chart_command: Callable, altair_type: str
+    ):
+        """Test that mixed color lists (built-in names + hex) work correctly.
+
+        Built-in color names should pass through unchanged while hex colors
+        remain as-is.
+        """
+        df = pd.DataFrame([[20, 30, 40]], columns=["a", "b", "c"])
+
+        # Test mixed list: built-in name + hex color
+        chart_command(df, x="a", y=["b", "c"], color=["red", "#00ff00"])
+
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        chart_spec = json.loads(proto.spec)
+
+        if altair_type == "line" and not is_altair_version_less_than("5.0.0"):
+            chart_spec = chart_spec["layer"][0]
+
+        # Built-in name passed through, hex color also passed through
+        assert chart_spec["encoding"]["color"]["scale"]["range"] == ["red", "#00ff00"]
+
+    @parameterized.expand(ST_CHART_ARGS)
+    def test_column_name_takes_priority_over_builtin_color_name(
+        self, chart_command: Callable, altair_type: str
+    ):
+        """Test that column names take priority over built-in color names.
+
+        If a DataFrame has a column named "red" (or any other built-in color name),
+        passing color="red" should use that column for color encoding, not treat
+        "red" as a built-in color value.
+        """
+        # DataFrame with a column named "red" (a built-in color name)
+        df = pd.DataFrame(
+            {
+                "x": [0, 1, 2],
+                "y": [10, 20, 30],
+                "red": ["category_a", "category_b", "category_a"],
+            }
+        )
+
+        # When color="red" and there's a column named "red", it should be
+        # treated as a column reference, not a built-in color value
+        chart_command(df, x="x", y="y", color="red")
+
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        chart_spec = json.loads(proto.spec)
+
+        if altair_type == "line" and not is_altair_version_less_than("5.0.0"):
+            chart_spec = chart_spec["layer"][0]
+
+        # Should be a field reference (color encoding), not a ColorValue
+        assert "field" in chart_spec["encoding"]["color"]
+        assert chart_spec["encoding"]["color"]["field"] == "red"
+        # Should NOT have a "value" key (which would indicate a color value)
+        assert "value" not in chart_spec["encoding"]["color"]
+
+    @parameterized.expand(ST_CHART_ARGS)
     def test_chart_with_color_column(self, chart_command: Callable, altair_type: str):
         """Test color support for built-in charts."""
         df = pd.DataFrame(
@@ -1959,7 +2098,8 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
 
         too_few_args = ["#f00", ["#f00"], (1, 0, 0, 0.5)]
         too_many_args = [["#f00", "#0ff"], [(1, 0, 0), (0, 0, 1)]]
-        bad_args = ["foo", "blue"]
+        # Note: built-in color names like "blue", "red", etc. are now valid
+        bad_args = ["foo", "notacolor"]
 
         for color_arg in too_few_args:
             with pytest.raises(StreamlitAPIException) as exc:

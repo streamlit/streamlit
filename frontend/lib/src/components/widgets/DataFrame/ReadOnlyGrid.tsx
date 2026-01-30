@@ -50,17 +50,12 @@ export const ReadOnlyGrid = ({
     <DataFrame
       element={
         new ArrowProto({
-          // Use container width is deprecated, the
-          // more relevant attribute is the width config below:
-          useContainerWidth: true,
           // Enforces read-only mode:
           editingMode: Arrow.EditingMode.READ_ONLY,
           disabled: true,
           // Data is provided via the data property below:
           data: undefined,
           styler: null,
-          width: undefined,
-          height: height ?? null,
           id: "",
           columns: "",
           formId: "",

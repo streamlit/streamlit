@@ -34,6 +34,6 @@ message Image {
 message ImageList {
   repeated Image imgs = 1;
 
-  // DEPRECATED use widthConfig on Element.proto
-  int32 width = 2 [deprecated = true];
+  reserved 2;
+  reserved "width";
 }

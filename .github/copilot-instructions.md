@@ -31,8 +31,9 @@
 ### Shell & Build Policy (AI Agents)
 
 - Prefer `make` targets for all dev tasks (tests, lint, format, builds).
-- For Python unit tests: `pytest` commands are allowed and encouraged for running specific tests during development.
-- For E2E tests: `pytest` commands targeting `e2e_playwright/` files are blocked by policy.
+- Always use `uv run` to run any Python command (e.g. `uv run streamlit`, `uv run pytest`, `uv run ruff`, `uv run mypy`, etc.).
+- For Python unit tests: `uv run pytest` commands are allowed and encouraged for running specific tests during development.
+- For E2E tests: `uv run pytest` commands targeting `e2e_playwright/` files are blocked by policy.
   Use `make run-e2e-test <filename>` instead.
 
 ## `make` commands
@@ -40,6 +41,7 @@
 Selection of `make` commands for development (run in the repo root):
 
 - `help`: Show all available make commands.
+- `check`: Run all checks (format, lint, types, unit tests) on changed files only. Useful to verify the current state of the codebase before committing.
 - `protobuf`: Recompile Protobufs for Python and the frontend.
 - `autofix`: Autofix linting and formatting errors.
 

@@ -101,11 +101,7 @@ describe("Popover container", () => {
   it("should render correctly with help", async () => {
     const user = userEvent.setup()
     // Hover to see tooltip content
-    render(
-      <Popover
-        {...getProps({ help: "mockHelpText", useContainerWidth: false })}
-      />
-    )
+    render(<Popover {...getProps({ help: "mockHelpText" })} />)
 
     // Ensure both the button and the tooltip target have the correct width
     const popoverButtonWidget = screen.getByRole("button")

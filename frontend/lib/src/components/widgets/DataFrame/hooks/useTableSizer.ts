@@ -112,7 +112,7 @@ function useTableSizer(
    *   - 4+ rows → 3-row minimum
    */
 
-  const configuredHeight = getConfiguredHeight(element, heightConfig)
+  const configuredHeight = getConfiguredHeight(heightConfig)
   // Stretch height styling does not work in the root container without an
   // enclosing fixed-height container.
   const useStretchHeight = shouldUseStretchHeight(heightConfig, isInRoot)
@@ -211,8 +211,8 @@ function useTableSizer(
   // The maximum width of the data grid can be resized to.
   let maxWidth = availableWidth
 
-  const useContainerWidth = shouldUseContainerWidth(element, widthConfig)
-  const configuredWidth = getConfiguredWidth(element, widthConfig)
+  const useContainerWidth = shouldUseContainerWidth(widthConfig)
+  const configuredWidth = getConfiguredWidth(widthConfig)
   const useContentWidth = shouldUseContentWidth(widthConfig)
 
   if (useContainerWidth) {

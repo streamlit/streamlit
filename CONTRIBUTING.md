@@ -16,7 +16,7 @@ This helps make sure:
 4. Your time is well spent!
 
 > [!TIP]
-> To be clear: if you open a PR that adds a new feature (and isn't just a bug fix or similar) *without* prior support from the Streamlit team, the chances of getting it merged are *extremely low*. Adding a new feature comes with a lot of baggage, such as thinking through the exact API, making sure it fulfills our standards, and maintaining it in the future – even if it's just a small parameter.
+> To be clear: if you open a PR that adds a new feature (and isn't just a bug fix or similar) _without_ prior support from the Streamlit team, the chances of getting it merged are _extremely low_. Adding a new feature comes with a lot of baggage, such as thinking through the exact API, making sure it fulfills our standards, and maintaining it in the future – even if it's just a small parameter.
 
 ## Style Guide
 
@@ -72,11 +72,6 @@ $ corepack enable
 
 # Install uv for Python
 $ curl -LsSf https://astral.sh/uv/install.sh | sh
-
-# Install virtual environment in lib:
-$ cd lib/
-$ uv venv --python 3.12
-$ source .venv/bin/activate
 ```
 
 #### Windows
@@ -85,7 +80,7 @@ Streamlit's development setup is pretty Mac- and Linux-centric. If you're doing 
 
 ### 2. Grab the code
 
-*(You probably already know how to do this, but just in case...)*
+_(You probably already know how to do this, but just in case...)_
 
 First fork [the repo](https://github.com/streamlit/streamlit) via the UI on Github and then do the following:
 
@@ -100,18 +95,13 @@ git checkout -b ${BRANCH_NAME}
 
 ### 3. Create a new Python environment
 
-Create a virtual environment for Streamlit using your favorite tool (`virtualenv`, `pipenv`, etc) and activate it. Here's how we do it with [`venv`](https://docs.python.org/3/library/venv.html):
+We use [uv](https://docs.astral.sh/uv/) to manage Python dependencies and virtual environments. If you don't have uv installed, you can install it with:
 
 ```bash
-cd lib
-python -m venv venv
+curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-Note that, with `venv` this process should be done from any directory, but it is recommended to do it from the `lib/` directory to keep all python files in one directory.
-
-```bash
-source ./venv/bin/activate
-```
+The virtual environment and dependencies will be automatically created and managed when you run `make all-dev` in the next step. uv creates a `.venv` directory in the repository root.
 
 ## How to develop Streamlit
 
@@ -142,24 +132,18 @@ make frontend-dev
 
 ### 4. Run Streamlit
 
-Open another terminal, start your Python environment and run Streamlit.
-
-If you're using `venv`, that's:
+Open another terminal and run Streamlit using `uv run`:
 
 ```bash
-$ cd lib
-$ source ./venv/bin/activate
-$ cd ..
-
-# Now run any Streamlit command you want, such as:
-$ streamlit hello
+# Run any Streamlit command, such as:
+uv run streamlit hello
 ```
 
 ### 5. What to do when you modify some code
 
 #### When you modify JS, or CSS code
 
-Since we use that awesome dev server above, when you change any JS/CSS code everything should automatically *just work* without the need to restart any of the servers.
+Since we use that awesome dev server above, when you change any JS/CSS code everything should automatically _just work_ without the need to restart any of the servers.
 
 #### When you modify Python code
 
@@ -198,19 +182,19 @@ You should always write unit tests and end-to-end tests! This is true for new fe
 - Run a specific test file with:
 
   ```bash
-  PYTHONPATH=lib pytest lib/tests/streamlit/the_test_name.py
+  uv run pytest lib/tests/streamlit/the_test_name.py
   ```
 
 - Run a specific test inside a test file with:
 
   ```bash
-  PYTHONPATH=lib pytest lib/tests/streamlit/the_test_name.py -k test_that_something_works
+  uv run pytest lib/tests/streamlit/the_test_name.py -k test_that_something_works
   ```
 
 - Some tests require you to set up credentials to connect to Snowflake and install [the `snowflake-snowpark-python` package](https://pypi.org/project/snowflake-snowpark-python/). Information on how the Snowflake environment is set up is in our [test utils](./lib/tests/testutil.py) including environment variables to be set. They are skipped by default when running tests. To enable them and disable all others, pass the `--require-integration` flag to `pytest`.
 
   ```bash
-  PYTHONPATH=lib pytest --require-integration
+  uv run pytest --require-integration
   ```
 
 #### JS unit tests
@@ -251,7 +235,7 @@ make python-format
 
 ```
 
-Alternatively, you can use the `ruff format` command directly.
+Alternatively, you can use `uv run ruff format` directly.
 
 #### Linting
 
@@ -262,7 +246,7 @@ make python-lint
 
 ```
 
-Alternatively, you can use the `ruff check` command directly.
+Alternatively, you can use `uv run ruff check` directly.
 
 #### Type-checking
 
@@ -318,13 +302,13 @@ But you can run pre-commit hooks manually as needed.
 - Run all checks on your staged files by using:
 
   ```shell
-  pre-commit run
+  uv run pre-commit run
   ```
 
 - Run all checks on all files by using:
 
   ```shell
-  pre-commit run --all-files
+  uv run pre-commit run --all-files
   ```
 
 ## Troubleshooting
@@ -342,16 +326,14 @@ def test_streamlit_version(self):
       ?      ^
 ```
 
-To fix this make sure you have setup your Python's venv environments correctly, upgrade your dependencies or recreate your environment and repeat setup.
-
-You might have double environments which mismatch for example by accident you could have created venv Python environment inside `streamlit` repository and second one inside `streamlit/lib`. Remove them.
+To fix this make sure your Python environment is set up correctly. Try running `uv sync --group dev` to reinstall dependencies, or delete the `.venv` directory and run `make all-dev` again to recreate the environment.
 
 #### `protoc` command fails because of version mismatch
 
 If the `protoc` command fails and there is a version mismatch reported, try to install the correct version.
 
 - Go to [Protobuf releases](https://github.com/protocolbuffers/protobuf/releases)
-- Choose the [Protobuf tag](https://github.com/protocolbuffers/protobuf/tags) which matches Python's environment Protobuf version, for example [3.20.0](https://github.com/protocolbuffers/protobuf/releases/tag/v3.20.0). Call `pip show protobuf` or equivalent to find this out.
+- Choose the [Protobuf tag](https://github.com/protocolbuffers/protobuf/tags) which matches Python's environment Protobuf version, for example [3.20.0](https://github.com/protocolbuffers/protobuf/releases/tag/v3.20.0). Call `uv run pip show protobuf` or equivalent to find this out.
 - Download zip containing protoc for your system, example: [protoc-3.20.0-osx-x86_64.zip](https://github.com/protocolbuffers/protobuf/releases/download/v3.20.0/protoc-3.20.0-osx-x86_64.zip)
 
 <details>

@@ -27,7 +27,9 @@ message Radio {
   string help = 5;
   string form_id = 6;
 
-  optional int32 value = 7 [deprecated = true];
+  reserved 7;
+  reserved "value";
+
   optional string raw_value = 13;
 
   bool set_value = 8;

@@ -16,6 +16,7 @@
 
 import { darken, getLuminance, lighten, mix, transparentize } from "color2k"
 
+import { BACKGROUND_ONLY_COLORS, NAMED_COLOR_CONFIG } from "./namedColors"
 import {
   DerivedColors,
   EmotionTheme,
@@ -137,7 +138,7 @@ export function getDividerColors(theme: EmotionTheme): DividerColors {
   }
 }
 
-type MarkdownBgColors = {
+type ThemeBackgroundColors = {
   redbg: string
   orangebg: string
   yellowbg: string
@@ -149,7 +150,9 @@ type MarkdownBgColors = {
   primarybg: string
 }
 
-export function getMarkdownBgColors(theme: EmotionTheme): MarkdownBgColors {
+export function getThemeBackgroundColors(
+  theme: EmotionTheme
+): ThemeBackgroundColors {
   const lightTheme = hasLightBackgroundColor(theme)
   const colors = theme.colors
 
@@ -323,4 +326,98 @@ export function getIncreasingGreen(theme: EmotionTheme): string {
   return hasLightBackgroundColor(theme)
     ? theme.colors.blueGreen80
     : theme.colors.green40
+}
+
+// WeakMap allows garbage collection when themes are no longer referenced.
+const namedColorCache = new WeakMap<EmotionTheme, Map<string, string>>()
+const namedBgColorCache = new WeakMap<EmotionTheme, Map<string, string>>()
+
+/**
+ * Get or create the named color mapping for a theme.
+ * Built from NAMED_COLOR_CONFIG to ensure consistency.
+ */
+function getNamedColorMap(theme: EmotionTheme): Map<string, string> {
+  let colorMap = namedColorCache.get(theme)
+  if (!colorMap) {
+    colorMap = new Map()
+    for (const [name, config] of Object.entries(NAMED_COLOR_CONFIG)) {
+      const themeColor = theme.colors[config.colorKey]
+      if (typeof themeColor === "string") {
+        colorMap.set(name, themeColor)
+      }
+    }
+    namedColorCache.set(theme, colorMap)
+  }
+  return colorMap
+}
+
+/**
+ * Get or create the named background color mapping for a theme.
+ * Built from NAMED_COLOR_CONFIG and BACKGROUND_ONLY_COLORS.
+ */
+function getNamedBgColorMap(theme: EmotionTheme): Map<string, string> {
+  let colorMap = namedBgColorCache.get(theme)
+  if (!colorMap) {
+    const bgColors = getThemeBackgroundColors(theme)
+    colorMap = new Map()
+
+    // Add colors from main config that have background colors
+    for (const [name, config] of Object.entries(NAMED_COLOR_CONFIG)) {
+      if (config.bgColorKey) {
+        const bgColor = theme.colors[config.bgColorKey]
+        if (typeof bgColor === "string") {
+          colorMap.set(name, bgColor)
+        }
+      }
+    }
+
+    // Add primary background (computed, not from theme.colors directly)
+    colorMap.set("primary", bgColors.primarybg)
+
+    // Add background-only colors (like purple)
+    for (const [name, config] of Object.entries(BACKGROUND_ONLY_COLORS)) {
+      const bgColor = bgColors[config.bgColorKey as keyof typeof bgColors]
+      if (typeof bgColor === "string") {
+        colorMap.set(name, bgColor)
+      }
+    }
+
+    namedBgColorCache.set(theme, colorMap)
+  }
+  return colorMap
+}
+
+/**
+ * Resolve a named color to its theme color value.
+ * If the color is not a named color, returns it unchanged.
+ *
+ * Note: "purple" is not supported here (no purpleColor exists in the theme).
+ * Use "violet" instead. For background colors, both "purple" and "violet"
+ * are supported via resolveNamedBackgroundColor().
+ *
+ * @param color - The color string to resolve
+ * @param theme - The EmotionTheme containing color values
+ * @returns The resolved theme color or the original color if not a named color
+ */
+export function resolveNamedColor(color: string, theme: EmotionTheme): string {
+  const colorMap = getNamedColorMap(theme)
+  return colorMap.get(color.toLowerCase()) ?? color
+}
+
+/**
+ * Resolve a named color to its theme background color value.
+ * If the color is not a named color, returns it unchanged.
+ *
+ * Note: "purple" and "violet" have distinct background colors.
+ *
+ * @param color - The color string to resolve
+ * @param theme - The EmotionTheme containing color values
+ * @returns The resolved theme background color or the original color if not a named color
+ */
+export function resolveNamedBackgroundColor(
+  color: string,
+  theme: EmotionTheme
+): string {
+  const colorMap = getNamedBgColorMap(theme)
+  return colorMap.get(color.toLowerCase()) ?? color
 }

@@ -134,7 +134,6 @@ import {
   PageInfo,
   PageNotFound,
   PageProfile,
-  PagesChanged,
   ParentMessage,
   SessionEvent,
   SessionStatus,
@@ -960,8 +959,6 @@ export class App extends PureComponent<Props, State> {
           this.handlePageConfigChanged(pageConfig),
         pageInfoChanged: (pageInfo: PageInfo) =>
           this.handlePageInfoChanged(pageInfo),
-        // Deprecated protobuf option as navigation will always inform us of pages
-        pagesChanged: (_pagesChangedMsg: PagesChanged) => {},
         pageNotFound: (pageNotFound: PageNotFound) =>
           this.handlePageNotFound(pageNotFound),
         gitInfoChanged: (gitInfo: GitInfo) =>

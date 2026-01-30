@@ -28,7 +28,6 @@ import "streamlit/proto/PageConfig.proto";
 import "streamlit/proto/PageInfo.proto";
 import "streamlit/proto/PageProfile.proto";
 import "streamlit/proto/PageNotFound.proto";
-import "streamlit/proto/PagesChanged.proto";
 import "streamlit/proto/ParentMessage.proto";
 import "streamlit/proto/SessionEvent.proto";
 import "streamlit/proto/SessionStatus.proto";
@@ -75,7 +74,6 @@ message ForwardMsg {
     // Other messages.
     Navigation navigation = 23;
     PageNotFound page_not_found = 15;
-    PagesChanged pages_changed = 16 [deprecated = true];
     FileURLsResponse file_urls_response = 19;
     AutoRerun auto_rerun = 21;
 
@@ -102,7 +100,8 @@ message ForwardMsg {
   // testing.
   string debug_last_backmsg_id = 17;
 
-  reserved 7, 8;
+  reserved 7, 8, 16;
+  reserved "pages_changed";
   // Next: 26
 }
 
@@ -125,23 +124,13 @@ message ForwardMsgMetadata {
   // Only set for Delta messages.
   repeated uint32 delta_path = 2;
 
-  // DEPRECATED: This is not used anymore.
-  ElementDimensionSpec element_dimension_spec = 3;
-
   // active_script_hash the forward message is associated from.
   // For multipage apps v1, this will always be the page file running
   // For multipage apps v2, this can be the main script or the page script
   string active_script_hash = 4;
-}
 
-// DEPRECATED: This is not used anymore.
-// Specifies the dimensions for the element
-message ElementDimensionSpec {
-  // width in pixels
-  uint32 width = 1;
-
-  // height in pixels
-  uint32 height = 2;
+  reserved 3;
+  reserved "element_dimension_spec";
 }
 
 // This is a list of ForwardMessages used to have a single protobuf message

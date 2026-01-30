@@ -43,9 +43,9 @@ message Block {
 
   message Vertical {
     bool border = 1;
-    // DEPRECATED: We use height_config on the top-level which is shared.
-    // with other Block types.
-    uint32 height = 2 [deprecated = true];
+
+    reserved 2;
+    reserved "height";
   }
 
   message Horizontal {
@@ -87,9 +87,6 @@ message Block {
   message Column {
     double weight = 1;
 
-    // Deprecated. Use gap_size
-    string gap = 2 [deprecated = true];
-
     enum VerticalAlignment {
       TOP = 0;
       CENTER = 1;
@@ -99,6 +96,9 @@ message Block {
     bool show_border = 4;
 
     optional streamlit.GapConfig gap_config = 5;
+
+    reserved 2;
+    reserved "gap";
   }
 
   message Expandable {
@@ -143,12 +143,13 @@ message Block {
 
   message Popover {
     string label = 1;
-    // DEPRECATED: We use widthConfig on the top-level which is shared.
-    bool use_container_width = 2 [deprecated = true];
     string help = 3;
     bool disabled = 4;
     string icon = 5;
     string type = 6;
+
+    reserved 2;
+    reserved "use_container_width";
   }
 
 
