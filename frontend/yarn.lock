@@ -2650,6 +2650,19 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@playwright/cli@npm:^0.0.62":
+  version: 0.0.62
+  resolution: "@playwright/cli@npm:0.0.62"
+  dependencies:
+    minimist: "npm:^1.2.5"
+    playwright: "npm:1.59.0-alpha-1769819922000"
+    playwright-core: "npm:1.59.0-alpha-1769819922000"
+  bin:
+    playwright-cli: playwright-cli.js
+  checksum: 10c0/ecb15d2132a74b55d3495a58b35ba2b08c200e91083c1bbd326433356a23ff2abf33df61f75f08b402d00a28d4317bc37b6b5fa1e3702b9497799349f8fdf066
+  languageName: node
+  linkType: hard
+
 "@plotly/d3-sankey-circular@npm:0.33.1":
   version: 0.33.1
   resolution: "@plotly/d3-sankey-circular@npm:0.33.1"
@@ -10221,12 +10234,31 @@ __metadata:
   languageName: node
   linkType: hard
 
+"fsevents@npm:2.3.2":
+  version: 2.3.2
+  resolution: "fsevents@npm:2.3.2"
+  dependencies:
+    node-gyp: "npm:latest"
+  checksum: 10c0/be78a3efa3e181cda3cf7a4637cb527bcebb0bd0ea0440105a3bb45b86f9245b307dc10a2507e8f4498a7d4ec349d1910f4d73e4d4495b16103106e07eee735b
+  conditions: os=darwin
+  languageName: node
+  linkType: hard
+
 "fsevents@npm:~2.3.2, fsevents@npm:~2.3.3":
   version: 2.3.3
   resolution: "fsevents@npm:2.3.3"
   dependencies:
     node-gyp: "npm:latest"
   checksum: 10c0/a1f0c44595123ed717febbc478aa952e47adfc28e2092be66b8ab1635147254ca6cfe1df792a8997f22716d4cbafc73309899ff7bfac2ac3ad8cf2e4ecc3ec60
+  conditions: os=darwin
+  languageName: node
+  linkType: hard
+
+"fsevents@patch:fsevents@npm%3A2.3.2#optional!builtin<compat/fsevents>":
+  version: 2.3.2
+  resolution: "fsevents@patch:fsevents@npm%3A2.3.2#optional!builtin<compat/fsevents>::version=2.3.2&hash=df0bf1"
+  dependencies:
+    node-gyp: "npm:latest"
   conditions: os=darwin
   languageName: node
   linkType: hard
@@ -14522,6 +14554,30 @@ __metadata:
   languageName: node
   linkType: hard
 
+"playwright-core@npm:1.59.0-alpha-1769819922000":
+  version: 1.59.0-alpha-1769819922000
+  resolution: "playwright-core@npm:1.59.0-alpha-1769819922000"
+  bin:
+    playwright-core: cli.js
+  checksum: 10c0/efa0133a5ed2ee94b2002eede60fc71991a56af3ef4caccf70fb475973bcc0e4e3ac5ea216c6aa78022913cfe80be778058c1fad3af2df54593ab47a45a230b2
+  languageName: node
+  linkType: hard
+
+"playwright@npm:1.59.0-alpha-1769819922000":
+  version: 1.59.0-alpha-1769819922000
+  resolution: "playwright@npm:1.59.0-alpha-1769819922000"
+  dependencies:
+    fsevents: "npm:2.3.2"
+    playwright-core: "npm:1.59.0-alpha-1769819922000"
+  dependenciesMeta:
+    fsevents:
+      optional: true
+  bin:
+    playwright: cli.js
+  checksum: 10c0/e644927219b8470e9a275383bf81c2c75e07f8b1de52acf4ff08ce7c99d4b09dcc46beaa7d8a3351a7e7e69d29ac441288b33036a711ca42cd2f15f93ebbb2b5
+  languageName: node
+  linkType: hard
+
 "plimit-lit@npm:^1.2.6":
   version: 1.6.1
   resolution: "plimit-lit@npm:1.6.1"
@@ -16816,6 +16872,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "streamlit@workspace:."
   dependencies:
+    "@playwright/cli": "npm:^0.0.62"
     "@vitest/coverage-v8": "npm:^4.0.18"
     concurrently: "npm:^9.2.1"
     jiti: "npm:^2.6.1"
