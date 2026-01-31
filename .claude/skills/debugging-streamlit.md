@@ -54,17 +54,12 @@ For advanced debugging with screenshots or automated UI interaction, create temp
 
 ### Setup
 
-Create a script in `work-tmp/` that reuses e2e_playwright utilities:
+Create a script in `work-tmp/` that imports e2e_playwright utilities directly:
 
 ```python
 # work-tmp/debug_screenshot.py
 """Temporary Playwright script for debugging - run against make debug."""
-import sys
-from pathlib import Path
 from playwright.sync_api import sync_playwright, expect
-
-# Add e2e_playwright to path for utility imports
-sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from e2e_playwright.shared.app_utils import (
     get_text_input,
@@ -107,12 +102,13 @@ if __name__ == "__main__":
 
 ### Running Temporary Scripts
 
-With `make debug <app.py>` running in another terminal:
+With `make debug <app.py>` running in another terminal, run scripts from the repo root using `uv run` with `PYTHONPATH=.`:
 
 ```bash
-cd /path/to/streamlit/repo
-python work-tmp/debug_screenshot.py
+PYTHONPATH=. uv run python work-tmp/debug_screenshot.py
 ```
+
+This uses the uv-managed environment with all dependencies (playwright, etc.) and makes `e2e_playwright` importable without path manipulation.
 
 ### Available Utilities from e2e_playwright
 
@@ -160,11 +156,7 @@ page.screenshot(path="work-tmp/viewport.png", full_page=False)
 
 ```python
 # work-tmp/debug_form.py
-import sys
-from pathlib import Path
 from playwright.sync_api import sync_playwright, expect
-
-sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from e2e_playwright.shared.app_utils import get_text_input, get_button, click_button
 from e2e_playwright.conftest import wait_for_app_loaded, wait_for_app_run
@@ -199,6 +191,8 @@ def main():
 if __name__ == "__main__":
     main()
 ```
+
+Run with: `PYTHONPATH=. uv run python work-tmp/debug_form.py`
 
 ## Troubleshooting
 
