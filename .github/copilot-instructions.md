@@ -74,6 +74,7 @@ Selection of `make` commands for development (run in the repo root):
   - Logs are written to `work-tmp/debug-backend.log` (Python/Streamlit) and `work-tmp/debug-frontend.log` (Vite/browser console).
   - Log files are cleared on each run but persist after exit for post-mortem analysis.
   - Browser `console.log()` output appears in `work-tmp/debug-frontend.log`.
+  - See [.claude/skills/debugging-streamlit.md](.claude/skills/debugging-streamlit.md) for the full debugging guide.
 
 ### Development Tips
 
