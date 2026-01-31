@@ -16,8 +16,6 @@
 
 syntax = "proto3";
 
-import "streamlit/proto/PandasStyler.proto";
-
 // Arrow data buffer with optional styling. Use this message for serialized
 // Arrow data, with optional pandas styling for table-like displays.
 message ArrowData {
@@ -26,4 +24,21 @@ message ArrowData {
 
   // Optional pandas styler information (used by table-like displays)
   PandasStyler styler = 2;
+
+  // Pandas Styler information for formatting and styling table displays.
+  message PandasStyler {
+    // The Styler's source UUID (if the user provided one), or the path-based
+    // hash that we generate (if no source UUID was provided).
+    string uuid = 1;
+
+    // The table's caption.
+    string caption = 2;
+
+    // `styles` contains the CSS for the entire source table.
+    string styles = 3;
+
+    // display_values is another Arrow/Table: a copy of the source table, but
+    // with all the display values formatted to the user-specified rules.
+    bytes display_values = 4;
+  }
 }
