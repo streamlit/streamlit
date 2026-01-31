@@ -181,6 +181,19 @@ function TimeInput({
               }) as React.CSSProperties,
           },
 
+          DropdownContainer: {
+            style: ({ $width }: { $width: number | null }) => {
+              const lightBackground = hasLightBackgroundColor(theme)
+              // In dark mode, subtract border width from both sides
+              const borderAdjustment = lightBackground
+                ? 0
+                : 2 * parseFloat(theme.sizes.borderWidth)
+              return {
+                width: $width ? `${$width - borderAdjustment}px` : undefined,
+              }
+            },
+          },
+
           Popover: {
             props: {
               ignoreBoundary: isInSidebar,
