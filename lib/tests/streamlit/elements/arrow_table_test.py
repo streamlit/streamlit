@@ -48,7 +48,9 @@ class ArrowTest(DeltaGeneratorTestCase):
         st.table(df)
 
         proto = self.get_delta_from_queue().new_element.table
-        pd.testing.assert_frame_equal(convert_arrow_bytes_to_pandas_df(proto.data), df)
+        pd.testing.assert_frame_equal(
+            convert_arrow_bytes_to_pandas_df(proto.arrow_data.data), df
+        )
 
     def test_pyarrow_table_data(self):
         df = mock_data_frame()
@@ -56,7 +58,7 @@ class ArrowTest(DeltaGeneratorTestCase):
         st.table(table)
 
         proto = self.get_delta_from_queue().new_element.table
-        assert proto.data == convert_arrow_table_to_arrow_bytes(table)
+        assert proto.arrow_data.data == convert_arrow_table_to_arrow_bytes(table)
 
     def test_uuid(self):
         df = mock_data_frame()
