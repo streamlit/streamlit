@@ -278,7 +278,7 @@ debug:
 		lsof -ti:8501 | xargs kill 2>/dev/null || true; \
 	}; \
 	trap cleanup EXIT; \
-	streamlit run "$$SCRIPT" \
+	uv run streamlit run "$$SCRIPT" \
 		--server.headless=true \
 		--server.runOnSave=true \
 		--browser.gatherUsageStats=false \
