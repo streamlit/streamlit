@@ -1,10 +1,13 @@
 name: "Setup Virtual Env"
-description: Sets up virtualenv + React; compiles protobuf.
+description: Sets up uv, Python, virtualenv, React, and compiles protobuf.
   This action intentionally does NOT install Playwright browsers.
   For CI jobs that need Playwright, call `./.github/actions/playwright_install`
   after this action.
 
 inputs:
+  python_version:
+    description: "Python version to install via uv (e.g., '3.12', '3.10')"
+    required: true
   use_cached_venv:
     description: "Use Cached Virtual Env"
     default: "true"
@@ -14,6 +17,22 @@ inputs:
 runs:
   using: composite
   steps:
+    # Install uv and Python using the official astral-sh/setup-uv action.
+    # This handles uv installation, Python version management, and venv activation.
+    - name: Install uv and Python ${{ inputs.python_version }}
+      uses: astral-sh/setup-uv@v7
+      with:
+        python-version: ${{ inputs.python_version }}
+        enable-cache: ${{ inputs.use_cached_venv }}
+        cache-suffix: py${{ inputs.python_version }}
+        # Cache Python installations to prevent broken symlinks in cached venvs
+        cache-python: true
+        # Auto-create and activate .venv
+        activate-environment: true
+        # Suppress errors when nothing to cache (e.g., Python restored from cache)
+        ignore-nothing-to-cache: true
+        # Use GitHub token to avoid API rate limiting
+        github-token: ${{ github.token }}
     - name: Enable and Prepare Latest Yarn
       run: corepack enable
       shell: bash
@@ -54,9 +73,7 @@ runs:
         # Print out your System's protoc version:
         protoc --version
       shell: bash
-    # Combine hashes of the Python interpreter, Pipfile, and today's
-    # date into a file whose hash will key the Python virtualenv.
-    #
+    # Combine hashes of the Python interpreter and config files into a cache key.
     # This means that our virtualenv cache will expire each day. We do
     # this because we are not using a lockfile to pin dependencies -
     # instead, each time Github Actions rebuilds the virtualenv, it uses the
@@ -67,10 +84,11 @@ runs:
     - if: inputs.use_cached_venv == 'true'
       name: Create Python environment cache key
       run: |
-        md5sum $(which python) > $GITHUB_WORKSPACE/python_cache_key.md5
-        md5sum lib/dev-requirements.txt >> $GITHUB_WORKSPACE/python_cache_key.md5
-        md5sum lib/test-requirements.txt >> $GITHUB_WORKSPACE/python_cache_key.md5
-        md5sum lib/setup.py >> $GITHUB_WORKSPACE/python_cache_key.md5
+        # Create cache key from Python version, config files, and date
+        # (Python binary is now cached by setup-uv with cache-python: true)
+        echo "${{ inputs.python_version }}" > $GITHUB_WORKSPACE/python_cache_key.md5
+        md5sum pyproject.toml >> $GITHUB_WORKSPACE/python_cache_key.md5
+        md5sum lib/pyproject.toml >> $GITHUB_WORKSPACE/python_cache_key.md5
         md5sum Makefile >> $GITHUB_WORKSPACE/python_cache_key.md5
         date +%F >> $GITHUB_WORKSPACE/python_cache_key.md5
       shell: bash
@@ -79,15 +97,24 @@ runs:
       id: cache-virtualenv
       uses: actions/cache@v4
       with:
-        path: venv
-        key: v1-python-venv-${{ hashFiles('**/python_cache_key.md5') }}
-    - if: steps.cache-virtualenv.outputs.cache-hit != 'true'
+        path: .venv
+        key: v2-python-venv-py${{ inputs.python_version }}-${{ hashFiles('**/python_cache_key.md5') }}
+    - name: Check if venv is valid
+      id: check-venv
+      if: steps.cache-virtualenv.outputs.cache-hit == 'true'
+      run: |
+        # Check if the cached venv has valid symlinks
+        if .venv/bin/python --version > /dev/null 2>&1; then
+          echo "valid=true" >> $GITHUB_OUTPUT
+        else
+          echo "::warning::Cached venv has broken symlinks, will recreate"
+          echo "valid=false" >> $GITHUB_OUTPUT
+          rm -rf .venv
+        fi
+      shell: bash
+    - if: steps.cache-virtualenv.outputs.cache-hit != 'true' || steps.check-venv.outputs.valid != 'true'
       name: Create Virtual Env
       run: |
-        python -m venv venv
-        source venv/bin/activate
-        pip install --upgrade pip
-        pip install uv
         # Do not install Playwright browsers in CI here; use the
         # shared action `./.github/actions/playwright_install` instead.
         INSTALL_PLAYWRIGHT=false make python-init
@@ -98,16 +125,15 @@ runs:
         # from pypi:
         uv pip install --editable ./lib --no-deps
       shell: bash
-    - name: Activate virtualenv
-      run: echo "${{ github.workspace }}/venv/bin" >> $GITHUB_PATH
-      shell: bash
     - name: Show environment info
       run: |
         echo "Show environment info"
         echo "Python version:"
         python --version
+        echo "uv version:"
+        uv --version
         echo "Installed dependencies:"
-        python -m pip list
+        uv pip list
       shell: bash
     - name: Generate Protobufs
       run: make protobuf

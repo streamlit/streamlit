@@ -25,6 +25,7 @@ from datetime import date, datetime, time, timedelta
 from typing import (
     TYPE_CHECKING,
     Any,
+    ClassVar,
     Generic,
     TypeAlias,
     TypeVar,
@@ -47,6 +48,7 @@ from streamlit.elements.widgets.time_widgets import (
 )
 from streamlit.proto.Alert_pb2 import Alert as AlertProto
 from streamlit.proto.Checkbox_pb2 import Checkbox as CheckboxProto
+from streamlit.proto.GapSize_pb2 import GapSize
 from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
 from streamlit.proto.Slider_pb2 import Slider as SliderProto
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
@@ -1094,18 +1096,33 @@ class SelectSlider(Widget, Generic[T]):
 
     @property
     def _widget_state(self) -> WidgetState:
-        serde = SelectSliderSerde(self.options, [], False)
+        # Build formatted options mapping
+        format_func = self.format_func
+        formatted_option_to_index = {
+            format_func(opt): idx for idx, opt in enumerate(self.options)
+        }
+
+        # Determine if this is a range value
+        is_range = isinstance(self.value, (list, tuple)) and len(self.value) == 2
+
+        serde = SelectSliderSerde(
+            self.options,
+            formatted_option_to_index=formatted_option_to_index,
+            default_indices=[0] if not is_range else [0, len(self.options) - 1],
+            format_func=format_func,
+        )
+
         try:
-            v = serde.serialize(self.format_func(self.value))
-        except (ValueError, TypeError):
-            try:
-                v = serde.serialize([self.format_func(val) for val in self.value])  # type: ignore
-            except:  # noqa: E722
-                raise ValueError(f"Could not find index for {self.value}")
+            if is_range:
+                v = serde.serialize(tuple(self.value))  # type: ignore
+            else:
+                v = serde.serialize(self.value)  # type: ignore
+        except (ValueError, TypeError) as e:
+            raise ValueError(f"Could not serialize value {self.value}") from e
 
         ws = WidgetState()
         ws.id = self.id
-        ws.double_array_value.data[:] = v
+        ws.string_array_value.data[:] = v
         return ws
 
     @property
@@ -1821,7 +1838,19 @@ class Column(Block):
     type: str = field(repr=False)
     proto: BlockProto.Column = field(repr=False)
     weight: float
-    gap: str
+    gap: str | None
+
+    # Mapping from GapSize enum to string
+    _GAP_SIZE_TO_STRING: ClassVar[dict[int, str | None]] = {
+        GapSize.NONE: None,
+        GapSize.XXSMALL: "xxsmall",
+        GapSize.XSMALL: "xsmall",
+        GapSize.SMALL: "small",
+        GapSize.MEDIUM: "medium",
+        GapSize.LARGE: "large",
+        GapSize.XLARGE: "xlarge",
+        GapSize.XXLARGE: "xxlarge",
+    }
 
     def __init__(
         self,
@@ -1833,7 +1862,7 @@ class Column(Block):
         self.root = root
         self.type = "column"
         self.weight = proto.weight
-        self.gap = proto.gap
+        self.gap = self._GAP_SIZE_TO_STRING.get(proto.gap_config.gap_size)
 
 
 @dataclass(repr=False)

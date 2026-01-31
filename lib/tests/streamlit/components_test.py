@@ -79,7 +79,6 @@ class DeclareComponentTest(unittest.TestCase):
     def setUp(self) -> None:
         config = RuntimeConfig(
             script_path="mock/script/path.py",
-            command_line=None,
             component_registry=LocalComponentRegistry(),
             media_file_storage=MemoryMediaFileStorage("/mock/media"),
             uploaded_file_manager=MemoryUploadedFileManager("/mock/upload"),
@@ -277,7 +276,6 @@ class ComponentRegistryTest(unittest.TestCase):
     def setUp(self) -> None:
         config = RuntimeConfig(
             script_path="mock/script/path.py",
-            command_line=None,
             component_registry=LocalComponentRegistry(),
             media_file_storage=MemoryMediaFileStorage("/mock/media"),
             uploaded_file_manager=MemoryUploadedFileManager("/mock/upload"),
@@ -646,8 +644,6 @@ class IFrameTest(DeltaGeneratorTestCase):
         assert el.iframe.scrolling
 
         assert el.width_config.pixel_width == 200
-        assert el.iframe.width == 0.0  # deprecated field should remain at default
-        assert el.iframe.has_width is False  # deprecated field should remain at default
 
     def test_html(self):
         """Test components.html"""
@@ -660,8 +656,6 @@ class IFrameTest(DeltaGeneratorTestCase):
         assert el.iframe.scrolling
 
         assert el.width_config.pixel_width == 200
-        assert el.iframe.width == 0.0  # deprecated field should remain at default
-        assert el.iframe.has_width is False  # deprecated field should remain at default
 
 
 class AlternativeComponentRegistryTest(unittest.TestCase):

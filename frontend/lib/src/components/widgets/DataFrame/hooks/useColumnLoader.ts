@@ -304,13 +304,13 @@ function useColumnLoader(
   }, [parsedColumnConfig])
 
   const shouldUseContainerWidthValue = useMemo(
-    () => shouldUseContainerWidth(element, widthConfig),
-    [element, widthConfig]
+    () => shouldUseContainerWidth(widthConfig),
+    [widthConfig]
   )
 
   const configuredWidth = useMemo(
-    () => getConfiguredWidth(element, widthConfig),
-    [element, widthConfig]
+    () => getConfiguredWidth(widthConfig),
+    [widthConfig]
   )
 
   const stretchColumns: boolean =

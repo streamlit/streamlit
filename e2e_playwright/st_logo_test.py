@@ -131,5 +131,43 @@ def test_logo_w_sidebar_and_nav(
     assert_snapshot(themed_app.get_by_test_id("stSidebarHeader"), name="logo-navbar")
 
 
+def test_material_icon_logo(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+) -> None:
+    """Test that material icons render correctly as logos."""
+    select_subtest(themed_app, "material_icon_logo_subtest")
+
+    expect(themed_app.get_by_test_id("stSidebar")).to_be_visible()
+    expect(themed_app.get_by_test_id("stSidebarHeader")).to_be_visible()
+    expect(themed_app.get_by_test_id("stSidebarLogo")).to_be_visible()
+
+    # Material icon logos should NOT render as <img> elements
+    logo_element = themed_app.get_by_test_id("stSidebarLogo")
+    expect(logo_element.locator("img")).not_to_be_attached()
+
+    assert_snapshot(
+        themed_app.get_by_test_id("stSidebarHeader"),
+        name="logo-material_icon",
+    )
+
+
+def test_emoji_logo(themed_app: Page, assert_snapshot: ImageCompareFunction) -> None:
+    """Test that emojis render correctly as logos."""
+    select_subtest(themed_app, "emoji_logo_subtest")
+
+    expect(themed_app.get_by_test_id("stSidebar")).to_be_visible()
+    expect(themed_app.get_by_test_id("stSidebarHeader")).to_be_visible()
+    expect(themed_app.get_by_test_id("stSidebarLogo")).to_be_visible()
+
+    # Emoji logos should NOT render as <img> elements
+    logo_element = themed_app.get_by_test_id("stSidebarLogo")
+    expect(logo_element.locator("img")).not_to_be_attached()
+
+    assert_snapshot(
+        themed_app.get_by_test_id("stSidebarHeader"),
+        name="logo-emoji",
+    )
+
+
 def select_subtest(app: Page, name: str) -> None:
     select_selectbox_option(app, "Test to run", name)

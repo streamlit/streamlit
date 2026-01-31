@@ -617,6 +617,17 @@ _create_option(
     scriptable=True,
 )
 
+_create_option(
+    "client.showErrorLinks",
+    description="""
+        Controls whether to show external help links (Google, ChatGPT) in
+        error displays. Can be "auto" (shows on localhost only), true (always
+        show), or false (never show).
+    """,
+    default_val="auto",
+    type_=str,
+)
+
 # Config Section: Runner #
 
 _create_section("runner", "Settings for how Streamlit executes your script")
@@ -2694,7 +2705,8 @@ def get_config_options(
 
         # Values set in files later in the CONFIG_FILENAMES list overwrite those
         # set earlier.
-        for filename in get_config_files("config.toml"):
+        config_files = get_config_files("config.toml")
+        for filename in config_files:
             if not os.path.exists(filename):
                 continue
 
@@ -2712,7 +2724,7 @@ def get_config_options(
         # This happens AFTER all config sources (files, env vars, flags) are processed
         # so theme.base can be set via any of those
         config_util.process_theme_inheritance(
-            _config_options, _config_options_template, _set_option
+            _config_options, _config_options_template, _set_option, config_files
         )
 
         if old_options and config_util.server_option_changed(

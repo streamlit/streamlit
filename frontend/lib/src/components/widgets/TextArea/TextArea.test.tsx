@@ -199,7 +199,6 @@ describe("TextArea widget", () => {
   it("limits the length if max_chars is passed", async () => {
     const user = userEvent.setup()
     const props = getProps({
-      height: 500,
       maxChars: 10,
     })
     render(<TextArea {...props} />)

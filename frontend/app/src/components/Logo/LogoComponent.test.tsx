@@ -357,6 +357,94 @@ describe("LogoComponent", () => {
     expect(logo).toHaveStyle("height: 2rem")
   })
 
+  describe("icon and emoji logos", () => {
+    it("renders DynamicIcon when imageType is ICON", () => {
+      const iconLogo = LogoProto.create({
+        image: ":material/home:",
+        imageType: LogoProto.ImageType.ICON,
+        size: "medium",
+      })
+
+      render(
+        <LogoComponent
+          {...getProps({
+            appLogo: iconLogo,
+            dataTestId: "stLogo",
+          })}
+        />
+      )
+
+      // Should render a div container (StyledIconLogo) instead of img (StyledLogo)
+      const logo = screen.getByTestId("stLogo")
+      expect(logo.tagName).toBe("DIV")
+    })
+
+    it("renders DynamicIcon when imageType is EMOJI", () => {
+      const emojiLogo = LogoProto.create({
+        image: "🏠",
+        imageType: LogoProto.ImageType.EMOJI,
+        size: "medium",
+      })
+
+      render(
+        <LogoComponent
+          {...getProps({
+            appLogo: emojiLogo,
+            dataTestId: "stLogo",
+          })}
+        />
+      )
+
+      // Should render a div container (StyledIconLogo) instead of img (StyledLogo)
+      const logo = screen.getByTestId("stLogo")
+      expect(logo.tagName).toBe("DIV")
+    })
+
+    it("renders img when imageType is IMAGE (default)", () => {
+      const imageLogo = LogoProto.create({
+        image: "https://example.com/logo.png",
+        imageType: LogoProto.ImageType.IMAGE,
+        size: "medium",
+      })
+
+      render(
+        <LogoComponent
+          {...getProps({
+            appLogo: imageLogo,
+            dataTestId: "stLogo",
+          })}
+        />
+      )
+
+      const logo = screen.getByTestId("stLogo")
+      expect(logo.tagName).toBe("IMG")
+    })
+
+    it("uses icon_image_type when collapsed and iconImage exists", () => {
+      const mixedLogo = LogoProto.create({
+        image: "https://example.com/logo.png",
+        imageType: LogoProto.ImageType.IMAGE,
+        iconImage: ":material/menu:",
+        iconImageType: LogoProto.ImageType.ICON,
+        size: "medium",
+      })
+
+      render(
+        <LogoComponent
+          {...getProps({
+            appLogo: mixedLogo,
+            dataTestId: "stLogo",
+            collapsed: true,
+          })}
+        />
+      )
+
+      // When collapsed, should use iconImage which is an icon
+      const logo = screen.getByTestId("stLogo")
+      expect(logo.tagName).toBe("DIV")
+    })
+  })
+
   describe("crossOrigin attribute", () => {
     afterEach(() => {
       globalThis.__mockStreamlitConfig = {}

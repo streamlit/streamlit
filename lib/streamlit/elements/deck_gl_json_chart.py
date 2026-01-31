@@ -556,7 +556,11 @@ class PydeckMixin:
             pydeck_proto.id = compute_and_register_element_id(
                 "deck_gl_json_chart",
                 user_key=key,
-                key_as_main_identity=False,
+                # When a key is provided, only selection_mode affects the element ID.
+                # This allows selection state to persist across data/spec changes.
+                # Note: This can lead to orphaned selections if data length shrinks,
+                # but the frontend handles this by sanitizing invalid indices.
+                key_as_main_identity={"selection_mode"},
                 dg=self.dg,
                 is_selection_activated=is_selection_activated,
                 selection_mode=selection_mode,

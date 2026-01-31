@@ -38,7 +38,6 @@ function generateNewSession(changes = {}): NewSession {
     config: {
       gatherUsageStats: false,
       maxCachedMessageAge: 0,
-      mapboxToken: "mapboxToken",
       allowRunOnSave: false,
       hideSidebarNav: false,
       hideTopBar: false,

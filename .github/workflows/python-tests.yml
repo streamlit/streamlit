@@ -85,12 +85,10 @@ jobs:
           persist-credentials: false
           submodules: "recursive"
 
-      - name: Set up Python ${{ env.PYTHON_VERSION }}
-        uses: actions/setup-python@v6
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
       - name: Setup virtual env
         uses: ./.github/actions/make_init
+        with:
+          python_version: ${{ env.PYTHON_VERSION }}
       - name: Run Linters
         run: make python-lint
         env:
@@ -105,7 +103,7 @@ jobs:
         uses: actions/upload-artifact@v6
         with:
           name: coverage_data_${{ matrix.python_version }}
-          path: lib/${{ env.COVERAGE_FILE }}
+          path: ${{ env.COVERAGE_FILE }}
           include-hidden-files: true
           if-no-files-found: ignore
 
@@ -125,21 +123,16 @@ jobs:
           ref: ${{ inputs.ref }}
           persist-credentials: false
           submodules: "recursive"
-      - name: Set up Python 3.12
-        uses: actions/setup-python@v6
-        with:
-          python-version: "3.12"
       - name: Setup virtual env
         uses: ./.github/actions/make_init
         with:
-          # Deactivate usage of cached venv to avoid inferring with the Python 3.11
-          # unit test job. The key generation for the cache resolves to the same key,
+          python_version: "3.12"
+          # Deactivate usage of cached venv to avoid interfering with other Python
+          # version jobs. The key generation for the cache could resolve to the same key,
           # which might cause some unexpected issues with dependencies.
           use_cached_venv: false
       - name: Install integration dependencies
-        run: |
-          source venv/bin/activate
-          uv pip install -r lib/integration-requirements.txt --force-reinstall
+        run: uv sync --python python --group integration
       - name: Run Python integration tests
         run: make python-integration-tests
         env:
@@ -149,7 +142,7 @@ jobs:
         uses: actions/upload-artifact@v6
         with:
           name: coverage_data_integration
-          path: lib/${{ env.COVERAGE_FILE }}
+          path: ${{ env.COVERAGE_FILE }}
           include-hidden-files: true
           if-no-files-found: ignore
 
@@ -175,13 +168,10 @@ jobs:
           persist-credentials: false
           submodules: "recursive"
           fetch-depth: 2
-      - name: Set up Python ${{ needs.build_info.outputs.PYTHON_MIN_VERSION }}
-        uses: actions/setup-python@v6
-        with:
-          python-version: "${{ needs.build_info.outputs.PYTHON_MIN_VERSION }}"
       - name: Setup virtual env
         uses: ./.github/actions/make_init
         with:
+          python_version: ${{ needs.build_info.outputs.PYTHON_MIN_VERSION }}
           use_cached_venv: false
       - name: Validate min-constraints-gen
         run: |
@@ -198,13 +188,9 @@ jobs:
             echo "min constraints file is up to date."
           fi
       - name: Install min dependencies (force reinstall)
-        run: |
-          source venv/bin/activate
-          uv pip install -r scripts/assets/min-constraints-gen.txt --force-reinstall
+        run: uv pip install -r scripts/assets/min-constraints-gen.txt --force-reinstall
       - name: Make local modules visible
-        run: |
-          source venv/bin/activate
-          uv pip install --editable ./lib --no-deps
+        run: uv pip install --editable ./lib --no-deps
       - name: Run Python Tests
         run: make python-tests
       - name: CLI Smoke Tests
@@ -213,7 +199,7 @@ jobs:
         uses: actions/upload-artifact@v6
         with:
           name: coverage_data_min_deps
-          path: lib/${{ env.COVERAGE_FILE }}
+          path: ${{ env.COVERAGE_FILE }}
           include-hidden-files: true
           if-no-files-found: ignore
 

@@ -137,6 +137,28 @@ def _get_server_address_if_manually_set() -> str | None:
     return None
 
 
+def get_display_address(address: str) -> str:
+    """Get a display-friendly address for URLs shown to users.
+
+    Wildcard addresses like "0.0.0.0" (all IPv4) or "::" (all interfaces)
+    are not valid browser addresses on all platforms. This translates
+    them to "localhost" for display purposes.
+
+    Parameters
+    ----------
+    address
+        The server address (IP or hostname).
+
+    Returns
+    -------
+    str
+        Address suitable for display. Wildcards become "localhost".
+    """
+    if address in {"0.0.0.0", "::"}:  # noqa: S104
+        return "localhost"
+    return address
+
+
 def make_url_path_regex(
     *path: str,
     trailing_slash: Literal["optional", "required", "prohibited"] = "optional",
