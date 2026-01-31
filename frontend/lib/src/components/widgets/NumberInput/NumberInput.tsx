@@ -458,6 +458,9 @@ const NumberInput: React.FC<Props> = ({
               style: {
                 color: theme.colors.redTextColor,
                 backgroundColor: theme.colors.transparent,
+                // Ensure the error tooltip is hoverable even when
+                // the input is focused (e.g. after pressing Enter).
+                pointerEvents: "auto",
               },
             },
             Input: {
