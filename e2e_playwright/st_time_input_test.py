@@ -132,8 +132,12 @@ def test_correct_menu_font_colors(
     # Take a snapshot of the time selection dropdown:
     selection_dropdown = themed_app.locator('[data-baseweb="popover"]').first
 
-    # Hover over another option:
-    selection_dropdown.get_by_text("08:30").hover()
+    # Get the target option and scroll it into view for consistent positioning
+    target_option = selection_dropdown.get_by_text("08:30")
+    target_option.scroll_into_view_if_needed()
+
+    # Hover over the option:
+    target_option.hover()
 
     # Take a screenshot
     assert_snapshot(selection_dropdown, name="st_time_input-menu_colors")

@@ -19,7 +19,7 @@ import pytest
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
-from e2e_playwright.shared.app_utils import expect_no_skeletons
+from e2e_playwright.shared.app_utils import expect_no_skeletons, reset_hovering
 
 
 @pytest.fixture(scope="module")
@@ -227,6 +227,9 @@ def test_theme_preference_persists_on_reload(
     # Close settings dialog
     settings_dialog.get_by_role("button", name="Close").click()
 
+    # Reset hovering to clear any dropdown/dialog artifacts
+    reset_hovering(app)
+
     assert_snapshot(app, name="persisted_on_reload_before", image_threshold=0.0003)
 
     # Force a full page reload
@@ -251,5 +254,8 @@ def test_theme_preference_persists_on_reload(
 
     # Close the dialog
     settings_dialog.get_by_role("button", name="Close").click()
+
+    # Reset hovering to clear any dropdown/dialog artifacts
+    reset_hovering(app)
 
     assert_snapshot(app, name="persisted_on_reload_after", image_threshold=0.0003)
