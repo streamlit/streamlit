@@ -52,11 +52,24 @@ Frontend `console.log()` output appears in `work-tmp/debug-frontend.log`.
 
 ## Temporary Playwright Scripts for Screenshots & Testing
 
-For advanced debugging with screenshots or automated UI interaction, create temporary Playwright scripts.
+For advanced debugging with screenshots or automated UI interaction.
 
-### Setup
+### Quick: Playwright CLI
 
-Create a script in `work-tmp/` that imports e2e_playwright utilities directly:
+For simple screenshots and interactions, use `@playwright/cli` (available in frontend devDependencies):
+
+```bash
+# Open page, take screenshot, close
+yarn playwright-cli open http://localhost:3000
+yarn playwright-cli screenshot --filename work-tmp/debug/screenshot.png --full-page
+yarn playwright-cli close
+```
+
+See https://github.com/microsoft/playwright-cli for more commands (`snapshot`, `click`, `fill`, etc.).
+
+### Custom Scripts
+
+For complex interactions, create temporary Playwright scripts in `work-tmp/`:
 
 ```python
 # work-tmp/debug_screenshot.py
@@ -150,3 +163,7 @@ kill $(lsof -ti:3000) $(lsof -ti:8501)
 - Verify `make debug` is running and healthy
 - Check http://localhost:3000 is accessible in browser
 - Ensure `wait_for_app_loaded(page)` is called after `page.goto()`
+
+## Cleanup
+
+After debugging is complete, remove temporary scripts and screenshots from `work-tmp/`.
