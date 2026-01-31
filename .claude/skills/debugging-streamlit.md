@@ -157,7 +157,7 @@ kill $(lsof -ti:3000) $(lsof -ti:8501)
 
 **Hot-reload not working:**
 - Backend: Only the app script is watched. Changes to `lib/streamlit/` require restarting `make debug`.
-- Frontend: Check `work-tmp/debug-frontend.log` for Vite errors.
+- Frontend: Check `work-tmp/debug-frontend.log` for Vite errors. TypeScript errors can break HMR.
 
 **Playwright script fails to connect:**
 - Verify `make debug` is running and healthy
