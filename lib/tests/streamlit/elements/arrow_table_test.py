@@ -65,7 +65,7 @@ class ArrowTest(DeltaGeneratorTestCase):
         st.table(styler)
 
         proto = self.get_delta_from_queue().new_element.table
-        assert proto.styler.uuid == "FAKE_UUID"
+        assert proto.arrow_data.styler.uuid == "FAKE_UUID"
 
     def test_caption(self):
         df = mock_data_frame()
@@ -74,7 +74,7 @@ class ArrowTest(DeltaGeneratorTestCase):
         st.table(styler)
 
         proto = self.get_delta_from_queue().new_element.table
-        assert proto.styler.caption == "FAKE_CAPTION"
+        assert proto.arrow_data.styler.caption == "FAKE_CAPTION"
 
     def test_table_styles(self):
         df = mock_data_frame()
@@ -87,7 +87,10 @@ class ArrowTest(DeltaGeneratorTestCase):
         st.table(styler)
 
         proto = self.get_delta_from_queue().new_element.table
-        assert proto.styler.styles == "#T_FAKE_UUID .blank { background-color: red }"
+        assert (
+            proto.arrow_data.styler.styles
+            == "#T_FAKE_UUID .blank { background-color: red }"
+        )
 
     def test_cell_styles(self):
         df = mock_data_frame()
@@ -99,7 +102,8 @@ class ArrowTest(DeltaGeneratorTestCase):
 
         proto = self.get_delta_from_queue().new_element.table
         assert (
-            proto.styler.styles == "#T_FAKE_UUID_row1_col2 { background-color: yellow }"
+            proto.arrow_data.styler.styles
+            == "#T_FAKE_UUID_row1_col2 { background-color: yellow }"
         )
 
     def test_display_values(self):
@@ -115,7 +119,8 @@ class ArrowTest(DeltaGeneratorTestCase):
 
         proto = self.get_delta_from_queue().new_element.table
         pd.testing.assert_frame_equal(
-            convert_arrow_bytes_to_pandas_df(proto.styler.display_values), expected
+            convert_arrow_bytes_to_pandas_df(proto.arrow_data.styler.display_values),
+            expected,
         )
 
     def test_table_uses_convert_anything_to_df(self):
