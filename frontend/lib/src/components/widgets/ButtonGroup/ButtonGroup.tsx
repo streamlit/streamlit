@@ -27,7 +27,7 @@ import { ButtonGroup as BasewebButtonGroup, MODE } from "baseui/button-group"
 
 import {
   ButtonGroup as ButtonGroupProto,
-  LabelVisibilityMessage,
+  LabelVisibility,
   streamlit,
 } from "@streamlit/protobuf"
 
@@ -376,7 +376,7 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
         disabled={disabled}
         labelVisibility={labelVisibilityProtoValueToEnum(
           labelVisibility?.value ??
-            LabelVisibilityMessage.LabelVisibilityOptions.COLLAPSED
+            LabelVisibility.LabelVisibilityOptions.COLLAPSED
         )}
       >
         {help && (

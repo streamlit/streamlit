@@ -19,7 +19,7 @@ import { userEvent } from "@testing-library/user-event"
 
 import {
   ButtonGroup as ButtonGroupProto,
-  LabelVisibilityMessage as LabelVisibilityMessageProto,
+  LabelVisibility as LabelVisibilityProto,
 } from "@streamlit/protobuf"
 
 import {
@@ -375,7 +375,7 @@ describe("ButtonGroup widget", () => {
     it("passes labelVisibility prop correctly when hidden", () => {
       const props = getProps({
         labelVisibility: {
-          value: LabelVisibilityMessageProto.LabelVisibilityOptions.HIDDEN,
+          value: LabelVisibilityProto.LabelVisibilityOptions.HIDDEN,
         },
       })
       render(<ButtonGroup {...props} />)
@@ -387,7 +387,7 @@ describe("ButtonGroup widget", () => {
     it("passes labelVisibility prop correctly when collapsed", () => {
       const props = getProps({
         labelVisibility: {
-          value: LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED,
+          value: LabelVisibilityProto.LabelVisibilityOptions.COLLAPSED,
         },
       })
       render(<ButtonGroup {...props} />)

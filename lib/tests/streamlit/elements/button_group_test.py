@@ -39,7 +39,7 @@ from streamlit.elements.widgets.button_group import (
 )
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
-from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
+from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.runtime.state.session_state import get_script_run_ctx
 from streamlit.testing.v1.util import patch_config_options
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -429,7 +429,7 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
             assert delta.label == command_args[0]
         assert (
             delta.label_visibility.value
-            is LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE
+            is LabelVisibility.LabelVisibilityOptions.VISIBLE
         )
 
     @parameterized.expand(

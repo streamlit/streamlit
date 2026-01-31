@@ -19,7 +19,7 @@ import { userEvent } from "@testing-library/user-event"
 
 import {
   Checkbox as CheckboxProto,
-  LabelVisibilityMessage as LabelVisibilityMessageProto,
+  LabelVisibility as LabelVisibilityProto,
 } from "@streamlit/protobuf"
 
 import { render } from "~lib/test_util"
@@ -85,7 +85,7 @@ describe("Checkbox widget", () => {
   it("pass labelVisibility prop to StyledContent correctly when hidden", () => {
     const props = getProps({
       labelVisibility: {
-        value: LabelVisibilityMessageProto.LabelVisibilityOptions.HIDDEN,
+        value: LabelVisibilityProto.LabelVisibilityOptions.HIDDEN,
       },
     })
 
@@ -98,7 +98,7 @@ describe("Checkbox widget", () => {
   it("pass labelVisibility prop to StyledContent correctly when collapsed", () => {
     const props = getProps({
       labelVisibility: {
-        value: LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED,
+        value: LabelVisibilityProto.LabelVisibilityOptions.COLLAPSED,
       },
     })
 
