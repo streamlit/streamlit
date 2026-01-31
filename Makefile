@@ -579,6 +579,6 @@ package: init frontend
 	rm -f lib/README.md
 
 # Catch-all target to allow passing arguments to make commands (e.g., `make debug my-script.py`).
-# This prevents Make from interpreting arguments as targets.
+# Without this, Make interprets arguments as targets and exits with error code 2.
 %:
 	@:
