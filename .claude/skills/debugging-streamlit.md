@@ -13,6 +13,10 @@ make debug my_app.py
 
 This starts both backend (Streamlit/Python) and frontend (Vite/React) with hot-reload. The app is available at http://localhost:3000.
 
+**Hot-reload behavior:**
+- **Frontend**: Changes to `frontend/` code are applied within seconds.
+- **Backend**: Only changes to the **app script** trigger a rerun. Changes to the Streamlit library itself (`lib/streamlit/`) require restarting `make debug`.
+
 ## Log Files
 
 All debug output goes to `work-tmp/`:
@@ -207,8 +211,8 @@ kill $(lsof -ti:3000) $(lsof -ti:8501)
 ```
 
 **Hot-reload not working:**
-- Backend: Ensure the script file is saved
-- Frontend: Check `work-tmp/debug-frontend.log` for Vite errors
+- Backend: Only the app script is watched. Changes to `lib/streamlit/` require restarting `make debug`.
+- Frontend: Check `work-tmp/debug-frontend.log` for Vite errors.
 
 **Playwright script fails to connect:**
 - Verify `make debug` is running and healthy
