@@ -1493,7 +1493,7 @@ describe("NumberInput widget", () => {
       ).not.toBeInTheDocument()
     })
 
-    it("does not show error for value within range", async () => {
+    it("does not show error for value within range", () => {
       const props = getIntProps({ min: 0, max: 100, default: 50 })
       render(<NumberInput {...props} />)
 
