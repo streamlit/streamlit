@@ -284,7 +284,7 @@ debug:
 		--browser.gatherUsageStats=false \
 		--global.developmentMode=true \
 		>> "$$DEBUG_DIR/debug-backend.log" 2>&1 & \
-	cd frontend && TERMINAL_CONSOLE=1 yarn start >> "$$DEBUG_DIR/debug-frontend.log" 2>&1 & \
+	cd frontend && DEBUG_TO_CONSOLE=1 yarn start >> "$$DEBUG_DIR/debug-frontend.log" 2>&1 & \
 	echo ""; \
 	echo "Starting debug session: $$SCRIPT"; \
 	BACKEND_READY=false; \
