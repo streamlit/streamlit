@@ -90,12 +90,12 @@ def main():
         # Example: click_button(page, "Submit")
 
         # Take screenshot
-        page.screenshot(path="work-tmp/debug_screenshot.png", full_page=True)
-        print(f"Screenshot saved to work-tmp/debug_screenshot.png")
+        page.screenshot(path="work-tmp/debug/debug_screenshot.png", full_page=True)
+        print(f"Screenshot saved to work-tmp/debug/debug_screenshot.png")
 
         # Element-specific screenshot
         # element = get_button(page, "My Button")
-        # element.screenshot(path="work-tmp/button.png")
+        # element.screenshot(path="work-tmp/debug/button.png")
 
         browser.close()
 
@@ -141,19 +141,19 @@ This uses the uv-managed environment with all dependencies (playwright, etc.) an
 
 ```python
 # Full page screenshot
-page.screenshot(path="work-tmp/full.png", full_page=True)
+page.screenshot(path="work-tmp/debug/full.png", full_page=True)
 
 # Element screenshot
 element = page.get_by_test_id("stDataFrame")
-element.screenshot(path="work-tmp/dataframe.png")
+element.screenshot(path="work-tmp/debug/dataframe.png")
 
 # Wait for stability before screenshot (for dynamic content)
 from e2e_playwright.shared.react18_utils import wait_for_react_stability
 wait_for_react_stability(page)
-page.screenshot(path="work-tmp/stable.png")
+page.screenshot(path="work-tmp/debug/stable.png")
 
 # Capture viewport only (excludes scrollable content)
-page.screenshot(path="work-tmp/viewport.png", full_page=False)
+page.screenshot(path="work-tmp/debug/viewport.png", full_page=False)
 ```
 
 ### Example: Debug Form Interaction
@@ -186,7 +186,7 @@ def main():
         expect(page.get_by_text("Hello, Test User")).to_be_visible()
 
         # Screenshot the result
-        page.screenshot(path="work-tmp/form_result.png")
+        page.screenshot(path="work-tmp/debug/form_result.png")
         print("Test passed! Screenshot saved.")
 
         browser.close()
