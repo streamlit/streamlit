@@ -205,8 +205,11 @@ Run with: `PYTHONPATH=. uv run python work-tmp/debug_form.py`
 # Check what's using the ports
 lsof -ti:3000  # Vite dev server
 lsof -ti:8501  # Streamlit backend
+```
 
-# Kill processes if needed
+If ports are in use, **ask the user first** before killing processes. They may have other debug sessions or applications running intentionally. Only after user confirmation:
+```bash
+# Kill processes (only after user confirms)
 kill $(lsof -ti:3000) $(lsof -ti:8501)
 ```
 
