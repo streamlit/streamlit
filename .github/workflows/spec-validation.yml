@@ -43,7 +43,8 @@ jobs:
             const { data: files } = await github.rest.pulls.listFiles({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              pull_number: context.payload.pull_request.number
+              pull_number: context.payload.pull_request.number,
+              per_page: 100
             });
 
             const specDirs = new Set(
