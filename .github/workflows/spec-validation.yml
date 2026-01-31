@@ -139,7 +139,7 @@ jobs:
             // Log results
             [...warnings, ...errors].forEach(m => console.log(m));
 
-            // Post PR comment
+            // Post PR comment (best-effort - may fail for fork PRs due to permissions)
             const marker = '<!-- spec-validation-comment -->';
             const body = errors.length === 0 && warnings.length === 0
               ? `${marker}\n## Spec PR Validation\n\n✅ All checks passed!`
@@ -149,27 +149,31 @@ jobs:
                   errors.length ? `### Errors\n${errors.join('\n')}\n\n**Fix errors before merging.**\n\nRequirements:\n- Next available spec number (NNNN format)\n- \`status: Approved\`\n- Valid \`author\`\n- \`created\` in YYYY-MM-DD format` : ''
                 }`;
 
-            const { data: comments } = await github.rest.issues.listComments({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.payload.pull_request.number
-            });
+            try {
+              const { data: comments } = await github.rest.issues.listComments({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.payload.pull_request.number
+              });
 
-            const existing = comments.find(c => c.user.type === 'Bot' && c.body.includes(marker));
-            if (existing) {
-              await github.rest.issues.updateComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                comment_id: existing.id,
-                body
-              });
-            } else {
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: context.payload.pull_request.number,
-                body
-              });
+              const existing = comments.find(c => c.user.type === 'Bot' && c.body.includes(marker));
+              if (existing) {
+                await github.rest.issues.updateComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  comment_id: existing.id,
+                  body
+                });
+              } else {
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.payload.pull_request.number,
+                  body
+                });
+              }
+            } catch (e) {
+              console.log(`Warning: Could not post PR comment (expected for fork PRs): ${e.message}`);
             }
 
             if (errors.length > 0) {
