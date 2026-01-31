@@ -45,7 +45,7 @@ PLAYWRIGHT_TEST_REGEX = re.compile(
     re.DOTALL,
 )
 
-FONT_FILE_URL_REGEX = r"url\((https://fonts\.gstatic\.com/[^\)]+)\)"
+FONT_FILE_URL_REGEX = r"url\((https://fonts\.gstatic\.com/[^)]+\.woff2)\)"
 
 NAMES_MODULE_PATH = os.path.join(BASE_DIR, "lib", "streamlit", "material_icon_names.py")
 FONT_FILE_PATH = os.path.join(
