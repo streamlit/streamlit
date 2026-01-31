@@ -151,9 +151,12 @@ function TimeInput({
               ({
                 // Padding to inset items from the edges (matches VirtualDropdown)
                 // No right padding - scrollbar sits at edge, items use marginRight for spacing
+                // In dark mode, subtract border width so content aligns with input field
                 paddingTop: theme.spacing.none,
                 paddingBottom: theme.spacing.none,
-                paddingLeft: theme.spacing.xs,
+                paddingLeft: hasLightBackgroundColor(theme)
+                  ? theme.spacing.xs
+                  : `calc(${theme.spacing.xs} - ${theme.sizes.borderWidth})`,
                 paddingRight: theme.spacing.none,
                 // Somehow this adds an additional shadow, even though we already have
                 // one on the popover, so we need to remove it here.

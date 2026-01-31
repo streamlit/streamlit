@@ -18,10 +18,24 @@ import isPropValid from "@emotion/is-prop-valid"
 import styled from "@emotion/styled"
 import { StyledDropdownListItem } from "baseui/select"
 
+import { EmotionTheme, hasLightBackgroundColor } from "~lib/theme"
+
 interface ThemedStyledDropdownListItemProps {
   $isHighlighted?: boolean
   $isSelectAll?: boolean
   $isCreatable?: boolean
+}
+
+/**
+ * Calculate the right inset for dropdown items, accounting for scrollbar gutter
+ * and border width in dark mode.
+ */
+function getRightInset(theme: EmotionTheme): string {
+  // In dark mode, also subtract border width so highlight extends to edge
+  const borderAdjustment = hasLightBackgroundColor(theme)
+    ? "0px"
+    : theme.sizes.borderWidth
+  return `max(0px, calc(${theme.spacing.xs} - var(--scrollbar-gutter-size, 0px) - ${borderAdjustment}))`
 }
 
 export const ThemedStyledDropdownListItem = styled(StyledDropdownListItem, {
@@ -39,7 +53,7 @@ export const ThemedStyledDropdownListItem = styled(StyledDropdownListItem, {
     content: '""',
     position: "absolute" as const,
     left: theme.spacing.none,
-    right: `max(0px, calc(${theme.spacing.xs} - var(--scrollbar-gutter-size, 0px)))`,
+    right: getRightInset(theme),
     height: theme.sizes.borderWidth,
     backgroundColor: theme.colors.fadedText10,
   }
@@ -74,11 +88,9 @@ export const ThemedStyledDropdownListItem = styled(StyledDropdownListItem, {
       paddingRight: theme.spacing.sm,
       paddingTop: theme.spacing.threeXS,
       paddingBottom: theme.spacing.threeXS,
-      // Right margin creates inset from scrollbar, adjusted for scrollbar gutter.
-      // In overlay mode (gutter=0): marginRight = xs (original spacing)
-      // In classic mode (gutter>0): marginRight = 0 (gutter provides spacing, larger gap accepted)
-      // Using max() to prevent negative margins which would clip the border radius.
-      marginRight: `max(0px, calc(${theme.spacing.xs} - var(--scrollbar-gutter-size, 0px)))`,
+      // Right margin creates inset from scrollbar, adjusted for scrollbar gutter
+      // and border width in dark mode.
+      marginRight: getRightInset(theme),
       borderTopLeftRadius: theme.radii.md2,
       borderTopRightRadius: theme.radii.md2,
       borderBottomRightRadius: theme.radii.md2,

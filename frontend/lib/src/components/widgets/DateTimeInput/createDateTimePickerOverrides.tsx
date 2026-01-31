@@ -325,15 +325,33 @@ export const createDateTimePickerOverrides = ({
                   "data-testid": "stDateTimeInputTimeDisplay",
                 },
               },
+              DropdownContainer: {
+                style: ({ $width }: { $width: number | null }) => {
+                  const lightBackground = hasLightBackgroundColor(theme)
+                  // In dark mode, subtract border width from both sides
+                  const borderAdjustment = lightBackground
+                    ? 0
+                    : 2 * parseFloat(theme.sizes.borderWidth)
+                  return {
+                    width: $width
+                      ? `${$width - borderAdjustment}px`
+                      : undefined,
+                  }
+                },
+              },
               Dropdown: {
                 style: () => {
                   // Detect scrollbar mode: classic (>0) vs overlay (0)
                   const scrollbarGutterSize = measureScrollbarGutterSize()
                   const isClassicMode = scrollbarGutterSize > 0
+                  const lightBackground = hasLightBackgroundColor(theme)
                   return {
                     paddingTop: theme.spacing.none,
                     paddingBottom: theme.spacing.none,
-                    paddingLeft: theme.spacing.xs,
+                    // In dark mode, subtract border width so content aligns with input field
+                    paddingLeft: lightBackground
+                      ? theme.spacing.xs
+                      : `calc(${theme.spacing.xs} - ${theme.sizes.borderWidth})`,
                     // Overlay: paddingRight = paddingLeft; Classic: no padding (gutter handles it)
                     paddingRight: isClassicMode
                       ? theme.spacing.none
@@ -366,6 +384,7 @@ export const createDateTimePickerOverrides = ({
                       style: () => {
                         const lightBackground = hasLightBackgroundColor(theme)
                         return {
+                          boxSizing: "border-box",
                           borderTopLeftRadius: theme.radii.default,
                           borderTopRightRadius: theme.radii.default,
                           borderBottomRightRadius: theme.radii.default,

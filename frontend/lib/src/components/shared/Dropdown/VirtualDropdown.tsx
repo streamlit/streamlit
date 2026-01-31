@@ -26,7 +26,7 @@ import { FixedSizeList } from "react-window"
 import { OverflowTooltip, Placement } from "~lib/components/shared/Tooltip"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useScrollbarGutterSize } from "~lib/hooks/useScrollbarGutterSize"
-import { convertRemToPx } from "~lib/theme/utils"
+import { convertRemToPx, hasLightBackgroundColor } from "~lib/theme"
 
 import { ThemedStyledDropdownListItem } from "./styled-components"
 
@@ -128,9 +128,12 @@ const VirtualDropdown = forwardRef<any, any>((props, ref) => {
       ref={ref}
       $style={{
         // Padding to inset items from the edges (no right padding so scrollbar sits at edge)
+        // In dark mode, subtract border width so content aligns with input field
         paddingTop: theme.spacing.none,
         paddingBottom: theme.spacing.none,
-        paddingLeft: theme.spacing.xs,
+        paddingLeft: hasLightBackgroundColor(theme)
+          ? theme.spacing.xs
+          : `calc(${theme.spacing.xs} - ${theme.sizes.borderWidth})`,
         paddingRight: theme.spacing.none,
         // Somehow this adds an additional shadow, even though we already have
         // one on the popover, so we need to remove it here.
