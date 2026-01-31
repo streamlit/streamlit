@@ -42,7 +42,7 @@ const getProps = (
     .READ_ONLY
 ): DataFrameProps => ({
   element: DataframeProto.create({
-    data: new Uint8Array(),
+    arrowData: { data: new Uint8Array() },
     editingMode,
   }),
   data,

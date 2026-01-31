@@ -24,7 +24,6 @@ import {
   ForwardMsgMetadata,
   IArrowData,
   IArrowNamedDataSet,
-  ITable,
 } from "@streamlit/protobuf"
 
 import {
@@ -84,11 +83,11 @@ export class ElementNode implements AppNode {
       )
     }
 
-    const elementData =
+    const arrowData =
       this.element.type === "table"
-        ? (this.element.table as ITable)
-        : (this.element.dataframe as DataframeProto)
-    const toReturn = new Quiver(elementData)
+        ? (this.element.table?.arrowData as IArrowData)
+        : ((this.element.dataframe as DataframeProto)?.arrowData as IArrowData)
+    const toReturn = new Quiver(arrowData)
     // TODO (lukasmasuch): Delete element from proto object?
     this.lazyQuiverElement = toReturn
     return toReturn

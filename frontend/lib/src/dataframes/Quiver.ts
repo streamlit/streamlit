@@ -19,12 +19,7 @@
 import { Field, Vector } from "apache-arrow"
 import { immerable, produce } from "immer"
 
-import {
-  IArrowData,
-  IDataframe,
-  ITable,
-  PandasStyler as StylerProto,
-} from "@streamlit/protobuf"
+import { IArrowData, PandasStyler as StylerProto } from "@streamlit/protobuf"
 
 import { hashString } from "~lib/util/utils"
 
@@ -152,15 +147,7 @@ export class Quiver {
   /** Number of bytes in the Arrow IPC bytes. */
   private readonly _num_bytes: number
 
-  constructor(element: IDataframe | ITable | IArrowData) {
-    // Extract arrow data from the element.
-    // For Dataframe and Table, the data is in the arrowData field.
-    // For ArrowData (used by VegaLite charts), the data is directly on the element.
-    const arrowData =
-      "arrowData" in element && element.arrowData
-        ? element.arrowData
-        : (element as IArrowData)
-
+  constructor(arrowData: IArrowData) {
     const {
       pandasIndexData,
       columnNames,
