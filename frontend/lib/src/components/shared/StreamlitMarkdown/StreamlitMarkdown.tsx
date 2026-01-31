@@ -62,8 +62,8 @@ import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import {
   convertRemToPx,
   EmotionTheme,
-  getMarkdownBgColors,
   getMarkdownTextColors,
+  getThemeBackgroundColors,
 } from "~lib/theme"
 
 import {
@@ -579,7 +579,7 @@ function createColorMapping(theme: EmotionTheme): Map<string, string> {
     purplebg,
     graybg,
     primarybg,
-  }: Record<string, string> = getMarkdownBgColors(theme)
+  }: Record<string, string> = getThemeBackgroundColors(theme)
 
   return new Map(
     Object.entries({

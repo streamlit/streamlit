@@ -16,8 +16,6 @@
 
 syntax = "proto3";
 
-option java_package = "com.snowflake.apps.streamlit";
-option java_outer_classname = "SpaceProto";
 
 // A space element for adding vertical or horizontal spacing.
 // The size and direction are controlled via Element.width_config and

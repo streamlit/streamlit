@@ -21,8 +21,8 @@ import { transparentize } from "color2k"
 import {
   blend,
   EmotionTheme,
-  getMarkdownBgColors,
   hasLightBackgroundColor,
+  resolveNamedBackgroundColor,
 } from "~lib/theme"
 import { isNullOrUndefined } from "~lib/util/utils"
 
@@ -38,32 +38,6 @@ import {
 } from "./utils"
 
 type SelectOption = { value: string; label?: string; color?: string }
-
-/**
- * Get the color mapping to map a user-defined color to the our
- * theme color (text background.)
- *
- * @param theme The theme to use.
- * @returns The color mapping.
- */
-const getColorMapping = (theme: EmotionTheme): Map<string, string> => {
-  const textBackgroundColors = getMarkdownBgColors(theme)
-
-  return new Map(
-    Object.entries({
-      red: textBackgroundColors.redbg,
-      blue: textBackgroundColors.bluebg,
-      green: textBackgroundColors.greenbg,
-      yellow: textBackgroundColors.yellowbg,
-      violet: textBackgroundColors.violetbg,
-      purple: textBackgroundColors.purplebg,
-      orange: textBackgroundColors.orangebg,
-      gray: textBackgroundColors.graybg,
-      grey: textBackgroundColors.graybg,
-      primary: textBackgroundColors.primarybg,
-    })
-  )
-}
 /**
  * Unifies the options into the format required by the multi-select cell.
  *
@@ -78,7 +52,6 @@ export const prepareOptions = (
     return []
   }
 
-  const colorMapping = getColorMapping(theme)
   // Categorical chart colors are used for the "auto" color option:
   const categoricalColors = theme.colors.chartCategoricalColors
   const isLightTheme = hasLightBackgroundColor(theme)
@@ -108,8 +81,9 @@ export const prepareOptions = (
 
         autoColorIndex += 1
       } else if (option.color) {
-        // Try to map the color to a theme color, otherwise use the color value directly.
-        resolvedColor = colorMapping.get(option.color) ?? option.color
+        // Resolve built-in color names to theme background colors,
+        // otherwise use the color value directly.
+        resolvedColor = resolveNamedBackgroundColor(option.color, theme)
       }
       // The upstream implementation has some issues with the alpha channel.
       // Therefore, we are blending the color with the background to remove the alpha channel.

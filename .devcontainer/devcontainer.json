@@ -93,7 +93,7 @@
         "vitest.maximumConfigs": 5,
         "mypy-type-checker.importStrategy": "fromEnvironment",
         "mypy-type-checker.preferDaemon": false,
-        "mypy-type-checker.args": ["--config-file=mypy.ini"],
+        "mypy-type-checker.args": [],
         "ruff.nativeServer": true,
         "ruff.organizeImports": true,
         "ruff.fixAll": true,

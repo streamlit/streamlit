@@ -16,7 +16,7 @@ alwaysApply: false
    - Note: new elements need to be added to `proto/streamlit/proto/Element.proto`.
 2. implement backend implementation in `lib/streamlit/` (-> @python_lib.mdc)
    - Note: new elements need to be added to `lib/streamlit/__init__.py`
-3. implement Python unit tests in `lib/tests` & run via: `PYTHONPATH=lib pytest lib/tests/streamlit/the_test_name.py` (-> @python_tests.mdc)
+3. implement Python unit tests in `lib/tests` & run via: `uv run pytest lib/tests/streamlit/the_test_name.py` (-> @python_tests.mdc)
    - Note: new elements need to be added to `lib/tests/streamlit/element_mocks.py`
 4. implement frontend changes in `frontend/` (-> @typescript.mdc)
    - Note: new elements need to be added to `frontend/lib/src/components/core/Block/ElementNodeRenderer.tsx`

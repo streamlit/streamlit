@@ -30,7 +30,7 @@ from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.Common_pb2 import FileURLs, FileURLsRequest, FileURLsResponse
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.proto.NewSession_pb2 import FontFace, FontSource
+from streamlit.proto.NewSession_pb2 import Config, FontFace, FontSource
 from streamlit.runtime import Runtime, app_session, caching
 from streamlit.runtime.app_session import AppSession, AppSessionState
 from streamlit.runtime.caching.storage.dummy_cache_storage import (
@@ -2418,3 +2418,30 @@ class DeferredFileRequestTest(unittest.TestCase):
             mock_create_task.assert_called_once()
             # The argument to create_task should be a coroutine
             assert asyncio.iscoroutine(mock_create_task.call_args[0][0])
+
+
+class GetShowErrorLinksTest(unittest.TestCase):
+    @patch_config_options({"client.showErrorLinks": "auto"})
+    def test_auto(self):
+        from streamlit.runtime.app_session import _get_show_error_links
+
+        assert _get_show_error_links() == Config.ShowErrorLinks.SHOW_ERROR_LINKS_AUTO
+
+    @patch_config_options({"client.showErrorLinks": "true"})
+    def test_true(self):
+        from streamlit.runtime.app_session import _get_show_error_links
+
+        assert _get_show_error_links() == Config.ShowErrorLinks.SHOW_ERROR_LINKS_TRUE
+
+    @patch_config_options({"client.showErrorLinks": "false"})
+    def test_false(self):
+        from streamlit.runtime.app_session import _get_show_error_links
+
+        assert _get_show_error_links() == Config.ShowErrorLinks.SHOW_ERROR_LINKS_FALSE
+
+    @patch_config_options({"client.showErrorLinks": "invalid"})
+    def test_invalid_raises(self):
+        from streamlit.runtime.app_session import _get_show_error_links
+
+        with pytest.raises(ValueError, match="auto, true, false"):
+            _get_show_error_links()

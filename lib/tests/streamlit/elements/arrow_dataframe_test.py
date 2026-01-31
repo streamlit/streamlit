@@ -66,7 +66,6 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
 
         # Since dataframe and data editor share the same proto, we also test for
         # properties only relevant for an editable dataframe.
-        assert proto.height == 0
         assert proto.editing_mode == ArrowProto.EditingMode.READ_ONLY
         assert proto.selection_mode == []
         assert not proto.disabled

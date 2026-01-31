@@ -25,6 +25,7 @@ from datetime import date, datetime, time, timedelta
 from typing import (
     TYPE_CHECKING,
     Any,
+    ClassVar,
     Generic,
     TypeAlias,
     TypeVar,
@@ -47,6 +48,7 @@ from streamlit.elements.widgets.time_widgets import (
 )
 from streamlit.proto.Alert_pb2 import Alert as AlertProto
 from streamlit.proto.Checkbox_pb2 import Checkbox as CheckboxProto
+from streamlit.proto.GapSize_pb2 import GapSize
 from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
 from streamlit.proto.Slider_pb2 import Slider as SliderProto
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
@@ -1836,7 +1838,19 @@ class Column(Block):
     type: str = field(repr=False)
     proto: BlockProto.Column = field(repr=False)
     weight: float
-    gap: str
+    gap: str | None
+
+    # Mapping from GapSize enum to string
+    _GAP_SIZE_TO_STRING: ClassVar[dict[int, str | None]] = {
+        GapSize.NONE: None,
+        GapSize.XXSMALL: "xxsmall",
+        GapSize.XSMALL: "xsmall",
+        GapSize.SMALL: "small",
+        GapSize.MEDIUM: "medium",
+        GapSize.LARGE: "large",
+        GapSize.XLARGE: "xlarge",
+        GapSize.XXLARGE: "xxlarge",
+    }
 
     def __init__(
         self,
@@ -1848,7 +1862,7 @@ class Column(Block):
         self.root = root
         self.type = "column"
         self.weight = proto.weight
-        self.gap = proto.gap
+        self.gap = self._GAP_SIZE_TO_STRING.get(proto.gap_config.gap_size)
 
 
 @dataclass(repr=False)

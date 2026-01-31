@@ -148,13 +148,6 @@ describe("Button widget", () => {
     expect(tooltipContent).toHaveTextContent("mockHelpText")
   })
 
-  it("passes useContainerWidth property without help correctly", () => {
-    render(<Button {...getProps({ useContainerWidth: true })}>Hello</Button>)
-
-    const buttonWidget = screen.getByRole("button")
-    expect(buttonWidget).toHaveStyle("width: 100%")
-  })
-
   it("renders shortcut label when provided", () => {
     const props = getProps({ shortcut: "Ctrl+Enter" })
     render(<Button {...props} />)

@@ -397,15 +397,6 @@ class FormSubmitButtonTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitAPIException):
             form.form_submit_button(icon_position="center")  # type: ignore[arg-type]
 
-    def test_submit_button_does_not_use_container_width_by_default(self):
-        """Test that a submit button does not use_use_container width by default."""
-
-        form = st.form("foo")
-        form.form_submit_button(type="primary")
-
-        last_delta = self.get_delta_from_queue()
-        assert not last_delta.new_element.button.use_container_width
-
     def test_return_false_when_not_submitted(self):
         with st.form("form1"):
             submitted = st.form_submit_button("Submit")

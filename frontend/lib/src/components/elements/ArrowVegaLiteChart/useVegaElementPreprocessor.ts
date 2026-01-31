@@ -21,6 +21,7 @@ import { EmotionTheme } from "~lib/theme"
 import { isNullOrUndefined } from "~lib/util/utils"
 
 import { VegaLiteChartElement } from "./arrowUtils"
+import { resolveNamedColorsInSpec } from "./colorUtils"
 import { applyStreamlitTheme, applyThemeDefaults } from "./CustomTheme"
 
 /**
@@ -185,6 +186,10 @@ const generateSpec = (
   if (selectionMode.length > 0) {
     prepareSpecForSelections(spec)
   }
+
+  // Resolve built-in color names (red, blue, etc.) to theme color values
+  resolveNamedColorsInSpec(spec, theme)
+
   return spec
 }
 
