@@ -1,7 +1,7 @@
 ---
 author: sfc-gh-lwilby
 created: 2026-01-14
-status: Draft
+status: Approved
 ---
 
 # Dynamic Tabs, Expander, and Popover (Lazy Execution)
