@@ -1,0 +1,162 @@
+name: Spec PR Validation
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled]
+    paths:
+      - "specs/**"
+
+# Avoid duplicate workflows on same branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-spec-validation
+  cancel-in-progress: true
+
+jobs:
+  validate-spec:
+    runs-on: ubuntu-latest
+    # Only run on PRs with change:spec label
+    if: contains(github.event.pull_request.labels.*.name, 'change:spec')
+
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Checkout Streamlit code
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Validate spec PR
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+            const yaml = require('js-yaml');
+
+            const errors = [];
+            const warnings = [];
+
+            // Get spec directories from changed files
+            const { data: files } = await github.rest.pulls.listFiles({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.pull_request.number
+            });
+
+            const specDirs = new Set(
+              files
+                .filter(f => f.filename.startsWith('specs/') && f.filename !== 'specs/README.md')
+                .map(f => f.filename.split('/')[1])
+                .filter(Boolean)
+            );
+
+            if (specDirs.size === 0) {
+              console.log('No spec directories found in PR changes');
+              return;
+            }
+
+            // Get existing spec numbers (excluding 0000-template)
+            const existingNumbers = fs.readdirSync('specs')
+              .filter(d => fs.statSync(path.join('specs', d)).isDirectory() && /^\d{4}-/.test(d))
+              .map(d => parseInt(d.substring(0, 4), 10))
+              .filter(n => n > 0);
+
+            const nextAvailable = existingNumbers.length > 0 ? Math.max(...existingNumbers) + 1 : 1;
+            console.log(`Next available number: ${nextAvailable}`);
+
+            // Helper to parse frontmatter
+            function parseFrontmatter(content) {
+              const match = content.match(/^---\n([\s\S]*?)\n---/);
+              return match ? yaml.load(match[1]) : null;
+            }
+
+            // Helper to validate date format
+            function isValidDate(str) {
+              if (!/^\d{4}-\d{2}-\d{2}$/.test(str)) return false;
+              const date = new Date(str + 'T00:00:00');
+              return !isNaN(date) && str === date.toISOString().split('T')[0];
+            }
+
+            // Validate each spec
+            for (const specDir of specDirs) {
+              if (specDir === '0000-template') continue;
+
+              const dirMatch = specDir.match(/^(\d{4})-(.+)$/);
+              if (!dirMatch) {
+                errors.push(`❌ "${specDir}" doesn't follow NNNN-name format`);
+                continue;
+              }
+
+              const specNum = parseInt(dirMatch[1], 10);
+              if (specNum !== nextAvailable && !existingNumbers.includes(specNum)) {
+                errors.push(`❌ "${specDir}" uses ${specNum}, but next available is ${nextAvailable}`);
+              } else if (existingNumbers.includes(specNum)) {
+                warnings.push(`⚠️ "${specDir}" is updating an existing spec`);
+              }
+
+              const specFile = path.join('specs', specDir, 'product-spec.md');
+              if (!fs.existsSync(specFile)) {
+                errors.push(`❌ Missing: ${specFile}`);
+                continue;
+              }
+
+              const fm = parseFrontmatter(fs.readFileSync(specFile, 'utf8'));
+              if (!fm) {
+                errors.push(`❌ ${specFile}: Invalid frontmatter`);
+                continue;
+              }
+
+              // Validate required fields
+              if (fm.status !== 'Approved') {
+                errors.push(`❌ ${specFile}: status must be "Approved" (got "${fm.status || 'missing'}")`);
+              }
+              if (!fm.author || fm.author === 'github-name') {
+                errors.push(`❌ ${specFile}: author is missing or placeholder`);
+              }
+              if (!fm.created || fm.created === 'YYYY-MM-DD' || !isValidDate(String(fm.created))) {
+                errors.push(`❌ ${specFile}: created must be valid YYYY-MM-DD date`);
+              }
+            }
+
+            // Log results
+            [...warnings, ...errors].forEach(m => console.log(m));
+
+            // Post PR comment
+            const marker = '<!-- spec-validation-comment -->';
+            const body = errors.length === 0 && warnings.length === 0
+              ? `${marker}\n## Spec PR Validation\n\n✅ All checks passed!`
+              : `${marker}\n## Spec PR Validation\n\n${
+                  warnings.length ? `### Warnings\n${warnings.join('\n')}\n\n` : ''
+                }${
+                  errors.length ? `### Errors\n${errors.join('\n')}\n\n**Fix errors before merging.**\n\nRequirements:\n- Next available spec number (NNNN format)\n- \`status: Approved\`\n- Valid \`author\`\n- \`created\` in YYYY-MM-DD format` : ''
+                }`;
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number
+            });
+
+            const existing = comments.find(c => c.user.type === 'Bot' && c.body.includes(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.payload.pull_request.number,
+                body
+              });
+            }
+
+            if (errors.length > 0) {
+              core.setFailed(`Spec validation failed with ${errors.length} error(s)`);
+            }
