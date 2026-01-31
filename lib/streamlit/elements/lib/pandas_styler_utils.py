@@ -26,17 +26,20 @@ if TYPE_CHECKING:
     from pandas.io.formats.style import Styler
 
     from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
+    from streamlit.proto.Table_pb2 import Table as TableProto
 
 from enum import Enum
 
 
-def marshall_styler(proto: ArrowProto, styler: Styler, default_uuid: str) -> None:
-    """Marshall pandas.Styler into an Arrow proto.
+def marshall_styler(
+    proto: ArrowProto | TableProto, styler: Styler, default_uuid: str
+) -> None:
+    """Marshall pandas.Styler into an Arrow or Table proto.
 
     Parameters
     ----------
-    proto : proto.Arrow
-        Output. The protobuf for Streamlit Arrow proto.
+    proto : proto.Arrow or proto.Table
+        Output. The protobuf for Streamlit Arrow or Table proto.
 
     styler : pandas.Styler
         Helps style a DataFrame or Series according to the data with HTML and CSS.
@@ -71,13 +74,15 @@ def marshall_styler(proto: ArrowProto, styler: Styler, default_uuid: str) -> Non
     _marshall_display_values(proto, styler_data_df, pandas_styles)
 
 
-def _marshall_uuid(proto: ArrowProto, styler: Styler, default_uuid: str) -> None:
-    """Marshall pandas.Styler uuid into an Arrow proto.
+def _marshall_uuid(
+    proto: ArrowProto | TableProto, styler: Styler, default_uuid: str
+) -> None:
+    """Marshall pandas.Styler uuid into an Arrow or Table proto.
 
     Parameters
     ----------
-    proto : proto.Arrow
-        Output. The protobuf for Streamlit Arrow proto.
+    proto : proto.Arrow or proto.Table
+        Output. The protobuf for Streamlit Arrow or Table proto.
 
     styler : pandas.Styler
         Helps style a DataFrame or Series according to the data with HTML and CSS.
@@ -92,13 +97,13 @@ def _marshall_uuid(proto: ArrowProto, styler: Styler, default_uuid: str) -> None
     proto.styler.uuid = str(styler.uuid)  # type: ignore[attr-defined]
 
 
-def _marshall_caption(proto: ArrowProto, styler: Styler) -> None:
-    """Marshall pandas.Styler caption into an Arrow proto.
+def _marshall_caption(proto: ArrowProto | TableProto, styler: Styler) -> None:
+    """Marshall pandas.Styler caption into an Arrow or Table proto.
 
     Parameters
     ----------
-    proto : proto.Arrow
-        Output. The protobuf for Streamlit Arrow proto.
+    proto : proto.Arrow or proto.Table
+        Output. The protobuf for Streamlit Arrow or Table proto.
 
     styler : pandas.Styler
         Helps style a DataFrame or Series according to the data with HTML and CSS.
@@ -109,14 +114,14 @@ def _marshall_caption(proto: ArrowProto, styler: Styler) -> None:
 
 
 def _marshall_styles(
-    proto: ArrowProto, styler: Styler, styles: Mapping[str, Any]
+    proto: ArrowProto | TableProto, styler: Styler, styles: Mapping[str, Any]
 ) -> None:
-    """Marshall pandas.Styler styles into an Arrow proto.
+    """Marshall pandas.Styler styles into an Arrow or Table proto.
 
     Parameters
     ----------
-    proto : proto.Arrow
-        Output. The protobuf for Streamlit Arrow proto.
+    proto : proto.Arrow or proto.Table
+        Output. The protobuf for Streamlit Arrow or Table proto.
 
     styler : pandas.Styler
         Helps style a DataFrame or Series according to the data with HTML and CSS.
@@ -228,14 +233,14 @@ def _pandas_style_to_css(
 
 
 def _marshall_display_values(
-    proto: ArrowProto, df: DataFrame, styles: Mapping[str, Any]
+    proto: ArrowProto | TableProto, df: DataFrame, styles: Mapping[str, Any]
 ) -> None:
-    """Marshall pandas.Styler display values into an Arrow proto.
+    """Marshall pandas.Styler display values into an Arrow or Table proto.
 
     Parameters
     ----------
-    proto : proto.Arrow
-        Output. The protobuf for Streamlit Arrow proto.
+    proto : proto.Arrow or proto.Table
+        Output. The protobuf for Streamlit Arrow or Table proto.
 
     df : pandas.DataFrame
         A dataframe with original values.

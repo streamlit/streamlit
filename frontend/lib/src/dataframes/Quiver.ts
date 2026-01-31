@@ -19,7 +19,11 @@
 import { Field, Vector } from "apache-arrow"
 import { immerable, produce } from "immer"
 
-import { IArrow, Styler as StylerProto } from "@streamlit/protobuf"
+import {
+  IArrow,
+  ITable,
+  PandasStyler as StylerProto,
+} from "@streamlit/protobuf"
 
 import { hashString } from "~lib/util/utils"
 
@@ -147,7 +151,7 @@ export class Quiver {
   /** Number of bytes in the Arrow IPC bytes. */
   private readonly _num_bytes: number
 
-  constructor(element: IArrow) {
+  constructor(element: IArrow | ITable) {
     const {
       pandasIndexData,
       columnNames,

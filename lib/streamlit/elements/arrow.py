@@ -54,6 +54,7 @@ from streamlit.elements.lib.utils import Key, compute_and_register_element_id, t
 from streamlit.errors import StreamlitAPIException, StreamlitValueError
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.proto.Table_pb2 import Table as TableProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
     enqueue_message,
@@ -272,12 +273,12 @@ def parse_selection_mode(
 
 def parse_border_mode(
     border: bool | Literal["horizontal"],
-) -> ArrowProto.BorderMode.ValueType:
+) -> TableProto.BorderMode.ValueType:
     """Parse and check the user provided border mode."""
     if isinstance(border, bool):
-        return ArrowProto.BorderMode.ALL if border else ArrowProto.BorderMode.NONE
+        return TableProto.BorderMode.ALL if border else TableProto.BorderMode.NONE
     if border == "horizontal":
-        return ArrowProto.BorderMode.HORIZONTAL
+        return TableProto.BorderMode.HORIZONTAL
     raise StreamlitValueError("border", ["True", "False", "'horizontal'"])
 
 
@@ -911,10 +912,10 @@ class ArrowMixin:
             height="content",
         )
 
-        proto = ArrowProto()
-        marshall(proto, data, default_uuid)
+        proto = TableProto()
+        marshall_table(proto, data, default_uuid)
         proto.border_mode = border_mode
-        return self.dg._enqueue("arrow_table", proto, layout_config=layout_config)
+        return self.dg._enqueue("table", proto, layout_config=layout_config)
 
     @gather_metrics("add_rows")
     def add_rows(self, data: Data = None, **kwargs: Any) -> DeltaGenerator | None:
@@ -1163,6 +1164,38 @@ def marshall(proto: ArrowProto, data: Data, default_uuid: str | None = None) -> 
         If pandas.Styler UUID is not provided, this value will be used.
         This attribute is optional and only used for pandas.Styler, other elements
         (e.g. charts) can ignore it.
+
+    """  # noqa: E501
+
+    if dataframe_util.is_pandas_styler(data):
+        # default_uuid is a string only if the data is a `Styler`,
+        # and `None` otherwise.
+        if not isinstance(default_uuid, str):
+            raise StreamlitAPIException(
+                "Default UUID must be a string for Styler data."
+            )
+        marshall_styler(proto, data, default_uuid)
+
+    proto.data = dataframe_util.convert_anything_to_arrow_bytes(data)
+
+
+def marshall_table(
+    proto: TableProto, data: Data, default_uuid: str | None = None
+) -> None:
+    """Marshall data into a Table proto.
+
+    Parameters
+    ----------
+    proto : proto.Table
+        Output. The protobuf for Streamlit Table proto.
+
+    data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, pyspark.sql.DataFrame, snowflake.snowpark.DataFrame, Iterable, dict, or None
+        Something that is or can be converted to a dataframe.
+
+    default_uuid : str | None
+        If pandas.Styler UUID is not provided, this value will be used.
+        This attribute is optional and only used for pandas.Styler, other elements
+        can ignore it.
 
     """  # noqa: E501
 

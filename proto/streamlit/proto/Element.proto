@@ -20,6 +20,7 @@ syntax = "proto3";
 import "streamlit/proto/Alert.proto";
 import "streamlit/proto/Arrow.proto";
 import "streamlit/proto/Audio.proto";
+import "streamlit/proto/Table.proto";
 import "streamlit/proto/AudioInput.proto";
 import "streamlit/proto/Balloons.proto";
 import "streamlit/proto/ArrowVegaLiteChart.proto";
@@ -85,7 +86,7 @@ message Element {
   oneof type {
     Alert alert = 30;
     Arrow arrow_data_frame = 40;
-    Arrow arrow_table = 39;
+    Table table = 39;
     ArrowVegaLiteChart arrow_vega_lite_chart = 41;
     Audio audio = 13;
     AudioInput audio_input = 56;
@@ -140,5 +141,5 @@ message Element {
   }
 
   reserved 3, 9, 10, 11;
-  reserved "data_frame", "vega_lite_chart", "table";
+  reserved "data_frame", "vega_lite_chart";
 }

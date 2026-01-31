@@ -16,15 +16,16 @@
 
 syntax = "proto3";
 
+import "streamlit/proto/PandasStyler.proto";
 
 message Arrow {
   // The serialized arrow dataframe
   bytes data = 1;
   // Pandas styler information
-  Styler styler = 2;
+  PandasStyler styler = 2;
 
-  reserved 3, 4, 5;
-  reserved "width", "height", "use_container_width";
+  reserved 3, 4, 5, 14;
+  reserved "width", "height", "use_container_width", "border_mode";
 
   // The id of the widget, this is required if the dataframe is editable
   string id = 6;
@@ -42,9 +43,6 @@ message Arrow {
   repeated SelectionMode selection_mode = 12;
   // Row height in pixels
   optional uint32 row_height = 13;
-  // How to show borders around the table and between cells. Note that this property
-  // is only used for `st.table` at the moment.
-  BorderMode border_mode = 14;
   // Placeholder string used when rendering missing values (e.g. nulls, NaNs).
   optional string placeholder = 15;
 
@@ -66,27 +64,4 @@ message Arrow {
     SINGLE_CELL = 4; // Only one cell can be selected at a time.
     MULTI_CELL = 5; // Multiple cells (continuous range) can be selected.
   }
-
-  // Available border modes:
-  enum BorderMode {
-    ALL = 0; // Show borders around the table and between cells.
-    NONE = 1; // Show no borders.
-    HORIZONTAL = 2; // Show only horizontal borders between rows.
-  }
-}
-
-message Styler {
-  // The Styler's source UUID (if the user provided one), or the path-based
-  // hash that we generate (if no source UUID was provided).
-  string uuid = 1;
-
-  // The table's caption.
-  string caption = 2;
-
-  // `styles` contains the CSS for the entire source table.
-  string styles = 3;
-
-  // display_values is another ArrowTable: a copy of the source table, but
-  // with all the display values formatted to the user-specified rules.
-  bytes display_values = 4;
 }

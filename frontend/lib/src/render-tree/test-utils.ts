@@ -86,9 +86,9 @@ export function block(
   )
 }
 
-/** Create an arrowTable element node with the given properties. */
+/** Create a table element node with the given properties. */
 export function arrowTable(scriptRunId = NO_SCRIPT_RUN_ID): ElementNode {
-  const element = makeProto(Element, { arrowTable: { data: UNICODE } })
+  const element = makeProto(Element, { table: { data: UNICODE } })
   return new ElementNode(
     element,
     ForwardMsgMetadata.create(),

@@ -58,6 +58,7 @@ import {
   Skeleton as SkeletonProto,
   Slider as SliderProto,
   Spinner as SpinnerProto,
+  Table as TableProto,
   TextArea as TextAreaProto,
   TextInput as TextInputProto,
   Text as TextProto,
@@ -212,11 +213,11 @@ const RawElementNodeRenderer = (
       )
     }
 
-    case "arrowTable": {
-      const arrowProto = node.element.arrowTable as ArrowProto
+    case "table": {
+      const tableProto = node.element.table as TableProto
       return (
         <ArrowTable
-          element={arrowProto}
+          element={tableProto}
           data={node.quiverElement}
           {...elementProps}
         />
