@@ -82,9 +82,9 @@ jobs:
             console.log(`Base branch spec numbers: ${baseSpecNumbers.join(', ')}`);
             console.log(`Next available number: ${nextAvailable}`);
 
-            // Helper to parse frontmatter
+            // Helper to parse frontmatter (handles both LF and CRLF line endings)
             function parseFrontmatter(content) {
-              const match = content.match(/^---\n([\s\S]*?)\n---/);
+              const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
               return match ? yaml.load(match[1]) : null;
             }
 
