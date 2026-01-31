@@ -27,9 +27,6 @@ message MultiSelect {
   string help = 5;
   string form_id = 6;
 
-  reserved 7;
-  reserved "value";
-
   // after we introduced accept_new_options, we send the option as a string
   // instead of an index to keep it simple.
   repeated string raw_values = 14;
@@ -41,5 +38,5 @@ message MultiSelect {
   string placeholder = 12;
   optional bool accept_new_options = 13;
 
-  // Next: 15
+  reserved 7;
 }

@@ -23,7 +23,6 @@ import "streamlit/proto/Audio.proto";
 import "streamlit/proto/AudioInput.proto";
 import "streamlit/proto/Balloons.proto";
 import "streamlit/proto/ArrowVegaLiteChart.proto";
-import "streamlit/proto/BokehChart.proto";
 import "streamlit/proto/Button.proto";
 import "streamlit/proto/ButtonGroup.proto";
 import "streamlit/proto/DownloadButton.proto";
@@ -91,7 +90,6 @@ message Element {
     AudioInput audio_input = 56;
     Balloons balloons = 12;
     BidiComponent bidi_component = 59;
-    BokehChart bokeh_chart = 17;
     Button button = 19;
     ButtonGroup button_group = 55;
     DownloadButton download_button = 43;
@@ -139,6 +137,5 @@ message Element {
     // Next ID: 63
   }
 
-  reserved 3, 9, 10, 11;
-  reserved "data_frame", "vega_lite_chart", "table";
+  reserved 3, 9, 10, 11, 17;
 }

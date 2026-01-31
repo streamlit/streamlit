@@ -26,10 +26,6 @@ message Radio {
   repeated string options = 4;
   string help = 5;
   string form_id = 6;
-
-  reserved 7;
-  reserved "value";
-
   optional string raw_value = 13;
 
   bool set_value = 8;
@@ -38,5 +34,5 @@ message Radio {
   LabelVisibilityMessage label_visibility = 11;
   repeated string captions = 12;
 
-  // Next: 14
+  reserved 7;
 }

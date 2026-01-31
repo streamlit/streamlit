@@ -60,4 +60,3 @@ message Slider {
   // Stores formatted option strings instead of indices.
   repeated string raw_value = 18;
 }
-// Next: 19

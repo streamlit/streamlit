@@ -28,5 +28,4 @@ message GraphVizChart {
   string engine = 6;
 
   reserved 2, 3, 4;
-  reserved "use_container_width";
 }

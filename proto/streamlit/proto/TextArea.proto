@@ -34,5 +34,4 @@ message TextArea {
   LabelVisibilityMessage label_visibility = 12;
 
   reserved 4;
-  reserved "height";
 }

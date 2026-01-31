@@ -38,5 +38,4 @@ message Audio {
   optional streamlit.WidthConfig width_config = 10;
 
   reserved 1, 2, 4;
-  reserved "data", "format";
 }

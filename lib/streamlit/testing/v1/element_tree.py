@@ -636,7 +636,6 @@ class Json(Element):
 class Markdown(Element):
     proto: MarkdownProto = field(repr=False)
 
-    is_caption: bool
     allow_html: bool
     key: None
 
@@ -649,6 +648,11 @@ class Markdown(Element):
     @property
     def value(self) -> str:
         return self.proto.body
+
+    @property
+    def is_caption(self) -> bool:
+        """Whether this is a caption element (derived from element_type)."""
+        return self.proto.element_type == MarkdownProto.Type.CAPTION
 
 
 @dataclass(repr=False)
