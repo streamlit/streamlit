@@ -32,14 +32,12 @@ Logs are cleared on each `make debug` run but persist after exit for post-mortem
 
 **Backend (Python):**
 ```python
-print(f"DEBUG: widget value = {value}")
 print(f"DEBUG: session_state = {st.session_state}")
 ```
 
 **Frontend (TypeScript/React):**
 ```typescript
 console.log("DEBUG: props =", props)
-console.log("DEBUG: state =", state)
 ```
 
 Frontend `console.log()` output appears in `work-tmp/debug-frontend.log`.
@@ -65,16 +63,8 @@ Create a script in `work-tmp/` that imports e2e_playwright utilities directly:
 """Temporary Playwright script for debugging - run against make debug."""
 from playwright.sync_api import sync_playwright, expect
 
-from e2e_playwright.shared.app_utils import (
-    get_text_input,
-    get_button,
-    click_button,
-    get_markdown,
-)
-from e2e_playwright.conftest import (
-    wait_for_app_loaded,
-    wait_for_app_run,
-)
+from e2e_playwright.shared.app_utils import get_text_input, click_button
+from e2e_playwright.conftest import wait_for_app_loaded, wait_for_app_run
 
 
 def main():
@@ -87,15 +77,15 @@ def main():
         wait_for_app_loaded(page)
 
         # Interact with the app
-        # Example: click_button(page, "Submit")
+        text_input = get_text_input(page, "Name")
+        text_input.fill("Test User")
+        click_button(page, "Submit")
+        wait_for_app_run(page)
 
-        # Take screenshot
+        # Verify and screenshot
+        expect(page.get_by_text("Hello, Test User")).to_be_visible()
         page.screenshot(path="work-tmp/debug/debug_screenshot.png", full_page=True)
-        print(f"Screenshot saved to work-tmp/debug/debug_screenshot.png")
-
-        # Element-specific screenshot
-        # element = get_button(page, "My Button")
-        # element.screenshot(path="work-tmp/debug/button.png")
+        print("Screenshot saved to work-tmp/debug/debug_screenshot.png")
 
         browser.close()
 
@@ -106,7 +96,7 @@ if __name__ == "__main__":
 
 ### Running Temporary Scripts
 
-With `make debug <app.py>` running in another terminal, run scripts from the repo root using `uv run` with `PYTHONPATH=.`:
+Ensure `make debug <app.py>` is running first (start it in a background task if needed). Wait for the server to be ready on port 3000, then run the Playwright script:
 
 ```bash
 PYTHONPATH=. uv run python work-tmp/debug_screenshot.py
@@ -116,26 +106,15 @@ This uses the uv-managed environment with all dependencies (playwright, etc.) an
 
 ### Available Utilities from e2e_playwright
 
-**Element Locators** (`e2e_playwright.shared.app_utils`):
-- `get_text_input(page, label)`, `get_text_area(page, label)`
-- `get_button(page, label)`, `get_checkbox(page, label)`
-- `get_selectbox(page, label)`, `get_multiselect(page, label)`
-- `get_slider(page, label)`, `get_number_input(page, label)`
-- `get_markdown(page)`, `get_expander(page, label)`
-- `get_element_by_key(page, key)` - locate by `st.key` parameter
-
-**Interaction Helpers**:
-- `click_button(page, label)`, `click_checkbox(page, label)`
-- `select_selectbox_option(page, locator, option)`
-- `fill_number_input(page, locator, value)`
+**Element Locators & Interactions** (`e2e_playwright.shared.app_utils`):
+Provides helpers like `get_text_input()`, `get_button()`, `click_button()`, `get_checkbox()`, etc.
 
 **Synchronization** (`e2e_playwright.conftest`):
 - `wait_for_app_loaded(page)` - wait for initial load
 - `wait_for_app_run(page)` - wait for script execution after interaction
 - `wait_until(page, fn, timeout)` - poll until condition is true
 
-**React Stability** (`e2e_playwright.shared.react18_utils`):
-- `wait_for_react_stability(page)` - wait for React DOM mutations to settle
+**Playwright API Reference**: https://playwright.dev/python/docs/api/class-playwright
 
 ### Screenshot Best Practices
 
@@ -146,57 +125,7 @@ page.screenshot(path="work-tmp/debug/full.png", full_page=True)
 # Element screenshot
 element = page.get_by_test_id("stDataFrame")
 element.screenshot(path="work-tmp/debug/dataframe.png")
-
-# Wait for stability before screenshot (for dynamic content)
-from e2e_playwright.shared.react18_utils import wait_for_react_stability
-wait_for_react_stability(page)
-page.screenshot(path="work-tmp/debug/stable.png")
-
-# Capture viewport only (excludes scrollable content)
-page.screenshot(path="work-tmp/debug/viewport.png", full_page=False)
 ```
-
-### Example: Debug Form Interaction
-
-```python
-# work-tmp/debug_form.py
-from playwright.sync_api import sync_playwright, expect
-
-from e2e_playwright.shared.app_utils import get_text_input, get_button, click_button
-from e2e_playwright.conftest import wait_for_app_loaded, wait_for_app_run
-
-
-def main():
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-        page = browser.new_page(viewport={"width": 1280, "height": 720})
-
-        page.goto("http://localhost:3000")
-        wait_for_app_loaded(page)
-
-        # Fill a text input
-        text_input = get_text_input(page, "Name")
-        text_input.fill("Test User")
-
-        # Click submit and wait for rerun
-        click_button(page, "Submit")
-        wait_for_app_run(page)
-
-        # Verify result
-        expect(page.get_by_text("Hello, Test User")).to_be_visible()
-
-        # Screenshot the result
-        page.screenshot(path="work-tmp/debug/form_result.png")
-        print("Test passed! Screenshot saved.")
-
-        browser.close()
-
-
-if __name__ == "__main__":
-    main()
-```
-
-Run with: `PYTHONPATH=. uv run python work-tmp/debug_form.py`
 
 ## Troubleshooting
 
