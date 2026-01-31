@@ -141,5 +141,4 @@ message Element {
   }
 
   reserved 3, 9, 10, 11;
-  reserved "data_frame", "vega_lite_chart";
 }
