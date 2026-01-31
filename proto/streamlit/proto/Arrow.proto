@@ -25,7 +25,6 @@ message Arrow {
   PandasStyler styler = 2;
 
   reserved 3, 4, 5, 14;
-  reserved "width", "height", "use_container_width", "border_mode";
 
   // The id of the widget, this is required if the dataframe is editable
   string id = 6;
