@@ -66,10 +66,11 @@ if TYPE_CHECKING:
 # Type for things that point to a specific time (even if a default time, though not None).
 TimeValue: TypeAlias = time | datetime | str | Literal["now"]
 DateTimeScalarValue: TypeAlias = datetime | date | time | str | Literal["now"]
-DateTimeValue: TypeAlias = DateTimeScalarValue | None
+DateTimeValue: TypeAlias = DateTimeScalarValue | Sequence[DateTimeScalarValue] | None
 
 # Type for things that point to a specific date (even if a default date, including None).
 NullableScalarDateValue: TypeAlias = date | datetime | str | Literal["today"] | None
+NullableScalarDateTimeValue: TypeAlias = date | datetime | str | Literal["now"] | None
 
 # The accepted input value for st.date_input. Can be a date scalar or a date range.
 DateValue: TypeAlias = NullableScalarDateValue | Sequence[NullableScalarDateValue]
@@ -78,6 +79,11 @@ DateValue: TypeAlias = NullableScalarDateValue | Sequence[NullableScalarDateValu
 DateWidgetRangeReturn: TypeAlias = tuple[()] | tuple[date] | tuple[date, date]
 DateWidgetReturn: TypeAlias = date | DateWidgetRangeReturn | None
 
+# The return value of st.datetime_input.
+DateTimeWidgetRangeReturn: TypeAlias = (
+    tuple[()] | tuple[datetime] | tuple[datetime, datetime]
+)
+DateTimeWidgetReturn: TypeAlias = datetime | DateTimeWidgetRangeReturn | None
 
 DEFAULT_STEP_MINUTES: Final = 15
 ALLOWED_DATE_FORMATS: Final = re.compile(
@@ -143,6 +149,35 @@ def _convert_datelike_to_date(
     raise StreamlitAPIException(
         'Date value should either be an date/datetime or an ISO string or "today"'
     )
+
+
+def _parse_datetime_value(value: DateTimeValue) -> tuple[list[datetime] | None, bool]:
+    if value is None:
+        return None, False
+
+    value_tuple: Sequence[DateTimeScalarValue]
+
+    if isinstance(value, Sequence) and not isinstance(value, str):
+        is_range = True
+        value_tuple = value  # ty: ignore[invalid-assignment]
+    else:
+        is_range = False
+        value_tuple = [cast("DateTimeScalarValue", value)]
+
+    if len(value_tuple) not in {0, 1, 2}:
+        raise StreamlitAPIException(
+            "DateTimeInput value should either be an date/datetime or a list/tuple of "
+            "0 - 2 date/datetime values"
+        )
+
+    parsed_datetimes = [
+        _convert_datetimelike_to_datetime(
+            value=v, fallback_date=date.today(), fallback_time=_DEFAULT_MIN_BOUND_TIME
+        )
+        for v in value_tuple
+    ]
+
+    return parsed_datetimes, is_range
 
 
 def _parse_date_value(value: DateValue) -> tuple[list[date] | None, bool]:
@@ -233,7 +268,7 @@ def _try_parse_datetime_with_format(value: str, fmt: str) -> datetime | None:
 
 
 def _convert_datetimelike_to_datetime(
-    value: DateTimeScalarValue,
+    value: DateTimeValue,
     *,
     fallback_date: date,
     fallback_time: time,
@@ -305,9 +340,90 @@ def _datetime_to_proto_string(value: datetime) -> str:
     return _normalize_datetime_value(value).strftime(_DATETIME_UI_FORMAT)
 
 
+def _parse_datetime_value(
+    value: DateTimeValue,
+) -> tuple[list[datetime] | None, bool]:
+    if value is None:
+        return None, False
+
+    parsed_datetimes: list[datetime] = []
+
+    def flatten_and_parse(v: object) -> None:
+        if v is None:
+            return
+        if isinstance(v, Sequence) and not isinstance(v, (str, bytes)):
+            for item in v:
+                flatten_and_parse(item)
+        elif isinstance(v, (datetime, date, time, str)):
+            if v == "now":
+                parsed_datetimes.append(_normalize_datetime_value(datetime.now()))
+            elif isinstance(v, datetime):
+                parsed_datetimes.append(_normalize_datetime_value(v))
+            elif isinstance(v, (date, time, str)):
+                dt = _convert_datetimelike_to_datetime(
+                    v,
+                    fallback_date=date.today(),
+                    fallback_time=_DEFAULT_MIN_BOUND_TIME,
+                )
+                parsed_datetimes.append(dt)
+
+    flatten_and_parse(value)
+
+    parsed_datetimes = parsed_datetimes[:2]
+    is_range = len(parsed_datetimes) == 2
+
+    return parsed_datetimes or None, is_range
+
+
+def _parse_min_datetime(
+    min_value: NullableScalarDateTimeValue,
+    parsed_datetimes: list[datetime] | None,
+) -> datetime:
+    if min_value is None:
+        base_date = parsed_datetimes[0].date() if parsed_datetimes else date.today()
+        return _default_min_datetime(base_date)
+    # min_value ist jetzt garantiert date | datetime | str | "now"
+    if min_value == "now":
+        return _normalize_datetime_value(datetime.now())
+    if isinstance(min_value, (datetime, date, time, str)):
+        return _convert_datetimelike_to_datetime(
+            min_value,
+            fallback_date=date.today(),
+            fallback_time=_DEFAULT_MIN_BOUND_TIME,
+        )
+    raise StreamlitAPIException(
+        "DateTimeInput min should either be a datetime/date/time/str or None"
+    )
+
+
+def _parse_max_datetime(
+    max_value: NullableScalarDateTimeValue,
+    parsed_datetimes: list[datetime] | None,
+) -> datetime:
+    """Parsed max, fallback basierend auf parsed_datetimes."""
+    if max_value is None:
+        base_date = parsed_datetimes[-1].date() if parsed_datetimes else date.today()
+        return _default_max_datetime(base_date)
+
+    if max_value == "now":
+        return _normalize_datetime_value(datetime.now())
+
+    if isinstance(max_value, (datetime, date, time, str)):
+        return _convert_datetimelike_to_datetime(
+            max_value,
+            fallback_date=date.today(),
+            fallback_time=_DEFAULT_MAX_BOUND_TIME,
+        )
+
+    raise StreamlitAPIException(
+        "DateTimeInput max should either be a datetime/date/time/str/'now' or None"
+    )
+
+
 @dataclass(frozen=True)
 class _DateTimeInputValues:
-    value: datetime | None
+    value: Sequence[datetime] | None
+    is_range: bool
     min: datetime
     max: datetime
 
@@ -315,45 +431,23 @@ class _DateTimeInputValues:
     def from_raw_values(
         cls,
         value: DateTimeValue,
-        min_value: DateTimeValue,
-        max_value: DateTimeValue,
+        min_value: NullableScalarDateTimeValue,
+        max_value: NullableScalarDateTimeValue,
     ) -> _DateTimeInputValues:
-        parsed_value = (
-            None
-            if value is None
-            else _convert_datetimelike_to_datetime(
-                value,
-                fallback_date=date.today(),
-                fallback_time=_DEFAULT_MIN_BOUND_TIME,
-            )
-        )
+        parsed_value, is_range = _parse_datetime_value(value=value)
 
-        base_date_for_bounds = (
-            parsed_value.date() if parsed_value is not None else date.today()
+        parsed_min = _parse_min_datetime(
+            min_value=min_value,
+            parsed_datetimes=parsed_value,
         )
-
-        parsed_min = (
-            _default_min_datetime(base_date_for_bounds)
-            if min_value is None
-            else _convert_datetimelike_to_datetime(
-                min_value,
-                fallback_date=base_date_for_bounds,
-                fallback_time=_DEFAULT_MIN_BOUND_TIME,
-            )
-        )
-
-        parsed_max = (
-            _default_max_datetime(base_date_for_bounds)
-            if max_value is None
-            else _convert_datetimelike_to_datetime(
-                max_value,
-                fallback_date=base_date_for_bounds,
-                fallback_time=_DEFAULT_MAX_BOUND_TIME,
-            )
+        parsed_max = _parse_max_datetime(
+            max_value=max_value,
+            parsed_datetimes=parsed_value,
         )
 
         return cls(
             value=parsed_value,
+            is_range=is_range,
             min=parsed_min,
             max=parsed_max,
         )
@@ -365,11 +459,15 @@ class _DateTimeInputValues:
                 f"than the `max_value`, set to {self.max}."
             )
 
-        if self.value is not None and (self.value < self.min or self.value > self.max):
-            raise StreamlitAPIException(
-                f"The default `value` of {self.value} must lie between the `min_value` "
-                f"of {self.min} and the `max_value` of {self.max}, inclusively."
-            )
+        if self.value:
+            start_value = self.value[0]
+            end_value = self.value[-1]
+            if start_value < self.min or end_value > self.max:
+                raise StreamlitAPIException(
+                    f"The default `value` of {self.value} "
+                    f"must lie between the `min_value` of {self.min} "
+                    f"and the `max_value` of {self.max}, inclusively."
+                )
 
 
 @dataclass(frozen=True)
@@ -431,26 +529,30 @@ class _DateInputValues:
 
 @dataclass
 class DateTimeInputSerde:
-    value: datetime | None
+    value: Sequence[datetime] | None
     min: datetime
     max: datetime
 
-    def deserialize(self, ui_value: list[str] | None) -> datetime | None:
+    def deserialize(self, ui_value: list[str] | None) -> Sequence[datetime] | None:
         if ui_value is not None and len(ui_value) > 0:
-            deserialized = _normalize_datetime_value(
-                datetime.strptime(ui_value[0], _DATETIME_UI_FORMAT)
+            min_deserialized = _normalize_datetime_value(
+                datetime.strptime(min(ui_value), _DATETIME_UI_FORMAT)
+            )
+            max_deserialized = _normalize_datetime_value(
+                datetime.strptime(max(ui_value), _DATETIME_UI_FORMAT)
             )
             # Validate against min/max bounds
             # If the value is out of bounds, return the previous valid value
-            if deserialized < self.min or deserialized > self.max:
+            if min_deserialized < self.min or max_deserialized > self.max:
                 return self.value
-            return deserialized
+            return [min_deserialized, max_deserialized]
         return self.value
 
-    def serialize(self, v: datetime | None) -> list[str]:
+    def serialize(self, v: Sequence[datetime] | datetime | None) -> list[str]:
         if v is None:
             return []
-        return [_datetime_to_proto_string(v)]
+        to_serialize = list(v) if isinstance(v, Sequence) else [v]
+        return [_datetime_to_proto_string(dt) for dt in to_serialize]
 
 
 @dataclass
@@ -540,10 +642,10 @@ def _validate_date_value(
 
 
 def _validate_datetime_value(
-    current_value: datetime | None,
+    current_value: DateTimeWidgetReturn,
     parsed_values: _DateTimeInputValues,
     has_explicit_bounds: bool,
-) -> tuple[datetime | None, bool]:
+) -> tuple[DateTimeWidgetReturn, bool]:
     """Validate current datetime value against min/max bounds and determine if reset is needed.
 
     Only validates when has_explicit_bounds is True (user provided min_value or max_value).
@@ -551,28 +653,59 @@ def _validate_datetime_value(
 
     Parameters
     ----------
-    current_value : datetime | None
-        The current value of the datetime input widget.
+    current_value : DateTimeWidgetReturn
+        The current value of the datetime input widget. Can be a single date, a tuple of
+        dates (for range mode), or None.
     parsed_values : _DateTimeInputValues
-        Parsed configuration containing min, max, and default value.
+        Parsed configuration containing min, max, and default value, and whether the widget
+        is in range mode.
     has_explicit_bounds : bool
         Whether the user explicitly provided min_value or max_value. If False, validation
         is skipped to avoid resetting against computed default bounds.
 
     Returns
     -------
-    tuple[datetime | None, bool]
+    tuple[DateTimeWidgetReturn, bool]
         A tuple of (validated_value, was_reset) where validated_value is either the
         original value (if valid) or the default value (if reset was needed), and
         was_reset indicates whether a reset occurred.
     """
+    value_needs_reset = False
+
     if current_value is None or not has_explicit_bounds:
-        return current_value, False
+        return current_value, value_needs_reset
 
-    if current_value < parsed_values.min or current_value > parsed_values.max:
-        return parsed_values.value, True
+    # For range inputs, current_value is a tuple; for single inputs, it's a date
+    if (
+        parsed_values.is_range
+        and isinstance(current_value, tuple)
+        and len(current_value) > 0
+    ):
+        # For range mode, check if any date in the tuple is outside bounds.
+        # Cast to tuple[datetime, ...] to satisfy the type checker after the length check.
+        non_empty_value = cast("tuple[datetime, ...]", current_value)
+        start_date = non_empty_value[0]
+        end_date = non_empty_value[-1] if len(non_empty_value) > 1 else start_date
+        if start_date < parsed_values.min or end_date > parsed_values.max:
+            value_needs_reset = True
+    elif not parsed_values.is_range and isinstance(current_value, datetime):
+        # For single date mode
+        if current_value < parsed_values.min or current_value > parsed_values.max:
+            value_needs_reset = True
+    else:
+        # Type mismatch: widget mode doesn't match current value type (e.g., range mode
+        # with a single date value or single mode with a tuple). Reset to match the mode.
+        value_needs_reset = True
 
-    return current_value, False
+    if not value_needs_reset:
+        return current_value, value_needs_reset
+
+    # Reset to the default value from parsed_values
+    if parsed_values.value is None or len(parsed_values.value) == 0:
+        return (() if parsed_values.is_range else None), True
+    if not parsed_values.is_range:
+        return parsed_values.value[0], True
+    return cast("DateTimeWidgetReturn", tuple(parsed_values.value)), True
 
 
 @dataclass
@@ -894,9 +1027,9 @@ class TimeWidgetsMixin:
     def datetime_input(
         self,
         label: str,
-        value: None,
-        min_value: DateTimeValue = None,
-        max_value: DateTimeValue = None,
+        value: None = None,
+        min_value: NullableScalarDateTimeValue = None,
+        max_value: NullableScalarDateTimeValue = None,
         *,  # keyword-only arguments:
         key: Key | None = None,
         help: str | None = None,
@@ -915,8 +1048,8 @@ class TimeWidgetsMixin:
         self,
         label: str,
         value: DateTimeScalarValue = "now",
-        min_value: DateTimeValue = None,
-        max_value: DateTimeValue = None,
+        min_value: NullableScalarDateTimeValue = None,
+        max_value: NullableScalarDateTimeValue = None,
         *,  # keyword-only arguments:
         key: Key | None = None,
         help: str | None = None,
@@ -930,13 +1063,13 @@ class TimeWidgetsMixin:
         width: WidthWithoutContent = "stretch",
     ) -> datetime: ...
 
-    @gather_metrics("datetime_input")
+    @overload
     def datetime_input(
         self,
         label: str,
-        value: DateTimeValue = "now",
-        min_value: DateTimeValue = None,
-        max_value: DateTimeValue = None,
+        value: Sequence[DateTimeScalarValue],
+        min_value: NullableScalarDateTimeValue = None,
+        max_value: NullableScalarDateTimeValue = None,
         *,  # keyword-only arguments:
         key: Key | None = None,
         help: str | None = None,
@@ -948,7 +1081,27 @@ class TimeWidgetsMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
-    ) -> datetime | None:
+    ) -> DateTimeWidgetRangeReturn: ...
+
+    @gather_metrics("datetime_input")
+    def datetime_input(
+        self,
+        label: str,
+        value: DateTimeValue = "now",
+        min_value: NullableScalarDateTimeValue = None,
+        max_value: NullableScalarDateTimeValue = None,
+        *,  # keyword-only arguments:
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        format: str = "YYYY/MM/DD",
+        step: int | timedelta = timedelta(minutes=DEFAULT_STEP_MINUTES),
+        disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
+        width: WidthWithoutContent = "stretch",
+    ) -> DateTimeWidgetReturn:
         r"""Display a date and time input widget.
 
         Parameters
@@ -1121,8 +1274,8 @@ class TimeWidgetsMixin:
         self,
         label: str,
         value: DateTimeValue = "now",
-        min_value: DateTimeValue = None,
-        max_value: DateTimeValue = None,
+        min_value: NullableScalarDateTimeValue = None,
+        max_value: NullableScalarDateTimeValue = None,
         *,  # keyword-only arguments:
         key: Key | None = None,
         help: str | None = None,
@@ -1135,7 +1288,7 @@ class TimeWidgetsMixin:
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
         ctx: ScriptRunContext | None = None,
-    ) -> datetime | None:
+    ) -> DateTimeWidgetReturn:
         key = to_key(key)
 
         check_widget_policies(
@@ -1160,7 +1313,7 @@ class TimeWidgetsMixin:
             value_for_id: Any = (
                 None
                 if default_value is None
-                else _datetime_to_proto_string(default_value)
+                else [_datetime_to_proto_string(dt) for dt in default_value]
             )
         else:
             value_for_id = value
@@ -1215,7 +1368,7 @@ class TimeWidgetsMixin:
         date_time_input_proto.label = label
         if default_value_for_proto is not None:
             date_time_input_proto.default[:] = [
-                _datetime_to_proto_string(default_value_for_proto)
+                _datetime_to_proto_string(dt) for dt in default_value_for_proto
             ]
         date_time_input_proto.min = min_value_proto
         date_time_input_proto.max = max_value_proto
