@@ -16,11 +16,14 @@
 
 syntax = "proto3";
 
+import "streamlit/proto/PandasStyler.proto";
 
-// Data-only Arrow buffer. This intentionally excludes any UI- or element-
-// specific configuration that exists in Arrow.proto. Use this message when
-// only the serialized Arrow data is required.
+// Arrow data buffer with optional styling. Use this message for serialized
+// Arrow data, with optional pandas styling for table-like displays.
 message ArrowData {
   // The serialized Apache Arrow buffer (IPC stream or file format bytes)
   bytes data = 1;
+
+  // Optional pandas styler information (used by table-like displays)
+  PandasStyler styler = 2;
 }

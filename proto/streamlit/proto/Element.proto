@@ -18,7 +18,7 @@ syntax = "proto3";
 
 
 import "streamlit/proto/Alert.proto";
-import "streamlit/proto/Arrow.proto";
+import "streamlit/proto/Dataframe.proto";
 import "streamlit/proto/Audio.proto";
 import "streamlit/proto/Table.proto";
 import "streamlit/proto/AudioInput.proto";
@@ -85,7 +85,7 @@ message Element {
   // An element can be one of the following element types.
   oneof type {
     Alert alert = 30;
-    Arrow arrow_data_frame = 40;
+    Dataframe dataframe = 40;
     Table table = 39;
     ArrowVegaLiteChart arrow_vega_lite_chart = 41;
     Audio audio = 13;

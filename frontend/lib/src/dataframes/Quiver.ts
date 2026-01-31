@@ -20,7 +20,8 @@ import { Field, Vector } from "apache-arrow"
 import { immerable, produce } from "immer"
 
 import {
-  IArrow,
+  IArrowData,
+  IDataframe,
   ITable,
   PandasStyler as StylerProto,
 } from "@streamlit/protobuf"
@@ -151,18 +152,26 @@ export class Quiver {
   /** Number of bytes in the Arrow IPC bytes. */
   private readonly _num_bytes: number
 
-  constructor(element: IArrow | ITable) {
+  constructor(element: IDataframe | ITable | IArrowData) {
+    // Extract arrow data from the element.
+    // For Dataframe and Table, the data is in the arrowData field.
+    // For ArrowData (used by VegaLite charts), the data is directly on the element.
+    const arrowData =
+      "arrowData" in element && element.arrowData
+        ? element.arrowData
+        : (element as IArrowData)
+
     const {
       pandasIndexData,
       columnNames,
       data,
       dataColumnTypes,
       pandasIndexColumnTypes,
-    } = parseArrowIpcBytes(element.data)
+    } = parseArrowIpcBytes(arrowData.data)
 
     // Load styler data (if provided):
-    const styler = element.styler
-      ? parseStyler(element.styler as StylerProto)
+    const styler = arrowData.styler
+      ? parseStyler(arrowData.styler as StylerProto)
       : undefined
 
     // The assignment is done below to avoid partially populating the instance
@@ -173,7 +182,7 @@ export class Quiver {
     this._dataColumnTypes = dataColumnTypes
     this._pandasIndexColumnTypes = pandasIndexColumnTypes
     this._styler = styler
-    this._num_bytes = element.data?.length ?? 0
+    this._num_bytes = arrowData.data?.length ?? 0
     this._columnTypes = this._pandasIndexColumnTypes.concat(
       this._dataColumnTypes
     )

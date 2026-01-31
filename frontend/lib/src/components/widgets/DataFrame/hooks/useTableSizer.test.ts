@@ -16,7 +16,7 @@
 
 import { act, renderHook } from "@testing-library/react"
 
-import { Arrow as ArrowProto, streamlit } from "@streamlit/protobuf"
+import { Dataframe as DataframeProto, streamlit } from "@streamlit/protobuf"
 
 import { calculateTableHeight } from "~lib/components/widgets/DataFrame/dimensionUtils"
 import { TEN_BY_TEN, UNICODE, VERY_TALL } from "~lib/mocks/arrow"
@@ -42,7 +42,7 @@ describe("useTableSizer hook", () => {
     const widthConfig = new streamlit.WidthConfig({ pixelWidth: TABLE_WIDTH })
     const { result } = renderHook(() =>
       useTableSizer(
-        ArrowProto.create({
+        DataframeProto.create({
           data: TEN_BY_TEN,
         }),
         mockTheme,
@@ -69,7 +69,7 @@ describe("useTableSizer hook", () => {
     const widthConfig = new streamlit.WidthConfig({ useStretch: true })
     const { result } = renderHook(() =>
       useTableSizer(
-        ArrowProto.create({
+        DataframeProto.create({
           data: TEN_BY_TEN,
         }),
         mockTheme,
@@ -97,7 +97,7 @@ describe("useTableSizer hook", () => {
     const widthConfig = new streamlit.WidthConfig({ pixelWidth: TABLE_WIDTH })
     const { result } = renderHook(() =>
       useTableSizer(
-        ArrowProto.create({
+        DataframeProto.create({
           data: TEN_BY_TEN,
         }),
         mockTheme,
@@ -123,7 +123,7 @@ describe("useTableSizer hook", () => {
 
     const { result } = renderHook(() =>
       useTableSizer(
-        ArrowProto.create({
+        DataframeProto.create({
           data: TEN_BY_TEN,
         }),
         mockTheme,
@@ -156,7 +156,7 @@ describe("useTableSizer hook", () => {
 
     const { result } = renderHook(() =>
       useTableSizer(
-        ArrowProto.create({
+        DataframeProto.create({
           data: TEN_BY_TEN,
         }),
         mockTheme,
@@ -191,7 +191,7 @@ describe("useTableSizer hook", () => {
 
     const { result } = renderHook(() =>
       useTableSizer(
-        ArrowProto.create({
+        DataframeProto.create({
           data: TEN_BY_TEN,
         }),
         mockTheme,
@@ -220,7 +220,7 @@ describe("useTableSizer hook", () => {
     const NUMBER_OF_ROWS = 2 // Less than 3 rows
     const { result } = renderHook(() =>
       useTableSizer(
-        ArrowProto.create({
+        DataframeProto.create({
           data: UNICODE,
           // No height configured - should use default auto height
         }),
@@ -256,7 +256,7 @@ describe("useTableSizer hook", () => {
     const widthConfig = new streamlit.WidthConfig({ useStretch: true })
     const { result } = renderHook(() =>
       useTableSizer(
-        ArrowProto.create({
+        DataframeProto.create({
           data: TEN_BY_TEN,
         }),
         mockTheme,
@@ -278,7 +278,7 @@ describe("useTableSizer hook", () => {
     const CONTAINER_WIDTH = 700
     const { result } = renderHook(() =>
       useTableSizer(
-        ArrowProto.create({
+        DataframeProto.create({
           data: UNICODE,
         }),
         mockTheme,
@@ -301,7 +301,7 @@ describe("useTableSizer hook", () => {
 
     const { result } = renderHook(() =>
       useTableSizer(
-        ArrowProto.create({
+        DataframeProto.create({
           data: VERY_TALL,
         }),
         mockTheme,
@@ -328,7 +328,7 @@ describe("useTableSizer hook", () => {
     const widthConfig = new streamlit.WidthConfig({ pixelWidth: TABLE_WIDTH })
     const { result } = renderHook(() =>
       useTableSizer(
-        ArrowProto.create({
+        DataframeProto.create({
           data: TEN_BY_TEN,
         }),
         mockTheme,
@@ -372,7 +372,7 @@ describe("useTableSizer hook", () => {
 
       const { result } = renderHook(() =>
         useTableSizer(
-          ArrowProto.create({
+          DataframeProto.create({
             data: TEN_BY_TEN,
           }),
           mockTheme,
@@ -411,7 +411,7 @@ describe("useTableSizer hook", () => {
 
       const { result } = renderHook(() =>
         useTableSizer(
-          ArrowProto.create({
+          DataframeProto.create({
             data: UNICODE,
           }),
           mockTheme,
@@ -445,7 +445,7 @@ describe("useTableSizer hook", () => {
 
       const { result } = renderHook(() =>
         useTableSizer(
-          ArrowProto.create({
+          DataframeProto.create({
             data: UNICODE,
           }),
           mockTheme,
@@ -480,7 +480,7 @@ describe("useTableSizer hook", () => {
 
       const { result } = renderHook(() =>
         useTableSizer(
-          ArrowProto.create({
+          DataframeProto.create({
             data: TEN_BY_TEN,
           }),
           mockTheme,
@@ -516,7 +516,7 @@ describe("useTableSizer hook", () => {
 
       const { result } = renderHook(() =>
         useTableSizer(
-          ArrowProto.create({
+          DataframeProto.create({
             data: TEN_BY_TEN,
           }),
           mockTheme,
@@ -558,7 +558,7 @@ describe("useTableSizer hook", () => {
 
       const { result } = renderHook(() =>
         useTableSizer(
-          ArrowProto.create({
+          DataframeProto.create({
             data: TEN_BY_TEN,
           }),
           mockTheme,
@@ -595,7 +595,7 @@ describe("useTableSizer hook", () => {
 
       const { result } = renderHook(() =>
         useTableSizer(
-          ArrowProto.create({
+          DataframeProto.create({
             data: TEN_BY_TEN,
           }),
           mockTheme,
@@ -621,7 +621,7 @@ describe("useTableSizer hook", () => {
 
       const { result } = renderHook(() =>
         useTableSizer(
-          ArrowProto.create({
+          DataframeProto.create({
             data: TEN_BY_TEN,
           }),
           mockTheme,
@@ -647,7 +647,7 @@ describe("useTableSizer hook", () => {
 
       const { result } = renderHook(() =>
         useTableSizer(
-          ArrowProto.create({
+          DataframeProto.create({
             data: TEN_BY_TEN,
           }),
           mockTheme,
@@ -674,7 +674,7 @@ describe("useTableSizer hook", () => {
 
       const { result } = renderHook(() =>
         useTableSizer(
-          ArrowProto.create({
+          DataframeProto.create({
             data: TEN_BY_TEN,
           }),
           mockTheme,
@@ -696,7 +696,7 @@ describe("useTableSizer hook", () => {
 
       const { result } = renderHook(() =>
         useTableSizer(
-          ArrowProto.create({
+          DataframeProto.create({
             data: TEN_BY_TEN,
           }),
           mockTheme,
@@ -720,7 +720,7 @@ describe("useTableSizer hook", () => {
 
     const { result } = renderHook(() =>
       useTableSizer(
-        ArrowProto.create({
+        DataframeProto.create({
           data: TEN_BY_TEN,
         }),
         mockTheme,

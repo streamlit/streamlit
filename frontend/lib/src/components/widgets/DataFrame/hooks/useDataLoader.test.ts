@@ -20,7 +20,7 @@ import { GridCellKind } from "@glideapps/glide-data-grid"
 import { renderHook } from "@testing-library/react"
 import { Field, Utf8 } from "apache-arrow"
 
-import { Arrow as ArrowProto } from "@streamlit/protobuf"
+import { Dataframe as DataframeProto } from "@streamlit/protobuf"
 
 import {
   BaseColumn,
@@ -107,7 +107,7 @@ const MOCK_COLUMNS: BaseColumn[] = [
 
 describe("useDataLoader hook", () => {
   it("creates a glide-data-grid compatible callback to access cells", () => {
-    const element = ArrowProto.create({
+    const element = DataframeProto.create({
       data: UNICODE,
     })
     const data = new Quiver(element)
@@ -148,7 +148,7 @@ describe("useDataLoader hook", () => {
   })
 
   it("correctly handles multi-index headers", () => {
-    const element = ArrowProto.create({
+    const element = DataframeProto.create({
       data: MULTI,
     })
     const data = new Quiver(element)
@@ -166,9 +166,9 @@ describe("useDataLoader hook", () => {
   })
 
   it("uses editing state if a cell got edited", () => {
-    const element = ArrowProto.create({
+    const element = DataframeProto.create({
       data: UNICODE,
-      editingMode: ArrowProto.EditingMode.FIXED,
+      editingMode: DataframeProto.EditingMode.FIXED,
     })
 
     const data = new Quiver(element)
@@ -192,9 +192,9 @@ describe("useDataLoader hook", () => {
   })
 
   it("uses editing state if a row got deleted", () => {
-    const element = ArrowProto.create({
+    const element = DataframeProto.create({
       data: UNICODE,
-      editingMode: ArrowProto.EditingMode.DYNAMIC,
+      editingMode: DataframeProto.EditingMode.DYNAMIC,
     })
 
     const data = new Quiver(element)
@@ -213,7 +213,7 @@ describe("useDataLoader hook", () => {
   })
 
   it("returns an error cell if getCell from Quiver throws an error", () => {
-    const element = ArrowProto.create({
+    const element = DataframeProto.create({
       data: UNICODE,
     })
     const realData = new Quiver(element)
@@ -238,7 +238,7 @@ describe("useDataLoader hook", () => {
   })
 
   it("returns an error cell if getCell from editing state throws an error", () => {
-    const element = ArrowProto.create({
+    const element = DataframeProto.create({
       data: UNICODE,
     })
     const realData = new Quiver(element)
