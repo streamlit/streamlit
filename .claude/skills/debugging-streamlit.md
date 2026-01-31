@@ -59,9 +59,9 @@ For advanced debugging with screenshots or automated UI interaction.
 For simple screenshots and interactions, use `@playwright/cli` (available in frontend devDependencies):
 
 ```bash
-# Open page, take screenshot, close
+cd frontend
 yarn playwright-cli open http://localhost:3000
-yarn playwright-cli screenshot --filename work-tmp/debug/screenshot.png --full-page
+yarn playwright-cli screenshot --filename ../work-tmp/debug/screenshot.png --full-page
 yarn playwright-cli close
 ```
 
