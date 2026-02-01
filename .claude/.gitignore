@@ -8,3 +8,4 @@ hooks/pre_bash_redirect.py
 skills/*
 # Only track certain skills so that we don't track a user's local skills
 # You can add more skills to this list as needed!
+!skills/fixing-streamlit-ci.md
