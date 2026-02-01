@@ -125,7 +125,7 @@ AGENT_RULE_FILES: Final[list[AgentRuleFile]] = [
 
 
 def generate_make_commands_skill() -> None:
-    """Generate the make commands Claude skill."""
+    """Generate the make commands agent skill."""
     # Determine workspace root and run `make help` without directory trace noise
     workspace_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     result = subprocess.run(
@@ -137,7 +137,7 @@ def generate_make_commands_skill() -> None:
     )
     make_commands = result.stdout.strip()
 
-    # Generate Claude skill file
+    # Generate agent skill file
     skill_content = MAKE_COMMANDS_SKILL_TEMPLATE.format(make_commands=make_commands)
 
     skill_dir = os.path.join(
@@ -148,7 +148,7 @@ def generate_make_commands_skill() -> None:
 
     with open(skill_path, "w", encoding="utf-8") as f:
         f.write(skill_content)
-    print(f"Generated Claude skill file: {skill_path}")
+    print(f"Generated agent skill file: {skill_path}")
 
 
 def resolve_rule_path(rule_path: str) -> str:
