@@ -41,7 +41,7 @@ repos:
         entry: ./scripts/run_in_subdirectory.py frontend yarn exec prettier --write
         files: ^frontend/(app|lib|connection|utils)/.*\.(js|jsx|ts|tsx)$
         exclude: /vendor/
-        language: node
+        language: system
         pass_filenames: true
       - id: prettier-yaml
         name: Prettier-yaml
