@@ -33,12 +33,12 @@ repos:
   - repo: local
     hooks:
       # Single prettier hook for all frontend source files.
-      # Calls prettier via yarn exec with passed filenames (faster than yarn run format).
+      # Calls prettier directly from node_modules/.bin to avoid yarn exec issues in CI.
       # Uses run_in_subdirectory.py to handle path translation for subdirectory files.
       # See: https://github.com/pre-commit/pre-commit/issues/1417
       - id: prettier-frontend
         name: Prettier Frontend
-        entry: ./scripts/run_in_subdirectory.py frontend yarn exec prettier --write
+        entry: ./scripts/run_in_subdirectory.py frontend node_modules/.bin/prettier --write
         files: ^frontend/(app|lib|connection|utils)/.*\.(js|jsx|ts|tsx)$
         exclude: /vendor/
         language: system
