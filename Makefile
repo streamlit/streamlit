@@ -421,7 +421,7 @@ check:
 	echo ""
 	@# Start frontend (format, lint, types, tests) in background, run Python + pre-commit + Python tests in foreground
 	@# Set FAST_CHECK=true to skip mypy, frontend-types, and unit tests
-	@FE_OUT=$$(mktemp); \
+	@FE_OUT=$$(mktemp) || { echo "Failed to create temp file"; exit 1; }; \
 	FE_FILES=$$(uv run python scripts/get_changed_files.py --frontend --strip-prefix frontend/); \
 	FE_CHECK=$$(uv run python scripts/get_changed_files.py --frontend); \
 	FE_TESTS=$$(uv run python scripts/get_changed_files.py --frontend-tests --strip-prefix frontend/); \

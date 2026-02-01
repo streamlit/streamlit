@@ -10,7 +10,7 @@
     ],
     "stop": [
       {
-        "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/stop_check.sh",
+        "command": "$CURSOR_PROJECT_DIR/.claude/hooks/stop_check.sh",
         "timeout": 120
       }
     ]

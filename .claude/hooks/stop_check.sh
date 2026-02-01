@@ -22,7 +22,10 @@
 # We output both fields for cross-compatibility.
 
 # Run make check from project root (fast mode to skip slow type checks)
-cd "$CLAUDE_PROJECT_DIR" || cd "$CURSOR_PROJECT_DIR" || exit 0
+cd "$CLAUDE_PROJECT_DIR" 2>/dev/null || cd "$CURSOR_PROJECT_DIR" 2>/dev/null || {
+    echo "Error: Cannot find project directory" >&2
+    exit 1
+}
 OUTPUT=$(FAST_CHECK=true make check 2>&1)
 EXIT_CODE=$?
 
@@ -32,10 +35,14 @@ if [ $EXIT_CODE -ne 0 ]; then
         OUTPUT="[truncated]...${OUTPUT: -10000}"
     fi
     # Output JSON with both fields for Claude Code and Cursor compatibility
+    # Use printf to avoid jq dependency
     REASON="make check failed (exit $EXIT_CODE). Please fix the issues:
 
 $OUTPUT"
-    jq -n --arg reason "$REASON" '{"decision": "block", "reason": $reason, "followup_message": $reason}'
+    # Escape special JSON characters in REASON
+    ESCAPED_REASON=$(printf '%s' "$REASON" | sed 's/\\/\\\\/g; s/"/\\"/g; s/\t/\\t/g' | tr '\n' '\r' | sed 's/\r/\\n/g')
+    printf '{"decision": "block", "reason": "%s", "followup_message": "%s"}\n' "$ESCAPED_REASON" "$ESCAPED_REASON"
+    exit 2
 fi
 
 exit 0
