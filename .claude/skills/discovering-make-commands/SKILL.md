@@ -1,12 +1,11 @@
 ---
-description: List of all available make commands
-globs:
-alwaysApply: false
+name: discovering-make-commands
+description: Lists available make commands for Streamlit development. Use for build, test, lint, or format tasks.
 ---
 
 # Available `make` commands
 
-List of all `make` commands that are available for execution from the repository root folder:
+List of all `make` commands available for execution from the repository root folder:
 
 help                      Show all available make commands.
 all                       Install all dependencies, build frontend, and install editable Streamlit.
