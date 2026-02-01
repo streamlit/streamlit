@@ -105,13 +105,13 @@ gh api "/repos/${REPO}/actions/jobs/{JOB_ID}/logs"
 gh run view {RUN_ID} --log-failed 2>&1 | grep -B 5 -A 10 -iE "error|fail|exception|traceback|panic|fatal" | head -100
 
 # Python tests - pytest summary
-gh run view {RUN_ID} --log-failed 2>&1 | grep -A 50 "FAILED\|ERROR\|short test summary"
+gh run view {RUN_ID} --log-failed 2>&1 | grep -E -A 50 "FAILED|ERROR|short test summary"
 
 # TypeScript/ESLint errors
-gh run view {RUN_ID} --log-failed 2>&1 | grep -B 2 -A 5 "error TS\|error  "
+gh run view {RUN_ID} --log-failed 2>&1 | grep -E -B 2 -A 5 "error TS|error  "
 
 # E2E snapshot mismatches
-gh run view {RUN_ID} --log-failed 2>&1 | grep -B 2 -A 5 "Missing snapshot for\|Snapshot mismatch for"
+gh run view {RUN_ID} --log-failed 2>&1 | grep -E -B 2 -A 5 "Missing snapshot for|Snapshot mismatch for"
 ```
 
 ### 6. Analyze Failure
@@ -136,7 +136,7 @@ Identify:
 | E2E snapshots | `playwright.yml` | `make run-e2e-test <file>` | ✅ `make update-snapshots` |
 | NOTICES | `js-tests.yml` | `make update-notices` | ✅ `make update-notices` |
 | Min constraints | `python-tests.yml` | `make update-min-deps` | ✅ `make update-min-deps` |
-| Pre-commit | `enforce-pre-commit.yml` | `pre-commit run --all-files` | ✅ Mostly auto-fix |
+| Pre-commit | `enforce-pre-commit.yml` | `uv run pre-commit run --all-files` | ✅ Mostly auto-fix |
 | Relative imports | `ensure-relative-imports.yml` | Check script output | ❌ Manual |
 | **PR Labels** | `require-labels.yml` | N/A | ⏭️ **Ignore** |
 
