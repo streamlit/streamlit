@@ -27,7 +27,9 @@ description: Lists available make commands for Streamlit development. Use for bu
 
 List of all `make` commands available for execution from the repository root folder:
 
+```
 {make_commands}
+```
 """
 
 CURSOR_RULE_TEMPLATE_GLOBS: Final[str] = """---

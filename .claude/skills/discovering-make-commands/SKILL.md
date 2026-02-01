@@ -7,6 +7,7 @@ description: Lists available make commands for Streamlit development. Use for bu
 
 List of all `make` commands available for execution from the repository root folder:
 
+```
 help                      Show all available make commands.
 all                       Install all dependencies, build frontend, and install editable Streamlit.
 all-dev                   Install all dependencies and editable Streamlit, but do not build the frontend.
@@ -47,3 +48,4 @@ cli-smoke-tests           Run CLI smoke tests.
 check                     Run all checks (format, lint, types, unit tests) on changed files only. Useful to verify the current state of the codebase before committing.
 autofix                   Autofix linting and formatting errors.
 package                   Create Python wheel files in `dist/`.
+```
