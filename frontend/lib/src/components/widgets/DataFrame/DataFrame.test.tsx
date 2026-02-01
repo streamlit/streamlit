@@ -19,6 +19,8 @@ import { screen } from "@testing-library/react"
 
 import { Arrow as ArrowProto } from "@streamlit/protobuf"
 
+import { FlexContext } from "~lib/components/core/Layout/FlexContext"
+import { Direction } from "~lib/components/core/Layout/utils"
 import { Quiver } from "~lib/dataframes/Quiver"
 import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
 import { TEN_BY_TEN } from "~lib/mocks/arrow"
@@ -212,5 +214,85 @@ describe("DataFrame widget", () => {
       }),
       {}
     )
+  })
+})
+
+describe("DataFrame resize behavior", () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.spyOn(UseResizeObserver, "useResizeObserver").mockReturnValue({
+      elementRef: { current: null },
+      values: [250],
+    })
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  const contentWidthProps = {
+    ...getProps(new Quiver({ data: TEN_BY_TEN })),
+    widthConfig: { useContent: true },
+  }
+
+  it("should enable resize for content-width dataframe in normal layout", () => {
+    // Issue #12683: content-width DataFrames should be resizable
+    // outside of horizontal layouts
+    render(
+      <FlexContext.Provider
+        value={{
+          direction: Direction.VERTICAL,
+          isInHorizontalLayout: false,
+          isInRoot: false,
+          isInContentWidthContainer: false,
+        }}
+      >
+        <DataFrame {...contentWidthProps} />
+      </FlexContext.Provider>
+    )
+
+    const container = screen.getByTestId("stDataFrame")
+    // When resize is enabled, display should be inline-block
+    expect(container).toHaveStyle({ display: "inline-block" })
+  })
+
+  it("should disable resize for dataframe in horizontal layout", () => {
+    render(
+      <FlexContext.Provider
+        value={{
+          direction: Direction.HORIZONTAL,
+          isInHorizontalLayout: true,
+          isInRoot: false,
+          isInContentWidthContainer: false,
+        }}
+      >
+        <DataFrame {...contentWidthProps} />
+      </FlexContext.Provider>
+    )
+
+    const container = screen.getByTestId("stDataFrame")
+    // When resize is disabled, display should be flex
+    expect(container).toHaveStyle({ display: "flex" })
+  })
+
+  it("should enable resize for content-width dataframe in a non-root container", () => {
+    // This is the core regression test for Issue #12683:
+    // Previously, content-width DataFrames in non-root containers had
+    // resize disabled due to the (widthConfig?.useContent && !isInRoot) condition
+    render(
+      <FlexContext.Provider
+        value={{
+          direction: Direction.VERTICAL,
+          isInHorizontalLayout: false,
+          isInRoot: false,
+          isInContentWidthContainer: false,
+        }}
+      >
+        <DataFrame {...contentWidthProps} />
+      </FlexContext.Provider>
+    )
+
+    const container = screen.getByTestId("stDataFrame")
+    expect(container).toHaveStyle({ display: "inline-block" })
   })
 })
