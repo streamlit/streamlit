@@ -419,7 +419,7 @@ check:
 	echo "Changed files:"; \
 	echo "$$CHANGED" | tr ' ' '\n' | sed 's/^/  /'; \
 	echo ""
-	@# Start frontend (format, lint, types, tests) in background, run Python + pre-commit + Python tests in foreground
+	@# Start frontend (lint, types, tests) in background, run Python + pre-commit + Python tests in foreground
 	@# Set FAST_CHECK=true to skip mypy, frontend-types, and unit tests
 	@FE_OUT=$$(mktemp); \
 	FE_FILES=$$(uv run python scripts/get_changed_files.py --frontend --strip-prefix frontend/); \
@@ -427,10 +427,6 @@ check:
 	FE_TESTS=$$(uv run python scripts/get_changed_files.py --frontend-tests --strip-prefix frontend/); \
 	( \
 		if [ -n "$$FE_FILES" ]; then \
-			echo "=== Frontend: format (prettier) ===" && \
-			cd frontend && yarn exec prettier --write $$FE_FILES && \
-			cd .. && \
-			echo "" && \
 			echo "=== Frontend: lint (eslint) ===" && \
 			cd frontend && ./node_modules/.bin/eslint --fix $$FE_FILES && \
 			cd .. && \
