@@ -211,7 +211,7 @@ make check
 uv run pytest lib/tests/path/to/test_file.py::test_name -v
 
 # Frontend tests (specific)
-cd frontend && yarn vitest run path/to/test.test.tsx
+cd frontend && yarn test path/to/test.test.tsx
 
 # E2E tests
 make run-e2e-test {test_file.py}
