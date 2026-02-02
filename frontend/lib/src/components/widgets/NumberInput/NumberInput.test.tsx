@@ -273,6 +273,46 @@ describe("NumberInput widget", () => {
     )
   })
 
+  it("commits value synchronously to widgetMgr before submitForm when pressing Enter", async () => {
+    const user = userEvent.setup()
+    const props = getIntProps({ formId: "form", default: 0 })
+    const setIntValueSpy = vi.spyOn(props.widgetMgr, "setIntValue")
+    vi.spyOn(props.widgetMgr, "allowFormEnterToSubmit").mockReturnValue(true)
+    const submitFormSpy = vi.spyOn(props.widgetMgr, "submitForm")
+
+    render(<NumberInput {...props} />)
+    const numberInput = screen.getByTestId("stNumberInputField")
+
+    // Clear spies before the action we want to test
+    setIntValueSpy.mockClear()
+    submitFormSpy.mockClear()
+
+    await user.clear(numberInput)
+    await user.type(numberInput, "42")
+    await user.keyboard("{enter}")
+
+    // Verify setIntValue was called with 42 BEFORE submitForm.
+    // This is critical: the form must have the current value when it submits.
+    // Find the call that set value to 42 with fromUi: true
+    const setValueCall = setIntValueSpy.mock.calls.find(
+      call => call[1] === 42 && call[2]?.fromUi === true
+    )
+    expect(setValueCall).toBeDefined()
+
+    // Verify submitForm was called
+    expect(submitFormSpy).toHaveBeenCalledWith("form", undefined)
+
+    // Verify the order: setIntValue with 42 should have been called before submitForm
+    const setValueCallIndex =
+      setIntValueSpy.mock.invocationCallOrder[
+        setIntValueSpy.mock.calls.findIndex(
+          call => call[1] === 42 && call[2]?.fromUi === true
+        )
+      ]
+    const submitFormCallIndex = submitFormSpy.mock.invocationCallOrder[0]
+    expect(setValueCallIndex).toBeLessThan(submitFormCallIndex)
+  })
+
   it("shows Input Instructions on dirty state when not in form (by default)", async () => {
     const user = userEvent.setup()
     const props = getIntProps()

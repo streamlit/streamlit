@@ -228,6 +228,7 @@ def test_number_input_enter_submits_current_value(app: Page):
 
     # Verify the submitted value is the new value, not the old one (0.0)
     markdown_elements = app.get_by_test_id("stMarkdown")
+    expect(markdown_elements.nth(3)).not_to_have_text("Number Input: 0.0")
     expect(markdown_elements.nth(3)).to_have_text("Number Input: 42.0")
 
 
