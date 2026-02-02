@@ -701,7 +701,8 @@ def create_component_routes(
         # Use build_safe_abspath to properly resolve symlinks and prevent traversal
         abspath = build_safe_abspath(component_root, filename)
         if abspath is None:
-            raise HTTPException(status_code=403, detail="Forbidden")
+            # Return 400 for malicious paths (consistent with middleware behavior)
+            raise HTTPException(status_code=400, detail="Bad Request")
 
         try:
             async with await anyio.open_file(abspath, "rb") as file:
@@ -838,8 +839,8 @@ def create_app_static_serving_routes(
         relative_path = request.path_params.get("path", "")
         safe_path = build_safe_abspath(app_static_root, relative_path)
         if safe_path is None:
-            # Return 403 for unsafe paths (matches Tornado behavior)
-            raise HTTPException(status_code=403, detail="Forbidden")
+            # Return 400 for malicious paths (consistent with middleware behavior)
+            raise HTTPException(status_code=400, detail="Bad Request")
 
         async_path = AsyncPath(safe_path)
         if not await async_path.exists() or await async_path.is_dir():
