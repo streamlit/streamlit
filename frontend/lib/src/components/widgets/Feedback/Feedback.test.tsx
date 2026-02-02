@@ -600,7 +600,7 @@ describe("Feedback widget", () => {
   })
 
   describe("Width configuration", () => {
-    it("renders with content width by default", () => {
+    it("renders with content width when configured", () => {
       const props = getProps(
         {},
         {
