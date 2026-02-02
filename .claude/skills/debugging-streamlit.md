@@ -19,14 +19,16 @@ This starts both backend (Streamlit/Python) and frontend (Vite/React) with hot-r
 
 ## Log Files
 
-All debug output goes to `work-tmp/`:
+All debug output goes to `work-tmp/debug/`:
 
 | File | Content |
 |------|---------|
-| `work-tmp/debug-backend.log` | Python `print()` statements, Streamlit logs, errors |
-| `work-tmp/debug-frontend.log` | Browser `console.log()`, React errors, Vite output |
+| `work-tmp/debug/backend.log` | Python `print()` statements, Streamlit logs, errors |
+| `work-tmp/debug/frontend.log` | Browser `console.log()`, React errors, Vite output |
 
 Logs are cleared on each `make debug` run but persist after exit for post-mortem analysis.
+
+Use this directory for all debugging artifacts (scripts, screenshots, etc.) to keep them organized.
 
 ## Adding Debug Output
 
@@ -40,13 +42,13 @@ print(f"DEBUG: session_state = {st.session_state}")
 console.log("DEBUG: props =", props)
 ```
 
-Frontend `console.log()` output appears in `work-tmp/debug-frontend.log`.
+Frontend `console.log()` output appears in `work-tmp/debug/frontend.log`.
 
 ## Workflow
 
-1. Create or use a test script in `work-tmp/` (e.g., `work-tmp/test_feature.py`)
-2. Run `make debug work-tmp/test_feature.py`
-3. Monitor logs: `tail -f work-tmp/debug-backend.log` or `tail -f work-tmp/debug-frontend.log`
+1. Create or use a test script in `work-tmp/debug/` (e.g., `work-tmp/debug/test_feature.py`)
+2. Run `make debug work-tmp/debug/test_feature.py`
+3. Monitor logs: `tail -f work-tmp/debug/backend.log` or `tail -f work-tmp/debug/frontend.log`
 4. Edit code - changes apply automatically via hot-reload
 5. Check logs for debug output
 
@@ -69,10 +71,10 @@ See https://github.com/microsoft/playwright-cli for more commands (`snapshot`, `
 
 ### Custom Scripts
 
-For complex interactions, create temporary Playwright scripts in `work-tmp/`:
+For complex interactions, create temporary Playwright scripts in `work-tmp/debug/`:
 
 ```python
-# work-tmp/debug_screenshot.py
+# work-tmp/debug/debug_screenshot.py
 """Temporary Playwright script for debugging - run against make debug."""
 from playwright.sync_api import sync_playwright, expect
 
@@ -112,7 +114,7 @@ if __name__ == "__main__":
 Ensure `make debug <app.py>` is running first (start it in a background task if needed). Wait for the server to be ready on port 3000, then run the Playwright script:
 
 ```bash
-PYTHONPATH=. uv run python work-tmp/debug_screenshot.py
+PYTHONPATH=. uv run python work-tmp/debug/debug_screenshot.py
 ```
 
 This uses the uv-managed environment with all dependencies (playwright, etc.) and makes `e2e_playwright` importable without path manipulation.
@@ -157,7 +159,7 @@ kill $(lsof -ti:3000) $(lsof -ti:8501)
 
 **Hot-reload not working:**
 - Backend: Only the app script is watched. Changes to `lib/streamlit/` require restarting `make debug`.
-- Frontend: Check `work-tmp/debug-frontend.log` for Vite errors. TypeScript errors can break HMR.
+- Frontend: Check `work-tmp/debug/frontend.log` for Vite errors. TypeScript errors can break HMR.
 
 **Playwright script fails to connect:**
 - Verify `make debug` is running and healthy
@@ -166,4 +168,4 @@ kill $(lsof -ti:3000) $(lsof -ti:8501)
 
 ## Cleanup
 
-After debugging is complete, remove temporary scripts and screenshots from `work-tmp/`.
+After debugging is complete, remove temporary scripts and screenshots from `work-tmp/debug/`.

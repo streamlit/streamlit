@@ -77,9 +77,9 @@ Selection of `make` commands for development (run in the repo root):
 - `debug`: Start Streamlit backend and Vite dev server together, via: `make debug my_app.py`.
   - Frontend hot-reload: Changes to frontend code (`frontend/`) are applied within seconds.
   - Backend hot-reload: Only changes to the **app script** trigger a rerun. Changes to the Streamlit library itself (`lib/streamlit/`) require restarting `make debug`.
-  - Logs are written to `work-tmp/debug-backend.log` (Python/Streamlit) and `work-tmp/debug-frontend.log` (Vite/browser console).
+  - Logs are written to `work-tmp/debug/backend.log` (Python/Streamlit) and `work-tmp/debug/frontend.log` (Vite/browser console).
   - Log files are cleared on each run but persist after exit for post-mortem analysis.
-  - Browser `console.log()` output appears in `work-tmp/debug-frontend.log`.
+  - Browser `console.log()` output appears in `work-tmp/debug/frontend.log`.
   - See [.claude/skills/debugging-streamlit.md](.claude/skills/debugging-streamlit.md) for the full debugging guide.
 
 ### Development Tips

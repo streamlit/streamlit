@@ -267,13 +267,13 @@ debug:
 		echo "To kill them: kill $$PORT_3000_PID$$PORT_8501_PID"; \
 		exit 1; \
 	fi; \
-	DEBUG_DIR="$$(pwd)/work-tmp"; \
+	DEBUG_DIR="$$(pwd)/work-tmp/debug"; \
 	mkdir -p "$$DEBUG_DIR"; \
-	> "$$DEBUG_DIR/debug-backend.log"; \
-	> "$$DEBUG_DIR/debug-frontend.log"; \
+	> "$$DEBUG_DIR/backend.log"; \
+	> "$$DEBUG_DIR/frontend.log"; \
 	cleanup() { \
 		echo ""; \
-		echo "Stopping servers... logs saved to work-tmp/"; \
+		echo "Stopping servers... logs saved to work-tmp/debug/"; \
 		lsof -ti:3000 | xargs kill 2>/dev/null || true; \
 		lsof -ti:8501 | xargs kill 2>/dev/null || true; \
 	}; \
@@ -283,8 +283,8 @@ debug:
 		--server.runOnSave=true \
 		--browser.gatherUsageStats=false \
 		--global.developmentMode=true \
-		>> "$$DEBUG_DIR/debug-backend.log" 2>&1 & \
-	cd frontend && DEBUG_TO_CONSOLE=1 yarn start >> "$$DEBUG_DIR/debug-frontend.log" 2>&1 & \
+		>> "$$DEBUG_DIR/backend.log" 2>&1 & \
+	cd frontend && DEBUG_TO_CONSOLE=1 yarn start >> "$$DEBUG_DIR/frontend.log" 2>&1 & \
 	echo ""; \
 	echo "Starting debug session: $$SCRIPT"; \
 	BACKEND_READY=false; \
@@ -309,8 +309,8 @@ debug:
 	echo "  App URL: http://localhost:3000"; \
 	echo ""; \
 	echo "  Log files:"; \
-	echo "    work-tmp/debug-backend.log  - Streamlit/Python output"; \
-	echo "    work-tmp/debug-frontend.log - Vite/browser console output"; \
+	echo "    work-tmp/debug/backend.log  - Streamlit/Python output"; \
+	echo "    work-tmp/debug/frontend.log - Vite/browser console output"; \
 	echo ""; \
 	echo "Press Ctrl+C to stop."; \
 	echo ""; \
