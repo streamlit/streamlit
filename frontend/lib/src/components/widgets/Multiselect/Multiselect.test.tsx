@@ -607,6 +607,293 @@ describe("Multiselect widget", () => {
       expect(screen.queryByText(/Add:/i)).not.toBeInTheDocument()
     })
   })
+
+  describe("Select all and Select X matches", () => {
+    it("selects all options from empty state", async () => {
+      const user = userEvent.setup()
+      const props = getProps({ default: [] })
+      vi.spyOn(props.widgetMgr, "setStringArrayValue")
+      render(<Multiselect {...props} />)
+
+      // Open dropdown
+      const expandListButton = screen.getAllByTitle("open")[0]
+      await user.click(expandListButton)
+
+      // Click "Select all"
+      const selectAll = screen.getByText("Select all")
+      await user.click(selectAll)
+
+      // All options should be selected
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+        props.element,
+        ["a", "b", "c"],
+        { fromUi: true },
+        undefined
+      )
+    })
+
+    it("selects all remaining options when some are already selected", async () => {
+      const user = userEvent.setup()
+      // Start with "a" already selected
+      const props = getProps({ default: [0] })
+      vi.spyOn(props.widgetMgr, "setStringArrayValue")
+      render(<Multiselect {...props} />)
+
+      // Open dropdown
+      const expandListButton = screen.getAllByTitle("open")[0]
+      await user.click(expandListButton)
+
+      // Click "Select all"
+      const selectAll = screen.getByText("Select all")
+      await user.click(selectAll)
+
+      // All options should be selected (a was already selected, b and c added)
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+        props.element,
+        ["a", "b", "c"],
+        { fromUi: true },
+        undefined
+      )
+    })
+
+    it("selects matching options from empty state with search", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        default: [],
+        options: ["apple", "apricot", "banana", "cherry"],
+      })
+      vi.spyOn(props.widgetMgr, "setStringArrayValue")
+      render(<Multiselect {...props} />)
+
+      // Type to filter
+      const multiSelect = screen.getByRole("combobox")
+      await user.type(multiSelect, "ap")
+
+      // Should show "Select 2 matches"
+      const selectMatches = screen.getByText("Select 2 matches")
+      await user.click(selectMatches)
+
+      // Only matching options should be selected
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+        props.element,
+        ["apple", "apricot"],
+        { fromUi: true },
+        undefined
+      )
+    })
+
+    it("selects matching options when a matching item is already selected", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        default: [0], // "apple" is already selected
+        options: ["apple", "apricot", "banana", "cherry", "grape"],
+      })
+      vi.spyOn(props.widgetMgr, "setStringArrayValue")
+      render(<Multiselect {...props} />)
+
+      // Type to filter - "apple" is already selected, so only "apricot" shows
+      const multiSelect = screen.getByRole("combobox")
+      await user.type(multiSelect, "ap")
+
+      // Should show "Select 2 matches"
+      const selectMatches = screen.getByText("Select 2 matches")
+      await user.click(selectMatches)
+
+      // Only matching options should be selected
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+        props.element,
+        ["apple", "apricot", "grape"],
+        { fromUi: true },
+        undefined
+      )
+    })
+
+    it("respects maxSelections when using Select all", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        default: [],
+        options: ["a", "b", "c", "d", "e"],
+        maxSelections: 3,
+      })
+      vi.spyOn(props.widgetMgr, "setStringArrayValue")
+      render(<Multiselect {...props} />)
+
+      // Open dropdown
+      const expandListButton = screen.getAllByTitle("open")[0]
+      await user.click(expandListButton)
+
+      // Click "Select all"
+      const selectAll = screen.getByText("Select all")
+      await user.click(selectAll)
+
+      // Only first 3 options should be selected (respecting maxSelections)
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+        props.element,
+        ["a", "b", "c"],
+        { fromUi: true },
+        undefined
+      )
+    })
+
+    it("respects maxSelections when using Select all with existing selections", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        default: [0], // "a" already selected
+        options: ["a", "b", "c", "d", "e"],
+        maxSelections: 3,
+      })
+      vi.spyOn(props.widgetMgr, "setStringArrayValue")
+      render(<Multiselect {...props} />)
+
+      // Open dropdown
+      const expandListButton = screen.getAllByTitle("open")[0]
+      await user.click(expandListButton)
+
+      // Click "Select all"
+      const selectAll = screen.getByText("Select all")
+      await user.click(selectAll)
+
+      // Only 2 more options should be added (a + 2 = 3 = maxSelections)
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+        props.element,
+        ["a", "b", "c"],
+        { fromUi: true },
+        undefined
+      )
+    })
+
+    it("respects maxSelections when using Select X matches", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        default: [],
+        options: ["apple", "apricot", "banana", "grape", "pineapple"],
+        maxSelections: 2,
+      })
+      vi.spyOn(props.widgetMgr, "setStringArrayValue")
+      render(<Multiselect {...props} />)
+
+      // Type to filter
+      const multiSelect = screen.getByRole("combobox")
+      await user.type(multiSelect, "ap")
+
+      // Should show "Select 4 matches"
+      const selectMatches = screen.getByText("Select 4 matches")
+      await user.click(selectMatches)
+
+      // Only first 2 matches should be selected (respecting maxSelections)
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+        props.element,
+        ["apple", "apricot"],
+        { fromUi: true },
+        undefined
+      )
+    })
+
+    it("does not show Select all when there are zero options", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        default: [0],
+        options: ["a"],
+      })
+      render(<Multiselect {...props} />)
+
+      // Open dropdown
+      const multiSelect = screen.getByRole("combobox")
+      await user.click(multiSelect)
+
+      expect(screen.queryByText("Select all")).not.toBeInTheDocument()
+      expect(screen.queryByText(/Select \d+ matches/)).toBeInTheDocument()
+    })
+
+    it("does not show Select all when there is only one option", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        default: [],
+        options: ["a"],
+      })
+      render(<Multiselect {...props} />)
+
+      // Open dropdown
+      const expandListButton = screen.getAllByTitle("open")[0]
+      await user.click(expandListButton)
+
+      // Should only see the single option, no "Select all"
+      const options = screen.getAllByRole("option")
+      expect(options.length).toBe(1)
+      expect(options[0]).toHaveTextContent("a")
+      expect(screen.queryByText("Select all")).not.toBeInTheDocument()
+      expect(screen.queryByText(/Select.*matches/)).not.toBeInTheDocument()
+    })
+
+    it("does not show Select X matches when only one option matches search", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        default: [],
+        options: ["apple", "banana", "cherry"],
+      })
+      render(<Multiselect {...props} />)
+
+      // Type to filter - only "apple" matches
+      const multiSelect = screen.getByRole("combobox")
+      await user.type(multiSelect, "apple")
+
+      // Should only see the single matching option
+      const options = screen.getAllByRole("option")
+      expect(options.length).toBe(1)
+      expect(options[0]).toHaveTextContent("apple")
+      expect(screen.queryByText("Select all")).not.toBeInTheDocument()
+      expect(screen.queryByText(/Select.*matches/)).not.toBeInTheDocument()
+    })
+
+    it("shows Select all without search and Select X matches with search, never both", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        default: [],
+        options: ["apple", "apricot", "banana"],
+      })
+      render(<Multiselect {...props} />)
+
+      // Open dropdown without search
+      const expandListButton = screen.getAllByTitle("open")[0]
+      await user.click(expandListButton)
+
+      // Should show "Select all", not "Select X matches"
+      expect(screen.getByText("Select all")).toBeInTheDocument()
+      expect(screen.queryByText(/Select.*matches/)).not.toBeInTheDocument()
+
+      // Now type to search
+      const multiSelect = screen.getByRole("combobox")
+      await user.type(multiSelect, "ap")
+
+      // Should show "Select X matches", not "Select all"
+      expect(screen.getByText("Select 2 matches")).toBeInTheDocument()
+      expect(screen.queryByText("Select all")).not.toBeInTheDocument()
+    })
+
+    it("switches back to Select all when search is cleared", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        default: [],
+        options: ["apple", "apricot", "banana"],
+      })
+      render(<Multiselect {...props} />)
+
+      // Open dropdown and search
+      const multiSelect = screen.getByRole("combobox")
+      await user.click(multiSelect)
+      await user.type(multiSelect, "ap")
+
+      // Should show "Select X matches"
+      expect(screen.getByText("Select 2 matches")).toBeInTheDocument()
+
+      // Clear search
+      await user.clear(multiSelect)
+
+      // Should show "Select all" again
+      expect(screen.getByText("Select all")).toBeInTheDocument()
+      expect(screen.queryByText(/Select.*matches/)).not.toBeInTheDocument()
+    })
+  })
 })
 
 describe("Multiselect query param binding", () => {
