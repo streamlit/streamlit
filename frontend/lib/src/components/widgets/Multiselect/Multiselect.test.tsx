@@ -211,8 +211,12 @@ describe("Multiselect widget", () => {
     await user.click(expandListButton)
 
     const options = screen.getAllByRole("option")
-    expect(options.length).toBe(props.element.options.length)
-    options.forEach((option, idx) => {
+    // First option is "Select all", followed by the actual options
+    expect(options.length).toBe(props.element.options.length + 1)
+    expect(options[0]).toHaveTextContent("Select all")
+    // Skip the first option (Select all) when checking data options
+    const dataOptions = options.slice(1)
+    dataOptions.forEach((option, idx) => {
       expect(option).toHaveTextContent(props.element.options[idx])
     })
   })
@@ -272,8 +276,12 @@ describe("Multiselect widget", () => {
     await user.click(expandListButton)
 
     const options = screen.getAllByRole("option")
-    expect(options.length).toBe(props.element.options.length)
-    options.forEach((option, idx) => {
+    // First option is "Select all", followed by the actual options
+    expect(options.length).toBe(props.element.options.length + 1)
+    expect(options[0]).toHaveTextContent("Select all")
+    // Skip the first option (Select all) when checking data options
+    const dataOptions = options.slice(1)
+    dataOptions.forEach((option, idx) => {
       expect(option).toHaveTextContent(props.element.options[idx])
     })
   })
@@ -292,8 +300,12 @@ describe("Multiselect widget", () => {
     await user.click(expandListButton)
 
     const options = screen.getAllByRole("option")
-    expect(options.length).toBe(props.element.options.length)
-    options.forEach((option, idx) => {
+    // First option is "Select all", followed by the actual options
+    expect(options.length).toBe(props.element.options.length + 1)
+    expect(options[0]).toHaveTextContent("Select all")
+    // Skip the first option (Select all) when checking data options
+    const dataOptions = options.slice(1)
+    dataOptions.forEach((option, idx) => {
       expect(option).toHaveTextContent(props.element.options[idx])
     })
   })
@@ -317,6 +329,7 @@ describe("Multiselect widget", () => {
     await user.click(match)
 
     // Options list should only have c available - a & b selected
+    // "Select all" is not shown when there's only 1 unselected option
     const remainingOptions = screen.getAllByRole("option")
     expect(remainingOptions.length).toBe(1)
     expect(remainingOptions[0]).toHaveTextContent("c")
@@ -338,11 +351,14 @@ describe("Multiselect widget", () => {
     // Our widget should be reset, and the widgetMgr should be updated
     const expandListButton = screen.getAllByTitle("open")[0]
     await user.click(expandListButton)
-    // Options list should only have b & c available - default a selected
+    // Options list should have "Select all" + b & c available - default a selected
     const updatedOptions = screen.getAllByRole("option")
-    expect(updatedOptions.length).toBe(2)
-    expect(updatedOptions[0]).toHaveTextContent("b")
-    expect(updatedOptions[1]).toHaveTextContent("c")
+    expect(updatedOptions.length).toBe(3)
+    expect(updatedOptions[0]).toHaveTextContent("Select all")
+    // Skip the first option (Select all) when checking data options
+    const dataOptions = updatedOptions.slice(1)
+    expect(dataOptions[0]).toHaveTextContent("b")
+    expect(dataOptions[1]).toHaveTextContent("c")
 
     expect(props.widgetMgr.setStringArrayValue).toHaveBeenLastCalledWith(
       props.element,
@@ -411,13 +427,16 @@ describe("Multiselect widget", () => {
       const expandListButton = screen.getAllByTitle("open")[0]
       // Open the list
       await user.click(expandListButton)
-      // Options list should only have b & c available - default a selected
+      // Options list should have "Select all" + b & c available - default a selected
       const options = screen.getAllByRole("option")
-      expect(options.length).toBe(2)
-      expect(options[0]).toHaveTextContent("b")
-      expect(options[1]).toHaveTextContent("c")
-      // Select b from the list
-      await user.click(options[0])
+      expect(options.length).toBe(3)
+      expect(options[0]).toHaveTextContent("Select all")
+      // Skip the first option (Select all) when checking data options
+      const dataOptions = options.slice(1)
+      expect(dataOptions[0]).toHaveTextContent("b")
+      expect(dataOptions[1]).toHaveTextContent("c")
+      // Select b from the list (click directly on b, not "Select all")
+      await user.click(screen.getByText("b"))
 
       expect(
         screen.getByText(
@@ -466,13 +485,16 @@ describe("Multiselect widget", () => {
       const deleteOptionButton = screen.getAllByTitle("Delete")[0]
       await user.click(deleteOptionButton)
 
-      // Options list should only have a & c available - b selected
+      // Options list should have "Select all" + a & c available - b selected
       const expandListButton = screen.getAllByTitle("open")[0]
       await user.click(expandListButton)
       const updatedOptions = screen.getAllByRole("option")
-      expect(updatedOptions.length).toBe(2)
-      expect(updatedOptions[0]).toHaveTextContent("a")
-      expect(updatedOptions[1]).toHaveTextContent("c")
+      expect(updatedOptions.length).toBe(3)
+      expect(updatedOptions[0]).toHaveTextContent("Select all")
+      // Skip the first option (Select all) when checking data options
+      const dataOptions = updatedOptions.slice(1)
+      expect(dataOptions[0]).toHaveTextContent("a")
+      expect(dataOptions[1]).toHaveTextContent("c")
     })
   })
 
@@ -502,10 +524,14 @@ describe("Multiselect widget", () => {
     await user.type(selectboxInput, "aa")
 
     const options = screen.queryAllByRole("option")
-    expect(options).toHaveLength(3)
-    expect(options[0]).toHaveTextContent("aa")
-    expect(options[1]).toHaveTextContent("Aa")
-    expect(options[2]).toHaveTextContent("aA")
+    // First option is "Select X matches", followed by the matched options
+    expect(options).toHaveLength(4)
+    expect(options[0]).toHaveTextContent("Select 3 matches")
+    // Skip the first option when checking data options
+    const dataOptions = options.slice(1)
+    expect(dataOptions[0]).toHaveTextContent("aa")
+    expect(dataOptions[1]).toHaveTextContent("Aa")
+    expect(dataOptions[2]).toHaveTextContent("aA")
   })
 
   describe("scroll position preservation", () => {
