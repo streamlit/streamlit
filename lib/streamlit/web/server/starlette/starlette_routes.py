@@ -773,7 +773,8 @@ def create_bidi_component_routes(
 
         abspath = build_safe_abspath(component_root, filename)
         if abspath is None:
-            return await _text_response("forbidden", 403)
+            # Return 400 for unsafe paths (matches Tornado behavior for opacity)
+            return await _text_response("Bad Request", 400)
 
         if await AsyncPath(abspath).is_dir():
             return await _text_response("not found", 404)
