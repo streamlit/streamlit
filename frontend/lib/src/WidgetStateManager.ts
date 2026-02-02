@@ -608,8 +608,9 @@ export class WidgetStateManager {
     const validValue = value.filter(
       v => v !== undefined && v !== null && !Number.isNaN(v)
     )
-    // If all values are invalid, skip the update entirely.
+    // If all values are invalid, clear URL params but skip state update.
     if (validValue.length === 0) {
+      this.maybeSyncValueToUrl(widget.id, source, [])
       return
     }
     this.createWidgetState(widget, source).doubleArrayValue = new DoubleArray({
