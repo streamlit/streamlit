@@ -39,7 +39,11 @@ import { MultiSelect as MultiSelectProto } from "@streamlit/protobuf"
 
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import { getBorderColor } from "~lib/components/shared/Base/styled-components"
-import { VirtualDropdown } from "~lib/components/shared/Dropdown"
+import {
+  SELECT_ALL_ID,
+  SELECT_MATCHES_ID,
+  VirtualDropdown,
+} from "~lib/components/shared/Dropdown"
 import {
   WidgetLabel,
   WidgetLabelHelpIcon,
@@ -113,6 +117,8 @@ const Multiselect: FC<Props> = props => {
       }
     : undefined
 
+  // Ref to store filtered matches for "Select X matches" option
+  const selectMatchesRef = useRef<string[]>([])
   const [value, setValueWithSource] = useBasicWidgetState<
     MultiselectValue,
     MultiSelectProto
@@ -150,6 +156,34 @@ const Multiselect: FC<Props> = props => {
           return []
         }
         case "select": {
+          // Handle "Select all" option (no search) - compute from element.options
+          if (data.option?.value === SELECT_ALL_ID) {
+            const unselectedValues = element.options.filter(
+              opt => !value.includes(opt)
+            )
+
+            // Respect maxSelections limit
+            if (element.maxSelections > 0) {
+              const remainingSlots = element.maxSelections - value.length
+              return [...value, ...unselectedValues.slice(0, remainingSlots)]
+            }
+
+            return [...value, ...unselectedValues]
+          }
+
+          // Handle "Select x matches" option (with search) - values stored in ref
+          if (data.option?.value === SELECT_MATCHES_ID) {
+            const filteredValues = selectMatchesRef.current
+
+            // Respect maxSelections limit
+            if (element.maxSelections > 0) {
+              const remainingSlots = element.maxSelections - value.length
+              return [...value, ...filteredValues.slice(0, remainingSlots)]
+            }
+
+            return [...value, ...filteredValues]
+          }
+
           return value.concat([data.option?.value])
         }
         default: {
@@ -158,7 +192,7 @@ const Multiselect: FC<Props> = props => {
         }
       }
     },
-    [value]
+    [value, element.maxSelections, element.options]
   )
 
   /**
