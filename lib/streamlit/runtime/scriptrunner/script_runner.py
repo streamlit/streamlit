@@ -711,6 +711,8 @@ class ScriptRunner:
                 # The handling for when a full script run or a fragment is stopped early
                 # is the same, so we only have one ScriptRunnerEvent for this scenario.
                 finished_event = ScriptRunnerEvent.SCRIPT_STOPPED_FOR_RERUN
+            elif premature_stop and self._requests.is_stop_requested():
+                finished_event = ScriptRunnerEvent.SCRIPT_STOPPED_FOR_RERUN
             elif rerun_data.fragment_id_queue:
                 finished_event = ScriptRunnerEvent.FRAGMENT_STOPPED_WITH_SUCCESS
             else:

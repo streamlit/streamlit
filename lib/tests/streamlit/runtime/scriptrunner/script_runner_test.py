@@ -686,7 +686,7 @@ class ScriptRunnerTest(AsyncTestCase):
                 ScriptRunnerEvent.SCRIPT_STARTED,
                 ScriptRunnerEvent.SCRIPT_STOPPED_FOR_RERUN,
                 ScriptRunnerEvent.SCRIPT_STARTED,
-                ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
+                ScriptRunnerEvent.SCRIPT_STOPPED_FOR_RERUN,
                 ScriptRunnerEvent.SHUTDOWN,
             ],
         )
@@ -707,7 +707,7 @@ class ScriptRunnerTest(AsyncTestCase):
             scriptrunner,
             [
                 ScriptRunnerEvent.SCRIPT_STARTED,
-                ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
+                ScriptRunnerEvent.SCRIPT_STOPPED_FOR_RERUN,
                 ScriptRunnerEvent.SHUTDOWN,
             ],
         )

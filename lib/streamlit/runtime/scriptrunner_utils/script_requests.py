@@ -173,6 +173,11 @@ class ScriptRequests:
         with self._lock:
             self._state = ScriptRequestType.STOP
 
+    def is_stop_requested(self) -> bool:
+        """Return True if a stop request is pending."""
+        with self._lock:
+            return self._state == ScriptRequestType.STOP
+
     def request_rerun(self, new_data: RerunData) -> bool:
         """Request that the ScriptRunner rerun its script.
 
