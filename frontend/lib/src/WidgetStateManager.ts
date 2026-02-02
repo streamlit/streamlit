@@ -33,6 +33,7 @@ import {
   WidgetStates,
 } from "@streamlit/protobuf"
 
+import { assertNever } from "~lib/util/assertNever"
 import {
   isNullOrUndefined,
   isValidFormId,
@@ -1109,7 +1110,9 @@ export class WidgetStateManager {
 
   /**
    * Unregister a widget's query param binding (called on unmount).
-   * Note: Does NOT clear the URL param to support React strict mode remounts.
+   *
+   * Note: This does NOT clear the URL param - that cleanup is handled by the
+   * backend via remove_stale_bindings().
    */
   public unregisterQueryParamBinding(widgetId: string): void {
     const binding = this.boundWidgets.get(widgetId)
@@ -1139,25 +1142,28 @@ export class WidgetStateManager {
 
     // Get current URL params for bound widgets
     const currentUrl = new URL(window.location.href)
-    const boundParams: string[] = []
+    const boundParamsObj: Record<string, string | string[]> = {}
 
     this.paramKeyToWidgetId.forEach((_, paramKey) => {
       const values = currentUrl.searchParams.getAll(paramKey)
-      values.forEach(value => {
-        boundParams.push(
-          `${encodeURIComponent(paramKey)}=${encodeURIComponent(value)}`
-        )
-      })
+      if (values.length === 1) {
+        boundParamsObj[paramKey] = values[0]
+      } else if (values.length > 1) {
+        boundParamsObj[paramKey] = values
+      }
+    })
+
+    // Build query string using query-string library
+    const boundParamsStr = queryString.stringify(boundParamsObj, {
+      arrayFormat: "none",
     })
 
     // Combine embed params with bound widget params
-    if (boundParams.length === 0) {
+    if (!boundParamsStr) {
       return embedParams
     }
 
-    return embedParams
-      ? `${embedParams}&${boundParams.join("&")}`
-      : boundParams.join("&")
+    return embedParams ? `${embedParams}&${boundParamsStr}` : boundParamsStr
   }
 
   /** Set callback for query param changes (used by App.tsx). */
@@ -1230,7 +1236,7 @@ export class WidgetStateManager {
       }
 
       default:
-        return null
+        return assertNever(binding.valueType)
     }
   }
 
