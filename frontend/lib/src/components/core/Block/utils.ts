@@ -51,7 +51,10 @@ export function isElementStale(
     return true
   }
 
-  if (scriptRunState === ScriptRunState.RUNNING) {
+  if (
+    scriptRunState === ScriptRunState.RUNNING ||
+    scriptRunState === ScriptRunState.STOP_REQUESTED
+  ) {
     if (fragmentIdsThisRun?.length) {
       // if the fragmentId is set, we only want to mark elements as stale
       // that belong to the same fragmentId and have a different scriptRunId.

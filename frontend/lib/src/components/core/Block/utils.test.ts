@@ -86,10 +86,19 @@ describe("isElementStale", () => {
     ).toBe(false)
   })
 
+  it("treats STOP_REQUESTED like RUNNING", () => {
+    expect(
+      isElementStale(node, ScriptRunState.STOP_REQUESTED, "someOtherScriptRunId", [])
+    ).toBe(true)
+
+    expect(
+      isElementStale(node, ScriptRunState.STOP_REQUESTED, "myScriptRunId", [])
+    ).toBe(false)
+  })
+
   it("returns false for all other script run states", () => {
     const states = [
       ScriptRunState.NOT_RUNNING,
-      ScriptRunState.STOP_REQUESTED,
       ScriptRunState.COMPILATION_ERROR,
     ]
     states.forEach(s => {
