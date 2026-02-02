@@ -175,13 +175,16 @@ const NumberInput: React.FC<Props> = ({
   }, [value, dirty, formatCurrentValue])
 
   // Commit a value: validate, update widget manager, and sync to URL
+  // When synchronous=true, also update widget manager immediately (needed for form submit on Enter)
   const commitValue = useCallback(
     ({
       value: valueArg,
       fromUi,
+      synchronous = false,
     }: {
       value: number | null
       fromUi: boolean
+      synchronous?: boolean
     }) => {
       // Validate range and show browser validation message if out of range
       if (notNullOrUndefined(valueArg) && (min > valueArg || valueArg > max)) {
@@ -193,10 +196,33 @@ const NumberInput: React.FC<Props> = ({
 
       setValueWithSource({ value: newValue, fromUi })
 
+      // When synchronous=true, also update widget manager immediately.
+      // This is needed for form submit on Enter: the setValueWithSource above
+      // triggers an async useEffect for widget mgr, but submitForm runs
+      // immediately after, reading stale state. By calling updateWidgetMgrState
+      // directly, we bypass the async path and ensure the form has the current value.
+      if (synchronous) {
+        updateWidgetMgrState(
+          element,
+          widgetMgr,
+          { value: newValue, fromUi },
+          fragmentId
+        )
+      }
+
       setDirty(false)
       setFormattedValue(formatCurrentValue(newValue))
     },
-    [min, max, elementDefault, formatCurrentValue, setValueWithSource]
+    [
+      min,
+      max,
+      elementDefault,
+      formatCurrentValue,
+      setValueWithSource,
+      element,
+      widgetMgr,
+      fragmentId,
+    ]
   )
 
   const handleFocus = useCallback((): void => {
@@ -313,37 +339,13 @@ const NumberInput: React.FC<Props> = ({
     (e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>): void => {
       if (e.key === "Enter") {
         if (dirty) {
-          // Validate range first - if invalid, report and don't submit
-          if (
-            notNullOrUndefined(currentNumericValue) &&
-            (min > currentNumericValue || currentNumericValue > max)
-          ) {
-            inputRef.current?.reportValidity()
-            return
-          }
-
-          const newValue = currentNumericValue ?? elementDefault ?? null
-
-          // Update local state
-          setDirty(false)
-          setFormattedValue(formatCurrentValue(newValue))
-
-          // Update the internal React state so value stays in sync.
-          // This is needed because the useEffect at lines 170-175 will reset
-          // formattedValue based on 'value' when props change (and dirty=false).
-          setValueWithSource({ value: newValue, fromUi: true })
-
-          // CRITICAL: Also update widget manager SYNCHRONOUSLY before form submit.
-          // This ensures the form has the current value when it submits.
-          // The setValueWithSource above triggers an async useEffect for widget mgr,
-          // but submitForm runs immediately after, reading stale state.
-          // By calling updateWidgetMgrState directly, we bypass the async path.
-          updateWidgetMgrState(
-            element,
-            widgetMgr,
-            { value: newValue, fromUi: true },
-            fragmentId
-          )
+          // Commit with synchronous=true to ensure widget manager is updated
+          // before form submission (see commitValue for details)
+          commitValue({
+            value: currentNumericValue,
+            fromUi: true,
+            synchronous: true,
+          })
         }
         if (widgetMgr.allowFormEnterToSubmit(elementFormId)) {
           widgetMgr.submitForm(elementFormId, fragmentId)
@@ -353,15 +355,10 @@ const NumberInput: React.FC<Props> = ({
     [
       dirty,
       currentNumericValue,
-      min,
-      max,
-      elementDefault,
-      formatCurrentValue,
-      setValueWithSource,
-      element,
+      commitValue,
       widgetMgr,
-      fragmentId,
       elementFormId,
+      fragmentId,
     ]
   )
 
