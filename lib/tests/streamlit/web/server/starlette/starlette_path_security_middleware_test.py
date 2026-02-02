@@ -225,6 +225,7 @@ class TestPathSecurityMiddleware:
             "/deeply/nested/path/to/file.css",
             "/file-with-dots.min.js",
             "/path.with.dots/file.txt",
+            "/file..js",
         ],
         ids=[
             "root",
@@ -234,6 +235,7 @@ class TestPathSecurityMiddleware:
             "deeply-nested",
             "dots-in-filename",
             "dots-in-dirname",
+            "double-dots-in-filename",
         ],
     )
     def test_allows_various_safe_paths(self, safe_path: str) -> None:
