@@ -16,6 +16,7 @@ from __future__ import annotations
 
 from typing import (
     TYPE_CHECKING,
+    Final,
     Literal,
     cast,
     overload,
@@ -50,9 +51,9 @@ if TYPE_CHECKING:
 
 
 # Number of options for each feedback type
-_NUM_THUMBS_OPTIONS = 2
-_NUM_FACES_OPTIONS = 5
-_NUM_STARS_OPTIONS = 5
+_NUM_THUMBS_OPTIONS: Final = 2
+_NUM_FACES_OPTIONS: Final = 5
+_NUM_STARS_OPTIONS: Final = 5
 
 
 def _get_num_options(feedback_type: Literal["thumbs", "faces", "stars"]) -> int:
