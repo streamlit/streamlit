@@ -217,3 +217,41 @@ class TestMiddlewarePosition:
         # should be blocked before session processing
         response = client.get("/..\\..\\etc\\passwd")
         assert response.status_code == 400
+
+    def test_middleware_protects_routes_without_explicit_validation(self) -> None:
+        """Test that middleware blocks unsafe paths even when handler doesn't validate.
+
+        This verifies the Swiss Cheese defense model: the middleware acts as a
+        catch-all safety net for routes that forget to call is_unsafe_path_pattern().
+        """
+        # Track whether the handler was called
+        handler_called = False
+
+        async def naive_handler(request):
+            """A deliberately vulnerable handler that does NOT validate the path.
+
+            In production, this would be a security vulnerability without middleware.
+            """
+            nonlocal handler_called
+            handler_called = True
+            path = request.path_params.get("path", "")
+            return PlainTextResponse(f"Received: {path}")
+
+        app = Starlette(
+            routes=[Route("/vulnerable/{path:path}", naive_handler)],
+        )
+        app.add_middleware(PathSecurityMiddleware)
+        client = TestClient(app)
+
+        # Safe path should reach the handler
+        handler_called = False
+        response = client.get("/vulnerable/safe/file.txt")
+        assert response.status_code == 200
+        assert handler_called is True
+
+        # Unsafe path should be blocked by middleware BEFORE reaching handler
+        handler_called = False
+        response = client.get("/vulnerable/..\\..\\etc\\passwd")
+        assert response.status_code == 400
+        assert response.text == "Bad Request"
+        assert handler_called is False  # Key assertion: handler was never called
