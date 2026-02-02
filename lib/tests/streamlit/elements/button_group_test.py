@@ -16,7 +16,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock, patch
 
 import numpy as np
@@ -34,7 +34,6 @@ from streamlit.elements.widgets.button_group import (
 )
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
-from streamlit.proto.Feedback_pb2 import Feedback as FeedbackProto
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
 from streamlit.runtime.state.session_state import get_script_run_ctx
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -167,41 +166,6 @@ class TestSingleOrMultiSelectSerde:
             serde.deserialize([3])
 
 
-class TestFeedbackCommand(DeltaGeneratorTestCase):
-    """Tests that are specific for the feedback command."""
-
-    @parameterized.expand(
-        [
-            ("thumbs", FeedbackProto.FeedbackType.THUMBS),
-            ("faces", FeedbackProto.FeedbackType.FACES),
-            ("stars", FeedbackProto.FeedbackType.STARS),
-        ]
-    )
-    def test_call_feedback_with_all_options(
-        self,
-        option: Literal["thumbs", "faces", "stars"],
-        expected_type: FeedbackProto.FeedbackType.ValueType,
-    ):
-        st.feedback(option)
-
-        delta = self.get_delta_from_queue().new_element.feedback
-        assert delta.type == expected_type
-
-    def test_invalid_option_literal(self):
-        with pytest.raises(StreamlitAPIException) as e:
-            st.feedback("foo")
-        assert str(e.value) == (
-            "The options argument to st.feedback must be one of "
-            "['thumbs', 'faces', 'stars']. The argument passed was 'foo'."
-        )
-
-    @parameterized.expand([(0,), (1,)])
-    def test_widget_state_changed_via_session_state(self, session_state_index: int):
-        st.session_state.feedback_command_key = session_state_index
-        val = st.feedback("thumbs", key="feedback_command_key")
-        assert val == session_state_index
-
-
 def get_command_matrix(
     test_args: list[Any], with_st_feedback: bool = False
 ) -> list[tuple[Any]]:
@@ -312,26 +276,8 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
         delta = self.get_delta_from_queue().new_element.button_group
         assert delta.id.endswith(f"-{key}")
 
-    @parameterized.expand([("string_key",), (0,), (None,)])
-    def test_key_types_feedback(self, key: str | int | None):
-        """Test that the key argument can be passed as expected for st.feedback."""
-
-        st.feedback("thumbs", key=key)
-
-        delta = self.get_delta_from_queue().new_element.feedback
-        assert delta.id.endswith(f"-{key}")
-
     @parameterized.expand(
         [
-            (st.feedback, ("thumbs",)),
-            (
-                st.feedback,
-                ("thumbs",),
-                {"default": 1},
-                1,
-            ),
-            (st.feedback, ("stars",), {"default": 2}, 2),
-            (st.feedback, ("faces",), {"default": 3}, 3),
             (st.pills, ("label", ["a", "b", "c"])),
             (st.pills, ("label", ["a", "b", "c"]), {"default": "b"}, "b"),
             (
@@ -379,13 +325,6 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
         command(*command_args, disabled=True)
 
         delta = self.get_delta_from_queue().new_element.button_group
-        assert delta.disabled is True
-
-    def test_disabled_feedback(self):
-        """Test that st.feedback disabled state is set correctly."""
-        st.feedback("thumbs", disabled=True)
-
-        delta = self.get_delta_from_queue().new_element.feedback
         assert delta.disabled is True
 
     @parameterized.expand(
@@ -614,7 +553,6 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            (st.feedback, ("thumbs",)),
             (st.pills, ("label", ["a", "b", "c"])),
         ]
     )
@@ -690,13 +628,6 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.button_group
         assert proto.form_id == ""
 
-    def test_outside_form_feedback(self):
-        """Test that form id is marshalled correctly outside of a form for st.feedback."""
-        st.feedback("thumbs")
-
-        proto = self.get_delta_from_queue().new_element.feedback
-        assert proto.form_id == ""
-
     @parameterized.expand(get_command_matrix([]))
     @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
     def test_inside_form(self, command: Callable[..., None]):
@@ -710,20 +641,6 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
 
         form_proto = self.get_delta_from_queue(0).add_block
         proto = self.get_delta_from_queue(1).new_element.button_group
-        assert proto.form_id == form_proto.form.form_id
-
-    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
-    def test_inside_form_feedback(self):
-        """Test that form id is marshalled correctly inside of a form for st.feedback."""
-
-        with st.form("form"):
-            st.feedback("thumbs")
-
-        # 2 elements will be created: form block, widget
-        assert len(self.get_all_deltas_from_queue()) == 2
-
-        form_proto = self.get_delta_from_queue(0).add_block
-        proto = self.get_delta_from_queue(1).new_element.feedback
         assert proto.form_id == form_proto.form.form_id
 
     @parameterized.expand(get_command_matrix([]))
@@ -742,21 +659,6 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
 
         assert proto.default == []
         assert [option.content for option in proto.options] == ["bar", "baz"]
-
-    def test_inside_column_feedback(self):
-        """Test that st.feedback works correctly inside of a column."""
-
-        col1, _ = st.columns(2)
-
-        with col1:
-            st.feedback("thumbs")
-        all_deltas = self.get_all_deltas_from_queue()
-
-        # 4 elements will be created: 1 horizontal block, 2 columns, 1 widget
-        assert len(all_deltas) == 4
-        proto = self.get_delta_from_queue().new_element.feedback
-
-        assert proto.type == FeedbackProto.FeedbackType.THUMBS
 
     @parameterized.expand(get_command_matrix([]))
     def test_default_string(self, command: Callable[..., None]):
@@ -876,7 +778,6 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            (st.feedback, ("thumbs",), "feedback"),
             (st.pills, ("label", ["a", "b", "c"]), "pills"),
             (st.segmented_control, ("label", ["a", "b", "c"]), "segmented_control"),
         ]
@@ -973,72 +874,6 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
             base_kwargs[kwarg_name] = value2
             st.segmented_control(**base_kwargs)  # type: ignore[arg-type]
             proto2 = self.get_delta_from_queue().new_element.button_group
-            id2 = proto2.id
-            assert id1 != id2
-
-    def test_stable_id_with_key_feedback(self):
-        """Test that the widget ID is stable for feedback when a stable key is provided."""
-        with patch(
-            "streamlit.elements.lib.utils._register_element_id",
-            return_value=MagicMock(),
-        ):
-            # First render with certain params (keep whitelisted kwargs stable)
-            st.feedback(
-                key="feedback_key",
-                disabled=False,
-                width="content",
-                on_change=lambda: None,
-                args=("arg1", "arg2"),
-                kwargs={"kwarg1": "kwarg1"},
-                default=0,
-                # Whitelisted args:
-                options="thumbs",
-            )
-            proto1 = self.get_delta_from_queue().new_element.feedback
-            id1 = proto1.id
-
-            # Second render with different non-whitelisted params but same key
-            st.feedback(
-                key="feedback_key",
-                disabled=True,
-                width="stretch",
-                on_change=lambda: None,
-                args=("arg_1", "arg_2"),
-                kwargs={"kwarg_1": "kwarg_1"},
-                default=1,
-                # Whitelisted args:
-                options="thumbs",
-            )
-            proto2 = self.get_delta_from_queue().new_element.feedback
-            id2 = proto2.id
-            assert id1 == id2
-
-    @parameterized.expand(
-        [
-            ("options", "thumbs", "faces"),
-        ]
-    )
-    def test_whitelisted_stable_key_kwargs_feedback(
-        self, _kwarg_name: str, value1: object, value2: object
-    ):
-        """Test that the widget ID changes for feedback when a whitelisted kwarg
-        changes even when the key is provided."""
-        with patch(
-            "streamlit.elements.lib.utils._register_element_id",
-            return_value=MagicMock(),
-        ):
-            base_kwargs: dict[str, object] = {
-                "key": "feedback_key_1",
-            }
-
-            # Apply first value for the whitelisted kwarg
-            st.feedback(value1, **base_kwargs)  # type: ignore[arg-type]
-            proto1 = self.get_delta_from_queue().new_element.feedback
-            id1 = proto1.id
-
-            # Apply second value for the whitelisted kwarg
-            st.feedback(value2, **base_kwargs)  # type: ignore[arg-type]
-            proto2 = self.get_delta_from_queue().new_element.feedback
             id2 = proto2.id
             assert id1 != id2
 

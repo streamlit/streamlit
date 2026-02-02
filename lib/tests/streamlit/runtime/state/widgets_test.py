@@ -515,8 +515,7 @@ class ComputeElementIdTests(DeltaGeneratorTestCase):
             ),
             (
                 # define a lambda that matches the signature of what button_group is
-                # passing to compute_and_register_element_id, because st.segmented_control does
-                # not take a label and its arguments are different.
+                # passing to compute_and_register_element_id.
                 lambda label,
                 options,
                 disabled=False,
