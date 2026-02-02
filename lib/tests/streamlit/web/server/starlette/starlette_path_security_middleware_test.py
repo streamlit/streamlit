@@ -38,11 +38,6 @@ def _create_test_app() -> Starlette:
     async def echo_path(request):
         return PlainTextResponse(f"Path: {request.url.path}")
 
-    async def websocket_endpoint(websocket: WebSocket):
-        await websocket.accept()
-        await websocket.send_text("connected")
-        await websocket.close()
-
     app = Starlette(
         routes=[
             Route("/{path:path}", echo_path),
@@ -73,114 +68,30 @@ def _create_websocket_app() -> Starlette:
 class TestPathSecurityMiddleware:
     """Tests for PathSecurityMiddleware."""
 
-    def test_allows_safe_paths(self) -> None:
-        """Test that normal safe paths are allowed through."""
-        app = _create_test_app()
-        client = TestClient(app)
+    @pytest.mark.parametrize(
+        ("path", "expected_path"),
+        [
+            ("/../../../etc/passwd", "/etc/passwd"),
+            ("///attacker.com/share", "/attacker.com/share"),
+        ],
+        ids=[
+            "forward-slash-traversal-normalized",
+            "multiple-forward-slashes-normalized",
+        ],
+    )
+    def test_starlette_normalizes_paths(self, path: str, expected_path: str) -> None:
+        """Test that Starlette normalizes certain path patterns before middleware.
 
-        response = client.get("/static/file.js")
-
-        assert response.status_code == 200
-        assert "Path: /static/file.js" in response.text
-
-    def test_allows_root_path(self) -> None:
-        """Test that the root path is allowed."""
-        app = _create_test_app()
-        client = TestClient(app)
-
-        response = client.get("/")
-
-        assert response.status_code == 200
-        assert "Path: /" in response.text
-
-    def test_allows_nested_directories(self) -> None:
-        """Test that nested directory paths are allowed."""
-        app = _create_test_app()
-        client = TestClient(app)
-
-        response = client.get("/subdir/nested/file.txt")
-
-        assert response.status_code == 200
-        assert "Path: /subdir/nested/file.txt" in response.text
-
-    def test_blocks_backslash_path_traversal(self) -> None:
-        """Test that backslash path traversal attempts are blocked with 400.
-
-        Note: Starlette normalizes forward-slash path traversal (/../..) before
-        it reaches middleware, so we can only catch backslash-based traversal.
+        These patterns are handled securely by the framework's path normalization,
+        so they reach the middleware as safe paths.
         """
         app = _create_test_app()
         client = TestClient(app)
 
-        response = client.get("/..\\..\\etc\\passwd")
+        response = client.get(path)
 
-        assert response.status_code == 400
-        assert response.text == "Bad Request"
-
-    def test_forward_slash_path_traversal_normalized_by_framework(self) -> None:
-        """Test that forward-slash path traversal is normalized by Starlette.
-
-        Starlette normalizes /../../../etc/passwd to /etc/passwd before it
-        reaches the middleware, which is actually secure behavior - the path
-        traversal is eliminated by the framework.
-        """
-        app = _create_test_app()
-        client = TestClient(app)
-
-        # This gets normalized to /etc/passwd by Starlette
-        response = client.get("/../../../etc/passwd")
-
-        # After normalization, this is a safe path
         assert response.status_code == 200
-        assert "Path: /etc/passwd" in response.text
-
-    def test_blocks_windows_drive_paths(self) -> None:
-        """Test that Windows drive paths are blocked."""
-        app = _create_test_app()
-        client = TestClient(app)
-
-        response = client.get("/C:/Windows/system32")
-
-        assert response.status_code == 400
-        assert response.text == "Bad Request"
-
-    def test_blocks_unc_paths_backslash(self) -> None:
-        """Test that UNC paths with backslashes are blocked."""
-        app = _create_test_app()
-        client = TestClient(app)
-
-        # URL-encoded backslash: %5c = '\'
-        response = client.get("/%5c%5cattacker.com%5cshare")
-
-        assert response.status_code == 400
-        assert response.text == "Bad Request"
-
-    def test_multiple_forward_slashes_normalized_by_framework(self) -> None:
-        """Test that multiple forward slashes are normalized by Starlette.
-
-        Starlette normalizes ///attacker.com/share to /attacker.com/share,
-        which prevents UNC path interpretation. This is secure framework behavior.
-        """
-        app = _create_test_app()
-        client = TestClient(app)
-
-        # This gets normalized to /attacker.com/share by Starlette
-        response = client.get("///attacker.com/share")
-
-        # After normalization, this is just a regular path segment
-        assert response.status_code == 200
-        assert "Path: /attacker.com/share" in response.text
-
-    def test_blocks_null_bytes(self) -> None:
-        """Test that paths with null bytes are blocked."""
-        app = _create_test_app()
-        client = TestClient(app)
-
-        # %00 = null byte
-        response = client.get("/file.txt%00.js")
-
-        assert response.status_code == 400
-        assert response.text == "Bad Request"
+        assert f"Path: {expected_path}" in response.text
 
     @pytest.mark.parametrize(
         "unsafe_path",
@@ -199,8 +110,8 @@ class TestPathSecurityMiddleware:
             "null-byte",
         ],
     )
-    def test_blocks_various_unsafe_paths(self, unsafe_path: str) -> None:
-        """Test that various unsafe path patterns are blocked.
+    def test_blocks_unsafe_paths(self, unsafe_path: str) -> None:
+        """Test that unsafe path patterns are blocked with 400.
 
         Note: Forward-slash path traversal (/../..) and multiple forward slashes
         (///) are normalized by Starlette before reaching the middleware, which
@@ -226,6 +137,7 @@ class TestPathSecurityMiddleware:
             "/file-with-dots.min.js",
             "/path.with.dots/file.txt",
             "/file..js",
+            "/files/...hidden",
         ],
         ids=[
             "root",
@@ -236,10 +148,11 @@ class TestPathSecurityMiddleware:
             "dots-in-filename",
             "dots-in-dirname",
             "double-dots-in-filename",
+            "triple-dots-in-filename",
         ],
     )
-    def test_allows_various_safe_paths(self, safe_path: str) -> None:
-        """Test that various safe path patterns are allowed."""
+    def test_allows_safe_paths(self, safe_path: str) -> None:
+        """Test that safe path patterns are allowed."""
         app = _create_test_app()
         client = TestClient(app)
 
@@ -256,17 +169,6 @@ class TestPathSecurityMiddleware:
         with client.websocket_connect("/ws") as websocket:
             data = websocket.receive_text()
             assert data == "connected"
-
-    def test_does_not_block_safe_paths_that_look_suspicious(self) -> None:
-        """Test that paths with '..' in filenames (not traversal) are allowed."""
-        app = _create_test_app()
-        client = TestClient(app)
-
-        # A file literally named "..something" (not traversal)
-        response = client.get("/files/...hidden")
-
-        assert response.status_code == 200
-        assert "Path: /files/...hidden" in response.text
 
 
 class TestMiddlewarePosition:
