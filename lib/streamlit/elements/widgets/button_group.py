@@ -19,7 +19,6 @@ from dataclasses import dataclass, field
 from typing import (
     TYPE_CHECKING,
     Any,
-    Final,
     Generic,
     Literal,
     TypeAlias,
@@ -28,7 +27,6 @@ from typing import (
     overload,
 )
 
-from streamlit import config
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
     LayoutConfig,
@@ -75,20 +73,6 @@ if TYPE_CHECKING:
 
 T = TypeVar("T")
 V = TypeVar("V")
-
-_THUMB_ICONS: Final = (":material/thumb_up:", ":material/thumb_down:")
-_FACES_ICONS: Final = (
-    ":material/sentiment_sad:",
-    ":material/sentiment_dissatisfied:",
-    ":material/sentiment_neutral:",
-    ":material/sentiment_satisfied:",
-    ":material/sentiment_very_satisfied:",
-)
-_NUMBER_STARS: Final = 5
-_STAR_ICON: Final = ":material/star:"
-# we don't have the filled-material icon library as a dependency. Hence, we have it here
-# in base64 format and send it over the wire as an image.
-_SELECTED_STAR_ICON: Final = ":material/star_filled:"
 
 SelectionMode: TypeAlias = Literal["single", "multi"]
 
@@ -185,35 +169,6 @@ class ButtonGroupSerde(Generic[T]):
         return self.serde.deserialize(ui_value)
 
 
-def get_mapped_options(
-    feedback_option: Literal["thumbs", "faces", "stars"],
-) -> tuple[list[ButtonGroupProto.Option], list[int]]:
-    # options object understandable by the web app
-    options: list[ButtonGroupProto.Option] = []
-    # we use the option index in the webapp communication to
-    # indicate which option is selected
-    options_indices: list[int] = []
-
-    if feedback_option == "thumbs":
-        # reversing the index mapping to have thumbs up first (but still with the higher
-        # index (=sentiment) in the list)
-        options_indices = list(reversed(range(len(_THUMB_ICONS))))
-        options = [ButtonGroupProto.Option(content_icon=icon) for icon in _THUMB_ICONS]
-    elif feedback_option == "faces":
-        options_indices = list(range(len(_FACES_ICONS)))
-        options = [ButtonGroupProto.Option(content_icon=icon) for icon in _FACES_ICONS]
-    elif feedback_option == "stars":
-        options_indices = list(range(_NUMBER_STARS))
-        options = [
-            ButtonGroupProto.Option(
-                content_icon=_STAR_ICON,
-                selected_content_icon=_SELECTED_STAR_ICON,
-            )
-        ] * _NUMBER_STARS
-
-    return options, options_indices
-
-
 def _build_proto(
     widget_id: str,
     formatted_options: Sequence[ButtonGroupProto.Option],
@@ -221,10 +176,7 @@ def _build_proto(
     disabled: bool,
     current_form_id: str,
     click_mode: ButtonGroupProto.ClickMode.ValueType,
-    selection_visualization: ButtonGroupProto.SelectionVisualization.ValueType = (
-        ButtonGroupProto.SelectionVisualization.ONLY_SELECTED
-    ),
-    style: Literal["borderless", "pills", "segmented_control"] = "pills",
+    style: Literal["pills", "segmented_control"] = "pills",
     label: str | None = None,
     label_visibility: LabelVisibility = "visible",
     help: str | None = None,
@@ -249,7 +201,6 @@ def _build_proto(
 
     for formatted_option in formatted_options:
         proto.options.append(formatted_option)
-    proto.selection_visualization = selection_visualization
     return proto
 
 
@@ -263,219 +214,6 @@ def _maybe_raise_selection_mode_warning(selection_mode: SelectionMode) -> None:
 
 
 class ButtonGroupMixin:
-    # These overloads are not documented in the docstring, at least not at this time, on
-    # the theory that most people won't know what it means. And the Literals here are a
-    # subclass of int anyway. Usually, we would make a type alias for
-    # Literal["thumbs", "faces", "stars"]; but, in this case, we don't use it in too
-    # many other places, and it's a more helpful autocomplete if we just enumerate the
-    # values explicitly, so a decision has been made to keep it as not an alias.
-    @overload
-    def feedback(
-        self,
-        options: Literal["thumbs"] = ...,
-        *,
-        key: Key | None = None,
-        default: int | None = None,
-        disabled: bool = False,
-        on_change: WidgetCallback | None = None,
-        args: WidgetArgs | None = None,
-        kwargs: WidgetKwargs | None = None,
-        width: Width = "content",
-    ) -> Literal[0, 1] | None: ...
-    @overload
-    def feedback(
-        self,
-        options: Literal["faces", "stars"] = ...,
-        *,
-        key: Key | None = None,
-        default: int | None = None,
-        disabled: bool = False,
-        on_change: WidgetCallback | None = None,
-        args: WidgetArgs | None = None,
-        kwargs: WidgetKwargs | None = None,
-        width: Width = "content",
-    ) -> Literal[0, 1, 2, 3, 4] | None: ...
-    @gather_metrics("feedback")
-    def feedback(
-        self,
-        options: Literal["thumbs", "faces", "stars"] = "thumbs",
-        *,
-        key: Key | None = None,
-        default: int | None = None,
-        disabled: bool = False,
-        on_change: WidgetCallback | None = None,
-        args: WidgetArgs | None = None,
-        kwargs: WidgetKwargs | None = None,
-        width: Width = "content",
-    ) -> int | None:
-        """Display a feedback widget.
-
-        A feedback widget is an icon-based button group available in three
-        styles, as described in ``options``. It is commonly used in chat and AI
-        apps to allow users to rate responses.
-
-        Parameters
-        ----------
-        options : "thumbs", "faces", or "stars"
-            The feedback options displayed to the user. ``options`` can be one
-            of the following:
-
-            - ``"thumbs"`` (default): Streamlit displays a thumb-up and
-              thumb-down button group.
-            - ``"faces"``: Streamlit displays a row of five buttons with
-              facial expressions depicting increasing satisfaction from left to
-              right.
-            - ``"stars"``: Streamlit displays a row of star icons, allowing the
-              user to select a rating from one to five stars.
-
-        key : str or int
-            An optional string or integer to use as the unique key for the widget.
-            If this is omitted, a key will be generated for the widget
-            based on its content. No two widgets may have the same key.
-
-        default : int or None
-            Default feedback value. This must be consistent with the feedback
-            type in ``options``:
-
-            - 0 or 1 if ``options="thumbs"``.
-            - Between 0 and 4, inclusive, if ``options="faces"`` or
-              ``options="stars"``.
-
-        disabled : bool
-            An optional boolean that disables the feedback widget if set
-            to ``True``. The default is ``False``.
-
-        on_change : callable
-            An optional callback invoked when this feedback widget's value
-            changes.
-
-        args : list or tuple
-            An optional list or tuple of args to pass to the callback.
-
-        kwargs : dict
-            An optional dict of kwargs to pass to the callback.
-
-        width : "content", "stretch", or int
-            The width of the feedback widget. This can be one of the following:
-
-            - ``"content"`` (default): The width of the widget matches the
-              width of its content, but doesn't exceed the width of the parent
-              container.
-            - ``"stretch"``: The width of the widget matches the width of the
-              parent container.
-            - An integer specifying the width in pixels: The widget has a
-              fixed width. If the specified width is greater than the width of
-              the parent container, the width of the widget matches the width
-              of the parent container.
-
-        Returns
-        -------
-        int or None
-            An integer indicating the user's selection, where ``0`` is the
-            lowest feedback. Higher values indicate more positive feedback.
-            If no option was selected, the widget returns ``None``.
-
-            - For ``options="thumbs"``, a return value of ``0`` indicates
-              thumbs-down, and ``1`` indicates thumbs-up.
-            - For ``options="faces"`` and ``options="stars"``, return values
-              range from ``0`` (least satisfied) to ``4`` (most satisfied).
-
-        Examples
-        --------
-        Display a feedback widget with stars, and show the selected sentiment:
-
-        >>> import streamlit as st
-        >>>
-        >>> sentiment_mapping = ["one", "two", "three", "four", "five"]
-        >>> selected = st.feedback("stars")
-        >>> if selected is not None:
-        >>>     st.markdown(f"You selected {sentiment_mapping[selected]} star(s).")
-
-        .. output::
-            https://doc-feedback-stars.streamlit.app/
-            height: 200px
-
-        Display a feedback widget with thumbs, and show the selected sentiment:
-
-        >>> import streamlit as st
-        >>>
-        >>> sentiment_mapping = [":material/thumb_down:", ":material/thumb_up:"]
-        >>> selected = st.feedback("thumbs")
-        >>> if selected is not None:
-        >>>     st.markdown(f"You selected: {sentiment_mapping[selected]}")
-
-        .. output::
-            https://doc-feedback-thumbs.streamlit.app/
-            height: 200px
-
-        """
-
-        if options not in {"thumbs", "faces", "stars"}:
-            raise StreamlitAPIException(
-                "The options argument to st.feedback must be one of "
-                "['thumbs', 'faces', 'stars']. "
-                f"The argument passed was '{options}'."
-            )
-        transformed_options, options_indices = get_mapped_options(options)
-
-        if default is not None and (default < 0 or default >= len(transformed_options)):
-            raise StreamlitAPIException(
-                f"The default value in '{options}' must be a number between 0 and {len(transformed_options) - 1}."
-                f" The passed default value is {default}"
-            )
-
-        # Convert small pixel widths to "content" to prevent icon wrapping.
-        # Calculate threshold based on theme.baseFontSize to be responsive to
-        # custom themes. The calculation is based on icon buttons sized in rem:
-        # - Button size: ~1.5rem (icon 1.25rem + padding 0.125rem x 2)
-        # - Gap: 0.125rem between buttons
-        # - thumbs: 2 buttons + 1 gap = 3.125rem
-        # - faces/stars: 5 buttons + 4 gaps = 8rem
-        base_font_size = config.get_option("theme.baseFontSize") or 16
-        button_size_rem = 1.5
-        gap_size_rem = 0.125
-
-        if options == "thumbs":
-            # 2 buttons + 1 gap
-            min_width_rem = 2 * button_size_rem + gap_size_rem
-        else:
-            # 5 buttons + 4 gaps (faces or stars)
-            min_width_rem = 5 * button_size_rem + 4 * gap_size_rem
-
-        # Convert rem to pixels based on base font size, add 10% buffer
-        min_width_threshold = int(min_width_rem * base_font_size * 1.1)
-
-        if isinstance(width, int) and width < min_width_threshold:
-            width = "content"
-
-        _default: list[int] | None = (
-            [options_indices[default]] if default is not None else None
-        )
-        serde = _SingleSelectSerde[int](options_indices, default_value=_default)
-
-        selection_visualization = ButtonGroupProto.SelectionVisualization.ONLY_SELECTED
-        if options == "stars":
-            selection_visualization = (
-                ButtonGroupProto.SelectionVisualization.ALL_UP_TO_SELECTED
-            )
-
-        sentiment = self._button_group(
-            transformed_options,
-            default=_default,
-            key=key,
-            selection_mode="single",
-            disabled=disabled,
-            deserializer=serde.deserialize,
-            serializer=serde.serialize,
-            on_change=on_change,
-            args=args,
-            kwargs=kwargs,
-            selection_visualization=selection_visualization,
-            style="borderless",
-            width=width,
-        )
-        return sentiment.value
-
     @overload
     def pills(
         self,
@@ -1023,18 +761,13 @@ class ButtonGroupMixin:
         default: list[int] | None = None,
         selection_mode: SelectionMode = "single",
         disabled: bool = False,
-        style: Literal[
-            "borderless", "pills", "segmented_control"
-        ] = "segmented_control",
+        style: Literal["pills", "segmented_control"] = "segmented_control",
         format_func: Callable[[V], ButtonGroupProto.Option] | None = None,
         deserializer: WidgetDeserializer[T],
         serializer: WidgetSerializer[T],
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
-        selection_visualization: ButtonGroupProto.SelectionVisualization.ValueType = (
-            ButtonGroupProto.SelectionVisualization.ONLY_SELECTED
-        ),
         label: str | None = None,
         label_visibility: LabelVisibility = "visible",
         help: str | None = None,
@@ -1062,9 +795,9 @@ class ButtonGroupMixin:
                 "`selection_mode='single'`."
             )
 
-        if style not in {"borderless", "pills", "segmented_control"}:
+        if style not in {"pills", "segmented_control"}:
             raise StreamlitAPIException(
-                "The style argument must be one of ['borderless', 'pills', 'segmented_control']. "
+                "The style argument must be one of ['pills', 'segmented_control']. "
                 f"The argument passed was '{style}'."
             )
 
@@ -1091,11 +824,9 @@ class ButtonGroupMixin:
         )
 
         element_id = compute_and_register_element_id(
-            # The borderless style is used by st.feedback, but users expect to see
-            # "feedback" in errors
-            "feedback" if style == "borderless" else style,
+            style,
             user_key=key,
-            # Treat the provided key as the main identity for segmented_control, pills and feedback,
+            # Treat the provided key as the main identity for segmented_control and pills,
             # and only include kwargs that can invalidate the current selection.
             # We whitelist the formatted options and the click mode (single vs multi).
             key_as_main_identity={"options", "click_mode"},
@@ -1116,7 +847,6 @@ class ButtonGroupMixin:
             disabled,
             form_id,
             click_mode=parsed_selection_mode,
-            selection_visualization=selection_visualization,
             style=style,
             label=label,
             label_visibility=label_visibility,

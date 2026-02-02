@@ -113,64 +113,21 @@ export function getContentElement(
   const kind =
     style === ButtonGroupProto.Style.PILLS
       ? BaseButtonKind.PILLS
-      : style === ButtonGroupProto.Style.BORDERLESS
-        ? BaseButtonKind.BORDERLESS_ICON
-        : BaseButtonKind.SEGMENTED_CONTROL
-  const size =
-    style === ButtonGroupProto.Style.BORDERLESS
-      ? BaseButtonSize.XSMALL
-      : BaseButtonSize.MEDIUM
-
-  // Use smaller font if kind is pills or segmented control
-  const useSmallerFont =
-    kind === BaseButtonKind.PILLS || kind === BaseButtonKind.SEGMENTED_CONTROL
-
-  const iconSize = style === ButtonGroupProto.Style.BORDERLESS ? "lg" : "base"
+      : BaseButtonKind.SEGMENTED_CONTROL
+  const size = BaseButtonSize.MEDIUM
 
   return {
     element: (
       <DynamicButtonLabel
         icon={icon}
         label={content}
-        iconSize={iconSize}
-        useSmallerFont={useSmallerFont}
+        iconSize="base"
+        useSmallerFont
       />
     ),
     kind: kind,
     size: size,
   }
-}
-
-/**
- * Returns true if the element should be shown as selected (even though its technically not).
- * This is used, for example, to show all elements as selected that come before the actually selected element.
- *
- * @param selectionVisualization sets the visualization mode
- * @param clickMode either SINGLE_SELECT or MULTI_SELECT
- * @param selected list of selected indices. Since only SINGLE_SELECT is considered, this list will always have a length of 1.
- * @param index of the current element
- * @returns true if the element is the selected one, or if click_mode is SINGLE_SELECT and selectionVisualization is set to
- *  ALL_UP_TO_SELECTED and the index of the element is smaller than the index of the selected element, false otherwise.
- */
-function showAsSelected(
-  selectionVisualization: ButtonGroupProto.SelectionVisualization,
-  clickMode: ButtonGroupProto.ClickMode,
-  selected: number[],
-  index: number
-): boolean {
-  if (selected.indexOf(index) > -1) {
-    return true
-  }
-
-  if (
-    clickMode !== ButtonGroupProto.ClickMode.SINGLE_SELECT ||
-    selectionVisualization !==
-      ButtonGroupProto.SelectionVisualization.ALL_UP_TO_SELECTED
-  ) {
-    return false
-  }
-
-  return selected.length > 0 && index < selected[0]
 }
 
 function getButtonKindAndSize(
@@ -203,12 +160,6 @@ function getButtonGroupOverridesStyle(
   const width = containerWidth ? "100%" : "auto"
 
   switch (style) {
-    case ButtonGroupProto.Style.BORDERLESS:
-      return {
-        ...baseStyle,
-        columnGap: spacing.threeXS,
-        rowGap: spacing.threeXS,
-      }
     case ButtonGroupProto.Style.PILLS:
       return {
         ...baseStyle,
@@ -231,25 +182,11 @@ function getButtonGroupOverridesStyle(
 function createOptionChild(
   option: ButtonGroupProto.IOption,
   index: number,
-  selectionVisualization: ButtonGroupProto.SelectionVisualization,
-  clickMode: ButtonGroupProto.ClickMode,
   selected: number[],
   style: ButtonGroupProto.Style,
   containerWidth: boolean
 ): React.FunctionComponent {
-  const isVisuallySelected = showAsSelected(
-    selectionVisualization,
-    clickMode,
-    selected,
-    index
-  )
-
-  let content = option.content
-  let icon = option.contentIcon
-  if (isVisuallySelected) {
-    content = option.selectedContent ? option.selectedContent : content
-    icon = option.selectedContentIcon ? option.selectedContentIcon : icon
-  }
+  const isSelected = selected.includes(index)
 
   // we have to use forwardRef here because BasewebButtonGroup passes the ref down to its children
   // and we see a console.error otherwise
@@ -259,18 +196,11 @@ function createOptionChild(
     _: Ref<BasewebButtonGroup>
   ): ReactElement {
     const { element, kind, size } = getContentElement(
-      content ?? "",
-      icon ?? undefined,
+      option.content ?? "",
+      option.contentIcon ?? undefined,
       style
     )
-    const buttonKind = getButtonKindAndSize(
-      !!(
-        isVisuallySelected &&
-        !option.selectedContent &&
-        !option.selectedContentIcon
-      ),
-      kind
-    )
+    const buttonKind = getButtonKindAndSize(isSelected, kind)
     return (
       <BaseButton
         {...props}
@@ -305,15 +235,7 @@ function getCurrStateFromProto(element: ButtonGroupProto): ButtonGroupValue {
 
 function ButtonGroup(props: Readonly<Props>): ReactElement {
   const { disabled, element, fragmentId, widgetMgr, widthConfig } = props
-  const {
-    clickMode,
-    options,
-    selectionVisualization,
-    style,
-    label,
-    labelVisibility,
-    help,
-  } = element
+  const { clickMode, options, style, label, labelVisibility, help } = element
   const theme = useEmotionTheme()
 
   const [value, setValueWithSource] = useBasicWidgetState<
@@ -352,8 +274,6 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
         const Element = createOptionChild(
           option,
           index,
-          selectionVisualization,
-          clickMode,
           value,
           style,
           containerWidth
@@ -362,7 +282,7 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
         // eslint-disable-next-line @eslint-react/no-array-index-key
         return <Element key={`${option.content}-${index}`} />
       }),
-    [clickMode, options, selectionVisualization, style, value, containerWidth]
+    [options, style, value, containerWidth]
   )
 
   return (

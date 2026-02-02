@@ -955,23 +955,23 @@ def test_state_access():
     assert at.markdown[0].value == "quux"
 
 
-def test_button_group_feedback():
-    """Test ButtonGroup widget used by st.feedback."""
+def test_feedback_element():
+    """Test Feedback widget used by st.feedback."""
 
     def script():
         import streamlit as st
 
-        # st.feedback creates a button_group widget
+        # st.feedback creates a feedback widget
         st.feedback("thumbs")
         st.feedback("stars")
 
     at = AppTest.from_function(script).run()
-    # Feedback widgets use button_group
+    # Feedback widgets use their own feedback element
     # The feedback element does not have a select/unselect but we can test it exists
-    assert len(at.get("button_group")) == 2
+    assert len(at.get("feedback")) == 2
 
-    result = repr(at.get("button_group")[0])
-    assert "ButtonGroup" in result
+    result = repr(at.get("feedback")[0])
+    assert "Feedback" in result
 
 
 def test_unknown_element():

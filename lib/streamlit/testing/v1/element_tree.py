@@ -68,6 +68,7 @@ if TYPE_CHECKING:
     from streamlit.proto.DateTimeInput_pb2 import DateTimeInput as DateTimeInputProto
     from streamlit.proto.Element_pb2 import Element as ElementProto
     from streamlit.proto.Exception_pb2 import Exception as ExceptionProto
+    from streamlit.proto.Feedback_pb2 import Feedback as FeedbackProto
     from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
     from streamlit.proto.Heading_pb2 import Heading as HeadingProto
     from streamlit.proto.Json_pb2 import Json as JsonProto
@@ -711,7 +712,7 @@ class Metric(Element):
 
 @dataclass(repr=False)
 class ButtonGroup(Widget, Generic[T]):
-    """A representation of button_group that is used by ``st.feedback``."""
+    """A representation of ``st.pills`` and ``st.segmented_control``."""
 
     _value: list[T] | None
 
@@ -788,6 +789,58 @@ class ButtonGroup(Widget, Generic[T]):
         while v in new:
             new.remove(v)
         self.set_value(new)
+        return self
+
+
+@dataclass(repr=False)
+class Feedback(Widget):
+    """A representation of ``st.feedback``."""
+
+    _value: int | InitialValue | None
+
+    proto: FeedbackProto = field(repr=False)
+    form_id: str
+
+    def __init__(self, proto: FeedbackProto, root: ElementTree) -> None:
+        super().__init__(proto, root)
+        self._value = InitialValue()
+        self.type = "feedback"
+
+    @property
+    def _widget_state(self) -> WidgetState:
+        """Protobuf message representing the state of the widget, including
+        any interactions that have happened.
+        Should be the same as the frontend would produce for those interactions.
+
+        Uses string_value as wire format to distinguish three states:
+        - None: User explicitly cleared -> string_value = ""
+        - int: User selected -> string_value = str(value)
+        - No string_value set: No interaction yet (use default)
+        """
+        ws = WidgetState()
+        ws.id = self.id
+
+        # Get the effective value: either from explicit set_value() or session state
+        effective_value = self.value
+
+        if effective_value is None:
+            ws.string_value = ""  # Cleared or no default
+        else:
+            ws.string_value = str(effective_value)  # User selected a value
+        return ws
+
+    @property
+    def value(self) -> int | None:
+        """The currently selected feedback value. (int or None)"""  # noqa: D400
+        if not isinstance(self._value, InitialValue):
+            return self._value
+        state = self.root.session_state
+        assert state
+        return cast("int | None", state[self.id])
+
+    def set_value(self, v: int | None) -> Feedback:
+        """Set the value of the feedback widget. (int or None)"""  # noqa: D400
+        self._value = v
         return self
 
 
@@ -1624,6 +1677,10 @@ class Block:
         return ElementList(self.get("exception"))  # type: ignore
 
     @property
+    def feedback(self) -> WidgetList[Feedback]:
+        return WidgetList(self.get("feedback"))  # type: ignore
+
+    @property
     def expander(self) -> Sequence[Expander]:
         return self.get("expander")  # type: ignore
 
@@ -2081,6 +2138,8 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                 new_node = DateTimeInput(elt.date_time_input, root=root)
             elif ty == "exception":
                 new_node = Exception(elt.exception, root=root)
+            elif ty == "feedback":
+                new_node = Feedback(elt.feedback, root=root)
             elif ty == "heading":
                 if elt.heading.tag == HeadingProtoTag.TITLE_TAG.value:
                     new_node = Title(elt.heading, root=root)
