@@ -16,10 +16,8 @@
 
 syntax = "proto3";
 
-option java_package = "com.snowflake.apps.streamlit";
-option java_outer_classname = "NumberInputProto";
 
-import "streamlit/proto/LabelVisibilityMessage.proto";
+import "streamlit/proto/LabelVisibility.proto";
 
 message NumberInput {
   enum DataType {
@@ -46,7 +44,7 @@ message NumberInput {
   optional double value = 19;
   bool set_value = 20;
   bool disabled = 21;
-  LabelVisibilityMessage label_visibility = 22;
+  LabelVisibility label_visibility = 22;
   string placeholder = 23;
   string icon = 24;
 

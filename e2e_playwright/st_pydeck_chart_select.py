@@ -38,7 +38,7 @@ if "selected_chart" not in st.session_state:
 
 # Create buttons for each chart type
 st.write("Select a chart type to display:")
-col1, col2, col3, col4, col5 = st.columns(5)
+col1, col2, col3, col4, col5, col6 = st.columns(6)
 
 with col1:
     if st.button("Basic Chart"):
@@ -55,6 +55,9 @@ with col4:
 with col5:
     if st.button("Scatterplot"):
         st.session_state.selected_chart = "scatterplot"
+with col6:
+    if st.button("Dynamic Data"):
+        st.session_state.selected_chart = "dynamic"
 
 # Selection mode for applicable charts
 selection_mode: Literal["single-object", "multi-object"] = st.selectbox(
@@ -168,6 +171,73 @@ elif st.session_state.selected_chart == "scatterplot":
         on_select="rerun",
         selection_mode="single-object",
     )
+
+elif st.session_state.selected_chart == "dynamic":
+    st.divider()
+    st.header("Dynamic Data Chart")
+
+    # Initialize data version in session state
+    if "data_version" not in st.session_state:
+        st.session_state.data_version = 1
+
+    # Button to update data
+    if st.button("Update Data"):
+        st.session_state.data_version += 1
+
+    # Create data based on current version
+    if st.session_state.data_version % 2 == 1:
+        # Version 1: Original 3 hexagons
+        dynamic_data = [
+            {"hex": "88283082b9fffff", "count": 10},
+            {"hex": "88283082d7fffff", "count": 50},
+            {"hex": "88283082a9fffff", "count": 100},
+        ]
+    else:
+        # Version 2: Modified counts (same hexagons)
+        dynamic_data = [
+            {"hex": "88283082b9fffff", "count": 20},
+            {"hex": "88283082d7fffff", "count": 60},
+            {"hex": "88283082a9fffff", "count": 110},
+        ]
+
+    dynamic_df = pd.DataFrame(dynamic_data)
+
+    selection = st.pydeck_chart(
+        pdk.Deck(
+            map_style="mapbox://styles/mapbox/outdoors-v12",
+            initial_view_state=pdk.ViewState(
+                latitude=37.7749295,
+                longitude=-122.4194155,
+                zoom=11,
+                bearing=0,
+                pitch=30,
+            ),
+            layers=[
+                pdk.Layer(
+                    "H3HexagonLayer",
+                    dynamic_df,
+                    id="MyHexLayer",
+                    stroked=True,
+                    filled=True,
+                    get_hexagon="hex",
+                    line_width_min_pixels=2,
+                    get_fill_color="[120, count > 50 ? 255 : 0, 255]",
+                ),
+            ],
+        ),
+        width="stretch",
+        key="dynamic_chart",  # Key to preserve selection across data updates
+        on_select="rerun",
+        selection_mode=selection_mode,
+    )
+
+    st.write("Data version:", st.session_state.data_version)
+    st.write("dynamic_chart selection:", str(selection))
+    st.write(
+        "session_state.dynamic_chart:",
+        str(st.session_state.get("dynamic_chart") or ""),
+    )
+
 else:
     st.info("Please select a chart type to display using the buttons above.")
 

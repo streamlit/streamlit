@@ -27,7 +27,7 @@ import { MockInstance } from "vitest"
 
 import {
   DateInput as DateInputProto,
-  LabelVisibilityMessage as LabelVisibilityMessageProto,
+  LabelVisibility as LabelVisibilityProto,
 } from "@streamlit/protobuf"
 
 import { render, renderWithContexts } from "~lib/test_util"
@@ -84,7 +84,7 @@ describe("DateInput widget", () => {
   it("pass labelVisibility prop to StyledWidgetLabel correctly when hidden", () => {
     const props = getProps({
       labelVisibility: {
-        value: LabelVisibilityMessageProto.LabelVisibilityOptions.HIDDEN,
+        value: LabelVisibilityProto.LabelVisibilityOptions.HIDDEN,
       },
     })
     render(<DateInput {...props} />)
@@ -96,7 +96,7 @@ describe("DateInput widget", () => {
   it("pass labelVisibility prop to StyledWidgetLabel correctly when collapsed", () => {
     const props = getProps({
       labelVisibility: {
-        value: LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED,
+        value: LabelVisibilityProto.LabelVisibilityOptions.COLLAPSED,
       },
     })
     render(<DateInput {...props} />)

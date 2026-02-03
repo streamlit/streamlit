@@ -146,3 +146,22 @@ class ServerUtilTest(unittest.TestCase):
             server_util.make_url_path_regex("foo", trailing_slash="prohibited")
             == r"^/foo$"
         )
+
+    @parameterized.expand(
+        [
+            ("0.0.0.0", "localhost"),
+            ("::", "localhost"),
+            ("127.0.0.1", "127.0.0.1"),
+            ("localhost", "localhost"),
+            ("192.168.1.100", "192.168.1.100"),
+            ("myhost.local", "myhost.local"),
+        ]
+    )
+    def test_get_display_address(self, address: str, expected: str):
+        """Test that wildcard addresses are translated to localhost for display."""
+        assert server_util.get_display_address(address) == expected
+
+    def test_get_display_address_does_not_modify_non_wildcards(self):
+        """Verify non-wildcard addresses are returned unchanged."""
+        for addr in ["10.0.0.1", "example.com", "my-other-host.local", "203.0.113.5"]:
+            assert server_util.get_display_address(addr) == addr

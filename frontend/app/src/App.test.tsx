@@ -78,7 +78,6 @@ import {
   IPageConfig,
   IPageInfo,
   IPageNotFound,
-  IPagesChanged,
   IParentMessage,
   Navigation,
   SessionEvent,
@@ -307,7 +306,6 @@ const NEW_SESSION_JSON: INewSession = {
   config: {
     gatherUsageStats: false,
     maxCachedMessageAge: 0,
-    mapboxToken: "mapboxToken",
     allowRunOnSave: false,
     hideSidebarNav: false,
     hideTopBar: false,
@@ -421,7 +419,6 @@ type ForwardMsgType =
   | ILogo
   | INavigation
   | INewSession
-  | IPagesChanged
   | IPageConfig
   | IPageInfo
   | IParentMessage
@@ -1572,7 +1569,6 @@ describe("App", () => {
       config: {
         gatherUsageStats: false,
         maxCachedMessageAge: 0,
-        mapboxToken: "mapboxToken",
         allowRunOnSave: false,
         hideSidebarNav: false,
       },

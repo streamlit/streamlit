@@ -68,7 +68,6 @@ describe("FormSubmitButton", () => {
         label: "Submit",
         formId: "mockFormId",
         help: "mockHelpText",
-        useContainerWidth: false,
         ...elementProps,
       }),
       disabled: false,

@@ -310,7 +310,6 @@ class Server:
         self._runtime = Runtime(
             RuntimeConfig(
                 script_path=main_script_path,
-                command_line=None,
                 media_file_storage=media_file_storage,
                 uploaded_file_manager=uploaded_file_mgr,
                 cache_storage_manager=create_default_cache_storage_manager(),

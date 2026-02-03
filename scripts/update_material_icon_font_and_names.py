@@ -45,9 +45,7 @@ PLAYWRIGHT_TEST_REGEX = re.compile(
     re.DOTALL,
 )
 
-FONT_FILE_URL_REGEX = (
-    r"url\((https://fonts\.gstatic\.com/s/materialsymbolsrounded/[^\)]+)\)"
-)
+FONT_FILE_URL_REGEX = r"url\((https://fonts\.gstatic\.com/[^)]+\.woff2)\)"
 
 NAMES_MODULE_PATH = os.path.join(BASE_DIR, "lib", "streamlit", "material_icon_names.py")
 FONT_FILE_PATH = os.path.join(
@@ -106,8 +104,8 @@ with open(NAMES_MODULE_PATH, "w", encoding="utf-8") as file:
 response = requests.get(
     MATERIAL_ICONS_FONT_URL,
     headers={
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_7_1) AppleWebKit/605.1.15 "
-        "(KHTML, like Gecko) Version/17.4.1 Safari/605.1.15"
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     },
 )
 

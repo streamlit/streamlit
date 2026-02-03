@@ -38,6 +38,7 @@ import {
   DocString as DocStringProto,
   DownloadButton as DownloadButtonProto,
   Exception as ExceptionProto,
+  Feedback as FeedbackProto,
   FileUploader as FileUploaderProto,
   GraphVizChart as GraphVizChartProto,
   Heading as HeadingProto,
@@ -144,6 +145,7 @@ const DateTimeInput = lazy(
 const DownloadButton = lazy(
   () => import("~lib/components/widgets/DownloadButton")
 )
+const Feedback = lazy(() => import("~lib/components/widgets/Feedback"))
 const FileUploader = lazy(() => import("~lib/components/widgets/FileUploader"))
 const FormSubmitContent = lazy(() =>
   import("~lib/components/widgets/Form").then(module => ({
@@ -254,13 +256,20 @@ const RawElementNodeRenderer = (
       )
     }
 
-    case "deckGlJsonChart":
+    case "deckGlJsonChart": {
+      const deckGlProto = node.element.deckGlJsonChart as DeckGlJsonChartProto
       return (
         <DeckGlJsonChart
-          element={node.element.deckGlJsonChart as DeckGlJsonChartProto}
+          element={deckGlProto}
+          // DeckGL chart can be used as a widget (when selections are activated) or
+          // an element. We only want to set the key in case of it being used as a widget
+          // since otherwise it might break some apps that show the same charts multiple times.
+          // So we only compute an element ID if it's a widget, otherwise its an empty string.
+          key={deckGlProto.id || undefined}
           {...widgetProps}
         />
       )
+    }
 
     case "docString":
       return (
@@ -492,6 +501,18 @@ const RawElementNodeRenderer = (
           endpoints={props.endpoints}
           key={downloadButtonProto.id}
           element={downloadButtonProto}
+          {...widgetProps}
+        />
+      )
+    }
+
+    case "feedback": {
+      const feedbackProto = node.element.feedback as FeedbackProto
+      widgetProps.disabled = widgetProps.disabled || feedbackProto.disabled
+      return (
+        <Feedback
+          key={feedbackProto.id}
+          element={feedbackProto}
           {...widgetProps}
         />
       )

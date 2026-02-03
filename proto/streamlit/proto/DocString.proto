@@ -16,20 +16,9 @@
 
 syntax = "proto3";
 
-option java_package = "com.snowflake.apps.streamlit";
-option java_outer_classname = "DocStringProto";
 
 // Formatted text
 message DocString {
-
-  // [DEPRECATED] The name of the object.
-  //string name = 1;
-  reserved 1;
-
-  // [DEPRECATED] The module of the object
-  //string module = 2;
-  reserved 2;
-
   // The doc string.
   string doc_string = 3;
 
@@ -48,6 +37,8 @@ message DocString {
 
   // List of this object's methods and member variables.
   repeated Member members = 8;
+
+  reserved 1, 2;
 }
 
 

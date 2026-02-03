@@ -16,7 +16,6 @@
 
 syntax = "proto3";
 
-option java_package = "com.snowflake.apps.streamlit";
 
 
 import "streamlit/proto/AppPage.proto";

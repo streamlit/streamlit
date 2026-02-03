@@ -37,6 +37,7 @@ import {
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
 import { useSelectCommon } from "~lib/hooks/useSelectCommon"
+import { hasLightBackgroundColor } from "~lib/theme"
 import { LabelVisibilityOptions } from "~lib/util/utils"
 
 export interface Props {
@@ -167,7 +168,10 @@ const Selectbox: FC<Props> = ({
               fontWeight: theme.fontWeights.normal,
             }),
           },
-          Dropdown: { component: VirtualDropdown },
+          Dropdown: {
+            component: VirtualDropdown,
+            style: { boxShadow: "none", overflow: "hidden" },
+          },
           ClearIcon: {
             props: {
               overrides: {
@@ -233,19 +237,71 @@ const Selectbox: FC<Props> = ({
               lineHeight: theme.lineHeights.inputWidget,
             }),
           },
-          // Nudge the dropdown menu by 1px so the focus state doesn't get cut off
           Popover: {
             props: {
               ignoreBoundary: isInSidebar,
               overrides: {
                 Body: {
-                  style: () => ({
-                    marginTop: theme.spacing.px,
-                  }),
+                  style: () => {
+                    const lightBackground = hasLightBackgroundColor(theme)
+                    return {
+                      marginTop: theme.spacing.twoXS,
+                      marginRight: theme.spacing.none,
+                      marginBottom: theme.spacing.none,
+
+                      paddingTop: theme.spacing.sm,
+                      paddingBottom: theme.spacing.sm,
+
+                      maxHeight: "70vh",
+                      overflow: "auto",
+                      boxSizing: "border-box",
+
+                      borderTopLeftRadius: theme.radii.default,
+                      borderTopRightRadius: theme.radii.default,
+                      borderBottomRightRadius: theme.radii.default,
+                      borderBottomLeftRadius: theme.radii.default,
+
+                      borderLeftWidth: lightBackground
+                        ? "0"
+                        : theme.sizes.borderWidth,
+                      borderRightWidth: lightBackground
+                        ? "0"
+                        : theme.sizes.borderWidth,
+                      borderTopWidth: lightBackground
+                        ? "0"
+                        : theme.sizes.borderWidth,
+                      borderBottomWidth: lightBackground
+                        ? "0"
+                        : theme.sizes.borderWidth,
+
+                      borderLeftStyle: lightBackground ? "none" : "solid",
+                      borderRightStyle: lightBackground ? "none" : "solid",
+                      borderTopStyle: lightBackground ? "none" : "solid",
+                      borderBottomStyle: lightBackground ? "none" : "solid",
+
+                      borderLeftColor: lightBackground
+                        ? "transparent"
+                        : theme.colors.borderColor,
+                      borderRightColor: lightBackground
+                        ? "transparent"
+                        : theme.colors.borderColor,
+                      borderTopColor: lightBackground
+                        ? "transparent"
+                        : theme.colors.borderColor,
+                      borderBottomColor: lightBackground
+                        ? "transparent"
+                        : theme.colors.borderColor,
+
+                      boxShadow: lightBackground
+                        ? "0px 4px 16px rgba(0, 0, 0, 0.16)"
+                        : "0px 4px 16px rgba(0, 0, 0, 0.7)",
+                    }
+                  },
                 },
               },
             },
           },
+
           SingleValue: {
             style: () => ({
               // remove margin from select value so that there is no jumpb, e.g. when pressing backspace on a selected option and removing a character.

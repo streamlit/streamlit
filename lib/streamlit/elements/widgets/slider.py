@@ -541,7 +541,8 @@ class SliderMixin:
             `sprintf.js
             <https://github.com/alexei/sprintf.js?tab=readme-ov-file#format-specification>`_.
             For example, ``format="%0.1f"`` adjusts the displayed decimal
-            precision to only show one digit after the decimal.
+            precision to only show one digit after the decimal. Use ``,`` for
+            thousand separators (e.g. ``"%,d"`` yields ``"1,234"``).
 
             For datetimes, dates, and times, you can use a momentJS format string
             or one of the following predefined formats:
