@@ -42,8 +42,6 @@ message ButtonGroup {
   ClickMode click_mode = 5;
   string form_id = 6;
 
-  // value passed by the backend
-  repeated uint32 value = 7;
   bool set_value = 8;
 
   enum Style {
@@ -62,6 +60,7 @@ message ButtonGroup {
   // For single-select mode, this contains at most one selected option string.
   repeated string raw_values = 14;
 
-  reserved 9;
+  reserved 7, 9;
+  reserved "value";
   // next id: 15
 }
