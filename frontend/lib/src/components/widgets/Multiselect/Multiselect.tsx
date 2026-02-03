@@ -55,6 +55,7 @@ import {
 } from "~lib/hooks/useBasicWidgetState"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useSelectCommon } from "~lib/hooks/useSelectCommon"
+import { convertRemToPx, hasLightBackgroundColor } from "~lib/theme"
 import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -105,6 +106,7 @@ const Multiselect: FC<Props> = props => {
 
   const theme = useEmotionTheme()
   const isInSidebar = useContext(IsSidebarContext)
+  const lightBackground = hasLightBackgroundColor(theme)
   const valueContainerRef = useRef<HTMLDivElement>(null)
   const scrollTopRef = useRef(0)
 
@@ -364,13 +366,42 @@ const Multiselect: FC<Props> = props => {
           closeOnSelect={false}
           ignoreCase={false}
           overrides={{
+            DropdownContainer: {
+              style: ({ $width }: { $width: number | null }) => {
+                const borderAdjustment =
+                  2 * parseFloat(theme.sizes.borderWidth)
+                return {
+                  width: $width ? `${$width - borderAdjustment}px` : undefined,
+                }
+              },
+            },
             Popover: {
               props: {
                 ignoreBoundary: isInSidebar,
+                popoverMargin: convertRemToPx(theme.spacing.twoXS),
                 overrides: {
                   Body: {
                     style: () => ({
-                      marginTop: theme.spacing.px,
+                      maxHeight: "70vh",
+                      overflow: "auto",
+                      boxSizing: "border-box",
+
+                      borderTopLeftRadius: theme.radii.default,
+                      borderTopRightRadius: theme.radii.default,
+                      borderBottomRightRadius: theme.radii.default,
+                      borderBottomLeftRadius: theme.radii.default,
+
+                      // Always use same border width - in light mode, match background
+                      // so we don't need to adjust for pixel shifts
+                      borderWidth: theme.sizes.borderWidth,
+                      borderStyle: "solid",
+                      borderColor: lightBackground
+                        ? theme.colors.bgColor
+                        : theme.colors.borderColor,
+
+                      boxShadow: lightBackground
+                        ? theme.shadows.popover
+                        : theme.shadows.none,
                     }),
                   },
                 },
@@ -423,13 +454,22 @@ const Multiselect: FC<Props> = props => {
                 color: disabled
                   ? theme.colors.fadedText40
                   : theme.colors.fadedText60,
+                // Position absolute so Input can overlay it
+                position: "absolute",
               }),
             },
             ValueContainer: {
               component: ValueContainer,
               style: () => ({
                 overflowY: "auto",
-                paddingLeft: theme.spacing.sm,
+                // Left padding is dictated by selected items in multiselect to have
+                // even padding around the selected first item (top, bottom, left).
+                // When nothing selected, calculate padding to the text of the placeholder:
+                // spacing.sm is the left padding within the highlight or option tag.
+                paddingLeft:
+                  value.length === 0
+                    ? `calc(${theme.spacing.sm} + ${theme.spacing.xs} - ${theme.sizes.borderWidth})`
+                    : `calc(${theme.spacing.xs} - ${theme.sizes.borderWidth})`,
                 paddingTop: theme.spacing.none,
                 paddingBottom: theme.spacing.none,
                 paddingRight: theme.spacing.none,
@@ -517,7 +557,14 @@ const Multiselect: FC<Props> = props => {
                 },
               },
             },
-            Input: { props: { readOnly: inputReadOnly } },
+            Input: {
+              props: { readOnly: inputReadOnly },
+              style: () => ({
+                // Input overlays Placeholder - both start at same position
+                color: theme.colors.bodyText,
+                caretColor: theme.colors.bodyText,
+              }),
+            },
             Dropdown: { component: VirtualDropdown },
           }}
         />

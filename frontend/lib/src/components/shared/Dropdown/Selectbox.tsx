@@ -37,7 +37,7 @@ import {
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
 import { useSelectCommon } from "~lib/hooks/useSelectCommon"
-import { hasLightBackgroundColor } from "~lib/theme"
+import { convertRemToPx, hasLightBackgroundColor } from "~lib/theme"
 import { LabelVisibilityOptions } from "~lib/util/utils"
 
 export interface Props {
@@ -68,6 +68,7 @@ const Selectbox: FC<Props> = ({
 }) => {
   const theme = useEmotionTheme()
   const isInSidebar = useContext(IsSidebarContext)
+  const lightBackground = hasLightBackgroundColor(theme)
 
   const [value, setValue] = useState<string | null>(propValue)
   // This ref is used to store the value before the user starts removing characters so that we can restore
@@ -172,6 +173,15 @@ const Selectbox: FC<Props> = ({
             component: VirtualDropdown,
             style: { boxShadow: "none", overflow: "hidden" },
           },
+          DropdownContainer: {
+            style: ({ $width }: { $width: number | null }) => {
+              // Subtract border width from both sides
+              const borderAdjustment = 2 * parseFloat(theme.sizes.borderWidth)
+              return {
+                width: $width ? `${$width - borderAdjustment}px` : undefined,
+              }
+            },
+          },
           ClearIcon: {
             props: {
               overrides: {
@@ -213,20 +223,23 @@ const Selectbox: FC<Props> = ({
               paddingRight: theme.spacing.sm,
             }),
           },
+          ValueContainer: {
+            style: () => ({
+              paddingRight: theme.spacing.sm,
+              // Left padding is dictated by selected items in multiselect to have
+              // even padding around the selected first item (top, bottom, left).
+              paddingLeft: `calc(${theme.spacing.sm} + ${theme.spacing.xs} - ${theme.sizes.borderWidth})`,
+              paddingBottom: theme.spacing.sm,
+              paddingTop: theme.spacing.sm,
+            }),
+          },
           Placeholder: {
             style: () => ({
               color: selectDisabled
                 ? theme.colors.fadedText40
                 : theme.colors.fadedText60,
-            }),
-          },
-          ValueContainer: {
-            style: () => ({
-              // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
-              paddingRight: theme.spacing.sm,
-              paddingLeft: theme.spacing.md,
-              paddingBottom: theme.spacing.sm,
-              paddingTop: theme.spacing.sm,
+              // Position absolute so Input can overlay it
+              position: "absolute",
             }),
           },
           Input: {
@@ -235,68 +248,39 @@ const Selectbox: FC<Props> = ({
             },
             style: () => ({
               lineHeight: theme.lineHeights.inputWidget,
+              // Input overlays Placeholder - both start at same position
+              color: theme.colors.bodyText,
+              caretColor: theme.colors.bodyText,
             }),
           },
           Popover: {
             props: {
               ignoreBoundary: isInSidebar,
+              popoverMargin: convertRemToPx(theme.spacing.twoXS),
               overrides: {
                 Body: {
-                  style: () => {
-                    const lightBackground = hasLightBackgroundColor(theme)
-                    return {
-                      marginTop: theme.spacing.twoXS,
-                      marginRight: theme.spacing.none,
-                      marginBottom: theme.spacing.none,
+                  style: () => ({
+                    maxHeight: "70vh",
+                    overflow: "auto",
+                    boxSizing: "border-box",
 
-                      paddingTop: theme.spacing.sm,
-                      paddingBottom: theme.spacing.sm,
+                    borderTopLeftRadius: theme.radii.default,
+                    borderTopRightRadius: theme.radii.default,
+                    borderBottomRightRadius: theme.radii.default,
+                    borderBottomLeftRadius: theme.radii.default,
 
-                      maxHeight: "70vh",
-                      overflow: "auto",
-                      boxSizing: "border-box",
+                    // Always use same border width - in light mode, match background
+                    // so we don't need to adjust for pixel shifts
+                    borderWidth: theme.sizes.borderWidth,
+                    borderStyle: "solid",
+                    borderColor: lightBackground
+                      ? theme.colors.bgColor
+                      : theme.colors.borderColor,
 
-                      borderTopLeftRadius: theme.radii.default,
-                      borderTopRightRadius: theme.radii.default,
-                      borderBottomRightRadius: theme.radii.default,
-                      borderBottomLeftRadius: theme.radii.default,
-
-                      borderLeftWidth: lightBackground
-                        ? "0"
-                        : theme.sizes.borderWidth,
-                      borderRightWidth: lightBackground
-                        ? "0"
-                        : theme.sizes.borderWidth,
-                      borderTopWidth: lightBackground
-                        ? "0"
-                        : theme.sizes.borderWidth,
-                      borderBottomWidth: lightBackground
-                        ? "0"
-                        : theme.sizes.borderWidth,
-
-                      borderLeftStyle: lightBackground ? "none" : "solid",
-                      borderRightStyle: lightBackground ? "none" : "solid",
-                      borderTopStyle: lightBackground ? "none" : "solid",
-                      borderBottomStyle: lightBackground ? "none" : "solid",
-
-                      borderLeftColor: lightBackground
-                        ? "transparent"
-                        : theme.colors.borderColor,
-                      borderRightColor: lightBackground
-                        ? "transparent"
-                        : theme.colors.borderColor,
-                      borderTopColor: lightBackground
-                        ? "transparent"
-                        : theme.colors.borderColor,
-                      borderBottomColor: lightBackground
-                        ? "transparent"
-                        : theme.colors.borderColor,
-
-                      boxShadow: lightBackground
-                        ? "0px 4px 16px rgba(0, 0, 0, 0.16)"
-                        : "0px 4px 16px rgba(0, 0, 0, 0.7)",
-                    }
-                  },
+                    boxShadow: lightBackground
+                      ? theme.shadows.popover
+                      : theme.shadows.none,
+                  }),
                 },
               },
             },
@@ -304,7 +288,7 @@ const Selectbox: FC<Props> = ({
 
           SingleValue: {
             style: () => ({
-              // remove margin from select value so that there is no jumpb, e.g. when pressing backspace on a selected option and removing a character.
+              // No margin needed - Input is now positioned absolutely
               marginLeft: theme.spacing.none,
             }),
           },
