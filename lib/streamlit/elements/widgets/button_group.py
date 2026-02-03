@@ -929,10 +929,6 @@ class ButtonGroupMixin:
             ]
         )
 
-        # For pills/segmented_control: only include click_mode in key_as_main_identity
-        # to allow dynamic option changes without resetting, but reset when
-        # selection_mode changes (since changing from single to multi or vice versa
-        # changes the value format)
         element_id = compute_and_register_element_id(
             style,
             user_key=key,
