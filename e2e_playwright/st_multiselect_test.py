@@ -521,7 +521,7 @@ def test_multiselect_preserves_scroll_position_on_remove(app: Page):
     assert initial_scroll > 0
 
     # Remove an item by clicking its delete button
-    del_from_multiselect(app, "multiselect 17 - show maxHeight", "fifteen")
+    del_from_multiselect(app, "multiselect 17 - show maxHeight", "twenty")
 
     # Verify scroll position is preserved
     final_scroll = value_container.evaluate("el => el.scrollTop")
