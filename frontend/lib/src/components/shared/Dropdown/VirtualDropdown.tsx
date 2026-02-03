@@ -24,6 +24,7 @@ import {
 import { FixedSizeList } from "react-window"
 
 import { OverflowTooltip, Placement } from "~lib/components/shared/Tooltip"
+import { useWindowDimensionsContext } from "~lib/components/shared/WindowDimensions/useWindowDimensionsContext"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useScrollbarGutterSize } from "~lib/hooks/useScrollbarGutterSize"
 import { convertRemToPx } from "~lib/theme/utils"
@@ -76,6 +77,7 @@ function FixedSizeListItem(props: FixedSizeListItemProps): ReactElement {
 const VirtualDropdown = forwardRef<any, any>((props, ref) => {
   const theme = useEmotionTheme()
   const scrollbarGutterSize = useScrollbarGutterSize()
+  const { innerHeight: windowHeight } = useWindowDimensionsContext()
   // TODO: Update to match React best practices
   // eslint-disable-next-line @eslint-react/no-children-to-array
   const children = Children.toArray(props.children) as ReactElement[]
@@ -109,7 +111,10 @@ const VirtualDropdown = forwardRef<any, any>((props, ref) => {
     )
   }
 
-  const maxHeight = convertRemToPx(theme.sizes.maxDropdownHeight)
+  const maxHeight = Math.min(
+    convertRemToPx(theme.sizes.maxDropdownHeight),
+    windowHeight * 0.7 // 70vh constraint on popover body
+  )
   const contentHeight =
     children.length * convertRemToPx(theme.sizes.dropdownItemHeight)
   const height = Math.min(maxHeight, contentHeight)
