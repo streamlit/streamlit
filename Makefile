@@ -454,11 +454,11 @@ check:
 	PY_FILES=$$(uv run python scripts/get_changed_files.py --python); \
 	PY_EXIT=0; \
 	if [ -n "$$PY_FILES" ]; then \
-		echo "=== Python: format (ruff) ===" && \
-		uv run ruff format $$PY_FILES && \
-		echo "" && \
 		echo "=== Python: lint (ruff) ===" && \
 		uv run ruff check --fix $$PY_FILES && \
+		echo "" && \
+		echo "=== Python: format (ruff) ===" && \
+		uv run ruff format $$PY_FILES && \
 		echo "" && \
 		echo "=== Python: type check (ty) ===" && \
 		uv run ty check $$PY_FILES && \
@@ -515,8 +515,8 @@ check:
 # Autofix linting and formatting errors.
 autofix:
 	# Python fixes:
-	make python-format
 	uv run ruff check --fix
+	make python-format
 	# JS fixes:
 	make frontend-init
 	make frontend-format
