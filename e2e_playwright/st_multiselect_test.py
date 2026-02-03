@@ -177,6 +177,8 @@ def test_multiselect_long_values_in_dropdown(
     multiselect_elem = get_multiselect(app, "multiselect 5")
     multiselect_elem.locator("input").click()
     wait_for_app_run(app)
+    # Move mouse away to avoid hover highlight on items
+    app.mouse.move(0, 0)
     # Skip the first element which is "Select all"
     dropdown_elems = app.locator("li").all()[1:]
     for idx, el in enumerate(dropdown_elems):
