@@ -166,14 +166,60 @@ export const StyledToggleRow = styled.div<StyledToggleRowProps>(
   })
 )
 
+export const StyledVersionCopyButton = styled.button(({ theme }) => ({
+  marginLeft: "auto",
+  height: theme.iconSizes.base,
+  width: theme.iconSizes.base,
+  padding: theme.spacing.none,
+  border: "none",
+  backgroundColor: theme.colors.transparent,
+  color: theme.colors.fadedText60,
+  cursor: "pointer",
+  borderRadius: theme.radii.md,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  opacity: 0,
+  pointerEvents: "none",
+  transform: "scale(0.9)",
+  transition: "opacity 120ms ease, transform 120ms ease",
+
+  "&:hover": {
+    color: theme.colors.bodyText,
+    backgroundColor: theme.colors.darkenedBgMix15,
+  },
+
+  "&:focus-visible": {
+    outline: "none",
+    boxShadow: theme.shadows.focusRing,
+  },
+}))
+
 export const StyledVersionFooter = styled.div(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
   width: "100%",
   paddingLeft: theme.spacing.lg,
   paddingRight: theme.spacing.lg,
+  paddingTop: theme.spacing.twoXS,
+  paddingBottom: theme.spacing.twoXS,
   fontSize: theme.fontSizes.twoSm,
   color: theme.colors.fadedText60,
   lineHeight: theme.lineHeights.menuItem,
+
+  "&:hover": {
+    [`${StyledVersionCopyButton}`]: {
+      opacity: 1,
+      pointerEvents: "auto",
+      transform: "scale(1)",
+    },
+  },
 }))
+
+export const StyledVersionFooterText = styled.span({
+  display: "inline-flex",
+  alignItems: "center",
+})
 
 export const StyledThemeSwitcherContainer = styled.div(({ theme }) => ({
   display: "flex",

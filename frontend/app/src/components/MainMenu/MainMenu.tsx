@@ -14,23 +14,32 @@
  * limitations under the License.
  */
 
-import { Fragment, isValidElement, memo, ReactElement } from "react"
+import {
+  Fragment,
+  isValidElement,
+  memo,
+  ReactElement,
+  useCallback,
+} from "react"
 
 import { MoreVert } from "@emotion-icons/material-rounded"
 import { Checkbox, LABEL_PLACEMENT, STYLE_TYPE } from "baseui/checkbox"
 import { CheckboxOverrides } from "baseui/checkbox/types"
 import { PLACEMENT, StatefulPopover } from "baseui/popover"
+import { Check as CheckIcon, Copy as CopyIcon } from "react-feather"
 
 import { MetricsManager } from "@streamlit/app/src/MetricsManager"
 import ScreenCastRecorder from "@streamlit/app/src/util/ScreenCastRecorder"
 import {
   BaseButton,
   BaseButtonKind,
+  convertRemToPx,
   hasLightBackgroundColor,
   Icon,
   IGuestToHostMessage,
   IMenuItem,
   SessionInfo,
+  useCopyToClipboard,
   useEmotionTheme,
 } from "@streamlit/lib"
 import { Config, PageConfig } from "@streamlit/protobuf"
@@ -46,7 +55,9 @@ import {
   StyledMenuItemShortcut,
   StyledRecordingIndicator,
   StyledToggleRow,
+  StyledVersionCopyButton,
   StyledVersionFooter,
+  StyledVersionFooterText,
 } from "./styled-components"
 import ThemeSwitcher from "./ThemeSwitcher"
 
@@ -107,6 +118,38 @@ const getOpenInWindowCallback = (url: string) => (): void => {
 
 const getMenuItemTestId = (label: string): string =>
   `stMainMenuItem-${label.replace(/\s+/g, "")}`
+
+interface VersionFooterProps {
+  versionLabel: string
+}
+
+const VersionFooter = ({ versionLabel }: VersionFooterProps): ReactElement => {
+  const theme = useEmotionTheme()
+  const { isCopied, copyToClipboard, label } = useCopyToClipboard()
+  const handleCopy = useCallback(() => {
+    copyToClipboard(versionLabel)
+  }, [copyToClipboard, versionLabel])
+
+  return (
+    <StyledVersionFooter data-testid="stMainMenuVersion">
+      <StyledVersionFooterText>
+        Made with {versionLabel}
+      </StyledVersionFooterText>
+      <StyledVersionCopyButton
+        type="button"
+        aria-label={label}
+        title={label}
+        onClick={handleCopy}
+      >
+        {isCopied ? (
+          <CheckIcon size={convertRemToPx(theme.iconSizes.sm)} />
+        ) : (
+          <CopyIcon size={convertRemToPx(theme.iconSizes.sm)} />
+        )}
+      </StyledVersionCopyButton>
+    </StyledVersionFooter>
+  )
+}
 
 interface MenuItemConfig {
   label: string
@@ -386,13 +429,10 @@ function MainMenu(props: Readonly<Props>): ReactElement {
               {props.sessionInfo.isSet && (
                 <>
                   {renderDivider("divider-minimal-footer")}
-                  <StyledVersionFooter
+                  <VersionFooter
                     key="version-footer-minimal"
-                    data-testid="stMainMenuVersion"
-                  >
-                    Made with Streamlit v
-                    {props.sessionInfo.current.streamlitVersion}
-                  </StyledVersionFooter>
+                    versionLabel={`Streamlit v${props.sessionInfo.current.streamlitVersion}`}
+                  />
                 </>
               )}
             </StyledMenuContainer>
@@ -549,12 +589,10 @@ function MainMenu(props: Readonly<Props>): ReactElement {
 
         if (props.sessionInfo.isSet) {
           addSection(
-            <StyledVersionFooter
+            <VersionFooter
               key="version-footer"
-              data-testid="stMainMenuVersion"
-            >
-              Made with Streamlit v{props.sessionInfo.current.streamlitVersion}
-            </StyledVersionFooter>
+              versionLabel={`Streamlit v${props.sessionInfo.current.streamlitVersion}`}
+            />
           )
         }
 
