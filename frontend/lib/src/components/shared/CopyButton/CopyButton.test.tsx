@@ -44,6 +44,7 @@ describe("CopyButton", () => {
     })
     expect(button).toBeVisible()
     expect(button).toHaveAttribute("title", "Copy to clipboard")
+    expect(button).toHaveAttribute("data-copy-state", "idle")
 
     expect(screen.getByTestId("stCodeCopyButton")).toBeVisible()
   })
@@ -74,6 +75,7 @@ describe("CopyButton", () => {
 
     expect(copyButton).toBeVisible()
     expect(mockWriteText).toHaveBeenCalledWith("test")
+    expect(copyButton).toHaveAttribute("data-copy-state", "copied")
   })
 
   it("reverts to copy icon after timeout", async () => {

@@ -59,6 +59,7 @@ const CopyButton = ({
       data-testid={dataTestId}
       title={title ?? label}
       aria-label={ariaLabel ?? label}
+      data-copy-state={isCopied ? "copied" : "idle"}
       type="button"
       buttonSize={resolvedButtonSize}
       onClick={handleCopy}
