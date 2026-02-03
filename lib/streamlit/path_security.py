@@ -29,6 +29,7 @@ SSRF attacks and NTLM hash disclosure.
 from __future__ import annotations
 
 import os
+import string
 
 
 def is_unsafe_path_pattern(path: str) -> bool:
@@ -80,7 +81,7 @@ def is_unsafe_path_pattern(path: str) -> bool:
     # paths including drive-relative paths like "C:foo" which resolve against the current
     # directory of that drive. Checked on all platforms for defense-in-depth and
     # testability (CI runs on Linux).
-    if len(path) >= 2 and path[0].isalpha() and path[1] == ":":
+    if len(path) >= 2 and path[0] in string.ascii_letters and path[1] == ":":
         return True
 
     # Rooted backslash or forward slash (absolute paths)
