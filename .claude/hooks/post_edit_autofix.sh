@@ -14,9 +14,6 @@
 # limitations under the License.
 
 # PostToolUse hook: Auto-format and fix lint errors in files after Edit/Write
-# Runs asynchronously so Claude continues working while this executes.
-# Ruff automatically respects exclusions from pyproject.toml.
-# This hook only applies fixes - it never fails on unfixable lint errors.
 #
 # NOTE: This can be extended to other file types (e.g., TypeScript, JSON), but
 # any additions must be very fast since this runs on every file edit/write.
@@ -39,7 +36,8 @@ fi
 cd "$CLAUDE_PROJECT_DIR"
 
 # Run ruff check --fix first, then format (per ruff's recommended order)
-# Ruff will automatically skip files that match extend-exclude in pyproject.toml
+# Ruff automatically respects exclusions from pyproject.toml.
+# This hook only applies fixes - it never fails on unfixable lint errors.
 uv run ruff check --fix "$FILE_PATH" 2>&1 || true
 uv run ruff format "$FILE_PATH" 2>&1 || true
 
