@@ -167,8 +167,24 @@ class _ButtonGroupSerde(Generic[T]):
 
         # Take the first value from the list
         string_value = ui_value[0]
+
+        # First, try direct lookup (in case value includes index suffix)
         option_index = self.formatted_option_to_option_index.get(string_value)
-        return self.options[option_index] if option_index is not None else string_value
+        if option_index is not None:
+            return self.options[option_index]
+
+        # If not found, search by base content (without index suffix)
+        # The frontend stores content strings without index suffixes
+        for (
+            formatted_with_index,
+            index,
+        ) in self.formatted_option_to_option_index.items():
+            base_formatted = formatted_with_index.rsplit("|", 1)[0]
+            if base_formatted == string_value:
+                return self.options[index]
+
+        # Value not found in options - return as-is
+        return string_value
 
     def _serialize_multi(self, value: T | str | list[T | str] | None) -> list[str]:
         """Serialize multi-select values to list of strings."""
@@ -219,10 +235,27 @@ class _ButtonGroupSerde(Generic[T]):
 
         values: list[T | str] = []
         for v in ui_value:
+            # First, try direct lookup (in case value includes index suffix)
             option_index = self.formatted_option_to_option_index.get(v)
             if option_index is not None:
                 values.append(self.options[option_index])
-            else:
+                continue
+
+            # If not found, search by base content (without index suffix)
+            # The frontend stores content strings without index suffixes
+            found = False
+            for (
+                formatted_with_index,
+                index,
+            ) in self.formatted_option_to_option_index.items():
+                base_formatted = formatted_with_index.rsplit("|", 1)[0]
+                if base_formatted == v:
+                    values.append(self.options[index])
+                    found = True
+                    break
+
+            if not found:
+                # Value not found in options - append as-is
                 values.append(v)
         return values
 
