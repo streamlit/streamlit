@@ -17,4 +17,6 @@ hooks/*
 skills/*
 !skills/checking-changes/
 !skills/debugging-streamlit/
+!skills/discovering-make-commands/
 !skills/fixing-streamlit-ci/
+!skills/implementing-new-features/
