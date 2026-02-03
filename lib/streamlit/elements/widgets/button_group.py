@@ -778,7 +778,7 @@ class ButtonGroupMixin:
         indexable_options = convert_to_sequence_and_check_comparable(options)
         default_values = get_default_indices(indexable_options, default)
 
-        # Create string-based mappings for the serde (like radio/selectbox/multiselect)
+        # Create string-based mappings for the serde
         formatted_options: list[str] = []
         formatted_option_to_option_index: dict[str, int] = {}
         for index, option in enumerate(indexable_options):

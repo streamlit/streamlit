@@ -146,7 +146,7 @@ function getInitialValue(
   widgetMgr: WidgetStateManager,
   element: ButtonGroupProto
 ): ButtonGroupValue | undefined {
-  // Get string values directly (like radio/selectbox/multiselect)
+  // Get string values directly
   return widgetMgr.getStringArrayValue(element)
 }
 
@@ -164,7 +164,7 @@ function getDefaultStateFromProto(
 }
 
 function getCurrStateFromProto(element: ButtonGroupProto): ButtonGroupValue {
-  // Get raw values directly (like radio/selectbox/multiselect)
+  // Get raw values directly
   return element.rawValues ?? []
 }
 
