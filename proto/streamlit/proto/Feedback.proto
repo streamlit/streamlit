@@ -16,16 +16,23 @@
 
 syntax = "proto3";
 
-
-message LabelVisibilityMessage {
-  // We use separate LabelVisibilityMessage instead of just defining Enum and
-  // use it in other widgets proto files due to protobuf js error, when just
-  // enum defined and imported
-  // https://github.com/protobufjs/protobuf.js/issues/1414
-  enum LabelVisibilityOptions {
-    VISIBLE = 0;
-    HIDDEN = 1;
-    COLLAPSED = 2;
+message Feedback {
+  enum FeedbackType {
+    THUMBS = 0;
+    FACES = 1;
+    STARS = 2;
   }
-  LabelVisibilityOptions value = 1;
+
+  string id = 1;
+  FeedbackType type = 2;
+  // Default selection index, uses None/null if not set
+  optional uint32 default = 3;
+  bool disabled = 4;
+  string form_id = 5;
+
+  // Value passed by the backend (selection index)
+  optional uint32 value = 6;
+  bool set_value = 7;
+
+  // next id: 8
 }

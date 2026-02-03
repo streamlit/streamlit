@@ -101,7 +101,6 @@ message ForwardMsg {
   string debug_last_backmsg_id = 17;
 
   reserved 7, 8, 16;
-  reserved "pages_changed";
   // Next: 26
 }
 
@@ -130,7 +129,6 @@ message ForwardMsgMetadata {
   string active_script_hash = 4;
 
   reserved 3;
-  reserved "element_dimension_spec";
 }
 
 // This is a list of ForwardMessages used to have a single protobuf message

@@ -17,13 +17,15 @@
 syntax = "proto3";
 
 
-message BokehChart {
-  // A JSON-formatted string from the Bokeh chart figure.
-  string figure = 1;
-
-  // If True, will overwrite the chart width spec to fit to container.
-  bool use_container_width = 2;
-
-  // A unique ID of this element.
-  string element_id = 3;
+message LabelVisibility {
+  // We use a separate LabelVisibility message instead of just defining an Enum
+  // and using it in other widgets proto files due to a protobuf.js error when
+  // just an enum is defined and imported.
+  // https://github.com/protobufjs/protobuf.js/issues/1414
+  enum LabelVisibilityOptions {
+    VISIBLE = 0;
+    HIDDEN = 1;
+    COLLAPSED = 2;
+  }
+  LabelVisibilityOptions value = 1;
 }

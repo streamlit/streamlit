@@ -86,14 +86,12 @@ message UploadedFileInfo {
   FileURLs file_urls = 5;
 
   reserved 1;
-  reserved "id";
 }
 
 message FileUploaderState {
   repeated UploadedFileInfo uploaded_file_info = 2;
 
   reserved 1;
-  reserved "max_file_id";
 }
 
 

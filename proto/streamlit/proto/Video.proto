@@ -58,5 +58,4 @@ message Video {
   optional streamlit.WidthConfig width_config = 13;
 
   reserved 1,2,4;
-  reserved "format", "data";
 }

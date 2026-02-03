@@ -23,15 +23,6 @@ import "streamlit/proto/Common.proto";
 // A message from the browser to the server.
 message BackMsg {
   oneof type {
-    // DEPRECATED. Set to true to ask the server to display the inline help.
-    // bool help = 1;
-
-    // DEPRECATED. Asks the server to run the script.
-    //bool rerun_script = 3;
-
-    // DEPRECATED. Asks the server to run the script with this object
-    // ReRun rerun = 4;
-
     // Requests that the app's @st_cache be cleared
     bool clear_cache = 5;
 
@@ -41,15 +32,6 @@ message BackMsg {
 
     // Requests that the script's execution be stopped
     bool stop_script = 7;
-
-    // DEPRECATED.
-    // string widget_json = 8;
-
-    // DEPRECATED. This is now inside ClientState.
-    // WidgetStates update_widgets = 9;
-
-    // DEPRECATED. Set to true to ask the server to close the connection
-    // bool close_connection = 10;
 
     ClientState rerun_script = 11;
 
@@ -82,7 +64,6 @@ message BackMsg {
   string debug_last_backmsg_id = 13;
 
   reserved 1, 2, 3, 4, 8, 9, 10;
-
   // Next: 19
 }
 
