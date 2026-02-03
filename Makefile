@@ -239,6 +239,83 @@ frontend-fast:
 frontend-dev:
 	cd frontend/ ; yarn start
 
+.PHONY: debug
+# Start Streamlit and Vite dev server for debugging. Use via `make debug my-script.py`.
+debug:
+	@SCRIPT=$$(echo $(filter-out $@,$(MAKECMDGOALS))); \
+	if [[ -z "$$SCRIPT" ]]; then \
+		echo "Error: Please specify a Streamlit script"; \
+		echo "Usage: make debug <script.py>"; \
+		exit 1; \
+	fi; \
+	if [[ ! -f "$$SCRIPT" ]]; then \
+		echo "Error: Script '$$SCRIPT' not found"; \
+		exit 1; \
+	fi; \
+	PORT_3000_PID=$$(lsof -ti:3000 2>/dev/null | tr '\n' ' '); \
+	PORT_8501_PID=$$(lsof -ti:8501 2>/dev/null | tr '\n' ' '); \
+	if [[ -n "$$PORT_3000_PID" ]] || [[ -n "$$PORT_8501_PID" ]]; then \
+		echo "Error: Required ports are already in use."; \
+		if [[ -n "$$PORT_3000_PID" ]]; then \
+			echo "  Port 3000 (Vite): PID(s) $$PORT_3000_PID"; \
+		fi; \
+		if [[ -n "$$PORT_8501_PID" ]]; then \
+			echo "  Port 8501 (Streamlit): PID(s) $$PORT_8501_PID"; \
+		fi; \
+		echo ""; \
+		echo "Please stop these processes and try again."; \
+		echo "To kill them: kill $$PORT_3000_PID$$PORT_8501_PID"; \
+		exit 1; \
+	fi; \
+	DEBUG_DIR="$$(pwd)/work-tmp/debug"; \
+	mkdir -p "$$DEBUG_DIR"; \
+	> "$$DEBUG_DIR/backend.log"; \
+	> "$$DEBUG_DIR/frontend.log"; \
+	cleanup() { \
+		echo ""; \
+		echo "Stopping servers... logs saved to work-tmp/debug/"; \
+		lsof -ti:3000 | xargs kill 2>/dev/null || true; \
+		lsof -ti:8501 | xargs kill 2>/dev/null || true; \
+	}; \
+	trap cleanup EXIT; \
+	uv run streamlit run "$$SCRIPT" \
+		--server.headless=true \
+		--server.runOnSave=true \
+		--browser.gatherUsageStats=false \
+		--global.developmentMode=true \
+		>> "$$DEBUG_DIR/backend.log" 2>&1 & \
+	cd frontend && DEBUG_TO_CONSOLE=1 yarn start >> "$$DEBUG_DIR/frontend.log" 2>&1 & \
+	echo ""; \
+	echo "Starting debug session: $$SCRIPT"; \
+	BACKEND_READY=false; \
+	FRONTEND_READY=false; \
+	for i in $$(seq 1 60); do \
+		if [[ "$$BACKEND_READY" == "false" ]] && curl -s http://localhost:8501/_stcore/health > /dev/null 2>&1; then \
+			BACKEND_READY=true; \
+		fi; \
+		if [[ "$$FRONTEND_READY" == "false" ]] && curl -s http://localhost:3000 > /dev/null 2>&1; then \
+			FRONTEND_READY=true; \
+		fi; \
+		if [[ "$$BACKEND_READY" == "true" ]] && [[ "$$FRONTEND_READY" == "true" ]]; then \
+			break; \
+		fi; \
+		sleep 1; \
+	done; \
+	echo ""; \
+	if [[ "$$BACKEND_READY" == "false" ]] || [[ "$$FRONTEND_READY" == "false" ]]; then \
+		echo "Warning: Servers may not have started correctly. Check log files."; \
+		echo ""; \
+	fi; \
+	echo "  App URL: http://localhost:3000"; \
+	echo ""; \
+	echo "  Log files:"; \
+	echo "    work-tmp/debug/backend.log  - Streamlit/Python output"; \
+	echo "    work-tmp/debug/frontend.log - Vite/browser console output"; \
+	echo ""; \
+	echo "Press Ctrl+C to stop."; \
+	echo ""; \
+	wait
+
 .PHONY: frontend-lint
 # Lint and check formatting of frontend files.
 frontend-lint:
@@ -538,3 +615,16 @@ package: init frontend
 	cd lib && uv build
 	# Clean up the copied README.md
 	rm -f lib/README.md
+
+# Targets that accept positional arguments (e.g., `make debug my-script.py`)
+TARGETS_WITH_ARGS := debug debug-e2e-test run-e2e-test trace-e2e-test
+
+# Catch-all target to allow passing arguments to the above targets.
+# Without this, Make interprets arguments as targets and exits with error code 2.
+# Only silently succeeds if invoked as an argument to a known target; otherwise fails
+# to catch typos like `make fronted-dev`.
+%:
+	@if ! echo "$(TARGETS_WITH_ARGS)" | grep -qw "$(firstword $(MAKECMDGOALS))"; then \
+		echo "Error: Unknown target '$@'. Run 'make help' to see available targets."; \
+		exit 1; \
+	fi
