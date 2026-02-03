@@ -10,6 +10,7 @@
 hooks/*
 !hooks/pre_bash_redirect.py
 !hooks/stop_check.sh
+!hooks/post_edit_autofix.sh
 
 # Allow specific skills
 !skills/
