@@ -264,31 +264,41 @@ function ColumnMenu({
           },
         },
         Inner: {
-          style: {
-            border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
-            backgroundColor: hasLightBackgroundColor(theme)
-              ? colors.bgColor
-              : colors.secondaryBg,
-            color: colors.bodyText,
-            fontSize: fontSizes.sm,
-            fontWeight: fontWeights.normal,
-            // This is annoying, but a bunch of warnings get logged when the
-            // shorthand version `borderRadius` is used here since the long
-            // names are used by BaseWeb and mixing the two is apparently
-            // bad :(
-            borderTopLeftRadius: radii.default,
-            borderTopRightRadius: radii.default,
-            borderBottomLeftRadius: radii.default,
-            borderBottomRightRadius: radii.default,
-            // Prevent the menu hover background from overflowing the menu edges
-            // This is only an issue if a high base radius is configured.
-            overflow: "auto",
-            // See the long comment about `borderRadius`. The same applies here
-            // to `padding`.
-            paddingTop: "0 !important",
-            paddingBottom: "0 !important",
-            paddingLeft: "0 !important",
-            paddingRight: "0 !important",
+          style: () => {
+            const lightBackground = hasLightBackgroundColor(theme)
+            return {
+              // No border in light mode, visible border in dark mode
+              borderWidth: lightBackground
+                ? theme.spacing.none
+                : theme.sizes.borderWidth,
+              borderStyle: "solid",
+              borderColor: theme.colors.borderColor,
+              backgroundColor: colors.bgColor,
+              color: colors.bodyText,
+              fontSize: fontSizes.sm,
+              fontWeight: fontWeights.normal,
+              // This is annoying, but a bunch of warnings get logged when the
+              // shorthand version `borderRadius` is used here since the long
+              // names are used by BaseWeb and mixing the two is apparently
+              // bad :(
+              borderTopLeftRadius: radii.default,
+              borderTopRightRadius: radii.default,
+              borderBottomLeftRadius: radii.default,
+              borderBottomRightRadius: radii.default,
+              // Prevent the menu hover background from overflowing the menu edges
+              // This is only an issue if a high base radius is configured.
+              overflow: "auto",
+              // See the long comment about `borderRadius`. The same applies here
+              // to `padding`.
+              paddingTop: "0 !important",
+              paddingBottom: "0 !important",
+              paddingLeft: "0 !important",
+              paddingRight: "0 !important",
+              // Only show shadow in light mode
+              boxShadow: lightBackground
+                ? theme.shadows.popover
+                : theme.shadows.none,
+            }
           },
         },
       }}

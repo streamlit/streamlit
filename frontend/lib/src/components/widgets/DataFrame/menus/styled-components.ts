@@ -20,8 +20,10 @@ import styled from "@emotion/styled"
  * A styled menu list component used by the column menu.
  */
 export const StyledMenuList = styled.div(({ theme }) => ({
-  paddingTop: theme.spacing.xs,
-  paddingBottom: theme.spacing.xs,
+  paddingTop: theme.spacing.threeXS,
+  paddingBottom: theme.spacing.threeXS,
+  paddingLeft: theme.spacing.xs,
+  paddingRight: theme.spacing.xs,
 }))
 
 interface StyledMenuListItemProps {
@@ -37,12 +39,17 @@ export const StyledMenuListItem = styled.div<StyledMenuListItemProps>(
     alignItems: "center",
     justifyContent: "flex-start",
     gap: theme.spacing.sm,
+    marginTop: theme.spacing.twoXS,
+    marginBottom: theme.spacing.twoXS,
+    // Inner padding for content
     paddingLeft: theme.spacing.sm,
     paddingRight: theme.spacing.sm,
-    paddingTop: theme.spacing.twoXS,
-    paddingBottom: theme.spacing.twoXS,
+    paddingTop: theme.spacing.threeXS,
+    paddingBottom: theme.spacing.threeXS,
     cursor: "pointer",
-    backgroundColor: isActive ? theme.colors.darkenedBgMix15 : undefined,
+    borderRadius: theme.radii.md2,
+    // Use md2 radius to match dropdown items
+    backgroundColor: isActive ? theme.colors.darkenedBgMix15 : "transparent",
     "&:hover": {
       backgroundColor: theme.colors.darkenedBgMix15,
     },
@@ -68,12 +75,16 @@ export const StyledMenuDivider = styled.div(({ theme }) => ({
   backgroundColor: theme.colors.borderColor,
   marginTop: theme.spacing.xs,
   marginBottom: theme.spacing.xs,
+  // Match the horizontal inset of menu items
+  marginLeft: theme.spacing.xs,
+  // Right margin accounts for scrollbar gutter when present
+  marginRight: `max(0px, calc(${theme.spacing.xs} - var(--scrollbar-gutter-size, 0px)))`,
 }))
 
 export const StyledColumnHeaderRow = styled.div(({ theme }) => ({
   display: "flex",
   alignItems: "center",
-  padding: `${theme.spacing.sm} ${theme.spacing.sm}`,
+  padding: `${theme.spacing.twoXS} ${theme.spacing.none}`,
   cursor: "default",
   gap: theme.spacing.twoXS,
 }))
@@ -84,7 +95,7 @@ export const StyledTypeIconContainer = styled.div(({ theme }) => ({
   justifyContent: "center",
   padding: theme.spacing.twoXS,
   border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
-  borderRadius: theme.radii.md,
+  borderRadius: theme.radii.md2,
   backgroundColor: "transparent",
   color: theme.colors.bodyText,
   height: "fit-content",
@@ -96,7 +107,7 @@ export const StyledColumnNameWithIcon = styled.div(({ theme }) => ({
   flexGrow: 1,
   padding: `${theme.spacing.threeXS} ${theme.spacing.threeXS}`,
   border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
-  borderRadius: theme.radii.md,
+  borderRadius: theme.radii.md2,
   backgroundColor: theme.colors.secondaryBg,
   minWidth: 0,
   overflow: "hidden",

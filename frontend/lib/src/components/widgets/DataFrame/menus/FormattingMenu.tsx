@@ -229,31 +229,43 @@ function FormattingMenu({
           props: {
             "data-testid": "stDataFrameColumnFormattingMenu",
           },
-          style: {
-            borderTopLeftRadius: radii.default,
-            borderTopRightRadius: radii.default,
-            borderBottomLeftRadius: radii.default,
-            borderBottomRightRadius: radii.default,
-            paddingTop: "0 !important",
-            paddingBottom: "0 !important",
-            paddingLeft: "0 !important",
-            paddingRight: "0 !important",
-            backgroundColor: "transparent",
-            border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
+          style: () => {
+            const lightBackground = hasLightBackgroundColor(theme)
+            return {
+              borderTopLeftRadius: radii.default,
+              borderTopRightRadius: radii.default,
+              borderBottomLeftRadius: radii.default,
+              borderBottomRightRadius: radii.default,
+              paddingTop: "0 !important",
+              paddingBottom: "0 !important",
+              paddingLeft: "0 !important",
+              paddingRight: "0 !important",
+              backgroundColor: "transparent",
+              // No border in light mode, visible border in dark mode
+              borderWidth: lightBackground
+                ? theme.spacing.none
+                : theme.sizes.borderWidth,
+              borderStyle: "solid",
+              borderColor: theme.colors.borderColor,
+              // Only show shadow in light mode
+              boxShadow: lightBackground
+                ? theme.shadows.popover
+                : theme.shadows.none,
+            }
           },
         },
         Inner: {
-          style: {
-            backgroundColor: hasLightBackgroundColor(theme)
-              ? colors.bgColor
-              : colors.secondaryBg,
-            color: colors.bodyText,
-            fontSize: fontSizes.sm,
-            fontWeight: fontWeights.normal,
-            paddingTop: "0 !important",
-            paddingBottom: "0 !important",
-            paddingLeft: "0 !important",
-            paddingRight: "0 !important",
+          style: () => {
+            return {
+              backgroundColor: colors.bgColor,
+              color: colors.bodyText,
+              fontSize: fontSizes.sm,
+              fontWeight: fontWeights.normal,
+              paddingTop: "0 !important",
+              paddingBottom: "0 !important",
+              paddingLeft: "0 !important",
+              paddingRight: "0 !important",
+            }
           },
         },
       }}
