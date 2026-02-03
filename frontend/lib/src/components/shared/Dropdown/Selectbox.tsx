@@ -261,7 +261,8 @@ const Selectbox: FC<Props> = ({
                 Body: {
                   style: () => ({
                     maxHeight: "70vh",
-                    overflow: "auto",
+                    // Scrolling is handled by the VirtualDropdown component
+                    overflow: "hidden",
                     boxSizing: "border-box",
 
                     borderTopLeftRadius: theme.radii.default,
