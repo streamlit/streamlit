@@ -1,4 +1,26 @@
 {
+  "plansDirectory": "./work-tmp",
+  "permissions": {
+    "allow": [
+      "Bash(make *)",
+      "Bash(uv run pytest *)",
+      "Bash(uv run ruff *)",
+      "Bash(uv run streamlit *)",
+      "Bash(uv run mypy *)",
+      "Bash(uv run ty *)",
+      "Bash(uv run pre-commit *)",
+      "Bash(uv sync *)",
+      "Bash(uv pip *)",
+      "Bash(yarn *)",
+      "Bash(gh *)",
+      "Bash(git *)"
+    ],
+    "ask": [
+      "Bash(git push *)",
+      "Bash(git reset --hard *)",
+      "Bash(git clean *)"
+    ]
+  },
   "hooks": {
     "PreToolUse": [
       {
