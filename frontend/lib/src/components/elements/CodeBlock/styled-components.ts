@@ -17,6 +17,8 @@
 import { CSSObject, Theme } from "@emotion/react"
 import styled from "@emotion/styled"
 
+import CopyButton from "~lib/components/shared/CopyButton"
+
 const codeLink: CSSObject = {
   // Streamline the style when inside anchors to avoid broken underline and more
   "a > &": {
@@ -233,14 +235,8 @@ export const StyledCodeBlock = styled.div(({ theme }) => ({
   },
 }))
 
-export const StyledCopyButton = styled.button(({ theme }) => ({
+export const StyledCopyButton = styled(CopyButton)(({ theme }) => ({
   pointerEvents: "auto",
-  height: theme.iconSizes.threeXL,
-  width: theme.iconSizes.threeXL,
-  padding: theme.spacing.none,
-  border: "none",
-  backgroundColor: theme.colors.transparent,
-  color: theme.colors.fadedText60,
   transform: "scale(0)",
   top: 0,
   right: 0,
